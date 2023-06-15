@@ -168,13 +168,9 @@ subroutine DBEMT_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DBEMT_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%NumBlades)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumNodes)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%tau1_const)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DBEMT_Mod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%rLocal))
    if (allocated(InData%rLocal)) then
       call RegPackBounds(Buf, 2, lbound(InData%rLocal), ubound(InData%rLocal))
@@ -287,7 +283,6 @@ subroutine DBEMT_PackElementContinuousStateType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DBEMT_PackElementContinuousStateType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%vind)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%vind_1)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -572,17 +567,13 @@ subroutine DBEMT_PackOtherState(Buf, Indata)
       call RegPackBounds(Buf, 2, lbound(InData%areStatesInitialized), ubound(InData%areStatesInitialized))
       call RegPack(Buf, InData%areStatesInitialized)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%tau1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%tau2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%n))
    if (allocated(InData%n)) then
       call RegPackBounds(Buf, 2, lbound(InData%n), ubound(InData%n))
       call RegPack(Buf, InData%n)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    LB(1:1) = lbound(InData%xdot)
    UB(1:1) = ubound(InData%xdot)
    do i1 = LB(1), UB(1)
@@ -730,23 +721,16 @@ subroutine DBEMT_PackParam(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DBEMT_PackParam'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%lin_nx)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumBlades)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumNodes)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%k_0ye)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%tau1_const)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%spanRatio))
    if (allocated(InData%spanRatio)) then
       call RegPackBounds(Buf, 2, lbound(InData%spanRatio), ubound(InData%spanRatio))
       call RegPack(Buf, InData%spanRatio)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DBEMT_Mod)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -817,7 +801,6 @@ subroutine DBEMT_PackElementInputType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DBEMT_PackElementInputType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%vind_s)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%spanRatio)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -903,11 +886,8 @@ subroutine DBEMT_PackInput(Buf, Indata)
    integer(IntKi)  :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%AxInd_disk)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Un_disk)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%R_disk)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%element))
    if (allocated(InData%element)) then
       call RegPackBounds(Buf, 2, lbound(InData%element), ubound(InData%element))

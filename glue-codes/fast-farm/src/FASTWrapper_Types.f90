@@ -213,59 +213,36 @@ subroutine FWrap_PackInitInput(Buf, Indata)
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%nr)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%FASTInFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dr)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%tmax)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%p_ref_Turbine)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveFieldMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%n_high_low)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dt_high)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%p_ref_high)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nX_high)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nY_high)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nZ_high)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dX_high)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dY_high)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dZ_high)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TurbNum)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RootName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumSC2Ctrl)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumSC2CtrlGlob)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumCtrl2SC)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UseSC)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%fromSCGlob))
    if (allocated(InData%fromSCGlob)) then
       call RegPackBounds(Buf, 1, lbound(InData%fromSCGlob), ubound(InData%fromSCGlob))
       call RegPack(Buf, InData%fromSCGlob)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%fromSC))
    if (allocated(InData%fromSC)) then
       call RegPackBounds(Buf, 1, lbound(InData%fromSC), ubound(InData%fromSC))
       call RegPack(Buf, InData%fromSC)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%Vdist_High))
    if (associated(InData%Vdist_High)) then
       call RegPackBounds(Buf, 5, lbound(InData%Vdist_High), ubound(InData%Vdist_High))
@@ -417,7 +394,6 @@ subroutine FWrap_PackInitOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'FWrap_PackInitOutput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%PtfmInit)
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -735,7 +711,6 @@ subroutine FWrap_PackMisc(Buf, Indata)
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
    call FAST_PackTurbineType(Buf, InData%Turbine) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%TempDisp))
    if (allocated(InData%TempDisp)) then
       call RegPackBounds(Buf, 1, lbound(InData%TempDisp), ubound(InData%TempDisp))
@@ -745,7 +720,6 @@ subroutine FWrap_PackMisc(Buf, Indata)
          call MeshPack(Buf, InData%TempDisp(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%TempLoads))
    if (allocated(InData%TempLoads)) then
       call RegPackBounds(Buf, 1, lbound(InData%TempLoads), ubound(InData%TempLoads))
@@ -755,7 +729,6 @@ subroutine FWrap_PackMisc(Buf, Indata)
          call MeshPack(Buf, InData%TempLoads(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ADRotorDisk))
    if (allocated(InData%ADRotorDisk)) then
       call RegPackBounds(Buf, 1, lbound(InData%ADRotorDisk), ubound(InData%ADRotorDisk))
@@ -765,7 +738,6 @@ subroutine FWrap_PackMisc(Buf, Indata)
          call MeshPack(Buf, InData%ADRotorDisk(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AD_L2L))
    if (allocated(InData%AD_L2L)) then
       call RegPackBounds(Buf, 1, lbound(InData%AD_L2L), ubound(InData%AD_L2L))
@@ -898,15 +870,12 @@ subroutine FWrap_PackParam(Buf, Indata)
    character(*), parameter         :: RoutineName = 'FWrap_PackParam'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%nr)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%r))
    if (allocated(InData%r)) then
       call RegPackBounds(Buf, 1, lbound(InData%r), ubound(InData%r))
       call RegPack(Buf, InData%r)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%n_FAST_low)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%p_ref_Turbine)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1007,7 +976,6 @@ subroutine FWrap_PackInput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%fromSCglob), ubound(InData%fromSCglob))
       call RegPack(Buf, InData%fromSCglob)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%fromSC))
    if (allocated(InData%fromSC)) then
       call RegPackBounds(Buf, 1, lbound(InData%fromSC), ubound(InData%fromSC))
@@ -1144,27 +1112,18 @@ subroutine FWrap_PackOutput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%toSC), ubound(InData%toSC))
       call RegPack(Buf, InData%toSC)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%xHat_Disk)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%YawErr)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%psi_skew)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%chi_skew)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%p_hub)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%D_rotor)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DiskAvg_Vx_Rel)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AzimAvg_Ct))
    if (allocated(InData%AzimAvg_Ct)) then
       call RegPackBounds(Buf, 1, lbound(InData%AzimAvg_Ct), ubound(InData%AzimAvg_Ct))
       call RegPack(Buf, InData%AzimAvg_Ct)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AzimAvg_Cq))
    if (allocated(InData%AzimAvg_Cq)) then
       call RegPackBounds(Buf, 1, lbound(InData%AzimAvg_Cq), ubound(InData%AzimAvg_Cq))

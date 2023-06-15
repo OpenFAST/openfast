@@ -129,9 +129,7 @@ subroutine SC_DX_PackInitInput(Buf, Indata)
       return
    end if
    call RegPack(Buf, InData%NumSC2Ctrl)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumSC2CtrlGlob)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumCtrl2SC)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -382,6 +380,7 @@ subroutine SC_DX_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
       DstInputData%toSC = SrcInputData%toSC
    else if (associated(DstInputData%toSC)) then
       deallocate(DstInputData%toSC)
+      nullify(DstInputData%toSC)
    end if
 end subroutine
 
@@ -541,6 +540,7 @@ subroutine SC_DX_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
       DstOutputData%fromSC = SrcOutputData%fromSC
    else if (associated(DstOutputData%fromSC)) then
       deallocate(DstOutputData%fromSC)
+      nullify(DstOutputData%fromSC)
    end if
    if (associated(SrcOutputData%fromSCglob)) then
       LB(1:1) = lbound(SrcOutputData%fromSCglob)
@@ -558,6 +558,7 @@ subroutine SC_DX_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
       DstOutputData%fromSCglob = SrcOutputData%fromSCglob
    else if (associated(DstOutputData%fromSCglob)) then
       deallocate(DstOutputData%fromSCglob)
+      nullify(DstOutputData%fromSCglob)
    end if
 end subroutine
 
@@ -600,7 +601,6 @@ subroutine SC_DX_PackOutput(Buf, Indata)
          call RegPack(Buf, InData%fromSC)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%fromSCglob))
    if (associated(InData%fromSCglob)) then
       call RegPackBounds(Buf, 1, lbound(InData%fromSCglob), ubound(InData%fromSCglob))

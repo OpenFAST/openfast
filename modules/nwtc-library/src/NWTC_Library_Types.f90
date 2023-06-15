@@ -116,9 +116,7 @@ subroutine NWTC_Library_PackProgDesc(Buf, Indata)
    character(*), parameter         :: RoutineName = 'NWTC_Library_PackProgDesc'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%Name)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Ver)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Date)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -220,27 +218,20 @@ subroutine NWTC_Library_PackFASTdataType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'NWTC_Library_PackFASTdataType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%File)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Descr)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumChans)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumRecs)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TimeStep)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ChanNames))
    if (allocated(InData%ChanNames)) then
       call RegPackBounds(Buf, 1, lbound(InData%ChanNames), ubound(InData%ChanNames))
       call RegPack(Buf, InData%ChanNames)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ChanUnits))
    if (allocated(InData%ChanUnits)) then
       call RegPackBounds(Buf, 1, lbound(InData%ChanUnits), ubound(InData%ChanUnits))
       call RegPack(Buf, InData%ChanUnits)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Data))
    if (allocated(InData%Data)) then
       call RegPackBounds(Buf, 2, lbound(InData%Data), ubound(InData%Data))
@@ -341,11 +332,8 @@ subroutine NWTC_Library_PackOutParmType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'NWTC_Library_PackOutParmType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%Indx)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Name)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Units)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SignM)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -463,27 +451,22 @@ subroutine NWTC_Library_PackFileInfoType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'NWTC_Library_PackFileInfoType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%NumLines)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumFiles)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%FileLine))
    if (allocated(InData%FileLine)) then
       call RegPackBounds(Buf, 1, lbound(InData%FileLine), ubound(InData%FileLine))
       call RegPack(Buf, InData%FileLine)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%FileIndx))
    if (allocated(InData%FileIndx)) then
       call RegPackBounds(Buf, 1, lbound(InData%FileIndx), ubound(InData%FileIndx))
       call RegPack(Buf, InData%FileIndx)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%FileList))
    if (allocated(InData%FileList)) then
       call RegPackBounds(Buf, 1, lbound(InData%FileList), ubound(InData%FileList))
       call RegPack(Buf, InData%FileList)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Lines))
    if (allocated(InData%Lines)) then
       call RegPackBounds(Buf, 1, lbound(InData%Lines), ubound(InData%Lines))
@@ -590,7 +573,6 @@ subroutine NWTC_Library_PackQuaternion(Buf, Indata)
    character(*), parameter         :: RoutineName = 'NWTC_Library_PackQuaternion'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%q0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%v)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -654,15 +636,12 @@ subroutine NWTC_Library_PackNWTC_RandomNumber_ParameterType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'NWTC_Library_PackNWTC_RandomNumber_ParameterType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%pRNG)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RandSeed)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%RandSeedAry))
    if (allocated(InData%RandSeedAry)) then
       call RegPackBounds(Buf, 1, lbound(InData%RandSeedAry), ubound(InData%RandSeedAry))
       call RegPack(Buf, InData%RandSeedAry)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RNG_type)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

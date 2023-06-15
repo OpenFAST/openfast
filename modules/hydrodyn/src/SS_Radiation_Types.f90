@@ -161,15 +161,12 @@ subroutine SS_Rad_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SS_Rad_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%InputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%enabledDOFs))
    if (allocated(InData%enabledDOFs)) then
       call RegPackBounds(Buf, 1, lbound(InData%enabledDOFs), ubound(InData%enabledDOFs))
       call RegPack(Buf, InData%enabledDOFs)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NBody)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PtfmRefztRot))
    if (allocated(InData%PtfmRefztRot)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmRefztRot), ubound(InData%PtfmRefztRot))
@@ -286,7 +283,6 @@ subroutine SS_Rad_PackInitOutput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
@@ -531,7 +527,6 @@ subroutine SS_Rad_PackOtherState(Buf, Indata)
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%n)
-   if (RegCheckErr(Buf, RoutineName)) return
    LB(1:1) = lbound(InData%xdot)
    UB(1:1) = ubound(InData%xdot)
    do i1 = LB(1), UB(1)
@@ -694,33 +689,27 @@ subroutine SS_Rad_PackParam(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SS_Rad_PackParam'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%A))
    if (allocated(InData%A)) then
       call RegPackBounds(Buf, 2, lbound(InData%A), ubound(InData%A))
       call RegPack(Buf, InData%A)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%B))
    if (allocated(InData%B)) then
       call RegPackBounds(Buf, 2, lbound(InData%B), ubound(InData%B))
       call RegPack(Buf, InData%B)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%C))
    if (allocated(InData%C)) then
       call RegPackBounds(Buf, 2, lbound(InData%C), ubound(InData%C))
       call RegPack(Buf, InData%C)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%numStates)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%spdof))
    if (allocated(InData%spdof)) then
       call RegPackBounds(Buf, 1, lbound(InData%spdof), ubound(InData%spdof))
       call RegPack(Buf, InData%spdof)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NBody)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -939,7 +928,6 @@ subroutine SS_Rad_PackOutput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%y), ubound(InData%y))
       call RegPack(Buf, InData%y)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))

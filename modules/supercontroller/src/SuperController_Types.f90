@@ -215,7 +215,6 @@ subroutine SC_PackInitInput(Buf, Indata)
       return
    end if
    call RegPack(Buf, InData%nTurbines)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DLL_FileName)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -316,13 +315,9 @@ subroutine SC_PackInitOutput(Buf, Indata)
       return
    end if
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumCtrl2SC)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nInpGlobal)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumSC2Ctrl)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumSC2CtrlGlob)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -437,6 +432,7 @@ subroutine SC_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%ParamGlobal = SrcParamData%ParamGlobal
    else if (associated(DstParamData%ParamGlobal)) then
       deallocate(DstParamData%ParamGlobal)
+      nullify(DstParamData%ParamGlobal)
    end if
    if (associated(SrcParamData%ParamTurbine)) then
       LB(1:1) = lbound(SrcParamData%ParamTurbine)
@@ -454,6 +450,7 @@ subroutine SC_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%ParamTurbine = SrcParamData%ParamTurbine
    else if (associated(DstParamData%ParamTurbine)) then
       deallocate(DstParamData%ParamTurbine)
+      nullify(DstParamData%ParamTurbine)
    end if
    DstParamData%DLL_Trgt = SrcParamData%DLL_Trgt
 end subroutine
@@ -492,25 +489,15 @@ subroutine SC_PackParam(Buf, Indata)
       return
    end if
    call RegPack(Buf, InData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nTurbines)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumCtrl2SC)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nInpGlobal)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumSC2Ctrl)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumSC2CtrlGlob)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumStatesGlobal)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumStatesTurbine)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumParamGlobal)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumParamTurbine)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%ParamGlobal))
    if (associated(InData%ParamGlobal)) then
       call RegPackBounds(Buf, 1, lbound(InData%ParamGlobal), ubound(InData%ParamGlobal))
@@ -519,7 +506,6 @@ subroutine SC_PackParam(Buf, Indata)
          call RegPack(Buf, InData%ParamGlobal)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%ParamTurbine))
    if (associated(InData%ParamTurbine)) then
       call RegPackBounds(Buf, 1, lbound(InData%ParamTurbine), ubound(InData%ParamTurbine))
@@ -528,7 +514,6 @@ subroutine SC_PackParam(Buf, Indata)
          call RegPack(Buf, InData%ParamTurbine)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call DLLTypePack(Buf, InData%DLL_Trgt) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -751,6 +736,7 @@ subroutine SC_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Global = SrcDiscStateData%Global
    else if (associated(DstDiscStateData%Global)) then
       deallocate(DstDiscStateData%Global)
+      nullify(DstDiscStateData%Global)
    end if
    if (associated(SrcDiscStateData%Turbine)) then
       LB(1:1) = lbound(SrcDiscStateData%Turbine)
@@ -768,6 +754,7 @@ subroutine SC_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
       DstDiscStateData%Turbine = SrcDiscStateData%Turbine
    else if (associated(DstDiscStateData%Turbine)) then
       deallocate(DstDiscStateData%Turbine)
+      nullify(DstDiscStateData%Turbine)
    end if
 end subroutine
 
@@ -810,7 +797,6 @@ subroutine SC_PackDiscState(Buf, Indata)
          call RegPack(Buf, InData%Global)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%Turbine))
    if (associated(InData%Turbine)) then
       call RegPackBounds(Buf, 1, lbound(InData%Turbine), ubound(InData%Turbine))
@@ -1313,6 +1299,7 @@ subroutine SC_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%toSCglob = SrcInputData%toSCglob
    else if (associated(DstInputData%toSCglob)) then
       deallocate(DstInputData%toSCglob)
+      nullify(DstInputData%toSCglob)
    end if
    if (associated(SrcInputData%toSC)) then
       LB(1:1) = lbound(SrcInputData%toSC)
@@ -1330,6 +1317,7 @@ subroutine SC_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%toSC = SrcInputData%toSC
    else if (associated(DstInputData%toSC)) then
       deallocate(DstInputData%toSC)
+      nullify(DstInputData%toSC)
    end if
 end subroutine
 
@@ -1372,7 +1360,6 @@ subroutine SC_PackInput(Buf, Indata)
          call RegPack(Buf, InData%toSCglob)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%toSC))
    if (associated(InData%toSC)) then
       call RegPackBounds(Buf, 1, lbound(InData%toSC), ubound(InData%toSC))
@@ -1551,6 +1538,7 @@ subroutine SC_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%fromSCglob = SrcOutputData%fromSCglob
    else if (associated(DstOutputData%fromSCglob)) then
       deallocate(DstOutputData%fromSCglob)
+      nullify(DstOutputData%fromSCglob)
    end if
    if (associated(SrcOutputData%fromSC)) then
       LB(1:1) = lbound(SrcOutputData%fromSC)
@@ -1568,6 +1556,7 @@ subroutine SC_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       DstOutputData%fromSC = SrcOutputData%fromSC
    else if (associated(DstOutputData%fromSC)) then
       deallocate(DstOutputData%fromSC)
+      nullify(DstOutputData%fromSC)
    end if
 end subroutine
 
@@ -1610,7 +1599,6 @@ subroutine SC_PackOutput(Buf, Indata)
          call RegPack(Buf, InData%fromSCglob)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%fromSC))
    if (associated(InData%fromSC)) then
       call RegPackBounds(Buf, 1, lbound(InData%fromSC), ubound(InData%fromSC))

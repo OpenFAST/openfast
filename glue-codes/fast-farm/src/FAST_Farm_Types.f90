@@ -423,107 +423,70 @@ subroutine Farm_PackParam(Buf, Indata)
    integer(IntKi)  :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%DT_low)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DT_high)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TMax)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%n_high_low)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumTurbines)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WindFilePath)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SC_FileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UseSC)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WT_Position))
    if (allocated(InData%WT_Position)) then
       call RegPackBounds(Buf, 2, lbound(InData%WT_Position), ubound(InData%WT_Position))
       call RegPack(Buf, InData%WT_Position)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveFieldMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MooringMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MD_FileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DT_mooring)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%n_mooring)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WT_FASTInFile))
    if (allocated(InData%WT_FASTInFile)) then
       call RegPackBounds(Buf, 1, lbound(InData%WT_FASTInFile), ubound(InData%WT_FASTInFile))
       call RegPack(Buf, InData%WT_FASTInFile)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%FTitle)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutFileRoot)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%n_ChkptTime)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TStart)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%n_TMax)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SumPrint)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WrBinOutFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WrTxtOutFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Delim)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutFmt_t)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%FmtWidth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TChanLen)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NOutTurb)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NOutRadii)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%OutRadii))
    if (allocated(InData%OutRadii)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutRadii), ubound(InData%OutRadii))
       call RegPack(Buf, InData%OutRadii)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NOutDist)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%OutDist))
    if (allocated(InData%OutDist)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutDist), ubound(InData%OutDist))
       call RegPack(Buf, InData%OutDist)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NWindVel)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WindVelX))
    if (allocated(InData%WindVelX)) then
       call RegPackBounds(Buf, 1, lbound(InData%WindVelX), ubound(InData%WindVelX))
       call RegPack(Buf, InData%WindVelX)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WindVelY))
    if (allocated(InData%WindVelY)) then
       call RegPackBounds(Buf, 1, lbound(InData%WindVelY), ubound(InData%WindVelY))
       call RegPack(Buf, InData%WindVelY)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WindVelZ))
    if (allocated(InData%WindVelZ)) then
       call RegPackBounds(Buf, 1, lbound(InData%WindVelZ), ubound(InData%WindVelZ))
       call RegPack(Buf, InData%WindVelZ)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutParam), ubound(InData%OutParam))
@@ -533,37 +496,23 @@ subroutine Farm_PackParam(Buf, Indata)
          call NWTC_Library_PackOutParmType(Buf, InData%OutParam(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NOutSteps)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%FileDescLines)
-   if (RegCheckErr(Buf, RoutineName)) return
    LB(1:1) = lbound(InData%Module_Ver)
    UB(1:1) = ubound(InData%Module_Ver)
    do i1 = LB(1), UB(1)
       call NWTC_Library_PackProgDesc(Buf, InData%Module_Ver(i1)) 
    end do
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UnOu)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dX_low)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dY_low)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dZ_low)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nX_low)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nY_low)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nZ_low)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%X0_low)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Y0_low)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Z0_low)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -929,21 +878,17 @@ subroutine Farm_PackMisc(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%AllOuts), ubound(InData%AllOuts))
       call RegPack(Buf, InData%AllOuts)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%TimeData))
    if (allocated(InData%TimeData)) then
       call RegPackBounds(Buf, 1, lbound(InData%TimeData), ubound(InData%TimeData))
       call RegPack(Buf, InData%TimeData)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AllOutData))
    if (allocated(InData%AllOutData)) then
       call RegPackBounds(Buf, 2, lbound(InData%AllOutData), ubound(InData%AllOutData))
       call RegPack(Buf, InData%AllOutData)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%n_Out)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%FWrap_2_MD))
    if (allocated(InData%FWrap_2_MD)) then
       call RegPackBounds(Buf, 1, lbound(InData%FWrap_2_MD), ubound(InData%FWrap_2_MD))
@@ -953,7 +898,6 @@ subroutine Farm_PackMisc(Buf, Indata)
          call NWTC_Library_PackMeshMapType(Buf, InData%FWrap_2_MD(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%MD_2_FWrap))
    if (allocated(InData%MD_2_FWrap)) then
       call RegPackBounds(Buf, 1, lbound(InData%MD_2_FWrap), ubound(InData%MD_2_FWrap))
@@ -1106,21 +1050,13 @@ subroutine Farm_PackFASTWrapper_Data(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Farm_PackFASTWrapper_Data'
    if (Buf%ErrStat >= AbortErrLev) return
    call FWrap_PackContState(Buf, InData%x) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call FWrap_PackDiscState(Buf, InData%xd) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call FWrap_PackConstrState(Buf, InData%z) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call FWrap_PackOtherState(Buf, InData%OtherSt) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call FWrap_PackParam(Buf, InData%p) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call FWrap_PackInput(Buf, InData%u) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call FWrap_PackOutput(Buf, InData%y) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call FWrap_PackMisc(Buf, InData%m) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%IsInitialized)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1197,21 +1133,13 @@ subroutine Farm_PackWakeDynamics_Data(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Farm_PackWakeDynamics_Data'
    if (Buf%ErrStat >= AbortErrLev) return
    call WD_PackContState(Buf, InData%x) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call WD_PackDiscState(Buf, InData%xd) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call WD_PackConstrState(Buf, InData%z) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call WD_PackOtherState(Buf, InData%OtherSt) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call WD_PackParam(Buf, InData%p) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call WD_PackInput(Buf, InData%u) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call WD_PackOutput(Buf, InData%y) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call WD_PackMisc(Buf, InData%m) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%IsInitialized)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1288,21 +1216,13 @@ subroutine Farm_PackAWAE_Data(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Farm_PackAWAE_Data'
    if (Buf%ErrStat >= AbortErrLev) return
    call AWAE_PackContState(Buf, InData%x) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call AWAE_PackDiscState(Buf, InData%xd) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call AWAE_PackConstrState(Buf, InData%z) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call AWAE_PackOtherState(Buf, InData%OtherSt) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call AWAE_PackParam(Buf, InData%p) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call AWAE_PackInput(Buf, InData%u) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call AWAE_PackOutput(Buf, InData%y) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call AWAE_PackMisc(Buf, InData%m) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%IsInitialized)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1380,23 +1300,14 @@ subroutine Farm_PackSC_Data(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Farm_PackSC_Data'
    if (Buf%ErrStat >= AbortErrLev) return
    call SC_PackContState(Buf, InData%x) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call SC_PackDiscState(Buf, InData%xd) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call SC_PackConstrState(Buf, InData%z) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call SC_PackOtherState(Buf, InData%OtherState) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call SC_PackParam(Buf, InData%p) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call SC_PackInput(Buf, InData%uInputs) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%utimes)
-   if (RegCheckErr(Buf, RoutineName)) return
    call SC_PackOutput(Buf, InData%y) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call SC_PackMisc(Buf, InData%m) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%IsInitialized)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1525,17 +1436,11 @@ subroutine Farm_PackMD_Data(Buf, Indata)
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
    call MD_PackContState(Buf, InData%x) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MD_PackDiscState(Buf, InData%xd) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MD_PackConstrState(Buf, InData%z) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MD_PackOtherState(Buf, InData%OtherSt) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MD_PackParam(Buf, InData%p) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MD_PackInput(Buf, InData%u) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Input))
    if (allocated(InData%Input)) then
       call RegPackBounds(Buf, 1, lbound(InData%Input), ubound(InData%Input))
@@ -1545,17 +1450,13 @@ subroutine Farm_PackMD_Data(Buf, Indata)
          call MD_PackInput(Buf, InData%Input(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%InputTimes))
    if (allocated(InData%InputTimes)) then
       call RegPackBounds(Buf, 1, lbound(InData%InputTimes), ubound(InData%InputTimes))
       call RegPack(Buf, InData%InputTimes)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call MD_PackOutput(Buf, InData%y) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MD_PackMisc(Buf, InData%m) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%IsInitialized)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1715,9 +1616,7 @@ subroutine Farm_PackAll_FastFarm_Data(Buf, Indata)
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
    call Farm_PackParam(Buf, InData%p) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call Farm_PackMisc(Buf, InData%m) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%FWrap))
    if (allocated(InData%FWrap)) then
       call RegPackBounds(Buf, 1, lbound(InData%FWrap), ubound(InData%FWrap))
@@ -1727,7 +1626,6 @@ subroutine Farm_PackAll_FastFarm_Data(Buf, Indata)
          call Farm_PackFASTWrapper_Data(Buf, InData%FWrap(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WD))
    if (allocated(InData%WD)) then
       call RegPackBounds(Buf, 1, lbound(InData%WD), ubound(InData%WD))
@@ -1737,11 +1635,8 @@ subroutine Farm_PackAll_FastFarm_Data(Buf, Indata)
          call Farm_PackWakeDynamics_Data(Buf, InData%WD(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call Farm_PackAWAE_Data(Buf, InData%AWAE) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call Farm_PackSC_Data(Buf, InData%SC) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call Farm_PackMD_Data(Buf, InData%MD) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

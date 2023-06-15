@@ -182,21 +182,13 @@ subroutine Waves2_PackInitInput(Buf, Indata)
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%Gravity)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WtrDens)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NStepWave2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveDOmega)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveStMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveMultiDir)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveDirArr))
    if (associated(InData%WaveDirArr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveDirArr), ubound(InData%WaveDirArr))
@@ -205,7 +197,6 @@ subroutine Waves2_PackInitInput(Buf, Indata)
          call RegPack(Buf, InData%WaveDirArr)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveElevC0))
    if (associated(InData%WaveElevC0)) then
       call RegPackBounds(Buf, 2, lbound(InData%WaveElevC0), ubound(InData%WaveElevC0))
@@ -214,7 +205,6 @@ subroutine Waves2_PackInitInput(Buf, Indata)
          call RegPack(Buf, InData%WaveElevC0)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveTime))
    if (associated(InData%WaveTime)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveTime), ubound(InData%WaveTime))
@@ -223,41 +213,29 @@ subroutine Waves2_PackInitInput(Buf, Indata)
          call RegPack(Buf, InData%WaveTime)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nGrid)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NWaveElevGrid)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NWaveKinGrid)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveKinGridxi))
    if (allocated(InData%WaveKinGridxi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridxi), ubound(InData%WaveKinGridxi))
       call RegPack(Buf, InData%WaveKinGridxi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveKinGridyi))
    if (allocated(InData%WaveKinGridyi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridyi), ubound(InData%WaveKinGridyi))
       call RegPack(Buf, InData%WaveKinGridyi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveKinGridzi))
    if (allocated(InData%WaveKinGridzi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridzi), ubound(InData%WaveKinGridzi))
       call RegPack(Buf, InData%WaveKinGridzi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvDiffQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvSumQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvLowCOffD)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvHiCOffD)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvLowCOffS)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvHiCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -559,37 +537,31 @@ subroutine Waves2_PackInitOutput(Buf, Indata)
       call RegPackBounds(Buf, 5, lbound(InData%WaveAcc2D), ubound(InData%WaveAcc2D))
       call RegPack(Buf, InData%WaveAcc2D)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveDynP2D))
    if (allocated(InData%WaveDynP2D)) then
       call RegPackBounds(Buf, 4, lbound(InData%WaveDynP2D), ubound(InData%WaveDynP2D))
       call RegPack(Buf, InData%WaveDynP2D)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveAcc2S))
    if (allocated(InData%WaveAcc2S)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveAcc2S), ubound(InData%WaveAcc2S))
       call RegPack(Buf, InData%WaveAcc2S)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveDynP2S))
    if (allocated(InData%WaveDynP2S)) then
       call RegPackBounds(Buf, 4, lbound(InData%WaveDynP2S), ubound(InData%WaveDynP2S))
       call RegPack(Buf, InData%WaveDynP2S)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveVel2D))
    if (allocated(InData%WaveVel2D)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveVel2D), ubound(InData%WaveVel2D))
       call RegPack(Buf, InData%WaveVel2D)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveVel2S))
    if (allocated(InData%WaveVel2S)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveVel2S), ubound(InData%WaveVel2S))
       call RegPack(Buf, InData%WaveVel2S)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveElev2))
    if (associated(InData%WaveElev2)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElev2), ubound(InData%WaveElev2))
@@ -749,7 +721,6 @@ subroutine Waves2_PackParam(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Waves2_PackParam'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%WvDiffQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvSumQTFF)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

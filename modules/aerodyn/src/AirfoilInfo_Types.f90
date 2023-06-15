@@ -273,97 +273,51 @@ subroutine AFI_PackUA_BL_Type(Buf, Indata)
    character(*), parameter         :: RoutineName = 'AFI_PackUA_BL_Type'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%alpha0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%alpha1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%alpha2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%eta_e)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%C_nalpha)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%C_lalpha)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%T_f0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%T_V0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%T_p)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%T_VL)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%b1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%b2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%b5)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%A1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%A2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%A5)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%S1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%S2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%S3)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%S4)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Cn1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Cn2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%St_sh)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Cd0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Cm0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%k0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%k1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%k2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%k3)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%k1_hat)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%x_cp_bar)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UACutout)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UACutout_delta)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UACutout_blend)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%filtCutOff)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%alphaUpper)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%alphaLower)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%c_Rate)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%c_RateUpper)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%c_RateLower)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%c_alphaLower)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%c_alphaUpper)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%alphaUpperWrap)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%alphaLowerWrap)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%c_RateWrap)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%c_alphaLowerWrap)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%c_alphaUpperWrap)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -531,75 +485,40 @@ subroutine AFI_PackUA_BL_Default_Type(Buf, Indata)
    character(*), parameter         :: RoutineName = 'AFI_PackUA_BL_Default_Type'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%alpha0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%alpha1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%alpha2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%eta_e)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%C_nalpha)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%C_lalpha)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%T_f0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%T_V0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%T_p)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%T_VL)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%b1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%b2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%b5)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%A1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%A2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%A5)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%S1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%S2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%S3)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%S4)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Cn1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Cn2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%St_sh)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Cd0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Cm0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%k0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%k1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%k2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%k3)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%k1_hat)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%x_cp_bar)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UACutout)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UACutout_delta)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%filtCutOff)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%alphaUpper)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%alphaLower)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -777,29 +696,21 @@ subroutine AFI_PackTable_Type(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%Alpha), ubound(InData%Alpha))
       call RegPack(Buf, InData%Alpha)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Coefs))
    if (allocated(InData%Coefs)) then
       call RegPackBounds(Buf, 2, lbound(InData%Coefs), ubound(InData%Coefs))
       call RegPack(Buf, InData%Coefs)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%SplineCoefs))
    if (allocated(InData%SplineCoefs)) then
       call RegPackBounds(Buf, 3, lbound(InData%SplineCoefs), ubound(InData%SplineCoefs))
       call RegPack(Buf, InData%SplineCoefs)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UserProp)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Re)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumAlf)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ConstData)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%InclUAdata)
-   if (RegCheckErr(Buf, RoutineName)) return
    call AFI_PackUA_BL_Type(Buf, InData%UA_BL) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -901,19 +812,12 @@ subroutine AFI_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'AFI_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%FileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%AFTabMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%InCol_Alfa)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%InCol_Cl)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%InCol_Cd)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%InCol_Cm)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%InCol_Cpmin)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UA_f_cn)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1112,45 +1016,31 @@ subroutine AFI_PackParam(Buf, Indata)
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%ColCd)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ColCl)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ColCm)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ColCpmin)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ColUAf)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%AFTabMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%secondVals))
    if (allocated(InData%secondVals)) then
       call RegPackBounds(Buf, 1, lbound(InData%secondVals), ubound(InData%secondVals))
       call RegPack(Buf, InData%secondVals)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%InterpOrd)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RelThickness)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NonDimArea)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumCoords)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%X_Coord))
    if (allocated(InData%X_Coord)) then
       call RegPackBounds(Buf, 1, lbound(InData%X_Coord), ubound(InData%X_Coord))
       call RegPack(Buf, InData%X_Coord)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Y_Coord))
    if (allocated(InData%Y_Coord)) then
       call RegPackBounds(Buf, 1, lbound(InData%Y_Coord), ubound(InData%Y_Coord))
       call RegPack(Buf, InData%Y_Coord)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumTabs)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Table))
    if (allocated(InData%Table)) then
       call RegPackBounds(Buf, 1, lbound(InData%Table), ubound(InData%Table))
@@ -1160,9 +1050,7 @@ subroutine AFI_PackParam(Buf, Indata)
          call AFI_PackTable_Type(Buf, InData%Table(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%BL_file)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%FileName)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1290,9 +1178,7 @@ subroutine AFI_PackInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'AFI_PackInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%AoA)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UserProp)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Re)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1345,21 +1231,13 @@ subroutine AFI_PackOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'AFI_PackOutput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%Cl)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Cd)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Cm)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Cpmin)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Cd0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Cm0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%f_st)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%FullySeparate)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%FullyAttached)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

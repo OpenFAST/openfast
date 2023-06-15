@@ -117,33 +117,21 @@ subroutine Current_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Current_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%CurrSSV0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%CurrSSDirChr)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%CurrSSDir)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%CurrNSRef)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%CurrNSV0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%CurrNSDir)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%CurrDIV)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%CurrDIDir)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%CurrMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveKinGridzi))
    if (allocated(InData%WaveKinGridzi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridzi), ubound(InData%WaveKinGridzi))
       call RegPack(Buf, InData%WaveKinGridzi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NGridPts)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DirRoot)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -264,15 +252,12 @@ subroutine Current_PackInitOutput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%CurrVxi), ubound(InData%CurrVxi))
       call RegPack(Buf, InData%CurrVxi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%CurrVyi))
    if (allocated(InData%CurrVyi)) then
       call RegPackBounds(Buf, 1, lbound(InData%CurrVyi), ubound(InData%CurrVyi))
       call RegPack(Buf, InData%CurrVyi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PCurrVxiPz0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PCurrVyiPz0)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

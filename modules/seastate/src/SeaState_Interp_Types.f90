@@ -95,11 +95,8 @@ subroutine SeaSt_Interp_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SeaSt_Interp_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%n)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%delta)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%pZero)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Z_Depth)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -194,13 +191,9 @@ subroutine SeaSt_Interp_PackMisc(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SeaSt_Interp_PackMisc'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%N3D)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%N4D)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Indx_Lo)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Indx_Hi)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%FirstWarn_Clamp)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -252,11 +245,8 @@ subroutine SeaSt_Interp_PackParam(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SeaSt_Interp_PackParam'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%n)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%delta)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%pZero)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Z_Depth)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

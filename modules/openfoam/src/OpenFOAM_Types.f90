@@ -234,6 +234,7 @@ subroutine OpFM_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
       DstInitInputData%StructBldRNodes = SrcInitInputData%StructBldRNodes
    else if (associated(DstInitInputData%StructBldRNodes)) then
       deallocate(DstInitInputData%StructBldRNodes)
+      nullify(DstInitInputData%StructBldRNodes)
    end if
    if (associated(SrcInitInputData%StructTwrHNodes)) then
       LB(1:1) = lbound(SrcInitInputData%StructTwrHNodes)
@@ -251,6 +252,7 @@ subroutine OpFM_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
       DstInitInputData%StructTwrHNodes = SrcInitInputData%StructTwrHNodes
    else if (associated(DstInitInputData%StructTwrHNodes)) then
       deallocate(DstInitInputData%StructTwrHNodes)
+      nullify(DstInitInputData%StructTwrHNodes)
    end if
    DstInitInputData%BladeLength = SrcInitInputData%BladeLength
    DstInitInputData%C_obj%BladeLength = SrcInitInputData%C_obj%BladeLength
@@ -294,9 +296,7 @@ subroutine OpFM_PackInitInput(Buf, Indata)
       return
    end if
    call RegPack(Buf, InData%NumActForcePtsBlade)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumActForcePtsTower)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%StructBldRNodes))
    if (associated(InData%StructBldRNodes)) then
       call RegPackBounds(Buf, 1, lbound(InData%StructBldRNodes), ubound(InData%StructBldRNodes))
@@ -305,7 +305,6 @@ subroutine OpFM_PackInitInput(Buf, Indata)
          call RegPack(Buf, InData%StructBldRNodes)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%StructTwrHNodes))
    if (associated(InData%StructTwrHNodes)) then
       call RegPackBounds(Buf, 1, lbound(InData%StructTwrHNodes), ubound(InData%StructTwrHNodes))
@@ -314,13 +313,9 @@ subroutine OpFM_PackInitInput(Buf, Indata)
          call RegPack(Buf, InData%StructTwrHNodes)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%BladeLength)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TowerHeight)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TowerBaseHeight)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NodeClusterType)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -571,13 +566,11 @@ subroutine OpFM_PackInitOutput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -811,7 +804,6 @@ subroutine OpFM_PackMisc(Buf, Indata)
          call MeshPack(Buf, InData%ActForceMotionsPoints(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ActForceLoadsPoints))
    if (allocated(InData%ActForceLoadsPoints)) then
       call RegPackBounds(Buf, 1, lbound(InData%ActForceLoadsPoints), ubound(InData%ActForceLoadsPoints))
@@ -821,7 +813,6 @@ subroutine OpFM_PackMisc(Buf, Indata)
          call MeshPack(Buf, InData%ActForceLoadsPoints(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Line2_to_Point_Loads))
    if (allocated(InData%Line2_to_Point_Loads)) then
       call RegPackBounds(Buf, 1, lbound(InData%Line2_to_Point_Loads), ubound(InData%Line2_to_Point_Loads))
@@ -831,7 +822,6 @@ subroutine OpFM_PackMisc(Buf, Indata)
          call NWTC_Library_PackMeshMapType(Buf, InData%Line2_to_Point_Loads(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Line2_to_Point_Motions))
    if (allocated(InData%Line2_to_Point_Motions)) then
       call RegPackBounds(Buf, 1, lbound(InData%Line2_to_Point_Motions), ubound(InData%Line2_to_Point_Motions))
@@ -990,6 +980,7 @@ subroutine OpFM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%forceBldRnodes = SrcParamData%forceBldRnodes
    else if (associated(DstParamData%forceBldRnodes)) then
       deallocate(DstParamData%forceBldRnodes)
+      nullify(DstParamData%forceBldRnodes)
    end if
    if (associated(SrcParamData%forceTwrHnodes)) then
       LB(1:1) = lbound(SrcParamData%forceTwrHnodes)
@@ -1007,6 +998,7 @@ subroutine OpFM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       DstParamData%forceTwrHnodes = SrcParamData%forceTwrHnodes
    else if (associated(DstParamData%forceTwrHnodes)) then
       deallocate(DstParamData%forceTwrHnodes)
+      nullify(DstParamData%forceTwrHnodes)
    end if
    DstParamData%BladeLength = SrcParamData%BladeLength
    DstParamData%C_obj%BladeLength = SrcParamData%C_obj%BladeLength
@@ -1050,19 +1042,12 @@ subroutine OpFM_PackParam(Buf, Indata)
       return
    end if
    call RegPack(Buf, InData%AirDens)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumBl)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NMappings)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NnodesVel)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NnodesForce)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NnodesForceBlade)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NnodesForceTower)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%forceBldRnodes))
    if (associated(InData%forceBldRnodes)) then
       call RegPackBounds(Buf, 1, lbound(InData%forceBldRnodes), ubound(InData%forceBldRnodes))
@@ -1071,7 +1056,6 @@ subroutine OpFM_PackParam(Buf, Indata)
          call RegPack(Buf, InData%forceBldRnodes)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%forceTwrHnodes))
    if (associated(InData%forceTwrHnodes)) then
       call RegPackBounds(Buf, 1, lbound(InData%forceTwrHnodes), ubound(InData%forceTwrHnodes))
@@ -1080,13 +1064,9 @@ subroutine OpFM_PackParam(Buf, Indata)
          call RegPack(Buf, InData%forceTwrHnodes)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%BladeLength)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TowerHeight)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TowerBaseHeight)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NodeClusterType)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1313,6 +1293,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%pxVel = SrcInputData%pxVel
    else if (associated(DstInputData%pxVel)) then
       deallocate(DstInputData%pxVel)
+      nullify(DstInputData%pxVel)
    end if
    if (associated(SrcInputData%pyVel)) then
       LB(1:1) = lbound(SrcInputData%pyVel)
@@ -1330,6 +1311,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%pyVel = SrcInputData%pyVel
    else if (associated(DstInputData%pyVel)) then
       deallocate(DstInputData%pyVel)
+      nullify(DstInputData%pyVel)
    end if
    if (associated(SrcInputData%pzVel)) then
       LB(1:1) = lbound(SrcInputData%pzVel)
@@ -1347,6 +1329,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%pzVel = SrcInputData%pzVel
    else if (associated(DstInputData%pzVel)) then
       deallocate(DstInputData%pzVel)
+      nullify(DstInputData%pzVel)
    end if
    if (associated(SrcInputData%pxForce)) then
       LB(1:1) = lbound(SrcInputData%pxForce)
@@ -1364,6 +1347,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%pxForce = SrcInputData%pxForce
    else if (associated(DstInputData%pxForce)) then
       deallocate(DstInputData%pxForce)
+      nullify(DstInputData%pxForce)
    end if
    if (associated(SrcInputData%pyForce)) then
       LB(1:1) = lbound(SrcInputData%pyForce)
@@ -1381,6 +1365,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%pyForce = SrcInputData%pyForce
    else if (associated(DstInputData%pyForce)) then
       deallocate(DstInputData%pyForce)
+      nullify(DstInputData%pyForce)
    end if
    if (associated(SrcInputData%pzForce)) then
       LB(1:1) = lbound(SrcInputData%pzForce)
@@ -1398,6 +1383,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%pzForce = SrcInputData%pzForce
    else if (associated(DstInputData%pzForce)) then
       deallocate(DstInputData%pzForce)
+      nullify(DstInputData%pzForce)
    end if
    if (associated(SrcInputData%xdotForce)) then
       LB(1:1) = lbound(SrcInputData%xdotForce)
@@ -1415,6 +1401,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%xdotForce = SrcInputData%xdotForce
    else if (associated(DstInputData%xdotForce)) then
       deallocate(DstInputData%xdotForce)
+      nullify(DstInputData%xdotForce)
    end if
    if (associated(SrcInputData%ydotForce)) then
       LB(1:1) = lbound(SrcInputData%ydotForce)
@@ -1432,6 +1419,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%ydotForce = SrcInputData%ydotForce
    else if (associated(DstInputData%ydotForce)) then
       deallocate(DstInputData%ydotForce)
+      nullify(DstInputData%ydotForce)
    end if
    if (associated(SrcInputData%zdotForce)) then
       LB(1:1) = lbound(SrcInputData%zdotForce)
@@ -1449,6 +1437,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%zdotForce = SrcInputData%zdotForce
    else if (associated(DstInputData%zdotForce)) then
       deallocate(DstInputData%zdotForce)
+      nullify(DstInputData%zdotForce)
    end if
    if (associated(SrcInputData%pOrientation)) then
       LB(1:1) = lbound(SrcInputData%pOrientation)
@@ -1466,6 +1455,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%pOrientation = SrcInputData%pOrientation
    else if (associated(DstInputData%pOrientation)) then
       deallocate(DstInputData%pOrientation)
+      nullify(DstInputData%pOrientation)
    end if
    if (associated(SrcInputData%fx)) then
       LB(1:1) = lbound(SrcInputData%fx)
@@ -1483,6 +1473,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%fx = SrcInputData%fx
    else if (associated(DstInputData%fx)) then
       deallocate(DstInputData%fx)
+      nullify(DstInputData%fx)
    end if
    if (associated(SrcInputData%fy)) then
       LB(1:1) = lbound(SrcInputData%fy)
@@ -1500,6 +1491,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%fy = SrcInputData%fy
    else if (associated(DstInputData%fy)) then
       deallocate(DstInputData%fy)
+      nullify(DstInputData%fy)
    end if
    if (associated(SrcInputData%fz)) then
       LB(1:1) = lbound(SrcInputData%fz)
@@ -1517,6 +1509,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%fz = SrcInputData%fz
    else if (associated(DstInputData%fz)) then
       deallocate(DstInputData%fz)
+      nullify(DstInputData%fz)
    end if
    if (associated(SrcInputData%momentx)) then
       LB(1:1) = lbound(SrcInputData%momentx)
@@ -1534,6 +1527,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%momentx = SrcInputData%momentx
    else if (associated(DstInputData%momentx)) then
       deallocate(DstInputData%momentx)
+      nullify(DstInputData%momentx)
    end if
    if (associated(SrcInputData%momenty)) then
       LB(1:1) = lbound(SrcInputData%momenty)
@@ -1551,6 +1545,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%momenty = SrcInputData%momenty
    else if (associated(DstInputData%momenty)) then
       deallocate(DstInputData%momenty)
+      nullify(DstInputData%momenty)
    end if
    if (associated(SrcInputData%momentz)) then
       LB(1:1) = lbound(SrcInputData%momentz)
@@ -1568,6 +1563,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%momentz = SrcInputData%momentz
    else if (associated(DstInputData%momentz)) then
       deallocate(DstInputData%momentz)
+      nullify(DstInputData%momentz)
    end if
    if (associated(SrcInputData%forceNodesChord)) then
       LB(1:1) = lbound(SrcInputData%forceNodesChord)
@@ -1585,6 +1581,7 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%forceNodesChord = SrcInputData%forceNodesChord
    else if (associated(DstInputData%forceNodesChord)) then
       deallocate(DstInputData%forceNodesChord)
+      nullify(DstInputData%forceNodesChord)
    end if
 end subroutine
 
@@ -1717,7 +1714,6 @@ subroutine OpFM_PackInput(Buf, Indata)
          call RegPack(Buf, InData%pxVel)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%pyVel))
    if (associated(InData%pyVel)) then
       call RegPackBounds(Buf, 1, lbound(InData%pyVel), ubound(InData%pyVel))
@@ -1726,7 +1722,6 @@ subroutine OpFM_PackInput(Buf, Indata)
          call RegPack(Buf, InData%pyVel)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%pzVel))
    if (associated(InData%pzVel)) then
       call RegPackBounds(Buf, 1, lbound(InData%pzVel), ubound(InData%pzVel))
@@ -1735,7 +1730,6 @@ subroutine OpFM_PackInput(Buf, Indata)
          call RegPack(Buf, InData%pzVel)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%pxForce))
    if (associated(InData%pxForce)) then
       call RegPackBounds(Buf, 1, lbound(InData%pxForce), ubound(InData%pxForce))
@@ -1744,7 +1738,6 @@ subroutine OpFM_PackInput(Buf, Indata)
          call RegPack(Buf, InData%pxForce)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%pyForce))
    if (associated(InData%pyForce)) then
       call RegPackBounds(Buf, 1, lbound(InData%pyForce), ubound(InData%pyForce))
@@ -1753,7 +1746,6 @@ subroutine OpFM_PackInput(Buf, Indata)
          call RegPack(Buf, InData%pyForce)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%pzForce))
    if (associated(InData%pzForce)) then
       call RegPackBounds(Buf, 1, lbound(InData%pzForce), ubound(InData%pzForce))
@@ -1762,7 +1754,6 @@ subroutine OpFM_PackInput(Buf, Indata)
          call RegPack(Buf, InData%pzForce)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%xdotForce))
    if (associated(InData%xdotForce)) then
       call RegPackBounds(Buf, 1, lbound(InData%xdotForce), ubound(InData%xdotForce))
@@ -1771,7 +1762,6 @@ subroutine OpFM_PackInput(Buf, Indata)
          call RegPack(Buf, InData%xdotForce)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%ydotForce))
    if (associated(InData%ydotForce)) then
       call RegPackBounds(Buf, 1, lbound(InData%ydotForce), ubound(InData%ydotForce))
@@ -1780,7 +1770,6 @@ subroutine OpFM_PackInput(Buf, Indata)
          call RegPack(Buf, InData%ydotForce)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%zdotForce))
    if (associated(InData%zdotForce)) then
       call RegPackBounds(Buf, 1, lbound(InData%zdotForce), ubound(InData%zdotForce))
@@ -1789,7 +1778,6 @@ subroutine OpFM_PackInput(Buf, Indata)
          call RegPack(Buf, InData%zdotForce)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%pOrientation))
    if (associated(InData%pOrientation)) then
       call RegPackBounds(Buf, 1, lbound(InData%pOrientation), ubound(InData%pOrientation))
@@ -1798,7 +1786,6 @@ subroutine OpFM_PackInput(Buf, Indata)
          call RegPack(Buf, InData%pOrientation)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%fx))
    if (associated(InData%fx)) then
       call RegPackBounds(Buf, 1, lbound(InData%fx), ubound(InData%fx))
@@ -1807,7 +1794,6 @@ subroutine OpFM_PackInput(Buf, Indata)
          call RegPack(Buf, InData%fx)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%fy))
    if (associated(InData%fy)) then
       call RegPackBounds(Buf, 1, lbound(InData%fy), ubound(InData%fy))
@@ -1816,7 +1802,6 @@ subroutine OpFM_PackInput(Buf, Indata)
          call RegPack(Buf, InData%fy)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%fz))
    if (associated(InData%fz)) then
       call RegPackBounds(Buf, 1, lbound(InData%fz), ubound(InData%fz))
@@ -1825,7 +1810,6 @@ subroutine OpFM_PackInput(Buf, Indata)
          call RegPack(Buf, InData%fz)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%momentx))
    if (associated(InData%momentx)) then
       call RegPackBounds(Buf, 1, lbound(InData%momentx), ubound(InData%momentx))
@@ -1834,7 +1818,6 @@ subroutine OpFM_PackInput(Buf, Indata)
          call RegPack(Buf, InData%momentx)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%momenty))
    if (associated(InData%momenty)) then
       call RegPackBounds(Buf, 1, lbound(InData%momenty), ubound(InData%momenty))
@@ -1843,7 +1826,6 @@ subroutine OpFM_PackInput(Buf, Indata)
          call RegPack(Buf, InData%momenty)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%momentz))
    if (associated(InData%momentz)) then
       call RegPackBounds(Buf, 1, lbound(InData%momentz), ubound(InData%momentz))
@@ -1852,7 +1834,6 @@ subroutine OpFM_PackInput(Buf, Indata)
          call RegPack(Buf, InData%momentz)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%forceNodesChord))
    if (associated(InData%forceNodesChord)) then
       call RegPackBounds(Buf, 1, lbound(InData%forceNodesChord), ubound(InData%forceNodesChord))
@@ -2736,6 +2717,7 @@ subroutine OpFM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
       DstOutputData%u = SrcOutputData%u
    else if (associated(DstOutputData%u)) then
       deallocate(DstOutputData%u)
+      nullify(DstOutputData%u)
    end if
    if (associated(SrcOutputData%v)) then
       LB(1:1) = lbound(SrcOutputData%v)
@@ -2753,6 +2735,7 @@ subroutine OpFM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
       DstOutputData%v = SrcOutputData%v
    else if (associated(DstOutputData%v)) then
       deallocate(DstOutputData%v)
+      nullify(DstOutputData%v)
    end if
    if (associated(SrcOutputData%w)) then
       LB(1:1) = lbound(SrcOutputData%w)
@@ -2770,6 +2753,7 @@ subroutine OpFM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
       DstOutputData%w = SrcOutputData%w
    else if (associated(DstOutputData%w)) then
       deallocate(DstOutputData%w)
+      nullify(DstOutputData%w)
    end if
    if (allocated(SrcOutputData%WriteOutput)) then
       LB(1:1) = lbound(SrcOutputData%WriteOutput)
@@ -2835,7 +2819,6 @@ subroutine OpFM_PackOutput(Buf, Indata)
          call RegPack(Buf, InData%u)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%v))
    if (associated(InData%v)) then
       call RegPackBounds(Buf, 1, lbound(InData%v), ubound(InData%v))
@@ -2844,7 +2827,6 @@ subroutine OpFM_PackOutput(Buf, Indata)
          call RegPack(Buf, InData%v)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%w))
    if (associated(InData%w)) then
       call RegPackBounds(Buf, 1, lbound(InData%w), ubound(InData%w))
@@ -2853,7 +2835,6 @@ subroutine OpFM_PackOutput(Buf, Indata)
          call RegPack(Buf, InData%w)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))

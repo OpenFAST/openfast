@@ -394,123 +394,78 @@ subroutine InflowWind_PackInputFile(Buf, Indata)
    character(*), parameter         :: RoutineName = 'InflowWind_PackInputFile'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%EchoFlag)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WindType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PropagationDir)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VFlowAngle)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VelInterpCubic)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NWindVel)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WindVxiList))
    if (allocated(InData%WindVxiList)) then
       call RegPackBounds(Buf, 1, lbound(InData%WindVxiList), ubound(InData%WindVxiList))
       call RegPack(Buf, InData%WindVxiList)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WindVyiList))
    if (allocated(InData%WindVyiList)) then
       call RegPackBounds(Buf, 1, lbound(InData%WindVyiList), ubound(InData%WindVyiList))
       call RegPack(Buf, InData%WindVyiList)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WindVziList))
    if (allocated(InData%WindVziList)) then
       call RegPackBounds(Buf, 1, lbound(InData%WindVziList), ubound(InData%WindVziList))
       call RegPack(Buf, InData%WindVziList)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Steady_HWindSpeed)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Steady_RefHt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Steady_PLexp)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Uniform_FileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Uniform_RefHt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Uniform_RefLength)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TSFF_FileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%BladedFF_FileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%BladedFF_TowerFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%CTTS_CoherentTurb)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%CTTS_FileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%CTTS_Path)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HAWC_FileName_u)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HAWC_FileName_v)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HAWC_FileName_w)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HAWC_nx)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HAWC_ny)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HAWC_nz)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HAWC_dx)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HAWC_dy)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HAWC_dz)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SumPrint)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%OutList))
    if (allocated(InData%OutList)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutList), ubound(InData%OutList))
       call RegPack(Buf, InData%OutList)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SensorType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumBeam)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumPulseGate)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RotorApexOffsetPos)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%FocalDistanceX))
    if (allocated(InData%FocalDistanceX)) then
       call RegPackBounds(Buf, 1, lbound(InData%FocalDistanceX), ubound(InData%FocalDistanceX))
       call RegPack(Buf, InData%FocalDistanceX)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%FocalDistanceY))
    if (allocated(InData%FocalDistanceY)) then
       call RegPackBounds(Buf, 1, lbound(InData%FocalDistanceY), ubound(InData%FocalDistanceY))
       call RegPack(Buf, InData%FocalDistanceY)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%FocalDistanceZ))
    if (allocated(InData%FocalDistanceZ)) then
       call RegPackBounds(Buf, 1, lbound(InData%FocalDistanceZ), ubound(InData%FocalDistanceZ))
       call RegPack(Buf, InData%FocalDistanceZ)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PulseSpacing)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MeasurementInterval)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%URefLid)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%LidRadialVel)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ConsiderHubMotion)
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_IO_PackGrid3D_InitInputType(Buf, InData%FF) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -758,43 +713,24 @@ subroutine InflowWind_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'InflowWind_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%InputFileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Linearize)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Use4Dext)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumWindPoints)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TurbineID)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%FixedWindFileRootName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UseInputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RootName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackFileInfoType(Buf, InData%PassedFileData) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WindType2UseInputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackFileInfoType(Buf, InData%WindType2Data) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutputAccel)
-   if (RegCheckErr(Buf, RoutineName)) return
    call Lidar_PackInitInput(Buf, InData%lidar) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_IO_PackGrid4D_InitInputType(Buf, InData%FDext) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RadAvg)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MHK)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MSL2SWL)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%BoxExceedAllowIdx)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%BoxExceedAllowF)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1005,47 +941,38 @@ subroutine InflowWind_PackInitOutput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_IO_PackWindFileDat(Buf, InData%WindFileInfo) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%LinNames_y))
    if (allocated(InData%LinNames_y)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames_y), ubound(InData%LinNames_y))
       call RegPack(Buf, InData%LinNames_y)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%LinNames_u))
    if (allocated(InData%LinNames_u)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames_u), ubound(InData%LinNames_u))
       call RegPack(Buf, InData%LinNames_u)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%RotFrame_y))
    if (allocated(InData%RotFrame_y)) then
       call RegPackBounds(Buf, 1, lbound(InData%RotFrame_y), ubound(InData%RotFrame_y))
       call RegPack(Buf, InData%RotFrame_y)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%RotFrame_u))
    if (allocated(InData%RotFrame_u)) then
       call RegPackBounds(Buf, 1, lbound(InData%RotFrame_u), ubound(InData%RotFrame_u))
       call RegPack(Buf, InData%RotFrame_u)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%IsLoad_u))
    if (allocated(InData%IsLoad_u)) then
       call RegPackBounds(Buf, 1, lbound(InData%IsLoad_u), ubound(InData%IsLoad_u))
       call RegPack(Buf, InData%IsLoad_u)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%FlowField))
    if (associated(InData%FlowField)) then
       call RegPackPointer(Buf, c_loc(InData%FlowField), PtrInIndex)
@@ -1244,6 +1171,7 @@ subroutine InflowWind_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, E
       if (ErrStat >= AbortErrLev) return
    else if (associated(DstParamData%FlowField)) then
       deallocate(DstParamData%FlowField)
+      nullify(DstParamData%FlowField)
    end if
    if (allocated(SrcParamData%PositionAvg)) then
       LB(1:2) = lbound(SrcParamData%PositionAvg)
@@ -1348,21 +1276,17 @@ subroutine InflowWind_PackParam(Buf, Indata)
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%RootFileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WindViXYZprime))
    if (allocated(InData%WindViXYZprime)) then
       call RegPackBounds(Buf, 2, lbound(InData%WindViXYZprime), ubound(InData%WindViXYZprime))
       call RegPack(Buf, InData%WindViXYZprime)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WindViXYZ))
    if (allocated(InData%WindViXYZ)) then
       call RegPackBounds(Buf, 2, lbound(InData%WindViXYZ), ubound(InData%WindViXYZ))
       call RegPack(Buf, InData%WindViXYZ)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%FlowField))
    if (associated(InData%FlowField)) then
       call RegPackPointer(Buf, c_loc(InData%FlowField), PtrInIndex)
@@ -1370,17 +1294,13 @@ subroutine InflowWind_PackParam(Buf, Indata)
          call IfW_FlowField_PackFlowFieldType(Buf, InData%FlowField) 
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PositionAvg))
    if (allocated(InData%PositionAvg)) then
       call RegPackBounds(Buf, 2, lbound(InData%PositionAvg), ubound(InData%PositionAvg))
       call RegPack(Buf, InData%PositionAvg)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NWindVel)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutParam), ubound(InData%OutParam))
@@ -1390,15 +1310,12 @@ subroutine InflowWind_PackParam(Buf, Indata)
          call NWTC_Library_PackOutParmType(Buf, InData%OutParam(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%OutParamLinIndx))
    if (allocated(InData%OutParamLinIndx)) then
       call RegPackBounds(Buf, 2, lbound(InData%OutParamLinIndx), ubound(InData%OutParamLinIndx))
       call RegPack(Buf, InData%OutParamLinIndx)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call Lidar_PackParam(Buf, InData%lidar) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutputAccel)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1575,11 +1492,8 @@ subroutine InflowWind_PackInput(Buf, Indata)
       call RegPackBounds(Buf, 2, lbound(InData%PositionXYZ), ubound(InData%PositionXYZ))
       call RegPack(Buf, InData%PositionXYZ)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call Lidar_PackInput(Buf, InData%lidar) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HubPosition)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HubOrientation)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1704,23 +1618,18 @@ subroutine InflowWind_PackOutput(Buf, Indata)
       call RegPackBounds(Buf, 2, lbound(InData%VelocityUVW), ubound(InData%VelocityUVW))
       call RegPack(Buf, InData%VelocityUVW)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AccelUVW))
    if (allocated(InData%AccelUVW)) then
       call RegPackBounds(Buf, 2, lbound(InData%AccelUVW), ubound(InData%AccelUVW))
       call RegPack(Buf, InData%AccelUVW)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
       call RegPack(Buf, InData%WriteOutput)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DiskVel)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HubVel)
-   if (RegCheckErr(Buf, RoutineName)) return
    call Lidar_PackOutput(Buf, InData%lidar) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -2036,25 +1945,19 @@ subroutine InflowWind_PackMisc(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%AllOuts), ubound(InData%AllOuts))
       call RegPack(Buf, InData%AllOuts)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WindViUVW))
    if (allocated(InData%WindViUVW)) then
       call RegPackBounds(Buf, 2, lbound(InData%WindViUVW), ubound(InData%WindViUVW))
       call RegPack(Buf, InData%WindViUVW)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WindAiUVW))
    if (allocated(InData%WindAiUVW)) then
       call RegPackBounds(Buf, 2, lbound(InData%WindAiUVW), ubound(InData%WindAiUVW))
       call RegPack(Buf, InData%WindAiUVW)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackInput(Buf, InData%u_Avg) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackOutput(Buf, InData%y_Avg) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackInput(Buf, InData%u_Hub) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackOutput(Buf, InData%y_Hub) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

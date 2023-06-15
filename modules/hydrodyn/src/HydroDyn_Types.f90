@@ -549,133 +549,99 @@ subroutine HydroDyn_PackInputFile(Buf, Indata)
    character(*), parameter         :: RoutineName = 'HydroDyn_PackInputFile'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%EchoFlag)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AddF0))
    if (allocated(InData%AddF0)) then
       call RegPackBounds(Buf, 2, lbound(InData%AddF0), ubound(InData%AddF0))
       call RegPack(Buf, InData%AddF0)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AddCLin))
    if (allocated(InData%AddCLin)) then
       call RegPackBounds(Buf, 3, lbound(InData%AddCLin), ubound(InData%AddCLin))
       call RegPack(Buf, InData%AddCLin)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AddBLin))
    if (allocated(InData%AddBLin)) then
       call RegPackBounds(Buf, 3, lbound(InData%AddBLin), ubound(InData%AddBLin))
       call RegPack(Buf, InData%AddBLin)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AddBQuad))
    if (allocated(InData%AddBQuad)) then
       call RegPackBounds(Buf, 3, lbound(InData%AddBQuad), ubound(InData%AddBQuad))
       call RegPack(Buf, InData%AddBQuad)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call SeaSt_PackInitInput(Buf, InData%SeaState) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PotFile))
    if (allocated(InData%PotFile)) then
       call RegPackBounds(Buf, 1, lbound(InData%PotFile), ubound(InData%PotFile))
       call RegPack(Buf, InData%PotFile)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nWAMITObj)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%vecMultiplier)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NBody)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NBodyMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PtfmVol0))
    if (allocated(InData%PtfmVol0)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmVol0), ubound(InData%PtfmVol0))
       call RegPack(Buf, InData%PtfmVol0)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HasWAMIT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WAMITULEN))
    if (allocated(InData%WAMITULEN)) then
       call RegPackBounds(Buf, 1, lbound(InData%WAMITULEN), ubound(InData%WAMITULEN))
       call RegPack(Buf, InData%WAMITULEN)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PtfmRefxt))
    if (allocated(InData%PtfmRefxt)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmRefxt), ubound(InData%PtfmRefxt))
       call RegPack(Buf, InData%PtfmRefxt)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PtfmRefyt))
    if (allocated(InData%PtfmRefyt)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmRefyt), ubound(InData%PtfmRefyt))
       call RegPack(Buf, InData%PtfmRefyt)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PtfmRefzt))
    if (allocated(InData%PtfmRefzt)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmRefzt), ubound(InData%PtfmRefzt))
       call RegPack(Buf, InData%PtfmRefzt)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PtfmRefztRot))
    if (allocated(InData%PtfmRefztRot)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmRefztRot), ubound(InData%PtfmRefztRot))
       call RegPack(Buf, InData%PtfmRefztRot)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PtfmCOBxt))
    if (allocated(InData%PtfmCOBxt)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmCOBxt), ubound(InData%PtfmCOBxt))
       call RegPack(Buf, InData%PtfmCOBxt)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PtfmCOByt))
    if (allocated(InData%PtfmCOByt)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmCOByt), ubound(InData%PtfmCOByt))
       call RegPack(Buf, InData%PtfmCOByt)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call WAMIT_PackInitInput(Buf, InData%WAMIT) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call WAMIT2_PackInitInput(Buf, InData%WAMIT2) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call Morison_PackInitInput(Buf, InData%Morison) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Echo)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PotMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NUserOutputs)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%UserOutputs))
    if (allocated(InData%UserOutputs)) then
       call RegPackBounds(Buf, 1, lbound(InData%UserOutputs), ubound(InData%UserOutputs))
       call RegPack(Buf, InData%UserOutputs)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutSwtch)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutAll)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%OutList))
    if (allocated(InData%OutList)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutList), ubound(InData%OutList))
       call RegPack(Buf, InData%OutList)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HDSum)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UnSum)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutSFmt)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1037,79 +1003,46 @@ subroutine HydroDyn_PackInitInput(Buf, Indata)
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%InputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UseInputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackFileInfoType(Buf, InData%PassedFileData) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutRootName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Linearize)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Gravity)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WtrDens)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MSL2SWL)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TMax)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PtfmLocationX)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PtfmLocationY)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NStepWave2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RhoXg)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveStMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveDirMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvLowCOff)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvHiCOff)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvLowCOffD)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvHiCOffD)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvLowCOffS)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvHiCOffS)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%InvalidWithSSExctn)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveElev0))
    if (allocated(InData%WaveElev0)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveElev0), ubound(InData%WaveElev0))
       call RegPack(Buf, InData%WaveElev0)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveElevC))
    if (allocated(InData%WaveElevC)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElevC), ubound(InData%WaveElevC))
       call RegPack(Buf, InData%WaveElevC)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveDirMin)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveDirMax)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveDir)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveMultiDir)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveDOmega)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MCFD)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
       call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
@@ -1397,45 +1330,37 @@ subroutine HydroDyn_PackInitOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'HydroDyn_PackInitOutput'
    if (Buf%ErrStat >= AbortErrLev) return
    call Morison_PackInitOutput(Buf, InData%Morison) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%LinNames_y))
    if (allocated(InData%LinNames_y)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames_y), ubound(InData%LinNames_y))
       call RegPack(Buf, InData%LinNames_y)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%LinNames_x))
    if (allocated(InData%LinNames_x)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames_x), ubound(InData%LinNames_x))
       call RegPack(Buf, InData%LinNames_x)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%LinNames_u))
    if (allocated(InData%LinNames_u)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames_u), ubound(InData%LinNames_u))
       call RegPack(Buf, InData%LinNames_u)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%DerivOrder_x))
    if (allocated(InData%DerivOrder_x)) then
       call RegPackBounds(Buf, 1, lbound(InData%DerivOrder_x), ubound(InData%DerivOrder_x))
       call RegPack(Buf, InData%DerivOrder_x)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%IsLoad_u))
    if (allocated(InData%IsLoad_u)) then
       call RegPackBounds(Buf, 1, lbound(InData%IsLoad_u), ubound(InData%IsLoad_u))
@@ -1593,9 +1518,7 @@ subroutine HydroDyn_PackHD_ModuleMapType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'HydroDyn_PackHD_ModuleMapType'
    if (Buf%ErrStat >= AbortErrLev) return
    call NWTC_Library_PackMeshMapType(Buf, InData%uW_P_2_PRP_P) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackMeshMapType(Buf, InData%W_P_2_PRP_P) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackMeshMapType(Buf, InData%M_P_2_PRP_P) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1684,7 +1607,6 @@ subroutine HydroDyn_PackContState(Buf, Indata)
          call WAMIT_PackContState(Buf, InData%WAMIT(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call Morison_PackContState(Buf, InData%Morison) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1790,7 +1712,6 @@ subroutine HydroDyn_PackDiscState(Buf, Indata)
          call WAMIT_PackDiscState(Buf, InData%WAMIT(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call Morison_PackDiscState(Buf, InData%Morison) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1858,7 +1779,6 @@ subroutine HydroDyn_PackConstrState(Buf, Indata)
    character(*), parameter         :: RoutineName = 'HydroDyn_PackConstrState'
    if (Buf%ErrStat >= AbortErrLev) return
    call WAMIT_PackConstrState(Buf, InData%WAMIT) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call Morison_PackConstrState(Buf, InData%Morison) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1946,7 +1866,6 @@ subroutine HydroDyn_PackOtherState(Buf, Indata)
          call WAMIT_PackOtherState(Buf, InData%WAMIT(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call Morison_PackOtherState(Buf, InData%Morison) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -2142,29 +2061,21 @@ subroutine HydroDyn_PackMisc(Buf, Indata)
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
    call MeshPack(Buf, InData%AllHdroOrigin) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call HydroDyn_PackHD_ModuleMapType(Buf, InData%HD_MeshMap) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Decimate)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%LastOutTime)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%LastIndWave)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%F_PtfmAdd))
    if (allocated(InData%F_PtfmAdd)) then
       call RegPackBounds(Buf, 1, lbound(InData%F_PtfmAdd), ubound(InData%F_PtfmAdd))
       call RegPack(Buf, InData%F_PtfmAdd)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%F_Hydro)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%F_Waves))
    if (allocated(InData%F_Waves)) then
       call RegPackBounds(Buf, 1, lbound(InData%F_Waves), ubound(InData%F_Waves))
       call RegPack(Buf, InData%F_Waves)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WAMIT))
    if (allocated(InData%WAMIT)) then
       call RegPackBounds(Buf, 1, lbound(InData%WAMIT), ubound(InData%WAMIT))
@@ -2174,7 +2085,6 @@ subroutine HydroDyn_PackMisc(Buf, Indata)
          call WAMIT_PackMisc(Buf, InData%WAMIT(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WAMIT2))
    if (allocated(InData%WAMIT2)) then
       call RegPackBounds(Buf, 1, lbound(InData%WAMIT2), ubound(InData%WAMIT2))
@@ -2184,9 +2094,7 @@ subroutine HydroDyn_PackMisc(Buf, Indata)
          call WAMIT2_PackMisc(Buf, InData%WAMIT2(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call Morison_PackMisc(Buf, InData%Morison) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%u_WAMIT))
    if (allocated(InData%u_WAMIT)) then
       call RegPackBounds(Buf, 1, lbound(InData%u_WAMIT), ubound(InData%u_WAMIT))
@@ -2558,9 +2466,7 @@ subroutine HydroDyn_PackParam(Buf, Indata)
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%nWAMITObj)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%vecMultiplier)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WAMIT))
    if (allocated(InData%WAMIT)) then
       call RegPackBounds(Buf, 1, lbound(InData%WAMIT), ubound(InData%WAMIT))
@@ -2570,7 +2476,6 @@ subroutine HydroDyn_PackParam(Buf, Indata)
          call WAMIT_PackParam(Buf, InData%WAMIT(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WAMIT2))
    if (allocated(InData%WAMIT2)) then
       call RegPackBounds(Buf, 1, lbound(InData%WAMIT2), ubound(InData%WAMIT2))
@@ -2580,23 +2485,14 @@ subroutine HydroDyn_PackParam(Buf, Indata)
          call WAMIT2_PackParam(Buf, InData%WAMIT2(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WAMIT2used)
-   if (RegCheckErr(Buf, RoutineName)) return
    call Morison_PackParam(Buf, InData%Morison) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PotMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NBody)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NBodyMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%totalStates)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%totalExctnStates)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%totalRdtnStates)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveTime))
    if (associated(InData%WaveTime)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveTime), ubound(InData%WaveTime))
@@ -2605,37 +2501,29 @@ subroutine HydroDyn_PackParam(Buf, Indata)
          call RegPack(Buf, InData%WaveTime)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AddF0))
    if (allocated(InData%AddF0)) then
       call RegPackBounds(Buf, 2, lbound(InData%AddF0), ubound(InData%AddF0))
       call RegPack(Buf, InData%AddF0)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AddCLin))
    if (allocated(InData%AddCLin)) then
       call RegPackBounds(Buf, 3, lbound(InData%AddCLin), ubound(InData%AddCLin))
       call RegPack(Buf, InData%AddCLin)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AddBLin))
    if (allocated(InData%AddBLin)) then
       call RegPackBounds(Buf, 3, lbound(InData%AddBLin), ubound(InData%AddBLin))
       call RegPack(Buf, InData%AddBLin)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AddBQuad))
    if (allocated(InData%AddBQuad)) then
       call RegPackBounds(Buf, 3, lbound(InData%AddBQuad), ubound(InData%AddBQuad))
       call RegPack(Buf, InData%AddBQuad)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutParam), ubound(InData%OutParam))
@@ -2645,43 +2533,30 @@ subroutine HydroDyn_PackParam(Buf, Indata)
          call NWTC_Library_PackOutParmType(Buf, InData%OutParam(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumTotalOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutSwtch)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutSFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Delim)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UnOutFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutDec)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Jac_u_indx))
    if (allocated(InData%Jac_u_indx)) then
       call RegPackBounds(Buf, 2, lbound(InData%Jac_u_indx), ubound(InData%Jac_u_indx))
       call RegPack(Buf, InData%Jac_u_indx)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%du))
    if (allocated(InData%du)) then
       call RegPackBounds(Buf, 1, lbound(InData%du), ubound(InData%du))
       call RegPack(Buf, InData%du)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%dx))
    if (allocated(InData%dx)) then
       call RegPackBounds(Buf, 1, lbound(InData%dx), ubound(InData%dx))
       call RegPack(Buf, InData%dx)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Jac_ny)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PointsToSeaState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -2950,9 +2825,7 @@ subroutine HydroDyn_PackInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'HydroDyn_PackInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call Morison_PackInput(Buf, InData%Morison) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MeshPack(Buf, InData%WAMITMesh) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MeshPack(Buf, InData%PRPMesh) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -3088,7 +2961,6 @@ subroutine HydroDyn_PackOutput(Buf, Indata)
          call WAMIT_PackOutput(Buf, InData%WAMIT(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WAMIT2))
    if (allocated(InData%WAMIT2)) then
       call RegPackBounds(Buf, 1, lbound(InData%WAMIT2), ubound(InData%WAMIT2))
@@ -3098,11 +2970,8 @@ subroutine HydroDyn_PackOutput(Buf, Indata)
          call WAMIT2_PackOutput(Buf, InData%WAMIT2(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call Morison_PackOutput(Buf, InData%Morison) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MeshPack(Buf, InData%WAMITMesh) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))

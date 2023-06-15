@@ -302,23 +302,14 @@ subroutine MAP_PackInitInput(Buf, Indata)
       return
    end if
    call RegPack(Buf, InData%gravity)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%sea_density)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%depth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%file_name)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%summary_file_name)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%library_input_str)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%node_input_str)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%line_input_str)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%option_input_str)
-   if (RegCheckErr(Buf, RoutineName)) return
    call MAP_Fortran_PackLin_InitInputType(Buf, InData%LinInitInp) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -491,25 +482,19 @@ subroutine MAP_PackInitOutput(Buf, Indata)
       return
    end if
    call RegPack(Buf, InData%progName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%version)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%compilingData)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%writeOutputHdr))
    if (allocated(InData%writeOutputHdr)) then
       call RegPackBounds(Buf, 1, lbound(InData%writeOutputHdr), ubound(InData%writeOutputHdr))
       call RegPack(Buf, InData%writeOutputHdr)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%writeOutputUnt))
    if (allocated(InData%writeOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%writeOutputUnt), ubound(InData%writeOutputUnt))
       call RegPack(Buf, InData%writeOutputUnt)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MAP_Fortran_PackLin_InitOutputType(Buf, InData%LinInitOut) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -792,6 +777,7 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%H = SrcOtherStateData%H
    else if (associated(DstOtherStateData%H)) then
       deallocate(DstOtherStateData%H)
+      nullify(DstOtherStateData%H)
    end if
    if (associated(SrcOtherStateData%V)) then
       LB(1:1) = lbound(SrcOtherStateData%V)
@@ -809,6 +795,7 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%V = SrcOtherStateData%V
    else if (associated(DstOtherStateData%V)) then
       deallocate(DstOtherStateData%V)
+      nullify(DstOtherStateData%V)
    end if
    if (associated(SrcOtherStateData%Ha)) then
       LB(1:1) = lbound(SrcOtherStateData%Ha)
@@ -826,6 +813,7 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%Ha = SrcOtherStateData%Ha
    else if (associated(DstOtherStateData%Ha)) then
       deallocate(DstOtherStateData%Ha)
+      nullify(DstOtherStateData%Ha)
    end if
    if (associated(SrcOtherStateData%Va)) then
       LB(1:1) = lbound(SrcOtherStateData%Va)
@@ -843,6 +831,7 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%Va = SrcOtherStateData%Va
    else if (associated(DstOtherStateData%Va)) then
       deallocate(DstOtherStateData%Va)
+      nullify(DstOtherStateData%Va)
    end if
    if (associated(SrcOtherStateData%x)) then
       LB(1:1) = lbound(SrcOtherStateData%x)
@@ -860,6 +849,7 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%x = SrcOtherStateData%x
    else if (associated(DstOtherStateData%x)) then
       deallocate(DstOtherStateData%x)
+      nullify(DstOtherStateData%x)
    end if
    if (associated(SrcOtherStateData%y)) then
       LB(1:1) = lbound(SrcOtherStateData%y)
@@ -877,6 +867,7 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%y = SrcOtherStateData%y
    else if (associated(DstOtherStateData%y)) then
       deallocate(DstOtherStateData%y)
+      nullify(DstOtherStateData%y)
    end if
    if (associated(SrcOtherStateData%z)) then
       LB(1:1) = lbound(SrcOtherStateData%z)
@@ -894,6 +885,7 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%z = SrcOtherStateData%z
    else if (associated(DstOtherStateData%z)) then
       deallocate(DstOtherStateData%z)
+      nullify(DstOtherStateData%z)
    end if
    if (associated(SrcOtherStateData%xa)) then
       LB(1:1) = lbound(SrcOtherStateData%xa)
@@ -911,6 +903,7 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%xa = SrcOtherStateData%xa
    else if (associated(DstOtherStateData%xa)) then
       deallocate(DstOtherStateData%xa)
+      nullify(DstOtherStateData%xa)
    end if
    if (associated(SrcOtherStateData%ya)) then
       LB(1:1) = lbound(SrcOtherStateData%ya)
@@ -928,6 +921,7 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%ya = SrcOtherStateData%ya
    else if (associated(DstOtherStateData%ya)) then
       deallocate(DstOtherStateData%ya)
+      nullify(DstOtherStateData%ya)
    end if
    if (associated(SrcOtherStateData%za)) then
       LB(1:1) = lbound(SrcOtherStateData%za)
@@ -945,6 +939,7 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%za = SrcOtherStateData%za
    else if (associated(DstOtherStateData%za)) then
       deallocate(DstOtherStateData%za)
+      nullify(DstOtherStateData%za)
    end if
    if (associated(SrcOtherStateData%Fx_connect)) then
       LB(1:1) = lbound(SrcOtherStateData%Fx_connect)
@@ -962,6 +957,7 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%Fx_connect = SrcOtherStateData%Fx_connect
    else if (associated(DstOtherStateData%Fx_connect)) then
       deallocate(DstOtherStateData%Fx_connect)
+      nullify(DstOtherStateData%Fx_connect)
    end if
    if (associated(SrcOtherStateData%Fy_connect)) then
       LB(1:1) = lbound(SrcOtherStateData%Fy_connect)
@@ -979,6 +975,7 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%Fy_connect = SrcOtherStateData%Fy_connect
    else if (associated(DstOtherStateData%Fy_connect)) then
       deallocate(DstOtherStateData%Fy_connect)
+      nullify(DstOtherStateData%Fy_connect)
    end if
    if (associated(SrcOtherStateData%Fz_connect)) then
       LB(1:1) = lbound(SrcOtherStateData%Fz_connect)
@@ -996,6 +993,7 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%Fz_connect = SrcOtherStateData%Fz_connect
    else if (associated(DstOtherStateData%Fz_connect)) then
       deallocate(DstOtherStateData%Fz_connect)
+      nullify(DstOtherStateData%Fz_connect)
    end if
    if (associated(SrcOtherStateData%Fx_anchor)) then
       LB(1:1) = lbound(SrcOtherStateData%Fx_anchor)
@@ -1013,6 +1011,7 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%Fx_anchor = SrcOtherStateData%Fx_anchor
    else if (associated(DstOtherStateData%Fx_anchor)) then
       deallocate(DstOtherStateData%Fx_anchor)
+      nullify(DstOtherStateData%Fx_anchor)
    end if
    if (associated(SrcOtherStateData%Fy_anchor)) then
       LB(1:1) = lbound(SrcOtherStateData%Fy_anchor)
@@ -1030,6 +1029,7 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%Fy_anchor = SrcOtherStateData%Fy_anchor
    else if (associated(DstOtherStateData%Fy_anchor)) then
       deallocate(DstOtherStateData%Fy_anchor)
+      nullify(DstOtherStateData%Fy_anchor)
    end if
    if (associated(SrcOtherStateData%Fz_anchor)) then
       LB(1:1) = lbound(SrcOtherStateData%Fz_anchor)
@@ -1047,6 +1047,7 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
       DstOtherStateData%Fz_anchor = SrcOtherStateData%Fz_anchor
    else if (associated(DstOtherStateData%Fz_anchor)) then
       deallocate(DstOtherStateData%Fz_anchor)
+      nullify(DstOtherStateData%Fz_anchor)
    end if
 end subroutine
 
@@ -1173,7 +1174,6 @@ subroutine MAP_PackOtherState(Buf, Indata)
          call RegPack(Buf, InData%H)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%V))
    if (associated(InData%V)) then
       call RegPackBounds(Buf, 1, lbound(InData%V), ubound(InData%V))
@@ -1182,7 +1182,6 @@ subroutine MAP_PackOtherState(Buf, Indata)
          call RegPack(Buf, InData%V)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%Ha))
    if (associated(InData%Ha)) then
       call RegPackBounds(Buf, 1, lbound(InData%Ha), ubound(InData%Ha))
@@ -1191,7 +1190,6 @@ subroutine MAP_PackOtherState(Buf, Indata)
          call RegPack(Buf, InData%Ha)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%Va))
    if (associated(InData%Va)) then
       call RegPackBounds(Buf, 1, lbound(InData%Va), ubound(InData%Va))
@@ -1200,7 +1198,6 @@ subroutine MAP_PackOtherState(Buf, Indata)
          call RegPack(Buf, InData%Va)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%x))
    if (associated(InData%x)) then
       call RegPackBounds(Buf, 1, lbound(InData%x), ubound(InData%x))
@@ -1209,7 +1206,6 @@ subroutine MAP_PackOtherState(Buf, Indata)
          call RegPack(Buf, InData%x)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%y))
    if (associated(InData%y)) then
       call RegPackBounds(Buf, 1, lbound(InData%y), ubound(InData%y))
@@ -1218,7 +1214,6 @@ subroutine MAP_PackOtherState(Buf, Indata)
          call RegPack(Buf, InData%y)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%z))
    if (associated(InData%z)) then
       call RegPackBounds(Buf, 1, lbound(InData%z), ubound(InData%z))
@@ -1227,7 +1222,6 @@ subroutine MAP_PackOtherState(Buf, Indata)
          call RegPack(Buf, InData%z)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%xa))
    if (associated(InData%xa)) then
       call RegPackBounds(Buf, 1, lbound(InData%xa), ubound(InData%xa))
@@ -1236,7 +1230,6 @@ subroutine MAP_PackOtherState(Buf, Indata)
          call RegPack(Buf, InData%xa)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%ya))
    if (associated(InData%ya)) then
       call RegPackBounds(Buf, 1, lbound(InData%ya), ubound(InData%ya))
@@ -1245,7 +1238,6 @@ subroutine MAP_PackOtherState(Buf, Indata)
          call RegPack(Buf, InData%ya)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%za))
    if (associated(InData%za)) then
       call RegPackBounds(Buf, 1, lbound(InData%za), ubound(InData%za))
@@ -1254,7 +1246,6 @@ subroutine MAP_PackOtherState(Buf, Indata)
          call RegPack(Buf, InData%za)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%Fx_connect))
    if (associated(InData%Fx_connect)) then
       call RegPackBounds(Buf, 1, lbound(InData%Fx_connect), ubound(InData%Fx_connect))
@@ -1263,7 +1254,6 @@ subroutine MAP_PackOtherState(Buf, Indata)
          call RegPack(Buf, InData%Fx_connect)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%Fy_connect))
    if (associated(InData%Fy_connect)) then
       call RegPackBounds(Buf, 1, lbound(InData%Fy_connect), ubound(InData%Fy_connect))
@@ -1272,7 +1262,6 @@ subroutine MAP_PackOtherState(Buf, Indata)
          call RegPack(Buf, InData%Fy_connect)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%Fz_connect))
    if (associated(InData%Fz_connect)) then
       call RegPackBounds(Buf, 1, lbound(InData%Fz_connect), ubound(InData%Fz_connect))
@@ -1281,7 +1270,6 @@ subroutine MAP_PackOtherState(Buf, Indata)
          call RegPack(Buf, InData%Fz_connect)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%Fx_anchor))
    if (associated(InData%Fx_anchor)) then
       call RegPackBounds(Buf, 1, lbound(InData%Fx_anchor), ubound(InData%Fx_anchor))
@@ -1290,7 +1278,6 @@ subroutine MAP_PackOtherState(Buf, Indata)
          call RegPack(Buf, InData%Fx_anchor)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%Fy_anchor))
    if (associated(InData%Fy_anchor)) then
       call RegPackBounds(Buf, 1, lbound(InData%Fy_anchor), ubound(InData%Fy_anchor))
@@ -1299,7 +1286,6 @@ subroutine MAP_PackOtherState(Buf, Indata)
          call RegPack(Buf, InData%Fy_anchor)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%Fz_anchor))
    if (associated(InData%Fz_anchor)) then
       call RegPackBounds(Buf, 1, lbound(InData%Fz_anchor), ubound(InData%Fz_anchor))
@@ -2136,6 +2122,7 @@ subroutine MAP_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
       DstConstrStateData%H = SrcConstrStateData%H
    else if (associated(DstConstrStateData%H)) then
       deallocate(DstConstrStateData%H)
+      nullify(DstConstrStateData%H)
    end if
    if (associated(SrcConstrStateData%V)) then
       LB(1:1) = lbound(SrcConstrStateData%V)
@@ -2153,6 +2140,7 @@ subroutine MAP_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
       DstConstrStateData%V = SrcConstrStateData%V
    else if (associated(DstConstrStateData%V)) then
       deallocate(DstConstrStateData%V)
+      nullify(DstConstrStateData%V)
    end if
    if (associated(SrcConstrStateData%x)) then
       LB(1:1) = lbound(SrcConstrStateData%x)
@@ -2170,6 +2158,7 @@ subroutine MAP_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
       DstConstrStateData%x = SrcConstrStateData%x
    else if (associated(DstConstrStateData%x)) then
       deallocate(DstConstrStateData%x)
+      nullify(DstConstrStateData%x)
    end if
    if (associated(SrcConstrStateData%y)) then
       LB(1:1) = lbound(SrcConstrStateData%y)
@@ -2187,6 +2176,7 @@ subroutine MAP_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
       DstConstrStateData%y = SrcConstrStateData%y
    else if (associated(DstConstrStateData%y)) then
       deallocate(DstConstrStateData%y)
+      nullify(DstConstrStateData%y)
    end if
    if (associated(SrcConstrStateData%z)) then
       LB(1:1) = lbound(SrcConstrStateData%z)
@@ -2204,6 +2194,7 @@ subroutine MAP_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
       DstConstrStateData%z = SrcConstrStateData%z
    else if (associated(DstConstrStateData%z)) then
       deallocate(DstConstrStateData%z)
+      nullify(DstConstrStateData%z)
    end if
 end subroutine
 
@@ -2264,7 +2255,6 @@ subroutine MAP_PackConstrState(Buf, Indata)
          call RegPack(Buf, InData%H)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%V))
    if (associated(InData%V)) then
       call RegPackBounds(Buf, 1, lbound(InData%V), ubound(InData%V))
@@ -2273,7 +2263,6 @@ subroutine MAP_PackConstrState(Buf, Indata)
          call RegPack(Buf, InData%V)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%x))
    if (associated(InData%x)) then
       call RegPackBounds(Buf, 1, lbound(InData%x), ubound(InData%x))
@@ -2282,7 +2271,6 @@ subroutine MAP_PackConstrState(Buf, Indata)
          call RegPack(Buf, InData%x)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%y))
    if (associated(InData%y)) then
       call RegPackBounds(Buf, 1, lbound(InData%y), ubound(InData%y))
@@ -2291,7 +2279,6 @@ subroutine MAP_PackConstrState(Buf, Indata)
          call RegPack(Buf, InData%y)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%z))
    if (associated(InData%z)) then
       call RegPackBounds(Buf, 1, lbound(InData%z), ubound(InData%z))
@@ -2633,19 +2620,12 @@ subroutine MAP_PackParam(Buf, Indata)
       return
    end if
    call RegPack(Buf, InData%g)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%depth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%rho_sea)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%InputLines)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%InputLineType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%numOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
    call MAP_Fortran_PackLin_ParamType(Buf, InData%LinParams) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -2749,6 +2729,7 @@ subroutine MAP_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%x = SrcInputData%x
    else if (associated(DstInputData%x)) then
       deallocate(DstInputData%x)
+      nullify(DstInputData%x)
    end if
    if (associated(SrcInputData%y)) then
       LB(1:1) = lbound(SrcInputData%y)
@@ -2766,6 +2747,7 @@ subroutine MAP_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%y = SrcInputData%y
    else if (associated(DstInputData%y)) then
       deallocate(DstInputData%y)
+      nullify(DstInputData%y)
    end if
    if (associated(SrcInputData%z)) then
       LB(1:1) = lbound(SrcInputData%z)
@@ -2783,6 +2765,7 @@ subroutine MAP_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       DstInputData%z = SrcInputData%z
    else if (associated(DstInputData%z)) then
       deallocate(DstInputData%z)
+      nullify(DstInputData%z)
    end if
    call MeshCopy(SrcInputData%PtFairDisplacement, DstInputData%PtFairDisplacement, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2836,7 +2819,6 @@ subroutine MAP_PackInput(Buf, Indata)
          call RegPack(Buf, InData%x)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%y))
    if (associated(InData%y)) then
       call RegPackBounds(Buf, 1, lbound(InData%y), ubound(InData%y))
@@ -2845,7 +2827,6 @@ subroutine MAP_PackInput(Buf, Indata)
          call RegPack(Buf, InData%y)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%z))
    if (associated(InData%z)) then
       call RegPackBounds(Buf, 1, lbound(InData%z), ubound(InData%z))
@@ -2854,7 +2835,6 @@ subroutine MAP_PackInput(Buf, Indata)
          call RegPack(Buf, InData%z)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call MeshPack(Buf, InData%PtFairDisplacement) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -3075,6 +3055,7 @@ subroutine MAP_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%Fx = SrcOutputData%Fx
    else if (associated(DstOutputData%Fx)) then
       deallocate(DstOutputData%Fx)
+      nullify(DstOutputData%Fx)
    end if
    if (associated(SrcOutputData%Fy)) then
       LB(1:1) = lbound(SrcOutputData%Fy)
@@ -3092,6 +3073,7 @@ subroutine MAP_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%Fy = SrcOutputData%Fy
    else if (associated(DstOutputData%Fy)) then
       deallocate(DstOutputData%Fy)
+      nullify(DstOutputData%Fy)
    end if
    if (associated(SrcOutputData%Fz)) then
       LB(1:1) = lbound(SrcOutputData%Fz)
@@ -3109,6 +3091,7 @@ subroutine MAP_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%Fz = SrcOutputData%Fz
    else if (associated(DstOutputData%Fz)) then
       deallocate(DstOutputData%Fz)
+      nullify(DstOutputData%Fz)
    end if
    if (allocated(SrcOutputData%WriteOutput)) then
       LB(1:1) = lbound(SrcOutputData%WriteOutput)
@@ -3140,6 +3123,7 @@ subroutine MAP_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
       DstOutputData%wrtOutput = SrcOutputData%wrtOutput
    else if (associated(DstOutputData%wrtOutput)) then
       deallocate(DstOutputData%wrtOutput)
+      nullify(DstOutputData%wrtOutput)
    end if
    call MeshCopy(SrcOutputData%ptFairleadLoad, DstOutputData%ptFairleadLoad, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3202,7 +3186,6 @@ subroutine MAP_PackOutput(Buf, Indata)
          call RegPack(Buf, InData%Fx)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%Fy))
    if (associated(InData%Fy)) then
       call RegPackBounds(Buf, 1, lbound(InData%Fy), ubound(InData%Fy))
@@ -3211,7 +3194,6 @@ subroutine MAP_PackOutput(Buf, Indata)
          call RegPack(Buf, InData%Fy)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%Fz))
    if (associated(InData%Fz)) then
       call RegPackBounds(Buf, 1, lbound(InData%Fz), ubound(InData%Fz))
@@ -3220,13 +3202,11 @@ subroutine MAP_PackOutput(Buf, Indata)
          call RegPack(Buf, InData%Fz)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
       call RegPack(Buf, InData%WriteOutput)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%wrtOutput))
    if (associated(InData%wrtOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%wrtOutput), ubound(InData%wrtOutput))
@@ -3235,7 +3215,6 @@ subroutine MAP_PackOutput(Buf, Indata)
          call RegPack(Buf, InData%wrtOutput)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call MeshPack(Buf, InData%ptFairleadLoad) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

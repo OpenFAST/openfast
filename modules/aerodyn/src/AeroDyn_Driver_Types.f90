@@ -236,25 +236,15 @@ subroutine AD_Dvr_PackDvr_Case(Buf, Indata)
    character(*), parameter         :: RoutineName = 'AD_Dvr_PackDvr_Case'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%HWindSpeed)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PLExp)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%rotSpeed)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%bldPitch)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nacYaw)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%tMax)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%numSteps)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DOF)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%amplitude)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%frequency)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -317,9 +307,7 @@ subroutine AD_Dvr_PackDvrVTK_SurfaceType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'AD_Dvr_PackDvrVTK_SurfaceType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%NumSectors)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NacelleBox)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%BaseBox)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -506,59 +494,42 @@ subroutine AD_Dvr_PackDvr_Outputs(Buf, Indata)
    integer(IntKi)  :: LB(3), UB(3)
    if (Buf%ErrStat >= AbortErrLev) return
    call NWTC_Library_PackProgDesc(Buf, InData%AD_ver) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%unOutFile))
    if (allocated(InData%unOutFile)) then
       call RegPackBounds(Buf, 1, lbound(InData%unOutFile), ubound(InData%unOutFile))
       call RegPack(Buf, InData%unOutFile)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ActualChanLen)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nDvrOutputs)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Fmt_t)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Fmt_a)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%delim)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%outFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%fileFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%wrVTK)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WrVTK_Type)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Root)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VTK_OutFileRoot)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%storage))
    if (allocated(InData%storage)) then
       call RegPackBounds(Buf, 3, lbound(InData%storage), ubound(InData%storage))
       call RegPack(Buf, InData%storage)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%outLine))
    if (allocated(InData%outLine)) then
       call RegPackBounds(Buf, 1, lbound(InData%outLine), ubound(InData%outLine))
       call RegPack(Buf, InData%outLine)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%VTK_surface))
    if (allocated(InData%VTK_surface)) then
       call RegPackBounds(Buf, 1, lbound(InData%VTK_surface), ubound(InData%VTK_surface))
@@ -568,19 +539,12 @@ subroutine AD_Dvr_PackDvr_Outputs(Buf, Indata)
          call AD_Dvr_PackDvrVTK_SurfaceType(Buf, InData%VTK_surface(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VTK_tWidth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%n_VTKTime)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VTKHubRad)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VTKNacDim)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VTKRefPoint)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DT_Outs)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%n_DT_Out)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -773,29 +737,19 @@ subroutine AD_Dvr_PackBladeData(Buf, Indata)
    character(*), parameter         :: RoutineName = 'AD_Dvr_PackBladeData'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%pitch)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%pitchSpeed)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%pitchAcc)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%origin_h)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%orientation_h)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%hubRad_bl)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Rh2bl0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%motionType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%iMotion)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%motion))
    if (allocated(InData%motion)) then
       call RegPackBounds(Buf, 2, lbound(InData%motion), ubound(InData%motion))
       call RegPack(Buf, InData%motion)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%motionFileName)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -897,21 +851,13 @@ subroutine AD_Dvr_PackHubData(Buf, Indata)
    character(*), parameter         :: RoutineName = 'AD_Dvr_PackHubData'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%origin_n)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%orientation_n)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%motionType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%iMotion)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%azimuth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%rotSpeed)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%rotAcc)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%motionFileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%motion))
    if (allocated(InData%motion)) then
       call RegPackBounds(Buf, 2, lbound(InData%motion), ubound(InData%motion))
@@ -1012,19 +958,12 @@ subroutine AD_Dvr_PackNacData(Buf, Indata)
    character(*), parameter         :: RoutineName = 'AD_Dvr_PackNacData'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%origin_t)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%motionType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%iMotion)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%yaw)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%yawSpeed)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%yawAcc)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%motionFileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%motion))
    if (allocated(InData%motion)) then
       call RegPackBounds(Buf, 2, lbound(InData%motion), ubound(InData%motion))
@@ -1283,15 +1222,10 @@ subroutine AD_Dvr_PackWTData(Buf, Indata)
    integer(IntKi)  :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%originInit)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%orientationInit)
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackMeshMapType(Buf, InData%map2twrPt) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackMeshMapType(Buf, InData%map2nacPt) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackMeshMapType(Buf, InData%map2hubPt) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%map2BldPt))
    if (allocated(InData%map2BldPt)) then
       call RegPackBounds(Buf, 1, lbound(InData%map2BldPt), ubound(InData%map2BldPt))
@@ -1301,7 +1235,6 @@ subroutine AD_Dvr_PackWTData(Buf, Indata)
          call NWTC_Library_PackMeshMapType(Buf, InData%map2BldPt(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%bld))
    if (allocated(InData%bld)) then
       call RegPackBounds(Buf, 1, lbound(InData%bld), ubound(InData%bld))
@@ -1311,49 +1244,31 @@ subroutine AD_Dvr_PackWTData(Buf, Indata)
          call AD_Dvr_PackBladeData(Buf, InData%bld(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call AD_Dvr_PackHubData(Buf, InData%hub) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call AD_Dvr_PackNacData(Buf, InData%nac) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call AD_Dvr_PackTwrData(Buf, InData%twr) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%numBlades)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%basicHAWTFormat)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%hasTower)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%projMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%BEM_Mod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HAWTprojection)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%motionType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%motion))
    if (allocated(InData%motion)) then
       call RegPackBounds(Buf, 2, lbound(InData%motion), ubound(InData%motion))
       call RegPack(Buf, InData%motion)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%iMotion)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%degreeOfFreedom)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%amplitude)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%frequency)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%motionFileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
       call RegPack(Buf, InData%WriteOutput)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%userSwapArray))
    if (allocated(InData%userSwapArray)) then
       call RegPackBounds(Buf, 1, lbound(InData%userSwapArray), ubound(InData%userSwapArray))
@@ -1610,27 +1525,16 @@ subroutine AD_Dvr_PackDvr_SimData(Buf, Indata)
    integer(IntKi)  :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%AD_InputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MHK)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%AnalysisType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%FldDens)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%KinVisc)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SpdSound)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Patm)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Pvap)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MSL2SWL)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%numTurbines)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WT))
    if (allocated(InData%WT)) then
       call RegPackBounds(Buf, 1, lbound(InData%WT), ubound(InData%WT))
@@ -1640,15 +1544,10 @@ subroutine AD_Dvr_PackDvr_SimData(Buf, Indata)
          call AD_Dvr_PackWTData(Buf, InData%WT(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%tMax)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%numSteps)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%numCases)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Cases))
    if (allocated(InData%Cases)) then
       call RegPackBounds(Buf, 1, lbound(InData%Cases), ubound(InData%Cases))
@@ -1658,21 +1557,15 @@ subroutine AD_Dvr_PackDvr_SimData(Buf, Indata)
          call AD_Dvr_PackDvr_Case(Buf, InData%Cases(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%iCase)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%timeSeries))
    if (allocated(InData%timeSeries)) then
       call RegPackBounds(Buf, 2, lbound(InData%timeSeries), ubound(InData%timeSeries))
       call RegPack(Buf, InData%timeSeries)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%iTimeSeries)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%root)
-   if (RegCheckErr(Buf, RoutineName)) return
    call AD_Dvr_PackDvr_Outputs(Buf, InData%out) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call ADI_PackIW_InputData(Buf, InData%IW_InitInp) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1812,15 +1705,10 @@ subroutine AD_Dvr_PackAllData(Buf, Indata)
    character(*), parameter         :: RoutineName = 'AD_Dvr_PackAllData'
    if (Buf%ErrStat >= AbortErrLev) return
    call AD_Dvr_PackDvr_SimData(Buf, InData%dvr) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call ADI_PackData(Buf, InData%ADI) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call ADI_PackFED_Data(Buf, InData%FED) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%errStat)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%errMsg)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%initialized)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

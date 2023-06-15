@@ -141,13 +141,9 @@ subroutine IceFloe_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'IceFloe_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%InputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%simLength)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MSL2SWL)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%gravity)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RootName)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -241,13 +237,11 @@ subroutine IceFloe_PackInitOutput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -601,53 +595,35 @@ subroutine IceFloe_PackParam(Buf, Indata)
       call RegPackBounds(Buf, 2, lbound(InData%loadSeries), ubound(InData%loadSeries))
       call RegPack(Buf, InData%loadSeries)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%iceVel)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%iceDirection)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%minStrength)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%minStrengthNegVel)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%defaultArea)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%crushArea)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%coeffStressRate)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%C(4))
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%rampTime)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%legX))
    if (allocated(InData%legX)) then
       call RegPackBounds(Buf, 1, lbound(InData%legX), ubound(InData%legX))
       call RegPack(Buf, InData%legX)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%legY))
    if (allocated(InData%legY)) then
       call RegPackBounds(Buf, 1, lbound(InData%legY), ubound(InData%legY))
       call RegPack(Buf, InData%legY)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ks))
    if (allocated(InData%ks)) then
       call RegPackBounds(Buf, 1, lbound(InData%ks), ubound(InData%ks))
       call RegPack(Buf, InData%ks)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%numLegs)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%iceType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%logUnitNum)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%singleLoad)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%initFlag)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -843,7 +819,6 @@ subroutine IceFloe_PackOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'IceFloe_PackOutput'
    if (Buf%ErrStat >= AbortErrLev) return
    call MeshPack(Buf, InData%iceMesh) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))

@@ -487,107 +487,88 @@ subroutine IfW_FlowField_PackUniformFieldType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'IfW_FlowField_PackUniformFieldType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%RefHeight)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RefLength)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DataSize)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Time))
    if (allocated(InData%Time)) then
       call RegPackBounds(Buf, 1, lbound(InData%Time), ubound(InData%Time))
       call RegPack(Buf, InData%Time)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%VelH))
    if (allocated(InData%VelH)) then
       call RegPackBounds(Buf, 1, lbound(InData%VelH), ubound(InData%VelH))
       call RegPack(Buf, InData%VelH)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%VelHDot))
    if (allocated(InData%VelHDot)) then
       call RegPackBounds(Buf, 1, lbound(InData%VelHDot), ubound(InData%VelHDot))
       call RegPack(Buf, InData%VelHDot)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%VelV))
    if (allocated(InData%VelV)) then
       call RegPackBounds(Buf, 1, lbound(InData%VelV), ubound(InData%VelV))
       call RegPack(Buf, InData%VelV)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%VelVDot))
    if (allocated(InData%VelVDot)) then
       call RegPackBounds(Buf, 1, lbound(InData%VelVDot), ubound(InData%VelVDot))
       call RegPack(Buf, InData%VelVDot)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%VelGust))
    if (allocated(InData%VelGust)) then
       call RegPackBounds(Buf, 1, lbound(InData%VelGust), ubound(InData%VelGust))
       call RegPack(Buf, InData%VelGust)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%VelGustDot))
    if (allocated(InData%VelGustDot)) then
       call RegPackBounds(Buf, 1, lbound(InData%VelGustDot), ubound(InData%VelGustDot))
       call RegPack(Buf, InData%VelGustDot)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AngleH))
    if (allocated(InData%AngleH)) then
       call RegPackBounds(Buf, 1, lbound(InData%AngleH), ubound(InData%AngleH))
       call RegPack(Buf, InData%AngleH)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AngleHDot))
    if (allocated(InData%AngleHDot)) then
       call RegPackBounds(Buf, 1, lbound(InData%AngleHDot), ubound(InData%AngleHDot))
       call RegPack(Buf, InData%AngleHDot)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AngleV))
    if (allocated(InData%AngleV)) then
       call RegPackBounds(Buf, 1, lbound(InData%AngleV), ubound(InData%AngleV))
       call RegPack(Buf, InData%AngleV)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AngleVDot))
    if (allocated(InData%AngleVDot)) then
       call RegPackBounds(Buf, 1, lbound(InData%AngleVDot), ubound(InData%AngleVDot))
       call RegPack(Buf, InData%AngleVDot)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ShrH))
    if (allocated(InData%ShrH)) then
       call RegPackBounds(Buf, 1, lbound(InData%ShrH), ubound(InData%ShrH))
       call RegPack(Buf, InData%ShrH)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ShrHDot))
    if (allocated(InData%ShrHDot)) then
       call RegPackBounds(Buf, 1, lbound(InData%ShrHDot), ubound(InData%ShrHDot))
       call RegPack(Buf, InData%ShrHDot)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ShrV))
    if (allocated(InData%ShrV)) then
       call RegPackBounds(Buf, 1, lbound(InData%ShrV), ubound(InData%ShrV))
       call RegPack(Buf, InData%ShrV)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ShrVDot))
    if (allocated(InData%ShrVDot)) then
       call RegPackBounds(Buf, 1, lbound(InData%ShrVDot), ubound(InData%ShrVDot))
       call RegPack(Buf, InData%ShrVDot)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%LinShrV))
    if (allocated(InData%LinShrV)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinShrV), ubound(InData%LinShrV))
       call RegPack(Buf, InData%LinShrV)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%LinShrVDot))
    if (allocated(InData%LinShrVDot)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinShrVDot), ubound(InData%LinShrVDot))
@@ -896,43 +877,24 @@ subroutine IfW_FlowField_PackUniformField_Interp(Buf, Indata)
    character(*), parameter         :: RoutineName = 'IfW_FlowField_PackUniformField_Interp'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%VelH)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VelHDot)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VelV)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VelVDot)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VelGust)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VelGustDot)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%AngleH)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%AngleHDot)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%AngleV)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%AngleVDot)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ShrH)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ShrHDot)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ShrV)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ShrVDot)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%LinShrV)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%LinShrVDot)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%CosAngleH)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SinAngleH)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%CosAngleV)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SinAngleV)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1144,99 +1106,64 @@ subroutine IfW_FlowField_PackGrid3DFieldType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'IfW_FlowField_PackGrid3DFieldType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%WindFileFormat)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WindProfileType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Periodic)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%InterpTower)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%AddMeanAfterInterp)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RefHeight)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RefLength)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Vel))
    if (allocated(InData%Vel)) then
       call RegPackBounds(Buf, 4, lbound(InData%Vel), ubound(InData%Vel))
       call RegPack(Buf, InData%Vel)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Acc))
    if (allocated(InData%Acc)) then
       call RegPackBounds(Buf, 4, lbound(InData%Acc), ubound(InData%Acc))
       call RegPack(Buf, InData%Acc)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%VelTower))
    if (allocated(InData%VelTower)) then
       call RegPackBounds(Buf, 3, lbound(InData%VelTower), ubound(InData%VelTower))
       call RegPack(Buf, InData%VelTower)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AccTower))
    if (allocated(InData%AccTower)) then
       call RegPackBounds(Buf, 3, lbound(InData%AccTower), ubound(InData%AccTower))
       call RegPack(Buf, InData%AccTower)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%VelAvg))
    if (allocated(InData%VelAvg)) then
       call RegPackBounds(Buf, 3, lbound(InData%VelAvg), ubound(InData%VelAvg))
       call RegPack(Buf, InData%VelAvg)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AccAvg))
    if (allocated(InData%AccAvg)) then
       call RegPackBounds(Buf, 3, lbound(InData%AccAvg), ubound(InData%AccAvg))
       call RegPack(Buf, InData%AccAvg)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DTime)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Rate)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%YHWid)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ZHWid)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%GridBase)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%InitXPosition)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%InvDY)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%InvDZ)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MeanWS)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%InvMWS)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TotalTime)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NComp)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NYGrids)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NZGrids)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NTGrids)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NSteps)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PLExp)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Z0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VLinShr)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HLinShr)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%BoxExceedAllowF)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%BoxExceedAllowIdx)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%BoxExceedWarned)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1431,11 +1358,8 @@ subroutine IfW_FlowField_PackGrid4DFieldType(Buf, Indata)
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%n)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%delta)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%pZero)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%Vel))
    if (associated(InData%Vel)) then
       call RegPackBounds(Buf, 5, lbound(InData%Vel), ubound(InData%Vel))
@@ -1444,9 +1368,7 @@ subroutine IfW_FlowField_PackGrid4DFieldType(Buf, Indata)
          call RegPack(Buf, InData%Vel)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TimeStart)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RefHeight)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1666,31 +1588,18 @@ subroutine IfW_FlowField_PackFlowFieldType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'IfW_FlowField_PackFlowFieldType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%FieldType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RefPosition)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PropagationDir)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VFlowAngle)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VelInterpCubic)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RotateWindBox)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%AccFieldValid)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RotToWind)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RotFromWind)
-   if (RegCheckErr(Buf, RoutineName)) return
    call IfW_FlowField_PackUniformFieldType(Buf, InData%Uniform) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call IfW_FlowField_PackGrid3DFieldType(Buf, InData%Grid3D) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call IfW_FlowField_PackGrid4DFieldType(Buf, InData%Grid4D) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call IfW_FlowField_PackPointsFieldType(Buf, InData%Points) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call IfW_FlowField_PackUserFieldType(Buf, InData%User) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

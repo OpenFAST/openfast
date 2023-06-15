@@ -137,9 +137,7 @@ subroutine Orca_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Orca_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%InputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RootName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TMax)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -225,13 +223,11 @@ subroutine Orca_PackInitOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Orca_PackInitOutput'
    if (Buf%ErrStat >= AbortErrLev) return
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
@@ -310,13 +306,9 @@ subroutine Orca_PackInputFile(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Orca_PackInputFile'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%DLL_FileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DLL_InitProcName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DLL_CalcProcName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DLL_EndProcName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DirRoot)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -426,17 +418,13 @@ subroutine Orca_PackMisc(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Orca_PackMisc'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%PtfmAM)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PtfmFt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%F_PtfmAM)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AllOuts))
    if (allocated(InData%AllOuts)) then
       call RegPackBounds(Buf, 1, lbound(InData%AllOuts), ubound(InData%AllOuts))
       call RegPack(Buf, InData%AllOuts)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%LastTimeStep)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -541,15 +529,10 @@ subroutine Orca_PackParam(Buf, Indata)
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call DLLTypePack(Buf, InData%DLL_Orca) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SimNamePath)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SimNamePathLen)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutParam), ubound(InData%OutParam))
@@ -692,7 +675,6 @@ subroutine Orca_PackOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Orca_PackOutput'
    if (Buf%ErrStat >= AbortErrLev) return
    call MeshPack(Buf, InData%PtfmMesh) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))

@@ -157,15 +157,10 @@ subroutine Lidar_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Lidar_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%SensorType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Tmax)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RotorApexOffsetPos)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HubPosition)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumPulseGate)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%LidRadialVel)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -344,67 +339,44 @@ subroutine Lidar_PackParam(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Lidar_PackParam'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%NumPulseGate)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RotorApexOffsetPos)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RayRangeSq)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SpatialRes)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SensorType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WtFnTrunc)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PulseRangeOne)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DeltaP)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DeltaR)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%r_p)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%LidRadialVel)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DisplacementLidarX)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DisplacementLidarY)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DisplacementLidarZ)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumBeam)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%FocalDistanceX))
    if (allocated(InData%FocalDistanceX)) then
       call RegPackBounds(Buf, 1, lbound(InData%FocalDistanceX), ubound(InData%FocalDistanceX))
       call RegPack(Buf, InData%FocalDistanceX)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%FocalDistanceY))
    if (allocated(InData%FocalDistanceY)) then
       call RegPackBounds(Buf, 1, lbound(InData%FocalDistanceY), ubound(InData%FocalDistanceY))
       call RegPack(Buf, InData%FocalDistanceY)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%FocalDistanceZ))
    if (allocated(InData%FocalDistanceZ)) then
       call RegPackBounds(Buf, 1, lbound(InData%FocalDistanceZ), ubound(InData%FocalDistanceZ))
       call RegPack(Buf, InData%FocalDistanceZ)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%MsrPosition))
    if (allocated(InData%MsrPosition)) then
       call RegPackBounds(Buf, 2, lbound(InData%MsrPosition), ubound(InData%MsrPosition))
       call RegPack(Buf, InData%MsrPosition)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PulseSpacing)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%URefLid)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ConsiderHubMotion)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MeasurementInterval)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%LidPosition)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -741,13 +713,9 @@ subroutine Lidar_PackInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Lidar_PackInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%PulseLidEl)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PulseLidAz)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HubDisplacementX)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HubDisplacementY)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HubDisplacementZ)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -886,25 +854,21 @@ subroutine Lidar_PackOutput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%LidSpeed), ubound(InData%LidSpeed))
       call RegPack(Buf, InData%LidSpeed)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WtTrunc))
    if (allocated(InData%WtTrunc)) then
       call RegPackBounds(Buf, 1, lbound(InData%WtTrunc), ubound(InData%WtTrunc))
       call RegPack(Buf, InData%WtTrunc)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%MsrPositionsX))
    if (allocated(InData%MsrPositionsX)) then
       call RegPackBounds(Buf, 1, lbound(InData%MsrPositionsX), ubound(InData%MsrPositionsX))
       call RegPack(Buf, InData%MsrPositionsX)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%MsrPositionsY))
    if (allocated(InData%MsrPositionsY)) then
       call RegPackBounds(Buf, 1, lbound(InData%MsrPositionsY), ubound(InData%MsrPositionsY))
       call RegPack(Buf, InData%MsrPositionsY)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%MsrPositionsZ))
    if (allocated(InData%MsrPositionsZ)) then
       call RegPackBounds(Buf, 1, lbound(InData%MsrPositionsZ), ubound(InData%MsrPositionsZ))

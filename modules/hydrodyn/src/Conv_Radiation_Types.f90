@@ -186,35 +186,26 @@ subroutine Conv_Rdtn_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Conv_Rdtn_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%RdtnDT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RdtnDTChr)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NBody)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HighFreq)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WAMITFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%HdroAddMs))
    if (allocated(InData%HdroAddMs)) then
       call RegPackBounds(Buf, 3, lbound(InData%HdroAddMs), ubound(InData%HdroAddMs))
       call RegPack(Buf, InData%HdroAddMs)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%HdroFreq))
    if (allocated(InData%HdroFreq)) then
       call RegPackBounds(Buf, 1, lbound(InData%HdroFreq), ubound(InData%HdroFreq))
       call RegPack(Buf, InData%HdroFreq)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%HdroDmpng))
    if (allocated(InData%HdroDmpng)) then
       call RegPackBounds(Buf, 3, lbound(InData%HdroDmpng), ubound(InData%HdroDmpng))
       call RegPack(Buf, InData%HdroDmpng)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NInpFreq)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RdtnTMax)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -413,7 +404,6 @@ subroutine Conv_Rdtn_PackDiscState(Buf, Indata)
       call RegPackBounds(Buf, 2, lbound(InData%XDHistory), ubound(InData%XDHistory))
       call RegPack(Buf, InData%XDHistory)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%LastTime)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -611,19 +601,14 @@ subroutine Conv_Rdtn_PackParam(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Conv_Rdtn_PackParam'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RdtnDT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NBody)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%RdtnKrnl))
    if (allocated(InData%RdtnKrnl)) then
       call RegPackBounds(Buf, 3, lbound(InData%RdtnKrnl), ubound(InData%RdtnKrnl))
       call RegPack(Buf, InData%RdtnKrnl)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NStepRdtn)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NStepRdtn1)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

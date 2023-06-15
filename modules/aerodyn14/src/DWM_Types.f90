@@ -356,9 +356,7 @@ subroutine DWM_PackCVSD(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DWM_PackCVSD'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%counter)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Denominator)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Numerator)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -479,29 +477,23 @@ subroutine DWM_Packturbine_average_velocity_data(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%average_velocity_array_temp), ubound(InData%average_velocity_array_temp))
       call RegPack(Buf, InData%average_velocity_array_temp)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%average_velocity_array))
    if (allocated(InData%average_velocity_array)) then
       call RegPackBounds(Buf, 1, lbound(InData%average_velocity_array), ubound(InData%average_velocity_array))
       call RegPack(Buf, InData%average_velocity_array)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%swept_area))
    if (allocated(InData%swept_area)) then
       call RegPackBounds(Buf, 1, lbound(InData%swept_area), ubound(InData%swept_area))
       call RegPack(Buf, InData%swept_area)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%time_step_velocity)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%time_step_velocity_array))
    if (allocated(InData%time_step_velocity_array)) then
       call RegPackBounds(Buf, 1, lbound(InData%time_step_velocity_array), ubound(InData%time_step_velocity_array))
       call RegPack(Buf, InData%time_step_velocity_array)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%time_step_pass_velocity)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%time_step_force)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -628,19 +620,14 @@ subroutine DWM_PackWake_Deficit_Data(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DWM_PackWake_Deficit_Data'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%np_x)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%X_length)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Turb_Stress_DWM))
    if (allocated(InData%Turb_Stress_DWM)) then
       call RegPackBounds(Buf, 2, lbound(InData%Turb_Stress_DWM), ubound(InData%Turb_Stress_DWM))
       call RegPack(Buf, InData%Turb_Stress_DWM)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%n_x_vector)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%n_r_vector)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ppR)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -707,7 +694,6 @@ subroutine DWM_PackMeanderData(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DWM_PackMeanderData'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%scale_factor)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%moving_time)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1027,103 +1013,84 @@ subroutine DWM_Packread_turbine_position_data(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DWM_Packread_turbine_position_data'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%SimulationOrder_index)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Turbine_sort_order))
    if (allocated(InData%Turbine_sort_order)) then
       call RegPackBounds(Buf, 1, lbound(InData%Turbine_sort_order), ubound(InData%Turbine_sort_order))
       call RegPack(Buf, InData%Turbine_sort_order)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WT_index)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%TurbineInfluenceData))
    if (allocated(InData%TurbineInfluenceData)) then
       call RegPackBounds(Buf, 2, lbound(InData%TurbineInfluenceData), ubound(InData%TurbineInfluenceData))
       call RegPack(Buf, InData%TurbineInfluenceData)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%upwind_turbine_index))
    if (allocated(InData%upwind_turbine_index)) then
       call RegPackBounds(Buf, 1, lbound(InData%upwind_turbine_index), ubound(InData%upwind_turbine_index))
       call RegPack(Buf, InData%upwind_turbine_index)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%downwind_turbine_index))
    if (allocated(InData%downwind_turbine_index)) then
       call RegPackBounds(Buf, 1, lbound(InData%downwind_turbine_index), ubound(InData%downwind_turbine_index))
       call RegPack(Buf, InData%downwind_turbine_index)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%upwindturbine_number)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%downwindturbine_number)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%turbine_windorigin_length))
    if (allocated(InData%turbine_windorigin_length)) then
       call RegPackBounds(Buf, 1, lbound(InData%turbine_windorigin_length), ubound(InData%turbine_windorigin_length))
       call RegPack(Buf, InData%turbine_windorigin_length)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%upwind_turbine_projected_distance))
    if (allocated(InData%upwind_turbine_projected_distance)) then
       call RegPackBounds(Buf, 1, lbound(InData%upwind_turbine_projected_distance), ubound(InData%upwind_turbine_projected_distance))
       call RegPack(Buf, InData%upwind_turbine_projected_distance)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%downwind_turbine_projected_distance))
    if (allocated(InData%downwind_turbine_projected_distance)) then
       call RegPackBounds(Buf, 1, lbound(InData%downwind_turbine_projected_distance), ubound(InData%downwind_turbine_projected_distance))
       call RegPack(Buf, InData%downwind_turbine_projected_distance)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%turbine_angle))
    if (allocated(InData%turbine_angle)) then
       call RegPackBounds(Buf, 2, lbound(InData%turbine_angle), ubound(InData%turbine_angle))
       call RegPack(Buf, InData%turbine_angle)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%upwind_align_angle))
    if (allocated(InData%upwind_align_angle)) then
       call RegPackBounds(Buf, 1, lbound(InData%upwind_align_angle), ubound(InData%upwind_align_angle))
       call RegPack(Buf, InData%upwind_align_angle)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%downwind_align_angle))
    if (allocated(InData%downwind_align_angle)) then
       call RegPackBounds(Buf, 1, lbound(InData%downwind_align_angle), ubound(InData%downwind_align_angle))
       call RegPack(Buf, InData%downwind_align_angle)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%upwind_turbine_Xcoor))
    if (allocated(InData%upwind_turbine_Xcoor)) then
       call RegPackBounds(Buf, 1, lbound(InData%upwind_turbine_Xcoor), ubound(InData%upwind_turbine_Xcoor))
       call RegPack(Buf, InData%upwind_turbine_Xcoor)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%upwind_turbine_Ycoor))
    if (allocated(InData%upwind_turbine_Ycoor)) then
       call RegPackBounds(Buf, 1, lbound(InData%upwind_turbine_Ycoor), ubound(InData%upwind_turbine_Ycoor))
       call RegPack(Buf, InData%upwind_turbine_Ycoor)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%wind_farm_Xcoor))
    if (allocated(InData%wind_farm_Xcoor)) then
       call RegPackBounds(Buf, 1, lbound(InData%wind_farm_Xcoor), ubound(InData%wind_farm_Xcoor))
       call RegPack(Buf, InData%wind_farm_Xcoor)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%wind_farm_Ycoor))
    if (allocated(InData%wind_farm_Ycoor)) then
       call RegPackBounds(Buf, 1, lbound(InData%wind_farm_Ycoor), ubound(InData%wind_farm_Ycoor))
       call RegPack(Buf, InData%wind_farm_Ycoor)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%downwind_turbine_Xcoor))
    if (allocated(InData%downwind_turbine_Xcoor)) then
       call RegPackBounds(Buf, 1, lbound(InData%downwind_turbine_Xcoor), ubound(InData%downwind_turbine_Xcoor))
       call RegPack(Buf, InData%downwind_turbine_Xcoor)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%downwind_turbine_Ycoor))
    if (allocated(InData%downwind_turbine_Ycoor)) then
       call RegPackBounds(Buf, 1, lbound(InData%downwind_turbine_Ycoor), ubound(InData%downwind_turbine_Ycoor))
@@ -1424,7 +1391,6 @@ subroutine DWM_PackWeiMethod(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%sweptarea), ubound(InData%sweptarea))
       call RegPack(Buf, InData%sweptarea)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%weighting_denominator)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1533,63 +1499,34 @@ subroutine DWM_PackTIDownstream(Buf, Indata)
       call RegPackBounds(Buf, 2, lbound(InData%TI_downstream_matrix), ubound(InData%TI_downstream_matrix))
       call RegPack(Buf, InData%TI_downstream_matrix)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%i)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%j)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%k)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%cross_plane_position_ds)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%cross_plane_position_TI)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%distance_index)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%counter1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%counter2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%initial_timestep)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%y_axis_turbine)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%z_axis_turbine)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%distance)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TI_downstream_node)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TI_node_temp)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TI_node)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TI_accumulation)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TI_apprant_accumulation)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TI_average)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TI_apprant)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HubHt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%wake_center_y)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%wake_center_z)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Rscale)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%y)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%z)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%zero_spacing)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%temp1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%temp2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%temp3)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1709,17 +1646,11 @@ subroutine DWM_PackTurbKaimal(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DWM_PackTurbKaimal'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%fs)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%temp_n)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%i)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%low_f)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%high_f)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%lk_facor)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%STD)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1870,45 +1801,33 @@ subroutine DWM_PackShinozuka(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%f_syn), ubound(InData%f_syn))
       call RegPack(Buf, InData%f_syn)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%t_syn))
    if (allocated(InData%t_syn)) then
       call RegPackBounds(Buf, 1, lbound(InData%t_syn), ubound(InData%t_syn))
       call RegPack(Buf, InData%t_syn)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%phi))
    if (allocated(InData%phi)) then
       call RegPackBounds(Buf, 1, lbound(InData%phi), ubound(InData%phi))
       call RegPack(Buf, InData%phi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%p_k))
    if (allocated(InData%p_k)) then
       call RegPackBounds(Buf, 1, lbound(InData%p_k), ubound(InData%p_k))
       call RegPack(Buf, InData%p_k)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%a_k))
    if (allocated(InData%a_k)) then
       call RegPackBounds(Buf, 1, lbound(InData%a_k), ubound(InData%a_k))
       call RegPack(Buf, InData%a_k)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%num_points)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ILo)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%i)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%j)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%t_min)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%t_max)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%df)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -2080,15 +1999,10 @@ subroutine DWM_PackSWSV(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DWM_PackSWSV'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%p1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%p2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%distance)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%y0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%z0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%unit)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -2331,61 +2245,51 @@ subroutine DWM_Packread_upwind_result(Buf, Indata)
       call RegPackBounds(Buf, 2, lbound(InData%upwind_U), ubound(InData%upwind_U))
       call RegPack(Buf, InData%upwind_U)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%upwind_wakecenter))
    if (allocated(InData%upwind_wakecenter)) then
       call RegPackBounds(Buf, 4, lbound(InData%upwind_wakecenter), ubound(InData%upwind_wakecenter))
       call RegPack(Buf, InData%upwind_wakecenter)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%upwind_meanU))
    if (allocated(InData%upwind_meanU)) then
       call RegPackBounds(Buf, 1, lbound(InData%upwind_meanU), ubound(InData%upwind_meanU))
       call RegPack(Buf, InData%upwind_meanU)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%upwind_TI))
    if (allocated(InData%upwind_TI)) then
       call RegPackBounds(Buf, 1, lbound(InData%upwind_TI), ubound(InData%upwind_TI))
       call RegPack(Buf, InData%upwind_TI)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%upwind_small_TI))
    if (allocated(InData%upwind_small_TI)) then
       call RegPackBounds(Buf, 1, lbound(InData%upwind_small_TI), ubound(InData%upwind_small_TI))
       call RegPack(Buf, InData%upwind_small_TI)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%upwind_smoothWake))
    if (allocated(InData%upwind_smoothWake)) then
       call RegPackBounds(Buf, 2, lbound(InData%upwind_smoothWake), ubound(InData%upwind_smoothWake))
       call RegPack(Buf, InData%upwind_smoothWake)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%velocity_aerodyn))
    if (allocated(InData%velocity_aerodyn)) then
       call RegPackBounds(Buf, 1, lbound(InData%velocity_aerodyn), ubound(InData%velocity_aerodyn))
       call RegPack(Buf, InData%velocity_aerodyn)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%TI_downstream))
    if (allocated(InData%TI_downstream)) then
       call RegPackBounds(Buf, 1, lbound(InData%TI_downstream), ubound(InData%TI_downstream))
       call RegPack(Buf, InData%TI_downstream)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%small_scale_TI_downstream))
    if (allocated(InData%small_scale_TI_downstream)) then
       call RegPackBounds(Buf, 1, lbound(InData%small_scale_TI_downstream), ubound(InData%small_scale_TI_downstream))
       call RegPack(Buf, InData%small_scale_TI_downstream)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%smoothed_velocity_array))
    if (allocated(InData%smoothed_velocity_array)) then
       call RegPackBounds(Buf, 2, lbound(InData%smoothed_velocity_array), ubound(InData%smoothed_velocity_array))
       call RegPack(Buf, InData%smoothed_velocity_array)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%vel_matrix))
    if (allocated(InData%vel_matrix)) then
       call RegPackBounds(Buf, 3, lbound(InData%vel_matrix), ubound(InData%vel_matrix))
@@ -2663,9 +2567,7 @@ subroutine DWM_Packturbine_blade(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DWM_Packturbine_blade'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%Aerodyn_turbine_num)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Blade_index)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Element_index)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -2813,69 +2715,43 @@ subroutine DWM_PackParam(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%velocityU), ubound(InData%velocityU))
       call RegPack(Buf, InData%velocityU)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%smoothed_wake))
    if (allocated(InData%smoothed_wake)) then
       call RegPackBounds(Buf, 1, lbound(InData%smoothed_wake), ubound(InData%smoothed_wake))
       call RegPack(Buf, InData%smoothed_wake)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WakePosition))
    if (allocated(InData%WakePosition)) then
       call RegPackBounds(Buf, 3, lbound(InData%WakePosition), ubound(InData%WakePosition))
       call RegPack(Buf, InData%WakePosition)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WakePosition_1)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WakePosition_2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%smooth_flag)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%p_p_r)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumWT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Tinfluencer)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RotorR)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%r_domain)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%x_domain)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Uambient)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TI_amb)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TI_wake)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%hub_height)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%length_velocityU)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WFLowerBd)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Wind_file_Mean_u)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Winddir)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%air_density)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RR)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ElementRad))
    if (allocated(InData%ElementRad)) then
       call RegPackBounds(Buf, 1, lbound(InData%ElementRad), ubound(InData%ElementRad))
       call RegPack(Buf, InData%ElementRad)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Bnum)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ElementNum)
-   if (RegCheckErr(Buf, RoutineName)) return
    call DWM_Packread_turbine_position_data(Buf, InData%RTPD) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackParam(Buf, InData%IfW) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -3149,63 +3025,38 @@ subroutine DWM_PackMisc(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DWM_PackMisc'
    if (Buf%ErrStat >= AbortErrLev) return
    call InflowWind_PackMisc(Buf, InData%IfW) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%position_y)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%position_z)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%velocity_wake_mean)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%shifted_velocity_Aerodyn)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%U_velocity)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%V_velocity)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Nforce))
    if (allocated(InData%Nforce)) then
       call RegPackBounds(Buf, 2, lbound(InData%Nforce), ubound(InData%Nforce))
       call RegPack(Buf, InData%Nforce)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%blade_dr))
    if (allocated(InData%blade_dr)) then
       call RegPackBounds(Buf, 1, lbound(InData%blade_dr), ubound(InData%blade_dr))
       call RegPack(Buf, InData%blade_dr)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NacYaw)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TI_original)
-   if (RegCheckErr(Buf, RoutineName)) return
    call DWM_Packturbine_average_velocity_data(Buf, InData%TAVD) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call DWM_PackCVSD(Buf, InData%CalVelScale_data) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call DWM_PackMeanderData(Buf, InData%meandering_data) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call DWM_PackWeiMethod(Buf, InData%weighting_method) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call DWM_PackTIDownstream(Buf, InData%TI_downstream_data) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call DWM_PackTurbKaimal(Buf, InData%Turbulence_KS) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call DWM_PackShinozuka(Buf, InData%shinozuka_data) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call DWM_Packsmooth_out_wake_data(Buf, InData%SmoothOut) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call DWM_PackSWSV(Buf, InData%smooth_wake_shifted_velocity_data) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call DWM_PackWake_Deficit_Data(Buf, InData%DWDD) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ct_tilde)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%FAST_Time)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SDtimestep)
-   if (RegCheckErr(Buf, RoutineName)) return
    call DWM_Packturbine_blade(Buf, InData%DWM_tb) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call DWM_Packwake_meandered_center(Buf, InData%WMC) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -3319,7 +3170,6 @@ subroutine DWM_PackInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DWM_PackInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call DWM_Packread_upwind_result(Buf, InData%Upwind_result) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackInput(Buf, InData%IfW) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -3515,65 +3365,49 @@ subroutine DWM_PackOutput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%turbine_thrust_force), ubound(InData%turbine_thrust_force))
       call RegPack(Buf, InData%turbine_thrust_force)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%induction_factor))
    if (allocated(InData%induction_factor)) then
       call RegPackBounds(Buf, 1, lbound(InData%induction_factor), ubound(InData%induction_factor))
       call RegPack(Buf, InData%induction_factor)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%r_initial))
    if (allocated(InData%r_initial)) then
       call RegPackBounds(Buf, 1, lbound(InData%r_initial), ubound(InData%r_initial))
       call RegPack(Buf, InData%r_initial)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%U_initial))
    if (allocated(InData%U_initial)) then
       call RegPackBounds(Buf, 1, lbound(InData%U_initial), ubound(InData%U_initial))
       call RegPack(Buf, InData%U_initial)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Mean_FFWS_array))
    if (allocated(InData%Mean_FFWS_array)) then
       call RegPackBounds(Buf, 1, lbound(InData%Mean_FFWS_array), ubound(InData%Mean_FFWS_array))
       call RegPack(Buf, InData%Mean_FFWS_array)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Mean_FFWS)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TI)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TI_downstream)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%wake_u))
    if (allocated(InData%wake_u)) then
       call RegPackBounds(Buf, 2, lbound(InData%wake_u), ubound(InData%wake_u))
       call RegPack(Buf, InData%wake_u)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%wake_position))
    if (allocated(InData%wake_position)) then
       call RegPackBounds(Buf, 3, lbound(InData%wake_position), ubound(InData%wake_position))
       call RegPack(Buf, InData%wake_position)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%smoothed_velocity_array))
    if (allocated(InData%smoothed_velocity_array)) then
       call RegPackBounds(Buf, 2, lbound(InData%smoothed_velocity_array), ubound(InData%smoothed_velocity_array))
       call RegPack(Buf, InData%smoothed_velocity_array)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%AtmUscale)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%du_dz_ABL)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%total_SDgenpwr)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%mean_SDgenpwr)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%avg_ct)
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackOutput(Buf, InData%IfW) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -3751,7 +3585,6 @@ subroutine DWM_PackContState(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DWM_PackContState'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%dummy)
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackContState(Buf, InData%IfW) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -3800,7 +3633,6 @@ subroutine DWM_PackDiscState(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DWM_PackDiscState'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%dummy)
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackDiscState(Buf, InData%IfW) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -3849,7 +3681,6 @@ subroutine DWM_PackConstrState(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DWM_PackConstrState'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%dummy)
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackConstrState(Buf, InData%IfW) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -3898,7 +3729,6 @@ subroutine DWM_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DWM_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%dummy)
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackInitInput(Buf, InData%IfW) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -3947,7 +3777,6 @@ subroutine DWM_PackInitOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'DWM_PackInitOutput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%dummy)
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackInitOutput(Buf, InData%IfW) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

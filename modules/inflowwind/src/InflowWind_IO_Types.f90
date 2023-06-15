@@ -186,39 +186,22 @@ subroutine InflowWind_IO_PackWindFileDat(Buf, Indata)
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackWindFileDat'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%FileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WindType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RefHt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RefHt_Set)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumTSteps)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ConstantDT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TRange)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TRange_Limited)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%YRange)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%YRange_Limited)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ZRange)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ZRange_Limited)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%BinaryFormat)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%IsBinary)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TI)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TI_listed)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MWS)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -295,9 +278,7 @@ subroutine InflowWind_IO_PackSteady_InitInputType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackSteady_InitInputType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%HWindSpeed)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RefHt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PLExp)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -353,15 +334,10 @@ subroutine InflowWind_IO_PackUniform_InitInputType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackUniform_InitInputType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%WindFileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RefHt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RefLength)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PropagationDir)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UseInputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackFileInfoType(Buf, InData%PassedFileData) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -422,27 +398,16 @@ subroutine InflowWind_IO_PackGrid3D_InitInputType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackGrid3D_InitInputType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%ScaleMethod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SF)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SigmaF)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WindProfileType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RefHt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%URef)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PLExp)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VLinShr)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HLinShr)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RefLength)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Z0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%XOffset)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -549,15 +514,10 @@ subroutine InflowWind_IO_PackBladed_InitInputType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackBladed_InitInputType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%WindFileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WindType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NativeBladedFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TowerFileExist)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TurbineID)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%FixedWindFileRootName)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -609,7 +569,6 @@ subroutine InflowWind_IO_PackBladed_InitOutputType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackBladed_InitOutputType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%PropagationDir)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%VFlowAngle)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -665,19 +624,12 @@ subroutine InflowWind_IO_PackHAWC_InitInputType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackHAWC_InitInputType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%WindFileName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nx)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ny)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nz)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dx)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dy)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dz)
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_IO_PackGrid3D_InitInputType(Buf, InData%G3D) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -777,11 +729,8 @@ subroutine InflowWind_IO_PackGrid4D_InitInputType(Buf, Indata)
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%n)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%delta)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%pZero)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%Vel))
    if (associated(InData%Vel)) then
       call RegPackBounds(Buf, 5, lbound(InData%Vel), ubound(InData%Vel))

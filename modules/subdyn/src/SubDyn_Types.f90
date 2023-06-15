@@ -568,45 +568,37 @@ subroutine SD_PackMeshAuxDataType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SD_PackMeshAuxDataType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%MemberID)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NOutCnt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%NodeCnt))
    if (allocated(InData%NodeCnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%NodeCnt), ubound(InData%NodeCnt))
       call RegPack(Buf, InData%NodeCnt)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%NodeIDs))
    if (allocated(InData%NodeIDs)) then
       call RegPackBounds(Buf, 1, lbound(InData%NodeIDs), ubound(InData%NodeIDs))
       call RegPack(Buf, InData%NodeIDs)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ElmIDs))
    if (allocated(InData%ElmIDs)) then
       call RegPackBounds(Buf, 2, lbound(InData%ElmIDs), ubound(InData%ElmIDs))
       call RegPack(Buf, InData%ElmIDs)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ElmNds))
    if (allocated(InData%ElmNds)) then
       call RegPackBounds(Buf, 2, lbound(InData%ElmNds), ubound(InData%ElmNds))
       call RegPack(Buf, InData%ElmNds)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Me))
    if (allocated(InData%Me)) then
       call RegPackBounds(Buf, 4, lbound(InData%Me), ubound(InData%Me))
       call RegPack(Buf, InData%Me)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Ke))
    if (allocated(InData%Ke)) then
       call RegPackBounds(Buf, 4, lbound(InData%Ke), ubound(InData%Ke))
       call RegPack(Buf, InData%Ke)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Fg))
    if (allocated(InData%Fg)) then
       call RegPackBounds(Buf, 3, lbound(InData%Fg), ubound(InData%Fg))
@@ -861,31 +853,26 @@ subroutine SD_PackCB_MatArrays(Buf, Indata)
       call RegPackBounds(Buf, 2, lbound(InData%MBB), ubound(InData%MBB))
       call RegPack(Buf, InData%MBB)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%MBM))
    if (allocated(InData%MBM)) then
       call RegPackBounds(Buf, 2, lbound(InData%MBM), ubound(InData%MBM))
       call RegPack(Buf, InData%MBM)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%KBB))
    if (allocated(InData%KBB)) then
       call RegPackBounds(Buf, 2, lbound(InData%KBB), ubound(InData%KBB))
       call RegPack(Buf, InData%KBB)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PhiL))
    if (allocated(InData%PhiL)) then
       call RegPackBounds(Buf, 2, lbound(InData%PhiL), ubound(InData%PhiL))
       call RegPack(Buf, InData%PhiL)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PhiR))
    if (allocated(InData%PhiR)) then
       call RegPackBounds(Buf, 2, lbound(InData%PhiR), ubound(InData%PhiR))
       call RegPack(Buf, InData%PhiR)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%OmegaL))
    if (allocated(InData%OmegaL)) then
       call RegPackBounds(Buf, 1, lbound(InData%OmegaL), ubound(InData%OmegaL))
@@ -1029,33 +1016,19 @@ subroutine SD_PackElemPropType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SD_PackElemPropType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%eType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Length)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Ixx)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Iyy)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Jzz)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Shear)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Kappa_x)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Kappa_y)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%YoungE)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%ShearG)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%D)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Area)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Rho)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%T0)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DirCos)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1155,25 +1128,17 @@ subroutine SD_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SD_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%SDInputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RootName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%g)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TP_RefPoint)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SubRotateZ)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%SoilStiffness))
    if (allocated(InData%SoilStiffness)) then
       call RegPackBounds(Buf, 3, lbound(InData%SoilStiffness), ubound(InData%SoilStiffness))
       call RegPack(Buf, InData%SoilStiffness)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call MeshPack(Buf, InData%SoilMesh) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Linearize)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1442,63 +1407,52 @@ subroutine SD_PackInitOutput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%LinNames_y))
    if (allocated(InData%LinNames_y)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames_y), ubound(InData%LinNames_y))
       call RegPack(Buf, InData%LinNames_y)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%LinNames_x))
    if (allocated(InData%LinNames_x)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames_x), ubound(InData%LinNames_x))
       call RegPack(Buf, InData%LinNames_x)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%LinNames_u))
    if (allocated(InData%LinNames_u)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames_u), ubound(InData%LinNames_u))
       call RegPack(Buf, InData%LinNames_u)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%RotFrame_y))
    if (allocated(InData%RotFrame_y)) then
       call RegPackBounds(Buf, 1, lbound(InData%RotFrame_y), ubound(InData%RotFrame_y))
       call RegPack(Buf, InData%RotFrame_y)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%RotFrame_x))
    if (allocated(InData%RotFrame_x)) then
       call RegPackBounds(Buf, 1, lbound(InData%RotFrame_x), ubound(InData%RotFrame_x))
       call RegPack(Buf, InData%RotFrame_x)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%RotFrame_u))
    if (allocated(InData%RotFrame_u)) then
       call RegPackBounds(Buf, 1, lbound(InData%RotFrame_u), ubound(InData%RotFrame_u))
       call RegPack(Buf, InData%RotFrame_u)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%IsLoad_u))
    if (allocated(InData%IsLoad_u)) then
       call RegPackBounds(Buf, 1, lbound(InData%IsLoad_u), ubound(InData%IsLoad_u))
       call RegPack(Buf, InData%IsLoad_u)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%DerivOrder_x))
    if (allocated(InData%DerivOrder_x)) then
       call RegPackBounds(Buf, 1, lbound(InData%DerivOrder_x), ubound(InData%DerivOrder_x))
       call RegPack(Buf, InData%DerivOrder_x)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%CableCChanRqst))
    if (allocated(InData%CableCChanRqst)) then
       call RegPackBounds(Buf, 1, lbound(InData%CableCChanRqst), ubound(InData%CableCChanRqst))
@@ -2167,209 +2121,159 @@ subroutine SD_PackInitType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SD_PackInitType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%RootName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TP_RefPoint)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SubRotateZ)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%g)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NJoints)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NPropSetsX)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NPropSetsB)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NPropSetsC)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NPropSetsR)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NCMass)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NCOSMs)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%FEMMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NDiv)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%CBMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Joints))
    if (allocated(InData%Joints)) then
       call RegPackBounds(Buf, 2, lbound(InData%Joints), ubound(InData%Joints))
       call RegPack(Buf, InData%Joints)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PropSetsB))
    if (allocated(InData%PropSetsB)) then
       call RegPackBounds(Buf, 2, lbound(InData%PropSetsB), ubound(InData%PropSetsB))
       call RegPack(Buf, InData%PropSetsB)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PropSetsC))
    if (allocated(InData%PropSetsC)) then
       call RegPackBounds(Buf, 2, lbound(InData%PropSetsC), ubound(InData%PropSetsC))
       call RegPack(Buf, InData%PropSetsC)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PropSetsR))
    if (allocated(InData%PropSetsR)) then
       call RegPackBounds(Buf, 2, lbound(InData%PropSetsR), ubound(InData%PropSetsR))
       call RegPack(Buf, InData%PropSetsR)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PropSetsX))
    if (allocated(InData%PropSetsX)) then
       call RegPackBounds(Buf, 2, lbound(InData%PropSetsX), ubound(InData%PropSetsX))
       call RegPack(Buf, InData%PropSetsX)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%COSMs))
    if (allocated(InData%COSMs)) then
       call RegPackBounds(Buf, 2, lbound(InData%COSMs), ubound(InData%COSMs))
       call RegPack(Buf, InData%COSMs)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%CMass))
    if (allocated(InData%CMass)) then
       call RegPackBounds(Buf, 2, lbound(InData%CMass), ubound(InData%CMass))
       call RegPack(Buf, InData%CMass)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%JDampings))
    if (allocated(InData%JDampings)) then
       call RegPackBounds(Buf, 1, lbound(InData%JDampings), ubound(InData%JDampings))
       call RegPack(Buf, InData%JDampings)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%GuyanDampMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RayleighDamp)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%GuyanDampMat)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Members))
    if (allocated(InData%Members)) then
       call RegPackBounds(Buf, 2, lbound(InData%Members), ubound(InData%Members))
       call RegPack(Buf, InData%Members)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%SSOutList))
    if (allocated(InData%SSOutList)) then
       call RegPackBounds(Buf, 1, lbound(InData%SSOutList), ubound(InData%SSOutList))
       call RegPack(Buf, InData%SSOutList)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutCOSM)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TabDelim)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%SSIK))
    if (allocated(InData%SSIK)) then
       call RegPackBounds(Buf, 2, lbound(InData%SSIK), ubound(InData%SSIK))
       call RegPack(Buf, InData%SSIK)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%SSIM))
    if (allocated(InData%SSIM)) then
       call RegPackBounds(Buf, 2, lbound(InData%SSIM), ubound(InData%SSIM))
       call RegPack(Buf, InData%SSIM)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%SSIfile))
    if (allocated(InData%SSIfile)) then
       call RegPackBounds(Buf, 1, lbound(InData%SSIfile), ubound(InData%SSIfile))
       call RegPack(Buf, InData%SSIfile)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Soil_K))
    if (allocated(InData%Soil_K)) then
       call RegPackBounds(Buf, 3, lbound(InData%Soil_K), ubound(InData%Soil_K))
       call RegPack(Buf, InData%Soil_K)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Soil_Points))
    if (allocated(InData%Soil_Points)) then
       call RegPackBounds(Buf, 2, lbound(InData%Soil_Points), ubound(InData%Soil_Points))
       call RegPack(Buf, InData%Soil_Points)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Soil_Nodes))
    if (allocated(InData%Soil_Nodes)) then
       call RegPackBounds(Buf, 1, lbound(InData%Soil_Nodes), ubound(InData%Soil_Nodes))
       call RegPack(Buf, InData%Soil_Nodes)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NElem)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NPropB)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NPropC)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NPropR)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Nodes))
    if (allocated(InData%Nodes)) then
       call RegPackBounds(Buf, 2, lbound(InData%Nodes), ubound(InData%Nodes))
       call RegPack(Buf, InData%Nodes)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PropsB))
    if (allocated(InData%PropsB)) then
       call RegPackBounds(Buf, 2, lbound(InData%PropsB), ubound(InData%PropsB))
       call RegPack(Buf, InData%PropsB)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PropsC))
    if (allocated(InData%PropsC)) then
       call RegPackBounds(Buf, 2, lbound(InData%PropsC), ubound(InData%PropsC))
       call RegPack(Buf, InData%PropsC)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PropsR))
    if (allocated(InData%PropsR)) then
       call RegPackBounds(Buf, 2, lbound(InData%PropsR), ubound(InData%PropsR))
       call RegPack(Buf, InData%PropsR)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%K))
    if (allocated(InData%K)) then
       call RegPackBounds(Buf, 2, lbound(InData%K), ubound(InData%K))
       call RegPack(Buf, InData%K)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%M))
    if (allocated(InData%M)) then
       call RegPackBounds(Buf, 2, lbound(InData%M), ubound(InData%M))
       call RegPack(Buf, InData%M)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ElemProps))
    if (allocated(InData%ElemProps)) then
       call RegPackBounds(Buf, 2, lbound(InData%ElemProps), ubound(InData%ElemProps))
       call RegPack(Buf, InData%ElemProps)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%MemberNodes))
    if (allocated(InData%MemberNodes)) then
       call RegPackBounds(Buf, 2, lbound(InData%MemberNodes), ubound(InData%MemberNodes))
       call RegPack(Buf, InData%MemberNodes)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%NodesConnN))
    if (allocated(InData%NodesConnN)) then
       call RegPackBounds(Buf, 2, lbound(InData%NodesConnN), ubound(InData%NodesConnN))
       call RegPack(Buf, InData%NodesConnN)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%NodesConnE))
    if (allocated(InData%NodesConnE)) then
       call RegPackBounds(Buf, 2, lbound(InData%NodesConnE), ubound(InData%NodesConnE))
       call RegPack(Buf, InData%NodesConnE)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SSSum)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -2864,7 +2768,6 @@ subroutine SD_PackContState(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%qm), ubound(InData%qm))
       call RegPack(Buf, InData%qm)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%qmdot))
    if (allocated(InData%qmdot)) then
       call RegPackBounds(Buf, 1, lbound(InData%qmdot), ubound(InData%qmdot))
@@ -3061,7 +2964,6 @@ subroutine SD_PackOtherState(Buf, Indata)
          call SD_PackContState(Buf, InData%xdot(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%n)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -3539,149 +3441,121 @@ subroutine SD_PackMisc(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%qmdotdot), ubound(InData%qmdotdot))
       call RegPack(Buf, InData%qmdotdot)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%u_TP)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%udot_TP)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%udotdot_TP)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%F_L))
    if (allocated(InData%F_L)) then
       call RegPackBounds(Buf, 1, lbound(InData%F_L), ubound(InData%F_L))
       call RegPack(Buf, InData%F_L)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%F_L2))
    if (allocated(InData%F_L2)) then
       call RegPackBounds(Buf, 1, lbound(InData%F_L2), ubound(InData%F_L2))
       call RegPack(Buf, InData%F_L2)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%UR_bar))
    if (allocated(InData%UR_bar)) then
       call RegPackBounds(Buf, 1, lbound(InData%UR_bar), ubound(InData%UR_bar))
       call RegPack(Buf, InData%UR_bar)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%UR_bar_dot))
    if (allocated(InData%UR_bar_dot)) then
       call RegPackBounds(Buf, 1, lbound(InData%UR_bar_dot), ubound(InData%UR_bar_dot))
       call RegPack(Buf, InData%UR_bar_dot)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%UR_bar_dotdot))
    if (allocated(InData%UR_bar_dotdot)) then
       call RegPackBounds(Buf, 1, lbound(InData%UR_bar_dotdot), ubound(InData%UR_bar_dotdot))
       call RegPack(Buf, InData%UR_bar_dotdot)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%UL))
    if (allocated(InData%UL)) then
       call RegPackBounds(Buf, 1, lbound(InData%UL), ubound(InData%UL))
       call RegPack(Buf, InData%UL)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%UL_NS))
    if (allocated(InData%UL_NS)) then
       call RegPackBounds(Buf, 1, lbound(InData%UL_NS), ubound(InData%UL_NS))
       call RegPack(Buf, InData%UL_NS)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%UL_dot))
    if (allocated(InData%UL_dot)) then
       call RegPackBounds(Buf, 1, lbound(InData%UL_dot), ubound(InData%UL_dot))
       call RegPack(Buf, InData%UL_dot)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%UL_dotdot))
    if (allocated(InData%UL_dotdot)) then
       call RegPackBounds(Buf, 1, lbound(InData%UL_dotdot), ubound(InData%UL_dotdot))
       call RegPack(Buf, InData%UL_dotdot)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%DU_full))
    if (allocated(InData%DU_full)) then
       call RegPackBounds(Buf, 1, lbound(InData%DU_full), ubound(InData%DU_full))
       call RegPack(Buf, InData%DU_full)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%U_full))
    if (allocated(InData%U_full)) then
       call RegPackBounds(Buf, 1, lbound(InData%U_full), ubound(InData%U_full))
       call RegPack(Buf, InData%U_full)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%U_full_NS))
    if (allocated(InData%U_full_NS)) then
       call RegPackBounds(Buf, 1, lbound(InData%U_full_NS), ubound(InData%U_full_NS))
       call RegPack(Buf, InData%U_full_NS)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%U_full_dot))
    if (allocated(InData%U_full_dot)) then
       call RegPackBounds(Buf, 1, lbound(InData%U_full_dot), ubound(InData%U_full_dot))
       call RegPack(Buf, InData%U_full_dot)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%U_full_dotdot))
    if (allocated(InData%U_full_dotdot)) then
       call RegPackBounds(Buf, 1, lbound(InData%U_full_dotdot), ubound(InData%U_full_dotdot))
       call RegPack(Buf, InData%U_full_dotdot)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%U_full_elast))
    if (allocated(InData%U_full_elast)) then
       call RegPackBounds(Buf, 1, lbound(InData%U_full_elast), ubound(InData%U_full_elast))
       call RegPack(Buf, InData%U_full_elast)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%U_red))
    if (allocated(InData%U_red)) then
       call RegPackBounds(Buf, 1, lbound(InData%U_red), ubound(InData%U_red))
       call RegPack(Buf, InData%U_red)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%FC_unit))
    if (allocated(InData%FC_unit)) then
       call RegPackBounds(Buf, 1, lbound(InData%FC_unit), ubound(InData%FC_unit))
       call RegPack(Buf, InData%FC_unit)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%SDWrOutput))
    if (allocated(InData%SDWrOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%SDWrOutput), ubound(InData%SDWrOutput))
       call RegPack(Buf, InData%SDWrOutput)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AllOuts))
    if (allocated(InData%AllOuts)) then
       call RegPackBounds(Buf, 1, lbound(InData%AllOuts), ubound(InData%AllOuts))
       call RegPack(Buf, InData%AllOuts)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%LastOutTime)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Decimat)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Fext))
    if (allocated(InData%Fext)) then
       call RegPackBounds(Buf, 1, lbound(InData%Fext), ubound(InData%Fext))
       call RegPack(Buf, InData%Fext)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Fext_red))
    if (allocated(InData%Fext_red)) then
       call RegPackBounds(Buf, 1, lbound(InData%Fext_red), ubound(InData%Fext_red))
       call RegPack(Buf, InData%Fext_red)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%UL_SIM))
    if (allocated(InData%UL_SIM)) then
       call RegPackBounds(Buf, 1, lbound(InData%UL_SIM), ubound(InData%UL_SIM))
       call RegPack(Buf, InData%UL_SIM)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%UL_0m))
    if (allocated(InData%UL_0m)) then
       call RegPackBounds(Buf, 1, lbound(InData%UL_0m), ubound(InData%UL_0m))
@@ -5199,21 +5073,15 @@ subroutine SD_PackParam(Buf, Indata)
    integer(IntKi)  :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%SDDeltaT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%IntMethod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nDOF)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nDOF_red)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Nmembers)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Elems))
    if (allocated(InData%Elems)) then
       call RegPackBounds(Buf, 2, lbound(InData%Elems), ubound(InData%Elems))
       call RegPack(Buf, InData%Elems)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ElemProps))
    if (allocated(InData%ElemProps)) then
       call RegPackBounds(Buf, 1, lbound(InData%ElemProps), ubound(InData%ElemProps))
@@ -5223,39 +5091,32 @@ subroutine SD_PackParam(Buf, Indata)
          call SD_PackElemPropType(Buf, InData%ElemProps(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%FG))
    if (allocated(InData%FG)) then
       call RegPackBounds(Buf, 1, lbound(InData%FG), ubound(InData%FG))
       call RegPack(Buf, InData%FG)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%DP0))
    if (allocated(InData%DP0)) then
       call RegPackBounds(Buf, 2, lbound(InData%DP0), ubound(InData%DP0))
       call RegPack(Buf, InData%DP0)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%NodeID2JointID))
    if (allocated(InData%NodeID2JointID)) then
       call RegPackBounds(Buf, 1, lbound(InData%NodeID2JointID), ubound(InData%NodeID2JointID))
       call RegPack(Buf, InData%NodeID2JointID)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%reduced)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%T_red))
    if (allocated(InData%T_red)) then
       call RegPackBounds(Buf, 2, lbound(InData%T_red), ubound(InData%T_red))
       call RegPack(Buf, InData%T_red)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%T_red_T))
    if (allocated(InData%T_red_T)) then
       call RegPackBounds(Buf, 2, lbound(InData%T_red_T), ubound(InData%T_red_T))
       call RegPack(Buf, InData%T_red_T)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%NodesDOF))
    if (allocated(InData%NodesDOF)) then
       call RegPackBounds(Buf, 1, lbound(InData%NodesDOF), ubound(InData%NodesDOF))
@@ -5265,7 +5126,6 @@ subroutine SD_PackParam(Buf, Indata)
          call SD_PackIList(Buf, InData%NodesDOF(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%NodesDOFred))
    if (allocated(InData%NodesDOFred)) then
       call RegPackBounds(Buf, 1, lbound(InData%NodesDOFred), ubound(InData%NodesDOFred))
@@ -5275,325 +5135,253 @@ subroutine SD_PackParam(Buf, Indata)
          call SD_PackIList(Buf, InData%NodesDOFred(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ElemsDOF))
    if (allocated(InData%ElemsDOF)) then
       call RegPackBounds(Buf, 2, lbound(InData%ElemsDOF), ubound(InData%ElemsDOF))
       call RegPack(Buf, InData%ElemsDOF)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%DOFred2Nodes))
    if (allocated(InData%DOFred2Nodes)) then
       call RegPackBounds(Buf, 2, lbound(InData%DOFred2Nodes), ubound(InData%DOFred2Nodes))
       call RegPack(Buf, InData%DOFred2Nodes)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%CtrlElem2Channel))
    if (allocated(InData%CtrlElem2Channel)) then
       call RegPackBounds(Buf, 2, lbound(InData%CtrlElem2Channel), ubound(InData%CtrlElem2Channel))
       call RegPack(Buf, InData%CtrlElem2Channel)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nDOFM)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SttcSolve)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%GuyanLoadCorrection)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Floating)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%KMMDiag))
    if (allocated(InData%KMMDiag)) then
       call RegPackBounds(Buf, 1, lbound(InData%KMMDiag), ubound(InData%KMMDiag))
       call RegPack(Buf, InData%KMMDiag)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%CMMDiag))
    if (allocated(InData%CMMDiag)) then
       call RegPackBounds(Buf, 1, lbound(InData%CMMDiag), ubound(InData%CMMDiag))
       call RegPack(Buf, InData%CMMDiag)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%MMB))
    if (allocated(InData%MMB)) then
       call RegPackBounds(Buf, 2, lbound(InData%MMB), ubound(InData%MMB))
       call RegPack(Buf, InData%MMB)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%MBmmB))
    if (allocated(InData%MBmmB)) then
       call RegPackBounds(Buf, 2, lbound(InData%MBmmB), ubound(InData%MBmmB))
       call RegPack(Buf, InData%MBmmB)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%C1_11))
    if (allocated(InData%C1_11)) then
       call RegPackBounds(Buf, 2, lbound(InData%C1_11), ubound(InData%C1_11))
       call RegPack(Buf, InData%C1_11)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%C1_12))
    if (allocated(InData%C1_12)) then
       call RegPackBounds(Buf, 2, lbound(InData%C1_12), ubound(InData%C1_12))
       call RegPack(Buf, InData%C1_12)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%D1_141))
    if (allocated(InData%D1_141)) then
       call RegPackBounds(Buf, 2, lbound(InData%D1_141), ubound(InData%D1_141))
       call RegPack(Buf, InData%D1_141)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%D1_142))
    if (allocated(InData%D1_142)) then
       call RegPackBounds(Buf, 2, lbound(InData%D1_142), ubound(InData%D1_142))
       call RegPack(Buf, InData%D1_142)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PhiM))
    if (allocated(InData%PhiM)) then
       call RegPackBounds(Buf, 2, lbound(InData%PhiM), ubound(InData%PhiM))
       call RegPack(Buf, InData%PhiM)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%C2_61))
    if (allocated(InData%C2_61)) then
       call RegPackBounds(Buf, 2, lbound(InData%C2_61), ubound(InData%C2_61))
       call RegPack(Buf, InData%C2_61)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%C2_62))
    if (allocated(InData%C2_62)) then
       call RegPackBounds(Buf, 2, lbound(InData%C2_62), ubound(InData%C2_62))
       call RegPack(Buf, InData%C2_62)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PhiRb_TI))
    if (allocated(InData%PhiRb_TI)) then
       call RegPackBounds(Buf, 2, lbound(InData%PhiRb_TI), ubound(InData%PhiRb_TI))
       call RegPack(Buf, InData%PhiRb_TI)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%D2_63))
    if (allocated(InData%D2_63)) then
       call RegPackBounds(Buf, 2, lbound(InData%D2_63), ubound(InData%D2_63))
       call RegPack(Buf, InData%D2_63)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%D2_64))
    if (allocated(InData%D2_64)) then
       call RegPackBounds(Buf, 2, lbound(InData%D2_64), ubound(InData%D2_64))
       call RegPack(Buf, InData%D2_64)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%MBB))
    if (allocated(InData%MBB)) then
       call RegPackBounds(Buf, 2, lbound(InData%MBB), ubound(InData%MBB))
       call RegPack(Buf, InData%MBB)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%KBB))
    if (allocated(InData%KBB)) then
       call RegPackBounds(Buf, 2, lbound(InData%KBB), ubound(InData%KBB))
       call RegPack(Buf, InData%KBB)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%CBB))
    if (allocated(InData%CBB)) then
       call RegPackBounds(Buf, 2, lbound(InData%CBB), ubound(InData%CBB))
       call RegPack(Buf, InData%CBB)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%CMM))
    if (allocated(InData%CMM)) then
       call RegPackBounds(Buf, 2, lbound(InData%CMM), ubound(InData%CMM))
       call RegPack(Buf, InData%CMM)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%MBM))
    if (allocated(InData%MBM)) then
       call RegPackBounds(Buf, 2, lbound(InData%MBM), ubound(InData%MBM))
       call RegPack(Buf, InData%MBM)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PhiL_T))
    if (allocated(InData%PhiL_T)) then
       call RegPackBounds(Buf, 2, lbound(InData%PhiL_T), ubound(InData%PhiL_T))
       call RegPack(Buf, InData%PhiL_T)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%PhiLInvOmgL2))
    if (allocated(InData%PhiLInvOmgL2)) then
       call RegPackBounds(Buf, 2, lbound(InData%PhiLInvOmgL2), ubound(InData%PhiLInvOmgL2))
       call RegPack(Buf, InData%PhiLInvOmgL2)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%KLLm1))
    if (allocated(InData%KLLm1)) then
       call RegPackBounds(Buf, 2, lbound(InData%KLLm1), ubound(InData%KLLm1))
       call RegPack(Buf, InData%KLLm1)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AM2Jac))
    if (allocated(InData%AM2Jac)) then
       call RegPackBounds(Buf, 2, lbound(InData%AM2Jac), ubound(InData%AM2Jac))
       call RegPack(Buf, InData%AM2Jac)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AM2JacPiv))
    if (allocated(InData%AM2JacPiv)) then
       call RegPackBounds(Buf, 1, lbound(InData%AM2JacPiv), ubound(InData%AM2JacPiv))
       call RegPack(Buf, InData%AM2JacPiv)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%TI))
    if (allocated(InData%TI)) then
       call RegPackBounds(Buf, 2, lbound(InData%TI), ubound(InData%TI))
       call RegPack(Buf, InData%TI)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%TIreact))
    if (allocated(InData%TIreact)) then
       call RegPackBounds(Buf, 2, lbound(InData%TIreact), ubound(InData%TIreact))
       call RegPack(Buf, InData%TIreact)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nNodes)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nNodes_I)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nNodes_L)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nNodes_C)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Nodes_I))
    if (allocated(InData%Nodes_I)) then
       call RegPackBounds(Buf, 2, lbound(InData%Nodes_I), ubound(InData%Nodes_I))
       call RegPack(Buf, InData%Nodes_I)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Nodes_L))
    if (allocated(InData%Nodes_L)) then
       call RegPackBounds(Buf, 2, lbound(InData%Nodes_L), ubound(InData%Nodes_L))
       call RegPack(Buf, InData%Nodes_L)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Nodes_C))
    if (allocated(InData%Nodes_C)) then
       call RegPackBounds(Buf, 2, lbound(InData%Nodes_C), ubound(InData%Nodes_C))
       call RegPack(Buf, InData%Nodes_C)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nDOFI__)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nDOFI_Rb)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nDOFI_F)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nDOFL_L)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nDOFC__)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nDOFC_Rb)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nDOFC_L)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nDOFC_F)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nDOFR__)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nDOF__Rb)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nDOF__L)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%nDOF__F)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%IDI__))
    if (allocated(InData%IDI__)) then
       call RegPackBounds(Buf, 1, lbound(InData%IDI__), ubound(InData%IDI__))
       call RegPack(Buf, InData%IDI__)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%IDI_Rb))
    if (allocated(InData%IDI_Rb)) then
       call RegPackBounds(Buf, 1, lbound(InData%IDI_Rb), ubound(InData%IDI_Rb))
       call RegPack(Buf, InData%IDI_Rb)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%IDI_F))
    if (allocated(InData%IDI_F)) then
       call RegPackBounds(Buf, 1, lbound(InData%IDI_F), ubound(InData%IDI_F))
       call RegPack(Buf, InData%IDI_F)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%IDL_L))
    if (allocated(InData%IDL_L)) then
       call RegPackBounds(Buf, 1, lbound(InData%IDL_L), ubound(InData%IDL_L))
       call RegPack(Buf, InData%IDL_L)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%IDC__))
    if (allocated(InData%IDC__)) then
       call RegPackBounds(Buf, 1, lbound(InData%IDC__), ubound(InData%IDC__))
       call RegPack(Buf, InData%IDC__)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%IDC_Rb))
    if (allocated(InData%IDC_Rb)) then
       call RegPackBounds(Buf, 1, lbound(InData%IDC_Rb), ubound(InData%IDC_Rb))
       call RegPack(Buf, InData%IDC_Rb)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%IDC_L))
    if (allocated(InData%IDC_L)) then
       call RegPackBounds(Buf, 1, lbound(InData%IDC_L), ubound(InData%IDC_L))
       call RegPack(Buf, InData%IDC_L)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%IDC_F))
    if (allocated(InData%IDC_F)) then
       call RegPackBounds(Buf, 1, lbound(InData%IDC_F), ubound(InData%IDC_F))
       call RegPack(Buf, InData%IDC_F)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%IDR__))
    if (allocated(InData%IDR__)) then
       call RegPackBounds(Buf, 1, lbound(InData%IDR__), ubound(InData%IDR__))
       call RegPack(Buf, InData%IDR__)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ID__Rb))
    if (allocated(InData%ID__Rb)) then
       call RegPackBounds(Buf, 1, lbound(InData%ID__Rb), ubound(InData%ID__Rb))
       call RegPack(Buf, InData%ID__Rb)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ID__L))
    if (allocated(InData%ID__L)) then
       call RegPackBounds(Buf, 1, lbound(InData%ID__L), ubound(InData%ID__L))
       call RegPack(Buf, InData%ID__L)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ID__F))
    if (allocated(InData%ID__F)) then
       call RegPackBounds(Buf, 1, lbound(InData%ID__F), ubound(InData%ID__F))
       call RegPack(Buf, InData%ID__F)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NMOutputs)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutSwtch)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UnJckF)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Delim)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutSFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%MoutLst))
    if (allocated(InData%MoutLst)) then
       call RegPackBounds(Buf, 1, lbound(InData%MoutLst), ubound(InData%MoutLst))
@@ -5603,7 +5391,6 @@ subroutine SD_PackParam(Buf, Indata)
          call SD_PackMeshAuxDataType(Buf, InData%MoutLst(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%MoutLst2))
    if (allocated(InData%MoutLst2)) then
       call RegPackBounds(Buf, 1, lbound(InData%MoutLst2), ubound(InData%MoutLst2))
@@ -5613,7 +5400,6 @@ subroutine SD_PackParam(Buf, Indata)
          call SD_PackMeshAuxDataType(Buf, InData%MoutLst2(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%MoutLst3))
    if (allocated(InData%MoutLst3)) then
       call RegPackBounds(Buf, 1, lbound(InData%MoutLst3), ubound(InData%MoutLst3))
@@ -5623,7 +5409,6 @@ subroutine SD_PackParam(Buf, Indata)
          call SD_PackMeshAuxDataType(Buf, InData%MoutLst3(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutParam), ubound(InData%OutParam))
@@ -5633,39 +5418,26 @@ subroutine SD_PackParam(Buf, Indata)
          call NWTC_Library_PackOutParmType(Buf, InData%OutParam(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutAll)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutCBModes)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutFEMModes)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutReact)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutAllInt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutAllDims)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutDec)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%Jac_u_indx))
    if (allocated(InData%Jac_u_indx)) then
       call RegPackBounds(Buf, 2, lbound(InData%Jac_u_indx), ubound(InData%Jac_u_indx))
       call RegPack(Buf, InData%Jac_u_indx)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%du))
    if (allocated(InData%du)) then
       call RegPackBounds(Buf, 1, lbound(InData%du), ubound(InData%du))
       call RegPack(Buf, InData%du)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dx)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Jac_ny)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Jac_nx)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RotStates)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -6656,9 +6428,7 @@ subroutine SD_PackInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SD_PackInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call MeshPack(Buf, InData%TPMesh) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MeshPack(Buf, InData%LMesh) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%CableDeltaL))
    if (allocated(InData%CableDeltaL)) then
       call RegPackBounds(Buf, 1, lbound(InData%CableDeltaL), ubound(InData%CableDeltaL))
@@ -6750,11 +6520,8 @@ subroutine SD_PackOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SD_PackOutput'
    if (Buf%ErrStat >= AbortErrLev) return
    call MeshPack(Buf, InData%Y1Mesh) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MeshPack(Buf, InData%Y2Mesh) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MeshPack(Buf, InData%Y3Mesh) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))

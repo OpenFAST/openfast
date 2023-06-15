@@ -234,27 +234,16 @@ subroutine ADI_PackInflowWindData(Buf, Indata)
    character(*), parameter         :: RoutineName = 'ADI_PackInflowWindData'
    if (Buf%ErrStat >= AbortErrLev) return
    call InflowWind_PackContState(Buf, InData%x) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackDiscState(Buf, InData%xd) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackConstrState(Buf, InData%z) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackOtherState(Buf, InData%OtherSt) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackParam(Buf, InData%p) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackMisc(Buf, InData%m) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackInput(Buf, InData%u) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call InflowWind_PackOutput(Buf, InData%y) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%CompInflow)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HWindSpeed)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RefHt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PLExp)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -323,21 +312,13 @@ subroutine ADI_PackIW_InputData(Buf, Indata)
    character(*), parameter         :: RoutineName = 'ADI_PackIW_InputData'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%InputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%CompInflow)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HWindSpeed)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RefHt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PLExp)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MHK)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UseInputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackFileInfoType(Buf, InData%PassedFileData) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Linearize)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -407,17 +388,11 @@ subroutine ADI_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'ADI_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call AD_PackInitInput(Buf, InData%AD) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call ADI_PackIW_InputData(Buf, InData%IW_InitInp) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RootName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%storeHHVel)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WrVTK)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WrVTK_Type)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -509,13 +484,11 @@ subroutine ADI_PackInitOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'ADI_PackInitOutput'
    if (Buf%ErrStat >= AbortErrLev) return
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
@@ -808,9 +781,7 @@ subroutine ADI_PackMisc(Buf, Indata)
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
    call AD_PackMisc(Buf, InData%AD) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call ADI_PackInflowWindData(Buf, InData%IW) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%VTK_surfaces))
    if (allocated(InData%VTK_surfaces)) then
       call RegPackBounds(Buf, 1, lbound(InData%VTK_surfaces), ubound(InData%VTK_surfaces))
@@ -891,19 +862,12 @@ subroutine ADI_PackParam(Buf, Indata)
    character(*), parameter         :: RoutineName = 'ADI_PackParam'
    if (Buf%ErrStat >= AbortErrLev) return
    call AD_PackParam(Buf, InData%AD) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%dt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%storeHHVel)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%wrVTK)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WrVTK_Type)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MHK)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1060,21 +1024,17 @@ subroutine ADI_PackOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'ADI_PackOutput'
    if (Buf%ErrStat >= AbortErrLev) return
    call AD_PackOutput(Buf, InData%AD) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%HHVel))
    if (allocated(InData%HHVel)) then
       call RegPackBounds(Buf, 2, lbound(InData%HHVel), ubound(InData%HHVel))
       call RegPack(Buf, InData%HHVel)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PLExp)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%IW_WriteOutput))
    if (allocated(InData%IW_WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%IW_WriteOutput), ubound(InData%IW_WriteOutput))
       call RegPack(Buf, InData%IW_WriteOutput)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
@@ -1343,7 +1303,6 @@ subroutine ADI_PackData(Buf, Indata)
          call ADI_PackContState(Buf, InData%x(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%xd))
    if (allocated(InData%xd)) then
       call RegPackBounds(Buf, 1, lbound(InData%xd), ubound(InData%xd))
@@ -1353,7 +1312,6 @@ subroutine ADI_PackData(Buf, Indata)
          call ADI_PackDiscState(Buf, InData%xd(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%z))
    if (allocated(InData%z)) then
       call RegPackBounds(Buf, 1, lbound(InData%z), ubound(InData%z))
@@ -1363,7 +1321,6 @@ subroutine ADI_PackData(Buf, Indata)
          call ADI_PackConstrState(Buf, InData%z(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%OtherState))
    if (allocated(InData%OtherState)) then
       call RegPackBounds(Buf, 1, lbound(InData%OtherState), ubound(InData%OtherState))
@@ -1373,11 +1330,8 @@ subroutine ADI_PackData(Buf, Indata)
          call ADI_PackOtherState(Buf, InData%OtherState(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call ADI_PackParam(Buf, InData%p) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call ADI_PackMisc(Buf, InData%m) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%u))
    if (allocated(InData%u)) then
       call RegPackBounds(Buf, 1, lbound(InData%u), ubound(InData%u))
@@ -1387,9 +1341,7 @@ subroutine ADI_PackData(Buf, Indata)
          call ADI_PackInput(Buf, InData%u(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call ADI_PackOutput(Buf, InData%y) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%inputTimes))
    if (allocated(InData%inputTimes)) then
       call RegPackBounds(Buf, 1, lbound(InData%inputTimes), ubound(InData%inputTimes))
@@ -1678,15 +1630,10 @@ subroutine ADI_PackRotFED(Buf, Indata)
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
    call MeshPack(Buf, InData%PlatformPtMesh) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MeshPack(Buf, InData%TwrPtMesh) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MeshPack(Buf, InData%TwrPtMeshAD) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MeshPack(Buf, InData%NacelleMotion) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call MeshPack(Buf, InData%HubPtMotion) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%BladeRootMotion))
    if (allocated(InData%BladeRootMotion)) then
       call RegPackBounds(Buf, 1, lbound(InData%BladeRootMotion), ubound(InData%BladeRootMotion))
@@ -1696,7 +1643,6 @@ subroutine ADI_PackRotFED(Buf, Indata)
          call MeshPack(Buf, InData%BladeRootMotion(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%BladeLn2Mesh))
    if (allocated(InData%BladeLn2Mesh)) then
       call RegPackBounds(Buf, 1, lbound(InData%BladeLn2Mesh), ubound(InData%BladeLn2Mesh))
@@ -1706,17 +1652,11 @@ subroutine ADI_PackRotFED(Buf, Indata)
          call MeshPack(Buf, InData%BladeLn2Mesh(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%hasTower)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%rigidBlades)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%numBlades)
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackMeshMapType(Buf, InData%ED_P_2_AD_P_T) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackMeshMapType(Buf, InData%AD_P_2_AD_L_T) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%AD_P_2_AD_L_B))
    if (allocated(InData%AD_P_2_AD_L_B)) then
       call RegPackBounds(Buf, 1, lbound(InData%AD_P_2_AD_L_B), ubound(InData%AD_P_2_AD_L_B))
@@ -1726,9 +1666,7 @@ subroutine ADI_PackRotFED(Buf, Indata)
          call NWTC_Library_PackMeshMapType(Buf, InData%AD_P_2_AD_L_B(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackMeshMapType(Buf, InData%ED_P_2_AD_P_TF) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%ED_P_2_AD_P_R))
    if (allocated(InData%ED_P_2_AD_P_R)) then
       call RegPackBounds(Buf, 1, lbound(InData%ED_P_2_AD_P_R), ubound(InData%ED_P_2_AD_P_R))
@@ -1738,9 +1676,7 @@ subroutine ADI_PackRotFED(Buf, Indata)
          call NWTC_Library_PackMeshMapType(Buf, InData%ED_P_2_AD_P_R(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackMeshMapType(Buf, InData%ED_P_2_AD_P_H) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackMeshMapType(Buf, InData%ED_P_2_AD_P_N) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

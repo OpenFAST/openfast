@@ -380,79 +380,54 @@ subroutine SeaSt_PackInputFile(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SeaSt_PackInputFile'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%EchoFlag)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MSL2SWL)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%X_HalfWidth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Y_HalfWidth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Z_Depth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NX)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NY)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NZ)
-   if (RegCheckErr(Buf, RoutineName)) return
    call Waves_PackInitInput(Buf, InData%Waves) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call Waves2_PackInitInput(Buf, InData%Waves2) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call Current_PackInitInput(Buf, InData%Current) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Echo)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NWaveElev)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveElevxi))
    if (allocated(InData%WaveElevxi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveElevxi), ubound(InData%WaveElevxi))
       call RegPack(Buf, InData%WaveElevxi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveElevyi))
    if (allocated(InData%WaveElevyi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveElevyi), ubound(InData%WaveElevyi))
       call RegPack(Buf, InData%WaveElevyi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NWaveKin)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveKinxi))
    if (allocated(InData%WaveKinxi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinxi), ubound(InData%WaveKinxi))
       call RegPack(Buf, InData%WaveKinxi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveKinyi))
    if (allocated(InData%WaveKinyi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinyi), ubound(InData%WaveKinyi))
       call RegPack(Buf, InData%WaveKinyi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveKinzi))
    if (allocated(InData%WaveKinzi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinzi), ubound(InData%WaveKinzi))
       call RegPack(Buf, InData%WaveKinzi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutSwtch)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutAll)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%OutList))
    if (allocated(InData%OutList)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutList), ubound(InData%OutList))
       call RegPack(Buf, InData%OutList)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%SeaStSum)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutSFmt)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -653,39 +628,24 @@ subroutine SeaSt_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SeaSt_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%InputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UseInputFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackFileInfoType(Buf, InData%PassedFileData) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutRootName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Gravity)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%defWtrDens)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%defWtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%defMSL2SWL)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%TMax)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveElevXY))
    if (allocated(InData%WaveElevXY)) then
       call RegPackBounds(Buf, 2, lbound(InData%WaveElevXY), ubound(InData%WaveElevXY))
       call RegPack(Buf, InData%WaveElevXY)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveFieldMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PtfmLocationX)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%PtfmLocationY)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WrWvKinMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%HasIce)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Linearize)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -890,21 +850,15 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WtrDens)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MSL2SWL)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveElevC0))
    if (associated(InData%WaveElevC0)) then
       call RegPackBounds(Buf, 2, lbound(InData%WaveElevC0), ubound(InData%WaveElevC0))
@@ -913,7 +867,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
          call RegPack(Buf, InData%WaveElevC0)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveElevC))
    if (associated(InData%WaveElevC)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElevC), ubound(InData%WaveElevC))
@@ -922,7 +875,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
          call RegPack(Buf, InData%WaveElevC)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveDirArr))
    if (associated(InData%WaveDirArr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveDirArr), ubound(InData%WaveDirArr))
@@ -931,17 +883,11 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
          call RegPack(Buf, InData%WaveDirArr)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveDirMin)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveDirMax)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveDir)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveMultiDir)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveDOmega)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveDynP))
    if (associated(InData%WaveDynP)) then
       call RegPackBounds(Buf, 4, lbound(InData%WaveDynP), ubound(InData%WaveDynP))
@@ -950,7 +896,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
          call RegPack(Buf, InData%WaveDynP)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveAcc))
    if (associated(InData%WaveAcc)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveAcc), ubound(InData%WaveAcc))
@@ -959,7 +904,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
          call RegPack(Buf, InData%WaveAcc)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveAccMCF))
    if (associated(InData%WaveAccMCF)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveAccMCF), ubound(InData%WaveAccMCF))
@@ -968,7 +912,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
          call RegPack(Buf, InData%WaveAccMCF)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveVel))
    if (associated(InData%WaveVel)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveVel), ubound(InData%WaveVel))
@@ -977,7 +920,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
          call RegPack(Buf, InData%WaveVel)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%PWaveDynP0))
    if (associated(InData%PWaveDynP0)) then
       call RegPackBounds(Buf, 3, lbound(InData%PWaveDynP0), ubound(InData%PWaveDynP0))
@@ -986,7 +928,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
          call RegPack(Buf, InData%PWaveDynP0)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%PWaveAcc0))
    if (associated(InData%PWaveAcc0)) then
       call RegPackBounds(Buf, 4, lbound(InData%PWaveAcc0), ubound(InData%PWaveAcc0))
@@ -995,7 +936,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
          call RegPack(Buf, InData%PWaveAcc0)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%PWaveAccMCF0))
    if (associated(InData%PWaveAccMCF0)) then
       call RegPackBounds(Buf, 4, lbound(InData%PWaveAccMCF0), ubound(InData%PWaveAccMCF0))
@@ -1004,7 +944,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
          call RegPack(Buf, InData%PWaveAccMCF0)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%PWaveVel0))
    if (associated(InData%PWaveVel0)) then
       call RegPackBounds(Buf, 4, lbound(InData%PWaveVel0), ubound(InData%PWaveVel0))
@@ -1013,7 +952,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
          call RegPack(Buf, InData%PWaveVel0)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveElev1))
    if (associated(InData%WaveElev1)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElev1), ubound(InData%WaveElev1))
@@ -1022,7 +960,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
          call RegPack(Buf, InData%WaveElev1)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveElev2))
    if (associated(InData%WaveElev2)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElev2), ubound(InData%WaveElev2))
@@ -1031,7 +968,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
          call RegPack(Buf, InData%WaveElev2)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveElev0))
    if (associated(InData%WaveElev0)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveElev0), ubound(InData%WaveElev0))
@@ -1040,7 +976,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
          call RegPack(Buf, InData%WaveElev0)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveTime))
    if (associated(InData%WaveTime)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveTime), ubound(InData%WaveTime))
@@ -1049,43 +984,26 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
          call RegPack(Buf, InData%WaveTime)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%RhoXg)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NStepWave2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveStMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveDirMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvLowCOff)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvHiCOff)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvLowCOffD)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvHiCOffD)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvLowCOffS)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WvHiCOffS)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%InvalidWithSSExctn)
-   if (RegCheckErr(Buf, RoutineName)) return
    call SeaSt_Interp_PackParam(Buf, InData%SeaSt_Interp_p) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%MCFD)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveElevSeries))
    if (allocated(InData%WaveElevSeries)) then
       call RegPackBounds(Buf, 2, lbound(InData%WaveElevSeries), ubound(InData%WaveElevSeries))
       call RegPack(Buf, InData%WaveElevSeries)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
       call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
@@ -1768,11 +1686,8 @@ subroutine SeaSt_PackMisc(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SeaSt_PackMisc'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%Decimate)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%LastOutTime)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%LastIndWave)
-   if (RegCheckErr(Buf, RoutineName)) return
    call SeaSt_Interp_PackMisc(Buf, InData%SeaSt_Interp_m) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1944,6 +1859,7 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
       if (ErrStat >= AbortErrLev) return
    else if (associated(DstParamData%WaveField)) then
       deallocate(DstParamData%WaveField)
+      nullify(DstParamData%WaveField)
    end if
 end subroutine
 
@@ -2012,7 +1928,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call Waves2_PackParam(Buf, InData%Waves2) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveTime))
    if (associated(InData%WaveTime)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveTime), ubound(InData%WaveTime))
@@ -2021,37 +1936,25 @@ subroutine SeaSt_PackParam(Buf, Indata)
          call RegPack(Buf, InData%WaveTime)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveDT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NGridPts)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NGrid)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%deltaGrid)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%X_HalfWidth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Y_HalfWidth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Z_Depth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NWaveElev)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveElevxi))
    if (allocated(InData%WaveElevxi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveElevxi), ubound(InData%WaveElevxi))
       call RegPack(Buf, InData%WaveElevxi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveElevyi))
    if (allocated(InData%WaveElevyi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveElevyi), ubound(InData%WaveElevyi))
       call RegPack(Buf, InData%WaveElevyi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveElev1))
    if (associated(InData%WaveElev1)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElev1), ubound(InData%WaveElev1))
@@ -2060,7 +1963,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
          call RegPack(Buf, InData%WaveElev1)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveElev2))
    if (associated(InData%WaveElev2)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElev2), ubound(InData%WaveElev2))
@@ -2069,7 +1971,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
          call RegPack(Buf, InData%WaveElev2)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%PWaveDynP0))
    if (associated(InData%PWaveDynP0)) then
       call RegPackBounds(Buf, 3, lbound(InData%PWaveDynP0), ubound(InData%PWaveDynP0))
@@ -2078,7 +1979,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
          call RegPack(Buf, InData%PWaveDynP0)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveDynP))
    if (associated(InData%WaveDynP)) then
       call RegPackBounds(Buf, 4, lbound(InData%WaveDynP), ubound(InData%WaveDynP))
@@ -2087,7 +1987,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
          call RegPack(Buf, InData%WaveDynP)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveAcc))
    if (associated(InData%WaveAcc)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveAcc), ubound(InData%WaveAcc))
@@ -2096,7 +1995,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
          call RegPack(Buf, InData%WaveAcc)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%PWaveAcc0))
    if (associated(InData%PWaveAcc0)) then
       call RegPackBounds(Buf, 4, lbound(InData%PWaveAcc0), ubound(InData%PWaveAcc0))
@@ -2105,7 +2003,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
          call RegPack(Buf, InData%PWaveAcc0)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveVel))
    if (associated(InData%WaveVel)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveVel), ubound(InData%WaveVel))
@@ -2114,7 +2011,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
          call RegPack(Buf, InData%WaveVel)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%PWaveVel0))
    if (associated(InData%PWaveVel0)) then
       call RegPackBounds(Buf, 4, lbound(InData%PWaveVel0), ubound(InData%PWaveVel0))
@@ -2123,7 +2019,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
          call RegPack(Buf, InData%PWaveVel0)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveAccMCF))
    if (associated(InData%WaveAccMCF)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveAccMCF), ubound(InData%WaveAccMCF))
@@ -2132,7 +2027,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
          call RegPack(Buf, InData%WaveAccMCF)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveDirArr))
    if (associated(InData%WaveDirArr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveDirArr), ubound(InData%WaveDirArr))
@@ -2141,7 +2035,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
          call RegPack(Buf, InData%WaveDirArr)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveElevC0))
    if (associated(InData%WaveElevC0)) then
       call RegPackBounds(Buf, 2, lbound(InData%WaveElevC0), ubound(InData%WaveElevC0))
@@ -2150,7 +2043,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
          call RegPack(Buf, InData%WaveElevC0)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%PWaveAccMCF0))
    if (associated(InData%PWaveAccMCF0)) then
       call RegPackBounds(Buf, 4, lbound(InData%PWaveAccMCF0), ubound(InData%PWaveAccMCF0))
@@ -2159,33 +2051,25 @@ subroutine SeaSt_PackParam(Buf, Indata)
          call RegPack(Buf, InData%PWaveAccMCF0)
       end if
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NWaveKin)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveKinxi))
    if (allocated(InData%WaveKinxi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinxi), ubound(InData%WaveKinxi))
       call RegPack(Buf, InData%WaveKinxi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveKinyi))
    if (allocated(InData%WaveKinyi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinyi), ubound(InData%WaveKinyi))
       call RegPack(Buf, InData%WaveKinyi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%WaveKinzi))
    if (allocated(InData%WaveKinzi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinzi), ubound(InData%WaveKinzi))
       call RegPack(Buf, InData%WaveKinzi)
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%WaveStMod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutParam), ubound(InData%OutParam))
@@ -2195,23 +2079,14 @@ subroutine SeaSt_PackParam(Buf, Indata)
          call NWTC_Library_PackOutParmType(Buf, InData%OutParam(i1)) 
       end do
    end if
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%NumOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutSwtch)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutSFmt)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%Delim)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%UnOutFile)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, InData%OutDec)
-   if (RegCheckErr(Buf, RoutineName)) return
    call SeaSt_Interp_PackParam(Buf, InData%SeaSt_Interp_p) 
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
       call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
