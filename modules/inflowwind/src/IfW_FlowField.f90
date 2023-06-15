@@ -146,6 +146,7 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
          end if
 
          ! Loop throuh points and calcualate velocity and acceleration
+         !$OMP PARALLEL DO SCHEDULE(RUNTIME)
          do i = 1, NumPoints
             if (Position(3, i) > 0.0_ReKi) then
                VelocityUVW(:, i) = UniformField_GetVel(FF%Uniform, UFopVel, Position(:, i))
@@ -159,6 +160,7 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       else  ! Otherwise, only velocity requested
 
          ! Loop throuh points and calcualate velocity
+         !$OMP PARALLEL DO SCHEDULE(RUNTIME)
          do i = 1, NumPoints
             if (Position(3, i) > 0.0_ReKi) then
                VelocityUVW(:, i) = UniformField_GetVel(FF%Uniform, UFopVel, Position(:, i))
@@ -166,6 +168,7 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
                VelocityUVW(:, i) = 0.0_ReKi
             end if
          end do
+
       end if
 
    case (Grid3D_FieldType)
@@ -194,6 +197,7 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       AddMeanAfterInterp = FF%Grid3D%AddMeanAfterInterp
 
       ! Loop through points
+      !$OMP PARALLEL DO SCHEDULE(RUNTIME)
       do i = 1, NumPoints
 
          ! If height < zero, set velocity/acceleration to zero, continue
@@ -247,24 +251,24 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       !-------------------------------------------------------------------------
 
       ! If field is not allocated, return error
-      if (.not. allocated(FF%Grid4D%Vel)) then
+      if (.not. associated(FF%Grid4D%Vel)) then
          call SetErrStat(ErrID_Fatal, "Grid4D Field not allocated", ErrStat, ErrMsg, RoutineName)
          return
       end if
 
       ! Loop through points
+      !$OMP PARALLEL DO SCHEDULE(RUNTIME)
       do i = 1, NumPoints
 
-         ! If height less than or equal to zero, set velocity to zero
-         if (Position(3, i) <= 0.0_ReKi) then
+         ! If height greater than zero, calculate velocity, otherwise zero
+         if (Position(3, i) > 0.0_ReKi) then
+            call Grid4DField_GetVel(FF%Grid4D, Time, Position(:, i), VelocityUVW(:, i), TmpErrStat, TmpErrMsg)
+            if (TmpErrStat >= AbortErrLev) then
+               call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+               return
+            end if
+         else
             VelocityUVW(:, i) = 0.0_ReKi
-            cycle
-         end if
-
-         call Grid4DField_GetVel(FF%Grid4D, Time, Position(:, i), VelocityUVW(:, i), TmpErrStat, TmpErrMsg)
-         if (TmpErrStat >= AbortErrLev) then
-            call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-            return
          end if
       end do
 
@@ -289,7 +293,7 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       ! User Flow Field
       !-------------------------------------------------------------------------
 
-      call SetErrStat(ErrID_Fatal, "User Field not to be implemented", ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "User Field not implemented", ErrStat, ErrMsg, RoutineName)
       return
 
    case default
@@ -1625,6 +1629,8 @@ subroutine Grid4DField_GetVel(G4D, Time, Position, Velocity, ErrStat, ErrMsg)
       end if
       Indx_Hi(i) = min(Indx_Lo(i) + 1, G4D%n(i))     ! make sure it's a valid index
    end do
+   Indx_Lo = Indx_Lo-1
+   Indx_Hi = Indx_Hi-1
 
    !----------------------------------------------------------------------------
    ! Clamp isopc to [-1, 1] so we don't extrapolate (effectively nearest neighbor)

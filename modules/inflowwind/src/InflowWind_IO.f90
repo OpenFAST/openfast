@@ -493,6 +493,7 @@ subroutine IfW_TurbSim_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
    character(ErrMsgLen)          :: TmpErrMsg         ! temporary error message
 
    type :: TurbSimHeaderType
+      sequence
       integer(B2Ki)  :: FileID
       integer(B4Ki)  :: NZGrids, NYGrids, NTGrids, NSteps
       real(SiKi)     :: dz, dy, dt
@@ -1022,8 +1023,6 @@ subroutine IfW_Grid4D_Init(InitInp, G4D, ErrStat, ErrMsg)
    character(*), intent(out)              :: ErrMsg
 
    character(*), parameter                :: RoutineName = "IfW_Grid4D_Init"
-   integer(IntKi)                         :: TmpErrStat
-   character(ErrMsgLen)                   :: TmpErrMsg
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -1034,15 +1033,7 @@ subroutine IfW_Grid4D_Init(InitInp, G4D, ErrStat, ErrMsg)
    G4D%pZero = InitInp%pZero
    G4D%TimeStart = 0.0_ReKi
    G4D%RefHeight = InitInp%pZero(3) + (InitInp%n(3)/2) * InitInp%delta(3)
-
-   ! uvw velocity components at x,y,z,t coordinates
-   call AllocAry(G4D%Vel, 3, G4D%n(1), G4D%n(2), G4D%n(3), G4D%n(4), &
-                 'External Grid Velocity', TmpErrStat, TmpErrMsg)
-   call SetErrStat(ErrStat, ErrMsg, TmpErrStat, TmpErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-
-   ! Initialize velocities to zero
-   G4D%Vel = 0.0_SiKi
+   G4D%Vel => InitInp%Vel
 
 end subroutine
 
@@ -1800,6 +1791,7 @@ subroutine Bladed_ReadHeader0(WindFileUnit, G3D, NativeBladedFmt, ErrStat, ErrMs
    character(*), intent(out)              :: ErrMsg            !< error message
 
    type :: HeaderType
+      sequence
       integer(B2Ki)  :: NComp
       integer(B2Ki)  :: DeltaZ, DeltaY, DeltaX
       integer(B2Ki)  :: NStepsHalf, MWS10
@@ -1874,19 +1866,23 @@ subroutine Bladed_ReadHeader1(UnitWind, TI, G3D, NativeBladedFmt, ErrStat, ErrMs
    character(*), intent(out)              :: ErrMsg            !< error message
 
    type :: Turb4Type
+      sequence
       integer(B4Ki)  :: NComp
       real(SiKi)     :: Latitude, RoughLen, RefHeight, TurbInt(3)
    end type
 
    type :: Turb78Type
+      sequence
       integer(B4Ki)  :: HeaderSize, NComp
    end type
 
    type :: Turb7Type
+      sequence
       real(SiKi)     :: CoherenceDecay, CoherenceScale
    end type
 
    type :: Turb8Type
+      sequence
       real(SiKi)     :: dummy1(6)
       integer(B4Ki)  :: dummy2(3)
       real(SiKi)     :: dummy3(2)
@@ -1895,6 +1891,7 @@ subroutine Bladed_ReadHeader1(UnitWind, TI, G3D, NativeBladedFmt, ErrStat, ErrMs
    end type
 
    type :: Sub1Type
+      sequence
       real(SiKi)     :: DeltaZ, DeltaY, DeltaX
       integer(B4Ki)  :: NStepsHalf
       real(SiKi)     :: MeanWS, zLu, yLu, xLu
@@ -1902,6 +1899,7 @@ subroutine Bladed_ReadHeader1(UnitWind, TI, G3D, NativeBladedFmt, ErrStat, ErrMs
    end type
 
    type :: Sub2Type
+      sequence
       real(SiKi)     :: zLv, yLv, xLv, zLw, yLw, xLw
    end type
 
@@ -2205,6 +2203,7 @@ subroutine Bladed_ReadTower(UnitWind, G3D, TwrFileName, ErrStat, ErrMsg)
    character(*), intent(out)              :: ErrMsg         !< a message for errors that occur
 
    type :: HeaderType
+      sequence
       real(SiKi)     :: DZ, DX, Zmax
       integer(B4Ki)  :: NumOutSteps, NumZ
       real(SiKi)     :: UHub, TI(3)
@@ -2396,7 +2395,7 @@ subroutine Grid3D_PopulateWindFileDat(Grid3DField, FileName, WindType, HasTower,
    if (HasTower) then
       FileDat%ZRange = [0.0_Reki, Grid3DField%RefHeight + Grid3DField%ZHWid]
    else
-      FileDat%ZRange = [Grid3DField%GridBase, Grid3DField%GridBase + Grid3DField%ZHWid*2.0]
+      FileDat%ZRange = [Grid3DField%GridBase, Grid3DField%GridBase + Grid3DField%ZHWid*2.0_ReKi]
    end if
 
    FileDat%ZRange_Limited = .true.

@@ -19,34 +19,56 @@ if (GENERATE_TYPES)
   generate_f90_types(src/ServoDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/ServoDyn_Types.f90)
 endif()
 
-set(SrvD_SOURCES
+set(SERVODYN_SRCS
+  src/ServoDyn.f90
   src/BladedInterface.f90
   src/BladedInterface_EX.f90
   src/UserSubs.f90
   src/PitchCntrl_ACH.f90
   src/StrucCtrl.f90
   src/UserVSCont_KP.f90
-  src/ServoDyn.f90
   src/ServoDyn_IO.f90
   src/StrucCtrl_Types.f90
   src/ServoDyn_Types.f90
 )
 
-add_library(servodynlib_obj OBJECT ${SrvD_SOURCES})
-target_link_libraries(servodynlib_obj nwtclibs_obj)
-
-add_library(servodynlib $<TARGET_OBJECTS:servodynlib_obj>)
+add_library(servodynlib ${SERVODYN_SRCS})
 target_link_libraries(servodynlib nwtclibs)
 
-add_executable(servodyn_driver src/ServoDyn_Driver.f90)
-target_link_libraries(servodyn_driver servodynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
+# Driver
+add_executable(servodyn_driver 
+  src/ServoDyn_Driver.f90
+)
+target_link_libraries(servodyn_driver servodynlib versioninfolib)
 
 # The Structural Control driver is currently not functional, so commenting this temporarily
 # add_executable(strucctrl_driver src/StrucCtrl_Driver.f90)
 # target_link_libraries(strucctrl_driver servodynlib nwtclibs ${CMAKE_DL_LIBS})
 
-install(TARGETS servodynlib servodynlib_obj servodyn_driver # strucctrl_driver
+install(TARGETS servodynlib servodyn_driver # strucctrl_driver
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib)
+  ARCHIVE DESTINATION lib
+)
+
+#-------------------------------------------------------------------------------
+# MATLAB Library
+#-------------------------------------------------------------------------------
+
+if (BUILD_OPENFAST_SIMULINK_API)
+
+  add_library(servodynlib-matlab ${SERVODYN_SRCS})
+  target_compile_definitions(servodynlib-matlab PUBLIC COMPILE_SIMULINK)
+  set_target_properties(servodynlib-matlab PROPERTIES 
+    Fortran_MODULE_DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/matlab)
+  target_link_libraries(servodynlib-matlab nwtclibs-matlab)
+
+  install(TARGETS servodynlib-matlab
+    EXPORT "${CMAKE_PROJECT_NAME}Libraries"
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+  )
+
+endif()

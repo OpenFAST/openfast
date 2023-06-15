@@ -109,23 +109,22 @@ typedef  ^                       InitOutputType    CHARACTER(ChanLen)     WriteO
 typedef  ^                       ^                 CHARACTER(ChanLen)     WriteOutputUnt    :   -   -    "Units of output-to-file channels"                       -
 typedef  ^                       ^                 ProgDesc               Ver               -   -   -    "Version information of InflowWind module"               -
 typedef  ^                       ^                 WindFileDat            WindFileInfo      -   -   -    "Meta data from the wind file"                           -
-typedef  ^                       InitOutputType    CHARACTER(LinChanLen)  LinNames_y       {:}  -   -    "Names of the outputs used in linearization" -
-typedef  ^                       InitOutputType    CHARACTER(LinChanLen)  LinNames_u       {:}  -   -    "Names of the inputs used in linearization" -
-typedef  ^                       InitOutputType    LOGICAL                RotFrame_y       {:}  -   -    "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
-typedef  ^                       InitOutputType    LOGICAL                RotFrame_u       {:}  -   -    "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
-typedef  ^                       InitOutputType    LOGICAL                IsLoad_u         {:}  -   -    "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
-
+typedef  ^                       ^                 CHARACTER(LinChanLen)  LinNames_y       {:}  -   -    "Names of the outputs used in linearization" -
+typedef  ^                       ^                 CHARACTER(LinChanLen)  LinNames_u       {:}  -   -    "Names of the inputs used in linearization" -
+typedef  ^                       ^                 LOGICAL                RotFrame_y       {:}  -   -    "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
+typedef  ^                       ^                 LOGICAL                RotFrame_u       {:}  -   -    "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
+typedef  ^                       ^                 LOGICAL                IsLoad_u         {:}  -   -    "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+typedef  ^                       ^                 FlowFieldType         *FlowField        -   -   -    "Flow field data to represent all wind types"  -
 
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef  ^                    ParameterType        CHARACTER(1024)   RootFileName      -     -     -     "Root of the InflowWind input   filename"                -
-typedef  ^                       ^                 IntKi             WindType          -     0     -     "Type of wind -- set to Undef_Wind initially"            -
 typedef  ^                       ^                 DbKi              DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
 typedef  ^                       ^                 ReKi              WindViXYZprime    ::    -     -     "List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ )"  meters
 typedef  ^                       ^                 ReKi              WindViXYZ         ::    -     -     "List of XYZ coordinates for wind velocity measurements, 3xNWindVel" meters
-typedef  ^                       ^                 FlowFieldType     FlowField         -     -     -     "Parameters from Full-Field"  -
+typedef  ^                       ^                 FlowFieldType    &FlowField         -     -     -     "Flow field data to represent all wind types"  -
 typedef  ^                       ^                 ReKi              PositionAvg       ::    -     -     "(non-rotated) positions of points used for averaging wind speed"  meters
 typedef  ^                       ^                 IntKi             NWindVel          -     -     -     "Number of points in the wind velocity list"             -
 typedef  ^                       ^                 IntKi             NumOuts           -     0     -     "Number of parameters in the output list (number of outputs requested)" -

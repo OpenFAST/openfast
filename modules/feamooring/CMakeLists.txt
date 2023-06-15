@@ -18,28 +18,20 @@ if (GENERATE_TYPES)
   generate_f90_types(src/FEAM_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FEAMooring_Types.f90)
 endif()
 
-set(FEAM_LIBS_SOURCES
+add_library(feamlib
   src/FEAM.f90
   src/FEAMooring_Types.f90
 )
-
-add_library(feamlib_obj OBJECT ${FEAM_LIBS_SOURCES})
-target_link_libraries(feamlib_obj nwtclibs_obj)
-
-add_library(feamlib $<TARGET_OBJECTS:feamlib_obj>)
 target_link_libraries(feamlib nwtclibs)
 
-install(TARGETS feamlib feamlib_obj
-  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
-  RUNTIME DESTINATION lib
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib)
+add_executable(feam_driver 
+  src/FEAM_Driver.f90
+)
+target_link_libraries(feam_driver feamlib)
 
-add_executable(feam_driver src/FEAM_Driver.f90)
-target_link_libraries(feam_driver feamlib versioninfolib)
-
-install(TARGETS feam_driver
+install(TARGETS feamlib feam_driver
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib)
+  LIBRARY DESTINATION lib
+)

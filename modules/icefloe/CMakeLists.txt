@@ -18,7 +18,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/interfaces/FAST/IceFloe_FASTRegistry.inp ${CMAKE_CURRENT_LIST_DIR}/src/icefloe/IceFloe_Types.f90)
 endif()
 
-set(ICEFLOE_LIBS_SOURCES
+add_library(icefloelib 
   src/icefloe/IceFlexBase.F90
   src/icefloe/IceFlexIEC.f90
   src/icefloe/IceFlexISO.f90
@@ -31,20 +31,14 @@ set(ICEFLOE_LIBS_SOURCES
   src/icefloe/intermittentCrushing.F90
   src/icefloe/lockInISO.F90
   src/icefloe/randomCrushing.F90
-
   src/interfaces/FAST/IceFloe.f90
-
   src/icefloe/IceFloe_Types.f90
 )
+target_link_libraries(icefloelib nwtclibs)
 
-add_library(icefloelib_obj OBJECT ${ICEFLOE_LIBS_SOURCES})
-target_link_libraries(icefloelib_obj nwtclibs_obj)
-
-add_library(icefloelib $<TARGET_OBJECTS:icefloelib_obj>)
-target_link_libraries(icefloelib nwtclibs versioninfolib)
-
-install(TARGETS icefloelib icefloelib_obj
+install(TARGETS icefloelib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib)
+  LIBRARY DESTINATION lib
+)

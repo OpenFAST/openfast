@@ -736,6 +736,9 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
          FWrap_InitInp%dX_high       = AWAE_InitOutput%dX_high(nt)
          FWrap_InitInp%dY_high       = AWAE_InitOutput%dY_high(nt)
          FWrap_InitInp%dZ_high       = AWAE_InitOutput%dZ_high(nt)
+
+         FWrap_InitInp%Vdist_High   => AWAE_InitOutput%Vdist_High(nt)%data
+
          if (SC_InitOutput%NumSC2Ctrl>0) then
             FWrap_InitInp%fromSC = SC_y%fromSC((nt-1)*SC_InitOutput%NumSC2Ctrl+1:nt*SC_InitOutput%NumSC2Ctrl)
          end if
@@ -786,19 +789,19 @@ END SUBROUTINE Farm_InitFAST
 SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
 
    ! Passed variables
-   type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data
-   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
-   CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
+   type(All_FastFarm_Data), TARGET, INTENT(INOUT) :: farm                            !< FAST.Farm data
+   INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat                         !< Error status
+   CHARACTER(*),                    INTENT(  OUT) :: ErrMsg                          !< Error message
 
    ! local variables
-   type(MD_InitInputType)                  :: MD_InitInp
-   type(MD_InitOutputType)                 :: MD_InitOut
+   type(MD_InitInputType)                         :: MD_InitInp
+   type(MD_InitOutputType)                        :: MD_InitOut
 
-   INTEGER(IntKi)                          :: nt                          ! loop counter for rotor number
-   INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
-   CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
-   CHARACTER(*),   PARAMETER               :: RoutineName = 'Farm_InitMD'
-   
+   INTEGER(IntKi)                                 :: nt                              ! loop counter for rotor number
+   INTEGER(IntKi)                                 :: ErrStat2                        ! Temporary Error status
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2                         ! Temporary Error message
+   CHARACTER(*),   PARAMETER                      :: RoutineName = 'Farm_InitMD'
+   TYPE(MeshType), POINTER                        :: SubstructureMotion
    
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -875,41 +878,30 @@ SUBROUTINE Farm_InitMD( farm, ErrStat, ErrMsg )
    CALL MD_CopyInput (farm%MD%Input(1), farm%MD%u,  MESH_NEWCOPY, Errstat2, ErrMsg2);  if (Failed()) return; ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
    
    
-   ! Set up mesh maps between MoorDyn and floating platforms.
-   ! (for now assuming ElastoDyn - eventually could differentiate at the turbine level)
-   
+   ! Set up mesh maps between MoorDyn and floating platforms (or substructure).
    ! allocate mesh mappings for coupling farm-level MoorDyn with OpenFAST instances
    ALLOCATE( farm%m%MD_2_FWrap(farm%p%NumTurbines), farm%m%FWrap_2_MD(farm%p%NumTurbines), STAT = ErrStat2 )
    if (Failed0("MD_2_FWrap and FWrap_2_MD.")) return;
    
    ! MoorDyn point mesh to/from ElastoDyn (or SubDyn) point mesh
-   do nt = 1,farm%p%NumTurbines      
+   do nt = 1,farm%p%NumTurbines
       !if (farm%MD%p%NFairs(nt) > 0 ) then   ! only set up a mesh map if MoorDyn has connections to this turbine
       
       ! loads
-      CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt),  &
-                          farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_MDf, farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2 )
+      CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%SubstructureLoads_Tmp_Farm, farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2 )
       if (Failed()) return;
-                          
+     
       ! kinematics
-      CALL MeshMapCreate( farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh,  &
-                          farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
+      IF (farm%FWrap(nt)%m%Turbine%p_FAST%CompSub == Module_SD) then
+         SubstructureMotion => farm%FWrap(nt)%m%Turbine%SD%y%y3Mesh
+      ELSE
+         SubstructureMotion => farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh
+      END IF
+   
+      CALL MeshMapCreate( SubstructureMotion, farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
       if (Failed()) return;
-      
-      ! Since SubDyn connections are not enabled yet, issue warning
-      if (allocated(farm%FWrap(nt)%m%Turbine%SD%Input)) then
-         call SetErrStat( ErrID_Warn, 'Turbine '//trim(Num2LStr(nt))//': Farm moorings connected to ElastoDyn platform reference instead of SubDyn', Errstat, ErrMsg, RoutineName//':MD_2_FWrap' )
-      endif
-      
-      ! SubDyn alternative:
-      !CALL MeshMapCreate( farm%MD%y%CoupledLoads(nt),  &
-      !                    farm%FWrap(nt)%m%Turbine%SD%Input(1)%LMesh, farm%m%MD_2_FWrap, ErrStat2, ErrMsg2 );  if (Failed()) return;
-      !                    
-      !CALL MeshMapCreate( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh,  &
-      !                    farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD, ErrStat2, ErrMsg2 );  if (Failed()) return;
-      !                    
-      !end if
-   end do   
+
+   end do
    
 
    farm%p%Module_Ver( ModuleFF_MD) = MD_InitOut%Ver
@@ -943,19 +935,20 @@ END SUBROUTINE Farm_InitMD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine moves a farm-level MoorDyn simulation one step forward, to catch up with FWrap_Increment
 subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
-   REAL(DbKi),               INTENT(IN   ) :: t                               !< Current simulation time in seconds
-   INTEGER(IntKi),           INTENT(IN   ) :: n                               !< Current step of the simulation in FARM MoorDyn terms
-   type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
-   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
-   CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
+   REAL(DbKi),                      INTENT(IN   ) :: t                               !< Current simulation time in seconds
+   INTEGER(IntKi),                  INTENT(IN   ) :: n                               !< Current step of the simulation in FARM MoorDyn terms
+   type(All_FastFarm_Data), TARGET, INTENT(INOUT) :: farm                            !< FAST.Farm data  
+   INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat                         !< Error status
+   CHARACTER(*),                    INTENT(  OUT) :: ErrMsg                          !< Error message
 
-   INTEGER(IntKi)                          :: nt                      
-   INTEGER(IntKi)                          :: n_ss                      
-   INTEGER(IntKi)                          :: n_FMD   
-   REAL(DbKi)                              :: t_next        ! time at next step after this one (s)  
-   INTEGER(IntKi)                          :: ErrStat2 
-   CHARACTER(ErrMsgLen)                    :: ErrMsg2
-   CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_MD_Increment'
+   INTEGER(IntKi)                                 :: nt
+   INTEGER(IntKi)                                 :: n_ss
+   INTEGER(IntKi)                                 :: n_FMD
+   REAL(DbKi)                                     :: t_next        ! time at next step after this one (s)  
+   INTEGER(IntKi)                                 :: ErrStat2 
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2
+   CHARACTER(*),   PARAMETER                      :: RoutineName = 'FARM_MD_Increment'
+   TYPE(MeshType), POINTER                        :: SubstructureMotion
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -982,15 +975,18 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
 
    do nt = 1,farm%p%NumTurbines
       !if (farm%MD%p%NFairs(nt) > 0 ) then   
-         
-         CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh, farm%MD%Input(1)%CoupledKinematics(nt), &
-                                       farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
+   
+         IF (farm%FWrap(nt)%m%Turbine%p_FAST%CompSub == Module_SD) then
+            SubstructureMotion => farm%FWrap(nt)%m%Turbine%SD%y%y3Mesh
+         ELSE
+            SubstructureMotion => farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh
+         END IF
+   
+         CALL Transfer_Point_to_Point( SubstructureMotion, farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat2, ErrMsg2 )
          if (Failed()) return;
-                             
-         ! SubDyn alternative
-         !CALL Transfer_Point_to_Point( farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh, farm%MD%Input(1)%CoupledKinematics(nt), farm%m%FWrap_2_MD(nt), ErrStat, ErrMsg )
-      !end if 
-   end do 
+
+      !end if
+   end do
 
    
    ! ----- update states and calculate outputs -----
@@ -999,6 +995,7 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
                          farm%MD%xd, farm%MD%z, farm%MD%OtherSt, farm%MD%m, ErrStat2, ErrMsg2 )
    if (Failed()) return;
       
+   
    CALL MD_CalcOutput( t, farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z,  &
                        farm%MD%OtherSt, farm%MD%y, farm%MD%m, ErrStat2, ErrMsg2 )
    if (Failed()) return;
@@ -1009,24 +1006,18 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
    
       if (farm%MD%p%nCpldCons(nt) > 0 ) then   ! only map loads if MoorDyn has connections to this turbine (currently considering only Point connections <<< )
          
-         ! copy the MD output mesh for this turbine into a copy mesh within the FAST instance
-         !CALL MeshCopy ( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_FarmMD_CoupledLoads, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-         !if (Failed()) return;
-         
-         
-         ! mapping
-         CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_ED_PlatformPtMesh_MDf,  &
+         IF (farm%FWrap(nt)%m%Turbine%p_FAST%CompSub == Module_SD) then
+            SubstructureMotion => farm%FWrap(nt)%m%Turbine%SD%y%y3Mesh
+         ELSE
+            SubstructureMotion => farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh
+         END IF
+      
+         ! mapping; Note: SubstructureLoads_Tmp_Farm contains loads from the farm-level (at a previous step); gets integrated into individual turbines inside FWrap_Increment()
+         CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%SubstructureLoads_Tmp_Farm,  &
                                        farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
-                                       farm%MD%Input(1)%CoupledKinematics(nt), farm%FWrap(nt)%m%Turbine%ED%y%PlatformPtMesh ) !u_MD and y_ED contain the displacements needed for moment calculations
+                                       farm%MD%Input(1)%CoupledKinematics(nt), SubstructureMotion ) !u_MD and y_ED contain the displacements needed for moment calculations
          if (Failed()) return;
-                  
-         ! SubDyn alternative
-         !CALL Transfer_Point_to_Point( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2,  &
-         !                              farm%m%MD_2_FWrap(nt), ErrStat2, ErrMsg2,  &
-         !                              farm%MD%Input(1)%CoupledKinematics(nt), farm%FWrap(nt)%m%Turbine%SD%y%y2Mesh ) !u_MD and y_SD contain the displacements needed for moment calculations
-         !
-         !farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Force  = farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Force  + farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2%Force
-         !farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Moment = farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh%Moment + farm%FWrap(nt)%m%Turbine%MeshMapData%u_SD_LMesh_2%Moment 
+         
       end if
    end do
    
@@ -1089,7 +1080,6 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
       !--------------------
       ! 1c. transfer y_AWAE to u_F and u_WD         
    
-   call Transfer_AWAE_to_FAST(farm)      
    call Transfer_AWAE_to_WD(farm)   
 
    if (farm%p%UseSC) then
@@ -1181,8 +1171,7 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    !.......................................................................................
    ! Transfer y_AWAE to u_F and u_WD
    !.......................................................................................
-   
-   call Transfer_AWAE_to_FAST(farm)              
+
    call Transfer_AWAE_to_WD(farm)   
    
    !.......................................................................................
@@ -1758,7 +1747,6 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
 
       !--------------------
       ! 2. Transfer y_AWAE to u_F  and u_WD   
-   call Transfer_AWAE_to_FAST(farm)      
    call Transfer_AWAE_to_WD(farm)   
    
    
@@ -1904,18 +1892,6 @@ SUBROUTINE Transfer_AWAE_to_WD(farm)
    END DO
    
 END SUBROUTINE Transfer_AWAE_to_WD
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Transfer_AWAE_to_FAST(farm)
-   type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
-
-   integer(intKi)  :: nt
-   
-   DO nt = 1,farm%p%NumTurbines
-         ! allocated in FAST's IfW initialization as 3,x,y,z,t
-      farm%FWrap(nt)%u%Vdist_High = farm%AWAE%y%Vdist_High(nt)%data
-   END DO
-   
-END SUBROUTINE Transfer_AWAE_to_FAST
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Transfer_WD_to_AWAE(farm)
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  

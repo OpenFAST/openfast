@@ -1041,6 +1041,13 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate ( y%Vx_wind_disk   (1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('y%Vx_rel_disk.')) return;
    allocate ( y%TI_amb   (1:p%NumTurbines),       STAT=ErrStat2 );  if (Failed0('y%TI_amb.')) return;
 
+   ! Set pointers to high resolution wind in InitOutput
+   allocate(InitOut%Vdist_High(1:p%NumTurbines), STAT=ErrStat2 )
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vdist_High.', errStat, errMsg, RoutineName )
+   do i = 1, p%NumTurbines
+      InitOut%Vdist_High(i)%data => y%Vdist_High(i)%data      
+   end do
+
       ! This next step is not strictly necessary
    y%V_plane       = 0.0_Reki
    y%Vx_wind_disk  = 0.0_Reki

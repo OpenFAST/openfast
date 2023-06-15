@@ -3601,14 +3601,18 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       real(R8Ki),                   intent(in   ) :: orientInit(3,3)  !< Orientation (direction cosine matrix) of node; identity by default
       logical,                      intent(in   ) :: hasMotion        !< include displacements in mesh
       logical,                      intent(in   ) :: hasLoads         !< include loads in mesh
-      logical, optional,            intent(in   ) :: hasAcc           !< include acceleration (default is true)
+      logical, optional,            intent(in   ) :: hasAcc           !< include acceleration (default is true)      
       integer(IntKi)              , intent(out)   :: errStat          ! Status of error message
       character(*)                , intent(out)   :: errMsg           ! Error message if ErrStat /= ErrID_None
-      logical              :: hasAcc_loc    !< include acceleration
-      integer(IntKi)       :: errStat2      ! local status of error message
-      character(ErrMsgLen) :: errMsg2       ! local error message if ErrStat /= ErrID_None
+      logical                                     :: hasAcc_loc       !< include acceleration
+      
+      integer(IntKi)                              :: errStat2         ! local status of error message
+      character(ErrMsgLen)                        :: errMsg2          ! local error message if ErrStat /= ErrID_None
+      character(*), parameter                     :: RoutineName = 'CreatePointMesh'
+      
       errStat = ErrID_None
       errMsg  = ''
+      
       hasAcc_loc = .true.
       if (present(hasAcc)) hasAcc_loc=hasAcc
 
@@ -3616,18 +3620,20 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
          Orientation=hasMotion, TranslationDisp=hasMotion, TranslationVel=hasMotion, RotationVel=hasMotion, &
          TranslationAcc=hasAcc_loc, RotationAcc=hasAcc_loc, &
          Force = hasLoads, Moment = hasLoads)
-      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
 
       call MeshPositionNode(mesh, 1, posInit, errStat2, errMsg2, orientInit); 
-      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
       call MeshConstructElement(mesh, ELEMENT_POINT, errStat2, errMsg2, p1=1); 
-      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
       call MeshCommit(mesh, errStat2, errMsg2);
-      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'CreatePointMesh')
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
+      
+      ! bjj: this initialization in done in MeshCreate already...
       ! Initialize fields
       if (hasLoads) then
          mesh%Force    = 0.0_ReKi

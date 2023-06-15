@@ -60,10 +60,13 @@ CONTAINS
       CHARACTER(*),      INTENT(INOUT )   :: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
       INTEGER(4)                          :: J             ! Generic index
-      INTEGER(4)                          :: K             ! Generic index
-      INTEGER(IntKi)                      :: N
+!      INTEGER(4)                          :: K             ! Generic index
+!      INTEGER(IntKi)                      :: N
 
       REAL(DbKi)                          :: Mtemp(6,6)   
+      
+      ErrStat = ErrID_None
+      ErrMsg = ""
 
       ! set initial velocity to zero
       Body%v6 = 0.0_DbKi
@@ -209,7 +212,7 @@ CONTAINS
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m         ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Connections)
 
 
-      INTEGER(IntKi)                   :: l
+!      INTEGER(IntKi)                   :: l
 
       ! store current time
       Body%time = t
@@ -247,8 +250,8 @@ CONTAINS
       Real(DbKi),            INTENT(IN   )  :: t              ! instantaneous time
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects
 
-      INTEGER(IntKi)                        :: l              ! index of segments or nodes along line
-      INTEGER(IntKi)                        :: J              ! index
+!      INTEGER(IntKi)                        :: l              ! index of segments or nodes along line
+!      INTEGER(IntKi)                        :: J              ! index
    
       ! store current time
       Body%time = t
@@ -379,14 +382,11 @@ CONTAINS
       !TYPE(MD_MiscVarType), INTENT(INOUT)  :: m       ! misc/optimization variables
 
       INTEGER(IntKi)             :: l         ! index of attached lines
-      INTEGER(IntKi)             :: I         ! index
-      INTEGER(IntKi)             :: J         ! index
-      INTEGER(IntKi)             :: K         ! index
 
       Real(DbKi)                 :: Fgrav(3)           ! body weight force
       Real(DbKi)                 :: body_rCGrotated(3) ! instantaneous vector from body ref point to CG
       Real(DbKi)                 :: U(3)               ! water velocity - zero for now
-      Real(DbKi)                 :: Ud(3)              ! water acceleration- zero for now
+!      Real(DbKi)                 :: Ud(3)              ! water acceleration- zero for now
       Real(DbKi)                 :: vi(6)              ! relative water velocity (last 3 terms are rotatonal and will be set to zero
       Real(DbKi)                 :: F6_i(6)            ! net force and moments from an attached object
       Real(DbKi)                 :: M6_i(6,6)          ! mass and inertia from an attached object

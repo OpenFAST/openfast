@@ -16,11 +16,11 @@ on:
     # paths-ignore:
 
 env:
-  FORTRAN_COMPILER: gfortran-10
-  CXX_COMPILER: g++-10
-  C_COMPILER: gcc-10
-  GCOV_EXE: gcov-10
-  NUM_PROCS: 8
+  FORTRAN_COMPILER: gfortran-12
+  CXX_COMPILER: g++-12
+  C_COMPILER: gcc-12
+  GCOV_EXE: gcov-12
+  CMAKE_BUILD_PARALLEL_LEVEL: 8
 
 
 jobs:
@@ -32,7 +32,7 @@ jobs:
     # Tests compiling in debug mode.
     # Also compiles the Registry and generates new types files.
     # Debug more speeds up the build.
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@main
@@ -68,7 +68,7 @@ jobs:
       - name: Build all
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target all -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target all
       - name: Cache the workspace
         uses: actions/cache@v3.0.4
         with:
@@ -79,7 +79,7 @@ jobs:
     # Tests compiling in debug mode with single precision.
     # This workspace is not used by any other subtests, it checks type errors of the type ReKi/R8Ki
     # Debug speeds up the build.
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@main
@@ -103,12 +103,12 @@ jobs:
       - name: Build all
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target all -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target all
 
 
 
   build-drivers-release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@main
@@ -141,7 +141,7 @@ jobs:
       - name: Build module drivers
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target regression_test_module_drivers -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target regression_test_module_drivers
       - name: Cache the workspace
         uses: actions/cache@v3.0.4
         with:
@@ -150,7 +150,7 @@ jobs:
 
 
   build-postlib-release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@main
@@ -189,7 +189,7 @@ jobs:
             ${GITHUB_WORKSPACE}
       - name: Build openfast-postlib
         working-directory: ${{runner.workspace}}/openfast/build
-        run: cmake --build . --target openfast_postlib -- -j ${{env.NUM_PROCS}}
+        run: cmake --build . --target openfast_postlib
       - name: Cache the workspace
         uses: actions/cache@v3.0.4
         with:
@@ -198,7 +198,7 @@ jobs:
 
 
   build-interfaces-release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: build-postlib-release
     steps:
       - name: Cache the workspace
@@ -220,14 +220,7 @@ jobs:
       - name: Build OpenFAST C-Interfaces
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target openfastlib -- -j ${{env.NUM_PROCS}}
-          cmake --build . --target openfast_cpp -- -j ${{env.NUM_PROCS}}
-          cmake --build . --target openfastcpp -- -j ${{env.NUM_PROCS}}
-          cmake --build . --target aerodyn_inflow_c_binding -- -j ${{env.NUM_PROCS}}
-          cmake --build . --target moordyn_c_binding -- -j ${{env.NUM_PROCS}}
-          cmake --build . --target ifw_c_binding -- -j ${{env.NUM_PROCS}}
-          cmake --build . --target hydrodyn_c_binding -- -j ${{env.NUM_PROCS}}
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target openfastlib openfast_cpp openfastcpp aerodyn_inflow_c_binding moordyn_c_binding ifw_c_binding hydrodyn_c_binding regression_test_controllers
       - name: Cache the workspace
         uses: actions/cache@v3.0.4
         with:
@@ -236,7 +229,7 @@ jobs:
 
 
   build-openfast-release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: build-postlib-release
     steps:
       - name: Cache the workspace
@@ -258,7 +251,7 @@ jobs:
       - name: Build OpenFAST glue-code
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target openfast -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target openfast
       - name: Cache the workspace
         uses: actions/cache@v3.0.4
         with:
@@ -267,7 +260,7 @@ jobs:
 
 
   build-fastfarm-release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: build-postlib-release
     steps:
       - name: Cache the workspace
@@ -289,7 +282,7 @@ jobs:
       - name: Build FAST.Farm
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target FAST.Farm -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target FAST.Farm
       - name: Cache the workspace
         uses: actions/cache@v3.0.4
         with:
@@ -302,7 +295,7 @@ jobs:
 
   build-test-uadriver-debug:
     # UA driver requires -DUA_OUTS, cannot be compiled with other
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@main
@@ -338,7 +331,7 @@ jobs:
       - name: Build all
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target unsteadyaero_driver -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target unsteadyaero_driver
 
       - name: Run UnsteadyAero tests
         working-directory: ${{runner.workspace}}/openfast/build
@@ -359,7 +352,7 @@ jobs:
   ### TEST JOBS
 
   rtest-module-drivers:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: build-drivers-release
     steps:
       - name: Cache the workspace
@@ -394,6 +387,8 @@ jobs:
           test-target: regression
       - name: Run MoorDyn tests
         uses: ./.github/actions/tests-module-moordyn
+      - name: Run SeaState tests
+        uses: ./.github/actions/tests-module-seastate
       - name: Run SubDyn tests
         uses: ./.github/actions/tests-module-subdyn
       - name: Failing test artifacts
@@ -406,7 +401,7 @@ jobs:
 
 
   rtest-modules-debug:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: build-all-debug
     steps:
       - name: Cache the workspace
@@ -432,7 +427,7 @@ jobs:
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target regression_test_controllers
       - name: Run AeroDyn tests
         uses: ./.github/actions/tests-module-aerodyn
         with:
@@ -448,6 +443,8 @@ jobs:
         uses: ./.github/actions/tests-module-moordyn
       - name: Run NWTC Library tests
         uses: ./.github/actions/tests-module-nwtclibrary
+      - name: Run SeaState tests
+        uses: ./.github/actions/tests-module-seastate
       - name: Run SubDyn tests
         uses: ./.github/actions/tests-module-subdyn
       - name: Run VersionInfo tests
@@ -463,7 +460,7 @@ jobs:
 
 
   rtest-interfaces:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: build-interfaces-release
     steps:
       - name: Cache the workspace
@@ -485,7 +482,7 @@ jobs:
       - name: Run Interface / API tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -L "cpp|python|fastlib" -j ${{env.NUM_PROCS}}
+          ctest -VV -L "cpp|python|fastlib"
       - name: Failing test artifacts
         uses: actions/upload-artifact@v3
         if: failure()
@@ -502,7 +499,7 @@ jobs:
 
 
   rtest-OF:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
@@ -524,7 +521,7 @@ jobs:
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target regression_test_controllers
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -549,7 +546,7 @@ jobs:
 
 
   rtest-OF-5MW_OC4Semi_WSt_WavesWN:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
@@ -571,7 +568,7 @@ jobs:
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target regression_test_controllers
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -593,7 +590,7 @@ jobs:
 
 
   rtest-OF-5MW_OC3Mnpl_DLL_WTurb_WavesIrr:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
@@ -615,7 +612,7 @@ jobs:
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target regression_test_controllers
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -637,7 +634,7 @@ jobs:
 
 
   rtest-OF-5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
@@ -659,7 +656,7 @@ jobs:
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target regression_test_controllers
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -681,7 +678,7 @@ jobs:
 
 
   rtest-OF-5MW_OC3Trpd_DLL_WSt_WavesReg:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
@@ -703,7 +700,7 @@ jobs:
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target regression_test_controllers
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -725,7 +722,7 @@ jobs:
 
 
   rtest-OF-5MW_Land_BD_DLL_WTurb:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
@@ -747,7 +744,7 @@ jobs:
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target regression_test_controllers
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -769,7 +766,7 @@ jobs:
 
 
   rtest-OF-linearization:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
@@ -791,7 +788,7 @@ jobs:
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target regression_test_controllers
       - name: Run OpenFAST linearization tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -813,7 +810,7 @@ jobs:
 
 
   rtest-FF:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: build-fastfarm-release
     steps:
       - name: Cache the workspace
@@ -835,13 +832,13 @@ jobs:
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target regression_test_controllers -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target regression_test_controllers
       - name: Run FAST.Farm tests
         working-directory: ${{runner.workspace}}/openfast/build
         shell: bash
         run: |
           set OMP_NUM_THREADS=2
-          ctest -VV -L fastfarm -j ${{env.NUM_PROCS}} --verbose
+          ctest -VV -L fastfarm --verbose
       - name: Failing test artifacts
         uses: actions/upload-artifact@v3
         if: failure()

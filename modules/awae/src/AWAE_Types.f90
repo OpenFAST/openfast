@@ -55,8 +55,13 @@ IMPLICIT NONE
 ! =======================
 ! =========  AWAE_HighWindGrid  =======
   TYPE, PUBLIC :: AWAE_HighWindGrid
-    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: data      !< UVW components of wind data across the high-res regularly-spaced grid [m/s]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: data => NULL()      !< UVW components of wind data across the high-res regularly-spaced grid [m/s]
   END TYPE AWAE_HighWindGrid
+! =======================
+! =========  AWAE_HighWindGridPtr  =======
+  TYPE, PUBLIC :: AWAE_HighWindGridPtr
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: data => NULL()      !< Pointer to UVW components of wind data across the high-res regularly-spaced grid [m/s]
+  END TYPE AWAE_HighWindGridPtr
 ! =======================
 ! =========  AWAE_InputFileType  =======
   TYPE, PUBLIC :: AWAE_InputFileType
@@ -133,6 +138,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: X0_low      !< X-component of the origin of the low-resolution spatial domain [m]
     REAL(ReKi)  :: Y0_low      !< Y-component of the origin of the low-resolution spatial domain [m]
     REAL(ReKi)  :: Z0_low      !< Z-component of the origin of the low-resolution spatial domain [m]
+    TYPE(AWAE_HighWindGridPtr) , DIMENSION(:), ALLOCATABLE  :: Vdist_High      !< Pointers to Wind velocity of disturbed wind (ambient + wakes) across each high-resolution domain around a turbine for each high-resolution step within a low-resolution step [m/s]
   END TYPE AWAE_InitOutputType
 ! =======================
 ! =========  AWAE_ContinuousStateType  =======
@@ -276,11 +282,6 @@ CONTAINS
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'AWAE_CopyWAT_IfW_data'
@@ -314,14 +315,12 @@ CONTAINS
     DstWAT_IfW_dataData%IsInitialized = SrcWAT_IfW_dataData%IsInitialized
  END SUBROUTINE AWAE_CopyWAT_IfW_data
 
- SUBROUTINE AWAE_DestroyWAT_IfW_data( WAT_IfW_dataData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AWAE_DestroyWAT_IfW_data( WAT_IfW_dataData, ErrStat, ErrMsg )
   TYPE(WAT_IfW_data), INTENT(INOUT) :: WAT_IfW_dataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyWAT_IfW_data'
@@ -329,27 +328,21 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL InflowWind_DestroyContState( WAT_IfW_dataData%x, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyContState( WAT_IfW_dataData%x, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL InflowWind_DestroyDiscState( WAT_IfW_dataData%xd, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyDiscState( WAT_IfW_dataData%xd, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL InflowWind_DestroyConstrState( WAT_IfW_dataData%z, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyConstrState( WAT_IfW_dataData%z, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL InflowWind_DestroyOtherState( WAT_IfW_dataData%OtherSt, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyOtherState( WAT_IfW_dataData%OtherSt, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL InflowWind_DestroyParam( WAT_IfW_dataData%p, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyParam( WAT_IfW_dataData%p, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL InflowWind_DestroyInput( WAT_IfW_dataData%u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyInput( WAT_IfW_dataData%u, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL InflowWind_DestroyOutput( WAT_IfW_dataData%y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyOutput( WAT_IfW_dataData%y, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL InflowWind_DestroyMisc( WAT_IfW_dataData%m, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyMisc( WAT_IfW_dataData%m, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AWAE_DestroyWAT_IfW_data
 
@@ -794,11 +787,6 @@ CONTAINS
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-  INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'AWAE_UnPackWAT_IfW_data'
@@ -1155,7 +1143,7 @@ CONTAINS
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-IF (ALLOCATED(SrcHighWindGridData%data)) THEN
+IF (ASSOCIATED(SrcHighWindGridData%data)) THEN
   i1_l = LBOUND(SrcHighWindGridData%data,1)
   i1_u = UBOUND(SrcHighWindGridData%data,1)
   i2_l = LBOUND(SrcHighWindGridData%data,2)
@@ -1166,7 +1154,7 @@ IF (ALLOCATED(SrcHighWindGridData%data)) THEN
   i4_u = UBOUND(SrcHighWindGridData%data,4)
   i5_l = LBOUND(SrcHighWindGridData%data,5)
   i5_u = UBOUND(SrcHighWindGridData%data,5)
-  IF (.NOT. ALLOCATED(DstHighWindGridData%data)) THEN 
+  IF (.NOT. ASSOCIATED(DstHighWindGridData%data)) THEN 
     ALLOCATE(DstHighWindGridData%data(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
       CALL SetErrStat(ErrID_Fatal, 'Error allocating DstHighWindGridData%data.', ErrStat, ErrMsg,RoutineName)
@@ -1177,14 +1165,12 @@ IF (ALLOCATED(SrcHighWindGridData%data)) THEN
 ENDIF
  END SUBROUTINE AWAE_CopyHighWindGrid
 
- SUBROUTINE AWAE_DestroyHighWindGrid( HighWindGridData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AWAE_DestroyHighWindGrid( HighWindGridData, ErrStat, ErrMsg )
   TYPE(AWAE_HighWindGrid), INTENT(INOUT) :: HighWindGridData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyHighWindGrid'
@@ -1192,14 +1178,9 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-IF (ALLOCATED(HighWindGridData%data)) THEN
+IF (ASSOCIATED(HighWindGridData%data)) THEN
   DEALLOCATE(HighWindGridData%data)
+  HighWindGridData%data => NULL()
 ENDIF
  END SUBROUTINE AWAE_DestroyHighWindGrid
 
@@ -1239,7 +1220,7 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
   Int_BufSz   = Int_BufSz   + 1     ! data allocated yes/no
-  IF ( ALLOCATED(InData%data) ) THEN
+  IF ( ASSOCIATED(InData%data) ) THEN
     Int_BufSz   = Int_BufSz   + 2*5  ! data upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%data)  ! data
   END IF
@@ -1270,7 +1251,7 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-  IF ( .NOT. ALLOCATED(InData%data) ) THEN
+  IF ( .NOT. ASSOCIATED(InData%data) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -1357,7 +1338,7 @@ ENDIF
     i5_l = IntKiBuf( Int_Xferred    )
     i5_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%data)) DEALLOCATE(OutData%data)
+    IF (ASSOCIATED(OutData%data)) DEALLOCATE(OutData%data)
     ALLOCATE(OutData%data(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%data.', ErrStat, ErrMsg,RoutineName)
@@ -1377,6 +1358,142 @@ ENDIF
       END DO
   END IF
  END SUBROUTINE AWAE_UnPackHighWindGrid
+
+ SUBROUTINE AWAE_CopyHighWindGridPtr( SrcHighWindGridPtrData, DstHighWindGridPtrData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(AWAE_HighWindGridPtr), INTENT(IN) :: SrcHighWindGridPtrData
+   TYPE(AWAE_HighWindGridPtr), INTENT(INOUT) :: DstHighWindGridPtrData
+   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+! Local 
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
+   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'AWAE_CopyHighWindGridPtr'
+! 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+    DstHighWindGridPtrData%data => SrcHighWindGridPtrData%data
+ END SUBROUTINE AWAE_CopyHighWindGridPtr
+
+ SUBROUTINE AWAE_DestroyHighWindGridPtr( HighWindGridPtrData, ErrStat, ErrMsg )
+  TYPE(AWAE_HighWindGridPtr), INTENT(INOUT) :: HighWindGridPtrData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+  
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyHighWindGridPtr'
+
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+
+NULLIFY(HighWindGridPtrData%data)
+ END SUBROUTINE AWAE_DestroyHighWindGridPtr
+
+ SUBROUTINE AWAE_PackHighWindGridPtr( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+  TYPE(AWAE_HighWindGridPtr),  INTENT(IN) :: InData
+  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
+  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
+  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'AWAE_PackHighWindGridPtr'
+ ! buffers to store subtypes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+
+  OnlySize = .FALSE.
+  IF ( PRESENT(SizeOnly) ) THEN
+    OnlySize = SizeOnly
+  ENDIF
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+  IF ( Re_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Db_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Int_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred = 1
+
+ END SUBROUTINE AWAE_PackHighWindGridPtr
+
+ SUBROUTINE AWAE_UnPackHighWindGridPtr( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+  TYPE(AWAE_HighWindGridPtr), INTENT(INOUT) :: OutData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    ! Local variables
+  INTEGER(IntKi)                 :: Buf_size
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
+  INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'AWAE_UnPackHighWindGridPtr'
+ ! buffers to store meshes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+  NULLIFY(OutData%data)
+ END SUBROUTINE AWAE_UnPackHighWindGridPtr
 
  SUBROUTINE AWAE_CopyInputFileType( SrcInputFileTypeData, DstInputFileTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(AWAE_InputFileType), INTENT(IN) :: SrcInputFileTypeData
@@ -1548,14 +1665,12 @@ ENDIF
     DstInputFileTypeData%Mod_Projection = SrcInputFileTypeData%Mod_Projection
  END SUBROUTINE AWAE_CopyInputFileType
 
- SUBROUTINE AWAE_DestroyInputFileType( InputFileTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AWAE_DestroyInputFileType( InputFileTypeData, ErrStat, ErrMsg )
   TYPE(AWAE_InputFileType), INTENT(INOUT) :: InputFileTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyInputFileType'
@@ -1563,12 +1678,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(InputFileTypeData%OutDisWindZ)) THEN
   DEALLOCATE(InputFileTypeData%OutDisWindZ)
 ENDIF
@@ -2269,14 +2378,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AWAE_CopyInitInput
 
- SUBROUTINE AWAE_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AWAE_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
   TYPE(AWAE_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyInitInput'
@@ -2284,15 +2391,9 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL AWAE_Destroyinputfiletype( InitInputData%InputFileData, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AWAE_DestroyInputFileType( InitInputData%InputFileData, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AWAE_Destroywat_ifw_data( InitInputData%WAT_IfW_data, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AWAE_DestroyWAT_IfW_data( InitInputData%WAT_IfW_data, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AWAE_DestroyInitInput
 
@@ -2333,7 +2434,7 @@ ENDIF
   Int_BufSz  = 0
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! InputFileData: size of buffers for each call to pack subtype
-      CALL AWAE_Packinputfiletype( Re_Buf, Db_Buf, Int_Buf, InData%InputFileData, ErrStat2, ErrMsg2, .TRUE. ) ! InputFileData 
+      CALL AWAE_PackInputFileType( Re_Buf, Db_Buf, Int_Buf, InData%InputFileData, ErrStat2, ErrMsg2, .TRUE. ) ! InputFileData 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2354,7 +2455,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutFileRoot)  ! OutFileRoot
       Int_BufSz  = Int_BufSz  + 1  ! WAT_Enabled
       Int_BufSz   = Int_BufSz + 3  ! WAT_IfW_data: size of buffers for each call to pack subtype
-      CALL AWAE_Packwat_ifw_data( Re_Buf, Db_Buf, Int_Buf, InData%WAT_IfW_data, ErrStat2, ErrMsg2, .TRUE. ) ! WAT_IfW_data 
+      CALL AWAE_PackWAT_IfW_data( Re_Buf, Db_Buf, Int_Buf, InData%WAT_IfW_data, ErrStat2, ErrMsg2, .TRUE. ) ! WAT_IfW_data 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2397,7 +2498,7 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      CALL AWAE_Packinputfiletype( Re_Buf, Db_Buf, Int_Buf, InData%InputFileData, ErrStat2, ErrMsg2, OnlySize ) ! InputFileData 
+      CALL AWAE_PackInputFileType( Re_Buf, Db_Buf, Int_Buf, InData%InputFileData, ErrStat2, ErrMsg2, OnlySize ) ! InputFileData 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2435,7 +2536,7 @@ ENDIF
     END DO ! I
     IntKiBuf(Int_Xferred) = TRANSFER(InData%WAT_Enabled, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-      CALL AWAE_Packwat_ifw_data( Re_Buf, Db_Buf, Int_Buf, InData%WAT_IfW_data, ErrStat2, ErrMsg2, OnlySize ) ! WAT_IfW_data 
+      CALL AWAE_PackWAT_IfW_data( Re_Buf, Db_Buf, Int_Buf, InData%WAT_IfW_data, ErrStat2, ErrMsg2, OnlySize ) ! WAT_IfW_data 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2524,7 +2625,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AWAE_Unpackinputfiletype( Re_Buf, Db_Buf, Int_Buf, OutData%InputFileData, ErrStat2, ErrMsg2 ) ! InputFileData 
+      CALL AWAE_UnpackInputFileType( Re_Buf, Db_Buf, Int_Buf, OutData%InputFileData, ErrStat2, ErrMsg2 ) ! InputFileData 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2574,7 +2675,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AWAE_Unpackwat_ifw_data( Re_Buf, Db_Buf, Int_Buf, OutData%WAT_IfW_data, ErrStat2, ErrMsg2 ) ! WAT_IfW_data 
+      CALL AWAE_UnpackWAT_IfW_data( Re_Buf, Db_Buf, Int_Buf, OutData%WAT_IfW_data, ErrStat2, ErrMsg2 ) ! WAT_IfW_data 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2685,16 +2786,30 @@ ENDIF
     DstInitOutputData%X0_low = SrcInitOutputData%X0_low
     DstInitOutputData%Y0_low = SrcInitOutputData%Y0_low
     DstInitOutputData%Z0_low = SrcInitOutputData%Z0_low
+IF (ALLOCATED(SrcInitOutputData%Vdist_High)) THEN
+  i1_l = LBOUND(SrcInitOutputData%Vdist_High,1)
+  i1_u = UBOUND(SrcInitOutputData%Vdist_High,1)
+  IF (.NOT. ALLOCATED(DstInitOutputData%Vdist_High)) THEN 
+    ALLOCATE(DstInitOutputData%Vdist_High(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%Vdist_High.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DO i1 = LBOUND(SrcInitOutputData%Vdist_High,1), UBOUND(SrcInitOutputData%Vdist_High,1)
+      CALL AWAE_Copyhighwindgridptr( SrcInitOutputData%Vdist_High(i1), DstInitOutputData%Vdist_High(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
+ENDIF
  END SUBROUTINE AWAE_CopyInitOutput
 
- SUBROUTINE AWAE_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AWAE_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
   TYPE(AWAE_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyInitOutput'
@@ -2702,13 +2817,7 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL NWTC_Library_DestroyProgDesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitOutputData%X0_high)) THEN
   DEALLOCATE(InitOutputData%X0_high)
@@ -2727,6 +2836,13 @@ IF (ALLOCATED(InitOutputData%dY_high)) THEN
 ENDIF
 IF (ALLOCATED(InitOutputData%dZ_high)) THEN
   DEALLOCATE(InitOutputData%dZ_high)
+ENDIF
+IF (ALLOCATED(InitOutputData%Vdist_High)) THEN
+DO i1 = LBOUND(InitOutputData%Vdist_High,1), UBOUND(InitOutputData%Vdist_High,1)
+  CALL AWAE_DestroyHighWindGridPtr( InitOutputData%Vdist_High(i1), ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+ENDDO
+  DEALLOCATE(InitOutputData%Vdist_High)
 ENDIF
  END SUBROUTINE AWAE_DestroyInitOutput
 
@@ -2767,7 +2883,7 @@ ENDIF
   Int_BufSz  = 0
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! Ver: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packprogdesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, .TRUE. ) ! Ver 
+      CALL NWTC_Library_PackProgDesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, .TRUE. ) ! Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2825,6 +2941,29 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! X0_low
       Re_BufSz   = Re_BufSz   + 1  ! Y0_low
       Re_BufSz   = Re_BufSz   + 1  ! Z0_low
+  Int_BufSz   = Int_BufSz   + 1     ! Vdist_High allocated yes/no
+  IF ( ALLOCATED(InData%Vdist_High) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Vdist_High upper/lower bounds for each dimension
+    DO i1 = LBOUND(InData%Vdist_High,1), UBOUND(InData%Vdist_High,1)
+      Int_BufSz   = Int_BufSz + 3  ! Vdist_High: size of buffers for each call to pack subtype
+      CALL AWAE_PackHighWindGridPtr( Re_Buf, Db_Buf, Int_Buf, InData%Vdist_High(i1), ErrStat2, ErrMsg2, .TRUE. ) ! Vdist_High 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! Vdist_High
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! Vdist_High
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! Vdist_High
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+    END DO
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2852,7 +2991,7 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      CALL NWTC_Library_Packprogdesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, OnlySize ) ! Ver 
+      CALL NWTC_Library_PackProgDesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, OnlySize ) ! Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -2994,6 +3133,47 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Z0_low
     Re_Xferred = Re_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%Vdist_High) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vdist_High,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vdist_High,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%Vdist_High,1), UBOUND(InData%Vdist_High,1)
+      CALL AWAE_PackHighWindGridPtr( Re_Buf, Db_Buf, Int_Buf, InData%Vdist_High(i1), ErrStat2, ErrMsg2, OnlySize ) ! Vdist_High 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+    END DO
+  END IF
  END SUBROUTINE AWAE_PackInitOutput
 
  SUBROUTINE AWAE_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3056,7 +3236,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackprogdesc( Re_Buf, Db_Buf, Int_Buf, OutData%Ver, ErrStat2, ErrMsg2 ) ! Ver 
+      CALL NWTC_Library_UnpackProgDesc( Re_Buf, Db_Buf, Int_Buf, OutData%Ver, ErrStat2, ErrMsg2 ) ! Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3195,6 +3375,62 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%Z0_low = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vdist_High not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Vdist_High)) DEALLOCATE(OutData%Vdist_High)
+    ALLOCATE(OutData%Vdist_High(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vdist_High.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    DO i1 = LBOUND(OutData%Vdist_High,1), UBOUND(OutData%Vdist_High,1)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL AWAE_UnpackHighWindGridPtr( Re_Buf, Db_Buf, Int_Buf, OutData%Vdist_High(i1), ErrStat2, ErrMsg2 ) ! Vdist_High 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
+  END IF
  END SUBROUTINE AWAE_UnPackInitOutput
 
  SUBROUTINE AWAE_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
@@ -3233,14 +3469,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AWAE_CopyContState
 
- SUBROUTINE AWAE_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AWAE_DestroyContState( ContStateData, ErrStat, ErrMsg )
   TYPE(AWAE_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyContState'
@@ -3248,20 +3482,14 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(ContStateData%IfW)) THEN
 DO i1 = LBOUND(ContStateData%IfW,1), UBOUND(ContStateData%IfW,1)
-  CALL InflowWind_DestroyContState( ContStateData%IfW(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyContState( ContStateData%IfW(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ContStateData%IfW)
 ENDIF
-  CALL InflowWind_DestroyContState( ContStateData%WAT_IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyContState( ContStateData%WAT_IfW, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AWAE_DestroyContState
 
@@ -3602,14 +3830,12 @@ ENDIF
     DstDiscStateData%Ufarm = SrcDiscStateData%Ufarm
  END SUBROUTINE AWAE_CopyDiscState
 
- SUBROUTINE AWAE_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AWAE_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
   TYPE(AWAE_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyDiscState'
@@ -3617,20 +3843,14 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(DiscStateData%IfW)) THEN
 DO i1 = LBOUND(DiscStateData%IfW,1), UBOUND(DiscStateData%IfW,1)
-  CALL InflowWind_DestroyDiscState( DiscStateData%IfW(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyDiscState( DiscStateData%IfW(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(DiscStateData%IfW)
 ENDIF
-  CALL InflowWind_DestroyDiscState( DiscStateData%WAT_IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyDiscState( DiscStateData%WAT_IfW, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AWAE_DestroyDiscState
 
@@ -3991,14 +4211,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AWAE_CopyConstrState
 
- SUBROUTINE AWAE_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AWAE_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
   TYPE(AWAE_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyConstrState'
@@ -4006,20 +4224,14 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(ConstrStateData%IfW)) THEN
 DO i1 = LBOUND(ConstrStateData%IfW,1), UBOUND(ConstrStateData%IfW,1)
-  CALL InflowWind_DestroyConstrState( ConstrStateData%IfW(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyConstrState( ConstrStateData%IfW(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ConstrStateData%IfW)
 ENDIF
-  CALL InflowWind_DestroyConstrState( ConstrStateData%WAT_IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyConstrState( ConstrStateData%WAT_IfW, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AWAE_DestroyConstrState
 
@@ -4358,14 +4570,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE AWAE_CopyOtherState
 
- SUBROUTINE AWAE_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AWAE_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
   TYPE(AWAE_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyOtherState'
@@ -4373,20 +4583,14 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(OtherStateData%IfW)) THEN
 DO i1 = LBOUND(OtherStateData%IfW,1), UBOUND(OtherStateData%IfW,1)
-  CALL InflowWind_DestroyOtherState( OtherStateData%IfW(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyOtherState( OtherStateData%IfW(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OtherStateData%IfW)
 ENDIF
-  CALL InflowWind_DestroyOtherState( OtherStateData%WAT_IFW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyOtherState( OtherStateData%WAT_IFW, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AWAE_DestroyOtherState
 
@@ -5004,14 +5208,12 @@ IF (ALLOCATED(SrcMiscData%V_amb_low_disk)) THEN
 ENDIF
  END SUBROUTINE AWAE_CopyMisc
 
- SUBROUTINE AWAE_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AWAE_DestroyMisc( MiscData, ErrStat, ErrMsg )
   TYPE(AWAE_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyMisc'
@@ -5019,12 +5221,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(MiscData%Vamb_low)) THEN
   DEALLOCATE(MiscData%Vamb_low)
 ENDIF
@@ -5039,7 +5235,7 @@ IF (ALLOCATED(MiscData%Vdist_low_full)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%Vamb_High)) THEN
 DO i1 = LBOUND(MiscData%Vamb_High,1), UBOUND(MiscData%Vamb_High,1)
-  CALL AWAE_Destroyhighwindgrid( MiscData%Vamb_High(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AWAE_DestroyHighWindGrid( MiscData%Vamb_High(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%Vamb_High)
@@ -5076,24 +5272,24 @@ IF (ALLOCATED(MiscData%outVizXZPlane)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%IfW)) THEN
 DO i1 = LBOUND(MiscData%IfW,1), UBOUND(MiscData%IfW,1)
-  CALL InflowWind_DestroyMisc( MiscData%IfW(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyMisc( MiscData%IfW(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(MiscData%IfW)
 ENDIF
-  CALL InflowWind_DestroyInput( MiscData%u_IfW_Low, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyInput( MiscData%u_IfW_Low, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL InflowWind_DestroyInput( MiscData%u_IfW_High, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyInput( MiscData%u_IfW_High, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL InflowWind_DestroyOutput( MiscData%y_IfW_Low, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyOutput( MiscData%y_IfW_Low, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL InflowWind_DestroyOutput( MiscData%y_IfW_High, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyOutput( MiscData%y_IfW_High, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL InflowWind_DestroyMisc( MiscData%WAT_IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyMisc( MiscData%WAT_IfW, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL InflowWind_DestroyInput( MiscData%u_WAT_IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyInput( MiscData%u_WAT_IfW, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL InflowWind_DestroyOutput( MiscData%y_WAT_IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyOutput( MiscData%y_WAT_IfW, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%V_amb_low_disk)) THEN
   DEALLOCATE(MiscData%V_amb_low_disk)
@@ -5161,7 +5357,7 @@ ENDIF
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
     DO i1 = LBOUND(InData%Vamb_High,1), UBOUND(InData%Vamb_High,1)
       Int_BufSz   = Int_BufSz + 3  ! Vamb_High: size of buffers for each call to pack subtype
-      CALL AWAE_Packhighwindgrid( Re_Buf, Db_Buf, Int_Buf, InData%Vamb_High(i1), ErrStat2, ErrMsg2, .TRUE. ) ! Vamb_High 
+      CALL AWAE_PackHighWindGrid( Re_Buf, Db_Buf, Int_Buf, InData%Vamb_High(i1), ErrStat2, ErrMsg2, .TRUE. ) ! Vamb_High 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -5524,7 +5720,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%Vamb_High,1), UBOUND(InData%Vamb_High,1)
-      CALL AWAE_Packhighwindgrid( Re_Buf, Db_Buf, Int_Buf, InData%Vamb_High(i1), ErrStat2, ErrMsg2, OnlySize ) ! Vamb_High 
+      CALL AWAE_PackHighWindGrid( Re_Buf, Db_Buf, Int_Buf, InData%Vamb_High(i1), ErrStat2, ErrMsg2, OnlySize ) ! Vamb_High 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6262,7 +6458,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AWAE_Unpackhighwindgrid( Re_Buf, Db_Buf, Int_Buf, OutData%Vamb_High(i1), ErrStat2, ErrMsg2 ) ! Vamb_High 
+      CALL AWAE_UnpackHighWindGrid( Re_Buf, Db_Buf, Int_Buf, OutData%Vamb_High(i1), ErrStat2, ErrMsg2 ) ! Vamb_High 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -7165,14 +7361,12 @@ ENDIF
     DstParamData%WAT_d_box = SrcParamData%WAT_d_box
  END SUBROUTINE AWAE_CopyParam
 
- SUBROUTINE AWAE_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AWAE_DestroyParam( ParamData, ErrStat, ErrMsg )
   TYPE(AWAE_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyParam'
@@ -7180,12 +7374,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(ParamData%y)) THEN
   DEALLOCATE(ParamData%y)
 ENDIF
@@ -7221,12 +7409,12 @@ IF (ALLOCATED(ParamData%WT_Position)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%IfW)) THEN
 DO i1 = LBOUND(ParamData%IfW,1), UBOUND(ParamData%IfW,1)
-  CALL InflowWind_DestroyParam( ParamData%IfW(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyParam( ParamData%IfW(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%IfW)
 ENDIF
-  CALL InflowWind_DestroyParam( ParamData%WAT_IfW, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_DestroyParam( ParamData%WAT_IfW, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(ParamData%OutDisWindZ)) THEN
   DEALLOCATE(ParamData%OutDisWindZ)
@@ -8406,14 +8594,12 @@ IF (ALLOCATED(SrcOutputData%Vx_wind_disk)) THEN
 ENDIF
  END SUBROUTINE AWAE_CopyOutput
 
- SUBROUTINE AWAE_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AWAE_DestroyOutput( OutputData, ErrStat, ErrMsg )
   TYPE(AWAE_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyOutput'
@@ -8421,15 +8607,9 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(OutputData%Vdist_High)) THEN
 DO i1 = LBOUND(OutputData%Vdist_High,1), UBOUND(OutputData%Vdist_High,1)
-  CALL AWAE_Destroyhighwindgrid( OutputData%Vdist_High(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL AWAE_DestroyHighWindGrid( OutputData%Vdist_High(i1), ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(OutputData%Vdist_High)
@@ -8486,7 +8666,7 @@ ENDIF
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
     DO i1 = LBOUND(InData%Vdist_High,1), UBOUND(InData%Vdist_High,1)
       Int_BufSz   = Int_BufSz + 3  ! Vdist_High: size of buffers for each call to pack subtype
-      CALL AWAE_Packhighwindgrid( Re_Buf, Db_Buf, Int_Buf, InData%Vdist_High(i1), ErrStat2, ErrMsg2, .TRUE. ) ! Vdist_High 
+      CALL AWAE_PackHighWindGrid( Re_Buf, Db_Buf, Int_Buf, InData%Vdist_High(i1), ErrStat2, ErrMsg2, .TRUE. ) ! Vdist_High 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -8557,7 +8737,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
     DO i1 = LBOUND(InData%Vdist_High,1), UBOUND(InData%Vdist_High,1)
-      CALL AWAE_Packhighwindgrid( Re_Buf, Db_Buf, Int_Buf, InData%Vdist_High(i1), ErrStat2, ErrMsg2, OnlySize ) ! Vdist_High 
+      CALL AWAE_PackHighWindGrid( Re_Buf, Db_Buf, Int_Buf, InData%Vdist_High(i1), ErrStat2, ErrMsg2, OnlySize ) ! Vdist_High 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -8720,7 +8900,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL AWAE_Unpackhighwindgrid( Re_Buf, Db_Buf, Int_Buf, OutData%Vdist_High(i1), ErrStat2, ErrMsg2 ) ! Vdist_High 
+      CALL AWAE_UnpackHighWindGrid( Re_Buf, Db_Buf, Int_Buf, OutData%Vdist_High(i1), ErrStat2, ErrMsg2 ) ! Vdist_High 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -8933,14 +9113,12 @@ IF (ALLOCATED(SrcInputData%WAT_k)) THEN
 ENDIF
  END SUBROUTINE AWAE_CopyInput
 
- SUBROUTINE AWAE_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE AWAE_DestroyInput( InputData, ErrStat, ErrMsg )
   TYPE(AWAE_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'AWAE_DestroyInput'
@@ -8948,12 +9126,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(InputData%xhat_plane)) THEN
   DEALLOCATE(InputData%xhat_plane)
 ENDIF

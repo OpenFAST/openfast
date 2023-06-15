@@ -132,7 +132,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:4)  :: n      !< number of evenly-spaced grid points in the x, y, z, and t directions [-]
     REAL(ReKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
     REAL(ReKi) , DIMENSION(1:3)  :: pZero      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
-    REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: Vel      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt] [-]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: Vel => NULL()      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt] [-]
     REAL(ReKi)  :: TimeStart      !< this is the time where the first time grid in m%V starts (i.e, the time associated with m%V(:,:,:,:,1)) [s]
     REAL(ReKi)  :: RefHeight      !< reference height; used to center the wind [meters]
   END TYPE Grid4DFieldType
@@ -175,10 +175,6 @@ CONTAINS
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_CopyUniformFieldType'
@@ -394,14 +390,12 @@ IF (ALLOCATED(SrcUniformFieldTypeData%LinShrVDot)) THEN
 ENDIF
  END SUBROUTINE IfW_FlowField_CopyUniformFieldType
 
- SUBROUTINE IfW_FlowField_DestroyUniformFieldType( UniformFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE IfW_FlowField_DestroyUniformFieldType( UniformFieldTypeData, ErrStat, ErrMsg )
   TYPE(UniformFieldType), INTENT(INOUT) :: UniformFieldTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyUniformFieldType'
@@ -409,12 +403,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(UniformFieldTypeData%Time)) THEN
   DEALLOCATE(UniformFieldTypeData%Time)
 ENDIF
@@ -895,10 +883,6 @@ ENDIF
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-  INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_UnPackUniformFieldType'
@@ -1262,14 +1246,12 @@ ENDIF
     DstUniformField_InterpData%SinAngleV = SrcUniformField_InterpData%SinAngleV
  END SUBROUTINE IfW_FlowField_CopyUniformField_Interp
 
- SUBROUTINE IfW_FlowField_DestroyUniformField_Interp( UniformField_InterpData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE IfW_FlowField_DestroyUniformField_Interp( UniformField_InterpData, ErrStat, ErrMsg )
   TYPE(UniformField_Interp), INTENT(INOUT) :: UniformField_InterpData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyUniformField_Interp'
@@ -1277,12 +1259,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE IfW_FlowField_DestroyUniformField_Interp
 
  SUBROUTINE IfW_FlowField_PackUniformField_Interp( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1627,14 +1603,12 @@ ENDIF
     DstGrid3DFieldTypeData%BoxExceedWarned = SrcGrid3DFieldTypeData%BoxExceedWarned
  END SUBROUTINE IfW_FlowField_CopyGrid3DFieldType
 
- SUBROUTINE IfW_FlowField_DestroyGrid3DFieldType( Grid3DFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE IfW_FlowField_DestroyGrid3DFieldType( Grid3DFieldTypeData, ErrStat, ErrMsg )
   TYPE(Grid3DFieldType), INTENT(INOUT) :: Grid3DFieldTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyGrid3DFieldType'
@@ -1642,12 +1616,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(Grid3DFieldTypeData%Vel)) THEN
   DEALLOCATE(Grid3DFieldTypeData%Vel)
 ENDIF
@@ -2304,38 +2272,17 @@ ENDIF
     DstGrid4DFieldTypeData%n = SrcGrid4DFieldTypeData%n
     DstGrid4DFieldTypeData%delta = SrcGrid4DFieldTypeData%delta
     DstGrid4DFieldTypeData%pZero = SrcGrid4DFieldTypeData%pZero
-IF (ALLOCATED(SrcGrid4DFieldTypeData%Vel)) THEN
-  i1_l = LBOUND(SrcGrid4DFieldTypeData%Vel,1)
-  i1_u = UBOUND(SrcGrid4DFieldTypeData%Vel,1)
-  i2_l = LBOUND(SrcGrid4DFieldTypeData%Vel,2)
-  i2_u = UBOUND(SrcGrid4DFieldTypeData%Vel,2)
-  i3_l = LBOUND(SrcGrid4DFieldTypeData%Vel,3)
-  i3_u = UBOUND(SrcGrid4DFieldTypeData%Vel,3)
-  i4_l = LBOUND(SrcGrid4DFieldTypeData%Vel,4)
-  i4_u = UBOUND(SrcGrid4DFieldTypeData%Vel,4)
-  i5_l = LBOUND(SrcGrid4DFieldTypeData%Vel,5)
-  i5_u = UBOUND(SrcGrid4DFieldTypeData%Vel,5)
-  IF (.NOT. ALLOCATED(DstGrid4DFieldTypeData%Vel)) THEN 
-    ALLOCATE(DstGrid4DFieldTypeData%Vel(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGrid4DFieldTypeData%Vel.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstGrid4DFieldTypeData%Vel = SrcGrid4DFieldTypeData%Vel
-ENDIF
+    DstGrid4DFieldTypeData%Vel => SrcGrid4DFieldTypeData%Vel
     DstGrid4DFieldTypeData%TimeStart = SrcGrid4DFieldTypeData%TimeStart
     DstGrid4DFieldTypeData%RefHeight = SrcGrid4DFieldTypeData%RefHeight
  END SUBROUTINE IfW_FlowField_CopyGrid4DFieldType
 
- SUBROUTINE IfW_FlowField_DestroyGrid4DFieldType( Grid4DFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE IfW_FlowField_DestroyGrid4DFieldType( Grid4DFieldTypeData, ErrStat, ErrMsg )
   TYPE(Grid4DFieldType), INTENT(INOUT) :: Grid4DFieldTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyGrid4DFieldType'
@@ -2343,15 +2290,7 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-IF (ALLOCATED(Grid4DFieldTypeData%Vel)) THEN
-  DEALLOCATE(Grid4DFieldTypeData%Vel)
-ENDIF
+NULLIFY(Grid4DFieldTypeData%Vel)
  END SUBROUTINE IfW_FlowField_DestroyGrid4DFieldType
 
  SUBROUTINE IfW_FlowField_PackGrid4DFieldType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2392,11 +2331,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%n)  ! n
       Re_BufSz   = Re_BufSz   + SIZE(InData%delta)  ! delta
       Re_BufSz   = Re_BufSz   + SIZE(InData%pZero)  ! pZero
-  Int_BufSz   = Int_BufSz   + 1     ! Vel allocated yes/no
-  IF ( ALLOCATED(InData%Vel) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*5  ! Vel upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%Vel)  ! Vel
-  END IF
       Re_BufSz   = Re_BufSz   + 1  ! TimeStart
       Re_BufSz   = Re_BufSz   + 1  ! RefHeight
   IF ( Re_BufSz  .GT. 0 ) THEN 
@@ -2438,41 +2372,6 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%pZero(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-  IF ( .NOT. ALLOCATED(InData%Vel) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vel,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vel,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vel,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vel,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vel,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vel,3)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vel,4)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vel,4)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Vel,5)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Vel,5)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i5 = LBOUND(InData%Vel,5), UBOUND(InData%Vel,5)
-        DO i4 = LBOUND(InData%Vel,4), UBOUND(InData%Vel,4)
-          DO i3 = LBOUND(InData%Vel,3), UBOUND(InData%Vel,3)
-            DO i2 = LBOUND(InData%Vel,2), UBOUND(InData%Vel,2)
-              DO i1 = LBOUND(InData%Vel,1), UBOUND(InData%Vel,1)
-                ReKiBuf(Re_Xferred) = InData%Vel(i1,i2,i3,i4,i5)
-                Re_Xferred = Re_Xferred + 1
-              END DO
-            END DO
-          END DO
-        END DO
-      END DO
-  END IF
     ReKiBuf(Re_Xferred) = InData%TimeStart
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%RefHeight
@@ -2528,44 +2427,7 @@ ENDIF
       OutData%pZero(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Vel not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i4_l = IntKiBuf( Int_Xferred    )
-    i4_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i5_l = IntKiBuf( Int_Xferred    )
-    i5_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%Vel)) DEALLOCATE(OutData%Vel)
-    ALLOCATE(OutData%Vel(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vel.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i5 = LBOUND(OutData%Vel,5), UBOUND(OutData%Vel,5)
-        DO i4 = LBOUND(OutData%Vel,4), UBOUND(OutData%Vel,4)
-          DO i3 = LBOUND(OutData%Vel,3), UBOUND(OutData%Vel,3)
-            DO i2 = LBOUND(OutData%Vel,2), UBOUND(OutData%Vel,2)
-              DO i1 = LBOUND(OutData%Vel,1), UBOUND(OutData%Vel,1)
-                OutData%Vel(i1,i2,i3,i4,i5) = REAL(ReKiBuf(Re_Xferred), SiKi)
-                Re_Xferred = Re_Xferred + 1
-              END DO
-            END DO
-          END DO
-        END DO
-      END DO
-  END IF
+  NULLIFY(OutData%Vel)
     OutData%TimeStart = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%RefHeight = ReKiBuf(Re_Xferred)
@@ -2604,14 +2466,12 @@ IF (ALLOCATED(SrcPointsFieldTypeData%Vel)) THEN
 ENDIF
  END SUBROUTINE IfW_FlowField_CopyPointsFieldType
 
- SUBROUTINE IfW_FlowField_DestroyPointsFieldType( PointsFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE IfW_FlowField_DestroyPointsFieldType( PointsFieldTypeData, ErrStat, ErrMsg )
   TYPE(PointsFieldType), INTENT(INOUT) :: PointsFieldTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyPointsFieldType'
@@ -2619,12 +2479,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(PointsFieldTypeData%Vel)) THEN
   DEALLOCATE(PointsFieldTypeData%Vel)
 ENDIF
@@ -2789,14 +2643,12 @@ ENDIF
     DstUserFieldTypeData%RefHeight = SrcUserFieldTypeData%RefHeight
  END SUBROUTINE IfW_FlowField_CopyUserFieldType
 
- SUBROUTINE IfW_FlowField_DestroyUserFieldType( UserFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE IfW_FlowField_DestroyUserFieldType( UserFieldTypeData, ErrStat, ErrMsg )
   TYPE(UserFieldType), INTENT(INOUT) :: UserFieldTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyUserFieldType'
@@ -2804,12 +2656,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE IfW_FlowField_DestroyUserFieldType
 
  SUBROUTINE IfW_FlowField_PackUserFieldType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2951,14 +2797,12 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE IfW_FlowField_CopyFlowFieldType
 
- SUBROUTINE IfW_FlowField_DestroyFlowFieldType( FlowFieldTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE IfW_FlowField_DestroyFlowFieldType( FlowFieldTypeData, ErrStat, ErrMsg )
   TYPE(FlowFieldType), INTENT(INOUT) :: FlowFieldTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyFlowFieldType'
@@ -2966,21 +2810,15 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL IfW_FlowField_Destroyuniformfieldtype( FlowFieldTypeData%Uniform, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL IfW_FlowField_DestroyUniformFieldType( FlowFieldTypeData%Uniform, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_FlowField_Destroygrid3dfieldtype( FlowFieldTypeData%Grid3D, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL IfW_FlowField_DestroyGrid3DFieldType( FlowFieldTypeData%Grid3D, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_FlowField_Destroygrid4dfieldtype( FlowFieldTypeData%Grid4D, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL IfW_FlowField_DestroyGrid4DFieldType( FlowFieldTypeData%Grid4D, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_FlowField_Destroypointsfieldtype( FlowFieldTypeData%Points, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL IfW_FlowField_DestroyPointsFieldType( FlowFieldTypeData%Points, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_FlowField_Destroyuserfieldtype( FlowFieldTypeData%User, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL IfW_FlowField_DestroyUserFieldType( FlowFieldTypeData%User, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE IfW_FlowField_DestroyFlowFieldType
 
@@ -3030,7 +2868,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%RotFromWind)  ! RotFromWind
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! Uniform: size of buffers for each call to pack subtype
-      CALL IfW_FlowField_Packuniformfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%Uniform, ErrStat2, ErrMsg2, .TRUE. ) ! Uniform 
+      CALL IfW_FlowField_PackUniformFieldType( Re_Buf, Db_Buf, Int_Buf, InData%Uniform, ErrStat2, ErrMsg2, .TRUE. ) ! Uniform 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3047,7 +2885,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! Grid3D: size of buffers for each call to pack subtype
-      CALL IfW_FlowField_Packgrid3dfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%Grid3D, ErrStat2, ErrMsg2, .TRUE. ) ! Grid3D 
+      CALL IfW_FlowField_PackGrid3DFieldType( Re_Buf, Db_Buf, Int_Buf, InData%Grid3D, ErrStat2, ErrMsg2, .TRUE. ) ! Grid3D 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3064,7 +2902,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! Grid4D: size of buffers for each call to pack subtype
-      CALL IfW_FlowField_Packgrid4dfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%Grid4D, ErrStat2, ErrMsg2, .TRUE. ) ! Grid4D 
+      CALL IfW_FlowField_PackGrid4DFieldType( Re_Buf, Db_Buf, Int_Buf, InData%Grid4D, ErrStat2, ErrMsg2, .TRUE. ) ! Grid4D 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3081,7 +2919,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! Points: size of buffers for each call to pack subtype
-      CALL IfW_FlowField_Packpointsfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%Points, ErrStat2, ErrMsg2, .TRUE. ) ! Points 
+      CALL IfW_FlowField_PackPointsFieldType( Re_Buf, Db_Buf, Int_Buf, InData%Points, ErrStat2, ErrMsg2, .TRUE. ) ! Points 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3098,7 +2936,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz   = Int_BufSz + 3  ! User: size of buffers for each call to pack subtype
-      CALL IfW_FlowField_Packuserfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%User, ErrStat2, ErrMsg2, .TRUE. ) ! User 
+      CALL IfW_FlowField_PackUserFieldType( Re_Buf, Db_Buf, Int_Buf, InData%User, ErrStat2, ErrMsg2, .TRUE. ) ! User 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3169,7 +3007,7 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
     END DO
-      CALL IfW_FlowField_Packuniformfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%Uniform, ErrStat2, ErrMsg2, OnlySize ) ! Uniform 
+      CALL IfW_FlowField_PackUniformFieldType( Re_Buf, Db_Buf, Int_Buf, InData%Uniform, ErrStat2, ErrMsg2, OnlySize ) ! Uniform 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3197,7 +3035,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL IfW_FlowField_Packgrid3dfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%Grid3D, ErrStat2, ErrMsg2, OnlySize ) ! Grid3D 
+      CALL IfW_FlowField_PackGrid3DFieldType( Re_Buf, Db_Buf, Int_Buf, InData%Grid3D, ErrStat2, ErrMsg2, OnlySize ) ! Grid3D 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3225,7 +3063,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL IfW_FlowField_Packgrid4dfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%Grid4D, ErrStat2, ErrMsg2, OnlySize ) ! Grid4D 
+      CALL IfW_FlowField_PackGrid4DFieldType( Re_Buf, Db_Buf, Int_Buf, InData%Grid4D, ErrStat2, ErrMsg2, OnlySize ) ! Grid4D 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3253,7 +3091,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL IfW_FlowField_Packpointsfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%Points, ErrStat2, ErrMsg2, OnlySize ) ! Points 
+      CALL IfW_FlowField_PackPointsFieldType( Re_Buf, Db_Buf, Int_Buf, InData%Points, ErrStat2, ErrMsg2, OnlySize ) ! Points 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3281,7 +3119,7 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-      CALL IfW_FlowField_Packuserfieldtype( Re_Buf, Db_Buf, Int_Buf, InData%User, ErrStat2, ErrMsg2, OnlySize ) ! User 
+      CALL IfW_FlowField_PackUserFieldType( Re_Buf, Db_Buf, Int_Buf, InData%User, ErrStat2, ErrMsg2, OnlySize ) ! User 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3410,7 +3248,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL IfW_FlowField_Unpackuniformfieldtype( Re_Buf, Db_Buf, Int_Buf, OutData%Uniform, ErrStat2, ErrMsg2 ) ! Uniform 
+      CALL IfW_FlowField_UnpackUniformFieldType( Re_Buf, Db_Buf, Int_Buf, OutData%Uniform, ErrStat2, ErrMsg2 ) ! Uniform 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3450,7 +3288,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL IfW_FlowField_Unpackgrid3dfieldtype( Re_Buf, Db_Buf, Int_Buf, OutData%Grid3D, ErrStat2, ErrMsg2 ) ! Grid3D 
+      CALL IfW_FlowField_UnpackGrid3DFieldType( Re_Buf, Db_Buf, Int_Buf, OutData%Grid3D, ErrStat2, ErrMsg2 ) ! Grid3D 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3490,7 +3328,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL IfW_FlowField_Unpackgrid4dfieldtype( Re_Buf, Db_Buf, Int_Buf, OutData%Grid4D, ErrStat2, ErrMsg2 ) ! Grid4D 
+      CALL IfW_FlowField_UnpackGrid4DFieldType( Re_Buf, Db_Buf, Int_Buf, OutData%Grid4D, ErrStat2, ErrMsg2 ) ! Grid4D 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3530,7 +3368,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL IfW_FlowField_Unpackpointsfieldtype( Re_Buf, Db_Buf, Int_Buf, OutData%Points, ErrStat2, ErrMsg2 ) ! Points 
+      CALL IfW_FlowField_UnpackPointsFieldType( Re_Buf, Db_Buf, Int_Buf, OutData%Points, ErrStat2, ErrMsg2 ) ! Points 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -3570,7 +3408,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL IfW_FlowField_Unpackuserfieldtype( Re_Buf, Db_Buf, Int_Buf, OutData%User, ErrStat2, ErrMsg2 ) ! User 
+      CALL IfW_FlowField_UnpackUserFieldType( Re_Buf, Db_Buf, Int_Buf, OutData%User, ErrStat2, ErrMsg2 ) ! User 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 

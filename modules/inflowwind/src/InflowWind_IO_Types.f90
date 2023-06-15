@@ -132,6 +132,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:4)  :: n      !< number of grid points in the x, y, z, and t directions [-]
     REAL(ReKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
     REAL(ReKi) , DIMENSION(1:3)  :: pZero      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
+    REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: Vel => NULL()      !< pointer to 4D grid velocity data [m/s]
   END TYPE Grid4D_InitInputType
 ! =======================
 ! =========  Points_InitInputType  =======
@@ -175,14 +176,12 @@ CONTAINS
     DstWindFileDatData%MWS = SrcWindFileDatData%MWS
  END SUBROUTINE InflowWind_IO_CopyWindFileDat
 
- SUBROUTINE InflowWind_IO_DestroyWindFileDat( WindFileDatData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE InflowWind_IO_DestroyWindFileDat( WindFileDatData, ErrStat, ErrMsg )
   TYPE(WindFileDat), INTENT(INOUT) :: WindFileDatData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyWindFileDat'
@@ -190,12 +189,6 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE InflowWind_IO_DestroyWindFileDat
 
  SUBROUTINE InflowWind_IO_PackWindFileDat( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -428,14 +421,12 @@ CONTAINS
     DstSteady_InitInputTypeData%PLExp = SrcSteady_InitInputTypeData%PLExp
  END SUBROUTINE InflowWind_IO_CopySteady_InitInputType
 
- SUBROUTINE InflowWind_IO_DestroySteady_InitInputType( Steady_InitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE InflowWind_IO_DestroySteady_InitInputType( Steady_InitInputTypeData, ErrStat, ErrMsg )
   TYPE(Steady_InitInputType), INTENT(INOUT) :: Steady_InitInputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroySteady_InitInputType'
@@ -443,12 +434,6 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE InflowWind_IO_DestroySteady_InitInputType
 
  SUBROUTINE InflowWind_IO_PackSteady_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -582,14 +567,12 @@ CONTAINS
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE InflowWind_IO_CopyUniform_InitInputType
 
- SUBROUTINE InflowWind_IO_DestroyUniform_InitInputType( Uniform_InitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE InflowWind_IO_DestroyUniform_InitInputType( Uniform_InitInputTypeData, ErrStat, ErrMsg )
   TYPE(Uniform_InitInputType), INTENT(INOUT) :: Uniform_InitInputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyUniform_InitInputType'
@@ -597,13 +580,7 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL NWTC_Library_Destroyfileinfotype( Uniform_InitInputTypeData%PassedFileInfo, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL NWTC_Library_DestroyFileInfoType( Uniform_InitInputTypeData%PassedFileInfo, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE InflowWind_IO_DestroyUniform_InitInputType
 
@@ -649,7 +626,7 @@ CONTAINS
       Int_BufSz  = Int_BufSz  + 1  ! UseInputFile
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! PassedFileInfo: size of buffers for each call to pack subtype
-      CALL NWTC_Library_Packfileinfotype( Re_Buf, Db_Buf, Int_Buf, InData%PassedFileInfo, ErrStat2, ErrMsg2, .TRUE. ) ! PassedFileInfo 
+      CALL NWTC_Library_PackFileInfoType( Re_Buf, Db_Buf, Int_Buf, InData%PassedFileInfo, ErrStat2, ErrMsg2, .TRUE. ) ! PassedFileInfo 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -704,7 +681,7 @@ CONTAINS
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%UseInputFile, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-      CALL NWTC_Library_Packfileinfotype( Re_Buf, Db_Buf, Int_Buf, InData%PassedFileInfo, ErrStat2, ErrMsg2, OnlySize ) ! PassedFileInfo 
+      CALL NWTC_Library_PackFileInfoType( Re_Buf, Db_Buf, Int_Buf, InData%PassedFileInfo, ErrStat2, ErrMsg2, OnlySize ) ! PassedFileInfo 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -805,7 +782,7 @@ CONTAINS
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL NWTC_Library_Unpackfileinfotype( Re_Buf, Db_Buf, Int_Buf, OutData%PassedFileInfo, ErrStat2, ErrMsg2 ) ! PassedFileInfo 
+      CALL NWTC_Library_UnpackFileInfoType( Re_Buf, Db_Buf, Int_Buf, OutData%PassedFileInfo, ErrStat2, ErrMsg2 ) ! PassedFileInfo 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -843,14 +820,12 @@ CONTAINS
     DstGrid3D_InitInputTypeData%XOffset = SrcGrid3D_InitInputTypeData%XOffset
  END SUBROUTINE InflowWind_IO_CopyGrid3D_InitInputType
 
- SUBROUTINE InflowWind_IO_DestroyGrid3D_InitInputType( Grid3D_InitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE InflowWind_IO_DestroyGrid3D_InitInputType( Grid3D_InitInputTypeData, ErrStat, ErrMsg )
   TYPE(Grid3D_InitInputType), INTENT(INOUT) :: Grid3D_InitInputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyGrid3D_InitInputType'
@@ -858,12 +833,6 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE InflowWind_IO_DestroyGrid3D_InitInputType
 
  SUBROUTINE InflowWind_IO_PackGrid3D_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1048,14 +1017,12 @@ CONTAINS
     DstTurbSim_InitInputTypeData%WindFileName = SrcTurbSim_InitInputTypeData%WindFileName
  END SUBROUTINE InflowWind_IO_CopyTurbSim_InitInputType
 
- SUBROUTINE InflowWind_IO_DestroyTurbSim_InitInputType( TurbSim_InitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE InflowWind_IO_DestroyTurbSim_InitInputType( TurbSim_InitInputTypeData, ErrStat, ErrMsg )
   TYPE(TurbSim_InitInputType), INTENT(INOUT) :: TurbSim_InitInputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyTurbSim_InitInputType'
@@ -1063,12 +1030,6 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE InflowWind_IO_DestroyTurbSim_InitInputType
 
  SUBROUTINE InflowWind_IO_PackTurbSim_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1194,14 +1155,12 @@ CONTAINS
     DstBladed_InitInputTypeData%FixedWindFileRootName = SrcBladed_InitInputTypeData%FixedWindFileRootName
  END SUBROUTINE InflowWind_IO_CopyBladed_InitInputType
 
- SUBROUTINE InflowWind_IO_DestroyBladed_InitInputType( Bladed_InitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE InflowWind_IO_DestroyBladed_InitInputType( Bladed_InitInputTypeData, ErrStat, ErrMsg )
   TYPE(Bladed_InitInputType), INTENT(INOUT) :: Bladed_InitInputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyBladed_InitInputType'
@@ -1209,12 +1168,6 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE InflowWind_IO_DestroyBladed_InitInputType
 
  SUBROUTINE InflowWind_IO_PackBladed_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1361,14 +1314,12 @@ CONTAINS
     DstBladed_InitOutputTypeData%VFlowAngle = SrcBladed_InitOutputTypeData%VFlowAngle
  END SUBROUTINE InflowWind_IO_CopyBladed_InitOutputType
 
- SUBROUTINE InflowWind_IO_DestroyBladed_InitOutputType( Bladed_InitOutputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE InflowWind_IO_DestroyBladed_InitOutputType( Bladed_InitOutputTypeData, ErrStat, ErrMsg )
   TYPE(Bladed_InitOutputType), INTENT(INOUT) :: Bladed_InitOutputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyBladed_InitOutputType'
@@ -1376,12 +1327,6 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE InflowWind_IO_DestroyBladed_InitOutputType
 
  SUBROUTINE InflowWind_IO_PackBladed_InitOutputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1513,14 +1458,12 @@ CONTAINS
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE InflowWind_IO_CopyHAWC_InitInputType
 
- SUBROUTINE InflowWind_IO_DestroyHAWC_InitInputType( HAWC_InitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE InflowWind_IO_DestroyHAWC_InitInputType( HAWC_InitInputTypeData, ErrStat, ErrMsg )
   TYPE(HAWC_InitInputType), INTENT(INOUT) :: HAWC_InitInputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyHAWC_InitInputType'
@@ -1528,13 +1471,7 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
-  CALL InflowWind_IO_Destroygrid3d_initinputtype( HAWC_InitInputTypeData%G3D, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+  CALL InflowWind_IO_DestroyGrid3D_InitInputType( HAWC_InitInputTypeData%G3D, ErrStat2, ErrMsg2 )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE InflowWind_IO_DestroyHAWC_InitInputType
 
@@ -1582,7 +1519,7 @@ CONTAINS
       Re_BufSz   = Re_BufSz   + 1  ! dz
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
       Int_BufSz   = Int_BufSz + 3  ! G3D: size of buffers for each call to pack subtype
-      CALL InflowWind_IO_Packgrid3d_initinputtype( Re_Buf, Db_Buf, Int_Buf, InData%G3D, ErrStat2, ErrMsg2, .TRUE. ) ! G3D 
+      CALL InflowWind_IO_PackGrid3D_InitInputType( Re_Buf, Db_Buf, Int_Buf, InData%G3D, ErrStat2, ErrMsg2, .TRUE. ) ! G3D 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1643,7 +1580,7 @@ CONTAINS
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%dz
     Re_Xferred = Re_Xferred + 1
-      CALL InflowWind_IO_Packgrid3d_initinputtype( Re_Buf, Db_Buf, Int_Buf, InData%G3D, ErrStat2, ErrMsg2, OnlySize ) ! G3D 
+      CALL InflowWind_IO_PackGrid3D_InitInputType( Re_Buf, Db_Buf, Int_Buf, InData%G3D, ErrStat2, ErrMsg2, OnlySize ) ! G3D 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1753,7 +1690,7 @@ CONTAINS
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL InflowWind_IO_Unpackgrid3d_initinputtype( Re_Buf, Db_Buf, Int_Buf, OutData%G3D, ErrStat2, ErrMsg2 ) ! G3D 
+      CALL InflowWind_IO_UnpackGrid3D_InitInputType( Re_Buf, Db_Buf, Int_Buf, OutData%G3D, ErrStat2, ErrMsg2 ) ! G3D 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1779,14 +1716,12 @@ CONTAINS
     DstUser_InitInputTypeData%Dummy = SrcUser_InitInputTypeData%Dummy
  END SUBROUTINE InflowWind_IO_CopyUser_InitInputType
 
- SUBROUTINE InflowWind_IO_DestroyUser_InitInputType( User_InitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE InflowWind_IO_DestroyUser_InitInputType( User_InitInputTypeData, ErrStat, ErrMsg )
   TYPE(User_InitInputType), INTENT(INOUT) :: User_InitInputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyUser_InitInputType'
@@ -1794,12 +1729,6 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE InflowWind_IO_DestroyUser_InitInputType
 
  SUBROUTINE InflowWind_IO_PackUser_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1908,6 +1837,10 @@ CONTAINS
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
+   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_CopyGrid4D_InitInputType'
@@ -1917,16 +1850,15 @@ CONTAINS
     DstGrid4D_InitInputTypeData%n = SrcGrid4D_InitInputTypeData%n
     DstGrid4D_InitInputTypeData%delta = SrcGrid4D_InitInputTypeData%delta
     DstGrid4D_InitInputTypeData%pZero = SrcGrid4D_InitInputTypeData%pZero
+    DstGrid4D_InitInputTypeData%Vel => SrcGrid4D_InitInputTypeData%Vel
  END SUBROUTINE InflowWind_IO_CopyGrid4D_InitInputType
 
- SUBROUTINE InflowWind_IO_DestroyGrid4D_InitInputType( Grid4D_InitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE InflowWind_IO_DestroyGrid4D_InitInputType( Grid4D_InitInputTypeData, ErrStat, ErrMsg )
   TYPE(Grid4D_InitInputType), INTENT(INOUT) :: Grid4D_InitInputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyGrid4D_InitInputType'
@@ -1934,12 +1866,7 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
+NULLIFY(Grid4D_InitInputTypeData%Vel)
  END SUBROUTINE InflowWind_IO_DestroyGrid4D_InitInputType
 
  SUBROUTINE InflowWind_IO_PackGrid4D_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2035,6 +1962,10 @@ CONTAINS
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+  INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
+  INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_UnPackGrid4D_InitInputType'
@@ -2066,6 +1997,7 @@ CONTAINS
       OutData%pZero(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
+  NULLIFY(OutData%Vel)
  END SUBROUTINE InflowWind_IO_UnPackGrid4D_InitInputType
 
  SUBROUTINE InflowWind_IO_CopyPoints_InitInputType( SrcPoints_InitInputTypeData, DstPoints_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
@@ -2085,14 +2017,12 @@ CONTAINS
     DstPoints_InitInputTypeData%NumWindPoints = SrcPoints_InitInputTypeData%NumWindPoints
  END SUBROUTINE InflowWind_IO_CopyPoints_InitInputType
 
- SUBROUTINE InflowWind_IO_DestroyPoints_InitInputType( Points_InitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE InflowWind_IO_DestroyPoints_InitInputType( Points_InitInputTypeData, ErrStat, ErrMsg )
   TYPE(Points_InitInputType), INTENT(INOUT) :: Points_InitInputTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyPoints_InitInputType'
@@ -2100,12 +2030,6 @@ CONTAINS
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE InflowWind_IO_DestroyPoints_InitInputType
 
  SUBROUTINE InflowWind_IO_PackPoints_InitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )

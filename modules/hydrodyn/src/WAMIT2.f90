@@ -71,27 +71,8 @@ MODULE WAMIT2
       ! ..... Public Subroutines ...................................................................................................
 
    PUBLIC :: WAMIT2_Init                           !< Initialization routine
-   PUBLIC :: WAMIT2_End                            !< Ending routine (includes clean up)
 
-   PUBLIC :: WAMIT2_UpdateStates                   !< Loose coupling routine for solving for constraint states, integrating
-                                                   !!   continuous states, and updating discrete states
    PUBLIC :: WAMIT2_CalcOutput                     !< Routine for computing outputs
-
-   PUBLIC :: WAMIT2_CalcConstrStateResidual        !< Tight coupling routine for returning the constraint state residual
-   PUBLIC :: WAMIT2_CalcContStateDeriv             !< Tight coupling routine for computing derivatives of continuous states
-   PUBLIC :: WAMIT2_UpdateDiscState                !< Tight coupling routine for updating discrete states
-
-   !PUBLIC :: WAMIT2_JacobianPInput                 !< Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                !!   (Xd), and constraint-state (Z) equations all with respect to the inputs (u)
-   !PUBLIC :: WAMIT2_JacobianPContState             !< Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                !!   (Xd), and constraint-state (Z) equations all with respect to the continuous
-   !                                                !!   states (x)
-   !PUBLIC :: WAMIT2_JacobianPDiscState             !< Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                !!   (Xd), and constraint-state (Z) equations all with respect to the discrete
-   !                                                !!   states (xd)
-   !PUBLIC :: WAMIT2_JacobianPConstrState           !< Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-                                                    !!   (Xd), and constraint-state (Z) equations all with respect to the constraint
-                                                    !!   states (z)
 
 
 
@@ -206,20 +187,13 @@ CONTAINS
 !!    This routine is called at the start of the simulation to perform initialization steps.
 !!    The parameters that are set here are not changed during the simulation.
 !!    The initial states and initial guess for the input are defined.
-SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
+SUBROUTINE WAMIT2_Init( InitInp, p, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
-      TYPE(WAMIT2_InputType),             INTENT(  OUT)  :: u                    !< An initial guess for the input; input mesh must be defined
       TYPE(WAMIT2_ParameterType),         INTENT(  OUT)  :: p                    !< Parameters
-      TYPE(WAMIT2_ContinuousStateType),   INTENT(  OUT)  :: x                    !< Initial continuous states
-      TYPE(WAMIT2_DiscreteStateType),     INTENT(  OUT)  :: xd                   !< Initial discrete states
-      TYPE(WAMIT2_ConstraintStateType),   INTENT(  OUT)  :: z                    !< Initial guess of the constraint states
-      TYPE(WAMIT2_OtherStateType),        INTENT(  OUT)  :: OtherState           !< Initial other states
       TYPE(WAMIT2_OutputType),            INTENT(  OUT)  :: y                    !< Initial system outputs (outputs are not calculated; only the output mesh is initialized)
       TYPE(WAMIT2_MiscVarType),           INTENT(  OUT)  :: m                    !< Initial misc/optimization variables
-      REAL(DbKi),                         INTENT(INOUT)  :: Interval             !< Coupling interval in seconds: don't change it from the glue code provided value.
-      TYPE(WAMIT2_InitOutputType),        INTENT(  OUT)  :: InitOut              !< Output for initialization routine
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None
 
@@ -227,7 +201,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ! Local Variables
       INTEGER(IntKi)                                     :: IBody                !< Counter for current body
       INTEGER(IntKi)                                     :: ThisDim              !< Counter to currrent dimension
-      INTEGER(IntKi)                                     :: J                    !< Generic counter
       INTEGER(IntKi)                                     :: Idx                  !< Generic counter
       REAL(R8Ki)                                         :: theta(3)             !< rotation about z for the current body (0 about x,y)
       REAL(R8Ki)                                         :: orientation(3,3)     !< Orientation matrix for orientation of the current body
@@ -257,9 +230,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> Initialize Error handling variables
 
       ErrStat     = ErrID_None
-      ErrStatTmp  = ErrID_None
       ErrMsg      = ""
-      ErrMsgTmp   = ""
 
 
          !> Initialize the data storage
@@ -279,12 +250,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       SumQTFData%Filename     = ''
 
 
-         !> Initialize the NWTC Subroutine Library and display the information about this module.
-
-      CALL NWTC_Init() ! WAMIT2_ProgDesc%Name, '('//WAMIT2_ProgDesc%Ver//','//WAMIT2_ProgDesc%Date//')', EchoLibVer = .FALSE. )
-
-
-
       !-----------------------------------------------------------------------------
       !> Before attempting to do any real calculations, we first check what was
       !! passed in through _InitInp_ to make sure it makes sense.  That routine will
@@ -298,10 +263,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !-------------------------------------------------------------------------------------------------------------
          !> 1. Check the data file related values (_MnDrift_, _MnDriftF_ etc). Also copy over important things from _InitInp_ to _p_ and _InitOut_.
 
-      CALL CheckInitInput( InitInp, Interval, InitOut, p, MnDriftData, NewmanAppData, DiffQTFData, SumQTFData, ErrStatTmp, ErrMsgTmp )
+      CALL CheckInitInput( InitInp, p, MnDriftData, NewmanAppData, DiffQTFData, SumQTFData, ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -325,7 +290,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   'CheckInitInput subroutine.', ErrStat, ErrMsg, RoutineName )
          ENDIF
          IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
       ENDIF
@@ -345,7 +310,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   'CheckInitInput subroutine.', ErrStat, ErrMsg, RoutineName )
          ENDIF
          IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
       ENDIF
@@ -367,7 +332,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                                           'CheckInitInput subroutine.', ErrStat, ErrMsg, RoutineName )
          ENDIF
          IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
       ENDIF
@@ -384,7 +349,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   'CheckInitInput subroutine.', ErrStat, ErrMsg, RoutineName )
          ENDIF
          IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
       ENDIF
@@ -423,7 +388,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  MnDrift flag is set, but no data has been read in.',ErrStat,ErrMsg, RoutineName)
          ENDIF
          IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
       ENDIF
@@ -457,7 +422,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  NewmanApp flag is set, but no data has been read in.',ErrStat,ErrMsg, RoutineName)
          ENDIF
          IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
       ENDIF
@@ -480,7 +445,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  DiffQTF flag is set, but no data has been read in.',ErrStat,ErrMsg, RoutineName)
          ENDIF
          IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
       ENDIF
@@ -503,7 +468,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  SumQTF flag is set, but no data has been read in.',ErrStat,ErrMsg, RoutineName)
          ENDIF
          IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
       ENDIF
@@ -547,7 +512,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          CALL MnDrift_InitCalc( InitInp, p, MnDriftData, MnDriftForce, ErrMsgTmp, ErrStatTmp )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
          IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
       ENDIF
@@ -561,7 +526,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          CALL NewmanApp_InitCalc( InitInp, p, NewmanAppData, NewmanAppForce, ErrMsgTmp, ErrStatTmp )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
          IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
       ENDIF
@@ -577,7 +542,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          CALL DiffQTF_InitCalc( InitInp, p, DiffQTFData, DiffQTFForce, ErrMsgTmp, ErrStatTmp )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
          IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
       ENDIF
@@ -591,7 +556,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          CALL SumQTF_InitCalc( InitInp, p, SumQTFData, SumQTFForce, ErrMsgTmp, ErrStatTmp )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
          IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
       ENDIF
@@ -672,21 +637,17 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !----------------------------------------------------------------------
 
          ! Create the input and output meshes associated with lumped loads
-      CALL MeshCreate(  BlankMesh         = u%Mesh           , &
-                        IOS               = COMPONENT_INPUT  , &
+      CALL MeshCreate(  BlankMesh         = y%Mesh           , &
+                        IOS               = COMPONENT_OUTPUT , &
                         Nnodes            = p%NBody          , &
                         ErrStat           = ErrStatTmp       , &
                         ErrMess           = ErrMsgTmp        , &
-                        TranslationDisp   = .TRUE.           , &
-                        Orientation       = .TRUE.           , &
-                        TranslationVel    = .TRUE.           , &
-                        RotationVel       = .TRUE.           , &
-                        TranslationAcc    = .FALSE.          , &
-                        RotationAcc       = .FALSE.)
+                        Force             = .TRUE.           , &
+                        Moment            = .TRUE.)
 
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       END IF
 
@@ -698,32 +659,22 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          XYZloc      = (/InitInp%PtfmRefxt(IBody), InitInp%PtfmRefyt(IBody), InitInp%PtfmRefzt(IBody)/)
 
             ! Create the node on the mesh
-         CALL MeshPositionNode (u%Mesh, IBody, XYZloc, ErrStatTmp, ErrMsgTmp, orientation )
+         CALL MeshPositionNode (y%Mesh, IBody, XYZloc, ErrStatTmp, ErrMsgTmp, orientation )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
 
             ! Create the mesh element
-         CALL MeshConstructElement (  u%Mesh, ELEMENT_POINT, ErrStatTmp, ErrMsgTmp, IBody )
+         CALL MeshConstructElement (  y%Mesh, ELEMENT_POINT, ErrStatTmp, ErrMsgTmp, IBody )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       ENDDO
 
-      CALL MeshCommit ( u%Mesh, ErrStatTmp, ErrMsgTmp )
+      CALL MeshCommit ( y%Mesh, ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       END IF
 
 
-      CALL MeshCopy( SrcMesh=u%Mesh, DestMesh=y%Mesh, CtrlCode=MESH_SIBLING, IOS=COMPONENT_OUTPUT, &
-                     ErrStat=ErrStatTmp, ErrMess=ErrMsgTmp, Force=.TRUE., Moment=.TRUE. )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp
-         RETURN
-      END IF
-
-
-      u%Mesh%RemapFlag  = .TRUE.
       y%Mesh%RemapFlag  = .TRUE.
 
 
@@ -731,19 +682,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> 6. Set zero values for unused outputs.  This is mostly so that the
          !!    compiler does not complain.  Also set misc vars
          !----------------------------------------------------------------------
-      x%DummyContState           = 0.0_SiKi
-      xd%DummyDiscState          = 0.0_SiKi
-      z%DummyConstrState         = 0.0_SiKi
       CALL AllocAry( m%LastIndWave, p%NBody, 'm%LastIndWave', ErrStatTmp, ErrMsgTmp)
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       m%LastIndWave              = 1_IntKi
       call AllocAry(m%F_Waves2, 6*p%NBody, 'm%F_Waves2', ErrStatTmp, ErrMsgTmp)
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
 
-      OtherState%DummyOtherState = 0
-
          ! Cleanup remaining stuff
-      CALL CleanUp
+      CALL CleanUp()
 
       RETURN
 
@@ -755,6 +701,11 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
    !-------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE CleanUp()
 
+      IF (ALLOCATED(MnDriftForce)) DEALLOCATE(MnDriftForce)
+      IF (ALLOCATED(NewmanAppForce)) DEALLOCATE(NewmanAppForce)
+      IF (ALLOCATED(DiffQTFForce)) DEALLOCATE(DiffQTFForce)
+      IF (ALLOCATED(SumQTFForce)) DEALLOCATE(SumQTFForce)
+   
       CALL Destroy_InitData3D(   MnDriftData%Data3D )
       CALL Destroy_InitData4D(   MnDriftData%Data4D )
       CALL Destroy_InitData3D( NewmanAppData%Data3D )
@@ -765,7 +716,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
    END SUBROUTINE CleanUp
 
-
+END SUBROUTINE WAMIT2_Init
 
 
    !-------------------------------------------------------------------------------------------------------------------------------
@@ -847,9 +798,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
          ! Initialize a few things
       ErrMsg      = ''
-      ErrMsgTmp   = ''
       ErrStat     = ErrID_None
-      ErrStatTmp  = ErrID_None
 
          ! Initialize resulting forces
       ALLOCATE( MnDriftForce(6*p%NBody), STAT=ErrStatTmp )
@@ -858,7 +807,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                                              'of the 2nd order force.',ErrStat, ErrMsg, RoutineName)
          RETURN
       ENDIF
-      MnDriftForce = 0.0_SiKi
+      MnDriftForce = 0.0_SiKi ! initialize this subroutine return value
 
 
          !> 1. Check the data to see if low cutoff on the difference frequency is 0.  If it is above zero, that implies no mean drift
@@ -867,7 +816,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( InitInp%WvLowCOffD > 0.0_SiKi )  THEN
          CALL SetErrStat( ErrID_Warn, ' WvLowCOffD > 0.0, so no mean drift term is calculated (the mean drift uses only the equal '//&
                         'frequency terms of the QTF).  Setting the mean drift force to 0.',ErrStat,ErrMsg,RoutineName)
-         MnDriftForce = 0.0_SiKi
          RETURN
       ENDIF
 
@@ -937,12 +885,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF ( InitInp%WaveMultiDir .AND. (MnDriftData%Data3D%NumWvDir1 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(MnDriftData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(MnDriftData%Data3D%WvDir1(1)))//' degrees (first wave direction). '// &
-                        'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                        'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
          ELSE IF ( InitInp%WaveMultiDir .AND. (MnDriftData%Data3D%NumWvDir2 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(MnDriftData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(MnDriftData%Data3D%WvDir2(1)))//' degrees (second wave direction). '// &
-                        'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                        'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
          ELSE
 
@@ -993,12 +941,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF ( InitInp%WaveMultiDir .AND. (MnDriftData%Data4D%NumWvDir1 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(MnDriftData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(MnDriftData%Data4D%WvDir1(1)))//' degrees (first wave direction). '// &
-                        'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                        'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
          ELSE IF ( InitInp%WaveMultiDir .AND. (MnDriftData%Data4D%NumWvDir2 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(MnDriftData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(MnDriftData%Data4D%WvDir2(1)))//' degrees (second wave direction). '// &
-                        'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                        'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
          ELSE
 
@@ -1059,20 +1007,26 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( .NOT. MnDriftData%DataIs3D .AND. MnDriftData%Data4D%WvFreqDiagComplete ) THEN
          TmpFlag = .FALSE.    ! if this goes true, then we need to convert to 3D data
          DO IBody=1,MnDriftData%Data4D%NumBodies
+            IF (TmpFlag) EXIT
             DO ThisDim=1,6
                Idx = (IBody-1)*6+ThisDim
                IF ( p%MnDriftDims(IBody) ) THEN        ! Flag indicating which dimension we are calculating for
-                  IF ( MnDriftData%Data4D%DataIsSparse(Idx) .AND. MnDriftData%Data4D%LoadComponents(Idx) )      TmpFlag = .TRUE.
+                  IF ( MnDriftData%Data4D%DataIsSparse(Idx) .AND. MnDriftData%Data4D%LoadComponents(Idx) ) THEN
+                     TmpFlag = .TRUE.
+                     EXIT ! inner DO
+                  END IF
                ENDIF
             ENDDO
          ENDDO
 
             ! If we need to create the 3D data set, then
-         CALL Copy_InitData4Dto3D( MnDriftData%Data4D, MnDriftData%Data3D, ErrStatTmp, ErrMsgTmp )
-         CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-         IF (ErrStat >= AbortErrLev) RETURN
+         IF (TmpFlag) THEN
+            CALL Copy_InitData4Dto3D( MnDriftData%Data4D, MnDriftData%Data3D, ErrStatTmp, ErrMsgTmp )
+            CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
 
-         MnDriftData%DataIs3D = .TRUE.       ! Set flag to indicate we now have the 3D data.
+            MnDriftData%DataIs3D = .TRUE.       ! Set flag to indicate we now have the 3D data.
+         END IF ! TmpFlag
 
       ENDIF
 
@@ -1086,16 +1040,24 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       TmpFlag = .FALSE.
       IF ( MnDriftData%DataIs3D ) THEN
          DO IBody=1,MnDriftData%Data3D%NumBodies
+            IF (TmpFlag) EXIT
             DO ThisDim=1,6
                Idx = (IBody-1)*6+ThisDim
-               IF ( MnDriftData%Data3D%DataIsSparse(Idx) .AND. MnDriftData%Data3D%LoadComponents(Idx) .AND. p%MnDriftDims(ThisDim) )    TmpFlag = .TRUE.
+               IF ( MnDriftData%Data3D%DataIsSparse(Idx) .AND. MnDriftData%Data3D%LoadComponents(Idx) .AND. p%MnDriftDims(ThisDim) ) THEN
+                  TmpFlag = .TRUE.
+                  EXIT
+               END IF
             ENDDO
          ENDDO
       ELSE     ! must be 4D -- we checked that we had something at the start of this routine.
          DO IBody=1,MnDriftData%Data4D%NumBodies
+            IF (TmpFlag) EXIT
             DO ThisDim=1,6
                Idx = (IBody-1)*6+ThisDim
-               IF ( MnDriftData%Data4D%DataIsSparse(Idx) .AND. MnDriftData%Data4D%LoadComponents(Idx) .AND. p%MnDriftDims(ThisDim) )    TmpFlag = .TRUE.
+               IF ( MnDriftData%Data4D%DataIsSparse(Idx) .AND. MnDriftData%Data4D%LoadComponents(Idx) .AND. p%MnDriftDims(ThisDim) ) THEN
+                  TmpFlag = .TRUE.
+                  EXIT
+               END IF
             ENDDO
          ENDDO
       ENDIF
@@ -1127,8 +1089,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
          ! If something went wrong during allocation of the temporary arrays...
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+         call cleanup()
          RETURN
       ENDIF
 
@@ -1189,7 +1150,11 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
                      ! Only get a QTF value if within the range of frequencies we have wave amplitudes for (first order cutoffs).  This
-                     ! is done only for efficiency.
+                     ! is done only for efficiency. 
+                  
+                  !BJJ: If WaveMod==1, this could result in zeroing out the wrong values... 
+                  !InitInp%WvLowCOff and InitInp%WvHiCOff are not used in SeaState when WaveMod = 0,1, or 6
+                  ! Probably could just remove this IF statement????
                   IF ( (Omega1 >= InitInp%WvLowCOff) .AND. (Omega1 <= InitInp%WvHiCOff) ) THEN
 
                         ! Now get the QTF value that corresponds to this frequency and wavedirection pair.
@@ -1205,6 +1170,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                            ! get the interpolated value for F(omega1,beta1,beta2)
                         CALL WAMIT_Interp3D_Cplx( Coord3, TmpData3D, MnDriftData%Data3D%WvFreq1, &
                                              MnDriftData%Data3D%WvDir1, MnDriftData%Data3D%WvDir2, LastIndex3, QTF_Value, ErrStatTmp, ErrMsgTmp )
+                           CALL SetErrStat(ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
 
                      ELSE
 
@@ -1218,6 +1184,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                            ! get the interpolated value for F(omega1,omega2,beta1,beta2)
                         CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, MnDriftData%Data4D%WvFreq1, MnDriftData%Data4D%WvFreq2, &
                                              MnDriftData%Data4D%WvDir1, MnDriftData%Data4D%WvDir2, LastIndex4, QTF_Value, ErrStatTmp, ErrMsgTmp )
+                           CALL SetErrStat(ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
 
 
                      ENDIF !QTF value find
@@ -1231,10 +1198,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
                      ! Check and make sure nothing bombed in the interpolation that we need to be aware of
-                  CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
                   IF ( ErrStat >= AbortErrLev ) THEN
-                     IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
-                     IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+                     call cleanup()
                      RETURN
                   ENDIF
 
@@ -1266,9 +1231,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
          ! Cleanup
-
-      IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
-      IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+      call cleanup()
+      
+   CONTAINS
+      subroutine cleanup()
+         IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
+         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+      end subroutine cleanup
 
    END SUBROUTINE MnDrift_InitCalc
 
@@ -1383,7 +1352,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> 1. Check the data to see if the wave frequencies are present in the QTF data.  Since Newman's approximation only uses
          !!    frequencies where \f$ \omega_1=\omega_2 \f$, the data read in from the files must contain the full range of frequencies
          !!    present in the waves.
-
+!bjj: InitInp%WvLowCOff and InitInp%WvHiCOff aren't supposed to be used when WaveMod=0, 1, or 6, but they are used here regardless of those conditions.
+!     Can we get rid of these checks????
       IF ( NewmanAppData%DataIs3D ) THEN
 
             ! Check the low frequency cutoff
@@ -1450,12 +1420,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF ( InitInp%WaveMultiDir .AND. (NewmanAppData%Data3D%NumWvDir1 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(NewmanAppData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(NewmanAppData%Data3D%WvDir1(1)))//' degrees (first wave direction). '// &
-                        'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                        'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
          ELSE IF ( InitInp%WaveMultiDir .AND. (NewmanAppData%Data3D%NumWvDir2 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(NewmanAppData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(NewmanAppData%Data3D%WvDir2(1)))//' degrees (second wave direction). '// &
-                        'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                        'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
          ELSE
 
@@ -1506,12 +1476,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF ( InitInp%WaveMultiDir .AND. (NewmanAppData%Data4D%NumWvDir1 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(NewmanAppData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(NewmanAppData%Data4D%WvDir1(1)))//' degrees (first wave direction). '// &
-                        'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                        'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
          ELSE IF ( InitInp%WaveMultiDir .AND. (NewmanAppData%Data4D%NumWvDir2 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(NewmanAppData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(NewmanAppData%Data4D%WvDir2(1)))//' degrees (second wave direction). '// &
-                        'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                        'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
          ELSE
 
@@ -2100,12 +2070,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( InitInp%WaveMultiDir .AND. (DiffQTFData%Data4D%NumWvDir1 == 1) ) THEN
          CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(DiffQTFData%Filename)//' only contains one wave '// &
                      'direction at '//TRIM(Num2LStr(DiffQTFData%Data4D%WvDir1(1)))//' degrees (first wave direction). '// &
-                     'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                     'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                      ErrStat,ErrMsg,RoutineName)
       ELSE IF ( InitInp%WaveMultiDir .AND. (DiffQTFData%Data4D%NumWvDir2 == 1) ) THEN
          CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(DiffQTFData%Filename)//' only contains one wave '// &
                      'direction at '//TRIM(Num2LStr(DiffQTFData%Data4D%WvDir2(1)))//' degrees (second wave direction). '// &
-                     'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                     'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                      ErrStat,ErrMsg,RoutineName)
       ELSE
 
@@ -2198,10 +2168,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
          ! If something went wrong during allocation of the temporary arrays...
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+         call cleanup()
          RETURN
       ENDIF
 
@@ -2214,10 +2181,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL InitFFT ( InitInp%NStepWave, FFT_Data, .FALSE., ErrStatTmp )
       CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+         call cleanup()
          RETURN
       END IF
 
@@ -2229,10 +2193,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL MnDrift_InitCalc( InitInp, p, DiffQTFData, MnDriftForce, ErrMsgTmp, ErrStatTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+         call cleanup()
          RETURN
       ENDIF
 
@@ -2246,10 +2207,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                      ErrStat,ErrMsg,RoutineName)
       ENDDO
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+         call cleanup()
          RETURN
       ENDIF
 
@@ -2323,10 +2281,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                                              DiffQTFData%Data4D%WvDir1, DiffQTFData%Data4D%WvDir2, LastIndex4, QTF_Value, ErrStatTmp, ErrMsgTmp )
                         CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
                         IF (ErrStat >= AbortErrLev ) THEN
-                           IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-                           IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-                           IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-                           IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+                           call cleanup()
                            RETURN
                         ENDIF
 
@@ -2407,10 +2362,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to the second term of the difference QTF.', &
                            ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
-               IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-               IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-               IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-               IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+               call cleanup()
                RETURN
             END IF
 
@@ -2434,20 +2386,22 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL  ExitFFT(FFT_Data, ErrStatTmp)
       CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+         call cleanup()
          RETURN
       END IF
 
+      call cleanup()
+      
+   contains
+!--------------------------------------------------- 
+      subroutine cleanup()
 
-         ! Cleanup
-      IF (ALLOCATED(TmpData4D))           DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-      IF (ALLOCATED(TmpDiffQTFForce))     DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-      IF (ALLOCATED(TmpComplexArr))       DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
-
-
+            ! Cleanup
+         IF (ALLOCATED(TmpData4D))           DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(TmpDiffQTFForce))     DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
+         IF (ALLOCATED(TmpComplexArr))       DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+      end subroutine cleanup
+!--------------------------------------------------- 
    END SUBROUTINE DiffQTF_InitCalc
 
 
@@ -2622,12 +2576,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( InitInp%WaveMultiDir .AND. (SumQTFData%Data4D%NumWvDir1 == 1) ) THEN
          CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(SumQTFData%Filename)//' only contains one wave '// &
                      'direction at '//TRIM(Num2LStr(SumQTFData%Data4D%WvDir1(1)))//' degrees (first wave direction). '// &
-                     'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                     'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                      ErrStat,ErrMsg,RoutineName)
       ELSE IF ( InitInp%WaveMultiDir .AND. (SumQTFData%Data4D%NumWvDir2 == 1) ) THEN
          CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(SumQTFData%Filename)//' only contains one wave '// &
                      'direction at '//TRIM(Num2LStr(SumQTFData%Data4D%WvDir2(1)))//' degrees (second wave direction). '// &
-                     'It cannot be used with multidirectional waves.  Set WvDirMod to 0 to use this file.', &
+                     'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                      ErrStat,ErrMsg,RoutineName)
       ELSE
 
@@ -3069,14 +3023,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
    !!
    !! This subroutine also populates the InitOut and creates the filenames for each of the calculation types.
    !!
-   SUBROUTINE CheckInitInput( InitInp, Interval, InitOut, p, MnDriftData, NewmanAppData, DiffQTFData, SumQTFData, ErrStat, ErrMsg )
+   SUBROUTINE CheckInitInput( InitInp, p, MnDriftData, NewmanAppData, DiffQTFData, SumQTFData, ErrStat, ErrMsg )
 
       IMPLICIT NONE
 
          ! Passed variables.
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp        !< Input data for initialization routine
-      REAL(DbKi),                         INTENT(IN   )  :: Interval       !< Coupling interval in seconds: don't change it from the glue code provided value.
-      TYPE(WAMIT2_InitOutputType),        INTENT(INOUT)  :: InitOut        !< The output from the init routine
       TYPE(WAMIT2_ParameterType),         INTENT(  OUT)  :: p              !< The parameters
 
          ! QTF storage -- from the data files that are read in
@@ -3104,9 +3056,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
          !> 1. Initialize error variables
       ErrStat     = ErrID_None
-      ErrStatTmp  = ErrID_None
       ErrMsg      = ''
-      ErrMsgTmp   = ''
 
          !> 2. Initialize filenames
       MnDriftData%Filename   = ''
@@ -3147,11 +3097,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
            ( InitInp%DiffQTF /= 0 .AND. InitInp%NewmanApp /= 0 ) .OR. &
            ( InitInp%MnDrift /= 0 .AND. InitInp%DiffQTF   /= 0 ) ) THEN
          CALL SetErrStat( ErrID_Fatal, ' Only one of MnDrift, NewmanApp, or DiffQTF can be non-zero.', ErrStat, ErrMsg, RoutineName)
+         IF ( ErrStat >= AbortErrLev ) RETURN
       END IF
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp
-         RETURN
-      ENDIF
 
 
          !> 2. Check that we have a valid values for MnDrift, check flag status
@@ -3177,10 +3124,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   '           MnDrift can only have values of 0, 7, 8, 9, 10, 11, or 12. '//NewLine// &
                   '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
       END IF
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp
-         RETURN
-      ENDIF
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
 
          !> 3. Check that we have a valid values for NewmanApp, check flag status
 
@@ -3205,10 +3150,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   '           NewmanApp can only have values of 0, 7, 8, 9, 10, 11, or 12. '//NewLine// &
                   '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
       END IF
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp
-         RETURN
-      ENDIF
+      IF ( ErrStat >= AbortErrLev ) RETURN
 
 
          !> 4. Check that we have a valid values for DiffQTF, check flag status
@@ -3230,10 +3172,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   '           DiffQTF can only have values of 0, 10, 11, or 12. '//NewLine// &
                   '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
       END IF
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp
-         RETURN
-      ENDIF
+      IF ( ErrStat >= AbortErrLev ) RETURN
 
 
          !> 5. Check that we have a valid values for SumQTF, check flag status
@@ -3255,10 +3194,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   '           SumQTF can only have values of 0, 10, 11, or 12. '//NewLine// &
                   '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
       END IF
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp
-         RETURN
-      ENDIF
+      IF ( ErrStat >= AbortErrLev ) RETURN
 
 
          !--------------------------------------------------------------------------------
@@ -3275,7 +3211,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             CALL SetErrStat( ErrID_Fatal, ' Programming Error in call to WAMIT2_Init: '//NewLine// &
                   '           WvHiCOffD must be larger than WvLowCOffD. Both must be positive.'// &
                   '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
-            CALL CleanUp
             RETURN
          END IF
       END IF
@@ -3288,7 +3223,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             CALL SetErrStat( ErrID_Fatal, ' Programming Error in call to WAMIT2_Init: '//NewLine// &
                   '           WvHiCOffS must be larger than WvLowCOffS. Both must be positive.'// &
                   '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
-            CALL CleanUp
             RETURN
          END IF
       END IF
@@ -3314,10 +3248,9 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             INQUIRE( file=TRIM(MnDriftData%Filename), exist=TmpFileExist )
             MnDriftData%DataIs4D = .TRUE.
          ENDIF
-         IF ( TmpFileExist .eqv. .FALSE. ) THEN
+         IF ( .not. TmpFileExist ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Cannot find the WAMIT file '//TRIM(MnDriftData%Filename)// &
                         ' required by the MnDrift option.', ErrStat, ErrMsg, RoutineName)
-            CALL CLeanup
             RETURN
          END IF
       END IF
@@ -3338,10 +3271,9 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             INQUIRE( file=TRIM(NewmanAppData%Filename), exist=TmpFileExist )
             NewmanAppData%DataIs4D  = .TRUE.
          ENDIF
-         IF ( TmpFileExist .eqv. .FALSE. ) THEN
+         IF ( .not. TmpFileExist ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Cannot find the WAMIT file '//TRIM(NewmanAppData%Filename)// &
                         ' required by the NewmanApp option.', ErrStat, ErrMsg, RoutineName)
-            CALL CleanUp
             RETURN
          END IF
       END IF
@@ -3355,10 +3287,9 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( InitInp%DiffQTF /= 0) THEN
          DiffQTFData%Filename  = TRIM(InitInp%WAMITFile)//'.'//TRIM(Num2LStr(InitInp%DiffQTF))//'d'
          INQUIRE( file=TRIM(DiffQTFData%Filename), exist=TmpFileExist )
-         IF ( TmpFileExist .eqv. .FALSE. ) THEN
+         IF ( .not. TmpFileExist ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Cannot find the WAMIT file '//TRIM(DiffQTFData%Filename)// &
                         ' required by the DiffQTF option.', ErrStat, ErrMsg, RoutineName)
-            CALL CleanUp
             RETURN
          END IF
          DiffQTFData%DataIs4D  = .TRUE.
@@ -3375,7 +3306,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF ( .not. TmpFileExist ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Cannot find the WAMIT file '//TRIM(SumQTFData%Filename)// &
                         ' required by the SumQTF option.', ErrStat, ErrMsg, RoutineName)
-            CALL CleanUp
             RETURN
          END IF
          SumQTFData%DataIs4D  = .TRUE.
@@ -3394,7 +3324,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                      '        --> Expected array for WaveElevC0 to be of size 2x'//TRIM(Num2LStr(InitInp%NStepWave2 + 1))// &
                      ' (2x(NStepWave2+1)), but instead received array of size '// &
                      TRIM(Num2LStr(SIZE(InitInp%WaveElevC0,1)))//'x'//TRIM(Num2LStr(SIZE(InitInp%WaveElevC0,2)))//'.', ErrStat, ErrMsg, RoutineName)
-         CALL CleanUp
          RETURN
       END IF
 
@@ -3410,13 +3339,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
       !--------------------------------------------------------------------------------
-      !> 2. Time related information
-      !--------------------------------------------------------------------------------
-
-      p%DT                    =  Interval                   ! Timestep from calling program
-
-
-      !--------------------------------------------------------------------------------
       !> 3. WAMIT body related information
       !--------------------------------------------------------------------------------
 
@@ -3426,7 +3348,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ! This module's implementation requires that if NBodyMod = 2 or 3, then there is one instance of a WAMIT module for each body, therefore, HydroDyn may have NBody > 1, but this WAMIT module will have NBody = 1
       if ( (p%NBodyMod > 1) .and. (p%NBody > 1) ) then
          CALL SetErrStat( ErrID_Fatal, "DEVELOPER ERROR: If NBodyMod = 2 or 3, then NBody for the a WAMIT2 object must be equal to 1", ErrStat, ErrMsg, RoutineName)
-         CALL CleanUp
          return
       end if
 
@@ -3600,7 +3521,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
          ! File reading variables
-      CHARACTER(1024)                                    :: TextLine          !< One line of text read from the file
+      CHARACTER(MaxFileInfoLineLen)                      :: TextLine          !< One line of text read from the file
       INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
       REAL(SiKi),       ALLOCATABLE                      :: TmpRealArr(:)     !< Temporary real array
       REAL(SiKi),       ALLOCATABLE                      :: TmpDataRow(:)     !< Single row of data
@@ -3631,9 +3552,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
          ! Initialize error variables
       ErrStat     = ErrID_None
-      ErrStatTmp  = ErrID_None
       ErrMsg      = ''
-      ErrMsgTmp   = ''
       HaveZeroFreq1 = .FALSE.             ! If we find a zero frequency, we will set this to true
 
 
@@ -3652,12 +3571,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL GetNewUnit(UnitDataFile,ErrStatTmp,ErrMsgTmp)
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         CALL CleanUp
+         UnitDataFile = -1
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -3665,30 +3580,17 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL OpenFInpFile(  UnitDataFile, TRIM(Filename3D), ErrStat, ErrMsg )  ! Open file containing mean drift information
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE( UnitDataFile )
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         CALL CleanUp
+         UnitDataFile = -1
+         CALL CleanUp()
          RETURN
       ENDIF
 
-      REWIND( UnitDataFile )
-
 
          ! Do an initial readthrough and find out the length of the file, if there is a header line, and the number of columns in the file.
-      CALL GetFileLength( UnitDataFile, TRIM(Filename3D), NumDataColumns, NumDataLines, NumHeaderLines, ErrStat, ErrMsg)
+      CALL GetFileLength( UnitDataFile, TRIM(Filename3D), NumDataColumns, NumDataLines, NumHeaderLines, ErrStatTmp, ErrMsgTmp)
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE( UnitDataFile )
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -3697,13 +3599,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( NumDataColumns /= 8 ) THEN
          CALL SetErrStat( ErrID_Fatal, ' The 2nd order WAMIT data file '//TRIM(Filename3D)//' has '//TRIM(Num2LStr(NumDataColumns))// &
                         ' columns instead of the 8 columns expected.', ErrStat, ErrMsg, RoutineName)
-         CLOSE( UnitDataFile )
-         IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -3721,13 +3617,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL AllocAry( RawData3DTmp, NumDataLines, NumDataColumns, ' Array for holding raw 3D data for 2nd order WAMIT files', ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         CLOSE( UnitDataFile )
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -3743,19 +3633,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                      ErrStatTmp, ErrMsgTmp )      ! Note, not echoing this to anything.
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
-            CLOSE( UnitDataFile )
-            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
          RawData3DTmp(I,:) = TmpDataRow
       ENDDO
 
       CLOSE( UnitDataFile )
+      UnitDataFile = -1
 
 
          !> Before continuing, we need to figure out how many actual lines of data we will
@@ -3778,13 +3663,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          CALL AllocAry( RawData3D, NumDataLinesKeep, NumDataColumns, ' Array for holding raw 3D data for 2nd order WAMIT files', ErrStatTmp, ErrMsgTmp )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
-            CLOSE( UnitDataFile )
-            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
 
@@ -3888,12 +3767,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL UniqueRealValues( RawData3D(:,1), TmpWvFreq1, Data3D%NumWvFreq1, ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -3901,12 +3775,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL UniqueRealValues( RawData3D(:,2), Data3D%WvDir1, Data3D%NumWvDir1, ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -3914,12 +3783,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL UniqueRealValues( RawData3D(:,3), Data3D%WvDir2, Data3D%NumWvDir2, ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -3937,12 +3801,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( Data3D%NumBodies > 1 ) CALL SetErrStat( ErrID_Info, ' Found data for '//TRIM(Num2LStr(Data3D%NumBodies))//' WAMIT bodies in '// &
                      TRIM(Filename3D)//'.', ErrStat,ErrMsg,RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -3961,12 +3820,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             CALL SetErrStat( ErrID_Fatal, ' Load components listed in column 4 of '//TRIM(Filename3D)// &
                   ' must be between 1 and '//TRIM(Num2LStr(6*Data3D%NumBodies))//' for '//TRIM(Num2LStr(Data3D%NumBodies))// &
                   ' WAMIT bodies.', ErrStat,ErrMsg,RoutineName)
-            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
          Data3D%LoadComponents(NINT(TmpRealArr(I))) = .TRUE.
@@ -4000,12 +3854,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data3D%WvFreq1 to store '// &
                               'the sorted 3D 2nd order WAMIT frequency data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -4029,27 +3878,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       ALLOCATE( Data3D%DataSet( Data3D%NumWvFreq1, Data3D%NumWvDir1, Data3D%NumWvDir2, 6*Data3D%NumBodies ),  STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data3D%DataSet to store '// &
                               'the sorted 3D 2nd order WAMIT data.',  ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         CALL CleanUp
-         RETURN
-      ENDIF
 
          ! Allocate the logical array for storing the mask for which points are valid. Set to .FALSE.
       ALLOCATE( Data3D%DataMask( Data3D%NumWvFreq1, Data3D%NumWvDir1, Data3D%NumWvDir2, 6*Data3D%NumBodies ),  STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data3D%DataMask to store '// &
                               'the sorted 3D 2nd order WAMIT data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -4094,12 +3929,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          CALL LocateStp( RawData3D(I,1), TmpWvFreq1, TmpCoord(1),   WvFreq1HiIdx - (WvFreq1LoIdx - 1) )  ! inclusive limits
          IF ( TmpCoord(1) == 0 .OR. ( RawData3D(I,1) > Data3D%WvFreq1(Data3D%NumWvFreq1)) ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data3D%WvFreq1 array.', ErrStat, ErrMsg, RoutineName)
-            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
          TmpCoord(1) =  TmpCoord(1) + ( WvFreq1LoIdx - 1 )     ! shift to the point in the Data3D%WvFreq1 array by adding the zero frequency step function
@@ -4108,12 +3938,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          CALL LocateStp( RawData3D(I,2), Data3D%WvDir1,  TmpCoord(2),   Data3D%NumWvDir1 )
          IF ( TmpCoord(2) == 0 .OR. ( RawData3D(I,2) > Data3D%WvDir1(Data3D%NumWvDir1)) ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data3D%WvDir1 array.', ErrStat, ErrMsg, RoutineName)
-            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
 
@@ -4121,12 +3946,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          CALL LocateStp( RawData3D(I,3), Data3D%WvDir2,  TmpCoord(3),   Data3D%NumWvDir2 )
          IF ( TmpCoord(3) == 0 .OR. ( RawData3D(I,3) > Data3D%WvDir2(Data3D%NumWvDir2)) ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data3D%WvDir2 array.', ErrStat, ErrMsg, RoutineName)
-            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
 
@@ -4184,12 +4004,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                         'given earlier in the file for the same values of wave frequency and wave direction '// &
                         '(force dimension = '//TRIM(Num2LStr(TmpCoord(4)))//').', &
                         ErrStat, ErrMsg, RoutineName )
-               IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-               IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-               IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-               IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-               IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-               CALL CleanUp
+               CALL CleanUp()
                RETURN
             ENDIF
          ELSE
@@ -4309,13 +4124,19 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
          ! Clean up
-      IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-      IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
-      IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-      IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-      IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-
-
+      call cleanup()
+      
+   CONTAINS
+      subroutine cleanup()
+      
+         if (UnitDataFile > 0) CLOSE( UnitDataFile )
+         
+         IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
+         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
+         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
+         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
+      end subroutine cleanup
    END SUBROUTINE Read_DataFile3D
 
 
@@ -4370,7 +4191,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
          ! File reading variables
-      CHARACTER(1024)                                    :: TextLine          !< One line of text read from the file
+      CHARACTER(MaxFileInfoLineLen)                      :: TextLine          !< One line of text read from the file
       INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
       REAL(SiKi),       ALLOCATABLE                      :: TmpRealArr(:)     !< Temporary real array
       REAL(SiKi),       ALLOCATABLE                      :: TmpDataRow(:)     !< Single row of data
@@ -4404,12 +4225,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
          ! Initialize error variables
       ErrStat     = ErrID_None
-      ErrStatTmp  = ErrID_None
       ErrMsg      = ''
-      ErrMsgTmp   = ''
       HaveZeroFreq1 = .FALSE.             ! If we find a zero frequency, we will set this to true
       HaveZeroFreq2 = .FALSE.             ! If we find a zero frequency, we will set this to true
-
+      UnitDataFile = -1
 
       !--------------------------------------------------------------------------------
       !> ### Check data file for consistency
@@ -4426,43 +4245,25 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL GetNewUnit(UnitDataFile,ErrStatTmp,ErrMsgTmp)
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
          ! Open the file
-      CALL OpenFInpFile(  UnitDataFile, TRIM(Filename4D), ErrStat, ErrMsg )  ! Open file containing mean drift information
+      CALL OpenFInpFile(  UnitDataFile, TRIM(Filename4D), ErrStatTmp, ErrMsgTmp )  ! Open file containing mean drift information
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )
-         IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
          ! Do an initial readthrough and find out the length of the file, if there is a header line, and the number of columns in the file.
-      CALL GetFileLength( UnitDataFile, TRIM(Filename4D), NumDataColumns, NumDataLines, NumHeaderLines, ErrStat, ErrMsg)
+      CALL GetFileLength( UnitDataFile, TRIM(Filename4D), NumDataColumns, NumDataLines, NumHeaderLines, ErrStatTmp, ErrMsgTmp)
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )
-         IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -4475,13 +4276,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          CALL SetErrStat( ErrID_Fatal, ' The 2nd order WAMIT data file '//TRIM(Filename4D)//' has '//TRIM(Num2LStr(NumDataColumns))// &
                         ' columns instead of the 9 columns expected.', ErrStat, ErrMsg, RoutineName)
          CLOSE( UnitDataFile )
-         IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -4501,13 +4296,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )
-         IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -4524,13 +4313,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CLOSE( UnitDataFile )
-            IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
          RawData4DTmp(I,:) = TmpDataRow
@@ -4560,12 +4343,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CLOSE( UnitDataFile )
-            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
 
@@ -4678,13 +4456,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL UniqueRealValues( RawData4D(:,1), TmpWvFreq1, Data4D%NumWvFreq1, ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -4692,13 +4464,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL UniqueRealValues( RawData4D(:,2), TmpWvFreq2, Data4D%NumWvFreq2, ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -4706,13 +4472,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL UniqueRealValues( RawData4D(:,3), Data4D%WvDir1, Data4D%NumWvDir1, ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -4720,13 +4480,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL UniqueRealValues( RawData4D(:,4), Data4D%WvDir2, Data4D%NumWvDir2, ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -4743,12 +4497,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( Data4D%NumBodies > 1 ) CALL SetErrStat( ErrID_Info, ' Found data for '//TRIM(Num2LStr(Data4D%NumBodies))//' WAMIT bodies in '// &
                      TRIM(Filename4D)//'.', ErrStat,ErrMsg,RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -4769,13 +4518,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             CALL SetErrStat( ErrID_Fatal, ' Load components listed in column 4 of '//TRIM(Filename4D)// &
                   ' must be between 1 and '//TRIM(Num2LStr(6*Data4D%NumBodies))//' for '//TRIM(Num2LStr(Data4D%NumBodies))// &
                   ' WAMIT bodies.', ErrStat,ErrMsg,RoutineName)
-            IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
          Data4D%LoadComponents(NINT(TmpRealArr(I))) = .TRUE.
@@ -4821,13 +4564,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data4D%WvFreq1 to store '// &
                               'the sorted 4D 2nd order WAMIT frequency data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -4837,13 +4574,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data4D%WvFreq2 to store '// &
                               'the sorted 4D 2nd order WAMIT frequency data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -4882,13 +4613,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data4D%DataSet to store '// &
                               'the sorted 4D 2nd order WAMIT data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -4897,13 +4622,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data4D%DataMask to store '// &
                               'the sorted 4D 2nd order WAMIT data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
-         IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -4949,13 +4668,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          CALL LocateStp( RawData4D(I,1), TmpWvFreq1, TmpCoord(1),   WvFreq1HiIdx - (WvFreq1LoIdx - 1) )  ! inclusive limits
          IF ( TmpCoord(1) == 0 .OR. ( RawData4D(I,1) > Data4D%WvFreq1(Data4D%NumWvFreq1)) ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data4D%WvFreq1 array.', ErrStat, ErrMsg, RoutineName)
-            IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
          TmpCoord(1) =  TmpCoord(1) + ( WvFreq1LoIdx - 1 )     ! shift to the point in the Data4D%WvFreq1 array by adding the zero frequency step function
@@ -4965,13 +4678,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          CALL LocateStp( RawData4D(I,2), TmpWvFreq2, TmpCoord(2),   WvFreq2HiIdx - (WvFreq2LoIdx - 1) )  ! inclusive limits
          IF ( TmpCoord(2) == 0 .OR. ( RawData4D(I,2) > Data4D%WvFreq2(Data4D%NumWvFreq2)) ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data4D%WvFreq2 array.', ErrStat, ErrMsg, RoutineName)
-            IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
          TmpCoord(2) =  TmpCoord(2) + ( WvFreq2LoIdx - 1 )     ! shift to the point in the Data4D%WvFreq2 array by adding the zero frequency step function
@@ -4980,13 +4687,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          CALL LocateStp( RawData4D(I,3), Data4D%WvDir1,  TmpCoord(3),   Data4D%NumWvDir1 )
          IF ( TmpCoord(3) == 0 .OR. ( RawData4D(I,3) > Data4D%WvDir1(Data4D%NumWvDir1)) ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data4D%WvDir1 array.', ErrStat, ErrMsg, RoutineName)
-            IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
 
@@ -4994,13 +4695,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          CALL LocateStp( RawData4D(I,4), Data4D%WvDir2,  TmpCoord(4),   Data4D%NumWvDir2 )
          IF ( TmpCoord(4) == 0 .OR. ( RawData4D(I,4) > Data4D%WvDir2(Data4D%NumWvDir2)) ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data4D%WvDir2 array.', ErrStat, ErrMsg, RoutineName)
-            IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-            IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-            CALL CleanUp
+            CALL CleanUp()
             RETURN
          ENDIF
 
@@ -5022,6 +4717,21 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             RETURN
          endif
 
+            ! Check that it is a valid force component
+         if (TmpCoord(5) < 1 .or. TmpCoord(5) > 6*Data4D%NumBodies) then
+            CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//' of '//TRIM(Filename4D)// &
+                           ' contains force component '//TRIM(Num2LStr(TmpCoord(5)))//' which is outside the expected force '// &
+                           ' range of 1 to '//TRIM(Num2Lstr(6*Data4D%NumBodies))//' for a '//TRIM(Num2LStr(Data4D%NumBodies))// &
+                           ' body system.', ErrStat, ErrMsg, RoutineName)
+            IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
+            CALL CleanUp
+            RETURN
+         endif
 
             !> The data from the WAMIT file is non-dimensional, so we need to dimensionalize it here.  This
             !! is a partial dimensionalization since the wave amplitudes are not included (this is done later
@@ -5058,13 +4768,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                         'given earlier in the file for the same values of wave frequency and wave direction '// &
                         '(force dimension = '//TRIM(Num2LStr(TmpCoord(5)))//').', &
                         ErrStat, ErrMsg, RoutineName )
-               IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-               IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-               IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-               IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-               IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-               IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-               CALL CleanUp
+               CALL CleanUp()
                RETURN
             ENDIF
          ELSE
@@ -5271,16 +4975,21 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
       Data4D%WvFreqDiagComplete = TmpDiagComplete
 
+      call cleanup()
+      
+      contains
+         subroutine cleanup()
 
-
-         ! Clean up
-      IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
-      IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-      IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-      IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-      IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-      IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
-
+               ! Clean up
+            IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
+            
+         end subroutine cleanup
+         
    END SUBROUTINE Read_DataFile4D
 
 
@@ -5315,16 +5024,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
          ! Initialize things
       ErrStat     =  ErrID_None
-      ErrStatTmp  =  ErrID_None
-      ErrMsg      =  ''
-      ErrMsgTmp   =  ''
+      ErrMsg      =  ""
 
 
          ! Allocate the temporary array
       CALL AllocAry( TmpRealArray, SIZE(DataArrayIn,1), 'Temporary array for data sorting', ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
@@ -5384,14 +5091,20 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL AllocAry( DataArrayOut, NumUnique, 'Return array with sorted values', ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp
+         CALL CleanUp()
          RETURN
       ENDIF
 
          ! Copy the values over
       DataArrayOut = TmpRealArray(1:NumUnique)
 
-
+      call cleanup()
+      
+      contains
+         subroutine cleanup()
+            if (allocated(TmpRealArray)) deallocate(TmpRealArray)
+         end subroutine cleanup
+      
    END SUBROUTINE UniqueRealValues
 
 
@@ -5435,13 +5148,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       INTEGER(IntKi)                                     :: TmpIOErrStat      !< Temporary error status for the internal read of the first word to a real number
       LOGICAL                                            :: IsRealNum         !< Flag indicating if the first word on the line was a real number
 
-      CHARACTER(1024)                                    :: TextLine          !< One line of text read from the file
+      CHARACTER(MaxFileInfoLineLen)                      :: TextLine          !< One line of text read from the file
       INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
       CHARACTER(1024)                                    :: StrRead           !< String containing the first word read in
       REAL(SiKi)                                         :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't
-      CHARACTER(1024)                                    :: VarName           !< Name of the variable we are trying to read from the file
+!      CHARACTER(1024)                                    :: VarName           !< Name of the variable we are trying to read from the file
       CHARACTER(NWTC_SizeOfNumWord)                      :: Words(20)         !< Array of words we extract from a line.  We shouldn't have more than 20.
-      INTEGER(IntKi)                                     :: i,j,k             !< simple integer counters
+      INTEGER(IntKi)                                     :: i !,j,k             !< simple integer counters
       INTEGER(IntKi)                                     :: LineNumber        !< the line I am on
       LOGICAL                                            :: LineHasText       !< Flag indicating if the line I just read has text.  If so, it is a header line.
       LOGICAL                                            :: HaveReadData      !< Flag indicating if I have started reading data.
@@ -5517,10 +5230,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                CALL SetErrStat( ErrID_Fatal, ' Found text on line '//TRIM(Num2LStr(LineNumber))//' of '//TRIM(FileName)// &
                            ' when real numbers were expected.  There may be a problem with the 2nd order WAMIT file: '// &
                            TRIM(Filename)//'.', ErrStat, ErrMsg, RoutineName)
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  CALL CleanUp
-                  RETURN
-               ENDIF
+               RETURN
             ELSE
                NumHeaderLines = NumHeaderLines + 1
             ENDIF
@@ -5540,10 +5250,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                            '('//TRIM(Num2LStr(NumWords))//' columns) is different than the number of columns on first row of data '// &
                            ' (line: '//TRIM(Num2LStr(FirstDataLineNum))//', '//TRIM(Num2LStr(NumDataColumns))//' columns).', &
                            ErrStat, ErrMsg, RoutineName)
-                  IF ( ErrStat >= AbortErrLev ) THEN
-                     CALL CleanUp
-                     RETURN
-                  ENDIF
+                  RETURN
                ENDIF
             ENDIF
          ENDIF
@@ -5553,10 +5260,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( NumDataLines < 2 ) THEN
          CALL SetErrStat( ErrID_Fatal, ' 2nd order WAMIT file '//TRIM(Filename)//' contains only '//TRIM(Num2LStr(NumDataLines))// &
                         ' lines of data. This does not appear to be a valid WAMIT file.', ErrStat, ErrMsg, RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp
-            RETURN
-         ENDIF
+         RETURN
       ENDIF
 
       REWIND( UnitDataFile )
@@ -5690,124 +5394,15 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
 
-END SUBROUTINE WAMIT2_Init
-
-
-
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is called at the end of the simulation.  The purpose of this routine is to destroy any data that is leftover.  If
-!! we don't do this, we may leave memory tied up after the simulation ends.
-!! To destroy the data, we call several routines that are generated by the FAST registry, so any issues with the destroy routines
-!! should be addressed by the registry.exe which generates the WAMIT2_Types.f90 file.
-!!
-SUBROUTINE WAMIT2_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      TYPE(WAMIT2_InputType),             INTENT(INOUT)  :: u              !< System inputs
-      TYPE(WAMIT2_ParameterType),         INTENT(INOUT)  :: p              !< Parameters
-      TYPE(WAMIT2_ContinuousStateType),   INTENT(INOUT)  :: x              !< Continuous states
-      TYPE(WAMIT2_DiscreteStateType),     INTENT(INOUT)  :: xd             !< Discrete states
-      TYPE(WAMIT2_ConstraintStateType),   INTENT(INOUT)  :: z              !< Constraint states
-      TYPE(WAMIT2_OtherStateType),        INTENT(INOUT)  :: OtherState     !< Other states
-      TYPE(WAMIT2_OutputType),            INTENT(INOUT)  :: y              !< System outputs
-      TYPE(WAMIT2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = ""
-
-
-         !> Place any last minute operations or calculations here.  For WAMIT2, most calculations are performed
-         !! during the initialization, so there are no final calculations that need to be performed.
-
-
-         !> Close files here.  The only files that are opened for WAMIT2 take place during the initialization routine.  They should
-         !! have been closed then.
-         !! @todo Check to make sure nothing is left open by this module.
-
-
-         !> Destroy the input data:
-
-      CALL WAMIT2_DestroyInput( u, ErrStat, ErrMsg )
-
-
-         !> Destroy the parameter data:
-
-      CALL WAMIT2_DestroyParam( p, ErrStat, ErrMsg )
-
-
-         !> Destroy the state data:
-
-      CALL WAMIT2_DestroyContState(   x,           ErrStat, ErrMsg )
-      CALL WAMIT2_DestroyDiscState(   xd,          ErrStat, ErrMsg )
-      CALL WAMIT2_DestroyConstrState( z,           ErrStat, ErrMsg )
-      CALL WAMIT2_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
-
-
-         !> Destroy the output data:
-
-      CALL WAMIT2_DestroyOutput( y, ErrStat, ErrMsg )
-
-
-END SUBROUTINE WAMIT2_End
-
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
-!> Continuous, constraint, and discrete states are updated to values at t + Interval.
-SUBROUTINE WAMIT2_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      REAL(DbKi),                         INTENT(IN   )  :: t              !< Current simulation time in seconds
-      INTEGER(IntKi),                     INTENT(IN   )  :: n              !< Current step of the simulation: t = n*Interval
-      TYPE(WAMIT2_InputType),             INTENT(IN   )  :: Inputs(:)      !< Inputs at InputTimes
-      REAL(DbKi),                         INTENT(IN   )  :: InputTimes(:)  !< Times in seconds associated with Inputs
-      TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
-      TYPE(WAMIT2_ContinuousStateType),   INTENT(INOUT)  :: x              !< Input: Continuous states at t;
-                                                                           !!Output: Continuous states at t + Interval
-      TYPE(WAMIT2_DiscreteStateType),     INTENT(INOUT)  :: xd             !< Input: Discrete states at t;
-                                                                           !!Output: Discrete states at t + Interval
-      TYPE(WAMIT2_ConstraintStateType),   INTENT(INOUT)  :: z              !< Input: Constraint states at t;
-                                                                           !!Output: Constraint states at t + Interval
-      TYPE(WAMIT2_OtherStateType),        INTENT(INOUT)  :: OtherState     !< Input: Other states at t;
-                                                                           !! Output: Other states at t + Interval
-      TYPE(WAMIT2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = ""
-
-
-END SUBROUTINE WAMIT2_UpdateStates
-
-
-
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
-SUBROUTINE WAMIT2_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+SUBROUTINE WAMIT2_CalcOutput( Time, WaveTime, p, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       REAL(DbKi),                         INTENT(IN   )  :: Time           !< Current simulation time in seconds
       real(SiKi),                         intent(in   )  :: WaveTime(:)    !< Array of wave kinematic time samples, (sec)
-      TYPE(WAMIT2_InputType),             INTENT(IN   )  :: u              !< Inputs at Time
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
-      TYPE(WAMIT2_ContinuousStateType),   INTENT(IN   )  :: x              !< Continuous states at Time
-      TYPE(WAMIT2_DiscreteStateType),     INTENT(IN   )  :: xd             !< Discrete states at Time
-      TYPE(WAMIT2_ConstraintStateType),   INTENT(IN   )  :: z              !< Constraint states at Time
-      TYPE(WAMIT2_OtherStateType),        INTENT(IN   )  :: OtherState     !< Other states
       TYPE(WAMIT2_OutputType),            INTENT(INOUT)  :: y              !< Outputs computed at Time (Input only so that mesh
                                                                            !!   connectivity information does not have to be recalculated)
       TYPE(WAMIT2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
@@ -5863,118 +5458,6 @@ SUBROUTINE WAMIT2_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, 
 
 END SUBROUTINE WAMIT2_CalcOutput
 
-
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is required for the FAST framework, but is not actually needed for this module.
-!! In the framework, this routine calculates the derivative of the continuous states.
-!! As this routine is not necessary in the WAMIT2 module, it simply issues a warning and returns.
-!! @note A few values will be set so that compilers are happy, but nothing of value is done.
-SUBROUTINE WAMIT2_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      REAL(DbKi),                         INTENT(IN   )  :: Time           !< Current simulation time in seconds
-      TYPE(WAMIT2_InputType),             INTENT(IN   )  :: u              !< Inputs at Time
-      TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
-      TYPE(WAMIT2_ContinuousStateType),   INTENT(IN   )  :: x              !< Continuous states at Time
-      TYPE(WAMIT2_DiscreteStateType),     INTENT(IN   )  :: xd             !< Discrete states at Time
-      TYPE(WAMIT2_ConstraintStateType),   INTENT(IN   )  :: z              !< Constraint states at Time
-      TYPE(WAMIT2_OtherStateType),        INTENT(IN   )  :: OtherState     !< Other states at Time
-      TYPE(WAMIT2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
-      TYPE(WAMIT2_ContinuousStateType),   INTENT(  OUT)  :: dxdt           !< Continuous state derivatives at Time
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = "Warning: No States to take derivative of in WAMIT2 module. *WAMIT2::CalcContStateDeriv was called.  It "// &
-                  "is not necessary in the WAMIT2 module, so it does nothing.*"
-
-
-         ! Compute the first time derivatives of the continuous states here: None to calculate, so no code here.
-
-         ! Dummy output value for dxdt -- this is only here to prevent the compiler from complaining.
-   dxdt%DummyContState = 0.0_SiKi
-
-
-END SUBROUTINE WAMIT2_CalcContStateDeriv
-
-
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is required for the FAST framework, but is not actually needed for this module.
-!! In the framework, this routine is used to update discrete states, by
-!! So, this routine will simply issue a warning and return.
-SUBROUTINE WAMIT2_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      REAL(DbKi),                         INTENT(IN   )  :: Time           !< Current simulation time in seconds
-      INTEGER(IntKi),                     INTENT(IN   )  :: n              !< Current step of the simulation: t = n*Interval
-      TYPE(WAMIT2_InputType),             INTENT(IN   )  :: u              !< Inputs at Time
-      TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
-      TYPE(WAMIT2_ContinuousStateType),   INTENT(IN   )  :: x              !< Continuous states at Time
-      TYPE(WAMIT2_DiscreteStateType),     INTENT(INOUT)  :: xd             !< Input: Discrete states at Time;
-                                                                           !!   Output: Discrete states at Time + Interval
-      TYPE(WAMIT2_ConstraintStateType),   INTENT(IN   )  :: z              !< Constraint states at Time
-      TYPE(WAMIT2_OtherStateType),        INTENT(IN   )  :: OtherState     !< Other states at Time
-      TYPE(WAMIT2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = "Warning: No Discrete States to update in WAMIT2 module. *WAMIT2::UpdateDiscState was called.  It is not "// &
-                  "necessary in the WAMIT2 module, so it does nothing.*"
-
-         ! Code to update the discrete states would live here, but there are no discrete states to update, hence no code.
-
-
-END SUBROUTINE WAMIT2_UpdateDiscState
-
-
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is required for the FAST framework, but is not actually needed for this module.
-!! In the framework, this is a tight coupling routine for solving for the residual of the constraint state equations
-!! So, this routine will simply issue a warning and return.
-!! @note A few values will be set so that compilers are happy, but nothing of value is done.
-SUBROUTINE WAMIT2_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-      REAL(DbKi),                         INTENT(IN   )  :: Time           !< Current simulation time in seconds
-      TYPE(WAMIT2_InputType),             INTENT(IN   )  :: u              !< Inputs at Time
-      TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
-      TYPE(WAMIT2_ContinuousStateType),   INTENT(IN   )  :: x              !< Continuous states at Time
-      TYPE(WAMIT2_DiscreteStateType),     INTENT(IN   )  :: xd             !< Discrete states at Time
-      TYPE(WAMIT2_ConstraintStateType),   INTENT(IN   )  :: z              !< Constraint states at Time (possibly a guess)
-      TYPE(WAMIT2_OtherStateType),        INTENT(IN   )  :: OtherState     !< Other states at Time
-      TYPE(WAMIT2_MiscVarType),           INTENT(INOUT)  :: m              !< Misc/optimization variables
-      TYPE(WAMIT2_ConstraintStateType),   INTENT(  OUT)  :: z_residual     !< Residual of the constraint state equations using
-                                                                           !!  the input values described above
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = "Warning: No States in WAMIT2 module. *WAMIT2::CalcConstrStateResidual was called.  It is not needed in "//&
-                  "the WAMIT2 module, so it does nothing useful."
-
-
-
-         ! Solve for the constraint states here: Since there are no constraint states to solve for in WAMIT2, there is no code here.
-
-      z_residual%DummyConstrState = 0.0_SiKi    ! This exists just so that we can make the compiler happy.
-
-END SUBROUTINE WAMIT2_CalcConstrStateResidual
 
 
 
@@ -6127,6 +5610,10 @@ SUBROUTINE Destroy_InitData3D(Data3D)
    IMPLICIT NONE
    TYPE(W2_InitData3D_Type),  INTENT(INOUT)  :: Data3D
    INTEGER(IntKi)                            :: ErrStatTmp
+   
+   IF (ALLOCATED(Data3D%DataIsSparse))   DEALLOCATE(Data3D%DataIsSparse,STAT=ErrStatTmp)
+   IF (ALLOCATED(Data3D%LoadComponents)) DEALLOCATE(Data3D%LoadComponents,STAT=ErrStatTmp)
+   
    IF (ALLOCATED(Data3D%DataSet))      DEALLOCATE(Data3D%DataSet,STAT=ErrStatTmp)
    IF (ALLOCATED(Data3D%DataMask))     DEALLOCATE(Data3D%DataMask,STAT=ErrStatTmp)
    IF (ALLOCATED(Data3D%WvFreq1))      DEALLOCATE(Data3D%WvFreq1,STAT=ErrStatTmp)
@@ -6140,12 +5627,16 @@ SUBROUTINE Destroy_InitData4D(Data4D)
    IMPLICIT NONE
    TYPE(W2_InitData4D_Type),  INTENT(INOUT)  :: Data4D
    INTEGER(IntKi)                            :: ErrStatTmp
-   IF (ALLOCATED(Data4D%DataSet))      DEALLOCATE(Data4D%DataSet,STAT=ErrStatTmp)
-   IF (ALLOCATED(Data4D%DataMask))     DEALLOCATE(Data4D%DataMask,STAT=ErrStatTmp)
-   IF (ALLOCATED(Data4D%WvFreq1))      DEALLOCATE(Data4D%WvFreq1,STAT=ErrStatTmp)
-   IF (ALLOCATED(Data4D%WvFreq2))      DEALLOCATE(Data4D%WvFreq2,STAT=ErrStatTmp)
-   IF (ALLOCATED(Data4D%WvDir1))       DEALLOCATE(Data4D%WvDir1,STAT=ErrStatTmp)
-   IF (ALLOCATED(Data4D%WvDir2))       DEALLOCATE(Data4D%WvDir2,STAT=ErrStatTmp)
+   
+   IF (ALLOCATED(Data4D%DataIsSparse))   DEALLOCATE(Data4D%DataIsSparse,STAT=ErrStatTmp)
+   IF (ALLOCATED(Data4D%LoadComponents)) DEALLOCATE(Data4D%LoadComponents,STAT=ErrStatTmp)
+
+   IF (ALLOCATED(Data4D%DataSet))        DEALLOCATE(Data4D%DataSet,STAT=ErrStatTmp)
+   IF (ALLOCATED(Data4D%DataMask))       DEALLOCATE(Data4D%DataMask,STAT=ErrStatTmp)
+   IF (ALLOCATED(Data4D%WvFreq1))        DEALLOCATE(Data4D%WvFreq1,STAT=ErrStatTmp)
+   IF (ALLOCATED(Data4D%WvFreq2))        DEALLOCATE(Data4D%WvFreq2,STAT=ErrStatTmp)
+   IF (ALLOCATED(Data4D%WvDir1))         DEALLOCATE(Data4D%WvDir1,STAT=ErrStatTmp)
+   IF (ALLOCATED(Data4D%WvDir2))         DEALLOCATE(Data4D%WvDir2,STAT=ErrStatTmp)
 END SUBROUTINE Destroy_InitData4D
 
 

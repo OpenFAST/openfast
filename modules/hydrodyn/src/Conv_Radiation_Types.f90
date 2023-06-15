@@ -45,7 +45,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: HdroDmpng      !<  [-]
     INTEGER(IntKi)  :: NInpFreq      !<  [-]
     REAL(DbKi)  :: RdtnTMax      !<  [-]
-    INTEGER(IntKi)  :: UnSum      !<  [-]
   END TYPE Conv_Rdtn_InitInputType
 ! =======================
 ! =========  Conv_Rdtn_InitOutputType  =======
@@ -168,17 +167,14 @@ IF (ALLOCATED(SrcInitInputData%HdroDmpng)) THEN
 ENDIF
     DstInitInputData%NInpFreq = SrcInitInputData%NInpFreq
     DstInitInputData%RdtnTMax = SrcInitInputData%RdtnTMax
-    DstInitInputData%UnSum = SrcInitInputData%UnSum
  END SUBROUTINE Conv_Rdtn_CopyInitInput
 
- SUBROUTINE Conv_Rdtn_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Conv_Rdtn_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
   TYPE(Conv_Rdtn_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Conv_Rdtn_DestroyInitInput'
@@ -186,12 +182,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(InitInputData%HdroAddMs)) THEN
   DEALLOCATE(InitInputData%HdroAddMs)
 ENDIF
@@ -260,7 +250,6 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NInpFreq
       Db_BufSz   = Db_BufSz   + 1  ! RdtnTMax
-      Int_BufSz  = Int_BufSz  + 1  ! UnSum
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -371,8 +360,6 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%RdtnTMax
     Db_Xferred = Db_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%UnSum
-    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE Conv_Rdtn_PackInitInput
 
  SUBROUTINE Conv_Rdtn_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -496,8 +483,6 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%RdtnTMax = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-    OutData%UnSum = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE Conv_Rdtn_UnPackInitInput
 
  SUBROUTINE Conv_Rdtn_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -517,14 +502,12 @@ ENDIF
     DstInitOutputData%DummyInitOut = SrcInitOutputData%DummyInitOut
  END SUBROUTINE Conv_Rdtn_CopyInitOutput
 
- SUBROUTINE Conv_Rdtn_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Conv_Rdtn_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
   TYPE(Conv_Rdtn_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Conv_Rdtn_DestroyInitOutput'
@@ -532,12 +515,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Conv_Rdtn_DestroyInitOutput
 
  SUBROUTINE Conv_Rdtn_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -654,14 +631,12 @@ ENDIF
     DstContStateData%DummyContState = SrcContStateData%DummyContState
  END SUBROUTINE Conv_Rdtn_CopyContState
 
- SUBROUTINE Conv_Rdtn_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Conv_Rdtn_DestroyContState( ContStateData, ErrStat, ErrMsg )
   TYPE(Conv_Rdtn_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Conv_Rdtn_DestroyContState'
@@ -669,12 +644,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Conv_Rdtn_DestroyContState
 
  SUBROUTINE Conv_Rdtn_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -807,14 +776,12 @@ ENDIF
     DstDiscStateData%LastTime = SrcDiscStateData%LastTime
  END SUBROUTINE Conv_Rdtn_CopyDiscState
 
- SUBROUTINE Conv_Rdtn_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Conv_Rdtn_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
   TYPE(Conv_Rdtn_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Conv_Rdtn_DestroyDiscState'
@@ -822,12 +789,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(DiscStateData%XDHistory)) THEN
   DEALLOCATE(DiscStateData%XDHistory)
 ENDIF
@@ -997,14 +958,12 @@ ENDIF
     DstConstrStateData%DummyConstrState = SrcConstrStateData%DummyConstrState
  END SUBROUTINE Conv_Rdtn_CopyConstrState
 
- SUBROUTINE Conv_Rdtn_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Conv_Rdtn_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
   TYPE(Conv_Rdtn_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Conv_Rdtn_DestroyConstrState'
@@ -1012,12 +971,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Conv_Rdtn_DestroyConstrState
 
  SUBROUTINE Conv_Rdtn_PackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1134,14 +1087,12 @@ ENDIF
     DstOtherStateData%IndRdtn = SrcOtherStateData%IndRdtn
  END SUBROUTINE Conv_Rdtn_CopyOtherState
 
- SUBROUTINE Conv_Rdtn_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Conv_Rdtn_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
   TYPE(Conv_Rdtn_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Conv_Rdtn_DestroyOtherState'
@@ -1149,12 +1100,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Conv_Rdtn_DestroyOtherState
 
  SUBROUTINE Conv_Rdtn_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1271,14 +1216,12 @@ ENDIF
     DstMiscData%LastIndRdtn = SrcMiscData%LastIndRdtn
  END SUBROUTINE Conv_Rdtn_CopyMisc
 
- SUBROUTINE Conv_Rdtn_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Conv_Rdtn_DestroyMisc( MiscData, ErrStat, ErrMsg )
   TYPE(Conv_Rdtn_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Conv_Rdtn_DestroyMisc'
@@ -1286,12 +1229,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
  END SUBROUTINE Conv_Rdtn_DestroyMisc
 
  SUBROUTINE Conv_Rdtn_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1431,14 +1368,12 @@ ENDIF
     DstParamData%NStepRdtn1 = SrcParamData%NStepRdtn1
  END SUBROUTINE Conv_Rdtn_CopyParam
 
- SUBROUTINE Conv_Rdtn_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Conv_Rdtn_DestroyParam( ParamData, ErrStat, ErrMsg )
   TYPE(Conv_Rdtn_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Conv_Rdtn_DestroyParam'
@@ -1446,12 +1381,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(ParamData%RdtnKrnl)) THEN
   DEALLOCATE(ParamData%RdtnKrnl)
 ENDIF
@@ -1664,14 +1593,12 @@ IF (ALLOCATED(SrcInputData%Velocity)) THEN
 ENDIF
  END SUBROUTINE Conv_Rdtn_CopyInput
 
- SUBROUTINE Conv_Rdtn_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Conv_Rdtn_DestroyInput( InputData, ErrStat, ErrMsg )
   TYPE(Conv_Rdtn_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Conv_Rdtn_DestroyInput'
@@ -1679,12 +1606,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(InputData%Velocity)) THEN
   DEALLOCATE(InputData%Velocity)
 ENDIF
@@ -1850,14 +1771,12 @@ IF (ALLOCATED(SrcOutputData%F_Rdtn)) THEN
 ENDIF
  END SUBROUTINE Conv_Rdtn_CopyOutput
 
- SUBROUTINE Conv_Rdtn_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
+ SUBROUTINE Conv_Rdtn_DestroyOutput( OutputData, ErrStat, ErrMsg )
   TYPE(Conv_Rdtn_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
   
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*),    PARAMETER :: RoutineName = 'Conv_Rdtn_DestroyOutput'
@@ -1865,12 +1784,6 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
-  IF (PRESENT(DEALLOCATEpointers)) THEN
-     DEALLOCATEpointers_local = DEALLOCATEpointers
-  ELSE
-     DEALLOCATEpointers_local = .true.
-  END IF
-  
 IF (ALLOCATED(OutputData%F_Rdtn)) THEN
   DEALLOCATE(OutputData%F_Rdtn)
 ENDIF

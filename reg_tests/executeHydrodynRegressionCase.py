@@ -108,8 +108,8 @@ if not noExec:
         sys.exit(returnCode*10)
     
 ### Build the filesystem navigation variables for running the regression test
-localOutFile = os.path.join(testBuildDirectory, "driver.HD.out")
-baselineOutFile = os.path.join(targetOutputDirectory, "driver.HD.out")
+localOutFile = os.path.join(testBuildDirectory, "driver.out")
+baselineOutFile = os.path.join(targetOutputDirectory, "driver.out")
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
 
