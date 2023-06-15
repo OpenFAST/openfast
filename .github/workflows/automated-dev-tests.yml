@@ -39,7 +39,7 @@ jobs:
         with:
           submodules: recursive
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -115,7 +115,7 @@ jobs:
         with:
           submodules: recursive
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -157,7 +157,7 @@ jobs:
         with:
           submodules: recursive
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -207,7 +207,7 @@ jobs:
           path: ${{runner.workspace}}
           key: build-postlib-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -238,7 +238,7 @@ jobs:
           path: ${{runner.workspace}}
           key: build-postlib-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -269,7 +269,7 @@ jobs:
           path: ${{runner.workspace}}
           key: build-postlib-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -302,7 +302,7 @@ jobs:
         with:
           submodules: recursive
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -361,7 +361,7 @@ jobs:
           path: ${{runner.workspace}}
           key: build-drivers-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -410,7 +410,7 @@ jobs:
           path: ${{runner.workspace}}
           key: build-all-debug-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -469,7 +469,7 @@ jobs:
           path: ${{runner.workspace}}
           key: build-interfaces-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -508,7 +508,7 @@ jobs:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -525,7 +525,7 @@ jobs:
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j8 \
+          ctest -VV -j6 \
           -L openfast \
           -LE "cpp|linear|python|fastlib" \
           -E "5MW_OC4Semi_WSt_WavesWN|5MW_OC3Mnpl_DLL_WTurb_WavesIrr|5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth|5MW_OC3Trpd_DLL_WSt_WavesReg|5MW_Land_BD_DLL_WTurb"
@@ -555,7 +555,7 @@ jobs:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -599,7 +599,7 @@ jobs:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -643,7 +643,7 @@ jobs:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -687,7 +687,7 @@ jobs:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -731,7 +731,7 @@ jobs:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -775,7 +775,7 @@ jobs:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -819,7 +819,7 @@ jobs:
           path: ${{runner.workspace}}
           key: build-fastfarm-release-${{ github.sha }}
       - name: Setup Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
           cache: 'pip'
