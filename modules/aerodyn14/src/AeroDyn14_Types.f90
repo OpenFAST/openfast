@@ -597,6 +597,20 @@ subroutine AD14_DestroyAeroConfig(AeroConfigData, ErrStat, ErrMsg)
       end do
       deallocate(AeroConfigData%Blade)
    end if
+   call AD14_DestroyMarker(AeroConfigData%Hub, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyMarker(AeroConfigData%RotorFurl, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyMarker(AeroConfigData%Nacelle, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyMarker(AeroConfigData%TailFin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyMarker(AeroConfigData%Tower, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyMarker(AeroConfigData%SubStructure, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyMarker(AeroConfigData%Foundation, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD14_PackAeroConfig(Buf, Indata)
@@ -5572,9 +5586,13 @@ subroutine AD14_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD14_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call AD14_DestroyAeroConfig(InitInputData%TurbineComponents, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitInputData%TwrNodeLocs)) then
       deallocate(InitInputData%TwrNodeLocs)
    end if
+   call DWM_DestroyInitInput(InitInputData%DWM, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD14_PackInitInput(Buf, Indata)
@@ -5677,6 +5695,10 @@ subroutine AD14_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD14_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DWM_DestroyInitOutput(InitOutputData%DWM, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD14_PackInitOutput(Buf, Indata)
@@ -5726,6 +5748,8 @@ subroutine AD14_DestroyContState(ContStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD14_DestroyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call DWM_DestroyContState(ContStateData%DWM, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD14_PackContState(Buf, Indata)
@@ -5770,6 +5794,8 @@ subroutine AD14_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD14_DestroyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call DWM_DestroyDiscState(DiscStateData%DWM, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD14_PackDiscState(Buf, Indata)
@@ -5814,6 +5840,8 @@ subroutine AD14_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD14_DestroyConstrState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call DWM_DestroyConstrState(ConstrStateData%DWM, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD14_PackConstrState(Buf, Indata)
@@ -5858,6 +5886,8 @@ subroutine AD14_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD14_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call DWM_DestroyOtherState(OtherStateData%DWM, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD14_PackOtherState(Buf, Indata)
@@ -5991,9 +6021,31 @@ subroutine AD14_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD14_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call DWM_DestroyMisc(MiscData%DWM, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DWM_DestroyInput(MiscData%DWM_Inputs, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DWM_DestroyOutput(MiscData%DWM_Outputs, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%ElPrNum)) then
       deallocate(MiscData%ElPrNum)
    end if
+   call AD14_DestroyAirFoil(MiscData%AirFoil, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyBeddoes(MiscData%Beddoes, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyDynInflow(MiscData%DynInflow, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyElement(MiscData%Element, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyRotor(MiscData%Rotor, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyWind(MiscData%Wind, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyInducedVel(MiscData%InducedVel, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyElOutParms(MiscData%ElOut, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%StoredForces)) then
       deallocate(MiscData%StoredForces)
    end if
@@ -6224,6 +6276,26 @@ subroutine AD14_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD14_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call AD14_DestroyAirFoilParms(ParamData%AirFoil, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyBladeParms(ParamData%Blade, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyBeddoesParms(ParamData%Beddoes, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyDynInflowParms(ParamData%DynInflow, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyElementParms(ParamData%Element, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyTwrPropsParms(ParamData%TwrProps, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyInducedVelParms(ParamData%InducedVel, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyWindParms(ParamData%Wind, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyRotorParms(ParamData%Rotor, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DWM_DestroyParam(ParamData%DWM, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD14_PackParam(Buf, Indata)
@@ -6424,6 +6496,10 @@ subroutine AD14_DestroyInput(InputData, ErrStat, ErrMsg)
       end do
       deallocate(InputData%InputMarkers)
    end if
+   call MeshDestroy( InputData%Twr_InputMarkers, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyAeroConfig(InputData%TurbineComponents, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InputData%MulTabLoc)) then
       deallocate(InputData%MulTabLoc)
    end if
@@ -6578,6 +6654,8 @@ subroutine AD14_DestroyOutput(OutputData, ErrStat, ErrMsg)
       end do
       deallocate(OutputData%OutputLoads)
    end if
+   call MeshDestroy( OutputData%Twr_OutputLoads, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD14_PackOutput(Buf, Indata)

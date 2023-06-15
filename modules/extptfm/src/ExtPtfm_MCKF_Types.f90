@@ -605,6 +605,8 @@ subroutine ExtPtfm_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ExtPtfm_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%WriteOutputHdr)) then
       deallocate(InitOutputData%WriteOutputHdr)
    end if
@@ -2282,6 +2284,8 @@ subroutine ExtPtfm_DestroyInput(InputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ExtPtfm_DestroyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( InputData%PtfmMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine ExtPtfm_PackInput(Buf, Indata)
@@ -2341,6 +2345,8 @@ subroutine ExtPtfm_DestroyOutput(OutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ExtPtfm_DestroyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( OutputData%PtfmMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OutputData%WriteOutput)) then
       deallocate(OutputData%WriteOutput)
    end if

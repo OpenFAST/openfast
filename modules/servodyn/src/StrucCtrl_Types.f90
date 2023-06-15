@@ -753,6 +753,10 @@ subroutine StC_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    if (allocated(InitInputData%InitRefOrient)) then
       deallocate(InitInputData%InitRefOrient)
    end if
+   call NWTC_Library_DestroyFileInfoType(InitInputData%PassedPrimaryInputData, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyFileInfoType(InitInputData%PassedPrescribeFrcData, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine StC_PackInitInput(Buf, Indata)

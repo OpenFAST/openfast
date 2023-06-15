@@ -386,6 +386,8 @@ subroutine InflowWind_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
    if (allocated(InputFileData%FocalDistanceZ)) then
       deallocate(InputFileData%FocalDistanceZ)
    end if
+   call InflowWind_IO_DestroyGrid3D_InitInputType(InputFileData%FF, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine InflowWind_PackInputFile(Buf, Indata)
@@ -705,6 +707,14 @@ subroutine InflowWind_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'InflowWind_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyFileInfoType(InitInputData%PassedFileData, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyFileInfoType(InitInputData%WindType2Data, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Lidar_DestroyInitInput(InitInputData%lidar, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_IO_DestroyGrid4D_InitInputType(InitInputData%FDext, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine InflowWind_PackInitInput(Buf, Indata)
@@ -912,6 +922,10 @@ subroutine InflowWind_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%WriteOutputUnt)) then
       deallocate(InitOutputData%WriteOutputUnt)
    end if
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_IO_DestroyWindFileDat(InitOutputData%WindFileInfo, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%LinNames_y)) then
       deallocate(InitOutputData%LinNames_y)
    end if
@@ -1265,6 +1279,8 @@ subroutine InflowWind_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%OutParamLinIndx)) then
       deallocate(ParamData%OutParamLinIndx)
    end if
+   call Lidar_DestroyParam(ParamData%lidar, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine InflowWind_PackParam(Buf, Indata)
@@ -1480,6 +1496,8 @@ subroutine InflowWind_DestroyInput(InputData, ErrStat, ErrMsg)
    if (allocated(InputData%PositionXYZ)) then
       deallocate(InputData%PositionXYZ)
    end if
+   call Lidar_DestroyInput(InputData%lidar, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine InflowWind_PackInput(Buf, Indata)
@@ -1606,6 +1624,8 @@ subroutine InflowWind_DestroyOutput(OutputData, ErrStat, ErrMsg)
    if (allocated(OutputData%WriteOutput)) then
       deallocate(OutputData%WriteOutput)
    end if
+   call Lidar_DestroyOutput(OutputData%lidar, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine InflowWind_PackOutput(Buf, Indata)
@@ -1933,6 +1953,14 @@ subroutine InflowWind_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%WindAiUVW)) then
       deallocate(MiscData%WindAiUVW)
    end if
+   call InflowWind_DestroyInput(MiscData%u_Avg, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyOutput(MiscData%y_Avg, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyInput(MiscData%u_Hub, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyOutput(MiscData%y_Hub, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine InflowWind_PackMisc(Buf, Indata)

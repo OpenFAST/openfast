@@ -740,6 +740,8 @@ subroutine WAMIT2_DestroyOutput(OutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'WAMIT2_DestroyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( OutputData%Mesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine WAMIT2_PackOutput(Buf, Indata)

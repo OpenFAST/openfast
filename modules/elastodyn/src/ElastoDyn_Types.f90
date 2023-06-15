@@ -1109,6 +1109,8 @@ subroutine ED_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%WriteOutputUnt)) then
       deallocate(InitOutputData%WriteOutputUnt)
    end if
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%BlPitch)) then
       deallocate(InitOutputData%BlPitch)
    end if
@@ -7659,6 +7661,12 @@ subroutine ED_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ED_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(OtherStateData%xdot)
+   UB(1:1) = ubound(OtherStateData%xdot)
+   do i1 = LB(1), UB(1)
+      call ED_DestroyContState(OtherStateData%xdot(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
    if (allocated(OtherStateData%IC)) then
       deallocate(OtherStateData%IC)
    end if
@@ -7857,6 +7865,10 @@ subroutine ED_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ED_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call ED_DestroyCoordSys(MiscData%CoordSys, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ED_DestroyRtHndSide(MiscData%RtHS, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%AllOuts)) then
       deallocate(MiscData%AllOuts)
    end if
@@ -9058,6 +9070,8 @@ subroutine ED_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%DOF_Desc)) then
       deallocate(ParamData%DOF_Desc)
    end if
+   call ED_DestroyActiveDOFs(ParamData%DOFs, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%OutParam)) then
       LB(1:1) = lbound(ParamData%OutParam)
       UB(1:1) = ubound(ParamData%OutParam)
@@ -10946,6 +10960,16 @@ subroutine ED_DestroyInput(InputData, ErrStat, ErrMsg)
       end do
       deallocate(InputData%BladePtLoads)
    end if
+   call MeshDestroy( InputData%PlatformPtMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( InputData%TowerPtLoads, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( InputData%HubPtLoad, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( InputData%NacelleLoads, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( InputData%TFinCMLoads, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InputData%TwrAddedMass)) then
       deallocate(InputData%TwrAddedMass)
    end if
@@ -11211,6 +11235,16 @@ subroutine ED_DestroyOutput(OutputData, ErrStat, ErrMsg)
       end do
       deallocate(OutputData%BladeLn2Mesh)
    end if
+   call MeshDestroy( OutputData%PlatformPtMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( OutputData%TowerLn2Mesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( OutputData%HubPtMotion14, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( OutputData%HubPtMotion, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( OutputData%BladeRootMotion14, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OutputData%BladeRootMotion)) then
       LB(1:1) = lbound(OutputData%BladeRootMotion)
       UB(1:1) = ubound(OutputData%BladeRootMotion)
@@ -11220,6 +11254,14 @@ subroutine ED_DestroyOutput(OutputData, ErrStat, ErrMsg)
       end do
       deallocate(OutputData%BladeRootMotion)
    end if
+   call MeshDestroy( OutputData%RotorFurlMotion14, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( OutputData%NacelleMotion, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( OutputData%TowerBaseMotion14, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( OutputData%TFinCMMotion, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OutputData%WriteOutput)) then
       deallocate(OutputData%WriteOutput)
    end if

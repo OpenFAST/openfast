@@ -2703,6 +2703,10 @@ subroutine DWM_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%ElementRad)) then
       deallocate(ParamData%ElementRad)
    end if
+   call DWM_Destroyread_turbine_position_data(ParamData%RTPD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyParam(ParamData%IfW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine DWM_PackParam(Buf, Indata)
@@ -2891,6 +2895,8 @@ subroutine DWM_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'DWM_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call InflowWind_DestroyOtherState(OtherStateData%IfW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine DWM_PackOtherState(Buf, Indata)
@@ -3011,12 +3017,38 @@ subroutine DWM_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'DWM_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call InflowWind_DestroyMisc(MiscData%IfW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%Nforce)) then
       deallocate(MiscData%Nforce)
    end if
    if (allocated(MiscData%blade_dr)) then
       deallocate(MiscData%blade_dr)
    end if
+   call DWM_Destroyturbine_average_velocity_data(MiscData%TAVD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DWM_DestroyCVSD(MiscData%CalVelScale_data, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DWM_DestroyMeanderData(MiscData%meandering_data, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DWM_DestroyWeiMethod(MiscData%weighting_method, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DWM_DestroyTIDownstream(MiscData%TI_downstream_data, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DWM_DestroyTurbKaimal(MiscData%Turbulence_KS, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DWM_DestroyShinozuka(MiscData%shinozuka_data, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DWM_Destroysmooth_out_wake_data(MiscData%SmoothOut, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DWM_DestroySWSV(MiscData%smooth_wake_shifted_velocity_data, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DWM_DestroyWake_Deficit_Data(MiscData%DWDD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DWM_Destroyturbine_blade(MiscData%DWM_tb, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DWM_Destroywake_meandered_center(MiscData%WMC, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine DWM_PackMisc(Buf, Indata)
@@ -3162,6 +3194,10 @@ subroutine DWM_DestroyInput(InputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'DWM_DestroyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call DWM_Destroyread_upwind_result(InputData%Upwind_result, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyInput(InputData%IfW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine DWM_PackInput(Buf, Indata)
@@ -3353,6 +3389,8 @@ subroutine DWM_DestroyOutput(OutputData, ErrStat, ErrMsg)
    if (allocated(OutputData%smoothed_velocity_array)) then
       deallocate(OutputData%smoothed_velocity_array)
    end if
+   call InflowWind_DestroyOutput(OutputData%IfW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine DWM_PackOutput(Buf, Indata)
@@ -3577,6 +3615,8 @@ subroutine DWM_DestroyContState(ContStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'DWM_DestroyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call InflowWind_DestroyContState(ContStateData%IfW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine DWM_PackContState(Buf, Indata)
@@ -3625,6 +3665,8 @@ subroutine DWM_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'DWM_DestroyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call InflowWind_DestroyDiscState(DiscStateData%IfW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine DWM_PackDiscState(Buf, Indata)
@@ -3673,6 +3715,8 @@ subroutine DWM_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'DWM_DestroyConstrState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call InflowWind_DestroyConstrState(ConstrStateData%IfW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine DWM_PackConstrState(Buf, Indata)
@@ -3721,6 +3765,8 @@ subroutine DWM_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'DWM_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call InflowWind_DestroyInitInput(InitInputData%IfW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine DWM_PackInitInput(Buf, Indata)
@@ -3769,6 +3815,8 @@ subroutine DWM_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'DWM_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call InflowWind_DestroyInitOutput(InitOutputData%IfW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine DWM_PackInitOutput(Buf, Indata)

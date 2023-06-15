@@ -334,6 +334,8 @@ subroutine SeaSt_WaveField_DestroySeaSt_WaveFieldType(SeaSt_WaveFieldTypeData, E
    if (allocated(SeaSt_WaveFieldTypeData%WaveElev2)) then
       deallocate(SeaSt_WaveFieldTypeData%WaveElev2)
    end if
+   call SeaSt_Interp_DestroyParam(SeaSt_WaveFieldTypeData%SeaSt_Interp_p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(SeaSt_WaveFieldTypeData%WaveElevC)) then
       deallocate(SeaSt_WaveFieldTypeData%WaveElevC)
    end if

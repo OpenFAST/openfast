@@ -225,6 +225,8 @@ subroutine IceFloe_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%WriteOutputUnt)) then
       deallocate(InitOutputData%WriteOutputUnt)
    end if
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine IceFloe_PackInitOutput(Buf, Indata)
@@ -749,6 +751,8 @@ subroutine IceFloe_DestroyInput(InputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'IceFloe_DestroyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( InputData%iceMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine IceFloe_PackInput(Buf, Indata)
@@ -808,6 +812,8 @@ subroutine IceFloe_DestroyOutput(OutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'IceFloe_DestroyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( OutputData%iceMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OutputData%WriteOutput)) then
       deallocate(OutputData%WriteOutput)
    end if

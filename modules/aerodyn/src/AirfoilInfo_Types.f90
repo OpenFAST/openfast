@@ -684,6 +684,8 @@ subroutine AFI_DestroyTable_Type(Table_TypeData, ErrStat, ErrMsg)
    if (allocated(Table_TypeData%SplineCoefs)) then
       deallocate(Table_TypeData%SplineCoefs)
    end if
+   call AFI_DestroyUA_BL_Type(Table_TypeData%UA_BL, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AFI_PackTable_Type(Buf, Indata)
@@ -870,6 +872,8 @@ subroutine AFI_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AFI_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AFI_PackInitOutput(Buf, Indata)

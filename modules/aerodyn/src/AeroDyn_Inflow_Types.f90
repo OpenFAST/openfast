@@ -226,6 +226,22 @@ subroutine ADI_DestroyInflowWindData(InflowWindDataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ADI_DestroyInflowWindData'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call InflowWind_DestroyContState(InflowWindDataData%x, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyDiscState(InflowWindDataData%xd, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyConstrState(InflowWindDataData%z, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyOtherState(InflowWindDataData%OtherSt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyParam(InflowWindDataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyMisc(InflowWindDataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyInput(InflowWindDataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyOutput(InflowWindDataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine ADI_PackInflowWindData(Buf, Indata)
@@ -304,6 +320,8 @@ subroutine ADI_DestroyIW_InputData(IW_InputDataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ADI_DestroyIW_InputData'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyFileInfoType(IW_InputDataData%PassedFileData, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine ADI_PackIW_InputData(Buf, Indata)
@@ -380,6 +398,10 @@ subroutine ADI_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ADI_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call AD_DestroyInitInput(InitInputData%AD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ADI_DestroyIW_InputData(InitInputData%IW_InitInp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine ADI_PackInitInput(Buf, Indata)
@@ -470,6 +492,8 @@ subroutine ADI_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ADI_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%WriteOutputHdr)) then
       deallocate(InitOutputData%WriteOutputHdr)
    end if
@@ -561,6 +585,8 @@ subroutine ADI_DestroyContState(ContStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ADI_DestroyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call AD_DestroyContState(ContStateData%AD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine ADI_PackContState(Buf, Indata)
@@ -605,6 +631,8 @@ subroutine ADI_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ADI_DestroyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call AD_DestroyDiscState(DiscStateData%AD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine ADI_PackDiscState(Buf, Indata)
@@ -649,6 +677,8 @@ subroutine ADI_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ADI_DestroyConstrState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call AD_DestroyConstrState(ConstrStateData%AD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine ADI_PackConstrState(Buf, Indata)
@@ -693,6 +723,8 @@ subroutine ADI_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ADI_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call AD_DestroyOtherState(OtherStateData%AD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine ADI_PackOtherState(Buf, Indata)
@@ -762,6 +794,10 @@ subroutine ADI_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ADI_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call AD_DestroyMisc(MiscData%AD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ADI_DestroyInflowWindData(MiscData%IW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%VTK_surfaces)) then
       LB(1:1) = lbound(MiscData%VTK_surfaces)
       UB(1:1) = ubound(MiscData%VTK_surfaces)
@@ -854,6 +890,8 @@ subroutine ADI_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ADI_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call AD_DestroyParam(ParamData%AD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine ADI_PackParam(Buf, Indata)
@@ -919,6 +957,8 @@ subroutine ADI_DestroyInput(InputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ADI_DestroyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call AD_DestroyInput(InputData%AD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine ADI_PackInput(Buf, Indata)
@@ -1007,6 +1047,8 @@ subroutine ADI_DestroyOutput(OutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ADI_DestroyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call AD_DestroyOutput(OutputData%AD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OutputData%HHVel)) then
       deallocate(OutputData%HHVel)
    end if
@@ -1273,6 +1315,10 @@ subroutine ADI_DestroyData(DataData, ErrStat, ErrMsg)
       end do
       deallocate(DataData%OtherState)
    end if
+   call ADI_DestroyParam(DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ADI_DestroyMisc(DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(DataData%u)) then
       LB(1:1) = lbound(DataData%u)
       UB(1:1) = ubound(DataData%u)
@@ -1282,6 +1328,8 @@ subroutine ADI_DestroyData(DataData, ErrStat, ErrMsg)
       end do
       deallocate(DataData%u)
    end if
+   call ADI_DestroyOutput(DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(DataData%inputTimes)) then
       deallocate(DataData%inputTimes)
    end if
@@ -1584,6 +1632,16 @@ subroutine ADI_DestroyRotFED(RotFEDData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ADI_DestroyRotFED'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( RotFEDData%PlatformPtMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( RotFEDData%TwrPtMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( RotFEDData%TwrPtMeshAD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( RotFEDData%NacelleMotion, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( RotFEDData%HubPtMotion, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotFEDData%BladeRootMotion)) then
       LB(1:1) = lbound(RotFEDData%BladeRootMotion)
       UB(1:1) = ubound(RotFEDData%BladeRootMotion)
@@ -1602,6 +1660,10 @@ subroutine ADI_DestroyRotFED(RotFEDData, ErrStat, ErrMsg)
       end do
       deallocate(RotFEDData%BladeLn2Mesh)
    end if
+   call NWTC_Library_DestroyMeshMapType(RotFEDData%ED_P_2_AD_P_T, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(RotFEDData%AD_P_2_AD_L_T, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotFEDData%AD_P_2_AD_L_B)) then
       LB(1:1) = lbound(RotFEDData%AD_P_2_AD_L_B)
       UB(1:1) = ubound(RotFEDData%AD_P_2_AD_L_B)
@@ -1611,6 +1673,8 @@ subroutine ADI_DestroyRotFED(RotFEDData, ErrStat, ErrMsg)
       end do
       deallocate(RotFEDData%AD_P_2_AD_L_B)
    end if
+   call NWTC_Library_DestroyMeshMapType(RotFEDData%ED_P_2_AD_P_TF, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotFEDData%ED_P_2_AD_P_R)) then
       LB(1:1) = lbound(RotFEDData%ED_P_2_AD_P_R)
       UB(1:1) = ubound(RotFEDData%ED_P_2_AD_P_R)
@@ -1620,6 +1684,10 @@ subroutine ADI_DestroyRotFED(RotFEDData, ErrStat, ErrMsg)
       end do
       deallocate(RotFEDData%ED_P_2_AD_P_R)
    end if
+   call NWTC_Library_DestroyMeshMapType(RotFEDData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(RotFEDData%ED_P_2_AD_P_N, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine ADI_PackRotFED(Buf, Indata)

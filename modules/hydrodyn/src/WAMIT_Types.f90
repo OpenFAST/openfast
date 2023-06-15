@@ -333,12 +333,16 @@ subroutine WAMIT_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    if (allocated(InitInputData%PtfmCOByt)) then
       deallocate(InitInputData%PtfmCOByt)
    end if
+   call Conv_Rdtn_DestroyInitInput(InitInputData%Conv_Rdtn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(InitInputData%WaveElev0)
    nullify(InitInputData%WaveElev1)
    nullify(InitInputData%WaveElevC0)
    nullify(InitInputData%WaveElevC)
    nullify(InitInputData%WaveTime)
    nullify(InitInputData%WaveDirArr)
+   call SeaSt_Interp_DestroyParam(InitInputData%SeaSt_Interp_p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine WAMIT_PackInitInput(Buf, Indata)
@@ -785,6 +789,12 @@ subroutine WAMIT_DestroyContState(ContStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'WAMIT_DestroyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call SS_Rad_DestroyContState(ContStateData%SS_Rdtn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SS_Exc_DestroyContState(ContStateData%SS_Exctn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Conv_Rdtn_DestroyContState(ContStateData%Conv_Rdtn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine WAMIT_PackContState(Buf, Indata)
@@ -854,6 +864,12 @@ subroutine WAMIT_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'WAMIT_DestroyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call Conv_Rdtn_DestroyDiscState(DiscStateData%Conv_Rdtn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SS_Rad_DestroyDiscState(DiscStateData%SS_Rdtn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SS_Exc_DestroyDiscState(DiscStateData%SS_Exctn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(DiscStateData%BdyPosFilt)) then
       deallocate(DiscStateData%BdyPosFilt)
    end if
@@ -933,6 +949,12 @@ subroutine WAMIT_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'WAMIT_DestroyConstrState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call Conv_Rdtn_DestroyConstrState(ConstrStateData%Conv_Rdtn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SS_Rad_DestroyConstrState(ConstrStateData%SS_Rdtn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SS_Exc_DestroyConstrState(ConstrStateData%SS_Exctn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine WAMIT_PackConstrState(Buf, Indata)
@@ -987,6 +1009,12 @@ subroutine WAMIT_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'WAMIT_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call SS_Rad_DestroyOtherState(OtherStateData%SS_Rdtn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SS_Exc_DestroyOtherState(OtherStateData%SS_Exctn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Conv_Rdtn_DestroyOtherState(OtherStateData%Conv_Rdtn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine WAMIT_PackOtherState(Buf, Indata)
@@ -1132,6 +1160,26 @@ subroutine WAMIT_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%F_PtfmAM)) then
       deallocate(MiscData%F_PtfmAM)
    end if
+   call SS_Rad_DestroyMisc(MiscData%SS_Rdtn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SS_Rad_DestroyInput(MiscData%SS_Rdtn_u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SS_Rad_DestroyOutput(MiscData%SS_Rdtn_y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SS_Exc_DestroyMisc(MiscData%SS_Exctn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SS_Exc_DestroyInput(MiscData%SS_Exctn_u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SS_Exc_DestroyOutput(MiscData%SS_Exctn_y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Conv_Rdtn_DestroyMisc(MiscData%Conv_Rdtn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Conv_Rdtn_DestroyInput(MiscData%Conv_Rdtn_u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Conv_Rdtn_DestroyOutput(MiscData%Conv_Rdtn_y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_Interp_DestroyMisc(MiscData%SeaSt_Interp_m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine WAMIT_PackMisc(Buf, Indata)
@@ -1380,6 +1428,14 @@ subroutine WAMIT_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%WaveExctnGrid)) then
       deallocate(ParamData%WaveExctnGrid)
    end if
+   call Conv_Rdtn_DestroyParam(ParamData%Conv_Rdtn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SS_Rad_DestroyParam(ParamData%SS_Rdtn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SS_Exc_DestroyParam(ParamData%SS_Exctn, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_Interp_DestroyParam(ParamData%SeaSt_Interp_p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine WAMIT_PackParam(Buf, Indata)
@@ -1555,6 +1611,8 @@ subroutine WAMIT_DestroyInput(InputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'WAMIT_DestroyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( InputData%Mesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine WAMIT_PackInput(Buf, Indata)
@@ -1599,6 +1657,8 @@ subroutine WAMIT_DestroyOutput(OutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'WAMIT_DestroyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( OutputData%Mesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine WAMIT_PackOutput(Buf, Indata)

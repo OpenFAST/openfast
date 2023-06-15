@@ -483,6 +483,8 @@ subroutine UA_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'UA_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Version, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%WriteOutputHdr)) then
       deallocate(InitOutputData%WriteOutputHdr)
    end if
@@ -2471,6 +2473,12 @@ subroutine UA_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    if (allocated(OtherStateData%n)) then
       deallocate(OtherStateData%n)
    end if
+   LB(1:1) = lbound(OtherStateData%xdot)
+   UB(1:1) = ubound(OtherStateData%xdot)
+   do i1 = LB(1), UB(1)
+      call UA_DestroyContState(OtherStateData%xdot(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
    if (allocated(OtherStateData%t_vortexBegin)) then
       deallocate(OtherStateData%t_vortexBegin)
    end if

@@ -821,6 +821,8 @@ subroutine SrvD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    if (allocated(InitInputData%BladeRootRefOrient)) then
       deallocate(InitInputData%BladeRootRefOrient)
    end if
+   call NWTC_Library_DestroyFileInfoType(InitInputData%PassedPrimaryInputData, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitInputData%CableControlRequestor)) then
       deallocate(InitInputData%CableControlRequestor)
    end if
@@ -1368,6 +1370,8 @@ subroutine SrvD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%WriteOutputUnt)) then
       deallocate(InitOutputData%WriteOutputUnt)
    end if
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%LinNames_y)) then
       deallocate(InitOutputData%LinNames_y)
    end if
@@ -5477,6 +5481,8 @@ subroutine SrvD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SrvD_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call SrvD_DestroyBladedDLLType(MiscData%dll_data, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%xd_BlPitchFilter)) then
       deallocate(MiscData%xd_BlPitchFilter)
    end if
@@ -5596,6 +5602,8 @@ subroutine SrvD_DestroyMisc(MiscData, ErrStat, ErrMsg)
       end do
       deallocate(MiscData%y_SStC)
    end if
+   call SrvD_DestroyModuleMapType(MiscData%SrvD_MeshMap, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine SrvD_PackMisc(Buf, Indata)
@@ -6502,6 +6510,8 @@ subroutine SrvD_DestroyParam(ParamData, ErrStat, ErrMsg)
       end do
       deallocate(ParamData%OutParam)
    end if
+   call FreeDynamicLib( ParamData%DLL_Trgt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%BStC)) then
       LB(1:1) = lbound(ParamData%BStC)
       UB(1:1) = ubound(ParamData%BStC)
@@ -7766,6 +7776,8 @@ subroutine SrvD_DestroyInput(InputData, ErrStat, ErrMsg)
    if (allocated(InputData%Lidar)) then
       deallocate(InputData%Lidar)
    end if
+   call MeshDestroy( InputData%PtfmMotionMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InputData%BStCMotionMesh)) then
       LB(1:2) = lbound(InputData%BStCMotionMesh)
       UB(1:2) = ubound(InputData%BStCMotionMesh)

@@ -413,6 +413,12 @@ subroutine Farm_DestroyParam(ParamData, ErrStat, ErrMsg)
       end do
       deallocate(ParamData%OutParam)
    end if
+   LB(1:1) = lbound(ParamData%Module_Ver)
+   UB(1:1) = ubound(ParamData%Module_Ver)
+   do i1 = LB(1), UB(1)
+      call NWTC_Library_DestroyProgDesc(ParamData%Module_Ver(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
 end subroutine
 
 subroutine Farm_PackParam(Buf, Indata)
@@ -1042,6 +1048,22 @@ subroutine Farm_DestroyFASTWrapper_Data(FASTWrapper_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Farm_DestroyFASTWrapper_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call FWrap_DestroyContState(FASTWrapper_DataData%x, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FWrap_DestroyDiscState(FASTWrapper_DataData%xd, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FWrap_DestroyConstrState(FASTWrapper_DataData%z, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FWrap_DestroyOtherState(FASTWrapper_DataData%OtherSt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FWrap_DestroyParam(FASTWrapper_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FWrap_DestroyInput(FASTWrapper_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FWrap_DestroyOutput(FASTWrapper_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FWrap_DestroyMisc(FASTWrapper_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine Farm_PackFASTWrapper_Data(Buf, Indata)
@@ -1125,6 +1147,22 @@ subroutine Farm_DestroyWakeDynamics_Data(WakeDynamics_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Farm_DestroyWakeDynamics_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call WD_DestroyContState(WakeDynamics_DataData%x, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call WD_DestroyDiscState(WakeDynamics_DataData%xd, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call WD_DestroyConstrState(WakeDynamics_DataData%z, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call WD_DestroyOtherState(WakeDynamics_DataData%OtherSt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call WD_DestroyParam(WakeDynamics_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call WD_DestroyInput(WakeDynamics_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call WD_DestroyOutput(WakeDynamics_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call WD_DestroyMisc(WakeDynamics_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine Farm_PackWakeDynamics_Data(Buf, Indata)
@@ -1208,6 +1246,22 @@ subroutine Farm_DestroyAWAE_Data(AWAE_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Farm_DestroyAWAE_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call AWAE_DestroyContState(AWAE_DataData%x, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AWAE_DestroyDiscState(AWAE_DataData%xd, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AWAE_DestroyConstrState(AWAE_DataData%z, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AWAE_DestroyOtherState(AWAE_DataData%OtherSt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AWAE_DestroyParam(AWAE_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AWAE_DestroyInput(AWAE_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AWAE_DestroyOutput(AWAE_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AWAE_DestroyMisc(AWAE_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine Farm_PackAWAE_Data(Buf, Indata)
@@ -1292,6 +1346,22 @@ subroutine Farm_DestroySC_Data(SC_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Farm_DestroySC_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call SC_DestroyContState(SC_DataData%x, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SC_DestroyDiscState(SC_DataData%xd, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SC_DestroyConstrState(SC_DataData%z, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SC_DestroyOtherState(SC_DataData%OtherState, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SC_DestroyParam(SC_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SC_DestroyInput(SC_DataData%uInputs, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SC_DestroyOutput(SC_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SC_DestroyMisc(SC_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine Farm_PackSC_Data(Buf, Indata)
@@ -1414,6 +1484,18 @@ subroutine Farm_DestroyMD_Data(MD_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Farm_DestroyMD_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MD_DestroyContState(MD_DataData%x, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MD_DestroyDiscState(MD_DataData%xd, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MD_DestroyConstrState(MD_DataData%z, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MD_DestroyOtherState(MD_DataData%OtherSt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MD_DestroyParam(MD_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MD_DestroyInput(MD_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MD_DataData%Input)) then
       LB(1:1) = lbound(MD_DataData%Input)
       UB(1:1) = ubound(MD_DataData%Input)
@@ -1426,6 +1508,10 @@ subroutine Farm_DestroyMD_Data(MD_DataData, ErrStat, ErrMsg)
    if (allocated(MD_DataData%InputTimes)) then
       deallocate(MD_DataData%InputTimes)
    end if
+   call MD_DestroyOutput(MD_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MD_DestroyMisc(MD_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine Farm_PackMD_Data(Buf, Indata)
@@ -1588,6 +1674,10 @@ subroutine Farm_DestroyAll_FastFarm_Data(All_FastFarm_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Farm_DestroyAll_FastFarm_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call Farm_DestroyParam(All_FastFarm_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Farm_DestroyMisc(All_FastFarm_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(All_FastFarm_DataData%FWrap)) then
       LB(1:1) = lbound(All_FastFarm_DataData%FWrap)
       UB(1:1) = ubound(All_FastFarm_DataData%FWrap)
@@ -1606,6 +1696,12 @@ subroutine Farm_DestroyAll_FastFarm_Data(All_FastFarm_DataData, ErrStat, ErrMsg)
       end do
       deallocate(All_FastFarm_DataData%WD)
    end if
+   call Farm_DestroyAWAE_Data(All_FastFarm_DataData%AWAE, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Farm_DestroySC_Data(All_FastFarm_DataData%SC, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Farm_DestroyMD_Data(All_FastFarm_DataData%MD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine Farm_PackAll_FastFarm_Data(Buf, Indata)

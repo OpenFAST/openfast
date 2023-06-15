@@ -1027,6 +1027,8 @@ subroutine AD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
       end do
       deallocate(InitInputData%rotors)
    end if
+   call NWTC_Library_DestroyFileInfoType(InitInputData%PassedPrimaryInputData, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackInitInput(Buf, Indata)
@@ -2238,6 +2240,8 @@ subroutine AD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
       end do
       deallocate(InitOutputData%rotors)
    end if
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackInitOutput(Buf, Indata)
@@ -2435,6 +2439,8 @@ subroutine AD_DestroyRotInputFile(RotInputFileData, ErrStat, ErrMsg)
    if (allocated(RotInputFileData%TwrCb)) then
       deallocate(RotInputFileData%TwrCb)
    end if
+   call AD_DestroyTFinInputFileType(RotInputFileData%TFin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackRotInputFile(Buf, Indata)
@@ -3072,6 +3078,10 @@ subroutine AD_DestroyRotContinuousStateType(RotContinuousStateTypeData, ErrStat,
    character(*), parameter        :: RoutineName = 'AD_DestroyRotContinuousStateType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call BEMT_DestroyContState(RotContinuousStateTypeData%BEMT, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AA_DestroyContState(RotContinuousStateTypeData%AA, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackRotContinuousStateType(Buf, Indata)
@@ -3149,6 +3159,8 @@ subroutine AD_DestroyContState(ContStateData, ErrStat, ErrMsg)
       end do
       deallocate(ContStateData%rotors)
    end if
+   call FVW_DestroyContState(ContStateData%FVW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackContState(Buf, Indata)
@@ -3226,6 +3238,10 @@ subroutine AD_DestroyRotDiscreteStateType(RotDiscreteStateTypeData, ErrStat, Err
    character(*), parameter        :: RoutineName = 'AD_DestroyRotDiscreteStateType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call BEMT_DestroyDiscState(RotDiscreteStateTypeData%BEMT, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AA_DestroyDiscState(RotDiscreteStateTypeData%AA, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackRotDiscreteStateType(Buf, Indata)
@@ -3303,6 +3319,8 @@ subroutine AD_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
       end do
       deallocate(DiscStateData%rotors)
    end if
+   call FVW_DestroyDiscState(DiscStateData%FVW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackDiscState(Buf, Indata)
@@ -3380,6 +3398,10 @@ subroutine AD_DestroyRotConstraintStateType(RotConstraintStateTypeData, ErrStat,
    character(*), parameter        :: RoutineName = 'AD_DestroyRotConstraintStateType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call BEMT_DestroyConstrState(RotConstraintStateTypeData%BEMT, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AA_DestroyConstrState(RotConstraintStateTypeData%AA, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackRotConstraintStateType(Buf, Indata)
@@ -3457,6 +3479,8 @@ subroutine AD_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
       end do
       deallocate(ConstrStateData%rotors)
    end if
+   call FVW_DestroyConstrState(ConstrStateData%FVW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackConstrState(Buf, Indata)
@@ -3534,6 +3558,10 @@ subroutine AD_DestroyRotOtherStateType(RotOtherStateTypeData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD_DestroyRotOtherStateType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call BEMT_DestroyOtherState(RotOtherStateTypeData%BEMT, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AA_DestroyOtherState(RotOtherStateTypeData%AA, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackRotOtherStateType(Buf, Indata)
@@ -3625,6 +3653,8 @@ subroutine AD_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
       end do
       deallocate(OtherStateData%rotors)
    end if
+   call FVW_DestroyOtherState(OtherStateData%FVW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OtherStateData%WakeLocationPoints)) then
       deallocate(OtherStateData%WakeLocationPoints)
    end if
@@ -4258,6 +4288,22 @@ subroutine AD_DestroyRotMiscVarType(RotMiscVarTypeData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD_DestroyRotMiscVarType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call BEMT_DestroyMisc(RotMiscVarTypeData%BEMT, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call BEMT_DestroyOutput(RotMiscVarTypeData%BEMT_y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   LB(1:1) = lbound(RotMiscVarTypeData%BEMT_u)
+   UB(1:1) = ubound(RotMiscVarTypeData%BEMT_u)
+   do i1 = LB(1), UB(1)
+      call BEMT_DestroyInput(RotMiscVarTypeData%BEMT_u(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call AA_DestroyMisc(RotMiscVarTypeData%AA, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AA_DestroyOutput(RotMiscVarTypeData%AA_y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AA_DestroyInput(RotMiscVarTypeData%AA_u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotMiscVarTypeData%DisturbedInflow)) then
       deallocate(RotMiscVarTypeData%DisturbedInflow)
    end if
@@ -4306,6 +4352,8 @@ subroutine AD_DestroyRotMiscVarType(RotMiscVarTypeData, ErrStat, ErrMsg)
    if (allocated(RotMiscVarTypeData%hub_theta_x_root)) then
       deallocate(RotMiscVarTypeData%hub_theta_x_root)
    end if
+   call MeshDestroy( RotMiscVarTypeData%HubLoad, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotMiscVarTypeData%B_L_2_H_P)) then
       LB(1:1) = lbound(RotMiscVarTypeData%B_L_2_H_P)
       UB(1:1) = ubound(RotMiscVarTypeData%B_L_2_H_P)
@@ -4393,6 +4441,12 @@ subroutine AD_DestroyRotMiscVarType(RotMiscVarTypeData, ErrStat, ErrMsg)
       end do
       deallocate(RotMiscVarTypeData%B_P_2_B_L)
    end if
+   call MeshDestroy( RotMiscVarTypeData%TwrBuoyLoadPoint, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( RotMiscVarTypeData%TwrBuoyLoad, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(RotMiscVarTypeData%T_P_2_T_L, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackRotMiscVarType(Buf, Indata)
@@ -5277,6 +5331,10 @@ subroutine AD_DestroyMisc(MiscData, ErrStat, ErrMsg)
       end do
       deallocate(MiscData%FVW_u)
    end if
+   call FVW_DestroyOutput(MiscData%FVW_y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FVW_DestroyMisc(MiscData%FVW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%WindPos)) then
       deallocate(MiscData%WindPos)
    end if
@@ -5839,6 +5897,10 @@ subroutine AD_DestroyRotParameterType(RotParameterTypeData, ErrStat, ErrMsg)
    if (allocated(RotParameterTypeData%TwrAxCent)) then
       deallocate(RotParameterTypeData%TwrAxCent)
    end if
+   call BEMT_DestroyParam(RotParameterTypeData%BEMT, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AA_DestroyParam(RotParameterTypeData%AA, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotParameterTypeData%Jac_u_indx)) then
       deallocate(RotParameterTypeData%Jac_u_indx)
    end if
@@ -5869,6 +5931,8 @@ subroutine AD_DestroyRotParameterType(RotParameterTypeData, ErrStat, ErrMsg)
    if (allocated(RotParameterTypeData%BldNd_BlOutNd)) then
       deallocate(RotParameterTypeData%BldNd_BlOutNd)
    end if
+   call AD_DestroyTFinParameterType(RotParameterTypeData%TFin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackRotParameterType(Buf, Indata)
@@ -6514,6 +6578,8 @@ subroutine AD_DestroyParam(ParamData, ErrStat, ErrMsg)
       end do
       deallocate(ParamData%AFI)
    end if
+   call FVW_DestroyParam(ParamData%FVW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(ParamData%FlowField)
 end subroutine
 
@@ -6755,6 +6821,12 @@ subroutine AD_DestroyRotInputType(RotInputTypeData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD_DestroyRotInputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( RotInputTypeData%NacelleMotion, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( RotInputTypeData%TowerMotion, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( RotInputTypeData%HubMotion, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotInputTypeData%BladeRootMotion)) then
       LB(1:1) = lbound(RotInputTypeData%BladeRootMotion)
       UB(1:1) = ubound(RotInputTypeData%BladeRootMotion)
@@ -6773,6 +6845,8 @@ subroutine AD_DestroyRotInputType(RotInputTypeData, ErrStat, ErrMsg)
       end do
       deallocate(RotInputTypeData%BladeMotion)
    end if
+   call MeshDestroy( RotInputTypeData%TFinMotion, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotInputTypeData%InflowOnBlade)) then
       deallocate(RotInputTypeData%InflowOnBlade)
    end if
@@ -7133,6 +7207,12 @@ subroutine AD_DestroyRotOutputType(RotOutputTypeData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD_DestroyRotOutputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( RotOutputTypeData%NacelleLoad, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( RotOutputTypeData%HubLoad, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( RotOutputTypeData%TowerLoad, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotOutputTypeData%BladeLoad)) then
       LB(1:1) = lbound(RotOutputTypeData%BladeLoad)
       UB(1:1) = ubound(RotOutputTypeData%BladeLoad)
@@ -7142,6 +7222,8 @@ subroutine AD_DestroyRotOutputType(RotOutputTypeData, ErrStat, ErrMsg)
       end do
       deallocate(RotOutputTypeData%BladeLoad)
    end if
+   call MeshDestroy( RotOutputTypeData%TFinLoad, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(RotOutputTypeData%WriteOutput)) then
       deallocate(RotOutputTypeData%WriteOutput)
    end if

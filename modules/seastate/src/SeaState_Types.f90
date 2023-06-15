@@ -354,6 +354,12 @@ subroutine SeaSt_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SeaSt_DestroyInputFile'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call Waves_DestroyInitInput(InputFileData%Waves, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Waves2_DestroyInitInput(InputFileData%Waves2, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Current_DestroyInitInput(InputFileData%Current, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InputFileData%WaveElevxi)) then
       deallocate(InputFileData%WaveElevxi)
    end if
@@ -617,6 +623,8 @@ subroutine SeaSt_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SeaSt_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyFileInfoType(InitInputData%PassedFileData, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitInputData%WaveElevXY)) then
       deallocate(InitInputData%WaveElevXY)
    end if
@@ -818,6 +826,8 @@ subroutine SeaSt_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%WriteOutputUnt)) then
       deallocate(InitOutputData%WriteOutputUnt)
    end if
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(InitOutputData%WaveElevC0)
    nullify(InitOutputData%WaveElevC)
    nullify(InitOutputData%WaveDirArr)
@@ -833,6 +843,8 @@ subroutine SeaSt_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    nullify(InitOutputData%WaveElev2)
    nullify(InitOutputData%WaveElev0)
    nullify(InitOutputData%WaveTime)
+   call SeaSt_Interp_DestroyParam(InitOutputData%SeaSt_Interp_p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%WaveElevSeries)) then
       deallocate(InitOutputData%WaveElevSeries)
    end if
@@ -1678,6 +1690,8 @@ subroutine SeaSt_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SeaSt_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call SeaSt_Interp_DestroyMisc(MiscData%SeaSt_Interp_m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine SeaSt_PackMisc(Buf, Indata)
@@ -1874,6 +1888,8 @@ subroutine SeaSt_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SeaSt_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call Waves2_DestroyParam(ParamData%Waves2, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(ParamData%WaveTime)
    if (allocated(ParamData%WaveElevxi)) then
       deallocate(ParamData%WaveElevxi)
@@ -1911,6 +1927,8 @@ subroutine SeaSt_DestroyParam(ParamData, ErrStat, ErrMsg)
       end do
       deallocate(ParamData%OutParam)
    end if
+   call SeaSt_Interp_DestroyParam(ParamData%SeaSt_Interp_p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (associated(ParamData%WaveField)) then
       call SeaSt_WaveField_DestroySeaSt_WaveFieldType(ParamData%WaveField, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

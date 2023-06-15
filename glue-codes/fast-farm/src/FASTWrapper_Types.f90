@@ -386,6 +386,8 @@ subroutine FWrap_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FWrap_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine FWrap_PackInitOutput(Buf, Indata)
@@ -665,6 +667,8 @@ subroutine FWrap_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FWrap_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call FAST_DestroyTurbineType(MiscData%Turbine, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%TempDisp)) then
       LB(1:1) = lbound(MiscData%TempDisp)
       UB(1:1) = ubound(MiscData%TempDisp)

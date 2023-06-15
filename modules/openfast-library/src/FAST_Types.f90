@@ -1552,6 +1552,10 @@ subroutine FAST_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call FAST_DestroyVTK_SurfaceType(ParamData%VTK_surface, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyVTK_ModeShapeType(ParamData%VTK_modes, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine FAST_PackParam(Buf, Indata)
@@ -6441,6 +6445,14 @@ subroutine FAST_DestroyLinFileType(LinFileTypeData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyLinFileType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(LinFileTypeData%Modules)
+   UB(1:1) = ubound(LinFileTypeData%Modules)
+   do i1 = LB(1), UB(1)
+      call FAST_DestroyModLinType(LinFileTypeData%Modules(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call FAST_DestroyLinType(LinFileTypeData%Glue, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine FAST_PackLinFileType(Buf, Indata)
@@ -6887,6 +6899,16 @@ subroutine FAST_DestroyOutputFileType(OutputFileTypeData, ErrStat, ErrMsg)
    if (allocated(OutputFileTypeData%ChannelUnits)) then
       deallocate(OutputFileTypeData%ChannelUnits)
    end if
+   LB(1:1) = lbound(OutputFileTypeData%Module_Ver)
+   UB(1:1) = ubound(OutputFileTypeData%Module_Ver)
+   do i1 = LB(1), UB(1)
+      call NWTC_Library_DestroyProgDesc(OutputFileTypeData%Module_Ver(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call FAST_DestroyLinFileType(OutputFileTypeData%Lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyLinStateSave(OutputFileTypeData%op, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine FAST_PackOutputFileType(Buf, Indata)
@@ -8436,6 +8458,38 @@ subroutine FAST_DestroyElastoDyn_Data(ElastoDyn_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyElastoDyn_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(ElastoDyn_DataData%x)
+   UB(1:1) = ubound(ElastoDyn_DataData%x)
+   do i1 = LB(1), UB(1)
+      call ED_DestroyContState(ElastoDyn_DataData%x(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(ElastoDyn_DataData%xd)
+   UB(1:1) = ubound(ElastoDyn_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call ED_DestroyDiscState(ElastoDyn_DataData%xd(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(ElastoDyn_DataData%z)
+   UB(1:1) = ubound(ElastoDyn_DataData%z)
+   do i1 = LB(1), UB(1)
+      call ED_DestroyConstrState(ElastoDyn_DataData%z(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(ElastoDyn_DataData%OtherSt)
+   UB(1:1) = ubound(ElastoDyn_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call ED_DestroyOtherState(ElastoDyn_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call ED_DestroyParam(ElastoDyn_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ED_DestroyInput(ElastoDyn_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ED_DestroyOutput(ElastoDyn_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ED_DestroyMisc(ElastoDyn_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ElastoDyn_DataData%Output)) then
       LB(1:1) = lbound(ElastoDyn_DataData%Output)
       UB(1:1) = ubound(ElastoDyn_DataData%Output)
@@ -8445,6 +8499,8 @@ subroutine FAST_DestroyElastoDyn_Data(ElastoDyn_DataData, ErrStat, ErrMsg)
       end do
       deallocate(ElastoDyn_DataData%Output)
    end if
+   call ED_DestroyOutput(ElastoDyn_DataData%y_interp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ElastoDyn_DataData%Input)) then
       LB(1:1) = lbound(ElastoDyn_DataData%Input)
       UB(1:1) = ubound(ElastoDyn_DataData%Input)
@@ -8716,6 +8772,38 @@ subroutine FAST_DestroyServoDyn_Data(ServoDyn_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyServoDyn_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(ServoDyn_DataData%x)
+   UB(1:1) = ubound(ServoDyn_DataData%x)
+   do i1 = LB(1), UB(1)
+      call SrvD_DestroyContState(ServoDyn_DataData%x(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(ServoDyn_DataData%xd)
+   UB(1:1) = ubound(ServoDyn_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call SrvD_DestroyDiscState(ServoDyn_DataData%xd(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(ServoDyn_DataData%z)
+   UB(1:1) = ubound(ServoDyn_DataData%z)
+   do i1 = LB(1), UB(1)
+      call SrvD_DestroyConstrState(ServoDyn_DataData%z(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(ServoDyn_DataData%OtherSt)
+   UB(1:1) = ubound(ServoDyn_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call SrvD_DestroyOtherState(ServoDyn_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call SrvD_DestroyParam(ServoDyn_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SrvD_DestroyInput(ServoDyn_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SrvD_DestroyOutput(ServoDyn_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SrvD_DestroyMisc(ServoDyn_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ServoDyn_DataData%Output)) then
       LB(1:1) = lbound(ServoDyn_DataData%Output)
       UB(1:1) = ubound(ServoDyn_DataData%Output)
@@ -8725,6 +8813,8 @@ subroutine FAST_DestroyServoDyn_Data(ServoDyn_DataData, ErrStat, ErrMsg)
       end do
       deallocate(ServoDyn_DataData%Output)
    end if
+   call SrvD_DestroyOutput(ServoDyn_DataData%y_interp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ServoDyn_DataData%Input)) then
       LB(1:1) = lbound(ServoDyn_DataData%Input)
       UB(1:1) = ubound(ServoDyn_DataData%Input)
@@ -8975,6 +9065,38 @@ subroutine FAST_DestroyAeroDyn14_Data(AeroDyn14_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyAeroDyn14_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(AeroDyn14_DataData%x)
+   UB(1:1) = ubound(AeroDyn14_DataData%x)
+   do i1 = LB(1), UB(1)
+      call AD14_DestroyContState(AeroDyn14_DataData%x(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(AeroDyn14_DataData%xd)
+   UB(1:1) = ubound(AeroDyn14_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call AD14_DestroyDiscState(AeroDyn14_DataData%xd(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(AeroDyn14_DataData%z)
+   UB(1:1) = ubound(AeroDyn14_DataData%z)
+   do i1 = LB(1), UB(1)
+      call AD14_DestroyConstrState(AeroDyn14_DataData%z(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(AeroDyn14_DataData%OtherSt)
+   UB(1:1) = ubound(AeroDyn14_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call AD14_DestroyOtherState(AeroDyn14_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call AD14_DestroyParam(AeroDyn14_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyInput(AeroDyn14_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyOutput(AeroDyn14_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyMisc(AeroDyn14_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(AeroDyn14_DataData%Input)) then
       LB(1:1) = lbound(AeroDyn14_DataData%Input)
       UB(1:1) = ubound(AeroDyn14_DataData%Input)
@@ -9220,6 +9342,38 @@ subroutine FAST_DestroyAeroDyn_Data(AeroDyn_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyAeroDyn_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(AeroDyn_DataData%x)
+   UB(1:1) = ubound(AeroDyn_DataData%x)
+   do i1 = LB(1), UB(1)
+      call AD_DestroyContState(AeroDyn_DataData%x(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(AeroDyn_DataData%xd)
+   UB(1:1) = ubound(AeroDyn_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call AD_DestroyDiscState(AeroDyn_DataData%xd(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(AeroDyn_DataData%z)
+   UB(1:1) = ubound(AeroDyn_DataData%z)
+   do i1 = LB(1), UB(1)
+      call AD_DestroyConstrState(AeroDyn_DataData%z(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(AeroDyn_DataData%OtherSt)
+   UB(1:1) = ubound(AeroDyn_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call AD_DestroyOtherState(AeroDyn_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call AD_DestroyParam(AeroDyn_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_DestroyInput(AeroDyn_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_DestroyOutput(AeroDyn_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_DestroyMisc(AeroDyn_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(AeroDyn_DataData%Output)) then
       LB(1:1) = lbound(AeroDyn_DataData%Output)
       UB(1:1) = ubound(AeroDyn_DataData%Output)
@@ -9229,6 +9383,8 @@ subroutine FAST_DestroyAeroDyn_Data(AeroDyn_DataData, ErrStat, ErrMsg)
       end do
       deallocate(AeroDyn_DataData%Output)
    end if
+   call AD_DestroyOutput(AeroDyn_DataData%y_interp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(AeroDyn_DataData%Input)) then
       LB(1:1) = lbound(AeroDyn_DataData%Input)
       UB(1:1) = ubound(AeroDyn_DataData%Input)
@@ -9500,6 +9656,38 @@ subroutine FAST_DestroyInflowWind_Data(InflowWind_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyInflowWind_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(InflowWind_DataData%x)
+   UB(1:1) = ubound(InflowWind_DataData%x)
+   do i1 = LB(1), UB(1)
+      call InflowWind_DestroyContState(InflowWind_DataData%x(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(InflowWind_DataData%xd)
+   UB(1:1) = ubound(InflowWind_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call InflowWind_DestroyDiscState(InflowWind_DataData%xd(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(InflowWind_DataData%z)
+   UB(1:1) = ubound(InflowWind_DataData%z)
+   do i1 = LB(1), UB(1)
+      call InflowWind_DestroyConstrState(InflowWind_DataData%z(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(InflowWind_DataData%OtherSt)
+   UB(1:1) = ubound(InflowWind_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call InflowWind_DestroyOtherState(InflowWind_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call InflowWind_DestroyParam(InflowWind_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyInput(InflowWind_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyOutput(InflowWind_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyMisc(InflowWind_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InflowWind_DataData%Output)) then
       LB(1:1) = lbound(InflowWind_DataData%Output)
       UB(1:1) = ubound(InflowWind_DataData%Output)
@@ -9509,6 +9697,8 @@ subroutine FAST_DestroyInflowWind_Data(InflowWind_DataData, ErrStat, ErrMsg)
       end do
       deallocate(InflowWind_DataData%Output)
    end if
+   call InflowWind_DestroyOutput(InflowWind_DataData%y_interp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InflowWind_DataData%Input)) then
       LB(1:1) = lbound(InflowWind_DataData%Input)
       UB(1:1) = ubound(InflowWind_DataData%Input)
@@ -9695,6 +9885,14 @@ subroutine FAST_DestroyOpenFOAM_Data(OpenFOAM_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyOpenFOAM_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call OpFM_DestroyInput(OpenFOAM_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call OpFM_DestroyOutput(OpenFOAM_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call OpFM_DestroyParam(OpenFOAM_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call OpFM_DestroyMisc(OpenFOAM_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine FAST_PackOpenFOAM_Data(Buf, Indata)
@@ -9751,6 +9949,12 @@ subroutine FAST_DestroySCDataEx_Data(SCDataEx_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroySCDataEx_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call SC_DX_DestroyInput(SCDataEx_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SC_DX_DestroyOutput(SCDataEx_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SC_DX_DestroyParam(SCDataEx_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine FAST_PackSCDataEx_Data(Buf, Indata)
@@ -9893,6 +10097,38 @@ subroutine FAST_DestroySubDyn_Data(SubDyn_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroySubDyn_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SubDyn_DataData%x)
+   UB(1:1) = ubound(SubDyn_DataData%x)
+   do i1 = LB(1), UB(1)
+      call SD_DestroyContState(SubDyn_DataData%x(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(SubDyn_DataData%xd)
+   UB(1:1) = ubound(SubDyn_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call SD_DestroyDiscState(SubDyn_DataData%xd(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(SubDyn_DataData%z)
+   UB(1:1) = ubound(SubDyn_DataData%z)
+   do i1 = LB(1), UB(1)
+      call SD_DestroyConstrState(SubDyn_DataData%z(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(SubDyn_DataData%OtherSt)
+   UB(1:1) = ubound(SubDyn_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call SD_DestroyOtherState(SubDyn_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call SD_DestroyParam(SubDyn_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SD_DestroyInput(SubDyn_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SD_DestroyOutput(SubDyn_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SD_DestroyMisc(SubDyn_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(SubDyn_DataData%Input)) then
       LB(1:1) = lbound(SubDyn_DataData%Input)
       UB(1:1) = ubound(SubDyn_DataData%Input)
@@ -9911,6 +10147,8 @@ subroutine FAST_DestroySubDyn_Data(SubDyn_DataData, ErrStat, ErrMsg)
       end do
       deallocate(SubDyn_DataData%Output)
    end if
+   call SD_DestroyOutput(SubDyn_DataData%y_interp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(SubDyn_DataData%InputTimes)) then
       deallocate(SubDyn_DataData%InputTimes)
    end if
@@ -10152,6 +10390,38 @@ subroutine FAST_DestroyExtPtfm_Data(ExtPtfm_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyExtPtfm_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(ExtPtfm_DataData%x)
+   UB(1:1) = ubound(ExtPtfm_DataData%x)
+   do i1 = LB(1), UB(1)
+      call ExtPtfm_DestroyContState(ExtPtfm_DataData%x(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(ExtPtfm_DataData%xd)
+   UB(1:1) = ubound(ExtPtfm_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call ExtPtfm_DestroyDiscState(ExtPtfm_DataData%xd(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(ExtPtfm_DataData%z)
+   UB(1:1) = ubound(ExtPtfm_DataData%z)
+   do i1 = LB(1), UB(1)
+      call ExtPtfm_DestroyConstrState(ExtPtfm_DataData%z(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(ExtPtfm_DataData%OtherSt)
+   UB(1:1) = ubound(ExtPtfm_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call ExtPtfm_DestroyOtherState(ExtPtfm_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call ExtPtfm_DestroyParam(ExtPtfm_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ExtPtfm_DestroyInput(ExtPtfm_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ExtPtfm_DestroyOutput(ExtPtfm_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ExtPtfm_DestroyMisc(ExtPtfm_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ExtPtfm_DataData%Input)) then
       LB(1:1) = lbound(ExtPtfm_DataData%Input)
       UB(1:1) = ubound(ExtPtfm_DataData%Input)
@@ -10397,6 +10667,38 @@ subroutine FAST_DestroySeaState_Data(SeaState_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroySeaState_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SeaState_DataData%x)
+   UB(1:1) = ubound(SeaState_DataData%x)
+   do i1 = LB(1), UB(1)
+      call SeaSt_DestroyContState(SeaState_DataData%x(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(SeaState_DataData%xd)
+   UB(1:1) = ubound(SeaState_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call SeaSt_DestroyDiscState(SeaState_DataData%xd(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(SeaState_DataData%z)
+   UB(1:1) = ubound(SeaState_DataData%z)
+   do i1 = LB(1), UB(1)
+      call SeaSt_DestroyConstrState(SeaState_DataData%z(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(SeaState_DataData%OtherSt)
+   UB(1:1) = ubound(SeaState_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call SeaSt_DestroyOtherState(SeaState_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call SeaSt_DestroyParam(SeaState_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyInput(SeaState_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyOutput(SeaState_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyMisc(SeaState_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(SeaState_DataData%Input)) then
       LB(1:1) = lbound(SeaState_DataData%Input)
       UB(1:1) = ubound(SeaState_DataData%Input)
@@ -10415,6 +10717,8 @@ subroutine FAST_DestroySeaState_Data(SeaState_DataData, ErrStat, ErrMsg)
       end do
       deallocate(SeaState_DataData%Output)
    end if
+   call SeaSt_DestroyOutput(SeaState_DataData%y_interp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(SeaState_DataData%InputTimes)) then
       deallocate(SeaState_DataData%InputTimes)
    end if
@@ -10677,6 +10981,38 @@ subroutine FAST_DestroyHydroDyn_Data(HydroDyn_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyHydroDyn_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(HydroDyn_DataData%x)
+   UB(1:1) = ubound(HydroDyn_DataData%x)
+   do i1 = LB(1), UB(1)
+      call HydroDyn_DestroyContState(HydroDyn_DataData%x(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(HydroDyn_DataData%xd)
+   UB(1:1) = ubound(HydroDyn_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call HydroDyn_DestroyDiscState(HydroDyn_DataData%xd(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(HydroDyn_DataData%z)
+   UB(1:1) = ubound(HydroDyn_DataData%z)
+   do i1 = LB(1), UB(1)
+      call HydroDyn_DestroyConstrState(HydroDyn_DataData%z(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(HydroDyn_DataData%OtherSt)
+   UB(1:1) = ubound(HydroDyn_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call HydroDyn_DestroyOtherState(HydroDyn_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call HydroDyn_DestroyParam(HydroDyn_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call HydroDyn_DestroyInput(HydroDyn_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call HydroDyn_DestroyOutput(HydroDyn_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call HydroDyn_DestroyMisc(HydroDyn_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(HydroDyn_DataData%Output)) then
       LB(1:1) = lbound(HydroDyn_DataData%Output)
       UB(1:1) = ubound(HydroDyn_DataData%Output)
@@ -10686,6 +11022,8 @@ subroutine FAST_DestroyHydroDyn_Data(HydroDyn_DataData, ErrStat, ErrMsg)
       end do
       deallocate(HydroDyn_DataData%Output)
    end if
+   call HydroDyn_DestroyOutput(HydroDyn_DataData%y_interp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(HydroDyn_DataData%Input)) then
       LB(1:1) = lbound(HydroDyn_DataData%Input)
       UB(1:1) = ubound(HydroDyn_DataData%Input)
@@ -10936,6 +11274,38 @@ subroutine FAST_DestroyIceFloe_Data(IceFloe_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyIceFloe_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(IceFloe_DataData%x)
+   UB(1:1) = ubound(IceFloe_DataData%x)
+   do i1 = LB(1), UB(1)
+      call IceFloe_DestroyContState(IceFloe_DataData%x(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(IceFloe_DataData%xd)
+   UB(1:1) = ubound(IceFloe_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call IceFloe_DestroyDiscState(IceFloe_DataData%xd(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(IceFloe_DataData%z)
+   UB(1:1) = ubound(IceFloe_DataData%z)
+   do i1 = LB(1), UB(1)
+      call IceFloe_DestroyConstrState(IceFloe_DataData%z(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(IceFloe_DataData%OtherSt)
+   UB(1:1) = ubound(IceFloe_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call IceFloe_DestroyOtherState(IceFloe_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call IceFloe_DestroyParam(IceFloe_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IceFloe_DestroyInput(IceFloe_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IceFloe_DestroyOutput(IceFloe_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IceFloe_DestroyMisc(IceFloe_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(IceFloe_DataData%Input)) then
       LB(1:1) = lbound(IceFloe_DataData%Input)
       UB(1:1) = ubound(IceFloe_DataData%Input)
@@ -11177,6 +11547,34 @@ subroutine FAST_DestroyMAP_Data(MAP_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyMAP_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(MAP_DataData%x)
+   UB(1:1) = ubound(MAP_DataData%x)
+   do i1 = LB(1), UB(1)
+      call MAP_DestroyContState(MAP_DataData%x(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(MAP_DataData%xd)
+   UB(1:1) = ubound(MAP_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call MAP_DestroyDiscState(MAP_DataData%xd(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(MAP_DataData%z)
+   UB(1:1) = ubound(MAP_DataData%z)
+   do i1 = LB(1), UB(1)
+      call MAP_DestroyConstrState(MAP_DataData%z(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call MAP_DestroyOtherState(MAP_DataData%OtherSt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MAP_DestroyParam(MAP_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MAP_DestroyInput(MAP_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MAP_DestroyOutput(MAP_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MAP_DestroyOtherState(MAP_DataData%OtherSt_old, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MAP_DataData%Output)) then
       LB(1:1) = lbound(MAP_DataData%Output)
       UB(1:1) = ubound(MAP_DataData%Output)
@@ -11186,6 +11584,8 @@ subroutine FAST_DestroyMAP_Data(MAP_DataData, ErrStat, ErrMsg)
       end do
       deallocate(MAP_DataData%Output)
    end if
+   call MAP_DestroyOutput(MAP_DataData%y_interp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MAP_DataData%Input)) then
       LB(1:1) = lbound(MAP_DataData%Input)
       UB(1:1) = ubound(MAP_DataData%Input)
@@ -11428,6 +11828,38 @@ subroutine FAST_DestroyFEAMooring_Data(FEAMooring_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyFEAMooring_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(FEAMooring_DataData%x)
+   UB(1:1) = ubound(FEAMooring_DataData%x)
+   do i1 = LB(1), UB(1)
+      call FEAM_DestroyContState(FEAMooring_DataData%x(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(FEAMooring_DataData%xd)
+   UB(1:1) = ubound(FEAMooring_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call FEAM_DestroyDiscState(FEAMooring_DataData%xd(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(FEAMooring_DataData%z)
+   UB(1:1) = ubound(FEAMooring_DataData%z)
+   do i1 = LB(1), UB(1)
+      call FEAM_DestroyConstrState(FEAMooring_DataData%z(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(FEAMooring_DataData%OtherSt)
+   UB(1:1) = ubound(FEAMooring_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call FEAM_DestroyOtherState(FEAMooring_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call FEAM_DestroyParam(FEAMooring_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FEAM_DestroyInput(FEAMooring_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FEAM_DestroyOutput(FEAMooring_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FEAM_DestroyMisc(FEAMooring_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(FEAMooring_DataData%Input)) then
       LB(1:1) = lbound(FEAMooring_DataData%Input)
       UB(1:1) = ubound(FEAMooring_DataData%Input)
@@ -11673,6 +12105,38 @@ subroutine FAST_DestroyMoorDyn_Data(MoorDyn_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyMoorDyn_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(MoorDyn_DataData%x)
+   UB(1:1) = ubound(MoorDyn_DataData%x)
+   do i1 = LB(1), UB(1)
+      call MD_DestroyContState(MoorDyn_DataData%x(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(MoorDyn_DataData%xd)
+   UB(1:1) = ubound(MoorDyn_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call MD_DestroyDiscState(MoorDyn_DataData%xd(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(MoorDyn_DataData%z)
+   UB(1:1) = ubound(MoorDyn_DataData%z)
+   do i1 = LB(1), UB(1)
+      call MD_DestroyConstrState(MoorDyn_DataData%z(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(MoorDyn_DataData%OtherSt)
+   UB(1:1) = ubound(MoorDyn_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call MD_DestroyOtherState(MoorDyn_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call MD_DestroyParam(MoorDyn_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MD_DestroyInput(MoorDyn_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MD_DestroyOutput(MoorDyn_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MD_DestroyMisc(MoorDyn_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MoorDyn_DataData%Output)) then
       LB(1:1) = lbound(MoorDyn_DataData%Output)
       UB(1:1) = ubound(MoorDyn_DataData%Output)
@@ -11682,6 +12146,8 @@ subroutine FAST_DestroyMoorDyn_Data(MoorDyn_DataData, ErrStat, ErrMsg)
       end do
       deallocate(MoorDyn_DataData%Output)
    end if
+   call MD_DestroyOutput(MoorDyn_DataData%y_interp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MoorDyn_DataData%Input)) then
       LB(1:1) = lbound(MoorDyn_DataData%Input)
       UB(1:1) = ubound(MoorDyn_DataData%Input)
@@ -11932,6 +12398,38 @@ subroutine FAST_DestroyOrcaFlex_Data(OrcaFlex_DataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyOrcaFlex_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(OrcaFlex_DataData%x)
+   UB(1:1) = ubound(OrcaFlex_DataData%x)
+   do i1 = LB(1), UB(1)
+      call Orca_DestroyContState(OrcaFlex_DataData%x(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(OrcaFlex_DataData%xd)
+   UB(1:1) = ubound(OrcaFlex_DataData%xd)
+   do i1 = LB(1), UB(1)
+      call Orca_DestroyDiscState(OrcaFlex_DataData%xd(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(OrcaFlex_DataData%z)
+   UB(1:1) = ubound(OrcaFlex_DataData%z)
+   do i1 = LB(1), UB(1)
+      call Orca_DestroyConstrState(OrcaFlex_DataData%z(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(OrcaFlex_DataData%OtherSt)
+   UB(1:1) = ubound(OrcaFlex_DataData%OtherSt)
+   do i1 = LB(1), UB(1)
+      call Orca_DestroyOtherState(OrcaFlex_DataData%OtherSt(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   call Orca_DestroyParam(OrcaFlex_DataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Orca_DestroyInput(OrcaFlex_DataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Orca_DestroyOutput(OrcaFlex_DataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Orca_DestroyMisc(OrcaFlex_DataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OrcaFlex_DataData%Input)) then
       LB(1:1) = lbound(OrcaFlex_DataData%Input)
       UB(1:1) = ubound(OrcaFlex_DataData%Input)
@@ -12677,6 +13175,24 @@ subroutine FAST_DestroyModuleMapType(ModuleMapTypeData, ErrStat, ErrMsg)
       end do
       deallocate(ModuleMapTypeData%ED_P_2_BD_P_Hub)
    end if
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SubStructure_2_HD_W_P, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%HD_W_P_2_SubStructure, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SubStructure_2_HD_M_P, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%HD_M_P_2_SubStructure, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%Structure_2_Mooring, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%Mooring_2_Structure, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_SD_TP, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SD_TP_2_ED_P, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ModuleMapTypeData%ED_P_2_NStC_P_N)) then
       LB(1:1) = lbound(ModuleMapTypeData%ED_P_2_NStC_P_N)
       UB(1:1) = ubound(ModuleMapTypeData%ED_P_2_NStC_P_N)
@@ -12775,6 +13291,8 @@ subroutine FAST_DestroyModuleMapType(ModuleMapTypeData, ErrStat, ErrMsg)
       end do
       deallocate(ModuleMapTypeData%SubStructure_2_SStC_P_P)
    end if
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_SrvD_P_P, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ModuleMapTypeData%BDED_L_2_AD_L_B)) then
       LB(1:1) = lbound(ModuleMapTypeData%BDED_L_2_AD_L_B)
       UB(1:1) = ubound(ModuleMapTypeData%BDED_L_2_AD_L_B)
@@ -12802,6 +13320,18 @@ subroutine FAST_DestroyModuleMapType(ModuleMapTypeData, ErrStat, ErrMsg)
       end do
       deallocate(ModuleMapTypeData%BD_L_2_BD_L)
    end if
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_AD_P_N, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%AD_P_2_ED_P_N, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_AD_P_TF, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%AD_P_2_ED_P_TF, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_L_2_AD_L_T, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%AD_L_2_ED_P_T, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ModuleMapTypeData%ED_P_2_AD_P_R)) then
       LB(1:1) = lbound(ModuleMapTypeData%ED_P_2_AD_P_R)
       UB(1:1) = ubound(ModuleMapTypeData%ED_P_2_AD_P_R)
@@ -12811,6 +13341,14 @@ subroutine FAST_DestroyModuleMapType(ModuleMapTypeData, ErrStat, ErrMsg)
       end do
       deallocate(ModuleMapTypeData%ED_P_2_AD_P_R)
    end if
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%ED_P_2_AD_P_H, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%AD_P_2_ED_P_H, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%IceF_P_2_SD_P, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(ModuleMapTypeData%SDy3_P_2_IceF_P, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ModuleMapTypeData%IceD_P_2_SD_P)) then
       LB(1:1) = lbound(ModuleMapTypeData%IceD_P_2_SD_P)
       UB(1:1) = ubound(ModuleMapTypeData%IceD_P_2_SD_P)
@@ -12838,6 +13376,20 @@ subroutine FAST_DestroyModuleMapType(ModuleMapTypeData, ErrStat, ErrMsg)
    if (allocated(ModuleMapTypeData%Jac_u_indx)) then
       deallocate(ModuleMapTypeData%Jac_u_indx)
    end if
+   call MeshDestroy( ModuleMapTypeData%u_ED_NacelleLoads, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( ModuleMapTypeData%SubstructureLoads_Tmp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( ModuleMapTypeData%SubstructureLoads_Tmp2, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( ModuleMapTypeData%PlatformLoads_Tmp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( ModuleMapTypeData%PlatformLoads_Tmp2, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( ModuleMapTypeData%SubstructureLoads_Tmp_Farm, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( ModuleMapTypeData%u_ED_TowerPtloads, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ModuleMapTypeData%u_ED_BladePtLoads)) then
       LB(1:1) = lbound(ModuleMapTypeData%u_ED_BladePtLoads)
       UB(1:1) = ubound(ModuleMapTypeData%u_ED_BladePtLoads)
@@ -12847,6 +13399,16 @@ subroutine FAST_DestroyModuleMapType(ModuleMapTypeData, ErrStat, ErrMsg)
       end do
       deallocate(ModuleMapTypeData%u_ED_BladePtLoads)
    end if
+   call MeshDestroy( ModuleMapTypeData%u_SD_TPMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( ModuleMapTypeData%u_HD_M_Mesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( ModuleMapTypeData%u_HD_W_Mesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( ModuleMapTypeData%u_ED_HubPtLoad, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( ModuleMapTypeData%u_ED_HubPtLoad_2, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ModuleMapTypeData%u_BD_RootMotion)) then
       LB(1:1) = lbound(ModuleMapTypeData%u_BD_RootMotion)
       UB(1:1) = ubound(ModuleMapTypeData%u_BD_RootMotion)
@@ -12874,6 +13436,10 @@ subroutine FAST_DestroyModuleMapType(ModuleMapTypeData, ErrStat, ErrMsg)
       end do
       deallocate(ModuleMapTypeData%u_BD_Distrload)
    end if
+   call MeshDestroy( ModuleMapTypeData%u_Orca_PtfmMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( ModuleMapTypeData%u_ExtPtfm_PtfmMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine FAST_PackModuleMapType(Buf, Indata)
@@ -13702,6 +14268,10 @@ subroutine FAST_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call FAST_DestroyExternInputType(MiscData%ExternInput, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyMiscLinType(MiscData%Lin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine FAST_PackMisc(Buf, Indata)
@@ -13893,6 +14463,12 @@ subroutine FAST_DestroyInitData(InitDataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyInitData'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call ED_DestroyInitInput(InitDataData%InData_ED, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ED_DestroyInitOutput(InitDataData%OutData_ED, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call BD_DestroyInitInput(InitDataData%InData_BD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitDataData%OutData_BD)) then
       LB(1:1) = lbound(InitDataData%OutData_BD)
       UB(1:1) = ubound(InitDataData%OutData_BD)
@@ -13902,6 +14478,66 @@ subroutine FAST_DestroyInitData(InitDataData, ErrStat, ErrMsg)
       end do
       deallocate(InitDataData%OutData_BD)
    end if
+   call SrvD_DestroyInitInput(InitDataData%InData_SrvD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SrvD_DestroyInitOutput(InitDataData%OutData_SrvD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyInitInput(InitDataData%InData_AD14, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD14_DestroyInitOutput(InitDataData%OutData_AD14, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_DestroyInitInput(InitDataData%InData_AD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_DestroyInitOutput(InitDataData%OutData_AD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyInitInput(InitDataData%InData_IfW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyInitOutput(InitDataData%OutData_IfW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call OpFM_DestroyInitInput(InitDataData%InData_OpFM, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call OpFM_DestroyInitOutput(InitDataData%OutData_OpFM, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyInitInput(InitDataData%InData_SeaSt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_DestroyInitOutput(InitDataData%OutData_SeaSt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call HydroDyn_DestroyInitInput(InitDataData%InData_HD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call HydroDyn_DestroyInitOutput(InitDataData%OutData_HD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SD_DestroyInitInput(InitDataData%InData_SD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SD_DestroyInitOutput(InitDataData%OutData_SD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ExtPtfm_DestroyInitInput(InitDataData%InData_ExtPtfm, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ExtPtfm_DestroyInitOutput(InitDataData%OutData_ExtPtfm, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MAP_DestroyInitInput(InitDataData%InData_MAP, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MAP_DestroyInitOutput(InitDataData%OutData_MAP, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FEAM_DestroyInitInput(InitDataData%InData_FEAM, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FEAM_DestroyInitOutput(InitDataData%OutData_FEAM, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MD_DestroyInitInput(InitDataData%InData_MD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MD_DestroyInitOutput(InitDataData%OutData_MD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Orca_DestroyInitInput(InitDataData%InData_Orca, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Orca_DestroyInitOutput(InitDataData%OutData_Orca, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IceFloe_DestroyInitInput(InitDataData%InData_IceF, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IceFloe_DestroyInitOutput(InitDataData%OutData_IceF, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IceD_DestroyInitInput(InitDataData%InData_IceD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IceD_DestroyInitOutput(InitDataData%OutData_IceD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine FAST_PackInitData(Buf, Indata)
@@ -14321,6 +14957,50 @@ subroutine FAST_DestroyTurbineType(TurbineTypeData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FAST_DestroyTurbineType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call FAST_DestroyParam(TurbineTypeData%p_FAST, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyOutputFileType(TurbineTypeData%y_FAST, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyMisc(TurbineTypeData%m_FAST, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyModuleMapType(TurbineTypeData%MeshMapData, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyElastoDyn_Data(TurbineTypeData%ED, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyBeamDyn_Data(TurbineTypeData%BD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyServoDyn_Data(TurbineTypeData%SrvD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyAeroDyn_Data(TurbineTypeData%AD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyAeroDyn14_Data(TurbineTypeData%AD14, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyInflowWind_Data(TurbineTypeData%IfW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyOpenFOAM_Data(TurbineTypeData%OpFM, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroySCDataEx_Data(TurbineTypeData%SC_DX, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroySeaState_Data(TurbineTypeData%SeaSt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyHydroDyn_Data(TurbineTypeData%HD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroySubDyn_Data(TurbineTypeData%SD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyMAP_Data(TurbineTypeData%MAP, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyFEAMooring_Data(TurbineTypeData%FEAM, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyMoorDyn_Data(TurbineTypeData%MD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyOrcaFlex_Data(TurbineTypeData%Orca, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyIceFloe_Data(TurbineTypeData%IceF, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyIceDyn_Data(TurbineTypeData%IceD, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FAST_DestroyExtPtfm_Data(TurbineTypeData%ExtPtfm, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine FAST_PackTurbineType(Buf, Indata)

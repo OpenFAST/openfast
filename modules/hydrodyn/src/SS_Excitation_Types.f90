@@ -166,6 +166,8 @@ subroutine SS_Exc_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    nullify(InitInputData%WaveElev0)
    nullify(InitInputData%WaveElev1)
    nullify(InitInputData%WaveTime)
+   call SeaSt_Interp_DestroyParam(InitInputData%SeaSt_Interp_p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine SS_Exc_PackInitInput(Buf, Indata)
@@ -621,6 +623,12 @@ subroutine SS_Exc_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SS_Exc_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(OtherStateData%xdot)
+   UB(1:1) = ubound(OtherStateData%xdot)
+   do i1 = LB(1), UB(1)
+      call SS_Exc_DestroyContState(OtherStateData%xdot(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
 end subroutine
 
 subroutine SS_Exc_PackOtherState(Buf, Indata)
@@ -681,6 +689,8 @@ subroutine SS_Exc_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SS_Exc_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call SeaSt_Interp_DestroyMisc(MiscData%SeaSt_Interp_m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine SS_Exc_PackMisc(Buf, Indata)
@@ -809,6 +819,8 @@ subroutine SS_Exc_DestroyParam(ParamData, ErrStat, ErrMsg)
    nullify(ParamData%WaveElev0)
    nullify(ParamData%WaveElev1)
    nullify(ParamData%WaveTime)
+   call SeaSt_Interp_DestroyParam(ParamData%SeaSt_Interp_p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine SS_Exc_PackParam(Buf, Indata)

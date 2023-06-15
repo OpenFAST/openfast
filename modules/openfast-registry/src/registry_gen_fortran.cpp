@@ -492,10 +492,6 @@ void gen_destroy(std::ostream &w, const Module &mod, const DataType::Derived &dd
         auto var = ddt_data + "%" + field.name;
         std::string alloc_assoc = field.is_pointer ? "associated" : "allocated";
 
-        // If field is not allocatable, skip it
-        if (!field.is_allocatable)
-            continue;
-
         // w << indent << "! " << field.name;
 
         // If non-target pointer field, just nullify pointer

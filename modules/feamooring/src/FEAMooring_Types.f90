@@ -1281,6 +1281,8 @@ subroutine FEAM_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%WriteOutputUnt)) then
       deallocate(InitOutputData%WriteOutputUnt)
    end if
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%LAnchxi)) then
       deallocate(InitOutputData%LAnchxi)
    end if
@@ -3275,6 +3277,10 @@ subroutine FEAM_DestroyInput(InputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'FEAM_DestroyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( InputData%HydroForceLineMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( InputData%PtFairleadDisplacement, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine FEAM_PackInput(Buf, Indata)
@@ -3342,6 +3348,10 @@ subroutine FEAM_DestroyOutput(OutputData, ErrStat, ErrMsg)
    if (allocated(OutputData%WriteOutput)) then
       deallocate(OutputData%WriteOutput)
    end if
+   call MeshDestroy( OutputData%PtFairleadLoad, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( OutputData%LineMeshPosition, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine FEAM_PackOutput(Buf, Indata)

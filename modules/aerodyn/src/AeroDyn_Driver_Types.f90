@@ -460,6 +460,8 @@ subroutine AD_Dvr_DestroyDvr_Outputs(Dvr_OutputsData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD_Dvr_DestroyDvr_Outputs'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyProgDesc(Dvr_OutputsData%AD_ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(Dvr_OutputsData%unOutFile)) then
       deallocate(Dvr_OutputsData%unOutFile)
    end if
@@ -1185,6 +1187,12 @@ subroutine AD_Dvr_DestroyWTData(WTDataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD_Dvr_DestroyWTData'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyMeshMapType(WTDataData%map2twrPt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(WTDataData%map2nacPt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(WTDataData%map2hubPt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(WTDataData%map2BldPt)) then
       LB(1:1) = lbound(WTDataData%map2BldPt)
       UB(1:1) = ubound(WTDataData%map2BldPt)
@@ -1203,6 +1211,12 @@ subroutine AD_Dvr_DestroyWTData(WTDataData, ErrStat, ErrMsg)
       end do
       deallocate(WTDataData%bld)
    end if
+   call AD_Dvr_DestroyHubData(WTDataData%hub, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_Dvr_DestroyNacData(WTDataData%nac, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AD_Dvr_DestroyTwrData(WTDataData%twr, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(WTDataData%motion)) then
       deallocate(WTDataData%motion)
    end if
@@ -1515,6 +1529,10 @@ subroutine AD_Dvr_DestroyDvr_SimData(Dvr_SimDataData, ErrStat, ErrMsg)
    if (allocated(Dvr_SimDataData%timeSeries)) then
       deallocate(Dvr_SimDataData%timeSeries)
    end if
+   call AD_Dvr_DestroyDvr_Outputs(Dvr_SimDataData%out, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ADI_DestroyIW_InputData(Dvr_SimDataData%IW_InitInp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_Dvr_PackDvr_SimData(Buf, Indata)
@@ -1697,6 +1715,12 @@ subroutine AD_Dvr_DestroyAllData(AllDataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AD_Dvr_DestroyAllData'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call AD_Dvr_DestroyDvr_SimData(AllDataData%dvr, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ADI_DestroyData(AllDataData%ADI, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call ADI_DestroyFED_Data(AllDataData%FED, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_Dvr_PackAllData(Buf, Indata)

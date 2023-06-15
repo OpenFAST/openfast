@@ -420,6 +420,8 @@ subroutine WD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'WD_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call WD_DestroyInputFileType(InitInputData%InputFileData, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine WD_PackInitInput(Buf, Indata)
@@ -505,6 +507,8 @@ subroutine WD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%WriteOutputUnt)) then
       deallocate(InitOutputData%WriteOutputUnt)
    end if
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine WD_PackInitOutput(Buf, Indata)

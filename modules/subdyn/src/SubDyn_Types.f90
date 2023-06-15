@@ -1120,6 +1120,8 @@ subroutine SD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    if (allocated(InitInputData%SoilStiffness)) then
       deallocate(InitInputData%SoilStiffness)
    end if
+   call MeshDestroy( InitInputData%SoilMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine SD_PackInitInput(Buf, Indata)
@@ -1368,6 +1370,8 @@ subroutine SD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%WriteOutputUnt)) then
       deallocate(InitOutputData%WriteOutputUnt)
    end if
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%LinNames_y)) then
       deallocate(InitOutputData%LinNames_y)
    end if
@@ -6417,6 +6421,10 @@ subroutine SD_DestroyInput(InputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SD_DestroyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( InputData%TPMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( InputData%LMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InputData%CableDeltaL)) then
       deallocate(InputData%CableDeltaL)
    end if
@@ -6509,6 +6517,12 @@ subroutine SD_DestroyOutput(OutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SD_DestroyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( OutputData%Y1Mesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( OutputData%Y2Mesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( OutputData%Y3Mesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OutputData%WriteOutput)) then
       deallocate(OutputData%WriteOutput)
    end if

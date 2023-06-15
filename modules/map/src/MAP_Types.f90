@@ -290,6 +290,8 @@ subroutine MAP_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'MAP_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MAP_Fortran_DestroyLin_InitInputType(InitInputData%LinInitInp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine MAP_PackInitInput(Buf, Indata)
@@ -470,6 +472,10 @@ subroutine MAP_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%writeOutputUnt)) then
       deallocate(InitOutputData%writeOutputUnt)
    end if
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MAP_Fortran_DestroyLin_InitOutputType(InitOutputData%LinInitOut, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine MAP_PackInitOutput(Buf, Indata)
@@ -2608,6 +2614,8 @@ subroutine MAP_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'MAP_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MAP_Fortran_DestroyLin_ParamType(ParamData%LinParams, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine MAP_PackParam(Buf, Indata)
@@ -2799,6 +2807,8 @@ subroutine MAP_DestroyInput(InputData, ErrStat, ErrMsg)
       InputData%C_obj%z = c_null_ptr
       InputData%C_obj%z_Len = 0
    end if
+   call MeshDestroy( InputData%PtFairDisplacement, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine MAP_PackInput(Buf, Indata)
@@ -3166,6 +3176,8 @@ subroutine MAP_DestroyOutput(OutputData, ErrStat, ErrMsg)
       OutputData%C_obj%wrtOutput = c_null_ptr
       OutputData%C_obj%wrtOutput_Len = 0
    end if
+   call MeshDestroy( OutputData%ptFairleadLoad, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine MAP_PackOutput(Buf, Indata)

@@ -2714,6 +2714,12 @@ subroutine FVW_DestroyWng_MiscVarType(Wng_MiscVarTypeData, ErrStat, ErrMsg)
       end do
       deallocate(Wng_MiscVarTypeData%u_UA)
    end if
+   call UA_DestroyMisc(Wng_MiscVarTypeData%m_UA, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call UA_DestroyOutput(Wng_MiscVarTypeData%y_UA, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call UA_DestroyParam(Wng_MiscVarTypeData%p_UA, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(Wng_MiscVarTypeData%Vind_LL)) then
       deallocate(Wng_MiscVarTypeData%Vind_LL)
    end if
@@ -3692,6 +3698,16 @@ subroutine FVW_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%r_wind)) then
       deallocate(MiscData%r_wind)
    end if
+   call FVW_DestroyContState(MiscData%dxdt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FVW_DestroyContState(MiscData%x1, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FVW_DestroyContState(MiscData%x2, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FVW_DestroyT_Sgmt(MiscData%Sgmt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call FVW_DestroyT_Part(MiscData%Part, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%CPs)) then
       deallocate(MiscData%CPs)
    end if

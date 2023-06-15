@@ -236,6 +236,8 @@ subroutine DBEMT_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'DBEMT_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine DBEMT_PackInitOutput(Buf, Indata)
@@ -553,6 +555,12 @@ subroutine DBEMT_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    if (allocated(OtherStateData%n)) then
       deallocate(OtherStateData%n)
    end if
+   LB(1:1) = lbound(OtherStateData%xdot)
+   UB(1:1) = ubound(OtherStateData%xdot)
+   do i1 = LB(1), UB(1)
+      call DBEMT_DestroyContState(OtherStateData%xdot(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
 end subroutine
 
 subroutine DBEMT_PackOtherState(Buf, Indata)

@@ -1580,6 +1580,16 @@ subroutine IfW_FlowField_DestroyFlowFieldType(FlowFieldTypeData, ErrStat, ErrMsg
    character(*), parameter        :: RoutineName = 'IfW_FlowField_DestroyFlowFieldType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call IfW_FlowField_DestroyUniformFieldType(FlowFieldTypeData%Uniform, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IfW_FlowField_DestroyGrid3DFieldType(FlowFieldTypeData%Grid3D, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IfW_FlowField_DestroyGrid4DFieldType(FlowFieldTypeData%Grid4D, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IfW_FlowField_DestroyPointsFieldType(FlowFieldTypeData%Points, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call IfW_FlowField_DestroyUserFieldType(FlowFieldTypeData%User, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine IfW_FlowField_PackFlowFieldType(Buf, Indata)

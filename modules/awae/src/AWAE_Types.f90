@@ -966,6 +966,8 @@ subroutine AWAE_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AWAE_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call AWAE_DestroyInputFileType(InitInputData%InputFileData, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AWAE_PackInitInput(Buf, Indata)
@@ -1137,6 +1139,8 @@ subroutine AWAE_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'AWAE_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%X0_high)) then
       deallocate(InitOutputData%X0_high)
    end if
@@ -2093,6 +2097,14 @@ subroutine AWAE_DestroyMisc(MiscData, ErrStat, ErrMsg)
       end do
       deallocate(MiscData%IfW)
    end if
+   call InflowWind_DestroyInput(MiscData%u_IfW_Low, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyInput(MiscData%u_IfW_High, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyOutput(MiscData%y_IfW_Low, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyOutput(MiscData%y_IfW_High, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AWAE_PackMisc(Buf, Indata)

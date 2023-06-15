@@ -262,6 +262,8 @@ subroutine Waves_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    if (allocated(InitInputData%CurrVyi)) then
       deallocate(InitInputData%CurrVyi)
    end if
+   call NWTC_Library_DestroyNWTC_RandomNumber_ParameterType(InitInputData%RNG, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine Waves_PackInitInput(Buf, Indata)

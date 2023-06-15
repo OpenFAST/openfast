@@ -605,6 +605,8 @@ subroutine BD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%WriteOutputUnt)) then
       deallocate(InitOutputData%WriteOutputUnt)
    end if
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%kp_coordinate)) then
       deallocate(InitOutputData%kp_coordinate)
    end if
@@ -1160,6 +1162,8 @@ subroutine BD_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
    if (allocated(InputFileData%kp_member)) then
       deallocate(InputFileData%kp_member)
    end if
+   call BD_DestroyBladeInputData(InputFileData%InpBl, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InputFileData%kp_coordinate)) then
       deallocate(InputFileData%kp_coordinate)
    end if
@@ -2348,6 +2352,8 @@ subroutine BD_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%OutNd2NdElem)) then
       deallocate(ParamData%OutNd2NdElem)
    end if
+   call BD_DestroyqpParam(ParamData%qp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%BldNd_OutParam)) then
       LB(1:1) = lbound(ParamData%BldNd_OutParam)
       UB(1:1) = ubound(ParamData%BldNd_OutParam)
@@ -3138,6 +3144,14 @@ subroutine BD_DestroyInput(InputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'BD_DestroyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( InputData%RootMotion, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( InputData%PointLoad, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( InputData%DistrLoad, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( InputData%HubMotion, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine BD_PackInput(Buf, Indata)
@@ -3208,6 +3222,10 @@ subroutine BD_DestroyOutput(OutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'BD_DestroyOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( OutputData%ReactionForce, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( OutputData%BldMotion, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OutputData%WriteOutput)) then
       deallocate(OutputData%WriteOutput)
    end if
@@ -4881,6 +4899,16 @@ subroutine BD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'BD_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( MiscData%u_DistrLoad_at_y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( MiscData%y_BldMotion_at_u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(MiscData%Map_u_DistrLoad_to_y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(MiscData%Map_y_BldMotion_to_u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call BD_DestroyEqMotionQP(MiscData%qp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%lin_A)) then
       deallocate(MiscData%lin_A)
    end if
@@ -4971,6 +4999,10 @@ subroutine BD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%LP_indx)) then
       deallocate(MiscData%LP_indx)
    end if
+   call BD_DestroyInput(MiscData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call BD_DestroyInput(MiscData%u2, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine BD_PackMisc(Buf, Indata)

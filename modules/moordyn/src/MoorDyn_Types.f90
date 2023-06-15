@@ -598,6 +598,8 @@ subroutine MD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    if (allocated(InitInputData%TurbineRefPos)) then
       deallocate(InitInputData%TurbineRefPos)
    end if
+   call NWTC_Library_DestroyFileInfoType(InitInputData%PassedPrimaryInputData, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitInputData%OutList)) then
       deallocate(InitInputData%OutList)
    end if
@@ -3567,6 +3569,8 @@ subroutine MD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%writeOutputUnt)) then
       deallocate(InitOutputData%writeOutputUnt)
    end if
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%CableCChanRqst)) then
       deallocate(InitOutputData%CableCChanRqst)
    end if
@@ -4468,6 +4472,8 @@ subroutine MD_DestroyMisc(MiscData, ErrStat, ErrMsg)
       end do
       deallocate(MiscData%RodTypeList)
    end if
+   call MD_DestroyBody(MiscData%GroundBody, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%BodyList)) then
       LB(1:1) = lbound(MiscData%BodyList)
       UB(1:1) = ubound(MiscData%BodyList)
@@ -4555,6 +4561,10 @@ subroutine MD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%BodyStateIsN)) then
       deallocate(MiscData%BodyStateIsN)
    end if
+   call MD_DestroyContState(MiscData%xTemp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MD_DestroyContState(MiscData%xdTemp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%MDWrOutput)) then
       deallocate(MiscData%MDWrOutput)
    end if

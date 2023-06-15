@@ -713,6 +713,8 @@ subroutine BEMT_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'BEMT_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Version, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine BEMT_PackInitOutput(Buf, Indata)
@@ -808,6 +810,10 @@ subroutine BEMT_DestroyContState(ContStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'BEMT_DestroyContState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call UA_DestroyContState(ContStateData%UA, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DBEMT_DestroyContState(ContStateData%DBEMT, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine BEMT_PackContState(Buf, Indata)
@@ -857,6 +863,8 @@ subroutine BEMT_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'BEMT_DestroyDiscState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call UA_DestroyDiscState(DiscStateData%UA, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine BEMT_PackDiscState(Buf, Indata)
@@ -1007,9 +1015,19 @@ subroutine BEMT_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'BEMT_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call UA_DestroyOtherState(OtherStateData%UA, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DBEMT_DestroyOtherState(OtherStateData%DBEMT, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OtherStateData%ValidPhi)) then
       deallocate(OtherStateData%ValidPhi)
    end if
+   LB(1:1) = lbound(OtherStateData%xdot)
+   UB(1:1) = ubound(OtherStateData%xdot)
+   do i1 = LB(1), UB(1)
+      call BEMT_DestroyContState(OtherStateData%xdot(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
 end subroutine
 
 subroutine BEMT_PackOtherState(Buf, Indata)
@@ -1260,6 +1278,12 @@ subroutine BEMT_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'BEMT_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call UA_DestroyMisc(MiscData%UA, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DBEMT_DestroyMisc(MiscData%DBEMT, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call UA_DestroyOutput(MiscData%y_UA, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%u_UA)) then
       LB(1:3) = lbound(MiscData%u_UA)
       UB(1:3) = ubound(MiscData%u_UA)
@@ -1273,6 +1297,18 @@ subroutine BEMT_DestroyMisc(MiscData, ErrStat, ErrMsg)
       end do
       deallocate(MiscData%u_UA)
    end if
+   LB(1:1) = lbound(MiscData%u_DBEMT)
+   UB(1:1) = ubound(MiscData%u_DBEMT)
+   do i1 = LB(1), UB(1)
+      call DBEMT_DestroyInput(MiscData%u_DBEMT(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   LB(1:1) = lbound(MiscData%u_SkewWake)
+   UB(1:1) = ubound(MiscData%u_SkewWake)
+   do i1 = LB(1), UB(1)
+      call BEMT_DestroySkewWake_InputType(MiscData%u_SkewWake(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
    if (allocated(MiscData%TnInd_op)) then
       deallocate(MiscData%TnInd_op)
    end if
@@ -1709,6 +1745,10 @@ subroutine BEMT_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%zHub)) then
       deallocate(ParamData%zHub)
    end if
+   call UA_DestroyParam(ParamData%UA, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call DBEMT_DestroyParam(ParamData%DBEMT, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%FixedInductions)) then
       deallocate(ParamData%FixedInductions)
    end if

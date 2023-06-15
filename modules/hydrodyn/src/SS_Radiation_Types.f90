@@ -517,6 +517,12 @@ subroutine SS_Rad_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SS_Rad_DestroyOtherState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(OtherStateData%xdot)
+   UB(1:1) = ubound(OtherStateData%xdot)
+   do i1 = LB(1), UB(1)
+      call SS_Rad_DestroyContState(OtherStateData%xdot(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
 end subroutine
 
 subroutine SS_Rad_PackOtherState(Buf, Indata)

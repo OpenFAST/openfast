@@ -726,6 +726,8 @@ subroutine AA_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%WriteOutputUntNodes)) then
       deallocate(InitOutputData%WriteOutputUntNodes)
    end if
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AA_PackInitOutput(Buf, Indata)

@@ -326,6 +326,8 @@ subroutine InflowWind_IO_DestroyUniform_InitInputType(Uniform_InitInputTypeData,
    character(*), parameter        :: RoutineName = 'InflowWind_IO_DestroyUniform_InitInputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyFileInfoType(Uniform_InitInputTypeData%PassedFileData, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine InflowWind_IO_PackUniform_InitInputType(Buf, Indata)
@@ -616,6 +618,8 @@ subroutine InflowWind_IO_DestroyHAWC_InitInputType(HAWC_InitInputTypeData, ErrSt
    character(*), parameter        :: RoutineName = 'InflowWind_IO_DestroyHAWC_InitInputType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call InflowWind_IO_DestroyGrid3D_InitInputType(HAWC_InitInputTypeData%G3D, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine InflowWind_IO_PackHAWC_InitInputType(Buf, Indata)

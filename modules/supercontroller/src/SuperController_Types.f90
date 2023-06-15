@@ -303,6 +303,8 @@ subroutine SC_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SC_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine SC_PackInitOutput(Buf, Indata)
@@ -476,6 +478,8 @@ subroutine SC_DestroyParam(ParamData, ErrStat, ErrMsg)
       ParamData%C_obj%ParamTurbine = c_null_ptr
       ParamData%C_obj%ParamTurbine_Len = 0
    end if
+   call FreeDynamicLib( ParamData%DLL_Trgt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine SC_PackParam(Buf, Indata)

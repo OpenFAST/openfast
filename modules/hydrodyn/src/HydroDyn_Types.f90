@@ -508,6 +508,8 @@ subroutine HydroDyn_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
    if (allocated(InputFileData%AddBQuad)) then
       deallocate(InputFileData%AddBQuad)
    end if
+   call SeaSt_DestroyInitInput(InputFileData%SeaState, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InputFileData%PotFile)) then
       deallocate(InputFileData%PotFile)
    end if
@@ -535,6 +537,12 @@ subroutine HydroDyn_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
    if (allocated(InputFileData%PtfmCOByt)) then
       deallocate(InputFileData%PtfmCOByt)
    end if
+   call WAMIT_DestroyInitInput(InputFileData%WAMIT, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call WAMIT2_DestroyInitInput(InputFileData%WAMIT2, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Morison_DestroyInitInput(InputFileData%Morison, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InputFileData%UserOutputs)) then
       deallocate(InputFileData%UserOutputs)
    end if
@@ -987,6 +995,8 @@ subroutine HydroDyn_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'HydroDyn_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyFileInfoType(InitInputData%PassedFileData, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitInputData%WaveElev0)) then
       deallocate(InitInputData%WaveElev0)
    end if
@@ -1301,12 +1311,16 @@ subroutine HydroDyn_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'HydroDyn_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call Morison_DestroyInitOutput(InitOutputData%Morison, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%WriteOutputHdr)) then
       deallocate(InitOutputData%WriteOutputHdr)
    end if
    if (allocated(InitOutputData%WriteOutputUnt)) then
       deallocate(InitOutputData%WriteOutputUnt)
    end if
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%LinNames_y)) then
       deallocate(InitOutputData%LinNames_y)
    end if
@@ -1510,6 +1524,12 @@ subroutine HydroDyn_DestroyHD_ModuleMapType(HD_ModuleMapTypeData, ErrStat, ErrMs
    character(*), parameter        :: RoutineName = 'HydroDyn_DestroyHD_ModuleMapType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyMeshMapType(HD_ModuleMapTypeData%uW_P_2_PRP_P, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(HD_ModuleMapTypeData%W_P_2_PRP_P, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(HD_ModuleMapTypeData%M_P_2_PRP_P, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine HydroDyn_PackHD_ModuleMapType(Buf, Indata)
@@ -1589,6 +1609,8 @@ subroutine HydroDyn_DestroyContState(ContStateData, ErrStat, ErrMsg)
       end do
       deallocate(ContStateData%WAMIT)
    end if
+   call Morison_DestroyContState(ContStateData%Morison, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine HydroDyn_PackContState(Buf, Indata)
@@ -1694,6 +1716,8 @@ subroutine HydroDyn_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
       end do
       deallocate(DiscStateData%WAMIT)
    end if
+   call Morison_DestroyDiscState(DiscStateData%Morison, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine HydroDyn_PackDiscState(Buf, Indata)
@@ -1771,6 +1795,10 @@ subroutine HydroDyn_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'HydroDyn_DestroyConstrState'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call WAMIT_DestroyConstrState(ConstrStateData%WAMIT, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Morison_DestroyConstrState(ConstrStateData%Morison, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine HydroDyn_PackConstrState(Buf, Indata)
@@ -1848,6 +1876,8 @@ subroutine HydroDyn_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
       end do
       deallocate(OtherStateData%WAMIT)
    end if
+   call Morison_DestroyOtherState(OtherStateData%Morison, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine HydroDyn_PackOtherState(Buf, Indata)
@@ -2018,6 +2048,10 @@ subroutine HydroDyn_DestroyMisc(MiscData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'HydroDyn_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call MeshDestroy( MiscData%AllHdroOrigin, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call HydroDyn_DestroyHD_ModuleMapType(MiscData%HD_MeshMap, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%F_PtfmAdd)) then
       deallocate(MiscData%F_PtfmAdd)
    end if
@@ -2042,6 +2076,8 @@ subroutine HydroDyn_DestroyMisc(MiscData, ErrStat, ErrMsg)
       end do
       deallocate(MiscData%WAMIT2)
    end if
+   call Morison_DestroyMisc(MiscData%Morison, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%u_WAMIT)) then
       LB(1:1) = lbound(MiscData%u_WAMIT)
       UB(1:1) = ubound(MiscData%u_WAMIT)
@@ -2424,6 +2460,8 @@ subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
       end do
       deallocate(ParamData%WAMIT2)
    end if
+   call Morison_DestroyParam(ParamData%Morison, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(ParamData%WaveTime)
    if (allocated(ParamData%AddF0)) then
       deallocate(ParamData%AddF0)
@@ -2817,6 +2855,12 @@ subroutine HydroDyn_DestroyInput(InputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'HydroDyn_DestroyInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call Morison_DestroyInput(InputData%Morison, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( InputData%WAMITMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( InputData%PRPMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine HydroDyn_PackInput(Buf, Indata)
@@ -2940,6 +2984,10 @@ subroutine HydroDyn_DestroyOutput(OutputData, ErrStat, ErrMsg)
       end do
       deallocate(OutputData%WAMIT2)
    end if
+   call Morison_DestroyOutput(OutputData%Morison, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( OutputData%WAMITMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OutputData%WriteOutput)) then
       deallocate(OutputData%WriteOutput)
    end if
