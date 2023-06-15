@@ -163,8 +163,6 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
          end if
       end if
       DstInitInputData%WaveKinGridxi = SrcInitInputData%WaveKinGridxi
-   else if (allocated(DstInitInputData%WaveKinGridxi)) then
-      deallocate(DstInitInputData%WaveKinGridxi)
    end if
    if (allocated(SrcInitInputData%WaveKinGridyi)) then
       LB(1:1) = lbound(SrcInitInputData%WaveKinGridyi)
@@ -177,8 +175,6 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
          end if
       end if
       DstInitInputData%WaveKinGridyi = SrcInitInputData%WaveKinGridyi
-   else if (allocated(DstInitInputData%WaveKinGridyi)) then
-      deallocate(DstInitInputData%WaveKinGridyi)
    end if
    if (allocated(SrcInitInputData%WaveKinGridzi)) then
       LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi)
@@ -191,8 +187,6 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
          end if
       end if
       DstInitInputData%WaveKinGridzi = SrcInitInputData%WaveKinGridzi
-   else if (allocated(DstInitInputData%WaveKinGridzi)) then
-      deallocate(DstInitInputData%WaveKinGridzi)
    end if
    if (allocated(SrcInitInputData%CurrVxi)) then
       LB(1:1) = lbound(SrcInitInputData%CurrVxi)
@@ -205,8 +199,6 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
          end if
       end if
       DstInitInputData%CurrVxi = SrcInitInputData%CurrVxi
-   else if (allocated(DstInitInputData%CurrVxi)) then
-      deallocate(DstInitInputData%CurrVxi)
    end if
    if (allocated(SrcInitInputData%CurrVyi)) then
       LB(1:1) = lbound(SrcInitInputData%CurrVyi)
@@ -219,8 +211,6 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
          end if
       end if
       DstInitInputData%CurrVyi = SrcInitInputData%CurrVyi
-   else if (allocated(DstInitInputData%CurrVyi)) then
-      deallocate(DstInitInputData%CurrVyi)
    end if
    DstInitInputData%PCurrVxiPz0 = SrcInitInputData%PCurrVxiPz0
    DstInitInputData%PCurrVyiPz0 = SrcInitInputData%PCurrVyiPz0
@@ -524,8 +514,6 @@ subroutine Waves_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
          end if
       end if
       DstInitOutputData%WaveElevC = SrcInitOutputData%WaveElevC
-   else if (allocated(DstInitOutputData%WaveElevC)) then
-      deallocate(DstInitOutputData%WaveElevC)
    end if
    DstInitOutputData%WaveDirArr => SrcInitOutputData%WaveDirArr
    DstInitOutputData%WaveDirMin = SrcInitOutputData%WaveDirMin
@@ -552,8 +540,6 @@ subroutine Waves_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
          end if
       end if
       DstInitOutputData%WaveElev0 = SrcInitOutputData%WaveElev0
-   else if (allocated(DstInitOutputData%WaveElev0)) then
-      deallocate(DstInitOutputData%WaveElev0)
    end if
    DstInitOutputData%WaveTime => SrcInitOutputData%WaveTime
    DstInitOutputData%WaveTMax = SrcInitOutputData%WaveTMax

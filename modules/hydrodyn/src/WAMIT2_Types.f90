@@ -130,8 +130,6 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
          end if
       end if
       DstInitInputData%PtfmRefxt = SrcInitInputData%PtfmRefxt
-   else if (allocated(DstInitInputData%PtfmRefxt)) then
-      deallocate(DstInitInputData%PtfmRefxt)
    end if
    if (allocated(SrcInitInputData%PtfmRefyt)) then
       LB(1:1) = lbound(SrcInitInputData%PtfmRefyt)
@@ -144,8 +142,6 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
          end if
       end if
       DstInitInputData%PtfmRefyt = SrcInitInputData%PtfmRefyt
-   else if (allocated(DstInitInputData%PtfmRefyt)) then
-      deallocate(DstInitInputData%PtfmRefyt)
    end if
    if (allocated(SrcInitInputData%PtfmRefzt)) then
       LB(1:1) = lbound(SrcInitInputData%PtfmRefzt)
@@ -158,8 +154,6 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
          end if
       end if
       DstInitInputData%PtfmRefzt = SrcInitInputData%PtfmRefzt
-   else if (allocated(DstInitInputData%PtfmRefzt)) then
-      deallocate(DstInitInputData%PtfmRefzt)
    end if
    if (allocated(SrcInitInputData%PtfmRefztRot)) then
       LB(1:1) = lbound(SrcInitInputData%PtfmRefztRot)
@@ -172,8 +166,6 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
          end if
       end if
       DstInitInputData%PtfmRefztRot = SrcInitInputData%PtfmRefztRot
-   else if (allocated(DstInitInputData%PtfmRefztRot)) then
-      deallocate(DstInitInputData%PtfmRefztRot)
    end if
    DstInitInputData%WAMITULEN = SrcInitInputData%WAMITULEN
    DstInitInputData%RhoXg = SrcInitInputData%RhoXg
@@ -505,8 +497,6 @@ subroutine WAMIT2_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%LastIndWave = SrcMiscData%LastIndWave
-   else if (allocated(DstMiscData%LastIndWave)) then
-      deallocate(DstMiscData%LastIndWave)
    end if
    if (allocated(SrcMiscData%F_Waves2)) then
       LB(1:1) = lbound(SrcMiscData%F_Waves2)
@@ -519,8 +509,6 @@ subroutine WAMIT2_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%F_Waves2 = SrcMiscData%F_Waves2
-   else if (allocated(DstMiscData%F_Waves2)) then
-      deallocate(DstMiscData%F_Waves2)
    end if
 end subroutine
 
@@ -620,8 +608,6 @@ subroutine WAMIT2_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstParamData%WaveExctn2 = SrcParamData%WaveExctn2
-   else if (allocated(DstParamData%WaveExctn2)) then
-      deallocate(DstParamData%WaveExctn2)
    end if
    DstParamData%MnDriftDims = SrcParamData%MnDriftDims
    DstParamData%NewmanAppDims = SrcParamData%NewmanAppDims

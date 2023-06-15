@@ -628,8 +628,6 @@ subroutine AD_CopyVTK_BLSurfaceType(SrcVTK_BLSurfaceTypeData, DstVTK_BLSurfaceTy
          end if
       end if
       DstVTK_BLSurfaceTypeData%AirfoilCoords = SrcVTK_BLSurfaceTypeData%AirfoilCoords
-   else if (allocated(DstVTK_BLSurfaceTypeData%AirfoilCoords)) then
-      deallocate(DstVTK_BLSurfaceTypeData%AirfoilCoords)
    end if
 end subroutine
 
@@ -710,8 +708,6 @@ subroutine AD_CopyVTK_RotSurfaceType(SrcVTK_RotSurfaceTypeData, DstVTK_RotSurfac
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstVTK_RotSurfaceTypeData%BladeShape)) then
-      deallocate(DstVTK_RotSurfaceTypeData%BladeShape)
    end if
    if (allocated(SrcVTK_RotSurfaceTypeData%TowerRad)) then
       LB(1:1) = lbound(SrcVTK_RotSurfaceTypeData%TowerRad)
@@ -724,8 +720,6 @@ subroutine AD_CopyVTK_RotSurfaceType(SrcVTK_RotSurfaceTypeData, DstVTK_RotSurfac
          end if
       end if
       DstVTK_RotSurfaceTypeData%TowerRad = SrcVTK_RotSurfaceTypeData%TowerRad
-   else if (allocated(DstVTK_RotSurfaceTypeData%TowerRad)) then
-      deallocate(DstVTK_RotSurfaceTypeData%TowerRad)
    end if
 end subroutine
 
@@ -843,8 +837,6 @@ subroutine AD_CopyRotInitInputType(SrcRotInitInputTypeData, DstRotInitInputTypeD
          end if
       end if
       DstRotInitInputTypeData%BladeRootPosition = SrcRotInitInputTypeData%BladeRootPosition
-   else if (allocated(DstRotInitInputTypeData%BladeRootPosition)) then
-      deallocate(DstRotInitInputTypeData%BladeRootPosition)
    end if
    if (allocated(SrcRotInitInputTypeData%BladeRootOrientation)) then
       LB(1:3) = lbound(SrcRotInitInputTypeData%BladeRootOrientation)
@@ -857,8 +849,6 @@ subroutine AD_CopyRotInitInputType(SrcRotInitInputTypeData, DstRotInitInputTypeD
          end if
       end if
       DstRotInitInputTypeData%BladeRootOrientation = SrcRotInitInputTypeData%BladeRootOrientation
-   else if (allocated(DstRotInitInputTypeData%BladeRootOrientation)) then
-      deallocate(DstRotInitInputTypeData%BladeRootOrientation)
    end if
    DstRotInitInputTypeData%NacellePosition = SrcRotInitInputTypeData%NacellePosition
    DstRotInitInputTypeData%NacelleOrientation = SrcRotInitInputTypeData%NacelleOrientation
@@ -986,8 +976,6 @@ subroutine AD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitInputData%rotors)) then
-      deallocate(DstInitInputData%rotors)
    end if
    DstInitInputData%InputFile = SrcInitInputData%InputFile
    DstInitInputData%RootName = SrcInitInputData%RootName
@@ -1140,8 +1128,6 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
          end if
       end if
       DstBladePropsTypeData%BlSpn = SrcBladePropsTypeData%BlSpn
-   else if (allocated(DstBladePropsTypeData%BlSpn)) then
-      deallocate(DstBladePropsTypeData%BlSpn)
    end if
    if (allocated(SrcBladePropsTypeData%BlCrvAC)) then
       LB(1:1) = lbound(SrcBladePropsTypeData%BlCrvAC)
@@ -1154,8 +1140,6 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
          end if
       end if
       DstBladePropsTypeData%BlCrvAC = SrcBladePropsTypeData%BlCrvAC
-   else if (allocated(DstBladePropsTypeData%BlCrvAC)) then
-      deallocate(DstBladePropsTypeData%BlCrvAC)
    end if
    if (allocated(SrcBladePropsTypeData%BlSwpAC)) then
       LB(1:1) = lbound(SrcBladePropsTypeData%BlSwpAC)
@@ -1168,8 +1152,6 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
          end if
       end if
       DstBladePropsTypeData%BlSwpAC = SrcBladePropsTypeData%BlSwpAC
-   else if (allocated(DstBladePropsTypeData%BlSwpAC)) then
-      deallocate(DstBladePropsTypeData%BlSwpAC)
    end if
    if (allocated(SrcBladePropsTypeData%BlCrvAng)) then
       LB(1:1) = lbound(SrcBladePropsTypeData%BlCrvAng)
@@ -1182,8 +1164,6 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
          end if
       end if
       DstBladePropsTypeData%BlCrvAng = SrcBladePropsTypeData%BlCrvAng
-   else if (allocated(DstBladePropsTypeData%BlCrvAng)) then
-      deallocate(DstBladePropsTypeData%BlCrvAng)
    end if
    if (allocated(SrcBladePropsTypeData%BlTwist)) then
       LB(1:1) = lbound(SrcBladePropsTypeData%BlTwist)
@@ -1196,8 +1176,6 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
          end if
       end if
       DstBladePropsTypeData%BlTwist = SrcBladePropsTypeData%BlTwist
-   else if (allocated(DstBladePropsTypeData%BlTwist)) then
-      deallocate(DstBladePropsTypeData%BlTwist)
    end if
    if (allocated(SrcBladePropsTypeData%BlChord)) then
       LB(1:1) = lbound(SrcBladePropsTypeData%BlChord)
@@ -1210,8 +1188,6 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
          end if
       end if
       DstBladePropsTypeData%BlChord = SrcBladePropsTypeData%BlChord
-   else if (allocated(DstBladePropsTypeData%BlChord)) then
-      deallocate(DstBladePropsTypeData%BlChord)
    end if
    if (allocated(SrcBladePropsTypeData%BlAFID)) then
       LB(1:1) = lbound(SrcBladePropsTypeData%BlAFID)
@@ -1224,8 +1200,6 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
          end if
       end if
       DstBladePropsTypeData%BlAFID = SrcBladePropsTypeData%BlAFID
-   else if (allocated(DstBladePropsTypeData%BlAFID)) then
-      deallocate(DstBladePropsTypeData%BlAFID)
    end if
    if (allocated(SrcBladePropsTypeData%BlCb)) then
       LB(1:1) = lbound(SrcBladePropsTypeData%BlCb)
@@ -1238,8 +1212,6 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
          end if
       end if
       DstBladePropsTypeData%BlCb = SrcBladePropsTypeData%BlCb
-   else if (allocated(DstBladePropsTypeData%BlCb)) then
-      deallocate(DstBladePropsTypeData%BlCb)
    end if
    if (allocated(SrcBladePropsTypeData%BlCenBn)) then
       LB(1:1) = lbound(SrcBladePropsTypeData%BlCenBn)
@@ -1252,8 +1224,6 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
          end if
       end if
       DstBladePropsTypeData%BlCenBn = SrcBladePropsTypeData%BlCenBn
-   else if (allocated(DstBladePropsTypeData%BlCenBn)) then
-      deallocate(DstBladePropsTypeData%BlCenBn)
    end if
    if (allocated(SrcBladePropsTypeData%BlCenBt)) then
       LB(1:1) = lbound(SrcBladePropsTypeData%BlCenBt)
@@ -1266,8 +1236,6 @@ subroutine AD_CopyBladePropsType(SrcBladePropsTypeData, DstBladePropsTypeData, C
          end if
       end if
       DstBladePropsTypeData%BlCenBt = SrcBladePropsTypeData%BlCenBt
-   else if (allocated(DstBladePropsTypeData%BlCenBt)) then
-      deallocate(DstBladePropsTypeData%BlCenBt)
    end if
 end subroutine
 
@@ -1543,8 +1511,6 @@ subroutine AD_CopyBladeShape(SrcBladeShapeData, DstBladeShapeData, CtrlCode, Err
          end if
       end if
       DstBladeShapeData%AirfoilCoords = SrcBladeShapeData%AirfoilCoords
-   else if (allocated(DstBladeShapeData%AirfoilCoords)) then
-      deallocate(DstBladeShapeData%AirfoilCoords)
    end if
 end subroutine
 
@@ -1622,8 +1588,6 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          end if
       end if
       DstRotInitOutputTypeData%WriteOutputHdr = SrcRotInitOutputTypeData%WriteOutputHdr
-   else if (allocated(DstRotInitOutputTypeData%WriteOutputHdr)) then
-      deallocate(DstRotInitOutputTypeData%WriteOutputHdr)
    end if
    if (allocated(SrcRotInitOutputTypeData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%WriteOutputUnt)
@@ -1636,8 +1600,6 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          end if
       end if
       DstRotInitOutputTypeData%WriteOutputUnt = SrcRotInitOutputTypeData%WriteOutputUnt
-   else if (allocated(DstRotInitOutputTypeData%WriteOutputUnt)) then
-      deallocate(DstRotInitOutputTypeData%WriteOutputUnt)
    end if
    if (allocated(SrcRotInitOutputTypeData%BladeShape)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%BladeShape)
@@ -1654,8 +1616,6 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotInitOutputTypeData%BladeShape)) then
-      deallocate(DstRotInitOutputTypeData%BladeShape)
    end if
    if (allocated(SrcRotInitOutputTypeData%LinNames_y)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%LinNames_y)
@@ -1668,8 +1628,6 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          end if
       end if
       DstRotInitOutputTypeData%LinNames_y = SrcRotInitOutputTypeData%LinNames_y
-   else if (allocated(DstRotInitOutputTypeData%LinNames_y)) then
-      deallocate(DstRotInitOutputTypeData%LinNames_y)
    end if
    if (allocated(SrcRotInitOutputTypeData%LinNames_x)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%LinNames_x)
@@ -1682,8 +1640,6 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          end if
       end if
       DstRotInitOutputTypeData%LinNames_x = SrcRotInitOutputTypeData%LinNames_x
-   else if (allocated(DstRotInitOutputTypeData%LinNames_x)) then
-      deallocate(DstRotInitOutputTypeData%LinNames_x)
    end if
    if (allocated(SrcRotInitOutputTypeData%LinNames_u)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%LinNames_u)
@@ -1696,8 +1652,6 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          end if
       end if
       DstRotInitOutputTypeData%LinNames_u = SrcRotInitOutputTypeData%LinNames_u
-   else if (allocated(DstRotInitOutputTypeData%LinNames_u)) then
-      deallocate(DstRotInitOutputTypeData%LinNames_u)
    end if
    if (allocated(SrcRotInitOutputTypeData%RotFrame_y)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%RotFrame_y)
@@ -1710,8 +1664,6 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          end if
       end if
       DstRotInitOutputTypeData%RotFrame_y = SrcRotInitOutputTypeData%RotFrame_y
-   else if (allocated(DstRotInitOutputTypeData%RotFrame_y)) then
-      deallocate(DstRotInitOutputTypeData%RotFrame_y)
    end if
    if (allocated(SrcRotInitOutputTypeData%RotFrame_x)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%RotFrame_x)
@@ -1724,8 +1676,6 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          end if
       end if
       DstRotInitOutputTypeData%RotFrame_x = SrcRotInitOutputTypeData%RotFrame_x
-   else if (allocated(DstRotInitOutputTypeData%RotFrame_x)) then
-      deallocate(DstRotInitOutputTypeData%RotFrame_x)
    end if
    if (allocated(SrcRotInitOutputTypeData%RotFrame_u)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%RotFrame_u)
@@ -1738,8 +1688,6 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          end if
       end if
       DstRotInitOutputTypeData%RotFrame_u = SrcRotInitOutputTypeData%RotFrame_u
-   else if (allocated(DstRotInitOutputTypeData%RotFrame_u)) then
-      deallocate(DstRotInitOutputTypeData%RotFrame_u)
    end if
    if (allocated(SrcRotInitOutputTypeData%IsLoad_u)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%IsLoad_u)
@@ -1752,8 +1700,6 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          end if
       end if
       DstRotInitOutputTypeData%IsLoad_u = SrcRotInitOutputTypeData%IsLoad_u
-   else if (allocated(DstRotInitOutputTypeData%IsLoad_u)) then
-      deallocate(DstRotInitOutputTypeData%IsLoad_u)
    end if
    if (allocated(SrcRotInitOutputTypeData%BladeProps)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%BladeProps)
@@ -1770,8 +1716,6 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotInitOutputTypeData%BladeProps)) then
-      deallocate(DstRotInitOutputTypeData%BladeProps)
    end if
    if (allocated(SrcRotInitOutputTypeData%DerivOrder_x)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%DerivOrder_x)
@@ -1784,8 +1728,6 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          end if
       end if
       DstRotInitOutputTypeData%DerivOrder_x = SrcRotInitOutputTypeData%DerivOrder_x
-   else if (allocated(DstRotInitOutputTypeData%DerivOrder_x)) then
-      deallocate(DstRotInitOutputTypeData%DerivOrder_x)
    end if
    if (allocated(SrcRotInitOutputTypeData%TwrElev)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%TwrElev)
@@ -1798,8 +1740,6 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          end if
       end if
       DstRotInitOutputTypeData%TwrElev = SrcRotInitOutputTypeData%TwrElev
-   else if (allocated(DstRotInitOutputTypeData%TwrElev)) then
-      deallocate(DstRotInitOutputTypeData%TwrElev)
    end if
    if (allocated(SrcRotInitOutputTypeData%TwrDiam)) then
       LB(1:1) = lbound(SrcRotInitOutputTypeData%TwrDiam)
@@ -1812,8 +1752,6 @@ subroutine AD_CopyRotInitOutputType(SrcRotInitOutputTypeData, DstRotInitOutputTy
          end if
       end if
       DstRotInitOutputTypeData%TwrDiam = SrcRotInitOutputTypeData%TwrDiam
-   else if (allocated(DstRotInitOutputTypeData%TwrDiam)) then
-      deallocate(DstRotInitOutputTypeData%TwrDiam)
    end if
 end subroutine
 
@@ -2212,8 +2150,6 @@ subroutine AD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitOutputData%rotors)) then
-      deallocate(DstInitOutputData%rotors)
    end if
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2319,8 +2255,6 @@ subroutine AD_CopyRotInputFile(SrcRotInputFileData, DstRotInputFileData, CtrlCod
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotInputFileData%BladeProps)) then
-      deallocate(DstRotInputFileData%BladeProps)
    end if
    DstRotInputFileData%NumTwrNds = SrcRotInputFileData%NumTwrNds
    if (allocated(SrcRotInputFileData%TwrElev)) then
@@ -2334,8 +2268,6 @@ subroutine AD_CopyRotInputFile(SrcRotInputFileData, DstRotInputFileData, CtrlCod
          end if
       end if
       DstRotInputFileData%TwrElev = SrcRotInputFileData%TwrElev
-   else if (allocated(DstRotInputFileData%TwrElev)) then
-      deallocate(DstRotInputFileData%TwrElev)
    end if
    if (allocated(SrcRotInputFileData%TwrDiam)) then
       LB(1:1) = lbound(SrcRotInputFileData%TwrDiam)
@@ -2348,8 +2280,6 @@ subroutine AD_CopyRotInputFile(SrcRotInputFileData, DstRotInputFileData, CtrlCod
          end if
       end if
       DstRotInputFileData%TwrDiam = SrcRotInputFileData%TwrDiam
-   else if (allocated(DstRotInputFileData%TwrDiam)) then
-      deallocate(DstRotInputFileData%TwrDiam)
    end if
    if (allocated(SrcRotInputFileData%TwrCd)) then
       LB(1:1) = lbound(SrcRotInputFileData%TwrCd)
@@ -2362,8 +2292,6 @@ subroutine AD_CopyRotInputFile(SrcRotInputFileData, DstRotInputFileData, CtrlCod
          end if
       end if
       DstRotInputFileData%TwrCd = SrcRotInputFileData%TwrCd
-   else if (allocated(DstRotInputFileData%TwrCd)) then
-      deallocate(DstRotInputFileData%TwrCd)
    end if
    if (allocated(SrcRotInputFileData%TwrTI)) then
       LB(1:1) = lbound(SrcRotInputFileData%TwrTI)
@@ -2376,8 +2304,6 @@ subroutine AD_CopyRotInputFile(SrcRotInputFileData, DstRotInputFileData, CtrlCod
          end if
       end if
       DstRotInputFileData%TwrTI = SrcRotInputFileData%TwrTI
-   else if (allocated(DstRotInputFileData%TwrTI)) then
-      deallocate(DstRotInputFileData%TwrTI)
    end if
    if (allocated(SrcRotInputFileData%TwrCb)) then
       LB(1:1) = lbound(SrcRotInputFileData%TwrCb)
@@ -2390,8 +2316,6 @@ subroutine AD_CopyRotInputFile(SrcRotInputFileData, DstRotInputFileData, CtrlCod
          end if
       end if
       DstRotInputFileData%TwrCb = SrcRotInputFileData%TwrCb
-   else if (allocated(DstRotInputFileData%TwrCb)) then
-      deallocate(DstRotInputFileData%TwrCb)
    end if
    DstRotInputFileData%VolHub = SrcRotInputFileData%VolHub
    DstRotInputFileData%HubCenBx = SrcRotInputFileData%HubCenBx
@@ -2642,8 +2566,6 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
          end if
       end if
       DstInputFileData%ADBlFile = SrcInputFileData%ADBlFile
-   else if (allocated(DstInputFileData%ADBlFile)) then
-      deallocate(DstInputFileData%ADBlFile)
    end if
    DstInputFileData%AirDens = SrcInputFileData%AirDens
    DstInputFileData%KinVisc = SrcInputFileData%KinVisc
@@ -2680,8 +2602,6 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
          end if
       end if
       DstInputFileData%AFNames = SrcInputFileData%AFNames
-   else if (allocated(DstInputFileData%AFNames)) then
-      deallocate(DstInputFileData%AFNames)
    end if
    DstInputFileData%UseBlCm = SrcInputFileData%UseBlCm
    DstInputFileData%SumPrint = SrcInputFileData%SumPrint
@@ -2701,8 +2621,6 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
          end if
       end if
       DstInputFileData%OutList = SrcInputFileData%OutList
-   else if (allocated(DstInputFileData%OutList)) then
-      deallocate(DstInputFileData%OutList)
    end if
    DstInputFileData%tau1_const = SrcInputFileData%tau1_const
    DstInputFileData%DBEMT_Mod = SrcInputFileData%DBEMT_Mod
@@ -2718,8 +2636,6 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
          end if
       end if
       DstInputFileData%BldNd_OutList = SrcInputFileData%BldNd_OutList
-   else if (allocated(DstInputFileData%BldNd_OutList)) then
-      deallocate(DstInputFileData%BldNd_OutList)
    end if
    DstInputFileData%BldNd_BlOutNd_Str = SrcInputFileData%BldNd_BlOutNd_Str
    DstInputFileData%BldNd_BladesOut = SrcInputFileData%BldNd_BladesOut
@@ -2740,8 +2656,6 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInputFileData%rotors)) then
-      deallocate(DstInputFileData%rotors)
    end if
 end subroutine
 
@@ -3131,8 +3045,6 @@ subroutine AD_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrSta
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstContStateData%rotors)) then
-      deallocate(DstContStateData%rotors)
    end if
    call FVW_CopyContState(SrcContStateData%FVW, DstContStateData%FVW, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3291,8 +3203,6 @@ subroutine AD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstDiscStateData%rotors)) then
-      deallocate(DstDiscStateData%rotors)
    end if
    call FVW_CopyDiscState(SrcDiscStateData%FVW, DstDiscStateData%FVW, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3451,8 +3361,6 @@ subroutine AD_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstConstrStateData%rotors)) then
-      deallocate(DstConstrStateData%rotors)
    end if
    call FVW_CopyConstrState(SrcConstrStateData%FVW, DstConstrStateData%FVW, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3611,8 +3519,6 @@ subroutine AD_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstOtherStateData%rotors)) then
-      deallocate(DstOtherStateData%rotors)
    end if
    call FVW_CopyOtherState(SrcOtherStateData%FVW, DstOtherStateData%FVW, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3628,8 +3534,6 @@ subroutine AD_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
          end if
       end if
       DstOtherStateData%WakeLocationPoints = SrcOtherStateData%WakeLocationPoints
-   else if (allocated(DstOtherStateData%WakeLocationPoints)) then
-      deallocate(DstOtherStateData%WakeLocationPoints)
    end if
 end subroutine
 
@@ -3772,8 +3676,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%DisturbedInflow = SrcRotMiscVarTypeData%DisturbedInflow
-   else if (allocated(DstRotMiscVarTypeData%DisturbedInflow)) then
-      deallocate(DstRotMiscVarTypeData%DisturbedInflow)
    end if
    if (allocated(SrcRotMiscVarTypeData%orientationAnnulus)) then
       LB(1:4) = lbound(SrcRotMiscVarTypeData%orientationAnnulus)
@@ -3786,8 +3688,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%orientationAnnulus = SrcRotMiscVarTypeData%orientationAnnulus
-   else if (allocated(DstRotMiscVarTypeData%orientationAnnulus)) then
-      deallocate(DstRotMiscVarTypeData%orientationAnnulus)
    end if
    if (allocated(SrcRotMiscVarTypeData%AllOuts)) then
       LB(1:1) = lbound(SrcRotMiscVarTypeData%AllOuts)
@@ -3800,8 +3700,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%AllOuts = SrcRotMiscVarTypeData%AllOuts
-   else if (allocated(DstRotMiscVarTypeData%AllOuts)) then
-      deallocate(DstRotMiscVarTypeData%AllOuts)
    end if
    if (allocated(SrcRotMiscVarTypeData%W_Twr)) then
       LB(1:1) = lbound(SrcRotMiscVarTypeData%W_Twr)
@@ -3814,8 +3712,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%W_Twr = SrcRotMiscVarTypeData%W_Twr
-   else if (allocated(DstRotMiscVarTypeData%W_Twr)) then
-      deallocate(DstRotMiscVarTypeData%W_Twr)
    end if
    if (allocated(SrcRotMiscVarTypeData%X_Twr)) then
       LB(1:1) = lbound(SrcRotMiscVarTypeData%X_Twr)
@@ -3828,8 +3724,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%X_Twr = SrcRotMiscVarTypeData%X_Twr
-   else if (allocated(DstRotMiscVarTypeData%X_Twr)) then
-      deallocate(DstRotMiscVarTypeData%X_Twr)
    end if
    if (allocated(SrcRotMiscVarTypeData%Y_Twr)) then
       LB(1:1) = lbound(SrcRotMiscVarTypeData%Y_Twr)
@@ -3842,8 +3736,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%Y_Twr = SrcRotMiscVarTypeData%Y_Twr
-   else if (allocated(DstRotMiscVarTypeData%Y_Twr)) then
-      deallocate(DstRotMiscVarTypeData%Y_Twr)
    end if
    if (allocated(SrcRotMiscVarTypeData%Curve)) then
       LB(1:2) = lbound(SrcRotMiscVarTypeData%Curve)
@@ -3856,8 +3748,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%Curve = SrcRotMiscVarTypeData%Curve
-   else if (allocated(DstRotMiscVarTypeData%Curve)) then
-      deallocate(DstRotMiscVarTypeData%Curve)
    end if
    if (allocated(SrcRotMiscVarTypeData%TwrClrnc)) then
       LB(1:2) = lbound(SrcRotMiscVarTypeData%TwrClrnc)
@@ -3870,8 +3760,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%TwrClrnc = SrcRotMiscVarTypeData%TwrClrnc
-   else if (allocated(DstRotMiscVarTypeData%TwrClrnc)) then
-      deallocate(DstRotMiscVarTypeData%TwrClrnc)
    end if
    if (allocated(SrcRotMiscVarTypeData%X)) then
       LB(1:2) = lbound(SrcRotMiscVarTypeData%X)
@@ -3884,8 +3772,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%X = SrcRotMiscVarTypeData%X
-   else if (allocated(DstRotMiscVarTypeData%X)) then
-      deallocate(DstRotMiscVarTypeData%X)
    end if
    if (allocated(SrcRotMiscVarTypeData%Y)) then
       LB(1:2) = lbound(SrcRotMiscVarTypeData%Y)
@@ -3898,8 +3784,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%Y = SrcRotMiscVarTypeData%Y
-   else if (allocated(DstRotMiscVarTypeData%Y)) then
-      deallocate(DstRotMiscVarTypeData%Y)
    end if
    if (allocated(SrcRotMiscVarTypeData%Z)) then
       LB(1:2) = lbound(SrcRotMiscVarTypeData%Z)
@@ -3912,8 +3796,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%Z = SrcRotMiscVarTypeData%Z
-   else if (allocated(DstRotMiscVarTypeData%Z)) then
-      deallocate(DstRotMiscVarTypeData%Z)
    end if
    if (allocated(SrcRotMiscVarTypeData%M)) then
       LB(1:2) = lbound(SrcRotMiscVarTypeData%M)
@@ -3926,8 +3808,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%M = SrcRotMiscVarTypeData%M
-   else if (allocated(DstRotMiscVarTypeData%M)) then
-      deallocate(DstRotMiscVarTypeData%M)
    end if
    if (allocated(SrcRotMiscVarTypeData%Mx)) then
       LB(1:2) = lbound(SrcRotMiscVarTypeData%Mx)
@@ -3940,8 +3820,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%Mx = SrcRotMiscVarTypeData%Mx
-   else if (allocated(DstRotMiscVarTypeData%Mx)) then
-      deallocate(DstRotMiscVarTypeData%Mx)
    end if
    if (allocated(SrcRotMiscVarTypeData%My)) then
       LB(1:2) = lbound(SrcRotMiscVarTypeData%My)
@@ -3954,8 +3832,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%My = SrcRotMiscVarTypeData%My
-   else if (allocated(DstRotMiscVarTypeData%My)) then
-      deallocate(DstRotMiscVarTypeData%My)
    end if
    if (allocated(SrcRotMiscVarTypeData%Mz)) then
       LB(1:2) = lbound(SrcRotMiscVarTypeData%Mz)
@@ -3968,8 +3844,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%Mz = SrcRotMiscVarTypeData%Mz
-   else if (allocated(DstRotMiscVarTypeData%Mz)) then
-      deallocate(DstRotMiscVarTypeData%Mz)
    end if
    DstRotMiscVarTypeData%V_DiskAvg = SrcRotMiscVarTypeData%V_DiskAvg
    DstRotMiscVarTypeData%yaw = SrcRotMiscVarTypeData%yaw
@@ -3985,8 +3859,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%hub_theta_x_root = SrcRotMiscVarTypeData%hub_theta_x_root
-   else if (allocated(DstRotMiscVarTypeData%hub_theta_x_root)) then
-      deallocate(DstRotMiscVarTypeData%hub_theta_x_root)
    end if
    DstRotMiscVarTypeData%V_dot_x = SrcRotMiscVarTypeData%V_dot_x
    call MeshCopy(SrcRotMiscVarTypeData%HubLoad, DstRotMiscVarTypeData%HubLoad, CtrlCode, ErrStat2, ErrMsg2 )
@@ -4007,8 +3879,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotMiscVarTypeData%B_L_2_H_P)) then
-      deallocate(DstRotMiscVarTypeData%B_L_2_H_P)
    end if
    if (allocated(SrcRotMiscVarTypeData%SigmaCavitCrit)) then
       LB(1:2) = lbound(SrcRotMiscVarTypeData%SigmaCavitCrit)
@@ -4021,8 +3891,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%SigmaCavitCrit = SrcRotMiscVarTypeData%SigmaCavitCrit
-   else if (allocated(DstRotMiscVarTypeData%SigmaCavitCrit)) then
-      deallocate(DstRotMiscVarTypeData%SigmaCavitCrit)
    end if
    if (allocated(SrcRotMiscVarTypeData%SigmaCavit)) then
       LB(1:2) = lbound(SrcRotMiscVarTypeData%SigmaCavit)
@@ -4035,8 +3903,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%SigmaCavit = SrcRotMiscVarTypeData%SigmaCavit
-   else if (allocated(DstRotMiscVarTypeData%SigmaCavit)) then
-      deallocate(DstRotMiscVarTypeData%SigmaCavit)
    end if
    if (allocated(SrcRotMiscVarTypeData%CavitWarnSet)) then
       LB(1:2) = lbound(SrcRotMiscVarTypeData%CavitWarnSet)
@@ -4049,8 +3915,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%CavitWarnSet = SrcRotMiscVarTypeData%CavitWarnSet
-   else if (allocated(DstRotMiscVarTypeData%CavitWarnSet)) then
-      deallocate(DstRotMiscVarTypeData%CavitWarnSet)
    end if
    if (allocated(SrcRotMiscVarTypeData%BlFB)) then
       LB(1:3) = lbound(SrcRotMiscVarTypeData%BlFB)
@@ -4063,8 +3927,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%BlFB = SrcRotMiscVarTypeData%BlFB
-   else if (allocated(DstRotMiscVarTypeData%BlFB)) then
-      deallocate(DstRotMiscVarTypeData%BlFB)
    end if
    if (allocated(SrcRotMiscVarTypeData%BlMB)) then
       LB(1:3) = lbound(SrcRotMiscVarTypeData%BlMB)
@@ -4077,8 +3939,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%BlMB = SrcRotMiscVarTypeData%BlMB
-   else if (allocated(DstRotMiscVarTypeData%BlMB)) then
-      deallocate(DstRotMiscVarTypeData%BlMB)
    end if
    if (allocated(SrcRotMiscVarTypeData%TwrFB)) then
       LB(1:2) = lbound(SrcRotMiscVarTypeData%TwrFB)
@@ -4091,8 +3951,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%TwrFB = SrcRotMiscVarTypeData%TwrFB
-   else if (allocated(DstRotMiscVarTypeData%TwrFB)) then
-      deallocate(DstRotMiscVarTypeData%TwrFB)
    end if
    if (allocated(SrcRotMiscVarTypeData%TwrMB)) then
       LB(1:2) = lbound(SrcRotMiscVarTypeData%TwrMB)
@@ -4105,8 +3963,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%TwrMB = SrcRotMiscVarTypeData%TwrMB
-   else if (allocated(DstRotMiscVarTypeData%TwrMB)) then
-      deallocate(DstRotMiscVarTypeData%TwrMB)
    end if
    if (allocated(SrcRotMiscVarTypeData%HubFB)) then
       LB(1:1) = lbound(SrcRotMiscVarTypeData%HubFB)
@@ -4119,8 +3975,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%HubFB = SrcRotMiscVarTypeData%HubFB
-   else if (allocated(DstRotMiscVarTypeData%HubFB)) then
-      deallocate(DstRotMiscVarTypeData%HubFB)
    end if
    if (allocated(SrcRotMiscVarTypeData%HubMB)) then
       LB(1:1) = lbound(SrcRotMiscVarTypeData%HubMB)
@@ -4133,8 +3987,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%HubMB = SrcRotMiscVarTypeData%HubMB
-   else if (allocated(DstRotMiscVarTypeData%HubMB)) then
-      deallocate(DstRotMiscVarTypeData%HubMB)
    end if
    if (allocated(SrcRotMiscVarTypeData%NacFB)) then
       LB(1:1) = lbound(SrcRotMiscVarTypeData%NacFB)
@@ -4147,8 +3999,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%NacFB = SrcRotMiscVarTypeData%NacFB
-   else if (allocated(DstRotMiscVarTypeData%NacFB)) then
-      deallocate(DstRotMiscVarTypeData%NacFB)
    end if
    if (allocated(SrcRotMiscVarTypeData%NacMB)) then
       LB(1:1) = lbound(SrcRotMiscVarTypeData%NacMB)
@@ -4161,8 +4011,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          end if
       end if
       DstRotMiscVarTypeData%NacMB = SrcRotMiscVarTypeData%NacMB
-   else if (allocated(DstRotMiscVarTypeData%NacMB)) then
-      deallocate(DstRotMiscVarTypeData%NacMB)
    end if
    if (allocated(SrcRotMiscVarTypeData%BladeRootLoad)) then
       LB(1:1) = lbound(SrcRotMiscVarTypeData%BladeRootLoad)
@@ -4179,8 +4027,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotMiscVarTypeData%BladeRootLoad)) then
-      deallocate(DstRotMiscVarTypeData%BladeRootLoad)
    end if
    if (allocated(SrcRotMiscVarTypeData%B_L_2_R_P)) then
       LB(1:1) = lbound(SrcRotMiscVarTypeData%B_L_2_R_P)
@@ -4197,8 +4043,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotMiscVarTypeData%B_L_2_R_P)) then
-      deallocate(DstRotMiscVarTypeData%B_L_2_R_P)
    end if
    if (allocated(SrcRotMiscVarTypeData%BladeBuoyLoadPoint)) then
       LB(1:1) = lbound(SrcRotMiscVarTypeData%BladeBuoyLoadPoint)
@@ -4215,8 +4059,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotMiscVarTypeData%BladeBuoyLoadPoint)) then
-      deallocate(DstRotMiscVarTypeData%BladeBuoyLoadPoint)
    end if
    if (allocated(SrcRotMiscVarTypeData%BladeBuoyLoad)) then
       LB(1:1) = lbound(SrcRotMiscVarTypeData%BladeBuoyLoad)
@@ -4233,8 +4075,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotMiscVarTypeData%BladeBuoyLoad)) then
-      deallocate(DstRotMiscVarTypeData%BladeBuoyLoad)
    end if
    if (allocated(SrcRotMiscVarTypeData%B_P_2_B_L)) then
       LB(1:1) = lbound(SrcRotMiscVarTypeData%B_P_2_B_L)
@@ -4251,8 +4091,6 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotMiscVarTypeData%B_P_2_B_L)) then
-      deallocate(DstRotMiscVarTypeData%B_P_2_B_L)
    end if
    call MeshCopy(SrcRotMiscVarTypeData%TwrBuoyLoadPoint, DstRotMiscVarTypeData%TwrBuoyLoadPoint, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -5231,8 +5069,6 @@ subroutine AD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%rotors)) then
-      deallocate(DstMiscData%rotors)
    end if
    if (allocated(SrcMiscData%FVW_u)) then
       LB(1:1) = lbound(SrcMiscData%FVW_u)
@@ -5249,8 +5085,6 @@ subroutine AD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%FVW_u)) then
-      deallocate(DstMiscData%FVW_u)
    end if
    call FVW_CopyOutput(SrcMiscData%FVW_y, DstMiscData%FVW_y, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -5269,8 +5103,6 @@ subroutine AD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%WindPos = SrcMiscData%WindPos
-   else if (allocated(DstMiscData%WindPos)) then
-      deallocate(DstMiscData%WindPos)
    end if
    if (allocated(SrcMiscData%WindVel)) then
       LB(1:2) = lbound(SrcMiscData%WindVel)
@@ -5283,8 +5115,6 @@ subroutine AD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%WindVel = SrcMiscData%WindVel
-   else if (allocated(DstMiscData%WindVel)) then
-      deallocate(DstMiscData%WindVel)
    end if
    if (allocated(SrcMiscData%WindAcc)) then
       LB(1:2) = lbound(SrcMiscData%WindAcc)
@@ -5297,8 +5127,6 @@ subroutine AD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%WindAcc = SrcMiscData%WindAcc
-   else if (allocated(DstMiscData%WindAcc)) then
-      deallocate(DstMiscData%WindAcc)
    end if
 end subroutine
 
@@ -5503,8 +5331,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%TwrDiam = SrcRotParameterTypeData%TwrDiam
-   else if (allocated(DstRotParameterTypeData%TwrDiam)) then
-      deallocate(DstRotParameterTypeData%TwrDiam)
    end if
    if (allocated(SrcRotParameterTypeData%TwrCd)) then
       LB(1:1) = lbound(SrcRotParameterTypeData%TwrCd)
@@ -5517,8 +5343,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%TwrCd = SrcRotParameterTypeData%TwrCd
-   else if (allocated(DstRotParameterTypeData%TwrCd)) then
-      deallocate(DstRotParameterTypeData%TwrCd)
    end if
    if (allocated(SrcRotParameterTypeData%TwrTI)) then
       LB(1:1) = lbound(SrcRotParameterTypeData%TwrTI)
@@ -5531,8 +5355,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%TwrTI = SrcRotParameterTypeData%TwrTI
-   else if (allocated(DstRotParameterTypeData%TwrTI)) then
-      deallocate(DstRotParameterTypeData%TwrTI)
    end if
    if (allocated(SrcRotParameterTypeData%BlTwist)) then
       LB(1:2) = lbound(SrcRotParameterTypeData%BlTwist)
@@ -5545,8 +5367,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%BlTwist = SrcRotParameterTypeData%BlTwist
-   else if (allocated(DstRotParameterTypeData%BlTwist)) then
-      deallocate(DstRotParameterTypeData%BlTwist)
    end if
    if (allocated(SrcRotParameterTypeData%TwrCb)) then
       LB(1:1) = lbound(SrcRotParameterTypeData%TwrCb)
@@ -5559,8 +5379,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%TwrCb = SrcRotParameterTypeData%TwrCb
-   else if (allocated(DstRotParameterTypeData%TwrCb)) then
-      deallocate(DstRotParameterTypeData%TwrCb)
    end if
    if (allocated(SrcRotParameterTypeData%BlCenBn)) then
       LB(1:2) = lbound(SrcRotParameterTypeData%BlCenBn)
@@ -5573,8 +5391,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%BlCenBn = SrcRotParameterTypeData%BlCenBn
-   else if (allocated(DstRotParameterTypeData%BlCenBn)) then
-      deallocate(DstRotParameterTypeData%BlCenBn)
    end if
    if (allocated(SrcRotParameterTypeData%BlCenBt)) then
       LB(1:2) = lbound(SrcRotParameterTypeData%BlCenBt)
@@ -5587,8 +5403,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%BlCenBt = SrcRotParameterTypeData%BlCenBt
-   else if (allocated(DstRotParameterTypeData%BlCenBt)) then
-      deallocate(DstRotParameterTypeData%BlCenBt)
    end if
    DstRotParameterTypeData%VolHub = SrcRotParameterTypeData%VolHub
    DstRotParameterTypeData%HubCenBx = SrcRotParameterTypeData%HubCenBx
@@ -5607,8 +5421,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%BlRad = SrcRotParameterTypeData%BlRad
-   else if (allocated(DstRotParameterTypeData%BlRad)) then
-      deallocate(DstRotParameterTypeData%BlRad)
    end if
    if (allocated(SrcRotParameterTypeData%BlDL)) then
       LB(1:2) = lbound(SrcRotParameterTypeData%BlDL)
@@ -5621,8 +5433,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%BlDL = SrcRotParameterTypeData%BlDL
-   else if (allocated(DstRotParameterTypeData%BlDL)) then
-      deallocate(DstRotParameterTypeData%BlDL)
    end if
    if (allocated(SrcRotParameterTypeData%BlTaper)) then
       LB(1:2) = lbound(SrcRotParameterTypeData%BlTaper)
@@ -5635,8 +5445,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%BlTaper = SrcRotParameterTypeData%BlTaper
-   else if (allocated(DstRotParameterTypeData%BlTaper)) then
-      deallocate(DstRotParameterTypeData%BlTaper)
    end if
    if (allocated(SrcRotParameterTypeData%BlAxCent)) then
       LB(1:2) = lbound(SrcRotParameterTypeData%BlAxCent)
@@ -5649,8 +5457,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%BlAxCent = SrcRotParameterTypeData%BlAxCent
-   else if (allocated(DstRotParameterTypeData%BlAxCent)) then
-      deallocate(DstRotParameterTypeData%BlAxCent)
    end if
    if (allocated(SrcRotParameterTypeData%TwrRad)) then
       LB(1:1) = lbound(SrcRotParameterTypeData%TwrRad)
@@ -5663,8 +5469,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%TwrRad = SrcRotParameterTypeData%TwrRad
-   else if (allocated(DstRotParameterTypeData%TwrRad)) then
-      deallocate(DstRotParameterTypeData%TwrRad)
    end if
    if (allocated(SrcRotParameterTypeData%TwrDL)) then
       LB(1:1) = lbound(SrcRotParameterTypeData%TwrDL)
@@ -5677,8 +5481,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%TwrDL = SrcRotParameterTypeData%TwrDL
-   else if (allocated(DstRotParameterTypeData%TwrDL)) then
-      deallocate(DstRotParameterTypeData%TwrDL)
    end if
    if (allocated(SrcRotParameterTypeData%TwrTaper)) then
       LB(1:1) = lbound(SrcRotParameterTypeData%TwrTaper)
@@ -5691,8 +5493,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%TwrTaper = SrcRotParameterTypeData%TwrTaper
-   else if (allocated(DstRotParameterTypeData%TwrTaper)) then
-      deallocate(DstRotParameterTypeData%TwrTaper)
    end if
    if (allocated(SrcRotParameterTypeData%TwrAxCent)) then
       LB(1:1) = lbound(SrcRotParameterTypeData%TwrAxCent)
@@ -5705,8 +5505,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%TwrAxCent = SrcRotParameterTypeData%TwrAxCent
-   else if (allocated(DstRotParameterTypeData%TwrAxCent)) then
-      deallocate(DstRotParameterTypeData%TwrAxCent)
    end if
    call BEMT_CopyParam(SrcRotParameterTypeData%BEMT, DstRotParameterTypeData%BEMT, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -5725,8 +5523,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%Jac_u_indx = SrcRotParameterTypeData%Jac_u_indx
-   else if (allocated(DstRotParameterTypeData%Jac_u_indx)) then
-      deallocate(DstRotParameterTypeData%Jac_u_indx)
    end if
    if (allocated(SrcRotParameterTypeData%du)) then
       LB(1:1) = lbound(SrcRotParameterTypeData%du)
@@ -5739,8 +5535,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%du = SrcRotParameterTypeData%du
-   else if (allocated(DstRotParameterTypeData%du)) then
-      deallocate(DstRotParameterTypeData%du)
    end if
    if (allocated(SrcRotParameterTypeData%dx)) then
       LB(1:1) = lbound(SrcRotParameterTypeData%dx)
@@ -5753,8 +5547,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%dx = SrcRotParameterTypeData%dx
-   else if (allocated(DstRotParameterTypeData%dx)) then
-      deallocate(DstRotParameterTypeData%dx)
    end if
    DstRotParameterTypeData%Jac_ny = SrcRotParameterTypeData%Jac_ny
    DstRotParameterTypeData%NumBl_Lin = SrcRotParameterTypeData%NumBl_Lin
@@ -5793,8 +5585,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotParameterTypeData%OutParam)) then
-      deallocate(DstRotParameterTypeData%OutParam)
    end if
    DstRotParameterTypeData%NBlOuts = SrcRotParameterTypeData%NBlOuts
    DstRotParameterTypeData%BlOutNd = SrcRotParameterTypeData%BlOutNd
@@ -5817,8 +5607,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotParameterTypeData%BldNd_OutParam)) then
-      deallocate(DstRotParameterTypeData%BldNd_OutParam)
    end if
    if (allocated(SrcRotParameterTypeData%BldNd_BlOutNd)) then
       LB(1:1) = lbound(SrcRotParameterTypeData%BldNd_BlOutNd)
@@ -5831,8 +5619,6 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
          end if
       end if
       DstRotParameterTypeData%BldNd_BlOutNd = SrcRotParameterTypeData%BldNd_BlOutNd
-   else if (allocated(DstRotParameterTypeData%BldNd_BlOutNd)) then
-      deallocate(DstRotParameterTypeData%BldNd_BlOutNd)
    end if
    DstRotParameterTypeData%BldNd_BladesOut = SrcRotParameterTypeData%BldNd_BladesOut
    DstRotParameterTypeData%TFinAero = SrcRotParameterTypeData%TFinAero
@@ -6516,8 +6302,6 @@ subroutine AD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%rotors)) then
-      deallocate(DstParamData%rotors)
    end if
    DstParamData%DT = SrcParamData%DT
    DstParamData%RootName = SrcParamData%RootName
@@ -6536,8 +6320,6 @@ subroutine AD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%AFI)) then
-      deallocate(DstParamData%AFI)
    end if
    DstParamData%SkewMod = SrcParamData%SkewMod
    DstParamData%WakeMod = SrcParamData%WakeMod
@@ -6739,8 +6521,6 @@ subroutine AD_CopyRotInputType(SrcRotInputTypeData, DstRotInputTypeData, CtrlCod
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotInputTypeData%BladeRootMotion)) then
-      deallocate(DstRotInputTypeData%BladeRootMotion)
    end if
    if (allocated(SrcRotInputTypeData%BladeMotion)) then
       LB(1:1) = lbound(SrcRotInputTypeData%BladeMotion)
@@ -6757,8 +6537,6 @@ subroutine AD_CopyRotInputType(SrcRotInputTypeData, DstRotInputTypeData, CtrlCod
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotInputTypeData%BladeMotion)) then
-      deallocate(DstRotInputTypeData%BladeMotion)
    end if
    call MeshCopy(SrcRotInputTypeData%TFinMotion, DstRotInputTypeData%TFinMotion, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -6774,8 +6552,6 @@ subroutine AD_CopyRotInputType(SrcRotInputTypeData, DstRotInputTypeData, CtrlCod
          end if
       end if
       DstRotInputTypeData%InflowOnBlade = SrcRotInputTypeData%InflowOnBlade
-   else if (allocated(DstRotInputTypeData%InflowOnBlade)) then
-      deallocate(DstRotInputTypeData%InflowOnBlade)
    end if
    if (allocated(SrcRotInputTypeData%InflowOnTower)) then
       LB(1:2) = lbound(SrcRotInputTypeData%InflowOnTower)
@@ -6788,8 +6564,6 @@ subroutine AD_CopyRotInputType(SrcRotInputTypeData, DstRotInputTypeData, CtrlCod
          end if
       end if
       DstRotInputTypeData%InflowOnTower = SrcRotInputTypeData%InflowOnTower
-   else if (allocated(DstRotInputTypeData%InflowOnTower)) then
-      deallocate(DstRotInputTypeData%InflowOnTower)
    end if
    DstRotInputTypeData%InflowOnHub = SrcRotInputTypeData%InflowOnHub
    DstRotInputTypeData%InflowOnNacelle = SrcRotInputTypeData%InflowOnNacelle
@@ -6805,8 +6579,6 @@ subroutine AD_CopyRotInputType(SrcRotInputTypeData, DstRotInputTypeData, CtrlCod
          end if
       end if
       DstRotInputTypeData%UserProp = SrcRotInputTypeData%UserProp
-   else if (allocated(DstRotInputTypeData%UserProp)) then
-      deallocate(DstRotInputTypeData%UserProp)
    end if
 end subroutine
 
@@ -7029,8 +6801,6 @@ subroutine AD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInputData%rotors)) then
-      deallocate(DstInputData%rotors)
    end if
    if (allocated(SrcInputData%InflowWakeVel)) then
       LB(1:2) = lbound(SrcInputData%InflowWakeVel)
@@ -7043,8 +6813,6 @@ subroutine AD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%InflowWakeVel = SrcInputData%InflowWakeVel
-   else if (allocated(DstInputData%InflowWakeVel)) then
-      deallocate(DstInputData%InflowWakeVel)
    end if
 end subroutine
 
@@ -7174,8 +6942,6 @@ subroutine AD_CopyRotOutputType(SrcRotOutputTypeData, DstRotOutputTypeData, Ctrl
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotOutputTypeData%BladeLoad)) then
-      deallocate(DstRotOutputTypeData%BladeLoad)
    end if
    call MeshCopy(SrcRotOutputTypeData%TFinLoad, DstRotOutputTypeData%TFinLoad, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -7191,8 +6957,6 @@ subroutine AD_CopyRotOutputType(SrcRotOutputTypeData, DstRotOutputTypeData, Ctrl
          end if
       end if
       DstRotOutputTypeData%WriteOutput = SrcRotOutputTypeData%WriteOutput
-   else if (allocated(DstRotOutputTypeData%WriteOutput)) then
-      deallocate(DstRotOutputTypeData%WriteOutput)
    end if
 end subroutine
 
@@ -7329,8 +7093,6 @@ subroutine AD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstOutputData%rotors)) then
-      deallocate(DstOutputData%rotors)
    end if
 end subroutine
 

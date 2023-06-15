@@ -115,8 +115,6 @@ subroutine MAP_Fortran_CopyLin_InitOutputType(SrcLin_InitOutputTypeData, DstLin_
          end if
       end if
       DstLin_InitOutputTypeData%LinNames_y = SrcLin_InitOutputTypeData%LinNames_y
-   else if (allocated(DstLin_InitOutputTypeData%LinNames_y)) then
-      deallocate(DstLin_InitOutputTypeData%LinNames_y)
    end if
    if (allocated(SrcLin_InitOutputTypeData%LinNames_u)) then
       LB(1:1) = lbound(SrcLin_InitOutputTypeData%LinNames_u)
@@ -129,8 +127,6 @@ subroutine MAP_Fortran_CopyLin_InitOutputType(SrcLin_InitOutputTypeData, DstLin_
          end if
       end if
       DstLin_InitOutputTypeData%LinNames_u = SrcLin_InitOutputTypeData%LinNames_u
-   else if (allocated(DstLin_InitOutputTypeData%LinNames_u)) then
-      deallocate(DstLin_InitOutputTypeData%LinNames_u)
    end if
    if (allocated(SrcLin_InitOutputTypeData%IsLoad_u)) then
       LB(1:1) = lbound(SrcLin_InitOutputTypeData%IsLoad_u)
@@ -143,8 +139,6 @@ subroutine MAP_Fortran_CopyLin_InitOutputType(SrcLin_InitOutputTypeData, DstLin_
          end if
       end if
       DstLin_InitOutputTypeData%IsLoad_u = SrcLin_InitOutputTypeData%IsLoad_u
-   else if (allocated(DstLin_InitOutputTypeData%IsLoad_u)) then
-      deallocate(DstLin_InitOutputTypeData%IsLoad_u)
    end if
 end subroutine
 
@@ -263,8 +257,6 @@ subroutine MAP_Fortran_CopyLin_ParamType(SrcLin_ParamTypeData, DstLin_ParamTypeD
          end if
       end if
       DstLin_ParamTypeData%Jac_u_indx = SrcLin_ParamTypeData%Jac_u_indx
-   else if (allocated(DstLin_ParamTypeData%Jac_u_indx)) then
-      deallocate(DstLin_ParamTypeData%Jac_u_indx)
    end if
    DstLin_ParamTypeData%du = SrcLin_ParamTypeData%du
    DstLin_ParamTypeData%Jac_ny = SrcLin_ParamTypeData%Jac_ny

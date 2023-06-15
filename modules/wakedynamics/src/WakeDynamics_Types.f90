@@ -470,8 +470,6 @@ subroutine WD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
-      deallocate(DstInitOutputData%WriteOutputHdr)
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
@@ -484,8 +482,6 @@ subroutine WD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
-      deallocate(DstInitOutputData%WriteOutputUnt)
    end if
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -630,8 +626,6 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%xhat_plane = SrcDiscStateData%xhat_plane
-   else if (allocated(DstDiscStateData%xhat_plane)) then
-      deallocate(DstDiscStateData%xhat_plane)
    end if
    if (allocated(SrcDiscStateData%YawErr_filt)) then
       LB(1:1) = lbound(SrcDiscStateData%YawErr_filt)
@@ -644,8 +638,6 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%YawErr_filt = SrcDiscStateData%YawErr_filt
-   else if (allocated(DstDiscStateData%YawErr_filt)) then
-      deallocate(DstDiscStateData%YawErr_filt)
    end if
    DstDiscStateData%psi_skew_filt = SrcDiscStateData%psi_skew_filt
    DstDiscStateData%chi_skew_filt = SrcDiscStateData%chi_skew_filt
@@ -660,8 +652,6 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%V_plane_filt = SrcDiscStateData%V_plane_filt
-   else if (allocated(DstDiscStateData%V_plane_filt)) then
-      deallocate(DstDiscStateData%V_plane_filt)
    end if
    if (allocated(SrcDiscStateData%p_plane)) then
       LB(1:2) = lbound(SrcDiscStateData%p_plane)
@@ -674,8 +664,6 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%p_plane = SrcDiscStateData%p_plane
-   else if (allocated(DstDiscStateData%p_plane)) then
-      deallocate(DstDiscStateData%p_plane)
    end if
    if (allocated(SrcDiscStateData%x_plane)) then
       LB(1:1) = lbound(SrcDiscStateData%x_plane)
@@ -688,8 +676,6 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%x_plane = SrcDiscStateData%x_plane
-   else if (allocated(DstDiscStateData%x_plane)) then
-      deallocate(DstDiscStateData%x_plane)
    end if
    if (allocated(SrcDiscStateData%Vx_wake)) then
       LB(1:2) = lbound(SrcDiscStateData%Vx_wake)
@@ -702,8 +688,6 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Vx_wake = SrcDiscStateData%Vx_wake
-   else if (allocated(DstDiscStateData%Vx_wake)) then
-      deallocate(DstDiscStateData%Vx_wake)
    end if
    if (allocated(SrcDiscStateData%Vr_wake)) then
       LB(1:2) = lbound(SrcDiscStateData%Vr_wake)
@@ -716,8 +700,6 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Vr_wake = SrcDiscStateData%Vr_wake
-   else if (allocated(DstDiscStateData%Vr_wake)) then
-      deallocate(DstDiscStateData%Vr_wake)
    end if
    if (allocated(SrcDiscStateData%Vx_wake2)) then
       LB(1:3) = lbound(SrcDiscStateData%Vx_wake2)
@@ -730,8 +712,6 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Vx_wake2 = SrcDiscStateData%Vx_wake2
-   else if (allocated(DstDiscStateData%Vx_wake2)) then
-      deallocate(DstDiscStateData%Vx_wake2)
    end if
    if (allocated(SrcDiscStateData%Vy_wake2)) then
       LB(1:3) = lbound(SrcDiscStateData%Vy_wake2)
@@ -744,8 +724,6 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Vy_wake2 = SrcDiscStateData%Vy_wake2
-   else if (allocated(DstDiscStateData%Vy_wake2)) then
-      deallocate(DstDiscStateData%Vy_wake2)
    end if
    if (allocated(SrcDiscStateData%Vz_wake2)) then
       LB(1:3) = lbound(SrcDiscStateData%Vz_wake2)
@@ -758,8 +736,6 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Vz_wake2 = SrcDiscStateData%Vz_wake2
-   else if (allocated(DstDiscStateData%Vz_wake2)) then
-      deallocate(DstDiscStateData%Vz_wake2)
    end if
    if (allocated(SrcDiscStateData%Vx_wind_disk_filt)) then
       LB(1:1) = lbound(SrcDiscStateData%Vx_wind_disk_filt)
@@ -772,8 +748,6 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Vx_wind_disk_filt = SrcDiscStateData%Vx_wind_disk_filt
-   else if (allocated(DstDiscStateData%Vx_wind_disk_filt)) then
-      deallocate(DstDiscStateData%Vx_wind_disk_filt)
    end if
    if (allocated(SrcDiscStateData%TI_amb_filt)) then
       LB(1:1) = lbound(SrcDiscStateData%TI_amb_filt)
@@ -786,8 +760,6 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%TI_amb_filt = SrcDiscStateData%TI_amb_filt
-   else if (allocated(DstDiscStateData%TI_amb_filt)) then
-      deallocate(DstDiscStateData%TI_amb_filt)
    end if
    if (allocated(SrcDiscStateData%D_rotor_filt)) then
       LB(1:1) = lbound(SrcDiscStateData%D_rotor_filt)
@@ -800,8 +772,6 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%D_rotor_filt = SrcDiscStateData%D_rotor_filt
-   else if (allocated(DstDiscStateData%D_rotor_filt)) then
-      deallocate(DstDiscStateData%D_rotor_filt)
    end if
    DstDiscStateData%Vx_rel_disk_filt = SrcDiscStateData%Vx_rel_disk_filt
    if (allocated(SrcDiscStateData%Ct_azavg_filt)) then
@@ -815,8 +785,6 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Ct_azavg_filt = SrcDiscStateData%Ct_azavg_filt
-   else if (allocated(DstDiscStateData%Ct_azavg_filt)) then
-      deallocate(DstDiscStateData%Ct_azavg_filt)
    end if
    if (allocated(SrcDiscStateData%Cq_azavg_filt)) then
       LB(1:1) = lbound(SrcDiscStateData%Cq_azavg_filt)
@@ -829,8 +797,6 @@ subroutine WD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Cq_azavg_filt = SrcDiscStateData%Cq_azavg_filt
-   else if (allocated(DstDiscStateData%Cq_azavg_filt)) then
-      deallocate(DstDiscStateData%Cq_azavg_filt)
    end if
 end subroutine
 
@@ -1300,8 +1266,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%dvtdr = SrcMiscData%dvtdr
-   else if (allocated(DstMiscData%dvtdr)) then
-      deallocate(DstMiscData%dvtdr)
    end if
    if (allocated(SrcMiscData%vt_tot)) then
       LB(1:2) = lbound(SrcMiscData%vt_tot)
@@ -1314,8 +1278,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%vt_tot = SrcMiscData%vt_tot
-   else if (allocated(DstMiscData%vt_tot)) then
-      deallocate(DstMiscData%vt_tot)
    end if
    if (allocated(SrcMiscData%vt_amb)) then
       LB(1:2) = lbound(SrcMiscData%vt_amb)
@@ -1328,8 +1290,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%vt_amb = SrcMiscData%vt_amb
-   else if (allocated(DstMiscData%vt_amb)) then
-      deallocate(DstMiscData%vt_amb)
    end if
    if (allocated(SrcMiscData%vt_shr)) then
       LB(1:2) = lbound(SrcMiscData%vt_shr)
@@ -1342,8 +1302,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%vt_shr = SrcMiscData%vt_shr
-   else if (allocated(DstMiscData%vt_shr)) then
-      deallocate(DstMiscData%vt_shr)
    end if
    if (allocated(SrcMiscData%vt_tot2)) then
       LB(1:3) = lbound(SrcMiscData%vt_tot2)
@@ -1356,8 +1314,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%vt_tot2 = SrcMiscData%vt_tot2
-   else if (allocated(DstMiscData%vt_tot2)) then
-      deallocate(DstMiscData%vt_tot2)
    end if
    if (allocated(SrcMiscData%vt_amb2)) then
       LB(1:3) = lbound(SrcMiscData%vt_amb2)
@@ -1370,8 +1326,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%vt_amb2 = SrcMiscData%vt_amb2
-   else if (allocated(DstMiscData%vt_amb2)) then
-      deallocate(DstMiscData%vt_amb2)
    end if
    if (allocated(SrcMiscData%vt_shr2)) then
       LB(1:3) = lbound(SrcMiscData%vt_shr2)
@@ -1384,8 +1338,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%vt_shr2 = SrcMiscData%vt_shr2
-   else if (allocated(DstMiscData%vt_shr2)) then
-      deallocate(DstMiscData%vt_shr2)
    end if
    if (allocated(SrcMiscData%dvx_dy)) then
       LB(1:3) = lbound(SrcMiscData%dvx_dy)
@@ -1398,8 +1350,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%dvx_dy = SrcMiscData%dvx_dy
-   else if (allocated(DstMiscData%dvx_dy)) then
-      deallocate(DstMiscData%dvx_dy)
    end if
    if (allocated(SrcMiscData%dvx_dz)) then
       LB(1:3) = lbound(SrcMiscData%dvx_dz)
@@ -1412,8 +1362,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%dvx_dz = SrcMiscData%dvx_dz
-   else if (allocated(DstMiscData%dvx_dz)) then
-      deallocate(DstMiscData%dvx_dz)
    end if
    if (allocated(SrcMiscData%nu_dvx_dy)) then
       LB(1:2) = lbound(SrcMiscData%nu_dvx_dy)
@@ -1426,8 +1374,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%nu_dvx_dy = SrcMiscData%nu_dvx_dy
-   else if (allocated(DstMiscData%nu_dvx_dy)) then
-      deallocate(DstMiscData%nu_dvx_dy)
    end if
    if (allocated(SrcMiscData%nu_dvx_dz)) then
       LB(1:2) = lbound(SrcMiscData%nu_dvx_dz)
@@ -1440,8 +1386,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%nu_dvx_dz = SrcMiscData%nu_dvx_dz
-   else if (allocated(DstMiscData%nu_dvx_dz)) then
-      deallocate(DstMiscData%nu_dvx_dz)
    end if
    if (allocated(SrcMiscData%dnuvx_dy)) then
       LB(1:2) = lbound(SrcMiscData%dnuvx_dy)
@@ -1454,8 +1398,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%dnuvx_dy = SrcMiscData%dnuvx_dy
-   else if (allocated(DstMiscData%dnuvx_dy)) then
-      deallocate(DstMiscData%dnuvx_dy)
    end if
    if (allocated(SrcMiscData%dnuvx_dz)) then
       LB(1:2) = lbound(SrcMiscData%dnuvx_dz)
@@ -1468,8 +1410,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%dnuvx_dz = SrcMiscData%dnuvx_dz
-   else if (allocated(DstMiscData%dnuvx_dz)) then
-      deallocate(DstMiscData%dnuvx_dz)
    end if
    if (allocated(SrcMiscData%a)) then
       LB(1:1) = lbound(SrcMiscData%a)
@@ -1482,8 +1422,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%a = SrcMiscData%a
-   else if (allocated(DstMiscData%a)) then
-      deallocate(DstMiscData%a)
    end if
    if (allocated(SrcMiscData%b)) then
       LB(1:1) = lbound(SrcMiscData%b)
@@ -1496,8 +1434,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%b = SrcMiscData%b
-   else if (allocated(DstMiscData%b)) then
-      deallocate(DstMiscData%b)
    end if
    if (allocated(SrcMiscData%c)) then
       LB(1:1) = lbound(SrcMiscData%c)
@@ -1510,8 +1446,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%c = SrcMiscData%c
-   else if (allocated(DstMiscData%c)) then
-      deallocate(DstMiscData%c)
    end if
    if (allocated(SrcMiscData%d)) then
       LB(1:1) = lbound(SrcMiscData%d)
@@ -1524,8 +1458,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%d = SrcMiscData%d
-   else if (allocated(DstMiscData%d)) then
-      deallocate(DstMiscData%d)
    end if
    if (allocated(SrcMiscData%r_wake)) then
       LB(1:1) = lbound(SrcMiscData%r_wake)
@@ -1538,8 +1470,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%r_wake = SrcMiscData%r_wake
-   else if (allocated(DstMiscData%r_wake)) then
-      deallocate(DstMiscData%r_wake)
    end if
    if (allocated(SrcMiscData%Vx_high)) then
       LB(1:1) = lbound(SrcMiscData%Vx_high)
@@ -1552,8 +1482,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%Vx_high = SrcMiscData%Vx_high
-   else if (allocated(DstMiscData%Vx_high)) then
-      deallocate(DstMiscData%Vx_high)
    end if
    if (allocated(SrcMiscData%Vx_polar)) then
       LB(1:1) = lbound(SrcMiscData%Vx_polar)
@@ -1566,8 +1494,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%Vx_polar = SrcMiscData%Vx_polar
-   else if (allocated(DstMiscData%Vx_polar)) then
-      deallocate(DstMiscData%Vx_polar)
    end if
    if (allocated(SrcMiscData%Vt_wake)) then
       LB(1:1) = lbound(SrcMiscData%Vt_wake)
@@ -1580,8 +1506,6 @@ subroutine WD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%Vt_wake = SrcMiscData%Vt_wake
-   else if (allocated(DstMiscData%Vt_wake)) then
-      deallocate(DstMiscData%Vt_wake)
    end if
    DstMiscData%GammaCurl = SrcMiscData%GammaCurl
    DstMiscData%Ct_avg = SrcMiscData%Ct_avg
@@ -2108,8 +2032,6 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%r = SrcParamData%r
-   else if (allocated(DstParamData%r)) then
-      deallocate(DstParamData%r)
    end if
    if (allocated(SrcParamData%y)) then
       LB(1:1) = lbound(SrcParamData%y)
@@ -2122,8 +2044,6 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%y = SrcParamData%y
-   else if (allocated(DstParamData%y)) then
-      deallocate(DstParamData%y)
    end if
    if (allocated(SrcParamData%z)) then
       LB(1:1) = lbound(SrcParamData%z)
@@ -2136,8 +2056,6 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%z = SrcParamData%z
-   else if (allocated(DstParamData%z)) then
-      deallocate(DstParamData%z)
    end if
    DstParamData%Mod_Wake = SrcParamData%Mod_Wake
    DstParamData%Swirl = SrcParamData%Swirl
@@ -2405,8 +2323,6 @@ subroutine WD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%V_plane = SrcInputData%V_plane
-   else if (allocated(DstInputData%V_plane)) then
-      deallocate(DstInputData%V_plane)
    end if
    DstInputData%Vx_wind_disk = SrcInputData%Vx_wind_disk
    DstInputData%TI_amb = SrcInputData%TI_amb
@@ -2423,8 +2339,6 @@ subroutine WD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%Ct_azavg = SrcInputData%Ct_azavg
-   else if (allocated(DstInputData%Ct_azavg)) then
-      deallocate(DstInputData%Ct_azavg)
    end if
    if (allocated(SrcInputData%Cq_azavg)) then
       LB(1:1) = lbound(SrcInputData%Cq_azavg)
@@ -2437,8 +2351,6 @@ subroutine WD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%Cq_azavg = SrcInputData%Cq_azavg
-   else if (allocated(DstInputData%Cq_azavg)) then
-      deallocate(DstInputData%Cq_azavg)
    end if
 end subroutine
 
@@ -2584,8 +2496,6 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstOutputData%xhat_plane = SrcOutputData%xhat_plane
-   else if (allocated(DstOutputData%xhat_plane)) then
-      deallocate(DstOutputData%xhat_plane)
    end if
    if (allocated(SrcOutputData%p_plane)) then
       LB(1:2) = lbound(SrcOutputData%p_plane)
@@ -2598,8 +2508,6 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstOutputData%p_plane = SrcOutputData%p_plane
-   else if (allocated(DstOutputData%p_plane)) then
-      deallocate(DstOutputData%p_plane)
    end if
    if (allocated(SrcOutputData%Vx_wake)) then
       LB(1:2) = lbound(SrcOutputData%Vx_wake)
@@ -2612,8 +2520,6 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstOutputData%Vx_wake = SrcOutputData%Vx_wake
-   else if (allocated(DstOutputData%Vx_wake)) then
-      deallocate(DstOutputData%Vx_wake)
    end if
    if (allocated(SrcOutputData%Vr_wake)) then
       LB(1:2) = lbound(SrcOutputData%Vr_wake)
@@ -2626,8 +2532,6 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstOutputData%Vr_wake = SrcOutputData%Vr_wake
-   else if (allocated(DstOutputData%Vr_wake)) then
-      deallocate(DstOutputData%Vr_wake)
    end if
    if (allocated(SrcOutputData%Vx_wake2)) then
       LB(1:3) = lbound(SrcOutputData%Vx_wake2)
@@ -2640,8 +2544,6 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstOutputData%Vx_wake2 = SrcOutputData%Vx_wake2
-   else if (allocated(DstOutputData%Vx_wake2)) then
-      deallocate(DstOutputData%Vx_wake2)
    end if
    if (allocated(SrcOutputData%Vy_wake2)) then
       LB(1:3) = lbound(SrcOutputData%Vy_wake2)
@@ -2654,8 +2556,6 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstOutputData%Vy_wake2 = SrcOutputData%Vy_wake2
-   else if (allocated(DstOutputData%Vy_wake2)) then
-      deallocate(DstOutputData%Vy_wake2)
    end if
    if (allocated(SrcOutputData%Vz_wake2)) then
       LB(1:3) = lbound(SrcOutputData%Vz_wake2)
@@ -2668,8 +2568,6 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstOutputData%Vz_wake2 = SrcOutputData%Vz_wake2
-   else if (allocated(DstOutputData%Vz_wake2)) then
-      deallocate(DstOutputData%Vz_wake2)
    end if
    if (allocated(SrcOutputData%D_wake)) then
       LB(1:1) = lbound(SrcOutputData%D_wake)
@@ -2682,8 +2580,6 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstOutputData%D_wake = SrcOutputData%D_wake
-   else if (allocated(DstOutputData%D_wake)) then
-      deallocate(DstOutputData%D_wake)
    end if
    if (allocated(SrcOutputData%x_plane)) then
       LB(1:1) = lbound(SrcOutputData%x_plane)
@@ -2696,8 +2592,6 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstOutputData%x_plane = SrcOutputData%x_plane
-   else if (allocated(DstOutputData%x_plane)) then
-      deallocate(DstOutputData%x_plane)
    end if
    if (allocated(SrcOutputData%WAT_k_mt)) then
       LB(1:3) = lbound(SrcOutputData%WAT_k_mt)
@@ -2710,8 +2604,6 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstOutputData%WAT_k_mt = SrcOutputData%WAT_k_mt
-   else if (allocated(DstOutputData%WAT_k_mt)) then
-      deallocate(DstOutputData%WAT_k_mt)
    end if
 end subroutine
 

@@ -185,8 +185,6 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
          end if
       end if
       DstInitInputData%PtfmVol0 = SrcInitInputData%PtfmVol0
-   else if (allocated(DstInitInputData%PtfmVol0)) then
-      deallocate(DstInitInputData%PtfmVol0)
    end if
    DstInitInputData%HasWAMIT = SrcInitInputData%HasWAMIT
    DstInitInputData%WAMITULEN = SrcInitInputData%WAMITULEN
@@ -201,8 +199,6 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
          end if
       end if
       DstInitInputData%PtfmRefxt = SrcInitInputData%PtfmRefxt
-   else if (allocated(DstInitInputData%PtfmRefxt)) then
-      deallocate(DstInitInputData%PtfmRefxt)
    end if
    if (allocated(SrcInitInputData%PtfmRefyt)) then
       LB(1:1) = lbound(SrcInitInputData%PtfmRefyt)
@@ -215,8 +211,6 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
          end if
       end if
       DstInitInputData%PtfmRefyt = SrcInitInputData%PtfmRefyt
-   else if (allocated(DstInitInputData%PtfmRefyt)) then
-      deallocate(DstInitInputData%PtfmRefyt)
    end if
    if (allocated(SrcInitInputData%PtfmRefzt)) then
       LB(1:1) = lbound(SrcInitInputData%PtfmRefzt)
@@ -229,8 +223,6 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
          end if
       end if
       DstInitInputData%PtfmRefzt = SrcInitInputData%PtfmRefzt
-   else if (allocated(DstInitInputData%PtfmRefzt)) then
-      deallocate(DstInitInputData%PtfmRefzt)
    end if
    if (allocated(SrcInitInputData%PtfmRefztRot)) then
       LB(1:1) = lbound(SrcInitInputData%PtfmRefztRot)
@@ -243,8 +235,6 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
          end if
       end if
       DstInitInputData%PtfmRefztRot = SrcInitInputData%PtfmRefztRot
-   else if (allocated(DstInitInputData%PtfmRefztRot)) then
-      deallocate(DstInitInputData%PtfmRefztRot)
    end if
    if (allocated(SrcInitInputData%PtfmCOBxt)) then
       LB(1:1) = lbound(SrcInitInputData%PtfmCOBxt)
@@ -257,8 +247,6 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
          end if
       end if
       DstInitInputData%PtfmCOBxt = SrcInitInputData%PtfmCOBxt
-   else if (allocated(DstInitInputData%PtfmCOBxt)) then
-      deallocate(DstInitInputData%PtfmCOBxt)
    end if
    if (allocated(SrcInitInputData%PtfmCOByt)) then
       LB(1:1) = lbound(SrcInitInputData%PtfmCOByt)
@@ -271,8 +259,6 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
          end if
       end if
       DstInitInputData%PtfmCOByt = SrcInitInputData%PtfmCOByt
-   else if (allocated(DstInitInputData%PtfmCOByt)) then
-      deallocate(DstInitInputData%PtfmCOByt)
    end if
    DstInitInputData%RdtnMod = SrcInitInputData%RdtnMod
    DstInitInputData%ExctnMod = SrcInitInputData%ExctnMod
@@ -850,8 +836,6 @@ subroutine WAMIT_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, Err
          end if
       end if
       DstDiscStateData%BdyPosFilt = SrcDiscStateData%BdyPosFilt
-   else if (allocated(DstDiscStateData%BdyPosFilt)) then
-      deallocate(DstDiscStateData%BdyPosFilt)
    end if
 end subroutine
 
@@ -1062,8 +1046,6 @@ subroutine WAMIT_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%F_HS = SrcMiscData%F_HS
-   else if (allocated(DstMiscData%F_HS)) then
-      deallocate(DstMiscData%F_HS)
    end if
    if (allocated(SrcMiscData%F_Waves1)) then
       LB(1:1) = lbound(SrcMiscData%F_Waves1)
@@ -1076,8 +1058,6 @@ subroutine WAMIT_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%F_Waves1 = SrcMiscData%F_Waves1
-   else if (allocated(DstMiscData%F_Waves1)) then
-      deallocate(DstMiscData%F_Waves1)
    end if
    if (allocated(SrcMiscData%F_Rdtn)) then
       LB(1:1) = lbound(SrcMiscData%F_Rdtn)
@@ -1090,8 +1070,6 @@ subroutine WAMIT_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%F_Rdtn = SrcMiscData%F_Rdtn
-   else if (allocated(DstMiscData%F_Rdtn)) then
-      deallocate(DstMiscData%F_Rdtn)
    end if
    if (allocated(SrcMiscData%F_PtfmAM)) then
       LB(1:1) = lbound(SrcMiscData%F_PtfmAM)
@@ -1104,8 +1082,6 @@ subroutine WAMIT_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%F_PtfmAM = SrcMiscData%F_PtfmAM
-   else if (allocated(DstMiscData%F_PtfmAM)) then
-      deallocate(DstMiscData%F_PtfmAM)
    end if
    call SS_Rad_CopyMisc(SrcMiscData%SS_Rdtn, DstMiscData%SS_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1324,8 +1300,6 @@ subroutine WAMIT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstParamData%F_HS_Moment_Offset = SrcParamData%F_HS_Moment_Offset
-   else if (allocated(DstParamData%F_HS_Moment_Offset)) then
-      deallocate(DstParamData%F_HS_Moment_Offset)
    end if
    if (allocated(SrcParamData%HdroAdMsI)) then
       LB(1:2) = lbound(SrcParamData%HdroAdMsI)
@@ -1338,8 +1312,6 @@ subroutine WAMIT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstParamData%HdroAdMsI = SrcParamData%HdroAdMsI
-   else if (allocated(DstParamData%HdroAdMsI)) then
-      deallocate(DstParamData%HdroAdMsI)
    end if
    if (allocated(SrcParamData%HdroSttc)) then
       LB(1:2) = lbound(SrcParamData%HdroSttc)
@@ -1352,8 +1324,6 @@ subroutine WAMIT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstParamData%HdroSttc = SrcParamData%HdroSttc
-   else if (allocated(DstParamData%HdroSttc)) then
-      deallocate(DstParamData%HdroSttc)
    end if
    DstParamData%RdtnMod = SrcParamData%RdtnMod
    DstParamData%ExctnMod = SrcParamData%ExctnMod
@@ -1371,8 +1341,6 @@ subroutine WAMIT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstParamData%WaveExctn = SrcParamData%WaveExctn
-   else if (allocated(DstParamData%WaveExctn)) then
-      deallocate(DstParamData%WaveExctn)
    end if
    if (allocated(SrcParamData%WaveExctnGrid)) then
       LB(1:4) = lbound(SrcParamData%WaveExctnGrid)
@@ -1385,8 +1353,6 @@ subroutine WAMIT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstParamData%WaveExctnGrid = SrcParamData%WaveExctnGrid
-   else if (allocated(DstParamData%WaveExctnGrid)) then
-      deallocate(DstParamData%WaveExctnGrid)
    end if
    DstParamData%NStepWave = SrcParamData%NStepWave
    call Conv_Rdtn_CopyParam(SrcParamData%Conv_Rdtn, DstParamData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2)

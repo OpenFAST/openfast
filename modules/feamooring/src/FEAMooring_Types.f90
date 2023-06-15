@@ -248,8 +248,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%LineCI = SrcInputFileData%LineCI
-   else if (allocated(DstInputFileData%LineCI)) then
-      deallocate(DstInputFileData%LineCI)
    end if
    if (allocated(SrcInputFileData%LineCD)) then
       LB(1:1) = lbound(SrcInputFileData%LineCD)
@@ -262,8 +260,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%LineCD = SrcInputFileData%LineCD
-   else if (allocated(DstInputFileData%LineCD)) then
-      deallocate(DstInputFileData%LineCD)
    end if
    if (allocated(SrcInputFileData%LEAStiff)) then
       LB(1:1) = lbound(SrcInputFileData%LEAStiff)
@@ -276,8 +272,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%LEAStiff = SrcInputFileData%LEAStiff
-   else if (allocated(DstInputFileData%LEAStiff)) then
-      deallocate(DstInputFileData%LEAStiff)
    end if
    if (allocated(SrcInputFileData%LMassDen)) then
       LB(1:1) = lbound(SrcInputFileData%LMassDen)
@@ -290,8 +284,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%LMassDen = SrcInputFileData%LMassDen
-   else if (allocated(DstInputFileData%LMassDen)) then
-      deallocate(DstInputFileData%LMassDen)
    end if
    if (allocated(SrcInputFileData%LDMassDen)) then
       LB(1:1) = lbound(SrcInputFileData%LDMassDen)
@@ -304,8 +296,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%LDMassDen = SrcInputFileData%LDMassDen
-   else if (allocated(DstInputFileData%LDMassDen)) then
-      deallocate(DstInputFileData%LDMassDen)
    end if
    if (allocated(SrcInputFileData%BottmStiff)) then
       LB(1:1) = lbound(SrcInputFileData%BottmStiff)
@@ -318,8 +308,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%BottmStiff = SrcInputFileData%BottmStiff
-   else if (allocated(DstInputFileData%BottmStiff)) then
-      deallocate(DstInputFileData%BottmStiff)
    end if
    if (allocated(SrcInputFileData%LRadAnch)) then
       LB(1:1) = lbound(SrcInputFileData%LRadAnch)
@@ -332,8 +320,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%LRadAnch = SrcInputFileData%LRadAnch
-   else if (allocated(DstInputFileData%LRadAnch)) then
-      deallocate(DstInputFileData%LRadAnch)
    end if
    if (allocated(SrcInputFileData%LAngAnch)) then
       LB(1:1) = lbound(SrcInputFileData%LAngAnch)
@@ -346,8 +332,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%LAngAnch = SrcInputFileData%LAngAnch
-   else if (allocated(DstInputFileData%LAngAnch)) then
-      deallocate(DstInputFileData%LAngAnch)
    end if
    if (allocated(SrcInputFileData%LDpthAnch)) then
       LB(1:1) = lbound(SrcInputFileData%LDpthAnch)
@@ -360,8 +344,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%LDpthAnch = SrcInputFileData%LDpthAnch
-   else if (allocated(DstInputFileData%LDpthAnch)) then
-      deallocate(DstInputFileData%LDpthAnch)
    end if
    if (allocated(SrcInputFileData%LRadFair)) then
       LB(1:1) = lbound(SrcInputFileData%LRadFair)
@@ -374,8 +356,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%LRadFair = SrcInputFileData%LRadFair
-   else if (allocated(DstInputFileData%LRadFair)) then
-      deallocate(DstInputFileData%LRadFair)
    end if
    if (allocated(SrcInputFileData%LAngFair)) then
       LB(1:1) = lbound(SrcInputFileData%LAngFair)
@@ -388,8 +368,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%LAngFair = SrcInputFileData%LAngFair
-   else if (allocated(DstInputFileData%LAngFair)) then
-      deallocate(DstInputFileData%LAngFair)
    end if
    if (allocated(SrcInputFileData%LDrftFair)) then
       LB(1:1) = lbound(SrcInputFileData%LDrftFair)
@@ -402,8 +380,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%LDrftFair = SrcInputFileData%LDrftFair
-   else if (allocated(DstInputFileData%LDrftFair)) then
-      deallocate(DstInputFileData%LDrftFair)
    end if
    if (allocated(SrcInputFileData%LUnstrLen)) then
       LB(1:1) = lbound(SrcInputFileData%LUnstrLen)
@@ -416,8 +392,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%LUnstrLen = SrcInputFileData%LUnstrLen
-   else if (allocated(DstInputFileData%LUnstrLen)) then
-      deallocate(DstInputFileData%LUnstrLen)
    end if
    if (allocated(SrcInputFileData%Tension)) then
       LB(1:1) = lbound(SrcInputFileData%Tension)
@@ -430,8 +404,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%Tension = SrcInputFileData%Tension
-   else if (allocated(DstInputFileData%Tension)) then
-      deallocate(DstInputFileData%Tension)
    end if
    if (allocated(SrcInputFileData%GSL)) then
       LB(1:3) = lbound(SrcInputFileData%GSL)
@@ -444,8 +416,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%GSL = SrcInputFileData%GSL
-   else if (allocated(DstInputFileData%GSL)) then
-      deallocate(DstInputFileData%GSL)
    end if
    if (allocated(SrcInputFileData%GSR)) then
       LB(1:2) = lbound(SrcInputFileData%GSR)
@@ -458,8 +428,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%GSR = SrcInputFileData%GSR
-   else if (allocated(DstInputFileData%GSR)) then
-      deallocate(DstInputFileData%GSR)
    end if
    if (allocated(SrcInputFileData%GE)) then
       LB(1:3) = lbound(SrcInputFileData%GE)
@@ -472,8 +440,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%GE = SrcInputFileData%GE
-   else if (allocated(DstInputFileData%GE)) then
-      deallocate(DstInputFileData%GE)
    end if
    DstInputFileData%NumLines = SrcInputFileData%NumLines
    DstInputFileData%NumElems = SrcInputFileData%NumElems
@@ -498,8 +464,6 @@ subroutine FEAM_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%OutList = SrcInputFileData%OutList
-   else if (allocated(DstInputFileData%OutList)) then
-      deallocate(DstInputFileData%OutList)
    end if
 end subroutine
 
@@ -991,8 +955,6 @@ subroutine FEAM_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
          end if
       end if
       DstInitInputData%WaveAcc0 = SrcInitInputData%WaveAcc0
-   else if (allocated(DstInitInputData%WaveAcc0)) then
-      deallocate(DstInitInputData%WaveAcc0)
    end if
    if (allocated(SrcInitInputData%WaveTime)) then
       LB(1:1) = lbound(SrcInitInputData%WaveTime)
@@ -1005,8 +967,6 @@ subroutine FEAM_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
          end if
       end if
       DstInitInputData%WaveTime = SrcInitInputData%WaveTime
-   else if (allocated(DstInitInputData%WaveTime)) then
-      deallocate(DstInitInputData%WaveTime)
    end if
    if (allocated(SrcInitInputData%WaveVel0)) then
       LB(1:3) = lbound(SrcInitInputData%WaveVel0)
@@ -1019,8 +979,6 @@ subroutine FEAM_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
          end if
       end if
       DstInitInputData%WaveVel0 = SrcInitInputData%WaveVel0
-   else if (allocated(DstInitInputData%WaveVel0)) then
-      deallocate(DstInitInputData%WaveVel0)
    end if
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%WtrDens = SrcInitInputData%WtrDens
@@ -1160,8 +1118,6 @@ subroutine FEAM_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
-      deallocate(DstInitOutputData%WriteOutputHdr)
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
@@ -1174,8 +1130,6 @@ subroutine FEAM_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
-      deallocate(DstInitOutputData%WriteOutputUnt)
    end if
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1191,8 +1145,6 @@ subroutine FEAM_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%LAnchxi = SrcInitOutputData%LAnchxi
-   else if (allocated(DstInitOutputData%LAnchxi)) then
-      deallocate(DstInitOutputData%LAnchxi)
    end if
    if (allocated(SrcInitOutputData%LAnchyi)) then
       LB(1:1) = lbound(SrcInitOutputData%LAnchyi)
@@ -1205,8 +1157,6 @@ subroutine FEAM_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%LAnchyi = SrcInitOutputData%LAnchyi
-   else if (allocated(DstInitOutputData%LAnchyi)) then
-      deallocate(DstInitOutputData%LAnchyi)
    end if
    if (allocated(SrcInitOutputData%LAnchzi)) then
       LB(1:1) = lbound(SrcInitOutputData%LAnchzi)
@@ -1219,8 +1169,6 @@ subroutine FEAM_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%LAnchzi = SrcInitOutputData%LAnchzi
-   else if (allocated(DstInitOutputData%LAnchzi)) then
-      deallocate(DstInitOutputData%LAnchzi)
    end if
    if (allocated(SrcInitOutputData%LFairxt)) then
       LB(1:1) = lbound(SrcInitOutputData%LFairxt)
@@ -1233,8 +1181,6 @@ subroutine FEAM_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%LFairxt = SrcInitOutputData%LFairxt
-   else if (allocated(DstInitOutputData%LFairxt)) then
-      deallocate(DstInitOutputData%LFairxt)
    end if
    if (allocated(SrcInitOutputData%LFairyt)) then
       LB(1:1) = lbound(SrcInitOutputData%LFairyt)
@@ -1247,8 +1193,6 @@ subroutine FEAM_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%LFairyt = SrcInitOutputData%LFairyt
-   else if (allocated(DstInitOutputData%LFairyt)) then
-      deallocate(DstInitOutputData%LFairyt)
    end if
    if (allocated(SrcInitOutputData%LFairzt)) then
       LB(1:1) = lbound(SrcInitOutputData%LFairzt)
@@ -1261,8 +1205,6 @@ subroutine FEAM_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%LFairzt = SrcInitOutputData%LFairzt
-   else if (allocated(DstInitOutputData%LFairzt)) then
-      deallocate(DstInitOutputData%LFairzt)
    end if
 end subroutine
 
@@ -1497,8 +1439,6 @@ subroutine FEAM_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrS
          end if
       end if
       DstContStateData%GLU = SrcContStateData%GLU
-   else if (allocated(DstContStateData%GLU)) then
-      deallocate(DstContStateData%GLU)
    end if
    if (allocated(SrcContStateData%GLDU)) then
       LB(1:2) = lbound(SrcContStateData%GLDU)
@@ -1511,8 +1451,6 @@ subroutine FEAM_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrS
          end if
       end if
       DstContStateData%GLDU = SrcContStateData%GLDU
-   else if (allocated(DstContStateData%GLDU)) then
-      deallocate(DstContStateData%GLDU)
    end if
 end subroutine
 
@@ -1691,8 +1629,6 @@ subroutine FEAM_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, E
          end if
       end if
       DstOtherStateData%GLU0 = SrcOtherStateData%GLU0
-   else if (allocated(DstOtherStateData%GLU0)) then
-      deallocate(DstOtherStateData%GLU0)
    end if
    if (allocated(SrcOtherStateData%GLDDU)) then
       LB(1:2) = lbound(SrcOtherStateData%GLDDU)
@@ -1705,8 +1641,6 @@ subroutine FEAM_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, E
          end if
       end if
       DstOtherStateData%GLDDU = SrcOtherStateData%GLDDU
-   else if (allocated(DstOtherStateData%GLDDU)) then
-      deallocate(DstOtherStateData%GLDDU)
    end if
    DstOtherStateData%BottomTouch = SrcOtherStateData%BottomTouch
    if (allocated(SrcOtherStateData%GFORC0)) then
@@ -1720,8 +1654,6 @@ subroutine FEAM_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, E
          end if
       end if
       DstOtherStateData%GFORC0 = SrcOtherStateData%GFORC0
-   else if (allocated(DstOtherStateData%GFORC0)) then
-      deallocate(DstOtherStateData%GFORC0)
    end if
    if (allocated(SrcOtherStateData%GMASS0)) then
       LB(1:4) = lbound(SrcOtherStateData%GMASS0)
@@ -1734,8 +1666,6 @@ subroutine FEAM_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, E
          end if
       end if
       DstOtherStateData%GMASS0 = SrcOtherStateData%GMASS0
-   else if (allocated(DstOtherStateData%GMASS0)) then
-      deallocate(DstOtherStateData%GMASS0)
    end if
    if (allocated(SrcOtherStateData%FAST_FPA)) then
       LB(1:2) = lbound(SrcOtherStateData%FAST_FPA)
@@ -1748,8 +1678,6 @@ subroutine FEAM_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, E
          end if
       end if
       DstOtherStateData%FAST_FPA = SrcOtherStateData%FAST_FPA
-   else if (allocated(DstOtherStateData%FAST_FPA)) then
-      deallocate(DstOtherStateData%FAST_FPA)
    end if
    if (allocated(SrcOtherStateData%FAST_RP)) then
       LB(1:2) = lbound(SrcOtherStateData%FAST_RP)
@@ -1762,8 +1690,6 @@ subroutine FEAM_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, E
          end if
       end if
       DstOtherStateData%FAST_RP = SrcOtherStateData%FAST_RP
-   else if (allocated(DstOtherStateData%FAST_RP)) then
-      deallocate(DstOtherStateData%FAST_RP)
    end if
    DstOtherStateData%INCR = SrcOtherStateData%INCR
    DstOtherStateData%RSDF = SrcOtherStateData%RSDF
@@ -1967,8 +1893,6 @@ subroutine FEAM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%GLF = SrcMiscData%GLF
-   else if (allocated(DstMiscData%GLF)) then
-      deallocate(DstMiscData%GLF)
    end if
    if (allocated(SrcMiscData%GLK)) then
       LB(1:3) = lbound(SrcMiscData%GLK)
@@ -1981,8 +1905,6 @@ subroutine FEAM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%GLK = SrcMiscData%GLK
-   else if (allocated(DstMiscData%GLK)) then
-      deallocate(DstMiscData%GLK)
    end if
    DstMiscData%EMASS = SrcMiscData%EMASS
    DstMiscData%ESTIF = SrcMiscData%ESTIF
@@ -1997,8 +1919,6 @@ subroutine FEAM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%FAST_FP = SrcMiscData%FAST_FP
-   else if (allocated(DstMiscData%FAST_FP)) then
-      deallocate(DstMiscData%FAST_FP)
    end if
    DstMiscData%FORCE = SrcMiscData%FORCE
    DstMiscData%FP = SrcMiscData%FP
@@ -2022,8 +1942,6 @@ subroutine FEAM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%FAIR_ANG = SrcMiscData%FAIR_ANG
-   else if (allocated(DstMiscData%FAIR_ANG)) then
-      deallocate(DstMiscData%FAIR_ANG)
    end if
    if (allocated(SrcMiscData%FAIR_T)) then
       LB(1:1) = lbound(SrcMiscData%FAIR_T)
@@ -2036,8 +1954,6 @@ subroutine FEAM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%FAIR_T = SrcMiscData%FAIR_T
-   else if (allocated(DstMiscData%FAIR_T)) then
-      deallocate(DstMiscData%FAIR_T)
    end if
    if (allocated(SrcMiscData%ANCH_ANG)) then
       LB(1:2) = lbound(SrcMiscData%ANCH_ANG)
@@ -2050,8 +1966,6 @@ subroutine FEAM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%ANCH_ANG = SrcMiscData%ANCH_ANG
-   else if (allocated(DstMiscData%ANCH_ANG)) then
-      deallocate(DstMiscData%ANCH_ANG)
    end if
    if (allocated(SrcMiscData%ANCH_T)) then
       LB(1:1) = lbound(SrcMiscData%ANCH_T)
@@ -2064,8 +1978,6 @@ subroutine FEAM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%ANCH_T = SrcMiscData%ANCH_T
-   else if (allocated(DstMiscData%ANCH_T)) then
-      deallocate(DstMiscData%ANCH_T)
    end if
    if (allocated(SrcMiscData%Line_Coordinate)) then
       LB(1:3) = lbound(SrcMiscData%Line_Coordinate)
@@ -2078,8 +1990,6 @@ subroutine FEAM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%Line_Coordinate = SrcMiscData%Line_Coordinate
-   else if (allocated(DstMiscData%Line_Coordinate)) then
-      deallocate(DstMiscData%Line_Coordinate)
    end if
    if (allocated(SrcMiscData%Line_Tangent)) then
       LB(1:3) = lbound(SrcMiscData%Line_Tangent)
@@ -2092,8 +2002,6 @@ subroutine FEAM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%Line_Tangent = SrcMiscData%Line_Tangent
-   else if (allocated(DstMiscData%Line_Tangent)) then
-      deallocate(DstMiscData%Line_Tangent)
    end if
    if (allocated(SrcMiscData%F_Lines)) then
       LB(1:2) = lbound(SrcMiscData%F_Lines)
@@ -2106,8 +2014,6 @@ subroutine FEAM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%F_Lines = SrcMiscData%F_Lines
-   else if (allocated(DstMiscData%F_Lines)) then
-      deallocate(DstMiscData%F_Lines)
    end if
    DstMiscData%LastIndWave = SrcMiscData%LastIndWave
 end subroutine
@@ -2433,8 +2339,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%NEQ = SrcParamData%NEQ
-   else if (allocated(DstParamData%NEQ)) then
-      deallocate(DstParamData%NEQ)
    end if
    DstParamData%NBAND = SrcParamData%NBAND
    DstParamData%NumLines = SrcParamData%NumLines
@@ -2451,8 +2355,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%GSL = SrcParamData%GSL
-   else if (allocated(DstParamData%GSL)) then
-      deallocate(DstParamData%GSL)
    end if
    if (allocated(SrcParamData%GP)) then
       LB(1:2) = lbound(SrcParamData%GP)
@@ -2465,8 +2367,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%GP = SrcParamData%GP
-   else if (allocated(DstParamData%GP)) then
-      deallocate(DstParamData%GP)
    end if
    if (allocated(SrcParamData%Elength)) then
       LB(1:1) = lbound(SrcParamData%Elength)
@@ -2479,8 +2379,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%Elength = SrcParamData%Elength
-   else if (allocated(DstParamData%Elength)) then
-      deallocate(DstParamData%Elength)
    end if
    if (allocated(SrcParamData%BottmElev)) then
       LB(1:1) = lbound(SrcParamData%BottmElev)
@@ -2493,8 +2391,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%BottmElev = SrcParamData%BottmElev
-   else if (allocated(DstParamData%BottmElev)) then
-      deallocate(DstParamData%BottmElev)
    end if
    if (allocated(SrcParamData%BottmStiff)) then
       LB(1:1) = lbound(SrcParamData%BottmStiff)
@@ -2507,8 +2403,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%BottmStiff = SrcParamData%BottmStiff
-   else if (allocated(DstParamData%BottmStiff)) then
-      deallocate(DstParamData%BottmStiff)
    end if
    if (allocated(SrcParamData%LMassDen)) then
       LB(1:1) = lbound(SrcParamData%LMassDen)
@@ -2521,8 +2415,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%LMassDen = SrcParamData%LMassDen
-   else if (allocated(DstParamData%LMassDen)) then
-      deallocate(DstParamData%LMassDen)
    end if
    if (allocated(SrcParamData%LDMassDen)) then
       LB(1:1) = lbound(SrcParamData%LDMassDen)
@@ -2535,8 +2427,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%LDMassDen = SrcParamData%LDMassDen
-   else if (allocated(DstParamData%LDMassDen)) then
-      deallocate(DstParamData%LDMassDen)
    end if
    if (allocated(SrcParamData%LEAStiff)) then
       LB(1:1) = lbound(SrcParamData%LEAStiff)
@@ -2549,8 +2439,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%LEAStiff = SrcParamData%LEAStiff
-   else if (allocated(DstParamData%LEAStiff)) then
-      deallocate(DstParamData%LEAStiff)
    end if
    if (allocated(SrcParamData%LineCI)) then
       LB(1:1) = lbound(SrcParamData%LineCI)
@@ -2563,8 +2451,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%LineCI = SrcParamData%LineCI
-   else if (allocated(DstParamData%LineCI)) then
-      deallocate(DstParamData%LineCI)
    end if
    if (allocated(SrcParamData%LineCD)) then
       LB(1:1) = lbound(SrcParamData%LineCD)
@@ -2577,8 +2463,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%LineCD = SrcParamData%LineCD
-   else if (allocated(DstParamData%LineCD)) then
-      deallocate(DstParamData%LineCD)
    end if
    if (allocated(SrcParamData%Bvp)) then
       LB(1:2) = lbound(SrcParamData%Bvp)
@@ -2591,8 +2475,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%Bvp = SrcParamData%Bvp
-   else if (allocated(DstParamData%Bvp)) then
-      deallocate(DstParamData%Bvp)
    end if
    if (allocated(SrcParamData%WaveAcc0)) then
       LB(1:3) = lbound(SrcParamData%WaveAcc0)
@@ -2605,8 +2487,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%WaveAcc0 = SrcParamData%WaveAcc0
-   else if (allocated(DstParamData%WaveAcc0)) then
-      deallocate(DstParamData%WaveAcc0)
    end if
    if (allocated(SrcParamData%WaveTime)) then
       LB(1:1) = lbound(SrcParamData%WaveTime)
@@ -2619,8 +2499,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%WaveTime = SrcParamData%WaveTime
-   else if (allocated(DstParamData%WaveTime)) then
-      deallocate(DstParamData%WaveTime)
    end if
    if (allocated(SrcParamData%WaveVel0)) then
       LB(1:3) = lbound(SrcParamData%WaveVel0)
@@ -2633,8 +2511,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%WaveVel0 = SrcParamData%WaveVel0
-   else if (allocated(DstParamData%WaveVel0)) then
-      deallocate(DstParamData%WaveVel0)
    end if
    DstParamData%NStepWave = SrcParamData%NStepWave
    DstParamData%SHAP = SrcParamData%SHAP
@@ -2672,8 +2548,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%OutParam)) then
-      deallocate(DstParamData%OutParam)
    end if
    DstParamData%Delim = SrcParamData%Delim
    if (allocated(SrcParamData%GLUZR)) then
@@ -2687,8 +2561,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%GLUZR = SrcParamData%GLUZR
-   else if (allocated(DstParamData%GLUZR)) then
-      deallocate(DstParamData%GLUZR)
    end if
    if (allocated(SrcParamData%GTZER)) then
       LB(1:2) = lbound(SrcParamData%GTZER)
@@ -2701,8 +2573,6 @@ subroutine FEAM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%GTZER = SrcParamData%GTZER
-   else if (allocated(DstParamData%GTZER)) then
-      deallocate(DstParamData%GTZER)
    end if
 end subroutine
 
@@ -3325,8 +3195,6 @@ subroutine FEAM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-   else if (allocated(DstOutputData%WriteOutput)) then
-      deallocate(DstOutputData%WriteOutput)
    end if
    call MeshCopy(SrcOutputData%PtFairleadLoad, DstOutputData%PtFairleadLoad, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

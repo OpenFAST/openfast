@@ -440,10 +440,6 @@ void gen_copy(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
         if (field.is_allocatable)
         {
             indent.erase(indent.size() - 3);
-            w << indent << "else if (" << alloc_assoc << "(" << dst << ")) then";
-            w << indent << "   deallocate(" << dst << ")";
-            if (field.is_pointer)
-                w << indent << "   nullify(" << dst << ")";
             w << indent << "end if";
         }
     }

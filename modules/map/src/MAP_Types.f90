@@ -432,8 +432,6 @@ subroutine MAP_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Er
          end if
       end if
       DstInitOutputData%writeOutputHdr = SrcInitOutputData%writeOutputHdr
-   else if (allocated(DstInitOutputData%writeOutputHdr)) then
-      deallocate(DstInitOutputData%writeOutputHdr)
    end if
    if (allocated(SrcInitOutputData%writeOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%writeOutputUnt)
@@ -446,8 +444,6 @@ subroutine MAP_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Er
          end if
       end if
       DstInitOutputData%writeOutputUnt = SrcInitOutputData%writeOutputUnt
-   else if (allocated(DstInitOutputData%writeOutputUnt)) then
-      deallocate(DstInitOutputData%writeOutputUnt)
    end if
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -781,9 +777,6 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
             DstOtherStateData%C_obj%H = c_loc(DstOtherStateData%H(LB(1)))
       end if
       DstOtherStateData%H = SrcOtherStateData%H
-   else if (associated(DstOtherStateData%H)) then
-      deallocate(DstOtherStateData%H)
-      nullify(DstOtherStateData%H)
    end if
    if (associated(SrcOtherStateData%V)) then
       LB(1:1) = lbound(SrcOtherStateData%V)
@@ -799,9 +792,6 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
             DstOtherStateData%C_obj%V = c_loc(DstOtherStateData%V(LB(1)))
       end if
       DstOtherStateData%V = SrcOtherStateData%V
-   else if (associated(DstOtherStateData%V)) then
-      deallocate(DstOtherStateData%V)
-      nullify(DstOtherStateData%V)
    end if
    if (associated(SrcOtherStateData%Ha)) then
       LB(1:1) = lbound(SrcOtherStateData%Ha)
@@ -817,9 +807,6 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
             DstOtherStateData%C_obj%Ha = c_loc(DstOtherStateData%Ha(LB(1)))
       end if
       DstOtherStateData%Ha = SrcOtherStateData%Ha
-   else if (associated(DstOtherStateData%Ha)) then
-      deallocate(DstOtherStateData%Ha)
-      nullify(DstOtherStateData%Ha)
    end if
    if (associated(SrcOtherStateData%Va)) then
       LB(1:1) = lbound(SrcOtherStateData%Va)
@@ -835,9 +822,6 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
             DstOtherStateData%C_obj%Va = c_loc(DstOtherStateData%Va(LB(1)))
       end if
       DstOtherStateData%Va = SrcOtherStateData%Va
-   else if (associated(DstOtherStateData%Va)) then
-      deallocate(DstOtherStateData%Va)
-      nullify(DstOtherStateData%Va)
    end if
    if (associated(SrcOtherStateData%x)) then
       LB(1:1) = lbound(SrcOtherStateData%x)
@@ -853,9 +837,6 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
             DstOtherStateData%C_obj%x = c_loc(DstOtherStateData%x(LB(1)))
       end if
       DstOtherStateData%x = SrcOtherStateData%x
-   else if (associated(DstOtherStateData%x)) then
-      deallocate(DstOtherStateData%x)
-      nullify(DstOtherStateData%x)
    end if
    if (associated(SrcOtherStateData%y)) then
       LB(1:1) = lbound(SrcOtherStateData%y)
@@ -871,9 +852,6 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
             DstOtherStateData%C_obj%y = c_loc(DstOtherStateData%y(LB(1)))
       end if
       DstOtherStateData%y = SrcOtherStateData%y
-   else if (associated(DstOtherStateData%y)) then
-      deallocate(DstOtherStateData%y)
-      nullify(DstOtherStateData%y)
    end if
    if (associated(SrcOtherStateData%z)) then
       LB(1:1) = lbound(SrcOtherStateData%z)
@@ -889,9 +867,6 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
             DstOtherStateData%C_obj%z = c_loc(DstOtherStateData%z(LB(1)))
       end if
       DstOtherStateData%z = SrcOtherStateData%z
-   else if (associated(DstOtherStateData%z)) then
-      deallocate(DstOtherStateData%z)
-      nullify(DstOtherStateData%z)
    end if
    if (associated(SrcOtherStateData%xa)) then
       LB(1:1) = lbound(SrcOtherStateData%xa)
@@ -907,9 +882,6 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
             DstOtherStateData%C_obj%xa = c_loc(DstOtherStateData%xa(LB(1)))
       end if
       DstOtherStateData%xa = SrcOtherStateData%xa
-   else if (associated(DstOtherStateData%xa)) then
-      deallocate(DstOtherStateData%xa)
-      nullify(DstOtherStateData%xa)
    end if
    if (associated(SrcOtherStateData%ya)) then
       LB(1:1) = lbound(SrcOtherStateData%ya)
@@ -925,9 +897,6 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
             DstOtherStateData%C_obj%ya = c_loc(DstOtherStateData%ya(LB(1)))
       end if
       DstOtherStateData%ya = SrcOtherStateData%ya
-   else if (associated(DstOtherStateData%ya)) then
-      deallocate(DstOtherStateData%ya)
-      nullify(DstOtherStateData%ya)
    end if
    if (associated(SrcOtherStateData%za)) then
       LB(1:1) = lbound(SrcOtherStateData%za)
@@ -943,9 +912,6 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
             DstOtherStateData%C_obj%za = c_loc(DstOtherStateData%za(LB(1)))
       end if
       DstOtherStateData%za = SrcOtherStateData%za
-   else if (associated(DstOtherStateData%za)) then
-      deallocate(DstOtherStateData%za)
-      nullify(DstOtherStateData%za)
    end if
    if (associated(SrcOtherStateData%Fx_connect)) then
       LB(1:1) = lbound(SrcOtherStateData%Fx_connect)
@@ -961,9 +927,6 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
             DstOtherStateData%C_obj%Fx_connect = c_loc(DstOtherStateData%Fx_connect(LB(1)))
       end if
       DstOtherStateData%Fx_connect = SrcOtherStateData%Fx_connect
-   else if (associated(DstOtherStateData%Fx_connect)) then
-      deallocate(DstOtherStateData%Fx_connect)
-      nullify(DstOtherStateData%Fx_connect)
    end if
    if (associated(SrcOtherStateData%Fy_connect)) then
       LB(1:1) = lbound(SrcOtherStateData%Fy_connect)
@@ -979,9 +942,6 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
             DstOtherStateData%C_obj%Fy_connect = c_loc(DstOtherStateData%Fy_connect(LB(1)))
       end if
       DstOtherStateData%Fy_connect = SrcOtherStateData%Fy_connect
-   else if (associated(DstOtherStateData%Fy_connect)) then
-      deallocate(DstOtherStateData%Fy_connect)
-      nullify(DstOtherStateData%Fy_connect)
    end if
    if (associated(SrcOtherStateData%Fz_connect)) then
       LB(1:1) = lbound(SrcOtherStateData%Fz_connect)
@@ -997,9 +957,6 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
             DstOtherStateData%C_obj%Fz_connect = c_loc(DstOtherStateData%Fz_connect(LB(1)))
       end if
       DstOtherStateData%Fz_connect = SrcOtherStateData%Fz_connect
-   else if (associated(DstOtherStateData%Fz_connect)) then
-      deallocate(DstOtherStateData%Fz_connect)
-      nullify(DstOtherStateData%Fz_connect)
    end if
    if (associated(SrcOtherStateData%Fx_anchor)) then
       LB(1:1) = lbound(SrcOtherStateData%Fx_anchor)
@@ -1015,9 +972,6 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
             DstOtherStateData%C_obj%Fx_anchor = c_loc(DstOtherStateData%Fx_anchor(LB(1)))
       end if
       DstOtherStateData%Fx_anchor = SrcOtherStateData%Fx_anchor
-   else if (associated(DstOtherStateData%Fx_anchor)) then
-      deallocate(DstOtherStateData%Fx_anchor)
-      nullify(DstOtherStateData%Fx_anchor)
    end if
    if (associated(SrcOtherStateData%Fy_anchor)) then
       LB(1:1) = lbound(SrcOtherStateData%Fy_anchor)
@@ -1033,9 +987,6 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
             DstOtherStateData%C_obj%Fy_anchor = c_loc(DstOtherStateData%Fy_anchor(LB(1)))
       end if
       DstOtherStateData%Fy_anchor = SrcOtherStateData%Fy_anchor
-   else if (associated(DstOtherStateData%Fy_anchor)) then
-      deallocate(DstOtherStateData%Fy_anchor)
-      nullify(DstOtherStateData%Fy_anchor)
    end if
    if (associated(SrcOtherStateData%Fz_anchor)) then
       LB(1:1) = lbound(SrcOtherStateData%Fz_anchor)
@@ -1051,9 +1002,6 @@ subroutine MAP_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
             DstOtherStateData%C_obj%Fz_anchor = c_loc(DstOtherStateData%Fz_anchor(LB(1)))
       end if
       DstOtherStateData%Fz_anchor = SrcOtherStateData%Fz_anchor
-   else if (associated(DstOtherStateData%Fz_anchor)) then
-      deallocate(DstOtherStateData%Fz_anchor)
-      nullify(DstOtherStateData%Fz_anchor)
    end if
 end subroutine
 
@@ -2126,9 +2074,6 @@ subroutine MAP_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
             DstConstrStateData%C_obj%H = c_loc(DstConstrStateData%H(LB(1)))
       end if
       DstConstrStateData%H = SrcConstrStateData%H
-   else if (associated(DstConstrStateData%H)) then
-      deallocate(DstConstrStateData%H)
-      nullify(DstConstrStateData%H)
    end if
    if (associated(SrcConstrStateData%V)) then
       LB(1:1) = lbound(SrcConstrStateData%V)
@@ -2144,9 +2089,6 @@ subroutine MAP_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
             DstConstrStateData%C_obj%V = c_loc(DstConstrStateData%V(LB(1)))
       end if
       DstConstrStateData%V = SrcConstrStateData%V
-   else if (associated(DstConstrStateData%V)) then
-      deallocate(DstConstrStateData%V)
-      nullify(DstConstrStateData%V)
    end if
    if (associated(SrcConstrStateData%x)) then
       LB(1:1) = lbound(SrcConstrStateData%x)
@@ -2162,9 +2104,6 @@ subroutine MAP_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
             DstConstrStateData%C_obj%x = c_loc(DstConstrStateData%x(LB(1)))
       end if
       DstConstrStateData%x = SrcConstrStateData%x
-   else if (associated(DstConstrStateData%x)) then
-      deallocate(DstConstrStateData%x)
-      nullify(DstConstrStateData%x)
    end if
    if (associated(SrcConstrStateData%y)) then
       LB(1:1) = lbound(SrcConstrStateData%y)
@@ -2180,9 +2119,6 @@ subroutine MAP_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
             DstConstrStateData%C_obj%y = c_loc(DstConstrStateData%y(LB(1)))
       end if
       DstConstrStateData%y = SrcConstrStateData%y
-   else if (associated(DstConstrStateData%y)) then
-      deallocate(DstConstrStateData%y)
-      nullify(DstConstrStateData%y)
    end if
    if (associated(SrcConstrStateData%z)) then
       LB(1:1) = lbound(SrcConstrStateData%z)
@@ -2198,9 +2134,6 @@ subroutine MAP_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
             DstConstrStateData%C_obj%z = c_loc(DstConstrStateData%z(LB(1)))
       end if
       DstConstrStateData%z = SrcConstrStateData%z
-   else if (associated(DstConstrStateData%z)) then
-      deallocate(DstConstrStateData%z)
-      nullify(DstConstrStateData%z)
    end if
 end subroutine
 
@@ -2735,9 +2668,6 @@ subroutine MAP_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%x = c_loc(DstInputData%x(LB(1)))
       end if
       DstInputData%x = SrcInputData%x
-   else if (associated(DstInputData%x)) then
-      deallocate(DstInputData%x)
-      nullify(DstInputData%x)
    end if
    if (associated(SrcInputData%y)) then
       LB(1:1) = lbound(SrcInputData%y)
@@ -2753,9 +2683,6 @@ subroutine MAP_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%y = c_loc(DstInputData%y(LB(1)))
       end if
       DstInputData%y = SrcInputData%y
-   else if (associated(DstInputData%y)) then
-      deallocate(DstInputData%y)
-      nullify(DstInputData%y)
    end if
    if (associated(SrcInputData%z)) then
       LB(1:1) = lbound(SrcInputData%z)
@@ -2771,9 +2698,6 @@ subroutine MAP_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%z = c_loc(DstInputData%z(LB(1)))
       end if
       DstInputData%z = SrcInputData%z
-   else if (associated(DstInputData%z)) then
-      deallocate(DstInputData%z)
-      nullify(DstInputData%z)
    end if
    call MeshCopy(SrcInputData%PtFairDisplacement, DstInputData%PtFairDisplacement, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3063,9 +2987,6 @@ subroutine MAP_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
             DstOutputData%C_obj%Fx = c_loc(DstOutputData%Fx(LB(1)))
       end if
       DstOutputData%Fx = SrcOutputData%Fx
-   else if (associated(DstOutputData%Fx)) then
-      deallocate(DstOutputData%Fx)
-      nullify(DstOutputData%Fx)
    end if
    if (associated(SrcOutputData%Fy)) then
       LB(1:1) = lbound(SrcOutputData%Fy)
@@ -3081,9 +3002,6 @@ subroutine MAP_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
             DstOutputData%C_obj%Fy = c_loc(DstOutputData%Fy(LB(1)))
       end if
       DstOutputData%Fy = SrcOutputData%Fy
-   else if (associated(DstOutputData%Fy)) then
-      deallocate(DstOutputData%Fy)
-      nullify(DstOutputData%Fy)
    end if
    if (associated(SrcOutputData%Fz)) then
       LB(1:1) = lbound(SrcOutputData%Fz)
@@ -3099,9 +3017,6 @@ subroutine MAP_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
             DstOutputData%C_obj%Fz = c_loc(DstOutputData%Fz(LB(1)))
       end if
       DstOutputData%Fz = SrcOutputData%Fz
-   else if (associated(DstOutputData%Fz)) then
-      deallocate(DstOutputData%Fz)
-      nullify(DstOutputData%Fz)
    end if
    if (allocated(SrcOutputData%WriteOutput)) then
       LB(1:1) = lbound(SrcOutputData%WriteOutput)
@@ -3114,8 +3029,6 @@ subroutine MAP_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-   else if (allocated(DstOutputData%WriteOutput)) then
-      deallocate(DstOutputData%WriteOutput)
    end if
    if (associated(SrcOutputData%wrtOutput)) then
       LB(1:1) = lbound(SrcOutputData%wrtOutput)
@@ -3131,9 +3044,6 @@ subroutine MAP_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
             DstOutputData%C_obj%wrtOutput = c_loc(DstOutputData%wrtOutput(LB(1)))
       end if
       DstOutputData%wrtOutput = SrcOutputData%wrtOutput
-   else if (associated(DstOutputData%wrtOutput)) then
-      deallocate(DstOutputData%wrtOutput)
-      nullify(DstOutputData%wrtOutput)
    end if
    call MeshCopy(SrcOutputData%ptFairleadLoad, DstOutputData%ptFairleadLoad, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

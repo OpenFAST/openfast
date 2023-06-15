@@ -223,8 +223,6 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%WT_Position = SrcParamData%WT_Position
-   else if (allocated(DstParamData%WT_Position)) then
-      deallocate(DstParamData%WT_Position)
    end if
    DstParamData%WaveFieldMod = SrcParamData%WaveFieldMod
    DstParamData%MooringMod = SrcParamData%MooringMod
@@ -242,8 +240,6 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%WT_FASTInFile = SrcParamData%WT_FASTInFile
-   else if (allocated(DstParamData%WT_FASTInFile)) then
-      deallocate(DstParamData%WT_FASTInFile)
    end if
    DstParamData%FTitle = SrcParamData%FTitle
    DstParamData%OutFileRoot = SrcParamData%OutFileRoot
@@ -271,8 +267,6 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%OutRadii = SrcParamData%OutRadii
-   else if (allocated(DstParamData%OutRadii)) then
-      deallocate(DstParamData%OutRadii)
    end if
    DstParamData%NOutDist = SrcParamData%NOutDist
    if (allocated(SrcParamData%OutDist)) then
@@ -286,8 +280,6 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%OutDist = SrcParamData%OutDist
-   else if (allocated(DstParamData%OutDist)) then
-      deallocate(DstParamData%OutDist)
    end if
    DstParamData%NWindVel = SrcParamData%NWindVel
    if (allocated(SrcParamData%WindVelX)) then
@@ -301,8 +293,6 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%WindVelX = SrcParamData%WindVelX
-   else if (allocated(DstParamData%WindVelX)) then
-      deallocate(DstParamData%WindVelX)
    end if
    if (allocated(SrcParamData%WindVelY)) then
       LB(1:1) = lbound(SrcParamData%WindVelY)
@@ -315,8 +305,6 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%WindVelY = SrcParamData%WindVelY
-   else if (allocated(DstParamData%WindVelY)) then
-      deallocate(DstParamData%WindVelY)
    end if
    if (allocated(SrcParamData%WindVelZ)) then
       LB(1:1) = lbound(SrcParamData%WindVelZ)
@@ -329,8 +317,6 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%WindVelZ = SrcParamData%WindVelZ
-   else if (allocated(DstParamData%WindVelZ)) then
-      deallocate(DstParamData%WindVelZ)
    end if
    if (allocated(SrcParamData%OutParam)) then
       LB(1:1) = lbound(SrcParamData%OutParam)
@@ -347,8 +333,6 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%OutParam)) then
-      deallocate(DstParamData%OutParam)
    end if
    DstParamData%NumOuts = SrcParamData%NumOuts
    DstParamData%NOutSteps = SrcParamData%NOutSteps
@@ -762,8 +746,6 @@ subroutine Farm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%AllOuts = SrcMiscData%AllOuts
-   else if (allocated(DstMiscData%AllOuts)) then
-      deallocate(DstMiscData%AllOuts)
    end if
    if (allocated(SrcMiscData%TimeData)) then
       LB(1:1) = lbound(SrcMiscData%TimeData)
@@ -776,8 +758,6 @@ subroutine Farm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%TimeData = SrcMiscData%TimeData
-   else if (allocated(DstMiscData%TimeData)) then
-      deallocate(DstMiscData%TimeData)
    end if
    if (allocated(SrcMiscData%AllOutData)) then
       LB(1:2) = lbound(SrcMiscData%AllOutData)
@@ -790,8 +770,6 @@ subroutine Farm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%AllOutData = SrcMiscData%AllOutData
-   else if (allocated(DstMiscData%AllOutData)) then
-      deallocate(DstMiscData%AllOutData)
    end if
    DstMiscData%n_Out = SrcMiscData%n_Out
    if (allocated(SrcMiscData%FWrap_2_MD)) then
@@ -809,8 +787,6 @@ subroutine Farm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%FWrap_2_MD)) then
-      deallocate(DstMiscData%FWrap_2_MD)
    end if
    if (allocated(SrcMiscData%MD_2_FWrap)) then
       LB(1:1) = lbound(SrcMiscData%MD_2_FWrap)
@@ -827,8 +803,6 @@ subroutine Farm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%MD_2_FWrap)) then
-      deallocate(DstMiscData%MD_2_FWrap)
    end if
 end subroutine
 
@@ -1447,8 +1421,6 @@ subroutine Farm_CopyMD_Data(SrcMD_DataData, DstMD_DataData, CtrlCode, ErrStat, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMD_DataData%Input)) then
-      deallocate(DstMD_DataData%Input)
    end if
    if (allocated(SrcMD_DataData%InputTimes)) then
       LB(1:1) = lbound(SrcMD_DataData%InputTimes)
@@ -1461,8 +1433,6 @@ subroutine Farm_CopyMD_Data(SrcMD_DataData, DstMD_DataData, CtrlCode, ErrStat, E
          end if
       end if
       DstMD_DataData%InputTimes = SrcMD_DataData%InputTimes
-   else if (allocated(DstMD_DataData%InputTimes)) then
-      deallocate(DstMD_DataData%InputTimes)
    end if
    call MD_CopyOutput(SrcMD_DataData%y, DstMD_DataData%y, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1631,8 +1601,6 @@ subroutine Farm_CopyAll_FastFarm_Data(SrcAll_FastFarm_DataData, DstAll_FastFarm_
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstAll_FastFarm_DataData%FWrap)) then
-      deallocate(DstAll_FastFarm_DataData%FWrap)
    end if
    if (allocated(SrcAll_FastFarm_DataData%WD)) then
       LB(1:1) = lbound(SrcAll_FastFarm_DataData%WD)
@@ -1649,8 +1617,6 @@ subroutine Farm_CopyAll_FastFarm_Data(SrcAll_FastFarm_DataData, DstAll_FastFarm_
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstAll_FastFarm_DataData%WD)) then
-      deallocate(DstAll_FastFarm_DataData%WD)
    end if
    call Farm_CopyAWAE_Data(SrcAll_FastFarm_DataData%AWAE, DstAll_FastFarm_DataData%AWAE, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

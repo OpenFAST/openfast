@@ -232,8 +232,6 @@ subroutine InflowWind_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode
          end if
       end if
       DstInputFileData%WindVxiList = SrcInputFileData%WindVxiList
-   else if (allocated(DstInputFileData%WindVxiList)) then
-      deallocate(DstInputFileData%WindVxiList)
    end if
    if (allocated(SrcInputFileData%WindVyiList)) then
       LB(1:1) = lbound(SrcInputFileData%WindVyiList)
@@ -246,8 +244,6 @@ subroutine InflowWind_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode
          end if
       end if
       DstInputFileData%WindVyiList = SrcInputFileData%WindVyiList
-   else if (allocated(DstInputFileData%WindVyiList)) then
-      deallocate(DstInputFileData%WindVyiList)
    end if
    if (allocated(SrcInputFileData%WindVziList)) then
       LB(1:1) = lbound(SrcInputFileData%WindVziList)
@@ -260,8 +256,6 @@ subroutine InflowWind_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode
          end if
       end if
       DstInputFileData%WindVziList = SrcInputFileData%WindVziList
-   else if (allocated(DstInputFileData%WindVziList)) then
-      deallocate(DstInputFileData%WindVziList)
    end if
    DstInputFileData%Steady_HWindSpeed = SrcInputFileData%Steady_HWindSpeed
    DstInputFileData%Steady_RefHt = SrcInputFileData%Steady_RefHt
@@ -297,8 +291,6 @@ subroutine InflowWind_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode
          end if
       end if
       DstInputFileData%OutList = SrcInputFileData%OutList
-   else if (allocated(DstInputFileData%OutList)) then
-      deallocate(DstInputFileData%OutList)
    end if
    DstInputFileData%SensorType = SrcInputFileData%SensorType
    DstInputFileData%NumBeam = SrcInputFileData%NumBeam
@@ -315,8 +307,6 @@ subroutine InflowWind_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode
          end if
       end if
       DstInputFileData%FocalDistanceX = SrcInputFileData%FocalDistanceX
-   else if (allocated(DstInputFileData%FocalDistanceX)) then
-      deallocate(DstInputFileData%FocalDistanceX)
    end if
    if (allocated(SrcInputFileData%FocalDistanceY)) then
       LB(1:1) = lbound(SrcInputFileData%FocalDistanceY)
@@ -329,8 +319,6 @@ subroutine InflowWind_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode
          end if
       end if
       DstInputFileData%FocalDistanceY = SrcInputFileData%FocalDistanceY
-   else if (allocated(DstInputFileData%FocalDistanceY)) then
-      deallocate(DstInputFileData%FocalDistanceY)
    end if
    if (allocated(SrcInputFileData%FocalDistanceZ)) then
       LB(1:1) = lbound(SrcInputFileData%FocalDistanceZ)
@@ -343,8 +331,6 @@ subroutine InflowWind_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode
          end if
       end if
       DstInputFileData%FocalDistanceZ = SrcInputFileData%FocalDistanceZ
-   else if (allocated(DstInputFileData%FocalDistanceZ)) then
-      deallocate(DstInputFileData%FocalDistanceZ)
    end if
    DstInputFileData%PulseSpacing = SrcInputFileData%PulseSpacing
    DstInputFileData%MeasurementInterval = SrcInputFileData%MeasurementInterval
@@ -811,8 +797,6 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
          end if
       end if
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
-      deallocate(DstInitOutputData%WriteOutputHdr)
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
@@ -825,8 +809,6 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
          end if
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
-      deallocate(DstInitOutputData%WriteOutputUnt)
    end if
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -845,8 +827,6 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
          end if
       end if
       DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
-   else if (allocated(DstInitOutputData%LinNames_y)) then
-      deallocate(DstInitOutputData%LinNames_y)
    end if
    if (allocated(SrcInitOutputData%LinNames_u)) then
       LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
@@ -859,8 +839,6 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
          end if
       end if
       DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
-   else if (allocated(DstInitOutputData%LinNames_u)) then
-      deallocate(DstInitOutputData%LinNames_u)
    end if
    if (allocated(SrcInitOutputData%RotFrame_y)) then
       LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
@@ -873,8 +851,6 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
          end if
       end if
       DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
-   else if (allocated(DstInitOutputData%RotFrame_y)) then
-      deallocate(DstInitOutputData%RotFrame_y)
    end if
    if (allocated(SrcInitOutputData%RotFrame_u)) then
       LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
@@ -887,8 +863,6 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
          end if
       end if
       DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
-   else if (allocated(DstInitOutputData%RotFrame_u)) then
-      deallocate(DstInitOutputData%RotFrame_u)
    end if
    if (allocated(SrcInitOutputData%IsLoad_u)) then
       LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
@@ -901,8 +875,6 @@ subroutine InflowWind_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlC
          end if
       end if
       DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
-   else if (allocated(DstInitOutputData%IsLoad_u)) then
-      deallocate(DstInitOutputData%IsLoad_u)
    end if
    DstInitOutputData%FlowField => SrcInitOutputData%FlowField
 end subroutine
@@ -1155,8 +1127,6 @@ subroutine InflowWind_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, E
          end if
       end if
       DstParamData%WindViXYZprime = SrcParamData%WindViXYZprime
-   else if (allocated(DstParamData%WindViXYZprime)) then
-      deallocate(DstParamData%WindViXYZprime)
    end if
    if (allocated(SrcParamData%WindViXYZ)) then
       LB(1:2) = lbound(SrcParamData%WindViXYZ)
@@ -1169,8 +1139,6 @@ subroutine InflowWind_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, E
          end if
       end if
       DstParamData%WindViXYZ = SrcParamData%WindViXYZ
-   else if (allocated(DstParamData%WindViXYZ)) then
-      deallocate(DstParamData%WindViXYZ)
    end if
    if (associated(SrcParamData%FlowField)) then
       if (.not. associated(DstParamData%FlowField)) then
@@ -1183,9 +1151,6 @@ subroutine InflowWind_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, E
       call IfW_FlowField_CopyFlowFieldType(SrcParamData%FlowField, DstParamData%FlowField, CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
-   else if (associated(DstParamData%FlowField)) then
-      deallocate(DstParamData%FlowField)
-      nullify(DstParamData%FlowField)
    end if
    if (allocated(SrcParamData%PositionAvg)) then
       LB(1:2) = lbound(SrcParamData%PositionAvg)
@@ -1198,8 +1163,6 @@ subroutine InflowWind_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, E
          end if
       end if
       DstParamData%PositionAvg = SrcParamData%PositionAvg
-   else if (allocated(DstParamData%PositionAvg)) then
-      deallocate(DstParamData%PositionAvg)
    end if
    DstParamData%NWindVel = SrcParamData%NWindVel
    DstParamData%NumOuts = SrcParamData%NumOuts
@@ -1218,8 +1181,6 @@ subroutine InflowWind_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%OutParam)) then
-      deallocate(DstParamData%OutParam)
    end if
    if (allocated(SrcParamData%OutParamLinIndx)) then
       LB(1:2) = lbound(SrcParamData%OutParamLinIndx)
@@ -1232,8 +1193,6 @@ subroutine InflowWind_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, E
          end if
       end if
       DstParamData%OutParamLinIndx = SrcParamData%OutParamLinIndx
-   else if (allocated(DstParamData%OutParamLinIndx)) then
-      deallocate(DstParamData%OutParamLinIndx)
    end if
    call Lidar_CopyParam(SrcParamData%lidar, DstParamData%lidar, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1474,8 +1433,6 @@ subroutine InflowWind_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, E
          end if
       end if
       DstInputData%PositionXYZ = SrcInputData%PositionXYZ
-   else if (allocated(DstInputData%PositionXYZ)) then
-      deallocate(DstInputData%PositionXYZ)
    end if
    call Lidar_CopyInput(SrcInputData%lidar, DstInputData%lidar, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1568,8 +1525,6 @@ subroutine InflowWind_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat
          end if
       end if
       DstOutputData%VelocityUVW = SrcOutputData%VelocityUVW
-   else if (allocated(DstOutputData%VelocityUVW)) then
-      deallocate(DstOutputData%VelocityUVW)
    end if
    if (allocated(SrcOutputData%AccelUVW)) then
       LB(1:2) = lbound(SrcOutputData%AccelUVW)
@@ -1582,8 +1537,6 @@ subroutine InflowWind_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat
          end if
       end if
       DstOutputData%AccelUVW = SrcOutputData%AccelUVW
-   else if (allocated(DstOutputData%AccelUVW)) then
-      deallocate(DstOutputData%AccelUVW)
    end if
    if (allocated(SrcOutputData%WriteOutput)) then
       LB(1:1) = lbound(SrcOutputData%WriteOutput)
@@ -1596,8 +1549,6 @@ subroutine InflowWind_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat
          end if
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-   else if (allocated(DstOutputData%WriteOutput)) then
-      deallocate(DstOutputData%WriteOutput)
    end if
    DstOutputData%DiskVel = SrcOutputData%DiskVel
    DstOutputData%HubVel = SrcOutputData%HubVel
@@ -1890,8 +1841,6 @@ subroutine InflowWind_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstMiscData%AllOuts = SrcMiscData%AllOuts
-   else if (allocated(DstMiscData%AllOuts)) then
-      deallocate(DstMiscData%AllOuts)
    end if
    if (allocated(SrcMiscData%WindViUVW)) then
       LB(1:2) = lbound(SrcMiscData%WindViUVW)
@@ -1904,8 +1853,6 @@ subroutine InflowWind_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstMiscData%WindViUVW = SrcMiscData%WindViUVW
-   else if (allocated(DstMiscData%WindViUVW)) then
-      deallocate(DstMiscData%WindViUVW)
    end if
    if (allocated(SrcMiscData%WindAiUVW)) then
       LB(1:2) = lbound(SrcMiscData%WindAiUVW)
@@ -1918,8 +1865,6 @@ subroutine InflowWind_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstMiscData%WindAiUVW = SrcMiscData%WindAiUVW
-   else if (allocated(DstMiscData%WindAiUVW)) then
-      deallocate(DstMiscData%WindAiUVW)
    end if
    call InflowWind_CopyInput(SrcMiscData%u_Avg, DstMiscData%u_Avg, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

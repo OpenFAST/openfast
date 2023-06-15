@@ -625,8 +625,6 @@ subroutine AFI_CopyTable_Type(SrcTable_TypeData, DstTable_TypeData, CtrlCode, Er
          end if
       end if
       DstTable_TypeData%Alpha = SrcTable_TypeData%Alpha
-   else if (allocated(DstTable_TypeData%Alpha)) then
-      deallocate(DstTable_TypeData%Alpha)
    end if
    if (allocated(SrcTable_TypeData%Coefs)) then
       LB(1:2) = lbound(SrcTable_TypeData%Coefs)
@@ -639,8 +637,6 @@ subroutine AFI_CopyTable_Type(SrcTable_TypeData, DstTable_TypeData, CtrlCode, Er
          end if
       end if
       DstTable_TypeData%Coefs = SrcTable_TypeData%Coefs
-   else if (allocated(DstTable_TypeData%Coefs)) then
-      deallocate(DstTable_TypeData%Coefs)
    end if
    if (allocated(SrcTable_TypeData%SplineCoefs)) then
       LB(1:3) = lbound(SrcTable_TypeData%SplineCoefs)
@@ -653,8 +649,6 @@ subroutine AFI_CopyTable_Type(SrcTable_TypeData, DstTable_TypeData, CtrlCode, Er
          end if
       end if
       DstTable_TypeData%SplineCoefs = SrcTable_TypeData%SplineCoefs
-   else if (allocated(DstTable_TypeData%SplineCoefs)) then
-      deallocate(DstTable_TypeData%SplineCoefs)
    end if
    DstTable_TypeData%UserProp = SrcTable_TypeData%UserProp
    DstTable_TypeData%Re = SrcTable_TypeData%Re
@@ -923,8 +917,6 @@ subroutine AFI_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%secondVals = SrcParamData%secondVals
-   else if (allocated(DstParamData%secondVals)) then
-      deallocate(DstParamData%secondVals)
    end if
    DstParamData%InterpOrd = SrcParamData%InterpOrd
    DstParamData%RelThickness = SrcParamData%RelThickness
@@ -941,8 +933,6 @@ subroutine AFI_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%X_Coord = SrcParamData%X_Coord
-   else if (allocated(DstParamData%X_Coord)) then
-      deallocate(DstParamData%X_Coord)
    end if
    if (allocated(SrcParamData%Y_Coord)) then
       LB(1:1) = lbound(SrcParamData%Y_Coord)
@@ -955,8 +945,6 @@ subroutine AFI_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%Y_Coord = SrcParamData%Y_Coord
-   else if (allocated(DstParamData%Y_Coord)) then
-      deallocate(DstParamData%Y_Coord)
    end if
    DstParamData%NumTabs = SrcParamData%NumTabs
    if (allocated(SrcParamData%Table)) then
@@ -974,8 +962,6 @@ subroutine AFI_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%Table)) then
-      deallocate(DstParamData%Table)
    end if
    DstParamData%BL_file = SrcParamData%BL_file
    DstParamData%FileName = SrcParamData%FileName

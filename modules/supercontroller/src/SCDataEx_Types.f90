@@ -380,9 +380,6 @@ subroutine SC_DX_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
             DstInputData%C_obj%toSC = c_loc(DstInputData%toSC(LB(1)))
       end if
       DstInputData%toSC = SrcInputData%toSC
-   else if (associated(DstInputData%toSC)) then
-      deallocate(DstInputData%toSC)
-      nullify(DstInputData%toSC)
    end if
 end subroutine
 
@@ -540,9 +537,6 @@ subroutine SC_DX_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
             DstOutputData%C_obj%fromSC = c_loc(DstOutputData%fromSC(LB(1)))
       end if
       DstOutputData%fromSC = SrcOutputData%fromSC
-   else if (associated(DstOutputData%fromSC)) then
-      deallocate(DstOutputData%fromSC)
-      nullify(DstOutputData%fromSC)
    end if
    if (associated(SrcOutputData%fromSCglob)) then
       LB(1:1) = lbound(SrcOutputData%fromSCglob)
@@ -558,9 +552,6 @@ subroutine SC_DX_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
             DstOutputData%C_obj%fromSCglob = c_loc(DstOutputData%fromSCglob(LB(1)))
       end if
       DstOutputData%fromSCglob = SrcOutputData%fromSCglob
-   else if (associated(DstOutputData%fromSCglob)) then
-      deallocate(DstOutputData%fromSCglob)
-      nullify(DstOutputData%fromSCglob)
    end if
 end subroutine
 

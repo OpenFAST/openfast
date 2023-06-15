@@ -170,8 +170,6 @@ subroutine FWrap_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
          end if
       end if
       DstInitInputData%fromSCGlob = SrcInitInputData%fromSCGlob
-   else if (allocated(DstInitInputData%fromSCGlob)) then
-      deallocate(DstInitInputData%fromSCGlob)
    end if
    if (allocated(SrcInitInputData%fromSC)) then
       LB(1:1) = lbound(SrcInitInputData%fromSC)
@@ -184,8 +182,6 @@ subroutine FWrap_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
          end if
       end if
       DstInitInputData%fromSC = SrcInitInputData%fromSC
-   else if (allocated(DstInitInputData%fromSC)) then
-      deallocate(DstInitInputData%fromSC)
    end if
    DstInitInputData%Vdist_High => SrcInitInputData%Vdist_High
 end subroutine
@@ -597,8 +593,6 @@ subroutine FWrap_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%TempDisp)) then
-      deallocate(DstMiscData%TempDisp)
    end if
    if (allocated(SrcMiscData%TempLoads)) then
       LB(1:1) = lbound(SrcMiscData%TempLoads)
@@ -615,8 +609,6 @@ subroutine FWrap_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%TempLoads)) then
-      deallocate(DstMiscData%TempLoads)
    end if
    if (allocated(SrcMiscData%ADRotorDisk)) then
       LB(1:1) = lbound(SrcMiscData%ADRotorDisk)
@@ -633,8 +625,6 @@ subroutine FWrap_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%ADRotorDisk)) then
-      deallocate(DstMiscData%ADRotorDisk)
    end if
    if (allocated(SrcMiscData%AD_L2L)) then
       LB(1:1) = lbound(SrcMiscData%AD_L2L)
@@ -651,8 +641,6 @@ subroutine FWrap_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%AD_L2L)) then
-      deallocate(DstMiscData%AD_L2L)
    end if
 end subroutine
 
@@ -849,8 +837,6 @@ subroutine FWrap_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstParamData%r = SrcParamData%r
-   else if (allocated(DstParamData%r)) then
-      deallocate(DstParamData%r)
    end if
    DstParamData%n_FAST_low = SrcParamData%n_FAST_low
    DstParamData%p_ref_Turbine = SrcParamData%p_ref_Turbine
@@ -936,8 +922,6 @@ subroutine FWrap_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstInputData%fromSCglob = SrcInputData%fromSCglob
-   else if (allocated(DstInputData%fromSCglob)) then
-      deallocate(DstInputData%fromSCglob)
    end if
    if (allocated(SrcInputData%fromSC)) then
       LB(1:1) = lbound(SrcInputData%fromSC)
@@ -950,8 +934,6 @@ subroutine FWrap_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstInputData%fromSC = SrcInputData%fromSC
-   else if (allocated(DstInputData%fromSC)) then
-      deallocate(DstInputData%fromSC)
    end if
 end subroutine
 
@@ -1048,8 +1030,6 @@ subroutine FWrap_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
          end if
       end if
       DstOutputData%toSC = SrcOutputData%toSC
-   else if (allocated(DstOutputData%toSC)) then
-      deallocate(DstOutputData%toSC)
    end if
    DstOutputData%xHat_Disk = SrcOutputData%xHat_Disk
    DstOutputData%YawErr = SrcOutputData%YawErr
@@ -1069,8 +1049,6 @@ subroutine FWrap_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
          end if
       end if
       DstOutputData%AzimAvg_Ct = SrcOutputData%AzimAvg_Ct
-   else if (allocated(DstOutputData%AzimAvg_Ct)) then
-      deallocate(DstOutputData%AzimAvg_Ct)
    end if
    if (allocated(SrcOutputData%AzimAvg_Cq)) then
       LB(1:1) = lbound(SrcOutputData%AzimAvg_Cq)
@@ -1083,8 +1061,6 @@ subroutine FWrap_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
          end if
       end if
       DstOutputData%AzimAvg_Cq = SrcOutputData%AzimAvg_Cq
-   else if (allocated(DstOutputData%AzimAvg_Cq)) then
-      deallocate(DstOutputData%AzimAvg_Cq)
    end if
 end subroutine
 

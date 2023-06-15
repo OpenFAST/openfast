@@ -145,8 +145,6 @@ subroutine DBEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
          end if
       end if
       DstInitInputData%rLocal = SrcInitInputData%rLocal
-   else if (allocated(DstInitInputData%rLocal)) then
-      deallocate(DstInitInputData%rLocal)
    end if
 end subroutine
 
@@ -330,8 +328,6 @@ subroutine DBEMT_CopyContState(SrcContStateData, DstContStateData, CtrlCode, Err
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstContStateData%element)) then
-      deallocate(DstContStateData%element)
    end if
 end subroutine
 
@@ -510,8 +506,6 @@ subroutine DBEMT_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, 
          end if
       end if
       DstOtherStateData%areStatesInitialized = SrcOtherStateData%areStatesInitialized
-   else if (allocated(DstOtherStateData%areStatesInitialized)) then
-      deallocate(DstOtherStateData%areStatesInitialized)
    end if
    DstOtherStateData%tau1 = SrcOtherStateData%tau1
    DstOtherStateData%tau2 = SrcOtherStateData%tau2
@@ -526,8 +520,6 @@ subroutine DBEMT_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, 
          end if
       end if
       DstOtherStateData%n = SrcOtherStateData%n
-   else if (allocated(DstOtherStateData%n)) then
-      deallocate(DstOtherStateData%n)
    end if
    LB(1:1) = lbound(SrcOtherStateData%xdot)
    UB(1:1) = ubound(SrcOtherStateData%xdot)
@@ -705,8 +697,6 @@ subroutine DBEMT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstParamData%spanRatio = SrcParamData%spanRatio
-   else if (allocated(DstParamData%spanRatio)) then
-      deallocate(DstParamData%spanRatio)
    end if
    DstParamData%DBEMT_Mod = SrcParamData%DBEMT_Mod
 end subroutine
@@ -857,8 +847,6 @@ subroutine DBEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstInputData%element)) then
-      deallocate(DstInputData%element)
    end if
 end subroutine
 
@@ -966,8 +954,6 @@ subroutine DBEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
          end if
       end if
       DstOutputData%vind = SrcOutputData%vind
-   else if (allocated(DstOutputData%vind)) then
-      deallocate(DstOutputData%vind)
    end if
 end subroutine
 

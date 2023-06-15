@@ -540,8 +540,6 @@ subroutine MD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
          end if
       end if
       DstInitInputData%PtfmInit = SrcInitInputData%PtfmInit
-   else if (allocated(DstInitInputData%PtfmInit)) then
-      deallocate(DstInitInputData%PtfmInit)
    end if
    DstInitInputData%FarmSize = SrcInitInputData%FarmSize
    if (allocated(SrcInitInputData%TurbineRefPos)) then
@@ -555,8 +553,6 @@ subroutine MD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
          end if
       end if
       DstInitInputData%TurbineRefPos = SrcInitInputData%TurbineRefPos
-   else if (allocated(DstInitInputData%TurbineRefPos)) then
-      deallocate(DstInitInputData%TurbineRefPos)
    end if
    DstInitInputData%Tmax = SrcInitInputData%Tmax
    DstInitInputData%FileName = SrcInitInputData%FileName
@@ -577,8 +573,6 @@ subroutine MD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
          end if
       end if
       DstInitInputData%OutList = SrcInitInputData%OutList
-   else if (allocated(DstInitInputData%OutList)) then
-      deallocate(DstInitInputData%OutList)
    end if
    DstInitInputData%Linearize = SrcInitInputData%Linearize
 end subroutine
@@ -1095,8 +1089,6 @@ subroutine MD_CopyConnect(SrcConnectData, DstConnectData, CtrlCode, ErrStat, Err
          end if
       end if
       DstConnectData%PDyn = SrcConnectData%PDyn
-   else if (allocated(DstConnectData%PDyn)) then
-      deallocate(DstConnectData%PDyn)
    end if
    DstConnectData%Fnet = SrcConnectData%Fnet
    DstConnectData%M = SrcConnectData%M
@@ -1267,8 +1259,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%r = SrcRodData%r
-   else if (allocated(DstRodData%r)) then
-      deallocate(DstRodData%r)
    end if
    if (allocated(SrcRodData%rd)) then
       LB(1:2) = lbound(SrcRodData%rd)
@@ -1281,8 +1271,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%rd = SrcRodData%rd
-   else if (allocated(DstRodData%rd)) then
-      deallocate(DstRodData%rd)
    end if
    DstRodData%q = SrcRodData%q
    if (allocated(SrcRodData%l)) then
@@ -1296,8 +1284,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%l = SrcRodData%l
-   else if (allocated(DstRodData%l)) then
-      deallocate(DstRodData%l)
    end if
    if (allocated(SrcRodData%V)) then
       LB(1:1) = lbound(SrcRodData%V)
@@ -1310,8 +1296,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%V = SrcRodData%V
-   else if (allocated(DstRodData%V)) then
-      deallocate(DstRodData%V)
    end if
    if (allocated(SrcRodData%U)) then
       LB(1:2) = lbound(SrcRodData%U)
@@ -1324,8 +1308,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%U = SrcRodData%U
-   else if (allocated(DstRodData%U)) then
-      deallocate(DstRodData%U)
    end if
    if (allocated(SrcRodData%Ud)) then
       LB(1:2) = lbound(SrcRodData%Ud)
@@ -1338,8 +1320,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%Ud = SrcRodData%Ud
-   else if (allocated(DstRodData%Ud)) then
-      deallocate(DstRodData%Ud)
    end if
    if (allocated(SrcRodData%zeta)) then
       LB(1:1) = lbound(SrcRodData%zeta)
@@ -1352,8 +1332,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%zeta = SrcRodData%zeta
-   else if (allocated(DstRodData%zeta)) then
-      deallocate(DstRodData%zeta)
    end if
    if (allocated(SrcRodData%PDyn)) then
       LB(1:1) = lbound(SrcRodData%PDyn)
@@ -1366,8 +1344,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%PDyn = SrcRodData%PDyn
-   else if (allocated(DstRodData%PDyn)) then
-      deallocate(DstRodData%PDyn)
    end if
    if (allocated(SrcRodData%W)) then
       LB(1:2) = lbound(SrcRodData%W)
@@ -1380,8 +1356,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%W = SrcRodData%W
-   else if (allocated(DstRodData%W)) then
-      deallocate(DstRodData%W)
    end if
    if (allocated(SrcRodData%Bo)) then
       LB(1:2) = lbound(SrcRodData%Bo)
@@ -1394,8 +1368,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%Bo = SrcRodData%Bo
-   else if (allocated(DstRodData%Bo)) then
-      deallocate(DstRodData%Bo)
    end if
    if (allocated(SrcRodData%Pd)) then
       LB(1:2) = lbound(SrcRodData%Pd)
@@ -1408,8 +1380,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%Pd = SrcRodData%Pd
-   else if (allocated(DstRodData%Pd)) then
-      deallocate(DstRodData%Pd)
    end if
    if (allocated(SrcRodData%Dp)) then
       LB(1:2) = lbound(SrcRodData%Dp)
@@ -1422,8 +1392,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%Dp = SrcRodData%Dp
-   else if (allocated(DstRodData%Dp)) then
-      deallocate(DstRodData%Dp)
    end if
    if (allocated(SrcRodData%Dq)) then
       LB(1:2) = lbound(SrcRodData%Dq)
@@ -1436,8 +1404,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%Dq = SrcRodData%Dq
-   else if (allocated(DstRodData%Dq)) then
-      deallocate(DstRodData%Dq)
    end if
    if (allocated(SrcRodData%Ap)) then
       LB(1:2) = lbound(SrcRodData%Ap)
@@ -1450,8 +1416,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%Ap = SrcRodData%Ap
-   else if (allocated(DstRodData%Ap)) then
-      deallocate(DstRodData%Ap)
    end if
    if (allocated(SrcRodData%Aq)) then
       LB(1:2) = lbound(SrcRodData%Aq)
@@ -1464,8 +1428,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%Aq = SrcRodData%Aq
-   else if (allocated(DstRodData%Aq)) then
-      deallocate(DstRodData%Aq)
    end if
    if (allocated(SrcRodData%B)) then
       LB(1:2) = lbound(SrcRodData%B)
@@ -1478,8 +1440,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%B = SrcRodData%B
-   else if (allocated(DstRodData%B)) then
-      deallocate(DstRodData%B)
    end if
    if (allocated(SrcRodData%Fnet)) then
       LB(1:2) = lbound(SrcRodData%Fnet)
@@ -1492,8 +1452,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%Fnet = SrcRodData%Fnet
-   else if (allocated(DstRodData%Fnet)) then
-      deallocate(DstRodData%Fnet)
    end if
    if (allocated(SrcRodData%M)) then
       LB(1:3) = lbound(SrcRodData%M)
@@ -1506,8 +1464,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%M = SrcRodData%M
-   else if (allocated(DstRodData%M)) then
-      deallocate(DstRodData%M)
    end if
    DstRodData%FextA = SrcRodData%FextA
    DstRodData%FextB = SrcRodData%FextB
@@ -1530,8 +1486,6 @@ subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstRodData%RodWrOutput = SrcRodData%RodWrOutput
-   else if (allocated(DstRodData%RodWrOutput)) then
-      deallocate(DstRodData%RodWrOutput)
    end if
 end subroutine
 
@@ -2151,8 +2105,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%r = SrcLineData%r
-   else if (allocated(DstLineData%r)) then
-      deallocate(DstLineData%r)
    end if
    if (allocated(SrcLineData%rd)) then
       LB(1:2) = lbound(SrcLineData%rd)
@@ -2165,8 +2117,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%rd = SrcLineData%rd
-   else if (allocated(DstLineData%rd)) then
-      deallocate(DstLineData%rd)
    end if
    if (allocated(SrcLineData%q)) then
       LB(1:2) = lbound(SrcLineData%q)
@@ -2179,8 +2129,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%q = SrcLineData%q
-   else if (allocated(DstLineData%q)) then
-      deallocate(DstLineData%q)
    end if
    if (allocated(SrcLineData%qs)) then
       LB(1:2) = lbound(SrcLineData%qs)
@@ -2193,8 +2141,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%qs = SrcLineData%qs
-   else if (allocated(DstLineData%qs)) then
-      deallocate(DstLineData%qs)
    end if
    if (allocated(SrcLineData%l)) then
       LB(1:1) = lbound(SrcLineData%l)
@@ -2207,8 +2153,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%l = SrcLineData%l
-   else if (allocated(DstLineData%l)) then
-      deallocate(DstLineData%l)
    end if
    if (allocated(SrcLineData%ld)) then
       LB(1:1) = lbound(SrcLineData%ld)
@@ -2221,8 +2165,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%ld = SrcLineData%ld
-   else if (allocated(DstLineData%ld)) then
-      deallocate(DstLineData%ld)
    end if
    if (allocated(SrcLineData%lstr)) then
       LB(1:1) = lbound(SrcLineData%lstr)
@@ -2235,8 +2177,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%lstr = SrcLineData%lstr
-   else if (allocated(DstLineData%lstr)) then
-      deallocate(DstLineData%lstr)
    end if
    if (allocated(SrcLineData%lstrd)) then
       LB(1:1) = lbound(SrcLineData%lstrd)
@@ -2249,8 +2189,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%lstrd = SrcLineData%lstrd
-   else if (allocated(DstLineData%lstrd)) then
-      deallocate(DstLineData%lstrd)
    end if
    if (allocated(SrcLineData%Kurv)) then
       LB(1:1) = lbound(SrcLineData%Kurv)
@@ -2263,8 +2201,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%Kurv = SrcLineData%Kurv
-   else if (allocated(DstLineData%Kurv)) then
-      deallocate(DstLineData%Kurv)
    end if
    if (allocated(SrcLineData%dl_1)) then
       LB(1:1) = lbound(SrcLineData%dl_1)
@@ -2277,8 +2213,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%dl_1 = SrcLineData%dl_1
-   else if (allocated(DstLineData%dl_1)) then
-      deallocate(DstLineData%dl_1)
    end if
    if (allocated(SrcLineData%V)) then
       LB(1:1) = lbound(SrcLineData%V)
@@ -2291,8 +2225,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%V = SrcLineData%V
-   else if (allocated(DstLineData%V)) then
-      deallocate(DstLineData%V)
    end if
    if (allocated(SrcLineData%U)) then
       LB(1:2) = lbound(SrcLineData%U)
@@ -2305,8 +2237,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%U = SrcLineData%U
-   else if (allocated(DstLineData%U)) then
-      deallocate(DstLineData%U)
    end if
    if (allocated(SrcLineData%Ud)) then
       LB(1:2) = lbound(SrcLineData%Ud)
@@ -2319,8 +2249,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%Ud = SrcLineData%Ud
-   else if (allocated(DstLineData%Ud)) then
-      deallocate(DstLineData%Ud)
    end if
    if (allocated(SrcLineData%zeta)) then
       LB(1:1) = lbound(SrcLineData%zeta)
@@ -2333,8 +2261,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%zeta = SrcLineData%zeta
-   else if (allocated(DstLineData%zeta)) then
-      deallocate(DstLineData%zeta)
    end if
    if (allocated(SrcLineData%PDyn)) then
       LB(1:1) = lbound(SrcLineData%PDyn)
@@ -2347,8 +2273,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%PDyn = SrcLineData%PDyn
-   else if (allocated(DstLineData%PDyn)) then
-      deallocate(DstLineData%PDyn)
    end if
    if (allocated(SrcLineData%T)) then
       LB(1:2) = lbound(SrcLineData%T)
@@ -2361,8 +2285,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%T = SrcLineData%T
-   else if (allocated(DstLineData%T)) then
-      deallocate(DstLineData%T)
    end if
    if (allocated(SrcLineData%Td)) then
       LB(1:2) = lbound(SrcLineData%Td)
@@ -2375,8 +2297,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%Td = SrcLineData%Td
-   else if (allocated(DstLineData%Td)) then
-      deallocate(DstLineData%Td)
    end if
    if (allocated(SrcLineData%W)) then
       LB(1:2) = lbound(SrcLineData%W)
@@ -2389,8 +2309,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%W = SrcLineData%W
-   else if (allocated(DstLineData%W)) then
-      deallocate(DstLineData%W)
    end if
    if (allocated(SrcLineData%Dp)) then
       LB(1:2) = lbound(SrcLineData%Dp)
@@ -2403,8 +2321,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%Dp = SrcLineData%Dp
-   else if (allocated(DstLineData%Dp)) then
-      deallocate(DstLineData%Dp)
    end if
    if (allocated(SrcLineData%Dq)) then
       LB(1:2) = lbound(SrcLineData%Dq)
@@ -2417,8 +2333,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%Dq = SrcLineData%Dq
-   else if (allocated(DstLineData%Dq)) then
-      deallocate(DstLineData%Dq)
    end if
    if (allocated(SrcLineData%Ap)) then
       LB(1:2) = lbound(SrcLineData%Ap)
@@ -2431,8 +2345,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%Ap = SrcLineData%Ap
-   else if (allocated(DstLineData%Ap)) then
-      deallocate(DstLineData%Ap)
    end if
    if (allocated(SrcLineData%Aq)) then
       LB(1:2) = lbound(SrcLineData%Aq)
@@ -2445,8 +2357,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%Aq = SrcLineData%Aq
-   else if (allocated(DstLineData%Aq)) then
-      deallocate(DstLineData%Aq)
    end if
    if (allocated(SrcLineData%B)) then
       LB(1:2) = lbound(SrcLineData%B)
@@ -2459,8 +2369,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%B = SrcLineData%B
-   else if (allocated(DstLineData%B)) then
-      deallocate(DstLineData%B)
    end if
    if (allocated(SrcLineData%Bs)) then
       LB(1:2) = lbound(SrcLineData%Bs)
@@ -2473,8 +2381,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%Bs = SrcLineData%Bs
-   else if (allocated(DstLineData%Bs)) then
-      deallocate(DstLineData%Bs)
    end if
    if (allocated(SrcLineData%Fnet)) then
       LB(1:2) = lbound(SrcLineData%Fnet)
@@ -2487,8 +2393,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%Fnet = SrcLineData%Fnet
-   else if (allocated(DstLineData%Fnet)) then
-      deallocate(DstLineData%Fnet)
    end if
    if (allocated(SrcLineData%S)) then
       LB(1:3) = lbound(SrcLineData%S)
@@ -2501,8 +2405,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%S = SrcLineData%S
-   else if (allocated(DstLineData%S)) then
-      deallocate(DstLineData%S)
    end if
    if (allocated(SrcLineData%M)) then
       LB(1:3) = lbound(SrcLineData%M)
@@ -2515,8 +2417,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%M = SrcLineData%M
-   else if (allocated(DstLineData%M)) then
-      deallocate(DstLineData%M)
    end if
    DstLineData%EndMomentA = SrcLineData%EndMomentA
    DstLineData%EndMomentB = SrcLineData%EndMomentB
@@ -2532,8 +2432,6 @@ subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstLineData%LineWrOutput = SrcLineData%LineWrOutput
-   else if (allocated(DstLineData%LineWrOutput)) then
-      deallocate(DstLineData%LineWrOutput)
    end if
 end subroutine
 
@@ -3406,8 +3304,6 @@ subroutine MD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%writeOutputHdr = SrcInitOutputData%writeOutputHdr
-   else if (allocated(DstInitOutputData%writeOutputHdr)) then
-      deallocate(DstInitOutputData%writeOutputHdr)
    end if
    if (allocated(SrcInitOutputData%writeOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%writeOutputUnt)
@@ -3420,8 +3316,6 @@ subroutine MD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%writeOutputUnt = SrcInitOutputData%writeOutputUnt
-   else if (allocated(DstInitOutputData%writeOutputUnt)) then
-      deallocate(DstInitOutputData%writeOutputUnt)
    end if
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3437,8 +3331,6 @@ subroutine MD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%CableCChanRqst = SrcInitOutputData%CableCChanRqst
-   else if (allocated(DstInitOutputData%CableCChanRqst)) then
-      deallocate(DstInitOutputData%CableCChanRqst)
    end if
    if (allocated(SrcInitOutputData%LinNames_y)) then
       LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
@@ -3451,8 +3343,6 @@ subroutine MD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
-   else if (allocated(DstInitOutputData%LinNames_y)) then
-      deallocate(DstInitOutputData%LinNames_y)
    end if
    if (allocated(SrcInitOutputData%LinNames_x)) then
       LB(1:1) = lbound(SrcInitOutputData%LinNames_x)
@@ -3465,8 +3355,6 @@ subroutine MD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
-   else if (allocated(DstInitOutputData%LinNames_x)) then
-      deallocate(DstInitOutputData%LinNames_x)
    end if
    if (allocated(SrcInitOutputData%LinNames_u)) then
       LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
@@ -3479,8 +3367,6 @@ subroutine MD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
-   else if (allocated(DstInitOutputData%LinNames_u)) then
-      deallocate(DstInitOutputData%LinNames_u)
    end if
    if (allocated(SrcInitOutputData%RotFrame_y)) then
       LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
@@ -3493,8 +3379,6 @@ subroutine MD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
-   else if (allocated(DstInitOutputData%RotFrame_y)) then
-      deallocate(DstInitOutputData%RotFrame_y)
    end if
    if (allocated(SrcInitOutputData%RotFrame_x)) then
       LB(1:1) = lbound(SrcInitOutputData%RotFrame_x)
@@ -3507,8 +3391,6 @@ subroutine MD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%RotFrame_x = SrcInitOutputData%RotFrame_x
-   else if (allocated(DstInitOutputData%RotFrame_x)) then
-      deallocate(DstInitOutputData%RotFrame_x)
    end if
    if (allocated(SrcInitOutputData%RotFrame_u)) then
       LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
@@ -3521,8 +3403,6 @@ subroutine MD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
-   else if (allocated(DstInitOutputData%RotFrame_u)) then
-      deallocate(DstInitOutputData%RotFrame_u)
    end if
    if (allocated(SrcInitOutputData%IsLoad_u)) then
       LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
@@ -3535,8 +3415,6 @@ subroutine MD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
-   else if (allocated(DstInitOutputData%IsLoad_u)) then
-      deallocate(DstInitOutputData%IsLoad_u)
    end if
    if (allocated(SrcInitOutputData%DerivOrder_x)) then
       LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x)
@@ -3549,8 +3427,6 @@ subroutine MD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
-   else if (allocated(DstInitOutputData%DerivOrder_x)) then
-      deallocate(DstInitOutputData%DerivOrder_x)
    end if
 end subroutine
 
@@ -3851,8 +3727,6 @@ subroutine MD_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrSta
          end if
       end if
       DstContStateData%states = SrcContStateData%states
-   else if (allocated(DstContStateData%states)) then
-      deallocate(DstContStateData%states)
    end if
 end subroutine
 
@@ -4050,8 +3924,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%LineTypeList)) then
-      deallocate(DstMiscData%LineTypeList)
    end if
    if (allocated(SrcMiscData%RodTypeList)) then
       LB(1:1) = lbound(SrcMiscData%RodTypeList)
@@ -4068,8 +3940,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%RodTypeList)) then
-      deallocate(DstMiscData%RodTypeList)
    end if
    call MD_CopyBody(SrcMiscData%GroundBody, DstMiscData%GroundBody, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -4089,8 +3959,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%BodyList)) then
-      deallocate(DstMiscData%BodyList)
    end if
    if (allocated(SrcMiscData%RodList)) then
       LB(1:1) = lbound(SrcMiscData%RodList)
@@ -4107,8 +3975,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%RodList)) then
-      deallocate(DstMiscData%RodList)
    end if
    if (allocated(SrcMiscData%ConnectList)) then
       LB(1:1) = lbound(SrcMiscData%ConnectList)
@@ -4125,8 +3991,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%ConnectList)) then
-      deallocate(DstMiscData%ConnectList)
    end if
    if (allocated(SrcMiscData%LineList)) then
       LB(1:1) = lbound(SrcMiscData%LineList)
@@ -4143,8 +4007,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%LineList)) then
-      deallocate(DstMiscData%LineList)
    end if
    if (allocated(SrcMiscData%FailList)) then
       LB(1:1) = lbound(SrcMiscData%FailList)
@@ -4161,8 +4023,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%FailList)) then
-      deallocate(DstMiscData%FailList)
    end if
    if (allocated(SrcMiscData%FreeConIs)) then
       LB(1:1) = lbound(SrcMiscData%FreeConIs)
@@ -4175,8 +4035,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%FreeConIs = SrcMiscData%FreeConIs
-   else if (allocated(DstMiscData%FreeConIs)) then
-      deallocate(DstMiscData%FreeConIs)
    end if
    if (allocated(SrcMiscData%CpldConIs)) then
       LB(1:2) = lbound(SrcMiscData%CpldConIs)
@@ -4189,8 +4047,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%CpldConIs = SrcMiscData%CpldConIs
-   else if (allocated(DstMiscData%CpldConIs)) then
-      deallocate(DstMiscData%CpldConIs)
    end if
    if (allocated(SrcMiscData%FreeRodIs)) then
       LB(1:1) = lbound(SrcMiscData%FreeRodIs)
@@ -4203,8 +4059,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%FreeRodIs = SrcMiscData%FreeRodIs
-   else if (allocated(DstMiscData%FreeRodIs)) then
-      deallocate(DstMiscData%FreeRodIs)
    end if
    if (allocated(SrcMiscData%CpldRodIs)) then
       LB(1:2) = lbound(SrcMiscData%CpldRodIs)
@@ -4217,8 +4071,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%CpldRodIs = SrcMiscData%CpldRodIs
-   else if (allocated(DstMiscData%CpldRodIs)) then
-      deallocate(DstMiscData%CpldRodIs)
    end if
    if (allocated(SrcMiscData%FreeBodyIs)) then
       LB(1:1) = lbound(SrcMiscData%FreeBodyIs)
@@ -4231,8 +4083,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%FreeBodyIs = SrcMiscData%FreeBodyIs
-   else if (allocated(DstMiscData%FreeBodyIs)) then
-      deallocate(DstMiscData%FreeBodyIs)
    end if
    if (allocated(SrcMiscData%CpldBodyIs)) then
       LB(1:2) = lbound(SrcMiscData%CpldBodyIs)
@@ -4245,8 +4095,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%CpldBodyIs = SrcMiscData%CpldBodyIs
-   else if (allocated(DstMiscData%CpldBodyIs)) then
-      deallocate(DstMiscData%CpldBodyIs)
    end if
    if (allocated(SrcMiscData%LineStateIs1)) then
       LB(1:1) = lbound(SrcMiscData%LineStateIs1)
@@ -4259,8 +4107,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%LineStateIs1 = SrcMiscData%LineStateIs1
-   else if (allocated(DstMiscData%LineStateIs1)) then
-      deallocate(DstMiscData%LineStateIs1)
    end if
    if (allocated(SrcMiscData%LineStateIsN)) then
       LB(1:1) = lbound(SrcMiscData%LineStateIsN)
@@ -4273,8 +4119,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%LineStateIsN = SrcMiscData%LineStateIsN
-   else if (allocated(DstMiscData%LineStateIsN)) then
-      deallocate(DstMiscData%LineStateIsN)
    end if
    if (allocated(SrcMiscData%ConStateIs1)) then
       LB(1:1) = lbound(SrcMiscData%ConStateIs1)
@@ -4287,8 +4131,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%ConStateIs1 = SrcMiscData%ConStateIs1
-   else if (allocated(DstMiscData%ConStateIs1)) then
-      deallocate(DstMiscData%ConStateIs1)
    end if
    if (allocated(SrcMiscData%ConStateIsN)) then
       LB(1:1) = lbound(SrcMiscData%ConStateIsN)
@@ -4301,8 +4143,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%ConStateIsN = SrcMiscData%ConStateIsN
-   else if (allocated(DstMiscData%ConStateIsN)) then
-      deallocate(DstMiscData%ConStateIsN)
    end if
    if (allocated(SrcMiscData%RodStateIs1)) then
       LB(1:1) = lbound(SrcMiscData%RodStateIs1)
@@ -4315,8 +4155,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%RodStateIs1 = SrcMiscData%RodStateIs1
-   else if (allocated(DstMiscData%RodStateIs1)) then
-      deallocate(DstMiscData%RodStateIs1)
    end if
    if (allocated(SrcMiscData%RodStateIsN)) then
       LB(1:1) = lbound(SrcMiscData%RodStateIsN)
@@ -4329,8 +4167,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%RodStateIsN = SrcMiscData%RodStateIsN
-   else if (allocated(DstMiscData%RodStateIsN)) then
-      deallocate(DstMiscData%RodStateIsN)
    end if
    if (allocated(SrcMiscData%BodyStateIs1)) then
       LB(1:1) = lbound(SrcMiscData%BodyStateIs1)
@@ -4343,8 +4179,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%BodyStateIs1 = SrcMiscData%BodyStateIs1
-   else if (allocated(DstMiscData%BodyStateIs1)) then
-      deallocate(DstMiscData%BodyStateIs1)
    end if
    if (allocated(SrcMiscData%BodyStateIsN)) then
       LB(1:1) = lbound(SrcMiscData%BodyStateIsN)
@@ -4357,8 +4191,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%BodyStateIsN = SrcMiscData%BodyStateIsN
-   else if (allocated(DstMiscData%BodyStateIsN)) then
-      deallocate(DstMiscData%BodyStateIsN)
    end if
    DstMiscData%Nx = SrcMiscData%Nx
    DstMiscData%WaveTi = SrcMiscData%WaveTi
@@ -4380,8 +4212,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%MDWrOutput = SrcMiscData%MDWrOutput
-   else if (allocated(DstMiscData%MDWrOutput)) then
-      deallocate(DstMiscData%MDWrOutput)
    end if
    DstMiscData%LastOutTime = SrcMiscData%LastOutTime
    DstMiscData%PtfmInit = SrcMiscData%PtfmInit
@@ -4396,8 +4226,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%BathymetryGrid = SrcMiscData%BathymetryGrid
-   else if (allocated(DstMiscData%BathymetryGrid)) then
-      deallocate(DstMiscData%BathymetryGrid)
    end if
    if (allocated(SrcMiscData%BathGrid_Xs)) then
       LB(1:1) = lbound(SrcMiscData%BathGrid_Xs)
@@ -4410,8 +4238,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%BathGrid_Xs = SrcMiscData%BathGrid_Xs
-   else if (allocated(DstMiscData%BathGrid_Xs)) then
-      deallocate(DstMiscData%BathGrid_Xs)
    end if
    if (allocated(SrcMiscData%BathGrid_Ys)) then
       LB(1:1) = lbound(SrcMiscData%BathGrid_Ys)
@@ -4424,8 +4250,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%BathGrid_Ys = SrcMiscData%BathGrid_Ys
-   else if (allocated(DstMiscData%BathGrid_Ys)) then
-      deallocate(DstMiscData%BathGrid_Ys)
    end if
    if (allocated(SrcMiscData%BathGrid_npoints)) then
       LB(1:1) = lbound(SrcMiscData%BathGrid_npoints)
@@ -4438,8 +4262,6 @@ subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%BathGrid_npoints = SrcMiscData%BathGrid_npoints
-   else if (allocated(DstMiscData%BathGrid_npoints)) then
-      deallocate(DstMiscData%BathGrid_npoints)
    end if
 end subroutine
 
@@ -5189,8 +5011,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%nCpldBodies = SrcParamData%nCpldBodies
-   else if (allocated(DstParamData%nCpldBodies)) then
-      deallocate(DstParamData%nCpldBodies)
    end if
    if (allocated(SrcParamData%nCpldRods)) then
       LB(1:1) = lbound(SrcParamData%nCpldRods)
@@ -5203,8 +5023,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%nCpldRods = SrcParamData%nCpldRods
-   else if (allocated(DstParamData%nCpldRods)) then
-      deallocate(DstParamData%nCpldRods)
    end if
    if (allocated(SrcParamData%nCpldCons)) then
       LB(1:1) = lbound(SrcParamData%nCpldCons)
@@ -5217,8 +5035,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%nCpldCons = SrcParamData%nCpldCons
-   else if (allocated(DstParamData%nCpldCons)) then
-      deallocate(DstParamData%nCpldCons)
    end if
    DstParamData%NConns = SrcParamData%NConns
    DstParamData%NAnchs = SrcParamData%NAnchs
@@ -5248,8 +5064,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%OutParam)) then
-      deallocate(DstParamData%OutParam)
    end if
    DstParamData%Delim = SrcParamData%Delim
    DstParamData%MDUnOut = SrcParamData%MDUnOut
@@ -5270,8 +5084,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%TurbineRefPos = SrcParamData%TurbineRefPos
-   else if (allocated(DstParamData%TurbineRefPos)) then
-      deallocate(DstParamData%TurbineRefPos)
    end if
    DstParamData%mu_kT = SrcParamData%mu_kT
    DstParamData%mu_kA = SrcParamData%mu_kA
@@ -5292,8 +5104,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%pxWave = SrcParamData%pxWave
-   else if (allocated(DstParamData%pxWave)) then
-      deallocate(DstParamData%pxWave)
    end if
    if (allocated(SrcParamData%pyWave)) then
       LB(1:1) = lbound(SrcParamData%pyWave)
@@ -5306,8 +5116,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%pyWave = SrcParamData%pyWave
-   else if (allocated(DstParamData%pyWave)) then
-      deallocate(DstParamData%pyWave)
    end if
    if (allocated(SrcParamData%pzWave)) then
       LB(1:1) = lbound(SrcParamData%pzWave)
@@ -5320,8 +5128,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%pzWave = SrcParamData%pzWave
-   else if (allocated(DstParamData%pzWave)) then
-      deallocate(DstParamData%pzWave)
    end if
    DstParamData%dtWave = SrcParamData%dtWave
    if (allocated(SrcParamData%uxWave)) then
@@ -5335,8 +5141,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%uxWave = SrcParamData%uxWave
-   else if (allocated(DstParamData%uxWave)) then
-      deallocate(DstParamData%uxWave)
    end if
    if (allocated(SrcParamData%uyWave)) then
       LB(1:4) = lbound(SrcParamData%uyWave)
@@ -5349,8 +5153,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%uyWave = SrcParamData%uyWave
-   else if (allocated(DstParamData%uyWave)) then
-      deallocate(DstParamData%uyWave)
    end if
    if (allocated(SrcParamData%uzWave)) then
       LB(1:4) = lbound(SrcParamData%uzWave)
@@ -5363,8 +5165,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%uzWave = SrcParamData%uzWave
-   else if (allocated(DstParamData%uzWave)) then
-      deallocate(DstParamData%uzWave)
    end if
    if (allocated(SrcParamData%axWave)) then
       LB(1:4) = lbound(SrcParamData%axWave)
@@ -5377,8 +5177,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%axWave = SrcParamData%axWave
-   else if (allocated(DstParamData%axWave)) then
-      deallocate(DstParamData%axWave)
    end if
    if (allocated(SrcParamData%ayWave)) then
       LB(1:4) = lbound(SrcParamData%ayWave)
@@ -5391,8 +5189,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%ayWave = SrcParamData%ayWave
-   else if (allocated(DstParamData%ayWave)) then
-      deallocate(DstParamData%ayWave)
    end if
    if (allocated(SrcParamData%azWave)) then
       LB(1:4) = lbound(SrcParamData%azWave)
@@ -5405,8 +5201,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%azWave = SrcParamData%azWave
-   else if (allocated(DstParamData%azWave)) then
-      deallocate(DstParamData%azWave)
    end if
    if (allocated(SrcParamData%PDyn)) then
       LB(1:4) = lbound(SrcParamData%PDyn)
@@ -5419,8 +5213,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%PDyn = SrcParamData%PDyn
-   else if (allocated(DstParamData%PDyn)) then
-      deallocate(DstParamData%PDyn)
    end if
    if (allocated(SrcParamData%zeta)) then
       LB(1:3) = lbound(SrcParamData%zeta)
@@ -5433,8 +5225,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%zeta = SrcParamData%zeta
-   else if (allocated(DstParamData%zeta)) then
-      deallocate(DstParamData%zeta)
    end if
    DstParamData%nzCurrent = SrcParamData%nzCurrent
    if (allocated(SrcParamData%pzCurrent)) then
@@ -5448,8 +5238,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%pzCurrent = SrcParamData%pzCurrent
-   else if (allocated(DstParamData%pzCurrent)) then
-      deallocate(DstParamData%pzCurrent)
    end if
    if (allocated(SrcParamData%uxCurrent)) then
       LB(1:1) = lbound(SrcParamData%uxCurrent)
@@ -5462,8 +5250,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%uxCurrent = SrcParamData%uxCurrent
-   else if (allocated(DstParamData%uxCurrent)) then
-      deallocate(DstParamData%uxCurrent)
    end if
    if (allocated(SrcParamData%uyCurrent)) then
       LB(1:1) = lbound(SrcParamData%uyCurrent)
@@ -5476,8 +5262,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%uyCurrent = SrcParamData%uyCurrent
-   else if (allocated(DstParamData%uyCurrent)) then
-      deallocate(DstParamData%uyCurrent)
    end if
    DstParamData%Nx0 = SrcParamData%Nx0
    if (allocated(SrcParamData%Jac_u_indx)) then
@@ -5491,8 +5275,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
-   else if (allocated(DstParamData%Jac_u_indx)) then
-      deallocate(DstParamData%Jac_u_indx)
    end if
    if (allocated(SrcParamData%du)) then
       LB(1:1) = lbound(SrcParamData%du)
@@ -5505,8 +5287,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%du = SrcParamData%du
-   else if (allocated(DstParamData%du)) then
-      deallocate(DstParamData%du)
    end if
    if (allocated(SrcParamData%dx)) then
       LB(1:1) = lbound(SrcParamData%dx)
@@ -5519,8 +5299,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%dx = SrcParamData%dx
-   else if (allocated(DstParamData%dx)) then
-      deallocate(DstParamData%dx)
    end if
    DstParamData%Jac_ny = SrcParamData%Jac_ny
    DstParamData%Jac_nx = SrcParamData%Jac_nx
@@ -5535,8 +5313,6 @@ subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%dxIdx_map2_xStateIdx = SrcParamData%dxIdx_map2_xStateIdx
-   else if (allocated(DstParamData%dxIdx_map2_xStateIdx)) then
-      deallocate(DstParamData%dxIdx_map2_xStateIdx)
    end if
 end subroutine
 
@@ -6257,8 +6033,6 @@ subroutine MD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInputData%CoupledKinematics)) then
-      deallocate(DstInputData%CoupledKinematics)
    end if
    if (allocated(SrcInputData%DeltaL)) then
       LB(1:1) = lbound(SrcInputData%DeltaL)
@@ -6271,8 +6045,6 @@ subroutine MD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%DeltaL = SrcInputData%DeltaL
-   else if (allocated(DstInputData%DeltaL)) then
-      deallocate(DstInputData%DeltaL)
    end if
    if (allocated(SrcInputData%DeltaLdot)) then
       LB(1:1) = lbound(SrcInputData%DeltaLdot)
@@ -6285,8 +6057,6 @@ subroutine MD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%DeltaLdot = SrcInputData%DeltaLdot
-   else if (allocated(DstInputData%DeltaLdot)) then
-      deallocate(DstInputData%DeltaLdot)
    end if
 end subroutine
 
@@ -6429,8 +6199,6 @@ subroutine MD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstOutputData%CoupledLoads)) then
-      deallocate(DstOutputData%CoupledLoads)
    end if
    if (allocated(SrcOutputData%WriteOutput)) then
       LB(1:1) = lbound(SrcOutputData%WriteOutput)
@@ -6443,8 +6211,6 @@ subroutine MD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-   else if (allocated(DstOutputData%WriteOutput)) then
-      deallocate(DstOutputData%WriteOutput)
    end if
 end subroutine
 

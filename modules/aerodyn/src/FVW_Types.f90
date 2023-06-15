@@ -392,8 +392,6 @@ subroutine FVW_CopyGridOutType(SrcGridOutTypeData, DstGridOutTypeData, CtrlCode,
          end if
       end if
       DstGridOutTypeData%uGrid = SrcGridOutTypeData%uGrid
-   else if (allocated(DstGridOutTypeData%uGrid)) then
-      deallocate(DstGridOutTypeData%uGrid)
    end if
    if (allocated(SrcGridOutTypeData%omGrid)) then
       LB(1:4) = lbound(SrcGridOutTypeData%omGrid)
@@ -406,8 +404,6 @@ subroutine FVW_CopyGridOutType(SrcGridOutTypeData, DstGridOutTypeData, CtrlCode,
          end if
       end if
       DstGridOutTypeData%omGrid = SrcGridOutTypeData%omGrid
-   else if (allocated(DstGridOutTypeData%omGrid)) then
-      deallocate(DstGridOutTypeData%omGrid)
    end if
    DstGridOutTypeData%tLastOutput = SrcGridOutTypeData%tLastOutput
 end subroutine
@@ -550,8 +546,6 @@ subroutine FVW_CopyT_Sgmt(SrcT_SgmtData, DstT_SgmtData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstT_SgmtData%Points = SrcT_SgmtData%Points
-   else if (allocated(DstT_SgmtData%Points)) then
-      deallocate(DstT_SgmtData%Points)
    end if
    if (allocated(SrcT_SgmtData%Connct)) then
       LB(1:2) = lbound(SrcT_SgmtData%Connct)
@@ -564,8 +558,6 @@ subroutine FVW_CopyT_Sgmt(SrcT_SgmtData, DstT_SgmtData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstT_SgmtData%Connct = SrcT_SgmtData%Connct
-   else if (allocated(DstT_SgmtData%Connct)) then
-      deallocate(DstT_SgmtData%Connct)
    end if
    if (allocated(SrcT_SgmtData%Gamma)) then
       LB(1:1) = lbound(SrcT_SgmtData%Gamma)
@@ -578,8 +570,6 @@ subroutine FVW_CopyT_Sgmt(SrcT_SgmtData, DstT_SgmtData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstT_SgmtData%Gamma = SrcT_SgmtData%Gamma
-   else if (allocated(DstT_SgmtData%Gamma)) then
-      deallocate(DstT_SgmtData%Gamma)
    end if
    if (allocated(SrcT_SgmtData%Epsilon)) then
       LB(1:1) = lbound(SrcT_SgmtData%Epsilon)
@@ -592,8 +582,6 @@ subroutine FVW_CopyT_Sgmt(SrcT_SgmtData, DstT_SgmtData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstT_SgmtData%Epsilon = SrcT_SgmtData%Epsilon
-   else if (allocated(DstT_SgmtData%Epsilon)) then
-      deallocate(DstT_SgmtData%Epsilon)
    end if
    DstT_SgmtData%RegFunction = SrcT_SgmtData%RegFunction
    DstT_SgmtData%nAct = SrcT_SgmtData%nAct
@@ -746,8 +734,6 @@ subroutine FVW_CopyT_Part(SrcT_PartData, DstT_PartData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstT_PartData%P = SrcT_PartData%P
-   else if (allocated(DstT_PartData%P)) then
-      deallocate(DstT_PartData%P)
    end if
    if (allocated(SrcT_PartData%Alpha)) then
       LB(1:2) = lbound(SrcT_PartData%Alpha)
@@ -760,8 +746,6 @@ subroutine FVW_CopyT_Part(SrcT_PartData, DstT_PartData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstT_PartData%Alpha = SrcT_PartData%Alpha
-   else if (allocated(DstT_PartData%Alpha)) then
-      deallocate(DstT_PartData%Alpha)
    end if
    if (allocated(SrcT_PartData%RegParam)) then
       LB(1:1) = lbound(SrcT_PartData%RegParam)
@@ -774,8 +758,6 @@ subroutine FVW_CopyT_Part(SrcT_PartData, DstT_PartData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstT_PartData%RegParam = SrcT_PartData%RegParam
-   else if (allocated(DstT_PartData%RegParam)) then
-      deallocate(DstT_PartData%RegParam)
    end if
    DstT_PartData%RegFunction = SrcT_PartData%RegFunction
    DstT_PartData%nAct = SrcT_PartData%nAct
@@ -902,8 +884,6 @@ subroutine FVW_CopyWng_ParameterType(SrcWng_ParameterTypeData, DstWng_ParameterT
          end if
       end if
       DstWng_ParameterTypeData%chord_LL = SrcWng_ParameterTypeData%chord_LL
-   else if (allocated(DstWng_ParameterTypeData%chord_LL)) then
-      deallocate(DstWng_ParameterTypeData%chord_LL)
    end if
    if (allocated(SrcWng_ParameterTypeData%chord_CP)) then
       LB(1:1) = lbound(SrcWng_ParameterTypeData%chord_CP)
@@ -916,8 +896,6 @@ subroutine FVW_CopyWng_ParameterType(SrcWng_ParameterTypeData, DstWng_ParameterT
          end if
       end if
       DstWng_ParameterTypeData%chord_CP = SrcWng_ParameterTypeData%chord_CP
-   else if (allocated(DstWng_ParameterTypeData%chord_CP)) then
-      deallocate(DstWng_ParameterTypeData%chord_CP)
    end if
    if (allocated(SrcWng_ParameterTypeData%s_LL)) then
       LB(1:1) = lbound(SrcWng_ParameterTypeData%s_LL)
@@ -930,8 +908,6 @@ subroutine FVW_CopyWng_ParameterType(SrcWng_ParameterTypeData, DstWng_ParameterT
          end if
       end if
       DstWng_ParameterTypeData%s_LL = SrcWng_ParameterTypeData%s_LL
-   else if (allocated(DstWng_ParameterTypeData%s_LL)) then
-      deallocate(DstWng_ParameterTypeData%s_LL)
    end if
    if (allocated(SrcWng_ParameterTypeData%s_CP)) then
       LB(1:1) = lbound(SrcWng_ParameterTypeData%s_CP)
@@ -944,8 +920,6 @@ subroutine FVW_CopyWng_ParameterType(SrcWng_ParameterTypeData, DstWng_ParameterT
          end if
       end if
       DstWng_ParameterTypeData%s_CP = SrcWng_ParameterTypeData%s_CP
-   else if (allocated(DstWng_ParameterTypeData%s_CP)) then
-      deallocate(DstWng_ParameterTypeData%s_CP)
    end if
    DstWng_ParameterTypeData%iRotor = SrcWng_ParameterTypeData%iRotor
    if (allocated(SrcWng_ParameterTypeData%AFindx)) then
@@ -959,8 +933,6 @@ subroutine FVW_CopyWng_ParameterType(SrcWng_ParameterTypeData, DstWng_ParameterT
          end if
       end if
       DstWng_ParameterTypeData%AFindx = SrcWng_ParameterTypeData%AFindx
-   else if (allocated(DstWng_ParameterTypeData%AFindx)) then
-      deallocate(DstWng_ParameterTypeData%AFindx)
    end if
    DstWng_ParameterTypeData%nSpan = SrcWng_ParameterTypeData%nSpan
    if (allocated(SrcWng_ParameterTypeData%PrescribedCirculation)) then
@@ -974,8 +946,6 @@ subroutine FVW_CopyWng_ParameterType(SrcWng_ParameterTypeData, DstWng_ParameterT
          end if
       end if
       DstWng_ParameterTypeData%PrescribedCirculation = SrcWng_ParameterTypeData%PrescribedCirculation
-   else if (allocated(DstWng_ParameterTypeData%PrescribedCirculation)) then
-      deallocate(DstWng_ParameterTypeData%PrescribedCirculation)
    end if
 end subroutine
 
@@ -1174,8 +1144,6 @@ subroutine FVW_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%W)) then
-      deallocate(DstParamData%W)
    end if
    if (allocated(SrcParamData%Bld2Wings)) then
       LB(1:2) = lbound(SrcParamData%Bld2Wings)
@@ -1188,8 +1156,6 @@ subroutine FVW_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%Bld2Wings = SrcParamData%Bld2Wings
-   else if (allocated(DstParamData%Bld2Wings)) then
-      deallocate(DstParamData%Bld2Wings)
    end if
    DstParamData%iNWStart = SrcParamData%iNWStart
    DstParamData%nNWMax = SrcParamData%nNWMax
@@ -1490,8 +1456,6 @@ subroutine FVW_CopyWng_ContinuousStateType(SrcWng_ContinuousStateTypeData, DstWn
          end if
       end if
       DstWng_ContinuousStateTypeData%Gamma_NW = SrcWng_ContinuousStateTypeData%Gamma_NW
-   else if (allocated(DstWng_ContinuousStateTypeData%Gamma_NW)) then
-      deallocate(DstWng_ContinuousStateTypeData%Gamma_NW)
    end if
    if (allocated(SrcWng_ContinuousStateTypeData%Gamma_FW)) then
       LB(1:2) = lbound(SrcWng_ContinuousStateTypeData%Gamma_FW)
@@ -1504,8 +1468,6 @@ subroutine FVW_CopyWng_ContinuousStateType(SrcWng_ContinuousStateTypeData, DstWn
          end if
       end if
       DstWng_ContinuousStateTypeData%Gamma_FW = SrcWng_ContinuousStateTypeData%Gamma_FW
-   else if (allocated(DstWng_ContinuousStateTypeData%Gamma_FW)) then
-      deallocate(DstWng_ContinuousStateTypeData%Gamma_FW)
    end if
    if (allocated(SrcWng_ContinuousStateTypeData%Eps_NW)) then
       LB(1:3) = lbound(SrcWng_ContinuousStateTypeData%Eps_NW)
@@ -1518,8 +1480,6 @@ subroutine FVW_CopyWng_ContinuousStateType(SrcWng_ContinuousStateTypeData, DstWn
          end if
       end if
       DstWng_ContinuousStateTypeData%Eps_NW = SrcWng_ContinuousStateTypeData%Eps_NW
-   else if (allocated(DstWng_ContinuousStateTypeData%Eps_NW)) then
-      deallocate(DstWng_ContinuousStateTypeData%Eps_NW)
    end if
    if (allocated(SrcWng_ContinuousStateTypeData%Eps_FW)) then
       LB(1:3) = lbound(SrcWng_ContinuousStateTypeData%Eps_FW)
@@ -1532,8 +1492,6 @@ subroutine FVW_CopyWng_ContinuousStateType(SrcWng_ContinuousStateTypeData, DstWn
          end if
       end if
       DstWng_ContinuousStateTypeData%Eps_FW = SrcWng_ContinuousStateTypeData%Eps_FW
-   else if (allocated(DstWng_ContinuousStateTypeData%Eps_FW)) then
-      deallocate(DstWng_ContinuousStateTypeData%Eps_FW)
    end if
    if (allocated(SrcWng_ContinuousStateTypeData%r_NW)) then
       LB(1:3) = lbound(SrcWng_ContinuousStateTypeData%r_NW)
@@ -1546,8 +1504,6 @@ subroutine FVW_CopyWng_ContinuousStateType(SrcWng_ContinuousStateTypeData, DstWn
          end if
       end if
       DstWng_ContinuousStateTypeData%r_NW = SrcWng_ContinuousStateTypeData%r_NW
-   else if (allocated(DstWng_ContinuousStateTypeData%r_NW)) then
-      deallocate(DstWng_ContinuousStateTypeData%r_NW)
    end if
    if (allocated(SrcWng_ContinuousStateTypeData%r_FW)) then
       LB(1:3) = lbound(SrcWng_ContinuousStateTypeData%r_FW)
@@ -1560,8 +1516,6 @@ subroutine FVW_CopyWng_ContinuousStateType(SrcWng_ContinuousStateTypeData, DstWn
          end if
       end if
       DstWng_ContinuousStateTypeData%r_FW = SrcWng_ContinuousStateTypeData%r_FW
-   else if (allocated(DstWng_ContinuousStateTypeData%r_FW)) then
-      deallocate(DstWng_ContinuousStateTypeData%r_FW)
    end if
 end subroutine
 
@@ -1752,8 +1706,6 @@ subroutine FVW_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrSt
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstContStateData%W)) then
-      deallocate(DstContStateData%W)
    end if
    if (allocated(SrcContStateData%UA)) then
       LB(1:1) = lbound(SrcContStateData%UA)
@@ -1770,8 +1722,6 @@ subroutine FVW_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrSt
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstContStateData%UA)) then
-      deallocate(DstContStateData%UA)
    end if
 end subroutine
 
@@ -1897,8 +1847,6 @@ subroutine FVW_CopyWng_OutputType(SrcWng_OutputTypeData, DstWng_OutputTypeData, 
          end if
       end if
       DstWng_OutputTypeData%Vind = SrcWng_OutputTypeData%Vind
-   else if (allocated(DstWng_OutputTypeData%Vind)) then
-      deallocate(DstWng_OutputTypeData%Vind)
    end if
 end subroutine
 
@@ -1979,8 +1927,6 @@ subroutine FVW_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstOutputData%W)) then
-      deallocate(DstOutputData%W)
    end if
 end subroutine
 
@@ -2075,8 +2021,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%LE = SrcWng_MiscVarTypeData%LE
-   else if (allocated(DstWng_MiscVarTypeData%LE)) then
-      deallocate(DstWng_MiscVarTypeData%LE)
    end if
    if (allocated(SrcWng_MiscVarTypeData%TE)) then
       LB(1:2) = lbound(SrcWng_MiscVarTypeData%TE)
@@ -2089,8 +2033,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%TE = SrcWng_MiscVarTypeData%TE
-   else if (allocated(DstWng_MiscVarTypeData%TE)) then
-      deallocate(DstWng_MiscVarTypeData%TE)
    end if
    if (allocated(SrcWng_MiscVarTypeData%r_LL)) then
       LB(1:3) = lbound(SrcWng_MiscVarTypeData%r_LL)
@@ -2103,8 +2045,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%r_LL = SrcWng_MiscVarTypeData%r_LL
-   else if (allocated(DstWng_MiscVarTypeData%r_LL)) then
-      deallocate(DstWng_MiscVarTypeData%r_LL)
    end if
    if (allocated(SrcWng_MiscVarTypeData%CP)) then
       LB(1:2) = lbound(SrcWng_MiscVarTypeData%CP)
@@ -2117,8 +2057,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%CP = SrcWng_MiscVarTypeData%CP
-   else if (allocated(DstWng_MiscVarTypeData%CP)) then
-      deallocate(DstWng_MiscVarTypeData%CP)
    end if
    if (allocated(SrcWng_MiscVarTypeData%Tang)) then
       LB(1:2) = lbound(SrcWng_MiscVarTypeData%Tang)
@@ -2131,8 +2069,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%Tang = SrcWng_MiscVarTypeData%Tang
-   else if (allocated(DstWng_MiscVarTypeData%Tang)) then
-      deallocate(DstWng_MiscVarTypeData%Tang)
    end if
    if (allocated(SrcWng_MiscVarTypeData%Norm)) then
       LB(1:2) = lbound(SrcWng_MiscVarTypeData%Norm)
@@ -2145,8 +2081,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%Norm = SrcWng_MiscVarTypeData%Norm
-   else if (allocated(DstWng_MiscVarTypeData%Norm)) then
-      deallocate(DstWng_MiscVarTypeData%Norm)
    end if
    if (allocated(SrcWng_MiscVarTypeData%Orth)) then
       LB(1:2) = lbound(SrcWng_MiscVarTypeData%Orth)
@@ -2159,8 +2093,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%Orth = SrcWng_MiscVarTypeData%Orth
-   else if (allocated(DstWng_MiscVarTypeData%Orth)) then
-      deallocate(DstWng_MiscVarTypeData%Orth)
    end if
    if (allocated(SrcWng_MiscVarTypeData%dl)) then
       LB(1:2) = lbound(SrcWng_MiscVarTypeData%dl)
@@ -2173,8 +2105,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%dl = SrcWng_MiscVarTypeData%dl
-   else if (allocated(DstWng_MiscVarTypeData%dl)) then
-      deallocate(DstWng_MiscVarTypeData%dl)
    end if
    if (allocated(SrcWng_MiscVarTypeData%Area)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%Area)
@@ -2187,8 +2117,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%Area = SrcWng_MiscVarTypeData%Area
-   else if (allocated(DstWng_MiscVarTypeData%Area)) then
-      deallocate(DstWng_MiscVarTypeData%Area)
    end if
    if (allocated(SrcWng_MiscVarTypeData%diag_LL)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%diag_LL)
@@ -2201,8 +2129,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%diag_LL = SrcWng_MiscVarTypeData%diag_LL
-   else if (allocated(DstWng_MiscVarTypeData%diag_LL)) then
-      deallocate(DstWng_MiscVarTypeData%diag_LL)
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vind_CP)) then
       LB(1:2) = lbound(SrcWng_MiscVarTypeData%Vind_CP)
@@ -2215,8 +2141,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%Vind_CP = SrcWng_MiscVarTypeData%Vind_CP
-   else if (allocated(DstWng_MiscVarTypeData%Vind_CP)) then
-      deallocate(DstWng_MiscVarTypeData%Vind_CP)
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vtot_CP)) then
       LB(1:2) = lbound(SrcWng_MiscVarTypeData%Vtot_CP)
@@ -2229,8 +2153,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%Vtot_CP = SrcWng_MiscVarTypeData%Vtot_CP
-   else if (allocated(DstWng_MiscVarTypeData%Vtot_CP)) then
-      deallocate(DstWng_MiscVarTypeData%Vtot_CP)
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vstr_CP)) then
       LB(1:2) = lbound(SrcWng_MiscVarTypeData%Vstr_CP)
@@ -2243,8 +2165,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%Vstr_CP = SrcWng_MiscVarTypeData%Vstr_CP
-   else if (allocated(DstWng_MiscVarTypeData%Vstr_CP)) then
-      deallocate(DstWng_MiscVarTypeData%Vstr_CP)
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vwnd_CP)) then
       LB(1:2) = lbound(SrcWng_MiscVarTypeData%Vwnd_CP)
@@ -2257,8 +2177,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%Vwnd_CP = SrcWng_MiscVarTypeData%Vwnd_CP
-   else if (allocated(DstWng_MiscVarTypeData%Vwnd_CP)) then
-      deallocate(DstWng_MiscVarTypeData%Vwnd_CP)
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vwnd_NW)) then
       LB(1:3) = lbound(SrcWng_MiscVarTypeData%Vwnd_NW)
@@ -2271,8 +2189,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%Vwnd_NW = SrcWng_MiscVarTypeData%Vwnd_NW
-   else if (allocated(DstWng_MiscVarTypeData%Vwnd_NW)) then
-      deallocate(DstWng_MiscVarTypeData%Vwnd_NW)
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vwnd_FW)) then
       LB(1:3) = lbound(SrcWng_MiscVarTypeData%Vwnd_FW)
@@ -2285,8 +2201,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%Vwnd_FW = SrcWng_MiscVarTypeData%Vwnd_FW
-   else if (allocated(DstWng_MiscVarTypeData%Vwnd_FW)) then
-      deallocate(DstWng_MiscVarTypeData%Vwnd_FW)
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vind_NW)) then
       LB(1:3) = lbound(SrcWng_MiscVarTypeData%Vind_NW)
@@ -2299,8 +2213,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%Vind_NW = SrcWng_MiscVarTypeData%Vind_NW
-   else if (allocated(DstWng_MiscVarTypeData%Vind_NW)) then
-      deallocate(DstWng_MiscVarTypeData%Vind_NW)
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vind_FW)) then
       LB(1:3) = lbound(SrcWng_MiscVarTypeData%Vind_FW)
@@ -2313,8 +2225,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%Vind_FW = SrcWng_MiscVarTypeData%Vind_FW
-   else if (allocated(DstWng_MiscVarTypeData%Vind_FW)) then
-      deallocate(DstWng_MiscVarTypeData%Vind_FW)
    end if
    if (allocated(SrcWng_MiscVarTypeData%PitchAndTwist)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%PitchAndTwist)
@@ -2327,8 +2237,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%PitchAndTwist = SrcWng_MiscVarTypeData%PitchAndTwist
-   else if (allocated(DstWng_MiscVarTypeData%PitchAndTwist)) then
-      deallocate(DstWng_MiscVarTypeData%PitchAndTwist)
    end if
    DstWng_MiscVarTypeData%iTip = SrcWng_MiscVarTypeData%iTip
    DstWng_MiscVarTypeData%iRoot = SrcWng_MiscVarTypeData%iRoot
@@ -2343,8 +2251,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%alpha_LL = SrcWng_MiscVarTypeData%alpha_LL
-   else if (allocated(DstWng_MiscVarTypeData%alpha_LL)) then
-      deallocate(DstWng_MiscVarTypeData%alpha_LL)
    end if
    if (allocated(SrcWng_MiscVarTypeData%Vreln_LL)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%Vreln_LL)
@@ -2357,8 +2263,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%Vreln_LL = SrcWng_MiscVarTypeData%Vreln_LL
-   else if (allocated(DstWng_MiscVarTypeData%Vreln_LL)) then
-      deallocate(DstWng_MiscVarTypeData%Vreln_LL)
    end if
    if (allocated(SrcWng_MiscVarTypeData%u_UA)) then
       LB(1:2) = lbound(SrcWng_MiscVarTypeData%u_UA)
@@ -2377,8 +2281,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstWng_MiscVarTypeData%u_UA)) then
-      deallocate(DstWng_MiscVarTypeData%u_UA)
    end if
    call UA_CopyMisc(SrcWng_MiscVarTypeData%m_UA, DstWng_MiscVarTypeData%m_UA, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2400,8 +2302,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%Vind_LL = SrcWng_MiscVarTypeData%Vind_LL
-   else if (allocated(DstWng_MiscVarTypeData%Vind_LL)) then
-      deallocate(DstWng_MiscVarTypeData%Vind_LL)
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_AxInd)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_AxInd)
@@ -2414,8 +2314,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%BN_AxInd = SrcWng_MiscVarTypeData%BN_AxInd
-   else if (allocated(DstWng_MiscVarTypeData%BN_AxInd)) then
-      deallocate(DstWng_MiscVarTypeData%BN_AxInd)
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_TanInd)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_TanInd)
@@ -2428,8 +2326,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%BN_TanInd = SrcWng_MiscVarTypeData%BN_TanInd
-   else if (allocated(DstWng_MiscVarTypeData%BN_TanInd)) then
-      deallocate(DstWng_MiscVarTypeData%BN_TanInd)
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Vrel)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Vrel)
@@ -2442,8 +2338,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%BN_Vrel = SrcWng_MiscVarTypeData%BN_Vrel
-   else if (allocated(DstWng_MiscVarTypeData%BN_Vrel)) then
-      deallocate(DstWng_MiscVarTypeData%BN_Vrel)
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_alpha)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_alpha)
@@ -2456,8 +2350,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%BN_alpha = SrcWng_MiscVarTypeData%BN_alpha
-   else if (allocated(DstWng_MiscVarTypeData%BN_alpha)) then
-      deallocate(DstWng_MiscVarTypeData%BN_alpha)
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_phi)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_phi)
@@ -2470,8 +2362,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%BN_phi = SrcWng_MiscVarTypeData%BN_phi
-   else if (allocated(DstWng_MiscVarTypeData%BN_phi)) then
-      deallocate(DstWng_MiscVarTypeData%BN_phi)
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Re)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Re)
@@ -2484,8 +2374,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%BN_Re = SrcWng_MiscVarTypeData%BN_Re
-   else if (allocated(DstWng_MiscVarTypeData%BN_Re)) then
-      deallocate(DstWng_MiscVarTypeData%BN_Re)
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_URelWind_s)) then
       LB(1:2) = lbound(SrcWng_MiscVarTypeData%BN_URelWind_s)
@@ -2498,8 +2386,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%BN_URelWind_s = SrcWng_MiscVarTypeData%BN_URelWind_s
-   else if (allocated(DstWng_MiscVarTypeData%BN_URelWind_s)) then
-      deallocate(DstWng_MiscVarTypeData%BN_URelWind_s)
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cl_Static)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cl_Static)
@@ -2512,8 +2398,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%BN_Cl_Static = SrcWng_MiscVarTypeData%BN_Cl_Static
-   else if (allocated(DstWng_MiscVarTypeData%BN_Cl_Static)) then
-      deallocate(DstWng_MiscVarTypeData%BN_Cl_Static)
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cd_Static)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cd_Static)
@@ -2526,8 +2410,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%BN_Cd_Static = SrcWng_MiscVarTypeData%BN_Cd_Static
-   else if (allocated(DstWng_MiscVarTypeData%BN_Cd_Static)) then
-      deallocate(DstWng_MiscVarTypeData%BN_Cd_Static)
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cm_Static)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cm_Static)
@@ -2540,8 +2422,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%BN_Cm_Static = SrcWng_MiscVarTypeData%BN_Cm_Static
-   else if (allocated(DstWng_MiscVarTypeData%BN_Cm_Static)) then
-      deallocate(DstWng_MiscVarTypeData%BN_Cm_Static)
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cpmin)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cpmin)
@@ -2554,8 +2434,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%BN_Cpmin = SrcWng_MiscVarTypeData%BN_Cpmin
-   else if (allocated(DstWng_MiscVarTypeData%BN_Cpmin)) then
-      deallocate(DstWng_MiscVarTypeData%BN_Cpmin)
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cl)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cl)
@@ -2568,8 +2446,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%BN_Cl = SrcWng_MiscVarTypeData%BN_Cl
-   else if (allocated(DstWng_MiscVarTypeData%BN_Cl)) then
-      deallocate(DstWng_MiscVarTypeData%BN_Cl)
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cd)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cd)
@@ -2582,8 +2458,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%BN_Cd = SrcWng_MiscVarTypeData%BN_Cd
-   else if (allocated(DstWng_MiscVarTypeData%BN_Cd)) then
-      deallocate(DstWng_MiscVarTypeData%BN_Cd)
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cm)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cm)
@@ -2596,8 +2470,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%BN_Cm = SrcWng_MiscVarTypeData%BN_Cm
-   else if (allocated(DstWng_MiscVarTypeData%BN_Cm)) then
-      deallocate(DstWng_MiscVarTypeData%BN_Cm)
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cx)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cx)
@@ -2610,8 +2482,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%BN_Cx = SrcWng_MiscVarTypeData%BN_Cx
-   else if (allocated(DstWng_MiscVarTypeData%BN_Cx)) then
-      deallocate(DstWng_MiscVarTypeData%BN_Cx)
    end if
    if (allocated(SrcWng_MiscVarTypeData%BN_Cy)) then
       LB(1:1) = lbound(SrcWng_MiscVarTypeData%BN_Cy)
@@ -2624,8 +2494,6 @@ subroutine FVW_CopyWng_MiscVarType(SrcWng_MiscVarTypeData, DstWng_MiscVarTypeDat
          end if
       end if
       DstWng_MiscVarTypeData%BN_Cy = SrcWng_MiscVarTypeData%BN_Cy
-   else if (allocated(DstWng_MiscVarTypeData%BN_Cy)) then
-      deallocate(DstWng_MiscVarTypeData%BN_Cy)
    end if
 end subroutine
 
@@ -3584,8 +3452,6 @@ subroutine FVW_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%W)) then
-      deallocate(DstMiscData%W)
    end if
    DstMiscData%FirstCall = SrcMiscData%FirstCall
    DstMiscData%nNW = SrcMiscData%nNW
@@ -3604,8 +3470,6 @@ subroutine FVW_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%r_wind = SrcMiscData%r_wind
-   else if (allocated(DstMiscData%r_wind)) then
-      deallocate(DstMiscData%r_wind)
    end if
    DstMiscData%ComputeWakeInduced = SrcMiscData%ComputeWakeInduced
    DstMiscData%OldWakeTime = SrcMiscData%OldWakeTime
@@ -3638,8 +3502,6 @@ subroutine FVW_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%CPs = SrcMiscData%CPs
-   else if (allocated(DstMiscData%CPs)) then
-      deallocate(DstMiscData%CPs)
    end if
    if (allocated(SrcMiscData%Uind)) then
       LB(1:2) = lbound(SrcMiscData%Uind)
@@ -3652,8 +3514,6 @@ subroutine FVW_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%Uind = SrcMiscData%Uind
-   else if (allocated(DstMiscData%Uind)) then
-      deallocate(DstMiscData%Uind)
    end if
    if (allocated(SrcMiscData%GridOutputs)) then
       LB(1:1) = lbound(SrcMiscData%GridOutputs)
@@ -3670,8 +3530,6 @@ subroutine FVW_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%GridOutputs)) then
-      deallocate(DstMiscData%GridOutputs)
    end if
 end subroutine
 
@@ -3959,8 +3817,6 @@ subroutine FVW_CopyWng_InputType(SrcWng_InputTypeData, DstWng_InputTypeData, Ctr
          end if
       end if
       DstWng_InputTypeData%Vwnd_LL = SrcWng_InputTypeData%Vwnd_LL
-   else if (allocated(DstWng_InputTypeData%Vwnd_LL)) then
-      deallocate(DstWng_InputTypeData%Vwnd_LL)
    end if
    if (allocated(SrcWng_InputTypeData%omega_z)) then
       LB(1:1) = lbound(SrcWng_InputTypeData%omega_z)
@@ -3973,8 +3829,6 @@ subroutine FVW_CopyWng_InputType(SrcWng_InputTypeData, DstWng_InputTypeData, Ctr
          end if
       end if
       DstWng_InputTypeData%omega_z = SrcWng_InputTypeData%omega_z
-   else if (allocated(DstWng_InputTypeData%omega_z)) then
-      deallocate(DstWng_InputTypeData%omega_z)
    end if
 end subroutine
 
@@ -4077,8 +3931,6 @@ subroutine FVW_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInputData%rotors)) then
-      deallocate(DstInputData%rotors)
    end if
    if (allocated(SrcInputData%W)) then
       LB(1:1) = lbound(SrcInputData%W)
@@ -4095,8 +3947,6 @@ subroutine FVW_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInputData%W)) then
-      deallocate(DstInputData%W)
    end if
    if (allocated(SrcInputData%WingsMesh)) then
       LB(1:1) = lbound(SrcInputData%WingsMesh)
@@ -4113,8 +3963,6 @@ subroutine FVW_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInputData%WingsMesh)) then
-      deallocate(DstInputData%WingsMesh)
    end if
    if (allocated(SrcInputData%V_wind)) then
       LB(1:2) = lbound(SrcInputData%V_wind)
@@ -4127,8 +3975,6 @@ subroutine FVW_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%V_wind = SrcInputData%V_wind
-   else if (allocated(DstInputData%V_wind)) then
-      deallocate(DstInputData%V_wind)
    end if
 end subroutine
 
@@ -4316,8 +4162,6 @@ subroutine FVW_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSt
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstDiscStateData%UA)) then
-      deallocate(DstDiscStateData%UA)
    end if
 end subroutine
 
@@ -4413,8 +4257,6 @@ subroutine FVW_CopyWng_ConstraintStateType(SrcWng_ConstraintStateTypeData, DstWn
          end if
       end if
       DstWng_ConstraintStateTypeData%Gamma_LL = SrcWng_ConstraintStateTypeData%Gamma_LL
-   else if (allocated(DstWng_ConstraintStateTypeData%Gamma_LL)) then
-      deallocate(DstWng_ConstraintStateTypeData%Gamma_LL)
    end if
 end subroutine
 
@@ -4495,8 +4337,6 @@ subroutine FVW_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode,
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstConstrStateData%W)) then
-      deallocate(DstConstrStateData%W)
    end if
    DstConstrStateData%residual = SrcConstrStateData%residual
 end subroutine
@@ -4600,8 +4440,6 @@ subroutine FVW_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Er
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstOtherStateData%UA)) then
-      deallocate(DstOtherStateData%UA)
    end if
 end subroutine
 
@@ -4697,8 +4535,6 @@ subroutine FVW_CopyWng_InitInputType(SrcWng_InitInputTypeData, DstWng_InitInputT
          end if
       end if
       DstWng_InitInputTypeData%AFindx = SrcWng_InitInputTypeData%AFindx
-   else if (allocated(DstWng_InitInputTypeData%AFindx)) then
-      deallocate(DstWng_InitInputTypeData%AFindx)
    end if
    if (allocated(SrcWng_InitInputTypeData%chord)) then
       LB(1:1) = lbound(SrcWng_InitInputTypeData%chord)
@@ -4711,8 +4547,6 @@ subroutine FVW_CopyWng_InitInputType(SrcWng_InitInputTypeData, DstWng_InitInputT
          end if
       end if
       DstWng_InitInputTypeData%chord = SrcWng_InitInputTypeData%chord
-   else if (allocated(DstWng_InitInputTypeData%chord)) then
-      deallocate(DstWng_InitInputTypeData%chord)
    end if
    if (allocated(SrcWng_InitInputTypeData%RElm)) then
       LB(1:1) = lbound(SrcWng_InitInputTypeData%RElm)
@@ -4725,8 +4559,6 @@ subroutine FVW_CopyWng_InitInputType(SrcWng_InitInputTypeData, DstWng_InitInputT
          end if
       end if
       DstWng_InitInputTypeData%RElm = SrcWng_InitInputTypeData%RElm
-   else if (allocated(DstWng_InitInputTypeData%RElm)) then
-      deallocate(DstWng_InitInputTypeData%RElm)
    end if
    DstWng_InitInputTypeData%iRotor = SrcWng_InitInputTypeData%iRotor
    DstWng_InitInputTypeData%UAOff_innerNode = SrcWng_InitInputTypeData%UAOff_innerNode
@@ -4865,8 +4697,6 @@ subroutine FVW_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSt
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitInputData%W)) then
-      deallocate(DstInitInputData%W)
    end if
    if (allocated(SrcInitInputData%WingsMesh)) then
       LB(1:1) = lbound(SrcInitInputData%WingsMesh)
@@ -4883,8 +4713,6 @@ subroutine FVW_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSt
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitInputData%WingsMesh)) then
-      deallocate(DstInitInputData%WingsMesh)
    end if
    DstInitInputData%numBladeNodes = SrcInitInputData%numBladeNodes
    DstInitInputData%DTaero = SrcInitInputData%DTaero

@@ -259,8 +259,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
          end if
       end if
       DstInputFileData%AddF0 = SrcInputFileData%AddF0
-   else if (allocated(DstInputFileData%AddF0)) then
-      deallocate(DstInputFileData%AddF0)
    end if
    if (allocated(SrcInputFileData%AddCLin)) then
       LB(1:3) = lbound(SrcInputFileData%AddCLin)
@@ -273,8 +271,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
          end if
       end if
       DstInputFileData%AddCLin = SrcInputFileData%AddCLin
-   else if (allocated(DstInputFileData%AddCLin)) then
-      deallocate(DstInputFileData%AddCLin)
    end if
    if (allocated(SrcInputFileData%AddBLin)) then
       LB(1:3) = lbound(SrcInputFileData%AddBLin)
@@ -287,8 +283,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
          end if
       end if
       DstInputFileData%AddBLin = SrcInputFileData%AddBLin
-   else if (allocated(DstInputFileData%AddBLin)) then
-      deallocate(DstInputFileData%AddBLin)
    end if
    if (allocated(SrcInputFileData%AddBQuad)) then
       LB(1:3) = lbound(SrcInputFileData%AddBQuad)
@@ -301,8 +295,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
          end if
       end if
       DstInputFileData%AddBQuad = SrcInputFileData%AddBQuad
-   else if (allocated(DstInputFileData%AddBQuad)) then
-      deallocate(DstInputFileData%AddBQuad)
    end if
    call SeaSt_CopyInitInput(SrcInputFileData%SeaState, DstInputFileData%SeaState, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -318,8 +310,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
          end if
       end if
       DstInputFileData%PotFile = SrcInputFileData%PotFile
-   else if (allocated(DstInputFileData%PotFile)) then
-      deallocate(DstInputFileData%PotFile)
    end if
    DstInputFileData%nWAMITObj = SrcInputFileData%nWAMITObj
    DstInputFileData%vecMultiplier = SrcInputFileData%vecMultiplier
@@ -336,8 +326,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
          end if
       end if
       DstInputFileData%PtfmVol0 = SrcInputFileData%PtfmVol0
-   else if (allocated(DstInputFileData%PtfmVol0)) then
-      deallocate(DstInputFileData%PtfmVol0)
    end if
    DstInputFileData%HasWAMIT = SrcInputFileData%HasWAMIT
    if (allocated(SrcInputFileData%WAMITULEN)) then
@@ -351,8 +339,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
          end if
       end if
       DstInputFileData%WAMITULEN = SrcInputFileData%WAMITULEN
-   else if (allocated(DstInputFileData%WAMITULEN)) then
-      deallocate(DstInputFileData%WAMITULEN)
    end if
    if (allocated(SrcInputFileData%PtfmRefxt)) then
       LB(1:1) = lbound(SrcInputFileData%PtfmRefxt)
@@ -365,8 +351,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
          end if
       end if
       DstInputFileData%PtfmRefxt = SrcInputFileData%PtfmRefxt
-   else if (allocated(DstInputFileData%PtfmRefxt)) then
-      deallocate(DstInputFileData%PtfmRefxt)
    end if
    if (allocated(SrcInputFileData%PtfmRefyt)) then
       LB(1:1) = lbound(SrcInputFileData%PtfmRefyt)
@@ -379,8 +363,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
          end if
       end if
       DstInputFileData%PtfmRefyt = SrcInputFileData%PtfmRefyt
-   else if (allocated(DstInputFileData%PtfmRefyt)) then
-      deallocate(DstInputFileData%PtfmRefyt)
    end if
    if (allocated(SrcInputFileData%PtfmRefzt)) then
       LB(1:1) = lbound(SrcInputFileData%PtfmRefzt)
@@ -393,8 +375,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
          end if
       end if
       DstInputFileData%PtfmRefzt = SrcInputFileData%PtfmRefzt
-   else if (allocated(DstInputFileData%PtfmRefzt)) then
-      deallocate(DstInputFileData%PtfmRefzt)
    end if
    if (allocated(SrcInputFileData%PtfmRefztRot)) then
       LB(1:1) = lbound(SrcInputFileData%PtfmRefztRot)
@@ -407,8 +387,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
          end if
       end if
       DstInputFileData%PtfmRefztRot = SrcInputFileData%PtfmRefztRot
-   else if (allocated(DstInputFileData%PtfmRefztRot)) then
-      deallocate(DstInputFileData%PtfmRefztRot)
    end if
    if (allocated(SrcInputFileData%PtfmCOBxt)) then
       LB(1:1) = lbound(SrcInputFileData%PtfmCOBxt)
@@ -421,8 +399,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
          end if
       end if
       DstInputFileData%PtfmCOBxt = SrcInputFileData%PtfmCOBxt
-   else if (allocated(DstInputFileData%PtfmCOBxt)) then
-      deallocate(DstInputFileData%PtfmCOBxt)
    end if
    if (allocated(SrcInputFileData%PtfmCOByt)) then
       LB(1:1) = lbound(SrcInputFileData%PtfmCOByt)
@@ -435,8 +411,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
          end if
       end if
       DstInputFileData%PtfmCOByt = SrcInputFileData%PtfmCOByt
-   else if (allocated(DstInputFileData%PtfmCOByt)) then
-      deallocate(DstInputFileData%PtfmCOByt)
    end if
    call WAMIT_CopyInitInput(SrcInputFileData%WAMIT, DstInputFileData%WAMIT, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -461,8 +435,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
          end if
       end if
       DstInputFileData%UserOutputs = SrcInputFileData%UserOutputs
-   else if (allocated(DstInputFileData%UserOutputs)) then
-      deallocate(DstInputFileData%UserOutputs)
    end if
    DstInputFileData%OutSwtch = SrcInputFileData%OutSwtch
    DstInputFileData%OutAll = SrcInputFileData%OutAll
@@ -478,8 +450,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
          end if
       end if
       DstInputFileData%OutList = SrcInputFileData%OutList
-   else if (allocated(DstInputFileData%OutList)) then
-      deallocate(DstInputFileData%OutList)
    end if
    DstInputFileData%HDSum = SrcInputFileData%HDSum
    DstInputFileData%UnSum = SrcInputFileData%UnSum
@@ -960,8 +930,6 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
          end if
       end if
       DstInitInputData%WaveElev0 = SrcInitInputData%WaveElev0
-   else if (allocated(DstInitInputData%WaveElev0)) then
-      deallocate(DstInitInputData%WaveElev0)
    end if
    if (allocated(SrcInitInputData%WaveElevC)) then
       LB(1:3) = lbound(SrcInitInputData%WaveElevC)
@@ -974,8 +942,6 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
          end if
       end if
       DstInitInputData%WaveElevC = SrcInitInputData%WaveElevC
-   else if (allocated(DstInitInputData%WaveElevC)) then
-      deallocate(DstInitInputData%WaveElevC)
    end if
    DstInitInputData%WaveDirMin = SrcInitInputData%WaveDirMin
    DstInitInputData%WaveDirMax = SrcInitInputData%WaveDirMax
@@ -1210,8 +1176,6 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
          end if
       end if
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
-      deallocate(DstInitOutputData%WriteOutputHdr)
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
@@ -1224,8 +1188,6 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
          end if
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
-      deallocate(DstInitOutputData%WriteOutputUnt)
    end if
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1241,8 +1203,6 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
          end if
       end if
       DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
-   else if (allocated(DstInitOutputData%LinNames_y)) then
-      deallocate(DstInitOutputData%LinNames_y)
    end if
    if (allocated(SrcInitOutputData%LinNames_x)) then
       LB(1:1) = lbound(SrcInitOutputData%LinNames_x)
@@ -1255,8 +1215,6 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
          end if
       end if
       DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
-   else if (allocated(DstInitOutputData%LinNames_x)) then
-      deallocate(DstInitOutputData%LinNames_x)
    end if
    if (allocated(SrcInitOutputData%LinNames_u)) then
       LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
@@ -1269,8 +1227,6 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
          end if
       end if
       DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
-   else if (allocated(DstInitOutputData%LinNames_u)) then
-      deallocate(DstInitOutputData%LinNames_u)
    end if
    if (allocated(SrcInitOutputData%DerivOrder_x)) then
       LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x)
@@ -1283,8 +1239,6 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
          end if
       end if
       DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
-   else if (allocated(DstInitOutputData%DerivOrder_x)) then
-      deallocate(DstInitOutputData%DerivOrder_x)
    end if
    if (allocated(SrcInitOutputData%IsLoad_u)) then
       LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
@@ -1297,8 +1251,6 @@ subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCod
          end if
       end if
       DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
-   else if (allocated(DstInitOutputData%IsLoad_u)) then
-      deallocate(DstInitOutputData%IsLoad_u)
    end if
 end subroutine
 
@@ -1581,8 +1533,6 @@ subroutine HydroDyn_CopyContState(SrcContStateData, DstContStateData, CtrlCode, 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstContStateData%WAMIT)) then
-      deallocate(DstContStateData%WAMIT)
    end if
    call Morison_CopyContState(SrcContStateData%Morison, DstContStateData%Morison, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1688,8 +1638,6 @@ subroutine HydroDyn_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstDiscStateData%WAMIT)) then
-      deallocate(DstDiscStateData%WAMIT)
    end if
    call Morison_CopyDiscState(SrcDiscStateData%Morison, DstDiscStateData%Morison, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1848,8 +1796,6 @@ subroutine HydroDyn_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCod
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstOtherStateData%WAMIT)) then
-      deallocate(DstOtherStateData%WAMIT)
    end if
    call Morison_CopyOtherState(SrcOtherStateData%Morison, DstOtherStateData%Morison, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1960,8 +1906,6 @@ subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstMiscData%F_PtfmAdd = SrcMiscData%F_PtfmAdd
-   else if (allocated(DstMiscData%F_PtfmAdd)) then
-      deallocate(DstMiscData%F_PtfmAdd)
    end if
    DstMiscData%F_Hydro = SrcMiscData%F_Hydro
    if (allocated(SrcMiscData%F_Waves)) then
@@ -1975,8 +1919,6 @@ subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstMiscData%F_Waves = SrcMiscData%F_Waves
-   else if (allocated(DstMiscData%F_Waves)) then
-      deallocate(DstMiscData%F_Waves)
    end if
    if (allocated(SrcMiscData%WAMIT)) then
       LB(1:1) = lbound(SrcMiscData%WAMIT)
@@ -1993,8 +1935,6 @@ subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%WAMIT)) then
-      deallocate(DstMiscData%WAMIT)
    end if
    if (allocated(SrcMiscData%WAMIT2)) then
       LB(1:1) = lbound(SrcMiscData%WAMIT2)
@@ -2011,8 +1951,6 @@ subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%WAMIT2)) then
-      deallocate(DstMiscData%WAMIT2)
    end if
    call Morison_CopyMisc(SrcMiscData%Morison, DstMiscData%Morison, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2032,8 +1970,6 @@ subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%u_WAMIT)) then
-      deallocate(DstMiscData%u_WAMIT)
    end if
 end subroutine
 
@@ -2268,8 +2204,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%WAMIT)) then
-      deallocate(DstParamData%WAMIT)
    end if
    if (allocated(SrcParamData%WAMIT2)) then
       LB(1:1) = lbound(SrcParamData%WAMIT2)
@@ -2286,8 +2220,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%WAMIT2)) then
-      deallocate(DstParamData%WAMIT2)
    end if
    DstParamData%WAMIT2used = SrcParamData%WAMIT2used
    call Morison_CopyParam(SrcParamData%Morison, DstParamData%Morison, CtrlCode, ErrStat2, ErrMsg2)
@@ -2313,8 +2245,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
          end if
       end if
       DstParamData%AddF0 = SrcParamData%AddF0
-   else if (allocated(DstParamData%AddF0)) then
-      deallocate(DstParamData%AddF0)
    end if
    if (allocated(SrcParamData%AddCLin)) then
       LB(1:3) = lbound(SrcParamData%AddCLin)
@@ -2327,8 +2257,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
          end if
       end if
       DstParamData%AddCLin = SrcParamData%AddCLin
-   else if (allocated(DstParamData%AddCLin)) then
-      deallocate(DstParamData%AddCLin)
    end if
    if (allocated(SrcParamData%AddBLin)) then
       LB(1:3) = lbound(SrcParamData%AddBLin)
@@ -2341,8 +2269,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
          end if
       end if
       DstParamData%AddBLin = SrcParamData%AddBLin
-   else if (allocated(DstParamData%AddBLin)) then
-      deallocate(DstParamData%AddBLin)
    end if
    if (allocated(SrcParamData%AddBQuad)) then
       LB(1:3) = lbound(SrcParamData%AddBQuad)
@@ -2355,8 +2281,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
          end if
       end if
       DstParamData%AddBQuad = SrcParamData%AddBQuad
-   else if (allocated(DstParamData%AddBQuad)) then
-      deallocate(DstParamData%AddBQuad)
    end if
    DstParamData%DT = SrcParamData%DT
    if (allocated(SrcParamData%OutParam)) then
@@ -2374,8 +2298,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%OutParam)) then
-      deallocate(DstParamData%OutParam)
    end if
    DstParamData%NumOuts = SrcParamData%NumOuts
    DstParamData%NumTotalOuts = SrcParamData%NumTotalOuts
@@ -2396,8 +2318,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
          end if
       end if
       DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
-   else if (allocated(DstParamData%Jac_u_indx)) then
-      deallocate(DstParamData%Jac_u_indx)
    end if
    if (allocated(SrcParamData%du)) then
       LB(1:1) = lbound(SrcParamData%du)
@@ -2410,8 +2330,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
          end if
       end if
       DstParamData%du = SrcParamData%du
-   else if (allocated(DstParamData%du)) then
-      deallocate(DstParamData%du)
    end if
    if (allocated(SrcParamData%dx)) then
       LB(1:1) = lbound(SrcParamData%dx)
@@ -2424,8 +2342,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
          end if
       end if
       DstParamData%dx = SrcParamData%dx
-   else if (allocated(DstParamData%dx)) then
-      deallocate(DstParamData%dx)
    end if
    DstParamData%Jac_ny = SrcParamData%Jac_ny
    DstParamData%PointsToSeaState = SrcParamData%PointsToSeaState
@@ -2912,8 +2828,6 @@ subroutine HydroDyn_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstOutputData%WAMIT)) then
-      deallocate(DstOutputData%WAMIT)
    end if
    if (allocated(SrcOutputData%WAMIT2)) then
       LB(1:1) = lbound(SrcOutputData%WAMIT2)
@@ -2930,8 +2844,6 @@ subroutine HydroDyn_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstOutputData%WAMIT2)) then
-      deallocate(DstOutputData%WAMIT2)
    end if
    call Morison_CopyOutput(SrcOutputData%Morison, DstOutputData%Morison, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2950,8 +2862,6 @@ subroutine HydroDyn_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, 
          end if
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-   else if (allocated(DstOutputData%WriteOutput)) then
-      deallocate(DstOutputData%WriteOutput)
    end if
 end subroutine
 

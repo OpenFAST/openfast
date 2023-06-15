@@ -192,8 +192,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%Time = SrcUniformFieldTypeData%Time
-   else if (allocated(DstUniformFieldTypeData%Time)) then
-      deallocate(DstUniformFieldTypeData%Time)
    end if
    if (allocated(SrcUniformFieldTypeData%VelH)) then
       LB(1:1) = lbound(SrcUniformFieldTypeData%VelH)
@@ -206,8 +204,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%VelH = SrcUniformFieldTypeData%VelH
-   else if (allocated(DstUniformFieldTypeData%VelH)) then
-      deallocate(DstUniformFieldTypeData%VelH)
    end if
    if (allocated(SrcUniformFieldTypeData%VelHDot)) then
       LB(1:1) = lbound(SrcUniformFieldTypeData%VelHDot)
@@ -220,8 +216,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%VelHDot = SrcUniformFieldTypeData%VelHDot
-   else if (allocated(DstUniformFieldTypeData%VelHDot)) then
-      deallocate(DstUniformFieldTypeData%VelHDot)
    end if
    if (allocated(SrcUniformFieldTypeData%VelV)) then
       LB(1:1) = lbound(SrcUniformFieldTypeData%VelV)
@@ -234,8 +228,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%VelV = SrcUniformFieldTypeData%VelV
-   else if (allocated(DstUniformFieldTypeData%VelV)) then
-      deallocate(DstUniformFieldTypeData%VelV)
    end if
    if (allocated(SrcUniformFieldTypeData%VelVDot)) then
       LB(1:1) = lbound(SrcUniformFieldTypeData%VelVDot)
@@ -248,8 +240,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%VelVDot = SrcUniformFieldTypeData%VelVDot
-   else if (allocated(DstUniformFieldTypeData%VelVDot)) then
-      deallocate(DstUniformFieldTypeData%VelVDot)
    end if
    if (allocated(SrcUniformFieldTypeData%VelGust)) then
       LB(1:1) = lbound(SrcUniformFieldTypeData%VelGust)
@@ -262,8 +252,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%VelGust = SrcUniformFieldTypeData%VelGust
-   else if (allocated(DstUniformFieldTypeData%VelGust)) then
-      deallocate(DstUniformFieldTypeData%VelGust)
    end if
    if (allocated(SrcUniformFieldTypeData%VelGustDot)) then
       LB(1:1) = lbound(SrcUniformFieldTypeData%VelGustDot)
@@ -276,8 +264,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%VelGustDot = SrcUniformFieldTypeData%VelGustDot
-   else if (allocated(DstUniformFieldTypeData%VelGustDot)) then
-      deallocate(DstUniformFieldTypeData%VelGustDot)
    end if
    if (allocated(SrcUniformFieldTypeData%AngleH)) then
       LB(1:1) = lbound(SrcUniformFieldTypeData%AngleH)
@@ -290,8 +276,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%AngleH = SrcUniformFieldTypeData%AngleH
-   else if (allocated(DstUniformFieldTypeData%AngleH)) then
-      deallocate(DstUniformFieldTypeData%AngleH)
    end if
    if (allocated(SrcUniformFieldTypeData%AngleHDot)) then
       LB(1:1) = lbound(SrcUniformFieldTypeData%AngleHDot)
@@ -304,8 +288,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%AngleHDot = SrcUniformFieldTypeData%AngleHDot
-   else if (allocated(DstUniformFieldTypeData%AngleHDot)) then
-      deallocate(DstUniformFieldTypeData%AngleHDot)
    end if
    if (allocated(SrcUniformFieldTypeData%AngleV)) then
       LB(1:1) = lbound(SrcUniformFieldTypeData%AngleV)
@@ -318,8 +300,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%AngleV = SrcUniformFieldTypeData%AngleV
-   else if (allocated(DstUniformFieldTypeData%AngleV)) then
-      deallocate(DstUniformFieldTypeData%AngleV)
    end if
    if (allocated(SrcUniformFieldTypeData%AngleVDot)) then
       LB(1:1) = lbound(SrcUniformFieldTypeData%AngleVDot)
@@ -332,8 +312,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%AngleVDot = SrcUniformFieldTypeData%AngleVDot
-   else if (allocated(DstUniformFieldTypeData%AngleVDot)) then
-      deallocate(DstUniformFieldTypeData%AngleVDot)
    end if
    if (allocated(SrcUniformFieldTypeData%ShrH)) then
       LB(1:1) = lbound(SrcUniformFieldTypeData%ShrH)
@@ -346,8 +324,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%ShrH = SrcUniformFieldTypeData%ShrH
-   else if (allocated(DstUniformFieldTypeData%ShrH)) then
-      deallocate(DstUniformFieldTypeData%ShrH)
    end if
    if (allocated(SrcUniformFieldTypeData%ShrHDot)) then
       LB(1:1) = lbound(SrcUniformFieldTypeData%ShrHDot)
@@ -360,8 +336,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%ShrHDot = SrcUniformFieldTypeData%ShrHDot
-   else if (allocated(DstUniformFieldTypeData%ShrHDot)) then
-      deallocate(DstUniformFieldTypeData%ShrHDot)
    end if
    if (allocated(SrcUniformFieldTypeData%ShrV)) then
       LB(1:1) = lbound(SrcUniformFieldTypeData%ShrV)
@@ -374,8 +348,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%ShrV = SrcUniformFieldTypeData%ShrV
-   else if (allocated(DstUniformFieldTypeData%ShrV)) then
-      deallocate(DstUniformFieldTypeData%ShrV)
    end if
    if (allocated(SrcUniformFieldTypeData%ShrVDot)) then
       LB(1:1) = lbound(SrcUniformFieldTypeData%ShrVDot)
@@ -388,8 +360,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%ShrVDot = SrcUniformFieldTypeData%ShrVDot
-   else if (allocated(DstUniformFieldTypeData%ShrVDot)) then
-      deallocate(DstUniformFieldTypeData%ShrVDot)
    end if
    if (allocated(SrcUniformFieldTypeData%LinShrV)) then
       LB(1:1) = lbound(SrcUniformFieldTypeData%LinShrV)
@@ -402,8 +372,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%LinShrV = SrcUniformFieldTypeData%LinShrV
-   else if (allocated(DstUniformFieldTypeData%LinShrV)) then
-      deallocate(DstUniformFieldTypeData%LinShrV)
    end if
    if (allocated(SrcUniformFieldTypeData%LinShrVDot)) then
       LB(1:1) = lbound(SrcUniformFieldTypeData%LinShrVDot)
@@ -416,8 +384,6 @@ subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUnifor
          end if
       end if
       DstUniformFieldTypeData%LinShrVDot = SrcUniformFieldTypeData%LinShrVDot
-   else if (allocated(DstUniformFieldTypeData%LinShrVDot)) then
-      deallocate(DstUniformFieldTypeData%LinShrVDot)
    end if
 end subroutine
 
@@ -975,8 +941,6 @@ subroutine IfW_FlowField_CopyGrid3DFieldType(SrcGrid3DFieldTypeData, DstGrid3DFi
          end if
       end if
       DstGrid3DFieldTypeData%Vel = SrcGrid3DFieldTypeData%Vel
-   else if (allocated(DstGrid3DFieldTypeData%Vel)) then
-      deallocate(DstGrid3DFieldTypeData%Vel)
    end if
    if (allocated(SrcGrid3DFieldTypeData%Acc)) then
       LB(1:4) = lbound(SrcGrid3DFieldTypeData%Acc)
@@ -989,8 +953,6 @@ subroutine IfW_FlowField_CopyGrid3DFieldType(SrcGrid3DFieldTypeData, DstGrid3DFi
          end if
       end if
       DstGrid3DFieldTypeData%Acc = SrcGrid3DFieldTypeData%Acc
-   else if (allocated(DstGrid3DFieldTypeData%Acc)) then
-      deallocate(DstGrid3DFieldTypeData%Acc)
    end if
    if (allocated(SrcGrid3DFieldTypeData%VelTower)) then
       LB(1:3) = lbound(SrcGrid3DFieldTypeData%VelTower)
@@ -1003,8 +965,6 @@ subroutine IfW_FlowField_CopyGrid3DFieldType(SrcGrid3DFieldTypeData, DstGrid3DFi
          end if
       end if
       DstGrid3DFieldTypeData%VelTower = SrcGrid3DFieldTypeData%VelTower
-   else if (allocated(DstGrid3DFieldTypeData%VelTower)) then
-      deallocate(DstGrid3DFieldTypeData%VelTower)
    end if
    if (allocated(SrcGrid3DFieldTypeData%AccTower)) then
       LB(1:3) = lbound(SrcGrid3DFieldTypeData%AccTower)
@@ -1017,8 +977,6 @@ subroutine IfW_FlowField_CopyGrid3DFieldType(SrcGrid3DFieldTypeData, DstGrid3DFi
          end if
       end if
       DstGrid3DFieldTypeData%AccTower = SrcGrid3DFieldTypeData%AccTower
-   else if (allocated(DstGrid3DFieldTypeData%AccTower)) then
-      deallocate(DstGrid3DFieldTypeData%AccTower)
    end if
    if (allocated(SrcGrid3DFieldTypeData%VelAvg)) then
       LB(1:3) = lbound(SrcGrid3DFieldTypeData%VelAvg)
@@ -1031,8 +989,6 @@ subroutine IfW_FlowField_CopyGrid3DFieldType(SrcGrid3DFieldTypeData, DstGrid3DFi
          end if
       end if
       DstGrid3DFieldTypeData%VelAvg = SrcGrid3DFieldTypeData%VelAvg
-   else if (allocated(DstGrid3DFieldTypeData%VelAvg)) then
-      deallocate(DstGrid3DFieldTypeData%VelAvg)
    end if
    if (allocated(SrcGrid3DFieldTypeData%AccAvg)) then
       LB(1:3) = lbound(SrcGrid3DFieldTypeData%AccAvg)
@@ -1045,8 +1001,6 @@ subroutine IfW_FlowField_CopyGrid3DFieldType(SrcGrid3DFieldTypeData, DstGrid3DFi
          end if
       end if
       DstGrid3DFieldTypeData%AccAvg = SrcGrid3DFieldTypeData%AccAvg
-   else if (allocated(DstGrid3DFieldTypeData%AccAvg)) then
-      deallocate(DstGrid3DFieldTypeData%AccAvg)
    end if
    DstGrid3DFieldTypeData%DTime = SrcGrid3DFieldTypeData%DTime
    DstGrid3DFieldTypeData%Rate = SrcGrid3DFieldTypeData%Rate
@@ -1441,8 +1395,6 @@ subroutine IfW_FlowField_CopyPointsFieldType(SrcPointsFieldTypeData, DstPointsFi
          end if
       end if
       DstPointsFieldTypeData%Vel = SrcPointsFieldTypeData%Vel
-   else if (allocated(DstPointsFieldTypeData%Vel)) then
-      deallocate(DstPointsFieldTypeData%Vel)
    end if
 end subroutine
 

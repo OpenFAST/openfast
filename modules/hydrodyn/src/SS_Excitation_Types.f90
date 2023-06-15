@@ -140,8 +140,6 @@ subroutine SS_Exc_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
          end if
       end if
       DstInitInputData%PtfmRefztRot = SrcInitInputData%PtfmRefztRot
-   else if (allocated(DstInitInputData%PtfmRefztRot)) then
-      deallocate(DstInitInputData%PtfmRefztRot)
    end if
    DstInitInputData%WaveElev0 => SrcInitInputData%WaveElev0
    DstInitInputData%WaveElev1 => SrcInitInputData%WaveElev1
@@ -345,8 +343,6 @@ subroutine SS_Exc_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
          end if
       end if
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
-      deallocate(DstInitOutputData%WriteOutputHdr)
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
@@ -359,8 +355,6 @@ subroutine SS_Exc_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
          end if
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
-      deallocate(DstInitOutputData%WriteOutputUnt)
    end if
 end subroutine
 
@@ -457,8 +451,6 @@ subroutine SS_Exc_CopyContState(SrcContStateData, DstContStateData, CtrlCode, Er
          end if
       end if
       DstContStateData%x = SrcContStateData%x
-   else if (allocated(DstContStateData%x)) then
-      deallocate(DstContStateData%x)
    end if
 end subroutine
 
@@ -740,8 +732,6 @@ subroutine SS_Exc_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstParamData%spDOF = SrcParamData%spDOF
-   else if (allocated(DstParamData%spDOF)) then
-      deallocate(DstParamData%spDOF)
    end if
    if (allocated(SrcParamData%A)) then
       LB(1:2) = lbound(SrcParamData%A)
@@ -754,8 +744,6 @@ subroutine SS_Exc_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstParamData%A = SrcParamData%A
-   else if (allocated(DstParamData%A)) then
-      deallocate(DstParamData%A)
    end if
    if (allocated(SrcParamData%B)) then
       LB(1:1) = lbound(SrcParamData%B)
@@ -768,8 +756,6 @@ subroutine SS_Exc_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstParamData%B = SrcParamData%B
-   else if (allocated(DstParamData%B)) then
-      deallocate(DstParamData%B)
    end if
    if (allocated(SrcParamData%C)) then
       LB(1:2) = lbound(SrcParamData%C)
@@ -782,8 +768,6 @@ subroutine SS_Exc_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstParamData%C = SrcParamData%C
-   else if (allocated(DstParamData%C)) then
-      deallocate(DstParamData%C)
    end if
    DstParamData%numStates = SrcParamData%numStates
    DstParamData%Tc = SrcParamData%Tc
@@ -1058,8 +1042,6 @@ subroutine SS_Exc_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstInputData%PtfmPos = SrcInputData%PtfmPos
-   else if (allocated(DstInputData%PtfmPos)) then
-      deallocate(DstInputData%PtfmPos)
    end if
 end subroutine
 
@@ -1134,8 +1116,6 @@ subroutine SS_Exc_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Er
          end if
       end if
       DstOutputData%y = SrcOutputData%y
-   else if (allocated(DstOutputData%y)) then
-      deallocate(DstOutputData%y)
    end if
    if (allocated(SrcOutputData%WriteOutput)) then
       LB(1:1) = lbound(SrcOutputData%WriteOutput)
@@ -1148,8 +1128,6 @@ subroutine SS_Exc_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Er
          end if
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-   else if (allocated(DstOutputData%WriteOutput)) then
-      deallocate(DstOutputData%WriteOutput)
    end if
 end subroutine
 

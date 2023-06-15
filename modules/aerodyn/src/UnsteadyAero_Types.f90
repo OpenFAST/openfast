@@ -269,8 +269,6 @@ subroutine UA_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
          end if
       end if
       DstInitInputData%c = SrcInitInputData%c
-   else if (allocated(DstInitInputData%c)) then
-      deallocate(DstInitInputData%c)
    end if
    DstInitInputData%numBlades = SrcInitInputData%numBlades
    DstInitInputData%nNodesPerBlade = SrcInitInputData%nNodesPerBlade
@@ -290,8 +288,6 @@ subroutine UA_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
          end if
       end if
       DstInitInputData%UAOff_innerNode = SrcInitInputData%UAOff_innerNode
-   else if (allocated(DstInitInputData%UAOff_innerNode)) then
-      deallocate(DstInitInputData%UAOff_innerNode)
    end if
    if (allocated(SrcInitInputData%UAOff_outerNode)) then
       LB(1:1) = lbound(SrcInitInputData%UAOff_outerNode)
@@ -304,8 +300,6 @@ subroutine UA_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
          end if
       end if
       DstInitInputData%UAOff_outerNode = SrcInitInputData%UAOff_outerNode
-   else if (allocated(DstInitInputData%UAOff_outerNode)) then
-      deallocate(DstInitInputData%UAOff_outerNode)
    end if
 end subroutine
 
@@ -455,8 +449,6 @@ subroutine UA_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
-      deallocate(DstInitOutputData%WriteOutputHdr)
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
@@ -469,8 +461,6 @@ subroutine UA_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
-      deallocate(DstInitOutputData%WriteOutputUnt)
    end if
 end subroutine
 
@@ -859,8 +849,6 @@ subroutine UA_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrSta
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstContStateData%element)) then
-      deallocate(DstContStateData%element)
    end if
 end subroutine
 
@@ -959,8 +947,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%alpha_minus1 = SrcDiscStateData%alpha_minus1
-   else if (allocated(DstDiscStateData%alpha_minus1)) then
-      deallocate(DstDiscStateData%alpha_minus1)
    end if
    if (allocated(SrcDiscStateData%alpha_filt_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%alpha_filt_minus1)
@@ -973,8 +959,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%alpha_filt_minus1 = SrcDiscStateData%alpha_filt_minus1
-   else if (allocated(DstDiscStateData%alpha_filt_minus1)) then
-      deallocate(DstDiscStateData%alpha_filt_minus1)
    end if
    if (allocated(SrcDiscStateData%alpha_dot)) then
       LB(1:2) = lbound(SrcDiscStateData%alpha_dot)
@@ -987,8 +971,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%alpha_dot = SrcDiscStateData%alpha_dot
-   else if (allocated(DstDiscStateData%alpha_dot)) then
-      deallocate(DstDiscStateData%alpha_dot)
    end if
    if (allocated(SrcDiscStateData%alpha_dot_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%alpha_dot_minus1)
@@ -1001,8 +983,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%alpha_dot_minus1 = SrcDiscStateData%alpha_dot_minus1
-   else if (allocated(DstDiscStateData%alpha_dot_minus1)) then
-      deallocate(DstDiscStateData%alpha_dot_minus1)
    end if
    if (allocated(SrcDiscStateData%q_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%q_minus1)
@@ -1015,8 +995,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%q_minus1 = SrcDiscStateData%q_minus1
-   else if (allocated(DstDiscStateData%q_minus1)) then
-      deallocate(DstDiscStateData%q_minus1)
    end if
    if (allocated(SrcDiscStateData%Kalpha_f_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%Kalpha_f_minus1)
@@ -1029,8 +1007,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Kalpha_f_minus1 = SrcDiscStateData%Kalpha_f_minus1
-   else if (allocated(DstDiscStateData%Kalpha_f_minus1)) then
-      deallocate(DstDiscStateData%Kalpha_f_minus1)
    end if
    if (allocated(SrcDiscStateData%Kq_f_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%Kq_f_minus1)
@@ -1043,8 +1019,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Kq_f_minus1 = SrcDiscStateData%Kq_f_minus1
-   else if (allocated(DstDiscStateData%Kq_f_minus1)) then
-      deallocate(DstDiscStateData%Kq_f_minus1)
    end if
    if (allocated(SrcDiscStateData%q_f_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%q_f_minus1)
@@ -1057,8 +1031,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%q_f_minus1 = SrcDiscStateData%q_f_minus1
-   else if (allocated(DstDiscStateData%q_f_minus1)) then
-      deallocate(DstDiscStateData%q_f_minus1)
    end if
    if (allocated(SrcDiscStateData%X1_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%X1_minus1)
@@ -1071,8 +1043,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%X1_minus1 = SrcDiscStateData%X1_minus1
-   else if (allocated(DstDiscStateData%X1_minus1)) then
-      deallocate(DstDiscStateData%X1_minus1)
    end if
    if (allocated(SrcDiscStateData%X2_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%X2_minus1)
@@ -1085,8 +1055,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%X2_minus1 = SrcDiscStateData%X2_minus1
-   else if (allocated(DstDiscStateData%X2_minus1)) then
-      deallocate(DstDiscStateData%X2_minus1)
    end if
    if (allocated(SrcDiscStateData%X3_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%X3_minus1)
@@ -1099,8 +1067,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%X3_minus1 = SrcDiscStateData%X3_minus1
-   else if (allocated(DstDiscStateData%X3_minus1)) then
-      deallocate(DstDiscStateData%X3_minus1)
    end if
    if (allocated(SrcDiscStateData%X4_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%X4_minus1)
@@ -1113,8 +1079,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%X4_minus1 = SrcDiscStateData%X4_minus1
-   else if (allocated(DstDiscStateData%X4_minus1)) then
-      deallocate(DstDiscStateData%X4_minus1)
    end if
    if (allocated(SrcDiscStateData%Kprime_alpha_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%Kprime_alpha_minus1)
@@ -1127,8 +1091,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Kprime_alpha_minus1 = SrcDiscStateData%Kprime_alpha_minus1
-   else if (allocated(DstDiscStateData%Kprime_alpha_minus1)) then
-      deallocate(DstDiscStateData%Kprime_alpha_minus1)
    end if
    if (allocated(SrcDiscStateData%Kprime_q_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%Kprime_q_minus1)
@@ -1141,8 +1103,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Kprime_q_minus1 = SrcDiscStateData%Kprime_q_minus1
-   else if (allocated(DstDiscStateData%Kprime_q_minus1)) then
-      deallocate(DstDiscStateData%Kprime_q_minus1)
    end if
    if (allocated(SrcDiscStateData%Kprimeprime_q_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%Kprimeprime_q_minus1)
@@ -1155,8 +1115,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Kprimeprime_q_minus1 = SrcDiscStateData%Kprimeprime_q_minus1
-   else if (allocated(DstDiscStateData%Kprimeprime_q_minus1)) then
-      deallocate(DstDiscStateData%Kprimeprime_q_minus1)
    end if
    if (allocated(SrcDiscStateData%K3prime_q_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%K3prime_q_minus1)
@@ -1169,8 +1127,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%K3prime_q_minus1 = SrcDiscStateData%K3prime_q_minus1
-   else if (allocated(DstDiscStateData%K3prime_q_minus1)) then
-      deallocate(DstDiscStateData%K3prime_q_minus1)
    end if
    if (allocated(SrcDiscStateData%Dp_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%Dp_minus1)
@@ -1183,8 +1139,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Dp_minus1 = SrcDiscStateData%Dp_minus1
-   else if (allocated(DstDiscStateData%Dp_minus1)) then
-      deallocate(DstDiscStateData%Dp_minus1)
    end if
    if (allocated(SrcDiscStateData%Cn_pot_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%Cn_pot_minus1)
@@ -1197,8 +1151,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Cn_pot_minus1 = SrcDiscStateData%Cn_pot_minus1
-   else if (allocated(DstDiscStateData%Cn_pot_minus1)) then
-      deallocate(DstDiscStateData%Cn_pot_minus1)
    end if
    if (allocated(SrcDiscStateData%fprimeprime_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%fprimeprime_minus1)
@@ -1211,8 +1163,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%fprimeprime_minus1 = SrcDiscStateData%fprimeprime_minus1
-   else if (allocated(DstDiscStateData%fprimeprime_minus1)) then
-      deallocate(DstDiscStateData%fprimeprime_minus1)
    end if
    if (allocated(SrcDiscStateData%fprimeprime_c_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%fprimeprime_c_minus1)
@@ -1225,8 +1175,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%fprimeprime_c_minus1 = SrcDiscStateData%fprimeprime_c_minus1
-   else if (allocated(DstDiscStateData%fprimeprime_c_minus1)) then
-      deallocate(DstDiscStateData%fprimeprime_c_minus1)
    end if
    if (allocated(SrcDiscStateData%fprimeprime_m_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%fprimeprime_m_minus1)
@@ -1239,8 +1187,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%fprimeprime_m_minus1 = SrcDiscStateData%fprimeprime_m_minus1
-   else if (allocated(DstDiscStateData%fprimeprime_m_minus1)) then
-      deallocate(DstDiscStateData%fprimeprime_m_minus1)
    end if
    if (allocated(SrcDiscStateData%Df_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%Df_minus1)
@@ -1253,8 +1199,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Df_minus1 = SrcDiscStateData%Df_minus1
-   else if (allocated(DstDiscStateData%Df_minus1)) then
-      deallocate(DstDiscStateData%Df_minus1)
    end if
    if (allocated(SrcDiscStateData%Df_c_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%Df_c_minus1)
@@ -1267,8 +1211,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Df_c_minus1 = SrcDiscStateData%Df_c_minus1
-   else if (allocated(DstDiscStateData%Df_c_minus1)) then
-      deallocate(DstDiscStateData%Df_c_minus1)
    end if
    if (allocated(SrcDiscStateData%Df_m_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%Df_m_minus1)
@@ -1281,8 +1223,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Df_m_minus1 = SrcDiscStateData%Df_m_minus1
-   else if (allocated(DstDiscStateData%Df_m_minus1)) then
-      deallocate(DstDiscStateData%Df_m_minus1)
    end if
    if (allocated(SrcDiscStateData%Dalphaf_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%Dalphaf_minus1)
@@ -1295,8 +1235,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Dalphaf_minus1 = SrcDiscStateData%Dalphaf_minus1
-   else if (allocated(DstDiscStateData%Dalphaf_minus1)) then
-      deallocate(DstDiscStateData%Dalphaf_minus1)
    end if
    if (allocated(SrcDiscStateData%alphaf_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%alphaf_minus1)
@@ -1309,8 +1247,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%alphaf_minus1 = SrcDiscStateData%alphaf_minus1
-   else if (allocated(DstDiscStateData%alphaf_minus1)) then
-      deallocate(DstDiscStateData%alphaf_minus1)
    end if
    if (allocated(SrcDiscStateData%fprime_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%fprime_minus1)
@@ -1323,8 +1259,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%fprime_minus1 = SrcDiscStateData%fprime_minus1
-   else if (allocated(DstDiscStateData%fprime_minus1)) then
-      deallocate(DstDiscStateData%fprime_minus1)
    end if
    if (allocated(SrcDiscStateData%fprime_c_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%fprime_c_minus1)
@@ -1337,8 +1271,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%fprime_c_minus1 = SrcDiscStateData%fprime_c_minus1
-   else if (allocated(DstDiscStateData%fprime_c_minus1)) then
-      deallocate(DstDiscStateData%fprime_c_minus1)
    end if
    if (allocated(SrcDiscStateData%fprime_m_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%fprime_m_minus1)
@@ -1351,8 +1283,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%fprime_m_minus1 = SrcDiscStateData%fprime_m_minus1
-   else if (allocated(DstDiscStateData%fprime_m_minus1)) then
-      deallocate(DstDiscStateData%fprime_m_minus1)
    end if
    if (allocated(SrcDiscStateData%tau_V)) then
       LB(1:2) = lbound(SrcDiscStateData%tau_V)
@@ -1365,8 +1295,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%tau_V = SrcDiscStateData%tau_V
-   else if (allocated(DstDiscStateData%tau_V)) then
-      deallocate(DstDiscStateData%tau_V)
    end if
    if (allocated(SrcDiscStateData%tau_V_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%tau_V_minus1)
@@ -1379,8 +1307,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%tau_V_minus1 = SrcDiscStateData%tau_V_minus1
-   else if (allocated(DstDiscStateData%tau_V_minus1)) then
-      deallocate(DstDiscStateData%tau_V_minus1)
    end if
    if (allocated(SrcDiscStateData%Cn_v_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%Cn_v_minus1)
@@ -1393,8 +1319,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Cn_v_minus1 = SrcDiscStateData%Cn_v_minus1
-   else if (allocated(DstDiscStateData%Cn_v_minus1)) then
-      deallocate(DstDiscStateData%Cn_v_minus1)
    end if
    if (allocated(SrcDiscStateData%C_V_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%C_V_minus1)
@@ -1407,8 +1331,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%C_V_minus1 = SrcDiscStateData%C_V_minus1
-   else if (allocated(DstDiscStateData%C_V_minus1)) then
-      deallocate(DstDiscStateData%C_V_minus1)
    end if
    if (allocated(SrcDiscStateData%Cn_prime_minus1)) then
       LB(1:2) = lbound(SrcDiscStateData%Cn_prime_minus1)
@@ -1421,8 +1343,6 @@ subroutine UA_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
          end if
       end if
       DstDiscStateData%Cn_prime_minus1 = SrcDiscStateData%Cn_prime_minus1
-   else if (allocated(DstDiscStateData%Cn_prime_minus1)) then
-      deallocate(DstDiscStateData%Cn_prime_minus1)
    end if
 end subroutine
 
@@ -2264,8 +2184,6 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
          end if
       end if
       DstOtherStateData%FirstPass = SrcOtherStateData%FirstPass
-   else if (allocated(DstOtherStateData%FirstPass)) then
-      deallocate(DstOtherStateData%FirstPass)
    end if
    if (allocated(SrcOtherStateData%sigma1)) then
       LB(1:2) = lbound(SrcOtherStateData%sigma1)
@@ -2278,8 +2196,6 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
          end if
       end if
       DstOtherStateData%sigma1 = SrcOtherStateData%sigma1
-   else if (allocated(DstOtherStateData%sigma1)) then
-      deallocate(DstOtherStateData%sigma1)
    end if
    if (allocated(SrcOtherStateData%sigma1c)) then
       LB(1:2) = lbound(SrcOtherStateData%sigma1c)
@@ -2292,8 +2208,6 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
          end if
       end if
       DstOtherStateData%sigma1c = SrcOtherStateData%sigma1c
-   else if (allocated(DstOtherStateData%sigma1c)) then
-      deallocate(DstOtherStateData%sigma1c)
    end if
    if (allocated(SrcOtherStateData%sigma1m)) then
       LB(1:2) = lbound(SrcOtherStateData%sigma1m)
@@ -2306,8 +2220,6 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
          end if
       end if
       DstOtherStateData%sigma1m = SrcOtherStateData%sigma1m
-   else if (allocated(DstOtherStateData%sigma1m)) then
-      deallocate(DstOtherStateData%sigma1m)
    end if
    if (allocated(SrcOtherStateData%sigma3)) then
       LB(1:2) = lbound(SrcOtherStateData%sigma3)
@@ -2320,8 +2232,6 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
          end if
       end if
       DstOtherStateData%sigma3 = SrcOtherStateData%sigma3
-   else if (allocated(DstOtherStateData%sigma3)) then
-      deallocate(DstOtherStateData%sigma3)
    end if
    if (allocated(SrcOtherStateData%n)) then
       LB(1:2) = lbound(SrcOtherStateData%n)
@@ -2334,8 +2244,6 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
          end if
       end if
       DstOtherStateData%n = SrcOtherStateData%n
-   else if (allocated(DstOtherStateData%n)) then
-      deallocate(DstOtherStateData%n)
    end if
    LB(1:1) = lbound(SrcOtherStateData%xdot)
    UB(1:1) = ubound(SrcOtherStateData%xdot)
@@ -2355,8 +2263,6 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
          end if
       end if
       DstOtherStateData%t_vortexBegin = SrcOtherStateData%t_vortexBegin
-   else if (allocated(DstOtherStateData%t_vortexBegin)) then
-      deallocate(DstOtherStateData%t_vortexBegin)
    end if
    if (allocated(SrcOtherStateData%SignOfOmega)) then
       LB(1:2) = lbound(SrcOtherStateData%SignOfOmega)
@@ -2369,8 +2275,6 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
          end if
       end if
       DstOtherStateData%SignOfOmega = SrcOtherStateData%SignOfOmega
-   else if (allocated(DstOtherStateData%SignOfOmega)) then
-      deallocate(DstOtherStateData%SignOfOmega)
    end if
    if (allocated(SrcOtherStateData%PositivePressure)) then
       LB(1:2) = lbound(SrcOtherStateData%PositivePressure)
@@ -2383,8 +2287,6 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
          end if
       end if
       DstOtherStateData%PositivePressure = SrcOtherStateData%PositivePressure
-   else if (allocated(DstOtherStateData%PositivePressure)) then
-      deallocate(DstOtherStateData%PositivePressure)
    end if
    if (allocated(SrcOtherStateData%vortexOn)) then
       LB(1:2) = lbound(SrcOtherStateData%vortexOn)
@@ -2397,8 +2299,6 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
          end if
       end if
       DstOtherStateData%vortexOn = SrcOtherStateData%vortexOn
-   else if (allocated(DstOtherStateData%vortexOn)) then
-      deallocate(DstOtherStateData%vortexOn)
    end if
    if (allocated(SrcOtherStateData%BelowThreshold)) then
       LB(1:2) = lbound(SrcOtherStateData%BelowThreshold)
@@ -2411,8 +2311,6 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
          end if
       end if
       DstOtherStateData%BelowThreshold = SrcOtherStateData%BelowThreshold
-   else if (allocated(DstOtherStateData%BelowThreshold)) then
-      deallocate(DstOtherStateData%BelowThreshold)
    end if
    if (allocated(SrcOtherStateData%activeL)) then
       LB(1:2) = lbound(SrcOtherStateData%activeL)
@@ -2425,8 +2323,6 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
          end if
       end if
       DstOtherStateData%activeL = SrcOtherStateData%activeL
-   else if (allocated(DstOtherStateData%activeL)) then
-      deallocate(DstOtherStateData%activeL)
    end if
    if (allocated(SrcOtherStateData%activeD)) then
       LB(1:2) = lbound(SrcOtherStateData%activeD)
@@ -2439,8 +2335,6 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
          end if
       end if
       DstOtherStateData%activeD = SrcOtherStateData%activeD
-   else if (allocated(DstOtherStateData%activeD)) then
-      deallocate(DstOtherStateData%activeD)
    end if
 end subroutine
 
@@ -2805,8 +2699,6 @@ subroutine UA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%TESF = SrcMiscData%TESF
-   else if (allocated(DstMiscData%TESF)) then
-      deallocate(DstMiscData%TESF)
    end if
    if (allocated(SrcMiscData%LESF)) then
       LB(1:2) = lbound(SrcMiscData%LESF)
@@ -2819,8 +2711,6 @@ subroutine UA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%LESF = SrcMiscData%LESF
-   else if (allocated(DstMiscData%LESF)) then
-      deallocate(DstMiscData%LESF)
    end if
    if (allocated(SrcMiscData%VRTX)) then
       LB(1:2) = lbound(SrcMiscData%VRTX)
@@ -2833,8 +2723,6 @@ subroutine UA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%VRTX = SrcMiscData%VRTX
-   else if (allocated(DstMiscData%VRTX)) then
-      deallocate(DstMiscData%VRTX)
    end if
    if (allocated(SrcMiscData%T_Sh)) then
       LB(1:2) = lbound(SrcMiscData%T_Sh)
@@ -2847,8 +2735,6 @@ subroutine UA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%T_Sh = SrcMiscData%T_Sh
-   else if (allocated(DstMiscData%T_Sh)) then
-      deallocate(DstMiscData%T_Sh)
    end if
    if (allocated(SrcMiscData%BEDSEP)) then
       LB(1:2) = lbound(SrcMiscData%BEDSEP)
@@ -2861,8 +2747,6 @@ subroutine UA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%BEDSEP = SrcMiscData%BEDSEP
-   else if (allocated(DstMiscData%BEDSEP)) then
-      deallocate(DstMiscData%BEDSEP)
    end if
    if (allocated(SrcMiscData%weight)) then
       LB(1:2) = lbound(SrcMiscData%weight)
@@ -2875,8 +2759,6 @@ subroutine UA_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%weight = SrcMiscData%weight
-   else if (allocated(DstMiscData%weight)) then
-      deallocate(DstMiscData%weight)
    end if
 end subroutine
 
@@ -3071,8 +2953,6 @@ subroutine UA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%c = SrcParamData%c
-   else if (allocated(DstParamData%c)) then
-      deallocate(DstParamData%c)
    end if
    DstParamData%numBlades = SrcParamData%numBlades
    DstParamData%nNodesPerBlade = SrcParamData%nNodesPerBlade
@@ -3098,8 +2978,6 @@ subroutine UA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%UA_off_forGood = SrcParamData%UA_off_forGood
-   else if (allocated(DstParamData%UA_off_forGood)) then
-      deallocate(DstParamData%UA_off_forGood)
    end if
 end subroutine
 
@@ -3302,8 +3180,6 @@ subroutine UA_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-   else if (allocated(DstOutputData%WriteOutput)) then
-      deallocate(DstOutputData%WriteOutput)
    end if
 end subroutine
 

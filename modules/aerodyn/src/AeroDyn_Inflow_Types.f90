@@ -464,8 +464,6 @@ subroutine ADI_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Er
          end if
       end if
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
-      deallocate(DstInitOutputData%WriteOutputHdr)
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
@@ -478,8 +476,6 @@ subroutine ADI_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Er
          end if
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
-      deallocate(DstInitOutputData%WriteOutputUnt)
    end if
 end subroutine
 
@@ -778,8 +774,6 @@ subroutine ADI_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%VTK_surfaces)) then
-      deallocate(DstMiscData%VTK_surfaces)
    end if
 end subroutine
 
@@ -1004,8 +998,6 @@ subroutine ADI_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstOutputData%HHVel = SrcOutputData%HHVel
-   else if (allocated(DstOutputData%HHVel)) then
-      deallocate(DstOutputData%HHVel)
    end if
    DstOutputData%PLExp = SrcOutputData%PLExp
    if (allocated(SrcOutputData%IW_WriteOutput)) then
@@ -1019,8 +1011,6 @@ subroutine ADI_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstOutputData%IW_WriteOutput = SrcOutputData%IW_WriteOutput
-   else if (allocated(DstOutputData%IW_WriteOutput)) then
-      deallocate(DstOutputData%IW_WriteOutput)
    end if
    if (allocated(SrcOutputData%WriteOutput)) then
       LB(1:1) = lbound(SrcOutputData%WriteOutput)
@@ -1033,8 +1023,6 @@ subroutine ADI_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-   else if (allocated(DstOutputData%WriteOutput)) then
-      deallocate(DstOutputData%WriteOutput)
    end if
 end subroutine
 
@@ -1168,8 +1156,6 @@ subroutine ADI_CopyData(SrcDataData, DstDataData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstDataData%x)) then
-      deallocate(DstDataData%x)
    end if
    if (allocated(SrcDataData%xd)) then
       LB(1:1) = lbound(SrcDataData%xd)
@@ -1186,8 +1172,6 @@ subroutine ADI_CopyData(SrcDataData, DstDataData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstDataData%xd)) then
-      deallocate(DstDataData%xd)
    end if
    if (allocated(SrcDataData%z)) then
       LB(1:1) = lbound(SrcDataData%z)
@@ -1204,8 +1188,6 @@ subroutine ADI_CopyData(SrcDataData, DstDataData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstDataData%z)) then
-      deallocate(DstDataData%z)
    end if
    if (allocated(SrcDataData%OtherState)) then
       LB(1:1) = lbound(SrcDataData%OtherState)
@@ -1222,8 +1204,6 @@ subroutine ADI_CopyData(SrcDataData, DstDataData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstDataData%OtherState)) then
-      deallocate(DstDataData%OtherState)
    end if
    call ADI_CopyParam(SrcDataData%p, DstDataData%p, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1246,8 +1226,6 @@ subroutine ADI_CopyData(SrcDataData, DstDataData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstDataData%u)) then
-      deallocate(DstDataData%u)
    end if
    call ADI_CopyOutput(SrcDataData%y, DstDataData%y, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1263,8 +1241,6 @@ subroutine ADI_CopyData(SrcDataData, DstDataData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstDataData%inputTimes = SrcDataData%inputTimes
-   else if (allocated(DstDataData%inputTimes)) then
-      deallocate(DstDataData%inputTimes)
    end if
 end subroutine
 
@@ -1544,8 +1520,6 @@ subroutine ADI_CopyRotFED(SrcRotFEDData, DstRotFEDData, CtrlCode, ErrStat, ErrMs
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotFEDData%BladeRootMotion)) then
-      deallocate(DstRotFEDData%BladeRootMotion)
    end if
    if (allocated(SrcRotFEDData%BladeLn2Mesh)) then
       LB(1:1) = lbound(SrcRotFEDData%BladeLn2Mesh)
@@ -1562,8 +1536,6 @@ subroutine ADI_CopyRotFED(SrcRotFEDData, DstRotFEDData, CtrlCode, ErrStat, ErrMs
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotFEDData%BladeLn2Mesh)) then
-      deallocate(DstRotFEDData%BladeLn2Mesh)
    end if
    DstRotFEDData%hasTower = SrcRotFEDData%hasTower
    DstRotFEDData%rigidBlades = SrcRotFEDData%rigidBlades
@@ -1589,8 +1561,6 @@ subroutine ADI_CopyRotFED(SrcRotFEDData, DstRotFEDData, CtrlCode, ErrStat, ErrMs
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotFEDData%AD_P_2_AD_L_B)) then
-      deallocate(DstRotFEDData%AD_P_2_AD_L_B)
    end if
    call NWTC_Library_CopyMeshMapType(SrcRotFEDData%ED_P_2_AD_P_TF, DstRotFEDData%ED_P_2_AD_P_TF, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1610,8 +1580,6 @@ subroutine ADI_CopyRotFED(SrcRotFEDData, DstRotFEDData, CtrlCode, ErrStat, ErrMs
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstRotFEDData%ED_P_2_AD_P_R)) then
-      deallocate(DstRotFEDData%ED_P_2_AD_P_R)
    end if
    call NWTC_Library_CopyMeshMapType(SrcRotFEDData%ED_P_2_AD_P_H, DstRotFEDData%ED_P_2_AD_P_H, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1864,8 +1832,6 @@ subroutine ADI_CopyFED_Data(SrcFED_DataData, DstFED_DataData, CtrlCode, ErrStat,
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstFED_DataData%WT)) then
-      deallocate(DstFED_DataData%WT)
    end if
 end subroutine
 

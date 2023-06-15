@@ -259,8 +259,6 @@ subroutine IceD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%LegPosX = SrcInputFileData%LegPosX
-   else if (allocated(DstInputFileData%LegPosX)) then
-      deallocate(DstInputFileData%LegPosX)
    end if
    if (allocated(SrcInputFileData%LegPosY)) then
       LB(1:1) = lbound(SrcInputFileData%LegPosY)
@@ -273,8 +271,6 @@ subroutine IceD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%LegPosY = SrcInputFileData%LegPosY
-   else if (allocated(DstInputFileData%LegPosY)) then
-      deallocate(DstInputFileData%LegPosY)
    end if
    if (allocated(SrcInputFileData%StrWd)) then
       LB(1:1) = lbound(SrcInputFileData%StrWd)
@@ -287,8 +283,6 @@ subroutine IceD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrS
          end if
       end if
       DstInputFileData%StrWd = SrcInputFileData%StrWd
-   else if (allocated(DstInputFileData%StrWd)) then
-      deallocate(DstInputFileData%StrWd)
    end if
    DstInputFileData%Ikm = SrcInputFileData%Ikm
    DstInputFileData%Ag = SrcInputFileData%Ag
@@ -688,8 +682,6 @@ subroutine IceD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
-      deallocate(DstInitOutputData%WriteOutputHdr)
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
@@ -702,8 +694,6 @@ subroutine IceD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
-      deallocate(DstInitOutputData%WriteOutputUnt)
    end if
    DstInitOutputData%numLegs = SrcInitOutputData%numLegs
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
@@ -937,8 +927,6 @@ subroutine IceD_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, E
          end if
       end if
       DstOtherStateData%Nc = SrcOtherStateData%Nc
-   else if (allocated(DstOtherStateData%Nc)) then
-      deallocate(DstOtherStateData%Nc)
    end if
    if (allocated(SrcOtherStateData%Psum)) then
       LB(1:1) = lbound(SrcOtherStateData%Psum)
@@ -951,8 +939,6 @@ subroutine IceD_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, E
          end if
       end if
       DstOtherStateData%Psum = SrcOtherStateData%Psum
-   else if (allocated(DstOtherStateData%Psum)) then
-      deallocate(DstOtherStateData%Psum)
    end if
    if (allocated(SrcOtherStateData%IceTthNo)) then
       LB(1:1) = lbound(SrcOtherStateData%IceTthNo)
@@ -965,8 +951,6 @@ subroutine IceD_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, E
          end if
       end if
       DstOtherStateData%IceTthNo = SrcOtherStateData%IceTthNo
-   else if (allocated(DstOtherStateData%IceTthNo)) then
-      deallocate(DstOtherStateData%IceTthNo)
    end if
    DstOtherStateData%Beta = SrcOtherStateData%Beta
    DstOtherStateData%Tinit = SrcOtherStateData%Tinit
@@ -987,8 +971,6 @@ subroutine IceD_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstOtherStateData%xdot)) then
-      deallocate(DstOtherStateData%xdot)
    end if
    DstOtherStateData%n = SrcOtherStateData%n
 end subroutine
@@ -1219,8 +1201,6 @@ subroutine IceD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%OutName = SrcParamData%OutName
-   else if (allocated(DstParamData%OutName)) then
-      deallocate(DstParamData%OutName)
    end if
    if (allocated(SrcParamData%OutUnit)) then
       LB(1:1) = lbound(SrcParamData%OutUnit)
@@ -1233,8 +1213,6 @@ subroutine IceD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%OutUnit = SrcParamData%OutUnit
-   else if (allocated(DstParamData%OutUnit)) then
-      deallocate(DstParamData%OutUnit)
    end if
    DstParamData%RootName = SrcParamData%RootName
    DstParamData%tm1a = SrcParamData%tm1a
@@ -1260,8 +1238,6 @@ subroutine IceD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%rdmFm = SrcParamData%rdmFm
-   else if (allocated(DstParamData%rdmFm)) then
-      deallocate(DstParamData%rdmFm)
    end if
    if (allocated(SrcParamData%rdmt0)) then
       LB(1:1) = lbound(SrcParamData%rdmt0)
@@ -1274,8 +1250,6 @@ subroutine IceD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%rdmt0 = SrcParamData%rdmt0
-   else if (allocated(DstParamData%rdmt0)) then
-      deallocate(DstParamData%rdmt0)
    end if
    if (allocated(SrcParamData%rdmtm)) then
       LB(1:1) = lbound(SrcParamData%rdmtm)
@@ -1288,8 +1262,6 @@ subroutine IceD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%rdmtm = SrcParamData%rdmtm
-   else if (allocated(DstParamData%rdmtm)) then
-      deallocate(DstParamData%rdmtm)
    end if
    if (allocated(SrcParamData%rdmDm)) then
       LB(1:1) = lbound(SrcParamData%rdmDm)
@@ -1302,8 +1274,6 @@ subroutine IceD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%rdmDm = SrcParamData%rdmDm
-   else if (allocated(DstParamData%rdmDm)) then
-      deallocate(DstParamData%rdmDm)
    end if
    if (allocated(SrcParamData%rdmP)) then
       LB(1:1) = lbound(SrcParamData%rdmP)
@@ -1316,8 +1286,6 @@ subroutine IceD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%rdmP = SrcParamData%rdmP
-   else if (allocated(DstParamData%rdmP)) then
-      deallocate(DstParamData%rdmP)
    end if
    if (allocated(SrcParamData%rdmKi)) then
       LB(1:1) = lbound(SrcParamData%rdmKi)
@@ -1330,8 +1298,6 @@ subroutine IceD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%rdmKi = SrcParamData%rdmKi
-   else if (allocated(DstParamData%rdmKi)) then
-      deallocate(DstParamData%rdmKi)
    end if
    DstParamData%ZonePitch = SrcParamData%ZonePitch
    DstParamData%Kice = SrcParamData%Kice
@@ -1347,8 +1313,6 @@ subroutine IceD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%Y0 = SrcParamData%Y0
-   else if (allocated(DstParamData%Y0)) then
-      deallocate(DstParamData%Y0)
    end if
    if (allocated(SrcParamData%ContPrfl)) then
       LB(1:1) = lbound(SrcParamData%ContPrfl)
@@ -1361,8 +1325,6 @@ subroutine IceD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%ContPrfl = SrcParamData%ContPrfl
-   else if (allocated(DstParamData%ContPrfl)) then
-      deallocate(DstParamData%ContPrfl)
    end if
    DstParamData%Zn = SrcParamData%Zn
    DstParamData%rhoi = SrcParamData%rhoi
@@ -1847,8 +1809,6 @@ subroutine IceD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-   else if (allocated(DstOutputData%WriteOutput)) then
-      deallocate(DstOutputData%WriteOutput)
    end if
 end subroutine
 

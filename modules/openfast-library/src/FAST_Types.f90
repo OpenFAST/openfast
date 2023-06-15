@@ -830,8 +830,6 @@ subroutine FAST_CopyVTK_BLSurfaceType(SrcVTK_BLSurfaceTypeData, DstVTK_BLSurface
          end if
       end if
       DstVTK_BLSurfaceTypeData%AirfoilCoords = SrcVTK_BLSurfaceTypeData%AirfoilCoords
-   else if (allocated(DstVTK_BLSurfaceTypeData%AirfoilCoords)) then
-      deallocate(DstVTK_BLSurfaceTypeData%AirfoilCoords)
    end if
 end subroutine
 
@@ -912,8 +910,6 @@ subroutine FAST_CopyVTK_SurfaceType(SrcVTK_SurfaceTypeData, DstVTK_SurfaceTypeDa
          end if
       end if
       DstVTK_SurfaceTypeData%TowerRad = SrcVTK_SurfaceTypeData%TowerRad
-   else if (allocated(DstVTK_SurfaceTypeData%TowerRad)) then
-      deallocate(DstVTK_SurfaceTypeData%TowerRad)
    end if
    DstVTK_SurfaceTypeData%NWaveElevPts = SrcVTK_SurfaceTypeData%NWaveElevPts
    if (allocated(SrcVTK_SurfaceTypeData%WaveElevXY)) then
@@ -927,8 +923,6 @@ subroutine FAST_CopyVTK_SurfaceType(SrcVTK_SurfaceTypeData, DstVTK_SurfaceTypeDa
          end if
       end if
       DstVTK_SurfaceTypeData%WaveElevXY = SrcVTK_SurfaceTypeData%WaveElevXY
-   else if (allocated(DstVTK_SurfaceTypeData%WaveElevXY)) then
-      deallocate(DstVTK_SurfaceTypeData%WaveElevXY)
    end if
    if (allocated(SrcVTK_SurfaceTypeData%WaveElev)) then
       LB(1:2) = lbound(SrcVTK_SurfaceTypeData%WaveElev)
@@ -941,8 +935,6 @@ subroutine FAST_CopyVTK_SurfaceType(SrcVTK_SurfaceTypeData, DstVTK_SurfaceTypeDa
          end if
       end if
       DstVTK_SurfaceTypeData%WaveElev = SrcVTK_SurfaceTypeData%WaveElev
-   else if (allocated(DstVTK_SurfaceTypeData%WaveElev)) then
-      deallocate(DstVTK_SurfaceTypeData%WaveElev)
    end if
    if (allocated(SrcVTK_SurfaceTypeData%BladeShape)) then
       LB(1:1) = lbound(SrcVTK_SurfaceTypeData%BladeShape)
@@ -959,8 +951,6 @@ subroutine FAST_CopyVTK_SurfaceType(SrcVTK_SurfaceTypeData, DstVTK_SurfaceTypeDa
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstVTK_SurfaceTypeData%BladeShape)) then
-      deallocate(DstVTK_SurfaceTypeData%BladeShape)
    end if
    if (allocated(SrcVTK_SurfaceTypeData%MorisonRad)) then
       LB(1:1) = lbound(SrcVTK_SurfaceTypeData%MorisonRad)
@@ -973,8 +963,6 @@ subroutine FAST_CopyVTK_SurfaceType(SrcVTK_SurfaceTypeData, DstVTK_SurfaceTypeDa
          end if
       end if
       DstVTK_SurfaceTypeData%MorisonRad = SrcVTK_SurfaceTypeData%MorisonRad
-   else if (allocated(DstVTK_SurfaceTypeData%MorisonRad)) then
-      deallocate(DstVTK_SurfaceTypeData%MorisonRad)
    end if
 end subroutine
 
@@ -1173,8 +1161,6 @@ subroutine FAST_CopyVTK_ModeShapeType(SrcVTK_ModeShapeTypeData, DstVTK_ModeShape
          end if
       end if
       DstVTK_ModeShapeTypeData%VTKModes = SrcVTK_ModeShapeTypeData%VTKModes
-   else if (allocated(DstVTK_ModeShapeTypeData%VTKModes)) then
-      deallocate(DstVTK_ModeShapeTypeData%VTKModes)
    end if
    DstVTK_ModeShapeTypeData%VTKLinTim = SrcVTK_ModeShapeTypeData%VTKLinTim
    DstVTK_ModeShapeTypeData%VTKNLinTimes = SrcVTK_ModeShapeTypeData%VTKNLinTimes
@@ -1191,8 +1177,6 @@ subroutine FAST_CopyVTK_ModeShapeType(SrcVTK_ModeShapeTypeData, DstVTK_ModeShape
          end if
       end if
       DstVTK_ModeShapeTypeData%DampingRatio = SrcVTK_ModeShapeTypeData%DampingRatio
-   else if (allocated(DstVTK_ModeShapeTypeData%DampingRatio)) then
-      deallocate(DstVTK_ModeShapeTypeData%DampingRatio)
    end if
    if (allocated(SrcVTK_ModeShapeTypeData%NaturalFreq_Hz)) then
       LB(1:1) = lbound(SrcVTK_ModeShapeTypeData%NaturalFreq_Hz)
@@ -1205,8 +1189,6 @@ subroutine FAST_CopyVTK_ModeShapeType(SrcVTK_ModeShapeTypeData, DstVTK_ModeShape
          end if
       end if
       DstVTK_ModeShapeTypeData%NaturalFreq_Hz = SrcVTK_ModeShapeTypeData%NaturalFreq_Hz
-   else if (allocated(DstVTK_ModeShapeTypeData%NaturalFreq_Hz)) then
-      deallocate(DstVTK_ModeShapeTypeData%NaturalFreq_Hz)
    end if
    if (allocated(SrcVTK_ModeShapeTypeData%DampedFreq_Hz)) then
       LB(1:1) = lbound(SrcVTK_ModeShapeTypeData%DampedFreq_Hz)
@@ -1219,8 +1201,6 @@ subroutine FAST_CopyVTK_ModeShapeType(SrcVTK_ModeShapeTypeData, DstVTK_ModeShape
          end if
       end if
       DstVTK_ModeShapeTypeData%DampedFreq_Hz = SrcVTK_ModeShapeTypeData%DampedFreq_Hz
-   else if (allocated(DstVTK_ModeShapeTypeData%DampedFreq_Hz)) then
-      deallocate(DstVTK_ModeShapeTypeData%DampedFreq_Hz)
    end if
    if (allocated(SrcVTK_ModeShapeTypeData%x_eig_magnitude)) then
       LB(1:3) = lbound(SrcVTK_ModeShapeTypeData%x_eig_magnitude)
@@ -1233,8 +1213,6 @@ subroutine FAST_CopyVTK_ModeShapeType(SrcVTK_ModeShapeTypeData, DstVTK_ModeShape
          end if
       end if
       DstVTK_ModeShapeTypeData%x_eig_magnitude = SrcVTK_ModeShapeTypeData%x_eig_magnitude
-   else if (allocated(DstVTK_ModeShapeTypeData%x_eig_magnitude)) then
-      deallocate(DstVTK_ModeShapeTypeData%x_eig_magnitude)
    end if
    if (allocated(SrcVTK_ModeShapeTypeData%x_eig_phase)) then
       LB(1:3) = lbound(SrcVTK_ModeShapeTypeData%x_eig_phase)
@@ -1247,8 +1225,6 @@ subroutine FAST_CopyVTK_ModeShapeType(SrcVTK_ModeShapeTypeData, DstVTK_ModeShape
          end if
       end if
       DstVTK_ModeShapeTypeData%x_eig_phase = SrcVTK_ModeShapeTypeData%x_eig_phase
-   else if (allocated(DstVTK_ModeShapeTypeData%x_eig_phase)) then
-      deallocate(DstVTK_ModeShapeTypeData%x_eig_phase)
    end if
 end subroutine
 
@@ -1883,8 +1859,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstLinStateSaveData%x_IceD)) then
-      deallocate(DstLinStateSaveData%x_IceD)
    end if
    if (allocated(SrcLinStateSaveData%xd_IceD)) then
       LB(1:2) = lbound(SrcLinStateSaveData%xd_IceD)
@@ -1903,8 +1877,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstLinStateSaveData%xd_IceD)) then
-      deallocate(DstLinStateSaveData%xd_IceD)
    end if
    if (allocated(SrcLinStateSaveData%z_IceD)) then
       LB(1:2) = lbound(SrcLinStateSaveData%z_IceD)
@@ -1923,8 +1895,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstLinStateSaveData%z_IceD)) then
-      deallocate(DstLinStateSaveData%z_IceD)
    end if
    if (allocated(SrcLinStateSaveData%OtherSt_IceD)) then
       LB(1:2) = lbound(SrcLinStateSaveData%OtherSt_IceD)
@@ -1943,8 +1913,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstLinStateSaveData%OtherSt_IceD)) then
-      deallocate(DstLinStateSaveData%OtherSt_IceD)
    end if
    if (allocated(SrcLinStateSaveData%u_IceD)) then
       LB(1:2) = lbound(SrcLinStateSaveData%u_IceD)
@@ -1963,8 +1931,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstLinStateSaveData%u_IceD)) then
-      deallocate(DstLinStateSaveData%u_IceD)
    end if
    if (allocated(SrcLinStateSaveData%x_BD)) then
       LB(1:2) = lbound(SrcLinStateSaveData%x_BD)
@@ -1983,8 +1949,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstLinStateSaveData%x_BD)) then
-      deallocate(DstLinStateSaveData%x_BD)
    end if
    if (allocated(SrcLinStateSaveData%xd_BD)) then
       LB(1:2) = lbound(SrcLinStateSaveData%xd_BD)
@@ -2003,8 +1967,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstLinStateSaveData%xd_BD)) then
-      deallocate(DstLinStateSaveData%xd_BD)
    end if
    if (allocated(SrcLinStateSaveData%z_BD)) then
       LB(1:2) = lbound(SrcLinStateSaveData%z_BD)
@@ -2023,8 +1985,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstLinStateSaveData%z_BD)) then
-      deallocate(DstLinStateSaveData%z_BD)
    end if
    if (allocated(SrcLinStateSaveData%OtherSt_BD)) then
       LB(1:2) = lbound(SrcLinStateSaveData%OtherSt_BD)
@@ -2043,8 +2003,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstLinStateSaveData%OtherSt_BD)) then
-      deallocate(DstLinStateSaveData%OtherSt_BD)
    end if
    if (allocated(SrcLinStateSaveData%u_BD)) then
       LB(1:2) = lbound(SrcLinStateSaveData%u_BD)
@@ -2063,8 +2021,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstLinStateSaveData%u_BD)) then
-      deallocate(DstLinStateSaveData%u_BD)
    end if
    if (allocated(SrcLinStateSaveData%x_ED)) then
       LB(1:1) = lbound(SrcLinStateSaveData%x_ED)
@@ -2081,8 +2037,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%x_ED)) then
-      deallocate(DstLinStateSaveData%x_ED)
    end if
    if (allocated(SrcLinStateSaveData%xd_ED)) then
       LB(1:1) = lbound(SrcLinStateSaveData%xd_ED)
@@ -2099,8 +2053,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%xd_ED)) then
-      deallocate(DstLinStateSaveData%xd_ED)
    end if
    if (allocated(SrcLinStateSaveData%z_ED)) then
       LB(1:1) = lbound(SrcLinStateSaveData%z_ED)
@@ -2117,8 +2069,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%z_ED)) then
-      deallocate(DstLinStateSaveData%z_ED)
    end if
    if (allocated(SrcLinStateSaveData%OtherSt_ED)) then
       LB(1:1) = lbound(SrcLinStateSaveData%OtherSt_ED)
@@ -2135,8 +2085,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%OtherSt_ED)) then
-      deallocate(DstLinStateSaveData%OtherSt_ED)
    end if
    if (allocated(SrcLinStateSaveData%u_ED)) then
       LB(1:1) = lbound(SrcLinStateSaveData%u_ED)
@@ -2153,8 +2101,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%u_ED)) then
-      deallocate(DstLinStateSaveData%u_ED)
    end if
    if (allocated(SrcLinStateSaveData%x_SrvD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%x_SrvD)
@@ -2171,8 +2117,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%x_SrvD)) then
-      deallocate(DstLinStateSaveData%x_SrvD)
    end if
    if (allocated(SrcLinStateSaveData%xd_SrvD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%xd_SrvD)
@@ -2189,8 +2133,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%xd_SrvD)) then
-      deallocate(DstLinStateSaveData%xd_SrvD)
    end if
    if (allocated(SrcLinStateSaveData%z_SrvD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%z_SrvD)
@@ -2207,8 +2149,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%z_SrvD)) then
-      deallocate(DstLinStateSaveData%z_SrvD)
    end if
    if (allocated(SrcLinStateSaveData%OtherSt_SrvD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%OtherSt_SrvD)
@@ -2225,8 +2165,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%OtherSt_SrvD)) then
-      deallocate(DstLinStateSaveData%OtherSt_SrvD)
    end if
    if (allocated(SrcLinStateSaveData%u_SrvD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%u_SrvD)
@@ -2243,8 +2181,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%u_SrvD)) then
-      deallocate(DstLinStateSaveData%u_SrvD)
    end if
    if (allocated(SrcLinStateSaveData%x_AD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%x_AD)
@@ -2261,8 +2197,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%x_AD)) then
-      deallocate(DstLinStateSaveData%x_AD)
    end if
    if (allocated(SrcLinStateSaveData%xd_AD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%xd_AD)
@@ -2279,8 +2213,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%xd_AD)) then
-      deallocate(DstLinStateSaveData%xd_AD)
    end if
    if (allocated(SrcLinStateSaveData%z_AD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%z_AD)
@@ -2297,8 +2229,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%z_AD)) then
-      deallocate(DstLinStateSaveData%z_AD)
    end if
    if (allocated(SrcLinStateSaveData%OtherSt_AD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%OtherSt_AD)
@@ -2315,8 +2245,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%OtherSt_AD)) then
-      deallocate(DstLinStateSaveData%OtherSt_AD)
    end if
    if (allocated(SrcLinStateSaveData%u_AD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%u_AD)
@@ -2333,8 +2261,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%u_AD)) then
-      deallocate(DstLinStateSaveData%u_AD)
    end if
    if (allocated(SrcLinStateSaveData%x_IfW)) then
       LB(1:1) = lbound(SrcLinStateSaveData%x_IfW)
@@ -2351,8 +2277,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%x_IfW)) then
-      deallocate(DstLinStateSaveData%x_IfW)
    end if
    if (allocated(SrcLinStateSaveData%xd_IfW)) then
       LB(1:1) = lbound(SrcLinStateSaveData%xd_IfW)
@@ -2369,8 +2293,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%xd_IfW)) then
-      deallocate(DstLinStateSaveData%xd_IfW)
    end if
    if (allocated(SrcLinStateSaveData%z_IfW)) then
       LB(1:1) = lbound(SrcLinStateSaveData%z_IfW)
@@ -2387,8 +2309,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%z_IfW)) then
-      deallocate(DstLinStateSaveData%z_IfW)
    end if
    if (allocated(SrcLinStateSaveData%OtherSt_IfW)) then
       LB(1:1) = lbound(SrcLinStateSaveData%OtherSt_IfW)
@@ -2405,8 +2325,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%OtherSt_IfW)) then
-      deallocate(DstLinStateSaveData%OtherSt_IfW)
    end if
    if (allocated(SrcLinStateSaveData%u_IfW)) then
       LB(1:1) = lbound(SrcLinStateSaveData%u_IfW)
@@ -2423,8 +2341,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%u_IfW)) then
-      deallocate(DstLinStateSaveData%u_IfW)
    end if
    if (allocated(SrcLinStateSaveData%x_SD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%x_SD)
@@ -2441,8 +2357,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%x_SD)) then
-      deallocate(DstLinStateSaveData%x_SD)
    end if
    if (allocated(SrcLinStateSaveData%xd_SD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%xd_SD)
@@ -2459,8 +2373,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%xd_SD)) then
-      deallocate(DstLinStateSaveData%xd_SD)
    end if
    if (allocated(SrcLinStateSaveData%z_SD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%z_SD)
@@ -2477,8 +2389,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%z_SD)) then
-      deallocate(DstLinStateSaveData%z_SD)
    end if
    if (allocated(SrcLinStateSaveData%OtherSt_SD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%OtherSt_SD)
@@ -2495,8 +2405,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%OtherSt_SD)) then
-      deallocate(DstLinStateSaveData%OtherSt_SD)
    end if
    if (allocated(SrcLinStateSaveData%u_SD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%u_SD)
@@ -2513,8 +2421,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%u_SD)) then
-      deallocate(DstLinStateSaveData%u_SD)
    end if
    if (allocated(SrcLinStateSaveData%x_ExtPtfm)) then
       LB(1:1) = lbound(SrcLinStateSaveData%x_ExtPtfm)
@@ -2531,8 +2437,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%x_ExtPtfm)) then
-      deallocate(DstLinStateSaveData%x_ExtPtfm)
    end if
    if (allocated(SrcLinStateSaveData%xd_ExtPtfm)) then
       LB(1:1) = lbound(SrcLinStateSaveData%xd_ExtPtfm)
@@ -2549,8 +2453,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%xd_ExtPtfm)) then
-      deallocate(DstLinStateSaveData%xd_ExtPtfm)
    end if
    if (allocated(SrcLinStateSaveData%z_ExtPtfm)) then
       LB(1:1) = lbound(SrcLinStateSaveData%z_ExtPtfm)
@@ -2567,8 +2469,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%z_ExtPtfm)) then
-      deallocate(DstLinStateSaveData%z_ExtPtfm)
    end if
    if (allocated(SrcLinStateSaveData%OtherSt_ExtPtfm)) then
       LB(1:1) = lbound(SrcLinStateSaveData%OtherSt_ExtPtfm)
@@ -2585,8 +2485,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%OtherSt_ExtPtfm)) then
-      deallocate(DstLinStateSaveData%OtherSt_ExtPtfm)
    end if
    if (allocated(SrcLinStateSaveData%u_ExtPtfm)) then
       LB(1:1) = lbound(SrcLinStateSaveData%u_ExtPtfm)
@@ -2603,8 +2501,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%u_ExtPtfm)) then
-      deallocate(DstLinStateSaveData%u_ExtPtfm)
    end if
    if (allocated(SrcLinStateSaveData%x_HD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%x_HD)
@@ -2621,8 +2517,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%x_HD)) then
-      deallocate(DstLinStateSaveData%x_HD)
    end if
    if (allocated(SrcLinStateSaveData%xd_HD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%xd_HD)
@@ -2639,8 +2533,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%xd_HD)) then
-      deallocate(DstLinStateSaveData%xd_HD)
    end if
    if (allocated(SrcLinStateSaveData%z_HD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%z_HD)
@@ -2657,8 +2549,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%z_HD)) then
-      deallocate(DstLinStateSaveData%z_HD)
    end if
    if (allocated(SrcLinStateSaveData%OtherSt_HD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%OtherSt_HD)
@@ -2675,8 +2565,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%OtherSt_HD)) then
-      deallocate(DstLinStateSaveData%OtherSt_HD)
    end if
    if (allocated(SrcLinStateSaveData%u_HD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%u_HD)
@@ -2693,8 +2581,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%u_HD)) then
-      deallocate(DstLinStateSaveData%u_HD)
    end if
    if (allocated(SrcLinStateSaveData%x_IceF)) then
       LB(1:1) = lbound(SrcLinStateSaveData%x_IceF)
@@ -2711,8 +2597,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%x_IceF)) then
-      deallocate(DstLinStateSaveData%x_IceF)
    end if
    if (allocated(SrcLinStateSaveData%xd_IceF)) then
       LB(1:1) = lbound(SrcLinStateSaveData%xd_IceF)
@@ -2729,8 +2613,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%xd_IceF)) then
-      deallocate(DstLinStateSaveData%xd_IceF)
    end if
    if (allocated(SrcLinStateSaveData%z_IceF)) then
       LB(1:1) = lbound(SrcLinStateSaveData%z_IceF)
@@ -2747,8 +2629,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%z_IceF)) then
-      deallocate(DstLinStateSaveData%z_IceF)
    end if
    if (allocated(SrcLinStateSaveData%OtherSt_IceF)) then
       LB(1:1) = lbound(SrcLinStateSaveData%OtherSt_IceF)
@@ -2765,8 +2645,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%OtherSt_IceF)) then
-      deallocate(DstLinStateSaveData%OtherSt_IceF)
    end if
    if (allocated(SrcLinStateSaveData%u_IceF)) then
       LB(1:1) = lbound(SrcLinStateSaveData%u_IceF)
@@ -2783,8 +2661,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%u_IceF)) then
-      deallocate(DstLinStateSaveData%u_IceF)
    end if
    if (allocated(SrcLinStateSaveData%x_MAP)) then
       LB(1:1) = lbound(SrcLinStateSaveData%x_MAP)
@@ -2801,8 +2677,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%x_MAP)) then
-      deallocate(DstLinStateSaveData%x_MAP)
    end if
    if (allocated(SrcLinStateSaveData%xd_MAP)) then
       LB(1:1) = lbound(SrcLinStateSaveData%xd_MAP)
@@ -2819,8 +2693,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%xd_MAP)) then
-      deallocate(DstLinStateSaveData%xd_MAP)
    end if
    if (allocated(SrcLinStateSaveData%z_MAP)) then
       LB(1:1) = lbound(SrcLinStateSaveData%z_MAP)
@@ -2837,8 +2709,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%z_MAP)) then
-      deallocate(DstLinStateSaveData%z_MAP)
    end if
    if (allocated(SrcLinStateSaveData%u_MAP)) then
       LB(1:1) = lbound(SrcLinStateSaveData%u_MAP)
@@ -2855,8 +2725,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%u_MAP)) then
-      deallocate(DstLinStateSaveData%u_MAP)
    end if
    if (allocated(SrcLinStateSaveData%x_FEAM)) then
       LB(1:1) = lbound(SrcLinStateSaveData%x_FEAM)
@@ -2873,8 +2741,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%x_FEAM)) then
-      deallocate(DstLinStateSaveData%x_FEAM)
    end if
    if (allocated(SrcLinStateSaveData%xd_FEAM)) then
       LB(1:1) = lbound(SrcLinStateSaveData%xd_FEAM)
@@ -2891,8 +2757,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%xd_FEAM)) then
-      deallocate(DstLinStateSaveData%xd_FEAM)
    end if
    if (allocated(SrcLinStateSaveData%z_FEAM)) then
       LB(1:1) = lbound(SrcLinStateSaveData%z_FEAM)
@@ -2909,8 +2773,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%z_FEAM)) then
-      deallocate(DstLinStateSaveData%z_FEAM)
    end if
    if (allocated(SrcLinStateSaveData%OtherSt_FEAM)) then
       LB(1:1) = lbound(SrcLinStateSaveData%OtherSt_FEAM)
@@ -2927,8 +2789,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%OtherSt_FEAM)) then
-      deallocate(DstLinStateSaveData%OtherSt_FEAM)
    end if
    if (allocated(SrcLinStateSaveData%u_FEAM)) then
       LB(1:1) = lbound(SrcLinStateSaveData%u_FEAM)
@@ -2945,8 +2805,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%u_FEAM)) then
-      deallocate(DstLinStateSaveData%u_FEAM)
    end if
    if (allocated(SrcLinStateSaveData%x_MD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%x_MD)
@@ -2963,8 +2821,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%x_MD)) then
-      deallocate(DstLinStateSaveData%x_MD)
    end if
    if (allocated(SrcLinStateSaveData%xd_MD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%xd_MD)
@@ -2981,8 +2837,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%xd_MD)) then
-      deallocate(DstLinStateSaveData%xd_MD)
    end if
    if (allocated(SrcLinStateSaveData%z_MD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%z_MD)
@@ -2999,8 +2853,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%z_MD)) then
-      deallocate(DstLinStateSaveData%z_MD)
    end if
    if (allocated(SrcLinStateSaveData%OtherSt_MD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%OtherSt_MD)
@@ -3017,8 +2869,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%OtherSt_MD)) then
-      deallocate(DstLinStateSaveData%OtherSt_MD)
    end if
    if (allocated(SrcLinStateSaveData%u_MD)) then
       LB(1:1) = lbound(SrcLinStateSaveData%u_MD)
@@ -3035,8 +2885,6 @@ subroutine FAST_CopyLinStateSave(SrcLinStateSaveData, DstLinStateSaveData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstLinStateSaveData%u_MD)) then
-      deallocate(DstLinStateSaveData%u_MD)
    end if
 end subroutine
 
@@ -5268,8 +5116,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%Names_u = SrcLinTypeData%Names_u
-   else if (allocated(DstLinTypeData%Names_u)) then
-      deallocate(DstLinTypeData%Names_u)
    end if
    if (allocated(SrcLinTypeData%Names_y)) then
       LB(1:1) = lbound(SrcLinTypeData%Names_y)
@@ -5282,8 +5128,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%Names_y = SrcLinTypeData%Names_y
-   else if (allocated(DstLinTypeData%Names_y)) then
-      deallocate(DstLinTypeData%Names_y)
    end if
    if (allocated(SrcLinTypeData%Names_x)) then
       LB(1:1) = lbound(SrcLinTypeData%Names_x)
@@ -5296,8 +5140,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%Names_x = SrcLinTypeData%Names_x
-   else if (allocated(DstLinTypeData%Names_x)) then
-      deallocate(DstLinTypeData%Names_x)
    end if
    if (allocated(SrcLinTypeData%Names_xd)) then
       LB(1:1) = lbound(SrcLinTypeData%Names_xd)
@@ -5310,8 +5152,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%Names_xd = SrcLinTypeData%Names_xd
-   else if (allocated(DstLinTypeData%Names_xd)) then
-      deallocate(DstLinTypeData%Names_xd)
    end if
    if (allocated(SrcLinTypeData%Names_z)) then
       LB(1:1) = lbound(SrcLinTypeData%Names_z)
@@ -5324,8 +5164,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%Names_z = SrcLinTypeData%Names_z
-   else if (allocated(DstLinTypeData%Names_z)) then
-      deallocate(DstLinTypeData%Names_z)
    end if
    if (allocated(SrcLinTypeData%op_u)) then
       LB(1:1) = lbound(SrcLinTypeData%op_u)
@@ -5338,8 +5176,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%op_u = SrcLinTypeData%op_u
-   else if (allocated(DstLinTypeData%op_u)) then
-      deallocate(DstLinTypeData%op_u)
    end if
    if (allocated(SrcLinTypeData%op_y)) then
       LB(1:1) = lbound(SrcLinTypeData%op_y)
@@ -5352,8 +5188,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%op_y = SrcLinTypeData%op_y
-   else if (allocated(DstLinTypeData%op_y)) then
-      deallocate(DstLinTypeData%op_y)
    end if
    if (allocated(SrcLinTypeData%op_x)) then
       LB(1:1) = lbound(SrcLinTypeData%op_x)
@@ -5366,8 +5200,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%op_x = SrcLinTypeData%op_x
-   else if (allocated(DstLinTypeData%op_x)) then
-      deallocate(DstLinTypeData%op_x)
    end if
    if (allocated(SrcLinTypeData%op_dx)) then
       LB(1:1) = lbound(SrcLinTypeData%op_dx)
@@ -5380,8 +5212,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%op_dx = SrcLinTypeData%op_dx
-   else if (allocated(DstLinTypeData%op_dx)) then
-      deallocate(DstLinTypeData%op_dx)
    end if
    if (allocated(SrcLinTypeData%op_xd)) then
       LB(1:1) = lbound(SrcLinTypeData%op_xd)
@@ -5394,8 +5224,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%op_xd = SrcLinTypeData%op_xd
-   else if (allocated(DstLinTypeData%op_xd)) then
-      deallocate(DstLinTypeData%op_xd)
    end if
    if (allocated(SrcLinTypeData%op_z)) then
       LB(1:1) = lbound(SrcLinTypeData%op_z)
@@ -5408,8 +5236,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%op_z = SrcLinTypeData%op_z
-   else if (allocated(DstLinTypeData%op_z)) then
-      deallocate(DstLinTypeData%op_z)
    end if
    if (allocated(SrcLinTypeData%op_x_eig_mag)) then
       LB(1:1) = lbound(SrcLinTypeData%op_x_eig_mag)
@@ -5422,8 +5248,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%op_x_eig_mag = SrcLinTypeData%op_x_eig_mag
-   else if (allocated(DstLinTypeData%op_x_eig_mag)) then
-      deallocate(DstLinTypeData%op_x_eig_mag)
    end if
    if (allocated(SrcLinTypeData%op_x_eig_phase)) then
       LB(1:1) = lbound(SrcLinTypeData%op_x_eig_phase)
@@ -5436,8 +5260,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%op_x_eig_phase = SrcLinTypeData%op_x_eig_phase
-   else if (allocated(DstLinTypeData%op_x_eig_phase)) then
-      deallocate(DstLinTypeData%op_x_eig_phase)
    end if
    if (allocated(SrcLinTypeData%Use_u)) then
       LB(1:1) = lbound(SrcLinTypeData%Use_u)
@@ -5450,8 +5272,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%Use_u = SrcLinTypeData%Use_u
-   else if (allocated(DstLinTypeData%Use_u)) then
-      deallocate(DstLinTypeData%Use_u)
    end if
    if (allocated(SrcLinTypeData%Use_y)) then
       LB(1:1) = lbound(SrcLinTypeData%Use_y)
@@ -5464,8 +5284,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%Use_y = SrcLinTypeData%Use_y
-   else if (allocated(DstLinTypeData%Use_y)) then
-      deallocate(DstLinTypeData%Use_y)
    end if
    if (allocated(SrcLinTypeData%A)) then
       LB(1:2) = lbound(SrcLinTypeData%A)
@@ -5478,8 +5296,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%A = SrcLinTypeData%A
-   else if (allocated(DstLinTypeData%A)) then
-      deallocate(DstLinTypeData%A)
    end if
    if (allocated(SrcLinTypeData%B)) then
       LB(1:2) = lbound(SrcLinTypeData%B)
@@ -5492,8 +5308,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%B = SrcLinTypeData%B
-   else if (allocated(DstLinTypeData%B)) then
-      deallocate(DstLinTypeData%B)
    end if
    if (allocated(SrcLinTypeData%C)) then
       LB(1:2) = lbound(SrcLinTypeData%C)
@@ -5506,8 +5320,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%C = SrcLinTypeData%C
-   else if (allocated(DstLinTypeData%C)) then
-      deallocate(DstLinTypeData%C)
    end if
    if (allocated(SrcLinTypeData%D)) then
       LB(1:2) = lbound(SrcLinTypeData%D)
@@ -5520,8 +5332,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%D = SrcLinTypeData%D
-   else if (allocated(DstLinTypeData%D)) then
-      deallocate(DstLinTypeData%D)
    end if
    if (allocated(SrcLinTypeData%StateRotation)) then
       LB(1:2) = lbound(SrcLinTypeData%StateRotation)
@@ -5534,8 +5344,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%StateRotation = SrcLinTypeData%StateRotation
-   else if (allocated(DstLinTypeData%StateRotation)) then
-      deallocate(DstLinTypeData%StateRotation)
    end if
    if (allocated(SrcLinTypeData%StateRel_x)) then
       LB(1:2) = lbound(SrcLinTypeData%StateRel_x)
@@ -5548,8 +5356,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%StateRel_x = SrcLinTypeData%StateRel_x
-   else if (allocated(DstLinTypeData%StateRel_x)) then
-      deallocate(DstLinTypeData%StateRel_x)
    end if
    if (allocated(SrcLinTypeData%StateRel_xdot)) then
       LB(1:2) = lbound(SrcLinTypeData%StateRel_xdot)
@@ -5562,8 +5368,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%StateRel_xdot = SrcLinTypeData%StateRel_xdot
-   else if (allocated(DstLinTypeData%StateRel_xdot)) then
-      deallocate(DstLinTypeData%StateRel_xdot)
    end if
    if (allocated(SrcLinTypeData%IsLoad_u)) then
       LB(1:1) = lbound(SrcLinTypeData%IsLoad_u)
@@ -5576,8 +5380,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%IsLoad_u = SrcLinTypeData%IsLoad_u
-   else if (allocated(DstLinTypeData%IsLoad_u)) then
-      deallocate(DstLinTypeData%IsLoad_u)
    end if
    if (allocated(SrcLinTypeData%RotFrame_u)) then
       LB(1:1) = lbound(SrcLinTypeData%RotFrame_u)
@@ -5590,8 +5392,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%RotFrame_u = SrcLinTypeData%RotFrame_u
-   else if (allocated(DstLinTypeData%RotFrame_u)) then
-      deallocate(DstLinTypeData%RotFrame_u)
    end if
    if (allocated(SrcLinTypeData%RotFrame_y)) then
       LB(1:1) = lbound(SrcLinTypeData%RotFrame_y)
@@ -5604,8 +5404,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%RotFrame_y = SrcLinTypeData%RotFrame_y
-   else if (allocated(DstLinTypeData%RotFrame_y)) then
-      deallocate(DstLinTypeData%RotFrame_y)
    end if
    if (allocated(SrcLinTypeData%RotFrame_x)) then
       LB(1:1) = lbound(SrcLinTypeData%RotFrame_x)
@@ -5618,8 +5416,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%RotFrame_x = SrcLinTypeData%RotFrame_x
-   else if (allocated(DstLinTypeData%RotFrame_x)) then
-      deallocate(DstLinTypeData%RotFrame_x)
    end if
    if (allocated(SrcLinTypeData%RotFrame_z)) then
       LB(1:1) = lbound(SrcLinTypeData%RotFrame_z)
@@ -5632,8 +5428,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%RotFrame_z = SrcLinTypeData%RotFrame_z
-   else if (allocated(DstLinTypeData%RotFrame_z)) then
-      deallocate(DstLinTypeData%RotFrame_z)
    end if
    if (allocated(SrcLinTypeData%DerivOrder_x)) then
       LB(1:1) = lbound(SrcLinTypeData%DerivOrder_x)
@@ -5646,8 +5440,6 @@ subroutine FAST_CopyLinType(SrcLinTypeData, DstLinTypeData, CtrlCode, ErrStat, E
          end if
       end if
       DstLinTypeData%DerivOrder_x = SrcLinTypeData%DerivOrder_x
-   else if (allocated(DstLinTypeData%DerivOrder_x)) then
-      deallocate(DstLinTypeData%DerivOrder_x)
    end if
    DstLinTypeData%SizeLin = SrcLinTypeData%SizeLin
    DstLinTypeData%LinStartIndx = SrcLinTypeData%LinStartIndx
@@ -6334,8 +6126,6 @@ subroutine FAST_CopyModLinType(SrcModLinTypeData, DstModLinTypeData, CtrlCode, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModLinTypeData%Instance)) then
-      deallocate(DstModLinTypeData%Instance)
    end if
 end subroutine
 
@@ -6517,8 +6307,6 @@ subroutine FAST_CopyMiscLinType(SrcMiscLinTypeData, DstMiscLinTypeData, CtrlCode
          end if
       end if
       DstMiscLinTypeData%LinTimes = SrcMiscLinTypeData%LinTimes
-   else if (allocated(DstMiscLinTypeData%LinTimes)) then
-      deallocate(DstMiscLinTypeData%LinTimes)
    end if
    DstMiscLinTypeData%CopyOP_CtrlCode = SrcMiscLinTypeData%CopyOP_CtrlCode
    if (allocated(SrcMiscLinTypeData%AzimTarget)) then
@@ -6532,8 +6320,6 @@ subroutine FAST_CopyMiscLinType(SrcMiscLinTypeData, DstMiscLinTypeData, CtrlCode
          end if
       end if
       DstMiscLinTypeData%AzimTarget = SrcMiscLinTypeData%AzimTarget
-   else if (allocated(DstMiscLinTypeData%AzimTarget)) then
-      deallocate(DstMiscLinTypeData%AzimTarget)
    end if
    DstMiscLinTypeData%IsConverged = SrcMiscLinTypeData%IsConverged
    DstMiscLinTypeData%FoundSteady = SrcMiscLinTypeData%FoundSteady
@@ -6552,8 +6338,6 @@ subroutine FAST_CopyMiscLinType(SrcMiscLinTypeData, DstMiscLinTypeData, CtrlCode
          end if
       end if
       DstMiscLinTypeData%Psi = SrcMiscLinTypeData%Psi
-   else if (allocated(DstMiscLinTypeData%Psi)) then
-      deallocate(DstMiscLinTypeData%Psi)
    end if
    if (allocated(SrcMiscLinTypeData%y_interp)) then
       LB(1:1) = lbound(SrcMiscLinTypeData%y_interp)
@@ -6566,8 +6350,6 @@ subroutine FAST_CopyMiscLinType(SrcMiscLinTypeData, DstMiscLinTypeData, CtrlCode
          end if
       end if
       DstMiscLinTypeData%y_interp = SrcMiscLinTypeData%y_interp
-   else if (allocated(DstMiscLinTypeData%y_interp)) then
-      deallocate(DstMiscLinTypeData%y_interp)
    end if
    if (allocated(SrcMiscLinTypeData%y_ref)) then
       LB(1:1) = lbound(SrcMiscLinTypeData%y_ref)
@@ -6580,8 +6362,6 @@ subroutine FAST_CopyMiscLinType(SrcMiscLinTypeData, DstMiscLinTypeData, CtrlCode
          end if
       end if
       DstMiscLinTypeData%y_ref = SrcMiscLinTypeData%y_ref
-   else if (allocated(DstMiscLinTypeData%y_ref)) then
-      deallocate(DstMiscLinTypeData%y_ref)
    end if
    if (allocated(SrcMiscLinTypeData%Y_prevRot)) then
       LB(1:2) = lbound(SrcMiscLinTypeData%Y_prevRot)
@@ -6594,8 +6374,6 @@ subroutine FAST_CopyMiscLinType(SrcMiscLinTypeData, DstMiscLinTypeData, CtrlCode
          end if
       end if
       DstMiscLinTypeData%Y_prevRot = SrcMiscLinTypeData%Y_prevRot
-   else if (allocated(DstMiscLinTypeData%Y_prevRot)) then
-      deallocate(DstMiscLinTypeData%Y_prevRot)
    end if
 end subroutine
 
@@ -6803,8 +6581,6 @@ subroutine FAST_CopyOutputFileType(SrcOutputFileTypeData, DstOutputFileTypeData,
          end if
       end if
       DstOutputFileTypeData%TimeData = SrcOutputFileTypeData%TimeData
-   else if (allocated(DstOutputFileTypeData%TimeData)) then
-      deallocate(DstOutputFileTypeData%TimeData)
    end if
    if (allocated(SrcOutputFileTypeData%AllOutData)) then
       LB(1:2) = lbound(SrcOutputFileTypeData%AllOutData)
@@ -6817,8 +6593,6 @@ subroutine FAST_CopyOutputFileType(SrcOutputFileTypeData, DstOutputFileTypeData,
          end if
       end if
       DstOutputFileTypeData%AllOutData = SrcOutputFileTypeData%AllOutData
-   else if (allocated(DstOutputFileTypeData%AllOutData)) then
-      deallocate(DstOutputFileTypeData%AllOutData)
    end if
    DstOutputFileTypeData%n_Out = SrcOutputFileTypeData%n_Out
    DstOutputFileTypeData%NOutSteps = SrcOutputFileTypeData%NOutSteps
@@ -6838,8 +6612,6 @@ subroutine FAST_CopyOutputFileType(SrcOutputFileTypeData, DstOutputFileTypeData,
          end if
       end if
       DstOutputFileTypeData%ChannelNames = SrcOutputFileTypeData%ChannelNames
-   else if (allocated(DstOutputFileTypeData%ChannelNames)) then
-      deallocate(DstOutputFileTypeData%ChannelNames)
    end if
    if (allocated(SrcOutputFileTypeData%ChannelUnits)) then
       LB(1:1) = lbound(SrcOutputFileTypeData%ChannelUnits)
@@ -6852,8 +6624,6 @@ subroutine FAST_CopyOutputFileType(SrcOutputFileTypeData, DstOutputFileTypeData,
          end if
       end if
       DstOutputFileTypeData%ChannelUnits = SrcOutputFileTypeData%ChannelUnits
-   else if (allocated(DstOutputFileTypeData%ChannelUnits)) then
-      deallocate(DstOutputFileTypeData%ChannelUnits)
    end if
    LB(1:1) = lbound(SrcOutputFileTypeData%Module_Ver)
    UB(1:1) = ubound(SrcOutputFileTypeData%Module_Ver)
@@ -7091,8 +6861,6 @@ subroutine FAST_CopyIceDyn_Data(SrcIceDyn_DataData, DstIceDyn_DataData, CtrlCode
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstIceDyn_DataData%x)) then
-      deallocate(DstIceDyn_DataData%x)
    end if
    if (allocated(SrcIceDyn_DataData%xd)) then
       LB(1:2) = lbound(SrcIceDyn_DataData%xd)
@@ -7111,8 +6879,6 @@ subroutine FAST_CopyIceDyn_Data(SrcIceDyn_DataData, DstIceDyn_DataData, CtrlCode
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstIceDyn_DataData%xd)) then
-      deallocate(DstIceDyn_DataData%xd)
    end if
    if (allocated(SrcIceDyn_DataData%z)) then
       LB(1:2) = lbound(SrcIceDyn_DataData%z)
@@ -7131,8 +6897,6 @@ subroutine FAST_CopyIceDyn_Data(SrcIceDyn_DataData, DstIceDyn_DataData, CtrlCode
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstIceDyn_DataData%z)) then
-      deallocate(DstIceDyn_DataData%z)
    end if
    if (allocated(SrcIceDyn_DataData%OtherSt)) then
       LB(1:2) = lbound(SrcIceDyn_DataData%OtherSt)
@@ -7151,8 +6915,6 @@ subroutine FAST_CopyIceDyn_Data(SrcIceDyn_DataData, DstIceDyn_DataData, CtrlCode
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstIceDyn_DataData%OtherSt)) then
-      deallocate(DstIceDyn_DataData%OtherSt)
    end if
    if (allocated(SrcIceDyn_DataData%p)) then
       LB(1:1) = lbound(SrcIceDyn_DataData%p)
@@ -7169,8 +6931,6 @@ subroutine FAST_CopyIceDyn_Data(SrcIceDyn_DataData, DstIceDyn_DataData, CtrlCode
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstIceDyn_DataData%p)) then
-      deallocate(DstIceDyn_DataData%p)
    end if
    if (allocated(SrcIceDyn_DataData%u)) then
       LB(1:1) = lbound(SrcIceDyn_DataData%u)
@@ -7187,8 +6947,6 @@ subroutine FAST_CopyIceDyn_Data(SrcIceDyn_DataData, DstIceDyn_DataData, CtrlCode
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstIceDyn_DataData%u)) then
-      deallocate(DstIceDyn_DataData%u)
    end if
    if (allocated(SrcIceDyn_DataData%y)) then
       LB(1:1) = lbound(SrcIceDyn_DataData%y)
@@ -7205,8 +6963,6 @@ subroutine FAST_CopyIceDyn_Data(SrcIceDyn_DataData, DstIceDyn_DataData, CtrlCode
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstIceDyn_DataData%y)) then
-      deallocate(DstIceDyn_DataData%y)
    end if
    if (allocated(SrcIceDyn_DataData%m)) then
       LB(1:1) = lbound(SrcIceDyn_DataData%m)
@@ -7223,8 +6979,6 @@ subroutine FAST_CopyIceDyn_Data(SrcIceDyn_DataData, DstIceDyn_DataData, CtrlCode
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstIceDyn_DataData%m)) then
-      deallocate(DstIceDyn_DataData%m)
    end if
    if (allocated(SrcIceDyn_DataData%Input)) then
       LB(1:2) = lbound(SrcIceDyn_DataData%Input)
@@ -7243,8 +6997,6 @@ subroutine FAST_CopyIceDyn_Data(SrcIceDyn_DataData, DstIceDyn_DataData, CtrlCode
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstIceDyn_DataData%Input)) then
-      deallocate(DstIceDyn_DataData%Input)
    end if
    if (allocated(SrcIceDyn_DataData%InputTimes)) then
       LB(1:2) = lbound(SrcIceDyn_DataData%InputTimes)
@@ -7257,8 +7009,6 @@ subroutine FAST_CopyIceDyn_Data(SrcIceDyn_DataData, DstIceDyn_DataData, CtrlCode
          end if
       end if
       DstIceDyn_DataData%InputTimes = SrcIceDyn_DataData%InputTimes
-   else if (allocated(DstIceDyn_DataData%InputTimes)) then
-      deallocate(DstIceDyn_DataData%InputTimes)
    end if
 end subroutine
 
@@ -7675,8 +7425,6 @@ subroutine FAST_CopyBeamDyn_Data(SrcBeamDyn_DataData, DstBeamDyn_DataData, CtrlC
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstBeamDyn_DataData%x)) then
-      deallocate(DstBeamDyn_DataData%x)
    end if
    if (allocated(SrcBeamDyn_DataData%xd)) then
       LB(1:2) = lbound(SrcBeamDyn_DataData%xd)
@@ -7695,8 +7443,6 @@ subroutine FAST_CopyBeamDyn_Data(SrcBeamDyn_DataData, DstBeamDyn_DataData, CtrlC
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstBeamDyn_DataData%xd)) then
-      deallocate(DstBeamDyn_DataData%xd)
    end if
    if (allocated(SrcBeamDyn_DataData%z)) then
       LB(1:2) = lbound(SrcBeamDyn_DataData%z)
@@ -7715,8 +7461,6 @@ subroutine FAST_CopyBeamDyn_Data(SrcBeamDyn_DataData, DstBeamDyn_DataData, CtrlC
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstBeamDyn_DataData%z)) then
-      deallocate(DstBeamDyn_DataData%z)
    end if
    if (allocated(SrcBeamDyn_DataData%OtherSt)) then
       LB(1:2) = lbound(SrcBeamDyn_DataData%OtherSt)
@@ -7735,8 +7479,6 @@ subroutine FAST_CopyBeamDyn_Data(SrcBeamDyn_DataData, DstBeamDyn_DataData, CtrlC
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstBeamDyn_DataData%OtherSt)) then
-      deallocate(DstBeamDyn_DataData%OtherSt)
    end if
    if (allocated(SrcBeamDyn_DataData%p)) then
       LB(1:1) = lbound(SrcBeamDyn_DataData%p)
@@ -7753,8 +7495,6 @@ subroutine FAST_CopyBeamDyn_Data(SrcBeamDyn_DataData, DstBeamDyn_DataData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstBeamDyn_DataData%p)) then
-      deallocate(DstBeamDyn_DataData%p)
    end if
    if (allocated(SrcBeamDyn_DataData%u)) then
       LB(1:1) = lbound(SrcBeamDyn_DataData%u)
@@ -7771,8 +7511,6 @@ subroutine FAST_CopyBeamDyn_Data(SrcBeamDyn_DataData, DstBeamDyn_DataData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstBeamDyn_DataData%u)) then
-      deallocate(DstBeamDyn_DataData%u)
    end if
    if (allocated(SrcBeamDyn_DataData%y)) then
       LB(1:1) = lbound(SrcBeamDyn_DataData%y)
@@ -7789,8 +7527,6 @@ subroutine FAST_CopyBeamDyn_Data(SrcBeamDyn_DataData, DstBeamDyn_DataData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstBeamDyn_DataData%y)) then
-      deallocate(DstBeamDyn_DataData%y)
    end if
    if (allocated(SrcBeamDyn_DataData%m)) then
       LB(1:1) = lbound(SrcBeamDyn_DataData%m)
@@ -7807,8 +7543,6 @@ subroutine FAST_CopyBeamDyn_Data(SrcBeamDyn_DataData, DstBeamDyn_DataData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstBeamDyn_DataData%m)) then
-      deallocate(DstBeamDyn_DataData%m)
    end if
    if (allocated(SrcBeamDyn_DataData%Output)) then
       LB(1:2) = lbound(SrcBeamDyn_DataData%Output)
@@ -7827,8 +7561,6 @@ subroutine FAST_CopyBeamDyn_Data(SrcBeamDyn_DataData, DstBeamDyn_DataData, CtrlC
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstBeamDyn_DataData%Output)) then
-      deallocate(DstBeamDyn_DataData%Output)
    end if
    if (allocated(SrcBeamDyn_DataData%y_interp)) then
       LB(1:1) = lbound(SrcBeamDyn_DataData%y_interp)
@@ -7845,8 +7577,6 @@ subroutine FAST_CopyBeamDyn_Data(SrcBeamDyn_DataData, DstBeamDyn_DataData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstBeamDyn_DataData%y_interp)) then
-      deallocate(DstBeamDyn_DataData%y_interp)
    end if
    if (allocated(SrcBeamDyn_DataData%Input)) then
       LB(1:2) = lbound(SrcBeamDyn_DataData%Input)
@@ -7865,8 +7595,6 @@ subroutine FAST_CopyBeamDyn_Data(SrcBeamDyn_DataData, DstBeamDyn_DataData, CtrlC
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstBeamDyn_DataData%Input)) then
-      deallocate(DstBeamDyn_DataData%Input)
    end if
    if (allocated(SrcBeamDyn_DataData%InputTimes)) then
       LB(1:2) = lbound(SrcBeamDyn_DataData%InputTimes)
@@ -7879,8 +7607,6 @@ subroutine FAST_CopyBeamDyn_Data(SrcBeamDyn_DataData, DstBeamDyn_DataData, CtrlC
          end if
       end if
       DstBeamDyn_DataData%InputTimes = SrcBeamDyn_DataData%InputTimes
-   else if (allocated(DstBeamDyn_DataData%InputTimes)) then
-      deallocate(DstBeamDyn_DataData%InputTimes)
    end if
 end subroutine
 
@@ -8407,8 +8133,6 @@ subroutine FAST_CopyElastoDyn_Data(SrcElastoDyn_DataData, DstElastoDyn_DataData,
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstElastoDyn_DataData%Output)) then
-      deallocate(DstElastoDyn_DataData%Output)
    end if
    call ED_CopyOutput(SrcElastoDyn_DataData%y_interp, DstElastoDyn_DataData%y_interp, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -8428,8 +8152,6 @@ subroutine FAST_CopyElastoDyn_Data(SrcElastoDyn_DataData, DstElastoDyn_DataData,
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstElastoDyn_DataData%Input)) then
-      deallocate(DstElastoDyn_DataData%Input)
    end if
    if (allocated(SrcElastoDyn_DataData%InputTimes)) then
       LB(1:1) = lbound(SrcElastoDyn_DataData%InputTimes)
@@ -8442,8 +8164,6 @@ subroutine FAST_CopyElastoDyn_Data(SrcElastoDyn_DataData, DstElastoDyn_DataData,
          end if
       end if
       DstElastoDyn_DataData%InputTimes = SrcElastoDyn_DataData%InputTimes
-   else if (allocated(DstElastoDyn_DataData%InputTimes)) then
-      deallocate(DstElastoDyn_DataData%InputTimes)
    end if
 end subroutine
 
@@ -8721,8 +8441,6 @@ subroutine FAST_CopyServoDyn_Data(SrcServoDyn_DataData, DstServoDyn_DataData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstServoDyn_DataData%Output)) then
-      deallocate(DstServoDyn_DataData%Output)
    end if
    call SrvD_CopyOutput(SrcServoDyn_DataData%y_interp, DstServoDyn_DataData%y_interp, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -8742,8 +8460,6 @@ subroutine FAST_CopyServoDyn_Data(SrcServoDyn_DataData, DstServoDyn_DataData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstServoDyn_DataData%Input)) then
-      deallocate(DstServoDyn_DataData%Input)
    end if
    if (allocated(SrcServoDyn_DataData%InputTimes)) then
       LB(1:1) = lbound(SrcServoDyn_DataData%InputTimes)
@@ -8756,8 +8472,6 @@ subroutine FAST_CopyServoDyn_Data(SrcServoDyn_DataData, DstServoDyn_DataData, Ct
          end if
       end if
       DstServoDyn_DataData%InputTimes = SrcServoDyn_DataData%InputTimes
-   else if (allocated(DstServoDyn_DataData%InputTimes)) then
-      deallocate(DstServoDyn_DataData%InputTimes)
    end if
 end subroutine
 
@@ -9035,8 +8749,6 @@ subroutine FAST_CopyAeroDyn14_Data(SrcAeroDyn14_DataData, DstAeroDyn14_DataData,
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstAeroDyn14_DataData%Input)) then
-      deallocate(DstAeroDyn14_DataData%Input)
    end if
    if (allocated(SrcAeroDyn14_DataData%InputTimes)) then
       LB(1:1) = lbound(SrcAeroDyn14_DataData%InputTimes)
@@ -9049,8 +8761,6 @@ subroutine FAST_CopyAeroDyn14_Data(SrcAeroDyn14_DataData, DstAeroDyn14_DataData,
          end if
       end if
       DstAeroDyn14_DataData%InputTimes = SrcAeroDyn14_DataData%InputTimes
-   else if (allocated(DstAeroDyn14_DataData%InputTimes)) then
-      deallocate(DstAeroDyn14_DataData%InputTimes)
    end if
 end subroutine
 
@@ -9291,8 +9001,6 @@ subroutine FAST_CopyAeroDyn_Data(SrcAeroDyn_DataData, DstAeroDyn_DataData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstAeroDyn_DataData%Output)) then
-      deallocate(DstAeroDyn_DataData%Output)
    end if
    call AD_CopyOutput(SrcAeroDyn_DataData%y_interp, DstAeroDyn_DataData%y_interp, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -9312,8 +9020,6 @@ subroutine FAST_CopyAeroDyn_Data(SrcAeroDyn_DataData, DstAeroDyn_DataData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstAeroDyn_DataData%Input)) then
-      deallocate(DstAeroDyn_DataData%Input)
    end if
    if (allocated(SrcAeroDyn_DataData%InputTimes)) then
       LB(1:1) = lbound(SrcAeroDyn_DataData%InputTimes)
@@ -9326,8 +9032,6 @@ subroutine FAST_CopyAeroDyn_Data(SrcAeroDyn_DataData, DstAeroDyn_DataData, CtrlC
          end if
       end if
       DstAeroDyn_DataData%InputTimes = SrcAeroDyn_DataData%InputTimes
-   else if (allocated(DstAeroDyn_DataData%InputTimes)) then
-      deallocate(DstAeroDyn_DataData%InputTimes)
    end if
 end subroutine
 
@@ -9605,8 +9309,6 @@ subroutine FAST_CopyInflowWind_Data(SrcInflowWind_DataData, DstInflowWind_DataDa
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInflowWind_DataData%Output)) then
-      deallocate(DstInflowWind_DataData%Output)
    end if
    call InflowWind_CopyOutput(SrcInflowWind_DataData%y_interp, DstInflowWind_DataData%y_interp, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -9626,8 +9328,6 @@ subroutine FAST_CopyInflowWind_Data(SrcInflowWind_DataData, DstInflowWind_DataDa
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInflowWind_DataData%Input)) then
-      deallocate(DstInflowWind_DataData%Input)
    end if
    if (allocated(SrcInflowWind_DataData%InputTimes)) then
       LB(1:1) = lbound(SrcInflowWind_DataData%InputTimes)
@@ -9640,8 +9340,6 @@ subroutine FAST_CopyInflowWind_Data(SrcInflowWind_DataData, DstInflowWind_DataDa
          end if
       end if
       DstInflowWind_DataData%InputTimes = SrcInflowWind_DataData%InputTimes
-   else if (allocated(DstInflowWind_DataData%InputTimes)) then
-      deallocate(DstInflowWind_DataData%InputTimes)
    end if
 end subroutine
 
@@ -10046,8 +9744,6 @@ subroutine FAST_CopySubDyn_Data(SrcSubDyn_DataData, DstSubDyn_DataData, CtrlCode
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstSubDyn_DataData%Input)) then
-      deallocate(DstSubDyn_DataData%Input)
    end if
    if (allocated(SrcSubDyn_DataData%Output)) then
       LB(1:1) = lbound(SrcSubDyn_DataData%Output)
@@ -10064,8 +9760,6 @@ subroutine FAST_CopySubDyn_Data(SrcSubDyn_DataData, DstSubDyn_DataData, CtrlCode
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstSubDyn_DataData%Output)) then
-      deallocate(DstSubDyn_DataData%Output)
    end if
    call SD_CopyOutput(SrcSubDyn_DataData%y_interp, DstSubDyn_DataData%y_interp, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -10081,8 +9775,6 @@ subroutine FAST_CopySubDyn_Data(SrcSubDyn_DataData, DstSubDyn_DataData, CtrlCode
          end if
       end if
       DstSubDyn_DataData%InputTimes = SrcSubDyn_DataData%InputTimes
-   else if (allocated(DstSubDyn_DataData%InputTimes)) then
-      deallocate(DstSubDyn_DataData%InputTimes)
    end if
 end subroutine
 
@@ -10360,8 +10052,6 @@ subroutine FAST_CopyExtPtfm_Data(SrcExtPtfm_DataData, DstExtPtfm_DataData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstExtPtfm_DataData%Input)) then
-      deallocate(DstExtPtfm_DataData%Input)
    end if
    if (allocated(SrcExtPtfm_DataData%InputTimes)) then
       LB(1:1) = lbound(SrcExtPtfm_DataData%InputTimes)
@@ -10374,8 +10064,6 @@ subroutine FAST_CopyExtPtfm_Data(SrcExtPtfm_DataData, DstExtPtfm_DataData, CtrlC
          end if
       end if
       DstExtPtfm_DataData%InputTimes = SrcExtPtfm_DataData%InputTimes
-   else if (allocated(DstExtPtfm_DataData%InputTimes)) then
-      deallocate(DstExtPtfm_DataData%InputTimes)
    end if
 end subroutine
 
@@ -10616,8 +10304,6 @@ subroutine FAST_CopySeaState_Data(SrcSeaState_DataData, DstSeaState_DataData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstSeaState_DataData%Input)) then
-      deallocate(DstSeaState_DataData%Input)
    end if
    if (allocated(SrcSeaState_DataData%Output)) then
       LB(1:1) = lbound(SrcSeaState_DataData%Output)
@@ -10634,8 +10320,6 @@ subroutine FAST_CopySeaState_Data(SrcSeaState_DataData, DstSeaState_DataData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstSeaState_DataData%Output)) then
-      deallocate(DstSeaState_DataData%Output)
    end if
    call SeaSt_CopyOutput(SrcSeaState_DataData%y_interp, DstSeaState_DataData%y_interp, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -10651,8 +10335,6 @@ subroutine FAST_CopySeaState_Data(SrcSeaState_DataData, DstSeaState_DataData, Ct
          end if
       end if
       DstSeaState_DataData%InputTimes = SrcSeaState_DataData%InputTimes
-   else if (allocated(DstSeaState_DataData%InputTimes)) then
-      deallocate(DstSeaState_DataData%InputTimes)
    end if
 end subroutine
 
@@ -10930,8 +10612,6 @@ subroutine FAST_CopyHydroDyn_Data(SrcHydroDyn_DataData, DstHydroDyn_DataData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstHydroDyn_DataData%Output)) then
-      deallocate(DstHydroDyn_DataData%Output)
    end if
    call HydroDyn_CopyOutput(SrcHydroDyn_DataData%y_interp, DstHydroDyn_DataData%y_interp, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -10951,8 +10631,6 @@ subroutine FAST_CopyHydroDyn_Data(SrcHydroDyn_DataData, DstHydroDyn_DataData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstHydroDyn_DataData%Input)) then
-      deallocate(DstHydroDyn_DataData%Input)
    end if
    if (allocated(SrcHydroDyn_DataData%InputTimes)) then
       LB(1:1) = lbound(SrcHydroDyn_DataData%InputTimes)
@@ -10965,8 +10643,6 @@ subroutine FAST_CopyHydroDyn_Data(SrcHydroDyn_DataData, DstHydroDyn_DataData, Ct
          end if
       end if
       DstHydroDyn_DataData%InputTimes = SrcHydroDyn_DataData%InputTimes
-   else if (allocated(DstHydroDyn_DataData%InputTimes)) then
-      deallocate(DstHydroDyn_DataData%InputTimes)
    end if
 end subroutine
 
@@ -11244,8 +10920,6 @@ subroutine FAST_CopyIceFloe_Data(SrcIceFloe_DataData, DstIceFloe_DataData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstIceFloe_DataData%Input)) then
-      deallocate(DstIceFloe_DataData%Input)
    end if
    if (allocated(SrcIceFloe_DataData%InputTimes)) then
       LB(1:1) = lbound(SrcIceFloe_DataData%InputTimes)
@@ -11258,8 +10932,6 @@ subroutine FAST_CopyIceFloe_Data(SrcIceFloe_DataData, DstIceFloe_DataData, CtrlC
          end if
       end if
       DstIceFloe_DataData%InputTimes = SrcIceFloe_DataData%InputTimes
-   else if (allocated(DstIceFloe_DataData%InputTimes)) then
-      deallocate(DstIceFloe_DataData%InputTimes)
    end if
 end subroutine
 
@@ -11496,8 +11168,6 @@ subroutine FAST_CopyMAP_Data(SrcMAP_DataData, DstMAP_DataData, CtrlCode, ErrStat
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMAP_DataData%Output)) then
-      deallocate(DstMAP_DataData%Output)
    end if
    call MAP_CopyOutput(SrcMAP_DataData%y_interp, DstMAP_DataData%y_interp, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -11517,8 +11187,6 @@ subroutine FAST_CopyMAP_Data(SrcMAP_DataData, DstMAP_DataData, CtrlCode, ErrStat
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMAP_DataData%Input)) then
-      deallocate(DstMAP_DataData%Input)
    end if
    if (allocated(SrcMAP_DataData%InputTimes)) then
       LB(1:1) = lbound(SrcMAP_DataData%InputTimes)
@@ -11531,8 +11199,6 @@ subroutine FAST_CopyMAP_Data(SrcMAP_DataData, DstMAP_DataData, CtrlCode, ErrStat
          end if
       end if
       DstMAP_DataData%InputTimes = SrcMAP_DataData%InputTimes
-   else if (allocated(DstMAP_DataData%InputTimes)) then
-      deallocate(DstMAP_DataData%InputTimes)
    end if
 end subroutine
 
@@ -11798,8 +11464,6 @@ subroutine FAST_CopyFEAMooring_Data(SrcFEAMooring_DataData, DstFEAMooring_DataDa
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstFEAMooring_DataData%Input)) then
-      deallocate(DstFEAMooring_DataData%Input)
    end if
    if (allocated(SrcFEAMooring_DataData%InputTimes)) then
       LB(1:1) = lbound(SrcFEAMooring_DataData%InputTimes)
@@ -11812,8 +11476,6 @@ subroutine FAST_CopyFEAMooring_Data(SrcFEAMooring_DataData, DstFEAMooring_DataDa
          end if
       end if
       DstFEAMooring_DataData%InputTimes = SrcFEAMooring_DataData%InputTimes
-   else if (allocated(DstFEAMooring_DataData%InputTimes)) then
-      deallocate(DstFEAMooring_DataData%InputTimes)
    end if
 end subroutine
 
@@ -12054,8 +11716,6 @@ subroutine FAST_CopyMoorDyn_Data(SrcMoorDyn_DataData, DstMoorDyn_DataData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMoorDyn_DataData%Output)) then
-      deallocate(DstMoorDyn_DataData%Output)
    end if
    call MD_CopyOutput(SrcMoorDyn_DataData%y_interp, DstMoorDyn_DataData%y_interp, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -12075,8 +11735,6 @@ subroutine FAST_CopyMoorDyn_Data(SrcMoorDyn_DataData, DstMoorDyn_DataData, CtrlC
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMoorDyn_DataData%Input)) then
-      deallocate(DstMoorDyn_DataData%Input)
    end if
    if (allocated(SrcMoorDyn_DataData%InputTimes)) then
       LB(1:1) = lbound(SrcMoorDyn_DataData%InputTimes)
@@ -12089,8 +11747,6 @@ subroutine FAST_CopyMoorDyn_Data(SrcMoorDyn_DataData, DstMoorDyn_DataData, CtrlC
          end if
       end if
       DstMoorDyn_DataData%InputTimes = SrcMoorDyn_DataData%InputTimes
-   else if (allocated(DstMoorDyn_DataData%InputTimes)) then
-      deallocate(DstMoorDyn_DataData%InputTimes)
    end if
 end subroutine
 
@@ -12368,8 +12024,6 @@ subroutine FAST_CopyOrcaFlex_Data(SrcOrcaFlex_DataData, DstOrcaFlex_DataData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstOrcaFlex_DataData%Input)) then
-      deallocate(DstOrcaFlex_DataData%Input)
    end if
    if (allocated(SrcOrcaFlex_DataData%InputTimes)) then
       LB(1:1) = lbound(SrcOrcaFlex_DataData%InputTimes)
@@ -12382,8 +12036,6 @@ subroutine FAST_CopyOrcaFlex_Data(SrcOrcaFlex_DataData, DstOrcaFlex_DataData, Ct
          end if
       end if
       DstOrcaFlex_DataData%InputTimes = SrcOrcaFlex_DataData%InputTimes
-   else if (allocated(DstOrcaFlex_DataData%InputTimes)) then
-      deallocate(DstOrcaFlex_DataData%InputTimes)
    end if
 end subroutine
 
@@ -12584,8 +12236,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%ED_P_2_BD_P)) then
-      deallocate(DstModuleMapTypeData%ED_P_2_BD_P)
    end if
    if (allocated(SrcModuleMapTypeData%BD_P_2_ED_P)) then
       LB(1:1) = lbound(SrcModuleMapTypeData%BD_P_2_ED_P)
@@ -12602,8 +12252,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%BD_P_2_ED_P)) then
-      deallocate(DstModuleMapTypeData%BD_P_2_ED_P)
    end if
    if (allocated(SrcModuleMapTypeData%ED_P_2_BD_P_Hub)) then
       LB(1:1) = lbound(SrcModuleMapTypeData%ED_P_2_BD_P_Hub)
@@ -12620,8 +12268,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%ED_P_2_BD_P_Hub)) then
-      deallocate(DstModuleMapTypeData%ED_P_2_BD_P_Hub)
    end if
    call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_HD_PRP_P, DstModuleMapTypeData%ED_P_2_HD_PRP_P, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -12665,8 +12311,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%ED_P_2_NStC_P_N)) then
-      deallocate(DstModuleMapTypeData%ED_P_2_NStC_P_N)
    end if
    if (allocated(SrcModuleMapTypeData%NStC_P_2_ED_P_N)) then
       LB(1:1) = lbound(SrcModuleMapTypeData%NStC_P_2_ED_P_N)
@@ -12683,8 +12327,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%NStC_P_2_ED_P_N)) then
-      deallocate(DstModuleMapTypeData%NStC_P_2_ED_P_N)
    end if
    if (allocated(SrcModuleMapTypeData%ED_L_2_TStC_P_T)) then
       LB(1:1) = lbound(SrcModuleMapTypeData%ED_L_2_TStC_P_T)
@@ -12701,8 +12343,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%ED_L_2_TStC_P_T)) then
-      deallocate(DstModuleMapTypeData%ED_L_2_TStC_P_T)
    end if
    if (allocated(SrcModuleMapTypeData%TStC_P_2_ED_P_T)) then
       LB(1:1) = lbound(SrcModuleMapTypeData%TStC_P_2_ED_P_T)
@@ -12719,8 +12359,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%TStC_P_2_ED_P_T)) then
-      deallocate(DstModuleMapTypeData%TStC_P_2_ED_P_T)
    end if
    if (allocated(SrcModuleMapTypeData%ED_L_2_BStC_P_B)) then
       LB(1:2) = lbound(SrcModuleMapTypeData%ED_L_2_BStC_P_B)
@@ -12739,8 +12377,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstModuleMapTypeData%ED_L_2_BStC_P_B)) then
-      deallocate(DstModuleMapTypeData%ED_L_2_BStC_P_B)
    end if
    if (allocated(SrcModuleMapTypeData%BStC_P_2_ED_P_B)) then
       LB(1:2) = lbound(SrcModuleMapTypeData%BStC_P_2_ED_P_B)
@@ -12759,8 +12395,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstModuleMapTypeData%BStC_P_2_ED_P_B)) then
-      deallocate(DstModuleMapTypeData%BStC_P_2_ED_P_B)
    end if
    if (allocated(SrcModuleMapTypeData%BD_L_2_BStC_P_B)) then
       LB(1:2) = lbound(SrcModuleMapTypeData%BD_L_2_BStC_P_B)
@@ -12779,8 +12413,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstModuleMapTypeData%BD_L_2_BStC_P_B)) then
-      deallocate(DstModuleMapTypeData%BD_L_2_BStC_P_B)
    end if
    if (allocated(SrcModuleMapTypeData%BStC_P_2_BD_P_B)) then
       LB(1:2) = lbound(SrcModuleMapTypeData%BStC_P_2_BD_P_B)
@@ -12799,8 +12431,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
             if (ErrStat >= AbortErrLev) return
          end do
       end do
-   else if (allocated(DstModuleMapTypeData%BStC_P_2_BD_P_B)) then
-      deallocate(DstModuleMapTypeData%BStC_P_2_BD_P_B)
    end if
    if (allocated(SrcModuleMapTypeData%SStC_P_P_2_SubStructure)) then
       LB(1:1) = lbound(SrcModuleMapTypeData%SStC_P_P_2_SubStructure)
@@ -12817,8 +12447,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%SStC_P_P_2_SubStructure)) then
-      deallocate(DstModuleMapTypeData%SStC_P_P_2_SubStructure)
    end if
    if (allocated(SrcModuleMapTypeData%SubStructure_2_SStC_P_P)) then
       LB(1:1) = lbound(SrcModuleMapTypeData%SubStructure_2_SStC_P_P)
@@ -12835,8 +12463,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%SubStructure_2_SStC_P_P)) then
-      deallocate(DstModuleMapTypeData%SubStructure_2_SStC_P_P)
    end if
    call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_SrvD_P_P, DstModuleMapTypeData%ED_P_2_SrvD_P_P, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -12856,8 +12482,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%BDED_L_2_AD_L_B)) then
-      deallocate(DstModuleMapTypeData%BDED_L_2_AD_L_B)
    end if
    if (allocated(SrcModuleMapTypeData%AD_L_2_BDED_B)) then
       LB(1:1) = lbound(SrcModuleMapTypeData%AD_L_2_BDED_B)
@@ -12874,8 +12498,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%AD_L_2_BDED_B)) then
-      deallocate(DstModuleMapTypeData%AD_L_2_BDED_B)
    end if
    if (allocated(SrcModuleMapTypeData%BD_L_2_BD_L)) then
       LB(1:1) = lbound(SrcModuleMapTypeData%BD_L_2_BD_L)
@@ -12892,8 +12514,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%BD_L_2_BD_L)) then
-      deallocate(DstModuleMapTypeData%BD_L_2_BD_L)
    end if
    call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_AD_P_N, DstModuleMapTypeData%ED_P_2_AD_P_N, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -12928,8 +12548,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%ED_P_2_AD_P_R)) then
-      deallocate(DstModuleMapTypeData%ED_P_2_AD_P_R)
    end if
    call NWTC_Library_CopyMeshMapType(SrcModuleMapTypeData%ED_P_2_AD_P_H, DstModuleMapTypeData%ED_P_2_AD_P_H, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -12958,8 +12576,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%IceD_P_2_SD_P)) then
-      deallocate(DstModuleMapTypeData%IceD_P_2_SD_P)
    end if
    if (allocated(SrcModuleMapTypeData%SDy3_P_2_IceD_P)) then
       LB(1:1) = lbound(SrcModuleMapTypeData%SDy3_P_2_IceD_P)
@@ -12976,8 +12592,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%SDy3_P_2_IceD_P)) then
-      deallocate(DstModuleMapTypeData%SDy3_P_2_IceD_P)
    end if
    if (allocated(SrcModuleMapTypeData%Jacobian_Opt1)) then
       LB(1:2) = lbound(SrcModuleMapTypeData%Jacobian_Opt1)
@@ -12990,8 +12604,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          end if
       end if
       DstModuleMapTypeData%Jacobian_Opt1 = SrcModuleMapTypeData%Jacobian_Opt1
-   else if (allocated(DstModuleMapTypeData%Jacobian_Opt1)) then
-      deallocate(DstModuleMapTypeData%Jacobian_Opt1)
    end if
    if (allocated(SrcModuleMapTypeData%Jacobian_pivot)) then
       LB(1:1) = lbound(SrcModuleMapTypeData%Jacobian_pivot)
@@ -13004,8 +12616,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          end if
       end if
       DstModuleMapTypeData%Jacobian_pivot = SrcModuleMapTypeData%Jacobian_pivot
-   else if (allocated(DstModuleMapTypeData%Jacobian_pivot)) then
-      deallocate(DstModuleMapTypeData%Jacobian_pivot)
    end if
    if (allocated(SrcModuleMapTypeData%Jac_u_indx)) then
       LB(1:2) = lbound(SrcModuleMapTypeData%Jac_u_indx)
@@ -13018,8 +12628,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          end if
       end if
       DstModuleMapTypeData%Jac_u_indx = SrcModuleMapTypeData%Jac_u_indx
-   else if (allocated(DstModuleMapTypeData%Jac_u_indx)) then
-      deallocate(DstModuleMapTypeData%Jac_u_indx)
    end if
    call MeshCopy(SrcModuleMapTypeData%u_ED_NacelleLoads, DstModuleMapTypeData%u_ED_NacelleLoads, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -13057,8 +12665,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%u_ED_BladePtLoads)) then
-      deallocate(DstModuleMapTypeData%u_ED_BladePtLoads)
    end if
    call MeshCopy(SrcModuleMapTypeData%u_SD_TPMesh, DstModuleMapTypeData%u_SD_TPMesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -13090,8 +12696,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%u_BD_RootMotion)) then
-      deallocate(DstModuleMapTypeData%u_BD_RootMotion)
    end if
    if (allocated(SrcModuleMapTypeData%y_BD_BldMotion_4Loads)) then
       LB(1:1) = lbound(SrcModuleMapTypeData%y_BD_BldMotion_4Loads)
@@ -13108,8 +12712,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%y_BD_BldMotion_4Loads)) then
-      deallocate(DstModuleMapTypeData%y_BD_BldMotion_4Loads)
    end if
    if (allocated(SrcModuleMapTypeData%u_BD_Distrload)) then
       LB(1:1) = lbound(SrcModuleMapTypeData%u_BD_Distrload)
@@ -13126,8 +12728,6 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstModuleMapTypeData%u_BD_Distrload)) then
-      deallocate(DstModuleMapTypeData%u_BD_Distrload)
    end if
    call MeshCopy(SrcModuleMapTypeData%u_Orca_PtfmMesh, DstModuleMapTypeData%u_Orca_PtfmMesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -14357,8 +13957,6 @@ subroutine FAST_CopyInitData(SrcInitDataData, DstInitDataData, CtrlCode, ErrStat
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitDataData%OutData_BD)) then
-      deallocate(DstInitDataData%OutData_BD)
    end if
    call SrvD_CopyInitInput(SrcInitDataData%InData_SrvD, DstInitDataData%InData_SrvD, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -14682,8 +14280,6 @@ subroutine FAST_CopyExternInitType(SrcExternInitTypeData, DstExternInitTypeData,
          end if
       end if
       DstExternInitTypeData%fromSCGlob = SrcExternInitTypeData%fromSCGlob
-   else if (allocated(DstExternInitTypeData%fromSCGlob)) then
-      deallocate(DstExternInitTypeData%fromSCGlob)
    end if
    if (allocated(SrcExternInitTypeData%fromSC)) then
       LB(1:1) = lbound(SrcExternInitTypeData%fromSC)
@@ -14696,8 +14292,6 @@ subroutine FAST_CopyExternInitType(SrcExternInitTypeData, DstExternInitTypeData,
          end if
       end if
       DstExternInitTypeData%fromSC = SrcExternInitTypeData%fromSC
-   else if (allocated(DstExternInitTypeData%fromSC)) then
-      deallocate(DstExternInitTypeData%fromSC)
    end if
    DstExternInitTypeData%FarmIntegration = SrcExternInitTypeData%FarmIntegration
    DstExternInitTypeData%windGrid_n = SrcExternInitTypeData%windGrid_n

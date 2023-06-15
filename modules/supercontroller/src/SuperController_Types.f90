@@ -432,9 +432,6 @@ subroutine SC_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
             DstParamData%C_obj%ParamGlobal = c_loc(DstParamData%ParamGlobal(LB(1)))
       end if
       DstParamData%ParamGlobal = SrcParamData%ParamGlobal
-   else if (associated(DstParamData%ParamGlobal)) then
-      deallocate(DstParamData%ParamGlobal)
-      nullify(DstParamData%ParamGlobal)
    end if
    if (associated(SrcParamData%ParamTurbine)) then
       LB(1:1) = lbound(SrcParamData%ParamTurbine)
@@ -450,9 +447,6 @@ subroutine SC_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
             DstParamData%C_obj%ParamTurbine = c_loc(DstParamData%ParamTurbine(LB(1)))
       end if
       DstParamData%ParamTurbine = SrcParamData%ParamTurbine
-   else if (associated(DstParamData%ParamTurbine)) then
-      deallocate(DstParamData%ParamTurbine)
-      nullify(DstParamData%ParamTurbine)
    end if
    DstParamData%DLL_Trgt = SrcParamData%DLL_Trgt
 end subroutine
@@ -738,9 +732,6 @@ subroutine SC_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
             DstDiscStateData%C_obj%Global = c_loc(DstDiscStateData%Global(LB(1)))
       end if
       DstDiscStateData%Global = SrcDiscStateData%Global
-   else if (associated(DstDiscStateData%Global)) then
-      deallocate(DstDiscStateData%Global)
-      nullify(DstDiscStateData%Global)
    end if
    if (associated(SrcDiscStateData%Turbine)) then
       LB(1:1) = lbound(SrcDiscStateData%Turbine)
@@ -756,9 +747,6 @@ subroutine SC_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrSta
             DstDiscStateData%C_obj%Turbine = c_loc(DstDiscStateData%Turbine(LB(1)))
       end if
       DstDiscStateData%Turbine = SrcDiscStateData%Turbine
-   else if (associated(DstDiscStateData%Turbine)) then
-      deallocate(DstDiscStateData%Turbine)
-      nullify(DstDiscStateData%Turbine)
    end if
 end subroutine
 
@@ -1301,9 +1289,6 @@ subroutine SC_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%toSCglob = c_loc(DstInputData%toSCglob(LB(1)))
       end if
       DstInputData%toSCglob = SrcInputData%toSCglob
-   else if (associated(DstInputData%toSCglob)) then
-      deallocate(DstInputData%toSCglob)
-      nullify(DstInputData%toSCglob)
    end if
    if (associated(SrcInputData%toSC)) then
       LB(1:1) = lbound(SrcInputData%toSC)
@@ -1319,9 +1304,6 @@ subroutine SC_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%toSC = c_loc(DstInputData%toSC(LB(1)))
       end if
       DstInputData%toSC = SrcInputData%toSC
-   else if (associated(DstInputData%toSC)) then
-      deallocate(DstInputData%toSC)
-      nullify(DstInputData%toSC)
    end if
 end subroutine
 
@@ -1540,9 +1522,6 @@ subroutine SC_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
             DstOutputData%C_obj%fromSCglob = c_loc(DstOutputData%fromSCglob(LB(1)))
       end if
       DstOutputData%fromSCglob = SrcOutputData%fromSCglob
-   else if (associated(DstOutputData%fromSCglob)) then
-      deallocate(DstOutputData%fromSCglob)
-      nullify(DstOutputData%fromSCglob)
    end if
    if (associated(SrcOutputData%fromSC)) then
       LB(1:1) = lbound(SrcOutputData%fromSC)
@@ -1558,9 +1537,6 @@ subroutine SC_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
             DstOutputData%C_obj%fromSC = c_loc(DstOutputData%fromSC(LB(1)))
       end if
       DstOutputData%fromSC = SrcOutputData%fromSC
-   else if (associated(DstOutputData%fromSC)) then
-      deallocate(DstOutputData%fromSC)
-      nullify(DstOutputData%fromSC)
    end if
 end subroutine
 

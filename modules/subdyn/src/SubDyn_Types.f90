@@ -365,8 +365,6 @@ subroutine SD_CopyIList(SrcIListData, DstIListData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstIListData%List = SrcIListData%List
-   else if (allocated(DstIListData%List)) then
-      deallocate(DstIListData%List)
    end if
 end subroutine
 
@@ -443,8 +441,6 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
          end if
       end if
       DstMeshAuxDataTypeData%NodeCnt = SrcMeshAuxDataTypeData%NodeCnt
-   else if (allocated(DstMeshAuxDataTypeData%NodeCnt)) then
-      deallocate(DstMeshAuxDataTypeData%NodeCnt)
    end if
    if (allocated(SrcMeshAuxDataTypeData%NodeIDs)) then
       LB(1:1) = lbound(SrcMeshAuxDataTypeData%NodeIDs)
@@ -457,8 +453,6 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
          end if
       end if
       DstMeshAuxDataTypeData%NodeIDs = SrcMeshAuxDataTypeData%NodeIDs
-   else if (allocated(DstMeshAuxDataTypeData%NodeIDs)) then
-      deallocate(DstMeshAuxDataTypeData%NodeIDs)
    end if
    if (allocated(SrcMeshAuxDataTypeData%ElmIDs)) then
       LB(1:2) = lbound(SrcMeshAuxDataTypeData%ElmIDs)
@@ -471,8 +465,6 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
          end if
       end if
       DstMeshAuxDataTypeData%ElmIDs = SrcMeshAuxDataTypeData%ElmIDs
-   else if (allocated(DstMeshAuxDataTypeData%ElmIDs)) then
-      deallocate(DstMeshAuxDataTypeData%ElmIDs)
    end if
    if (allocated(SrcMeshAuxDataTypeData%ElmNds)) then
       LB(1:2) = lbound(SrcMeshAuxDataTypeData%ElmNds)
@@ -485,8 +477,6 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
          end if
       end if
       DstMeshAuxDataTypeData%ElmNds = SrcMeshAuxDataTypeData%ElmNds
-   else if (allocated(DstMeshAuxDataTypeData%ElmNds)) then
-      deallocate(DstMeshAuxDataTypeData%ElmNds)
    end if
    if (allocated(SrcMeshAuxDataTypeData%Me)) then
       LB(1:4) = lbound(SrcMeshAuxDataTypeData%Me)
@@ -499,8 +489,6 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
          end if
       end if
       DstMeshAuxDataTypeData%Me = SrcMeshAuxDataTypeData%Me
-   else if (allocated(DstMeshAuxDataTypeData%Me)) then
-      deallocate(DstMeshAuxDataTypeData%Me)
    end if
    if (allocated(SrcMeshAuxDataTypeData%Ke)) then
       LB(1:4) = lbound(SrcMeshAuxDataTypeData%Ke)
@@ -513,8 +501,6 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
          end if
       end if
       DstMeshAuxDataTypeData%Ke = SrcMeshAuxDataTypeData%Ke
-   else if (allocated(DstMeshAuxDataTypeData%Ke)) then
-      deallocate(DstMeshAuxDataTypeData%Ke)
    end if
    if (allocated(SrcMeshAuxDataTypeData%Fg)) then
       LB(1:3) = lbound(SrcMeshAuxDataTypeData%Fg)
@@ -527,8 +513,6 @@ subroutine SD_CopyMeshAuxDataType(SrcMeshAuxDataTypeData, DstMeshAuxDataTypeData
          end if
       end if
       DstMeshAuxDataTypeData%Fg = SrcMeshAuxDataTypeData%Fg
-   else if (allocated(DstMeshAuxDataTypeData%Fg)) then
-      deallocate(DstMeshAuxDataTypeData%Fg)
    end if
 end subroutine
 
@@ -741,8 +725,6 @@ subroutine SD_CopyCB_MatArrays(SrcCB_MatArraysData, DstCB_MatArraysData, CtrlCod
          end if
       end if
       DstCB_MatArraysData%MBB = SrcCB_MatArraysData%MBB
-   else if (allocated(DstCB_MatArraysData%MBB)) then
-      deallocate(DstCB_MatArraysData%MBB)
    end if
    if (allocated(SrcCB_MatArraysData%MBM)) then
       LB(1:2) = lbound(SrcCB_MatArraysData%MBM)
@@ -755,8 +737,6 @@ subroutine SD_CopyCB_MatArrays(SrcCB_MatArraysData, DstCB_MatArraysData, CtrlCod
          end if
       end if
       DstCB_MatArraysData%MBM = SrcCB_MatArraysData%MBM
-   else if (allocated(DstCB_MatArraysData%MBM)) then
-      deallocate(DstCB_MatArraysData%MBM)
    end if
    if (allocated(SrcCB_MatArraysData%KBB)) then
       LB(1:2) = lbound(SrcCB_MatArraysData%KBB)
@@ -769,8 +749,6 @@ subroutine SD_CopyCB_MatArrays(SrcCB_MatArraysData, DstCB_MatArraysData, CtrlCod
          end if
       end if
       DstCB_MatArraysData%KBB = SrcCB_MatArraysData%KBB
-   else if (allocated(DstCB_MatArraysData%KBB)) then
-      deallocate(DstCB_MatArraysData%KBB)
    end if
    if (allocated(SrcCB_MatArraysData%PhiL)) then
       LB(1:2) = lbound(SrcCB_MatArraysData%PhiL)
@@ -783,8 +761,6 @@ subroutine SD_CopyCB_MatArrays(SrcCB_MatArraysData, DstCB_MatArraysData, CtrlCod
          end if
       end if
       DstCB_MatArraysData%PhiL = SrcCB_MatArraysData%PhiL
-   else if (allocated(DstCB_MatArraysData%PhiL)) then
-      deallocate(DstCB_MatArraysData%PhiL)
    end if
    if (allocated(SrcCB_MatArraysData%PhiR)) then
       LB(1:2) = lbound(SrcCB_MatArraysData%PhiR)
@@ -797,8 +773,6 @@ subroutine SD_CopyCB_MatArrays(SrcCB_MatArraysData, DstCB_MatArraysData, CtrlCod
          end if
       end if
       DstCB_MatArraysData%PhiR = SrcCB_MatArraysData%PhiR
-   else if (allocated(DstCB_MatArraysData%PhiR)) then
-      deallocate(DstCB_MatArraysData%PhiR)
    end if
    if (allocated(SrcCB_MatArraysData%OmegaL)) then
       LB(1:1) = lbound(SrcCB_MatArraysData%OmegaL)
@@ -811,8 +785,6 @@ subroutine SD_CopyCB_MatArrays(SrcCB_MatArraysData, DstCB_MatArraysData, CtrlCod
          end if
       end if
       DstCB_MatArraysData%OmegaL = SrcCB_MatArraysData%OmegaL
-   else if (allocated(DstCB_MatArraysData%OmegaL)) then
-      deallocate(DstCB_MatArraysData%OmegaL)
    end if
 end subroutine
 
@@ -1099,8 +1071,6 @@ subroutine SD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrSta
          end if
       end if
       DstInitInputData%SoilStiffness = SrcInitInputData%SoilStiffness
-   else if (allocated(DstInitInputData%SoilStiffness)) then
-      deallocate(DstInitInputData%SoilStiffness)
    end if
    call MeshCopy(SrcInitInputData%SoilMesh, DstInitInputData%SoilMesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1207,8 +1177,6 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
-      deallocate(DstInitOutputData%WriteOutputHdr)
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
@@ -1221,8 +1189,6 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
-      deallocate(DstInitOutputData%WriteOutputUnt)
    end if
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1238,8 +1204,6 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
-   else if (allocated(DstInitOutputData%LinNames_y)) then
-      deallocate(DstInitOutputData%LinNames_y)
    end if
    if (allocated(SrcInitOutputData%LinNames_x)) then
       LB(1:1) = lbound(SrcInitOutputData%LinNames_x)
@@ -1252,8 +1216,6 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
-   else if (allocated(DstInitOutputData%LinNames_x)) then
-      deallocate(DstInitOutputData%LinNames_x)
    end if
    if (allocated(SrcInitOutputData%LinNames_u)) then
       LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
@@ -1266,8 +1228,6 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
-   else if (allocated(DstInitOutputData%LinNames_u)) then
-      deallocate(DstInitOutputData%LinNames_u)
    end if
    if (allocated(SrcInitOutputData%RotFrame_y)) then
       LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
@@ -1280,8 +1240,6 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
-   else if (allocated(DstInitOutputData%RotFrame_y)) then
-      deallocate(DstInitOutputData%RotFrame_y)
    end if
    if (allocated(SrcInitOutputData%RotFrame_x)) then
       LB(1:1) = lbound(SrcInitOutputData%RotFrame_x)
@@ -1294,8 +1252,6 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%RotFrame_x = SrcInitOutputData%RotFrame_x
-   else if (allocated(DstInitOutputData%RotFrame_x)) then
-      deallocate(DstInitOutputData%RotFrame_x)
    end if
    if (allocated(SrcInitOutputData%RotFrame_u)) then
       LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
@@ -1308,8 +1264,6 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
-   else if (allocated(DstInitOutputData%RotFrame_u)) then
-      deallocate(DstInitOutputData%RotFrame_u)
    end if
    if (allocated(SrcInitOutputData%IsLoad_u)) then
       LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
@@ -1322,8 +1276,6 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
-   else if (allocated(DstInitOutputData%IsLoad_u)) then
-      deallocate(DstInitOutputData%IsLoad_u)
    end if
    if (allocated(SrcInitOutputData%DerivOrder_x)) then
       LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x)
@@ -1336,8 +1288,6 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
-   else if (allocated(DstInitOutputData%DerivOrder_x)) then
-      deallocate(DstInitOutputData%DerivOrder_x)
    end if
    if (allocated(SrcInitOutputData%CableCChanRqst)) then
       LB(1:1) = lbound(SrcInitOutputData%CableCChanRqst)
@@ -1350,8 +1300,6 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
          end if
       end if
       DstInitOutputData%CableCChanRqst = SrcInitOutputData%CableCChanRqst
-   else if (allocated(DstInitOutputData%CableCChanRqst)) then
-      deallocate(DstInitOutputData%CableCChanRqst)
    end if
 end subroutine
 
@@ -1667,8 +1615,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%Joints = SrcInitTypeData%Joints
-   else if (allocated(DstInitTypeData%Joints)) then
-      deallocate(DstInitTypeData%Joints)
    end if
    if (allocated(SrcInitTypeData%PropSetsB)) then
       LB(1:2) = lbound(SrcInitTypeData%PropSetsB)
@@ -1681,8 +1627,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%PropSetsB = SrcInitTypeData%PropSetsB
-   else if (allocated(DstInitTypeData%PropSetsB)) then
-      deallocate(DstInitTypeData%PropSetsB)
    end if
    if (allocated(SrcInitTypeData%PropSetsC)) then
       LB(1:2) = lbound(SrcInitTypeData%PropSetsC)
@@ -1695,8 +1639,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%PropSetsC = SrcInitTypeData%PropSetsC
-   else if (allocated(DstInitTypeData%PropSetsC)) then
-      deallocate(DstInitTypeData%PropSetsC)
    end if
    if (allocated(SrcInitTypeData%PropSetsR)) then
       LB(1:2) = lbound(SrcInitTypeData%PropSetsR)
@@ -1709,8 +1651,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%PropSetsR = SrcInitTypeData%PropSetsR
-   else if (allocated(DstInitTypeData%PropSetsR)) then
-      deallocate(DstInitTypeData%PropSetsR)
    end if
    if (allocated(SrcInitTypeData%PropSetsX)) then
       LB(1:2) = lbound(SrcInitTypeData%PropSetsX)
@@ -1723,8 +1663,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%PropSetsX = SrcInitTypeData%PropSetsX
-   else if (allocated(DstInitTypeData%PropSetsX)) then
-      deallocate(DstInitTypeData%PropSetsX)
    end if
    if (allocated(SrcInitTypeData%COSMs)) then
       LB(1:2) = lbound(SrcInitTypeData%COSMs)
@@ -1737,8 +1675,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%COSMs = SrcInitTypeData%COSMs
-   else if (allocated(DstInitTypeData%COSMs)) then
-      deallocate(DstInitTypeData%COSMs)
    end if
    if (allocated(SrcInitTypeData%CMass)) then
       LB(1:2) = lbound(SrcInitTypeData%CMass)
@@ -1751,8 +1687,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%CMass = SrcInitTypeData%CMass
-   else if (allocated(DstInitTypeData%CMass)) then
-      deallocate(DstInitTypeData%CMass)
    end if
    if (allocated(SrcInitTypeData%JDampings)) then
       LB(1:1) = lbound(SrcInitTypeData%JDampings)
@@ -1765,8 +1699,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%JDampings = SrcInitTypeData%JDampings
-   else if (allocated(DstInitTypeData%JDampings)) then
-      deallocate(DstInitTypeData%JDampings)
    end if
    DstInitTypeData%GuyanDampMod = SrcInitTypeData%GuyanDampMod
    DstInitTypeData%RayleighDamp = SrcInitTypeData%RayleighDamp
@@ -1782,8 +1714,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%Members = SrcInitTypeData%Members
-   else if (allocated(DstInitTypeData%Members)) then
-      deallocate(DstInitTypeData%Members)
    end if
    if (allocated(SrcInitTypeData%SSOutList)) then
       LB(1:1) = lbound(SrcInitTypeData%SSOutList)
@@ -1796,8 +1726,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%SSOutList = SrcInitTypeData%SSOutList
-   else if (allocated(DstInitTypeData%SSOutList)) then
-      deallocate(DstInitTypeData%SSOutList)
    end if
    DstInitTypeData%OutCOSM = SrcInitTypeData%OutCOSM
    DstInitTypeData%TabDelim = SrcInitTypeData%TabDelim
@@ -1812,8 +1740,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%SSIK = SrcInitTypeData%SSIK
-   else if (allocated(DstInitTypeData%SSIK)) then
-      deallocate(DstInitTypeData%SSIK)
    end if
    if (allocated(SrcInitTypeData%SSIM)) then
       LB(1:2) = lbound(SrcInitTypeData%SSIM)
@@ -1826,8 +1752,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%SSIM = SrcInitTypeData%SSIM
-   else if (allocated(DstInitTypeData%SSIM)) then
-      deallocate(DstInitTypeData%SSIM)
    end if
    if (allocated(SrcInitTypeData%SSIfile)) then
       LB(1:1) = lbound(SrcInitTypeData%SSIfile)
@@ -1840,8 +1764,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%SSIfile = SrcInitTypeData%SSIfile
-   else if (allocated(DstInitTypeData%SSIfile)) then
-      deallocate(DstInitTypeData%SSIfile)
    end if
    if (allocated(SrcInitTypeData%Soil_K)) then
       LB(1:3) = lbound(SrcInitTypeData%Soil_K)
@@ -1854,8 +1776,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%Soil_K = SrcInitTypeData%Soil_K
-   else if (allocated(DstInitTypeData%Soil_K)) then
-      deallocate(DstInitTypeData%Soil_K)
    end if
    if (allocated(SrcInitTypeData%Soil_Points)) then
       LB(1:2) = lbound(SrcInitTypeData%Soil_Points)
@@ -1868,8 +1788,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%Soil_Points = SrcInitTypeData%Soil_Points
-   else if (allocated(DstInitTypeData%Soil_Points)) then
-      deallocate(DstInitTypeData%Soil_Points)
    end if
    if (allocated(SrcInitTypeData%Soil_Nodes)) then
       LB(1:1) = lbound(SrcInitTypeData%Soil_Nodes)
@@ -1882,8 +1800,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%Soil_Nodes = SrcInitTypeData%Soil_Nodes
-   else if (allocated(DstInitTypeData%Soil_Nodes)) then
-      deallocate(DstInitTypeData%Soil_Nodes)
    end if
    DstInitTypeData%NElem = SrcInitTypeData%NElem
    DstInitTypeData%NPropB = SrcInitTypeData%NPropB
@@ -1900,8 +1816,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%Nodes = SrcInitTypeData%Nodes
-   else if (allocated(DstInitTypeData%Nodes)) then
-      deallocate(DstInitTypeData%Nodes)
    end if
    if (allocated(SrcInitTypeData%PropsB)) then
       LB(1:2) = lbound(SrcInitTypeData%PropsB)
@@ -1914,8 +1828,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%PropsB = SrcInitTypeData%PropsB
-   else if (allocated(DstInitTypeData%PropsB)) then
-      deallocate(DstInitTypeData%PropsB)
    end if
    if (allocated(SrcInitTypeData%PropsC)) then
       LB(1:2) = lbound(SrcInitTypeData%PropsC)
@@ -1928,8 +1840,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%PropsC = SrcInitTypeData%PropsC
-   else if (allocated(DstInitTypeData%PropsC)) then
-      deallocate(DstInitTypeData%PropsC)
    end if
    if (allocated(SrcInitTypeData%PropsR)) then
       LB(1:2) = lbound(SrcInitTypeData%PropsR)
@@ -1942,8 +1852,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%PropsR = SrcInitTypeData%PropsR
-   else if (allocated(DstInitTypeData%PropsR)) then
-      deallocate(DstInitTypeData%PropsR)
    end if
    if (allocated(SrcInitTypeData%K)) then
       LB(1:2) = lbound(SrcInitTypeData%K)
@@ -1956,8 +1864,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%K = SrcInitTypeData%K
-   else if (allocated(DstInitTypeData%K)) then
-      deallocate(DstInitTypeData%K)
    end if
    if (allocated(SrcInitTypeData%M)) then
       LB(1:2) = lbound(SrcInitTypeData%M)
@@ -1970,8 +1876,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%M = SrcInitTypeData%M
-   else if (allocated(DstInitTypeData%M)) then
-      deallocate(DstInitTypeData%M)
    end if
    if (allocated(SrcInitTypeData%ElemProps)) then
       LB(1:2) = lbound(SrcInitTypeData%ElemProps)
@@ -1984,8 +1888,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%ElemProps = SrcInitTypeData%ElemProps
-   else if (allocated(DstInitTypeData%ElemProps)) then
-      deallocate(DstInitTypeData%ElemProps)
    end if
    if (allocated(SrcInitTypeData%MemberNodes)) then
       LB(1:2) = lbound(SrcInitTypeData%MemberNodes)
@@ -1998,8 +1900,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%MemberNodes = SrcInitTypeData%MemberNodes
-   else if (allocated(DstInitTypeData%MemberNodes)) then
-      deallocate(DstInitTypeData%MemberNodes)
    end if
    if (allocated(SrcInitTypeData%NodesConnN)) then
       LB(1:2) = lbound(SrcInitTypeData%NodesConnN)
@@ -2012,8 +1912,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%NodesConnN = SrcInitTypeData%NodesConnN
-   else if (allocated(DstInitTypeData%NodesConnN)) then
-      deallocate(DstInitTypeData%NodesConnN)
    end if
    if (allocated(SrcInitTypeData%NodesConnE)) then
       LB(1:2) = lbound(SrcInitTypeData%NodesConnE)
@@ -2026,8 +1924,6 @@ subroutine SD_CopyInitType(SrcInitTypeData, DstInitTypeData, CtrlCode, ErrStat, 
          end if
       end if
       DstInitTypeData%NodesConnE = SrcInitTypeData%NodesConnE
-   else if (allocated(DstInitTypeData%NodesConnE)) then
-      deallocate(DstInitTypeData%NodesConnE)
    end if
    DstInitTypeData%SSSum = SrcInitTypeData%SSSum
 end subroutine
@@ -2728,8 +2624,6 @@ subroutine SD_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrSta
          end if
       end if
       DstContStateData%qm = SrcContStateData%qm
-   else if (allocated(DstContStateData%qm)) then
-      deallocate(DstContStateData%qm)
    end if
    if (allocated(SrcContStateData%qmdot)) then
       LB(1:1) = lbound(SrcContStateData%qmdot)
@@ -2742,8 +2636,6 @@ subroutine SD_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrSta
          end if
       end if
       DstContStateData%qmdot = SrcContStateData%qmdot
-   else if (allocated(DstContStateData%qmdot)) then
-      deallocate(DstContStateData%qmdot)
    end if
 end subroutine
 
@@ -2924,8 +2816,6 @@ subroutine SD_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstOtherStateData%xdot)) then
-      deallocate(DstOtherStateData%xdot)
    end if
    DstOtherStateData%n = SrcOtherStateData%n
 end subroutine
@@ -3022,8 +2912,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%qmdotdot = SrcMiscData%qmdotdot
-   else if (allocated(DstMiscData%qmdotdot)) then
-      deallocate(DstMiscData%qmdotdot)
    end if
    DstMiscData%u_TP = SrcMiscData%u_TP
    DstMiscData%udot_TP = SrcMiscData%udot_TP
@@ -3039,8 +2927,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%F_L = SrcMiscData%F_L
-   else if (allocated(DstMiscData%F_L)) then
-      deallocate(DstMiscData%F_L)
    end if
    if (allocated(SrcMiscData%F_L2)) then
       LB(1:1) = lbound(SrcMiscData%F_L2)
@@ -3053,8 +2939,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%F_L2 = SrcMiscData%F_L2
-   else if (allocated(DstMiscData%F_L2)) then
-      deallocate(DstMiscData%F_L2)
    end if
    if (allocated(SrcMiscData%UR_bar)) then
       LB(1:1) = lbound(SrcMiscData%UR_bar)
@@ -3067,8 +2951,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%UR_bar = SrcMiscData%UR_bar
-   else if (allocated(DstMiscData%UR_bar)) then
-      deallocate(DstMiscData%UR_bar)
    end if
    if (allocated(SrcMiscData%UR_bar_dot)) then
       LB(1:1) = lbound(SrcMiscData%UR_bar_dot)
@@ -3081,8 +2963,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%UR_bar_dot = SrcMiscData%UR_bar_dot
-   else if (allocated(DstMiscData%UR_bar_dot)) then
-      deallocate(DstMiscData%UR_bar_dot)
    end if
    if (allocated(SrcMiscData%UR_bar_dotdot)) then
       LB(1:1) = lbound(SrcMiscData%UR_bar_dotdot)
@@ -3095,8 +2975,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%UR_bar_dotdot = SrcMiscData%UR_bar_dotdot
-   else if (allocated(DstMiscData%UR_bar_dotdot)) then
-      deallocate(DstMiscData%UR_bar_dotdot)
    end if
    if (allocated(SrcMiscData%UL)) then
       LB(1:1) = lbound(SrcMiscData%UL)
@@ -3109,8 +2987,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%UL = SrcMiscData%UL
-   else if (allocated(DstMiscData%UL)) then
-      deallocate(DstMiscData%UL)
    end if
    if (allocated(SrcMiscData%UL_NS)) then
       LB(1:1) = lbound(SrcMiscData%UL_NS)
@@ -3123,8 +2999,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%UL_NS = SrcMiscData%UL_NS
-   else if (allocated(DstMiscData%UL_NS)) then
-      deallocate(DstMiscData%UL_NS)
    end if
    if (allocated(SrcMiscData%UL_dot)) then
       LB(1:1) = lbound(SrcMiscData%UL_dot)
@@ -3137,8 +3011,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%UL_dot = SrcMiscData%UL_dot
-   else if (allocated(DstMiscData%UL_dot)) then
-      deallocate(DstMiscData%UL_dot)
    end if
    if (allocated(SrcMiscData%UL_dotdot)) then
       LB(1:1) = lbound(SrcMiscData%UL_dotdot)
@@ -3151,8 +3023,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%UL_dotdot = SrcMiscData%UL_dotdot
-   else if (allocated(DstMiscData%UL_dotdot)) then
-      deallocate(DstMiscData%UL_dotdot)
    end if
    if (allocated(SrcMiscData%DU_full)) then
       LB(1:1) = lbound(SrcMiscData%DU_full)
@@ -3165,8 +3035,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%DU_full = SrcMiscData%DU_full
-   else if (allocated(DstMiscData%DU_full)) then
-      deallocate(DstMiscData%DU_full)
    end if
    if (allocated(SrcMiscData%U_full)) then
       LB(1:1) = lbound(SrcMiscData%U_full)
@@ -3179,8 +3047,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%U_full = SrcMiscData%U_full
-   else if (allocated(DstMiscData%U_full)) then
-      deallocate(DstMiscData%U_full)
    end if
    if (allocated(SrcMiscData%U_full_NS)) then
       LB(1:1) = lbound(SrcMiscData%U_full_NS)
@@ -3193,8 +3059,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%U_full_NS = SrcMiscData%U_full_NS
-   else if (allocated(DstMiscData%U_full_NS)) then
-      deallocate(DstMiscData%U_full_NS)
    end if
    if (allocated(SrcMiscData%U_full_dot)) then
       LB(1:1) = lbound(SrcMiscData%U_full_dot)
@@ -3207,8 +3071,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%U_full_dot = SrcMiscData%U_full_dot
-   else if (allocated(DstMiscData%U_full_dot)) then
-      deallocate(DstMiscData%U_full_dot)
    end if
    if (allocated(SrcMiscData%U_full_dotdot)) then
       LB(1:1) = lbound(SrcMiscData%U_full_dotdot)
@@ -3221,8 +3083,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%U_full_dotdot = SrcMiscData%U_full_dotdot
-   else if (allocated(DstMiscData%U_full_dotdot)) then
-      deallocate(DstMiscData%U_full_dotdot)
    end if
    if (allocated(SrcMiscData%U_full_elast)) then
       LB(1:1) = lbound(SrcMiscData%U_full_elast)
@@ -3235,8 +3095,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%U_full_elast = SrcMiscData%U_full_elast
-   else if (allocated(DstMiscData%U_full_elast)) then
-      deallocate(DstMiscData%U_full_elast)
    end if
    if (allocated(SrcMiscData%U_red)) then
       LB(1:1) = lbound(SrcMiscData%U_red)
@@ -3249,8 +3107,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%U_red = SrcMiscData%U_red
-   else if (allocated(DstMiscData%U_red)) then
-      deallocate(DstMiscData%U_red)
    end if
    if (allocated(SrcMiscData%FC_unit)) then
       LB(1:1) = lbound(SrcMiscData%FC_unit)
@@ -3263,8 +3119,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%FC_unit = SrcMiscData%FC_unit
-   else if (allocated(DstMiscData%FC_unit)) then
-      deallocate(DstMiscData%FC_unit)
    end if
    if (allocated(SrcMiscData%SDWrOutput)) then
       LB(1:1) = lbound(SrcMiscData%SDWrOutput)
@@ -3277,8 +3131,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%SDWrOutput = SrcMiscData%SDWrOutput
-   else if (allocated(DstMiscData%SDWrOutput)) then
-      deallocate(DstMiscData%SDWrOutput)
    end if
    if (allocated(SrcMiscData%AllOuts)) then
       LB(1:1) = lbound(SrcMiscData%AllOuts)
@@ -3291,8 +3143,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%AllOuts = SrcMiscData%AllOuts
-   else if (allocated(DstMiscData%AllOuts)) then
-      deallocate(DstMiscData%AllOuts)
    end if
    DstMiscData%LastOutTime = SrcMiscData%LastOutTime
    DstMiscData%Decimat = SrcMiscData%Decimat
@@ -3307,8 +3157,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%Fext = SrcMiscData%Fext
-   else if (allocated(DstMiscData%Fext)) then
-      deallocate(DstMiscData%Fext)
    end if
    if (allocated(SrcMiscData%Fext_red)) then
       LB(1:1) = lbound(SrcMiscData%Fext_red)
@@ -3321,8 +3169,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%Fext_red = SrcMiscData%Fext_red
-   else if (allocated(DstMiscData%Fext_red)) then
-      deallocate(DstMiscData%Fext_red)
    end if
    if (allocated(SrcMiscData%UL_SIM)) then
       LB(1:1) = lbound(SrcMiscData%UL_SIM)
@@ -3335,8 +3181,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%UL_SIM = SrcMiscData%UL_SIM
-   else if (allocated(DstMiscData%UL_SIM)) then
-      deallocate(DstMiscData%UL_SIM)
    end if
    if (allocated(SrcMiscData%UL_0m)) then
       LB(1:1) = lbound(SrcMiscData%UL_0m)
@@ -3349,8 +3193,6 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%UL_0m = SrcMiscData%UL_0m
-   else if (allocated(DstMiscData%UL_0m)) then
-      deallocate(DstMiscData%UL_0m)
    end if
 end subroutine
 
@@ -3953,8 +3795,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%Elems = SrcParamData%Elems
-   else if (allocated(DstParamData%Elems)) then
-      deallocate(DstParamData%Elems)
    end if
    if (allocated(SrcParamData%ElemProps)) then
       LB(1:1) = lbound(SrcParamData%ElemProps)
@@ -3971,8 +3811,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%ElemProps)) then
-      deallocate(DstParamData%ElemProps)
    end if
    if (allocated(SrcParamData%FG)) then
       LB(1:1) = lbound(SrcParamData%FG)
@@ -3985,8 +3823,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%FG = SrcParamData%FG
-   else if (allocated(DstParamData%FG)) then
-      deallocate(DstParamData%FG)
    end if
    if (allocated(SrcParamData%DP0)) then
       LB(1:2) = lbound(SrcParamData%DP0)
@@ -3999,8 +3835,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%DP0 = SrcParamData%DP0
-   else if (allocated(DstParamData%DP0)) then
-      deallocate(DstParamData%DP0)
    end if
    if (allocated(SrcParamData%NodeID2JointID)) then
       LB(1:1) = lbound(SrcParamData%NodeID2JointID)
@@ -4013,8 +3847,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%NodeID2JointID = SrcParamData%NodeID2JointID
-   else if (allocated(DstParamData%NodeID2JointID)) then
-      deallocate(DstParamData%NodeID2JointID)
    end if
    DstParamData%reduced = SrcParamData%reduced
    if (allocated(SrcParamData%T_red)) then
@@ -4028,8 +3860,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%T_red = SrcParamData%T_red
-   else if (allocated(DstParamData%T_red)) then
-      deallocate(DstParamData%T_red)
    end if
    if (allocated(SrcParamData%T_red_T)) then
       LB(1:2) = lbound(SrcParamData%T_red_T)
@@ -4042,8 +3872,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%T_red_T = SrcParamData%T_red_T
-   else if (allocated(DstParamData%T_red_T)) then
-      deallocate(DstParamData%T_red_T)
    end if
    if (allocated(SrcParamData%NodesDOF)) then
       LB(1:1) = lbound(SrcParamData%NodesDOF)
@@ -4060,8 +3888,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%NodesDOF)) then
-      deallocate(DstParamData%NodesDOF)
    end if
    if (allocated(SrcParamData%NodesDOFred)) then
       LB(1:1) = lbound(SrcParamData%NodesDOFred)
@@ -4078,8 +3904,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%NodesDOFred)) then
-      deallocate(DstParamData%NodesDOFred)
    end if
    if (allocated(SrcParamData%ElemsDOF)) then
       LB(1:2) = lbound(SrcParamData%ElemsDOF)
@@ -4092,8 +3916,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%ElemsDOF = SrcParamData%ElemsDOF
-   else if (allocated(DstParamData%ElemsDOF)) then
-      deallocate(DstParamData%ElemsDOF)
    end if
    if (allocated(SrcParamData%DOFred2Nodes)) then
       LB(1:2) = lbound(SrcParamData%DOFred2Nodes)
@@ -4106,8 +3928,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%DOFred2Nodes = SrcParamData%DOFred2Nodes
-   else if (allocated(DstParamData%DOFred2Nodes)) then
-      deallocate(DstParamData%DOFred2Nodes)
    end if
    if (allocated(SrcParamData%CtrlElem2Channel)) then
       LB(1:2) = lbound(SrcParamData%CtrlElem2Channel)
@@ -4120,8 +3940,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%CtrlElem2Channel = SrcParamData%CtrlElem2Channel
-   else if (allocated(DstParamData%CtrlElem2Channel)) then
-      deallocate(DstParamData%CtrlElem2Channel)
    end if
    DstParamData%nDOFM = SrcParamData%nDOFM
    DstParamData%SttcSolve = SrcParamData%SttcSolve
@@ -4138,8 +3956,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%KMMDiag = SrcParamData%KMMDiag
-   else if (allocated(DstParamData%KMMDiag)) then
-      deallocate(DstParamData%KMMDiag)
    end if
    if (allocated(SrcParamData%CMMDiag)) then
       LB(1:1) = lbound(SrcParamData%CMMDiag)
@@ -4152,8 +3968,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%CMMDiag = SrcParamData%CMMDiag
-   else if (allocated(DstParamData%CMMDiag)) then
-      deallocate(DstParamData%CMMDiag)
    end if
    if (allocated(SrcParamData%MMB)) then
       LB(1:2) = lbound(SrcParamData%MMB)
@@ -4166,8 +3980,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%MMB = SrcParamData%MMB
-   else if (allocated(DstParamData%MMB)) then
-      deallocate(DstParamData%MMB)
    end if
    if (allocated(SrcParamData%MBmmB)) then
       LB(1:2) = lbound(SrcParamData%MBmmB)
@@ -4180,8 +3992,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%MBmmB = SrcParamData%MBmmB
-   else if (allocated(DstParamData%MBmmB)) then
-      deallocate(DstParamData%MBmmB)
    end if
    if (allocated(SrcParamData%C1_11)) then
       LB(1:2) = lbound(SrcParamData%C1_11)
@@ -4194,8 +4004,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%C1_11 = SrcParamData%C1_11
-   else if (allocated(DstParamData%C1_11)) then
-      deallocate(DstParamData%C1_11)
    end if
    if (allocated(SrcParamData%C1_12)) then
       LB(1:2) = lbound(SrcParamData%C1_12)
@@ -4208,8 +4016,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%C1_12 = SrcParamData%C1_12
-   else if (allocated(DstParamData%C1_12)) then
-      deallocate(DstParamData%C1_12)
    end if
    if (allocated(SrcParamData%D1_141)) then
       LB(1:2) = lbound(SrcParamData%D1_141)
@@ -4222,8 +4028,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%D1_141 = SrcParamData%D1_141
-   else if (allocated(DstParamData%D1_141)) then
-      deallocate(DstParamData%D1_141)
    end if
    if (allocated(SrcParamData%D1_142)) then
       LB(1:2) = lbound(SrcParamData%D1_142)
@@ -4236,8 +4040,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%D1_142 = SrcParamData%D1_142
-   else if (allocated(DstParamData%D1_142)) then
-      deallocate(DstParamData%D1_142)
    end if
    if (allocated(SrcParamData%PhiM)) then
       LB(1:2) = lbound(SrcParamData%PhiM)
@@ -4250,8 +4052,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%PhiM = SrcParamData%PhiM
-   else if (allocated(DstParamData%PhiM)) then
-      deallocate(DstParamData%PhiM)
    end if
    if (allocated(SrcParamData%C2_61)) then
       LB(1:2) = lbound(SrcParamData%C2_61)
@@ -4264,8 +4064,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%C2_61 = SrcParamData%C2_61
-   else if (allocated(DstParamData%C2_61)) then
-      deallocate(DstParamData%C2_61)
    end if
    if (allocated(SrcParamData%C2_62)) then
       LB(1:2) = lbound(SrcParamData%C2_62)
@@ -4278,8 +4076,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%C2_62 = SrcParamData%C2_62
-   else if (allocated(DstParamData%C2_62)) then
-      deallocate(DstParamData%C2_62)
    end if
    if (allocated(SrcParamData%PhiRb_TI)) then
       LB(1:2) = lbound(SrcParamData%PhiRb_TI)
@@ -4292,8 +4088,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%PhiRb_TI = SrcParamData%PhiRb_TI
-   else if (allocated(DstParamData%PhiRb_TI)) then
-      deallocate(DstParamData%PhiRb_TI)
    end if
    if (allocated(SrcParamData%D2_63)) then
       LB(1:2) = lbound(SrcParamData%D2_63)
@@ -4306,8 +4100,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%D2_63 = SrcParamData%D2_63
-   else if (allocated(DstParamData%D2_63)) then
-      deallocate(DstParamData%D2_63)
    end if
    if (allocated(SrcParamData%D2_64)) then
       LB(1:2) = lbound(SrcParamData%D2_64)
@@ -4320,8 +4112,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%D2_64 = SrcParamData%D2_64
-   else if (allocated(DstParamData%D2_64)) then
-      deallocate(DstParamData%D2_64)
    end if
    if (allocated(SrcParamData%MBB)) then
       LB(1:2) = lbound(SrcParamData%MBB)
@@ -4334,8 +4124,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%MBB = SrcParamData%MBB
-   else if (allocated(DstParamData%MBB)) then
-      deallocate(DstParamData%MBB)
    end if
    if (allocated(SrcParamData%KBB)) then
       LB(1:2) = lbound(SrcParamData%KBB)
@@ -4348,8 +4136,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%KBB = SrcParamData%KBB
-   else if (allocated(DstParamData%KBB)) then
-      deallocate(DstParamData%KBB)
    end if
    if (allocated(SrcParamData%CBB)) then
       LB(1:2) = lbound(SrcParamData%CBB)
@@ -4362,8 +4148,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%CBB = SrcParamData%CBB
-   else if (allocated(DstParamData%CBB)) then
-      deallocate(DstParamData%CBB)
    end if
    if (allocated(SrcParamData%CMM)) then
       LB(1:2) = lbound(SrcParamData%CMM)
@@ -4376,8 +4160,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%CMM = SrcParamData%CMM
-   else if (allocated(DstParamData%CMM)) then
-      deallocate(DstParamData%CMM)
    end if
    if (allocated(SrcParamData%MBM)) then
       LB(1:2) = lbound(SrcParamData%MBM)
@@ -4390,8 +4172,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%MBM = SrcParamData%MBM
-   else if (allocated(DstParamData%MBM)) then
-      deallocate(DstParamData%MBM)
    end if
    if (allocated(SrcParamData%PhiL_T)) then
       LB(1:2) = lbound(SrcParamData%PhiL_T)
@@ -4404,8 +4184,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%PhiL_T = SrcParamData%PhiL_T
-   else if (allocated(DstParamData%PhiL_T)) then
-      deallocate(DstParamData%PhiL_T)
    end if
    if (allocated(SrcParamData%PhiLInvOmgL2)) then
       LB(1:2) = lbound(SrcParamData%PhiLInvOmgL2)
@@ -4418,8 +4196,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%PhiLInvOmgL2 = SrcParamData%PhiLInvOmgL2
-   else if (allocated(DstParamData%PhiLInvOmgL2)) then
-      deallocate(DstParamData%PhiLInvOmgL2)
    end if
    if (allocated(SrcParamData%KLLm1)) then
       LB(1:2) = lbound(SrcParamData%KLLm1)
@@ -4432,8 +4208,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%KLLm1 = SrcParamData%KLLm1
-   else if (allocated(DstParamData%KLLm1)) then
-      deallocate(DstParamData%KLLm1)
    end if
    if (allocated(SrcParamData%AM2Jac)) then
       LB(1:2) = lbound(SrcParamData%AM2Jac)
@@ -4446,8 +4220,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%AM2Jac = SrcParamData%AM2Jac
-   else if (allocated(DstParamData%AM2Jac)) then
-      deallocate(DstParamData%AM2Jac)
    end if
    if (allocated(SrcParamData%AM2JacPiv)) then
       LB(1:1) = lbound(SrcParamData%AM2JacPiv)
@@ -4460,8 +4232,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%AM2JacPiv = SrcParamData%AM2JacPiv
-   else if (allocated(DstParamData%AM2JacPiv)) then
-      deallocate(DstParamData%AM2JacPiv)
    end if
    if (allocated(SrcParamData%TI)) then
       LB(1:2) = lbound(SrcParamData%TI)
@@ -4474,8 +4244,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%TI = SrcParamData%TI
-   else if (allocated(DstParamData%TI)) then
-      deallocate(DstParamData%TI)
    end if
    if (allocated(SrcParamData%TIreact)) then
       LB(1:2) = lbound(SrcParamData%TIreact)
@@ -4488,8 +4256,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%TIreact = SrcParamData%TIreact
-   else if (allocated(DstParamData%TIreact)) then
-      deallocate(DstParamData%TIreact)
    end if
    DstParamData%nNodes = SrcParamData%nNodes
    DstParamData%nNodes_I = SrcParamData%nNodes_I
@@ -4506,8 +4272,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%Nodes_I = SrcParamData%Nodes_I
-   else if (allocated(DstParamData%Nodes_I)) then
-      deallocate(DstParamData%Nodes_I)
    end if
    if (allocated(SrcParamData%Nodes_L)) then
       LB(1:2) = lbound(SrcParamData%Nodes_L)
@@ -4520,8 +4284,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%Nodes_L = SrcParamData%Nodes_L
-   else if (allocated(DstParamData%Nodes_L)) then
-      deallocate(DstParamData%Nodes_L)
    end if
    if (allocated(SrcParamData%Nodes_C)) then
       LB(1:2) = lbound(SrcParamData%Nodes_C)
@@ -4534,8 +4296,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%Nodes_C = SrcParamData%Nodes_C
-   else if (allocated(DstParamData%Nodes_C)) then
-      deallocate(DstParamData%Nodes_C)
    end if
    DstParamData%nDOFI__ = SrcParamData%nDOFI__
    DstParamData%nDOFI_Rb = SrcParamData%nDOFI_Rb
@@ -4560,8 +4320,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%IDI__ = SrcParamData%IDI__
-   else if (allocated(DstParamData%IDI__)) then
-      deallocate(DstParamData%IDI__)
    end if
    if (allocated(SrcParamData%IDI_Rb)) then
       LB(1:1) = lbound(SrcParamData%IDI_Rb)
@@ -4574,8 +4332,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%IDI_Rb = SrcParamData%IDI_Rb
-   else if (allocated(DstParamData%IDI_Rb)) then
-      deallocate(DstParamData%IDI_Rb)
    end if
    if (allocated(SrcParamData%IDI_F)) then
       LB(1:1) = lbound(SrcParamData%IDI_F)
@@ -4588,8 +4344,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%IDI_F = SrcParamData%IDI_F
-   else if (allocated(DstParamData%IDI_F)) then
-      deallocate(DstParamData%IDI_F)
    end if
    if (allocated(SrcParamData%IDL_L)) then
       LB(1:1) = lbound(SrcParamData%IDL_L)
@@ -4602,8 +4356,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%IDL_L = SrcParamData%IDL_L
-   else if (allocated(DstParamData%IDL_L)) then
-      deallocate(DstParamData%IDL_L)
    end if
    if (allocated(SrcParamData%IDC__)) then
       LB(1:1) = lbound(SrcParamData%IDC__)
@@ -4616,8 +4368,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%IDC__ = SrcParamData%IDC__
-   else if (allocated(DstParamData%IDC__)) then
-      deallocate(DstParamData%IDC__)
    end if
    if (allocated(SrcParamData%IDC_Rb)) then
       LB(1:1) = lbound(SrcParamData%IDC_Rb)
@@ -4630,8 +4380,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%IDC_Rb = SrcParamData%IDC_Rb
-   else if (allocated(DstParamData%IDC_Rb)) then
-      deallocate(DstParamData%IDC_Rb)
    end if
    if (allocated(SrcParamData%IDC_L)) then
       LB(1:1) = lbound(SrcParamData%IDC_L)
@@ -4644,8 +4392,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%IDC_L = SrcParamData%IDC_L
-   else if (allocated(DstParamData%IDC_L)) then
-      deallocate(DstParamData%IDC_L)
    end if
    if (allocated(SrcParamData%IDC_F)) then
       LB(1:1) = lbound(SrcParamData%IDC_F)
@@ -4658,8 +4404,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%IDC_F = SrcParamData%IDC_F
-   else if (allocated(DstParamData%IDC_F)) then
-      deallocate(DstParamData%IDC_F)
    end if
    if (allocated(SrcParamData%IDR__)) then
       LB(1:1) = lbound(SrcParamData%IDR__)
@@ -4672,8 +4416,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%IDR__ = SrcParamData%IDR__
-   else if (allocated(DstParamData%IDR__)) then
-      deallocate(DstParamData%IDR__)
    end if
    if (allocated(SrcParamData%ID__Rb)) then
       LB(1:1) = lbound(SrcParamData%ID__Rb)
@@ -4686,8 +4428,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%ID__Rb = SrcParamData%ID__Rb
-   else if (allocated(DstParamData%ID__Rb)) then
-      deallocate(DstParamData%ID__Rb)
    end if
    if (allocated(SrcParamData%ID__L)) then
       LB(1:1) = lbound(SrcParamData%ID__L)
@@ -4700,8 +4440,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%ID__L = SrcParamData%ID__L
-   else if (allocated(DstParamData%ID__L)) then
-      deallocate(DstParamData%ID__L)
    end if
    if (allocated(SrcParamData%ID__F)) then
       LB(1:1) = lbound(SrcParamData%ID__F)
@@ -4714,8 +4452,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%ID__F = SrcParamData%ID__F
-   else if (allocated(DstParamData%ID__F)) then
-      deallocate(DstParamData%ID__F)
    end if
    DstParamData%NMOutputs = SrcParamData%NMOutputs
    DstParamData%NumOuts = SrcParamData%NumOuts
@@ -4739,8 +4475,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%MoutLst)) then
-      deallocate(DstParamData%MoutLst)
    end if
    if (allocated(SrcParamData%MoutLst2)) then
       LB(1:1) = lbound(SrcParamData%MoutLst2)
@@ -4757,8 +4491,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%MoutLst2)) then
-      deallocate(DstParamData%MoutLst2)
    end if
    if (allocated(SrcParamData%MoutLst3)) then
       LB(1:1) = lbound(SrcParamData%MoutLst3)
@@ -4775,8 +4507,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%MoutLst3)) then
-      deallocate(DstParamData%MoutLst3)
    end if
    if (allocated(SrcParamData%OutParam)) then
       LB(1:1) = lbound(SrcParamData%OutParam)
@@ -4793,8 +4523,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%OutParam)) then
-      deallocate(DstParamData%OutParam)
    end if
    DstParamData%OutAll = SrcParamData%OutAll
    DstParamData%OutCBModes = SrcParamData%OutCBModes
@@ -4814,8 +4542,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
-   else if (allocated(DstParamData%Jac_u_indx)) then
-      deallocate(DstParamData%Jac_u_indx)
    end if
    if (allocated(SrcParamData%du)) then
       LB(1:1) = lbound(SrcParamData%du)
@@ -4828,8 +4554,6 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%du = SrcParamData%du
-   else if (allocated(DstParamData%du)) then
-      deallocate(DstParamData%du)
    end if
    DstParamData%dx = SrcParamData%dx
    DstParamData%Jac_ny = SrcParamData%Jac_ny
@@ -6407,8 +6131,6 @@ subroutine SD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%CableDeltaL = SrcInputData%CableDeltaL
-   else if (allocated(DstInputData%CableDeltaL)) then
-      deallocate(DstInputData%CableDeltaL)
    end if
 end subroutine
 
@@ -6503,8 +6225,6 @@ subroutine SD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-   else if (allocated(DstOutputData%WriteOutput)) then
-      deallocate(DstOutputData%WriteOutput)
    end if
 end subroutine
 

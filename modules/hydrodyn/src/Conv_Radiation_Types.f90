@@ -127,8 +127,6 @@ subroutine Conv_Rdtn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode,
          end if
       end if
       DstInitInputData%HdroAddMs = SrcInitInputData%HdroAddMs
-   else if (allocated(DstInitInputData%HdroAddMs)) then
-      deallocate(DstInitInputData%HdroAddMs)
    end if
    if (allocated(SrcInitInputData%HdroFreq)) then
       LB(1:1) = lbound(SrcInitInputData%HdroFreq)
@@ -141,8 +139,6 @@ subroutine Conv_Rdtn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode,
          end if
       end if
       DstInitInputData%HdroFreq = SrcInitInputData%HdroFreq
-   else if (allocated(DstInitInputData%HdroFreq)) then
-      deallocate(DstInitInputData%HdroFreq)
    end if
    if (allocated(SrcInitInputData%HdroDmpng)) then
       LB(1:3) = lbound(SrcInitInputData%HdroDmpng)
@@ -155,8 +151,6 @@ subroutine Conv_Rdtn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode,
          end if
       end if
       DstInitInputData%HdroDmpng = SrcInitInputData%HdroDmpng
-   else if (allocated(DstInitInputData%HdroDmpng)) then
-      deallocate(DstInitInputData%HdroDmpng)
    end if
    DstInitInputData%NInpFreq = SrcInitInputData%NInpFreq
    DstInitInputData%RdtnTMax = SrcInitInputData%RdtnTMax
@@ -376,8 +370,6 @@ subroutine Conv_Rdtn_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode,
          end if
       end if
       DstDiscStateData%XDHistory = SrcDiscStateData%XDHistory
-   else if (allocated(DstDiscStateData%XDHistory)) then
-      deallocate(DstDiscStateData%XDHistory)
    end if
    DstDiscStateData%LastTime = SrcDiscStateData%LastTime
 end subroutine
@@ -576,8 +568,6 @@ subroutine Conv_Rdtn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Er
          end if
       end if
       DstParamData%RdtnKrnl = SrcParamData%RdtnKrnl
-   else if (allocated(DstParamData%RdtnKrnl)) then
-      deallocate(DstParamData%RdtnKrnl)
    end if
    DstParamData%NStepRdtn = SrcParamData%NStepRdtn
    DstParamData%NStepRdtn1 = SrcParamData%NStepRdtn1
@@ -669,8 +659,6 @@ subroutine Conv_Rdtn_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, Er
          end if
       end if
       DstInputData%Velocity = SrcInputData%Velocity
-   else if (allocated(DstInputData%Velocity)) then
-      deallocate(DstInputData%Velocity)
    end if
 end subroutine
 
@@ -745,8 +733,6 @@ subroutine Conv_Rdtn_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat,
          end if
       end if
       DstOutputData%F_Rdtn = SrcOutputData%F_Rdtn
-   else if (allocated(DstOutputData%F_Rdtn)) then
-      deallocate(DstOutputData%F_Rdtn)
    end if
 end subroutine
 

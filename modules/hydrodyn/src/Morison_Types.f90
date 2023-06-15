@@ -570,8 +570,6 @@ subroutine Morison_CopyFilledGroupType(SrcFilledGroupTypeData, DstFilledGroupTyp
          end if
       end if
       DstFilledGroupTypeData%FillMList = SrcFilledGroupTypeData%FillMList
-   else if (allocated(DstFilledGroupTypeData%FillMList)) then
-      deallocate(DstFilledGroupTypeData%FillMList)
    end if
    DstFilledGroupTypeData%FillFSLoc = SrcFilledGroupTypeData%FillFSLoc
    DstFilledGroupTypeData%FillDensChr = SrcFilledGroupTypeData%FillDensChr
@@ -824,8 +822,6 @@ subroutine Morison_CopyMemberInputType(SrcMemberInputTypeData, DstMemberInputTyp
          end if
       end if
       DstMemberInputTypeData%NodeIndx = SrcMemberInputTypeData%NodeIndx
-   else if (allocated(DstMemberInputTypeData%NodeIndx)) then
-      deallocate(DstMemberInputTypeData%NodeIndx)
    end if
    DstMemberInputTypeData%MJointID1 = SrcMemberInputTypeData%MJointID1
    DstMemberInputTypeData%MJointID2 = SrcMemberInputTypeData%MJointID2
@@ -1070,8 +1066,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%NodeIndx = SrcMemberTypeData%NodeIndx
-   else if (allocated(DstMemberTypeData%NodeIndx)) then
-      deallocate(DstMemberTypeData%NodeIndx)
    end if
    DstMemberTypeData%MemberID = SrcMemberTypeData%MemberID
    DstMemberTypeData%NElements = SrcMemberTypeData%NElements
@@ -1092,8 +1086,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%R = SrcMemberTypeData%R
-   else if (allocated(DstMemberTypeData%R)) then
-      deallocate(DstMemberTypeData%R)
    end if
    if (allocated(SrcMemberTypeData%RMG)) then
       LB(1:1) = lbound(SrcMemberTypeData%RMG)
@@ -1106,8 +1098,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%RMG = SrcMemberTypeData%RMG
-   else if (allocated(DstMemberTypeData%RMG)) then
-      deallocate(DstMemberTypeData%RMG)
    end if
    if (allocated(SrcMemberTypeData%RMGB)) then
       LB(1:1) = lbound(SrcMemberTypeData%RMGB)
@@ -1120,8 +1110,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%RMGB = SrcMemberTypeData%RMGB
-   else if (allocated(DstMemberTypeData%RMGB)) then
-      deallocate(DstMemberTypeData%RMGB)
    end if
    if (allocated(SrcMemberTypeData%Rin)) then
       LB(1:1) = lbound(SrcMemberTypeData%Rin)
@@ -1134,8 +1122,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%Rin = SrcMemberTypeData%Rin
-   else if (allocated(DstMemberTypeData%Rin)) then
-      deallocate(DstMemberTypeData%Rin)
    end if
    if (allocated(SrcMemberTypeData%tMG)) then
       LB(1:1) = lbound(SrcMemberTypeData%tMG)
@@ -1148,8 +1134,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%tMG = SrcMemberTypeData%tMG
-   else if (allocated(DstMemberTypeData%tMG)) then
-      deallocate(DstMemberTypeData%tMG)
    end if
    if (allocated(SrcMemberTypeData%MGdensity)) then
       LB(1:1) = lbound(SrcMemberTypeData%MGdensity)
@@ -1162,8 +1146,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%MGdensity = SrcMemberTypeData%MGdensity
-   else if (allocated(DstMemberTypeData%MGdensity)) then
-      deallocate(DstMemberTypeData%MGdensity)
    end if
    if (allocated(SrcMemberTypeData%dRdl_mg)) then
       LB(1:1) = lbound(SrcMemberTypeData%dRdl_mg)
@@ -1176,8 +1158,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%dRdl_mg = SrcMemberTypeData%dRdl_mg
-   else if (allocated(DstMemberTypeData%dRdl_mg)) then
-      deallocate(DstMemberTypeData%dRdl_mg)
    end if
    if (allocated(SrcMemberTypeData%dRdl_mg_b)) then
       LB(1:1) = lbound(SrcMemberTypeData%dRdl_mg_b)
@@ -1190,8 +1170,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%dRdl_mg_b = SrcMemberTypeData%dRdl_mg_b
-   else if (allocated(DstMemberTypeData%dRdl_mg_b)) then
-      deallocate(DstMemberTypeData%dRdl_mg_b)
    end if
    if (allocated(SrcMemberTypeData%dRdl_in)) then
       LB(1:1) = lbound(SrcMemberTypeData%dRdl_in)
@@ -1204,8 +1182,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%dRdl_in = SrcMemberTypeData%dRdl_in
-   else if (allocated(DstMemberTypeData%dRdl_in)) then
-      deallocate(DstMemberTypeData%dRdl_in)
    end if
    DstMemberTypeData%Vinner = SrcMemberTypeData%Vinner
    DstMemberTypeData%Vouter = SrcMemberTypeData%Vouter
@@ -1229,8 +1205,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%floodstatus = SrcMemberTypeData%floodstatus
-   else if (allocated(DstMemberTypeData%floodstatus)) then
-      deallocate(DstMemberTypeData%floodstatus)
    end if
    if (allocated(SrcMemberTypeData%alpha)) then
       LB(1:1) = lbound(SrcMemberTypeData%alpha)
@@ -1243,8 +1217,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%alpha = SrcMemberTypeData%alpha
-   else if (allocated(DstMemberTypeData%alpha)) then
-      deallocate(DstMemberTypeData%alpha)
    end if
    if (allocated(SrcMemberTypeData%alpha_fb)) then
       LB(1:1) = lbound(SrcMemberTypeData%alpha_fb)
@@ -1257,8 +1229,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%alpha_fb = SrcMemberTypeData%alpha_fb
-   else if (allocated(DstMemberTypeData%alpha_fb)) then
-      deallocate(DstMemberTypeData%alpha_fb)
    end if
    if (allocated(SrcMemberTypeData%alpha_fb_star)) then
       LB(1:1) = lbound(SrcMemberTypeData%alpha_fb_star)
@@ -1271,8 +1241,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%alpha_fb_star = SrcMemberTypeData%alpha_fb_star
-   else if (allocated(DstMemberTypeData%alpha_fb_star)) then
-      deallocate(DstMemberTypeData%alpha_fb_star)
    end if
    if (allocated(SrcMemberTypeData%Cd)) then
       LB(1:1) = lbound(SrcMemberTypeData%Cd)
@@ -1285,8 +1253,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%Cd = SrcMemberTypeData%Cd
-   else if (allocated(DstMemberTypeData%Cd)) then
-      deallocate(DstMemberTypeData%Cd)
    end if
    if (allocated(SrcMemberTypeData%Ca)) then
       LB(1:1) = lbound(SrcMemberTypeData%Ca)
@@ -1299,8 +1265,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%Ca = SrcMemberTypeData%Ca
-   else if (allocated(DstMemberTypeData%Ca)) then
-      deallocate(DstMemberTypeData%Ca)
    end if
    if (allocated(SrcMemberTypeData%Cp)) then
       LB(1:1) = lbound(SrcMemberTypeData%Cp)
@@ -1313,8 +1277,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%Cp = SrcMemberTypeData%Cp
-   else if (allocated(DstMemberTypeData%Cp)) then
-      deallocate(DstMemberTypeData%Cp)
    end if
    if (allocated(SrcMemberTypeData%AxCd)) then
       LB(1:1) = lbound(SrcMemberTypeData%AxCd)
@@ -1327,8 +1289,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%AxCd = SrcMemberTypeData%AxCd
-   else if (allocated(DstMemberTypeData%AxCd)) then
-      deallocate(DstMemberTypeData%AxCd)
    end if
    if (allocated(SrcMemberTypeData%AxCa)) then
       LB(1:1) = lbound(SrcMemberTypeData%AxCa)
@@ -1341,8 +1301,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%AxCa = SrcMemberTypeData%AxCa
-   else if (allocated(DstMemberTypeData%AxCa)) then
-      deallocate(DstMemberTypeData%AxCa)
    end if
    if (allocated(SrcMemberTypeData%AxCp)) then
       LB(1:1) = lbound(SrcMemberTypeData%AxCp)
@@ -1355,8 +1313,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%AxCp = SrcMemberTypeData%AxCp
-   else if (allocated(DstMemberTypeData%AxCp)) then
-      deallocate(DstMemberTypeData%AxCp)
    end if
    if (allocated(SrcMemberTypeData%Cb)) then
       LB(1:1) = lbound(SrcMemberTypeData%Cb)
@@ -1369,8 +1325,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%Cb = SrcMemberTypeData%Cb
-   else if (allocated(DstMemberTypeData%Cb)) then
-      deallocate(DstMemberTypeData%Cb)
    end if
    if (allocated(SrcMemberTypeData%m_fb_l)) then
       LB(1:1) = lbound(SrcMemberTypeData%m_fb_l)
@@ -1383,8 +1337,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%m_fb_l = SrcMemberTypeData%m_fb_l
-   else if (allocated(DstMemberTypeData%m_fb_l)) then
-      deallocate(DstMemberTypeData%m_fb_l)
    end if
    if (allocated(SrcMemberTypeData%m_fb_u)) then
       LB(1:1) = lbound(SrcMemberTypeData%m_fb_u)
@@ -1397,8 +1349,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%m_fb_u = SrcMemberTypeData%m_fb_u
-   else if (allocated(DstMemberTypeData%m_fb_u)) then
-      deallocate(DstMemberTypeData%m_fb_u)
    end if
    if (allocated(SrcMemberTypeData%h_cfb_l)) then
       LB(1:1) = lbound(SrcMemberTypeData%h_cfb_l)
@@ -1411,8 +1361,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%h_cfb_l = SrcMemberTypeData%h_cfb_l
-   else if (allocated(DstMemberTypeData%h_cfb_l)) then
-      deallocate(DstMemberTypeData%h_cfb_l)
    end if
    if (allocated(SrcMemberTypeData%h_cfb_u)) then
       LB(1:1) = lbound(SrcMemberTypeData%h_cfb_u)
@@ -1425,8 +1373,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%h_cfb_u = SrcMemberTypeData%h_cfb_u
-   else if (allocated(DstMemberTypeData%h_cfb_u)) then
-      deallocate(DstMemberTypeData%h_cfb_u)
    end if
    if (allocated(SrcMemberTypeData%I_lfb_l)) then
       LB(1:1) = lbound(SrcMemberTypeData%I_lfb_l)
@@ -1439,8 +1385,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%I_lfb_l = SrcMemberTypeData%I_lfb_l
-   else if (allocated(DstMemberTypeData%I_lfb_l)) then
-      deallocate(DstMemberTypeData%I_lfb_l)
    end if
    if (allocated(SrcMemberTypeData%I_lfb_u)) then
       LB(1:1) = lbound(SrcMemberTypeData%I_lfb_u)
@@ -1453,8 +1397,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%I_lfb_u = SrcMemberTypeData%I_lfb_u
-   else if (allocated(DstMemberTypeData%I_lfb_u)) then
-      deallocate(DstMemberTypeData%I_lfb_u)
    end if
    if (allocated(SrcMemberTypeData%I_rfb_l)) then
       LB(1:1) = lbound(SrcMemberTypeData%I_rfb_l)
@@ -1467,8 +1409,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%I_rfb_l = SrcMemberTypeData%I_rfb_l
-   else if (allocated(DstMemberTypeData%I_rfb_l)) then
-      deallocate(DstMemberTypeData%I_rfb_l)
    end if
    if (allocated(SrcMemberTypeData%I_rfb_u)) then
       LB(1:1) = lbound(SrcMemberTypeData%I_rfb_u)
@@ -1481,8 +1421,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%I_rfb_u = SrcMemberTypeData%I_rfb_u
-   else if (allocated(DstMemberTypeData%I_rfb_u)) then
-      deallocate(DstMemberTypeData%I_rfb_u)
    end if
    if (allocated(SrcMemberTypeData%m_mg_l)) then
       LB(1:1) = lbound(SrcMemberTypeData%m_mg_l)
@@ -1495,8 +1433,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%m_mg_l = SrcMemberTypeData%m_mg_l
-   else if (allocated(DstMemberTypeData%m_mg_l)) then
-      deallocate(DstMemberTypeData%m_mg_l)
    end if
    if (allocated(SrcMemberTypeData%m_mg_u)) then
       LB(1:1) = lbound(SrcMemberTypeData%m_mg_u)
@@ -1509,8 +1445,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%m_mg_u = SrcMemberTypeData%m_mg_u
-   else if (allocated(DstMemberTypeData%m_mg_u)) then
-      deallocate(DstMemberTypeData%m_mg_u)
    end if
    if (allocated(SrcMemberTypeData%h_cmg_l)) then
       LB(1:1) = lbound(SrcMemberTypeData%h_cmg_l)
@@ -1523,8 +1457,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%h_cmg_l = SrcMemberTypeData%h_cmg_l
-   else if (allocated(DstMemberTypeData%h_cmg_l)) then
-      deallocate(DstMemberTypeData%h_cmg_l)
    end if
    if (allocated(SrcMemberTypeData%h_cmg_u)) then
       LB(1:1) = lbound(SrcMemberTypeData%h_cmg_u)
@@ -1537,8 +1469,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%h_cmg_u = SrcMemberTypeData%h_cmg_u
-   else if (allocated(DstMemberTypeData%h_cmg_u)) then
-      deallocate(DstMemberTypeData%h_cmg_u)
    end if
    if (allocated(SrcMemberTypeData%I_lmg_l)) then
       LB(1:1) = lbound(SrcMemberTypeData%I_lmg_l)
@@ -1551,8 +1481,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%I_lmg_l = SrcMemberTypeData%I_lmg_l
-   else if (allocated(DstMemberTypeData%I_lmg_l)) then
-      deallocate(DstMemberTypeData%I_lmg_l)
    end if
    if (allocated(SrcMemberTypeData%I_lmg_u)) then
       LB(1:1) = lbound(SrcMemberTypeData%I_lmg_u)
@@ -1565,8 +1493,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%I_lmg_u = SrcMemberTypeData%I_lmg_u
-   else if (allocated(DstMemberTypeData%I_lmg_u)) then
-      deallocate(DstMemberTypeData%I_lmg_u)
    end if
    if (allocated(SrcMemberTypeData%I_rmg_l)) then
       LB(1:1) = lbound(SrcMemberTypeData%I_rmg_l)
@@ -1579,8 +1505,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%I_rmg_l = SrcMemberTypeData%I_rmg_l
-   else if (allocated(DstMemberTypeData%I_rmg_l)) then
-      deallocate(DstMemberTypeData%I_rmg_l)
    end if
    if (allocated(SrcMemberTypeData%I_rmg_u)) then
       LB(1:1) = lbound(SrcMemberTypeData%I_rmg_u)
@@ -1593,8 +1517,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%I_rmg_u = SrcMemberTypeData%I_rmg_u
-   else if (allocated(DstMemberTypeData%I_rmg_u)) then
-      deallocate(DstMemberTypeData%I_rmg_u)
    end if
    if (allocated(SrcMemberTypeData%Cfl_fb)) then
       LB(1:1) = lbound(SrcMemberTypeData%Cfl_fb)
@@ -1607,8 +1529,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%Cfl_fb = SrcMemberTypeData%Cfl_fb
-   else if (allocated(DstMemberTypeData%Cfl_fb)) then
-      deallocate(DstMemberTypeData%Cfl_fb)
    end if
    if (allocated(SrcMemberTypeData%Cfr_fb)) then
       LB(1:1) = lbound(SrcMemberTypeData%Cfr_fb)
@@ -1621,8 +1541,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%Cfr_fb = SrcMemberTypeData%Cfr_fb
-   else if (allocated(DstMemberTypeData%Cfr_fb)) then
-      deallocate(DstMemberTypeData%Cfr_fb)
    end if
    if (allocated(SrcMemberTypeData%CM0_fb)) then
       LB(1:1) = lbound(SrcMemberTypeData%CM0_fb)
@@ -1635,8 +1553,6 @@ subroutine Morison_CopyMemberType(SrcMemberTypeData, DstMemberTypeData, CtrlCode
          end if
       end if
       DstMemberTypeData%CM0_fb = SrcMemberTypeData%CM0_fb
-   else if (allocated(DstMemberTypeData%CM0_fb)) then
-      deallocate(DstMemberTypeData%CM0_fb)
    end if
    DstMemberTypeData%MGvolume = SrcMemberTypeData%MGvolume
    DstMemberTypeData%MDivSize = SrcMemberTypeData%MDivSize
@@ -2670,8 +2586,6 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
          end if
       end if
       DstMemberLoadsData%F_D = SrcMemberLoadsData%F_D
-   else if (allocated(DstMemberLoadsData%F_D)) then
-      deallocate(DstMemberLoadsData%F_D)
    end if
    if (allocated(SrcMemberLoadsData%F_I)) then
       LB(1:2) = lbound(SrcMemberLoadsData%F_I)
@@ -2684,8 +2598,6 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
          end if
       end if
       DstMemberLoadsData%F_I = SrcMemberLoadsData%F_I
-   else if (allocated(DstMemberLoadsData%F_I)) then
-      deallocate(DstMemberLoadsData%F_I)
    end if
    if (allocated(SrcMemberLoadsData%F_A)) then
       LB(1:2) = lbound(SrcMemberLoadsData%F_A)
@@ -2698,8 +2610,6 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
          end if
       end if
       DstMemberLoadsData%F_A = SrcMemberLoadsData%F_A
-   else if (allocated(DstMemberLoadsData%F_A)) then
-      deallocate(DstMemberLoadsData%F_A)
    end if
    if (allocated(SrcMemberLoadsData%F_B)) then
       LB(1:2) = lbound(SrcMemberLoadsData%F_B)
@@ -2712,8 +2622,6 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
          end if
       end if
       DstMemberLoadsData%F_B = SrcMemberLoadsData%F_B
-   else if (allocated(DstMemberLoadsData%F_B)) then
-      deallocate(DstMemberLoadsData%F_B)
    end if
    if (allocated(SrcMemberLoadsData%F_BF)) then
       LB(1:2) = lbound(SrcMemberLoadsData%F_BF)
@@ -2726,8 +2634,6 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
          end if
       end if
       DstMemberLoadsData%F_BF = SrcMemberLoadsData%F_BF
-   else if (allocated(DstMemberLoadsData%F_BF)) then
-      deallocate(DstMemberLoadsData%F_BF)
    end if
    if (allocated(SrcMemberLoadsData%F_If)) then
       LB(1:2) = lbound(SrcMemberLoadsData%F_If)
@@ -2740,8 +2646,6 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
          end if
       end if
       DstMemberLoadsData%F_If = SrcMemberLoadsData%F_If
-   else if (allocated(DstMemberLoadsData%F_If)) then
-      deallocate(DstMemberLoadsData%F_If)
    end if
    if (allocated(SrcMemberLoadsData%F_WMG)) then
       LB(1:2) = lbound(SrcMemberLoadsData%F_WMG)
@@ -2754,8 +2658,6 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
          end if
       end if
       DstMemberLoadsData%F_WMG = SrcMemberLoadsData%F_WMG
-   else if (allocated(DstMemberLoadsData%F_WMG)) then
-      deallocate(DstMemberLoadsData%F_WMG)
    end if
    if (allocated(SrcMemberLoadsData%F_IMG)) then
       LB(1:2) = lbound(SrcMemberLoadsData%F_IMG)
@@ -2768,8 +2670,6 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
          end if
       end if
       DstMemberLoadsData%F_IMG = SrcMemberLoadsData%F_IMG
-   else if (allocated(DstMemberLoadsData%F_IMG)) then
-      deallocate(DstMemberLoadsData%F_IMG)
    end if
    if (allocated(SrcMemberLoadsData%FV)) then
       LB(1:2) = lbound(SrcMemberLoadsData%FV)
@@ -2782,8 +2682,6 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
          end if
       end if
       DstMemberLoadsData%FV = SrcMemberLoadsData%FV
-   else if (allocated(DstMemberLoadsData%FV)) then
-      deallocate(DstMemberLoadsData%FV)
    end if
    if (allocated(SrcMemberLoadsData%FA)) then
       LB(1:2) = lbound(SrcMemberLoadsData%FA)
@@ -2796,8 +2694,6 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
          end if
       end if
       DstMemberLoadsData%FA = SrcMemberLoadsData%FA
-   else if (allocated(DstMemberLoadsData%FA)) then
-      deallocate(DstMemberLoadsData%FA)
    end if
    if (allocated(SrcMemberLoadsData%F_DP)) then
       LB(1:2) = lbound(SrcMemberLoadsData%F_DP)
@@ -2810,8 +2706,6 @@ subroutine Morison_CopyMemberLoads(SrcMemberLoadsData, DstMemberLoadsData, CtrlC
          end if
       end if
       DstMemberLoadsData%F_DP = SrcMemberLoadsData%F_DP
-   else if (allocated(DstMemberLoadsData%F_DP)) then
-      deallocate(DstMemberLoadsData%F_DP)
    end if
 end subroutine
 
@@ -3310,8 +3204,6 @@ subroutine Morison_CopyMOutput(SrcMOutputData, DstMOutputData, CtrlCode, ErrStat
          end if
       end if
       DstMOutputData%NodeLocs = SrcMOutputData%NodeLocs
-   else if (allocated(DstMOutputData%NodeLocs)) then
-      deallocate(DstMOutputData%NodeLocs)
    end if
    DstMOutputData%MemberIDIndx = SrcMOutputData%MemberIDIndx
    if (allocated(SrcMOutputData%MeshIndx1)) then
@@ -3325,8 +3217,6 @@ subroutine Morison_CopyMOutput(SrcMOutputData, DstMOutputData, CtrlCode, ErrStat
          end if
       end if
       DstMOutputData%MeshIndx1 = SrcMOutputData%MeshIndx1
-   else if (allocated(DstMOutputData%MeshIndx1)) then
-      deallocate(DstMOutputData%MeshIndx1)
    end if
    if (allocated(SrcMOutputData%MeshIndx2)) then
       LB(1:1) = lbound(SrcMOutputData%MeshIndx2)
@@ -3339,8 +3229,6 @@ subroutine Morison_CopyMOutput(SrcMOutputData, DstMOutputData, CtrlCode, ErrStat
          end if
       end if
       DstMOutputData%MeshIndx2 = SrcMOutputData%MeshIndx2
-   else if (allocated(DstMOutputData%MeshIndx2)) then
-      deallocate(DstMOutputData%MeshIndx2)
    end if
    if (allocated(SrcMOutputData%MemberIndx1)) then
       LB(1:1) = lbound(SrcMOutputData%MemberIndx1)
@@ -3353,8 +3241,6 @@ subroutine Morison_CopyMOutput(SrcMOutputData, DstMOutputData, CtrlCode, ErrStat
          end if
       end if
       DstMOutputData%MemberIndx1 = SrcMOutputData%MemberIndx1
-   else if (allocated(DstMOutputData%MemberIndx1)) then
-      deallocate(DstMOutputData%MemberIndx1)
    end if
    if (allocated(SrcMOutputData%MemberIndx2)) then
       LB(1:1) = lbound(SrcMOutputData%MemberIndx2)
@@ -3367,8 +3253,6 @@ subroutine Morison_CopyMOutput(SrcMOutputData, DstMOutputData, CtrlCode, ErrStat
          end if
       end if
       DstMOutputData%MemberIndx2 = SrcMOutputData%MemberIndx2
-   else if (allocated(DstMOutputData%MemberIndx2)) then
-      deallocate(DstMOutputData%MemberIndx2)
    end if
    if (allocated(SrcMOutputData%s)) then
       LB(1:1) = lbound(SrcMOutputData%s)
@@ -3381,8 +3265,6 @@ subroutine Morison_CopyMOutput(SrcMOutputData, DstMOutputData, CtrlCode, ErrStat
          end if
       end if
       DstMOutputData%s = SrcMOutputData%s
-   else if (allocated(DstMOutputData%s)) then
-      deallocate(DstMOutputData%s)
    end if
 end subroutine
 
@@ -3633,8 +3515,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitInputData%InpJoints)) then
-      deallocate(DstInitInputData%InpJoints)
    end if
    if (allocated(SrcInitInputData%Nodes)) then
       LB(1:1) = lbound(SrcInitInputData%Nodes)
@@ -3651,8 +3531,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitInputData%Nodes)) then
-      deallocate(DstInitInputData%Nodes)
    end if
    DstInitInputData%NAxCoefs = SrcInitInputData%NAxCoefs
    if (allocated(SrcInitInputData%AxialCoefs)) then
@@ -3670,8 +3548,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitInputData%AxialCoefs)) then
-      deallocate(DstInitInputData%AxialCoefs)
    end if
    DstInitInputData%NPropSets = SrcInitInputData%NPropSets
    if (allocated(SrcInitInputData%MPropSets)) then
@@ -3689,8 +3565,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitInputData%MPropSets)) then
-      deallocate(DstInitInputData%MPropSets)
    end if
    DstInitInputData%SimplCd = SrcInitInputData%SimplCd
    DstInitInputData%SimplCdMG = SrcInitInputData%SimplCdMG
@@ -3723,8 +3597,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitInputData%CoefDpths)) then
-      deallocate(DstInitInputData%CoefDpths)
    end if
    DstInitInputData%NCoefMembers = SrcInitInputData%NCoefMembers
    if (allocated(SrcInitInputData%CoefMembers)) then
@@ -3742,8 +3614,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitInputData%CoefMembers)) then
-      deallocate(DstInitInputData%CoefMembers)
    end if
    DstInitInputData%NMembers = SrcInitInputData%NMembers
    if (allocated(SrcInitInputData%InpMembers)) then
@@ -3761,8 +3631,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitInputData%InpMembers)) then
-      deallocate(DstInitInputData%InpMembers)
    end if
    DstInitInputData%NFillGroups = SrcInitInputData%NFillGroups
    if (allocated(SrcInitInputData%FilledGroups)) then
@@ -3780,8 +3648,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitInputData%FilledGroups)) then
-      deallocate(DstInitInputData%FilledGroups)
    end if
    DstInitInputData%NMGDepths = SrcInitInputData%NMGDepths
    if (allocated(SrcInitInputData%MGDepths)) then
@@ -3799,8 +3665,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitInputData%MGDepths)) then
-      deallocate(DstInitInputData%MGDepths)
    end if
    DstInitInputData%MGTop = SrcInitInputData%MGTop
    DstInitInputData%MGBottom = SrcInitInputData%MGBottom
@@ -3820,8 +3684,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitInputData%MOutLst)) then
-      deallocate(DstInitInputData%MOutLst)
    end if
    DstInitInputData%NJOutputs = SrcInitInputData%NJOutputs
    if (allocated(SrcInitInputData%JOutLst)) then
@@ -3839,8 +3701,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitInputData%JOutLst)) then
-      deallocate(DstInitInputData%JOutLst)
    end if
    if (allocated(SrcInitInputData%OutList)) then
       LB(1:1) = lbound(SrcInitInputData%OutList)
@@ -3853,8 +3713,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
          end if
       end if
       DstInitInputData%OutList = SrcInitInputData%OutList
-   else if (allocated(DstInitInputData%OutList)) then
-      deallocate(DstInitInputData%OutList)
    end if
    DstInitInputData%NumOuts = SrcInitInputData%NumOuts
    DstInitInputData%UnSum = SrcInitInputData%UnSum
@@ -4453,8 +4311,6 @@ subroutine Morison_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
          end if
       end if
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
-      deallocate(DstInitOutputData%WriteOutputHdr)
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
@@ -4467,8 +4323,6 @@ subroutine Morison_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
          end if
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
-      deallocate(DstInitOutputData%WriteOutputUnt)
    end if
 end subroutine
 
@@ -4604,8 +4458,6 @@ subroutine Morison_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, E
          end if
       end if
       DstDiscStateData%V_rel_n_FiltStat = SrcDiscStateData%V_rel_n_FiltStat
-   else if (allocated(DstDiscStateData%V_rel_n_FiltStat)) then
-      deallocate(DstDiscStateData%V_rel_n_FiltStat)
    end if
 end subroutine
 
@@ -4760,8 +4612,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%FV = SrcMiscData%FV
-   else if (allocated(DstMiscData%FV)) then
-      deallocate(DstMiscData%FV)
    end if
    if (allocated(SrcMiscData%FA)) then
       LB(1:2) = lbound(SrcMiscData%FA)
@@ -4774,8 +4624,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%FA = SrcMiscData%FA
-   else if (allocated(DstMiscData%FA)) then
-      deallocate(DstMiscData%FA)
    end if
    if (allocated(SrcMiscData%FAMCF)) then
       LB(1:2) = lbound(SrcMiscData%FAMCF)
@@ -4788,8 +4636,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%FAMCF = SrcMiscData%FAMCF
-   else if (allocated(DstMiscData%FAMCF)) then
-      deallocate(DstMiscData%FAMCF)
    end if
    if (allocated(SrcMiscData%FDynP)) then
       LB(1:1) = lbound(SrcMiscData%FDynP)
@@ -4802,8 +4648,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%FDynP = SrcMiscData%FDynP
-   else if (allocated(DstMiscData%FDynP)) then
-      deallocate(DstMiscData%FDynP)
    end if
    if (allocated(SrcMiscData%WaveElev)) then
       LB(1:1) = lbound(SrcMiscData%WaveElev)
@@ -4816,8 +4660,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%WaveElev = SrcMiscData%WaveElev
-   else if (allocated(DstMiscData%WaveElev)) then
-      deallocate(DstMiscData%WaveElev)
    end if
    if (allocated(SrcMiscData%WaveElev1)) then
       LB(1:1) = lbound(SrcMiscData%WaveElev1)
@@ -4830,8 +4672,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%WaveElev1 = SrcMiscData%WaveElev1
-   else if (allocated(DstMiscData%WaveElev1)) then
-      deallocate(DstMiscData%WaveElev1)
    end if
    if (allocated(SrcMiscData%WaveElev2)) then
       LB(1:1) = lbound(SrcMiscData%WaveElev2)
@@ -4844,8 +4684,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%WaveElev2 = SrcMiscData%WaveElev2
-   else if (allocated(DstMiscData%WaveElev2)) then
-      deallocate(DstMiscData%WaveElev2)
    end if
    if (allocated(SrcMiscData%vrel)) then
       LB(1:2) = lbound(SrcMiscData%vrel)
@@ -4858,8 +4696,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%vrel = SrcMiscData%vrel
-   else if (allocated(DstMiscData%vrel)) then
-      deallocate(DstMiscData%vrel)
    end if
    if (allocated(SrcMiscData%nodeInWater)) then
       LB(1:1) = lbound(SrcMiscData%nodeInWater)
@@ -4872,8 +4708,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%nodeInWater = SrcMiscData%nodeInWater
-   else if (allocated(DstMiscData%nodeInWater)) then
-      deallocate(DstMiscData%nodeInWater)
    end if
    if (allocated(SrcMiscData%memberLoads)) then
       LB(1:1) = lbound(SrcMiscData%memberLoads)
@@ -4890,8 +4724,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%memberLoads)) then
-      deallocate(DstMiscData%memberLoads)
    end if
    if (allocated(SrcMiscData%F_B_End)) then
       LB(1:2) = lbound(SrcMiscData%F_B_End)
@@ -4904,8 +4736,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%F_B_End = SrcMiscData%F_B_End
-   else if (allocated(DstMiscData%F_B_End)) then
-      deallocate(DstMiscData%F_B_End)
    end if
    if (allocated(SrcMiscData%F_D_End)) then
       LB(1:2) = lbound(SrcMiscData%F_D_End)
@@ -4918,8 +4748,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%F_D_End = SrcMiscData%F_D_End
-   else if (allocated(DstMiscData%F_D_End)) then
-      deallocate(DstMiscData%F_D_End)
    end if
    if (allocated(SrcMiscData%F_I_End)) then
       LB(1:2) = lbound(SrcMiscData%F_I_End)
@@ -4932,8 +4760,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%F_I_End = SrcMiscData%F_I_End
-   else if (allocated(DstMiscData%F_I_End)) then
-      deallocate(DstMiscData%F_I_End)
    end if
    if (allocated(SrcMiscData%F_IMG_End)) then
       LB(1:2) = lbound(SrcMiscData%F_IMG_End)
@@ -4946,8 +4772,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%F_IMG_End = SrcMiscData%F_IMG_End
-   else if (allocated(DstMiscData%F_IMG_End)) then
-      deallocate(DstMiscData%F_IMG_End)
    end if
    if (allocated(SrcMiscData%F_A_End)) then
       LB(1:2) = lbound(SrcMiscData%F_A_End)
@@ -4960,8 +4784,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%F_A_End = SrcMiscData%F_A_End
-   else if (allocated(DstMiscData%F_A_End)) then
-      deallocate(DstMiscData%F_A_End)
    end if
    if (allocated(SrcMiscData%F_BF_End)) then
       LB(1:2) = lbound(SrcMiscData%F_BF_End)
@@ -4974,8 +4796,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%F_BF_End = SrcMiscData%F_BF_End
-   else if (allocated(DstMiscData%F_BF_End)) then
-      deallocate(DstMiscData%F_BF_End)
    end if
    if (allocated(SrcMiscData%V_rel_n)) then
       LB(1:1) = lbound(SrcMiscData%V_rel_n)
@@ -4988,8 +4808,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%V_rel_n = SrcMiscData%V_rel_n
-   else if (allocated(DstMiscData%V_rel_n)) then
-      deallocate(DstMiscData%V_rel_n)
    end if
    if (allocated(SrcMiscData%V_rel_n_HiPass)) then
       LB(1:1) = lbound(SrcMiscData%V_rel_n_HiPass)
@@ -5002,8 +4820,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%V_rel_n_HiPass = SrcMiscData%V_rel_n_HiPass
-   else if (allocated(DstMiscData%V_rel_n_HiPass)) then
-      deallocate(DstMiscData%V_rel_n_HiPass)
    end if
    DstMiscData%LastIndWave = SrcMiscData%LastIndWave
 end subroutine
@@ -5488,8 +5304,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%Members)) then
-      deallocate(DstParamData%Members)
    end if
    DstParamData%NNodes = SrcParamData%NNodes
    DstParamData%NJoints = SrcParamData%NJoints
@@ -5504,8 +5318,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%I_MG_End = SrcParamData%I_MG_End
-   else if (allocated(DstParamData%I_MG_End)) then
-      deallocate(DstParamData%I_MG_End)
    end if
    if (allocated(SrcParamData%An_End)) then
       LB(1:2) = lbound(SrcParamData%An_End)
@@ -5518,8 +5330,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%An_End = SrcParamData%An_End
-   else if (allocated(DstParamData%An_End)) then
-      deallocate(DstParamData%An_End)
    end if
    if (allocated(SrcParamData%DragConst_End)) then
       LB(1:1) = lbound(SrcParamData%DragConst_End)
@@ -5532,8 +5342,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%DragConst_End = SrcParamData%DragConst_End
-   else if (allocated(DstParamData%DragConst_End)) then
-      deallocate(DstParamData%DragConst_End)
    end if
    if (allocated(SrcParamData%VRelNFiltConst)) then
       LB(1:1) = lbound(SrcParamData%VRelNFiltConst)
@@ -5546,8 +5354,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%VRelNFiltConst = SrcParamData%VRelNFiltConst
-   else if (allocated(DstParamData%VRelNFiltConst)) then
-      deallocate(DstParamData%VRelNFiltConst)
    end if
    if (allocated(SrcParamData%DragMod_End)) then
       LB(1:1) = lbound(SrcParamData%DragMod_End)
@@ -5560,8 +5366,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%DragMod_End = SrcParamData%DragMod_End
-   else if (allocated(DstParamData%DragMod_End)) then
-      deallocate(DstParamData%DragMod_End)
    end if
    if (allocated(SrcParamData%DragLoFSc_End)) then
       LB(1:1) = lbound(SrcParamData%DragLoFSc_End)
@@ -5574,8 +5378,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%DragLoFSc_End = SrcParamData%DragLoFSc_End
-   else if (allocated(DstParamData%DragLoFSc_End)) then
-      deallocate(DstParamData%DragLoFSc_End)
    end if
    if (allocated(SrcParamData%F_WMG_End)) then
       LB(1:2) = lbound(SrcParamData%F_WMG_End)
@@ -5588,8 +5390,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%F_WMG_End = SrcParamData%F_WMG_End
-   else if (allocated(DstParamData%F_WMG_End)) then
-      deallocate(DstParamData%F_WMG_End)
    end if
    if (allocated(SrcParamData%DP_Const_End)) then
       LB(1:2) = lbound(SrcParamData%DP_Const_End)
@@ -5602,8 +5402,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%DP_Const_End = SrcParamData%DP_Const_End
-   else if (allocated(DstParamData%DP_Const_End)) then
-      deallocate(DstParamData%DP_Const_End)
    end if
    if (allocated(SrcParamData%Mass_MG_End)) then
       LB(1:1) = lbound(SrcParamData%Mass_MG_End)
@@ -5616,8 +5414,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%Mass_MG_End = SrcParamData%Mass_MG_End
-   else if (allocated(DstParamData%Mass_MG_End)) then
-      deallocate(DstParamData%Mass_MG_End)
    end if
    if (allocated(SrcParamData%AM_End)) then
       LB(1:3) = lbound(SrcParamData%AM_End)
@@ -5630,8 +5426,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%AM_End = SrcParamData%AM_End
-   else if (allocated(DstParamData%AM_End)) then
-      deallocate(DstParamData%AM_End)
    end if
    DstParamData%NStepWave = SrcParamData%NStepWave
    DstParamData%NMOutputs = SrcParamData%NMOutputs
@@ -5650,8 +5444,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%MOutLst)) then
-      deallocate(DstParamData%MOutLst)
    end if
    DstParamData%NJOutputs = SrcParamData%NJOutputs
    if (allocated(SrcParamData%JOutLst)) then
@@ -5669,8 +5461,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%JOutLst)) then
-      deallocate(DstParamData%JOutLst)
    end if
    if (allocated(SrcParamData%OutParam)) then
       LB(1:1) = lbound(SrcParamData%OutParam)
@@ -5687,8 +5477,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%OutParam)) then
-      deallocate(DstParamData%OutParam)
    end if
    DstParamData%NumOuts = SrcParamData%NumOuts
    DstParamData%WaveStMod = SrcParamData%WaveStMod
@@ -6229,8 +6017,6 @@ subroutine Morison_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
          end if
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-   else if (allocated(DstOutputData%WriteOutput)) then
-      deallocate(DstOutputData%WriteOutput)
    end if
 end subroutine
 

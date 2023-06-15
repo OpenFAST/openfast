@@ -269,9 +269,6 @@ subroutine AWAE_CopyHighWindGrid(SrcHighWindGridData, DstHighWindGridData, CtrlC
          end if
       end if
       DstHighWindGridData%data = SrcHighWindGridData%data
-   else if (associated(DstHighWindGridData%data)) then
-      deallocate(DstHighWindGridData%data)
-      nullify(DstHighWindGridData%data)
    end if
 end subroutine
 
@@ -448,8 +445,6 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
          end if
       end if
       DstInputFileTypeData%OutDisWindZ = SrcInputFileTypeData%OutDisWindZ
-   else if (allocated(DstInputFileTypeData%OutDisWindZ)) then
-      deallocate(DstInputFileTypeData%OutDisWindZ)
    end if
    DstInputFileTypeData%NOutDisWindYZ = SrcInputFileTypeData%NOutDisWindYZ
    if (allocated(SrcInputFileTypeData%OutDisWindX)) then
@@ -463,8 +458,6 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
          end if
       end if
       DstInputFileTypeData%OutDisWindX = SrcInputFileTypeData%OutDisWindX
-   else if (allocated(DstInputFileTypeData%OutDisWindX)) then
-      deallocate(DstInputFileTypeData%OutDisWindX)
    end if
    DstInputFileTypeData%NOutDisWindXZ = SrcInputFileTypeData%NOutDisWindXZ
    if (allocated(SrcInputFileTypeData%OutDisWindY)) then
@@ -478,8 +471,6 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
          end if
       end if
       DstInputFileTypeData%OutDisWindY = SrcInputFileTypeData%OutDisWindY
-   else if (allocated(DstInputFileTypeData%OutDisWindY)) then
-      deallocate(DstInputFileTypeData%OutDisWindY)
    end if
    DstInputFileTypeData%WrDisDT = SrcInputFileTypeData%WrDisDT
    DstInputFileTypeData%ChkWndFiles = SrcInputFileTypeData%ChkWndFiles
@@ -499,8 +490,6 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
          end if
       end if
       DstInputFileTypeData%X0_high = SrcInputFileTypeData%X0_high
-   else if (allocated(DstInputFileTypeData%X0_high)) then
-      deallocate(DstInputFileTypeData%X0_high)
    end if
    if (allocated(SrcInputFileTypeData%Y0_high)) then
       LB(1:1) = lbound(SrcInputFileTypeData%Y0_high)
@@ -513,8 +502,6 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
          end if
       end if
       DstInputFileTypeData%Y0_high = SrcInputFileTypeData%Y0_high
-   else if (allocated(DstInputFileTypeData%Y0_high)) then
-      deallocate(DstInputFileTypeData%Y0_high)
    end if
    if (allocated(SrcInputFileTypeData%Z0_high)) then
       LB(1:1) = lbound(SrcInputFileTypeData%Z0_high)
@@ -527,8 +514,6 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
          end if
       end if
       DstInputFileTypeData%Z0_high = SrcInputFileTypeData%Z0_high
-   else if (allocated(DstInputFileTypeData%Z0_high)) then
-      deallocate(DstInputFileTypeData%Z0_high)
    end if
    if (allocated(SrcInputFileTypeData%dX_high)) then
       LB(1:1) = lbound(SrcInputFileTypeData%dX_high)
@@ -541,8 +526,6 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
          end if
       end if
       DstInputFileTypeData%dX_high = SrcInputFileTypeData%dX_high
-   else if (allocated(DstInputFileTypeData%dX_high)) then
-      deallocate(DstInputFileTypeData%dX_high)
    end if
    if (allocated(SrcInputFileTypeData%dY_high)) then
       LB(1:1) = lbound(SrcInputFileTypeData%dY_high)
@@ -555,8 +538,6 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
          end if
       end if
       DstInputFileTypeData%dY_high = SrcInputFileTypeData%dY_high
-   else if (allocated(DstInputFileTypeData%dY_high)) then
-      deallocate(DstInputFileTypeData%dY_high)
    end if
    if (allocated(SrcInputFileTypeData%dZ_high)) then
       LB(1:1) = lbound(SrcInputFileTypeData%dZ_high)
@@ -569,8 +550,6 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
          end if
       end if
       DstInputFileTypeData%dZ_high = SrcInputFileTypeData%dZ_high
-   else if (allocated(DstInputFileTypeData%dZ_high)) then
-      deallocate(DstInputFileTypeData%dZ_high)
    end if
    DstInputFileTypeData%nX_high = SrcInputFileTypeData%nX_high
    DstInputFileTypeData%nY_high = SrcInputFileTypeData%nY_high
@@ -595,8 +574,6 @@ subroutine AWAE_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ct
          end if
       end if
       DstInputFileTypeData%WT_Position = SrcInputFileTypeData%WT_Position
-   else if (allocated(DstInputFileTypeData%WT_Position)) then
-      deallocate(DstInputFileTypeData%WT_Position)
    end if
    DstInputFileTypeData%Mod_Projection = SrcInputFileTypeData%Mod_Projection
 end subroutine
@@ -1023,8 +1000,6 @@ subroutine AWAE_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%X0_high = SrcInitOutputData%X0_high
-   else if (allocated(DstInitOutputData%X0_high)) then
-      deallocate(DstInitOutputData%X0_high)
    end if
    if (allocated(SrcInitOutputData%Y0_high)) then
       LB(1:1) = lbound(SrcInitOutputData%Y0_high)
@@ -1037,8 +1012,6 @@ subroutine AWAE_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%Y0_high = SrcInitOutputData%Y0_high
-   else if (allocated(DstInitOutputData%Y0_high)) then
-      deallocate(DstInitOutputData%Y0_high)
    end if
    if (allocated(SrcInitOutputData%Z0_high)) then
       LB(1:1) = lbound(SrcInitOutputData%Z0_high)
@@ -1051,8 +1024,6 @@ subroutine AWAE_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%Z0_high = SrcInitOutputData%Z0_high
-   else if (allocated(DstInitOutputData%Z0_high)) then
-      deallocate(DstInitOutputData%Z0_high)
    end if
    if (allocated(SrcInitOutputData%dX_high)) then
       LB(1:1) = lbound(SrcInitOutputData%dX_high)
@@ -1065,8 +1036,6 @@ subroutine AWAE_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%dX_high = SrcInitOutputData%dX_high
-   else if (allocated(DstInitOutputData%dX_high)) then
-      deallocate(DstInitOutputData%dX_high)
    end if
    if (allocated(SrcInitOutputData%dY_high)) then
       LB(1:1) = lbound(SrcInitOutputData%dY_high)
@@ -1079,8 +1048,6 @@ subroutine AWAE_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%dY_high = SrcInitOutputData%dY_high
-   else if (allocated(DstInitOutputData%dY_high)) then
-      deallocate(DstInitOutputData%dY_high)
    end if
    if (allocated(SrcInitOutputData%dZ_high)) then
       LB(1:1) = lbound(SrcInitOutputData%dZ_high)
@@ -1093,8 +1060,6 @@ subroutine AWAE_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%dZ_high = SrcInitOutputData%dZ_high
-   else if (allocated(DstInitOutputData%dZ_high)) then
-      deallocate(DstInitOutputData%dZ_high)
    end if
    DstInitOutputData%nX_high = SrcInitOutputData%nX_high
    DstInitOutputData%nY_high = SrcInitOutputData%nY_high
@@ -1123,8 +1088,6 @@ subroutine AWAE_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstInitOutputData%Vdist_High)) then
-      deallocate(DstInitOutputData%Vdist_High)
    end if
 end subroutine
 
@@ -1395,8 +1358,6 @@ subroutine AWAE_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrS
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstContStateData%IfW)) then
-      deallocate(DstContStateData%IfW)
    end if
 end subroutine
 
@@ -1495,8 +1456,6 @@ subroutine AWAE_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrS
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstDiscStateData%IfW)) then
-      deallocate(DstDiscStateData%IfW)
    end if
 end subroutine
 
@@ -1595,8 +1554,6 @@ subroutine AWAE_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstConstrStateData%IfW)) then
-      deallocate(DstConstrStateData%IfW)
    end if
 end subroutine
 
@@ -1695,8 +1652,6 @@ subroutine AWAE_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, E
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstOtherStateData%IfW)) then
-      deallocate(DstOtherStateData%IfW)
    end if
 end subroutine
 
@@ -1791,8 +1746,6 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%Vamb_low = SrcMiscData%Vamb_low
-   else if (allocated(DstMiscData%Vamb_low)) then
-      deallocate(DstMiscData%Vamb_low)
    end if
    if (allocated(SrcMiscData%Vamb_lowpol)) then
       LB(1:2) = lbound(SrcMiscData%Vamb_lowpol)
@@ -1805,8 +1758,6 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%Vamb_lowpol = SrcMiscData%Vamb_lowpol
-   else if (allocated(DstMiscData%Vamb_lowpol)) then
-      deallocate(DstMiscData%Vamb_lowpol)
    end if
    if (allocated(SrcMiscData%Vdist_low)) then
       LB(1:4) = lbound(SrcMiscData%Vdist_low)
@@ -1819,8 +1770,6 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%Vdist_low = SrcMiscData%Vdist_low
-   else if (allocated(DstMiscData%Vdist_low)) then
-      deallocate(DstMiscData%Vdist_low)
    end if
    if (allocated(SrcMiscData%Vdist_low_full)) then
       LB(1:4) = lbound(SrcMiscData%Vdist_low_full)
@@ -1833,8 +1782,6 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%Vdist_low_full = SrcMiscData%Vdist_low_full
-   else if (allocated(DstMiscData%Vdist_low_full)) then
-      deallocate(DstMiscData%Vdist_low_full)
    end if
    if (allocated(SrcMiscData%Vamb_High)) then
       LB(1:1) = lbound(SrcMiscData%Vamb_High)
@@ -1851,8 +1798,6 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%Vamb_High)) then
-      deallocate(DstMiscData%Vamb_High)
    end if
    if (allocated(SrcMiscData%parallelFlag)) then
       LB(1:2) = lbound(SrcMiscData%parallelFlag)
@@ -1865,8 +1810,6 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%parallelFlag = SrcMiscData%parallelFlag
-   else if (allocated(DstMiscData%parallelFlag)) then
-      deallocate(DstMiscData%parallelFlag)
    end if
    if (allocated(SrcMiscData%r_s)) then
       LB(1:2) = lbound(SrcMiscData%r_s)
@@ -1879,8 +1822,6 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%r_s = SrcMiscData%r_s
-   else if (allocated(DstMiscData%r_s)) then
-      deallocate(DstMiscData%r_s)
    end if
    if (allocated(SrcMiscData%r_e)) then
       LB(1:2) = lbound(SrcMiscData%r_e)
@@ -1893,8 +1834,6 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%r_e = SrcMiscData%r_e
-   else if (allocated(DstMiscData%r_e)) then
-      deallocate(DstMiscData%r_e)
    end if
    if (allocated(SrcMiscData%rhat_s)) then
       LB(1:3) = lbound(SrcMiscData%rhat_s)
@@ -1907,8 +1846,6 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%rhat_s = SrcMiscData%rhat_s
-   else if (allocated(DstMiscData%rhat_s)) then
-      deallocate(DstMiscData%rhat_s)
    end if
    if (allocated(SrcMiscData%rhat_e)) then
       LB(1:3) = lbound(SrcMiscData%rhat_e)
@@ -1921,8 +1858,6 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%rhat_e = SrcMiscData%rhat_e
-   else if (allocated(DstMiscData%rhat_e)) then
-      deallocate(DstMiscData%rhat_e)
    end if
    if (allocated(SrcMiscData%pvec_cs)) then
       LB(1:3) = lbound(SrcMiscData%pvec_cs)
@@ -1935,8 +1870,6 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%pvec_cs = SrcMiscData%pvec_cs
-   else if (allocated(DstMiscData%pvec_cs)) then
-      deallocate(DstMiscData%pvec_cs)
    end if
    if (allocated(SrcMiscData%pvec_ce)) then
       LB(1:3) = lbound(SrcMiscData%pvec_ce)
@@ -1949,8 +1882,6 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%pvec_ce = SrcMiscData%pvec_ce
-   else if (allocated(DstMiscData%pvec_ce)) then
-      deallocate(DstMiscData%pvec_ce)
    end if
    if (allocated(SrcMiscData%outVizXYPlane)) then
       LB(1:4) = lbound(SrcMiscData%outVizXYPlane)
@@ -1963,8 +1894,6 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%outVizXYPlane = SrcMiscData%outVizXYPlane
-   else if (allocated(DstMiscData%outVizXYPlane)) then
-      deallocate(DstMiscData%outVizXYPlane)
    end if
    if (allocated(SrcMiscData%outVizYZPlane)) then
       LB(1:4) = lbound(SrcMiscData%outVizYZPlane)
@@ -1977,8 +1906,6 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%outVizYZPlane = SrcMiscData%outVizYZPlane
-   else if (allocated(DstMiscData%outVizYZPlane)) then
-      deallocate(DstMiscData%outVizYZPlane)
    end if
    if (allocated(SrcMiscData%outVizXZPlane)) then
       LB(1:4) = lbound(SrcMiscData%outVizXZPlane)
@@ -1991,8 +1918,6 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%outVizXZPlane = SrcMiscData%outVizXZPlane
-   else if (allocated(DstMiscData%outVizXZPlane)) then
-      deallocate(DstMiscData%outVizXZPlane)
    end if
    if (allocated(SrcMiscData%IfW)) then
       LB(1:1) = lbound(SrcMiscData%IfW)
@@ -2009,8 +1934,6 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%IfW)) then
-      deallocate(DstMiscData%IfW)
    end if
    call InflowWind_CopyInput(SrcMiscData%u_IfW_Low, DstMiscData%u_IfW_Low, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2478,8 +2401,6 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%y = SrcParamData%y
-   else if (allocated(DstParamData%y)) then
-      deallocate(DstParamData%y)
    end if
    if (allocated(SrcParamData%z)) then
       LB(1:1) = lbound(SrcParamData%z)
@@ -2492,8 +2413,6 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%z = SrcParamData%z
-   else if (allocated(DstParamData%z)) then
-      deallocate(DstParamData%z)
    end if
    DstParamData%Mod_AmbWind = SrcParamData%Mod_AmbWind
    DstParamData%nX_low = SrcParamData%nX_low
@@ -2520,8 +2439,6 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%X0_high = SrcParamData%X0_high
-   else if (allocated(DstParamData%X0_high)) then
-      deallocate(DstParamData%X0_high)
    end if
    if (allocated(SrcParamData%Y0_high)) then
       LB(1:1) = lbound(SrcParamData%Y0_high)
@@ -2534,8 +2451,6 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%Y0_high = SrcParamData%Y0_high
-   else if (allocated(DstParamData%Y0_high)) then
-      deallocate(DstParamData%Y0_high)
    end if
    if (allocated(SrcParamData%Z0_high)) then
       LB(1:1) = lbound(SrcParamData%Z0_high)
@@ -2548,8 +2463,6 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%Z0_high = SrcParamData%Z0_high
-   else if (allocated(DstParamData%Z0_high)) then
-      deallocate(DstParamData%Z0_high)
    end if
    if (allocated(SrcParamData%dX_high)) then
       LB(1:1) = lbound(SrcParamData%dX_high)
@@ -2562,8 +2475,6 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%dX_high = SrcParamData%dX_high
-   else if (allocated(DstParamData%dX_high)) then
-      deallocate(DstParamData%dX_high)
    end if
    if (allocated(SrcParamData%dY_high)) then
       LB(1:1) = lbound(SrcParamData%dY_high)
@@ -2576,8 +2487,6 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%dY_high = SrcParamData%dY_high
-   else if (allocated(DstParamData%dY_high)) then
-      deallocate(DstParamData%dY_high)
    end if
    if (allocated(SrcParamData%dZ_high)) then
       LB(1:1) = lbound(SrcParamData%dZ_high)
@@ -2590,8 +2499,6 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%dZ_high = SrcParamData%dZ_high
-   else if (allocated(DstParamData%dZ_high)) then
-      deallocate(DstParamData%dZ_high)
    end if
    DstParamData%nX_high = SrcParamData%nX_high
    DstParamData%nY_high = SrcParamData%nY_high
@@ -2607,8 +2514,6 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%Grid_low = SrcParamData%Grid_low
-   else if (allocated(DstParamData%Grid_low)) then
-      deallocate(DstParamData%Grid_low)
    end if
    if (allocated(SrcParamData%Grid_high)) then
       LB(1:3) = lbound(SrcParamData%Grid_high)
@@ -2621,8 +2526,6 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%Grid_high = SrcParamData%Grid_high
-   else if (allocated(DstParamData%Grid_high)) then
-      deallocate(DstParamData%Grid_high)
    end if
    if (allocated(SrcParamData%WT_Position)) then
       LB(1:2) = lbound(SrcParamData%WT_Position)
@@ -2635,8 +2538,6 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%WT_Position = SrcParamData%WT_Position
-   else if (allocated(DstParamData%WT_Position)) then
-      deallocate(DstParamData%WT_Position)
    end if
    DstParamData%n_high_low = SrcParamData%n_high_low
    DstParamData%dt_low = SrcParamData%dt_low
@@ -2661,8 +2562,6 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%IfW)) then
-      deallocate(DstParamData%IfW)
    end if
    DstParamData%WrDisSkp1 = SrcParamData%WrDisSkp1
    DstParamData%WrDisWind = SrcParamData%WrDisWind
@@ -2678,8 +2577,6 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%OutDisWindZ = SrcParamData%OutDisWindZ
-   else if (allocated(DstParamData%OutDisWindZ)) then
-      deallocate(DstParamData%OutDisWindZ)
    end if
    DstParamData%NOutDisWindYZ = SrcParamData%NOutDisWindYZ
    if (allocated(SrcParamData%OutDisWindX)) then
@@ -2693,8 +2590,6 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%OutDisWindX = SrcParamData%OutDisWindX
-   else if (allocated(DstParamData%OutDisWindX)) then
-      deallocate(DstParamData%OutDisWindX)
    end if
    DstParamData%NOutDisWindXZ = SrcParamData%NOutDisWindXZ
    if (allocated(SrcParamData%OutDisWindY)) then
@@ -2708,8 +2603,6 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%OutDisWindY = SrcParamData%OutDisWindY
-   else if (allocated(DstParamData%OutDisWindY)) then
-      deallocate(DstParamData%OutDisWindY)
    end if
    DstParamData%OutFileRoot = SrcParamData%OutFileRoot
    DstParamData%OutFileVTKRoot = SrcParamData%OutFileVTKRoot
@@ -3230,8 +3123,6 @@ subroutine AWAE_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstOutputData%Vdist_High)) then
-      deallocate(DstOutputData%Vdist_High)
    end if
    if (allocated(SrcOutputData%V_plane)) then
       LB(1:3) = lbound(SrcOutputData%V_plane)
@@ -3244,8 +3135,6 @@ subroutine AWAE_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%V_plane = SrcOutputData%V_plane
-   else if (allocated(DstOutputData%V_plane)) then
-      deallocate(DstOutputData%V_plane)
    end if
    if (allocated(SrcOutputData%TI_amb)) then
       LB(1:1) = lbound(SrcOutputData%TI_amb)
@@ -3258,8 +3147,6 @@ subroutine AWAE_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%TI_amb = SrcOutputData%TI_amb
-   else if (allocated(DstOutputData%TI_amb)) then
-      deallocate(DstOutputData%TI_amb)
    end if
    if (allocated(SrcOutputData%Vx_wind_disk)) then
       LB(1:1) = lbound(SrcOutputData%Vx_wind_disk)
@@ -3272,8 +3159,6 @@ subroutine AWAE_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%Vx_wind_disk = SrcOutputData%Vx_wind_disk
-   else if (allocated(DstOutputData%Vx_wind_disk)) then
-      deallocate(DstOutputData%Vx_wind_disk)
    end if
 end subroutine
 
@@ -3432,8 +3317,6 @@ subroutine AWAE_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%xhat_plane = SrcInputData%xhat_plane
-   else if (allocated(DstInputData%xhat_plane)) then
-      deallocate(DstInputData%xhat_plane)
    end if
    if (allocated(SrcInputData%p_plane)) then
       LB(1:3) = lbound(SrcInputData%p_plane)
@@ -3446,8 +3329,6 @@ subroutine AWAE_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%p_plane = SrcInputData%p_plane
-   else if (allocated(DstInputData%p_plane)) then
-      deallocate(DstInputData%p_plane)
    end if
    if (allocated(SrcInputData%Vx_wake)) then
       LB(1:4) = lbound(SrcInputData%Vx_wake)
@@ -3460,8 +3341,6 @@ subroutine AWAE_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%Vx_wake = SrcInputData%Vx_wake
-   else if (allocated(DstInputData%Vx_wake)) then
-      deallocate(DstInputData%Vx_wake)
    end if
    if (allocated(SrcInputData%Vy_wake)) then
       LB(1:4) = lbound(SrcInputData%Vy_wake)
@@ -3474,8 +3353,6 @@ subroutine AWAE_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%Vy_wake = SrcInputData%Vy_wake
-   else if (allocated(DstInputData%Vy_wake)) then
-      deallocate(DstInputData%Vy_wake)
    end if
    if (allocated(SrcInputData%Vz_wake)) then
       LB(1:4) = lbound(SrcInputData%Vz_wake)
@@ -3488,8 +3365,6 @@ subroutine AWAE_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%Vz_wake = SrcInputData%Vz_wake
-   else if (allocated(DstInputData%Vz_wake)) then
-      deallocate(DstInputData%Vz_wake)
    end if
    if (allocated(SrcInputData%D_wake)) then
       LB(1:2) = lbound(SrcInputData%D_wake)
@@ -3502,8 +3377,6 @@ subroutine AWAE_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%D_wake = SrcInputData%D_wake
-   else if (allocated(DstInputData%D_wake)) then
-      deallocate(DstInputData%D_wake)
    end if
    if (allocated(SrcInputData%WAT_k_mt)) then
       LB(1:3) = lbound(SrcInputData%WAT_k_mt)
@@ -3516,8 +3389,6 @@ subroutine AWAE_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%WAT_k_mt = SrcInputData%WAT_k_mt
-   else if (allocated(DstInputData%WAT_k_mt)) then
-      deallocate(DstInputData%WAT_k_mt)
    end if
 end subroutine
 

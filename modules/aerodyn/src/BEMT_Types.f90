@@ -246,8 +246,6 @@ subroutine BEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
          end if
       end if
       DstInitInputData%chord = SrcInitInputData%chord
-   else if (allocated(DstInitInputData%chord)) then
-      deallocate(DstInitInputData%chord)
    end if
    DstInitInputData%numBlades = SrcInitInputData%numBlades
    DstInitInputData%airDens = SrcInitInputData%airDens
@@ -275,8 +273,6 @@ subroutine BEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
          end if
       end if
       DstInitInputData%AFindx = SrcInitInputData%AFindx
-   else if (allocated(DstInitInputData%AFindx)) then
-      deallocate(DstInitInputData%AFindx)
    end if
    if (allocated(SrcInitInputData%zHub)) then
       LB(1:1) = lbound(SrcInitInputData%zHub)
@@ -289,8 +285,6 @@ subroutine BEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
          end if
       end if
       DstInitInputData%zHub = SrcInitInputData%zHub
-   else if (allocated(DstInitInputData%zHub)) then
-      deallocate(DstInitInputData%zHub)
    end if
    if (allocated(SrcInitInputData%zLocal)) then
       LB(1:2) = lbound(SrcInitInputData%zLocal)
@@ -303,8 +297,6 @@ subroutine BEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
          end if
       end if
       DstInitInputData%zLocal = SrcInitInputData%zLocal
-   else if (allocated(DstInitInputData%zLocal)) then
-      deallocate(DstInitInputData%zLocal)
    end if
    if (allocated(SrcInitInputData%zTip)) then
       LB(1:1) = lbound(SrcInitInputData%zTip)
@@ -317,8 +309,6 @@ subroutine BEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
          end if
       end if
       DstInitInputData%zTip = SrcInitInputData%zTip
-   else if (allocated(DstInitInputData%zTip)) then
-      deallocate(DstInitInputData%zTip)
    end if
    if (allocated(SrcInitInputData%rLocal)) then
       LB(1:2) = lbound(SrcInitInputData%rLocal)
@@ -331,8 +321,6 @@ subroutine BEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
          end if
       end if
       DstInitInputData%rLocal = SrcInitInputData%rLocal
-   else if (allocated(DstInitInputData%rLocal)) then
-      deallocate(DstInitInputData%rLocal)
    end if
    if (allocated(SrcInitInputData%rTipFix)) then
       LB(1:1) = lbound(SrcInitInputData%rTipFix)
@@ -345,8 +333,6 @@ subroutine BEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
          end if
       end if
       DstInitInputData%rTipFix = SrcInitInputData%rTipFix
-   else if (allocated(DstInitInputData%rTipFix)) then
-      deallocate(DstInitInputData%rTipFix)
    end if
    DstInitInputData%UAMod = SrcInitInputData%UAMod
    DstInitInputData%UA_Flag = SrcInitInputData%UA_Flag
@@ -366,8 +352,6 @@ subroutine BEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
          end if
       end if
       DstInitInputData%UAOff_innerNode = SrcInitInputData%UAOff_innerNode
-   else if (allocated(DstInitInputData%UAOff_innerNode)) then
-      deallocate(DstInitInputData%UAOff_innerNode)
    end if
    if (allocated(SrcInitInputData%UAOff_outerNode)) then
       LB(1:1) = lbound(SrcInitInputData%UAOff_outerNode)
@@ -380,8 +364,6 @@ subroutine BEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
          end if
       end if
       DstInitInputData%UAOff_outerNode = SrcInitInputData%UAOff_outerNode
-   else if (allocated(DstInitInputData%UAOff_outerNode)) then
-      deallocate(DstInitInputData%UAOff_outerNode)
    end if
    DstInitInputData%RootName = SrcInitInputData%RootName
    DstInitInputData%SumPrint = SrcInitInputData%SumPrint
@@ -906,8 +888,6 @@ subroutine BEMT_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode
          end if
       end if
       DstConstrStateData%phi = SrcConstrStateData%phi
-   else if (allocated(DstConstrStateData%phi)) then
-      deallocate(DstConstrStateData%phi)
    end if
 end subroutine
 
@@ -990,8 +970,6 @@ subroutine BEMT_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, E
          end if
       end if
       DstOtherStateData%ValidPhi = SrcOtherStateData%ValidPhi
-   else if (allocated(DstOtherStateData%ValidPhi)) then
-      deallocate(DstOtherStateData%ValidPhi)
    end if
    DstOtherStateData%nodesInitialized = SrcOtherStateData%nodesInitialized
    LB(1:1) = lbound(SrcOtherStateData%xdot)
@@ -1134,8 +1112,6 @@ subroutine BEMT_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
             end do
          end do
       end do
-   else if (allocated(DstMiscData%u_UA)) then
-      deallocate(DstMiscData%u_UA)
    end if
    LB(1:1) = lbound(SrcMiscData%u_DBEMT)
    UB(1:1) = ubound(SrcMiscData%u_DBEMT)
@@ -1162,8 +1138,6 @@ subroutine BEMT_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%TnInd_op = SrcMiscData%TnInd_op
-   else if (allocated(DstMiscData%TnInd_op)) then
-      deallocate(DstMiscData%TnInd_op)
    end if
    if (allocated(SrcMiscData%AxInd_op)) then
       LB(1:2) = lbound(SrcMiscData%AxInd_op)
@@ -1176,8 +1150,6 @@ subroutine BEMT_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%AxInd_op = SrcMiscData%AxInd_op
-   else if (allocated(DstMiscData%AxInd_op)) then
-      deallocate(DstMiscData%AxInd_op)
    end if
    if (allocated(SrcMiscData%AxInduction)) then
       LB(1:2) = lbound(SrcMiscData%AxInduction)
@@ -1190,8 +1162,6 @@ subroutine BEMT_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%AxInduction = SrcMiscData%AxInduction
-   else if (allocated(DstMiscData%AxInduction)) then
-      deallocate(DstMiscData%AxInduction)
    end if
    if (allocated(SrcMiscData%TanInduction)) then
       LB(1:2) = lbound(SrcMiscData%TanInduction)
@@ -1204,8 +1174,6 @@ subroutine BEMT_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%TanInduction = SrcMiscData%TanInduction
-   else if (allocated(DstMiscData%TanInduction)) then
-      deallocate(DstMiscData%TanInduction)
    end if
    DstMiscData%UseFrozenWake = SrcMiscData%UseFrozenWake
    if (allocated(SrcMiscData%Rtip)) then
@@ -1219,8 +1187,6 @@ subroutine BEMT_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%Rtip = SrcMiscData%Rtip
-   else if (allocated(DstMiscData%Rtip)) then
-      deallocate(DstMiscData%Rtip)
    end if
    if (allocated(SrcMiscData%phi)) then
       LB(1:2) = lbound(SrcMiscData%phi)
@@ -1233,8 +1199,6 @@ subroutine BEMT_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%phi = SrcMiscData%phi
-   else if (allocated(DstMiscData%phi)) then
-      deallocate(DstMiscData%phi)
    end if
    if (allocated(SrcMiscData%chi)) then
       LB(1:2) = lbound(SrcMiscData%chi)
@@ -1247,8 +1211,6 @@ subroutine BEMT_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%chi = SrcMiscData%chi
-   else if (allocated(DstMiscData%chi)) then
-      deallocate(DstMiscData%chi)
    end if
    if (allocated(SrcMiscData%ValidPhi)) then
       LB(1:2) = lbound(SrcMiscData%ValidPhi)
@@ -1261,8 +1223,6 @@ subroutine BEMT_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%ValidPhi = SrcMiscData%ValidPhi
-   else if (allocated(DstMiscData%ValidPhi)) then
-      deallocate(DstMiscData%ValidPhi)
    end if
    DstMiscData%BEM_weight = SrcMiscData%BEM_weight
 end subroutine
@@ -1605,8 +1565,6 @@ subroutine BEMT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%chord = SrcParamData%chord
-   else if (allocated(DstParamData%chord)) then
-      deallocate(DstParamData%chord)
    end if
    DstParamData%numBlades = SrcParamData%numBlades
    DstParamData%airDens = SrcParamData%airDens
@@ -1633,8 +1591,6 @@ subroutine BEMT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%AFindx = SrcParamData%AFindx
-   else if (allocated(DstParamData%AFindx)) then
-      deallocate(DstParamData%AFindx)
    end if
    if (allocated(SrcParamData%tipLossConst)) then
       LB(1:2) = lbound(SrcParamData%tipLossConst)
@@ -1647,8 +1603,6 @@ subroutine BEMT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%tipLossConst = SrcParamData%tipLossConst
-   else if (allocated(DstParamData%tipLossConst)) then
-      deallocate(DstParamData%tipLossConst)
    end if
    if (allocated(SrcParamData%hubLossConst)) then
       LB(1:2) = lbound(SrcParamData%hubLossConst)
@@ -1661,8 +1615,6 @@ subroutine BEMT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%hubLossConst = SrcParamData%hubLossConst
-   else if (allocated(DstParamData%hubLossConst)) then
-      deallocate(DstParamData%hubLossConst)
    end if
    if (allocated(SrcParamData%zHub)) then
       LB(1:1) = lbound(SrcParamData%zHub)
@@ -1675,8 +1627,6 @@ subroutine BEMT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%zHub = SrcParamData%zHub
-   else if (allocated(DstParamData%zHub)) then
-      deallocate(DstParamData%zHub)
    end if
    call UA_CopyParam(SrcParamData%UA, DstParamData%UA, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1698,8 +1648,6 @@ subroutine BEMT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%FixedInductions = SrcParamData%FixedInductions
-   else if (allocated(DstParamData%FixedInductions)) then
-      deallocate(DstParamData%FixedInductions)
    end if
    DstParamData%MomentumCorr = SrcParamData%MomentumCorr
    DstParamData%rTipFixMax = SrcParamData%rTipFixMax
@@ -1714,8 +1662,6 @@ subroutine BEMT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%IntegrateWeight = SrcParamData%IntegrateWeight
-   else if (allocated(DstParamData%IntegrateWeight)) then
-      deallocate(DstParamData%IntegrateWeight)
    end if
    DstParamData%lin_nx = SrcParamData%lin_nx
    DstParamData%BEM_Mod = SrcParamData%BEM_Mod
@@ -2000,8 +1946,6 @@ subroutine BEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%theta = SrcInputData%theta
-   else if (allocated(DstInputData%theta)) then
-      deallocate(DstInputData%theta)
    end if
    DstInputData%chi0 = SrcInputData%chi0
    DstInputData%psiSkewOffset = SrcInputData%psiSkewOffset
@@ -2016,8 +1960,6 @@ subroutine BEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%psi = SrcInputData%psi
-   else if (allocated(DstInputData%psi)) then
-      deallocate(DstInputData%psi)
    end if
    DstInputData%omega = SrcInputData%omega
    DstInputData%TSR = SrcInputData%TSR
@@ -2032,8 +1974,6 @@ subroutine BEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%Vx = SrcInputData%Vx
-   else if (allocated(DstInputData%Vx)) then
-      deallocate(DstInputData%Vx)
    end if
    if (allocated(SrcInputData%Vy)) then
       LB(1:2) = lbound(SrcInputData%Vy)
@@ -2046,8 +1986,6 @@ subroutine BEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%Vy = SrcInputData%Vy
-   else if (allocated(DstInputData%Vy)) then
-      deallocate(DstInputData%Vy)
    end if
    if (allocated(SrcInputData%Vz)) then
       LB(1:2) = lbound(SrcInputData%Vz)
@@ -2060,8 +1998,6 @@ subroutine BEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%Vz = SrcInputData%Vz
-   else if (allocated(DstInputData%Vz)) then
-      deallocate(DstInputData%Vz)
    end if
    if (allocated(SrcInputData%omega_z)) then
       LB(1:2) = lbound(SrcInputData%omega_z)
@@ -2074,8 +2010,6 @@ subroutine BEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%omega_z = SrcInputData%omega_z
-   else if (allocated(DstInputData%omega_z)) then
-      deallocate(DstInputData%omega_z)
    end if
    if (allocated(SrcInputData%xVelCorr)) then
       LB(1:2) = lbound(SrcInputData%xVelCorr)
@@ -2088,8 +2022,6 @@ subroutine BEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%xVelCorr = SrcInputData%xVelCorr
-   else if (allocated(DstInputData%xVelCorr)) then
-      deallocate(DstInputData%xVelCorr)
    end if
    if (allocated(SrcInputData%rLocal)) then
       LB(1:2) = lbound(SrcInputData%rLocal)
@@ -2102,8 +2034,6 @@ subroutine BEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%rLocal = SrcInputData%rLocal
-   else if (allocated(DstInputData%rLocal)) then
-      deallocate(DstInputData%rLocal)
    end if
    DstInputData%Un_disk = SrcInputData%Un_disk
    DstInputData%V0 = SrcInputData%V0
@@ -2119,8 +2049,6 @@ subroutine BEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%UserProp = SrcInputData%UserProp
-   else if (allocated(DstInputData%UserProp)) then
-      deallocate(DstInputData%UserProp)
    end if
    if (allocated(SrcInputData%CantAngle)) then
       LB(1:2) = lbound(SrcInputData%CantAngle)
@@ -2133,8 +2061,6 @@ subroutine BEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%CantAngle = SrcInputData%CantAngle
-   else if (allocated(DstInputData%CantAngle)) then
-      deallocate(DstInputData%CantAngle)
    end if
    if (allocated(SrcInputData%drdz)) then
       LB(1:2) = lbound(SrcInputData%drdz)
@@ -2147,8 +2073,6 @@ subroutine BEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%drdz = SrcInputData%drdz
-   else if (allocated(DstInputData%drdz)) then
-      deallocate(DstInputData%drdz)
    end if
    if (allocated(SrcInputData%toeAngle)) then
       LB(1:2) = lbound(SrcInputData%toeAngle)
@@ -2161,8 +2085,6 @@ subroutine BEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstInputData%toeAngle = SrcInputData%toeAngle
-   else if (allocated(DstInputData%toeAngle)) then
-      deallocate(DstInputData%toeAngle)
    end if
 end subroutine
 
@@ -2500,8 +2422,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%Vrel = SrcOutputData%Vrel
-   else if (allocated(DstOutputData%Vrel)) then
-      deallocate(DstOutputData%Vrel)
    end if
    if (allocated(SrcOutputData%phi)) then
       LB(1:2) = lbound(SrcOutputData%phi)
@@ -2514,8 +2434,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%phi = SrcOutputData%phi
-   else if (allocated(DstOutputData%phi)) then
-      deallocate(DstOutputData%phi)
    end if
    if (allocated(SrcOutputData%axInduction)) then
       LB(1:2) = lbound(SrcOutputData%axInduction)
@@ -2528,8 +2446,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%axInduction = SrcOutputData%axInduction
-   else if (allocated(DstOutputData%axInduction)) then
-      deallocate(DstOutputData%axInduction)
    end if
    if (allocated(SrcOutputData%tanInduction)) then
       LB(1:2) = lbound(SrcOutputData%tanInduction)
@@ -2542,8 +2458,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%tanInduction = SrcOutputData%tanInduction
-   else if (allocated(DstOutputData%tanInduction)) then
-      deallocate(DstOutputData%tanInduction)
    end if
    if (allocated(SrcOutputData%Re)) then
       LB(1:2) = lbound(SrcOutputData%Re)
@@ -2556,8 +2470,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%Re = SrcOutputData%Re
-   else if (allocated(DstOutputData%Re)) then
-      deallocate(DstOutputData%Re)
    end if
    if (allocated(SrcOutputData%AOA)) then
       LB(1:2) = lbound(SrcOutputData%AOA)
@@ -2570,8 +2482,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%AOA = SrcOutputData%AOA
-   else if (allocated(DstOutputData%AOA)) then
-      deallocate(DstOutputData%AOA)
    end if
    if (allocated(SrcOutputData%Cx)) then
       LB(1:2) = lbound(SrcOutputData%Cx)
@@ -2584,8 +2494,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%Cx = SrcOutputData%Cx
-   else if (allocated(DstOutputData%Cx)) then
-      deallocate(DstOutputData%Cx)
    end if
    if (allocated(SrcOutputData%Cy)) then
       LB(1:2) = lbound(SrcOutputData%Cy)
@@ -2598,8 +2506,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%Cy = SrcOutputData%Cy
-   else if (allocated(DstOutputData%Cy)) then
-      deallocate(DstOutputData%Cy)
    end if
    if (allocated(SrcOutputData%Cz)) then
       LB(1:2) = lbound(SrcOutputData%Cz)
@@ -2612,8 +2518,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%Cz = SrcOutputData%Cz
-   else if (allocated(DstOutputData%Cz)) then
-      deallocate(DstOutputData%Cz)
    end if
    if (allocated(SrcOutputData%Cmx)) then
       LB(1:2) = lbound(SrcOutputData%Cmx)
@@ -2626,8 +2530,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%Cmx = SrcOutputData%Cmx
-   else if (allocated(DstOutputData%Cmx)) then
-      deallocate(DstOutputData%Cmx)
    end if
    if (allocated(SrcOutputData%Cmy)) then
       LB(1:2) = lbound(SrcOutputData%Cmy)
@@ -2640,8 +2542,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%Cmy = SrcOutputData%Cmy
-   else if (allocated(DstOutputData%Cmy)) then
-      deallocate(DstOutputData%Cmy)
    end if
    if (allocated(SrcOutputData%Cmz)) then
       LB(1:2) = lbound(SrcOutputData%Cmz)
@@ -2654,8 +2554,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%Cmz = SrcOutputData%Cmz
-   else if (allocated(DstOutputData%Cmz)) then
-      deallocate(DstOutputData%Cmz)
    end if
    if (allocated(SrcOutputData%Cm)) then
       LB(1:2) = lbound(SrcOutputData%Cm)
@@ -2668,8 +2566,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%Cm = SrcOutputData%Cm
-   else if (allocated(DstOutputData%Cm)) then
-      deallocate(DstOutputData%Cm)
    end if
    if (allocated(SrcOutputData%Cl)) then
       LB(1:2) = lbound(SrcOutputData%Cl)
@@ -2682,8 +2578,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%Cl = SrcOutputData%Cl
-   else if (allocated(DstOutputData%Cl)) then
-      deallocate(DstOutputData%Cl)
    end if
    if (allocated(SrcOutputData%Cd)) then
       LB(1:2) = lbound(SrcOutputData%Cd)
@@ -2696,8 +2590,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%Cd = SrcOutputData%Cd
-   else if (allocated(DstOutputData%Cd)) then
-      deallocate(DstOutputData%Cd)
    end if
    if (allocated(SrcOutputData%chi)) then
       LB(1:2) = lbound(SrcOutputData%chi)
@@ -2710,8 +2602,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%chi = SrcOutputData%chi
-   else if (allocated(DstOutputData%chi)) then
-      deallocate(DstOutputData%chi)
    end if
    if (allocated(SrcOutputData%Cpmin)) then
       LB(1:2) = lbound(SrcOutputData%Cpmin)
@@ -2724,8 +2614,6 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%Cpmin = SrcOutputData%Cpmin
-   else if (allocated(DstOutputData%Cpmin)) then
-      deallocate(DstOutputData%Cpmin)
    end if
 end subroutine
 

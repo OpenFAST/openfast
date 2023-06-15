@@ -232,9 +232,6 @@ subroutine OpFM_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
             DstInitInputData%C_obj%StructBldRNodes = c_loc(DstInitInputData%StructBldRNodes(LB(1)))
       end if
       DstInitInputData%StructBldRNodes = SrcInitInputData%StructBldRNodes
-   else if (associated(DstInitInputData%StructBldRNodes)) then
-      deallocate(DstInitInputData%StructBldRNodes)
-      nullify(DstInitInputData%StructBldRNodes)
    end if
    if (associated(SrcInitInputData%StructTwrHNodes)) then
       LB(1:1) = lbound(SrcInitInputData%StructTwrHNodes)
@@ -250,9 +247,6 @@ subroutine OpFM_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
             DstInitInputData%C_obj%StructTwrHNodes = c_loc(DstInitInputData%StructTwrHNodes(LB(1)))
       end if
       DstInitInputData%StructTwrHNodes = SrcInitInputData%StructTwrHNodes
-   else if (associated(DstInitInputData%StructTwrHNodes)) then
-      deallocate(DstInitInputData%StructTwrHNodes)
-      nullify(DstInitInputData%StructTwrHNodes)
    end if
    DstInitInputData%BladeLength = SrcInitInputData%BladeLength
    DstInitInputData%C_obj%BladeLength = SrcInitInputData%C_obj%BladeLength
@@ -513,8 +507,6 @@ subroutine OpFM_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
-      deallocate(DstInitOutputData%WriteOutputHdr)
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
@@ -527,8 +519,6 @@ subroutine OpFM_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
          end if
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
-      deallocate(DstInitOutputData%WriteOutputUnt)
    end if
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -678,8 +668,6 @@ subroutine OpFM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%ActForceMotionsPoints)) then
-      deallocate(DstMiscData%ActForceMotionsPoints)
    end if
    if (allocated(SrcMiscData%ActForceLoadsPoints)) then
       LB(1:1) = lbound(SrcMiscData%ActForceLoadsPoints)
@@ -696,8 +684,6 @@ subroutine OpFM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%ActForceLoadsPoints)) then
-      deallocate(DstMiscData%ActForceLoadsPoints)
    end if
    if (allocated(SrcMiscData%Line2_to_Point_Loads)) then
       LB(1:1) = lbound(SrcMiscData%Line2_to_Point_Loads)
@@ -714,8 +700,6 @@ subroutine OpFM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%Line2_to_Point_Loads)) then
-      deallocate(DstMiscData%Line2_to_Point_Loads)
    end if
    if (allocated(SrcMiscData%Line2_to_Point_Motions)) then
       LB(1:1) = lbound(SrcMiscData%Line2_to_Point_Motions)
@@ -732,8 +716,6 @@ subroutine OpFM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstMiscData%Line2_to_Point_Motions)) then
-      deallocate(DstMiscData%Line2_to_Point_Motions)
    end if
 end subroutine
 
@@ -980,9 +962,6 @@ subroutine OpFM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
             DstParamData%C_obj%forceBldRnodes = c_loc(DstParamData%forceBldRnodes(LB(1)))
       end if
       DstParamData%forceBldRnodes = SrcParamData%forceBldRnodes
-   else if (associated(DstParamData%forceBldRnodes)) then
-      deallocate(DstParamData%forceBldRnodes)
-      nullify(DstParamData%forceBldRnodes)
    end if
    if (associated(SrcParamData%forceTwrHnodes)) then
       LB(1:1) = lbound(SrcParamData%forceTwrHnodes)
@@ -998,9 +977,6 @@ subroutine OpFM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
             DstParamData%C_obj%forceTwrHnodes = c_loc(DstParamData%forceTwrHnodes(LB(1)))
       end if
       DstParamData%forceTwrHnodes = SrcParamData%forceTwrHnodes
-   else if (associated(DstParamData%forceTwrHnodes)) then
-      deallocate(DstParamData%forceTwrHnodes)
-      nullify(DstParamData%forceTwrHnodes)
    end if
    DstParamData%BladeLength = SrcParamData%BladeLength
    DstParamData%C_obj%BladeLength = SrcParamData%C_obj%BladeLength
@@ -1293,9 +1269,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%pxVel = c_loc(DstInputData%pxVel(LB(1)))
       end if
       DstInputData%pxVel = SrcInputData%pxVel
-   else if (associated(DstInputData%pxVel)) then
-      deallocate(DstInputData%pxVel)
-      nullify(DstInputData%pxVel)
    end if
    if (associated(SrcInputData%pyVel)) then
       LB(1:1) = lbound(SrcInputData%pyVel)
@@ -1311,9 +1284,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%pyVel = c_loc(DstInputData%pyVel(LB(1)))
       end if
       DstInputData%pyVel = SrcInputData%pyVel
-   else if (associated(DstInputData%pyVel)) then
-      deallocate(DstInputData%pyVel)
-      nullify(DstInputData%pyVel)
    end if
    if (associated(SrcInputData%pzVel)) then
       LB(1:1) = lbound(SrcInputData%pzVel)
@@ -1329,9 +1299,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%pzVel = c_loc(DstInputData%pzVel(LB(1)))
       end if
       DstInputData%pzVel = SrcInputData%pzVel
-   else if (associated(DstInputData%pzVel)) then
-      deallocate(DstInputData%pzVel)
-      nullify(DstInputData%pzVel)
    end if
    if (associated(SrcInputData%pxForce)) then
       LB(1:1) = lbound(SrcInputData%pxForce)
@@ -1347,9 +1314,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%pxForce = c_loc(DstInputData%pxForce(LB(1)))
       end if
       DstInputData%pxForce = SrcInputData%pxForce
-   else if (associated(DstInputData%pxForce)) then
-      deallocate(DstInputData%pxForce)
-      nullify(DstInputData%pxForce)
    end if
    if (associated(SrcInputData%pyForce)) then
       LB(1:1) = lbound(SrcInputData%pyForce)
@@ -1365,9 +1329,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%pyForce = c_loc(DstInputData%pyForce(LB(1)))
       end if
       DstInputData%pyForce = SrcInputData%pyForce
-   else if (associated(DstInputData%pyForce)) then
-      deallocate(DstInputData%pyForce)
-      nullify(DstInputData%pyForce)
    end if
    if (associated(SrcInputData%pzForce)) then
       LB(1:1) = lbound(SrcInputData%pzForce)
@@ -1383,9 +1344,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%pzForce = c_loc(DstInputData%pzForce(LB(1)))
       end if
       DstInputData%pzForce = SrcInputData%pzForce
-   else if (associated(DstInputData%pzForce)) then
-      deallocate(DstInputData%pzForce)
-      nullify(DstInputData%pzForce)
    end if
    if (associated(SrcInputData%xdotForce)) then
       LB(1:1) = lbound(SrcInputData%xdotForce)
@@ -1401,9 +1359,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%xdotForce = c_loc(DstInputData%xdotForce(LB(1)))
       end if
       DstInputData%xdotForce = SrcInputData%xdotForce
-   else if (associated(DstInputData%xdotForce)) then
-      deallocate(DstInputData%xdotForce)
-      nullify(DstInputData%xdotForce)
    end if
    if (associated(SrcInputData%ydotForce)) then
       LB(1:1) = lbound(SrcInputData%ydotForce)
@@ -1419,9 +1374,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%ydotForce = c_loc(DstInputData%ydotForce(LB(1)))
       end if
       DstInputData%ydotForce = SrcInputData%ydotForce
-   else if (associated(DstInputData%ydotForce)) then
-      deallocate(DstInputData%ydotForce)
-      nullify(DstInputData%ydotForce)
    end if
    if (associated(SrcInputData%zdotForce)) then
       LB(1:1) = lbound(SrcInputData%zdotForce)
@@ -1437,9 +1389,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%zdotForce = c_loc(DstInputData%zdotForce(LB(1)))
       end if
       DstInputData%zdotForce = SrcInputData%zdotForce
-   else if (associated(DstInputData%zdotForce)) then
-      deallocate(DstInputData%zdotForce)
-      nullify(DstInputData%zdotForce)
    end if
    if (associated(SrcInputData%pOrientation)) then
       LB(1:1) = lbound(SrcInputData%pOrientation)
@@ -1455,9 +1404,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%pOrientation = c_loc(DstInputData%pOrientation(LB(1)))
       end if
       DstInputData%pOrientation = SrcInputData%pOrientation
-   else if (associated(DstInputData%pOrientation)) then
-      deallocate(DstInputData%pOrientation)
-      nullify(DstInputData%pOrientation)
    end if
    if (associated(SrcInputData%fx)) then
       LB(1:1) = lbound(SrcInputData%fx)
@@ -1473,9 +1419,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%fx = c_loc(DstInputData%fx(LB(1)))
       end if
       DstInputData%fx = SrcInputData%fx
-   else if (associated(DstInputData%fx)) then
-      deallocate(DstInputData%fx)
-      nullify(DstInputData%fx)
    end if
    if (associated(SrcInputData%fy)) then
       LB(1:1) = lbound(SrcInputData%fy)
@@ -1491,9 +1434,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%fy = c_loc(DstInputData%fy(LB(1)))
       end if
       DstInputData%fy = SrcInputData%fy
-   else if (associated(DstInputData%fy)) then
-      deallocate(DstInputData%fy)
-      nullify(DstInputData%fy)
    end if
    if (associated(SrcInputData%fz)) then
       LB(1:1) = lbound(SrcInputData%fz)
@@ -1509,9 +1449,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%fz = c_loc(DstInputData%fz(LB(1)))
       end if
       DstInputData%fz = SrcInputData%fz
-   else if (associated(DstInputData%fz)) then
-      deallocate(DstInputData%fz)
-      nullify(DstInputData%fz)
    end if
    if (associated(SrcInputData%momentx)) then
       LB(1:1) = lbound(SrcInputData%momentx)
@@ -1527,9 +1464,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%momentx = c_loc(DstInputData%momentx(LB(1)))
       end if
       DstInputData%momentx = SrcInputData%momentx
-   else if (associated(DstInputData%momentx)) then
-      deallocate(DstInputData%momentx)
-      nullify(DstInputData%momentx)
    end if
    if (associated(SrcInputData%momenty)) then
       LB(1:1) = lbound(SrcInputData%momenty)
@@ -1545,9 +1479,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%momenty = c_loc(DstInputData%momenty(LB(1)))
       end if
       DstInputData%momenty = SrcInputData%momenty
-   else if (associated(DstInputData%momenty)) then
-      deallocate(DstInputData%momenty)
-      nullify(DstInputData%momenty)
    end if
    if (associated(SrcInputData%momentz)) then
       LB(1:1) = lbound(SrcInputData%momentz)
@@ -1563,9 +1494,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%momentz = c_loc(DstInputData%momentz(LB(1)))
       end if
       DstInputData%momentz = SrcInputData%momentz
-   else if (associated(DstInputData%momentz)) then
-      deallocate(DstInputData%momentz)
-      nullify(DstInputData%momentz)
    end if
    if (associated(SrcInputData%forceNodesChord)) then
       LB(1:1) = lbound(SrcInputData%forceNodesChord)
@@ -1581,9 +1509,6 @@ subroutine OpFM_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
             DstInputData%C_obj%forceNodesChord = c_loc(DstInputData%forceNodesChord(LB(1)))
       end if
       DstInputData%forceNodesChord = SrcInputData%forceNodesChord
-   else if (associated(DstInputData%forceNodesChord)) then
-      deallocate(DstInputData%forceNodesChord)
-      nullify(DstInputData%forceNodesChord)
    end if
 end subroutine
 
@@ -2717,9 +2642,6 @@ subroutine OpFM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
             DstOutputData%C_obj%u = c_loc(DstOutputData%u(LB(1)))
       end if
       DstOutputData%u = SrcOutputData%u
-   else if (associated(DstOutputData%u)) then
-      deallocate(DstOutputData%u)
-      nullify(DstOutputData%u)
    end if
    if (associated(SrcOutputData%v)) then
       LB(1:1) = lbound(SrcOutputData%v)
@@ -2735,9 +2657,6 @@ subroutine OpFM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
             DstOutputData%C_obj%v = c_loc(DstOutputData%v(LB(1)))
       end if
       DstOutputData%v = SrcOutputData%v
-   else if (associated(DstOutputData%v)) then
-      deallocate(DstOutputData%v)
-      nullify(DstOutputData%v)
    end if
    if (associated(SrcOutputData%w)) then
       LB(1:1) = lbound(SrcOutputData%w)
@@ -2753,9 +2672,6 @@ subroutine OpFM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
             DstOutputData%C_obj%w = c_loc(DstOutputData%w(LB(1)))
       end if
       DstOutputData%w = SrcOutputData%w
-   else if (associated(DstOutputData%w)) then
-      deallocate(DstOutputData%w)
-      nullify(DstOutputData%w)
    end if
    if (allocated(SrcOutputData%WriteOutput)) then
       LB(1:1) = lbound(SrcOutputData%WriteOutput)
@@ -2768,8 +2684,6 @@ subroutine OpFM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-   else if (allocated(DstOutputData%WriteOutput)) then
-      deallocate(DstOutputData%WriteOutput)
    end if
 end subroutine
 

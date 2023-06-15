@@ -120,8 +120,6 @@ subroutine SS_Rad_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
          end if
       end if
       DstInitInputData%enabledDOFs = SrcInitInputData%enabledDOFs
-   else if (allocated(DstInitInputData%enabledDOFs)) then
-      deallocate(DstInitInputData%enabledDOFs)
    end if
    DstInitInputData%NBody = SrcInitInputData%NBody
    if (allocated(SrcInitInputData%PtfmRefztRot)) then
@@ -135,8 +133,6 @@ subroutine SS_Rad_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
          end if
       end if
       DstInitInputData%PtfmRefztRot = SrcInitInputData%PtfmRefztRot
-   else if (allocated(DstInitInputData%PtfmRefztRot)) then
-      deallocate(DstInitInputData%PtfmRefztRot)
    end if
 end subroutine
 
@@ -239,8 +235,6 @@ subroutine SS_Rad_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
          end if
       end if
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
-      deallocate(DstInitOutputData%WriteOutputHdr)
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
@@ -253,8 +247,6 @@ subroutine SS_Rad_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
          end if
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
-      deallocate(DstInitOutputData%WriteOutputUnt)
    end if
 end subroutine
 
@@ -351,8 +343,6 @@ subroutine SS_Rad_CopyContState(SrcContStateData, DstContStateData, CtrlCode, Er
          end if
       end if
       DstContStateData%x = SrcContStateData%x
-   else if (allocated(DstContStateData%x)) then
-      deallocate(DstContStateData%x)
    end if
 end subroutine
 
@@ -619,8 +609,6 @@ subroutine SS_Rad_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstParamData%A = SrcParamData%A
-   else if (allocated(DstParamData%A)) then
-      deallocate(DstParamData%A)
    end if
    if (allocated(SrcParamData%B)) then
       LB(1:2) = lbound(SrcParamData%B)
@@ -633,8 +621,6 @@ subroutine SS_Rad_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstParamData%B = SrcParamData%B
-   else if (allocated(DstParamData%B)) then
-      deallocate(DstParamData%B)
    end if
    if (allocated(SrcParamData%C)) then
       LB(1:2) = lbound(SrcParamData%C)
@@ -647,8 +633,6 @@ subroutine SS_Rad_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstParamData%C = SrcParamData%C
-   else if (allocated(DstParamData%C)) then
-      deallocate(DstParamData%C)
    end if
    DstParamData%numStates = SrcParamData%numStates
    if (allocated(SrcParamData%spdof)) then
@@ -662,8 +646,6 @@ subroutine SS_Rad_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstParamData%spdof = SrcParamData%spdof
-   else if (allocated(DstParamData%spdof)) then
-      deallocate(DstParamData%spdof)
    end if
    DstParamData%NBody = SrcParamData%NBody
 end subroutine
@@ -814,8 +796,6 @@ subroutine SS_Rad_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstInputData%dq = SrcInputData%dq
-   else if (allocated(DstInputData%dq)) then
-      deallocate(DstInputData%dq)
    end if
 end subroutine
 
@@ -890,8 +870,6 @@ subroutine SS_Rad_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Er
          end if
       end if
       DstOutputData%y = SrcOutputData%y
-   else if (allocated(DstOutputData%y)) then
-      deallocate(DstOutputData%y)
    end if
    if (allocated(SrcOutputData%WriteOutput)) then
       LB(1:1) = lbound(SrcOutputData%WriteOutput)
@@ -904,8 +882,6 @@ subroutine SS_Rad_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Er
          end if
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-   else if (allocated(DstOutputData%WriteOutput)) then
-      deallocate(DstOutputData%WriteOutput)
    end if
 end subroutine
 

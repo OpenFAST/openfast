@@ -115,8 +115,6 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
          end if
       end if
       DstInitInputData%WaveKinGridxi = SrcInitInputData%WaveKinGridxi
-   else if (allocated(DstInitInputData%WaveKinGridxi)) then
-      deallocate(DstInitInputData%WaveKinGridxi)
    end if
    if (allocated(SrcInitInputData%WaveKinGridyi)) then
       LB(1:1) = lbound(SrcInitInputData%WaveKinGridyi)
@@ -129,8 +127,6 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
          end if
       end if
       DstInitInputData%WaveKinGridyi = SrcInitInputData%WaveKinGridyi
-   else if (allocated(DstInitInputData%WaveKinGridyi)) then
-      deallocate(DstInitInputData%WaveKinGridyi)
    end if
    if (allocated(SrcInitInputData%WaveKinGridzi)) then
       LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi)
@@ -143,8 +139,6 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
          end if
       end if
       DstInitInputData%WaveKinGridzi = SrcInitInputData%WaveKinGridzi
-   else if (allocated(DstInitInputData%WaveKinGridzi)) then
-      deallocate(DstInitInputData%WaveKinGridzi)
    end if
    DstInitInputData%WvDiffQTFF = SrcInitInputData%WvDiffQTFF
    DstInitInputData%WvSumQTFF = SrcInitInputData%WvSumQTFF
@@ -422,8 +416,6 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
          end if
       end if
       DstInitOutputData%WaveAcc2D = SrcInitOutputData%WaveAcc2D
-   else if (allocated(DstInitOutputData%WaveAcc2D)) then
-      deallocate(DstInitOutputData%WaveAcc2D)
    end if
    if (allocated(SrcInitOutputData%WaveDynP2D)) then
       LB(1:4) = lbound(SrcInitOutputData%WaveDynP2D)
@@ -436,8 +428,6 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
          end if
       end if
       DstInitOutputData%WaveDynP2D = SrcInitOutputData%WaveDynP2D
-   else if (allocated(DstInitOutputData%WaveDynP2D)) then
-      deallocate(DstInitOutputData%WaveDynP2D)
    end if
    if (allocated(SrcInitOutputData%WaveAcc2S)) then
       LB(1:5) = lbound(SrcInitOutputData%WaveAcc2S)
@@ -450,8 +440,6 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
          end if
       end if
       DstInitOutputData%WaveAcc2S = SrcInitOutputData%WaveAcc2S
-   else if (allocated(DstInitOutputData%WaveAcc2S)) then
-      deallocate(DstInitOutputData%WaveAcc2S)
    end if
    if (allocated(SrcInitOutputData%WaveDynP2S)) then
       LB(1:4) = lbound(SrcInitOutputData%WaveDynP2S)
@@ -464,8 +452,6 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
          end if
       end if
       DstInitOutputData%WaveDynP2S = SrcInitOutputData%WaveDynP2S
-   else if (allocated(DstInitOutputData%WaveDynP2S)) then
-      deallocate(DstInitOutputData%WaveDynP2S)
    end if
    if (allocated(SrcInitOutputData%WaveVel2D)) then
       LB(1:5) = lbound(SrcInitOutputData%WaveVel2D)
@@ -478,8 +464,6 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
          end if
       end if
       DstInitOutputData%WaveVel2D = SrcInitOutputData%WaveVel2D
-   else if (allocated(DstInitOutputData%WaveVel2D)) then
-      deallocate(DstInitOutputData%WaveVel2D)
    end if
    if (allocated(SrcInitOutputData%WaveVel2S)) then
       LB(1:5) = lbound(SrcInitOutputData%WaveVel2S)
@@ -492,8 +476,6 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
          end if
       end if
       DstInitOutputData%WaveVel2S = SrcInitOutputData%WaveVel2S
-   else if (allocated(DstInitOutputData%WaveVel2S)) then
-      deallocate(DstInitOutputData%WaveVel2S)
    end if
    DstInitOutputData%WaveElev2 => SrcInitOutputData%WaveElev2
 end subroutine

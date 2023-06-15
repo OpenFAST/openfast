@@ -235,8 +235,6 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
          end if
       end if
       DstInputFileData%ActiveCBDOF = SrcInputFileData%ActiveCBDOF
-   else if (allocated(DstInputFileData%ActiveCBDOF)) then
-      deallocate(DstInputFileData%ActiveCBDOF)
    end if
    if (allocated(SrcInputFileData%InitPosList)) then
       LB(1:1) = lbound(SrcInputFileData%InitPosList)
@@ -249,8 +247,6 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
          end if
       end if
       DstInputFileData%InitPosList = SrcInputFileData%InitPosList
-   else if (allocated(DstInputFileData%InitPosList)) then
-      deallocate(DstInputFileData%InitPosList)
    end if
    if (allocated(SrcInputFileData%InitVelList)) then
       LB(1:1) = lbound(SrcInputFileData%InitVelList)
@@ -263,8 +259,6 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
          end if
       end if
       DstInputFileData%InitVelList = SrcInputFileData%InitVelList
-   else if (allocated(DstInputFileData%InitVelList)) then
-      deallocate(DstInputFileData%InitVelList)
    end if
    DstInputFileData%SumPrint = SrcInputFileData%SumPrint
    DstInputFileData%OutFile = SrcInputFileData%OutFile
@@ -283,8 +277,6 @@ subroutine ExtPtfm_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, E
          end if
       end if
       DstInputFileData%OutList = SrcInputFileData%OutList
-   else if (allocated(DstInputFileData%OutList)) then
-      deallocate(DstInputFileData%OutList)
    end if
 end subroutine
 
@@ -465,8 +457,6 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
          end if
       end if
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
-      deallocate(DstInitOutputData%WriteOutputHdr)
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
@@ -479,8 +469,6 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
          end if
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
-      deallocate(DstInitOutputData%WriteOutputUnt)
    end if
    if (allocated(SrcInitOutputData%LinNames_y)) then
       LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
@@ -493,8 +481,6 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
          end if
       end if
       DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
-   else if (allocated(DstInitOutputData%LinNames_y)) then
-      deallocate(DstInitOutputData%LinNames_y)
    end if
    if (allocated(SrcInitOutputData%LinNames_x)) then
       LB(1:1) = lbound(SrcInitOutputData%LinNames_x)
@@ -507,8 +493,6 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
          end if
       end if
       DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
-   else if (allocated(DstInitOutputData%LinNames_x)) then
-      deallocate(DstInitOutputData%LinNames_x)
    end if
    if (allocated(SrcInitOutputData%LinNames_u)) then
       LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
@@ -521,8 +505,6 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
          end if
       end if
       DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
-   else if (allocated(DstInitOutputData%LinNames_u)) then
-      deallocate(DstInitOutputData%LinNames_u)
    end if
    if (allocated(SrcInitOutputData%RotFrame_y)) then
       LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
@@ -535,8 +517,6 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
          end if
       end if
       DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
-   else if (allocated(DstInitOutputData%RotFrame_y)) then
-      deallocate(DstInitOutputData%RotFrame_y)
    end if
    if (allocated(SrcInitOutputData%RotFrame_x)) then
       LB(1:1) = lbound(SrcInitOutputData%RotFrame_x)
@@ -549,8 +529,6 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
          end if
       end if
       DstInitOutputData%RotFrame_x = SrcInitOutputData%RotFrame_x
-   else if (allocated(DstInitOutputData%RotFrame_x)) then
-      deallocate(DstInitOutputData%RotFrame_x)
    end if
    if (allocated(SrcInitOutputData%RotFrame_u)) then
       LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
@@ -563,8 +541,6 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
          end if
       end if
       DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
-   else if (allocated(DstInitOutputData%RotFrame_u)) then
-      deallocate(DstInitOutputData%RotFrame_u)
    end if
    if (allocated(SrcInitOutputData%IsLoad_u)) then
       LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
@@ -577,8 +553,6 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
          end if
       end if
       DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
-   else if (allocated(DstInitOutputData%IsLoad_u)) then
-      deallocate(DstInitOutputData%IsLoad_u)
    end if
    if (allocated(SrcInitOutputData%DerivOrder_x)) then
       LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x)
@@ -591,8 +565,6 @@ subroutine ExtPtfm_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
          end if
       end if
       DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
-   else if (allocated(DstInitOutputData%DerivOrder_x)) then
-      deallocate(DstInitOutputData%DerivOrder_x)
    end if
 end subroutine
 
@@ -871,8 +843,6 @@ subroutine ExtPtfm_CopyContState(SrcContStateData, DstContStateData, CtrlCode, E
          end if
       end if
       DstContStateData%qm = SrcContStateData%qm
-   else if (allocated(DstContStateData%qm)) then
-      deallocate(DstContStateData%qm)
    end if
    if (allocated(SrcContStateData%qmdot)) then
       LB(1:1) = lbound(SrcContStateData%qmdot)
@@ -885,8 +855,6 @@ subroutine ExtPtfm_CopyContState(SrcContStateData, DstContStateData, CtrlCode, E
          end if
       end if
       DstContStateData%qmdot = SrcContStateData%qmdot
-   else if (allocated(DstContStateData%qmdot)) then
-      deallocate(DstContStateData%qmdot)
    end if
 end subroutine
 
@@ -1067,8 +1035,6 @@ subroutine ExtPtfm_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstOtherStateData%xdot)) then
-      deallocate(DstOtherStateData%xdot)
    end if
    DstOtherStateData%n = SrcOtherStateData%n
 end subroutine
@@ -1165,8 +1131,6 @@ subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%xFlat = SrcMiscData%xFlat
-   else if (allocated(DstMiscData%xFlat)) then
-      deallocate(DstMiscData%xFlat)
    end if
    DstMiscData%uFlat = SrcMiscData%uFlat
    if (allocated(SrcMiscData%F_at_t)) then
@@ -1180,8 +1144,6 @@ subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%F_at_t = SrcMiscData%F_at_t
-   else if (allocated(DstMiscData%F_at_t)) then
-      deallocate(DstMiscData%F_at_t)
    end if
    DstMiscData%Indx = SrcMiscData%Indx
    DstMiscData%EquilStart = SrcMiscData%EquilStart
@@ -1196,8 +1158,6 @@ subroutine ExtPtfm_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%AllOuts = SrcMiscData%AllOuts
-   else if (allocated(DstMiscData%AllOuts)) then
-      deallocate(DstMiscData%AllOuts)
    end if
 end subroutine
 
@@ -1327,8 +1287,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%Mass = SrcParamData%Mass
-   else if (allocated(DstParamData%Mass)) then
-      deallocate(DstParamData%Mass)
    end if
    if (allocated(SrcParamData%Damp)) then
       LB(1:2) = lbound(SrcParamData%Damp)
@@ -1341,8 +1299,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%Damp = SrcParamData%Damp
-   else if (allocated(DstParamData%Damp)) then
-      deallocate(DstParamData%Damp)
    end if
    if (allocated(SrcParamData%Stff)) then
       LB(1:2) = lbound(SrcParamData%Stff)
@@ -1355,8 +1311,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%Stff = SrcParamData%Stff
-   else if (allocated(DstParamData%Stff)) then
-      deallocate(DstParamData%Stff)
    end if
    if (allocated(SrcParamData%Forces)) then
       LB(1:2) = lbound(SrcParamData%Forces)
@@ -1369,8 +1323,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%Forces = SrcParamData%Forces
-   else if (allocated(DstParamData%Forces)) then
-      deallocate(DstParamData%Forces)
    end if
    if (allocated(SrcParamData%times)) then
       LB(1:1) = lbound(SrcParamData%times)
@@ -1383,8 +1335,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%times = SrcParamData%times
-   else if (allocated(DstParamData%times)) then
-      deallocate(DstParamData%times)
    end if
    if (allocated(SrcParamData%AMat)) then
       LB(1:2) = lbound(SrcParamData%AMat)
@@ -1397,8 +1347,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%AMat = SrcParamData%AMat
-   else if (allocated(DstParamData%AMat)) then
-      deallocate(DstParamData%AMat)
    end if
    if (allocated(SrcParamData%BMat)) then
       LB(1:2) = lbound(SrcParamData%BMat)
@@ -1411,8 +1359,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%BMat = SrcParamData%BMat
-   else if (allocated(DstParamData%BMat)) then
-      deallocate(DstParamData%BMat)
    end if
    if (allocated(SrcParamData%CMat)) then
       LB(1:2) = lbound(SrcParamData%CMat)
@@ -1425,8 +1371,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%CMat = SrcParamData%CMat
-   else if (allocated(DstParamData%CMat)) then
-      deallocate(DstParamData%CMat)
    end if
    if (allocated(SrcParamData%DMat)) then
       LB(1:2) = lbound(SrcParamData%DMat)
@@ -1439,8 +1383,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%DMat = SrcParamData%DMat
-   else if (allocated(DstParamData%DMat)) then
-      deallocate(DstParamData%DMat)
    end if
    if (allocated(SrcParamData%FX)) then
       LB(1:1) = lbound(SrcParamData%FX)
@@ -1453,8 +1395,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%FX = SrcParamData%FX
-   else if (allocated(DstParamData%FX)) then
-      deallocate(DstParamData%FX)
    end if
    if (allocated(SrcParamData%FY)) then
       LB(1:1) = lbound(SrcParamData%FY)
@@ -1467,8 +1407,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%FY = SrcParamData%FY
-   else if (allocated(DstParamData%FY)) then
-      deallocate(DstParamData%FY)
    end if
    if (allocated(SrcParamData%M11)) then
       LB(1:2) = lbound(SrcParamData%M11)
@@ -1481,8 +1419,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%M11 = SrcParamData%M11
-   else if (allocated(DstParamData%M11)) then
-      deallocate(DstParamData%M11)
    end if
    if (allocated(SrcParamData%M12)) then
       LB(1:2) = lbound(SrcParamData%M12)
@@ -1495,8 +1431,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%M12 = SrcParamData%M12
-   else if (allocated(DstParamData%M12)) then
-      deallocate(DstParamData%M12)
    end if
    if (allocated(SrcParamData%M22)) then
       LB(1:2) = lbound(SrcParamData%M22)
@@ -1509,8 +1443,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%M22 = SrcParamData%M22
-   else if (allocated(DstParamData%M22)) then
-      deallocate(DstParamData%M22)
    end if
    if (allocated(SrcParamData%M21)) then
       LB(1:2) = lbound(SrcParamData%M21)
@@ -1523,8 +1455,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%M21 = SrcParamData%M21
-   else if (allocated(DstParamData%M21)) then
-      deallocate(DstParamData%M21)
    end if
    if (allocated(SrcParamData%K11)) then
       LB(1:2) = lbound(SrcParamData%K11)
@@ -1537,8 +1467,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%K11 = SrcParamData%K11
-   else if (allocated(DstParamData%K11)) then
-      deallocate(DstParamData%K11)
    end if
    if (allocated(SrcParamData%K22)) then
       LB(1:2) = lbound(SrcParamData%K22)
@@ -1551,8 +1479,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%K22 = SrcParamData%K22
-   else if (allocated(DstParamData%K22)) then
-      deallocate(DstParamData%K22)
    end if
    if (allocated(SrcParamData%C11)) then
       LB(1:2) = lbound(SrcParamData%C11)
@@ -1565,8 +1491,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%C11 = SrcParamData%C11
-   else if (allocated(DstParamData%C11)) then
-      deallocate(DstParamData%C11)
    end if
    if (allocated(SrcParamData%C12)) then
       LB(1:2) = lbound(SrcParamData%C12)
@@ -1579,8 +1503,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%C12 = SrcParamData%C12
-   else if (allocated(DstParamData%C12)) then
-      deallocate(DstParamData%C12)
    end if
    if (allocated(SrcParamData%C22)) then
       LB(1:2) = lbound(SrcParamData%C22)
@@ -1593,8 +1515,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%C22 = SrcParamData%C22
-   else if (allocated(DstParamData%C22)) then
-      deallocate(DstParamData%C22)
    end if
    if (allocated(SrcParamData%C21)) then
       LB(1:2) = lbound(SrcParamData%C21)
@@ -1607,8 +1527,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%C21 = SrcParamData%C21
-   else if (allocated(DstParamData%C21)) then
-      deallocate(DstParamData%C21)
    end if
    DstParamData%EP_DeltaT = SrcParamData%EP_DeltaT
    DstParamData%nTimeSteps = SrcParamData%nTimeSteps
@@ -1628,8 +1546,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%ActiveCBDOF = SrcParamData%ActiveCBDOF
-   else if (allocated(DstParamData%ActiveCBDOF)) then
-      deallocate(DstParamData%ActiveCBDOF)
    end if
    if (allocated(SrcParamData%OutParam)) then
       LB(1:1) = lbound(SrcParamData%OutParam)
@@ -1646,8 +1562,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%OutParam)) then
-      deallocate(DstParamData%OutParam)
    end if
    if (allocated(SrcParamData%OutParamLinIndx)) then
       LB(1:2) = lbound(SrcParamData%OutParamLinIndx)
@@ -1660,8 +1574,6 @@ subroutine ExtPtfm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%OutParamLinIndx = SrcParamData%OutParamLinIndx
-   else if (allocated(DstParamData%OutParamLinIndx)) then
-      deallocate(DstParamData%OutParamLinIndx)
    end if
 end subroutine
 
@@ -2331,8 +2243,6 @@ subroutine ExtPtfm_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
          end if
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-   else if (allocated(DstOutputData%WriteOutput)) then
-      deallocate(DstOutputData%WriteOutput)
    end if
 end subroutine
 

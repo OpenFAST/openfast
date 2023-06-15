@@ -260,8 +260,6 @@ subroutine Lidar_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstParamData%FocalDistanceX = SrcParamData%FocalDistanceX
-   else if (allocated(DstParamData%FocalDistanceX)) then
-      deallocate(DstParamData%FocalDistanceX)
    end if
    if (allocated(SrcParamData%FocalDistanceY)) then
       LB(1:1) = lbound(SrcParamData%FocalDistanceY)
@@ -274,8 +272,6 @@ subroutine Lidar_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstParamData%FocalDistanceY = SrcParamData%FocalDistanceY
-   else if (allocated(DstParamData%FocalDistanceY)) then
-      deallocate(DstParamData%FocalDistanceY)
    end if
    if (allocated(SrcParamData%FocalDistanceZ)) then
       LB(1:1) = lbound(SrcParamData%FocalDistanceZ)
@@ -288,8 +284,6 @@ subroutine Lidar_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstParamData%FocalDistanceZ = SrcParamData%FocalDistanceZ
-   else if (allocated(DstParamData%FocalDistanceZ)) then
-      deallocate(DstParamData%FocalDistanceZ)
    end if
    if (allocated(SrcParamData%MsrPosition)) then
       LB(1:2) = lbound(SrcParamData%MsrPosition)
@@ -302,8 +296,6 @@ subroutine Lidar_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstParamData%MsrPosition = SrcParamData%MsrPosition
-   else if (allocated(DstParamData%MsrPosition)) then
-      deallocate(DstParamData%MsrPosition)
    end if
    DstParamData%PulseSpacing = SrcParamData%PulseSpacing
    DstParamData%URefLid = SrcParamData%URefLid
@@ -759,8 +751,6 @@ subroutine Lidar_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
          end if
       end if
       DstOutputData%LidSpeed = SrcOutputData%LidSpeed
-   else if (allocated(DstOutputData%LidSpeed)) then
-      deallocate(DstOutputData%LidSpeed)
    end if
    if (allocated(SrcOutputData%WtTrunc)) then
       LB(1:1) = lbound(SrcOutputData%WtTrunc)
@@ -773,8 +763,6 @@ subroutine Lidar_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
          end if
       end if
       DstOutputData%WtTrunc = SrcOutputData%WtTrunc
-   else if (allocated(DstOutputData%WtTrunc)) then
-      deallocate(DstOutputData%WtTrunc)
    end if
    if (allocated(SrcOutputData%MsrPositionsX)) then
       LB(1:1) = lbound(SrcOutputData%MsrPositionsX)
@@ -787,8 +775,6 @@ subroutine Lidar_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
          end if
       end if
       DstOutputData%MsrPositionsX = SrcOutputData%MsrPositionsX
-   else if (allocated(DstOutputData%MsrPositionsX)) then
-      deallocate(DstOutputData%MsrPositionsX)
    end if
    if (allocated(SrcOutputData%MsrPositionsY)) then
       LB(1:1) = lbound(SrcOutputData%MsrPositionsY)
@@ -801,8 +787,6 @@ subroutine Lidar_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
          end if
       end if
       DstOutputData%MsrPositionsY = SrcOutputData%MsrPositionsY
-   else if (allocated(DstOutputData%MsrPositionsY)) then
-      deallocate(DstOutputData%MsrPositionsY)
    end if
    if (allocated(SrcOutputData%MsrPositionsZ)) then
       LB(1:1) = lbound(SrcOutputData%MsrPositionsZ)
@@ -815,8 +799,6 @@ subroutine Lidar_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
          end if
       end if
       DstOutputData%MsrPositionsZ = SrcOutputData%MsrPositionsZ
-   else if (allocated(DstOutputData%MsrPositionsZ)) then
-      deallocate(DstOutputData%MsrPositionsZ)
    end if
 end subroutine
 

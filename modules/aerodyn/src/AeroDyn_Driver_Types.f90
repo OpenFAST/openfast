@@ -352,8 +352,6 @@ subroutine AD_Dvr_CopyDvr_Outputs(SrcDvr_OutputsData, DstDvr_OutputsData, CtrlCo
          end if
       end if
       DstDvr_OutputsData%unOutFile = SrcDvr_OutputsData%unOutFile
-   else if (allocated(DstDvr_OutputsData%unOutFile)) then
-      deallocate(DstDvr_OutputsData%unOutFile)
    end if
    DstDvr_OutputsData%ActualChanLen = SrcDvr_OutputsData%ActualChanLen
    DstDvr_OutputsData%nDvrOutputs = SrcDvr_OutputsData%nDvrOutputs
@@ -377,8 +375,6 @@ subroutine AD_Dvr_CopyDvr_Outputs(SrcDvr_OutputsData, DstDvr_OutputsData, CtrlCo
          end if
       end if
       DstDvr_OutputsData%WriteOutputHdr = SrcDvr_OutputsData%WriteOutputHdr
-   else if (allocated(DstDvr_OutputsData%WriteOutputHdr)) then
-      deallocate(DstDvr_OutputsData%WriteOutputHdr)
    end if
    if (allocated(SrcDvr_OutputsData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcDvr_OutputsData%WriteOutputUnt)
@@ -391,8 +387,6 @@ subroutine AD_Dvr_CopyDvr_Outputs(SrcDvr_OutputsData, DstDvr_OutputsData, CtrlCo
          end if
       end if
       DstDvr_OutputsData%WriteOutputUnt = SrcDvr_OutputsData%WriteOutputUnt
-   else if (allocated(DstDvr_OutputsData%WriteOutputUnt)) then
-      deallocate(DstDvr_OutputsData%WriteOutputUnt)
    end if
    if (allocated(SrcDvr_OutputsData%storage)) then
       LB(1:3) = lbound(SrcDvr_OutputsData%storage)
@@ -405,8 +399,6 @@ subroutine AD_Dvr_CopyDvr_Outputs(SrcDvr_OutputsData, DstDvr_OutputsData, CtrlCo
          end if
       end if
       DstDvr_OutputsData%storage = SrcDvr_OutputsData%storage
-   else if (allocated(DstDvr_OutputsData%storage)) then
-      deallocate(DstDvr_OutputsData%storage)
    end if
    if (allocated(SrcDvr_OutputsData%outLine)) then
       LB(1:1) = lbound(SrcDvr_OutputsData%outLine)
@@ -419,8 +411,6 @@ subroutine AD_Dvr_CopyDvr_Outputs(SrcDvr_OutputsData, DstDvr_OutputsData, CtrlCo
          end if
       end if
       DstDvr_OutputsData%outLine = SrcDvr_OutputsData%outLine
-   else if (allocated(DstDvr_OutputsData%outLine)) then
-      deallocate(DstDvr_OutputsData%outLine)
    end if
    if (allocated(SrcDvr_OutputsData%VTK_surface)) then
       LB(1:1) = lbound(SrcDvr_OutputsData%VTK_surface)
@@ -437,8 +427,6 @@ subroutine AD_Dvr_CopyDvr_Outputs(SrcDvr_OutputsData, DstDvr_OutputsData, CtrlCo
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstDvr_OutputsData%VTK_surface)) then
-      deallocate(DstDvr_OutputsData%VTK_surface)
    end if
    DstDvr_OutputsData%VTK_tWidth = SrcDvr_OutputsData%VTK_tWidth
    DstDvr_OutputsData%n_VTKTime = SrcDvr_OutputsData%n_VTKTime
@@ -715,8 +703,6 @@ subroutine AD_Dvr_CopyBladeData(SrcBladeDataData, DstBladeDataData, CtrlCode, Er
          end if
       end if
       DstBladeDataData%motion = SrcBladeDataData%motion
-   else if (allocated(DstBladeDataData%motion)) then
-      deallocate(DstBladeDataData%motion)
    end if
    DstBladeDataData%motionFileName = SrcBladeDataData%motionFileName
 end subroutine
@@ -830,8 +816,6 @@ subroutine AD_Dvr_CopyHubData(SrcHubDataData, DstHubDataData, CtrlCode, ErrStat,
          end if
       end if
       DstHubDataData%motion = SrcHubDataData%motion
-   else if (allocated(DstHubDataData%motion)) then
-      deallocate(DstHubDataData%motion)
    end if
 end subroutine
 
@@ -937,8 +921,6 @@ subroutine AD_Dvr_CopyNacData(SrcNacDataData, DstNacDataData, CtrlCode, ErrStat,
          end if
       end if
       DstNacDataData%motion = SrcNacDataData%motion
-   else if (allocated(DstNacDataData%motion)) then
-      deallocate(DstNacDataData%motion)
    end if
 end subroutine
 
@@ -1090,8 +1072,6 @@ subroutine AD_Dvr_CopyWTData(SrcWTDataData, DstWTDataData, CtrlCode, ErrStat, Er
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstWTDataData%map2BldPt)) then
-      deallocate(DstWTDataData%map2BldPt)
    end if
    if (allocated(SrcWTDataData%bld)) then
       LB(1:1) = lbound(SrcWTDataData%bld)
@@ -1108,8 +1088,6 @@ subroutine AD_Dvr_CopyWTData(SrcWTDataData, DstWTDataData, CtrlCode, ErrStat, Er
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstWTDataData%bld)) then
-      deallocate(DstWTDataData%bld)
    end if
    call AD_Dvr_CopyHubData(SrcWTDataData%hub, DstWTDataData%hub, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1138,8 +1116,6 @@ subroutine AD_Dvr_CopyWTData(SrcWTDataData, DstWTDataData, CtrlCode, ErrStat, Er
          end if
       end if
       DstWTDataData%motion = SrcWTDataData%motion
-   else if (allocated(DstWTDataData%motion)) then
-      deallocate(DstWTDataData%motion)
    end if
    DstWTDataData%iMotion = SrcWTDataData%iMotion
    DstWTDataData%degreeOfFreedom = SrcWTDataData%degreeOfFreedom
@@ -1157,8 +1133,6 @@ subroutine AD_Dvr_CopyWTData(SrcWTDataData, DstWTDataData, CtrlCode, ErrStat, Er
          end if
       end if
       DstWTDataData%WriteOutput = SrcWTDataData%WriteOutput
-   else if (allocated(DstWTDataData%WriteOutput)) then
-      deallocate(DstWTDataData%WriteOutput)
    end if
    if (allocated(SrcWTDataData%userSwapArray)) then
       LB(1:1) = lbound(SrcWTDataData%userSwapArray)
@@ -1171,8 +1145,6 @@ subroutine AD_Dvr_CopyWTData(SrcWTDataData, DstWTDataData, CtrlCode, ErrStat, Er
          end if
       end if
       DstWTDataData%userSwapArray = SrcWTDataData%userSwapArray
-   else if (allocated(DstWTDataData%userSwapArray)) then
-      deallocate(DstWTDataData%userSwapArray)
    end if
 end subroutine
 
@@ -1447,8 +1419,6 @@ subroutine AD_Dvr_CopyDvr_SimData(SrcDvr_SimDataData, DstDvr_SimDataData, CtrlCo
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstDvr_SimDataData%WT)) then
-      deallocate(DstDvr_SimDataData%WT)
    end if
    DstDvr_SimDataData%dT = SrcDvr_SimDataData%dT
    DstDvr_SimDataData%tMax = SrcDvr_SimDataData%tMax
@@ -1469,8 +1439,6 @@ subroutine AD_Dvr_CopyDvr_SimData(SrcDvr_SimDataData, DstDvr_SimDataData, CtrlCo
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstDvr_SimDataData%Cases)) then
-      deallocate(DstDvr_SimDataData%Cases)
    end if
    DstDvr_SimDataData%iCase = SrcDvr_SimDataData%iCase
    if (allocated(SrcDvr_SimDataData%timeSeries)) then
@@ -1484,8 +1452,6 @@ subroutine AD_Dvr_CopyDvr_SimData(SrcDvr_SimDataData, DstDvr_SimDataData, CtrlCo
          end if
       end if
       DstDvr_SimDataData%timeSeries = SrcDvr_SimDataData%timeSeries
-   else if (allocated(DstDvr_SimDataData%timeSeries)) then
-      deallocate(DstDvr_SimDataData%timeSeries)
    end if
    DstDvr_SimDataData%iTimeSeries = SrcDvr_SimDataData%iTimeSeries
    DstDvr_SimDataData%root = SrcDvr_SimDataData%root

@@ -161,8 +161,6 @@ subroutine NWTC_Library_CopyFASTdataType(SrcFASTdataTypeData, DstFASTdataTypeDat
          end if
       end if
       DstFASTdataTypeData%ChanNames = SrcFASTdataTypeData%ChanNames
-   else if (allocated(DstFASTdataTypeData%ChanNames)) then
-      deallocate(DstFASTdataTypeData%ChanNames)
    end if
    if (allocated(SrcFASTdataTypeData%ChanUnits)) then
       LB(1:1) = lbound(SrcFASTdataTypeData%ChanUnits)
@@ -175,8 +173,6 @@ subroutine NWTC_Library_CopyFASTdataType(SrcFASTdataTypeData, DstFASTdataTypeDat
          end if
       end if
       DstFASTdataTypeData%ChanUnits = SrcFASTdataTypeData%ChanUnits
-   else if (allocated(DstFASTdataTypeData%ChanUnits)) then
-      deallocate(DstFASTdataTypeData%ChanUnits)
    end if
    if (allocated(SrcFASTdataTypeData%Data)) then
       LB(1:2) = lbound(SrcFASTdataTypeData%Data)
@@ -189,8 +185,6 @@ subroutine NWTC_Library_CopyFASTdataType(SrcFASTdataTypeData, DstFASTdataTypeDat
          end if
       end if
       DstFASTdataTypeData%Data = SrcFASTdataTypeData%Data
-   else if (allocated(DstFASTdataTypeData%Data)) then
-      deallocate(DstFASTdataTypeData%Data)
    end if
 end subroutine
 
@@ -377,8 +371,6 @@ subroutine NWTC_Library_CopyFileInfoType(SrcFileInfoTypeData, DstFileInfoTypeDat
          end if
       end if
       DstFileInfoTypeData%FileLine = SrcFileInfoTypeData%FileLine
-   else if (allocated(DstFileInfoTypeData%FileLine)) then
-      deallocate(DstFileInfoTypeData%FileLine)
    end if
    if (allocated(SrcFileInfoTypeData%FileIndx)) then
       LB(1:1) = lbound(SrcFileInfoTypeData%FileIndx)
@@ -391,8 +383,6 @@ subroutine NWTC_Library_CopyFileInfoType(SrcFileInfoTypeData, DstFileInfoTypeDat
          end if
       end if
       DstFileInfoTypeData%FileIndx = SrcFileInfoTypeData%FileIndx
-   else if (allocated(DstFileInfoTypeData%FileIndx)) then
-      deallocate(DstFileInfoTypeData%FileIndx)
    end if
    if (allocated(SrcFileInfoTypeData%FileList)) then
       LB(1:1) = lbound(SrcFileInfoTypeData%FileList)
@@ -405,8 +395,6 @@ subroutine NWTC_Library_CopyFileInfoType(SrcFileInfoTypeData, DstFileInfoTypeDat
          end if
       end if
       DstFileInfoTypeData%FileList = SrcFileInfoTypeData%FileList
-   else if (allocated(DstFileInfoTypeData%FileList)) then
-      deallocate(DstFileInfoTypeData%FileList)
    end if
    if (allocated(SrcFileInfoTypeData%Lines)) then
       LB(1:1) = lbound(SrcFileInfoTypeData%Lines)
@@ -419,8 +407,6 @@ subroutine NWTC_Library_CopyFileInfoType(SrcFileInfoTypeData, DstFileInfoTypeDat
          end if
       end if
       DstFileInfoTypeData%Lines = SrcFileInfoTypeData%Lines
-   else if (allocated(DstFileInfoTypeData%Lines)) then
-      deallocate(DstFileInfoTypeData%Lines)
    end if
 end subroutine
 
@@ -612,8 +598,6 @@ subroutine NWTC_Library_CopyNWTC_RandomNumber_ParameterType(SrcNWTC_RandomNumber
          end if
       end if
       DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry = SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry
-   else if (allocated(DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry)) then
-      deallocate(DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry)
    end if
    DstNWTC_RandomNumber_ParameterTypeData%RNG_type = SrcNWTC_RandomNumber_ParameterTypeData%RNG_type
 end subroutine

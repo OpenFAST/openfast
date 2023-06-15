@@ -92,8 +92,6 @@ subroutine Current_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
          end if
       end if
       DstInitInputData%WaveKinGridzi = SrcInitInputData%WaveKinGridzi
-   else if (allocated(DstInitInputData%WaveKinGridzi)) then
-      deallocate(DstInitInputData%WaveKinGridzi)
    end if
    DstInitInputData%NGridPts = SrcInitInputData%NGridPts
    DstInitInputData%DirRoot = SrcInitInputData%DirRoot
@@ -206,8 +204,6 @@ subroutine Current_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
          end if
       end if
       DstInitOutputData%CurrVxi = SrcInitOutputData%CurrVxi
-   else if (allocated(DstInitOutputData%CurrVxi)) then
-      deallocate(DstInitOutputData%CurrVxi)
    end if
    if (allocated(SrcInitOutputData%CurrVyi)) then
       LB(1:1) = lbound(SrcInitOutputData%CurrVyi)
@@ -220,8 +216,6 @@ subroutine Current_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
          end if
       end if
       DstInitOutputData%CurrVyi = SrcInitOutputData%CurrVyi
-   else if (allocated(DstInitOutputData%CurrVyi)) then
-      deallocate(DstInitOutputData%CurrVyi)
    end if
    DstInitOutputData%PCurrVxiPz0 = SrcInitOutputData%PCurrVxiPz0
    DstInitOutputData%PCurrVyiPz0 = SrcInitOutputData%PCurrVyiPz0

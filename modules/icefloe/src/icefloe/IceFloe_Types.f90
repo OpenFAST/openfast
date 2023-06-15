@@ -188,8 +188,6 @@ subroutine IceFloe_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
          end if
       end if
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
-      deallocate(DstInitOutputData%WriteOutputHdr)
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
@@ -202,8 +200,6 @@ subroutine IceFloe_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
          end if
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
-      deallocate(DstInitOutputData%WriteOutputUnt)
    end if
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -504,8 +500,6 @@ subroutine IceFloe_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%loadSeries = SrcParamData%loadSeries
-   else if (allocated(DstParamData%loadSeries)) then
-      deallocate(DstParamData%loadSeries)
    end if
    DstParamData%iceVel = SrcParamData%iceVel
    DstParamData%iceDirection = SrcParamData%iceDirection
@@ -528,8 +522,6 @@ subroutine IceFloe_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%legX = SrcParamData%legX
-   else if (allocated(DstParamData%legX)) then
-      deallocate(DstParamData%legX)
    end if
    if (allocated(SrcParamData%legY)) then
       LB(1:1) = lbound(SrcParamData%legY)
@@ -542,8 +534,6 @@ subroutine IceFloe_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%legY = SrcParamData%legY
-   else if (allocated(DstParamData%legY)) then
-      deallocate(DstParamData%legY)
    end if
    if (allocated(SrcParamData%ks)) then
       LB(1:1) = lbound(SrcParamData%ks)
@@ -556,8 +546,6 @@ subroutine IceFloe_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
          end if
       end if
       DstParamData%ks = SrcParamData%ks
-   else if (allocated(DstParamData%ks)) then
-      deallocate(DstParamData%ks)
    end if
    DstParamData%numLegs = SrcParamData%numLegs
    DstParamData%iceType = SrcParamData%iceType
@@ -798,8 +786,6 @@ subroutine IceFloe_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
          end if
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-   else if (allocated(DstOutputData%WriteOutput)) then
-      deallocate(DstOutputData%WriteOutput)
    end if
 end subroutine
 

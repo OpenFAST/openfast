@@ -263,8 +263,6 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
          end if
       end if
       DstInputFileData%WaveElevxi = SrcInputFileData%WaveElevxi
-   else if (allocated(DstInputFileData%WaveElevxi)) then
-      deallocate(DstInputFileData%WaveElevxi)
    end if
    if (allocated(SrcInputFileData%WaveElevyi)) then
       LB(1:1) = lbound(SrcInputFileData%WaveElevyi)
@@ -277,8 +275,6 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
          end if
       end if
       DstInputFileData%WaveElevyi = SrcInputFileData%WaveElevyi
-   else if (allocated(DstInputFileData%WaveElevyi)) then
-      deallocate(DstInputFileData%WaveElevyi)
    end if
    DstInputFileData%NWaveKin = SrcInputFileData%NWaveKin
    if (allocated(SrcInputFileData%WaveKinxi)) then
@@ -292,8 +288,6 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
          end if
       end if
       DstInputFileData%WaveKinxi = SrcInputFileData%WaveKinxi
-   else if (allocated(DstInputFileData%WaveKinxi)) then
-      deallocate(DstInputFileData%WaveKinxi)
    end if
    if (allocated(SrcInputFileData%WaveKinyi)) then
       LB(1:1) = lbound(SrcInputFileData%WaveKinyi)
@@ -306,8 +300,6 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
          end if
       end if
       DstInputFileData%WaveKinyi = SrcInputFileData%WaveKinyi
-   else if (allocated(DstInputFileData%WaveKinyi)) then
-      deallocate(DstInputFileData%WaveKinyi)
    end if
    if (allocated(SrcInputFileData%WaveKinzi)) then
       LB(1:1) = lbound(SrcInputFileData%WaveKinzi)
@@ -320,8 +312,6 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
          end if
       end if
       DstInputFileData%WaveKinzi = SrcInputFileData%WaveKinzi
-   else if (allocated(DstInputFileData%WaveKinzi)) then
-      deallocate(DstInputFileData%WaveKinzi)
    end if
    DstInputFileData%OutSwtch = SrcInputFileData%OutSwtch
    DstInputFileData%OutAll = SrcInputFileData%OutAll
@@ -337,8 +327,6 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
          end if
       end if
       DstInputFileData%OutList = SrcInputFileData%OutList
-   else if (allocated(DstInputFileData%OutList)) then
-      deallocate(DstInputFileData%OutList)
    end if
    DstInputFileData%SeaStSum = SrcInputFileData%SeaStSum
    DstInputFileData%OutFmt = SrcInputFileData%OutFmt
@@ -603,8 +591,6 @@ subroutine SeaSt_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
          end if
       end if
       DstInitInputData%WaveElevXY = SrcInitInputData%WaveElevXY
-   else if (allocated(DstInitInputData%WaveElevXY)) then
-      deallocate(DstInitInputData%WaveElevXY)
    end if
    DstInitInputData%WaveFieldMod = SrcInitInputData%WaveFieldMod
    DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
@@ -734,8 +720,6 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
          end if
       end if
       DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
-      deallocate(DstInitOutputData%WriteOutputHdr)
    end if
    if (allocated(SrcInitOutputData%WriteOutputUnt)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
@@ -748,8 +732,6 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
          end if
       end if
       DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
-      deallocate(DstInitOutputData%WriteOutputUnt)
    end if
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -805,8 +787,6 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
          end if
       end if
       DstInitOutputData%WaveElevSeries = SrcInitOutputData%WaveElevSeries
-   else if (allocated(DstInitOutputData%WaveElevSeries)) then
-      deallocate(DstInitOutputData%WaveElevSeries)
    end if
    DstInitOutputData%WaveField => SrcInitOutputData%WaveField
 end subroutine
@@ -1757,8 +1737,6 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstParamData%WaveElevxi = SrcParamData%WaveElevxi
-   else if (allocated(DstParamData%WaveElevxi)) then
-      deallocate(DstParamData%WaveElevxi)
    end if
    if (allocated(SrcParamData%WaveElevyi)) then
       LB(1:1) = lbound(SrcParamData%WaveElevyi)
@@ -1771,8 +1749,6 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstParamData%WaveElevyi = SrcParamData%WaveElevyi
-   else if (allocated(DstParamData%WaveElevyi)) then
-      deallocate(DstParamData%WaveElevyi)
    end if
    DstParamData%WaveElev1 => SrcParamData%WaveElev1
    DstParamData%WaveElev2 => SrcParamData%WaveElev2
@@ -1798,8 +1774,6 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstParamData%WaveKinxi = SrcParamData%WaveKinxi
-   else if (allocated(DstParamData%WaveKinxi)) then
-      deallocate(DstParamData%WaveKinxi)
    end if
    if (allocated(SrcParamData%WaveKinyi)) then
       LB(1:1) = lbound(SrcParamData%WaveKinyi)
@@ -1812,8 +1786,6 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstParamData%WaveKinyi = SrcParamData%WaveKinyi
-   else if (allocated(DstParamData%WaveKinyi)) then
-      deallocate(DstParamData%WaveKinyi)
    end if
    if (allocated(SrcParamData%WaveKinzi)) then
       LB(1:1) = lbound(SrcParamData%WaveKinzi)
@@ -1826,8 +1798,6 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          end if
       end if
       DstParamData%WaveKinzi = SrcParamData%WaveKinzi
-   else if (allocated(DstParamData%WaveKinzi)) then
-      deallocate(DstParamData%WaveKinzi)
    end if
    DstParamData%WtrDpth = SrcParamData%WtrDpth
    DstParamData%DT = SrcParamData%DT
@@ -1847,8 +1817,6 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
-   else if (allocated(DstParamData%OutParam)) then
-      deallocate(DstParamData%OutParam)
    end if
    DstParamData%NumOuts = SrcParamData%NumOuts
    DstParamData%OutSwtch = SrcParamData%OutSwtch
@@ -1871,9 +1839,6 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
       call SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcParamData%WaveField, DstParamData%WaveField, CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
-   else if (associated(DstParamData%WaveField)) then
-      deallocate(DstParamData%WaveField)
-      nullify(DstParamData%WaveField)
    end if
 end subroutine
 
@@ -2648,8 +2613,6 @@ subroutine SeaSt_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, Err
          end if
       end if
       DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-   else if (allocated(DstOutputData%WriteOutput)) then
-      deallocate(DstOutputData%WriteOutput)
    end if
 end subroutine
 

@@ -396,8 +396,6 @@ subroutine DWM_Copyturbine_average_velocity_data(Srcturbine_average_velocity_dat
          end if
       end if
       Dstturbine_average_velocity_dataData%average_velocity_array_temp = Srcturbine_average_velocity_dataData%average_velocity_array_temp
-   else if (allocated(Dstturbine_average_velocity_dataData%average_velocity_array_temp)) then
-      deallocate(Dstturbine_average_velocity_dataData%average_velocity_array_temp)
    end if
    if (allocated(Srcturbine_average_velocity_dataData%average_velocity_array)) then
       LB(1:1) = lbound(Srcturbine_average_velocity_dataData%average_velocity_array)
@@ -410,8 +408,6 @@ subroutine DWM_Copyturbine_average_velocity_data(Srcturbine_average_velocity_dat
          end if
       end if
       Dstturbine_average_velocity_dataData%average_velocity_array = Srcturbine_average_velocity_dataData%average_velocity_array
-   else if (allocated(Dstturbine_average_velocity_dataData%average_velocity_array)) then
-      deallocate(Dstturbine_average_velocity_dataData%average_velocity_array)
    end if
    if (allocated(Srcturbine_average_velocity_dataData%swept_area)) then
       LB(1:1) = lbound(Srcturbine_average_velocity_dataData%swept_area)
@@ -424,8 +420,6 @@ subroutine DWM_Copyturbine_average_velocity_data(Srcturbine_average_velocity_dat
          end if
       end if
       Dstturbine_average_velocity_dataData%swept_area = Srcturbine_average_velocity_dataData%swept_area
-   else if (allocated(Dstturbine_average_velocity_dataData%swept_area)) then
-      deallocate(Dstturbine_average_velocity_dataData%swept_area)
    end if
    Dstturbine_average_velocity_dataData%time_step_velocity = Srcturbine_average_velocity_dataData%time_step_velocity
    if (allocated(Srcturbine_average_velocity_dataData%time_step_velocity_array)) then
@@ -439,8 +433,6 @@ subroutine DWM_Copyturbine_average_velocity_data(Srcturbine_average_velocity_dat
          end if
       end if
       Dstturbine_average_velocity_dataData%time_step_velocity_array = Srcturbine_average_velocity_dataData%time_step_velocity_array
-   else if (allocated(Dstturbine_average_velocity_dataData%time_step_velocity_array)) then
-      deallocate(Dstturbine_average_velocity_dataData%time_step_velocity_array)
    end if
    Dstturbine_average_velocity_dataData%time_step_pass_velocity = Srcturbine_average_velocity_dataData%time_step_pass_velocity
    Dstturbine_average_velocity_dataData%time_step_force = Srcturbine_average_velocity_dataData%time_step_force
@@ -594,8 +586,6 @@ subroutine DWM_CopyWake_Deficit_Data(SrcWake_Deficit_DataData, DstWake_Deficit_D
          end if
       end if
       DstWake_Deficit_DataData%Turb_Stress_DWM = SrcWake_Deficit_DataData%Turb_Stress_DWM
-   else if (allocated(DstWake_Deficit_DataData%Turb_Stress_DWM)) then
-      deallocate(DstWake_Deficit_DataData%Turb_Stress_DWM)
    end if
    DstWake_Deficit_DataData%n_x_vector = SrcWake_Deficit_DataData%n_x_vector
    DstWake_Deficit_DataData%n_r_vector = SrcWake_Deficit_DataData%n_r_vector
@@ -732,8 +722,6 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
          end if
       end if
       Dstread_turbine_position_dataData%Turbine_sort_order = Srcread_turbine_position_dataData%Turbine_sort_order
-   else if (allocated(Dstread_turbine_position_dataData%Turbine_sort_order)) then
-      deallocate(Dstread_turbine_position_dataData%Turbine_sort_order)
    end if
    Dstread_turbine_position_dataData%WT_index = Srcread_turbine_position_dataData%WT_index
    if (allocated(Srcread_turbine_position_dataData%TurbineInfluenceData)) then
@@ -747,8 +735,6 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
          end if
       end if
       Dstread_turbine_position_dataData%TurbineInfluenceData = Srcread_turbine_position_dataData%TurbineInfluenceData
-   else if (allocated(Dstread_turbine_position_dataData%TurbineInfluenceData)) then
-      deallocate(Dstread_turbine_position_dataData%TurbineInfluenceData)
    end if
    if (allocated(Srcread_turbine_position_dataData%upwind_turbine_index)) then
       LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_index)
@@ -761,8 +747,6 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
          end if
       end if
       Dstread_turbine_position_dataData%upwind_turbine_index = Srcread_turbine_position_dataData%upwind_turbine_index
-   else if (allocated(Dstread_turbine_position_dataData%upwind_turbine_index)) then
-      deallocate(Dstread_turbine_position_dataData%upwind_turbine_index)
    end if
    if (allocated(Srcread_turbine_position_dataData%downwind_turbine_index)) then
       LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_index)
@@ -775,8 +759,6 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
          end if
       end if
       Dstread_turbine_position_dataData%downwind_turbine_index = Srcread_turbine_position_dataData%downwind_turbine_index
-   else if (allocated(Dstread_turbine_position_dataData%downwind_turbine_index)) then
-      deallocate(Dstread_turbine_position_dataData%downwind_turbine_index)
    end if
    Dstread_turbine_position_dataData%upwindturbine_number = Srcread_turbine_position_dataData%upwindturbine_number
    Dstread_turbine_position_dataData%downwindturbine_number = Srcread_turbine_position_dataData%downwindturbine_number
@@ -791,8 +773,6 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
          end if
       end if
       Dstread_turbine_position_dataData%turbine_windorigin_length = Srcread_turbine_position_dataData%turbine_windorigin_length
-   else if (allocated(Dstread_turbine_position_dataData%turbine_windorigin_length)) then
-      deallocate(Dstread_turbine_position_dataData%turbine_windorigin_length)
    end if
    if (allocated(Srcread_turbine_position_dataData%upwind_turbine_projected_distance)) then
       LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_projected_distance)
@@ -805,8 +785,6 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
          end if
       end if
       Dstread_turbine_position_dataData%upwind_turbine_projected_distance = Srcread_turbine_position_dataData%upwind_turbine_projected_distance
-   else if (allocated(Dstread_turbine_position_dataData%upwind_turbine_projected_distance)) then
-      deallocate(Dstread_turbine_position_dataData%upwind_turbine_projected_distance)
    end if
    if (allocated(Srcread_turbine_position_dataData%downwind_turbine_projected_distance)) then
       LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_projected_distance)
@@ -819,8 +797,6 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
          end if
       end if
       Dstread_turbine_position_dataData%downwind_turbine_projected_distance = Srcread_turbine_position_dataData%downwind_turbine_projected_distance
-   else if (allocated(Dstread_turbine_position_dataData%downwind_turbine_projected_distance)) then
-      deallocate(Dstread_turbine_position_dataData%downwind_turbine_projected_distance)
    end if
    if (allocated(Srcread_turbine_position_dataData%turbine_angle)) then
       LB(1:2) = lbound(Srcread_turbine_position_dataData%turbine_angle)
@@ -833,8 +809,6 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
          end if
       end if
       Dstread_turbine_position_dataData%turbine_angle = Srcread_turbine_position_dataData%turbine_angle
-   else if (allocated(Dstread_turbine_position_dataData%turbine_angle)) then
-      deallocate(Dstread_turbine_position_dataData%turbine_angle)
    end if
    if (allocated(Srcread_turbine_position_dataData%upwind_align_angle)) then
       LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_align_angle)
@@ -847,8 +821,6 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
          end if
       end if
       Dstread_turbine_position_dataData%upwind_align_angle = Srcread_turbine_position_dataData%upwind_align_angle
-   else if (allocated(Dstread_turbine_position_dataData%upwind_align_angle)) then
-      deallocate(Dstread_turbine_position_dataData%upwind_align_angle)
    end if
    if (allocated(Srcread_turbine_position_dataData%downwind_align_angle)) then
       LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_align_angle)
@@ -861,8 +833,6 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
          end if
       end if
       Dstread_turbine_position_dataData%downwind_align_angle = Srcread_turbine_position_dataData%downwind_align_angle
-   else if (allocated(Dstread_turbine_position_dataData%downwind_align_angle)) then
-      deallocate(Dstread_turbine_position_dataData%downwind_align_angle)
    end if
    if (allocated(Srcread_turbine_position_dataData%upwind_turbine_Xcoor)) then
       LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_Xcoor)
@@ -875,8 +845,6 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
          end if
       end if
       Dstread_turbine_position_dataData%upwind_turbine_Xcoor = Srcread_turbine_position_dataData%upwind_turbine_Xcoor
-   else if (allocated(Dstread_turbine_position_dataData%upwind_turbine_Xcoor)) then
-      deallocate(Dstread_turbine_position_dataData%upwind_turbine_Xcoor)
    end if
    if (allocated(Srcread_turbine_position_dataData%upwind_turbine_Ycoor)) then
       LB(1:1) = lbound(Srcread_turbine_position_dataData%upwind_turbine_Ycoor)
@@ -889,8 +857,6 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
          end if
       end if
       Dstread_turbine_position_dataData%upwind_turbine_Ycoor = Srcread_turbine_position_dataData%upwind_turbine_Ycoor
-   else if (allocated(Dstread_turbine_position_dataData%upwind_turbine_Ycoor)) then
-      deallocate(Dstread_turbine_position_dataData%upwind_turbine_Ycoor)
    end if
    if (allocated(Srcread_turbine_position_dataData%wind_farm_Xcoor)) then
       LB(1:1) = lbound(Srcread_turbine_position_dataData%wind_farm_Xcoor)
@@ -903,8 +869,6 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
          end if
       end if
       Dstread_turbine_position_dataData%wind_farm_Xcoor = Srcread_turbine_position_dataData%wind_farm_Xcoor
-   else if (allocated(Dstread_turbine_position_dataData%wind_farm_Xcoor)) then
-      deallocate(Dstread_turbine_position_dataData%wind_farm_Xcoor)
    end if
    if (allocated(Srcread_turbine_position_dataData%wind_farm_Ycoor)) then
       LB(1:1) = lbound(Srcread_turbine_position_dataData%wind_farm_Ycoor)
@@ -917,8 +881,6 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
          end if
       end if
       Dstread_turbine_position_dataData%wind_farm_Ycoor = Srcread_turbine_position_dataData%wind_farm_Ycoor
-   else if (allocated(Dstread_turbine_position_dataData%wind_farm_Ycoor)) then
-      deallocate(Dstread_turbine_position_dataData%wind_farm_Ycoor)
    end if
    if (allocated(Srcread_turbine_position_dataData%downwind_turbine_Xcoor)) then
       LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_Xcoor)
@@ -931,8 +893,6 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
          end if
       end if
       Dstread_turbine_position_dataData%downwind_turbine_Xcoor = Srcread_turbine_position_dataData%downwind_turbine_Xcoor
-   else if (allocated(Dstread_turbine_position_dataData%downwind_turbine_Xcoor)) then
-      deallocate(Dstread_turbine_position_dataData%downwind_turbine_Xcoor)
    end if
    if (allocated(Srcread_turbine_position_dataData%downwind_turbine_Ycoor)) then
       LB(1:1) = lbound(Srcread_turbine_position_dataData%downwind_turbine_Ycoor)
@@ -945,8 +905,6 @@ subroutine DWM_Copyread_turbine_position_data(Srcread_turbine_position_dataData,
          end if
       end if
       Dstread_turbine_position_dataData%downwind_turbine_Ycoor = Srcread_turbine_position_dataData%downwind_turbine_Ycoor
-   else if (allocated(Dstread_turbine_position_dataData%downwind_turbine_Ycoor)) then
-      deallocate(Dstread_turbine_position_dataData%downwind_turbine_Ycoor)
    end if
 end subroutine
 
@@ -1363,8 +1321,6 @@ subroutine DWM_CopyWeiMethod(SrcWeiMethodData, DstWeiMethodData, CtrlCode, ErrSt
          end if
       end if
       DstWeiMethodData%sweptarea = SrcWeiMethodData%sweptarea
-   else if (allocated(DstWeiMethodData%sweptarea)) then
-      deallocate(DstWeiMethodData%sweptarea)
    end if
    DstWeiMethodData%weighting_denominator = SrcWeiMethodData%weighting_denominator
 end subroutine
@@ -1443,8 +1399,6 @@ subroutine DWM_CopyTIDownstream(SrcTIDownstreamData, DstTIDownstreamData, CtrlCo
          end if
       end if
       DstTIDownstreamData%TI_downstream_matrix = SrcTIDownstreamData%TI_downstream_matrix
-   else if (allocated(DstTIDownstreamData%TI_downstream_matrix)) then
-      deallocate(DstTIDownstreamData%TI_downstream_matrix)
    end if
    DstTIDownstreamData%i = SrcTIDownstreamData%i
    DstTIDownstreamData%j = SrcTIDownstreamData%j
@@ -1698,8 +1652,6 @@ subroutine DWM_CopyShinozuka(SrcShinozukaData, DstShinozukaData, CtrlCode, ErrSt
          end if
       end if
       DstShinozukaData%f_syn = SrcShinozukaData%f_syn
-   else if (allocated(DstShinozukaData%f_syn)) then
-      deallocate(DstShinozukaData%f_syn)
    end if
    if (allocated(SrcShinozukaData%t_syn)) then
       LB(1:1) = lbound(SrcShinozukaData%t_syn)
@@ -1712,8 +1664,6 @@ subroutine DWM_CopyShinozuka(SrcShinozukaData, DstShinozukaData, CtrlCode, ErrSt
          end if
       end if
       DstShinozukaData%t_syn = SrcShinozukaData%t_syn
-   else if (allocated(DstShinozukaData%t_syn)) then
-      deallocate(DstShinozukaData%t_syn)
    end if
    if (allocated(SrcShinozukaData%phi)) then
       LB(1:1) = lbound(SrcShinozukaData%phi)
@@ -1726,8 +1676,6 @@ subroutine DWM_CopyShinozuka(SrcShinozukaData, DstShinozukaData, CtrlCode, ErrSt
          end if
       end if
       DstShinozukaData%phi = SrcShinozukaData%phi
-   else if (allocated(DstShinozukaData%phi)) then
-      deallocate(DstShinozukaData%phi)
    end if
    if (allocated(SrcShinozukaData%p_k)) then
       LB(1:1) = lbound(SrcShinozukaData%p_k)
@@ -1740,8 +1688,6 @@ subroutine DWM_CopyShinozuka(SrcShinozukaData, DstShinozukaData, CtrlCode, ErrSt
          end if
       end if
       DstShinozukaData%p_k = SrcShinozukaData%p_k
-   else if (allocated(DstShinozukaData%p_k)) then
-      deallocate(DstShinozukaData%p_k)
    end if
    if (allocated(SrcShinozukaData%a_k)) then
       LB(1:1) = lbound(SrcShinozukaData%a_k)
@@ -1754,8 +1700,6 @@ subroutine DWM_CopyShinozuka(SrcShinozukaData, DstShinozukaData, CtrlCode, ErrSt
          end if
       end if
       DstShinozukaData%a_k = SrcShinozukaData%a_k
-   else if (allocated(DstShinozukaData%a_k)) then
-      deallocate(DstShinozukaData%a_k)
    end if
    DstShinozukaData%num_points = SrcShinozukaData%num_points
    DstShinozukaData%ILo = SrcShinozukaData%ILo
@@ -2048,8 +1992,6 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
          end if
       end if
       Dstread_upwind_resultData%upwind_U = Srcread_upwind_resultData%upwind_U
-   else if (allocated(Dstread_upwind_resultData%upwind_U)) then
-      deallocate(Dstread_upwind_resultData%upwind_U)
    end if
    if (allocated(Srcread_upwind_resultData%upwind_wakecenter)) then
       LB(1:4) = lbound(Srcread_upwind_resultData%upwind_wakecenter)
@@ -2062,8 +2004,6 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
          end if
       end if
       Dstread_upwind_resultData%upwind_wakecenter = Srcread_upwind_resultData%upwind_wakecenter
-   else if (allocated(Dstread_upwind_resultData%upwind_wakecenter)) then
-      deallocate(Dstread_upwind_resultData%upwind_wakecenter)
    end if
    if (allocated(Srcread_upwind_resultData%upwind_meanU)) then
       LB(1:1) = lbound(Srcread_upwind_resultData%upwind_meanU)
@@ -2076,8 +2016,6 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
          end if
       end if
       Dstread_upwind_resultData%upwind_meanU = Srcread_upwind_resultData%upwind_meanU
-   else if (allocated(Dstread_upwind_resultData%upwind_meanU)) then
-      deallocate(Dstread_upwind_resultData%upwind_meanU)
    end if
    if (allocated(Srcread_upwind_resultData%upwind_TI)) then
       LB(1:1) = lbound(Srcread_upwind_resultData%upwind_TI)
@@ -2090,8 +2028,6 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
          end if
       end if
       Dstread_upwind_resultData%upwind_TI = Srcread_upwind_resultData%upwind_TI
-   else if (allocated(Dstread_upwind_resultData%upwind_TI)) then
-      deallocate(Dstread_upwind_resultData%upwind_TI)
    end if
    if (allocated(Srcread_upwind_resultData%upwind_small_TI)) then
       LB(1:1) = lbound(Srcread_upwind_resultData%upwind_small_TI)
@@ -2104,8 +2040,6 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
          end if
       end if
       Dstread_upwind_resultData%upwind_small_TI = Srcread_upwind_resultData%upwind_small_TI
-   else if (allocated(Dstread_upwind_resultData%upwind_small_TI)) then
-      deallocate(Dstread_upwind_resultData%upwind_small_TI)
    end if
    if (allocated(Srcread_upwind_resultData%upwind_smoothWake)) then
       LB(1:2) = lbound(Srcread_upwind_resultData%upwind_smoothWake)
@@ -2118,8 +2052,6 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
          end if
       end if
       Dstread_upwind_resultData%upwind_smoothWake = Srcread_upwind_resultData%upwind_smoothWake
-   else if (allocated(Dstread_upwind_resultData%upwind_smoothWake)) then
-      deallocate(Dstread_upwind_resultData%upwind_smoothWake)
    end if
    if (allocated(Srcread_upwind_resultData%velocity_aerodyn)) then
       LB(1:1) = lbound(Srcread_upwind_resultData%velocity_aerodyn)
@@ -2132,8 +2064,6 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
          end if
       end if
       Dstread_upwind_resultData%velocity_aerodyn = Srcread_upwind_resultData%velocity_aerodyn
-   else if (allocated(Dstread_upwind_resultData%velocity_aerodyn)) then
-      deallocate(Dstread_upwind_resultData%velocity_aerodyn)
    end if
    if (allocated(Srcread_upwind_resultData%TI_downstream)) then
       LB(1:1) = lbound(Srcread_upwind_resultData%TI_downstream)
@@ -2146,8 +2076,6 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
          end if
       end if
       Dstread_upwind_resultData%TI_downstream = Srcread_upwind_resultData%TI_downstream
-   else if (allocated(Dstread_upwind_resultData%TI_downstream)) then
-      deallocate(Dstread_upwind_resultData%TI_downstream)
    end if
    if (allocated(Srcread_upwind_resultData%small_scale_TI_downstream)) then
       LB(1:1) = lbound(Srcread_upwind_resultData%small_scale_TI_downstream)
@@ -2160,8 +2088,6 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
          end if
       end if
       Dstread_upwind_resultData%small_scale_TI_downstream = Srcread_upwind_resultData%small_scale_TI_downstream
-   else if (allocated(Dstread_upwind_resultData%small_scale_TI_downstream)) then
-      deallocate(Dstread_upwind_resultData%small_scale_TI_downstream)
    end if
    if (allocated(Srcread_upwind_resultData%smoothed_velocity_array)) then
       LB(1:2) = lbound(Srcread_upwind_resultData%smoothed_velocity_array)
@@ -2174,8 +2100,6 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
          end if
       end if
       Dstread_upwind_resultData%smoothed_velocity_array = Srcread_upwind_resultData%smoothed_velocity_array
-   else if (allocated(Dstread_upwind_resultData%smoothed_velocity_array)) then
-      deallocate(Dstread_upwind_resultData%smoothed_velocity_array)
    end if
    if (allocated(Srcread_upwind_resultData%vel_matrix)) then
       LB(1:3) = lbound(Srcread_upwind_resultData%vel_matrix)
@@ -2188,8 +2112,6 @@ subroutine DWM_Copyread_upwind_result(Srcread_upwind_resultData, Dstread_upwind_
          end if
       end if
       Dstread_upwind_resultData%vel_matrix = Srcread_upwind_resultData%vel_matrix
-   else if (allocated(Dstread_upwind_resultData%vel_matrix)) then
-      deallocate(Dstread_upwind_resultData%vel_matrix)
    end if
 end subroutine
 
@@ -2484,8 +2406,6 @@ subroutine DWM_Copywake_meandered_center(Srcwake_meandered_centerData, Dstwake_m
          end if
       end if
       Dstwake_meandered_centerData%wake_width = Srcwake_meandered_centerData%wake_width
-   else if (allocated(Dstwake_meandered_centerData%wake_width)) then
-      deallocate(Dstwake_meandered_centerData%wake_width)
    end if
 end subroutine
 
@@ -2608,8 +2528,6 @@ subroutine DWM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%velocityU = SrcParamData%velocityU
-   else if (allocated(DstParamData%velocityU)) then
-      deallocate(DstParamData%velocityU)
    end if
    if (allocated(SrcParamData%smoothed_wake)) then
       LB(1:1) = lbound(SrcParamData%smoothed_wake)
@@ -2622,8 +2540,6 @@ subroutine DWM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%smoothed_wake = SrcParamData%smoothed_wake
-   else if (allocated(DstParamData%smoothed_wake)) then
-      deallocate(DstParamData%smoothed_wake)
    end if
    if (allocated(SrcParamData%WakePosition)) then
       LB(1:3) = lbound(SrcParamData%WakePosition)
@@ -2636,8 +2552,6 @@ subroutine DWM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%WakePosition = SrcParamData%WakePosition
-   else if (allocated(DstParamData%WakePosition)) then
-      deallocate(DstParamData%WakePosition)
    end if
    DstParamData%WakePosition_1 = SrcParamData%WakePosition_1
    DstParamData%WakePosition_2 = SrcParamData%WakePosition_2
@@ -2669,8 +2583,6 @@ subroutine DWM_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstParamData%ElementRad = SrcParamData%ElementRad
-   else if (allocated(DstParamData%ElementRad)) then
-      deallocate(DstParamData%ElementRad)
    end if
    DstParamData%Bnum = SrcParamData%Bnum
    DstParamData%ElementNum = SrcParamData%ElementNum
@@ -2948,8 +2860,6 @@ subroutine DWM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%Nforce = SrcMiscData%Nforce
-   else if (allocated(DstMiscData%Nforce)) then
-      deallocate(DstMiscData%Nforce)
    end if
    if (allocated(SrcMiscData%blade_dr)) then
       LB(1:1) = lbound(SrcMiscData%blade_dr)
@@ -2962,8 +2872,6 @@ subroutine DWM_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          end if
       end if
       DstMiscData%blade_dr = SrcMiscData%blade_dr
-   else if (allocated(DstMiscData%blade_dr)) then
-      deallocate(DstMiscData%blade_dr)
    end if
    DstMiscData%NacYaw = SrcMiscData%NacYaw
    DstMiscData%TI_original = SrcMiscData%TI_original
@@ -3242,8 +3150,6 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstOutputData%turbine_thrust_force = SrcOutputData%turbine_thrust_force
-   else if (allocated(DstOutputData%turbine_thrust_force)) then
-      deallocate(DstOutputData%turbine_thrust_force)
    end if
    if (allocated(SrcOutputData%induction_factor)) then
       LB(1:1) = lbound(SrcOutputData%induction_factor)
@@ -3256,8 +3162,6 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstOutputData%induction_factor = SrcOutputData%induction_factor
-   else if (allocated(DstOutputData%induction_factor)) then
-      deallocate(DstOutputData%induction_factor)
    end if
    if (allocated(SrcOutputData%r_initial)) then
       LB(1:1) = lbound(SrcOutputData%r_initial)
@@ -3270,8 +3174,6 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstOutputData%r_initial = SrcOutputData%r_initial
-   else if (allocated(DstOutputData%r_initial)) then
-      deallocate(DstOutputData%r_initial)
    end if
    if (allocated(SrcOutputData%U_initial)) then
       LB(1:1) = lbound(SrcOutputData%U_initial)
@@ -3284,8 +3186,6 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstOutputData%U_initial = SrcOutputData%U_initial
-   else if (allocated(DstOutputData%U_initial)) then
-      deallocate(DstOutputData%U_initial)
    end if
    if (allocated(SrcOutputData%Mean_FFWS_array)) then
       LB(1:1) = lbound(SrcOutputData%Mean_FFWS_array)
@@ -3298,8 +3198,6 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstOutputData%Mean_FFWS_array = SrcOutputData%Mean_FFWS_array
-   else if (allocated(DstOutputData%Mean_FFWS_array)) then
-      deallocate(DstOutputData%Mean_FFWS_array)
    end if
    DstOutputData%Mean_FFWS = SrcOutputData%Mean_FFWS
    DstOutputData%TI = SrcOutputData%TI
@@ -3315,8 +3213,6 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstOutputData%wake_u = SrcOutputData%wake_u
-   else if (allocated(DstOutputData%wake_u)) then
-      deallocate(DstOutputData%wake_u)
    end if
    if (allocated(SrcOutputData%wake_position)) then
       LB(1:3) = lbound(SrcOutputData%wake_position)
@@ -3329,8 +3225,6 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstOutputData%wake_position = SrcOutputData%wake_position
-   else if (allocated(DstOutputData%wake_position)) then
-      deallocate(DstOutputData%wake_position)
    end if
    if (allocated(SrcOutputData%smoothed_velocity_array)) then
       LB(1:2) = lbound(SrcOutputData%smoothed_velocity_array)
@@ -3343,8 +3237,6 @@ subroutine DWM_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMs
          end if
       end if
       DstOutputData%smoothed_velocity_array = SrcOutputData%smoothed_velocity_array
-   else if (allocated(DstOutputData%smoothed_velocity_array)) then
-      deallocate(DstOutputData%smoothed_velocity_array)
    end if
    DstOutputData%AtmUscale = SrcOutputData%AtmUscale
    DstOutputData%du_dz_ABL = SrcOutputData%du_dz_ABL
