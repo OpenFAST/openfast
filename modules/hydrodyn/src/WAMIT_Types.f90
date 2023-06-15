@@ -157,188 +157,189 @@ IMPLICIT NONE
   END TYPE WAMIT_OutputType
 ! =======================
 CONTAINS
- SUBROUTINE WAMIT_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(WAMIT_InitInputType), INTENT(IN) :: SrcInitInputData
-   TYPE(WAMIT_InitInputType), INTENT(INOUT) :: DstInitInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'WAMIT_CopyInitInput'
-! 
+
+subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
+   type(WAMIT_InitInputType), intent(in) :: SrcInitInputData
+   type(WAMIT_InitInputType), intent(inout) :: DstInitInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(3), UB(3)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_CopyInitInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInitInputData%NBody = SrcInitInputData%NBody
-    DstInitInputData%NBodyMod = SrcInitInputData%NBodyMod
-    DstInitInputData%Gravity = SrcInitInputData%Gravity
-    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
-IF (ALLOCATED(SrcInitInputData%PtfmVol0)) THEN
-  i1_l = LBOUND(SrcInitInputData%PtfmVol0,1)
-  i1_u = UBOUND(SrcInitInputData%PtfmVol0,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%PtfmVol0)) THEN 
-    ALLOCATE(DstInitInputData%PtfmVol0(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmVol0.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%PtfmVol0 = SrcInitInputData%PtfmVol0
-ENDIF
-    DstInitInputData%HasWAMIT = SrcInitInputData%HasWAMIT
-    DstInitInputData%WAMITULEN = SrcInitInputData%WAMITULEN
-IF (ALLOCATED(SrcInitInputData%PtfmRefxt)) THEN
-  i1_l = LBOUND(SrcInitInputData%PtfmRefxt,1)
-  i1_u = UBOUND(SrcInitInputData%PtfmRefxt,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%PtfmRefxt)) THEN 
-    ALLOCATE(DstInitInputData%PtfmRefxt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmRefxt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%PtfmRefxt = SrcInitInputData%PtfmRefxt
-ENDIF
-IF (ALLOCATED(SrcInitInputData%PtfmRefyt)) THEN
-  i1_l = LBOUND(SrcInitInputData%PtfmRefyt,1)
-  i1_u = UBOUND(SrcInitInputData%PtfmRefyt,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%PtfmRefyt)) THEN 
-    ALLOCATE(DstInitInputData%PtfmRefyt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmRefyt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%PtfmRefyt = SrcInitInputData%PtfmRefyt
-ENDIF
-IF (ALLOCATED(SrcInitInputData%PtfmRefzt)) THEN
-  i1_l = LBOUND(SrcInitInputData%PtfmRefzt,1)
-  i1_u = UBOUND(SrcInitInputData%PtfmRefzt,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%PtfmRefzt)) THEN 
-    ALLOCATE(DstInitInputData%PtfmRefzt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmRefzt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%PtfmRefzt = SrcInitInputData%PtfmRefzt
-ENDIF
-IF (ALLOCATED(SrcInitInputData%PtfmRefztRot)) THEN
-  i1_l = LBOUND(SrcInitInputData%PtfmRefztRot,1)
-  i1_u = UBOUND(SrcInitInputData%PtfmRefztRot,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%PtfmRefztRot)) THEN 
-    ALLOCATE(DstInitInputData%PtfmRefztRot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmRefztRot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%PtfmRefztRot = SrcInitInputData%PtfmRefztRot
-ENDIF
-IF (ALLOCATED(SrcInitInputData%PtfmCOBxt)) THEN
-  i1_l = LBOUND(SrcInitInputData%PtfmCOBxt,1)
-  i1_u = UBOUND(SrcInitInputData%PtfmCOBxt,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%PtfmCOBxt)) THEN 
-    ALLOCATE(DstInitInputData%PtfmCOBxt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmCOBxt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%PtfmCOBxt = SrcInitInputData%PtfmCOBxt
-ENDIF
-IF (ALLOCATED(SrcInitInputData%PtfmCOByt)) THEN
-  i1_l = LBOUND(SrcInitInputData%PtfmCOByt,1)
-  i1_u = UBOUND(SrcInitInputData%PtfmCOByt,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%PtfmCOByt)) THEN 
-    ALLOCATE(DstInitInputData%PtfmCOByt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmCOByt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%PtfmCOByt = SrcInitInputData%PtfmCOByt
-ENDIF
-    DstInitInputData%RdtnMod = SrcInitInputData%RdtnMod
-    DstInitInputData%ExctnMod = SrcInitInputData%ExctnMod
-    DstInitInputData%ExctnDisp = SrcInitInputData%ExctnDisp
-    DstInitInputData%ExctnCutOff = SrcInitInputData%ExctnCutOff
-    DstInitInputData%RdtnTMax = SrcInitInputData%RdtnTMax
-    DstInitInputData%WaveDir = SrcInitInputData%WaveDir
-    DstInitInputData%WAMITFile = SrcInitInputData%WAMITFile
-      CALL Conv_Rdtn_CopyInitInput( SrcInitInputData%Conv_Rdtn, DstInitInputData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    DstInitInputData%Rhoxg = SrcInitInputData%Rhoxg
-    DstInitInputData%NStepWave = SrcInitInputData%NStepWave
-    DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
-    DstInitInputData%WaveDOmega = SrcInitInputData%WaveDOmega
-    DstInitInputData%WaveElev0 => SrcInitInputData%WaveElev0
-    DstInitInputData%WaveElev1 => SrcInitInputData%WaveElev1
-    DstInitInputData%WaveElevC0 => SrcInitInputData%WaveElevC0
-    DstInitInputData%WaveElevC => SrcInitInputData%WaveElevC
-    DstInitInputData%WaveTime => SrcInitInputData%WaveTime
-    DstInitInputData%WaveMod = SrcInitInputData%WaveMod
-    DstInitInputData%WtrDens = SrcInitInputData%WtrDens
-    DstInitInputData%WaveDirArr => SrcInitInputData%WaveDirArr
-    DstInitInputData%WaveDirMin = SrcInitInputData%WaveDirMin
-    DstInitInputData%WaveDirMax = SrcInitInputData%WaveDirMax
-      CALL SeaSt_Interp_CopyParam( SrcInitInputData%SeaSt_Interp_p, DstInitInputData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE WAMIT_CopyInitInput
+   ErrMsg  = ''
+   DstInitInputData%NBody = SrcInitInputData%NBody
+   DstInitInputData%NBodyMod = SrcInitInputData%NBodyMod
+   DstInitInputData%Gravity = SrcInitInputData%Gravity
+   DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
+   if (allocated(SrcInitInputData%PtfmVol0)) then
+      LB(1:1) = lbound(SrcInitInputData%PtfmVol0)
+      UB(1:1) = ubound(SrcInitInputData%PtfmVol0)
+      if (.not. allocated(DstInitInputData%PtfmVol0)) then
+         allocate(DstInitInputData%PtfmVol0(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmVol0.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%PtfmVol0 = SrcInitInputData%PtfmVol0
+   else if (allocated(DstInitInputData%PtfmVol0)) then
+      deallocate(DstInitInputData%PtfmVol0)
+   end if
+   DstInitInputData%HasWAMIT = SrcInitInputData%HasWAMIT
+   DstInitInputData%WAMITULEN = SrcInitInputData%WAMITULEN
+   if (allocated(SrcInitInputData%PtfmRefxt)) then
+      LB(1:1) = lbound(SrcInitInputData%PtfmRefxt)
+      UB(1:1) = ubound(SrcInitInputData%PtfmRefxt)
+      if (.not. allocated(DstInitInputData%PtfmRefxt)) then
+         allocate(DstInitInputData%PtfmRefxt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmRefxt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%PtfmRefxt = SrcInitInputData%PtfmRefxt
+   else if (allocated(DstInitInputData%PtfmRefxt)) then
+      deallocate(DstInitInputData%PtfmRefxt)
+   end if
+   if (allocated(SrcInitInputData%PtfmRefyt)) then
+      LB(1:1) = lbound(SrcInitInputData%PtfmRefyt)
+      UB(1:1) = ubound(SrcInitInputData%PtfmRefyt)
+      if (.not. allocated(DstInitInputData%PtfmRefyt)) then
+         allocate(DstInitInputData%PtfmRefyt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmRefyt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%PtfmRefyt = SrcInitInputData%PtfmRefyt
+   else if (allocated(DstInitInputData%PtfmRefyt)) then
+      deallocate(DstInitInputData%PtfmRefyt)
+   end if
+   if (allocated(SrcInitInputData%PtfmRefzt)) then
+      LB(1:1) = lbound(SrcInitInputData%PtfmRefzt)
+      UB(1:1) = ubound(SrcInitInputData%PtfmRefzt)
+      if (.not. allocated(DstInitInputData%PtfmRefzt)) then
+         allocate(DstInitInputData%PtfmRefzt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmRefzt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%PtfmRefzt = SrcInitInputData%PtfmRefzt
+   else if (allocated(DstInitInputData%PtfmRefzt)) then
+      deallocate(DstInitInputData%PtfmRefzt)
+   end if
+   if (allocated(SrcInitInputData%PtfmRefztRot)) then
+      LB(1:1) = lbound(SrcInitInputData%PtfmRefztRot)
+      UB(1:1) = ubound(SrcInitInputData%PtfmRefztRot)
+      if (.not. allocated(DstInitInputData%PtfmRefztRot)) then
+         allocate(DstInitInputData%PtfmRefztRot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmRefztRot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%PtfmRefztRot = SrcInitInputData%PtfmRefztRot
+   else if (allocated(DstInitInputData%PtfmRefztRot)) then
+      deallocate(DstInitInputData%PtfmRefztRot)
+   end if
+   if (allocated(SrcInitInputData%PtfmCOBxt)) then
+      LB(1:1) = lbound(SrcInitInputData%PtfmCOBxt)
+      UB(1:1) = ubound(SrcInitInputData%PtfmCOBxt)
+      if (.not. allocated(DstInitInputData%PtfmCOBxt)) then
+         allocate(DstInitInputData%PtfmCOBxt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmCOBxt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%PtfmCOBxt = SrcInitInputData%PtfmCOBxt
+   else if (allocated(DstInitInputData%PtfmCOBxt)) then
+      deallocate(DstInitInputData%PtfmCOBxt)
+   end if
+   if (allocated(SrcInitInputData%PtfmCOByt)) then
+      LB(1:1) = lbound(SrcInitInputData%PtfmCOByt)
+      UB(1:1) = ubound(SrcInitInputData%PtfmCOByt)
+      if (.not. allocated(DstInitInputData%PtfmCOByt)) then
+         allocate(DstInitInputData%PtfmCOByt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmCOByt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%PtfmCOByt = SrcInitInputData%PtfmCOByt
+   else if (allocated(DstInitInputData%PtfmCOByt)) then
+      deallocate(DstInitInputData%PtfmCOByt)
+   end if
+   DstInitInputData%RdtnMod = SrcInitInputData%RdtnMod
+   DstInitInputData%ExctnMod = SrcInitInputData%ExctnMod
+   DstInitInputData%ExctnDisp = SrcInitInputData%ExctnDisp
+   DstInitInputData%ExctnCutOff = SrcInitInputData%ExctnCutOff
+   DstInitInputData%RdtnTMax = SrcInitInputData%RdtnTMax
+   DstInitInputData%WaveDir = SrcInitInputData%WaveDir
+   DstInitInputData%WAMITFile = SrcInitInputData%WAMITFile
+   call Conv_Rdtn_CopyInitInput(SrcInitInputData%Conv_Rdtn, DstInitInputData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstInitInputData%Rhoxg = SrcInitInputData%Rhoxg
+   DstInitInputData%NStepWave = SrcInitInputData%NStepWave
+   DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
+   DstInitInputData%WaveDOmega = SrcInitInputData%WaveDOmega
+   DstInitInputData%WaveElev0 => SrcInitInputData%WaveElev0
+   DstInitInputData%WaveElev1 => SrcInitInputData%WaveElev1
+   DstInitInputData%WaveElevC0 => SrcInitInputData%WaveElevC0
+   DstInitInputData%WaveElevC => SrcInitInputData%WaveElevC
+   DstInitInputData%WaveTime => SrcInitInputData%WaveTime
+   DstInitInputData%WaveMod = SrcInitInputData%WaveMod
+   DstInitInputData%WtrDens = SrcInitInputData%WtrDens
+   DstInitInputData%WaveDirArr => SrcInitInputData%WaveDirArr
+   DstInitInputData%WaveDirMin = SrcInitInputData%WaveDirMin
+   DstInitInputData%WaveDirMax = SrcInitInputData%WaveDirMax
+   call SeaSt_Interp_CopyParam(SrcInitInputData%SeaSt_Interp_p, DstInitInputData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE WAMIT_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
-  TYPE(WAMIT_InitInputType), INTENT(INOUT) :: InitInputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'WAMIT_DestroyInitInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(InitInputData%PtfmVol0)) THEN
-  DEALLOCATE(InitInputData%PtfmVol0)
-ENDIF
-IF (ALLOCATED(InitInputData%PtfmRefxt)) THEN
-  DEALLOCATE(InitInputData%PtfmRefxt)
-ENDIF
-IF (ALLOCATED(InitInputData%PtfmRefyt)) THEN
-  DEALLOCATE(InitInputData%PtfmRefyt)
-ENDIF
-IF (ALLOCATED(InitInputData%PtfmRefzt)) THEN
-  DEALLOCATE(InitInputData%PtfmRefzt)
-ENDIF
-IF (ALLOCATED(InitInputData%PtfmRefztRot)) THEN
-  DEALLOCATE(InitInputData%PtfmRefztRot)
-ENDIF
-IF (ALLOCATED(InitInputData%PtfmCOBxt)) THEN
-  DEALLOCATE(InitInputData%PtfmCOBxt)
-ENDIF
-IF (ALLOCATED(InitInputData%PtfmCOByt)) THEN
-  DEALLOCATE(InitInputData%PtfmCOByt)
-ENDIF
-  CALL Conv_Rdtn_DestroyInitInput( InitInputData%Conv_Rdtn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-NULLIFY(InitInputData%WaveElev0)
-NULLIFY(InitInputData%WaveElev1)
-NULLIFY(InitInputData%WaveElevC0)
-NULLIFY(InitInputData%WaveElevC)
-NULLIFY(InitInputData%WaveTime)
-NULLIFY(InitInputData%WaveDirArr)
-  CALL SeaSt_Interp_DestroyParam( InitInputData%SeaSt_Interp_p, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE WAMIT_DestroyInitInput
-
+subroutine WAMIT_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
+   type(WAMIT_InitInputType), intent(inout) :: InitInputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_DestroyInitInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InitInputData%PtfmVol0)) then
+      deallocate(InitInputData%PtfmVol0)
+   end if
+   if (allocated(InitInputData%PtfmRefxt)) then
+      deallocate(InitInputData%PtfmRefxt)
+   end if
+   if (allocated(InitInputData%PtfmRefyt)) then
+      deallocate(InitInputData%PtfmRefyt)
+   end if
+   if (allocated(InitInputData%PtfmRefzt)) then
+      deallocate(InitInputData%PtfmRefzt)
+   end if
+   if (allocated(InitInputData%PtfmRefztRot)) then
+      deallocate(InitInputData%PtfmRefztRot)
+   end if
+   if (allocated(InitInputData%PtfmCOBxt)) then
+      deallocate(InitInputData%PtfmCOBxt)
+   end if
+   if (allocated(InitInputData%PtfmCOByt)) then
+      deallocate(InitInputData%PtfmCOByt)
+   end if
+   nullify(InitInputData%WaveElev0)
+   nullify(InitInputData%WaveElev1)
+   nullify(InitInputData%WaveElevC0)
+   nullify(InitInputData%WaveElevC)
+   nullify(InitInputData%WaveTime)
+   nullify(InitInputData%WaveDirArr)
+end subroutine
 
 subroutine WAMIT_PackInitInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -346,110 +347,84 @@ subroutine WAMIT_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'WAMIT_PackInitInput'
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
-   ! NBody
    call RegPack(Buf, InData%NBody)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NBodyMod
    call RegPack(Buf, InData%NBodyMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Gravity
    call RegPack(Buf, InData%Gravity)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDpth
    call RegPack(Buf, InData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmVol0
    call RegPack(Buf, allocated(InData%PtfmVol0))
    if (allocated(InData%PtfmVol0)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmVol0), ubound(InData%PtfmVol0))
       call RegPack(Buf, InData%PtfmVol0)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HasWAMIT
    call RegPack(Buf, InData%HasWAMIT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMITULEN
    call RegPack(Buf, InData%WAMITULEN)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmRefxt
    call RegPack(Buf, allocated(InData%PtfmRefxt))
    if (allocated(InData%PtfmRefxt)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmRefxt), ubound(InData%PtfmRefxt))
       call RegPack(Buf, InData%PtfmRefxt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmRefyt
    call RegPack(Buf, allocated(InData%PtfmRefyt))
    if (allocated(InData%PtfmRefyt)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmRefyt), ubound(InData%PtfmRefyt))
       call RegPack(Buf, InData%PtfmRefyt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmRefzt
    call RegPack(Buf, allocated(InData%PtfmRefzt))
    if (allocated(InData%PtfmRefzt)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmRefzt), ubound(InData%PtfmRefzt))
       call RegPack(Buf, InData%PtfmRefzt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmRefztRot
    call RegPack(Buf, allocated(InData%PtfmRefztRot))
    if (allocated(InData%PtfmRefztRot)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmRefztRot), ubound(InData%PtfmRefztRot))
       call RegPack(Buf, InData%PtfmRefztRot)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmCOBxt
    call RegPack(Buf, allocated(InData%PtfmCOBxt))
    if (allocated(InData%PtfmCOBxt)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmCOBxt), ubound(InData%PtfmCOBxt))
       call RegPack(Buf, InData%PtfmCOBxt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmCOByt
    call RegPack(Buf, allocated(InData%PtfmCOByt))
    if (allocated(InData%PtfmCOByt)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmCOByt), ubound(InData%PtfmCOByt))
       call RegPack(Buf, InData%PtfmCOByt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RdtnMod
    call RegPack(Buf, InData%RdtnMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ExctnMod
    call RegPack(Buf, InData%ExctnMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ExctnDisp
    call RegPack(Buf, InData%ExctnDisp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ExctnCutOff
    call RegPack(Buf, InData%ExctnCutOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RdtnTMax
    call RegPack(Buf, InData%RdtnTMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDir
    call RegPack(Buf, InData%WaveDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMITFile
    call RegPack(Buf, InData%WAMITFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Conv_Rdtn
    call Conv_Rdtn_PackInitInput(Buf, InData%Conv_Rdtn) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Rhoxg
    call RegPack(Buf, InData%Rhoxg)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NStepWave
    call RegPack(Buf, InData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NStepWave2
    call RegPack(Buf, InData%NStepWave2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDOmega
    call RegPack(Buf, InData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElev0
    call RegPack(Buf, associated(InData%WaveElev0))
    if (associated(InData%WaveElev0)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveElev0), ubound(InData%WaveElev0))
@@ -459,7 +434,6 @@ subroutine WAMIT_PackInitInput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElev1
    call RegPack(Buf, associated(InData%WaveElev1))
    if (associated(InData%WaveElev1)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElev1), ubound(InData%WaveElev1))
@@ -469,7 +443,6 @@ subroutine WAMIT_PackInitInput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevC0
    call RegPack(Buf, associated(InData%WaveElevC0))
    if (associated(InData%WaveElevC0)) then
       call RegPackBounds(Buf, 2, lbound(InData%WaveElevC0), ubound(InData%WaveElevC0))
@@ -479,7 +452,6 @@ subroutine WAMIT_PackInitInput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevC
    call RegPack(Buf, associated(InData%WaveElevC))
    if (associated(InData%WaveElevC)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElevC), ubound(InData%WaveElevC))
@@ -489,7 +461,6 @@ subroutine WAMIT_PackInitInput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveTime
    call RegPack(Buf, associated(InData%WaveTime))
    if (associated(InData%WaveTime)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveTime), ubound(InData%WaveTime))
@@ -499,13 +470,10 @@ subroutine WAMIT_PackInitInput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveMod
    call RegPack(Buf, InData%WaveMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDens
    call RegPack(Buf, InData%WtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirArr
    call RegPack(Buf, associated(InData%WaveDirArr))
    if (associated(InData%WaveDirArr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveDirArr), ubound(InData%WaveDirArr))
@@ -515,13 +483,10 @@ subroutine WAMIT_PackInitInput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirMin
    call RegPack(Buf, InData%WaveDirMin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirMax
    call RegPack(Buf, InData%WaveDirMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SeaSt_Interp_p
    call SeaSt_Interp_PackParam(Buf, InData%SeaSt_Interp_p) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -536,19 +501,14 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
    integer(IntKi)  :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
-   ! NBody
    call RegUnpack(Buf, OutData%NBody)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NBodyMod
    call RegUnpack(Buf, OutData%NBodyMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Gravity
    call RegUnpack(Buf, OutData%Gravity)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDpth
    call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmVol0
    if (allocated(OutData%PtfmVol0)) deallocate(OutData%PtfmVol0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -563,13 +523,10 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%PtfmVol0)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! HasWAMIT
    call RegUnpack(Buf, OutData%HasWAMIT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMITULEN
    call RegUnpack(Buf, OutData%WAMITULEN)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmRefxt
    if (allocated(OutData%PtfmRefxt)) deallocate(OutData%PtfmRefxt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -584,7 +541,6 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%PtfmRefxt)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PtfmRefyt
    if (allocated(OutData%PtfmRefyt)) deallocate(OutData%PtfmRefyt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -599,7 +555,6 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%PtfmRefyt)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PtfmRefzt
    if (allocated(OutData%PtfmRefzt)) deallocate(OutData%PtfmRefzt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -614,7 +569,6 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%PtfmRefzt)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PtfmRefztRot
    if (allocated(OutData%PtfmRefztRot)) deallocate(OutData%PtfmRefztRot)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -629,7 +583,6 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%PtfmRefztRot)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PtfmCOBxt
    if (allocated(OutData%PtfmCOBxt)) deallocate(OutData%PtfmCOBxt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -644,7 +597,6 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%PtfmCOBxt)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PtfmCOByt
    if (allocated(OutData%PtfmCOByt)) deallocate(OutData%PtfmCOByt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -659,42 +611,29 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%PtfmCOByt)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! RdtnMod
    call RegUnpack(Buf, OutData%RdtnMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ExctnMod
    call RegUnpack(Buf, OutData%ExctnMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ExctnDisp
    call RegUnpack(Buf, OutData%ExctnDisp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ExctnCutOff
    call RegUnpack(Buf, OutData%ExctnCutOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RdtnTMax
    call RegUnpack(Buf, OutData%RdtnTMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDir
    call RegUnpack(Buf, OutData%WaveDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMITFile
    call RegUnpack(Buf, OutData%WAMITFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Conv_Rdtn
    call Conv_Rdtn_UnpackInitInput(Buf, OutData%Conv_Rdtn) ! Conv_Rdtn 
-   ! Rhoxg
    call RegUnpack(Buf, OutData%Rhoxg)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NStepWave
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NStepWave2
    call RegUnpack(Buf, OutData%NStepWave2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDOmega
    call RegUnpack(Buf, OutData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElev0
    if (associated(OutData%WaveElev0)) deallocate(OutData%WaveElev0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -719,7 +658,6 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
    else
       OutData%WaveElev0 => null()
    end if
-   ! WaveElev1
    if (associated(OutData%WaveElev1)) deallocate(OutData%WaveElev1)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -744,7 +682,6 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
    else
       OutData%WaveElev1 => null()
    end if
-   ! WaveElevC0
    if (associated(OutData%WaveElevC0)) deallocate(OutData%WaveElevC0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -769,7 +706,6 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
    else
       OutData%WaveElevC0 => null()
    end if
-   ! WaveElevC
    if (associated(OutData%WaveElevC)) deallocate(OutData%WaveElevC)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -794,7 +730,6 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
    else
       OutData%WaveElevC => null()
    end if
-   ! WaveTime
    if (associated(OutData%WaveTime)) deallocate(OutData%WaveTime)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -819,13 +754,10 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
    else
       OutData%WaveTime => null()
    end if
-   ! WaveMod
    call RegUnpack(Buf, OutData%WaveMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDens
    call RegUnpack(Buf, OutData%WtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirArr
    if (associated(OutData%WaveDirArr)) deallocate(OutData%WaveDirArr)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -850,74 +782,55 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
    else
       OutData%WaveDirArr => null()
    end if
-   ! WaveDirMin
    call RegUnpack(Buf, OutData%WaveDirMin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirMax
    call RegUnpack(Buf, OutData%WaveDirMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SeaSt_Interp_p
    call SeaSt_Interp_UnpackParam(Buf, OutData%SeaSt_Interp_p) ! SeaSt_Interp_p 
 end subroutine
- SUBROUTINE WAMIT_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(WAMIT_ContinuousStateType), INTENT(IN) :: SrcContStateData
-   TYPE(WAMIT_ContinuousStateType), INTENT(INOUT) :: DstContStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'WAMIT_CopyContState'
-! 
+
+subroutine WAMIT_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
+   type(WAMIT_ContinuousStateType), intent(in) :: SrcContStateData
+   type(WAMIT_ContinuousStateType), intent(inout) :: DstContStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_CopyContState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL SS_Rad_CopyContState( SrcContStateData%SS_Rdtn, DstContStateData%SS_Rdtn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL SS_Exc_CopyContState( SrcContStateData%SS_Exctn, DstContStateData%SS_Exctn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL Conv_Rdtn_CopyContState( SrcContStateData%Conv_Rdtn, DstContStateData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE WAMIT_CopyContState
+   ErrMsg  = ''
+   call SS_Rad_CopyContState(SrcContStateData%SS_Rdtn, DstContStateData%SS_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SS_Exc_CopyContState(SrcContStateData%SS_Exctn, DstContStateData%SS_Exctn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call Conv_Rdtn_CopyContState(SrcContStateData%Conv_Rdtn, DstContStateData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE WAMIT_DestroyContState( ContStateData, ErrStat, ErrMsg )
-  TYPE(WAMIT_ContinuousStateType), INTENT(INOUT) :: ContStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'WAMIT_DestroyContState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL SS_Rad_DestroyContState( ContStateData%SS_Rdtn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Exc_DestroyContState( ContStateData%SS_Exctn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Conv_Rdtn_DestroyContState( ContStateData%Conv_Rdtn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE WAMIT_DestroyContState
-
+subroutine WAMIT_DestroyContState(ContStateData, ErrStat, ErrMsg)
+   type(WAMIT_ContinuousStateType), intent(inout) :: ContStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_DestroyContState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine WAMIT_PackContState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(WAMIT_ContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT_PackContState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! SS_Rdtn
    call SS_Rad_PackContState(Buf, InData%SS_Rdtn) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SS_Exctn
    call SS_Exc_PackContState(Buf, InData%SS_Exctn) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Conv_Rdtn
    call Conv_Rdtn_PackContState(Buf, InData%Conv_Rdtn) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -927,97 +840,73 @@ subroutine WAMIT_UnPackContState(Buf, OutData)
    type(WAMIT_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT_UnPackContState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! SS_Rdtn
    call SS_Rad_UnpackContState(Buf, OutData%SS_Rdtn) ! SS_Rdtn 
-   ! SS_Exctn
    call SS_Exc_UnpackContState(Buf, OutData%SS_Exctn) ! SS_Exctn 
-   ! Conv_Rdtn
    call Conv_Rdtn_UnpackContState(Buf, OutData%Conv_Rdtn) ! Conv_Rdtn 
 end subroutine
- SUBROUTINE WAMIT_CopyDiscState( SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(WAMIT_DiscreteStateType), INTENT(IN) :: SrcDiscStateData
-   TYPE(WAMIT_DiscreteStateType), INTENT(INOUT) :: DstDiscStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'WAMIT_CopyDiscState'
-! 
+
+subroutine WAMIT_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg)
+   type(WAMIT_DiscreteStateType), intent(in) :: SrcDiscStateData
+   type(WAMIT_DiscreteStateType), intent(inout) :: DstDiscStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(3), UB(3)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_CopyDiscState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL Conv_Rdtn_CopyDiscState( SrcDiscStateData%Conv_Rdtn, DstDiscStateData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL SS_Rad_CopyDiscState( SrcDiscStateData%SS_Rdtn, DstDiscStateData%SS_Rdtn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL SS_Exc_CopyDiscState( SrcDiscStateData%SS_Exctn, DstDiscStateData%SS_Exctn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcDiscStateData%BdyPosFilt)) THEN
-  i1_l = LBOUND(SrcDiscStateData%BdyPosFilt,1)
-  i1_u = UBOUND(SrcDiscStateData%BdyPosFilt,1)
-  i2_l = LBOUND(SrcDiscStateData%BdyPosFilt,2)
-  i2_u = UBOUND(SrcDiscStateData%BdyPosFilt,2)
-  i3_l = LBOUND(SrcDiscStateData%BdyPosFilt,3)
-  i3_u = UBOUND(SrcDiscStateData%BdyPosFilt,3)
-  IF (.NOT. ALLOCATED(DstDiscStateData%BdyPosFilt)) THEN 
-    ALLOCATE(DstDiscStateData%BdyPosFilt(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%BdyPosFilt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstDiscStateData%BdyPosFilt = SrcDiscStateData%BdyPosFilt
-ENDIF
- END SUBROUTINE WAMIT_CopyDiscState
+   ErrMsg  = ''
+   call Conv_Rdtn_CopyDiscState(SrcDiscStateData%Conv_Rdtn, DstDiscStateData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SS_Rad_CopyDiscState(SrcDiscStateData%SS_Rdtn, DstDiscStateData%SS_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SS_Exc_CopyDiscState(SrcDiscStateData%SS_Exctn, DstDiscStateData%SS_Exctn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcDiscStateData%BdyPosFilt)) then
+      LB(1:3) = lbound(SrcDiscStateData%BdyPosFilt)
+      UB(1:3) = ubound(SrcDiscStateData%BdyPosFilt)
+      if (.not. allocated(DstDiscStateData%BdyPosFilt)) then
+         allocate(DstDiscStateData%BdyPosFilt(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%BdyPosFilt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstDiscStateData%BdyPosFilt = SrcDiscStateData%BdyPosFilt
+   else if (allocated(DstDiscStateData%BdyPosFilt)) then
+      deallocate(DstDiscStateData%BdyPosFilt)
+   end if
+end subroutine
 
- SUBROUTINE WAMIT_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
-  TYPE(WAMIT_DiscreteStateType), INTENT(INOUT) :: DiscStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'WAMIT_DestroyDiscState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL Conv_Rdtn_DestroyDiscState( DiscStateData%Conv_Rdtn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Rad_DestroyDiscState( DiscStateData%SS_Rdtn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Exc_DestroyDiscState( DiscStateData%SS_Exctn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(DiscStateData%BdyPosFilt)) THEN
-  DEALLOCATE(DiscStateData%BdyPosFilt)
-ENDIF
- END SUBROUTINE WAMIT_DestroyDiscState
-
+subroutine WAMIT_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
+   type(WAMIT_DiscreteStateType), intent(inout) :: DiscStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_DestroyDiscState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(DiscStateData%BdyPosFilt)) then
+      deallocate(DiscStateData%BdyPosFilt)
+   end if
+end subroutine
 
 subroutine WAMIT_PackDiscState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(WAMIT_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT_PackDiscState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Conv_Rdtn
    call Conv_Rdtn_PackDiscState(Buf, InData%Conv_Rdtn) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SS_Rdtn
    call SS_Rad_PackDiscState(Buf, InData%SS_Rdtn) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SS_Exctn
    call SS_Exc_PackDiscState(Buf, InData%SS_Exctn) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BdyPosFilt
    call RegPack(Buf, allocated(InData%BdyPosFilt))
    if (allocated(InData%BdyPosFilt)) then
       call RegPackBounds(Buf, 3, lbound(InData%BdyPosFilt), ubound(InData%BdyPosFilt))
@@ -1034,13 +923,9 @@ subroutine WAMIT_UnPackDiscState(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! Conv_Rdtn
    call Conv_Rdtn_UnpackDiscState(Buf, OutData%Conv_Rdtn) ! Conv_Rdtn 
-   ! SS_Rdtn
    call SS_Rad_UnpackDiscState(Buf, OutData%SS_Rdtn) ! SS_Rdtn 
-   ! SS_Exctn
    call SS_Exc_UnpackDiscState(Buf, OutData%SS_Exctn) ! SS_Exctn 
-   ! BdyPosFilt
    if (allocated(OutData%BdyPosFilt)) deallocate(OutData%BdyPosFilt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1056,65 +941,49 @@ subroutine WAMIT_UnPackDiscState(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE WAMIT_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(WAMIT_ConstraintStateType), INTENT(IN) :: SrcConstrStateData
-   TYPE(WAMIT_ConstraintStateType), INTENT(INOUT) :: DstConstrStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'WAMIT_CopyConstrState'
-! 
+
+subroutine WAMIT_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
+   type(WAMIT_ConstraintStateType), intent(in) :: SrcConstrStateData
+   type(WAMIT_ConstraintStateType), intent(inout) :: DstConstrStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_CopyConstrState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL Conv_Rdtn_CopyConstrState( SrcConstrStateData%Conv_Rdtn, DstConstrStateData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL SS_Rad_CopyConstrState( SrcConstrStateData%SS_Rdtn, DstConstrStateData%SS_Rdtn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL SS_Exc_CopyConstrState( SrcConstrStateData%SS_Exctn, DstConstrStateData%SS_Exctn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE WAMIT_CopyConstrState
+   ErrMsg  = ''
+   call Conv_Rdtn_CopyConstrState(SrcConstrStateData%Conv_Rdtn, DstConstrStateData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SS_Rad_CopyConstrState(SrcConstrStateData%SS_Rdtn, DstConstrStateData%SS_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SS_Exc_CopyConstrState(SrcConstrStateData%SS_Exctn, DstConstrStateData%SS_Exctn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE WAMIT_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
-  TYPE(WAMIT_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'WAMIT_DestroyConstrState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL Conv_Rdtn_DestroyConstrState( ConstrStateData%Conv_Rdtn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Rad_DestroyConstrState( ConstrStateData%SS_Rdtn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Exc_DestroyConstrState( ConstrStateData%SS_Exctn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE WAMIT_DestroyConstrState
-
+subroutine WAMIT_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
+   type(WAMIT_ConstraintStateType), intent(inout) :: ConstrStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_DestroyConstrState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine WAMIT_PackConstrState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(WAMIT_ConstraintStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT_PackConstrState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Conv_Rdtn
    call Conv_Rdtn_PackConstrState(Buf, InData%Conv_Rdtn) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SS_Rdtn
    call SS_Rad_PackConstrState(Buf, InData%SS_Rdtn) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SS_Exctn
    call SS_Exc_PackConstrState(Buf, InData%SS_Exctn) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1124,72 +993,53 @@ subroutine WAMIT_UnPackConstrState(Buf, OutData)
    type(WAMIT_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT_UnPackConstrState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! Conv_Rdtn
    call Conv_Rdtn_UnpackConstrState(Buf, OutData%Conv_Rdtn) ! Conv_Rdtn 
-   ! SS_Rdtn
    call SS_Rad_UnpackConstrState(Buf, OutData%SS_Rdtn) ! SS_Rdtn 
-   ! SS_Exctn
    call SS_Exc_UnpackConstrState(Buf, OutData%SS_Exctn) ! SS_Exctn 
 end subroutine
- SUBROUTINE WAMIT_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(WAMIT_OtherStateType), INTENT(IN) :: SrcOtherStateData
-   TYPE(WAMIT_OtherStateType), INTENT(INOUT) :: DstOtherStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'WAMIT_CopyOtherState'
-! 
+
+subroutine WAMIT_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg)
+   type(WAMIT_OtherStateType), intent(in) :: SrcOtherStateData
+   type(WAMIT_OtherStateType), intent(inout) :: DstOtherStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_CopyOtherState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL SS_Rad_CopyOtherState( SrcOtherStateData%SS_Rdtn, DstOtherStateData%SS_Rdtn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL SS_Exc_CopyOtherState( SrcOtherStateData%SS_Exctn, DstOtherStateData%SS_Exctn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL Conv_Rdtn_CopyOtherState( SrcOtherStateData%Conv_Rdtn, DstOtherStateData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE WAMIT_CopyOtherState
+   ErrMsg  = ''
+   call SS_Rad_CopyOtherState(SrcOtherStateData%SS_Rdtn, DstOtherStateData%SS_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SS_Exc_CopyOtherState(SrcOtherStateData%SS_Exctn, DstOtherStateData%SS_Exctn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call Conv_Rdtn_CopyOtherState(SrcOtherStateData%Conv_Rdtn, DstOtherStateData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE WAMIT_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
-  TYPE(WAMIT_OtherStateType), INTENT(INOUT) :: OtherStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'WAMIT_DestroyOtherState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL SS_Rad_DestroyOtherState( OtherStateData%SS_Rdtn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Exc_DestroyOtherState( OtherStateData%SS_Exctn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Conv_Rdtn_DestroyOtherState( OtherStateData%Conv_Rdtn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE WAMIT_DestroyOtherState
-
+subroutine WAMIT_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
+   type(WAMIT_OtherStateType), intent(inout) :: OtherStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_DestroyOtherState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine WAMIT_PackOtherState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(WAMIT_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT_PackOtherState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! SS_Rdtn
    call SS_Rad_PackOtherState(Buf, InData%SS_Rdtn) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SS_Exctn
    call SS_Exc_PackOtherState(Buf, InData%SS_Exctn) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Conv_Rdtn
    call Conv_Rdtn_PackOtherState(Buf, InData%Conv_Rdtn) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1199,221 +1049,184 @@ subroutine WAMIT_UnPackOtherState(Buf, OutData)
    type(WAMIT_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT_UnPackOtherState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! SS_Rdtn
    call SS_Rad_UnpackOtherState(Buf, OutData%SS_Rdtn) ! SS_Rdtn 
-   ! SS_Exctn
    call SS_Exc_UnpackOtherState(Buf, OutData%SS_Exctn) ! SS_Exctn 
-   ! Conv_Rdtn
    call Conv_Rdtn_UnpackOtherState(Buf, OutData%Conv_Rdtn) ! Conv_Rdtn 
 end subroutine
- SUBROUTINE WAMIT_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(WAMIT_MiscVarType), INTENT(IN) :: SrcMiscData
-   TYPE(WAMIT_MiscVarType), INTENT(INOUT) :: DstMiscData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'WAMIT_CopyMisc'
-! 
+
+subroutine WAMIT_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(WAMIT_MiscVarType), intent(in) :: SrcMiscData
+   type(WAMIT_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_CopyMisc'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstMiscData%LastIndWave = SrcMiscData%LastIndWave
-IF (ALLOCATED(SrcMiscData%F_HS)) THEN
-  i1_l = LBOUND(SrcMiscData%F_HS,1)
-  i1_u = UBOUND(SrcMiscData%F_HS,1)
-  IF (.NOT. ALLOCATED(DstMiscData%F_HS)) THEN 
-    ALLOCATE(DstMiscData%F_HS(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_HS.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%F_HS = SrcMiscData%F_HS
-ENDIF
-IF (ALLOCATED(SrcMiscData%F_Waves1)) THEN
-  i1_l = LBOUND(SrcMiscData%F_Waves1,1)
-  i1_u = UBOUND(SrcMiscData%F_Waves1,1)
-  IF (.NOT. ALLOCATED(DstMiscData%F_Waves1)) THEN 
-    ALLOCATE(DstMiscData%F_Waves1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_Waves1.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%F_Waves1 = SrcMiscData%F_Waves1
-ENDIF
-IF (ALLOCATED(SrcMiscData%F_Rdtn)) THEN
-  i1_l = LBOUND(SrcMiscData%F_Rdtn,1)
-  i1_u = UBOUND(SrcMiscData%F_Rdtn,1)
-  IF (.NOT. ALLOCATED(DstMiscData%F_Rdtn)) THEN 
-    ALLOCATE(DstMiscData%F_Rdtn(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_Rdtn.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%F_Rdtn = SrcMiscData%F_Rdtn
-ENDIF
-IF (ALLOCATED(SrcMiscData%F_PtfmAM)) THEN
-  i1_l = LBOUND(SrcMiscData%F_PtfmAM,1)
-  i1_u = UBOUND(SrcMiscData%F_PtfmAM,1)
-  IF (.NOT. ALLOCATED(DstMiscData%F_PtfmAM)) THEN 
-    ALLOCATE(DstMiscData%F_PtfmAM(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_PtfmAM.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%F_PtfmAM = SrcMiscData%F_PtfmAM
-ENDIF
-      CALL SS_Rad_CopyMisc( SrcMiscData%SS_Rdtn, DstMiscData%SS_Rdtn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL SS_Rad_CopyInput( SrcMiscData%SS_Rdtn_u, DstMiscData%SS_Rdtn_u, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL SS_Rad_CopyOutput( SrcMiscData%SS_Rdtn_y, DstMiscData%SS_Rdtn_y, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL SS_Exc_CopyMisc( SrcMiscData%SS_Exctn, DstMiscData%SS_Exctn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL SS_Exc_CopyInput( SrcMiscData%SS_Exctn_u, DstMiscData%SS_Exctn_u, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL SS_Exc_CopyOutput( SrcMiscData%SS_Exctn_y, DstMiscData%SS_Exctn_y, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL Conv_Rdtn_CopyMisc( SrcMiscData%Conv_Rdtn, DstMiscData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL Conv_Rdtn_CopyInput( SrcMiscData%Conv_Rdtn_u, DstMiscData%Conv_Rdtn_u, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL Conv_Rdtn_CopyOutput( SrcMiscData%Conv_Rdtn_y, DstMiscData%Conv_Rdtn_y, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL SeaSt_Interp_CopyMisc( SrcMiscData%SeaSt_Interp_m, DstMiscData%SeaSt_Interp_m, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE WAMIT_CopyMisc
+   ErrMsg  = ''
+   DstMiscData%LastIndWave = SrcMiscData%LastIndWave
+   if (allocated(SrcMiscData%F_HS)) then
+      LB(1:1) = lbound(SrcMiscData%F_HS)
+      UB(1:1) = ubound(SrcMiscData%F_HS)
+      if (.not. allocated(DstMiscData%F_HS)) then
+         allocate(DstMiscData%F_HS(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_HS.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%F_HS = SrcMiscData%F_HS
+   else if (allocated(DstMiscData%F_HS)) then
+      deallocate(DstMiscData%F_HS)
+   end if
+   if (allocated(SrcMiscData%F_Waves1)) then
+      LB(1:1) = lbound(SrcMiscData%F_Waves1)
+      UB(1:1) = ubound(SrcMiscData%F_Waves1)
+      if (.not. allocated(DstMiscData%F_Waves1)) then
+         allocate(DstMiscData%F_Waves1(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_Waves1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%F_Waves1 = SrcMiscData%F_Waves1
+   else if (allocated(DstMiscData%F_Waves1)) then
+      deallocate(DstMiscData%F_Waves1)
+   end if
+   if (allocated(SrcMiscData%F_Rdtn)) then
+      LB(1:1) = lbound(SrcMiscData%F_Rdtn)
+      UB(1:1) = ubound(SrcMiscData%F_Rdtn)
+      if (.not. allocated(DstMiscData%F_Rdtn)) then
+         allocate(DstMiscData%F_Rdtn(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_Rdtn.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%F_Rdtn = SrcMiscData%F_Rdtn
+   else if (allocated(DstMiscData%F_Rdtn)) then
+      deallocate(DstMiscData%F_Rdtn)
+   end if
+   if (allocated(SrcMiscData%F_PtfmAM)) then
+      LB(1:1) = lbound(SrcMiscData%F_PtfmAM)
+      UB(1:1) = ubound(SrcMiscData%F_PtfmAM)
+      if (.not. allocated(DstMiscData%F_PtfmAM)) then
+         allocate(DstMiscData%F_PtfmAM(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_PtfmAM.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%F_PtfmAM = SrcMiscData%F_PtfmAM
+   else if (allocated(DstMiscData%F_PtfmAM)) then
+      deallocate(DstMiscData%F_PtfmAM)
+   end if
+   call SS_Rad_CopyMisc(SrcMiscData%SS_Rdtn, DstMiscData%SS_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SS_Rad_CopyInput(SrcMiscData%SS_Rdtn_u, DstMiscData%SS_Rdtn_u, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SS_Rad_CopyOutput(SrcMiscData%SS_Rdtn_y, DstMiscData%SS_Rdtn_y, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SS_Exc_CopyMisc(SrcMiscData%SS_Exctn, DstMiscData%SS_Exctn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SS_Exc_CopyInput(SrcMiscData%SS_Exctn_u, DstMiscData%SS_Exctn_u, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SS_Exc_CopyOutput(SrcMiscData%SS_Exctn_y, DstMiscData%SS_Exctn_y, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call Conv_Rdtn_CopyMisc(SrcMiscData%Conv_Rdtn, DstMiscData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call Conv_Rdtn_CopyInput(SrcMiscData%Conv_Rdtn_u, DstMiscData%Conv_Rdtn_u, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call Conv_Rdtn_CopyOutput(SrcMiscData%Conv_Rdtn_y, DstMiscData%Conv_Rdtn_y, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SeaSt_Interp_CopyMisc(SrcMiscData%SeaSt_Interp_m, DstMiscData%SeaSt_Interp_m, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE WAMIT_DestroyMisc( MiscData, ErrStat, ErrMsg )
-  TYPE(WAMIT_MiscVarType), INTENT(INOUT) :: MiscData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'WAMIT_DestroyMisc'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(MiscData%F_HS)) THEN
-  DEALLOCATE(MiscData%F_HS)
-ENDIF
-IF (ALLOCATED(MiscData%F_Waves1)) THEN
-  DEALLOCATE(MiscData%F_Waves1)
-ENDIF
-IF (ALLOCATED(MiscData%F_Rdtn)) THEN
-  DEALLOCATE(MiscData%F_Rdtn)
-ENDIF
-IF (ALLOCATED(MiscData%F_PtfmAM)) THEN
-  DEALLOCATE(MiscData%F_PtfmAM)
-ENDIF
-  CALL SS_Rad_DestroyMisc( MiscData%SS_Rdtn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Rad_DestroyInput( MiscData%SS_Rdtn_u, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Rad_DestroyOutput( MiscData%SS_Rdtn_y, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Exc_DestroyMisc( MiscData%SS_Exctn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Exc_DestroyInput( MiscData%SS_Exctn_u, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Exc_DestroyOutput( MiscData%SS_Exctn_y, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Conv_Rdtn_DestroyMisc( MiscData%Conv_Rdtn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Conv_Rdtn_DestroyInput( MiscData%Conv_Rdtn_u, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Conv_Rdtn_DestroyOutput( MiscData%Conv_Rdtn_y, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SeaSt_Interp_DestroyMisc( MiscData%SeaSt_Interp_m, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE WAMIT_DestroyMisc
-
+subroutine WAMIT_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(WAMIT_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(MiscData%F_HS)) then
+      deallocate(MiscData%F_HS)
+   end if
+   if (allocated(MiscData%F_Waves1)) then
+      deallocate(MiscData%F_Waves1)
+   end if
+   if (allocated(MiscData%F_Rdtn)) then
+      deallocate(MiscData%F_Rdtn)
+   end if
+   if (allocated(MiscData%F_PtfmAM)) then
+      deallocate(MiscData%F_PtfmAM)
+   end if
+end subroutine
 
 subroutine WAMIT_PackMisc(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(WAMIT_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT_PackMisc'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! LastIndWave
    call RegPack(Buf, InData%LastIndWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F_HS
    call RegPack(Buf, allocated(InData%F_HS))
    if (allocated(InData%F_HS)) then
       call RegPackBounds(Buf, 1, lbound(InData%F_HS), ubound(InData%F_HS))
       call RegPack(Buf, InData%F_HS)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F_Waves1
    call RegPack(Buf, allocated(InData%F_Waves1))
    if (allocated(InData%F_Waves1)) then
       call RegPackBounds(Buf, 1, lbound(InData%F_Waves1), ubound(InData%F_Waves1))
       call RegPack(Buf, InData%F_Waves1)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F_Rdtn
    call RegPack(Buf, allocated(InData%F_Rdtn))
    if (allocated(InData%F_Rdtn)) then
       call RegPackBounds(Buf, 1, lbound(InData%F_Rdtn), ubound(InData%F_Rdtn))
       call RegPack(Buf, InData%F_Rdtn)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F_PtfmAM
    call RegPack(Buf, allocated(InData%F_PtfmAM))
    if (allocated(InData%F_PtfmAM)) then
       call RegPackBounds(Buf, 1, lbound(InData%F_PtfmAM), ubound(InData%F_PtfmAM))
       call RegPack(Buf, InData%F_PtfmAM)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SS_Rdtn
    call SS_Rad_PackMisc(Buf, InData%SS_Rdtn) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SS_Rdtn_u
    call SS_Rad_PackInput(Buf, InData%SS_Rdtn_u) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SS_Rdtn_y
    call SS_Rad_PackOutput(Buf, InData%SS_Rdtn_y) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SS_Exctn
    call SS_Exc_PackMisc(Buf, InData%SS_Exctn) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SS_Exctn_u
    call SS_Exc_PackInput(Buf, InData%SS_Exctn_u) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SS_Exctn_y
    call SS_Exc_PackOutput(Buf, InData%SS_Exctn_y) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Conv_Rdtn
    call Conv_Rdtn_PackMisc(Buf, InData%Conv_Rdtn) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Conv_Rdtn_u
    call Conv_Rdtn_PackInput(Buf, InData%Conv_Rdtn_u) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Conv_Rdtn_y
    call Conv_Rdtn_PackOutput(Buf, InData%Conv_Rdtn_y) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SeaSt_Interp_m
    call SeaSt_Interp_PackMisc(Buf, InData%SeaSt_Interp_m) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1426,10 +1239,8 @@ subroutine WAMIT_UnPackMisc(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! LastIndWave
    call RegUnpack(Buf, OutData%LastIndWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F_HS
    if (allocated(OutData%F_HS)) deallocate(OutData%F_HS)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1444,7 +1255,6 @@ subroutine WAMIT_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%F_HS)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! F_Waves1
    if (allocated(OutData%F_Waves1)) deallocate(OutData%F_Waves1)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1459,7 +1269,6 @@ subroutine WAMIT_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%F_Waves1)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! F_Rdtn
    if (allocated(OutData%F_Rdtn)) deallocate(OutData%F_Rdtn)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1474,7 +1283,6 @@ subroutine WAMIT_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%F_Rdtn)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! F_PtfmAM
    if (allocated(OutData%F_PtfmAM)) deallocate(OutData%F_PtfmAM)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1489,258 +1297,208 @@ subroutine WAMIT_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%F_PtfmAM)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! SS_Rdtn
    call SS_Rad_UnpackMisc(Buf, OutData%SS_Rdtn) ! SS_Rdtn 
-   ! SS_Rdtn_u
    call SS_Rad_UnpackInput(Buf, OutData%SS_Rdtn_u) ! SS_Rdtn_u 
-   ! SS_Rdtn_y
    call SS_Rad_UnpackOutput(Buf, OutData%SS_Rdtn_y) ! SS_Rdtn_y 
-   ! SS_Exctn
    call SS_Exc_UnpackMisc(Buf, OutData%SS_Exctn) ! SS_Exctn 
-   ! SS_Exctn_u
    call SS_Exc_UnpackInput(Buf, OutData%SS_Exctn_u) ! SS_Exctn_u 
-   ! SS_Exctn_y
    call SS_Exc_UnpackOutput(Buf, OutData%SS_Exctn_y) ! SS_Exctn_y 
-   ! Conv_Rdtn
    call Conv_Rdtn_UnpackMisc(Buf, OutData%Conv_Rdtn) ! Conv_Rdtn 
-   ! Conv_Rdtn_u
    call Conv_Rdtn_UnpackInput(Buf, OutData%Conv_Rdtn_u) ! Conv_Rdtn_u 
-   ! Conv_Rdtn_y
    call Conv_Rdtn_UnpackOutput(Buf, OutData%Conv_Rdtn_y) ! Conv_Rdtn_y 
-   ! SeaSt_Interp_m
    call SeaSt_Interp_UnpackMisc(Buf, OutData%SeaSt_Interp_m) ! SeaSt_Interp_m 
 end subroutine
- SUBROUTINE WAMIT_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(WAMIT_ParameterType), INTENT(IN) :: SrcParamData
-   TYPE(WAMIT_ParameterType), INTENT(INOUT) :: DstParamData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'WAMIT_CopyParam'
-! 
+
+subroutine WAMIT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
+   type(WAMIT_ParameterType), intent(in) :: SrcParamData
+   type(WAMIT_ParameterType), intent(inout) :: DstParamData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(4), UB(4)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_CopyParam'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstParamData%NBody = SrcParamData%NBody
-    DstParamData%NBodyMod = SrcParamData%NBodyMod
-IF (ALLOCATED(SrcParamData%F_HS_Moment_Offset)) THEN
-  i1_l = LBOUND(SrcParamData%F_HS_Moment_Offset,1)
-  i1_u = UBOUND(SrcParamData%F_HS_Moment_Offset,1)
-  i2_l = LBOUND(SrcParamData%F_HS_Moment_Offset,2)
-  i2_u = UBOUND(SrcParamData%F_HS_Moment_Offset,2)
-  IF (.NOT. ALLOCATED(DstParamData%F_HS_Moment_Offset)) THEN 
-    ALLOCATE(DstParamData%F_HS_Moment_Offset(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%F_HS_Moment_Offset.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%F_HS_Moment_Offset = SrcParamData%F_HS_Moment_Offset
-ENDIF
-IF (ALLOCATED(SrcParamData%HdroAdMsI)) THEN
-  i1_l = LBOUND(SrcParamData%HdroAdMsI,1)
-  i1_u = UBOUND(SrcParamData%HdroAdMsI,1)
-  i2_l = LBOUND(SrcParamData%HdroAdMsI,2)
-  i2_u = UBOUND(SrcParamData%HdroAdMsI,2)
-  IF (.NOT. ALLOCATED(DstParamData%HdroAdMsI)) THEN 
-    ALLOCATE(DstParamData%HdroAdMsI(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%HdroAdMsI.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%HdroAdMsI = SrcParamData%HdroAdMsI
-ENDIF
-IF (ALLOCATED(SrcParamData%HdroSttc)) THEN
-  i1_l = LBOUND(SrcParamData%HdroSttc,1)
-  i1_u = UBOUND(SrcParamData%HdroSttc,1)
-  i2_l = LBOUND(SrcParamData%HdroSttc,2)
-  i2_u = UBOUND(SrcParamData%HdroSttc,2)
-  IF (.NOT. ALLOCATED(DstParamData%HdroSttc)) THEN 
-    ALLOCATE(DstParamData%HdroSttc(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%HdroSttc.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%HdroSttc = SrcParamData%HdroSttc
-ENDIF
-    DstParamData%RdtnMod = SrcParamData%RdtnMod
-    DstParamData%ExctnMod = SrcParamData%ExctnMod
-    DstParamData%ExctnDisp = SrcParamData%ExctnDisp
-    DstParamData%ExctnCutOff = SrcParamData%ExctnCutOff
-    DstParamData%ExctnFiltConst = SrcParamData%ExctnFiltConst
-IF (ALLOCATED(SrcParamData%WaveExctn)) THEN
-  i1_l = LBOUND(SrcParamData%WaveExctn,1)
-  i1_u = UBOUND(SrcParamData%WaveExctn,1)
-  i2_l = LBOUND(SrcParamData%WaveExctn,2)
-  i2_u = UBOUND(SrcParamData%WaveExctn,2)
-  IF (.NOT. ALLOCATED(DstParamData%WaveExctn)) THEN 
-    ALLOCATE(DstParamData%WaveExctn(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveExctn.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%WaveExctn = SrcParamData%WaveExctn
-ENDIF
-IF (ALLOCATED(SrcParamData%WaveExctnGrid)) THEN
-  i1_l = LBOUND(SrcParamData%WaveExctnGrid,1)
-  i1_u = UBOUND(SrcParamData%WaveExctnGrid,1)
-  i2_l = LBOUND(SrcParamData%WaveExctnGrid,2)
-  i2_u = UBOUND(SrcParamData%WaveExctnGrid,2)
-  i3_l = LBOUND(SrcParamData%WaveExctnGrid,3)
-  i3_u = UBOUND(SrcParamData%WaveExctnGrid,3)
-  i4_l = LBOUND(SrcParamData%WaveExctnGrid,4)
-  i4_u = UBOUND(SrcParamData%WaveExctnGrid,4)
-  IF (.NOT. ALLOCATED(DstParamData%WaveExctnGrid)) THEN 
-    ALLOCATE(DstParamData%WaveExctnGrid(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveExctnGrid.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%WaveExctnGrid = SrcParamData%WaveExctnGrid
-ENDIF
-    DstParamData%NStepWave = SrcParamData%NStepWave
-      CALL Conv_Rdtn_CopyParam( SrcParamData%Conv_Rdtn, DstParamData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL SS_Rad_CopyParam( SrcParamData%SS_Rdtn, DstParamData%SS_Rdtn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL SS_Exc_CopyParam( SrcParamData%SS_Exctn, DstParamData%SS_Exctn, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    DstParamData%DT = SrcParamData%DT
-      CALL SeaSt_Interp_CopyParam( SrcParamData%SeaSt_Interp_p, DstParamData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE WAMIT_CopyParam
+   ErrMsg  = ''
+   DstParamData%NBody = SrcParamData%NBody
+   DstParamData%NBodyMod = SrcParamData%NBodyMod
+   if (allocated(SrcParamData%F_HS_Moment_Offset)) then
+      LB(1:2) = lbound(SrcParamData%F_HS_Moment_Offset)
+      UB(1:2) = ubound(SrcParamData%F_HS_Moment_Offset)
+      if (.not. allocated(DstParamData%F_HS_Moment_Offset)) then
+         allocate(DstParamData%F_HS_Moment_Offset(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%F_HS_Moment_Offset.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%F_HS_Moment_Offset = SrcParamData%F_HS_Moment_Offset
+   else if (allocated(DstParamData%F_HS_Moment_Offset)) then
+      deallocate(DstParamData%F_HS_Moment_Offset)
+   end if
+   if (allocated(SrcParamData%HdroAdMsI)) then
+      LB(1:2) = lbound(SrcParamData%HdroAdMsI)
+      UB(1:2) = ubound(SrcParamData%HdroAdMsI)
+      if (.not. allocated(DstParamData%HdroAdMsI)) then
+         allocate(DstParamData%HdroAdMsI(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%HdroAdMsI.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%HdroAdMsI = SrcParamData%HdroAdMsI
+   else if (allocated(DstParamData%HdroAdMsI)) then
+      deallocate(DstParamData%HdroAdMsI)
+   end if
+   if (allocated(SrcParamData%HdroSttc)) then
+      LB(1:2) = lbound(SrcParamData%HdroSttc)
+      UB(1:2) = ubound(SrcParamData%HdroSttc)
+      if (.not. allocated(DstParamData%HdroSttc)) then
+         allocate(DstParamData%HdroSttc(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%HdroSttc.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%HdroSttc = SrcParamData%HdroSttc
+   else if (allocated(DstParamData%HdroSttc)) then
+      deallocate(DstParamData%HdroSttc)
+   end if
+   DstParamData%RdtnMod = SrcParamData%RdtnMod
+   DstParamData%ExctnMod = SrcParamData%ExctnMod
+   DstParamData%ExctnDisp = SrcParamData%ExctnDisp
+   DstParamData%ExctnCutOff = SrcParamData%ExctnCutOff
+   DstParamData%ExctnFiltConst = SrcParamData%ExctnFiltConst
+   if (allocated(SrcParamData%WaveExctn)) then
+      LB(1:2) = lbound(SrcParamData%WaveExctn)
+      UB(1:2) = ubound(SrcParamData%WaveExctn)
+      if (.not. allocated(DstParamData%WaveExctn)) then
+         allocate(DstParamData%WaveExctn(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveExctn.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%WaveExctn = SrcParamData%WaveExctn
+   else if (allocated(DstParamData%WaveExctn)) then
+      deallocate(DstParamData%WaveExctn)
+   end if
+   if (allocated(SrcParamData%WaveExctnGrid)) then
+      LB(1:4) = lbound(SrcParamData%WaveExctnGrid)
+      UB(1:4) = ubound(SrcParamData%WaveExctnGrid)
+      if (.not. allocated(DstParamData%WaveExctnGrid)) then
+         allocate(DstParamData%WaveExctnGrid(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveExctnGrid.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%WaveExctnGrid = SrcParamData%WaveExctnGrid
+   else if (allocated(DstParamData%WaveExctnGrid)) then
+      deallocate(DstParamData%WaveExctnGrid)
+   end if
+   DstParamData%NStepWave = SrcParamData%NStepWave
+   call Conv_Rdtn_CopyParam(SrcParamData%Conv_Rdtn, DstParamData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SS_Rad_CopyParam(SrcParamData%SS_Rdtn, DstParamData%SS_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call SS_Exc_CopyParam(SrcParamData%SS_Exctn, DstParamData%SS_Exctn, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstParamData%DT = SrcParamData%DT
+   call SeaSt_Interp_CopyParam(SrcParamData%SeaSt_Interp_p, DstParamData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE WAMIT_DestroyParam( ParamData, ErrStat, ErrMsg )
-  TYPE(WAMIT_ParameterType), INTENT(INOUT) :: ParamData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'WAMIT_DestroyParam'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(ParamData%F_HS_Moment_Offset)) THEN
-  DEALLOCATE(ParamData%F_HS_Moment_Offset)
-ENDIF
-IF (ALLOCATED(ParamData%HdroAdMsI)) THEN
-  DEALLOCATE(ParamData%HdroAdMsI)
-ENDIF
-IF (ALLOCATED(ParamData%HdroSttc)) THEN
-  DEALLOCATE(ParamData%HdroSttc)
-ENDIF
-IF (ALLOCATED(ParamData%WaveExctn)) THEN
-  DEALLOCATE(ParamData%WaveExctn)
-ENDIF
-IF (ALLOCATED(ParamData%WaveExctnGrid)) THEN
-  DEALLOCATE(ParamData%WaveExctnGrid)
-ENDIF
-  CALL Conv_Rdtn_DestroyParam( ParamData%Conv_Rdtn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Rad_DestroyParam( ParamData%SS_Rdtn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SS_Exc_DestroyParam( ParamData%SS_Exctn, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL SeaSt_Interp_DestroyParam( ParamData%SeaSt_Interp_p, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE WAMIT_DestroyParam
-
+subroutine WAMIT_DestroyParam(ParamData, ErrStat, ErrMsg)
+   type(WAMIT_ParameterType), intent(inout) :: ParamData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_DestroyParam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(ParamData%F_HS_Moment_Offset)) then
+      deallocate(ParamData%F_HS_Moment_Offset)
+   end if
+   if (allocated(ParamData%HdroAdMsI)) then
+      deallocate(ParamData%HdroAdMsI)
+   end if
+   if (allocated(ParamData%HdroSttc)) then
+      deallocate(ParamData%HdroSttc)
+   end if
+   if (allocated(ParamData%WaveExctn)) then
+      deallocate(ParamData%WaveExctn)
+   end if
+   if (allocated(ParamData%WaveExctnGrid)) then
+      deallocate(ParamData%WaveExctnGrid)
+   end if
+end subroutine
 
 subroutine WAMIT_PackParam(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(WAMIT_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT_PackParam'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! NBody
    call RegPack(Buf, InData%NBody)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NBodyMod
    call RegPack(Buf, InData%NBodyMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F_HS_Moment_Offset
    call RegPack(Buf, allocated(InData%F_HS_Moment_Offset))
    if (allocated(InData%F_HS_Moment_Offset)) then
       call RegPackBounds(Buf, 2, lbound(InData%F_HS_Moment_Offset), ubound(InData%F_HS_Moment_Offset))
       call RegPack(Buf, InData%F_HS_Moment_Offset)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HdroAdMsI
    call RegPack(Buf, allocated(InData%HdroAdMsI))
    if (allocated(InData%HdroAdMsI)) then
       call RegPackBounds(Buf, 2, lbound(InData%HdroAdMsI), ubound(InData%HdroAdMsI))
       call RegPack(Buf, InData%HdroAdMsI)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HdroSttc
    call RegPack(Buf, allocated(InData%HdroSttc))
    if (allocated(InData%HdroSttc)) then
       call RegPackBounds(Buf, 2, lbound(InData%HdroSttc), ubound(InData%HdroSttc))
       call RegPack(Buf, InData%HdroSttc)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RdtnMod
    call RegPack(Buf, InData%RdtnMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ExctnMod
    call RegPack(Buf, InData%ExctnMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ExctnDisp
    call RegPack(Buf, InData%ExctnDisp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ExctnCutOff
    call RegPack(Buf, InData%ExctnCutOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ExctnFiltConst
    call RegPack(Buf, InData%ExctnFiltConst)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveExctn
    call RegPack(Buf, allocated(InData%WaveExctn))
    if (allocated(InData%WaveExctn)) then
       call RegPackBounds(Buf, 2, lbound(InData%WaveExctn), ubound(InData%WaveExctn))
       call RegPack(Buf, InData%WaveExctn)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveExctnGrid
    call RegPack(Buf, allocated(InData%WaveExctnGrid))
    if (allocated(InData%WaveExctnGrid)) then
       call RegPackBounds(Buf, 4, lbound(InData%WaveExctnGrid), ubound(InData%WaveExctnGrid))
       call RegPack(Buf, InData%WaveExctnGrid)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NStepWave
    call RegPack(Buf, InData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Conv_Rdtn
    call Conv_Rdtn_PackParam(Buf, InData%Conv_Rdtn) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SS_Rdtn
    call SS_Rad_PackParam(Buf, InData%SS_Rdtn) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SS_Exctn
    call SS_Exc_PackParam(Buf, InData%SS_Exctn) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DT
    call RegPack(Buf, InData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SeaSt_Interp_p
    call SeaSt_Interp_PackParam(Buf, InData%SeaSt_Interp_p) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1753,13 +1511,10 @@ subroutine WAMIT_UnPackParam(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! NBody
    call RegUnpack(Buf, OutData%NBody)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NBodyMod
    call RegUnpack(Buf, OutData%NBodyMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F_HS_Moment_Offset
    if (allocated(OutData%F_HS_Moment_Offset)) deallocate(OutData%F_HS_Moment_Offset)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1774,7 +1529,6 @@ subroutine WAMIT_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%F_HS_Moment_Offset)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! HdroAdMsI
    if (allocated(OutData%HdroAdMsI)) deallocate(OutData%HdroAdMsI)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1789,7 +1543,6 @@ subroutine WAMIT_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%HdroAdMsI)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! HdroSttc
    if (allocated(OutData%HdroSttc)) deallocate(OutData%HdroSttc)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1804,22 +1557,16 @@ subroutine WAMIT_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%HdroSttc)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! RdtnMod
    call RegUnpack(Buf, OutData%RdtnMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ExctnMod
    call RegUnpack(Buf, OutData%ExctnMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ExctnDisp
    call RegUnpack(Buf, OutData%ExctnDisp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ExctnCutOff
    call RegUnpack(Buf, OutData%ExctnCutOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ExctnFiltConst
    call RegUnpack(Buf, OutData%ExctnFiltConst)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveExctn
    if (allocated(OutData%WaveExctn)) deallocate(OutData%WaveExctn)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1834,7 +1581,6 @@ subroutine WAMIT_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveExctn)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveExctnGrid
    if (allocated(OutData%WaveExctnGrid)) deallocate(OutData%WaveExctnGrid)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1849,64 +1595,48 @@ subroutine WAMIT_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveExctnGrid)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! NStepWave
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Conv_Rdtn
    call Conv_Rdtn_UnpackParam(Buf, OutData%Conv_Rdtn) ! Conv_Rdtn 
-   ! SS_Rdtn
    call SS_Rad_UnpackParam(Buf, OutData%SS_Rdtn) ! SS_Rdtn 
-   ! SS_Exctn
    call SS_Exc_UnpackParam(Buf, OutData%SS_Exctn) ! SS_Exctn 
-   ! DT
    call RegUnpack(Buf, OutData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SeaSt_Interp_p
    call SeaSt_Interp_UnpackParam(Buf, OutData%SeaSt_Interp_p) ! SeaSt_Interp_p 
 end subroutine
- SUBROUTINE WAMIT_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(WAMIT_InputType), INTENT(INOUT) :: SrcInputData
-   TYPE(WAMIT_InputType), INTENT(INOUT) :: DstInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'WAMIT_CopyInput'
-! 
+
+subroutine WAMIT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
+   type(WAMIT_InputType), intent(inout) :: SrcInputData
+   type(WAMIT_InputType), intent(inout) :: DstInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_CopyInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL MeshCopy( SrcInputData%Mesh, DstInputData%Mesh, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE WAMIT_CopyInput
+   ErrMsg  = ''
+   call MeshCopy(SrcInputData%Mesh, DstInputData%Mesh, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE WAMIT_DestroyInput( InputData, ErrStat, ErrMsg )
-  TYPE(WAMIT_InputType), INTENT(INOUT) :: InputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'WAMIT_DestroyInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL MeshDestroy( InputData%Mesh, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE WAMIT_DestroyInput
-
+subroutine WAMIT_DestroyInput(InputData, ErrStat, ErrMsg)
+   type(WAMIT_InputType), intent(inout) :: InputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_DestroyInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine WAMIT_PackInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(WAMIT_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT_PackInput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Mesh
    call MeshPack(Buf, InData%Mesh) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1916,52 +1646,41 @@ subroutine WAMIT_UnPackInput(Buf, OutData)
    type(WAMIT_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT_UnPackInput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! Mesh
    call MeshUnpack(Buf, OutData%Mesh) ! Mesh 
 end subroutine
- SUBROUTINE WAMIT_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(WAMIT_OutputType), INTENT(INOUT) :: SrcOutputData
-   TYPE(WAMIT_OutputType), INTENT(INOUT) :: DstOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'WAMIT_CopyOutput'
-! 
+
+subroutine WAMIT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(WAMIT_OutputType), intent(inout) :: SrcOutputData
+   type(WAMIT_OutputType), intent(inout) :: DstOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_CopyOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL MeshCopy( SrcOutputData%Mesh, DstOutputData%Mesh, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE WAMIT_CopyOutput
+   ErrMsg  = ''
+   call MeshCopy(SrcOutputData%Mesh, DstOutputData%Mesh, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE WAMIT_DestroyOutput( OutputData, ErrStat, ErrMsg )
-  TYPE(WAMIT_OutputType), INTENT(INOUT) :: OutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'WAMIT_DestroyOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL MeshDestroy( OutputData%Mesh, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE WAMIT_DestroyOutput
-
+subroutine WAMIT_DestroyOutput(OutputData, ErrStat, ErrMsg)
+   type(WAMIT_OutputType), intent(inout) :: OutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'WAMIT_DestroyOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine WAMIT_PackOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(WAMIT_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT_PackOutput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Mesh
    call MeshPack(Buf, InData%Mesh) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1971,7 +1690,6 @@ subroutine WAMIT_UnPackOutput(Buf, OutData)
    type(WAMIT_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'WAMIT_UnPackOutput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! Mesh
    call MeshUnpack(Buf, OutData%Mesh) ! Mesh 
 end subroutine
 

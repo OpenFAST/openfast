@@ -220,266 +220,239 @@ IMPLICIT NONE
   END TYPE SeaSt_OutputType
 ! =======================
 CONTAINS
- SUBROUTINE SeaSt_CopyInputFile( SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaSt_InputFile), INTENT(IN) :: SrcInputFileData
-   TYPE(SeaSt_InputFile), INTENT(INOUT) :: DstInputFileData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyInputFile'
-! 
+
+subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_InputFile), intent(in) :: SrcInputFileData
+   type(SeaSt_InputFile), intent(inout) :: DstInputFileData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_CopyInputFile'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInputFileData%EchoFlag = SrcInputFileData%EchoFlag
-    DstInputFileData%MSL2SWL = SrcInputFileData%MSL2SWL
-    DstInputFileData%X_HalfWidth = SrcInputFileData%X_HalfWidth
-    DstInputFileData%Y_HalfWidth = SrcInputFileData%Y_HalfWidth
-    DstInputFileData%Z_Depth = SrcInputFileData%Z_Depth
-    DstInputFileData%NX = SrcInputFileData%NX
-    DstInputFileData%NY = SrcInputFileData%NY
-    DstInputFileData%NZ = SrcInputFileData%NZ
-      CALL Waves_CopyInitInput( SrcInputFileData%Waves, DstInputFileData%Waves, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL Waves2_CopyInitInput( SrcInputFileData%Waves2, DstInputFileData%Waves2, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL Current_CopyInitInput( SrcInputFileData%Current, DstInputFileData%Current, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    DstInputFileData%Echo = SrcInputFileData%Echo
-    DstInputFileData%NWaveElev = SrcInputFileData%NWaveElev
-IF (ALLOCATED(SrcInputFileData%WaveElevxi)) THEN
-  i1_l = LBOUND(SrcInputFileData%WaveElevxi,1)
-  i1_u = UBOUND(SrcInputFileData%WaveElevxi,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%WaveElevxi)) THEN 
-    ALLOCATE(DstInputFileData%WaveElevxi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%WaveElevxi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%WaveElevxi = SrcInputFileData%WaveElevxi
-ENDIF
-IF (ALLOCATED(SrcInputFileData%WaveElevyi)) THEN
-  i1_l = LBOUND(SrcInputFileData%WaveElevyi,1)
-  i1_u = UBOUND(SrcInputFileData%WaveElevyi,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%WaveElevyi)) THEN 
-    ALLOCATE(DstInputFileData%WaveElevyi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%WaveElevyi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%WaveElevyi = SrcInputFileData%WaveElevyi
-ENDIF
-    DstInputFileData%NWaveKin = SrcInputFileData%NWaveKin
-IF (ALLOCATED(SrcInputFileData%WaveKinxi)) THEN
-  i1_l = LBOUND(SrcInputFileData%WaveKinxi,1)
-  i1_u = UBOUND(SrcInputFileData%WaveKinxi,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%WaveKinxi)) THEN 
-    ALLOCATE(DstInputFileData%WaveKinxi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%WaveKinxi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%WaveKinxi = SrcInputFileData%WaveKinxi
-ENDIF
-IF (ALLOCATED(SrcInputFileData%WaveKinyi)) THEN
-  i1_l = LBOUND(SrcInputFileData%WaveKinyi,1)
-  i1_u = UBOUND(SrcInputFileData%WaveKinyi,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%WaveKinyi)) THEN 
-    ALLOCATE(DstInputFileData%WaveKinyi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%WaveKinyi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%WaveKinyi = SrcInputFileData%WaveKinyi
-ENDIF
-IF (ALLOCATED(SrcInputFileData%WaveKinzi)) THEN
-  i1_l = LBOUND(SrcInputFileData%WaveKinzi,1)
-  i1_u = UBOUND(SrcInputFileData%WaveKinzi,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%WaveKinzi)) THEN 
-    ALLOCATE(DstInputFileData%WaveKinzi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%WaveKinzi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%WaveKinzi = SrcInputFileData%WaveKinzi
-ENDIF
-    DstInputFileData%OutSwtch = SrcInputFileData%OutSwtch
-    DstInputFileData%OutAll = SrcInputFileData%OutAll
-    DstInputFileData%NumOuts = SrcInputFileData%NumOuts
-IF (ALLOCATED(SrcInputFileData%OutList)) THEN
-  i1_l = LBOUND(SrcInputFileData%OutList,1)
-  i1_u = UBOUND(SrcInputFileData%OutList,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%OutList)) THEN 
-    ALLOCATE(DstInputFileData%OutList(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%OutList.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%OutList = SrcInputFileData%OutList
-ENDIF
-    DstInputFileData%SeaStSum = SrcInputFileData%SeaStSum
-    DstInputFileData%OutFmt = SrcInputFileData%OutFmt
-    DstInputFileData%OutSFmt = SrcInputFileData%OutSFmt
- END SUBROUTINE SeaSt_CopyInputFile
+   ErrMsg  = ''
+   DstInputFileData%EchoFlag = SrcInputFileData%EchoFlag
+   DstInputFileData%MSL2SWL = SrcInputFileData%MSL2SWL
+   DstInputFileData%X_HalfWidth = SrcInputFileData%X_HalfWidth
+   DstInputFileData%Y_HalfWidth = SrcInputFileData%Y_HalfWidth
+   DstInputFileData%Z_Depth = SrcInputFileData%Z_Depth
+   DstInputFileData%NX = SrcInputFileData%NX
+   DstInputFileData%NY = SrcInputFileData%NY
+   DstInputFileData%NZ = SrcInputFileData%NZ
+   call Waves_CopyInitInput(SrcInputFileData%Waves, DstInputFileData%Waves, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call Waves2_CopyInitInput(SrcInputFileData%Waves2, DstInputFileData%Waves2, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call Current_CopyInitInput(SrcInputFileData%Current, DstInputFileData%Current, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstInputFileData%Echo = SrcInputFileData%Echo
+   DstInputFileData%NWaveElev = SrcInputFileData%NWaveElev
+   if (allocated(SrcInputFileData%WaveElevxi)) then
+      LB(1:1) = lbound(SrcInputFileData%WaveElevxi)
+      UB(1:1) = ubound(SrcInputFileData%WaveElevxi)
+      if (.not. allocated(DstInputFileData%WaveElevxi)) then
+         allocate(DstInputFileData%WaveElevxi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%WaveElevxi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%WaveElevxi = SrcInputFileData%WaveElevxi
+   else if (allocated(DstInputFileData%WaveElevxi)) then
+      deallocate(DstInputFileData%WaveElevxi)
+   end if
+   if (allocated(SrcInputFileData%WaveElevyi)) then
+      LB(1:1) = lbound(SrcInputFileData%WaveElevyi)
+      UB(1:1) = ubound(SrcInputFileData%WaveElevyi)
+      if (.not. allocated(DstInputFileData%WaveElevyi)) then
+         allocate(DstInputFileData%WaveElevyi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%WaveElevyi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%WaveElevyi = SrcInputFileData%WaveElevyi
+   else if (allocated(DstInputFileData%WaveElevyi)) then
+      deallocate(DstInputFileData%WaveElevyi)
+   end if
+   DstInputFileData%NWaveKin = SrcInputFileData%NWaveKin
+   if (allocated(SrcInputFileData%WaveKinxi)) then
+      LB(1:1) = lbound(SrcInputFileData%WaveKinxi)
+      UB(1:1) = ubound(SrcInputFileData%WaveKinxi)
+      if (.not. allocated(DstInputFileData%WaveKinxi)) then
+         allocate(DstInputFileData%WaveKinxi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%WaveKinxi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%WaveKinxi = SrcInputFileData%WaveKinxi
+   else if (allocated(DstInputFileData%WaveKinxi)) then
+      deallocate(DstInputFileData%WaveKinxi)
+   end if
+   if (allocated(SrcInputFileData%WaveKinyi)) then
+      LB(1:1) = lbound(SrcInputFileData%WaveKinyi)
+      UB(1:1) = ubound(SrcInputFileData%WaveKinyi)
+      if (.not. allocated(DstInputFileData%WaveKinyi)) then
+         allocate(DstInputFileData%WaveKinyi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%WaveKinyi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%WaveKinyi = SrcInputFileData%WaveKinyi
+   else if (allocated(DstInputFileData%WaveKinyi)) then
+      deallocate(DstInputFileData%WaveKinyi)
+   end if
+   if (allocated(SrcInputFileData%WaveKinzi)) then
+      LB(1:1) = lbound(SrcInputFileData%WaveKinzi)
+      UB(1:1) = ubound(SrcInputFileData%WaveKinzi)
+      if (.not. allocated(DstInputFileData%WaveKinzi)) then
+         allocate(DstInputFileData%WaveKinzi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%WaveKinzi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%WaveKinzi = SrcInputFileData%WaveKinzi
+   else if (allocated(DstInputFileData%WaveKinzi)) then
+      deallocate(DstInputFileData%WaveKinzi)
+   end if
+   DstInputFileData%OutSwtch = SrcInputFileData%OutSwtch
+   DstInputFileData%OutAll = SrcInputFileData%OutAll
+   DstInputFileData%NumOuts = SrcInputFileData%NumOuts
+   if (allocated(SrcInputFileData%OutList)) then
+      LB(1:1) = lbound(SrcInputFileData%OutList)
+      UB(1:1) = ubound(SrcInputFileData%OutList)
+      if (.not. allocated(DstInputFileData%OutList)) then
+         allocate(DstInputFileData%OutList(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%OutList.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%OutList = SrcInputFileData%OutList
+   else if (allocated(DstInputFileData%OutList)) then
+      deallocate(DstInputFileData%OutList)
+   end if
+   DstInputFileData%SeaStSum = SrcInputFileData%SeaStSum
+   DstInputFileData%OutFmt = SrcInputFileData%OutFmt
+   DstInputFileData%OutSFmt = SrcInputFileData%OutSFmt
+end subroutine
 
- SUBROUTINE SeaSt_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
-  TYPE(SeaSt_InputFile), INTENT(INOUT) :: InputFileData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyInputFile'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL Waves_DestroyInitInput( InputFileData%Waves, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Waves2_DestroyInitInput( InputFileData%Waves2, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Current_DestroyInitInput( InputFileData%Current, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(InputFileData%WaveElevxi)) THEN
-  DEALLOCATE(InputFileData%WaveElevxi)
-ENDIF
-IF (ALLOCATED(InputFileData%WaveElevyi)) THEN
-  DEALLOCATE(InputFileData%WaveElevyi)
-ENDIF
-IF (ALLOCATED(InputFileData%WaveKinxi)) THEN
-  DEALLOCATE(InputFileData%WaveKinxi)
-ENDIF
-IF (ALLOCATED(InputFileData%WaveKinyi)) THEN
-  DEALLOCATE(InputFileData%WaveKinyi)
-ENDIF
-IF (ALLOCATED(InputFileData%WaveKinzi)) THEN
-  DEALLOCATE(InputFileData%WaveKinzi)
-ENDIF
-IF (ALLOCATED(InputFileData%OutList)) THEN
-  DEALLOCATE(InputFileData%OutList)
-ENDIF
- END SUBROUTINE SeaSt_DestroyInputFile
-
+subroutine SeaSt_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
+   type(SeaSt_InputFile), intent(inout) :: InputFileData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_DestroyInputFile'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InputFileData%WaveElevxi)) then
+      deallocate(InputFileData%WaveElevxi)
+   end if
+   if (allocated(InputFileData%WaveElevyi)) then
+      deallocate(InputFileData%WaveElevyi)
+   end if
+   if (allocated(InputFileData%WaveKinxi)) then
+      deallocate(InputFileData%WaveKinxi)
+   end if
+   if (allocated(InputFileData%WaveKinyi)) then
+      deallocate(InputFileData%WaveKinyi)
+   end if
+   if (allocated(InputFileData%WaveKinzi)) then
+      deallocate(InputFileData%WaveKinzi)
+   end if
+   if (allocated(InputFileData%OutList)) then
+      deallocate(InputFileData%OutList)
+   end if
+end subroutine
 
 subroutine SeaSt_PackInputFile(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SeaSt_InputFile), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_PackInputFile'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! EchoFlag
    call RegPack(Buf, InData%EchoFlag)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MSL2SWL
    call RegPack(Buf, InData%MSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! X_HalfWidth
    call RegPack(Buf, InData%X_HalfWidth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Y_HalfWidth
    call RegPack(Buf, InData%Y_HalfWidth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Z_Depth
    call RegPack(Buf, InData%Z_Depth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NX
    call RegPack(Buf, InData%NX)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NY
    call RegPack(Buf, InData%NY)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NZ
    call RegPack(Buf, InData%NZ)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Waves
    call Waves_PackInitInput(Buf, InData%Waves) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Waves2
    call Waves2_PackInitInput(Buf, InData%Waves2) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Current
    call Current_PackInitInput(Buf, InData%Current) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Echo
    call RegPack(Buf, InData%Echo)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NWaveElev
    call RegPack(Buf, InData%NWaveElev)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevxi
    call RegPack(Buf, allocated(InData%WaveElevxi))
    if (allocated(InData%WaveElevxi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveElevxi), ubound(InData%WaveElevxi))
       call RegPack(Buf, InData%WaveElevxi)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevyi
    call RegPack(Buf, allocated(InData%WaveElevyi))
    if (allocated(InData%WaveElevyi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveElevyi), ubound(InData%WaveElevyi))
       call RegPack(Buf, InData%WaveElevyi)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NWaveKin
    call RegPack(Buf, InData%NWaveKin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveKinxi
    call RegPack(Buf, allocated(InData%WaveKinxi))
    if (allocated(InData%WaveKinxi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinxi), ubound(InData%WaveKinxi))
       call RegPack(Buf, InData%WaveKinxi)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveKinyi
    call RegPack(Buf, allocated(InData%WaveKinyi))
    if (allocated(InData%WaveKinyi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinyi), ubound(InData%WaveKinyi))
       call RegPack(Buf, InData%WaveKinyi)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveKinzi
    call RegPack(Buf, allocated(InData%WaveKinzi))
    if (allocated(InData%WaveKinzi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinzi), ubound(InData%WaveKinzi))
       call RegPack(Buf, InData%WaveKinzi)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutSwtch
    call RegPack(Buf, InData%OutSwtch)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutAll
    call RegPack(Buf, InData%OutAll)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumOuts
    call RegPack(Buf, InData%NumOuts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutList
    call RegPack(Buf, allocated(InData%OutList))
    if (allocated(InData%OutList)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutList), ubound(InData%OutList))
       call RegPack(Buf, InData%OutList)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SeaStSum
    call RegPack(Buf, InData%SeaStSum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutFmt
    call RegPack(Buf, InData%OutFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutSFmt
    call RegPack(Buf, InData%OutSFmt)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -492,43 +465,29 @@ subroutine SeaSt_UnPackInputFile(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! EchoFlag
    call RegUnpack(Buf, OutData%EchoFlag)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MSL2SWL
    call RegUnpack(Buf, OutData%MSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! X_HalfWidth
    call RegUnpack(Buf, OutData%X_HalfWidth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Y_HalfWidth
    call RegUnpack(Buf, OutData%Y_HalfWidth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Z_Depth
    call RegUnpack(Buf, OutData%Z_Depth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NX
    call RegUnpack(Buf, OutData%NX)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NY
    call RegUnpack(Buf, OutData%NY)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NZ
    call RegUnpack(Buf, OutData%NZ)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Waves
    call Waves_UnpackInitInput(Buf, OutData%Waves) ! Waves 
-   ! Waves2
    call Waves2_UnpackInitInput(Buf, OutData%Waves2) ! Waves2 
-   ! Current
    call Current_UnpackInitInput(Buf, OutData%Current) ! Current 
-   ! Echo
    call RegUnpack(Buf, OutData%Echo)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NWaveElev
    call RegUnpack(Buf, OutData%NWaveElev)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevxi
    if (allocated(OutData%WaveElevxi)) deallocate(OutData%WaveElevxi)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -543,7 +502,6 @@ subroutine SeaSt_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveElevxi)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveElevyi
    if (allocated(OutData%WaveElevyi)) deallocate(OutData%WaveElevyi)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -558,10 +516,8 @@ subroutine SeaSt_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveElevyi)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! NWaveKin
    call RegUnpack(Buf, OutData%NWaveKin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveKinxi
    if (allocated(OutData%WaveKinxi)) deallocate(OutData%WaveKinxi)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -576,7 +532,6 @@ subroutine SeaSt_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveKinxi)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveKinyi
    if (allocated(OutData%WaveKinyi)) deallocate(OutData%WaveKinyi)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -591,7 +546,6 @@ subroutine SeaSt_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveKinyi)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveKinzi
    if (allocated(OutData%WaveKinzi)) deallocate(OutData%WaveKinzi)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -606,16 +560,12 @@ subroutine SeaSt_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveKinzi)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! OutSwtch
    call RegUnpack(Buf, OutData%OutSwtch)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutAll
    call RegUnpack(Buf, OutData%OutAll)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumOuts
    call RegUnpack(Buf, OutData%NumOuts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutList
    if (allocated(OutData%OutList)) deallocate(OutData%OutList)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -630,141 +580,112 @@ subroutine SeaSt_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%OutList)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! SeaStSum
    call RegUnpack(Buf, OutData%SeaStSum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutFmt
    call RegUnpack(Buf, OutData%OutFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutSFmt
    call RegUnpack(Buf, OutData%OutSFmt)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE SeaSt_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaSt_InitInputType), INTENT(IN) :: SrcInitInputData
-   TYPE(SeaSt_InitInputType), INTENT(INOUT) :: DstInitInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyInitInput'
-! 
+
+subroutine SeaSt_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_InitInputType), intent(in) :: SrcInitInputData
+   type(SeaSt_InitInputType), intent(inout) :: DstInitInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_CopyInitInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInitInputData%InputFile = SrcInitInputData%InputFile
-    DstInitInputData%UseInputFile = SrcInitInputData%UseInputFile
-      CALL NWTC_Library_Copyfileinfotype( SrcInitInputData%PassedFileData, DstInitInputData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    DstInitInputData%OutRootName = SrcInitInputData%OutRootName
-    DstInitInputData%Gravity = SrcInitInputData%Gravity
-    DstInitInputData%defWtrDens = SrcInitInputData%defWtrDens
-    DstInitInputData%defWtrDpth = SrcInitInputData%defWtrDpth
-    DstInitInputData%defMSL2SWL = SrcInitInputData%defMSL2SWL
-    DstInitInputData%TMax = SrcInitInputData%TMax
-IF (ALLOCATED(SrcInitInputData%WaveElevXY)) THEN
-  i1_l = LBOUND(SrcInitInputData%WaveElevXY,1)
-  i1_u = UBOUND(SrcInitInputData%WaveElevXY,1)
-  i2_l = LBOUND(SrcInitInputData%WaveElevXY,2)
-  i2_u = UBOUND(SrcInitInputData%WaveElevXY,2)
-  IF (.NOT. ALLOCATED(DstInitInputData%WaveElevXY)) THEN 
-    ALLOCATE(DstInitInputData%WaveElevXY(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveElevXY.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%WaveElevXY = SrcInitInputData%WaveElevXY
-ENDIF
-    DstInitInputData%WaveFieldMod = SrcInitInputData%WaveFieldMod
-    DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
-    DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
-    DstInitInputData%WrWvKinMod = SrcInitInputData%WrWvKinMod
-    DstInitInputData%HasIce = SrcInitInputData%HasIce
-    DstInitInputData%Linearize = SrcInitInputData%Linearize
- END SUBROUTINE SeaSt_CopyInitInput
+   ErrMsg  = ''
+   DstInitInputData%InputFile = SrcInitInputData%InputFile
+   DstInitInputData%UseInputFile = SrcInitInputData%UseInputFile
+   call NWTC_Library_CopyFileInfoType(SrcInitInputData%PassedFileData, DstInitInputData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstInitInputData%OutRootName = SrcInitInputData%OutRootName
+   DstInitInputData%Gravity = SrcInitInputData%Gravity
+   DstInitInputData%defWtrDens = SrcInitInputData%defWtrDens
+   DstInitInputData%defWtrDpth = SrcInitInputData%defWtrDpth
+   DstInitInputData%defMSL2SWL = SrcInitInputData%defMSL2SWL
+   DstInitInputData%TMax = SrcInitInputData%TMax
+   if (allocated(SrcInitInputData%WaveElevXY)) then
+      LB(1:2) = lbound(SrcInitInputData%WaveElevXY)
+      UB(1:2) = ubound(SrcInitInputData%WaveElevXY)
+      if (.not. allocated(DstInitInputData%WaveElevXY)) then
+         allocate(DstInitInputData%WaveElevXY(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveElevXY.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%WaveElevXY = SrcInitInputData%WaveElevXY
+   else if (allocated(DstInitInputData%WaveElevXY)) then
+      deallocate(DstInitInputData%WaveElevXY)
+   end if
+   DstInitInputData%WaveFieldMod = SrcInitInputData%WaveFieldMod
+   DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
+   DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
+   DstInitInputData%WrWvKinMod = SrcInitInputData%WrWvKinMod
+   DstInitInputData%HasIce = SrcInitInputData%HasIce
+   DstInitInputData%Linearize = SrcInitInputData%Linearize
+end subroutine
 
- SUBROUTINE SeaSt_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
-  TYPE(SeaSt_InitInputType), INTENT(INOUT) :: InitInputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyInitInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL NWTC_Library_DestroyFileInfoType( InitInputData%PassedFileData, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(InitInputData%WaveElevXY)) THEN
-  DEALLOCATE(InitInputData%WaveElevXY)
-ENDIF
- END SUBROUTINE SeaSt_DestroyInitInput
-
+subroutine SeaSt_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
+   type(SeaSt_InitInputType), intent(inout) :: InitInputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_DestroyInitInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InitInputData%WaveElevXY)) then
+      deallocate(InitInputData%WaveElevXY)
+   end if
+end subroutine
 
 subroutine SeaSt_PackInitInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SeaSt_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! InputFile
    call RegPack(Buf, InData%InputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UseInputFile
    call RegPack(Buf, InData%UseInputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PassedFileData
    call NWTC_Library_PackFileInfoType(Buf, InData%PassedFileData) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutRootName
    call RegPack(Buf, InData%OutRootName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Gravity
    call RegPack(Buf, InData%Gravity)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! defWtrDens
    call RegPack(Buf, InData%defWtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! defWtrDpth
    call RegPack(Buf, InData%defWtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! defMSL2SWL
    call RegPack(Buf, InData%defMSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TMax
    call RegPack(Buf, InData%TMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevXY
    call RegPack(Buf, allocated(InData%WaveElevXY))
    if (allocated(InData%WaveElevXY)) then
       call RegPackBounds(Buf, 2, lbound(InData%WaveElevXY), ubound(InData%WaveElevXY))
       call RegPack(Buf, InData%WaveElevXY)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveFieldMod
    call RegPack(Buf, InData%WaveFieldMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmLocationX
    call RegPack(Buf, InData%PtfmLocationX)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmLocationY
    call RegPack(Buf, InData%PtfmLocationY)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WrWvKinMod
    call RegPack(Buf, InData%WrWvKinMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HasIce
    call RegPack(Buf, InData%HasIce)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Linearize
    call RegPack(Buf, InData%Linearize)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -777,33 +698,23 @@ subroutine SeaSt_UnPackInitInput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! InputFile
    call RegUnpack(Buf, OutData%InputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UseInputFile
    call RegUnpack(Buf, OutData%UseInputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PassedFileData
    call NWTC_Library_UnpackFileInfoType(Buf, OutData%PassedFileData) ! PassedFileData 
-   ! OutRootName
    call RegUnpack(Buf, OutData%OutRootName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Gravity
    call RegUnpack(Buf, OutData%Gravity)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! defWtrDens
    call RegUnpack(Buf, OutData%defWtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! defWtrDpth
    call RegUnpack(Buf, OutData%defWtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! defMSL2SWL
    call RegUnpack(Buf, OutData%defMSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TMax
    call RegUnpack(Buf, OutData%TMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevXY
    if (allocated(OutData%WaveElevXY)) deallocate(OutData%WaveElevXY)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -818,172 +729,155 @@ subroutine SeaSt_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveElevXY)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveFieldMod
    call RegUnpack(Buf, OutData%WaveFieldMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmLocationX
    call RegUnpack(Buf, OutData%PtfmLocationX)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmLocationY
    call RegUnpack(Buf, OutData%PtfmLocationY)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WrWvKinMod
    call RegUnpack(Buf, OutData%WrWvKinMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HasIce
    call RegUnpack(Buf, OutData%HasIce)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Linearize
    call RegUnpack(Buf, OutData%Linearize)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE SeaSt_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaSt_InitOutputType), INTENT(IN) :: SrcInitOutputData
-   TYPE(SeaSt_InitOutputType), INTENT(INOUT) :: DstInitOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyInitOutput'
-! 
+
+subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_InitOutputType), intent(in) :: SrcInitOutputData
+   type(SeaSt_InitOutputType), intent(inout) :: DstInitOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(5), UB(5)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_CopyInitOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcInitOutputData%WriteOutputHdr)) THEN
-  i1_l = LBOUND(SrcInitOutputData%WriteOutputHdr,1)
-  i1_u = UBOUND(SrcInitOutputData%WriteOutputHdr,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%WriteOutputHdr)) THEN 
-    ALLOCATE(DstInitOutputData%WriteOutputHdr(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputHdr.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%WriteOutputUnt)) THEN
-  i1_l = LBOUND(SrcInitOutputData%WriteOutputUnt,1)
-  i1_u = UBOUND(SrcInitOutputData%WriteOutputUnt,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%WriteOutputUnt)) THEN 
-    ALLOCATE(DstInitOutputData%WriteOutputUnt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputUnt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-ENDIF
-      CALL NWTC_Library_Copyprogdesc( SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    DstInitOutputData%WtrDens = SrcInitOutputData%WtrDens
-    DstInitOutputData%WtrDpth = SrcInitOutputData%WtrDpth
-    DstInitOutputData%MSL2SWL = SrcInitOutputData%MSL2SWL
-    DstInitOutputData%WaveElevC0 => SrcInitOutputData%WaveElevC0
-    DstInitOutputData%WaveElevC => SrcInitOutputData%WaveElevC
-    DstInitOutputData%WaveDirArr => SrcInitOutputData%WaveDirArr
-    DstInitOutputData%WaveDirMin = SrcInitOutputData%WaveDirMin
-    DstInitOutputData%WaveDirMax = SrcInitOutputData%WaveDirMax
-    DstInitOutputData%WaveDir = SrcInitOutputData%WaveDir
-    DstInitOutputData%WaveMultiDir = SrcInitOutputData%WaveMultiDir
-    DstInitOutputData%WaveDOmega = SrcInitOutputData%WaveDOmega
-    DstInitOutputData%WaveDynP => SrcInitOutputData%WaveDynP
-    DstInitOutputData%WaveAcc => SrcInitOutputData%WaveAcc
-    DstInitOutputData%WaveAccMCF => SrcInitOutputData%WaveAccMCF
-    DstInitOutputData%WaveVel => SrcInitOutputData%WaveVel
-    DstInitOutputData%PWaveDynP0 => SrcInitOutputData%PWaveDynP0
-    DstInitOutputData%PWaveAcc0 => SrcInitOutputData%PWaveAcc0
-    DstInitOutputData%PWaveAccMCF0 => SrcInitOutputData%PWaveAccMCF0
-    DstInitOutputData%PWaveVel0 => SrcInitOutputData%PWaveVel0
-    DstInitOutputData%WaveElev1 => SrcInitOutputData%WaveElev1
-    DstInitOutputData%WaveElev2 => SrcInitOutputData%WaveElev2
-    DstInitOutputData%WaveElev0 => SrcInitOutputData%WaveElev0
-    DstInitOutputData%WaveTime => SrcInitOutputData%WaveTime
-    DstInitOutputData%RhoXg = SrcInitOutputData%RhoXg
-    DstInitOutputData%NStepWave = SrcInitOutputData%NStepWave
-    DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
-    DstInitOutputData%WaveMod = SrcInitOutputData%WaveMod
-    DstInitOutputData%WaveStMod = SrcInitOutputData%WaveStMod
-    DstInitOutputData%WaveDirMod = SrcInitOutputData%WaveDirMod
-    DstInitOutputData%WvLowCOff = SrcInitOutputData%WvLowCOff
-    DstInitOutputData%WvHiCOff = SrcInitOutputData%WvHiCOff
-    DstInitOutputData%WvLowCOffD = SrcInitOutputData%WvLowCOffD
-    DstInitOutputData%WvHiCOffD = SrcInitOutputData%WvHiCOffD
-    DstInitOutputData%WvLowCOffS = SrcInitOutputData%WvLowCOffS
-    DstInitOutputData%WvHiCOffS = SrcInitOutputData%WvHiCOffS
-    DstInitOutputData%InvalidWithSSExctn = SrcInitOutputData%InvalidWithSSExctn
-      CALL SeaSt_Interp_CopyParam( SrcInitOutputData%SeaSt_Interp_p, DstInitOutputData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    DstInitOutputData%MCFD = SrcInitOutputData%MCFD
-IF (ALLOCATED(SrcInitOutputData%WaveElevSeries)) THEN
-  i1_l = LBOUND(SrcInitOutputData%WaveElevSeries,1)
-  i1_u = UBOUND(SrcInitOutputData%WaveElevSeries,1)
-  i2_l = LBOUND(SrcInitOutputData%WaveElevSeries,2)
-  i2_u = UBOUND(SrcInitOutputData%WaveElevSeries,2)
-  IF (.NOT. ALLOCATED(DstInitOutputData%WaveElevSeries)) THEN 
-    ALLOCATE(DstInitOutputData%WaveElevSeries(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveElevSeries.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%WaveElevSeries = SrcInitOutputData%WaveElevSeries
-ENDIF
-    DstInitOutputData%WaveField => SrcInitOutputData%WaveField
- END SUBROUTINE SeaSt_CopyInitOutput
+   ErrMsg  = ''
+   if (allocated(SrcInitOutputData%WriteOutputHdr)) then
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
+      if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
+         allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputHdr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
+   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
+      deallocate(DstInitOutputData%WriteOutputHdr)
+   end if
+   if (allocated(SrcInitOutputData%WriteOutputUnt)) then
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
+      if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
+         allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputUnt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
+   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
+      deallocate(DstInitOutputData%WriteOutputUnt)
+   end if
+   call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstInitOutputData%WtrDens = SrcInitOutputData%WtrDens
+   DstInitOutputData%WtrDpth = SrcInitOutputData%WtrDpth
+   DstInitOutputData%MSL2SWL = SrcInitOutputData%MSL2SWL
+   DstInitOutputData%WaveElevC0 => SrcInitOutputData%WaveElevC0
+   DstInitOutputData%WaveElevC => SrcInitOutputData%WaveElevC
+   DstInitOutputData%WaveDirArr => SrcInitOutputData%WaveDirArr
+   DstInitOutputData%WaveDirMin = SrcInitOutputData%WaveDirMin
+   DstInitOutputData%WaveDirMax = SrcInitOutputData%WaveDirMax
+   DstInitOutputData%WaveDir = SrcInitOutputData%WaveDir
+   DstInitOutputData%WaveMultiDir = SrcInitOutputData%WaveMultiDir
+   DstInitOutputData%WaveDOmega = SrcInitOutputData%WaveDOmega
+   DstInitOutputData%WaveDynP => SrcInitOutputData%WaveDynP
+   DstInitOutputData%WaveAcc => SrcInitOutputData%WaveAcc
+   DstInitOutputData%WaveAccMCF => SrcInitOutputData%WaveAccMCF
+   DstInitOutputData%WaveVel => SrcInitOutputData%WaveVel
+   DstInitOutputData%PWaveDynP0 => SrcInitOutputData%PWaveDynP0
+   DstInitOutputData%PWaveAcc0 => SrcInitOutputData%PWaveAcc0
+   DstInitOutputData%PWaveAccMCF0 => SrcInitOutputData%PWaveAccMCF0
+   DstInitOutputData%PWaveVel0 => SrcInitOutputData%PWaveVel0
+   DstInitOutputData%WaveElev1 => SrcInitOutputData%WaveElev1
+   DstInitOutputData%WaveElev2 => SrcInitOutputData%WaveElev2
+   DstInitOutputData%WaveElev0 => SrcInitOutputData%WaveElev0
+   DstInitOutputData%WaveTime => SrcInitOutputData%WaveTime
+   DstInitOutputData%RhoXg = SrcInitOutputData%RhoXg
+   DstInitOutputData%NStepWave = SrcInitOutputData%NStepWave
+   DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
+   DstInitOutputData%WaveMod = SrcInitOutputData%WaveMod
+   DstInitOutputData%WaveStMod = SrcInitOutputData%WaveStMod
+   DstInitOutputData%WaveDirMod = SrcInitOutputData%WaveDirMod
+   DstInitOutputData%WvLowCOff = SrcInitOutputData%WvLowCOff
+   DstInitOutputData%WvHiCOff = SrcInitOutputData%WvHiCOff
+   DstInitOutputData%WvLowCOffD = SrcInitOutputData%WvLowCOffD
+   DstInitOutputData%WvHiCOffD = SrcInitOutputData%WvHiCOffD
+   DstInitOutputData%WvLowCOffS = SrcInitOutputData%WvLowCOffS
+   DstInitOutputData%WvHiCOffS = SrcInitOutputData%WvHiCOffS
+   DstInitOutputData%InvalidWithSSExctn = SrcInitOutputData%InvalidWithSSExctn
+   call SeaSt_Interp_CopyParam(SrcInitOutputData%SeaSt_Interp_p, DstInitOutputData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstInitOutputData%MCFD = SrcInitOutputData%MCFD
+   if (allocated(SrcInitOutputData%WaveElevSeries)) then
+      LB(1:2) = lbound(SrcInitOutputData%WaveElevSeries)
+      UB(1:2) = ubound(SrcInitOutputData%WaveElevSeries)
+      if (.not. allocated(DstInitOutputData%WaveElevSeries)) then
+         allocate(DstInitOutputData%WaveElevSeries(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveElevSeries.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%WaveElevSeries = SrcInitOutputData%WaveElevSeries
+   else if (allocated(DstInitOutputData%WaveElevSeries)) then
+      deallocate(DstInitOutputData%WaveElevSeries)
+   end if
+   DstInitOutputData%WaveField => SrcInitOutputData%WaveField
+end subroutine
 
- SUBROUTINE SeaSt_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
-  TYPE(SeaSt_InitOutputType), INTENT(INOUT) :: InitOutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyInitOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(InitOutputData%WriteOutputHdr)) THEN
-  DEALLOCATE(InitOutputData%WriteOutputHdr)
-ENDIF
-IF (ALLOCATED(InitOutputData%WriteOutputUnt)) THEN
-  DEALLOCATE(InitOutputData%WriteOutputUnt)
-ENDIF
-  CALL NWTC_Library_DestroyProgDesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-NULLIFY(InitOutputData%WaveElevC0)
-NULLIFY(InitOutputData%WaveElevC)
-NULLIFY(InitOutputData%WaveDirArr)
-NULLIFY(InitOutputData%WaveDynP)
-NULLIFY(InitOutputData%WaveAcc)
-NULLIFY(InitOutputData%WaveAccMCF)
-NULLIFY(InitOutputData%WaveVel)
-NULLIFY(InitOutputData%PWaveDynP0)
-NULLIFY(InitOutputData%PWaveAcc0)
-NULLIFY(InitOutputData%PWaveAccMCF0)
-NULLIFY(InitOutputData%PWaveVel0)
-NULLIFY(InitOutputData%WaveElev1)
-NULLIFY(InitOutputData%WaveElev2)
-NULLIFY(InitOutputData%WaveElev0)
-NULLIFY(InitOutputData%WaveTime)
-  CALL SeaSt_Interp_DestroyParam( InitOutputData%SeaSt_Interp_p, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(InitOutputData%WaveElevSeries)) THEN
-  DEALLOCATE(InitOutputData%WaveElevSeries)
-ENDIF
-NULLIFY(InitOutputData%WaveField)
- END SUBROUTINE SeaSt_DestroyInitOutput
-
+subroutine SeaSt_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
+   type(SeaSt_InitOutputType), intent(inout) :: InitOutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_DestroyInitOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InitOutputData%WriteOutputHdr)) then
+      deallocate(InitOutputData%WriteOutputHdr)
+   end if
+   if (allocated(InitOutputData%WriteOutputUnt)) then
+      deallocate(InitOutputData%WriteOutputUnt)
+   end if
+   nullify(InitOutputData%WaveElevC0)
+   nullify(InitOutputData%WaveElevC)
+   nullify(InitOutputData%WaveDirArr)
+   nullify(InitOutputData%WaveDynP)
+   nullify(InitOutputData%WaveAcc)
+   nullify(InitOutputData%WaveAccMCF)
+   nullify(InitOutputData%WaveVel)
+   nullify(InitOutputData%PWaveDynP0)
+   nullify(InitOutputData%PWaveAcc0)
+   nullify(InitOutputData%PWaveAccMCF0)
+   nullify(InitOutputData%PWaveVel0)
+   nullify(InitOutputData%WaveElev1)
+   nullify(InitOutputData%WaveElev2)
+   nullify(InitOutputData%WaveElev0)
+   nullify(InitOutputData%WaveTime)
+   if (allocated(InitOutputData%WaveElevSeries)) then
+      deallocate(InitOutputData%WaveElevSeries)
+   end if
+   nullify(InitOutputData%WaveField)
+end subroutine
 
 subroutine SeaSt_PackInitOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -991,33 +885,26 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SeaSt_PackInitOutput'
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
-   ! WriteOutputHdr
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WriteOutputUnt
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Ver
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDens
    call RegPack(Buf, InData%WtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDpth
    call RegPack(Buf, InData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MSL2SWL
    call RegPack(Buf, InData%MSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevC0
    call RegPack(Buf, associated(InData%WaveElevC0))
    if (associated(InData%WaveElevC0)) then
       call RegPackBounds(Buf, 2, lbound(InData%WaveElevC0), ubound(InData%WaveElevC0))
@@ -1027,7 +914,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevC
    call RegPack(Buf, associated(InData%WaveElevC))
    if (associated(InData%WaveElevC)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElevC), ubound(InData%WaveElevC))
@@ -1037,7 +923,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirArr
    call RegPack(Buf, associated(InData%WaveDirArr))
    if (associated(InData%WaveDirArr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveDirArr), ubound(InData%WaveDirArr))
@@ -1047,22 +932,16 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirMin
    call RegPack(Buf, InData%WaveDirMin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirMax
    call RegPack(Buf, InData%WaveDirMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDir
    call RegPack(Buf, InData%WaveDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveMultiDir
    call RegPack(Buf, InData%WaveMultiDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDOmega
    call RegPack(Buf, InData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDynP
    call RegPack(Buf, associated(InData%WaveDynP))
    if (associated(InData%WaveDynP)) then
       call RegPackBounds(Buf, 4, lbound(InData%WaveDynP), ubound(InData%WaveDynP))
@@ -1072,7 +951,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveAcc
    call RegPack(Buf, associated(InData%WaveAcc))
    if (associated(InData%WaveAcc)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveAcc), ubound(InData%WaveAcc))
@@ -1082,7 +960,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveAccMCF
    call RegPack(Buf, associated(InData%WaveAccMCF))
    if (associated(InData%WaveAccMCF)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveAccMCF), ubound(InData%WaveAccMCF))
@@ -1092,7 +969,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveVel
    call RegPack(Buf, associated(InData%WaveVel))
    if (associated(InData%WaveVel)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveVel), ubound(InData%WaveVel))
@@ -1102,7 +978,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PWaveDynP0
    call RegPack(Buf, associated(InData%PWaveDynP0))
    if (associated(InData%PWaveDynP0)) then
       call RegPackBounds(Buf, 3, lbound(InData%PWaveDynP0), ubound(InData%PWaveDynP0))
@@ -1112,7 +987,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PWaveAcc0
    call RegPack(Buf, associated(InData%PWaveAcc0))
    if (associated(InData%PWaveAcc0)) then
       call RegPackBounds(Buf, 4, lbound(InData%PWaveAcc0), ubound(InData%PWaveAcc0))
@@ -1122,7 +996,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PWaveAccMCF0
    call RegPack(Buf, associated(InData%PWaveAccMCF0))
    if (associated(InData%PWaveAccMCF0)) then
       call RegPackBounds(Buf, 4, lbound(InData%PWaveAccMCF0), ubound(InData%PWaveAccMCF0))
@@ -1132,7 +1005,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PWaveVel0
    call RegPack(Buf, associated(InData%PWaveVel0))
    if (associated(InData%PWaveVel0)) then
       call RegPackBounds(Buf, 4, lbound(InData%PWaveVel0), ubound(InData%PWaveVel0))
@@ -1142,7 +1014,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElev1
    call RegPack(Buf, associated(InData%WaveElev1))
    if (associated(InData%WaveElev1)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElev1), ubound(InData%WaveElev1))
@@ -1152,7 +1023,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElev2
    call RegPack(Buf, associated(InData%WaveElev2))
    if (associated(InData%WaveElev2)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElev2), ubound(InData%WaveElev2))
@@ -1162,7 +1032,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElev0
    call RegPack(Buf, associated(InData%WaveElev0))
    if (associated(InData%WaveElev0)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveElev0), ubound(InData%WaveElev0))
@@ -1172,7 +1041,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveTime
    call RegPack(Buf, associated(InData%WaveTime))
    if (associated(InData%WaveTime)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveTime), ubound(InData%WaveTime))
@@ -1182,59 +1050,42 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RhoXg
    call RegPack(Buf, InData%RhoXg)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NStepWave
    call RegPack(Buf, InData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NStepWave2
    call RegPack(Buf, InData%NStepWave2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveMod
    call RegPack(Buf, InData%WaveMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveStMod
    call RegPack(Buf, InData%WaveStMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirMod
    call RegPack(Buf, InData%WaveDirMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvLowCOff
    call RegPack(Buf, InData%WvLowCOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvHiCOff
    call RegPack(Buf, InData%WvHiCOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvLowCOffD
    call RegPack(Buf, InData%WvLowCOffD)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvHiCOffD
    call RegPack(Buf, InData%WvHiCOffD)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvLowCOffS
    call RegPack(Buf, InData%WvLowCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvHiCOffS
    call RegPack(Buf, InData%WvHiCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InvalidWithSSExctn
    call RegPack(Buf, InData%InvalidWithSSExctn)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SeaSt_Interp_p
    call SeaSt_Interp_PackParam(Buf, InData%SeaSt_Interp_p) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MCFD
    call RegPack(Buf, InData%MCFD)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevSeries
    call RegPack(Buf, allocated(InData%WaveElevSeries))
    if (allocated(InData%WaveElevSeries)) then
       call RegPackBounds(Buf, 2, lbound(InData%WaveElevSeries), ubound(InData%WaveElevSeries))
       call RegPack(Buf, InData%WaveElevSeries)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveField
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
       call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
@@ -1255,7 +1106,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    integer(IntKi)  :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
-   ! WriteOutputHdr
    if (allocated(OutData%WriteOutputHdr)) deallocate(OutData%WriteOutputHdr)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1270,7 +1120,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%WriteOutputHdr)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WriteOutputUnt
    if (allocated(OutData%WriteOutputUnt)) deallocate(OutData%WriteOutputUnt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1285,18 +1134,13 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%WriteOutputUnt)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Ver
    call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
-   ! WtrDens
    call RegUnpack(Buf, OutData%WtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDpth
    call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MSL2SWL
    call RegUnpack(Buf, OutData%MSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevC0
    if (associated(OutData%WaveElevC0)) deallocate(OutData%WaveElevC0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1321,7 +1165,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    else
       OutData%WaveElevC0 => null()
    end if
-   ! WaveElevC
    if (associated(OutData%WaveElevC)) deallocate(OutData%WaveElevC)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1346,7 +1189,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    else
       OutData%WaveElevC => null()
    end if
-   ! WaveDirArr
    if (associated(OutData%WaveDirArr)) deallocate(OutData%WaveDirArr)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1371,22 +1213,16 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    else
       OutData%WaveDirArr => null()
    end if
-   ! WaveDirMin
    call RegUnpack(Buf, OutData%WaveDirMin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirMax
    call RegUnpack(Buf, OutData%WaveDirMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDir
    call RegUnpack(Buf, OutData%WaveDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveMultiDir
    call RegUnpack(Buf, OutData%WaveMultiDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDOmega
    call RegUnpack(Buf, OutData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDynP
    if (associated(OutData%WaveDynP)) deallocate(OutData%WaveDynP)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1411,7 +1247,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    else
       OutData%WaveDynP => null()
    end if
-   ! WaveAcc
    if (associated(OutData%WaveAcc)) deallocate(OutData%WaveAcc)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1436,7 +1271,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    else
       OutData%WaveAcc => null()
    end if
-   ! WaveAccMCF
    if (associated(OutData%WaveAccMCF)) deallocate(OutData%WaveAccMCF)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1461,7 +1295,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    else
       OutData%WaveAccMCF => null()
    end if
-   ! WaveVel
    if (associated(OutData%WaveVel)) deallocate(OutData%WaveVel)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1486,7 +1319,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    else
       OutData%WaveVel => null()
    end if
-   ! PWaveDynP0
    if (associated(OutData%PWaveDynP0)) deallocate(OutData%PWaveDynP0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1511,7 +1343,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    else
       OutData%PWaveDynP0 => null()
    end if
-   ! PWaveAcc0
    if (associated(OutData%PWaveAcc0)) deallocate(OutData%PWaveAcc0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1536,7 +1367,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    else
       OutData%PWaveAcc0 => null()
    end if
-   ! PWaveAccMCF0
    if (associated(OutData%PWaveAccMCF0)) deallocate(OutData%PWaveAccMCF0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1561,7 +1391,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    else
       OutData%PWaveAccMCF0 => null()
    end if
-   ! PWaveVel0
    if (associated(OutData%PWaveVel0)) deallocate(OutData%PWaveVel0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1586,7 +1415,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    else
       OutData%PWaveVel0 => null()
    end if
-   ! WaveElev1
    if (associated(OutData%WaveElev1)) deallocate(OutData%WaveElev1)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1611,7 +1439,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    else
       OutData%WaveElev1 => null()
    end if
-   ! WaveElev2
    if (associated(OutData%WaveElev2)) deallocate(OutData%WaveElev2)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1636,7 +1463,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    else
       OutData%WaveElev2 => null()
    end if
-   ! WaveElev0
    if (associated(OutData%WaveElev0)) deallocate(OutData%WaveElev0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1661,7 +1487,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    else
       OutData%WaveElev0 => null()
    end if
-   ! WaveTime
    if (associated(OutData%WaveTime)) deallocate(OutData%WaveTime)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1686,51 +1511,35 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    else
       OutData%WaveTime => null()
    end if
-   ! RhoXg
    call RegUnpack(Buf, OutData%RhoXg)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NStepWave
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NStepWave2
    call RegUnpack(Buf, OutData%NStepWave2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveMod
    call RegUnpack(Buf, OutData%WaveMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveStMod
    call RegUnpack(Buf, OutData%WaveStMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirMod
    call RegUnpack(Buf, OutData%WaveDirMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvLowCOff
    call RegUnpack(Buf, OutData%WvLowCOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvHiCOff
    call RegUnpack(Buf, OutData%WvHiCOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvLowCOffD
    call RegUnpack(Buf, OutData%WvLowCOffD)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvHiCOffD
    call RegUnpack(Buf, OutData%WvHiCOffD)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvLowCOffS
    call RegUnpack(Buf, OutData%WvLowCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvHiCOffS
    call RegUnpack(Buf, OutData%WvHiCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InvalidWithSSExctn
    call RegUnpack(Buf, OutData%InvalidWithSSExctn)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SeaSt_Interp_p
    call SeaSt_Interp_UnpackParam(Buf, OutData%SeaSt_Interp_p) ! SeaSt_Interp_p 
-   ! MCFD
    call RegUnpack(Buf, OutData%MCFD)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevSeries
    if (allocated(OutData%WaveElevSeries)) deallocate(OutData%WaveElevSeries)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1745,7 +1554,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveElevSeries)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveField
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1767,45 +1575,33 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
       OutData%WaveField => null()
    end if
 end subroutine
- SUBROUTINE SeaSt_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaSt_ContinuousStateType), INTENT(IN) :: SrcContStateData
-   TYPE(SeaSt_ContinuousStateType), INTENT(INOUT) :: DstContStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyContState'
-! 
+
+subroutine SeaSt_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_ContinuousStateType), intent(in) :: SrcContStateData
+   type(SeaSt_ContinuousStateType), intent(inout) :: DstContStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_CopyContState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstContStateData%UnusedStates = SrcContStateData%UnusedStates
- END SUBROUTINE SeaSt_CopyContState
+   ErrMsg  = ''
+   DstContStateData%UnusedStates = SrcContStateData%UnusedStates
+end subroutine
 
- SUBROUTINE SeaSt_DestroyContState( ContStateData, ErrStat, ErrMsg )
-  TYPE(SeaSt_ContinuousStateType), INTENT(INOUT) :: ContStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyContState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE SeaSt_DestroyContState
-
+subroutine SeaSt_DestroyContState(ContStateData, ErrStat, ErrMsg)
+   type(SeaSt_ContinuousStateType), intent(inout) :: ContStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_DestroyContState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SeaSt_PackContState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SeaSt_ContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_PackContState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! UnusedStates
    call RegPack(Buf, InData%UnusedStates)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1815,49 +1611,36 @@ subroutine SeaSt_UnPackContState(Buf, OutData)
    type(SeaSt_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_UnPackContState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! UnusedStates
    call RegUnpack(Buf, OutData%UnusedStates)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE SeaSt_CopyDiscState( SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaSt_DiscreteStateType), INTENT(IN) :: SrcDiscStateData
-   TYPE(SeaSt_DiscreteStateType), INTENT(INOUT) :: DstDiscStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyDiscState'
-! 
+
+subroutine SeaSt_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_DiscreteStateType), intent(in) :: SrcDiscStateData
+   type(SeaSt_DiscreteStateType), intent(inout) :: DstDiscStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_CopyDiscState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstDiscStateData%UnusedStates = SrcDiscStateData%UnusedStates
- END SUBROUTINE SeaSt_CopyDiscState
+   ErrMsg  = ''
+   DstDiscStateData%UnusedStates = SrcDiscStateData%UnusedStates
+end subroutine
 
- SUBROUTINE SeaSt_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
-  TYPE(SeaSt_DiscreteStateType), INTENT(INOUT) :: DiscStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyDiscState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE SeaSt_DestroyDiscState
-
+subroutine SeaSt_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
+   type(SeaSt_DiscreteStateType), intent(inout) :: DiscStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_DestroyDiscState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SeaSt_PackDiscState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SeaSt_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_PackDiscState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! UnusedStates
    call RegPack(Buf, InData%UnusedStates)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1867,49 +1650,36 @@ subroutine SeaSt_UnPackDiscState(Buf, OutData)
    type(SeaSt_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_UnPackDiscState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! UnusedStates
    call RegUnpack(Buf, OutData%UnusedStates)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE SeaSt_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaSt_ConstraintStateType), INTENT(IN) :: SrcConstrStateData
-   TYPE(SeaSt_ConstraintStateType), INTENT(INOUT) :: DstConstrStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyConstrState'
-! 
+
+subroutine SeaSt_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_ConstraintStateType), intent(in) :: SrcConstrStateData
+   type(SeaSt_ConstraintStateType), intent(inout) :: DstConstrStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_CopyConstrState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstConstrStateData%UnusedStates = SrcConstrStateData%UnusedStates
- END SUBROUTINE SeaSt_CopyConstrState
+   ErrMsg  = ''
+   DstConstrStateData%UnusedStates = SrcConstrStateData%UnusedStates
+end subroutine
 
- SUBROUTINE SeaSt_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
-  TYPE(SeaSt_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyConstrState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE SeaSt_DestroyConstrState
-
+subroutine SeaSt_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
+   type(SeaSt_ConstraintStateType), intent(inout) :: ConstrStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_DestroyConstrState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SeaSt_PackConstrState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SeaSt_ConstraintStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_PackConstrState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! UnusedStates
    call RegPack(Buf, InData%UnusedStates)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1919,49 +1689,36 @@ subroutine SeaSt_UnPackConstrState(Buf, OutData)
    type(SeaSt_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_UnPackConstrState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! UnusedStates
    call RegUnpack(Buf, OutData%UnusedStates)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE SeaSt_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaSt_OtherStateType), INTENT(IN) :: SrcOtherStateData
-   TYPE(SeaSt_OtherStateType), INTENT(INOUT) :: DstOtherStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyOtherState'
-! 
+
+subroutine SeaSt_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_OtherStateType), intent(in) :: SrcOtherStateData
+   type(SeaSt_OtherStateType), intent(inout) :: DstOtherStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_CopyOtherState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstOtherStateData%UnusedStates = SrcOtherStateData%UnusedStates
- END SUBROUTINE SeaSt_CopyOtherState
+   ErrMsg  = ''
+   DstOtherStateData%UnusedStates = SrcOtherStateData%UnusedStates
+end subroutine
 
- SUBROUTINE SeaSt_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
-  TYPE(SeaSt_OtherStateType), INTENT(INOUT) :: OtherStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyOtherState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE SeaSt_DestroyOtherState
-
+subroutine SeaSt_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
+   type(SeaSt_OtherStateType), intent(inout) :: OtherStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_DestroyOtherState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SeaSt_PackOtherState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SeaSt_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_PackOtherState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! UnusedStates
    call RegPack(Buf, InData%UnusedStates)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1971,65 +1728,51 @@ subroutine SeaSt_UnPackOtherState(Buf, OutData)
    type(SeaSt_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_UnPackOtherState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! UnusedStates
    call RegUnpack(Buf, OutData%UnusedStates)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE SeaSt_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaSt_MiscVarType), INTENT(IN) :: SrcMiscData
-   TYPE(SeaSt_MiscVarType), INTENT(INOUT) :: DstMiscData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyMisc'
-! 
+
+subroutine SeaSt_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_MiscVarType), intent(in) :: SrcMiscData
+   type(SeaSt_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_CopyMisc'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstMiscData%Decimate = SrcMiscData%Decimate
-    DstMiscData%LastOutTime = SrcMiscData%LastOutTime
-    DstMiscData%LastIndWave = SrcMiscData%LastIndWave
-      CALL SeaSt_Interp_CopyMisc( SrcMiscData%SeaSt_Interp_m, DstMiscData%SeaSt_Interp_m, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE SeaSt_CopyMisc
+   ErrMsg  = ''
+   DstMiscData%Decimate = SrcMiscData%Decimate
+   DstMiscData%LastOutTime = SrcMiscData%LastOutTime
+   DstMiscData%LastIndWave = SrcMiscData%LastIndWave
+   call SeaSt_Interp_CopyMisc(SrcMiscData%SeaSt_Interp_m, DstMiscData%SeaSt_Interp_m, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE SeaSt_DestroyMisc( MiscData, ErrStat, ErrMsg )
-  TYPE(SeaSt_MiscVarType), INTENT(INOUT) :: MiscData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyMisc'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL SeaSt_Interp_DestroyMisc( MiscData%SeaSt_Interp_m, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE SeaSt_DestroyMisc
-
+subroutine SeaSt_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(SeaSt_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SeaSt_PackMisc(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SeaSt_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_PackMisc'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Decimate
    call RegPack(Buf, InData%Decimate)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LastOutTime
    call RegPack(Buf, InData%LastOutTime)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LastIndWave
    call RegPack(Buf, InData%LastIndWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SeaSt_Interp_m
    call SeaSt_Interp_PackMisc(Buf, InData%SeaSt_Interp_m) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -2039,228 +1782,226 @@ subroutine SeaSt_UnPackMisc(Buf, OutData)
    type(SeaSt_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_UnPackMisc'
    if (Buf%ErrStat /= ErrID_None) return
-   ! Decimate
    call RegUnpack(Buf, OutData%Decimate)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LastOutTime
    call RegUnpack(Buf, OutData%LastOutTime)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LastIndWave
    call RegUnpack(Buf, OutData%LastIndWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SeaSt_Interp_m
    call SeaSt_Interp_UnpackMisc(Buf, OutData%SeaSt_Interp_m) ! SeaSt_Interp_m 
 end subroutine
- SUBROUTINE SeaSt_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaSt_ParameterType), INTENT(IN) :: SrcParamData
-   TYPE(SeaSt_ParameterType), INTENT(INOUT) :: DstParamData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyParam'
-! 
+
+subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_ParameterType), intent(in) :: SrcParamData
+   type(SeaSt_ParameterType), intent(inout) :: DstParamData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1, i2, i3, i4, i5
+   integer(IntKi)                 :: LB(5), UB(5)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_CopyParam'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL Waves2_CopyParam( SrcParamData%Waves2, DstParamData%Waves2, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    DstParamData%WaveTime => SrcParamData%WaveTime
-    DstParamData%WaveDT = SrcParamData%WaveDT
-    DstParamData%NGridPts = SrcParamData%NGridPts
-    DstParamData%NGrid = SrcParamData%NGrid
-    DstParamData%deltaGrid = SrcParamData%deltaGrid
-    DstParamData%X_HalfWidth = SrcParamData%X_HalfWidth
-    DstParamData%Y_HalfWidth = SrcParamData%Y_HalfWidth
-    DstParamData%Z_Depth = SrcParamData%Z_Depth
-    DstParamData%NStepWave = SrcParamData%NStepWave
-    DstParamData%NWaveElev = SrcParamData%NWaveElev
-IF (ALLOCATED(SrcParamData%WaveElevxi)) THEN
-  i1_l = LBOUND(SrcParamData%WaveElevxi,1)
-  i1_u = UBOUND(SrcParamData%WaveElevxi,1)
-  IF (.NOT. ALLOCATED(DstParamData%WaveElevxi)) THEN 
-    ALLOCATE(DstParamData%WaveElevxi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveElevxi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%WaveElevxi = SrcParamData%WaveElevxi
-ENDIF
-IF (ALLOCATED(SrcParamData%WaveElevyi)) THEN
-  i1_l = LBOUND(SrcParamData%WaveElevyi,1)
-  i1_u = UBOUND(SrcParamData%WaveElevyi,1)
-  IF (.NOT. ALLOCATED(DstParamData%WaveElevyi)) THEN 
-    ALLOCATE(DstParamData%WaveElevyi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveElevyi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%WaveElevyi = SrcParamData%WaveElevyi
-ENDIF
-    DstParamData%WaveElev1 => SrcParamData%WaveElev1
-    DstParamData%WaveElev2 => SrcParamData%WaveElev2
-    DstParamData%PWaveDynP0 => SrcParamData%PWaveDynP0
-    DstParamData%WaveDynP => SrcParamData%WaveDynP
-    DstParamData%WaveAcc => SrcParamData%WaveAcc
-    DstParamData%PWaveAcc0 => SrcParamData%PWaveAcc0
-    DstParamData%WaveVel => SrcParamData%WaveVel
-    DstParamData%PWaveVel0 => SrcParamData%PWaveVel0
-    DstParamData%WaveAccMCF => SrcParamData%WaveAccMCF
-    DstParamData%WaveDirArr => SrcParamData%WaveDirArr
-    DstParamData%WaveElevC0 => SrcParamData%WaveElevC0
-    DstParamData%PWaveAccMCF0 => SrcParamData%PWaveAccMCF0
-    DstParamData%NWaveKin = SrcParamData%NWaveKin
-IF (ALLOCATED(SrcParamData%WaveKinxi)) THEN
-  i1_l = LBOUND(SrcParamData%WaveKinxi,1)
-  i1_u = UBOUND(SrcParamData%WaveKinxi,1)
-  IF (.NOT. ALLOCATED(DstParamData%WaveKinxi)) THEN 
-    ALLOCATE(DstParamData%WaveKinxi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveKinxi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%WaveKinxi = SrcParamData%WaveKinxi
-ENDIF
-IF (ALLOCATED(SrcParamData%WaveKinyi)) THEN
-  i1_l = LBOUND(SrcParamData%WaveKinyi,1)
-  i1_u = UBOUND(SrcParamData%WaveKinyi,1)
-  IF (.NOT. ALLOCATED(DstParamData%WaveKinyi)) THEN 
-    ALLOCATE(DstParamData%WaveKinyi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveKinyi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%WaveKinyi = SrcParamData%WaveKinyi
-ENDIF
-IF (ALLOCATED(SrcParamData%WaveKinzi)) THEN
-  i1_l = LBOUND(SrcParamData%WaveKinzi,1)
-  i1_u = UBOUND(SrcParamData%WaveKinzi,1)
-  IF (.NOT. ALLOCATED(DstParamData%WaveKinzi)) THEN 
-    ALLOCATE(DstParamData%WaveKinzi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveKinzi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%WaveKinzi = SrcParamData%WaveKinzi
-ENDIF
-    DstParamData%WtrDpth = SrcParamData%WtrDpth
-    DstParamData%DT = SrcParamData%DT
-    DstParamData%WaveStMod = SrcParamData%WaveStMod
-IF (ALLOCATED(SrcParamData%OutParam)) THEN
-  i1_l = LBOUND(SrcParamData%OutParam,1)
-  i1_u = UBOUND(SrcParamData%OutParam,1)
-  IF (.NOT. ALLOCATED(DstParamData%OutParam)) THEN 
-    ALLOCATE(DstParamData%OutParam(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%OutParam.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcParamData%OutParam,1), UBOUND(SrcParamData%OutParam,1)
-      CALL NWTC_Library_Copyoutparmtype( SrcParamData%OutParam(i1), DstParamData%OutParam(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-    DstParamData%NumOuts = SrcParamData%NumOuts
-    DstParamData%OutSwtch = SrcParamData%OutSwtch
-    DstParamData%OutFmt = SrcParamData%OutFmt
-    DstParamData%OutSFmt = SrcParamData%OutSFmt
-    DstParamData%Delim = SrcParamData%Delim
-    DstParamData%UnOutFile = SrcParamData%UnOutFile
-    DstParamData%OutDec = SrcParamData%OutDec
-      CALL SeaSt_Interp_CopyParam( SrcParamData%SeaSt_Interp_p, DstParamData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-IF (ASSOCIATED(SrcParamData%WaveField)) THEN
-  IF (.NOT. ASSOCIATED(DstParamData%WaveField)) THEN 
-    ALLOCATE(DstParamData%WaveField,STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveField.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-      CALL SeaSt_WaveField_Copyseast_wavefieldtype( SrcParamData%WaveField, DstParamData%WaveField, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-ENDIF
- END SUBROUTINE SeaSt_CopyParam
+   ErrMsg  = ''
+   call Waves2_CopyParam(SrcParamData%Waves2, DstParamData%Waves2, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstParamData%WaveTime => SrcParamData%WaveTime
+   DstParamData%WaveDT = SrcParamData%WaveDT
+   DstParamData%NGridPts = SrcParamData%NGridPts
+   DstParamData%NGrid = SrcParamData%NGrid
+   DstParamData%deltaGrid = SrcParamData%deltaGrid
+   DstParamData%X_HalfWidth = SrcParamData%X_HalfWidth
+   DstParamData%Y_HalfWidth = SrcParamData%Y_HalfWidth
+   DstParamData%Z_Depth = SrcParamData%Z_Depth
+   DstParamData%NStepWave = SrcParamData%NStepWave
+   DstParamData%NWaveElev = SrcParamData%NWaveElev
+   if (allocated(SrcParamData%WaveElevxi)) then
+      LB(1:1) = lbound(SrcParamData%WaveElevxi)
+      UB(1:1) = ubound(SrcParamData%WaveElevxi)
+      if (.not. allocated(DstParamData%WaveElevxi)) then
+         allocate(DstParamData%WaveElevxi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveElevxi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%WaveElevxi = SrcParamData%WaveElevxi
+   else if (allocated(DstParamData%WaveElevxi)) then
+      deallocate(DstParamData%WaveElevxi)
+   end if
+   if (allocated(SrcParamData%WaveElevyi)) then
+      LB(1:1) = lbound(SrcParamData%WaveElevyi)
+      UB(1:1) = ubound(SrcParamData%WaveElevyi)
+      if (.not. allocated(DstParamData%WaveElevyi)) then
+         allocate(DstParamData%WaveElevyi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveElevyi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%WaveElevyi = SrcParamData%WaveElevyi
+   else if (allocated(DstParamData%WaveElevyi)) then
+      deallocate(DstParamData%WaveElevyi)
+   end if
+   DstParamData%WaveElev1 => SrcParamData%WaveElev1
+   DstParamData%WaveElev2 => SrcParamData%WaveElev2
+   DstParamData%PWaveDynP0 => SrcParamData%PWaveDynP0
+   DstParamData%WaveDynP => SrcParamData%WaveDynP
+   DstParamData%WaveAcc => SrcParamData%WaveAcc
+   DstParamData%PWaveAcc0 => SrcParamData%PWaveAcc0
+   DstParamData%WaveVel => SrcParamData%WaveVel
+   DstParamData%PWaveVel0 => SrcParamData%PWaveVel0
+   DstParamData%WaveAccMCF => SrcParamData%WaveAccMCF
+   DstParamData%WaveDirArr => SrcParamData%WaveDirArr
+   DstParamData%WaveElevC0 => SrcParamData%WaveElevC0
+   DstParamData%PWaveAccMCF0 => SrcParamData%PWaveAccMCF0
+   DstParamData%NWaveKin = SrcParamData%NWaveKin
+   if (allocated(SrcParamData%WaveKinxi)) then
+      LB(1:1) = lbound(SrcParamData%WaveKinxi)
+      UB(1:1) = ubound(SrcParamData%WaveKinxi)
+      if (.not. allocated(DstParamData%WaveKinxi)) then
+         allocate(DstParamData%WaveKinxi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveKinxi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%WaveKinxi = SrcParamData%WaveKinxi
+   else if (allocated(DstParamData%WaveKinxi)) then
+      deallocate(DstParamData%WaveKinxi)
+   end if
+   if (allocated(SrcParamData%WaveKinyi)) then
+      LB(1:1) = lbound(SrcParamData%WaveKinyi)
+      UB(1:1) = ubound(SrcParamData%WaveKinyi)
+      if (.not. allocated(DstParamData%WaveKinyi)) then
+         allocate(DstParamData%WaveKinyi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveKinyi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%WaveKinyi = SrcParamData%WaveKinyi
+   else if (allocated(DstParamData%WaveKinyi)) then
+      deallocate(DstParamData%WaveKinyi)
+   end if
+   if (allocated(SrcParamData%WaveKinzi)) then
+      LB(1:1) = lbound(SrcParamData%WaveKinzi)
+      UB(1:1) = ubound(SrcParamData%WaveKinzi)
+      if (.not. allocated(DstParamData%WaveKinzi)) then
+         allocate(DstParamData%WaveKinzi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveKinzi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%WaveKinzi = SrcParamData%WaveKinzi
+   else if (allocated(DstParamData%WaveKinzi)) then
+      deallocate(DstParamData%WaveKinzi)
+   end if
+   DstParamData%WtrDpth = SrcParamData%WtrDpth
+   DstParamData%DT = SrcParamData%DT
+   DstParamData%WaveStMod = SrcParamData%WaveStMod
+   if (allocated(SrcParamData%OutParam)) then
+      LB(1:1) = lbound(SrcParamData%OutParam)
+      UB(1:1) = ubound(SrcParamData%OutParam)
+      if (.not. allocated(DstParamData%OutParam)) then
+         allocate(DstParamData%OutParam(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%OutParam.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_CopyOutParmType(SrcParamData%OutParam(i1), DstParamData%OutParam(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstParamData%OutParam)) then
+      deallocate(DstParamData%OutParam)
+   end if
+   DstParamData%NumOuts = SrcParamData%NumOuts
+   DstParamData%OutSwtch = SrcParamData%OutSwtch
+   DstParamData%OutFmt = SrcParamData%OutFmt
+   DstParamData%OutSFmt = SrcParamData%OutSFmt
+   DstParamData%Delim = SrcParamData%Delim
+   DstParamData%UnOutFile = SrcParamData%UnOutFile
+   DstParamData%OutDec = SrcParamData%OutDec
+   call SeaSt_Interp_CopyParam(SrcParamData%SeaSt_Interp_p, DstParamData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (associated(SrcParamData%WaveField)) then
+      if (.not. associated(DstParamData%WaveField)) then
+         allocate(DstParamData%WaveField, stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveField.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      call SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcParamData%WaveField, DstParamData%WaveField, CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   else if (associated(DstParamData%WaveField)) then
+      deallocate(DstParamData%WaveField)
+   end if
+end subroutine
 
- SUBROUTINE SeaSt_DestroyParam( ParamData, ErrStat, ErrMsg )
-  TYPE(SeaSt_ParameterType), INTENT(INOUT) :: ParamData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyParam'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL Waves2_DestroyParam( ParamData%Waves2, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-NULLIFY(ParamData%WaveTime)
-IF (ALLOCATED(ParamData%WaveElevxi)) THEN
-  DEALLOCATE(ParamData%WaveElevxi)
-ENDIF
-IF (ALLOCATED(ParamData%WaveElevyi)) THEN
-  DEALLOCATE(ParamData%WaveElevyi)
-ENDIF
-NULLIFY(ParamData%WaveElev1)
-NULLIFY(ParamData%WaveElev2)
-NULLIFY(ParamData%PWaveDynP0)
-NULLIFY(ParamData%WaveDynP)
-NULLIFY(ParamData%WaveAcc)
-NULLIFY(ParamData%PWaveAcc0)
-NULLIFY(ParamData%WaveVel)
-NULLIFY(ParamData%PWaveVel0)
-NULLIFY(ParamData%WaveAccMCF)
-NULLIFY(ParamData%WaveDirArr)
-NULLIFY(ParamData%WaveElevC0)
-NULLIFY(ParamData%PWaveAccMCF0)
-IF (ALLOCATED(ParamData%WaveKinxi)) THEN
-  DEALLOCATE(ParamData%WaveKinxi)
-ENDIF
-IF (ALLOCATED(ParamData%WaveKinyi)) THEN
-  DEALLOCATE(ParamData%WaveKinyi)
-ENDIF
-IF (ALLOCATED(ParamData%WaveKinzi)) THEN
-  DEALLOCATE(ParamData%WaveKinzi)
-ENDIF
-IF (ALLOCATED(ParamData%OutParam)) THEN
-DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_DestroyOutParmType( ParamData%OutParam(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(ParamData%OutParam)
-ENDIF
-  CALL SeaSt_Interp_DestroyParam( ParamData%SeaSt_Interp_p, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ASSOCIATED(ParamData%WaveField)) THEN
-  IF (ASSOCIATED(ParamData%WaveField)) THEN
-    CALL SeaSt_WaveField_DestroySeaSt_WaveFieldType( ParamData%WaveField, ErrStat2, ErrMsg2 )
-       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  ENDIF
-  DEALLOCATE(ParamData%WaveField)
-  ParamData%WaveField => NULL()
-ENDIF
- END SUBROUTINE SeaSt_DestroyParam
-
+subroutine SeaSt_DestroyParam(ParamData, ErrStat, ErrMsg)
+   type(SeaSt_ParameterType), intent(inout) :: ParamData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1, i2, i3, i4, i5
+   integer(IntKi)  :: LB(5), UB(5)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_DestroyParam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   nullify(ParamData%WaveTime)
+   if (allocated(ParamData%WaveElevxi)) then
+      deallocate(ParamData%WaveElevxi)
+   end if
+   if (allocated(ParamData%WaveElevyi)) then
+      deallocate(ParamData%WaveElevyi)
+   end if
+   nullify(ParamData%WaveElev1)
+   nullify(ParamData%WaveElev2)
+   nullify(ParamData%PWaveDynP0)
+   nullify(ParamData%WaveDynP)
+   nullify(ParamData%WaveAcc)
+   nullify(ParamData%PWaveAcc0)
+   nullify(ParamData%WaveVel)
+   nullify(ParamData%PWaveVel0)
+   nullify(ParamData%WaveAccMCF)
+   nullify(ParamData%WaveDirArr)
+   nullify(ParamData%WaveElevC0)
+   nullify(ParamData%PWaveAccMCF0)
+   if (allocated(ParamData%WaveKinxi)) then
+      deallocate(ParamData%WaveKinxi)
+   end if
+   if (allocated(ParamData%WaveKinyi)) then
+      deallocate(ParamData%WaveKinyi)
+   end if
+   if (allocated(ParamData%WaveKinzi)) then
+      deallocate(ParamData%WaveKinzi)
+   end if
+   if (allocated(ParamData%OutParam)) then
+      LB(1:1) = lbound(ParamData%OutParam)
+      UB(1:1) = ubound(ParamData%OutParam)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_DestroyOutParmType(ParamData%OutParam(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ParamData%OutParam)
+   end if
+   if (associated(ParamData%WaveField)) then
+      call SeaSt_WaveField_DestroySeaSt_WaveFieldType(ParamData%WaveField, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      deallocate(ParamData%WaveField)
+      ParamData%WaveField => null()
+   end if
+end subroutine
 
 subroutine SeaSt_PackParam(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -2270,10 +2011,8 @@ subroutine SeaSt_PackParam(Buf, Indata)
    integer(IntKi)  :: LB(5), UB(5)
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Waves2
    call Waves2_PackParam(Buf, InData%Waves2) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveTime
    call RegPack(Buf, associated(InData%WaveTime))
    if (associated(InData%WaveTime)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveTime), ubound(InData%WaveTime))
@@ -2283,48 +2022,36 @@ subroutine SeaSt_PackParam(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDT
    call RegPack(Buf, InData%WaveDT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NGridPts
    call RegPack(Buf, InData%NGridPts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NGrid
    call RegPack(Buf, InData%NGrid)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! deltaGrid
    call RegPack(Buf, InData%deltaGrid)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! X_HalfWidth
    call RegPack(Buf, InData%X_HalfWidth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Y_HalfWidth
    call RegPack(Buf, InData%Y_HalfWidth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Z_Depth
    call RegPack(Buf, InData%Z_Depth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NStepWave
    call RegPack(Buf, InData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NWaveElev
    call RegPack(Buf, InData%NWaveElev)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevxi
    call RegPack(Buf, allocated(InData%WaveElevxi))
    if (allocated(InData%WaveElevxi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveElevxi), ubound(InData%WaveElevxi))
       call RegPack(Buf, InData%WaveElevxi)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevyi
    call RegPack(Buf, allocated(InData%WaveElevyi))
    if (allocated(InData%WaveElevyi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveElevyi), ubound(InData%WaveElevyi))
       call RegPack(Buf, InData%WaveElevyi)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElev1
    call RegPack(Buf, associated(InData%WaveElev1))
    if (associated(InData%WaveElev1)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElev1), ubound(InData%WaveElev1))
@@ -2334,7 +2061,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElev2
    call RegPack(Buf, associated(InData%WaveElev2))
    if (associated(InData%WaveElev2)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElev2), ubound(InData%WaveElev2))
@@ -2344,7 +2070,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PWaveDynP0
    call RegPack(Buf, associated(InData%PWaveDynP0))
    if (associated(InData%PWaveDynP0)) then
       call RegPackBounds(Buf, 3, lbound(InData%PWaveDynP0), ubound(InData%PWaveDynP0))
@@ -2354,7 +2079,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDynP
    call RegPack(Buf, associated(InData%WaveDynP))
    if (associated(InData%WaveDynP)) then
       call RegPackBounds(Buf, 4, lbound(InData%WaveDynP), ubound(InData%WaveDynP))
@@ -2364,7 +2088,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveAcc
    call RegPack(Buf, associated(InData%WaveAcc))
    if (associated(InData%WaveAcc)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveAcc), ubound(InData%WaveAcc))
@@ -2374,7 +2097,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PWaveAcc0
    call RegPack(Buf, associated(InData%PWaveAcc0))
    if (associated(InData%PWaveAcc0)) then
       call RegPackBounds(Buf, 4, lbound(InData%PWaveAcc0), ubound(InData%PWaveAcc0))
@@ -2384,7 +2106,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveVel
    call RegPack(Buf, associated(InData%WaveVel))
    if (associated(InData%WaveVel)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveVel), ubound(InData%WaveVel))
@@ -2394,7 +2115,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PWaveVel0
    call RegPack(Buf, associated(InData%PWaveVel0))
    if (associated(InData%PWaveVel0)) then
       call RegPackBounds(Buf, 4, lbound(InData%PWaveVel0), ubound(InData%PWaveVel0))
@@ -2404,7 +2124,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveAccMCF
    call RegPack(Buf, associated(InData%WaveAccMCF))
    if (associated(InData%WaveAccMCF)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveAccMCF), ubound(InData%WaveAccMCF))
@@ -2414,7 +2133,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirArr
    call RegPack(Buf, associated(InData%WaveDirArr))
    if (associated(InData%WaveDirArr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveDirArr), ubound(InData%WaveDirArr))
@@ -2424,7 +2142,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevC0
    call RegPack(Buf, associated(InData%WaveElevC0))
    if (associated(InData%WaveElevC0)) then
       call RegPackBounds(Buf, 2, lbound(InData%WaveElevC0), ubound(InData%WaveElevC0))
@@ -2434,7 +2151,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PWaveAccMCF0
    call RegPack(Buf, associated(InData%PWaveAccMCF0))
    if (associated(InData%PWaveAccMCF0)) then
       call RegPackBounds(Buf, 4, lbound(InData%PWaveAccMCF0), ubound(InData%PWaveAccMCF0))
@@ -2444,40 +2160,32 @@ subroutine SeaSt_PackParam(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NWaveKin
    call RegPack(Buf, InData%NWaveKin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveKinxi
    call RegPack(Buf, allocated(InData%WaveKinxi))
    if (allocated(InData%WaveKinxi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinxi), ubound(InData%WaveKinxi))
       call RegPack(Buf, InData%WaveKinxi)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveKinyi
    call RegPack(Buf, allocated(InData%WaveKinyi))
    if (allocated(InData%WaveKinyi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinyi), ubound(InData%WaveKinyi))
       call RegPack(Buf, InData%WaveKinyi)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveKinzi
    call RegPack(Buf, allocated(InData%WaveKinzi))
    if (allocated(InData%WaveKinzi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinzi), ubound(InData%WaveKinzi))
       call RegPack(Buf, InData%WaveKinzi)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDpth
    call RegPack(Buf, InData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DT
    call RegPack(Buf, InData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveStMod
    call RegPack(Buf, InData%WaveStMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutParam
    call RegPack(Buf, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutParam), ubound(InData%OutParam))
@@ -2488,31 +2196,22 @@ subroutine SeaSt_PackParam(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumOuts
    call RegPack(Buf, InData%NumOuts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutSwtch
    call RegPack(Buf, InData%OutSwtch)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutFmt
    call RegPack(Buf, InData%OutFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutSFmt
    call RegPack(Buf, InData%OutSFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Delim
    call RegPack(Buf, InData%Delim)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UnOutFile
    call RegPack(Buf, InData%UnOutFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutDec
    call RegPack(Buf, InData%OutDec)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SeaSt_Interp_p
    call SeaSt_Interp_PackParam(Buf, InData%SeaSt_Interp_p) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveField
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
       call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
@@ -2534,9 +2233,7 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    integer(IntKi)  :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
-   ! Waves2
    call Waves2_UnpackParam(Buf, OutData%Waves2) ! Waves2 
-   ! WaveTime
    if (associated(OutData%WaveTime)) deallocate(OutData%WaveTime)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2561,34 +2258,24 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    else
       OutData%WaveTime => null()
    end if
-   ! WaveDT
    call RegUnpack(Buf, OutData%WaveDT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NGridPts
    call RegUnpack(Buf, OutData%NGridPts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NGrid
    call RegUnpack(Buf, OutData%NGrid)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! deltaGrid
    call RegUnpack(Buf, OutData%deltaGrid)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! X_HalfWidth
    call RegUnpack(Buf, OutData%X_HalfWidth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Y_HalfWidth
    call RegUnpack(Buf, OutData%Y_HalfWidth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Z_Depth
    call RegUnpack(Buf, OutData%Z_Depth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NStepWave
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NWaveElev
    call RegUnpack(Buf, OutData%NWaveElev)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevxi
    if (allocated(OutData%WaveElevxi)) deallocate(OutData%WaveElevxi)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2603,7 +2290,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveElevxi)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveElevyi
    if (allocated(OutData%WaveElevyi)) deallocate(OutData%WaveElevyi)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2618,7 +2304,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveElevyi)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveElev1
    if (associated(OutData%WaveElev1)) deallocate(OutData%WaveElev1)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2643,7 +2328,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    else
       OutData%WaveElev1 => null()
    end if
-   ! WaveElev2
    if (associated(OutData%WaveElev2)) deallocate(OutData%WaveElev2)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2668,7 +2352,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    else
       OutData%WaveElev2 => null()
    end if
-   ! PWaveDynP0
    if (associated(OutData%PWaveDynP0)) deallocate(OutData%PWaveDynP0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2693,7 +2376,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    else
       OutData%PWaveDynP0 => null()
    end if
-   ! WaveDynP
    if (associated(OutData%WaveDynP)) deallocate(OutData%WaveDynP)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2718,7 +2400,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    else
       OutData%WaveDynP => null()
    end if
-   ! WaveAcc
    if (associated(OutData%WaveAcc)) deallocate(OutData%WaveAcc)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2743,7 +2424,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    else
       OutData%WaveAcc => null()
    end if
-   ! PWaveAcc0
    if (associated(OutData%PWaveAcc0)) deallocate(OutData%PWaveAcc0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2768,7 +2448,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    else
       OutData%PWaveAcc0 => null()
    end if
-   ! WaveVel
    if (associated(OutData%WaveVel)) deallocate(OutData%WaveVel)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2793,7 +2472,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    else
       OutData%WaveVel => null()
    end if
-   ! PWaveVel0
    if (associated(OutData%PWaveVel0)) deallocate(OutData%PWaveVel0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2818,7 +2496,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    else
       OutData%PWaveVel0 => null()
    end if
-   ! WaveAccMCF
    if (associated(OutData%WaveAccMCF)) deallocate(OutData%WaveAccMCF)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2843,7 +2520,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    else
       OutData%WaveAccMCF => null()
    end if
-   ! WaveDirArr
    if (associated(OutData%WaveDirArr)) deallocate(OutData%WaveDirArr)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2868,7 +2544,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    else
       OutData%WaveDirArr => null()
    end if
-   ! WaveElevC0
    if (associated(OutData%WaveElevC0)) deallocate(OutData%WaveElevC0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2893,7 +2568,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    else
       OutData%WaveElevC0 => null()
    end if
-   ! PWaveAccMCF0
    if (associated(OutData%PWaveAccMCF0)) deallocate(OutData%PWaveAccMCF0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2918,10 +2592,8 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    else
       OutData%PWaveAccMCF0 => null()
    end if
-   ! NWaveKin
    call RegUnpack(Buf, OutData%NWaveKin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveKinxi
    if (allocated(OutData%WaveKinxi)) deallocate(OutData%WaveKinxi)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2936,7 +2608,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveKinxi)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveKinyi
    if (allocated(OutData%WaveKinyi)) deallocate(OutData%WaveKinyi)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2951,7 +2622,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveKinyi)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveKinzi
    if (allocated(OutData%WaveKinzi)) deallocate(OutData%WaveKinzi)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2966,16 +2636,12 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveKinzi)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WtrDpth
    call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DT
    call RegUnpack(Buf, OutData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveStMod
    call RegUnpack(Buf, OutData%WaveStMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutParam
    if (allocated(OutData%OutParam)) deallocate(OutData%OutParam)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2991,30 +2657,21 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
          call NWTC_Library_UnpackOutParmType(Buf, OutData%OutParam(i1)) ! OutParam 
       end do
    end if
-   ! NumOuts
    call RegUnpack(Buf, OutData%NumOuts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutSwtch
    call RegUnpack(Buf, OutData%OutSwtch)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutFmt
    call RegUnpack(Buf, OutData%OutFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutSFmt
    call RegUnpack(Buf, OutData%OutSFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Delim
    call RegUnpack(Buf, OutData%Delim)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UnOutFile
    call RegUnpack(Buf, OutData%UnOutFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutDec
    call RegUnpack(Buf, OutData%OutDec)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SeaSt_Interp_p
    call SeaSt_Interp_UnpackParam(Buf, OutData%SeaSt_Interp_p) ! SeaSt_Interp_p 
-   ! WaveField
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3036,45 +2693,33 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
       OutData%WaveField => null()
    end if
 end subroutine
- SUBROUTINE SeaSt_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaSt_InputType), INTENT(IN) :: SrcInputData
-   TYPE(SeaSt_InputType), INTENT(INOUT) :: DstInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyInput'
-! 
+
+subroutine SeaSt_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_InputType), intent(in) :: SrcInputData
+   type(SeaSt_InputType), intent(inout) :: DstInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_CopyInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInputData%DummyInput = SrcInputData%DummyInput
- END SUBROUTINE SeaSt_CopyInput
+   ErrMsg  = ''
+   DstInputData%DummyInput = SrcInputData%DummyInput
+end subroutine
 
- SUBROUTINE SeaSt_DestroyInput( InputData, ErrStat, ErrMsg )
-  TYPE(SeaSt_InputType), INTENT(INOUT) :: InputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE SeaSt_DestroyInput
-
+subroutine SeaSt_DestroyInput(InputData, ErrStat, ErrMsg)
+   type(SeaSt_InputType), intent(inout) :: InputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_DestroyInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SeaSt_PackInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SeaSt_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_PackInput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! DummyInput
    call RegPack(Buf, InData%DummyInput)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -3084,64 +2729,54 @@ subroutine SeaSt_UnPackInput(Buf, OutData)
    type(SeaSt_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_UnPackInput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! DummyInput
    call RegUnpack(Buf, OutData%DummyInput)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE SeaSt_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaSt_OutputType), INTENT(IN) :: SrcOutputData
-   TYPE(SeaSt_OutputType), INTENT(INOUT) :: DstOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_CopyOutput'
-! 
+
+subroutine SeaSt_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_OutputType), intent(in) :: SrcOutputData
+   type(SeaSt_OutputType), intent(inout) :: DstOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'SeaSt_CopyOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
-  i1_l = LBOUND(SrcOutputData%WriteOutput,1)
-  i1_u = UBOUND(SrcOutputData%WriteOutput,1)
-  IF (.NOT. ALLOCATED(DstOutputData%WriteOutput)) THEN 
-    ALLOCATE(DstOutputData%WriteOutput(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WriteOutput.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-ENDIF
- END SUBROUTINE SeaSt_CopyOutput
+   ErrMsg  = ''
+   if (allocated(SrcOutputData%WriteOutput)) then
+      LB(1:1) = lbound(SrcOutputData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput)
+      if (.not. allocated(DstOutputData%WriteOutput)) then
+         allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WriteOutput.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%WriteOutput = SrcOutputData%WriteOutput
+   else if (allocated(DstOutputData%WriteOutput)) then
+      deallocate(DstOutputData%WriteOutput)
+   end if
+end subroutine
 
- SUBROUTINE SeaSt_DestroyOutput( OutputData, ErrStat, ErrMsg )
-  TYPE(SeaSt_OutputType), INTENT(INOUT) :: OutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_DestroyOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(OutputData%WriteOutput)) THEN
-  DEALLOCATE(OutputData%WriteOutput)
-ENDIF
- END SUBROUTINE SeaSt_DestroyOutput
-
+subroutine SeaSt_DestroyOutput(OutputData, ErrStat, ErrMsg)
+   type(SeaSt_OutputType), intent(inout) :: OutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_DestroyOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(OutputData%WriteOutput)) then
+      deallocate(OutputData%WriteOutput)
+   end if
+end subroutine
 
 subroutine SeaSt_PackOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SeaSt_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_PackOutput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! WriteOutput
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
@@ -3158,7 +2793,6 @@ subroutine SeaSt_UnPackOutput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! WriteOutput
    if (allocated(OutData%WriteOutput)) deallocate(OutData%WriteOutput)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return

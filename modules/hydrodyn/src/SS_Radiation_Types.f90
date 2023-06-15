@@ -96,90 +96,80 @@ IMPLICIT NONE
   END TYPE SS_Rad_OutputType
 ! =======================
 CONTAINS
- SUBROUTINE SS_Rad_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SS_Rad_InitInputType), INTENT(IN) :: SrcInitInputData
-   TYPE(SS_Rad_InitInputType), INTENT(INOUT) :: DstInitInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SS_Rad_CopyInitInput'
-! 
+
+subroutine SS_Rad_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
+   type(SS_Rad_InitInputType), intent(in) :: SrcInitInputData
+   type(SS_Rad_InitInputType), intent(inout) :: DstInitInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'SS_Rad_CopyInitInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInitInputData%InputFile = SrcInitInputData%InputFile
-IF (ALLOCATED(SrcInitInputData%enabledDOFs)) THEN
-  i1_l = LBOUND(SrcInitInputData%enabledDOFs,1)
-  i1_u = UBOUND(SrcInitInputData%enabledDOFs,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%enabledDOFs)) THEN 
-    ALLOCATE(DstInitInputData%enabledDOFs(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%enabledDOFs.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%enabledDOFs = SrcInitInputData%enabledDOFs
-ENDIF
-    DstInitInputData%NBody = SrcInitInputData%NBody
-IF (ALLOCATED(SrcInitInputData%PtfmRefztRot)) THEN
-  i1_l = LBOUND(SrcInitInputData%PtfmRefztRot,1)
-  i1_u = UBOUND(SrcInitInputData%PtfmRefztRot,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%PtfmRefztRot)) THEN 
-    ALLOCATE(DstInitInputData%PtfmRefztRot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmRefztRot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%PtfmRefztRot = SrcInitInputData%PtfmRefztRot
-ENDIF
- END SUBROUTINE SS_Rad_CopyInitInput
+   ErrMsg  = ''
+   DstInitInputData%InputFile = SrcInitInputData%InputFile
+   if (allocated(SrcInitInputData%enabledDOFs)) then
+      LB(1:1) = lbound(SrcInitInputData%enabledDOFs)
+      UB(1:1) = ubound(SrcInitInputData%enabledDOFs)
+      if (.not. allocated(DstInitInputData%enabledDOFs)) then
+         allocate(DstInitInputData%enabledDOFs(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%enabledDOFs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%enabledDOFs = SrcInitInputData%enabledDOFs
+   else if (allocated(DstInitInputData%enabledDOFs)) then
+      deallocate(DstInitInputData%enabledDOFs)
+   end if
+   DstInitInputData%NBody = SrcInitInputData%NBody
+   if (allocated(SrcInitInputData%PtfmRefztRot)) then
+      LB(1:1) = lbound(SrcInitInputData%PtfmRefztRot)
+      UB(1:1) = ubound(SrcInitInputData%PtfmRefztRot)
+      if (.not. allocated(DstInitInputData%PtfmRefztRot)) then
+         allocate(DstInitInputData%PtfmRefztRot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmRefztRot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%PtfmRefztRot = SrcInitInputData%PtfmRefztRot
+   else if (allocated(DstInitInputData%PtfmRefztRot)) then
+      deallocate(DstInitInputData%PtfmRefztRot)
+   end if
+end subroutine
 
- SUBROUTINE SS_Rad_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
-  TYPE(SS_Rad_InitInputType), INTENT(INOUT) :: InitInputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SS_Rad_DestroyInitInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(InitInputData%enabledDOFs)) THEN
-  DEALLOCATE(InitInputData%enabledDOFs)
-ENDIF
-IF (ALLOCATED(InitInputData%PtfmRefztRot)) THEN
-  DEALLOCATE(InitInputData%PtfmRefztRot)
-ENDIF
- END SUBROUTINE SS_Rad_DestroyInitInput
-
+subroutine SS_Rad_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
+   type(SS_Rad_InitInputType), intent(inout) :: InitInputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SS_Rad_DestroyInitInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InitInputData%enabledDOFs)) then
+      deallocate(InitInputData%enabledDOFs)
+   end if
+   if (allocated(InitInputData%PtfmRefztRot)) then
+      deallocate(InitInputData%PtfmRefztRot)
+   end if
+end subroutine
 
 subroutine SS_Rad_PackInitInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SS_Rad_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SS_Rad_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! InputFile
    call RegPack(Buf, InData%InputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! enabledDOFs
    call RegPack(Buf, allocated(InData%enabledDOFs))
    if (allocated(InData%enabledDOFs)) then
       call RegPackBounds(Buf, 1, lbound(InData%enabledDOFs), ubound(InData%enabledDOFs))
       call RegPack(Buf, InData%enabledDOFs)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NBody
    call RegPack(Buf, InData%NBody)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmRefztRot
    call RegPack(Buf, allocated(InData%PtfmRefztRot))
    if (allocated(InData%PtfmRefztRot)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmRefztRot), ubound(InData%PtfmRefztRot))
@@ -196,10 +186,8 @@ subroutine SS_Rad_UnPackInitInput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! InputFile
    call RegUnpack(Buf, OutData%InputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! enabledDOFs
    if (allocated(OutData%enabledDOFs)) deallocate(OutData%enabledDOFs)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -214,10 +202,8 @@ subroutine SS_Rad_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%enabledDOFs)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! NBody
    call RegUnpack(Buf, OutData%NBody)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmRefztRot
    if (allocated(OutData%PtfmRefztRot)) deallocate(OutData%PtfmRefztRot)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -233,82 +219,74 @@ subroutine SS_Rad_UnPackInitInput(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE SS_Rad_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SS_Rad_InitOutputType), INTENT(IN) :: SrcInitOutputData
-   TYPE(SS_Rad_InitOutputType), INTENT(INOUT) :: DstInitOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SS_Rad_CopyInitOutput'
-! 
+
+subroutine SS_Rad_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(SS_Rad_InitOutputType), intent(in) :: SrcInitOutputData
+   type(SS_Rad_InitOutputType), intent(inout) :: DstInitOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'SS_Rad_CopyInitOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcInitOutputData%WriteOutputHdr)) THEN
-  i1_l = LBOUND(SrcInitOutputData%WriteOutputHdr,1)
-  i1_u = UBOUND(SrcInitOutputData%WriteOutputHdr,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%WriteOutputHdr)) THEN 
-    ALLOCATE(DstInitOutputData%WriteOutputHdr(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputHdr.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%WriteOutputUnt)) THEN
-  i1_l = LBOUND(SrcInitOutputData%WriteOutputUnt,1)
-  i1_u = UBOUND(SrcInitOutputData%WriteOutputUnt,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%WriteOutputUnt)) THEN 
-    ALLOCATE(DstInitOutputData%WriteOutputUnt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputUnt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-ENDIF
- END SUBROUTINE SS_Rad_CopyInitOutput
+   ErrMsg  = ''
+   if (allocated(SrcInitOutputData%WriteOutputHdr)) then
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
+      if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
+         allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputHdr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
+   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
+      deallocate(DstInitOutputData%WriteOutputHdr)
+   end if
+   if (allocated(SrcInitOutputData%WriteOutputUnt)) then
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
+      if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
+         allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputUnt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
+   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
+      deallocate(DstInitOutputData%WriteOutputUnt)
+   end if
+end subroutine
 
- SUBROUTINE SS_Rad_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
-  TYPE(SS_Rad_InitOutputType), INTENT(INOUT) :: InitOutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SS_Rad_DestroyInitOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(InitOutputData%WriteOutputHdr)) THEN
-  DEALLOCATE(InitOutputData%WriteOutputHdr)
-ENDIF
-IF (ALLOCATED(InitOutputData%WriteOutputUnt)) THEN
-  DEALLOCATE(InitOutputData%WriteOutputUnt)
-ENDIF
- END SUBROUTINE SS_Rad_DestroyInitOutput
-
+subroutine SS_Rad_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
+   type(SS_Rad_InitOutputType), intent(inout) :: InitOutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SS_Rad_DestroyInitOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InitOutputData%WriteOutputHdr)) then
+      deallocate(InitOutputData%WriteOutputHdr)
+   end if
+   if (allocated(InitOutputData%WriteOutputUnt)) then
+      deallocate(InitOutputData%WriteOutputUnt)
+   end if
+end subroutine
 
 subroutine SS_Rad_PackInitOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SS_Rad_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SS_Rad_PackInitOutput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! WriteOutputHdr
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WriteOutputUnt
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
@@ -325,7 +303,6 @@ subroutine SS_Rad_UnPackInitOutput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! WriteOutputHdr
    if (allocated(OutData%WriteOutputHdr)) deallocate(OutData%WriteOutputHdr)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -340,7 +317,6 @@ subroutine SS_Rad_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%WriteOutputHdr)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WriteOutputUnt
    if (allocated(OutData%WriteOutputUnt)) deallocate(OutData%WriteOutputUnt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -356,60 +332,51 @@ subroutine SS_Rad_UnPackInitOutput(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE SS_Rad_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SS_Rad_ContinuousStateType), INTENT(IN) :: SrcContStateData
-   TYPE(SS_Rad_ContinuousStateType), INTENT(INOUT) :: DstContStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SS_Rad_CopyContState'
-! 
+
+subroutine SS_Rad_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
+   type(SS_Rad_ContinuousStateType), intent(in) :: SrcContStateData
+   type(SS_Rad_ContinuousStateType), intent(inout) :: DstContStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'SS_Rad_CopyContState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcContStateData%x)) THEN
-  i1_l = LBOUND(SrcContStateData%x,1)
-  i1_u = UBOUND(SrcContStateData%x,1)
-  IF (.NOT. ALLOCATED(DstContStateData%x)) THEN 
-    ALLOCATE(DstContStateData%x(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstContStateData%x.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstContStateData%x = SrcContStateData%x
-ENDIF
- END SUBROUTINE SS_Rad_CopyContState
+   ErrMsg  = ''
+   if (allocated(SrcContStateData%x)) then
+      LB(1:1) = lbound(SrcContStateData%x)
+      UB(1:1) = ubound(SrcContStateData%x)
+      if (.not. allocated(DstContStateData%x)) then
+         allocate(DstContStateData%x(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstContStateData%x.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstContStateData%x = SrcContStateData%x
+   else if (allocated(DstContStateData%x)) then
+      deallocate(DstContStateData%x)
+   end if
+end subroutine
 
- SUBROUTINE SS_Rad_DestroyContState( ContStateData, ErrStat, ErrMsg )
-  TYPE(SS_Rad_ContinuousStateType), INTENT(INOUT) :: ContStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SS_Rad_DestroyContState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(ContStateData%x)) THEN
-  DEALLOCATE(ContStateData%x)
-ENDIF
- END SUBROUTINE SS_Rad_DestroyContState
-
+subroutine SS_Rad_DestroyContState(ContStateData, ErrStat, ErrMsg)
+   type(SS_Rad_ContinuousStateType), intent(inout) :: ContStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SS_Rad_DestroyContState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(ContStateData%x)) then
+      deallocate(ContStateData%x)
+   end if
+end subroutine
 
 subroutine SS_Rad_PackContState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SS_Rad_ContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SS_Rad_PackContState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! x
    call RegPack(Buf, allocated(InData%x))
    if (allocated(InData%x)) then
       call RegPackBounds(Buf, 1, lbound(InData%x), ubound(InData%x))
@@ -426,7 +393,6 @@ subroutine SS_Rad_UnPackContState(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! x
    if (allocated(OutData%x)) deallocate(OutData%x)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -442,45 +408,33 @@ subroutine SS_Rad_UnPackContState(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE SS_Rad_CopyDiscState( SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SS_Rad_DiscreteStateType), INTENT(IN) :: SrcDiscStateData
-   TYPE(SS_Rad_DiscreteStateType), INTENT(INOUT) :: DstDiscStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SS_Rad_CopyDiscState'
-! 
+
+subroutine SS_Rad_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg)
+   type(SS_Rad_DiscreteStateType), intent(in) :: SrcDiscStateData
+   type(SS_Rad_DiscreteStateType), intent(inout) :: DstDiscStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SS_Rad_CopyDiscState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstDiscStateData%DummyDiscState = SrcDiscStateData%DummyDiscState
- END SUBROUTINE SS_Rad_CopyDiscState
+   ErrMsg  = ''
+   DstDiscStateData%DummyDiscState = SrcDiscStateData%DummyDiscState
+end subroutine
 
- SUBROUTINE SS_Rad_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
-  TYPE(SS_Rad_DiscreteStateType), INTENT(INOUT) :: DiscStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SS_Rad_DestroyDiscState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE SS_Rad_DestroyDiscState
-
+subroutine SS_Rad_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
+   type(SS_Rad_DiscreteStateType), intent(inout) :: DiscStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SS_Rad_DestroyDiscState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SS_Rad_PackDiscState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SS_Rad_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SS_Rad_PackDiscState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! DummyDiscState
    call RegPack(Buf, InData%DummyDiscState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -490,49 +444,36 @@ subroutine SS_Rad_UnPackDiscState(Buf, OutData)
    type(SS_Rad_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SS_Rad_UnPackDiscState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! DummyDiscState
    call RegUnpack(Buf, OutData%DummyDiscState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE SS_Rad_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SS_Rad_ConstraintStateType), INTENT(IN) :: SrcConstrStateData
-   TYPE(SS_Rad_ConstraintStateType), INTENT(INOUT) :: DstConstrStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SS_Rad_CopyConstrState'
-! 
+
+subroutine SS_Rad_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
+   type(SS_Rad_ConstraintStateType), intent(in) :: SrcConstrStateData
+   type(SS_Rad_ConstraintStateType), intent(inout) :: DstConstrStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SS_Rad_CopyConstrState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstConstrStateData%DummyConstrState = SrcConstrStateData%DummyConstrState
- END SUBROUTINE SS_Rad_CopyConstrState
+   ErrMsg  = ''
+   DstConstrStateData%DummyConstrState = SrcConstrStateData%DummyConstrState
+end subroutine
 
- SUBROUTINE SS_Rad_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
-  TYPE(SS_Rad_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SS_Rad_DestroyConstrState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE SS_Rad_DestroyConstrState
-
+subroutine SS_Rad_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
+   type(SS_Rad_ConstraintStateType), intent(inout) :: ConstrStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SS_Rad_DestroyConstrState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SS_Rad_PackConstrState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SS_Rad_ConstraintStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SS_Rad_PackConstrState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! DummyConstrState
    call RegPack(Buf, InData%DummyConstrState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -542,52 +483,43 @@ subroutine SS_Rad_UnPackConstrState(Buf, OutData)
    type(SS_Rad_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SS_Rad_UnPackConstrState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! DummyConstrState
    call RegUnpack(Buf, OutData%DummyConstrState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE SS_Rad_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SS_Rad_OtherStateType), INTENT(IN) :: SrcOtherStateData
-   TYPE(SS_Rad_OtherStateType), INTENT(INOUT) :: DstOtherStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SS_Rad_CopyOtherState'
-! 
+
+subroutine SS_Rad_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg)
+   type(SS_Rad_OtherStateType), intent(in) :: SrcOtherStateData
+   type(SS_Rad_OtherStateType), intent(inout) :: DstOtherStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SS_Rad_CopyOtherState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstOtherStateData%n = SrcOtherStateData%n
-    DO i1 = LBOUND(SrcOtherStateData%xdot,1), UBOUND(SrcOtherStateData%xdot,1)
-      CALL SS_Rad_CopyContState( SrcOtherStateData%xdot(i1), DstOtherStateData%xdot(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
- END SUBROUTINE SS_Rad_CopyOtherState
+   ErrMsg  = ''
+   DstOtherStateData%n = SrcOtherStateData%n
+   do i1 = LB(1), UB(1)
+      call SS_Rad_CopyContState(SrcOtherStateData%xdot(i1), DstOtherStateData%xdot(i1), CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end do
+end subroutine
 
- SUBROUTINE SS_Rad_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
-  TYPE(SS_Rad_OtherStateType), INTENT(INOUT) :: OtherStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SS_Rad_DestroyOtherState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-DO i1 = LBOUND(OtherStateData%xdot,1), UBOUND(OtherStateData%xdot,1)
-  CALL SS_Rad_DestroyContState( OtherStateData%xdot(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
- END SUBROUTINE SS_Rad_DestroyOtherState
-
+subroutine SS_Rad_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
+   type(SS_Rad_OtherStateType), intent(inout) :: OtherStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SS_Rad_DestroyOtherState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SS_Rad_PackOtherState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -596,10 +528,8 @@ subroutine SS_Rad_PackOtherState(Buf, Indata)
    integer(IntKi)  :: i1
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
-   ! n
    call RegPack(Buf, InData%n)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! xdot
    LB(1:1) = lbound(InData%xdot)
    UB(1:1) = ubound(InData%xdot)
    do i1 = LB(1), UB(1)
@@ -615,55 +545,41 @@ subroutine SS_Rad_UnPackOtherState(Buf, OutData)
    integer(IntKi)  :: i1
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat /= ErrID_None) return
-   ! n
    call RegUnpack(Buf, OutData%n)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! xdot
    LB(1:1) = lbound(OutData%xdot)
    UB(1:1) = ubound(OutData%xdot)
    do i1 = LB(1), UB(1)
       call SS_Rad_UnpackContState(Buf, OutData%xdot(i1)) ! xdot 
    end do
 end subroutine
- SUBROUTINE SS_Rad_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SS_Rad_MiscVarType), INTENT(IN) :: SrcMiscData
-   TYPE(SS_Rad_MiscVarType), INTENT(INOUT) :: DstMiscData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SS_Rad_CopyMisc'
-! 
+
+subroutine SS_Rad_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(SS_Rad_MiscVarType), intent(in) :: SrcMiscData
+   type(SS_Rad_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SS_Rad_CopyMisc'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstMiscData%DummyMiscVar = SrcMiscData%DummyMiscVar
- END SUBROUTINE SS_Rad_CopyMisc
+   ErrMsg  = ''
+   DstMiscData%DummyMiscVar = SrcMiscData%DummyMiscVar
+end subroutine
 
- SUBROUTINE SS_Rad_DestroyMisc( MiscData, ErrStat, ErrMsg )
-  TYPE(SS_Rad_MiscVarType), INTENT(INOUT) :: MiscData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SS_Rad_DestroyMisc'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE SS_Rad_DestroyMisc
-
+subroutine SS_Rad_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(SS_Rad_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SS_Rad_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SS_Rad_PackMisc(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SS_Rad_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SS_Rad_PackMisc'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! DummyMiscVar
    call RegPack(Buf, InData%DummyMiscVar)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -673,153 +589,136 @@ subroutine SS_Rad_UnPackMisc(Buf, OutData)
    type(SS_Rad_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SS_Rad_UnPackMisc'
    if (Buf%ErrStat /= ErrID_None) return
-   ! DummyMiscVar
    call RegUnpack(Buf, OutData%DummyMiscVar)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE SS_Rad_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SS_Rad_ParameterType), INTENT(IN) :: SrcParamData
-   TYPE(SS_Rad_ParameterType), INTENT(INOUT) :: DstParamData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SS_Rad_CopyParam'
-! 
+
+subroutine SS_Rad_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
+   type(SS_Rad_ParameterType), intent(in) :: SrcParamData
+   type(SS_Rad_ParameterType), intent(inout) :: DstParamData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'SS_Rad_CopyParam'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstParamData%DT = SrcParamData%DT
-IF (ALLOCATED(SrcParamData%A)) THEN
-  i1_l = LBOUND(SrcParamData%A,1)
-  i1_u = UBOUND(SrcParamData%A,1)
-  i2_l = LBOUND(SrcParamData%A,2)
-  i2_u = UBOUND(SrcParamData%A,2)
-  IF (.NOT. ALLOCATED(DstParamData%A)) THEN 
-    ALLOCATE(DstParamData%A(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%A.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%A = SrcParamData%A
-ENDIF
-IF (ALLOCATED(SrcParamData%B)) THEN
-  i1_l = LBOUND(SrcParamData%B,1)
-  i1_u = UBOUND(SrcParamData%B,1)
-  i2_l = LBOUND(SrcParamData%B,2)
-  i2_u = UBOUND(SrcParamData%B,2)
-  IF (.NOT. ALLOCATED(DstParamData%B)) THEN 
-    ALLOCATE(DstParamData%B(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%B.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%B = SrcParamData%B
-ENDIF
-IF (ALLOCATED(SrcParamData%C)) THEN
-  i1_l = LBOUND(SrcParamData%C,1)
-  i1_u = UBOUND(SrcParamData%C,1)
-  i2_l = LBOUND(SrcParamData%C,2)
-  i2_u = UBOUND(SrcParamData%C,2)
-  IF (.NOT. ALLOCATED(DstParamData%C)) THEN 
-    ALLOCATE(DstParamData%C(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%C.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%C = SrcParamData%C
-ENDIF
-    DstParamData%numStates = SrcParamData%numStates
-IF (ALLOCATED(SrcParamData%spdof)) THEN
-  i1_l = LBOUND(SrcParamData%spdof,1)
-  i1_u = UBOUND(SrcParamData%spdof,1)
-  IF (.NOT. ALLOCATED(DstParamData%spdof)) THEN 
-    ALLOCATE(DstParamData%spdof(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%spdof.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%spdof = SrcParamData%spdof
-ENDIF
-    DstParamData%NBody = SrcParamData%NBody
- END SUBROUTINE SS_Rad_CopyParam
+   ErrMsg  = ''
+   DstParamData%DT = SrcParamData%DT
+   if (allocated(SrcParamData%A)) then
+      LB(1:2) = lbound(SrcParamData%A)
+      UB(1:2) = ubound(SrcParamData%A)
+      if (.not. allocated(DstParamData%A)) then
+         allocate(DstParamData%A(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%A.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%A = SrcParamData%A
+   else if (allocated(DstParamData%A)) then
+      deallocate(DstParamData%A)
+   end if
+   if (allocated(SrcParamData%B)) then
+      LB(1:2) = lbound(SrcParamData%B)
+      UB(1:2) = ubound(SrcParamData%B)
+      if (.not. allocated(DstParamData%B)) then
+         allocate(DstParamData%B(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%B.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%B = SrcParamData%B
+   else if (allocated(DstParamData%B)) then
+      deallocate(DstParamData%B)
+   end if
+   if (allocated(SrcParamData%C)) then
+      LB(1:2) = lbound(SrcParamData%C)
+      UB(1:2) = ubound(SrcParamData%C)
+      if (.not. allocated(DstParamData%C)) then
+         allocate(DstParamData%C(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%C.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%C = SrcParamData%C
+   else if (allocated(DstParamData%C)) then
+      deallocate(DstParamData%C)
+   end if
+   DstParamData%numStates = SrcParamData%numStates
+   if (allocated(SrcParamData%spdof)) then
+      LB(1:1) = lbound(SrcParamData%spdof)
+      UB(1:1) = ubound(SrcParamData%spdof)
+      if (.not. allocated(DstParamData%spdof)) then
+         allocate(DstParamData%spdof(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%spdof.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%spdof = SrcParamData%spdof
+   else if (allocated(DstParamData%spdof)) then
+      deallocate(DstParamData%spdof)
+   end if
+   DstParamData%NBody = SrcParamData%NBody
+end subroutine
 
- SUBROUTINE SS_Rad_DestroyParam( ParamData, ErrStat, ErrMsg )
-  TYPE(SS_Rad_ParameterType), INTENT(INOUT) :: ParamData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SS_Rad_DestroyParam'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(ParamData%A)) THEN
-  DEALLOCATE(ParamData%A)
-ENDIF
-IF (ALLOCATED(ParamData%B)) THEN
-  DEALLOCATE(ParamData%B)
-ENDIF
-IF (ALLOCATED(ParamData%C)) THEN
-  DEALLOCATE(ParamData%C)
-ENDIF
-IF (ALLOCATED(ParamData%spdof)) THEN
-  DEALLOCATE(ParamData%spdof)
-ENDIF
- END SUBROUTINE SS_Rad_DestroyParam
-
+subroutine SS_Rad_DestroyParam(ParamData, ErrStat, ErrMsg)
+   type(SS_Rad_ParameterType), intent(inout) :: ParamData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SS_Rad_DestroyParam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(ParamData%A)) then
+      deallocate(ParamData%A)
+   end if
+   if (allocated(ParamData%B)) then
+      deallocate(ParamData%B)
+   end if
+   if (allocated(ParamData%C)) then
+      deallocate(ParamData%C)
+   end if
+   if (allocated(ParamData%spdof)) then
+      deallocate(ParamData%spdof)
+   end if
+end subroutine
 
 subroutine SS_Rad_PackParam(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SS_Rad_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SS_Rad_PackParam'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! DT
    call RegPack(Buf, InData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! A
    call RegPack(Buf, allocated(InData%A))
    if (allocated(InData%A)) then
       call RegPackBounds(Buf, 2, lbound(InData%A), ubound(InData%A))
       call RegPack(Buf, InData%A)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! B
    call RegPack(Buf, allocated(InData%B))
    if (allocated(InData%B)) then
       call RegPackBounds(Buf, 2, lbound(InData%B), ubound(InData%B))
       call RegPack(Buf, InData%B)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! C
    call RegPack(Buf, allocated(InData%C))
    if (allocated(InData%C)) then
       call RegPackBounds(Buf, 2, lbound(InData%C), ubound(InData%C))
       call RegPack(Buf, InData%C)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! numStates
    call RegPack(Buf, InData%numStates)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! spdof
    call RegPack(Buf, allocated(InData%spdof))
    if (allocated(InData%spdof)) then
       call RegPackBounds(Buf, 1, lbound(InData%spdof), ubound(InData%spdof))
       call RegPack(Buf, InData%spdof)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NBody
    call RegPack(Buf, InData%NBody)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -832,10 +731,8 @@ subroutine SS_Rad_UnPackParam(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! DT
    call RegUnpack(Buf, OutData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! A
    if (allocated(OutData%A)) deallocate(OutData%A)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -850,7 +747,6 @@ subroutine SS_Rad_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%A)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! B
    if (allocated(OutData%B)) deallocate(OutData%B)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -865,7 +761,6 @@ subroutine SS_Rad_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%B)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! C
    if (allocated(OutData%C)) deallocate(OutData%C)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -880,10 +775,8 @@ subroutine SS_Rad_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%C)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! numStates
    call RegUnpack(Buf, OutData%numStates)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! spdof
    if (allocated(OutData%spdof)) deallocate(OutData%spdof)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -898,64 +791,54 @@ subroutine SS_Rad_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%spdof)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! NBody
    call RegUnpack(Buf, OutData%NBody)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE SS_Rad_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SS_Rad_InputType), INTENT(IN) :: SrcInputData
-   TYPE(SS_Rad_InputType), INTENT(INOUT) :: DstInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SS_Rad_CopyInput'
-! 
+
+subroutine SS_Rad_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
+   type(SS_Rad_InputType), intent(in) :: SrcInputData
+   type(SS_Rad_InputType), intent(inout) :: DstInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'SS_Rad_CopyInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcInputData%dq)) THEN
-  i1_l = LBOUND(SrcInputData%dq,1)
-  i1_u = UBOUND(SrcInputData%dq,1)
-  IF (.NOT. ALLOCATED(DstInputData%dq)) THEN 
-    ALLOCATE(DstInputData%dq(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%dq.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputData%dq = SrcInputData%dq
-ENDIF
- END SUBROUTINE SS_Rad_CopyInput
+   ErrMsg  = ''
+   if (allocated(SrcInputData%dq)) then
+      LB(1:1) = lbound(SrcInputData%dq)
+      UB(1:1) = ubound(SrcInputData%dq)
+      if (.not. allocated(DstInputData%dq)) then
+         allocate(DstInputData%dq(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%dq.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputData%dq = SrcInputData%dq
+   else if (allocated(DstInputData%dq)) then
+      deallocate(DstInputData%dq)
+   end if
+end subroutine
 
- SUBROUTINE SS_Rad_DestroyInput( InputData, ErrStat, ErrMsg )
-  TYPE(SS_Rad_InputType), INTENT(INOUT) :: InputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SS_Rad_DestroyInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(InputData%dq)) THEN
-  DEALLOCATE(InputData%dq)
-ENDIF
- END SUBROUTINE SS_Rad_DestroyInput
-
+subroutine SS_Rad_DestroyInput(InputData, ErrStat, ErrMsg)
+   type(SS_Rad_InputType), intent(inout) :: InputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SS_Rad_DestroyInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InputData%dq)) then
+      deallocate(InputData%dq)
+   end if
+end subroutine
 
 subroutine SS_Rad_PackInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SS_Rad_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SS_Rad_PackInput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! dq
    call RegPack(Buf, allocated(InData%dq))
    if (allocated(InData%dq)) then
       call RegPackBounds(Buf, 1, lbound(InData%dq), ubound(InData%dq))
@@ -972,7 +855,6 @@ subroutine SS_Rad_UnPackInput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! dq
    if (allocated(OutData%dq)) deallocate(OutData%dq)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -988,82 +870,74 @@ subroutine SS_Rad_UnPackInput(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE SS_Rad_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SS_Rad_OutputType), INTENT(IN) :: SrcOutputData
-   TYPE(SS_Rad_OutputType), INTENT(INOUT) :: DstOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SS_Rad_CopyOutput'
-! 
+
+subroutine SS_Rad_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(SS_Rad_OutputType), intent(in) :: SrcOutputData
+   type(SS_Rad_OutputType), intent(inout) :: DstOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'SS_Rad_CopyOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcOutputData%y)) THEN
-  i1_l = LBOUND(SrcOutputData%y,1)
-  i1_u = UBOUND(SrcOutputData%y,1)
-  IF (.NOT. ALLOCATED(DstOutputData%y)) THEN 
-    ALLOCATE(DstOutputData%y(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%y.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstOutputData%y = SrcOutputData%y
-ENDIF
-IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
-  i1_l = LBOUND(SrcOutputData%WriteOutput,1)
-  i1_u = UBOUND(SrcOutputData%WriteOutput,1)
-  IF (.NOT. ALLOCATED(DstOutputData%WriteOutput)) THEN 
-    ALLOCATE(DstOutputData%WriteOutput(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WriteOutput.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-ENDIF
- END SUBROUTINE SS_Rad_CopyOutput
+   ErrMsg  = ''
+   if (allocated(SrcOutputData%y)) then
+      LB(1:1) = lbound(SrcOutputData%y)
+      UB(1:1) = ubound(SrcOutputData%y)
+      if (.not. allocated(DstOutputData%y)) then
+         allocate(DstOutputData%y(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%y.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%y = SrcOutputData%y
+   else if (allocated(DstOutputData%y)) then
+      deallocate(DstOutputData%y)
+   end if
+   if (allocated(SrcOutputData%WriteOutput)) then
+      LB(1:1) = lbound(SrcOutputData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput)
+      if (.not. allocated(DstOutputData%WriteOutput)) then
+         allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WriteOutput.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%WriteOutput = SrcOutputData%WriteOutput
+   else if (allocated(DstOutputData%WriteOutput)) then
+      deallocate(DstOutputData%WriteOutput)
+   end if
+end subroutine
 
- SUBROUTINE SS_Rad_DestroyOutput( OutputData, ErrStat, ErrMsg )
-  TYPE(SS_Rad_OutputType), INTENT(INOUT) :: OutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SS_Rad_DestroyOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(OutputData%y)) THEN
-  DEALLOCATE(OutputData%y)
-ENDIF
-IF (ALLOCATED(OutputData%WriteOutput)) THEN
-  DEALLOCATE(OutputData%WriteOutput)
-ENDIF
- END SUBROUTINE SS_Rad_DestroyOutput
-
+subroutine SS_Rad_DestroyOutput(OutputData, ErrStat, ErrMsg)
+   type(SS_Rad_OutputType), intent(inout) :: OutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SS_Rad_DestroyOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(OutputData%y)) then
+      deallocate(OutputData%y)
+   end if
+   if (allocated(OutputData%WriteOutput)) then
+      deallocate(OutputData%WriteOutput)
+   end if
+end subroutine
 
 subroutine SS_Rad_PackOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SS_Rad_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SS_Rad_PackOutput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! y
    call RegPack(Buf, allocated(InData%y))
    if (allocated(InData%y)) then
       call RegPackBounds(Buf, 1, lbound(InData%y), ubound(InData%y))
       call RegPack(Buf, InData%y)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WriteOutput
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
@@ -1080,7 +954,6 @@ subroutine SS_Rad_UnPackOutput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! y
    if (allocated(OutData%y)) deallocate(OutData%y)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1095,7 +968,6 @@ subroutine SS_Rad_UnPackOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%y)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WriteOutput
    if (allocated(OutData%WriteOutput)) deallocate(OutData%WriteOutput)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return

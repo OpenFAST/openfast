@@ -199,229 +199,171 @@ IMPLICIT NONE
   END TYPE AFI_OutputType
 ! =======================
 CONTAINS
- SUBROUTINE AFI_CopyUA_BL_Type( SrcUA_BL_TypeData, DstUA_BL_TypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(AFI_UA_BL_Type), INTENT(IN) :: SrcUA_BL_TypeData
-   TYPE(AFI_UA_BL_Type), INTENT(INOUT) :: DstUA_BL_TypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AFI_CopyUA_BL_Type'
-! 
+
+subroutine AFI_CopyUA_BL_Type(SrcUA_BL_TypeData, DstUA_BL_TypeData, CtrlCode, ErrStat, ErrMsg)
+   type(AFI_UA_BL_Type), intent(in) :: SrcUA_BL_TypeData
+   type(AFI_UA_BL_Type), intent(inout) :: DstUA_BL_TypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AFI_CopyUA_BL_Type'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstUA_BL_TypeData%alpha0 = SrcUA_BL_TypeData%alpha0
-    DstUA_BL_TypeData%alpha1 = SrcUA_BL_TypeData%alpha1
-    DstUA_BL_TypeData%alpha2 = SrcUA_BL_TypeData%alpha2
-    DstUA_BL_TypeData%eta_e = SrcUA_BL_TypeData%eta_e
-    DstUA_BL_TypeData%C_nalpha = SrcUA_BL_TypeData%C_nalpha
-    DstUA_BL_TypeData%C_lalpha = SrcUA_BL_TypeData%C_lalpha
-    DstUA_BL_TypeData%T_f0 = SrcUA_BL_TypeData%T_f0
-    DstUA_BL_TypeData%T_V0 = SrcUA_BL_TypeData%T_V0
-    DstUA_BL_TypeData%T_p = SrcUA_BL_TypeData%T_p
-    DstUA_BL_TypeData%T_VL = SrcUA_BL_TypeData%T_VL
-    DstUA_BL_TypeData%b1 = SrcUA_BL_TypeData%b1
-    DstUA_BL_TypeData%b2 = SrcUA_BL_TypeData%b2
-    DstUA_BL_TypeData%b5 = SrcUA_BL_TypeData%b5
-    DstUA_BL_TypeData%A1 = SrcUA_BL_TypeData%A1
-    DstUA_BL_TypeData%A2 = SrcUA_BL_TypeData%A2
-    DstUA_BL_TypeData%A5 = SrcUA_BL_TypeData%A5
-    DstUA_BL_TypeData%S1 = SrcUA_BL_TypeData%S1
-    DstUA_BL_TypeData%S2 = SrcUA_BL_TypeData%S2
-    DstUA_BL_TypeData%S3 = SrcUA_BL_TypeData%S3
-    DstUA_BL_TypeData%S4 = SrcUA_BL_TypeData%S4
-    DstUA_BL_TypeData%Cn1 = SrcUA_BL_TypeData%Cn1
-    DstUA_BL_TypeData%Cn2 = SrcUA_BL_TypeData%Cn2
-    DstUA_BL_TypeData%St_sh = SrcUA_BL_TypeData%St_sh
-    DstUA_BL_TypeData%Cd0 = SrcUA_BL_TypeData%Cd0
-    DstUA_BL_TypeData%Cm0 = SrcUA_BL_TypeData%Cm0
-    DstUA_BL_TypeData%k0 = SrcUA_BL_TypeData%k0
-    DstUA_BL_TypeData%k1 = SrcUA_BL_TypeData%k1
-    DstUA_BL_TypeData%k2 = SrcUA_BL_TypeData%k2
-    DstUA_BL_TypeData%k3 = SrcUA_BL_TypeData%k3
-    DstUA_BL_TypeData%k1_hat = SrcUA_BL_TypeData%k1_hat
-    DstUA_BL_TypeData%x_cp_bar = SrcUA_BL_TypeData%x_cp_bar
-    DstUA_BL_TypeData%UACutout = SrcUA_BL_TypeData%UACutout
-    DstUA_BL_TypeData%UACutout_delta = SrcUA_BL_TypeData%UACutout_delta
-    DstUA_BL_TypeData%UACutout_blend = SrcUA_BL_TypeData%UACutout_blend
-    DstUA_BL_TypeData%filtCutOff = SrcUA_BL_TypeData%filtCutOff
-    DstUA_BL_TypeData%alphaUpper = SrcUA_BL_TypeData%alphaUpper
-    DstUA_BL_TypeData%alphaLower = SrcUA_BL_TypeData%alphaLower
-    DstUA_BL_TypeData%c_Rate = SrcUA_BL_TypeData%c_Rate
-    DstUA_BL_TypeData%c_RateUpper = SrcUA_BL_TypeData%c_RateUpper
-    DstUA_BL_TypeData%c_RateLower = SrcUA_BL_TypeData%c_RateLower
-    DstUA_BL_TypeData%c_alphaLower = SrcUA_BL_TypeData%c_alphaLower
-    DstUA_BL_TypeData%c_alphaUpper = SrcUA_BL_TypeData%c_alphaUpper
-    DstUA_BL_TypeData%alphaUpperWrap = SrcUA_BL_TypeData%alphaUpperWrap
-    DstUA_BL_TypeData%alphaLowerWrap = SrcUA_BL_TypeData%alphaLowerWrap
-    DstUA_BL_TypeData%c_RateWrap = SrcUA_BL_TypeData%c_RateWrap
-    DstUA_BL_TypeData%c_alphaLowerWrap = SrcUA_BL_TypeData%c_alphaLowerWrap
-    DstUA_BL_TypeData%c_alphaUpperWrap = SrcUA_BL_TypeData%c_alphaUpperWrap
- END SUBROUTINE AFI_CopyUA_BL_Type
+   ErrMsg  = ''
+   DstUA_BL_TypeData%alpha0 = SrcUA_BL_TypeData%alpha0
+   DstUA_BL_TypeData%alpha1 = SrcUA_BL_TypeData%alpha1
+   DstUA_BL_TypeData%alpha2 = SrcUA_BL_TypeData%alpha2
+   DstUA_BL_TypeData%eta_e = SrcUA_BL_TypeData%eta_e
+   DstUA_BL_TypeData%C_nalpha = SrcUA_BL_TypeData%C_nalpha
+   DstUA_BL_TypeData%C_lalpha = SrcUA_BL_TypeData%C_lalpha
+   DstUA_BL_TypeData%T_f0 = SrcUA_BL_TypeData%T_f0
+   DstUA_BL_TypeData%T_V0 = SrcUA_BL_TypeData%T_V0
+   DstUA_BL_TypeData%T_p = SrcUA_BL_TypeData%T_p
+   DstUA_BL_TypeData%T_VL = SrcUA_BL_TypeData%T_VL
+   DstUA_BL_TypeData%b1 = SrcUA_BL_TypeData%b1
+   DstUA_BL_TypeData%b2 = SrcUA_BL_TypeData%b2
+   DstUA_BL_TypeData%b5 = SrcUA_BL_TypeData%b5
+   DstUA_BL_TypeData%A1 = SrcUA_BL_TypeData%A1
+   DstUA_BL_TypeData%A2 = SrcUA_BL_TypeData%A2
+   DstUA_BL_TypeData%A5 = SrcUA_BL_TypeData%A5
+   DstUA_BL_TypeData%S1 = SrcUA_BL_TypeData%S1
+   DstUA_BL_TypeData%S2 = SrcUA_BL_TypeData%S2
+   DstUA_BL_TypeData%S3 = SrcUA_BL_TypeData%S3
+   DstUA_BL_TypeData%S4 = SrcUA_BL_TypeData%S4
+   DstUA_BL_TypeData%Cn1 = SrcUA_BL_TypeData%Cn1
+   DstUA_BL_TypeData%Cn2 = SrcUA_BL_TypeData%Cn2
+   DstUA_BL_TypeData%St_sh = SrcUA_BL_TypeData%St_sh
+   DstUA_BL_TypeData%Cd0 = SrcUA_BL_TypeData%Cd0
+   DstUA_BL_TypeData%Cm0 = SrcUA_BL_TypeData%Cm0
+   DstUA_BL_TypeData%k0 = SrcUA_BL_TypeData%k0
+   DstUA_BL_TypeData%k1 = SrcUA_BL_TypeData%k1
+   DstUA_BL_TypeData%k2 = SrcUA_BL_TypeData%k2
+   DstUA_BL_TypeData%k3 = SrcUA_BL_TypeData%k3
+   DstUA_BL_TypeData%k1_hat = SrcUA_BL_TypeData%k1_hat
+   DstUA_BL_TypeData%x_cp_bar = SrcUA_BL_TypeData%x_cp_bar
+   DstUA_BL_TypeData%UACutout = SrcUA_BL_TypeData%UACutout
+   DstUA_BL_TypeData%UACutout_delta = SrcUA_BL_TypeData%UACutout_delta
+   DstUA_BL_TypeData%UACutout_blend = SrcUA_BL_TypeData%UACutout_blend
+   DstUA_BL_TypeData%filtCutOff = SrcUA_BL_TypeData%filtCutOff
+   DstUA_BL_TypeData%alphaUpper = SrcUA_BL_TypeData%alphaUpper
+   DstUA_BL_TypeData%alphaLower = SrcUA_BL_TypeData%alphaLower
+   DstUA_BL_TypeData%c_Rate = SrcUA_BL_TypeData%c_Rate
+   DstUA_BL_TypeData%c_RateUpper = SrcUA_BL_TypeData%c_RateUpper
+   DstUA_BL_TypeData%c_RateLower = SrcUA_BL_TypeData%c_RateLower
+   DstUA_BL_TypeData%c_alphaLower = SrcUA_BL_TypeData%c_alphaLower
+   DstUA_BL_TypeData%c_alphaUpper = SrcUA_BL_TypeData%c_alphaUpper
+   DstUA_BL_TypeData%alphaUpperWrap = SrcUA_BL_TypeData%alphaUpperWrap
+   DstUA_BL_TypeData%alphaLowerWrap = SrcUA_BL_TypeData%alphaLowerWrap
+   DstUA_BL_TypeData%c_RateWrap = SrcUA_BL_TypeData%c_RateWrap
+   DstUA_BL_TypeData%c_alphaLowerWrap = SrcUA_BL_TypeData%c_alphaLowerWrap
+   DstUA_BL_TypeData%c_alphaUpperWrap = SrcUA_BL_TypeData%c_alphaUpperWrap
+end subroutine
 
- SUBROUTINE AFI_DestroyUA_BL_Type( UA_BL_TypeData, ErrStat, ErrMsg )
-  TYPE(AFI_UA_BL_Type), INTENT(INOUT) :: UA_BL_TypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AFI_DestroyUA_BL_Type'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE AFI_DestroyUA_BL_Type
-
+subroutine AFI_DestroyUA_BL_Type(UA_BL_TypeData, ErrStat, ErrMsg)
+   type(AFI_UA_BL_Type), intent(inout) :: UA_BL_TypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AFI_DestroyUA_BL_Type'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine AFI_PackUA_BL_Type(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(AFI_UA_BL_Type), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AFI_PackUA_BL_Type'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! alpha0
    call RegPack(Buf, InData%alpha0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alpha1
    call RegPack(Buf, InData%alpha1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alpha2
    call RegPack(Buf, InData%alpha2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! eta_e
    call RegPack(Buf, InData%eta_e)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! C_nalpha
    call RegPack(Buf, InData%C_nalpha)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! C_lalpha
    call RegPack(Buf, InData%C_lalpha)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T_f0
    call RegPack(Buf, InData%T_f0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T_V0
    call RegPack(Buf, InData%T_V0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T_p
    call RegPack(Buf, InData%T_p)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T_VL
    call RegPack(Buf, InData%T_VL)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! b1
    call RegPack(Buf, InData%b1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! b2
    call RegPack(Buf, InData%b2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! b5
    call RegPack(Buf, InData%b5)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! A1
    call RegPack(Buf, InData%A1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! A2
    call RegPack(Buf, InData%A2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! A5
    call RegPack(Buf, InData%A5)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S1
    call RegPack(Buf, InData%S1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S2
    call RegPack(Buf, InData%S2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S3
    call RegPack(Buf, InData%S3)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S4
    call RegPack(Buf, InData%S4)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cn1
    call RegPack(Buf, InData%Cn1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cn2
    call RegPack(Buf, InData%Cn2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! St_sh
    call RegPack(Buf, InData%St_sh)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cd0
    call RegPack(Buf, InData%Cd0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cm0
    call RegPack(Buf, InData%Cm0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k0
    call RegPack(Buf, InData%k0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k1
    call RegPack(Buf, InData%k1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k2
    call RegPack(Buf, InData%k2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k3
    call RegPack(Buf, InData%k3)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k1_hat
    call RegPack(Buf, InData%k1_hat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! x_cp_bar
    call RegPack(Buf, InData%x_cp_bar)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UACutout
    call RegPack(Buf, InData%UACutout)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UACutout_delta
    call RegPack(Buf, InData%UACutout_delta)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UACutout_blend
    call RegPack(Buf, InData%UACutout_blend)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! filtCutOff
    call RegPack(Buf, InData%filtCutOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alphaUpper
    call RegPack(Buf, InData%alphaUpper)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alphaLower
    call RegPack(Buf, InData%alphaLower)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! c_Rate
    call RegPack(Buf, InData%c_Rate)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! c_RateUpper
    call RegPack(Buf, InData%c_RateUpper)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! c_RateLower
    call RegPack(Buf, InData%c_RateLower)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! c_alphaLower
    call RegPack(Buf, InData%c_alphaLower)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! c_alphaUpper
    call RegPack(Buf, InData%c_alphaUpper)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alphaUpperWrap
    call RegPack(Buf, InData%alphaUpperWrap)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alphaLowerWrap
    call RegPack(Buf, InData%alphaLowerWrap)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! c_RateWrap
    call RegPack(Buf, InData%c_RateWrap)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! c_alphaLowerWrap
    call RegPack(Buf, InData%c_alphaLowerWrap)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! c_alphaUpperWrap
    call RegPack(Buf, InData%c_alphaUpperWrap)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -431,327 +373,233 @@ subroutine AFI_UnPackUA_BL_Type(Buf, OutData)
    type(AFI_UA_BL_Type), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AFI_UnPackUA_BL_Type'
    if (Buf%ErrStat /= ErrID_None) return
-   ! alpha0
    call RegUnpack(Buf, OutData%alpha0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alpha1
    call RegUnpack(Buf, OutData%alpha1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alpha2
    call RegUnpack(Buf, OutData%alpha2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! eta_e
    call RegUnpack(Buf, OutData%eta_e)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! C_nalpha
    call RegUnpack(Buf, OutData%C_nalpha)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! C_lalpha
    call RegUnpack(Buf, OutData%C_lalpha)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T_f0
    call RegUnpack(Buf, OutData%T_f0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T_V0
    call RegUnpack(Buf, OutData%T_V0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T_p
    call RegUnpack(Buf, OutData%T_p)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T_VL
    call RegUnpack(Buf, OutData%T_VL)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! b1
    call RegUnpack(Buf, OutData%b1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! b2
    call RegUnpack(Buf, OutData%b2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! b5
    call RegUnpack(Buf, OutData%b5)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! A1
    call RegUnpack(Buf, OutData%A1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! A2
    call RegUnpack(Buf, OutData%A2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! A5
    call RegUnpack(Buf, OutData%A5)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S1
    call RegUnpack(Buf, OutData%S1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S2
    call RegUnpack(Buf, OutData%S2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S3
    call RegUnpack(Buf, OutData%S3)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S4
    call RegUnpack(Buf, OutData%S4)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cn1
    call RegUnpack(Buf, OutData%Cn1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cn2
    call RegUnpack(Buf, OutData%Cn2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! St_sh
    call RegUnpack(Buf, OutData%St_sh)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cd0
    call RegUnpack(Buf, OutData%Cd0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cm0
    call RegUnpack(Buf, OutData%Cm0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k0
    call RegUnpack(Buf, OutData%k0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k1
    call RegUnpack(Buf, OutData%k1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k2
    call RegUnpack(Buf, OutData%k2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k3
    call RegUnpack(Buf, OutData%k3)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k1_hat
    call RegUnpack(Buf, OutData%k1_hat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! x_cp_bar
    call RegUnpack(Buf, OutData%x_cp_bar)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UACutout
    call RegUnpack(Buf, OutData%UACutout)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UACutout_delta
    call RegUnpack(Buf, OutData%UACutout_delta)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UACutout_blend
    call RegUnpack(Buf, OutData%UACutout_blend)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! filtCutOff
    call RegUnpack(Buf, OutData%filtCutOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alphaUpper
    call RegUnpack(Buf, OutData%alphaUpper)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alphaLower
    call RegUnpack(Buf, OutData%alphaLower)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! c_Rate
    call RegUnpack(Buf, OutData%c_Rate)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! c_RateUpper
    call RegUnpack(Buf, OutData%c_RateUpper)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! c_RateLower
    call RegUnpack(Buf, OutData%c_RateLower)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! c_alphaLower
    call RegUnpack(Buf, OutData%c_alphaLower)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! c_alphaUpper
    call RegUnpack(Buf, OutData%c_alphaUpper)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alphaUpperWrap
    call RegUnpack(Buf, OutData%alphaUpperWrap)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alphaLowerWrap
    call RegUnpack(Buf, OutData%alphaLowerWrap)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! c_RateWrap
    call RegUnpack(Buf, OutData%c_RateWrap)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! c_alphaLowerWrap
    call RegUnpack(Buf, OutData%c_alphaLowerWrap)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! c_alphaUpperWrap
    call RegUnpack(Buf, OutData%c_alphaUpperWrap)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE AFI_CopyUA_BL_Default_Type( SrcUA_BL_Default_TypeData, DstUA_BL_Default_TypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(AFI_UA_BL_Default_Type), INTENT(IN) :: SrcUA_BL_Default_TypeData
-   TYPE(AFI_UA_BL_Default_Type), INTENT(INOUT) :: DstUA_BL_Default_TypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AFI_CopyUA_BL_Default_Type'
-! 
+
+subroutine AFI_CopyUA_BL_Default_Type(SrcUA_BL_Default_TypeData, DstUA_BL_Default_TypeData, CtrlCode, ErrStat, ErrMsg)
+   type(AFI_UA_BL_Default_Type), intent(in) :: SrcUA_BL_Default_TypeData
+   type(AFI_UA_BL_Default_Type), intent(inout) :: DstUA_BL_Default_TypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AFI_CopyUA_BL_Default_Type'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstUA_BL_Default_TypeData%alpha0 = SrcUA_BL_Default_TypeData%alpha0
-    DstUA_BL_Default_TypeData%alpha1 = SrcUA_BL_Default_TypeData%alpha1
-    DstUA_BL_Default_TypeData%alpha2 = SrcUA_BL_Default_TypeData%alpha2
-    DstUA_BL_Default_TypeData%eta_e = SrcUA_BL_Default_TypeData%eta_e
-    DstUA_BL_Default_TypeData%C_nalpha = SrcUA_BL_Default_TypeData%C_nalpha
-    DstUA_BL_Default_TypeData%C_lalpha = SrcUA_BL_Default_TypeData%C_lalpha
-    DstUA_BL_Default_TypeData%T_f0 = SrcUA_BL_Default_TypeData%T_f0
-    DstUA_BL_Default_TypeData%T_V0 = SrcUA_BL_Default_TypeData%T_V0
-    DstUA_BL_Default_TypeData%T_p = SrcUA_BL_Default_TypeData%T_p
-    DstUA_BL_Default_TypeData%T_VL = SrcUA_BL_Default_TypeData%T_VL
-    DstUA_BL_Default_TypeData%b1 = SrcUA_BL_Default_TypeData%b1
-    DstUA_BL_Default_TypeData%b2 = SrcUA_BL_Default_TypeData%b2
-    DstUA_BL_Default_TypeData%b5 = SrcUA_BL_Default_TypeData%b5
-    DstUA_BL_Default_TypeData%A1 = SrcUA_BL_Default_TypeData%A1
-    DstUA_BL_Default_TypeData%A2 = SrcUA_BL_Default_TypeData%A2
-    DstUA_BL_Default_TypeData%A5 = SrcUA_BL_Default_TypeData%A5
-    DstUA_BL_Default_TypeData%S1 = SrcUA_BL_Default_TypeData%S1
-    DstUA_BL_Default_TypeData%S2 = SrcUA_BL_Default_TypeData%S2
-    DstUA_BL_Default_TypeData%S3 = SrcUA_BL_Default_TypeData%S3
-    DstUA_BL_Default_TypeData%S4 = SrcUA_BL_Default_TypeData%S4
-    DstUA_BL_Default_TypeData%Cn1 = SrcUA_BL_Default_TypeData%Cn1
-    DstUA_BL_Default_TypeData%Cn2 = SrcUA_BL_Default_TypeData%Cn2
-    DstUA_BL_Default_TypeData%St_sh = SrcUA_BL_Default_TypeData%St_sh
-    DstUA_BL_Default_TypeData%Cd0 = SrcUA_BL_Default_TypeData%Cd0
-    DstUA_BL_Default_TypeData%Cm0 = SrcUA_BL_Default_TypeData%Cm0
-    DstUA_BL_Default_TypeData%k0 = SrcUA_BL_Default_TypeData%k0
-    DstUA_BL_Default_TypeData%k1 = SrcUA_BL_Default_TypeData%k1
-    DstUA_BL_Default_TypeData%k2 = SrcUA_BL_Default_TypeData%k2
-    DstUA_BL_Default_TypeData%k3 = SrcUA_BL_Default_TypeData%k3
-    DstUA_BL_Default_TypeData%k1_hat = SrcUA_BL_Default_TypeData%k1_hat
-    DstUA_BL_Default_TypeData%x_cp_bar = SrcUA_BL_Default_TypeData%x_cp_bar
-    DstUA_BL_Default_TypeData%UACutout = SrcUA_BL_Default_TypeData%UACutout
-    DstUA_BL_Default_TypeData%UACutout_delta = SrcUA_BL_Default_TypeData%UACutout_delta
-    DstUA_BL_Default_TypeData%filtCutOff = SrcUA_BL_Default_TypeData%filtCutOff
-    DstUA_BL_Default_TypeData%alphaUpper = SrcUA_BL_Default_TypeData%alphaUpper
-    DstUA_BL_Default_TypeData%alphaLower = SrcUA_BL_Default_TypeData%alphaLower
- END SUBROUTINE AFI_CopyUA_BL_Default_Type
+   ErrMsg  = ''
+   DstUA_BL_Default_TypeData%alpha0 = SrcUA_BL_Default_TypeData%alpha0
+   DstUA_BL_Default_TypeData%alpha1 = SrcUA_BL_Default_TypeData%alpha1
+   DstUA_BL_Default_TypeData%alpha2 = SrcUA_BL_Default_TypeData%alpha2
+   DstUA_BL_Default_TypeData%eta_e = SrcUA_BL_Default_TypeData%eta_e
+   DstUA_BL_Default_TypeData%C_nalpha = SrcUA_BL_Default_TypeData%C_nalpha
+   DstUA_BL_Default_TypeData%C_lalpha = SrcUA_BL_Default_TypeData%C_lalpha
+   DstUA_BL_Default_TypeData%T_f0 = SrcUA_BL_Default_TypeData%T_f0
+   DstUA_BL_Default_TypeData%T_V0 = SrcUA_BL_Default_TypeData%T_V0
+   DstUA_BL_Default_TypeData%T_p = SrcUA_BL_Default_TypeData%T_p
+   DstUA_BL_Default_TypeData%T_VL = SrcUA_BL_Default_TypeData%T_VL
+   DstUA_BL_Default_TypeData%b1 = SrcUA_BL_Default_TypeData%b1
+   DstUA_BL_Default_TypeData%b2 = SrcUA_BL_Default_TypeData%b2
+   DstUA_BL_Default_TypeData%b5 = SrcUA_BL_Default_TypeData%b5
+   DstUA_BL_Default_TypeData%A1 = SrcUA_BL_Default_TypeData%A1
+   DstUA_BL_Default_TypeData%A2 = SrcUA_BL_Default_TypeData%A2
+   DstUA_BL_Default_TypeData%A5 = SrcUA_BL_Default_TypeData%A5
+   DstUA_BL_Default_TypeData%S1 = SrcUA_BL_Default_TypeData%S1
+   DstUA_BL_Default_TypeData%S2 = SrcUA_BL_Default_TypeData%S2
+   DstUA_BL_Default_TypeData%S3 = SrcUA_BL_Default_TypeData%S3
+   DstUA_BL_Default_TypeData%S4 = SrcUA_BL_Default_TypeData%S4
+   DstUA_BL_Default_TypeData%Cn1 = SrcUA_BL_Default_TypeData%Cn1
+   DstUA_BL_Default_TypeData%Cn2 = SrcUA_BL_Default_TypeData%Cn2
+   DstUA_BL_Default_TypeData%St_sh = SrcUA_BL_Default_TypeData%St_sh
+   DstUA_BL_Default_TypeData%Cd0 = SrcUA_BL_Default_TypeData%Cd0
+   DstUA_BL_Default_TypeData%Cm0 = SrcUA_BL_Default_TypeData%Cm0
+   DstUA_BL_Default_TypeData%k0 = SrcUA_BL_Default_TypeData%k0
+   DstUA_BL_Default_TypeData%k1 = SrcUA_BL_Default_TypeData%k1
+   DstUA_BL_Default_TypeData%k2 = SrcUA_BL_Default_TypeData%k2
+   DstUA_BL_Default_TypeData%k3 = SrcUA_BL_Default_TypeData%k3
+   DstUA_BL_Default_TypeData%k1_hat = SrcUA_BL_Default_TypeData%k1_hat
+   DstUA_BL_Default_TypeData%x_cp_bar = SrcUA_BL_Default_TypeData%x_cp_bar
+   DstUA_BL_Default_TypeData%UACutout = SrcUA_BL_Default_TypeData%UACutout
+   DstUA_BL_Default_TypeData%UACutout_delta = SrcUA_BL_Default_TypeData%UACutout_delta
+   DstUA_BL_Default_TypeData%filtCutOff = SrcUA_BL_Default_TypeData%filtCutOff
+   DstUA_BL_Default_TypeData%alphaUpper = SrcUA_BL_Default_TypeData%alphaUpper
+   DstUA_BL_Default_TypeData%alphaLower = SrcUA_BL_Default_TypeData%alphaLower
+end subroutine
 
- SUBROUTINE AFI_DestroyUA_BL_Default_Type( UA_BL_Default_TypeData, ErrStat, ErrMsg )
-  TYPE(AFI_UA_BL_Default_Type), INTENT(INOUT) :: UA_BL_Default_TypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AFI_DestroyUA_BL_Default_Type'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE AFI_DestroyUA_BL_Default_Type
-
+subroutine AFI_DestroyUA_BL_Default_Type(UA_BL_Default_TypeData, ErrStat, ErrMsg)
+   type(AFI_UA_BL_Default_Type), intent(inout) :: UA_BL_Default_TypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AFI_DestroyUA_BL_Default_Type'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine AFI_PackUA_BL_Default_Type(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(AFI_UA_BL_Default_Type), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AFI_PackUA_BL_Default_Type'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! alpha0
    call RegPack(Buf, InData%alpha0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alpha1
    call RegPack(Buf, InData%alpha1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alpha2
    call RegPack(Buf, InData%alpha2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! eta_e
    call RegPack(Buf, InData%eta_e)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! C_nalpha
    call RegPack(Buf, InData%C_nalpha)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! C_lalpha
    call RegPack(Buf, InData%C_lalpha)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T_f0
    call RegPack(Buf, InData%T_f0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T_V0
    call RegPack(Buf, InData%T_V0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T_p
    call RegPack(Buf, InData%T_p)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T_VL
    call RegPack(Buf, InData%T_VL)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! b1
    call RegPack(Buf, InData%b1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! b2
    call RegPack(Buf, InData%b2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! b5
    call RegPack(Buf, InData%b5)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! A1
    call RegPack(Buf, InData%A1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! A2
    call RegPack(Buf, InData%A2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! A5
    call RegPack(Buf, InData%A5)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S1
    call RegPack(Buf, InData%S1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S2
    call RegPack(Buf, InData%S2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S3
    call RegPack(Buf, InData%S3)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S4
    call RegPack(Buf, InData%S4)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cn1
    call RegPack(Buf, InData%Cn1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cn2
    call RegPack(Buf, InData%Cn2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! St_sh
    call RegPack(Buf, InData%St_sh)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cd0
    call RegPack(Buf, InData%Cd0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cm0
    call RegPack(Buf, InData%Cm0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k0
    call RegPack(Buf, InData%k0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k1
    call RegPack(Buf, InData%k1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k2
    call RegPack(Buf, InData%k2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k3
    call RegPack(Buf, InData%k3)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k1_hat
    call RegPack(Buf, InData%k1_hat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! x_cp_bar
    call RegPack(Buf, InData%x_cp_bar)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UACutout
    call RegPack(Buf, InData%UACutout)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UACutout_delta
    call RegPack(Buf, InData%UACutout_delta)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! filtCutOff
    call RegPack(Buf, InData%filtCutOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alphaUpper
    call RegPack(Buf, InData%alphaUpper)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alphaLower
    call RegPack(Buf, InData%alphaLower)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -761,253 +609,197 @@ subroutine AFI_UnPackUA_BL_Default_Type(Buf, OutData)
    type(AFI_UA_BL_Default_Type), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AFI_UnPackUA_BL_Default_Type'
    if (Buf%ErrStat /= ErrID_None) return
-   ! alpha0
    call RegUnpack(Buf, OutData%alpha0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alpha1
    call RegUnpack(Buf, OutData%alpha1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alpha2
    call RegUnpack(Buf, OutData%alpha2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! eta_e
    call RegUnpack(Buf, OutData%eta_e)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! C_nalpha
    call RegUnpack(Buf, OutData%C_nalpha)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! C_lalpha
    call RegUnpack(Buf, OutData%C_lalpha)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T_f0
    call RegUnpack(Buf, OutData%T_f0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T_V0
    call RegUnpack(Buf, OutData%T_V0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T_p
    call RegUnpack(Buf, OutData%T_p)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T_VL
    call RegUnpack(Buf, OutData%T_VL)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! b1
    call RegUnpack(Buf, OutData%b1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! b2
    call RegUnpack(Buf, OutData%b2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! b5
    call RegUnpack(Buf, OutData%b5)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! A1
    call RegUnpack(Buf, OutData%A1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! A2
    call RegUnpack(Buf, OutData%A2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! A5
    call RegUnpack(Buf, OutData%A5)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S1
    call RegUnpack(Buf, OutData%S1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S2
    call RegUnpack(Buf, OutData%S2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S3
    call RegUnpack(Buf, OutData%S3)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S4
    call RegUnpack(Buf, OutData%S4)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cn1
    call RegUnpack(Buf, OutData%Cn1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cn2
    call RegUnpack(Buf, OutData%Cn2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! St_sh
    call RegUnpack(Buf, OutData%St_sh)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cd0
    call RegUnpack(Buf, OutData%Cd0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cm0
    call RegUnpack(Buf, OutData%Cm0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k0
    call RegUnpack(Buf, OutData%k0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k1
    call RegUnpack(Buf, OutData%k1)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k2
    call RegUnpack(Buf, OutData%k2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k3
    call RegUnpack(Buf, OutData%k3)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! k1_hat
    call RegUnpack(Buf, OutData%k1_hat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! x_cp_bar
    call RegUnpack(Buf, OutData%x_cp_bar)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UACutout
    call RegUnpack(Buf, OutData%UACutout)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UACutout_delta
    call RegUnpack(Buf, OutData%UACutout_delta)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! filtCutOff
    call RegUnpack(Buf, OutData%filtCutOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alphaUpper
    call RegUnpack(Buf, OutData%alphaUpper)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! alphaLower
    call RegUnpack(Buf, OutData%alphaLower)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE AFI_CopyTable_Type( SrcTable_TypeData, DstTable_TypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(AFI_Table_Type), INTENT(IN) :: SrcTable_TypeData
-   TYPE(AFI_Table_Type), INTENT(INOUT) :: DstTable_TypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AFI_CopyTable_Type'
-! 
+
+subroutine AFI_CopyTable_Type(SrcTable_TypeData, DstTable_TypeData, CtrlCode, ErrStat, ErrMsg)
+   type(AFI_Table_Type), intent(in) :: SrcTable_TypeData
+   type(AFI_Table_Type), intent(inout) :: DstTable_TypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(3), UB(3)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AFI_CopyTable_Type'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcTable_TypeData%Alpha)) THEN
-  i1_l = LBOUND(SrcTable_TypeData%Alpha,1)
-  i1_u = UBOUND(SrcTable_TypeData%Alpha,1)
-  IF (.NOT. ALLOCATED(DstTable_TypeData%Alpha)) THEN 
-    ALLOCATE(DstTable_TypeData%Alpha(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstTable_TypeData%Alpha.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstTable_TypeData%Alpha = SrcTable_TypeData%Alpha
-ENDIF
-IF (ALLOCATED(SrcTable_TypeData%Coefs)) THEN
-  i1_l = LBOUND(SrcTable_TypeData%Coefs,1)
-  i1_u = UBOUND(SrcTable_TypeData%Coefs,1)
-  i2_l = LBOUND(SrcTable_TypeData%Coefs,2)
-  i2_u = UBOUND(SrcTable_TypeData%Coefs,2)
-  IF (.NOT. ALLOCATED(DstTable_TypeData%Coefs)) THEN 
-    ALLOCATE(DstTable_TypeData%Coefs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstTable_TypeData%Coefs.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstTable_TypeData%Coefs = SrcTable_TypeData%Coefs
-ENDIF
-IF (ALLOCATED(SrcTable_TypeData%SplineCoefs)) THEN
-  i1_l = LBOUND(SrcTable_TypeData%SplineCoefs,1)
-  i1_u = UBOUND(SrcTable_TypeData%SplineCoefs,1)
-  i2_l = LBOUND(SrcTable_TypeData%SplineCoefs,2)
-  i2_u = UBOUND(SrcTable_TypeData%SplineCoefs,2)
-  i3_l = LBOUND(SrcTable_TypeData%SplineCoefs,3)
-  i3_u = UBOUND(SrcTable_TypeData%SplineCoefs,3)
-  IF (.NOT. ALLOCATED(DstTable_TypeData%SplineCoefs)) THEN 
-    ALLOCATE(DstTable_TypeData%SplineCoefs(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstTable_TypeData%SplineCoefs.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstTable_TypeData%SplineCoefs = SrcTable_TypeData%SplineCoefs
-ENDIF
-    DstTable_TypeData%UserProp = SrcTable_TypeData%UserProp
-    DstTable_TypeData%Re = SrcTable_TypeData%Re
-    DstTable_TypeData%NumAlf = SrcTable_TypeData%NumAlf
-    DstTable_TypeData%ConstData = SrcTable_TypeData%ConstData
-    DstTable_TypeData%InclUAdata = SrcTable_TypeData%InclUAdata
-      CALL AFI_Copyua_bl_type( SrcTable_TypeData%UA_BL, DstTable_TypeData%UA_BL, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE AFI_CopyTable_Type
+   ErrMsg  = ''
+   if (allocated(SrcTable_TypeData%Alpha)) then
+      LB(1:1) = lbound(SrcTable_TypeData%Alpha)
+      UB(1:1) = ubound(SrcTable_TypeData%Alpha)
+      if (.not. allocated(DstTable_TypeData%Alpha)) then
+         allocate(DstTable_TypeData%Alpha(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTable_TypeData%Alpha.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTable_TypeData%Alpha = SrcTable_TypeData%Alpha
+   else if (allocated(DstTable_TypeData%Alpha)) then
+      deallocate(DstTable_TypeData%Alpha)
+   end if
+   if (allocated(SrcTable_TypeData%Coefs)) then
+      LB(1:2) = lbound(SrcTable_TypeData%Coefs)
+      UB(1:2) = ubound(SrcTable_TypeData%Coefs)
+      if (.not. allocated(DstTable_TypeData%Coefs)) then
+         allocate(DstTable_TypeData%Coefs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTable_TypeData%Coefs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTable_TypeData%Coefs = SrcTable_TypeData%Coefs
+   else if (allocated(DstTable_TypeData%Coefs)) then
+      deallocate(DstTable_TypeData%Coefs)
+   end if
+   if (allocated(SrcTable_TypeData%SplineCoefs)) then
+      LB(1:3) = lbound(SrcTable_TypeData%SplineCoefs)
+      UB(1:3) = ubound(SrcTable_TypeData%SplineCoefs)
+      if (.not. allocated(DstTable_TypeData%SplineCoefs)) then
+         allocate(DstTable_TypeData%SplineCoefs(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTable_TypeData%SplineCoefs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTable_TypeData%SplineCoefs = SrcTable_TypeData%SplineCoefs
+   else if (allocated(DstTable_TypeData%SplineCoefs)) then
+      deallocate(DstTable_TypeData%SplineCoefs)
+   end if
+   DstTable_TypeData%UserProp = SrcTable_TypeData%UserProp
+   DstTable_TypeData%Re = SrcTable_TypeData%Re
+   DstTable_TypeData%NumAlf = SrcTable_TypeData%NumAlf
+   DstTable_TypeData%ConstData = SrcTable_TypeData%ConstData
+   DstTable_TypeData%InclUAdata = SrcTable_TypeData%InclUAdata
+   call AFI_CopyUA_BL_Type(SrcTable_TypeData%UA_BL, DstTable_TypeData%UA_BL, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE AFI_DestroyTable_Type( Table_TypeData, ErrStat, ErrMsg )
-  TYPE(AFI_Table_Type), INTENT(INOUT) :: Table_TypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AFI_DestroyTable_Type'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(Table_TypeData%Alpha)) THEN
-  DEALLOCATE(Table_TypeData%Alpha)
-ENDIF
-IF (ALLOCATED(Table_TypeData%Coefs)) THEN
-  DEALLOCATE(Table_TypeData%Coefs)
-ENDIF
-IF (ALLOCATED(Table_TypeData%SplineCoefs)) THEN
-  DEALLOCATE(Table_TypeData%SplineCoefs)
-ENDIF
-  CALL AFI_DestroyUA_BL_Type( Table_TypeData%UA_BL, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE AFI_DestroyTable_Type
-
+subroutine AFI_DestroyTable_Type(Table_TypeData, ErrStat, ErrMsg)
+   type(AFI_Table_Type), intent(inout) :: Table_TypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AFI_DestroyTable_Type'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(Table_TypeData%Alpha)) then
+      deallocate(Table_TypeData%Alpha)
+   end if
+   if (allocated(Table_TypeData%Coefs)) then
+      deallocate(Table_TypeData%Coefs)
+   end if
+   if (allocated(Table_TypeData%SplineCoefs)) then
+      deallocate(Table_TypeData%SplineCoefs)
+   end if
+end subroutine
 
 subroutine AFI_PackTable_Type(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(AFI_Table_Type), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AFI_PackTable_Type'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Alpha
    call RegPack(Buf, allocated(InData%Alpha))
    if (allocated(InData%Alpha)) then
       call RegPackBounds(Buf, 1, lbound(InData%Alpha), ubound(InData%Alpha))
       call RegPack(Buf, InData%Alpha)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Coefs
    call RegPack(Buf, allocated(InData%Coefs))
    if (allocated(InData%Coefs)) then
       call RegPackBounds(Buf, 2, lbound(InData%Coefs), ubound(InData%Coefs))
       call RegPack(Buf, InData%Coefs)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SplineCoefs
    call RegPack(Buf, allocated(InData%SplineCoefs))
    if (allocated(InData%SplineCoefs)) then
       call RegPackBounds(Buf, 3, lbound(InData%SplineCoefs), ubound(InData%SplineCoefs))
       call RegPack(Buf, InData%SplineCoefs)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UserProp
    call RegPack(Buf, InData%UserProp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Re
    call RegPack(Buf, InData%Re)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumAlf
    call RegPack(Buf, InData%NumAlf)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ConstData
    call RegPack(Buf, InData%ConstData)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InclUAdata
    call RegPack(Buf, InData%InclUAdata)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UA_BL
    call AFI_PackUA_BL_Type(Buf, InData%UA_BL) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1020,7 +812,6 @@ subroutine AFI_UnPackTable_Type(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! Alpha
    if (allocated(OutData%Alpha)) deallocate(OutData%Alpha)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1035,7 +826,6 @@ subroutine AFI_UnPackTable_Type(Buf, OutData)
       call RegUnpack(Buf, OutData%Alpha)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Coefs
    if (allocated(OutData%Coefs)) deallocate(OutData%Coefs)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1050,7 +840,6 @@ subroutine AFI_UnPackTable_Type(Buf, OutData)
       call RegUnpack(Buf, OutData%Coefs)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! SplineCoefs
    if (allocated(OutData%SplineCoefs)) deallocate(OutData%SplineCoefs)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1065,91 +854,66 @@ subroutine AFI_UnPackTable_Type(Buf, OutData)
       call RegUnpack(Buf, OutData%SplineCoefs)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! UserProp
    call RegUnpack(Buf, OutData%UserProp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Re
    call RegUnpack(Buf, OutData%Re)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumAlf
    call RegUnpack(Buf, OutData%NumAlf)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ConstData
    call RegUnpack(Buf, OutData%ConstData)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InclUAdata
    call RegUnpack(Buf, OutData%InclUAdata)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UA_BL
    call AFI_UnpackUA_BL_Type(Buf, OutData%UA_BL) ! UA_BL 
 end subroutine
- SUBROUTINE AFI_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(AFI_InitInputType), INTENT(IN) :: SrcInitInputData
-   TYPE(AFI_InitInputType), INTENT(INOUT) :: DstInitInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AFI_CopyInitInput'
-! 
+
+subroutine AFI_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
+   type(AFI_InitInputType), intent(in) :: SrcInitInputData
+   type(AFI_InitInputType), intent(inout) :: DstInitInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AFI_CopyInitInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInitInputData%FileName = SrcInitInputData%FileName
-    DstInitInputData%AFTabMod = SrcInitInputData%AFTabMod
-    DstInitInputData%InCol_Alfa = SrcInitInputData%InCol_Alfa
-    DstInitInputData%InCol_Cl = SrcInitInputData%InCol_Cl
-    DstInitInputData%InCol_Cd = SrcInitInputData%InCol_Cd
-    DstInitInputData%InCol_Cm = SrcInitInputData%InCol_Cm
-    DstInitInputData%InCol_Cpmin = SrcInitInputData%InCol_Cpmin
-    DstInitInputData%UA_f_cn = SrcInitInputData%UA_f_cn
- END SUBROUTINE AFI_CopyInitInput
+   ErrMsg  = ''
+   DstInitInputData%FileName = SrcInitInputData%FileName
+   DstInitInputData%AFTabMod = SrcInitInputData%AFTabMod
+   DstInitInputData%InCol_Alfa = SrcInitInputData%InCol_Alfa
+   DstInitInputData%InCol_Cl = SrcInitInputData%InCol_Cl
+   DstInitInputData%InCol_Cd = SrcInitInputData%InCol_Cd
+   DstInitInputData%InCol_Cm = SrcInitInputData%InCol_Cm
+   DstInitInputData%InCol_Cpmin = SrcInitInputData%InCol_Cpmin
+   DstInitInputData%UA_f_cn = SrcInitInputData%UA_f_cn
+end subroutine
 
- SUBROUTINE AFI_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
-  TYPE(AFI_InitInputType), INTENT(INOUT) :: InitInputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AFI_DestroyInitInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE AFI_DestroyInitInput
-
+subroutine AFI_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
+   type(AFI_InitInputType), intent(inout) :: InitInputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AFI_DestroyInitInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine AFI_PackInitInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(AFI_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AFI_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! FileName
    call RegPack(Buf, InData%FileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AFTabMod
    call RegPack(Buf, InData%AFTabMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InCol_Alfa
    call RegPack(Buf, InData%InCol_Alfa)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InCol_Cl
    call RegPack(Buf, InData%InCol_Cl)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InCol_Cd
    call RegPack(Buf, InData%InCol_Cd)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InCol_Cm
    call RegPack(Buf, InData%InCol_Cm)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InCol_Cpmin
    call RegPack(Buf, InData%InCol_Cpmin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UA_f_cn
    call RegPack(Buf, InData%UA_f_cn)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1159,74 +923,56 @@ subroutine AFI_UnPackInitInput(Buf, OutData)
    type(AFI_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AFI_UnPackInitInput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! FileName
    call RegUnpack(Buf, OutData%FileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AFTabMod
    call RegUnpack(Buf, OutData%AFTabMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InCol_Alfa
    call RegUnpack(Buf, OutData%InCol_Alfa)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InCol_Cl
    call RegUnpack(Buf, OutData%InCol_Cl)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InCol_Cd
    call RegUnpack(Buf, OutData%InCol_Cd)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InCol_Cm
    call RegUnpack(Buf, OutData%InCol_Cm)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InCol_Cpmin
    call RegUnpack(Buf, OutData%InCol_Cpmin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UA_f_cn
    call RegUnpack(Buf, OutData%UA_f_cn)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE AFI_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(AFI_InitOutputType), INTENT(IN) :: SrcInitOutputData
-   TYPE(AFI_InitOutputType), INTENT(INOUT) :: DstInitOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AFI_CopyInitOutput'
-! 
+
+subroutine AFI_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(AFI_InitOutputType), intent(in) :: SrcInitOutputData
+   type(AFI_InitOutputType), intent(inout) :: DstInitOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AFI_CopyInitOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL NWTC_Library_Copyprogdesc( SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE AFI_CopyInitOutput
+   ErrMsg  = ''
+   call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE AFI_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
-  TYPE(AFI_InitOutputType), INTENT(INOUT) :: InitOutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AFI_DestroyInitOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL NWTC_Library_DestroyProgDesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE AFI_DestroyInitOutput
-
+subroutine AFI_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
+   type(AFI_InitOutputType), intent(inout) :: InitOutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AFI_DestroyInitOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine AFI_PackInitOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(AFI_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AFI_PackInitOutput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Ver
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1236,122 +982,127 @@ subroutine AFI_UnPackInitOutput(Buf, OutData)
    type(AFI_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AFI_UnPackInitOutput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! Ver
    call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
 end subroutine
- SUBROUTINE AFI_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(AFI_ParameterType), INTENT(IN) :: SrcParamData
-   TYPE(AFI_ParameterType), INTENT(INOUT) :: DstParamData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AFI_CopyParam'
-! 
+
+subroutine AFI_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
+   type(AFI_ParameterType), intent(in) :: SrcParamData
+   type(AFI_ParameterType), intent(inout) :: DstParamData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AFI_CopyParam'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstParamData%ColCd = SrcParamData%ColCd
-    DstParamData%ColCl = SrcParamData%ColCl
-    DstParamData%ColCm = SrcParamData%ColCm
-    DstParamData%ColCpmin = SrcParamData%ColCpmin
-    DstParamData%ColUAf = SrcParamData%ColUAf
-    DstParamData%AFTabMod = SrcParamData%AFTabMod
-IF (ALLOCATED(SrcParamData%secondVals)) THEN
-  i1_l = LBOUND(SrcParamData%secondVals,1)
-  i1_u = UBOUND(SrcParamData%secondVals,1)
-  IF (.NOT. ALLOCATED(DstParamData%secondVals)) THEN 
-    ALLOCATE(DstParamData%secondVals(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%secondVals.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%secondVals = SrcParamData%secondVals
-ENDIF
-    DstParamData%InterpOrd = SrcParamData%InterpOrd
-    DstParamData%RelThickness = SrcParamData%RelThickness
-    DstParamData%NonDimArea = SrcParamData%NonDimArea
-    DstParamData%NumCoords = SrcParamData%NumCoords
-IF (ALLOCATED(SrcParamData%X_Coord)) THEN
-  i1_l = LBOUND(SrcParamData%X_Coord,1)
-  i1_u = UBOUND(SrcParamData%X_Coord,1)
-  IF (.NOT. ALLOCATED(DstParamData%X_Coord)) THEN 
-    ALLOCATE(DstParamData%X_Coord(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%X_Coord.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%X_Coord = SrcParamData%X_Coord
-ENDIF
-IF (ALLOCATED(SrcParamData%Y_Coord)) THEN
-  i1_l = LBOUND(SrcParamData%Y_Coord,1)
-  i1_u = UBOUND(SrcParamData%Y_Coord,1)
-  IF (.NOT. ALLOCATED(DstParamData%Y_Coord)) THEN 
-    ALLOCATE(DstParamData%Y_Coord(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Y_Coord.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%Y_Coord = SrcParamData%Y_Coord
-ENDIF
-    DstParamData%NumTabs = SrcParamData%NumTabs
-IF (ALLOCATED(SrcParamData%Table)) THEN
-  i1_l = LBOUND(SrcParamData%Table,1)
-  i1_u = UBOUND(SrcParamData%Table,1)
-  IF (.NOT. ALLOCATED(DstParamData%Table)) THEN 
-    ALLOCATE(DstParamData%Table(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Table.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcParamData%Table,1), UBOUND(SrcParamData%Table,1)
-      CALL AFI_Copytable_type( SrcParamData%Table(i1), DstParamData%Table(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-    DstParamData%BL_file = SrcParamData%BL_file
-    DstParamData%FileName = SrcParamData%FileName
- END SUBROUTINE AFI_CopyParam
+   ErrMsg  = ''
+   DstParamData%ColCd = SrcParamData%ColCd
+   DstParamData%ColCl = SrcParamData%ColCl
+   DstParamData%ColCm = SrcParamData%ColCm
+   DstParamData%ColCpmin = SrcParamData%ColCpmin
+   DstParamData%ColUAf = SrcParamData%ColUAf
+   DstParamData%AFTabMod = SrcParamData%AFTabMod
+   if (allocated(SrcParamData%secondVals)) then
+      LB(1:1) = lbound(SrcParamData%secondVals)
+      UB(1:1) = ubound(SrcParamData%secondVals)
+      if (.not. allocated(DstParamData%secondVals)) then
+         allocate(DstParamData%secondVals(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%secondVals.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%secondVals = SrcParamData%secondVals
+   else if (allocated(DstParamData%secondVals)) then
+      deallocate(DstParamData%secondVals)
+   end if
+   DstParamData%InterpOrd = SrcParamData%InterpOrd
+   DstParamData%RelThickness = SrcParamData%RelThickness
+   DstParamData%NonDimArea = SrcParamData%NonDimArea
+   DstParamData%NumCoords = SrcParamData%NumCoords
+   if (allocated(SrcParamData%X_Coord)) then
+      LB(1:1) = lbound(SrcParamData%X_Coord)
+      UB(1:1) = ubound(SrcParamData%X_Coord)
+      if (.not. allocated(DstParamData%X_Coord)) then
+         allocate(DstParamData%X_Coord(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%X_Coord.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%X_Coord = SrcParamData%X_Coord
+   else if (allocated(DstParamData%X_Coord)) then
+      deallocate(DstParamData%X_Coord)
+   end if
+   if (allocated(SrcParamData%Y_Coord)) then
+      LB(1:1) = lbound(SrcParamData%Y_Coord)
+      UB(1:1) = ubound(SrcParamData%Y_Coord)
+      if (.not. allocated(DstParamData%Y_Coord)) then
+         allocate(DstParamData%Y_Coord(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Y_Coord.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%Y_Coord = SrcParamData%Y_Coord
+   else if (allocated(DstParamData%Y_Coord)) then
+      deallocate(DstParamData%Y_Coord)
+   end if
+   DstParamData%NumTabs = SrcParamData%NumTabs
+   if (allocated(SrcParamData%Table)) then
+      LB(1:1) = lbound(SrcParamData%Table)
+      UB(1:1) = ubound(SrcParamData%Table)
+      if (.not. allocated(DstParamData%Table)) then
+         allocate(DstParamData%Table(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Table.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call AFI_CopyTable_Type(SrcParamData%Table(i1), DstParamData%Table(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstParamData%Table)) then
+      deallocate(DstParamData%Table)
+   end if
+   DstParamData%BL_file = SrcParamData%BL_file
+   DstParamData%FileName = SrcParamData%FileName
+end subroutine
 
- SUBROUTINE AFI_DestroyParam( ParamData, ErrStat, ErrMsg )
-  TYPE(AFI_ParameterType), INTENT(INOUT) :: ParamData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AFI_DestroyParam'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(ParamData%secondVals)) THEN
-  DEALLOCATE(ParamData%secondVals)
-ENDIF
-IF (ALLOCATED(ParamData%X_Coord)) THEN
-  DEALLOCATE(ParamData%X_Coord)
-ENDIF
-IF (ALLOCATED(ParamData%Y_Coord)) THEN
-  DEALLOCATE(ParamData%Y_Coord)
-ENDIF
-IF (ALLOCATED(ParamData%Table)) THEN
-DO i1 = LBOUND(ParamData%Table,1), UBOUND(ParamData%Table,1)
-  CALL AFI_DestroyTable_Type( ParamData%Table(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(ParamData%Table)
-ENDIF
- END SUBROUTINE AFI_DestroyParam
-
+subroutine AFI_DestroyParam(ParamData, ErrStat, ErrMsg)
+   type(AFI_ParameterType), intent(inout) :: ParamData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AFI_DestroyParam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(ParamData%secondVals)) then
+      deallocate(ParamData%secondVals)
+   end if
+   if (allocated(ParamData%X_Coord)) then
+      deallocate(ParamData%X_Coord)
+   end if
+   if (allocated(ParamData%Y_Coord)) then
+      deallocate(ParamData%Y_Coord)
+   end if
+   if (allocated(ParamData%Table)) then
+      LB(1:1) = lbound(ParamData%Table)
+      UB(1:1) = ubound(ParamData%Table)
+      do i1 = LB(1), UB(1)
+         call AFI_DestroyTable_Type(ParamData%Table(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ParamData%Table)
+   end if
+end subroutine
 
 subroutine AFI_PackParam(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -1360,61 +1111,46 @@ subroutine AFI_PackParam(Buf, Indata)
    integer(IntKi)  :: i1
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
-   ! ColCd
    call RegPack(Buf, InData%ColCd)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ColCl
    call RegPack(Buf, InData%ColCl)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ColCm
    call RegPack(Buf, InData%ColCm)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ColCpmin
    call RegPack(Buf, InData%ColCpmin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ColUAf
    call RegPack(Buf, InData%ColUAf)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AFTabMod
    call RegPack(Buf, InData%AFTabMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! secondVals
    call RegPack(Buf, allocated(InData%secondVals))
    if (allocated(InData%secondVals)) then
       call RegPackBounds(Buf, 1, lbound(InData%secondVals), ubound(InData%secondVals))
       call RegPack(Buf, InData%secondVals)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InterpOrd
    call RegPack(Buf, InData%InterpOrd)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RelThickness
    call RegPack(Buf, InData%RelThickness)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NonDimArea
    call RegPack(Buf, InData%NonDimArea)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumCoords
    call RegPack(Buf, InData%NumCoords)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! X_Coord
    call RegPack(Buf, allocated(InData%X_Coord))
    if (allocated(InData%X_Coord)) then
       call RegPackBounds(Buf, 1, lbound(InData%X_Coord), ubound(InData%X_Coord))
       call RegPack(Buf, InData%X_Coord)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Y_Coord
    call RegPack(Buf, allocated(InData%Y_Coord))
    if (allocated(InData%Y_Coord)) then
       call RegPackBounds(Buf, 1, lbound(InData%Y_Coord), ubound(InData%Y_Coord))
       call RegPack(Buf, InData%Y_Coord)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumTabs
    call RegPack(Buf, InData%NumTabs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Table
    call RegPack(Buf, allocated(InData%Table))
    if (allocated(InData%Table)) then
       call RegPackBounds(Buf, 1, lbound(InData%Table), ubound(InData%Table))
@@ -1425,10 +1161,8 @@ subroutine AFI_PackParam(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BL_file
    call RegPack(Buf, InData%BL_file)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FileName
    call RegPack(Buf, InData%FileName)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1442,25 +1176,18 @@ subroutine AFI_UnPackParam(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! ColCd
    call RegUnpack(Buf, OutData%ColCd)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ColCl
    call RegUnpack(Buf, OutData%ColCl)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ColCm
    call RegUnpack(Buf, OutData%ColCm)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ColCpmin
    call RegUnpack(Buf, OutData%ColCpmin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ColUAf
    call RegUnpack(Buf, OutData%ColUAf)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AFTabMod
    call RegUnpack(Buf, OutData%AFTabMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! secondVals
    if (allocated(OutData%secondVals)) deallocate(OutData%secondVals)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1475,19 +1202,14 @@ subroutine AFI_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%secondVals)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! InterpOrd
    call RegUnpack(Buf, OutData%InterpOrd)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RelThickness
    call RegUnpack(Buf, OutData%RelThickness)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NonDimArea
    call RegUnpack(Buf, OutData%NonDimArea)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumCoords
    call RegUnpack(Buf, OutData%NumCoords)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! X_Coord
    if (allocated(OutData%X_Coord)) deallocate(OutData%X_Coord)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1502,7 +1224,6 @@ subroutine AFI_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%X_Coord)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Y_Coord
    if (allocated(OutData%Y_Coord)) deallocate(OutData%Y_Coord)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1517,10 +1238,8 @@ subroutine AFI_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%Y_Coord)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! NumTabs
    call RegUnpack(Buf, OutData%NumTabs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Table
    if (allocated(OutData%Table)) deallocate(OutData%Table)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1536,60 +1255,44 @@ subroutine AFI_UnPackParam(Buf, OutData)
          call AFI_UnpackTable_Type(Buf, OutData%Table(i1)) ! Table 
       end do
    end if
-   ! BL_file
    call RegUnpack(Buf, OutData%BL_file)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FileName
    call RegUnpack(Buf, OutData%FileName)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE AFI_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(AFI_InputType), INTENT(IN) :: SrcInputData
-   TYPE(AFI_InputType), INTENT(INOUT) :: DstInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AFI_CopyInput'
-! 
+
+subroutine AFI_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
+   type(AFI_InputType), intent(in) :: SrcInputData
+   type(AFI_InputType), intent(inout) :: DstInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AFI_CopyInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInputData%AoA = SrcInputData%AoA
-    DstInputData%UserProp = SrcInputData%UserProp
-    DstInputData%Re = SrcInputData%Re
- END SUBROUTINE AFI_CopyInput
+   ErrMsg  = ''
+   DstInputData%AoA = SrcInputData%AoA
+   DstInputData%UserProp = SrcInputData%UserProp
+   DstInputData%Re = SrcInputData%Re
+end subroutine
 
- SUBROUTINE AFI_DestroyInput( InputData, ErrStat, ErrMsg )
-  TYPE(AFI_InputType), INTENT(INOUT) :: InputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AFI_DestroyInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE AFI_DestroyInput
-
+subroutine AFI_DestroyInput(InputData, ErrStat, ErrMsg)
+   type(AFI_InputType), intent(inout) :: InputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AFI_DestroyInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine AFI_PackInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(AFI_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AFI_PackInput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! AoA
    call RegPack(Buf, InData%AoA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UserProp
    call RegPack(Buf, InData%UserProp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Re
    call RegPack(Buf, InData%Re)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1599,87 +1302,64 @@ subroutine AFI_UnPackInput(Buf, OutData)
    type(AFI_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AFI_UnPackInput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! AoA
    call RegUnpack(Buf, OutData%AoA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UserProp
    call RegUnpack(Buf, OutData%UserProp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Re
    call RegUnpack(Buf, OutData%Re)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE AFI_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(AFI_OutputType), INTENT(IN) :: SrcOutputData
-   TYPE(AFI_OutputType), INTENT(INOUT) :: DstOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AFI_CopyOutput'
-! 
+
+subroutine AFI_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(AFI_OutputType), intent(in) :: SrcOutputData
+   type(AFI_OutputType), intent(inout) :: DstOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AFI_CopyOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstOutputData%Cl = SrcOutputData%Cl
-    DstOutputData%Cd = SrcOutputData%Cd
-    DstOutputData%Cm = SrcOutputData%Cm
-    DstOutputData%Cpmin = SrcOutputData%Cpmin
-    DstOutputData%Cd0 = SrcOutputData%Cd0
-    DstOutputData%Cm0 = SrcOutputData%Cm0
-    DstOutputData%f_st = SrcOutputData%f_st
-    DstOutputData%FullySeparate = SrcOutputData%FullySeparate
-    DstOutputData%FullyAttached = SrcOutputData%FullyAttached
- END SUBROUTINE AFI_CopyOutput
+   ErrMsg  = ''
+   DstOutputData%Cl = SrcOutputData%Cl
+   DstOutputData%Cd = SrcOutputData%Cd
+   DstOutputData%Cm = SrcOutputData%Cm
+   DstOutputData%Cpmin = SrcOutputData%Cpmin
+   DstOutputData%Cd0 = SrcOutputData%Cd0
+   DstOutputData%Cm0 = SrcOutputData%Cm0
+   DstOutputData%f_st = SrcOutputData%f_st
+   DstOutputData%FullySeparate = SrcOutputData%FullySeparate
+   DstOutputData%FullyAttached = SrcOutputData%FullyAttached
+end subroutine
 
- SUBROUTINE AFI_DestroyOutput( OutputData, ErrStat, ErrMsg )
-  TYPE(AFI_OutputType), INTENT(INOUT) :: OutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AFI_DestroyOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE AFI_DestroyOutput
-
+subroutine AFI_DestroyOutput(OutputData, ErrStat, ErrMsg)
+   type(AFI_OutputType), intent(inout) :: OutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AFI_DestroyOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine AFI_PackOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(AFI_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AFI_PackOutput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Cl
    call RegPack(Buf, InData%Cl)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cd
    call RegPack(Buf, InData%Cd)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cm
    call RegPack(Buf, InData%Cm)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cpmin
    call RegPack(Buf, InData%Cpmin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cd0
    call RegPack(Buf, InData%Cd0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cm0
    call RegPack(Buf, InData%Cm0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! f_st
    call RegPack(Buf, InData%f_st)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FullySeparate
    call RegPack(Buf, InData%FullySeparate)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FullyAttached
    call RegPack(Buf, InData%FullyAttached)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1689,31 +1369,22 @@ subroutine AFI_UnPackOutput(Buf, OutData)
    type(AFI_OutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AFI_UnPackOutput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! Cl
    call RegUnpack(Buf, OutData%Cl)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cd
    call RegUnpack(Buf, OutData%Cd)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cm
    call RegUnpack(Buf, OutData%Cm)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cpmin
    call RegUnpack(Buf, OutData%Cpmin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cd0
    call RegUnpack(Buf, OutData%Cd0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cm0
    call RegUnpack(Buf, OutData%Cm0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! f_st
    call RegUnpack(Buf, OutData%f_st)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FullySeparate
    call RegUnpack(Buf, OutData%FullySeparate)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FullyAttached
    call RegUnpack(Buf, OutData%FullyAttached)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

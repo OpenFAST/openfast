@@ -64,58 +64,42 @@ IMPLICIT NONE
   END TYPE SeaSt_Interp_ParameterType
 ! =======================
 CONTAINS
- SUBROUTINE SeaSt_Interp_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaSt_Interp_InitInputType), INTENT(IN) :: SrcInitInputData
-   TYPE(SeaSt_Interp_InitInputType), INTENT(INOUT) :: DstInitInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_CopyInitInput'
-! 
+
+subroutine SeaSt_Interp_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_Interp_InitInputType), intent(in) :: SrcInitInputData
+   type(SeaSt_Interp_InitInputType), intent(inout) :: DstInitInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_Interp_CopyInitInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInitInputData%n = SrcInitInputData%n
-    DstInitInputData%delta = SrcInitInputData%delta
-    DstInitInputData%pZero = SrcInitInputData%pZero
-    DstInitInputData%Z_Depth = SrcInitInputData%Z_Depth
- END SUBROUTINE SeaSt_Interp_CopyInitInput
+   ErrMsg  = ''
+   DstInitInputData%n = SrcInitInputData%n
+   DstInitInputData%delta = SrcInitInputData%delta
+   DstInitInputData%pZero = SrcInitInputData%pZero
+   DstInitInputData%Z_Depth = SrcInitInputData%Z_Depth
+end subroutine
 
- SUBROUTINE SeaSt_Interp_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
-  TYPE(SeaSt_Interp_InitInputType), INTENT(INOUT) :: InitInputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_Interp_DestroyInitInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE SeaSt_Interp_DestroyInitInput
-
+subroutine SeaSt_Interp_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
+   type(SeaSt_Interp_InitInputType), intent(inout) :: InitInputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_Interp_DestroyInitInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SeaSt_Interp_PackInitInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SeaSt_Interp_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_Interp_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! n
    call RegPack(Buf, InData%n)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! delta
    call RegPack(Buf, InData%delta)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pZero
    call RegPack(Buf, InData%pZero)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Z_Depth
    call RegPack(Buf, InData%Z_Depth)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -125,62 +109,48 @@ subroutine SeaSt_Interp_UnPackInitInput(Buf, OutData)
    type(SeaSt_Interp_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_Interp_UnPackInitInput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! n
    call RegUnpack(Buf, OutData%n)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! delta
    call RegUnpack(Buf, OutData%delta)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pZero
    call RegUnpack(Buf, OutData%pZero)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Z_Depth
    call RegUnpack(Buf, OutData%Z_Depth)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE SeaSt_Interp_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaSt_Interp_InitOutputType), INTENT(IN) :: SrcInitOutputData
-   TYPE(SeaSt_Interp_InitOutputType), INTENT(INOUT) :: DstInitOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_CopyInitOutput'
-! 
+
+subroutine SeaSt_Interp_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_Interp_InitOutputType), intent(in) :: SrcInitOutputData
+   type(SeaSt_Interp_InitOutputType), intent(inout) :: DstInitOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_Interp_CopyInitOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL NWTC_Library_Copyprogdesc( SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE SeaSt_Interp_CopyInitOutput
+   ErrMsg  = ''
+   call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE SeaSt_Interp_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
-  TYPE(SeaSt_Interp_InitOutputType), INTENT(INOUT) :: InitOutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_Interp_DestroyInitOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL NWTC_Library_DestroyProgDesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE SeaSt_Interp_DestroyInitOutput
-
+subroutine SeaSt_Interp_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
+   type(SeaSt_Interp_InitOutputType), intent(inout) :: InitOutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_Interp_DestroyInitOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SeaSt_Interp_PackInitOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SeaSt_Interp_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_Interp_PackInitOutput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Ver
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -190,65 +160,47 @@ subroutine SeaSt_Interp_UnPackInitOutput(Buf, OutData)
    type(SeaSt_Interp_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_Interp_UnPackInitOutput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! Ver
    call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
 end subroutine
- SUBROUTINE SeaSt_Interp_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaSt_Interp_MiscVarType), INTENT(IN) :: SrcMiscData
-   TYPE(SeaSt_Interp_MiscVarType), INTENT(INOUT) :: DstMiscData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_CopyMisc'
-! 
+
+subroutine SeaSt_Interp_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_Interp_MiscVarType), intent(in) :: SrcMiscData
+   type(SeaSt_Interp_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_Interp_CopyMisc'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstMiscData%N3D = SrcMiscData%N3D
-    DstMiscData%N4D = SrcMiscData%N4D
-    DstMiscData%Indx_Lo = SrcMiscData%Indx_Lo
-    DstMiscData%Indx_Hi = SrcMiscData%Indx_Hi
-    DstMiscData%FirstWarn_Clamp = SrcMiscData%FirstWarn_Clamp
- END SUBROUTINE SeaSt_Interp_CopyMisc
+   ErrMsg  = ''
+   DstMiscData%N3D = SrcMiscData%N3D
+   DstMiscData%N4D = SrcMiscData%N4D
+   DstMiscData%Indx_Lo = SrcMiscData%Indx_Lo
+   DstMiscData%Indx_Hi = SrcMiscData%Indx_Hi
+   DstMiscData%FirstWarn_Clamp = SrcMiscData%FirstWarn_Clamp
+end subroutine
 
- SUBROUTINE SeaSt_Interp_DestroyMisc( MiscData, ErrStat, ErrMsg )
-  TYPE(SeaSt_Interp_MiscVarType), INTENT(INOUT) :: MiscData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_Interp_DestroyMisc'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE SeaSt_Interp_DestroyMisc
-
+subroutine SeaSt_Interp_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(SeaSt_Interp_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_Interp_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SeaSt_Interp_PackMisc(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SeaSt_Interp_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_Interp_PackMisc'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! N3D
    call RegPack(Buf, InData%N3D)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! N4D
    call RegPack(Buf, InData%N4D)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Indx_Lo
    call RegPack(Buf, InData%Indx_Lo)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Indx_Hi
    call RegPack(Buf, InData%Indx_Hi)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FirstWarn_Clamp
    call RegPack(Buf, InData%FirstWarn_Clamp)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -258,74 +210,53 @@ subroutine SeaSt_Interp_UnPackMisc(Buf, OutData)
    type(SeaSt_Interp_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_Interp_UnPackMisc'
    if (Buf%ErrStat /= ErrID_None) return
-   ! N3D
    call RegUnpack(Buf, OutData%N3D)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! N4D
    call RegUnpack(Buf, OutData%N4D)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Indx_Lo
    call RegUnpack(Buf, OutData%Indx_Lo)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Indx_Hi
    call RegUnpack(Buf, OutData%Indx_Hi)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FirstWarn_Clamp
    call RegUnpack(Buf, OutData%FirstWarn_Clamp)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE SeaSt_Interp_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaSt_Interp_ParameterType), INTENT(IN) :: SrcParamData
-   TYPE(SeaSt_Interp_ParameterType), INTENT(INOUT) :: DstParamData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_Interp_CopyParam'
-! 
+
+subroutine SeaSt_Interp_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_Interp_ParameterType), intent(in) :: SrcParamData
+   type(SeaSt_Interp_ParameterType), intent(inout) :: DstParamData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_Interp_CopyParam'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstParamData%n = SrcParamData%n
-    DstParamData%delta = SrcParamData%delta
-    DstParamData%pZero = SrcParamData%pZero
-    DstParamData%Z_Depth = SrcParamData%Z_Depth
- END SUBROUTINE SeaSt_Interp_CopyParam
+   ErrMsg  = ''
+   DstParamData%n = SrcParamData%n
+   DstParamData%delta = SrcParamData%delta
+   DstParamData%pZero = SrcParamData%pZero
+   DstParamData%Z_Depth = SrcParamData%Z_Depth
+end subroutine
 
- SUBROUTINE SeaSt_Interp_DestroyParam( ParamData, ErrStat, ErrMsg )
-  TYPE(SeaSt_Interp_ParameterType), INTENT(INOUT) :: ParamData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_Interp_DestroyParam'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE SeaSt_Interp_DestroyParam
-
+subroutine SeaSt_Interp_DestroyParam(ParamData, ErrStat, ErrMsg)
+   type(SeaSt_Interp_ParameterType), intent(inout) :: ParamData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SeaSt_Interp_DestroyParam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SeaSt_Interp_PackParam(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SeaSt_Interp_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_Interp_PackParam'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! n
    call RegPack(Buf, InData%n)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! delta
    call RegPack(Buf, InData%delta)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pZero
    call RegPack(Buf, InData%pZero)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Z_Depth
    call RegPack(Buf, InData%Z_Depth)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -335,16 +266,12 @@ subroutine SeaSt_Interp_UnPackParam(Buf, OutData)
    type(SeaSt_Interp_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SeaSt_Interp_UnPackParam'
    if (Buf%ErrStat /= ErrID_None) return
-   ! n
    call RegUnpack(Buf, OutData%n)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! delta
    call RegUnpack(Buf, OutData%delta)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pZero
    call RegUnpack(Buf, OutData%pZero)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Z_Depth
    call RegUnpack(Buf, OutData%Z_Depth)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

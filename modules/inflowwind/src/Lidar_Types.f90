@@ -124,66 +124,48 @@ IMPLICIT NONE
   END TYPE Lidar_OutputType
 ! =======================
 CONTAINS
- SUBROUTINE Lidar_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Lidar_InitInputType), INTENT(IN) :: SrcInitInputData
-   TYPE(Lidar_InitInputType), INTENT(INOUT) :: DstInitInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_CopyInitInput'
-! 
+
+subroutine Lidar_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
+   type(Lidar_InitInputType), intent(in) :: SrcInitInputData
+   type(Lidar_InitInputType), intent(inout) :: DstInitInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_CopyInitInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInitInputData%SensorType = SrcInitInputData%SensorType
-    DstInitInputData%Tmax = SrcInitInputData%Tmax
-    DstInitInputData%RotorApexOffsetPos = SrcInitInputData%RotorApexOffsetPos
-    DstInitInputData%HubPosition = SrcInitInputData%HubPosition
-    DstInitInputData%NumPulseGate = SrcInitInputData%NumPulseGate
-    DstInitInputData%LidRadialVel = SrcInitInputData%LidRadialVel
- END SUBROUTINE Lidar_CopyInitInput
+   ErrMsg  = ''
+   DstInitInputData%SensorType = SrcInitInputData%SensorType
+   DstInitInputData%Tmax = SrcInitInputData%Tmax
+   DstInitInputData%RotorApexOffsetPos = SrcInitInputData%RotorApexOffsetPos
+   DstInitInputData%HubPosition = SrcInitInputData%HubPosition
+   DstInitInputData%NumPulseGate = SrcInitInputData%NumPulseGate
+   DstInitInputData%LidRadialVel = SrcInitInputData%LidRadialVel
+end subroutine
 
- SUBROUTINE Lidar_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
-  TYPE(Lidar_InitInputType), INTENT(INOUT) :: InitInputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyInitInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE Lidar_DestroyInitInput
-
+subroutine Lidar_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
+   type(Lidar_InitInputType), intent(inout) :: InitInputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_DestroyInitInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine Lidar_PackInitInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Lidar_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Lidar_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! SensorType
    call RegPack(Buf, InData%SensorType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Tmax
    call RegPack(Buf, InData%Tmax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RotorApexOffsetPos
    call RegPack(Buf, InData%RotorApexOffsetPos)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HubPosition
    call RegPack(Buf, InData%HubPosition)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumPulseGate
    call RegPack(Buf, InData%NumPulseGate)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LidRadialVel
    call RegPack(Buf, InData%LidRadialVel)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -193,64 +175,46 @@ subroutine Lidar_UnPackInitInput(Buf, OutData)
    type(Lidar_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Lidar_UnPackInitInput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! SensorType
    call RegUnpack(Buf, OutData%SensorType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Tmax
    call RegUnpack(Buf, OutData%Tmax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RotorApexOffsetPos
    call RegUnpack(Buf, OutData%RotorApexOffsetPos)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HubPosition
    call RegUnpack(Buf, OutData%HubPosition)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumPulseGate
    call RegUnpack(Buf, OutData%NumPulseGate)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LidRadialVel
    call RegUnpack(Buf, OutData%LidRadialVel)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE Lidar_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Lidar_InitOutputType), INTENT(IN) :: SrcInitOutputData
-   TYPE(Lidar_InitOutputType), INTENT(INOUT) :: DstInitOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_CopyInitOutput'
-! 
+
+subroutine Lidar_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(Lidar_InitOutputType), intent(in) :: SrcInitOutputData
+   type(Lidar_InitOutputType), intent(inout) :: DstInitOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_CopyInitOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInitOutputData%DummyInitOut = SrcInitOutputData%DummyInitOut
- END SUBROUTINE Lidar_CopyInitOutput
+   ErrMsg  = ''
+   DstInitOutputData%DummyInitOut = SrcInitOutputData%DummyInitOut
+end subroutine
 
- SUBROUTINE Lidar_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
-  TYPE(Lidar_InitOutputType), INTENT(INOUT) :: InitOutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyInitOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE Lidar_DestroyInitOutput
-
+subroutine Lidar_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
+   type(Lidar_InitOutputType), intent(inout) :: InitOutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_DestroyInitOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine Lidar_PackInitOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Lidar_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Lidar_PackInitOutput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! DummyInitOut
    call RegPack(Buf, InData%DummyInitOut)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -260,217 +224,187 @@ subroutine Lidar_UnPackInitOutput(Buf, OutData)
    type(Lidar_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Lidar_UnPackInitOutput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! DummyInitOut
    call RegUnpack(Buf, OutData%DummyInitOut)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE Lidar_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Lidar_ParameterType), INTENT(IN) :: SrcParamData
-   TYPE(Lidar_ParameterType), INTENT(INOUT) :: DstParamData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_CopyParam'
-! 
+
+subroutine Lidar_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
+   type(Lidar_ParameterType), intent(in) :: SrcParamData
+   type(Lidar_ParameterType), intent(inout) :: DstParamData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'Lidar_CopyParam'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstParamData%NumPulseGate = SrcParamData%NumPulseGate
-    DstParamData%RotorApexOffsetPos = SrcParamData%RotorApexOffsetPos
-    DstParamData%RayRangeSq = SrcParamData%RayRangeSq
-    DstParamData%SpatialRes = SrcParamData%SpatialRes
-    DstParamData%SensorType = SrcParamData%SensorType
-    DstParamData%WtFnTrunc = SrcParamData%WtFnTrunc
-    DstParamData%PulseRangeOne = SrcParamData%PulseRangeOne
-    DstParamData%DeltaP = SrcParamData%DeltaP
-    DstParamData%DeltaR = SrcParamData%DeltaR
-    DstParamData%r_p = SrcParamData%r_p
-    DstParamData%LidRadialVel = SrcParamData%LidRadialVel
-    DstParamData%DisplacementLidarX = SrcParamData%DisplacementLidarX
-    DstParamData%DisplacementLidarY = SrcParamData%DisplacementLidarY
-    DstParamData%DisplacementLidarZ = SrcParamData%DisplacementLidarZ
-    DstParamData%NumBeam = SrcParamData%NumBeam
-IF (ALLOCATED(SrcParamData%FocalDistanceX)) THEN
-  i1_l = LBOUND(SrcParamData%FocalDistanceX,1)
-  i1_u = UBOUND(SrcParamData%FocalDistanceX,1)
-  IF (.NOT. ALLOCATED(DstParamData%FocalDistanceX)) THEN 
-    ALLOCATE(DstParamData%FocalDistanceX(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%FocalDistanceX.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%FocalDistanceX = SrcParamData%FocalDistanceX
-ENDIF
-IF (ALLOCATED(SrcParamData%FocalDistanceY)) THEN
-  i1_l = LBOUND(SrcParamData%FocalDistanceY,1)
-  i1_u = UBOUND(SrcParamData%FocalDistanceY,1)
-  IF (.NOT. ALLOCATED(DstParamData%FocalDistanceY)) THEN 
-    ALLOCATE(DstParamData%FocalDistanceY(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%FocalDistanceY.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%FocalDistanceY = SrcParamData%FocalDistanceY
-ENDIF
-IF (ALLOCATED(SrcParamData%FocalDistanceZ)) THEN
-  i1_l = LBOUND(SrcParamData%FocalDistanceZ,1)
-  i1_u = UBOUND(SrcParamData%FocalDistanceZ,1)
-  IF (.NOT. ALLOCATED(DstParamData%FocalDistanceZ)) THEN 
-    ALLOCATE(DstParamData%FocalDistanceZ(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%FocalDistanceZ.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%FocalDistanceZ = SrcParamData%FocalDistanceZ
-ENDIF
-IF (ALLOCATED(SrcParamData%MsrPosition)) THEN
-  i1_l = LBOUND(SrcParamData%MsrPosition,1)
-  i1_u = UBOUND(SrcParamData%MsrPosition,1)
-  i2_l = LBOUND(SrcParamData%MsrPosition,2)
-  i2_u = UBOUND(SrcParamData%MsrPosition,2)
-  IF (.NOT. ALLOCATED(DstParamData%MsrPosition)) THEN 
-    ALLOCATE(DstParamData%MsrPosition(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%MsrPosition.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%MsrPosition = SrcParamData%MsrPosition
-ENDIF
-    DstParamData%PulseSpacing = SrcParamData%PulseSpacing
-    DstParamData%URefLid = SrcParamData%URefLid
-    DstParamData%ConsiderHubMotion = SrcParamData%ConsiderHubMotion
-    DstParamData%MeasurementInterval = SrcParamData%MeasurementInterval
-    DstParamData%LidPosition = SrcParamData%LidPosition
- END SUBROUTINE Lidar_CopyParam
+   ErrMsg  = ''
+   DstParamData%NumPulseGate = SrcParamData%NumPulseGate
+   DstParamData%RotorApexOffsetPos = SrcParamData%RotorApexOffsetPos
+   DstParamData%RayRangeSq = SrcParamData%RayRangeSq
+   DstParamData%SpatialRes = SrcParamData%SpatialRes
+   DstParamData%SensorType = SrcParamData%SensorType
+   DstParamData%WtFnTrunc = SrcParamData%WtFnTrunc
+   DstParamData%PulseRangeOne = SrcParamData%PulseRangeOne
+   DstParamData%DeltaP = SrcParamData%DeltaP
+   DstParamData%DeltaR = SrcParamData%DeltaR
+   DstParamData%r_p = SrcParamData%r_p
+   DstParamData%LidRadialVel = SrcParamData%LidRadialVel
+   DstParamData%DisplacementLidarX = SrcParamData%DisplacementLidarX
+   DstParamData%DisplacementLidarY = SrcParamData%DisplacementLidarY
+   DstParamData%DisplacementLidarZ = SrcParamData%DisplacementLidarZ
+   DstParamData%NumBeam = SrcParamData%NumBeam
+   if (allocated(SrcParamData%FocalDistanceX)) then
+      LB(1:1) = lbound(SrcParamData%FocalDistanceX)
+      UB(1:1) = ubound(SrcParamData%FocalDistanceX)
+      if (.not. allocated(DstParamData%FocalDistanceX)) then
+         allocate(DstParamData%FocalDistanceX(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%FocalDistanceX.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%FocalDistanceX = SrcParamData%FocalDistanceX
+   else if (allocated(DstParamData%FocalDistanceX)) then
+      deallocate(DstParamData%FocalDistanceX)
+   end if
+   if (allocated(SrcParamData%FocalDistanceY)) then
+      LB(1:1) = lbound(SrcParamData%FocalDistanceY)
+      UB(1:1) = ubound(SrcParamData%FocalDistanceY)
+      if (.not. allocated(DstParamData%FocalDistanceY)) then
+         allocate(DstParamData%FocalDistanceY(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%FocalDistanceY.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%FocalDistanceY = SrcParamData%FocalDistanceY
+   else if (allocated(DstParamData%FocalDistanceY)) then
+      deallocate(DstParamData%FocalDistanceY)
+   end if
+   if (allocated(SrcParamData%FocalDistanceZ)) then
+      LB(1:1) = lbound(SrcParamData%FocalDistanceZ)
+      UB(1:1) = ubound(SrcParamData%FocalDistanceZ)
+      if (.not. allocated(DstParamData%FocalDistanceZ)) then
+         allocate(DstParamData%FocalDistanceZ(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%FocalDistanceZ.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%FocalDistanceZ = SrcParamData%FocalDistanceZ
+   else if (allocated(DstParamData%FocalDistanceZ)) then
+      deallocate(DstParamData%FocalDistanceZ)
+   end if
+   if (allocated(SrcParamData%MsrPosition)) then
+      LB(1:2) = lbound(SrcParamData%MsrPosition)
+      UB(1:2) = ubound(SrcParamData%MsrPosition)
+      if (.not. allocated(DstParamData%MsrPosition)) then
+         allocate(DstParamData%MsrPosition(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%MsrPosition.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%MsrPosition = SrcParamData%MsrPosition
+   else if (allocated(DstParamData%MsrPosition)) then
+      deallocate(DstParamData%MsrPosition)
+   end if
+   DstParamData%PulseSpacing = SrcParamData%PulseSpacing
+   DstParamData%URefLid = SrcParamData%URefLid
+   DstParamData%ConsiderHubMotion = SrcParamData%ConsiderHubMotion
+   DstParamData%MeasurementInterval = SrcParamData%MeasurementInterval
+   DstParamData%LidPosition = SrcParamData%LidPosition
+end subroutine
 
- SUBROUTINE Lidar_DestroyParam( ParamData, ErrStat, ErrMsg )
-  TYPE(Lidar_ParameterType), INTENT(INOUT) :: ParamData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyParam'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(ParamData%FocalDistanceX)) THEN
-  DEALLOCATE(ParamData%FocalDistanceX)
-ENDIF
-IF (ALLOCATED(ParamData%FocalDistanceY)) THEN
-  DEALLOCATE(ParamData%FocalDistanceY)
-ENDIF
-IF (ALLOCATED(ParamData%FocalDistanceZ)) THEN
-  DEALLOCATE(ParamData%FocalDistanceZ)
-ENDIF
-IF (ALLOCATED(ParamData%MsrPosition)) THEN
-  DEALLOCATE(ParamData%MsrPosition)
-ENDIF
- END SUBROUTINE Lidar_DestroyParam
-
+subroutine Lidar_DestroyParam(ParamData, ErrStat, ErrMsg)
+   type(Lidar_ParameterType), intent(inout) :: ParamData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_DestroyParam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(ParamData%FocalDistanceX)) then
+      deallocate(ParamData%FocalDistanceX)
+   end if
+   if (allocated(ParamData%FocalDistanceY)) then
+      deallocate(ParamData%FocalDistanceY)
+   end if
+   if (allocated(ParamData%FocalDistanceZ)) then
+      deallocate(ParamData%FocalDistanceZ)
+   end if
+   if (allocated(ParamData%MsrPosition)) then
+      deallocate(ParamData%MsrPosition)
+   end if
+end subroutine
 
 subroutine Lidar_PackParam(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Lidar_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Lidar_PackParam'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! NumPulseGate
    call RegPack(Buf, InData%NumPulseGate)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RotorApexOffsetPos
    call RegPack(Buf, InData%RotorApexOffsetPos)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RayRangeSq
    call RegPack(Buf, InData%RayRangeSq)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SpatialRes
    call RegPack(Buf, InData%SpatialRes)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SensorType
    call RegPack(Buf, InData%SensorType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtFnTrunc
    call RegPack(Buf, InData%WtFnTrunc)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PulseRangeOne
    call RegPack(Buf, InData%PulseRangeOne)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DeltaP
    call RegPack(Buf, InData%DeltaP)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DeltaR
    call RegPack(Buf, InData%DeltaR)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! r_p
    call RegPack(Buf, InData%r_p)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LidRadialVel
    call RegPack(Buf, InData%LidRadialVel)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DisplacementLidarX
    call RegPack(Buf, InData%DisplacementLidarX)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DisplacementLidarY
    call RegPack(Buf, InData%DisplacementLidarY)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DisplacementLidarZ
    call RegPack(Buf, InData%DisplacementLidarZ)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumBeam
    call RegPack(Buf, InData%NumBeam)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FocalDistanceX
    call RegPack(Buf, allocated(InData%FocalDistanceX))
    if (allocated(InData%FocalDistanceX)) then
       call RegPackBounds(Buf, 1, lbound(InData%FocalDistanceX), ubound(InData%FocalDistanceX))
       call RegPack(Buf, InData%FocalDistanceX)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FocalDistanceY
    call RegPack(Buf, allocated(InData%FocalDistanceY))
    if (allocated(InData%FocalDistanceY)) then
       call RegPackBounds(Buf, 1, lbound(InData%FocalDistanceY), ubound(InData%FocalDistanceY))
       call RegPack(Buf, InData%FocalDistanceY)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FocalDistanceZ
    call RegPack(Buf, allocated(InData%FocalDistanceZ))
    if (allocated(InData%FocalDistanceZ)) then
       call RegPackBounds(Buf, 1, lbound(InData%FocalDistanceZ), ubound(InData%FocalDistanceZ))
       call RegPack(Buf, InData%FocalDistanceZ)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MsrPosition
    call RegPack(Buf, allocated(InData%MsrPosition))
    if (allocated(InData%MsrPosition)) then
       call RegPackBounds(Buf, 2, lbound(InData%MsrPosition), ubound(InData%MsrPosition))
       call RegPack(Buf, InData%MsrPosition)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PulseSpacing
    call RegPack(Buf, InData%PulseSpacing)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! URefLid
    call RegPack(Buf, InData%URefLid)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ConsiderHubMotion
    call RegPack(Buf, InData%ConsiderHubMotion)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MeasurementInterval
    call RegPack(Buf, InData%MeasurementInterval)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LidPosition
    call RegPack(Buf, InData%LidPosition)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -483,52 +417,36 @@ subroutine Lidar_UnPackParam(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! NumPulseGate
    call RegUnpack(Buf, OutData%NumPulseGate)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RotorApexOffsetPos
    call RegUnpack(Buf, OutData%RotorApexOffsetPos)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RayRangeSq
    call RegUnpack(Buf, OutData%RayRangeSq)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SpatialRes
    call RegUnpack(Buf, OutData%SpatialRes)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SensorType
    call RegUnpack(Buf, OutData%SensorType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtFnTrunc
    call RegUnpack(Buf, OutData%WtFnTrunc)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PulseRangeOne
    call RegUnpack(Buf, OutData%PulseRangeOne)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DeltaP
    call RegUnpack(Buf, OutData%DeltaP)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DeltaR
    call RegUnpack(Buf, OutData%DeltaR)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! r_p
    call RegUnpack(Buf, OutData%r_p)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LidRadialVel
    call RegUnpack(Buf, OutData%LidRadialVel)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DisplacementLidarX
    call RegUnpack(Buf, OutData%DisplacementLidarX)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DisplacementLidarY
    call RegUnpack(Buf, OutData%DisplacementLidarY)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DisplacementLidarZ
    call RegUnpack(Buf, OutData%DisplacementLidarZ)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumBeam
    call RegUnpack(Buf, OutData%NumBeam)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FocalDistanceX
    if (allocated(OutData%FocalDistanceX)) deallocate(OutData%FocalDistanceX)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -543,7 +461,6 @@ subroutine Lidar_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%FocalDistanceX)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! FocalDistanceY
    if (allocated(OutData%FocalDistanceY)) deallocate(OutData%FocalDistanceY)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -558,7 +475,6 @@ subroutine Lidar_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%FocalDistanceY)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! FocalDistanceZ
    if (allocated(OutData%FocalDistanceZ)) deallocate(OutData%FocalDistanceZ)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -573,7 +489,6 @@ subroutine Lidar_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%FocalDistanceZ)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! MsrPosition
    if (allocated(OutData%MsrPosition)) deallocate(OutData%MsrPosition)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -588,61 +503,44 @@ subroutine Lidar_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%MsrPosition)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PulseSpacing
    call RegUnpack(Buf, OutData%PulseSpacing)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! URefLid
    call RegUnpack(Buf, OutData%URefLid)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ConsiderHubMotion
    call RegUnpack(Buf, OutData%ConsiderHubMotion)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MeasurementInterval
    call RegUnpack(Buf, OutData%MeasurementInterval)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LidPosition
    call RegUnpack(Buf, OutData%LidPosition)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE Lidar_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Lidar_ContinuousStateType), INTENT(IN) :: SrcContStateData
-   TYPE(Lidar_ContinuousStateType), INTENT(INOUT) :: DstContStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_CopyContState'
-! 
+
+subroutine Lidar_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
+   type(Lidar_ContinuousStateType), intent(in) :: SrcContStateData
+   type(Lidar_ContinuousStateType), intent(inout) :: DstContStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_CopyContState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstContStateData%DummyContState = SrcContStateData%DummyContState
- END SUBROUTINE Lidar_CopyContState
+   ErrMsg  = ''
+   DstContStateData%DummyContState = SrcContStateData%DummyContState
+end subroutine
 
- SUBROUTINE Lidar_DestroyContState( ContStateData, ErrStat, ErrMsg )
-  TYPE(Lidar_ContinuousStateType), INTENT(INOUT) :: ContStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyContState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE Lidar_DestroyContState
-
+subroutine Lidar_DestroyContState(ContStateData, ErrStat, ErrMsg)
+   type(Lidar_ContinuousStateType), intent(inout) :: ContStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_DestroyContState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine Lidar_PackContState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Lidar_ContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Lidar_PackContState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! DummyContState
    call RegPack(Buf, InData%DummyContState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -652,49 +550,36 @@ subroutine Lidar_UnPackContState(Buf, OutData)
    type(Lidar_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Lidar_UnPackContState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! DummyContState
    call RegUnpack(Buf, OutData%DummyContState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE Lidar_CopyDiscState( SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Lidar_DiscreteStateType), INTENT(IN) :: SrcDiscStateData
-   TYPE(Lidar_DiscreteStateType), INTENT(INOUT) :: DstDiscStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_CopyDiscState'
-! 
+
+subroutine Lidar_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg)
+   type(Lidar_DiscreteStateType), intent(in) :: SrcDiscStateData
+   type(Lidar_DiscreteStateType), intent(inout) :: DstDiscStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_CopyDiscState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstDiscStateData%DummyDiscState = SrcDiscStateData%DummyDiscState
- END SUBROUTINE Lidar_CopyDiscState
+   ErrMsg  = ''
+   DstDiscStateData%DummyDiscState = SrcDiscStateData%DummyDiscState
+end subroutine
 
- SUBROUTINE Lidar_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
-  TYPE(Lidar_DiscreteStateType), INTENT(INOUT) :: DiscStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyDiscState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE Lidar_DestroyDiscState
-
+subroutine Lidar_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
+   type(Lidar_DiscreteStateType), intent(inout) :: DiscStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_DestroyDiscState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine Lidar_PackDiscState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Lidar_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Lidar_PackDiscState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! DummyDiscState
    call RegPack(Buf, InData%DummyDiscState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -704,49 +589,36 @@ subroutine Lidar_UnPackDiscState(Buf, OutData)
    type(Lidar_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Lidar_UnPackDiscState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! DummyDiscState
    call RegUnpack(Buf, OutData%DummyDiscState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE Lidar_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Lidar_ConstraintStateType), INTENT(IN) :: SrcConstrStateData
-   TYPE(Lidar_ConstraintStateType), INTENT(INOUT) :: DstConstrStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_CopyConstrState'
-! 
+
+subroutine Lidar_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
+   type(Lidar_ConstraintStateType), intent(in) :: SrcConstrStateData
+   type(Lidar_ConstraintStateType), intent(inout) :: DstConstrStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_CopyConstrState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstConstrStateData%DummyConstrState = SrcConstrStateData%DummyConstrState
- END SUBROUTINE Lidar_CopyConstrState
+   ErrMsg  = ''
+   DstConstrStateData%DummyConstrState = SrcConstrStateData%DummyConstrState
+end subroutine
 
- SUBROUTINE Lidar_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
-  TYPE(Lidar_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyConstrState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE Lidar_DestroyConstrState
-
+subroutine Lidar_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
+   type(Lidar_ConstraintStateType), intent(inout) :: ConstrStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_DestroyConstrState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine Lidar_PackConstrState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Lidar_ConstraintStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Lidar_PackConstrState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! DummyConstrState
    call RegPack(Buf, InData%DummyConstrState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -756,49 +628,36 @@ subroutine Lidar_UnPackConstrState(Buf, OutData)
    type(Lidar_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Lidar_UnPackConstrState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! DummyConstrState
    call RegUnpack(Buf, OutData%DummyConstrState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE Lidar_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Lidar_OtherStateType), INTENT(IN) :: SrcOtherStateData
-   TYPE(Lidar_OtherStateType), INTENT(INOUT) :: DstOtherStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_CopyOtherState'
-! 
+
+subroutine Lidar_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg)
+   type(Lidar_OtherStateType), intent(in) :: SrcOtherStateData
+   type(Lidar_OtherStateType), intent(inout) :: DstOtherStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_CopyOtherState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstOtherStateData%DummyOtherState = SrcOtherStateData%DummyOtherState
- END SUBROUTINE Lidar_CopyOtherState
+   ErrMsg  = ''
+   DstOtherStateData%DummyOtherState = SrcOtherStateData%DummyOtherState
+end subroutine
 
- SUBROUTINE Lidar_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
-  TYPE(Lidar_OtherStateType), INTENT(INOUT) :: OtherStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyOtherState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE Lidar_DestroyOtherState
-
+subroutine Lidar_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
+   type(Lidar_OtherStateType), intent(inout) :: OtherStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_DestroyOtherState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine Lidar_PackOtherState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Lidar_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Lidar_PackOtherState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! DummyOtherState
    call RegPack(Buf, InData%DummyOtherState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -808,49 +667,36 @@ subroutine Lidar_UnPackOtherState(Buf, OutData)
    type(Lidar_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Lidar_UnPackOtherState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! DummyOtherState
    call RegUnpack(Buf, OutData%DummyOtherState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE Lidar_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Lidar_MiscVarType), INTENT(IN) :: SrcMiscData
-   TYPE(Lidar_MiscVarType), INTENT(INOUT) :: DstMiscData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_CopyMisc'
-! 
+
+subroutine Lidar_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(Lidar_MiscVarType), intent(in) :: SrcMiscData
+   type(Lidar_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_CopyMisc'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstMiscData%DummyMiscVar = SrcMiscData%DummyMiscVar
- END SUBROUTINE Lidar_CopyMisc
+   ErrMsg  = ''
+   DstMiscData%DummyMiscVar = SrcMiscData%DummyMiscVar
+end subroutine
 
- SUBROUTINE Lidar_DestroyMisc( MiscData, ErrStat, ErrMsg )
-  TYPE(Lidar_MiscVarType), INTENT(INOUT) :: MiscData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyMisc'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE Lidar_DestroyMisc
-
+subroutine Lidar_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(Lidar_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine Lidar_PackMisc(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Lidar_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Lidar_PackMisc'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! DummyMiscVar
    call RegPack(Buf, InData%DummyMiscVar)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -860,65 +706,48 @@ subroutine Lidar_UnPackMisc(Buf, OutData)
    type(Lidar_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Lidar_UnPackMisc'
    if (Buf%ErrStat /= ErrID_None) return
-   ! DummyMiscVar
    call RegUnpack(Buf, OutData%DummyMiscVar)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE Lidar_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Lidar_InputType), INTENT(IN) :: SrcInputData
-   TYPE(Lidar_InputType), INTENT(INOUT) :: DstInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_CopyInput'
-! 
+
+subroutine Lidar_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
+   type(Lidar_InputType), intent(in) :: SrcInputData
+   type(Lidar_InputType), intent(inout) :: DstInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_CopyInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInputData%PulseLidEl = SrcInputData%PulseLidEl
-    DstInputData%PulseLidAz = SrcInputData%PulseLidAz
-    DstInputData%HubDisplacementX = SrcInputData%HubDisplacementX
-    DstInputData%HubDisplacementY = SrcInputData%HubDisplacementY
-    DstInputData%HubDisplacementZ = SrcInputData%HubDisplacementZ
- END SUBROUTINE Lidar_CopyInput
+   ErrMsg  = ''
+   DstInputData%PulseLidEl = SrcInputData%PulseLidEl
+   DstInputData%PulseLidAz = SrcInputData%PulseLidAz
+   DstInputData%HubDisplacementX = SrcInputData%HubDisplacementX
+   DstInputData%HubDisplacementY = SrcInputData%HubDisplacementY
+   DstInputData%HubDisplacementZ = SrcInputData%HubDisplacementZ
+end subroutine
 
- SUBROUTINE Lidar_DestroyInput( InputData, ErrStat, ErrMsg )
-  TYPE(Lidar_InputType), INTENT(INOUT) :: InputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE Lidar_DestroyInput
-
+subroutine Lidar_DestroyInput(InputData, ErrStat, ErrMsg)
+   type(Lidar_InputType), intent(inout) :: InputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_DestroyInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine Lidar_PackInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Lidar_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Lidar_PackInput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! PulseLidEl
    call RegPack(Buf, InData%PulseLidEl)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PulseLidAz
    call RegPack(Buf, InData%PulseLidAz)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HubDisplacementX
    call RegPack(Buf, InData%HubDisplacementX)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HubDisplacementY
    call RegPack(Buf, InData%HubDisplacementY)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HubDisplacementZ
    call RegPack(Buf, InData%HubDisplacementZ)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -928,164 +757,154 @@ subroutine Lidar_UnPackInput(Buf, OutData)
    type(Lidar_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Lidar_UnPackInput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! PulseLidEl
    call RegUnpack(Buf, OutData%PulseLidEl)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PulseLidAz
    call RegUnpack(Buf, OutData%PulseLidAz)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HubDisplacementX
    call RegUnpack(Buf, OutData%HubDisplacementX)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HubDisplacementY
    call RegUnpack(Buf, OutData%HubDisplacementY)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HubDisplacementZ
    call RegUnpack(Buf, OutData%HubDisplacementZ)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE Lidar_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Lidar_OutputType), INTENT(IN) :: SrcOutputData
-   TYPE(Lidar_OutputType), INTENT(INOUT) :: DstOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Lidar_CopyOutput'
-! 
+
+subroutine Lidar_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(Lidar_OutputType), intent(in) :: SrcOutputData
+   type(Lidar_OutputType), intent(inout) :: DstOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'Lidar_CopyOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcOutputData%LidSpeed)) THEN
-  i1_l = LBOUND(SrcOutputData%LidSpeed,1)
-  i1_u = UBOUND(SrcOutputData%LidSpeed,1)
-  IF (.NOT. ALLOCATED(DstOutputData%LidSpeed)) THEN 
-    ALLOCATE(DstOutputData%LidSpeed(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%LidSpeed.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstOutputData%LidSpeed = SrcOutputData%LidSpeed
-ENDIF
-IF (ALLOCATED(SrcOutputData%WtTrunc)) THEN
-  i1_l = LBOUND(SrcOutputData%WtTrunc,1)
-  i1_u = UBOUND(SrcOutputData%WtTrunc,1)
-  IF (.NOT. ALLOCATED(DstOutputData%WtTrunc)) THEN 
-    ALLOCATE(DstOutputData%WtTrunc(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WtTrunc.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstOutputData%WtTrunc = SrcOutputData%WtTrunc
-ENDIF
-IF (ALLOCATED(SrcOutputData%MsrPositionsX)) THEN
-  i1_l = LBOUND(SrcOutputData%MsrPositionsX,1)
-  i1_u = UBOUND(SrcOutputData%MsrPositionsX,1)
-  IF (.NOT. ALLOCATED(DstOutputData%MsrPositionsX)) THEN 
-    ALLOCATE(DstOutputData%MsrPositionsX(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%MsrPositionsX.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstOutputData%MsrPositionsX = SrcOutputData%MsrPositionsX
-ENDIF
-IF (ALLOCATED(SrcOutputData%MsrPositionsY)) THEN
-  i1_l = LBOUND(SrcOutputData%MsrPositionsY,1)
-  i1_u = UBOUND(SrcOutputData%MsrPositionsY,1)
-  IF (.NOT. ALLOCATED(DstOutputData%MsrPositionsY)) THEN 
-    ALLOCATE(DstOutputData%MsrPositionsY(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%MsrPositionsY.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstOutputData%MsrPositionsY = SrcOutputData%MsrPositionsY
-ENDIF
-IF (ALLOCATED(SrcOutputData%MsrPositionsZ)) THEN
-  i1_l = LBOUND(SrcOutputData%MsrPositionsZ,1)
-  i1_u = UBOUND(SrcOutputData%MsrPositionsZ,1)
-  IF (.NOT. ALLOCATED(DstOutputData%MsrPositionsZ)) THEN 
-    ALLOCATE(DstOutputData%MsrPositionsZ(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%MsrPositionsZ.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstOutputData%MsrPositionsZ = SrcOutputData%MsrPositionsZ
-ENDIF
- END SUBROUTINE Lidar_CopyOutput
+   ErrMsg  = ''
+   if (allocated(SrcOutputData%LidSpeed)) then
+      LB(1:1) = lbound(SrcOutputData%LidSpeed)
+      UB(1:1) = ubound(SrcOutputData%LidSpeed)
+      if (.not. allocated(DstOutputData%LidSpeed)) then
+         allocate(DstOutputData%LidSpeed(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%LidSpeed.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%LidSpeed = SrcOutputData%LidSpeed
+   else if (allocated(DstOutputData%LidSpeed)) then
+      deallocate(DstOutputData%LidSpeed)
+   end if
+   if (allocated(SrcOutputData%WtTrunc)) then
+      LB(1:1) = lbound(SrcOutputData%WtTrunc)
+      UB(1:1) = ubound(SrcOutputData%WtTrunc)
+      if (.not. allocated(DstOutputData%WtTrunc)) then
+         allocate(DstOutputData%WtTrunc(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WtTrunc.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%WtTrunc = SrcOutputData%WtTrunc
+   else if (allocated(DstOutputData%WtTrunc)) then
+      deallocate(DstOutputData%WtTrunc)
+   end if
+   if (allocated(SrcOutputData%MsrPositionsX)) then
+      LB(1:1) = lbound(SrcOutputData%MsrPositionsX)
+      UB(1:1) = ubound(SrcOutputData%MsrPositionsX)
+      if (.not. allocated(DstOutputData%MsrPositionsX)) then
+         allocate(DstOutputData%MsrPositionsX(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%MsrPositionsX.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%MsrPositionsX = SrcOutputData%MsrPositionsX
+   else if (allocated(DstOutputData%MsrPositionsX)) then
+      deallocate(DstOutputData%MsrPositionsX)
+   end if
+   if (allocated(SrcOutputData%MsrPositionsY)) then
+      LB(1:1) = lbound(SrcOutputData%MsrPositionsY)
+      UB(1:1) = ubound(SrcOutputData%MsrPositionsY)
+      if (.not. allocated(DstOutputData%MsrPositionsY)) then
+         allocate(DstOutputData%MsrPositionsY(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%MsrPositionsY.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%MsrPositionsY = SrcOutputData%MsrPositionsY
+   else if (allocated(DstOutputData%MsrPositionsY)) then
+      deallocate(DstOutputData%MsrPositionsY)
+   end if
+   if (allocated(SrcOutputData%MsrPositionsZ)) then
+      LB(1:1) = lbound(SrcOutputData%MsrPositionsZ)
+      UB(1:1) = ubound(SrcOutputData%MsrPositionsZ)
+      if (.not. allocated(DstOutputData%MsrPositionsZ)) then
+         allocate(DstOutputData%MsrPositionsZ(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%MsrPositionsZ.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%MsrPositionsZ = SrcOutputData%MsrPositionsZ
+   else if (allocated(DstOutputData%MsrPositionsZ)) then
+      deallocate(DstOutputData%MsrPositionsZ)
+   end if
+end subroutine
 
- SUBROUTINE Lidar_DestroyOutput( OutputData, ErrStat, ErrMsg )
-  TYPE(Lidar_OutputType), INTENT(INOUT) :: OutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Lidar_DestroyOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(OutputData%LidSpeed)) THEN
-  DEALLOCATE(OutputData%LidSpeed)
-ENDIF
-IF (ALLOCATED(OutputData%WtTrunc)) THEN
-  DEALLOCATE(OutputData%WtTrunc)
-ENDIF
-IF (ALLOCATED(OutputData%MsrPositionsX)) THEN
-  DEALLOCATE(OutputData%MsrPositionsX)
-ENDIF
-IF (ALLOCATED(OutputData%MsrPositionsY)) THEN
-  DEALLOCATE(OutputData%MsrPositionsY)
-ENDIF
-IF (ALLOCATED(OutputData%MsrPositionsZ)) THEN
-  DEALLOCATE(OutputData%MsrPositionsZ)
-ENDIF
- END SUBROUTINE Lidar_DestroyOutput
-
+subroutine Lidar_DestroyOutput(OutputData, ErrStat, ErrMsg)
+   type(Lidar_OutputType), intent(inout) :: OutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Lidar_DestroyOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(OutputData%LidSpeed)) then
+      deallocate(OutputData%LidSpeed)
+   end if
+   if (allocated(OutputData%WtTrunc)) then
+      deallocate(OutputData%WtTrunc)
+   end if
+   if (allocated(OutputData%MsrPositionsX)) then
+      deallocate(OutputData%MsrPositionsX)
+   end if
+   if (allocated(OutputData%MsrPositionsY)) then
+      deallocate(OutputData%MsrPositionsY)
+   end if
+   if (allocated(OutputData%MsrPositionsZ)) then
+      deallocate(OutputData%MsrPositionsZ)
+   end if
+end subroutine
 
 subroutine Lidar_PackOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Lidar_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Lidar_PackOutput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! LidSpeed
    call RegPack(Buf, allocated(InData%LidSpeed))
    if (allocated(InData%LidSpeed)) then
       call RegPackBounds(Buf, 1, lbound(InData%LidSpeed), ubound(InData%LidSpeed))
       call RegPack(Buf, InData%LidSpeed)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtTrunc
    call RegPack(Buf, allocated(InData%WtTrunc))
    if (allocated(InData%WtTrunc)) then
       call RegPackBounds(Buf, 1, lbound(InData%WtTrunc), ubound(InData%WtTrunc))
       call RegPack(Buf, InData%WtTrunc)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MsrPositionsX
    call RegPack(Buf, allocated(InData%MsrPositionsX))
    if (allocated(InData%MsrPositionsX)) then
       call RegPackBounds(Buf, 1, lbound(InData%MsrPositionsX), ubound(InData%MsrPositionsX))
       call RegPack(Buf, InData%MsrPositionsX)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MsrPositionsY
    call RegPack(Buf, allocated(InData%MsrPositionsY))
    if (allocated(InData%MsrPositionsY)) then
       call RegPackBounds(Buf, 1, lbound(InData%MsrPositionsY), ubound(InData%MsrPositionsY))
       call RegPack(Buf, InData%MsrPositionsY)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MsrPositionsZ
    call RegPack(Buf, allocated(InData%MsrPositionsZ))
    if (allocated(InData%MsrPositionsZ)) then
       call RegPackBounds(Buf, 1, lbound(InData%MsrPositionsZ), ubound(InData%MsrPositionsZ))
@@ -1102,7 +921,6 @@ subroutine Lidar_UnPackOutput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! LidSpeed
    if (allocated(OutData%LidSpeed)) deallocate(OutData%LidSpeed)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1117,7 +935,6 @@ subroutine Lidar_UnPackOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%LidSpeed)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WtTrunc
    if (allocated(OutData%WtTrunc)) deallocate(OutData%WtTrunc)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1132,7 +949,6 @@ subroutine Lidar_UnPackOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%WtTrunc)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! MsrPositionsX
    if (allocated(OutData%MsrPositionsX)) deallocate(OutData%MsrPositionsX)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1147,7 +963,6 @@ subroutine Lidar_UnPackOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%MsrPositionsX)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! MsrPositionsY
    if (allocated(OutData%MsrPositionsY)) deallocate(OutData%MsrPositionsY)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1162,7 +977,6 @@ subroutine Lidar_UnPackOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%MsrPositionsY)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! MsrPositionsZ
    if (allocated(OutData%MsrPositionsZ)) deallocate(OutData%MsrPositionsZ)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return

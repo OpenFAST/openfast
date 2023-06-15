@@ -198,85 +198,63 @@ IMPLICIT NONE
   END TYPE AllData
 ! =======================
 CONTAINS
- SUBROUTINE AD_Dvr_CopyDvr_Case( SrcDvr_CaseData, DstDvr_CaseData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Dvr_Case), INTENT(IN) :: SrcDvr_CaseData
-   TYPE(Dvr_Case), INTENT(INOUT) :: DstDvr_CaseData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AD_Dvr_CopyDvr_Case'
-! 
+
+subroutine AD_Dvr_CopyDvr_Case(SrcDvr_CaseData, DstDvr_CaseData, CtrlCode, ErrStat, ErrMsg)
+   type(Dvr_Case), intent(in) :: SrcDvr_CaseData
+   type(Dvr_Case), intent(inout) :: DstDvr_CaseData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_Dvr_CopyDvr_Case'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstDvr_CaseData%HWindSpeed = SrcDvr_CaseData%HWindSpeed
-    DstDvr_CaseData%PLExp = SrcDvr_CaseData%PLExp
-    DstDvr_CaseData%rotSpeed = SrcDvr_CaseData%rotSpeed
-    DstDvr_CaseData%bldPitch = SrcDvr_CaseData%bldPitch
-    DstDvr_CaseData%nacYaw = SrcDvr_CaseData%nacYaw
-    DstDvr_CaseData%tMax = SrcDvr_CaseData%tMax
-    DstDvr_CaseData%dT = SrcDvr_CaseData%dT
-    DstDvr_CaseData%numSteps = SrcDvr_CaseData%numSteps
-    DstDvr_CaseData%DOF = SrcDvr_CaseData%DOF
-    DstDvr_CaseData%amplitude = SrcDvr_CaseData%amplitude
-    DstDvr_CaseData%frequency = SrcDvr_CaseData%frequency
- END SUBROUTINE AD_Dvr_CopyDvr_Case
+   ErrMsg  = ''
+   DstDvr_CaseData%HWindSpeed = SrcDvr_CaseData%HWindSpeed
+   DstDvr_CaseData%PLExp = SrcDvr_CaseData%PLExp
+   DstDvr_CaseData%rotSpeed = SrcDvr_CaseData%rotSpeed
+   DstDvr_CaseData%bldPitch = SrcDvr_CaseData%bldPitch
+   DstDvr_CaseData%nacYaw = SrcDvr_CaseData%nacYaw
+   DstDvr_CaseData%tMax = SrcDvr_CaseData%tMax
+   DstDvr_CaseData%dT = SrcDvr_CaseData%dT
+   DstDvr_CaseData%numSteps = SrcDvr_CaseData%numSteps
+   DstDvr_CaseData%DOF = SrcDvr_CaseData%DOF
+   DstDvr_CaseData%amplitude = SrcDvr_CaseData%amplitude
+   DstDvr_CaseData%frequency = SrcDvr_CaseData%frequency
+end subroutine
 
- SUBROUTINE AD_Dvr_DestroyDvr_Case( Dvr_CaseData, ErrStat, ErrMsg )
-  TYPE(Dvr_Case), INTENT(INOUT) :: Dvr_CaseData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyDvr_Case'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE AD_Dvr_DestroyDvr_Case
-
+subroutine AD_Dvr_DestroyDvr_Case(Dvr_CaseData, ErrStat, ErrMsg)
+   type(Dvr_Case), intent(inout) :: Dvr_CaseData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_Dvr_DestroyDvr_Case'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine AD_Dvr_PackDvr_Case(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Dvr_Case), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AD_Dvr_PackDvr_Case'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! HWindSpeed
    call RegPack(Buf, InData%HWindSpeed)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PLExp
    call RegPack(Buf, InData%PLExp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rotSpeed
    call RegPack(Buf, InData%rotSpeed)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bldPitch
    call RegPack(Buf, InData%bldPitch)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nacYaw
    call RegPack(Buf, InData%nacYaw)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! tMax
    call RegPack(Buf, InData%tMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dT
    call RegPack(Buf, InData%dT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! numSteps
    call RegPack(Buf, InData%numSteps)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DOF
    call RegPack(Buf, InData%DOF)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! amplitude
    call RegPack(Buf, InData%amplitude)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! frequency
    call RegPack(Buf, InData%frequency)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -286,89 +264,62 @@ subroutine AD_Dvr_UnPackDvr_Case(Buf, OutData)
    type(Dvr_Case), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AD_Dvr_UnPackDvr_Case'
    if (Buf%ErrStat /= ErrID_None) return
-   ! HWindSpeed
    call RegUnpack(Buf, OutData%HWindSpeed)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PLExp
    call RegUnpack(Buf, OutData%PLExp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rotSpeed
    call RegUnpack(Buf, OutData%rotSpeed)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bldPitch
    call RegUnpack(Buf, OutData%bldPitch)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nacYaw
    call RegUnpack(Buf, OutData%nacYaw)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! tMax
    call RegUnpack(Buf, OutData%tMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dT
    call RegUnpack(Buf, OutData%dT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! numSteps
    call RegUnpack(Buf, OutData%numSteps)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DOF
    call RegUnpack(Buf, OutData%DOF)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! amplitude
    call RegUnpack(Buf, OutData%amplitude)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! frequency
    call RegUnpack(Buf, OutData%frequency)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE AD_Dvr_CopyDvrVTK_SurfaceType( SrcDvrVTK_SurfaceTypeData, DstDvrVTK_SurfaceTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(DvrVTK_SurfaceType), INTENT(IN) :: SrcDvrVTK_SurfaceTypeData
-   TYPE(DvrVTK_SurfaceType), INTENT(INOUT) :: DstDvrVTK_SurfaceTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AD_Dvr_CopyDvrVTK_SurfaceType'
-! 
+
+subroutine AD_Dvr_CopyDvrVTK_SurfaceType(SrcDvrVTK_SurfaceTypeData, DstDvrVTK_SurfaceTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(DvrVTK_SurfaceType), intent(in) :: SrcDvrVTK_SurfaceTypeData
+   type(DvrVTK_SurfaceType), intent(inout) :: DstDvrVTK_SurfaceTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_Dvr_CopyDvrVTK_SurfaceType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstDvrVTK_SurfaceTypeData%NumSectors = SrcDvrVTK_SurfaceTypeData%NumSectors
-    DstDvrVTK_SurfaceTypeData%NacelleBox = SrcDvrVTK_SurfaceTypeData%NacelleBox
-    DstDvrVTK_SurfaceTypeData%BaseBox = SrcDvrVTK_SurfaceTypeData%BaseBox
- END SUBROUTINE AD_Dvr_CopyDvrVTK_SurfaceType
+   ErrMsg  = ''
+   DstDvrVTK_SurfaceTypeData%NumSectors = SrcDvrVTK_SurfaceTypeData%NumSectors
+   DstDvrVTK_SurfaceTypeData%NacelleBox = SrcDvrVTK_SurfaceTypeData%NacelleBox
+   DstDvrVTK_SurfaceTypeData%BaseBox = SrcDvrVTK_SurfaceTypeData%BaseBox
+end subroutine
 
- SUBROUTINE AD_Dvr_DestroyDvrVTK_SurfaceType( DvrVTK_SurfaceTypeData, ErrStat, ErrMsg )
-  TYPE(DvrVTK_SurfaceType), INTENT(INOUT) :: DvrVTK_SurfaceTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyDvrVTK_SurfaceType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE AD_Dvr_DestroyDvrVTK_SurfaceType
-
+subroutine AD_Dvr_DestroyDvrVTK_SurfaceType(DvrVTK_SurfaceTypeData, ErrStat, ErrMsg)
+   type(DvrVTK_SurfaceType), intent(inout) :: DvrVTK_SurfaceTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_Dvr_DestroyDvrVTK_SurfaceType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine AD_Dvr_PackDvrVTK_SurfaceType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(DvrVTK_SurfaceType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AD_Dvr_PackDvrVTK_SurfaceType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! NumSectors
    call RegPack(Buf, InData%NumSectors)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NacelleBox
    call RegPack(Buf, InData%NacelleBox)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BaseBox
    call RegPack(Buf, InData%BaseBox)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -378,175 +329,174 @@ subroutine AD_Dvr_UnPackDvrVTK_SurfaceType(Buf, OutData)
    type(DvrVTK_SurfaceType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AD_Dvr_UnPackDvrVTK_SurfaceType'
    if (Buf%ErrStat /= ErrID_None) return
-   ! NumSectors
    call RegUnpack(Buf, OutData%NumSectors)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NacelleBox
    call RegUnpack(Buf, OutData%NacelleBox)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BaseBox
    call RegUnpack(Buf, OutData%BaseBox)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE AD_Dvr_CopyDvr_Outputs( SrcDvr_OutputsData, DstDvr_OutputsData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Dvr_Outputs), INTENT(IN) :: SrcDvr_OutputsData
-   TYPE(Dvr_Outputs), INTENT(INOUT) :: DstDvr_OutputsData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AD_Dvr_CopyDvr_Outputs'
-! 
+
+subroutine AD_Dvr_CopyDvr_Outputs(SrcDvr_OutputsData, DstDvr_OutputsData, CtrlCode, ErrStat, ErrMsg)
+   type(Dvr_Outputs), intent(in) :: SrcDvr_OutputsData
+   type(Dvr_Outputs), intent(inout) :: DstDvr_OutputsData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1, i2, i3
+   integer(IntKi)                 :: LB(3), UB(3)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_Dvr_CopyDvr_Outputs'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL NWTC_Library_Copyprogdesc( SrcDvr_OutputsData%AD_ver, DstDvr_OutputsData%AD_ver, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcDvr_OutputsData%unOutFile)) THEN
-  i1_l = LBOUND(SrcDvr_OutputsData%unOutFile,1)
-  i1_u = UBOUND(SrcDvr_OutputsData%unOutFile,1)
-  IF (.NOT. ALLOCATED(DstDvr_OutputsData%unOutFile)) THEN 
-    ALLOCATE(DstDvr_OutputsData%unOutFile(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_OutputsData%unOutFile.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstDvr_OutputsData%unOutFile = SrcDvr_OutputsData%unOutFile
-ENDIF
-    DstDvr_OutputsData%ActualChanLen = SrcDvr_OutputsData%ActualChanLen
-    DstDvr_OutputsData%nDvrOutputs = SrcDvr_OutputsData%nDvrOutputs
-    DstDvr_OutputsData%Fmt_t = SrcDvr_OutputsData%Fmt_t
-    DstDvr_OutputsData%Fmt_a = SrcDvr_OutputsData%Fmt_a
-    DstDvr_OutputsData%delim = SrcDvr_OutputsData%delim
-    DstDvr_OutputsData%outFmt = SrcDvr_OutputsData%outFmt
-    DstDvr_OutputsData%fileFmt = SrcDvr_OutputsData%fileFmt
-    DstDvr_OutputsData%wrVTK = SrcDvr_OutputsData%wrVTK
-    DstDvr_OutputsData%WrVTK_Type = SrcDvr_OutputsData%WrVTK_Type
-    DstDvr_OutputsData%Root = SrcDvr_OutputsData%Root
-    DstDvr_OutputsData%VTK_OutFileRoot = SrcDvr_OutputsData%VTK_OutFileRoot
-IF (ALLOCATED(SrcDvr_OutputsData%WriteOutputHdr)) THEN
-  i1_l = LBOUND(SrcDvr_OutputsData%WriteOutputHdr,1)
-  i1_u = UBOUND(SrcDvr_OutputsData%WriteOutputHdr,1)
-  IF (.NOT. ALLOCATED(DstDvr_OutputsData%WriteOutputHdr)) THEN 
-    ALLOCATE(DstDvr_OutputsData%WriteOutputHdr(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_OutputsData%WriteOutputHdr.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstDvr_OutputsData%WriteOutputHdr = SrcDvr_OutputsData%WriteOutputHdr
-ENDIF
-IF (ALLOCATED(SrcDvr_OutputsData%WriteOutputUnt)) THEN
-  i1_l = LBOUND(SrcDvr_OutputsData%WriteOutputUnt,1)
-  i1_u = UBOUND(SrcDvr_OutputsData%WriteOutputUnt,1)
-  IF (.NOT. ALLOCATED(DstDvr_OutputsData%WriteOutputUnt)) THEN 
-    ALLOCATE(DstDvr_OutputsData%WriteOutputUnt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_OutputsData%WriteOutputUnt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstDvr_OutputsData%WriteOutputUnt = SrcDvr_OutputsData%WriteOutputUnt
-ENDIF
-IF (ALLOCATED(SrcDvr_OutputsData%storage)) THEN
-  i1_l = LBOUND(SrcDvr_OutputsData%storage,1)
-  i1_u = UBOUND(SrcDvr_OutputsData%storage,1)
-  i2_l = LBOUND(SrcDvr_OutputsData%storage,2)
-  i2_u = UBOUND(SrcDvr_OutputsData%storage,2)
-  i3_l = LBOUND(SrcDvr_OutputsData%storage,3)
-  i3_u = UBOUND(SrcDvr_OutputsData%storage,3)
-  IF (.NOT. ALLOCATED(DstDvr_OutputsData%storage)) THEN 
-    ALLOCATE(DstDvr_OutputsData%storage(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_OutputsData%storage.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstDvr_OutputsData%storage = SrcDvr_OutputsData%storage
-ENDIF
-IF (ALLOCATED(SrcDvr_OutputsData%outLine)) THEN
-  i1_l = LBOUND(SrcDvr_OutputsData%outLine,1)
-  i1_u = UBOUND(SrcDvr_OutputsData%outLine,1)
-  IF (.NOT. ALLOCATED(DstDvr_OutputsData%outLine)) THEN 
-    ALLOCATE(DstDvr_OutputsData%outLine(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_OutputsData%outLine.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstDvr_OutputsData%outLine = SrcDvr_OutputsData%outLine
-ENDIF
-IF (ALLOCATED(SrcDvr_OutputsData%VTK_surface)) THEN
-  i1_l = LBOUND(SrcDvr_OutputsData%VTK_surface,1)
-  i1_u = UBOUND(SrcDvr_OutputsData%VTK_surface,1)
-  IF (.NOT. ALLOCATED(DstDvr_OutputsData%VTK_surface)) THEN 
-    ALLOCATE(DstDvr_OutputsData%VTK_surface(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_OutputsData%VTK_surface.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcDvr_OutputsData%VTK_surface,1), UBOUND(SrcDvr_OutputsData%VTK_surface,1)
-      CALL AD_Dvr_Copydvrvtk_surfacetype( SrcDvr_OutputsData%VTK_surface(i1), DstDvr_OutputsData%VTK_surface(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-    DstDvr_OutputsData%VTK_tWidth = SrcDvr_OutputsData%VTK_tWidth
-    DstDvr_OutputsData%n_VTKTime = SrcDvr_OutputsData%n_VTKTime
-    DstDvr_OutputsData%VTKHubRad = SrcDvr_OutputsData%VTKHubRad
-    DstDvr_OutputsData%VTKNacDim = SrcDvr_OutputsData%VTKNacDim
-    DstDvr_OutputsData%VTKRefPoint = SrcDvr_OutputsData%VTKRefPoint
-    DstDvr_OutputsData%DT_Outs = SrcDvr_OutputsData%DT_Outs
-    DstDvr_OutputsData%n_DT_Out = SrcDvr_OutputsData%n_DT_Out
- END SUBROUTINE AD_Dvr_CopyDvr_Outputs
+   ErrMsg  = ''
+   call NWTC_Library_CopyProgDesc(SrcDvr_OutputsData%AD_ver, DstDvr_OutputsData%AD_ver, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcDvr_OutputsData%unOutFile)) then
+      LB(1:1) = lbound(SrcDvr_OutputsData%unOutFile)
+      UB(1:1) = ubound(SrcDvr_OutputsData%unOutFile)
+      if (.not. allocated(DstDvr_OutputsData%unOutFile)) then
+         allocate(DstDvr_OutputsData%unOutFile(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_OutputsData%unOutFile.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstDvr_OutputsData%unOutFile = SrcDvr_OutputsData%unOutFile
+   else if (allocated(DstDvr_OutputsData%unOutFile)) then
+      deallocate(DstDvr_OutputsData%unOutFile)
+   end if
+   DstDvr_OutputsData%ActualChanLen = SrcDvr_OutputsData%ActualChanLen
+   DstDvr_OutputsData%nDvrOutputs = SrcDvr_OutputsData%nDvrOutputs
+   DstDvr_OutputsData%Fmt_t = SrcDvr_OutputsData%Fmt_t
+   DstDvr_OutputsData%Fmt_a = SrcDvr_OutputsData%Fmt_a
+   DstDvr_OutputsData%delim = SrcDvr_OutputsData%delim
+   DstDvr_OutputsData%outFmt = SrcDvr_OutputsData%outFmt
+   DstDvr_OutputsData%fileFmt = SrcDvr_OutputsData%fileFmt
+   DstDvr_OutputsData%wrVTK = SrcDvr_OutputsData%wrVTK
+   DstDvr_OutputsData%WrVTK_Type = SrcDvr_OutputsData%WrVTK_Type
+   DstDvr_OutputsData%Root = SrcDvr_OutputsData%Root
+   DstDvr_OutputsData%VTK_OutFileRoot = SrcDvr_OutputsData%VTK_OutFileRoot
+   if (allocated(SrcDvr_OutputsData%WriteOutputHdr)) then
+      LB(1:1) = lbound(SrcDvr_OutputsData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcDvr_OutputsData%WriteOutputHdr)
+      if (.not. allocated(DstDvr_OutputsData%WriteOutputHdr)) then
+         allocate(DstDvr_OutputsData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_OutputsData%WriteOutputHdr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstDvr_OutputsData%WriteOutputHdr = SrcDvr_OutputsData%WriteOutputHdr
+   else if (allocated(DstDvr_OutputsData%WriteOutputHdr)) then
+      deallocate(DstDvr_OutputsData%WriteOutputHdr)
+   end if
+   if (allocated(SrcDvr_OutputsData%WriteOutputUnt)) then
+      LB(1:1) = lbound(SrcDvr_OutputsData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcDvr_OutputsData%WriteOutputUnt)
+      if (.not. allocated(DstDvr_OutputsData%WriteOutputUnt)) then
+         allocate(DstDvr_OutputsData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_OutputsData%WriteOutputUnt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstDvr_OutputsData%WriteOutputUnt = SrcDvr_OutputsData%WriteOutputUnt
+   else if (allocated(DstDvr_OutputsData%WriteOutputUnt)) then
+      deallocate(DstDvr_OutputsData%WriteOutputUnt)
+   end if
+   if (allocated(SrcDvr_OutputsData%storage)) then
+      LB(1:3) = lbound(SrcDvr_OutputsData%storage)
+      UB(1:3) = ubound(SrcDvr_OutputsData%storage)
+      if (.not. allocated(DstDvr_OutputsData%storage)) then
+         allocate(DstDvr_OutputsData%storage(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_OutputsData%storage.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstDvr_OutputsData%storage = SrcDvr_OutputsData%storage
+   else if (allocated(DstDvr_OutputsData%storage)) then
+      deallocate(DstDvr_OutputsData%storage)
+   end if
+   if (allocated(SrcDvr_OutputsData%outLine)) then
+      LB(1:1) = lbound(SrcDvr_OutputsData%outLine)
+      UB(1:1) = ubound(SrcDvr_OutputsData%outLine)
+      if (.not. allocated(DstDvr_OutputsData%outLine)) then
+         allocate(DstDvr_OutputsData%outLine(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_OutputsData%outLine.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstDvr_OutputsData%outLine = SrcDvr_OutputsData%outLine
+   else if (allocated(DstDvr_OutputsData%outLine)) then
+      deallocate(DstDvr_OutputsData%outLine)
+   end if
+   if (allocated(SrcDvr_OutputsData%VTK_surface)) then
+      LB(1:1) = lbound(SrcDvr_OutputsData%VTK_surface)
+      UB(1:1) = ubound(SrcDvr_OutputsData%VTK_surface)
+      if (.not. allocated(DstDvr_OutputsData%VTK_surface)) then
+         allocate(DstDvr_OutputsData%VTK_surface(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_OutputsData%VTK_surface.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_Dvr_CopyDvrVTK_SurfaceType(SrcDvr_OutputsData%VTK_surface(i1), DstDvr_OutputsData%VTK_surface(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstDvr_OutputsData%VTK_surface)) then
+      deallocate(DstDvr_OutputsData%VTK_surface)
+   end if
+   DstDvr_OutputsData%VTK_tWidth = SrcDvr_OutputsData%VTK_tWidth
+   DstDvr_OutputsData%n_VTKTime = SrcDvr_OutputsData%n_VTKTime
+   DstDvr_OutputsData%VTKHubRad = SrcDvr_OutputsData%VTKHubRad
+   DstDvr_OutputsData%VTKNacDim = SrcDvr_OutputsData%VTKNacDim
+   DstDvr_OutputsData%VTKRefPoint = SrcDvr_OutputsData%VTKRefPoint
+   DstDvr_OutputsData%DT_Outs = SrcDvr_OutputsData%DT_Outs
+   DstDvr_OutputsData%n_DT_Out = SrcDvr_OutputsData%n_DT_Out
+end subroutine
 
- SUBROUTINE AD_Dvr_DestroyDvr_Outputs( Dvr_OutputsData, ErrStat, ErrMsg )
-  TYPE(Dvr_Outputs), INTENT(INOUT) :: Dvr_OutputsData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyDvr_Outputs'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL NWTC_Library_DestroyProgDesc( Dvr_OutputsData%AD_ver, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(Dvr_OutputsData%unOutFile)) THEN
-  DEALLOCATE(Dvr_OutputsData%unOutFile)
-ENDIF
-IF (ALLOCATED(Dvr_OutputsData%WriteOutputHdr)) THEN
-  DEALLOCATE(Dvr_OutputsData%WriteOutputHdr)
-ENDIF
-IF (ALLOCATED(Dvr_OutputsData%WriteOutputUnt)) THEN
-  DEALLOCATE(Dvr_OutputsData%WriteOutputUnt)
-ENDIF
-IF (ALLOCATED(Dvr_OutputsData%storage)) THEN
-  DEALLOCATE(Dvr_OutputsData%storage)
-ENDIF
-IF (ALLOCATED(Dvr_OutputsData%outLine)) THEN
-  DEALLOCATE(Dvr_OutputsData%outLine)
-ENDIF
-IF (ALLOCATED(Dvr_OutputsData%VTK_surface)) THEN
-DO i1 = LBOUND(Dvr_OutputsData%VTK_surface,1), UBOUND(Dvr_OutputsData%VTK_surface,1)
-  CALL AD_Dvr_DestroyDvrVTK_SurfaceType( Dvr_OutputsData%VTK_surface(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(Dvr_OutputsData%VTK_surface)
-ENDIF
- END SUBROUTINE AD_Dvr_DestroyDvr_Outputs
-
+subroutine AD_Dvr_DestroyDvr_Outputs(Dvr_OutputsData, ErrStat, ErrMsg)
+   type(Dvr_Outputs), intent(inout) :: Dvr_OutputsData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1, i2, i3
+   integer(IntKi)  :: LB(3), UB(3)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_Dvr_DestroyDvr_Outputs'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(Dvr_OutputsData%unOutFile)) then
+      deallocate(Dvr_OutputsData%unOutFile)
+   end if
+   if (allocated(Dvr_OutputsData%WriteOutputHdr)) then
+      deallocate(Dvr_OutputsData%WriteOutputHdr)
+   end if
+   if (allocated(Dvr_OutputsData%WriteOutputUnt)) then
+      deallocate(Dvr_OutputsData%WriteOutputUnt)
+   end if
+   if (allocated(Dvr_OutputsData%storage)) then
+      deallocate(Dvr_OutputsData%storage)
+   end if
+   if (allocated(Dvr_OutputsData%outLine)) then
+      deallocate(Dvr_OutputsData%outLine)
+   end if
+   if (allocated(Dvr_OutputsData%VTK_surface)) then
+      LB(1:1) = lbound(Dvr_OutputsData%VTK_surface)
+      UB(1:1) = ubound(Dvr_OutputsData%VTK_surface)
+      do i1 = LB(1), UB(1)
+         call AD_Dvr_DestroyDvrVTK_SurfaceType(Dvr_OutputsData%VTK_surface(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(Dvr_OutputsData%VTK_surface)
+   end if
+end subroutine
 
 subroutine AD_Dvr_PackDvr_Outputs(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -555,78 +505,60 @@ subroutine AD_Dvr_PackDvr_Outputs(Buf, Indata)
    integer(IntKi)  :: i1, i2, i3
    integer(IntKi)  :: LB(3), UB(3)
    if (Buf%ErrStat >= AbortErrLev) return
-   ! AD_ver
    call NWTC_Library_PackProgDesc(Buf, InData%AD_ver) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! unOutFile
    call RegPack(Buf, allocated(InData%unOutFile))
    if (allocated(InData%unOutFile)) then
       call RegPackBounds(Buf, 1, lbound(InData%unOutFile), ubound(InData%unOutFile))
       call RegPack(Buf, InData%unOutFile)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ActualChanLen
    call RegPack(Buf, InData%ActualChanLen)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nDvrOutputs
    call RegPack(Buf, InData%nDvrOutputs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Fmt_t
    call RegPack(Buf, InData%Fmt_t)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Fmt_a
    call RegPack(Buf, InData%Fmt_a)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! delim
    call RegPack(Buf, InData%delim)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! outFmt
    call RegPack(Buf, InData%outFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! fileFmt
    call RegPack(Buf, InData%fileFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! wrVTK
    call RegPack(Buf, InData%wrVTK)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WrVTK_Type
    call RegPack(Buf, InData%WrVTK_Type)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Root
    call RegPack(Buf, InData%Root)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VTK_OutFileRoot
    call RegPack(Buf, InData%VTK_OutFileRoot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WriteOutputHdr
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WriteOutputUnt
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! storage
    call RegPack(Buf, allocated(InData%storage))
    if (allocated(InData%storage)) then
       call RegPackBounds(Buf, 3, lbound(InData%storage), ubound(InData%storage))
       call RegPack(Buf, InData%storage)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! outLine
    call RegPack(Buf, allocated(InData%outLine))
    if (allocated(InData%outLine)) then
       call RegPackBounds(Buf, 1, lbound(InData%outLine), ubound(InData%outLine))
       call RegPack(Buf, InData%outLine)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VTK_surface
    call RegPack(Buf, allocated(InData%VTK_surface))
    if (allocated(InData%VTK_surface)) then
       call RegPackBounds(Buf, 1, lbound(InData%VTK_surface), ubound(InData%VTK_surface))
@@ -637,25 +569,18 @@ subroutine AD_Dvr_PackDvr_Outputs(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VTK_tWidth
    call RegPack(Buf, InData%VTK_tWidth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! n_VTKTime
    call RegPack(Buf, InData%n_VTKTime)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VTKHubRad
    call RegPack(Buf, InData%VTKHubRad)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VTKNacDim
    call RegPack(Buf, InData%VTKNacDim)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VTKRefPoint
    call RegPack(Buf, InData%VTKRefPoint)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DT_Outs
    call RegPack(Buf, InData%DT_Outs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! n_DT_Out
    call RegPack(Buf, InData%n_DT_Out)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -669,9 +594,7 @@ subroutine AD_Dvr_UnPackDvr_Outputs(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! AD_ver
    call NWTC_Library_UnpackProgDesc(Buf, OutData%AD_ver) ! AD_ver 
-   ! unOutFile
    if (allocated(OutData%unOutFile)) deallocate(OutData%unOutFile)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -686,40 +609,28 @@ subroutine AD_Dvr_UnPackDvr_Outputs(Buf, OutData)
       call RegUnpack(Buf, OutData%unOutFile)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! ActualChanLen
    call RegUnpack(Buf, OutData%ActualChanLen)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nDvrOutputs
    call RegUnpack(Buf, OutData%nDvrOutputs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Fmt_t
    call RegUnpack(Buf, OutData%Fmt_t)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Fmt_a
    call RegUnpack(Buf, OutData%Fmt_a)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! delim
    call RegUnpack(Buf, OutData%delim)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! outFmt
    call RegUnpack(Buf, OutData%outFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! fileFmt
    call RegUnpack(Buf, OutData%fileFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! wrVTK
    call RegUnpack(Buf, OutData%wrVTK)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WrVTK_Type
    call RegUnpack(Buf, OutData%WrVTK_Type)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Root
    call RegUnpack(Buf, OutData%Root)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VTK_OutFileRoot
    call RegUnpack(Buf, OutData%VTK_OutFileRoot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WriteOutputHdr
    if (allocated(OutData%WriteOutputHdr)) deallocate(OutData%WriteOutputHdr)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -734,7 +645,6 @@ subroutine AD_Dvr_UnPackDvr_Outputs(Buf, OutData)
       call RegUnpack(Buf, OutData%WriteOutputHdr)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WriteOutputUnt
    if (allocated(OutData%WriteOutputUnt)) deallocate(OutData%WriteOutputUnt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -749,7 +659,6 @@ subroutine AD_Dvr_UnPackDvr_Outputs(Buf, OutData)
       call RegUnpack(Buf, OutData%WriteOutputUnt)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! storage
    if (allocated(OutData%storage)) deallocate(OutData%storage)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -764,7 +673,6 @@ subroutine AD_Dvr_UnPackDvr_Outputs(Buf, OutData)
       call RegUnpack(Buf, OutData%storage)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! outLine
    if (allocated(OutData%outLine)) deallocate(OutData%outLine)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -779,7 +687,6 @@ subroutine AD_Dvr_UnPackDvr_Outputs(Buf, OutData)
       call RegUnpack(Buf, OutData%outLine)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! VTK_surface
    if (allocated(OutData%VTK_surface)) deallocate(OutData%VTK_surface)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -795,129 +702,100 @@ subroutine AD_Dvr_UnPackDvr_Outputs(Buf, OutData)
          call AD_Dvr_UnpackDvrVTK_SurfaceType(Buf, OutData%VTK_surface(i1)) ! VTK_surface 
       end do
    end if
-   ! VTK_tWidth
    call RegUnpack(Buf, OutData%VTK_tWidth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! n_VTKTime
    call RegUnpack(Buf, OutData%n_VTKTime)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VTKHubRad
    call RegUnpack(Buf, OutData%VTKHubRad)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VTKNacDim
    call RegUnpack(Buf, OutData%VTKNacDim)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VTKRefPoint
    call RegUnpack(Buf, OutData%VTKRefPoint)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DT_Outs
    call RegUnpack(Buf, OutData%DT_Outs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! n_DT_Out
    call RegUnpack(Buf, OutData%n_DT_Out)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE AD_Dvr_CopyBladeData( SrcBladeDataData, DstBladeDataData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(BladeData), INTENT(IN) :: SrcBladeDataData
-   TYPE(BladeData), INTENT(INOUT) :: DstBladeDataData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AD_Dvr_CopyBladeData'
-! 
+
+subroutine AD_Dvr_CopyBladeData(SrcBladeDataData, DstBladeDataData, CtrlCode, ErrStat, ErrMsg)
+   type(BladeData), intent(in) :: SrcBladeDataData
+   type(BladeData), intent(inout) :: DstBladeDataData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'AD_Dvr_CopyBladeData'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstBladeDataData%pitch = SrcBladeDataData%pitch
-    DstBladeDataData%pitchSpeed = SrcBladeDataData%pitchSpeed
-    DstBladeDataData%pitchAcc = SrcBladeDataData%pitchAcc
-    DstBladeDataData%origin_h = SrcBladeDataData%origin_h
-    DstBladeDataData%orientation_h = SrcBladeDataData%orientation_h
-    DstBladeDataData%hubRad_bl = SrcBladeDataData%hubRad_bl
-    DstBladeDataData%Rh2bl0 = SrcBladeDataData%Rh2bl0
-    DstBladeDataData%motionType = SrcBladeDataData%motionType
-    DstBladeDataData%iMotion = SrcBladeDataData%iMotion
-IF (ALLOCATED(SrcBladeDataData%motion)) THEN
-  i1_l = LBOUND(SrcBladeDataData%motion,1)
-  i1_u = UBOUND(SrcBladeDataData%motion,1)
-  i2_l = LBOUND(SrcBladeDataData%motion,2)
-  i2_u = UBOUND(SrcBladeDataData%motion,2)
-  IF (.NOT. ALLOCATED(DstBladeDataData%motion)) THEN 
-    ALLOCATE(DstBladeDataData%motion(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstBladeDataData%motion.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstBladeDataData%motion = SrcBladeDataData%motion
-ENDIF
-    DstBladeDataData%motionFileName = SrcBladeDataData%motionFileName
- END SUBROUTINE AD_Dvr_CopyBladeData
+   ErrMsg  = ''
+   DstBladeDataData%pitch = SrcBladeDataData%pitch
+   DstBladeDataData%pitchSpeed = SrcBladeDataData%pitchSpeed
+   DstBladeDataData%pitchAcc = SrcBladeDataData%pitchAcc
+   DstBladeDataData%origin_h = SrcBladeDataData%origin_h
+   DstBladeDataData%orientation_h = SrcBladeDataData%orientation_h
+   DstBladeDataData%hubRad_bl = SrcBladeDataData%hubRad_bl
+   DstBladeDataData%Rh2bl0 = SrcBladeDataData%Rh2bl0
+   DstBladeDataData%motionType = SrcBladeDataData%motionType
+   DstBladeDataData%iMotion = SrcBladeDataData%iMotion
+   if (allocated(SrcBladeDataData%motion)) then
+      LB(1:2) = lbound(SrcBladeDataData%motion)
+      UB(1:2) = ubound(SrcBladeDataData%motion)
+      if (.not. allocated(DstBladeDataData%motion)) then
+         allocate(DstBladeDataData%motion(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstBladeDataData%motion.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstBladeDataData%motion = SrcBladeDataData%motion
+   else if (allocated(DstBladeDataData%motion)) then
+      deallocate(DstBladeDataData%motion)
+   end if
+   DstBladeDataData%motionFileName = SrcBladeDataData%motionFileName
+end subroutine
 
- SUBROUTINE AD_Dvr_DestroyBladeData( BladeDataData, ErrStat, ErrMsg )
-  TYPE(BladeData), INTENT(INOUT) :: BladeDataData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyBladeData'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(BladeDataData%motion)) THEN
-  DEALLOCATE(BladeDataData%motion)
-ENDIF
- END SUBROUTINE AD_Dvr_DestroyBladeData
-
+subroutine AD_Dvr_DestroyBladeData(BladeDataData, ErrStat, ErrMsg)
+   type(BladeData), intent(inout) :: BladeDataData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_Dvr_DestroyBladeData'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(BladeDataData%motion)) then
+      deallocate(BladeDataData%motion)
+   end if
+end subroutine
 
 subroutine AD_Dvr_PackBladeData(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(BladeData), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AD_Dvr_PackBladeData'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! pitch
    call RegPack(Buf, InData%pitch)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pitchSpeed
    call RegPack(Buf, InData%pitchSpeed)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pitchAcc
    call RegPack(Buf, InData%pitchAcc)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! origin_h
    call RegPack(Buf, InData%origin_h)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! orientation_h
    call RegPack(Buf, InData%orientation_h)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! hubRad_bl
    call RegPack(Buf, InData%hubRad_bl)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Rh2bl0
    call RegPack(Buf, InData%Rh2bl0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motionType
    call RegPack(Buf, InData%motionType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! iMotion
    call RegPack(Buf, InData%iMotion)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motion
    call RegPack(Buf, allocated(InData%motion))
    if (allocated(InData%motion)) then
       call RegPackBounds(Buf, 2, lbound(InData%motion), ubound(InData%motion))
       call RegPack(Buf, InData%motion)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motionFileName
    call RegPack(Buf, InData%motionFileName)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -930,34 +808,24 @@ subroutine AD_Dvr_UnPackBladeData(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! pitch
    call RegUnpack(Buf, OutData%pitch)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pitchSpeed
    call RegUnpack(Buf, OutData%pitchSpeed)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pitchAcc
    call RegUnpack(Buf, OutData%pitchAcc)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! origin_h
    call RegUnpack(Buf, OutData%origin_h)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! orientation_h
    call RegUnpack(Buf, OutData%orientation_h)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! hubRad_bl
    call RegUnpack(Buf, OutData%hubRad_bl)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Rh2bl0
    call RegUnpack(Buf, OutData%Rh2bl0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motionType
    call RegUnpack(Buf, OutData%motionType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! iMotion
    call RegUnpack(Buf, OutData%iMotion)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motion
    if (allocated(OutData%motion)) deallocate(OutData%motion)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -972,99 +840,78 @@ subroutine AD_Dvr_UnPackBladeData(Buf, OutData)
       call RegUnpack(Buf, OutData%motion)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! motionFileName
    call RegUnpack(Buf, OutData%motionFileName)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE AD_Dvr_CopyHubData( SrcHubDataData, DstHubDataData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(HubData), INTENT(IN) :: SrcHubDataData
-   TYPE(HubData), INTENT(INOUT) :: DstHubDataData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AD_Dvr_CopyHubData'
-! 
+
+subroutine AD_Dvr_CopyHubData(SrcHubDataData, DstHubDataData, CtrlCode, ErrStat, ErrMsg)
+   type(HubData), intent(in) :: SrcHubDataData
+   type(HubData), intent(inout) :: DstHubDataData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'AD_Dvr_CopyHubData'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstHubDataData%origin_n = SrcHubDataData%origin_n
-    DstHubDataData%orientation_n = SrcHubDataData%orientation_n
-    DstHubDataData%motionType = SrcHubDataData%motionType
-    DstHubDataData%iMotion = SrcHubDataData%iMotion
-    DstHubDataData%azimuth = SrcHubDataData%azimuth
-    DstHubDataData%rotSpeed = SrcHubDataData%rotSpeed
-    DstHubDataData%rotAcc = SrcHubDataData%rotAcc
-    DstHubDataData%motionFileName = SrcHubDataData%motionFileName
-IF (ALLOCATED(SrcHubDataData%motion)) THEN
-  i1_l = LBOUND(SrcHubDataData%motion,1)
-  i1_u = UBOUND(SrcHubDataData%motion,1)
-  i2_l = LBOUND(SrcHubDataData%motion,2)
-  i2_u = UBOUND(SrcHubDataData%motion,2)
-  IF (.NOT. ALLOCATED(DstHubDataData%motion)) THEN 
-    ALLOCATE(DstHubDataData%motion(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstHubDataData%motion.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstHubDataData%motion = SrcHubDataData%motion
-ENDIF
- END SUBROUTINE AD_Dvr_CopyHubData
+   ErrMsg  = ''
+   DstHubDataData%origin_n = SrcHubDataData%origin_n
+   DstHubDataData%orientation_n = SrcHubDataData%orientation_n
+   DstHubDataData%motionType = SrcHubDataData%motionType
+   DstHubDataData%iMotion = SrcHubDataData%iMotion
+   DstHubDataData%azimuth = SrcHubDataData%azimuth
+   DstHubDataData%rotSpeed = SrcHubDataData%rotSpeed
+   DstHubDataData%rotAcc = SrcHubDataData%rotAcc
+   DstHubDataData%motionFileName = SrcHubDataData%motionFileName
+   if (allocated(SrcHubDataData%motion)) then
+      LB(1:2) = lbound(SrcHubDataData%motion)
+      UB(1:2) = ubound(SrcHubDataData%motion)
+      if (.not. allocated(DstHubDataData%motion)) then
+         allocate(DstHubDataData%motion(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstHubDataData%motion.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstHubDataData%motion = SrcHubDataData%motion
+   else if (allocated(DstHubDataData%motion)) then
+      deallocate(DstHubDataData%motion)
+   end if
+end subroutine
 
- SUBROUTINE AD_Dvr_DestroyHubData( HubDataData, ErrStat, ErrMsg )
-  TYPE(HubData), INTENT(INOUT) :: HubDataData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyHubData'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(HubDataData%motion)) THEN
-  DEALLOCATE(HubDataData%motion)
-ENDIF
- END SUBROUTINE AD_Dvr_DestroyHubData
-
+subroutine AD_Dvr_DestroyHubData(HubDataData, ErrStat, ErrMsg)
+   type(HubData), intent(inout) :: HubDataData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_Dvr_DestroyHubData'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(HubDataData%motion)) then
+      deallocate(HubDataData%motion)
+   end if
+end subroutine
 
 subroutine AD_Dvr_PackHubData(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(HubData), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AD_Dvr_PackHubData'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! origin_n
    call RegPack(Buf, InData%origin_n)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! orientation_n
    call RegPack(Buf, InData%orientation_n)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motionType
    call RegPack(Buf, InData%motionType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! iMotion
    call RegPack(Buf, InData%iMotion)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! azimuth
    call RegPack(Buf, InData%azimuth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rotSpeed
    call RegPack(Buf, InData%rotSpeed)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rotAcc
    call RegPack(Buf, InData%rotAcc)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motionFileName
    call RegPack(Buf, InData%motionFileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motion
    call RegPack(Buf, allocated(InData%motion))
    if (allocated(InData%motion)) then
       call RegPackBounds(Buf, 2, lbound(InData%motion), ubound(InData%motion))
@@ -1081,31 +928,22 @@ subroutine AD_Dvr_UnPackHubData(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! origin_n
    call RegUnpack(Buf, OutData%origin_n)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! orientation_n
    call RegUnpack(Buf, OutData%orientation_n)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motionType
    call RegUnpack(Buf, OutData%motionType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! iMotion
    call RegUnpack(Buf, OutData%iMotion)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! azimuth
    call RegUnpack(Buf, OutData%azimuth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rotSpeed
    call RegUnpack(Buf, OutData%rotSpeed)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rotAcc
    call RegUnpack(Buf, OutData%rotAcc)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motionFileName
    call RegUnpack(Buf, OutData%motionFileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motion
    if (allocated(OutData%motion)) deallocate(OutData%motion)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1121,91 +959,72 @@ subroutine AD_Dvr_UnPackHubData(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE AD_Dvr_CopyNacData( SrcNacDataData, DstNacDataData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(NacData), INTENT(IN) :: SrcNacDataData
-   TYPE(NacData), INTENT(INOUT) :: DstNacDataData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AD_Dvr_CopyNacData'
-! 
+
+subroutine AD_Dvr_CopyNacData(SrcNacDataData, DstNacDataData, CtrlCode, ErrStat, ErrMsg)
+   type(NacData), intent(in) :: SrcNacDataData
+   type(NacData), intent(inout) :: DstNacDataData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'AD_Dvr_CopyNacData'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstNacDataData%origin_t = SrcNacDataData%origin_t
-    DstNacDataData%motionType = SrcNacDataData%motionType
-    DstNacDataData%iMotion = SrcNacDataData%iMotion
-    DstNacDataData%yaw = SrcNacDataData%yaw
-    DstNacDataData%yawSpeed = SrcNacDataData%yawSpeed
-    DstNacDataData%yawAcc = SrcNacDataData%yawAcc
-    DstNacDataData%motionFileName = SrcNacDataData%motionFileName
-IF (ALLOCATED(SrcNacDataData%motion)) THEN
-  i1_l = LBOUND(SrcNacDataData%motion,1)
-  i1_u = UBOUND(SrcNacDataData%motion,1)
-  i2_l = LBOUND(SrcNacDataData%motion,2)
-  i2_u = UBOUND(SrcNacDataData%motion,2)
-  IF (.NOT. ALLOCATED(DstNacDataData%motion)) THEN 
-    ALLOCATE(DstNacDataData%motion(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstNacDataData%motion.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstNacDataData%motion = SrcNacDataData%motion
-ENDIF
- END SUBROUTINE AD_Dvr_CopyNacData
+   ErrMsg  = ''
+   DstNacDataData%origin_t = SrcNacDataData%origin_t
+   DstNacDataData%motionType = SrcNacDataData%motionType
+   DstNacDataData%iMotion = SrcNacDataData%iMotion
+   DstNacDataData%yaw = SrcNacDataData%yaw
+   DstNacDataData%yawSpeed = SrcNacDataData%yawSpeed
+   DstNacDataData%yawAcc = SrcNacDataData%yawAcc
+   DstNacDataData%motionFileName = SrcNacDataData%motionFileName
+   if (allocated(SrcNacDataData%motion)) then
+      LB(1:2) = lbound(SrcNacDataData%motion)
+      UB(1:2) = ubound(SrcNacDataData%motion)
+      if (.not. allocated(DstNacDataData%motion)) then
+         allocate(DstNacDataData%motion(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstNacDataData%motion.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstNacDataData%motion = SrcNacDataData%motion
+   else if (allocated(DstNacDataData%motion)) then
+      deallocate(DstNacDataData%motion)
+   end if
+end subroutine
 
- SUBROUTINE AD_Dvr_DestroyNacData( NacDataData, ErrStat, ErrMsg )
-  TYPE(NacData), INTENT(INOUT) :: NacDataData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyNacData'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(NacDataData%motion)) THEN
-  DEALLOCATE(NacDataData%motion)
-ENDIF
- END SUBROUTINE AD_Dvr_DestroyNacData
-
+subroutine AD_Dvr_DestroyNacData(NacDataData, ErrStat, ErrMsg)
+   type(NacData), intent(inout) :: NacDataData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_Dvr_DestroyNacData'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(NacDataData%motion)) then
+      deallocate(NacDataData%motion)
+   end if
+end subroutine
 
 subroutine AD_Dvr_PackNacData(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(NacData), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AD_Dvr_PackNacData'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! origin_t
    call RegPack(Buf, InData%origin_t)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motionType
    call RegPack(Buf, InData%motionType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! iMotion
    call RegPack(Buf, InData%iMotion)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! yaw
    call RegPack(Buf, InData%yaw)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! yawSpeed
    call RegPack(Buf, InData%yawSpeed)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! yawAcc
    call RegPack(Buf, InData%yawAcc)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motionFileName
    call RegPack(Buf, InData%motionFileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motion
    call RegPack(Buf, allocated(InData%motion))
    if (allocated(InData%motion)) then
       call RegPackBounds(Buf, 2, lbound(InData%motion), ubound(InData%motion))
@@ -1222,28 +1041,20 @@ subroutine AD_Dvr_UnPackNacData(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! origin_t
    call RegUnpack(Buf, OutData%origin_t)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motionType
    call RegUnpack(Buf, OutData%motionType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! iMotion
    call RegUnpack(Buf, OutData%iMotion)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! yaw
    call RegUnpack(Buf, OutData%yaw)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! yawSpeed
    call RegUnpack(Buf, OutData%yawSpeed)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! yawAcc
    call RegUnpack(Buf, OutData%yawAcc)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motionFileName
    call RegUnpack(Buf, OutData%motionFileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motion
    if (allocated(OutData%motion)) deallocate(OutData%motion)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1259,46 +1070,33 @@ subroutine AD_Dvr_UnPackNacData(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE AD_Dvr_CopyTwrData( SrcTwrDataData, DstTwrDataData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(TwrData), INTENT(IN) :: SrcTwrDataData
-   TYPE(TwrData), INTENT(INOUT) :: DstTwrDataData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AD_Dvr_CopyTwrData'
-! 
+
+subroutine AD_Dvr_CopyTwrData(SrcTwrDataData, DstTwrDataData, CtrlCode, ErrStat, ErrMsg)
+   type(TwrData), intent(in) :: SrcTwrDataData
+   type(TwrData), intent(inout) :: DstTwrDataData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_Dvr_CopyTwrData'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstTwrDataData%origin_t = SrcTwrDataData%origin_t
- END SUBROUTINE AD_Dvr_CopyTwrData
+   ErrMsg  = ''
+   DstTwrDataData%origin_t = SrcTwrDataData%origin_t
+end subroutine
 
- SUBROUTINE AD_Dvr_DestroyTwrData( TwrDataData, ErrStat, ErrMsg )
-  TYPE(TwrData), INTENT(INOUT) :: TwrDataData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyTwrData'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE AD_Dvr_DestroyTwrData
-
+subroutine AD_Dvr_DestroyTwrData(TwrDataData, ErrStat, ErrMsg)
+   type(TwrData), intent(inout) :: TwrDataData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'AD_Dvr_DestroyTwrData'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine AD_Dvr_PackTwrData(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(TwrData), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AD_Dvr_PackTwrData'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! origin_t
    call RegPack(Buf, InData%origin_t)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1308,180 +1106,174 @@ subroutine AD_Dvr_UnPackTwrData(Buf, OutData)
    type(TwrData), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AD_Dvr_UnPackTwrData'
    if (Buf%ErrStat /= ErrID_None) return
-   ! origin_t
    call RegUnpack(Buf, OutData%origin_t)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE AD_Dvr_CopyWTData( SrcWTDataData, DstWTDataData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(WTData), INTENT(INOUT) :: SrcWTDataData
-   TYPE(WTData), INTENT(INOUT) :: DstWTDataData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AD_Dvr_CopyWTData'
-! 
+
+subroutine AD_Dvr_CopyWTData(SrcWTDataData, DstWTDataData, CtrlCode, ErrStat, ErrMsg)
+   type(WTData), intent(inout) :: SrcWTDataData
+   type(WTData), intent(inout) :: DstWTDataData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1, i2
+   integer(IntKi)                 :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_Dvr_CopyWTData'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstWTDataData%originInit = SrcWTDataData%originInit
-    DstWTDataData%orientationInit = SrcWTDataData%orientationInit
-      CALL NWTC_Library_Copymeshmaptype( SrcWTDataData%map2twrPt, DstWTDataData%map2twrPt, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL NWTC_Library_Copymeshmaptype( SrcWTDataData%map2nacPt, DstWTDataData%map2nacPt, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL NWTC_Library_Copymeshmaptype( SrcWTDataData%map2hubPt, DstWTDataData%map2hubPt, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcWTDataData%map2BldPt)) THEN
-  i1_l = LBOUND(SrcWTDataData%map2BldPt,1)
-  i1_u = UBOUND(SrcWTDataData%map2BldPt,1)
-  IF (.NOT. ALLOCATED(DstWTDataData%map2BldPt)) THEN 
-    ALLOCATE(DstWTDataData%map2BldPt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWTDataData%map2BldPt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcWTDataData%map2BldPt,1), UBOUND(SrcWTDataData%map2BldPt,1)
-      CALL NWTC_Library_Copymeshmaptype( SrcWTDataData%map2BldPt(i1), DstWTDataData%map2BldPt(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-IF (ALLOCATED(SrcWTDataData%bld)) THEN
-  i1_l = LBOUND(SrcWTDataData%bld,1)
-  i1_u = UBOUND(SrcWTDataData%bld,1)
-  IF (.NOT. ALLOCATED(DstWTDataData%bld)) THEN 
-    ALLOCATE(DstWTDataData%bld(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWTDataData%bld.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcWTDataData%bld,1), UBOUND(SrcWTDataData%bld,1)
-      CALL AD_Dvr_Copybladedata( SrcWTDataData%bld(i1), DstWTDataData%bld(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-      CALL AD_Dvr_Copyhubdata( SrcWTDataData%hub, DstWTDataData%hub, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL AD_Dvr_Copynacdata( SrcWTDataData%nac, DstWTDataData%nac, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL AD_Dvr_Copytwrdata( SrcWTDataData%twr, DstWTDataData%twr, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    DstWTDataData%numBlades = SrcWTDataData%numBlades
-    DstWTDataData%basicHAWTFormat = SrcWTDataData%basicHAWTFormat
-    DstWTDataData%hasTower = SrcWTDataData%hasTower
-    DstWTDataData%projMod = SrcWTDataData%projMod
-    DstWTDataData%BEM_Mod = SrcWTDataData%BEM_Mod
-    DstWTDataData%HAWTprojection = SrcWTDataData%HAWTprojection
-    DstWTDataData%motionType = SrcWTDataData%motionType
-IF (ALLOCATED(SrcWTDataData%motion)) THEN
-  i1_l = LBOUND(SrcWTDataData%motion,1)
-  i1_u = UBOUND(SrcWTDataData%motion,1)
-  i2_l = LBOUND(SrcWTDataData%motion,2)
-  i2_u = UBOUND(SrcWTDataData%motion,2)
-  IF (.NOT. ALLOCATED(DstWTDataData%motion)) THEN 
-    ALLOCATE(DstWTDataData%motion(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWTDataData%motion.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstWTDataData%motion = SrcWTDataData%motion
-ENDIF
-    DstWTDataData%iMotion = SrcWTDataData%iMotion
-    DstWTDataData%degreeOfFreedom = SrcWTDataData%degreeOfFreedom
-    DstWTDataData%amplitude = SrcWTDataData%amplitude
-    DstWTDataData%frequency = SrcWTDataData%frequency
-    DstWTDataData%motionFileName = SrcWTDataData%motionFileName
-IF (ALLOCATED(SrcWTDataData%WriteOutput)) THEN
-  i1_l = LBOUND(SrcWTDataData%WriteOutput,1)
-  i1_u = UBOUND(SrcWTDataData%WriteOutput,1)
-  IF (.NOT. ALLOCATED(DstWTDataData%WriteOutput)) THEN 
-    ALLOCATE(DstWTDataData%WriteOutput(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWTDataData%WriteOutput.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstWTDataData%WriteOutput = SrcWTDataData%WriteOutput
-ENDIF
-IF (ALLOCATED(SrcWTDataData%userSwapArray)) THEN
-  i1_l = LBOUND(SrcWTDataData%userSwapArray,1)
-  i1_u = UBOUND(SrcWTDataData%userSwapArray,1)
-  IF (.NOT. ALLOCATED(DstWTDataData%userSwapArray)) THEN 
-    ALLOCATE(DstWTDataData%userSwapArray(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstWTDataData%userSwapArray.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstWTDataData%userSwapArray = SrcWTDataData%userSwapArray
-ENDIF
- END SUBROUTINE AD_Dvr_CopyWTData
+   ErrMsg  = ''
+   DstWTDataData%originInit = SrcWTDataData%originInit
+   DstWTDataData%orientationInit = SrcWTDataData%orientationInit
+   call NWTC_Library_CopyMeshMapType(SrcWTDataData%map2twrPt, DstWTDataData%map2twrPt, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyMeshMapType(SrcWTDataData%map2nacPt, DstWTDataData%map2nacPt, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyMeshMapType(SrcWTDataData%map2hubPt, DstWTDataData%map2hubPt, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcWTDataData%map2BldPt)) then
+      LB(1:1) = lbound(SrcWTDataData%map2BldPt)
+      UB(1:1) = ubound(SrcWTDataData%map2BldPt)
+      if (.not. allocated(DstWTDataData%map2BldPt)) then
+         allocate(DstWTDataData%map2BldPt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstWTDataData%map2BldPt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_CopyMeshMapType(SrcWTDataData%map2BldPt(i1), DstWTDataData%map2BldPt(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstWTDataData%map2BldPt)) then
+      deallocate(DstWTDataData%map2BldPt)
+   end if
+   if (allocated(SrcWTDataData%bld)) then
+      LB(1:1) = lbound(SrcWTDataData%bld)
+      UB(1:1) = ubound(SrcWTDataData%bld)
+      if (.not. allocated(DstWTDataData%bld)) then
+         allocate(DstWTDataData%bld(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstWTDataData%bld.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_Dvr_CopyBladeData(SrcWTDataData%bld(i1), DstWTDataData%bld(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstWTDataData%bld)) then
+      deallocate(DstWTDataData%bld)
+   end if
+   call AD_Dvr_CopyHubData(SrcWTDataData%hub, DstWTDataData%hub, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call AD_Dvr_CopyNacData(SrcWTDataData%nac, DstWTDataData%nac, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call AD_Dvr_CopyTwrData(SrcWTDataData%twr, DstWTDataData%twr, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstWTDataData%numBlades = SrcWTDataData%numBlades
+   DstWTDataData%basicHAWTFormat = SrcWTDataData%basicHAWTFormat
+   DstWTDataData%hasTower = SrcWTDataData%hasTower
+   DstWTDataData%projMod = SrcWTDataData%projMod
+   DstWTDataData%BEM_Mod = SrcWTDataData%BEM_Mod
+   DstWTDataData%HAWTprojection = SrcWTDataData%HAWTprojection
+   DstWTDataData%motionType = SrcWTDataData%motionType
+   if (allocated(SrcWTDataData%motion)) then
+      LB(1:2) = lbound(SrcWTDataData%motion)
+      UB(1:2) = ubound(SrcWTDataData%motion)
+      if (.not. allocated(DstWTDataData%motion)) then
+         allocate(DstWTDataData%motion(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstWTDataData%motion.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstWTDataData%motion = SrcWTDataData%motion
+   else if (allocated(DstWTDataData%motion)) then
+      deallocate(DstWTDataData%motion)
+   end if
+   DstWTDataData%iMotion = SrcWTDataData%iMotion
+   DstWTDataData%degreeOfFreedom = SrcWTDataData%degreeOfFreedom
+   DstWTDataData%amplitude = SrcWTDataData%amplitude
+   DstWTDataData%frequency = SrcWTDataData%frequency
+   DstWTDataData%motionFileName = SrcWTDataData%motionFileName
+   if (allocated(SrcWTDataData%WriteOutput)) then
+      LB(1:1) = lbound(SrcWTDataData%WriteOutput)
+      UB(1:1) = ubound(SrcWTDataData%WriteOutput)
+      if (.not. allocated(DstWTDataData%WriteOutput)) then
+         allocate(DstWTDataData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstWTDataData%WriteOutput.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstWTDataData%WriteOutput = SrcWTDataData%WriteOutput
+   else if (allocated(DstWTDataData%WriteOutput)) then
+      deallocate(DstWTDataData%WriteOutput)
+   end if
+   if (allocated(SrcWTDataData%userSwapArray)) then
+      LB(1:1) = lbound(SrcWTDataData%userSwapArray)
+      UB(1:1) = ubound(SrcWTDataData%userSwapArray)
+      if (.not. allocated(DstWTDataData%userSwapArray)) then
+         allocate(DstWTDataData%userSwapArray(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstWTDataData%userSwapArray.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstWTDataData%userSwapArray = SrcWTDataData%userSwapArray
+   else if (allocated(DstWTDataData%userSwapArray)) then
+      deallocate(DstWTDataData%userSwapArray)
+   end if
+end subroutine
 
- SUBROUTINE AD_Dvr_DestroyWTData( WTDataData, ErrStat, ErrMsg )
-  TYPE(WTData), INTENT(INOUT) :: WTDataData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyWTData'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL NWTC_Library_DestroyMeshMapType( WTDataData%map2twrPt, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL NWTC_Library_DestroyMeshMapType( WTDataData%map2nacPt, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL NWTC_Library_DestroyMeshMapType( WTDataData%map2hubPt, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(WTDataData%map2BldPt)) THEN
-DO i1 = LBOUND(WTDataData%map2BldPt,1), UBOUND(WTDataData%map2BldPt,1)
-  CALL NWTC_Library_DestroyMeshMapType( WTDataData%map2BldPt(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(WTDataData%map2BldPt)
-ENDIF
-IF (ALLOCATED(WTDataData%bld)) THEN
-DO i1 = LBOUND(WTDataData%bld,1), UBOUND(WTDataData%bld,1)
-  CALL AD_Dvr_DestroyBladeData( WTDataData%bld(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(WTDataData%bld)
-ENDIF
-  CALL AD_Dvr_DestroyHubData( WTDataData%hub, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD_Dvr_DestroyNacData( WTDataData%nac, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL AD_Dvr_DestroyTwrData( WTDataData%twr, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(WTDataData%motion)) THEN
-  DEALLOCATE(WTDataData%motion)
-ENDIF
-IF (ALLOCATED(WTDataData%WriteOutput)) THEN
-  DEALLOCATE(WTDataData%WriteOutput)
-ENDIF
-IF (ALLOCATED(WTDataData%userSwapArray)) THEN
-  DEALLOCATE(WTDataData%userSwapArray)
-ENDIF
- END SUBROUTINE AD_Dvr_DestroyWTData
-
+subroutine AD_Dvr_DestroyWTData(WTDataData, ErrStat, ErrMsg)
+   type(WTData), intent(inout) :: WTDataData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1, i2
+   integer(IntKi)  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_Dvr_DestroyWTData'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(WTDataData%map2BldPt)) then
+      LB(1:1) = lbound(WTDataData%map2BldPt)
+      UB(1:1) = ubound(WTDataData%map2BldPt)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_DestroyMeshMapType(WTDataData%map2BldPt(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(WTDataData%map2BldPt)
+   end if
+   if (allocated(WTDataData%bld)) then
+      LB(1:1) = lbound(WTDataData%bld)
+      UB(1:1) = ubound(WTDataData%bld)
+      do i1 = LB(1), UB(1)
+         call AD_Dvr_DestroyBladeData(WTDataData%bld(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(WTDataData%bld)
+   end if
+   if (allocated(WTDataData%motion)) then
+      deallocate(WTDataData%motion)
+   end if
+   if (allocated(WTDataData%WriteOutput)) then
+      deallocate(WTDataData%WriteOutput)
+   end if
+   if (allocated(WTDataData%userSwapArray)) then
+      deallocate(WTDataData%userSwapArray)
+   end if
+end subroutine
 
 subroutine AD_Dvr_PackWTData(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -1490,22 +1282,16 @@ subroutine AD_Dvr_PackWTData(Buf, Indata)
    integer(IntKi)  :: i1, i2
    integer(IntKi)  :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
-   ! originInit
    call RegPack(Buf, InData%originInit)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! orientationInit
    call RegPack(Buf, InData%orientationInit)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! map2twrPt
    call NWTC_Library_PackMeshMapType(Buf, InData%map2twrPt) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! map2nacPt
    call NWTC_Library_PackMeshMapType(Buf, InData%map2nacPt) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! map2hubPt
    call NWTC_Library_PackMeshMapType(Buf, InData%map2hubPt) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! map2BldPt
    call RegPack(Buf, allocated(InData%map2BldPt))
    if (allocated(InData%map2BldPt)) then
       call RegPackBounds(Buf, 1, lbound(InData%map2BldPt), ubound(InData%map2BldPt))
@@ -1516,7 +1302,6 @@ subroutine AD_Dvr_PackWTData(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bld
    call RegPack(Buf, allocated(InData%bld))
    if (allocated(InData%bld)) then
       call RegPackBounds(Buf, 1, lbound(InData%bld), ubound(InData%bld))
@@ -1527,66 +1312,48 @@ subroutine AD_Dvr_PackWTData(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! hub
    call AD_Dvr_PackHubData(Buf, InData%hub) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nac
    call AD_Dvr_PackNacData(Buf, InData%nac) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! twr
    call AD_Dvr_PackTwrData(Buf, InData%twr) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! numBlades
    call RegPack(Buf, InData%numBlades)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! basicHAWTFormat
    call RegPack(Buf, InData%basicHAWTFormat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! hasTower
    call RegPack(Buf, InData%hasTower)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! projMod
    call RegPack(Buf, InData%projMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BEM_Mod
    call RegPack(Buf, InData%BEM_Mod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HAWTprojection
    call RegPack(Buf, InData%HAWTprojection)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motionType
    call RegPack(Buf, InData%motionType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motion
    call RegPack(Buf, allocated(InData%motion))
    if (allocated(InData%motion)) then
       call RegPackBounds(Buf, 2, lbound(InData%motion), ubound(InData%motion))
       call RegPack(Buf, InData%motion)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! iMotion
    call RegPack(Buf, InData%iMotion)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! degreeOfFreedom
    call RegPack(Buf, InData%degreeOfFreedom)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! amplitude
    call RegPack(Buf, InData%amplitude)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! frequency
    call RegPack(Buf, InData%frequency)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motionFileName
    call RegPack(Buf, InData%motionFileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WriteOutput
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
       call RegPack(Buf, InData%WriteOutput)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! userSwapArray
    call RegPack(Buf, allocated(InData%userSwapArray))
    if (allocated(InData%userSwapArray)) then
       call RegPackBounds(Buf, 1, lbound(InData%userSwapArray), ubound(InData%userSwapArray))
@@ -1604,19 +1371,13 @@ subroutine AD_Dvr_UnPackWTData(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! originInit
    call RegUnpack(Buf, OutData%originInit)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! orientationInit
    call RegUnpack(Buf, OutData%orientationInit)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! map2twrPt
    call NWTC_Library_UnpackMeshMapType(Buf, OutData%map2twrPt) ! map2twrPt 
-   ! map2nacPt
    call NWTC_Library_UnpackMeshMapType(Buf, OutData%map2nacPt) ! map2nacPt 
-   ! map2hubPt
    call NWTC_Library_UnpackMeshMapType(Buf, OutData%map2hubPt) ! map2hubPt 
-   ! map2BldPt
    if (allocated(OutData%map2BldPt)) deallocate(OutData%map2BldPt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1632,7 +1393,6 @@ subroutine AD_Dvr_UnPackWTData(Buf, OutData)
          call NWTC_Library_UnpackMeshMapType(Buf, OutData%map2BldPt(i1)) ! map2BldPt 
       end do
    end if
-   ! bld
    if (allocated(OutData%bld)) deallocate(OutData%bld)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1648,34 +1408,23 @@ subroutine AD_Dvr_UnPackWTData(Buf, OutData)
          call AD_Dvr_UnpackBladeData(Buf, OutData%bld(i1)) ! bld 
       end do
    end if
-   ! hub
    call AD_Dvr_UnpackHubData(Buf, OutData%hub) ! hub 
-   ! nac
    call AD_Dvr_UnpackNacData(Buf, OutData%nac) ! nac 
-   ! twr
    call AD_Dvr_UnpackTwrData(Buf, OutData%twr) ! twr 
-   ! numBlades
    call RegUnpack(Buf, OutData%numBlades)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! basicHAWTFormat
    call RegUnpack(Buf, OutData%basicHAWTFormat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! hasTower
    call RegUnpack(Buf, OutData%hasTower)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! projMod
    call RegUnpack(Buf, OutData%projMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BEM_Mod
    call RegUnpack(Buf, OutData%BEM_Mod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HAWTprojection
    call RegUnpack(Buf, OutData%HAWTprojection)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motionType
    call RegUnpack(Buf, OutData%motionType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motion
    if (allocated(OutData%motion)) deallocate(OutData%motion)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1690,22 +1439,16 @@ subroutine AD_Dvr_UnPackWTData(Buf, OutData)
       call RegUnpack(Buf, OutData%motion)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! iMotion
    call RegUnpack(Buf, OutData%iMotion)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! degreeOfFreedom
    call RegUnpack(Buf, OutData%degreeOfFreedom)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! amplitude
    call RegUnpack(Buf, OutData%amplitude)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! frequency
    call RegUnpack(Buf, OutData%frequency)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! motionFileName
    call RegUnpack(Buf, OutData%motionFileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WriteOutput
    if (allocated(OutData%WriteOutput)) deallocate(OutData%WriteOutput)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1720,7 +1463,6 @@ subroutine AD_Dvr_UnPackWTData(Buf, OutData)
       call RegUnpack(Buf, OutData%WriteOutput)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! userSwapArray
    if (allocated(OutData%userSwapArray)) deallocate(OutData%userSwapArray)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1736,130 +1478,129 @@ subroutine AD_Dvr_UnPackWTData(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE AD_Dvr_CopyDvr_SimData( SrcDvr_SimDataData, DstDvr_SimDataData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Dvr_SimData), INTENT(INOUT) :: SrcDvr_SimDataData
-   TYPE(Dvr_SimData), INTENT(INOUT) :: DstDvr_SimDataData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AD_Dvr_CopyDvr_SimData'
-! 
+
+subroutine AD_Dvr_CopyDvr_SimData(SrcDvr_SimDataData, DstDvr_SimDataData, CtrlCode, ErrStat, ErrMsg)
+   type(Dvr_SimData), intent(inout) :: SrcDvr_SimDataData
+   type(Dvr_SimData), intent(inout) :: DstDvr_SimDataData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1, i2
+   integer(IntKi)                 :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_Dvr_CopyDvr_SimData'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstDvr_SimDataData%AD_InputFile = SrcDvr_SimDataData%AD_InputFile
-    DstDvr_SimDataData%MHK = SrcDvr_SimDataData%MHK
-    DstDvr_SimDataData%AnalysisType = SrcDvr_SimDataData%AnalysisType
-    DstDvr_SimDataData%FldDens = SrcDvr_SimDataData%FldDens
-    DstDvr_SimDataData%KinVisc = SrcDvr_SimDataData%KinVisc
-    DstDvr_SimDataData%SpdSound = SrcDvr_SimDataData%SpdSound
-    DstDvr_SimDataData%Patm = SrcDvr_SimDataData%Patm
-    DstDvr_SimDataData%Pvap = SrcDvr_SimDataData%Pvap
-    DstDvr_SimDataData%WtrDpth = SrcDvr_SimDataData%WtrDpth
-    DstDvr_SimDataData%MSL2SWL = SrcDvr_SimDataData%MSL2SWL
-    DstDvr_SimDataData%numTurbines = SrcDvr_SimDataData%numTurbines
-IF (ALLOCATED(SrcDvr_SimDataData%WT)) THEN
-  i1_l = LBOUND(SrcDvr_SimDataData%WT,1)
-  i1_u = UBOUND(SrcDvr_SimDataData%WT,1)
-  IF (.NOT. ALLOCATED(DstDvr_SimDataData%WT)) THEN 
-    ALLOCATE(DstDvr_SimDataData%WT(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_SimDataData%WT.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcDvr_SimDataData%WT,1), UBOUND(SrcDvr_SimDataData%WT,1)
-      CALL AD_Dvr_Copywtdata( SrcDvr_SimDataData%WT(i1), DstDvr_SimDataData%WT(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-    DstDvr_SimDataData%dT = SrcDvr_SimDataData%dT
-    DstDvr_SimDataData%tMax = SrcDvr_SimDataData%tMax
-    DstDvr_SimDataData%numSteps = SrcDvr_SimDataData%numSteps
-    DstDvr_SimDataData%numCases = SrcDvr_SimDataData%numCases
-IF (ALLOCATED(SrcDvr_SimDataData%Cases)) THEN
-  i1_l = LBOUND(SrcDvr_SimDataData%Cases,1)
-  i1_u = UBOUND(SrcDvr_SimDataData%Cases,1)
-  IF (.NOT. ALLOCATED(DstDvr_SimDataData%Cases)) THEN 
-    ALLOCATE(DstDvr_SimDataData%Cases(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_SimDataData%Cases.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcDvr_SimDataData%Cases,1), UBOUND(SrcDvr_SimDataData%Cases,1)
-      CALL AD_Dvr_Copydvr_case( SrcDvr_SimDataData%Cases(i1), DstDvr_SimDataData%Cases(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-    DstDvr_SimDataData%iCase = SrcDvr_SimDataData%iCase
-IF (ALLOCATED(SrcDvr_SimDataData%timeSeries)) THEN
-  i1_l = LBOUND(SrcDvr_SimDataData%timeSeries,1)
-  i1_u = UBOUND(SrcDvr_SimDataData%timeSeries,1)
-  i2_l = LBOUND(SrcDvr_SimDataData%timeSeries,2)
-  i2_u = UBOUND(SrcDvr_SimDataData%timeSeries,2)
-  IF (.NOT. ALLOCATED(DstDvr_SimDataData%timeSeries)) THEN 
-    ALLOCATE(DstDvr_SimDataData%timeSeries(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_SimDataData%timeSeries.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstDvr_SimDataData%timeSeries = SrcDvr_SimDataData%timeSeries
-ENDIF
-    DstDvr_SimDataData%iTimeSeries = SrcDvr_SimDataData%iTimeSeries
-    DstDvr_SimDataData%root = SrcDvr_SimDataData%root
-      CALL AD_Dvr_Copydvr_outputs( SrcDvr_SimDataData%out, DstDvr_SimDataData%out, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL ADI_Copyiw_inputdata( SrcDvr_SimDataData%IW_InitInp, DstDvr_SimDataData%IW_InitInp, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE AD_Dvr_CopyDvr_SimData
+   ErrMsg  = ''
+   DstDvr_SimDataData%AD_InputFile = SrcDvr_SimDataData%AD_InputFile
+   DstDvr_SimDataData%MHK = SrcDvr_SimDataData%MHK
+   DstDvr_SimDataData%AnalysisType = SrcDvr_SimDataData%AnalysisType
+   DstDvr_SimDataData%FldDens = SrcDvr_SimDataData%FldDens
+   DstDvr_SimDataData%KinVisc = SrcDvr_SimDataData%KinVisc
+   DstDvr_SimDataData%SpdSound = SrcDvr_SimDataData%SpdSound
+   DstDvr_SimDataData%Patm = SrcDvr_SimDataData%Patm
+   DstDvr_SimDataData%Pvap = SrcDvr_SimDataData%Pvap
+   DstDvr_SimDataData%WtrDpth = SrcDvr_SimDataData%WtrDpth
+   DstDvr_SimDataData%MSL2SWL = SrcDvr_SimDataData%MSL2SWL
+   DstDvr_SimDataData%numTurbines = SrcDvr_SimDataData%numTurbines
+   if (allocated(SrcDvr_SimDataData%WT)) then
+      LB(1:1) = lbound(SrcDvr_SimDataData%WT)
+      UB(1:1) = ubound(SrcDvr_SimDataData%WT)
+      if (.not. allocated(DstDvr_SimDataData%WT)) then
+         allocate(DstDvr_SimDataData%WT(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_SimDataData%WT.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_Dvr_CopyWTData(SrcDvr_SimDataData%WT(i1), DstDvr_SimDataData%WT(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstDvr_SimDataData%WT)) then
+      deallocate(DstDvr_SimDataData%WT)
+   end if
+   DstDvr_SimDataData%dT = SrcDvr_SimDataData%dT
+   DstDvr_SimDataData%tMax = SrcDvr_SimDataData%tMax
+   DstDvr_SimDataData%numSteps = SrcDvr_SimDataData%numSteps
+   DstDvr_SimDataData%numCases = SrcDvr_SimDataData%numCases
+   if (allocated(SrcDvr_SimDataData%Cases)) then
+      LB(1:1) = lbound(SrcDvr_SimDataData%Cases)
+      UB(1:1) = ubound(SrcDvr_SimDataData%Cases)
+      if (.not. allocated(DstDvr_SimDataData%Cases)) then
+         allocate(DstDvr_SimDataData%Cases(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_SimDataData%Cases.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call AD_Dvr_CopyDvr_Case(SrcDvr_SimDataData%Cases(i1), DstDvr_SimDataData%Cases(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstDvr_SimDataData%Cases)) then
+      deallocate(DstDvr_SimDataData%Cases)
+   end if
+   DstDvr_SimDataData%iCase = SrcDvr_SimDataData%iCase
+   if (allocated(SrcDvr_SimDataData%timeSeries)) then
+      LB(1:2) = lbound(SrcDvr_SimDataData%timeSeries)
+      UB(1:2) = ubound(SrcDvr_SimDataData%timeSeries)
+      if (.not. allocated(DstDvr_SimDataData%timeSeries)) then
+         allocate(DstDvr_SimDataData%timeSeries(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstDvr_SimDataData%timeSeries.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstDvr_SimDataData%timeSeries = SrcDvr_SimDataData%timeSeries
+   else if (allocated(DstDvr_SimDataData%timeSeries)) then
+      deallocate(DstDvr_SimDataData%timeSeries)
+   end if
+   DstDvr_SimDataData%iTimeSeries = SrcDvr_SimDataData%iTimeSeries
+   DstDvr_SimDataData%root = SrcDvr_SimDataData%root
+   call AD_Dvr_CopyDvr_Outputs(SrcDvr_SimDataData%out, DstDvr_SimDataData%out, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call ADI_CopyIW_InputData(SrcDvr_SimDataData%IW_InitInp, DstDvr_SimDataData%IW_InitInp, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE AD_Dvr_DestroyDvr_SimData( Dvr_SimDataData, ErrStat, ErrMsg )
-  TYPE(Dvr_SimData), INTENT(INOUT) :: Dvr_SimDataData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyDvr_SimData'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(Dvr_SimDataData%WT)) THEN
-DO i1 = LBOUND(Dvr_SimDataData%WT,1), UBOUND(Dvr_SimDataData%WT,1)
-  CALL AD_Dvr_DestroyWTData( Dvr_SimDataData%WT(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(Dvr_SimDataData%WT)
-ENDIF
-IF (ALLOCATED(Dvr_SimDataData%Cases)) THEN
-DO i1 = LBOUND(Dvr_SimDataData%Cases,1), UBOUND(Dvr_SimDataData%Cases,1)
-  CALL AD_Dvr_DestroyDvr_Case( Dvr_SimDataData%Cases(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(Dvr_SimDataData%Cases)
-ENDIF
-IF (ALLOCATED(Dvr_SimDataData%timeSeries)) THEN
-  DEALLOCATE(Dvr_SimDataData%timeSeries)
-ENDIF
-  CALL AD_Dvr_DestroyDvr_Outputs( Dvr_SimDataData%out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL ADI_DestroyIW_InputData( Dvr_SimDataData%IW_InitInp, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE AD_Dvr_DestroyDvr_SimData
-
+subroutine AD_Dvr_DestroyDvr_SimData(Dvr_SimDataData, ErrStat, ErrMsg)
+   type(Dvr_SimData), intent(inout) :: Dvr_SimDataData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1, i2
+   integer(IntKi)  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_Dvr_DestroyDvr_SimData'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(Dvr_SimDataData%WT)) then
+      LB(1:1) = lbound(Dvr_SimDataData%WT)
+      UB(1:1) = ubound(Dvr_SimDataData%WT)
+      do i1 = LB(1), UB(1)
+         call AD_Dvr_DestroyWTData(Dvr_SimDataData%WT(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(Dvr_SimDataData%WT)
+   end if
+   if (allocated(Dvr_SimDataData%Cases)) then
+      LB(1:1) = lbound(Dvr_SimDataData%Cases)
+      UB(1:1) = ubound(Dvr_SimDataData%Cases)
+      do i1 = LB(1), UB(1)
+         call AD_Dvr_DestroyDvr_Case(Dvr_SimDataData%Cases(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(Dvr_SimDataData%Cases)
+   end if
+   if (allocated(Dvr_SimDataData%timeSeries)) then
+      deallocate(Dvr_SimDataData%timeSeries)
+   end if
+end subroutine
 
 subroutine AD_Dvr_PackDvr_SimData(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -1868,40 +1609,28 @@ subroutine AD_Dvr_PackDvr_SimData(Buf, Indata)
    integer(IntKi)  :: i1, i2
    integer(IntKi)  :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
-   ! AD_InputFile
    call RegPack(Buf, InData%AD_InputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MHK
    call RegPack(Buf, InData%MHK)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AnalysisType
    call RegPack(Buf, InData%AnalysisType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FldDens
    call RegPack(Buf, InData%FldDens)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! KinVisc
    call RegPack(Buf, InData%KinVisc)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SpdSound
    call RegPack(Buf, InData%SpdSound)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Patm
    call RegPack(Buf, InData%Patm)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Pvap
    call RegPack(Buf, InData%Pvap)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDpth
    call RegPack(Buf, InData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MSL2SWL
    call RegPack(Buf, InData%MSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! numTurbines
    call RegPack(Buf, InData%numTurbines)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WT
    call RegPack(Buf, allocated(InData%WT))
    if (allocated(InData%WT)) then
       call RegPackBounds(Buf, 1, lbound(InData%WT), ubound(InData%WT))
@@ -1912,19 +1641,14 @@ subroutine AD_Dvr_PackDvr_SimData(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dT
    call RegPack(Buf, InData%dT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! tMax
    call RegPack(Buf, InData%tMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! numSteps
    call RegPack(Buf, InData%numSteps)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! numCases
    call RegPack(Buf, InData%numCases)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cases
    call RegPack(Buf, allocated(InData%Cases))
    if (allocated(InData%Cases)) then
       call RegPackBounds(Buf, 1, lbound(InData%Cases), ubound(InData%Cases))
@@ -1935,26 +1659,20 @@ subroutine AD_Dvr_PackDvr_SimData(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! iCase
    call RegPack(Buf, InData%iCase)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! timeSeries
    call RegPack(Buf, allocated(InData%timeSeries))
    if (allocated(InData%timeSeries)) then
       call RegPackBounds(Buf, 2, lbound(InData%timeSeries), ubound(InData%timeSeries))
       call RegPack(Buf, InData%timeSeries)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! iTimeSeries
    call RegPack(Buf, InData%iTimeSeries)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! root
    call RegPack(Buf, InData%root)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! out
    call AD_Dvr_PackDvr_Outputs(Buf, InData%out) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! IW_InitInp
    call ADI_PackIW_InputData(Buf, InData%IW_InitInp) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1968,40 +1686,28 @@ subroutine AD_Dvr_UnPackDvr_SimData(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! AD_InputFile
    call RegUnpack(Buf, OutData%AD_InputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MHK
    call RegUnpack(Buf, OutData%MHK)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AnalysisType
    call RegUnpack(Buf, OutData%AnalysisType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FldDens
    call RegUnpack(Buf, OutData%FldDens)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! KinVisc
    call RegUnpack(Buf, OutData%KinVisc)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SpdSound
    call RegUnpack(Buf, OutData%SpdSound)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Patm
    call RegUnpack(Buf, OutData%Patm)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Pvap
    call RegUnpack(Buf, OutData%Pvap)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDpth
    call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MSL2SWL
    call RegUnpack(Buf, OutData%MSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! numTurbines
    call RegUnpack(Buf, OutData%numTurbines)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WT
    if (allocated(OutData%WT)) deallocate(OutData%WT)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2017,19 +1723,14 @@ subroutine AD_Dvr_UnPackDvr_SimData(Buf, OutData)
          call AD_Dvr_UnpackWTData(Buf, OutData%WT(i1)) ! WT 
       end do
    end if
-   ! dT
    call RegUnpack(Buf, OutData%dT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! tMax
    call RegUnpack(Buf, OutData%tMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! numSteps
    call RegUnpack(Buf, OutData%numSteps)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! numCases
    call RegUnpack(Buf, OutData%numCases)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cases
    if (allocated(OutData%Cases)) deallocate(OutData%Cases)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2045,10 +1746,8 @@ subroutine AD_Dvr_UnPackDvr_SimData(Buf, OutData)
          call AD_Dvr_UnpackDvr_Case(Buf, OutData%Cases(i1)) ! Cases 
       end do
    end if
-   ! iCase
    call RegUnpack(Buf, OutData%iCase)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! timeSeries
    if (allocated(OutData%timeSeries)) deallocate(OutData%timeSeries)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2063,88 +1762,65 @@ subroutine AD_Dvr_UnPackDvr_SimData(Buf, OutData)
       call RegUnpack(Buf, OutData%timeSeries)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! iTimeSeries
    call RegUnpack(Buf, OutData%iTimeSeries)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! root
    call RegUnpack(Buf, OutData%root)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! out
    call AD_Dvr_UnpackDvr_Outputs(Buf, OutData%out) ! out 
-   ! IW_InitInp
    call ADI_UnpackIW_InputData(Buf, OutData%IW_InitInp) ! IW_InitInp 
 end subroutine
- SUBROUTINE AD_Dvr_CopyAllData( SrcAllDataData, DstAllDataData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(AllData), INTENT(INOUT) :: SrcAllDataData
-   TYPE(AllData), INTENT(INOUT) :: DstAllDataData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'AD_Dvr_CopyAllData'
-! 
+
+subroutine AD_Dvr_CopyAllData(SrcAllDataData, DstAllDataData, CtrlCode, ErrStat, ErrMsg)
+   type(AllData), intent(inout) :: SrcAllDataData
+   type(AllData), intent(inout) :: DstAllDataData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_Dvr_CopyAllData'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL AD_Dvr_Copydvr_simdata( SrcAllDataData%dvr, DstAllDataData%dvr, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL ADI_Copydata( SrcAllDataData%ADI, DstAllDataData%ADI, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL ADI_Copyfed_data( SrcAllDataData%FED, DstAllDataData%FED, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    DstAllDataData%errStat = SrcAllDataData%errStat
-    DstAllDataData%errMsg = SrcAllDataData%errMsg
-    DstAllDataData%initialized = SrcAllDataData%initialized
- END SUBROUTINE AD_Dvr_CopyAllData
+   ErrMsg  = ''
+   call AD_Dvr_CopyDvr_SimData(SrcAllDataData%dvr, DstAllDataData%dvr, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call ADI_CopyData(SrcAllDataData%ADI, DstAllDataData%ADI, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call ADI_CopyFED_Data(SrcAllDataData%FED, DstAllDataData%FED, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstAllDataData%errStat = SrcAllDataData%errStat
+   DstAllDataData%errMsg = SrcAllDataData%errMsg
+   DstAllDataData%initialized = SrcAllDataData%initialized
+end subroutine
 
- SUBROUTINE AD_Dvr_DestroyAllData( AllDataData, ErrStat, ErrMsg )
-  TYPE(AllData), INTENT(INOUT) :: AllDataData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AD_Dvr_DestroyAllData'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL AD_Dvr_DestroyDvr_SimData( AllDataData%dvr, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL ADI_DestroyData( AllDataData%ADI, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL ADI_DestroyFED_Data( AllDataData%FED, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE AD_Dvr_DestroyAllData
-
+subroutine AD_Dvr_DestroyAllData(AllDataData, ErrStat, ErrMsg)
+   type(AllData), intent(inout) :: AllDataData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'AD_Dvr_DestroyAllData'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine AD_Dvr_PackAllData(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(AllData), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AD_Dvr_PackAllData'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! dvr
    call AD_Dvr_PackDvr_SimData(Buf, InData%dvr) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ADI
    call ADI_PackData(Buf, InData%ADI) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FED
    call ADI_PackFED_Data(Buf, InData%FED) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! errStat
    call RegPack(Buf, InData%errStat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! errMsg
    call RegPack(Buf, InData%errMsg)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! initialized
    call RegPack(Buf, InData%initialized)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -2154,19 +1830,13 @@ subroutine AD_Dvr_UnPackAllData(Buf, OutData)
    type(AllData), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AD_Dvr_UnPackAllData'
    if (Buf%ErrStat /= ErrID_None) return
-   ! dvr
    call AD_Dvr_UnpackDvr_SimData(Buf, OutData%dvr) ! dvr 
-   ! ADI
    call ADI_UnpackData(Buf, OutData%ADI) ! ADI 
-   ! FED
    call ADI_UnpackFED_Data(Buf, OutData%FED) ! FED 
-   ! errStat
    call RegUnpack(Buf, OutData%errStat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! errMsg
    call RegUnpack(Buf, OutData%errMsg)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! initialized
    call RegUnpack(Buf, OutData%initialized)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

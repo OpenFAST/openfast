@@ -92,43 +92,32 @@ IMPLICIT NONE
   END TYPE SC_DX_OutputType
 ! =======================
 CONTAINS
- SUBROUTINE SC_DX_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SC_DX_InitInputType), INTENT(IN) :: SrcInitInputData
-   TYPE(SC_DX_InitInputType), INTENT(INOUT) :: DstInitInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_CopyInitInput'
-! 
+
+subroutine SC_DX_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
+   type(SC_DX_InitInputType), intent(in) :: SrcInitInputData
+   type(SC_DX_InitInputType), intent(inout) :: DstInitInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SC_DX_CopyInitInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInitInputData%NumSC2Ctrl = SrcInitInputData%NumSC2Ctrl
-    DstInitInputData%C_obj%NumSC2Ctrl = SrcInitInputData%C_obj%NumSC2Ctrl
-    DstInitInputData%NumSC2CtrlGlob = SrcInitInputData%NumSC2CtrlGlob
-    DstInitInputData%C_obj%NumSC2CtrlGlob = SrcInitInputData%C_obj%NumSC2CtrlGlob
-    DstInitInputData%NumCtrl2SC = SrcInitInputData%NumCtrl2SC
-    DstInitInputData%C_obj%NumCtrl2SC = SrcInitInputData%C_obj%NumCtrl2SC
- END SUBROUTINE SC_DX_CopyInitInput
+   ErrMsg  = ''
+   DstInitInputData%NumSC2Ctrl = SrcInitInputData%NumSC2Ctrl
+   DstInitInputData%C_obj%NumSC2Ctrl = SrcInitInputData%C_obj%NumSC2Ctrl
+   DstInitInputData%NumSC2CtrlGlob = SrcInitInputData%NumSC2CtrlGlob
+   DstInitInputData%C_obj%NumSC2CtrlGlob = SrcInitInputData%C_obj%NumSC2CtrlGlob
+   DstInitInputData%NumCtrl2SC = SrcInitInputData%NumCtrl2SC
+   DstInitInputData%C_obj%NumCtrl2SC = SrcInitInputData%C_obj%NumCtrl2SC
+end subroutine
 
- SUBROUTINE SC_DX_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
-  TYPE(SC_DX_InitInputType), INTENT(INOUT) :: InitInputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SC_DX_DestroyInitInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE SC_DX_DestroyInitInput
-
+subroutine SC_DX_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
+   type(SC_DX_InitInputType), intent(inout) :: InitInputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SC_DX_DestroyInitInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SC_DX_PackInitInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -139,13 +128,10 @@ subroutine SC_DX_PackInitInput(Buf, Indata)
       call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
       return
    end if
-   ! NumSC2Ctrl
    call RegPack(Buf, InData%NumSC2Ctrl)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumSC2CtrlGlob
    call RegPack(Buf, InData%NumSC2CtrlGlob)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumCtrl2SC
    call RegPack(Buf, InData%NumCtrl2SC)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -155,15 +141,12 @@ subroutine SC_DX_UnPackInitInput(Buf, OutData)
    type(SC_DX_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_DX_UnPackInitInput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! NumSC2Ctrl
    call RegUnpack(Buf, OutData%NumSC2Ctrl)
    if (RegCheckErr(Buf, RoutineName)) return
    OutData%C_obj%NumSC2Ctrl = OutData%NumSC2Ctrl
-   ! NumSC2CtrlGlob
    call RegUnpack(Buf, OutData%NumSC2CtrlGlob)
    if (RegCheckErr(Buf, RoutineName)) return
    OutData%C_obj%NumSC2CtrlGlob = OutData%NumSC2CtrlGlob
-   ! NumCtrl2SC
    call RegUnpack(Buf, OutData%NumCtrl2SC)
    if (RegCheckErr(Buf, RoutineName)) return
    OutData%C_obj%NumCtrl2SC = OutData%NumCtrl2SC
@@ -208,42 +191,33 @@ end subroutine
     InitInputData%C_obj%NumCtrl2SC = InitInputData%NumCtrl2SC
  END SUBROUTINE SC_DX_F2C_CopyInitInput
 
- SUBROUTINE SC_DX_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SC_DX_InitOutputType), INTENT(IN) :: SrcInitOutputData
-   TYPE(SC_DX_InitOutputType), INTENT(INOUT) :: DstInitOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_CopyInitOutput'
-! 
+
+subroutine SC_DX_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(SC_DX_InitOutputType), intent(in) :: SrcInitOutputData
+   type(SC_DX_InitOutputType), intent(inout) :: DstInitOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SC_DX_CopyInitOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL NWTC_Library_Copyprogdesc( SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE SC_DX_CopyInitOutput
+   ErrMsg  = ''
+   call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE SC_DX_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
-  TYPE(SC_DX_InitOutputType), INTENT(INOUT) :: InitOutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SC_DX_DestroyInitOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL NWTC_Library_DestroyProgDesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE SC_DX_DestroyInitOutput
-
+subroutine SC_DX_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
+   type(SC_DX_InitOutputType), intent(inout) :: InitOutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SC_DX_DestroyInitOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SC_DX_PackInitOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -254,7 +228,6 @@ subroutine SC_DX_PackInitOutput(Buf, Indata)
       call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
       return
    end if
-   ! Ver
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -264,7 +237,6 @@ subroutine SC_DX_UnPackInitOutput(Buf, OutData)
    type(SC_DX_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_DX_UnPackInitOutput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! Ver
    call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
 end subroutine
  SUBROUTINE SC_DX_C2Fary_CopyInitOutput( InitOutputData, ErrStat, ErrMsg, SkipPointers )
@@ -301,39 +273,28 @@ end subroutine
     END IF
  END SUBROUTINE SC_DX_F2C_CopyInitOutput
 
- SUBROUTINE SC_DX_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SC_DX_ParameterType), INTENT(IN) :: SrcParamData
-   TYPE(SC_DX_ParameterType), INTENT(INOUT) :: DstParamData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_CopyParam'
-! 
+
+subroutine SC_DX_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
+   type(SC_DX_ParameterType), intent(in) :: SrcParamData
+   type(SC_DX_ParameterType), intent(inout) :: DstParamData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SC_DX_CopyParam'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstParamData%useSC = SrcParamData%useSC
-    DstParamData%C_obj%useSC = SrcParamData%C_obj%useSC
- END SUBROUTINE SC_DX_CopyParam
+   ErrMsg  = ''
+   DstParamData%useSC = SrcParamData%useSC
+   DstParamData%C_obj%useSC = SrcParamData%C_obj%useSC
+end subroutine
 
- SUBROUTINE SC_DX_DestroyParam( ParamData, ErrStat, ErrMsg )
-  TYPE(SC_DX_ParameterType), INTENT(INOUT) :: ParamData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SC_DX_DestroyParam'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE SC_DX_DestroyParam
-
+subroutine SC_DX_DestroyParam(ParamData, ErrStat, ErrMsg)
+   type(SC_DX_ParameterType), intent(inout) :: ParamData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SC_DX_DestroyParam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine SC_DX_PackParam(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -344,7 +305,6 @@ subroutine SC_DX_PackParam(Buf, Indata)
       call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
       return
    end if
-   ! useSC
    call RegPack(Buf, InData%useSC)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -354,7 +314,6 @@ subroutine SC_DX_UnPackParam(Buf, OutData)
    type(SC_DX_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'SC_DX_UnPackParam'
    if (Buf%ErrStat /= ErrID_None) return
-   ! useSC
    call RegUnpack(Buf, OutData%useSC)
    if (RegCheckErr(Buf, RoutineName)) return
    OutData%C_obj%useSC = OutData%useSC
@@ -395,59 +354,51 @@ end subroutine
     ParamData%C_obj%useSC = ParamData%useSC
  END SUBROUTINE SC_DX_F2C_CopyParam
 
- SUBROUTINE SC_DX_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SC_DX_InputType), INTENT(IN) :: SrcInputData
-   TYPE(SC_DX_InputType), INTENT(INOUT) :: DstInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_CopyInput'
-! 
+
+subroutine SC_DX_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
+   type(SC_DX_InputType), intent(in) :: SrcInputData
+   type(SC_DX_InputType), intent(inout) :: DstInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'SC_DX_CopyInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ASSOCIATED(SrcInputData%toSC)) THEN
-  i1_l = LBOUND(SrcInputData%toSC,1)
-  i1_u = UBOUND(SrcInputData%toSC,1)
-  IF (.NOT. ASSOCIATED(DstInputData%toSC)) THEN 
-    ALLOCATE(DstInputData%toSC(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%toSC.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-    DstInputData%C_obj%toSC_Len = SIZE(DstInputData%toSC)
-    IF (DstInputData%C_obj%toSC_Len > 0) &
-          DstInputData%C_obj%toSC = C_LOC( DstInputData%toSC( i1_l ) )
-  END IF
-    DstInputData%toSC = SrcInputData%toSC
-ENDIF
- END SUBROUTINE SC_DX_CopyInput
+   ErrMsg  = ''
+   if (associated(SrcInputData%toSC)) then
+      LB(1:1) = lbound(SrcInputData%toSC)
+      UB(1:1) = ubound(SrcInputData%toSC)
+      if (.not. associated(DstInputData%toSC)) then
+         allocate(DstInputData%toSC(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%toSC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+         DstInputData%C_obj%toSC_Len = size(DstInputData%toSC)
+         if (DstInputData%C_obj%toSC_Len > 0) &
+            DstInputData%C_obj%toSC = c_loc(DstInputData%toSC(LB(1)))
+      end if
+      DstInputData%toSC = SrcInputData%toSC
+   else if (associated(DstInputData%toSC)) then
+      deallocate(DstInputData%toSC)
+   end if
+end subroutine
 
- SUBROUTINE SC_DX_DestroyInput( InputData, ErrStat, ErrMsg )
-  TYPE(SC_DX_InputType), INTENT(INOUT) :: InputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SC_DX_DestroyInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ASSOCIATED(InputData%toSC)) THEN
-  DEALLOCATE(InputData%toSC)
-  InputData%toSC => NULL()
-  InputData%C_obj%toSC = C_NULL_PTR
-  InputData%C_obj%toSC_Len = 0
-ENDIF
- END SUBROUTINE SC_DX_DestroyInput
-
+subroutine SC_DX_DestroyInput(InputData, ErrStat, ErrMsg)
+   type(SC_DX_InputType), intent(inout) :: InputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SC_DX_DestroyInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (associated(InputData%toSC)) then
+      deallocate(InputData%toSC)
+      InputData%toSC => null()
+      InputData%C_obj%toSC = c_null_ptr
+      InputData%C_obj%toSC_Len = 0
+   end if
+end subroutine
 
 subroutine SC_DX_PackInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -459,7 +410,6 @@ subroutine SC_DX_PackInput(Buf, Indata)
       call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
       return
    end if
-   ! toSC
    call RegPack(Buf, associated(InData%toSC))
    if (associated(InData%toSC)) then
       call RegPackBounds(Buf, 1, lbound(InData%toSC), ubound(InData%toSC))
@@ -481,7 +431,6 @@ subroutine SC_DX_UnPackInput(Buf, OutData)
    integer(IntKi)  :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
-   ! toSC
    if (associated(OutData%toSC)) deallocate(OutData%toSC)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -564,80 +513,74 @@ end subroutine
     END IF
  END SUBROUTINE SC_DX_F2C_CopyInput
 
- SUBROUTINE SC_DX_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SC_DX_OutputType), INTENT(IN) :: SrcOutputData
-   TYPE(SC_DX_OutputType), INTENT(INOUT) :: DstOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_CopyOutput'
-! 
+
+subroutine SC_DX_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(SC_DX_OutputType), intent(in) :: SrcOutputData
+   type(SC_DX_OutputType), intent(inout) :: DstOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'SC_DX_CopyOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ASSOCIATED(SrcOutputData%fromSC)) THEN
-  i1_l = LBOUND(SrcOutputData%fromSC,1)
-  i1_u = UBOUND(SrcOutputData%fromSC,1)
-  IF (.NOT. ASSOCIATED(DstOutputData%fromSC)) THEN 
-    ALLOCATE(DstOutputData%fromSC(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%fromSC.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-    DstOutputData%C_obj%fromSC_Len = SIZE(DstOutputData%fromSC)
-    IF (DstOutputData%C_obj%fromSC_Len > 0) &
-          DstOutputData%C_obj%fromSC = C_LOC( DstOutputData%fromSC( i1_l ) )
-  END IF
-    DstOutputData%fromSC = SrcOutputData%fromSC
-ENDIF
-IF (ASSOCIATED(SrcOutputData%fromSCglob)) THEN
-  i1_l = LBOUND(SrcOutputData%fromSCglob,1)
-  i1_u = UBOUND(SrcOutputData%fromSCglob,1)
-  IF (.NOT. ASSOCIATED(DstOutputData%fromSCglob)) THEN 
-    ALLOCATE(DstOutputData%fromSCglob(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%fromSCglob.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-    DstOutputData%C_obj%fromSCglob_Len = SIZE(DstOutputData%fromSCglob)
-    IF (DstOutputData%C_obj%fromSCglob_Len > 0) &
-          DstOutputData%C_obj%fromSCglob = C_LOC( DstOutputData%fromSCglob( i1_l ) )
-  END IF
-    DstOutputData%fromSCglob = SrcOutputData%fromSCglob
-ENDIF
- END SUBROUTINE SC_DX_CopyOutput
+   ErrMsg  = ''
+   if (associated(SrcOutputData%fromSC)) then
+      LB(1:1) = lbound(SrcOutputData%fromSC)
+      UB(1:1) = ubound(SrcOutputData%fromSC)
+      if (.not. associated(DstOutputData%fromSC)) then
+         allocate(DstOutputData%fromSC(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%fromSC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+         DstOutputData%C_obj%fromSC_Len = size(DstOutputData%fromSC)
+         if (DstOutputData%C_obj%fromSC_Len > 0) &
+            DstOutputData%C_obj%fromSC = c_loc(DstOutputData%fromSC(LB(1)))
+      end if
+      DstOutputData%fromSC = SrcOutputData%fromSC
+   else if (associated(DstOutputData%fromSC)) then
+      deallocate(DstOutputData%fromSC)
+   end if
+   if (associated(SrcOutputData%fromSCglob)) then
+      LB(1:1) = lbound(SrcOutputData%fromSCglob)
+      UB(1:1) = ubound(SrcOutputData%fromSCglob)
+      if (.not. associated(DstOutputData%fromSCglob)) then
+         allocate(DstOutputData%fromSCglob(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%fromSCglob.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+         DstOutputData%C_obj%fromSCglob_Len = size(DstOutputData%fromSCglob)
+         if (DstOutputData%C_obj%fromSCglob_Len > 0) &
+            DstOutputData%C_obj%fromSCglob = c_loc(DstOutputData%fromSCglob(LB(1)))
+      end if
+      DstOutputData%fromSCglob = SrcOutputData%fromSCglob
+   else if (associated(DstOutputData%fromSCglob)) then
+      deallocate(DstOutputData%fromSCglob)
+   end if
+end subroutine
 
- SUBROUTINE SC_DX_DestroyOutput( OutputData, ErrStat, ErrMsg )
-  TYPE(SC_DX_OutputType), INTENT(INOUT) :: OutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SC_DX_DestroyOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ASSOCIATED(OutputData%fromSC)) THEN
-  DEALLOCATE(OutputData%fromSC)
-  OutputData%fromSC => NULL()
-  OutputData%C_obj%fromSC = C_NULL_PTR
-  OutputData%C_obj%fromSC_Len = 0
-ENDIF
-IF (ASSOCIATED(OutputData%fromSCglob)) THEN
-  DEALLOCATE(OutputData%fromSCglob)
-  OutputData%fromSCglob => NULL()
-  OutputData%C_obj%fromSCglob = C_NULL_PTR
-  OutputData%C_obj%fromSCglob_Len = 0
-ENDIF
- END SUBROUTINE SC_DX_DestroyOutput
-
+subroutine SC_DX_DestroyOutput(OutputData, ErrStat, ErrMsg)
+   type(SC_DX_OutputType), intent(inout) :: OutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SC_DX_DestroyOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (associated(OutputData%fromSC)) then
+      deallocate(OutputData%fromSC)
+      OutputData%fromSC => null()
+      OutputData%C_obj%fromSC = c_null_ptr
+      OutputData%C_obj%fromSC_Len = 0
+   end if
+   if (associated(OutputData%fromSCglob)) then
+      deallocate(OutputData%fromSCglob)
+      OutputData%fromSCglob => null()
+      OutputData%C_obj%fromSCglob = c_null_ptr
+      OutputData%C_obj%fromSCglob_Len = 0
+   end if
+end subroutine
 
 subroutine SC_DX_PackOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -649,7 +592,6 @@ subroutine SC_DX_PackOutput(Buf, Indata)
       call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
       return
    end if
-   ! fromSC
    call RegPack(Buf, associated(InData%fromSC))
    if (associated(InData%fromSC)) then
       call RegPackBounds(Buf, 1, lbound(InData%fromSC), ubound(InData%fromSC))
@@ -659,7 +601,6 @@ subroutine SC_DX_PackOutput(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! fromSCglob
    call RegPack(Buf, associated(InData%fromSCglob))
    if (associated(InData%fromSCglob)) then
       call RegPackBounds(Buf, 1, lbound(InData%fromSCglob), ubound(InData%fromSCglob))
@@ -681,7 +622,6 @@ subroutine SC_DX_UnPackOutput(Buf, OutData)
    integer(IntKi)  :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
-   ! fromSC
    if (associated(OutData%fromSC)) deallocate(OutData%fromSC)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -708,7 +648,6 @@ subroutine SC_DX_UnPackOutput(Buf, OutData)
    else
       OutData%fromSC => null()
    end if
-   ! fromSCglob
    if (associated(OutData%fromSCglob)) deallocate(OutData%fromSCglob)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return

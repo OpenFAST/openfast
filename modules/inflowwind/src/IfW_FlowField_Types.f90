@@ -166,424 +166,428 @@ IMPLICIT NONE
   END TYPE FlowFieldType
 ! =======================
 CONTAINS
- SUBROUTINE IfW_FlowField_CopyUniformFieldType( SrcUniformFieldTypeData, DstUniformFieldTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(UniformFieldType), INTENT(IN) :: SrcUniformFieldTypeData
-   TYPE(UniformFieldType), INTENT(INOUT) :: DstUniformFieldTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_CopyUniformFieldType'
-! 
+
+subroutine IfW_FlowField_CopyUniformFieldType(SrcUniformFieldTypeData, DstUniformFieldTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(UniformFieldType), intent(in) :: SrcUniformFieldTypeData
+   type(UniformFieldType), intent(inout) :: DstUniformFieldTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyUniformFieldType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstUniformFieldTypeData%RefHeight = SrcUniformFieldTypeData%RefHeight
-    DstUniformFieldTypeData%RefLength = SrcUniformFieldTypeData%RefLength
-    DstUniformFieldTypeData%DataSize = SrcUniformFieldTypeData%DataSize
-IF (ALLOCATED(SrcUniformFieldTypeData%Time)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%Time,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%Time,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%Time)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%Time(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%Time.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%Time = SrcUniformFieldTypeData%Time
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%VelH)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%VelH,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%VelH,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%VelH)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%VelH(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelH.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%VelH = SrcUniformFieldTypeData%VelH
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%VelHDot)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%VelHDot,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%VelHDot,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%VelHDot)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%VelHDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelHDot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%VelHDot = SrcUniformFieldTypeData%VelHDot
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%VelV)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%VelV,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%VelV,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%VelV)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%VelV(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelV.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%VelV = SrcUniformFieldTypeData%VelV
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%VelVDot)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%VelVDot,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%VelVDot,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%VelVDot)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%VelVDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelVDot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%VelVDot = SrcUniformFieldTypeData%VelVDot
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%VelGust)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%VelGust,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%VelGust,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%VelGust)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%VelGust(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelGust.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%VelGust = SrcUniformFieldTypeData%VelGust
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%VelGustDot)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%VelGustDot,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%VelGustDot,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%VelGustDot)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%VelGustDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelGustDot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%VelGustDot = SrcUniformFieldTypeData%VelGustDot
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%AngleH)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%AngleH,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%AngleH,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%AngleH)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%AngleH(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleH.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%AngleH = SrcUniformFieldTypeData%AngleH
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%AngleHDot)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%AngleHDot,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%AngleHDot,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%AngleHDot)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%AngleHDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleHDot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%AngleHDot = SrcUniformFieldTypeData%AngleHDot
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%AngleV)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%AngleV,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%AngleV,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%AngleV)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%AngleV(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleV.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%AngleV = SrcUniformFieldTypeData%AngleV
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%AngleVDot)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%AngleVDot,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%AngleVDot,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%AngleVDot)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%AngleVDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleVDot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%AngleVDot = SrcUniformFieldTypeData%AngleVDot
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%ShrH)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%ShrH,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%ShrH,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%ShrH)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%ShrH(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrH.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%ShrH = SrcUniformFieldTypeData%ShrH
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%ShrHDot)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%ShrHDot,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%ShrHDot,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%ShrHDot)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%ShrHDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrHDot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%ShrHDot = SrcUniformFieldTypeData%ShrHDot
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%ShrV)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%ShrV,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%ShrV,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%ShrV)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%ShrV(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrV.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%ShrV = SrcUniformFieldTypeData%ShrV
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%ShrVDot)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%ShrVDot,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%ShrVDot,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%ShrVDot)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%ShrVDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrVDot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%ShrVDot = SrcUniformFieldTypeData%ShrVDot
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%LinShrV)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%LinShrV,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%LinShrV,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%LinShrV)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%LinShrV(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%LinShrV.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%LinShrV = SrcUniformFieldTypeData%LinShrV
-ENDIF
-IF (ALLOCATED(SrcUniformFieldTypeData%LinShrVDot)) THEN
-  i1_l = LBOUND(SrcUniformFieldTypeData%LinShrVDot,1)
-  i1_u = UBOUND(SrcUniformFieldTypeData%LinShrVDot,1)
-  IF (.NOT. ALLOCATED(DstUniformFieldTypeData%LinShrVDot)) THEN 
-    ALLOCATE(DstUniformFieldTypeData%LinShrVDot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%LinShrVDot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstUniformFieldTypeData%LinShrVDot = SrcUniformFieldTypeData%LinShrVDot
-ENDIF
- END SUBROUTINE IfW_FlowField_CopyUniformFieldType
+   ErrMsg  = ''
+   DstUniformFieldTypeData%RefHeight = SrcUniformFieldTypeData%RefHeight
+   DstUniformFieldTypeData%RefLength = SrcUniformFieldTypeData%RefLength
+   DstUniformFieldTypeData%DataSize = SrcUniformFieldTypeData%DataSize
+   if (allocated(SrcUniformFieldTypeData%Time)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%Time)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%Time)
+      if (.not. allocated(DstUniformFieldTypeData%Time)) then
+         allocate(DstUniformFieldTypeData%Time(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%Time.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%Time = SrcUniformFieldTypeData%Time
+   else if (allocated(DstUniformFieldTypeData%Time)) then
+      deallocate(DstUniformFieldTypeData%Time)
+   end if
+   if (allocated(SrcUniformFieldTypeData%VelH)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelH)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelH)
+      if (.not. allocated(DstUniformFieldTypeData%VelH)) then
+         allocate(DstUniformFieldTypeData%VelH(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelH.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%VelH = SrcUniformFieldTypeData%VelH
+   else if (allocated(DstUniformFieldTypeData%VelH)) then
+      deallocate(DstUniformFieldTypeData%VelH)
+   end if
+   if (allocated(SrcUniformFieldTypeData%VelHDot)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelHDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelHDot)
+      if (.not. allocated(DstUniformFieldTypeData%VelHDot)) then
+         allocate(DstUniformFieldTypeData%VelHDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelHDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%VelHDot = SrcUniformFieldTypeData%VelHDot
+   else if (allocated(DstUniformFieldTypeData%VelHDot)) then
+      deallocate(DstUniformFieldTypeData%VelHDot)
+   end if
+   if (allocated(SrcUniformFieldTypeData%VelV)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelV)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelV)
+      if (.not. allocated(DstUniformFieldTypeData%VelV)) then
+         allocate(DstUniformFieldTypeData%VelV(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelV.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%VelV = SrcUniformFieldTypeData%VelV
+   else if (allocated(DstUniformFieldTypeData%VelV)) then
+      deallocate(DstUniformFieldTypeData%VelV)
+   end if
+   if (allocated(SrcUniformFieldTypeData%VelVDot)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelVDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelVDot)
+      if (.not. allocated(DstUniformFieldTypeData%VelVDot)) then
+         allocate(DstUniformFieldTypeData%VelVDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelVDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%VelVDot = SrcUniformFieldTypeData%VelVDot
+   else if (allocated(DstUniformFieldTypeData%VelVDot)) then
+      deallocate(DstUniformFieldTypeData%VelVDot)
+   end if
+   if (allocated(SrcUniformFieldTypeData%VelGust)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelGust)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelGust)
+      if (.not. allocated(DstUniformFieldTypeData%VelGust)) then
+         allocate(DstUniformFieldTypeData%VelGust(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelGust.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%VelGust = SrcUniformFieldTypeData%VelGust
+   else if (allocated(DstUniformFieldTypeData%VelGust)) then
+      deallocate(DstUniformFieldTypeData%VelGust)
+   end if
+   if (allocated(SrcUniformFieldTypeData%VelGustDot)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%VelGustDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%VelGustDot)
+      if (.not. allocated(DstUniformFieldTypeData%VelGustDot)) then
+         allocate(DstUniformFieldTypeData%VelGustDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%VelGustDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%VelGustDot = SrcUniformFieldTypeData%VelGustDot
+   else if (allocated(DstUniformFieldTypeData%VelGustDot)) then
+      deallocate(DstUniformFieldTypeData%VelGustDot)
+   end if
+   if (allocated(SrcUniformFieldTypeData%AngleH)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%AngleH)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%AngleH)
+      if (.not. allocated(DstUniformFieldTypeData%AngleH)) then
+         allocate(DstUniformFieldTypeData%AngleH(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleH.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%AngleH = SrcUniformFieldTypeData%AngleH
+   else if (allocated(DstUniformFieldTypeData%AngleH)) then
+      deallocate(DstUniformFieldTypeData%AngleH)
+   end if
+   if (allocated(SrcUniformFieldTypeData%AngleHDot)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%AngleHDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%AngleHDot)
+      if (.not. allocated(DstUniformFieldTypeData%AngleHDot)) then
+         allocate(DstUniformFieldTypeData%AngleHDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleHDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%AngleHDot = SrcUniformFieldTypeData%AngleHDot
+   else if (allocated(DstUniformFieldTypeData%AngleHDot)) then
+      deallocate(DstUniformFieldTypeData%AngleHDot)
+   end if
+   if (allocated(SrcUniformFieldTypeData%AngleV)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%AngleV)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%AngleV)
+      if (.not. allocated(DstUniformFieldTypeData%AngleV)) then
+         allocate(DstUniformFieldTypeData%AngleV(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleV.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%AngleV = SrcUniformFieldTypeData%AngleV
+   else if (allocated(DstUniformFieldTypeData%AngleV)) then
+      deallocate(DstUniformFieldTypeData%AngleV)
+   end if
+   if (allocated(SrcUniformFieldTypeData%AngleVDot)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%AngleVDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%AngleVDot)
+      if (.not. allocated(DstUniformFieldTypeData%AngleVDot)) then
+         allocate(DstUniformFieldTypeData%AngleVDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%AngleVDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%AngleVDot = SrcUniformFieldTypeData%AngleVDot
+   else if (allocated(DstUniformFieldTypeData%AngleVDot)) then
+      deallocate(DstUniformFieldTypeData%AngleVDot)
+   end if
+   if (allocated(SrcUniformFieldTypeData%ShrH)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%ShrH)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%ShrH)
+      if (.not. allocated(DstUniformFieldTypeData%ShrH)) then
+         allocate(DstUniformFieldTypeData%ShrH(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrH.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%ShrH = SrcUniformFieldTypeData%ShrH
+   else if (allocated(DstUniformFieldTypeData%ShrH)) then
+      deallocate(DstUniformFieldTypeData%ShrH)
+   end if
+   if (allocated(SrcUniformFieldTypeData%ShrHDot)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%ShrHDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%ShrHDot)
+      if (.not. allocated(DstUniformFieldTypeData%ShrHDot)) then
+         allocate(DstUniformFieldTypeData%ShrHDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrHDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%ShrHDot = SrcUniformFieldTypeData%ShrHDot
+   else if (allocated(DstUniformFieldTypeData%ShrHDot)) then
+      deallocate(DstUniformFieldTypeData%ShrHDot)
+   end if
+   if (allocated(SrcUniformFieldTypeData%ShrV)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%ShrV)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%ShrV)
+      if (.not. allocated(DstUniformFieldTypeData%ShrV)) then
+         allocate(DstUniformFieldTypeData%ShrV(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrV.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%ShrV = SrcUniformFieldTypeData%ShrV
+   else if (allocated(DstUniformFieldTypeData%ShrV)) then
+      deallocate(DstUniformFieldTypeData%ShrV)
+   end if
+   if (allocated(SrcUniformFieldTypeData%ShrVDot)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%ShrVDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%ShrVDot)
+      if (.not. allocated(DstUniformFieldTypeData%ShrVDot)) then
+         allocate(DstUniformFieldTypeData%ShrVDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%ShrVDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%ShrVDot = SrcUniformFieldTypeData%ShrVDot
+   else if (allocated(DstUniformFieldTypeData%ShrVDot)) then
+      deallocate(DstUniformFieldTypeData%ShrVDot)
+   end if
+   if (allocated(SrcUniformFieldTypeData%LinShrV)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%LinShrV)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%LinShrV)
+      if (.not. allocated(DstUniformFieldTypeData%LinShrV)) then
+         allocate(DstUniformFieldTypeData%LinShrV(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%LinShrV.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%LinShrV = SrcUniformFieldTypeData%LinShrV
+   else if (allocated(DstUniformFieldTypeData%LinShrV)) then
+      deallocate(DstUniformFieldTypeData%LinShrV)
+   end if
+   if (allocated(SrcUniformFieldTypeData%LinShrVDot)) then
+      LB(1:1) = lbound(SrcUniformFieldTypeData%LinShrVDot)
+      UB(1:1) = ubound(SrcUniformFieldTypeData%LinShrVDot)
+      if (.not. allocated(DstUniformFieldTypeData%LinShrVDot)) then
+         allocate(DstUniformFieldTypeData%LinShrVDot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstUniformFieldTypeData%LinShrVDot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstUniformFieldTypeData%LinShrVDot = SrcUniformFieldTypeData%LinShrVDot
+   else if (allocated(DstUniformFieldTypeData%LinShrVDot)) then
+      deallocate(DstUniformFieldTypeData%LinShrVDot)
+   end if
+end subroutine
 
- SUBROUTINE IfW_FlowField_DestroyUniformFieldType( UniformFieldTypeData, ErrStat, ErrMsg )
-  TYPE(UniformFieldType), INTENT(INOUT) :: UniformFieldTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyUniformFieldType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(UniformFieldTypeData%Time)) THEN
-  DEALLOCATE(UniformFieldTypeData%Time)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%VelH)) THEN
-  DEALLOCATE(UniformFieldTypeData%VelH)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%VelHDot)) THEN
-  DEALLOCATE(UniformFieldTypeData%VelHDot)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%VelV)) THEN
-  DEALLOCATE(UniformFieldTypeData%VelV)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%VelVDot)) THEN
-  DEALLOCATE(UniformFieldTypeData%VelVDot)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%VelGust)) THEN
-  DEALLOCATE(UniformFieldTypeData%VelGust)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%VelGustDot)) THEN
-  DEALLOCATE(UniformFieldTypeData%VelGustDot)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%AngleH)) THEN
-  DEALLOCATE(UniformFieldTypeData%AngleH)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%AngleHDot)) THEN
-  DEALLOCATE(UniformFieldTypeData%AngleHDot)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%AngleV)) THEN
-  DEALLOCATE(UniformFieldTypeData%AngleV)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%AngleVDot)) THEN
-  DEALLOCATE(UniformFieldTypeData%AngleVDot)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%ShrH)) THEN
-  DEALLOCATE(UniformFieldTypeData%ShrH)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%ShrHDot)) THEN
-  DEALLOCATE(UniformFieldTypeData%ShrHDot)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%ShrV)) THEN
-  DEALLOCATE(UniformFieldTypeData%ShrV)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%ShrVDot)) THEN
-  DEALLOCATE(UniformFieldTypeData%ShrVDot)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%LinShrV)) THEN
-  DEALLOCATE(UniformFieldTypeData%LinShrV)
-ENDIF
-IF (ALLOCATED(UniformFieldTypeData%LinShrVDot)) THEN
-  DEALLOCATE(UniformFieldTypeData%LinShrVDot)
-ENDIF
- END SUBROUTINE IfW_FlowField_DestroyUniformFieldType
-
+subroutine IfW_FlowField_DestroyUniformFieldType(UniformFieldTypeData, ErrStat, ErrMsg)
+   type(UniformFieldType), intent(inout) :: UniformFieldTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_DestroyUniformFieldType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(UniformFieldTypeData%Time)) then
+      deallocate(UniformFieldTypeData%Time)
+   end if
+   if (allocated(UniformFieldTypeData%VelH)) then
+      deallocate(UniformFieldTypeData%VelH)
+   end if
+   if (allocated(UniformFieldTypeData%VelHDot)) then
+      deallocate(UniformFieldTypeData%VelHDot)
+   end if
+   if (allocated(UniformFieldTypeData%VelV)) then
+      deallocate(UniformFieldTypeData%VelV)
+   end if
+   if (allocated(UniformFieldTypeData%VelVDot)) then
+      deallocate(UniformFieldTypeData%VelVDot)
+   end if
+   if (allocated(UniformFieldTypeData%VelGust)) then
+      deallocate(UniformFieldTypeData%VelGust)
+   end if
+   if (allocated(UniformFieldTypeData%VelGustDot)) then
+      deallocate(UniformFieldTypeData%VelGustDot)
+   end if
+   if (allocated(UniformFieldTypeData%AngleH)) then
+      deallocate(UniformFieldTypeData%AngleH)
+   end if
+   if (allocated(UniformFieldTypeData%AngleHDot)) then
+      deallocate(UniformFieldTypeData%AngleHDot)
+   end if
+   if (allocated(UniformFieldTypeData%AngleV)) then
+      deallocate(UniformFieldTypeData%AngleV)
+   end if
+   if (allocated(UniformFieldTypeData%AngleVDot)) then
+      deallocate(UniformFieldTypeData%AngleVDot)
+   end if
+   if (allocated(UniformFieldTypeData%ShrH)) then
+      deallocate(UniformFieldTypeData%ShrH)
+   end if
+   if (allocated(UniformFieldTypeData%ShrHDot)) then
+      deallocate(UniformFieldTypeData%ShrHDot)
+   end if
+   if (allocated(UniformFieldTypeData%ShrV)) then
+      deallocate(UniformFieldTypeData%ShrV)
+   end if
+   if (allocated(UniformFieldTypeData%ShrVDot)) then
+      deallocate(UniformFieldTypeData%ShrVDot)
+   end if
+   if (allocated(UniformFieldTypeData%LinShrV)) then
+      deallocate(UniformFieldTypeData%LinShrV)
+   end if
+   if (allocated(UniformFieldTypeData%LinShrVDot)) then
+      deallocate(UniformFieldTypeData%LinShrVDot)
+   end if
+end subroutine
 
 subroutine IfW_FlowField_PackUniformFieldType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(UniformFieldType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'IfW_FlowField_PackUniformFieldType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! RefHeight
    call RegPack(Buf, InData%RefHeight)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefLength
    call RegPack(Buf, InData%RefLength)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DataSize
    call RegPack(Buf, InData%DataSize)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Time
    call RegPack(Buf, allocated(InData%Time))
    if (allocated(InData%Time)) then
       call RegPackBounds(Buf, 1, lbound(InData%Time), ubound(InData%Time))
       call RegPack(Buf, InData%Time)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelH
    call RegPack(Buf, allocated(InData%VelH))
    if (allocated(InData%VelH)) then
       call RegPackBounds(Buf, 1, lbound(InData%VelH), ubound(InData%VelH))
       call RegPack(Buf, InData%VelH)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelHDot
    call RegPack(Buf, allocated(InData%VelHDot))
    if (allocated(InData%VelHDot)) then
       call RegPackBounds(Buf, 1, lbound(InData%VelHDot), ubound(InData%VelHDot))
       call RegPack(Buf, InData%VelHDot)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelV
    call RegPack(Buf, allocated(InData%VelV))
    if (allocated(InData%VelV)) then
       call RegPackBounds(Buf, 1, lbound(InData%VelV), ubound(InData%VelV))
       call RegPack(Buf, InData%VelV)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelVDot
    call RegPack(Buf, allocated(InData%VelVDot))
    if (allocated(InData%VelVDot)) then
       call RegPackBounds(Buf, 1, lbound(InData%VelVDot), ubound(InData%VelVDot))
       call RegPack(Buf, InData%VelVDot)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelGust
    call RegPack(Buf, allocated(InData%VelGust))
    if (allocated(InData%VelGust)) then
       call RegPackBounds(Buf, 1, lbound(InData%VelGust), ubound(InData%VelGust))
       call RegPack(Buf, InData%VelGust)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelGustDot
    call RegPack(Buf, allocated(InData%VelGustDot))
    if (allocated(InData%VelGustDot)) then
       call RegPackBounds(Buf, 1, lbound(InData%VelGustDot), ubound(InData%VelGustDot))
       call RegPack(Buf, InData%VelGustDot)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AngleH
    call RegPack(Buf, allocated(InData%AngleH))
    if (allocated(InData%AngleH)) then
       call RegPackBounds(Buf, 1, lbound(InData%AngleH), ubound(InData%AngleH))
       call RegPack(Buf, InData%AngleH)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AngleHDot
    call RegPack(Buf, allocated(InData%AngleHDot))
    if (allocated(InData%AngleHDot)) then
       call RegPackBounds(Buf, 1, lbound(InData%AngleHDot), ubound(InData%AngleHDot))
       call RegPack(Buf, InData%AngleHDot)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AngleV
    call RegPack(Buf, allocated(InData%AngleV))
    if (allocated(InData%AngleV)) then
       call RegPackBounds(Buf, 1, lbound(InData%AngleV), ubound(InData%AngleV))
       call RegPack(Buf, InData%AngleV)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AngleVDot
    call RegPack(Buf, allocated(InData%AngleVDot))
    if (allocated(InData%AngleVDot)) then
       call RegPackBounds(Buf, 1, lbound(InData%AngleVDot), ubound(InData%AngleVDot))
       call RegPack(Buf, InData%AngleVDot)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ShrH
    call RegPack(Buf, allocated(InData%ShrH))
    if (allocated(InData%ShrH)) then
       call RegPackBounds(Buf, 1, lbound(InData%ShrH), ubound(InData%ShrH))
       call RegPack(Buf, InData%ShrH)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ShrHDot
    call RegPack(Buf, allocated(InData%ShrHDot))
    if (allocated(InData%ShrHDot)) then
       call RegPackBounds(Buf, 1, lbound(InData%ShrHDot), ubound(InData%ShrHDot))
       call RegPack(Buf, InData%ShrHDot)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ShrV
    call RegPack(Buf, allocated(InData%ShrV))
    if (allocated(InData%ShrV)) then
       call RegPackBounds(Buf, 1, lbound(InData%ShrV), ubound(InData%ShrV))
       call RegPack(Buf, InData%ShrV)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ShrVDot
    call RegPack(Buf, allocated(InData%ShrVDot))
    if (allocated(InData%ShrVDot)) then
       call RegPackBounds(Buf, 1, lbound(InData%ShrVDot), ubound(InData%ShrVDot))
       call RegPack(Buf, InData%ShrVDot)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LinShrV
    call RegPack(Buf, allocated(InData%LinShrV))
    if (allocated(InData%LinShrV)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinShrV), ubound(InData%LinShrV))
       call RegPack(Buf, InData%LinShrV)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LinShrVDot
    call RegPack(Buf, allocated(InData%LinShrVDot))
    if (allocated(InData%LinShrVDot)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinShrVDot), ubound(InData%LinShrVDot))
@@ -600,16 +604,12 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! RefHeight
    call RegUnpack(Buf, OutData%RefHeight)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefLength
    call RegUnpack(Buf, OutData%RefLength)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DataSize
    call RegUnpack(Buf, OutData%DataSize)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Time
    if (allocated(OutData%Time)) deallocate(OutData%Time)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -624,7 +624,6 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%Time)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! VelH
    if (allocated(OutData%VelH)) deallocate(OutData%VelH)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -639,7 +638,6 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%VelH)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! VelHDot
    if (allocated(OutData%VelHDot)) deallocate(OutData%VelHDot)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -654,7 +652,6 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%VelHDot)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! VelV
    if (allocated(OutData%VelV)) deallocate(OutData%VelV)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -669,7 +666,6 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%VelV)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! VelVDot
    if (allocated(OutData%VelVDot)) deallocate(OutData%VelVDot)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -684,7 +680,6 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%VelVDot)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! VelGust
    if (allocated(OutData%VelGust)) deallocate(OutData%VelGust)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -699,7 +694,6 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%VelGust)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! VelGustDot
    if (allocated(OutData%VelGustDot)) deallocate(OutData%VelGustDot)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -714,7 +708,6 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%VelGustDot)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! AngleH
    if (allocated(OutData%AngleH)) deallocate(OutData%AngleH)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -729,7 +722,6 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%AngleH)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! AngleHDot
    if (allocated(OutData%AngleHDot)) deallocate(OutData%AngleHDot)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -744,7 +736,6 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%AngleHDot)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! AngleV
    if (allocated(OutData%AngleV)) deallocate(OutData%AngleV)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -759,7 +750,6 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%AngleV)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! AngleVDot
    if (allocated(OutData%AngleVDot)) deallocate(OutData%AngleVDot)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -774,7 +764,6 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%AngleVDot)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! ShrH
    if (allocated(OutData%ShrH)) deallocate(OutData%ShrH)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -789,7 +778,6 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%ShrH)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! ShrHDot
    if (allocated(OutData%ShrHDot)) deallocate(OutData%ShrHDot)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -804,7 +792,6 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%ShrHDot)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! ShrV
    if (allocated(OutData%ShrV)) deallocate(OutData%ShrV)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -819,7 +806,6 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%ShrV)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! ShrVDot
    if (allocated(OutData%ShrVDot)) deallocate(OutData%ShrVDot)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -834,7 +820,6 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%ShrVDot)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! LinShrV
    if (allocated(OutData%LinShrV)) deallocate(OutData%LinShrV)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -849,7 +834,6 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%LinShrV)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! LinShrVDot
    if (allocated(OutData%LinShrVDot)) deallocate(OutData%LinShrVDot)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -865,121 +849,90 @@ subroutine IfW_FlowField_UnPackUniformFieldType(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE IfW_FlowField_CopyUniformField_Interp( SrcUniformField_InterpData, DstUniformField_InterpData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(UniformField_Interp), INTENT(IN) :: SrcUniformField_InterpData
-   TYPE(UniformField_Interp), INTENT(INOUT) :: DstUniformField_InterpData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_CopyUniformField_Interp'
-! 
+
+subroutine IfW_FlowField_CopyUniformField_Interp(SrcUniformField_InterpData, DstUniformField_InterpData, CtrlCode, ErrStat, ErrMsg)
+   type(UniformField_Interp), intent(in) :: SrcUniformField_InterpData
+   type(UniformField_Interp), intent(inout) :: DstUniformField_InterpData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyUniformField_Interp'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstUniformField_InterpData%VelH = SrcUniformField_InterpData%VelH
-    DstUniformField_InterpData%VelHDot = SrcUniformField_InterpData%VelHDot
-    DstUniformField_InterpData%VelV = SrcUniformField_InterpData%VelV
-    DstUniformField_InterpData%VelVDot = SrcUniformField_InterpData%VelVDot
-    DstUniformField_InterpData%VelGust = SrcUniformField_InterpData%VelGust
-    DstUniformField_InterpData%VelGustDot = SrcUniformField_InterpData%VelGustDot
-    DstUniformField_InterpData%AngleH = SrcUniformField_InterpData%AngleH
-    DstUniformField_InterpData%AngleHDot = SrcUniformField_InterpData%AngleHDot
-    DstUniformField_InterpData%AngleV = SrcUniformField_InterpData%AngleV
-    DstUniformField_InterpData%AngleVDot = SrcUniformField_InterpData%AngleVDot
-    DstUniformField_InterpData%ShrH = SrcUniformField_InterpData%ShrH
-    DstUniformField_InterpData%ShrHDot = SrcUniformField_InterpData%ShrHDot
-    DstUniformField_InterpData%ShrV = SrcUniformField_InterpData%ShrV
-    DstUniformField_InterpData%ShrVDot = SrcUniformField_InterpData%ShrVDot
-    DstUniformField_InterpData%LinShrV = SrcUniformField_InterpData%LinShrV
-    DstUniformField_InterpData%LinShrVDot = SrcUniformField_InterpData%LinShrVDot
-    DstUniformField_InterpData%CosAngleH = SrcUniformField_InterpData%CosAngleH
-    DstUniformField_InterpData%SinAngleH = SrcUniformField_InterpData%SinAngleH
-    DstUniformField_InterpData%CosAngleV = SrcUniformField_InterpData%CosAngleV
-    DstUniformField_InterpData%SinAngleV = SrcUniformField_InterpData%SinAngleV
- END SUBROUTINE IfW_FlowField_CopyUniformField_Interp
+   ErrMsg  = ''
+   DstUniformField_InterpData%VelH = SrcUniformField_InterpData%VelH
+   DstUniformField_InterpData%VelHDot = SrcUniformField_InterpData%VelHDot
+   DstUniformField_InterpData%VelV = SrcUniformField_InterpData%VelV
+   DstUniformField_InterpData%VelVDot = SrcUniformField_InterpData%VelVDot
+   DstUniformField_InterpData%VelGust = SrcUniformField_InterpData%VelGust
+   DstUniformField_InterpData%VelGustDot = SrcUniformField_InterpData%VelGustDot
+   DstUniformField_InterpData%AngleH = SrcUniformField_InterpData%AngleH
+   DstUniformField_InterpData%AngleHDot = SrcUniformField_InterpData%AngleHDot
+   DstUniformField_InterpData%AngleV = SrcUniformField_InterpData%AngleV
+   DstUniformField_InterpData%AngleVDot = SrcUniformField_InterpData%AngleVDot
+   DstUniformField_InterpData%ShrH = SrcUniformField_InterpData%ShrH
+   DstUniformField_InterpData%ShrHDot = SrcUniformField_InterpData%ShrHDot
+   DstUniformField_InterpData%ShrV = SrcUniformField_InterpData%ShrV
+   DstUniformField_InterpData%ShrVDot = SrcUniformField_InterpData%ShrVDot
+   DstUniformField_InterpData%LinShrV = SrcUniformField_InterpData%LinShrV
+   DstUniformField_InterpData%LinShrVDot = SrcUniformField_InterpData%LinShrVDot
+   DstUniformField_InterpData%CosAngleH = SrcUniformField_InterpData%CosAngleH
+   DstUniformField_InterpData%SinAngleH = SrcUniformField_InterpData%SinAngleH
+   DstUniformField_InterpData%CosAngleV = SrcUniformField_InterpData%CosAngleV
+   DstUniformField_InterpData%SinAngleV = SrcUniformField_InterpData%SinAngleV
+end subroutine
 
- SUBROUTINE IfW_FlowField_DestroyUniformField_Interp( UniformField_InterpData, ErrStat, ErrMsg )
-  TYPE(UniformField_Interp), INTENT(INOUT) :: UniformField_InterpData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyUniformField_Interp'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE IfW_FlowField_DestroyUniformField_Interp
-
+subroutine IfW_FlowField_DestroyUniformField_Interp(UniformField_InterpData, ErrStat, ErrMsg)
+   type(UniformField_Interp), intent(inout) :: UniformField_InterpData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_DestroyUniformField_Interp'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine IfW_FlowField_PackUniformField_Interp(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(UniformField_Interp), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'IfW_FlowField_PackUniformField_Interp'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! VelH
    call RegPack(Buf, InData%VelH)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelHDot
    call RegPack(Buf, InData%VelHDot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelV
    call RegPack(Buf, InData%VelV)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelVDot
    call RegPack(Buf, InData%VelVDot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelGust
    call RegPack(Buf, InData%VelGust)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelGustDot
    call RegPack(Buf, InData%VelGustDot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AngleH
    call RegPack(Buf, InData%AngleH)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AngleHDot
    call RegPack(Buf, InData%AngleHDot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AngleV
    call RegPack(Buf, InData%AngleV)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AngleVDot
    call RegPack(Buf, InData%AngleVDot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ShrH
    call RegPack(Buf, InData%ShrH)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ShrHDot
    call RegPack(Buf, InData%ShrHDot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ShrV
    call RegPack(Buf, InData%ShrV)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ShrVDot
    call RegPack(Buf, InData%ShrVDot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LinShrV
    call RegPack(Buf, InData%LinShrV)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LinShrVDot
    call RegPack(Buf, InData%LinShrVDot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CosAngleH
    call RegPack(Buf, InData%CosAngleH)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SinAngleH
    call RegPack(Buf, InData%SinAngleH)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CosAngleV
    call RegPack(Buf, InData%CosAngleV)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SinAngleV
    call RegPack(Buf, InData%SinAngleV)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -989,386 +942,301 @@ subroutine IfW_FlowField_UnPackUniformField_Interp(Buf, OutData)
    type(UniformField_Interp), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'IfW_FlowField_UnPackUniformField_Interp'
    if (Buf%ErrStat /= ErrID_None) return
-   ! VelH
    call RegUnpack(Buf, OutData%VelH)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelHDot
    call RegUnpack(Buf, OutData%VelHDot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelV
    call RegUnpack(Buf, OutData%VelV)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelVDot
    call RegUnpack(Buf, OutData%VelVDot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelGust
    call RegUnpack(Buf, OutData%VelGust)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelGustDot
    call RegUnpack(Buf, OutData%VelGustDot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AngleH
    call RegUnpack(Buf, OutData%AngleH)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AngleHDot
    call RegUnpack(Buf, OutData%AngleHDot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AngleV
    call RegUnpack(Buf, OutData%AngleV)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AngleVDot
    call RegUnpack(Buf, OutData%AngleVDot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ShrH
    call RegUnpack(Buf, OutData%ShrH)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ShrHDot
    call RegUnpack(Buf, OutData%ShrHDot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ShrV
    call RegUnpack(Buf, OutData%ShrV)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ShrVDot
    call RegUnpack(Buf, OutData%ShrVDot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LinShrV
    call RegUnpack(Buf, OutData%LinShrV)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LinShrVDot
    call RegUnpack(Buf, OutData%LinShrVDot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CosAngleH
    call RegUnpack(Buf, OutData%CosAngleH)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SinAngleH
    call RegUnpack(Buf, OutData%SinAngleH)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CosAngleV
    call RegUnpack(Buf, OutData%CosAngleV)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SinAngleV
    call RegUnpack(Buf, OutData%SinAngleV)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE IfW_FlowField_CopyGrid3DFieldType( SrcGrid3DFieldTypeData, DstGrid3DFieldTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Grid3DFieldType), INTENT(IN) :: SrcGrid3DFieldTypeData
-   TYPE(Grid3DFieldType), INTENT(INOUT) :: DstGrid3DFieldTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_CopyGrid3DFieldType'
-! 
+
+subroutine IfW_FlowField_CopyGrid3DFieldType(SrcGrid3DFieldTypeData, DstGrid3DFieldTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(Grid3DFieldType), intent(in) :: SrcGrid3DFieldTypeData
+   type(Grid3DFieldType), intent(inout) :: DstGrid3DFieldTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(4), UB(4)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyGrid3DFieldType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstGrid3DFieldTypeData%WindFileFormat = SrcGrid3DFieldTypeData%WindFileFormat
-    DstGrid3DFieldTypeData%WindProfileType = SrcGrid3DFieldTypeData%WindProfileType
-    DstGrid3DFieldTypeData%Periodic = SrcGrid3DFieldTypeData%Periodic
-    DstGrid3DFieldTypeData%InterpTower = SrcGrid3DFieldTypeData%InterpTower
-    DstGrid3DFieldTypeData%AddMeanAfterInterp = SrcGrid3DFieldTypeData%AddMeanAfterInterp
-    DstGrid3DFieldTypeData%RefHeight = SrcGrid3DFieldTypeData%RefHeight
-    DstGrid3DFieldTypeData%RefLength = SrcGrid3DFieldTypeData%RefLength
-IF (ALLOCATED(SrcGrid3DFieldTypeData%Vel)) THEN
-  i1_l = LBOUND(SrcGrid3DFieldTypeData%Vel,1)
-  i1_u = UBOUND(SrcGrid3DFieldTypeData%Vel,1)
-  i2_l = LBOUND(SrcGrid3DFieldTypeData%Vel,2)
-  i2_u = UBOUND(SrcGrid3DFieldTypeData%Vel,2)
-  i3_l = LBOUND(SrcGrid3DFieldTypeData%Vel,3)
-  i3_u = UBOUND(SrcGrid3DFieldTypeData%Vel,3)
-  i4_l = LBOUND(SrcGrid3DFieldTypeData%Vel,4)
-  i4_u = UBOUND(SrcGrid3DFieldTypeData%Vel,4)
-  IF (.NOT. ALLOCATED(DstGrid3DFieldTypeData%Vel)) THEN 
-    ALLOCATE(DstGrid3DFieldTypeData%Vel(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%Vel.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstGrid3DFieldTypeData%Vel = SrcGrid3DFieldTypeData%Vel
-ENDIF
-IF (ALLOCATED(SrcGrid3DFieldTypeData%Acc)) THEN
-  i1_l = LBOUND(SrcGrid3DFieldTypeData%Acc,1)
-  i1_u = UBOUND(SrcGrid3DFieldTypeData%Acc,1)
-  i2_l = LBOUND(SrcGrid3DFieldTypeData%Acc,2)
-  i2_u = UBOUND(SrcGrid3DFieldTypeData%Acc,2)
-  i3_l = LBOUND(SrcGrid3DFieldTypeData%Acc,3)
-  i3_u = UBOUND(SrcGrid3DFieldTypeData%Acc,3)
-  i4_l = LBOUND(SrcGrid3DFieldTypeData%Acc,4)
-  i4_u = UBOUND(SrcGrid3DFieldTypeData%Acc,4)
-  IF (.NOT. ALLOCATED(DstGrid3DFieldTypeData%Acc)) THEN 
-    ALLOCATE(DstGrid3DFieldTypeData%Acc(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%Acc.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstGrid3DFieldTypeData%Acc = SrcGrid3DFieldTypeData%Acc
-ENDIF
-IF (ALLOCATED(SrcGrid3DFieldTypeData%VelTower)) THEN
-  i1_l = LBOUND(SrcGrid3DFieldTypeData%VelTower,1)
-  i1_u = UBOUND(SrcGrid3DFieldTypeData%VelTower,1)
-  i2_l = LBOUND(SrcGrid3DFieldTypeData%VelTower,2)
-  i2_u = UBOUND(SrcGrid3DFieldTypeData%VelTower,2)
-  i3_l = LBOUND(SrcGrid3DFieldTypeData%VelTower,3)
-  i3_u = UBOUND(SrcGrid3DFieldTypeData%VelTower,3)
-  IF (.NOT. ALLOCATED(DstGrid3DFieldTypeData%VelTower)) THEN 
-    ALLOCATE(DstGrid3DFieldTypeData%VelTower(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%VelTower.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstGrid3DFieldTypeData%VelTower = SrcGrid3DFieldTypeData%VelTower
-ENDIF
-IF (ALLOCATED(SrcGrid3DFieldTypeData%AccTower)) THEN
-  i1_l = LBOUND(SrcGrid3DFieldTypeData%AccTower,1)
-  i1_u = UBOUND(SrcGrid3DFieldTypeData%AccTower,1)
-  i2_l = LBOUND(SrcGrid3DFieldTypeData%AccTower,2)
-  i2_u = UBOUND(SrcGrid3DFieldTypeData%AccTower,2)
-  i3_l = LBOUND(SrcGrid3DFieldTypeData%AccTower,3)
-  i3_u = UBOUND(SrcGrid3DFieldTypeData%AccTower,3)
-  IF (.NOT. ALLOCATED(DstGrid3DFieldTypeData%AccTower)) THEN 
-    ALLOCATE(DstGrid3DFieldTypeData%AccTower(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%AccTower.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstGrid3DFieldTypeData%AccTower = SrcGrid3DFieldTypeData%AccTower
-ENDIF
-IF (ALLOCATED(SrcGrid3DFieldTypeData%VelAvg)) THEN
-  i1_l = LBOUND(SrcGrid3DFieldTypeData%VelAvg,1)
-  i1_u = UBOUND(SrcGrid3DFieldTypeData%VelAvg,1)
-  i2_l = LBOUND(SrcGrid3DFieldTypeData%VelAvg,2)
-  i2_u = UBOUND(SrcGrid3DFieldTypeData%VelAvg,2)
-  i3_l = LBOUND(SrcGrid3DFieldTypeData%VelAvg,3)
-  i3_u = UBOUND(SrcGrid3DFieldTypeData%VelAvg,3)
-  IF (.NOT. ALLOCATED(DstGrid3DFieldTypeData%VelAvg)) THEN 
-    ALLOCATE(DstGrid3DFieldTypeData%VelAvg(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%VelAvg.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstGrid3DFieldTypeData%VelAvg = SrcGrid3DFieldTypeData%VelAvg
-ENDIF
-IF (ALLOCATED(SrcGrid3DFieldTypeData%AccAvg)) THEN
-  i1_l = LBOUND(SrcGrid3DFieldTypeData%AccAvg,1)
-  i1_u = UBOUND(SrcGrid3DFieldTypeData%AccAvg,1)
-  i2_l = LBOUND(SrcGrid3DFieldTypeData%AccAvg,2)
-  i2_u = UBOUND(SrcGrid3DFieldTypeData%AccAvg,2)
-  i3_l = LBOUND(SrcGrid3DFieldTypeData%AccAvg,3)
-  i3_u = UBOUND(SrcGrid3DFieldTypeData%AccAvg,3)
-  IF (.NOT. ALLOCATED(DstGrid3DFieldTypeData%AccAvg)) THEN 
-    ALLOCATE(DstGrid3DFieldTypeData%AccAvg(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%AccAvg.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstGrid3DFieldTypeData%AccAvg = SrcGrid3DFieldTypeData%AccAvg
-ENDIF
-    DstGrid3DFieldTypeData%DTime = SrcGrid3DFieldTypeData%DTime
-    DstGrid3DFieldTypeData%Rate = SrcGrid3DFieldTypeData%Rate
-    DstGrid3DFieldTypeData%YHWid = SrcGrid3DFieldTypeData%YHWid
-    DstGrid3DFieldTypeData%ZHWid = SrcGrid3DFieldTypeData%ZHWid
-    DstGrid3DFieldTypeData%GridBase = SrcGrid3DFieldTypeData%GridBase
-    DstGrid3DFieldTypeData%InitXPosition = SrcGrid3DFieldTypeData%InitXPosition
-    DstGrid3DFieldTypeData%InvDY = SrcGrid3DFieldTypeData%InvDY
-    DstGrid3DFieldTypeData%InvDZ = SrcGrid3DFieldTypeData%InvDZ
-    DstGrid3DFieldTypeData%MeanWS = SrcGrid3DFieldTypeData%MeanWS
-    DstGrid3DFieldTypeData%InvMWS = SrcGrid3DFieldTypeData%InvMWS
-    DstGrid3DFieldTypeData%TotalTime = SrcGrid3DFieldTypeData%TotalTime
-    DstGrid3DFieldTypeData%NComp = SrcGrid3DFieldTypeData%NComp
-    DstGrid3DFieldTypeData%NYGrids = SrcGrid3DFieldTypeData%NYGrids
-    DstGrid3DFieldTypeData%NZGrids = SrcGrid3DFieldTypeData%NZGrids
-    DstGrid3DFieldTypeData%NTGrids = SrcGrid3DFieldTypeData%NTGrids
-    DstGrid3DFieldTypeData%NSteps = SrcGrid3DFieldTypeData%NSteps
-    DstGrid3DFieldTypeData%PLExp = SrcGrid3DFieldTypeData%PLExp
-    DstGrid3DFieldTypeData%Z0 = SrcGrid3DFieldTypeData%Z0
-    DstGrid3DFieldTypeData%VLinShr = SrcGrid3DFieldTypeData%VLinShr
-    DstGrid3DFieldTypeData%HLinShr = SrcGrid3DFieldTypeData%HLinShr
-    DstGrid3DFieldTypeData%BoxExceedAllowF = SrcGrid3DFieldTypeData%BoxExceedAllowF
-    DstGrid3DFieldTypeData%BoxExceedAllowIdx = SrcGrid3DFieldTypeData%BoxExceedAllowIdx
-    DstGrid3DFieldTypeData%BoxExceedWarned = SrcGrid3DFieldTypeData%BoxExceedWarned
- END SUBROUTINE IfW_FlowField_CopyGrid3DFieldType
+   ErrMsg  = ''
+   DstGrid3DFieldTypeData%WindFileFormat = SrcGrid3DFieldTypeData%WindFileFormat
+   DstGrid3DFieldTypeData%WindProfileType = SrcGrid3DFieldTypeData%WindProfileType
+   DstGrid3DFieldTypeData%Periodic = SrcGrid3DFieldTypeData%Periodic
+   DstGrid3DFieldTypeData%InterpTower = SrcGrid3DFieldTypeData%InterpTower
+   DstGrid3DFieldTypeData%AddMeanAfterInterp = SrcGrid3DFieldTypeData%AddMeanAfterInterp
+   DstGrid3DFieldTypeData%RefHeight = SrcGrid3DFieldTypeData%RefHeight
+   DstGrid3DFieldTypeData%RefLength = SrcGrid3DFieldTypeData%RefLength
+   if (allocated(SrcGrid3DFieldTypeData%Vel)) then
+      LB(1:4) = lbound(SrcGrid3DFieldTypeData%Vel)
+      UB(1:4) = ubound(SrcGrid3DFieldTypeData%Vel)
+      if (.not. allocated(DstGrid3DFieldTypeData%Vel)) then
+         allocate(DstGrid3DFieldTypeData%Vel(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%Vel.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGrid3DFieldTypeData%Vel = SrcGrid3DFieldTypeData%Vel
+   else if (allocated(DstGrid3DFieldTypeData%Vel)) then
+      deallocate(DstGrid3DFieldTypeData%Vel)
+   end if
+   if (allocated(SrcGrid3DFieldTypeData%Acc)) then
+      LB(1:4) = lbound(SrcGrid3DFieldTypeData%Acc)
+      UB(1:4) = ubound(SrcGrid3DFieldTypeData%Acc)
+      if (.not. allocated(DstGrid3DFieldTypeData%Acc)) then
+         allocate(DstGrid3DFieldTypeData%Acc(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%Acc.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGrid3DFieldTypeData%Acc = SrcGrid3DFieldTypeData%Acc
+   else if (allocated(DstGrid3DFieldTypeData%Acc)) then
+      deallocate(DstGrid3DFieldTypeData%Acc)
+   end if
+   if (allocated(SrcGrid3DFieldTypeData%VelTower)) then
+      LB(1:3) = lbound(SrcGrid3DFieldTypeData%VelTower)
+      UB(1:3) = ubound(SrcGrid3DFieldTypeData%VelTower)
+      if (.not. allocated(DstGrid3DFieldTypeData%VelTower)) then
+         allocate(DstGrid3DFieldTypeData%VelTower(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%VelTower.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGrid3DFieldTypeData%VelTower = SrcGrid3DFieldTypeData%VelTower
+   else if (allocated(DstGrid3DFieldTypeData%VelTower)) then
+      deallocate(DstGrid3DFieldTypeData%VelTower)
+   end if
+   if (allocated(SrcGrid3DFieldTypeData%AccTower)) then
+      LB(1:3) = lbound(SrcGrid3DFieldTypeData%AccTower)
+      UB(1:3) = ubound(SrcGrid3DFieldTypeData%AccTower)
+      if (.not. allocated(DstGrid3DFieldTypeData%AccTower)) then
+         allocate(DstGrid3DFieldTypeData%AccTower(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%AccTower.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGrid3DFieldTypeData%AccTower = SrcGrid3DFieldTypeData%AccTower
+   else if (allocated(DstGrid3DFieldTypeData%AccTower)) then
+      deallocate(DstGrid3DFieldTypeData%AccTower)
+   end if
+   if (allocated(SrcGrid3DFieldTypeData%VelAvg)) then
+      LB(1:3) = lbound(SrcGrid3DFieldTypeData%VelAvg)
+      UB(1:3) = ubound(SrcGrid3DFieldTypeData%VelAvg)
+      if (.not. allocated(DstGrid3DFieldTypeData%VelAvg)) then
+         allocate(DstGrid3DFieldTypeData%VelAvg(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%VelAvg.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGrid3DFieldTypeData%VelAvg = SrcGrid3DFieldTypeData%VelAvg
+   else if (allocated(DstGrid3DFieldTypeData%VelAvg)) then
+      deallocate(DstGrid3DFieldTypeData%VelAvg)
+   end if
+   if (allocated(SrcGrid3DFieldTypeData%AccAvg)) then
+      LB(1:3) = lbound(SrcGrid3DFieldTypeData%AccAvg)
+      UB(1:3) = ubound(SrcGrid3DFieldTypeData%AccAvg)
+      if (.not. allocated(DstGrid3DFieldTypeData%AccAvg)) then
+         allocate(DstGrid3DFieldTypeData%AccAvg(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstGrid3DFieldTypeData%AccAvg.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstGrid3DFieldTypeData%AccAvg = SrcGrid3DFieldTypeData%AccAvg
+   else if (allocated(DstGrid3DFieldTypeData%AccAvg)) then
+      deallocate(DstGrid3DFieldTypeData%AccAvg)
+   end if
+   DstGrid3DFieldTypeData%DTime = SrcGrid3DFieldTypeData%DTime
+   DstGrid3DFieldTypeData%Rate = SrcGrid3DFieldTypeData%Rate
+   DstGrid3DFieldTypeData%YHWid = SrcGrid3DFieldTypeData%YHWid
+   DstGrid3DFieldTypeData%ZHWid = SrcGrid3DFieldTypeData%ZHWid
+   DstGrid3DFieldTypeData%GridBase = SrcGrid3DFieldTypeData%GridBase
+   DstGrid3DFieldTypeData%InitXPosition = SrcGrid3DFieldTypeData%InitXPosition
+   DstGrid3DFieldTypeData%InvDY = SrcGrid3DFieldTypeData%InvDY
+   DstGrid3DFieldTypeData%InvDZ = SrcGrid3DFieldTypeData%InvDZ
+   DstGrid3DFieldTypeData%MeanWS = SrcGrid3DFieldTypeData%MeanWS
+   DstGrid3DFieldTypeData%InvMWS = SrcGrid3DFieldTypeData%InvMWS
+   DstGrid3DFieldTypeData%TotalTime = SrcGrid3DFieldTypeData%TotalTime
+   DstGrid3DFieldTypeData%NComp = SrcGrid3DFieldTypeData%NComp
+   DstGrid3DFieldTypeData%NYGrids = SrcGrid3DFieldTypeData%NYGrids
+   DstGrid3DFieldTypeData%NZGrids = SrcGrid3DFieldTypeData%NZGrids
+   DstGrid3DFieldTypeData%NTGrids = SrcGrid3DFieldTypeData%NTGrids
+   DstGrid3DFieldTypeData%NSteps = SrcGrid3DFieldTypeData%NSteps
+   DstGrid3DFieldTypeData%PLExp = SrcGrid3DFieldTypeData%PLExp
+   DstGrid3DFieldTypeData%Z0 = SrcGrid3DFieldTypeData%Z0
+   DstGrid3DFieldTypeData%VLinShr = SrcGrid3DFieldTypeData%VLinShr
+   DstGrid3DFieldTypeData%HLinShr = SrcGrid3DFieldTypeData%HLinShr
+   DstGrid3DFieldTypeData%BoxExceedAllowF = SrcGrid3DFieldTypeData%BoxExceedAllowF
+   DstGrid3DFieldTypeData%BoxExceedAllowIdx = SrcGrid3DFieldTypeData%BoxExceedAllowIdx
+   DstGrid3DFieldTypeData%BoxExceedWarned = SrcGrid3DFieldTypeData%BoxExceedWarned
+end subroutine
 
- SUBROUTINE IfW_FlowField_DestroyGrid3DFieldType( Grid3DFieldTypeData, ErrStat, ErrMsg )
-  TYPE(Grid3DFieldType), INTENT(INOUT) :: Grid3DFieldTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyGrid3DFieldType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(Grid3DFieldTypeData%Vel)) THEN
-  DEALLOCATE(Grid3DFieldTypeData%Vel)
-ENDIF
-IF (ALLOCATED(Grid3DFieldTypeData%Acc)) THEN
-  DEALLOCATE(Grid3DFieldTypeData%Acc)
-ENDIF
-IF (ALLOCATED(Grid3DFieldTypeData%VelTower)) THEN
-  DEALLOCATE(Grid3DFieldTypeData%VelTower)
-ENDIF
-IF (ALLOCATED(Grid3DFieldTypeData%AccTower)) THEN
-  DEALLOCATE(Grid3DFieldTypeData%AccTower)
-ENDIF
-IF (ALLOCATED(Grid3DFieldTypeData%VelAvg)) THEN
-  DEALLOCATE(Grid3DFieldTypeData%VelAvg)
-ENDIF
-IF (ALLOCATED(Grid3DFieldTypeData%AccAvg)) THEN
-  DEALLOCATE(Grid3DFieldTypeData%AccAvg)
-ENDIF
- END SUBROUTINE IfW_FlowField_DestroyGrid3DFieldType
-
+subroutine IfW_FlowField_DestroyGrid3DFieldType(Grid3DFieldTypeData, ErrStat, ErrMsg)
+   type(Grid3DFieldType), intent(inout) :: Grid3DFieldTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_DestroyGrid3DFieldType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(Grid3DFieldTypeData%Vel)) then
+      deallocate(Grid3DFieldTypeData%Vel)
+   end if
+   if (allocated(Grid3DFieldTypeData%Acc)) then
+      deallocate(Grid3DFieldTypeData%Acc)
+   end if
+   if (allocated(Grid3DFieldTypeData%VelTower)) then
+      deallocate(Grid3DFieldTypeData%VelTower)
+   end if
+   if (allocated(Grid3DFieldTypeData%AccTower)) then
+      deallocate(Grid3DFieldTypeData%AccTower)
+   end if
+   if (allocated(Grid3DFieldTypeData%VelAvg)) then
+      deallocate(Grid3DFieldTypeData%VelAvg)
+   end if
+   if (allocated(Grid3DFieldTypeData%AccAvg)) then
+      deallocate(Grid3DFieldTypeData%AccAvg)
+   end if
+end subroutine
 
 subroutine IfW_FlowField_PackGrid3DFieldType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Grid3DFieldType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'IfW_FlowField_PackGrid3DFieldType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! WindFileFormat
    call RegPack(Buf, InData%WindFileFormat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WindProfileType
    call RegPack(Buf, InData%WindProfileType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Periodic
    call RegPack(Buf, InData%Periodic)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InterpTower
    call RegPack(Buf, InData%InterpTower)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AddMeanAfterInterp
    call RegPack(Buf, InData%AddMeanAfterInterp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefHeight
    call RegPack(Buf, InData%RefHeight)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefLength
    call RegPack(Buf, InData%RefLength)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Vel
    call RegPack(Buf, allocated(InData%Vel))
    if (allocated(InData%Vel)) then
       call RegPackBounds(Buf, 4, lbound(InData%Vel), ubound(InData%Vel))
       call RegPack(Buf, InData%Vel)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Acc
    call RegPack(Buf, allocated(InData%Acc))
    if (allocated(InData%Acc)) then
       call RegPackBounds(Buf, 4, lbound(InData%Acc), ubound(InData%Acc))
       call RegPack(Buf, InData%Acc)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelTower
    call RegPack(Buf, allocated(InData%VelTower))
    if (allocated(InData%VelTower)) then
       call RegPackBounds(Buf, 3, lbound(InData%VelTower), ubound(InData%VelTower))
       call RegPack(Buf, InData%VelTower)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AccTower
    call RegPack(Buf, allocated(InData%AccTower))
    if (allocated(InData%AccTower)) then
       call RegPackBounds(Buf, 3, lbound(InData%AccTower), ubound(InData%AccTower))
       call RegPack(Buf, InData%AccTower)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelAvg
    call RegPack(Buf, allocated(InData%VelAvg))
    if (allocated(InData%VelAvg)) then
       call RegPackBounds(Buf, 3, lbound(InData%VelAvg), ubound(InData%VelAvg))
       call RegPack(Buf, InData%VelAvg)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AccAvg
    call RegPack(Buf, allocated(InData%AccAvg))
    if (allocated(InData%AccAvg)) then
       call RegPackBounds(Buf, 3, lbound(InData%AccAvg), ubound(InData%AccAvg))
       call RegPack(Buf, InData%AccAvg)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DTime
    call RegPack(Buf, InData%DTime)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Rate
    call RegPack(Buf, InData%Rate)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! YHWid
    call RegPack(Buf, InData%YHWid)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ZHWid
    call RegPack(Buf, InData%ZHWid)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! GridBase
    call RegPack(Buf, InData%GridBase)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InitXPosition
    call RegPack(Buf, InData%InitXPosition)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InvDY
    call RegPack(Buf, InData%InvDY)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InvDZ
    call RegPack(Buf, InData%InvDZ)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MeanWS
    call RegPack(Buf, InData%MeanWS)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InvMWS
    call RegPack(Buf, InData%InvMWS)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TotalTime
    call RegPack(Buf, InData%TotalTime)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NComp
    call RegPack(Buf, InData%NComp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NYGrids
    call RegPack(Buf, InData%NYGrids)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NZGrids
    call RegPack(Buf, InData%NZGrids)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NTGrids
    call RegPack(Buf, InData%NTGrids)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NSteps
    call RegPack(Buf, InData%NSteps)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PLExp
    call RegPack(Buf, InData%PLExp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Z0
    call RegPack(Buf, InData%Z0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VLinShr
    call RegPack(Buf, InData%VLinShr)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HLinShr
    call RegPack(Buf, InData%HLinShr)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BoxExceedAllowF
    call RegPack(Buf, InData%BoxExceedAllowF)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BoxExceedAllowIdx
    call RegPack(Buf, InData%BoxExceedAllowIdx)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BoxExceedWarned
    call RegPack(Buf, InData%BoxExceedWarned)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1381,28 +1249,20 @@ subroutine IfW_FlowField_UnPackGrid3DFieldType(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! WindFileFormat
    call RegUnpack(Buf, OutData%WindFileFormat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WindProfileType
    call RegUnpack(Buf, OutData%WindProfileType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Periodic
    call RegUnpack(Buf, OutData%Periodic)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InterpTower
    call RegUnpack(Buf, OutData%InterpTower)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AddMeanAfterInterp
    call RegUnpack(Buf, OutData%AddMeanAfterInterp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefHeight
    call RegUnpack(Buf, OutData%RefHeight)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefLength
    call RegUnpack(Buf, OutData%RefLength)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Vel
    if (allocated(OutData%Vel)) deallocate(OutData%Vel)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1417,7 +1277,6 @@ subroutine IfW_FlowField_UnPackGrid3DFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%Vel)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Acc
    if (allocated(OutData%Acc)) deallocate(OutData%Acc)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1432,7 +1291,6 @@ subroutine IfW_FlowField_UnPackGrid3DFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%Acc)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! VelTower
    if (allocated(OutData%VelTower)) deallocate(OutData%VelTower)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1447,7 +1305,6 @@ subroutine IfW_FlowField_UnPackGrid3DFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%VelTower)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! AccTower
    if (allocated(OutData%AccTower)) deallocate(OutData%AccTower)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1462,7 +1319,6 @@ subroutine IfW_FlowField_UnPackGrid3DFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%AccTower)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! VelAvg
    if (allocated(OutData%VelAvg)) deallocate(OutData%VelAvg)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1477,7 +1333,6 @@ subroutine IfW_FlowField_UnPackGrid3DFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%VelAvg)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! AccAvg
    if (allocated(OutData%AccAvg)) deallocate(OutData%AccAvg)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1492,119 +1347,82 @@ subroutine IfW_FlowField_UnPackGrid3DFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%AccAvg)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! DTime
    call RegUnpack(Buf, OutData%DTime)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Rate
    call RegUnpack(Buf, OutData%Rate)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! YHWid
    call RegUnpack(Buf, OutData%YHWid)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ZHWid
    call RegUnpack(Buf, OutData%ZHWid)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! GridBase
    call RegUnpack(Buf, OutData%GridBase)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InitXPosition
    call RegUnpack(Buf, OutData%InitXPosition)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InvDY
    call RegUnpack(Buf, OutData%InvDY)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InvDZ
    call RegUnpack(Buf, OutData%InvDZ)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MeanWS
    call RegUnpack(Buf, OutData%MeanWS)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InvMWS
    call RegUnpack(Buf, OutData%InvMWS)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TotalTime
    call RegUnpack(Buf, OutData%TotalTime)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NComp
    call RegUnpack(Buf, OutData%NComp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NYGrids
    call RegUnpack(Buf, OutData%NYGrids)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NZGrids
    call RegUnpack(Buf, OutData%NZGrids)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NTGrids
    call RegUnpack(Buf, OutData%NTGrids)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NSteps
    call RegUnpack(Buf, OutData%NSteps)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PLExp
    call RegUnpack(Buf, OutData%PLExp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Z0
    call RegUnpack(Buf, OutData%Z0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VLinShr
    call RegUnpack(Buf, OutData%VLinShr)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HLinShr
    call RegUnpack(Buf, OutData%HLinShr)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BoxExceedAllowF
    call RegUnpack(Buf, OutData%BoxExceedAllowF)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BoxExceedAllowIdx
    call RegUnpack(Buf, OutData%BoxExceedAllowIdx)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BoxExceedWarned
    call RegUnpack(Buf, OutData%BoxExceedWarned)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE IfW_FlowField_CopyGrid4DFieldType( SrcGrid4DFieldTypeData, DstGrid4DFieldTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Grid4DFieldType), INTENT(IN) :: SrcGrid4DFieldTypeData
-   TYPE(Grid4DFieldType), INTENT(INOUT) :: DstGrid4DFieldTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_CopyGrid4DFieldType'
-! 
+
+subroutine IfW_FlowField_CopyGrid4DFieldType(SrcGrid4DFieldTypeData, DstGrid4DFieldTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(Grid4DFieldType), intent(in) :: SrcGrid4DFieldTypeData
+   type(Grid4DFieldType), intent(inout) :: DstGrid4DFieldTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(5), UB(5)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyGrid4DFieldType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstGrid4DFieldTypeData%n = SrcGrid4DFieldTypeData%n
-    DstGrid4DFieldTypeData%delta = SrcGrid4DFieldTypeData%delta
-    DstGrid4DFieldTypeData%pZero = SrcGrid4DFieldTypeData%pZero
-    DstGrid4DFieldTypeData%Vel => SrcGrid4DFieldTypeData%Vel
-    DstGrid4DFieldTypeData%TimeStart = SrcGrid4DFieldTypeData%TimeStart
-    DstGrid4DFieldTypeData%RefHeight = SrcGrid4DFieldTypeData%RefHeight
- END SUBROUTINE IfW_FlowField_CopyGrid4DFieldType
+   ErrMsg  = ''
+   DstGrid4DFieldTypeData%n = SrcGrid4DFieldTypeData%n
+   DstGrid4DFieldTypeData%delta = SrcGrid4DFieldTypeData%delta
+   DstGrid4DFieldTypeData%pZero = SrcGrid4DFieldTypeData%pZero
+   DstGrid4DFieldTypeData%Vel => SrcGrid4DFieldTypeData%Vel
+   DstGrid4DFieldTypeData%TimeStart = SrcGrid4DFieldTypeData%TimeStart
+   DstGrid4DFieldTypeData%RefHeight = SrcGrid4DFieldTypeData%RefHeight
+end subroutine
 
- SUBROUTINE IfW_FlowField_DestroyGrid4DFieldType( Grid4DFieldTypeData, ErrStat, ErrMsg )
-  TYPE(Grid4DFieldType), INTENT(INOUT) :: Grid4DFieldTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyGrid4DFieldType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-NULLIFY(Grid4DFieldTypeData%Vel)
- END SUBROUTINE IfW_FlowField_DestroyGrid4DFieldType
-
+subroutine IfW_FlowField_DestroyGrid4DFieldType(Grid4DFieldTypeData, ErrStat, ErrMsg)
+   type(Grid4DFieldType), intent(inout) :: Grid4DFieldTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_DestroyGrid4DFieldType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   nullify(Grid4DFieldTypeData%Vel)
+end subroutine
 
 subroutine IfW_FlowField_PackGrid4DFieldType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -1612,16 +1430,12 @@ subroutine IfW_FlowField_PackGrid4DFieldType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'IfW_FlowField_PackGrid4DFieldType'
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
-   ! n
    call RegPack(Buf, InData%n)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! delta
    call RegPack(Buf, InData%delta)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pZero
    call RegPack(Buf, InData%pZero)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Vel
    call RegPack(Buf, associated(InData%Vel))
    if (associated(InData%Vel)) then
       call RegPackBounds(Buf, 5, lbound(InData%Vel), ubound(InData%Vel))
@@ -1631,10 +1445,8 @@ subroutine IfW_FlowField_PackGrid4DFieldType(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TimeStart
    call RegPack(Buf, InData%TimeStart)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefHeight
    call RegPack(Buf, InData%RefHeight)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1649,16 +1461,12 @@ subroutine IfW_FlowField_UnPackGrid4DFieldType(Buf, OutData)
    integer(IntKi)  :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
-   ! n
    call RegUnpack(Buf, OutData%n)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! delta
    call RegUnpack(Buf, OutData%delta)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pZero
    call RegUnpack(Buf, OutData%pZero)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Vel
    if (associated(OutData%Vel)) deallocate(OutData%Vel)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1683,70 +1491,56 @@ subroutine IfW_FlowField_UnPackGrid4DFieldType(Buf, OutData)
    else
       OutData%Vel => null()
    end if
-   ! TimeStart
    call RegUnpack(Buf, OutData%TimeStart)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefHeight
    call RegUnpack(Buf, OutData%RefHeight)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE IfW_FlowField_CopyPointsFieldType( SrcPointsFieldTypeData, DstPointsFieldTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(PointsFieldType), INTENT(IN) :: SrcPointsFieldTypeData
-   TYPE(PointsFieldType), INTENT(INOUT) :: DstPointsFieldTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_CopyPointsFieldType'
-! 
+
+subroutine IfW_FlowField_CopyPointsFieldType(SrcPointsFieldTypeData, DstPointsFieldTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(PointsFieldType), intent(in) :: SrcPointsFieldTypeData
+   type(PointsFieldType), intent(inout) :: DstPointsFieldTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyPointsFieldType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcPointsFieldTypeData%Vel)) THEN
-  i1_l = LBOUND(SrcPointsFieldTypeData%Vel,1)
-  i1_u = UBOUND(SrcPointsFieldTypeData%Vel,1)
-  i2_l = LBOUND(SrcPointsFieldTypeData%Vel,2)
-  i2_u = UBOUND(SrcPointsFieldTypeData%Vel,2)
-  IF (.NOT. ALLOCATED(DstPointsFieldTypeData%Vel)) THEN 
-    ALLOCATE(DstPointsFieldTypeData%Vel(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstPointsFieldTypeData%Vel.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstPointsFieldTypeData%Vel = SrcPointsFieldTypeData%Vel
-ENDIF
- END SUBROUTINE IfW_FlowField_CopyPointsFieldType
+   ErrMsg  = ''
+   if (allocated(SrcPointsFieldTypeData%Vel)) then
+      LB(1:2) = lbound(SrcPointsFieldTypeData%Vel)
+      UB(1:2) = ubound(SrcPointsFieldTypeData%Vel)
+      if (.not. allocated(DstPointsFieldTypeData%Vel)) then
+         allocate(DstPointsFieldTypeData%Vel(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstPointsFieldTypeData%Vel.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstPointsFieldTypeData%Vel = SrcPointsFieldTypeData%Vel
+   else if (allocated(DstPointsFieldTypeData%Vel)) then
+      deallocate(DstPointsFieldTypeData%Vel)
+   end if
+end subroutine
 
- SUBROUTINE IfW_FlowField_DestroyPointsFieldType( PointsFieldTypeData, ErrStat, ErrMsg )
-  TYPE(PointsFieldType), INTENT(INOUT) :: PointsFieldTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyPointsFieldType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(PointsFieldTypeData%Vel)) THEN
-  DEALLOCATE(PointsFieldTypeData%Vel)
-ENDIF
- END SUBROUTINE IfW_FlowField_DestroyPointsFieldType
-
+subroutine IfW_FlowField_DestroyPointsFieldType(PointsFieldTypeData, ErrStat, ErrMsg)
+   type(PointsFieldType), intent(inout) :: PointsFieldTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_DestroyPointsFieldType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(PointsFieldTypeData%Vel)) then
+      deallocate(PointsFieldTypeData%Vel)
+   end if
+end subroutine
 
 subroutine IfW_FlowField_PackPointsFieldType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(PointsFieldType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'IfW_FlowField_PackPointsFieldType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Vel
    call RegPack(Buf, allocated(InData%Vel))
    if (allocated(InData%Vel)) then
       call RegPackBounds(Buf, 2, lbound(InData%Vel), ubound(InData%Vel))
@@ -1763,7 +1557,6 @@ subroutine IfW_FlowField_UnPackPointsFieldType(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! Vel
    if (allocated(OutData%Vel)) deallocate(OutData%Vel)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1779,45 +1572,33 @@ subroutine IfW_FlowField_UnPackPointsFieldType(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE IfW_FlowField_CopyUserFieldType( SrcUserFieldTypeData, DstUserFieldTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(UserFieldType), INTENT(IN) :: SrcUserFieldTypeData
-   TYPE(UserFieldType), INTENT(INOUT) :: DstUserFieldTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_CopyUserFieldType'
-! 
+
+subroutine IfW_FlowField_CopyUserFieldType(SrcUserFieldTypeData, DstUserFieldTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(UserFieldType), intent(in) :: SrcUserFieldTypeData
+   type(UserFieldType), intent(inout) :: DstUserFieldTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyUserFieldType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstUserFieldTypeData%RefHeight = SrcUserFieldTypeData%RefHeight
- END SUBROUTINE IfW_FlowField_CopyUserFieldType
+   ErrMsg  = ''
+   DstUserFieldTypeData%RefHeight = SrcUserFieldTypeData%RefHeight
+end subroutine
 
- SUBROUTINE IfW_FlowField_DestroyUserFieldType( UserFieldTypeData, ErrStat, ErrMsg )
-  TYPE(UserFieldType), INTENT(INOUT) :: UserFieldTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyUserFieldType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE IfW_FlowField_DestroyUserFieldType
-
+subroutine IfW_FlowField_DestroyUserFieldType(UserFieldTypeData, ErrStat, ErrMsg)
+   type(UserFieldType), intent(inout) :: UserFieldTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_DestroyUserFieldType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine IfW_FlowField_PackUserFieldType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(UserFieldType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'IfW_FlowField_PackUserFieldType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! RefHeight
    call RegPack(Buf, InData%RefHeight)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1827,123 +1608,89 @@ subroutine IfW_FlowField_UnPackUserFieldType(Buf, OutData)
    type(UserFieldType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'IfW_FlowField_UnPackUserFieldType'
    if (Buf%ErrStat /= ErrID_None) return
-   ! RefHeight
    call RegUnpack(Buf, OutData%RefHeight)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE IfW_FlowField_CopyFlowFieldType( SrcFlowFieldTypeData, DstFlowFieldTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(FlowFieldType), INTENT(IN) :: SrcFlowFieldTypeData
-   TYPE(FlowFieldType), INTENT(INOUT) :: DstFlowFieldTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'IfW_FlowField_CopyFlowFieldType'
-! 
+
+subroutine IfW_FlowField_CopyFlowFieldType(SrcFlowFieldTypeData, DstFlowFieldTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(FlowFieldType), intent(in) :: SrcFlowFieldTypeData
+   type(FlowFieldType), intent(inout) :: DstFlowFieldTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_CopyFlowFieldType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstFlowFieldTypeData%FieldType = SrcFlowFieldTypeData%FieldType
-    DstFlowFieldTypeData%RefPosition = SrcFlowFieldTypeData%RefPosition
-    DstFlowFieldTypeData%PropagationDir = SrcFlowFieldTypeData%PropagationDir
-    DstFlowFieldTypeData%VFlowAngle = SrcFlowFieldTypeData%VFlowAngle
-    DstFlowFieldTypeData%VelInterpCubic = SrcFlowFieldTypeData%VelInterpCubic
-    DstFlowFieldTypeData%RotateWindBox = SrcFlowFieldTypeData%RotateWindBox
-    DstFlowFieldTypeData%AccFieldValid = SrcFlowFieldTypeData%AccFieldValid
-    DstFlowFieldTypeData%RotToWind = SrcFlowFieldTypeData%RotToWind
-    DstFlowFieldTypeData%RotFromWind = SrcFlowFieldTypeData%RotFromWind
-      CALL IfW_FlowField_Copyuniformfieldtype( SrcFlowFieldTypeData%Uniform, DstFlowFieldTypeData%Uniform, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL IfW_FlowField_Copygrid3dfieldtype( SrcFlowFieldTypeData%Grid3D, DstFlowFieldTypeData%Grid3D, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL IfW_FlowField_Copygrid4dfieldtype( SrcFlowFieldTypeData%Grid4D, DstFlowFieldTypeData%Grid4D, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL IfW_FlowField_Copypointsfieldtype( SrcFlowFieldTypeData%Points, DstFlowFieldTypeData%Points, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL IfW_FlowField_Copyuserfieldtype( SrcFlowFieldTypeData%User, DstFlowFieldTypeData%User, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE IfW_FlowField_CopyFlowFieldType
+   ErrMsg  = ''
+   DstFlowFieldTypeData%FieldType = SrcFlowFieldTypeData%FieldType
+   DstFlowFieldTypeData%RefPosition = SrcFlowFieldTypeData%RefPosition
+   DstFlowFieldTypeData%PropagationDir = SrcFlowFieldTypeData%PropagationDir
+   DstFlowFieldTypeData%VFlowAngle = SrcFlowFieldTypeData%VFlowAngle
+   DstFlowFieldTypeData%VelInterpCubic = SrcFlowFieldTypeData%VelInterpCubic
+   DstFlowFieldTypeData%RotateWindBox = SrcFlowFieldTypeData%RotateWindBox
+   DstFlowFieldTypeData%AccFieldValid = SrcFlowFieldTypeData%AccFieldValid
+   DstFlowFieldTypeData%RotToWind = SrcFlowFieldTypeData%RotToWind
+   DstFlowFieldTypeData%RotFromWind = SrcFlowFieldTypeData%RotFromWind
+   call IfW_FlowField_CopyUniformFieldType(SrcFlowFieldTypeData%Uniform, DstFlowFieldTypeData%Uniform, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call IfW_FlowField_CopyGrid3DFieldType(SrcFlowFieldTypeData%Grid3D, DstFlowFieldTypeData%Grid3D, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call IfW_FlowField_CopyGrid4DFieldType(SrcFlowFieldTypeData%Grid4D, DstFlowFieldTypeData%Grid4D, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call IfW_FlowField_CopyPointsFieldType(SrcFlowFieldTypeData%Points, DstFlowFieldTypeData%Points, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call IfW_FlowField_CopyUserFieldType(SrcFlowFieldTypeData%User, DstFlowFieldTypeData%User, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE IfW_FlowField_DestroyFlowFieldType( FlowFieldTypeData, ErrStat, ErrMsg )
-  TYPE(FlowFieldType), INTENT(INOUT) :: FlowFieldTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'IfW_FlowField_DestroyFlowFieldType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL IfW_FlowField_DestroyUniformFieldType( FlowFieldTypeData%Uniform, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_FlowField_DestroyGrid3DFieldType( FlowFieldTypeData%Grid3D, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_FlowField_DestroyGrid4DFieldType( FlowFieldTypeData%Grid4D, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_FlowField_DestroyPointsFieldType( FlowFieldTypeData%Points, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL IfW_FlowField_DestroyUserFieldType( FlowFieldTypeData%User, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE IfW_FlowField_DestroyFlowFieldType
-
+subroutine IfW_FlowField_DestroyFlowFieldType(FlowFieldTypeData, ErrStat, ErrMsg)
+   type(FlowFieldType), intent(inout) :: FlowFieldTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'IfW_FlowField_DestroyFlowFieldType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine IfW_FlowField_PackFlowFieldType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(FlowFieldType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'IfW_FlowField_PackFlowFieldType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! FieldType
    call RegPack(Buf, InData%FieldType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefPosition
    call RegPack(Buf, InData%RefPosition)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PropagationDir
    call RegPack(Buf, InData%PropagationDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VFlowAngle
    call RegPack(Buf, InData%VFlowAngle)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelInterpCubic
    call RegPack(Buf, InData%VelInterpCubic)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RotateWindBox
    call RegPack(Buf, InData%RotateWindBox)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AccFieldValid
    call RegPack(Buf, InData%AccFieldValid)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RotToWind
    call RegPack(Buf, InData%RotToWind)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RotFromWind
    call RegPack(Buf, InData%RotFromWind)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Uniform
    call IfW_FlowField_PackUniformFieldType(Buf, InData%Uniform) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Grid3D
    call IfW_FlowField_PackGrid3DFieldType(Buf, InData%Grid3D) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Grid4D
    call IfW_FlowField_PackGrid4DFieldType(Buf, InData%Grid4D) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Points
    call IfW_FlowField_PackPointsFieldType(Buf, InData%Points) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! User
    call IfW_FlowField_PackUserFieldType(Buf, InData%User) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1953,42 +1700,28 @@ subroutine IfW_FlowField_UnPackFlowFieldType(Buf, OutData)
    type(FlowFieldType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'IfW_FlowField_UnPackFlowFieldType'
    if (Buf%ErrStat /= ErrID_None) return
-   ! FieldType
    call RegUnpack(Buf, OutData%FieldType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefPosition
    call RegUnpack(Buf, OutData%RefPosition)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PropagationDir
    call RegUnpack(Buf, OutData%PropagationDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VFlowAngle
    call RegUnpack(Buf, OutData%VFlowAngle)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VelInterpCubic
    call RegUnpack(Buf, OutData%VelInterpCubic)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RotateWindBox
    call RegUnpack(Buf, OutData%RotateWindBox)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AccFieldValid
    call RegUnpack(Buf, OutData%AccFieldValid)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RotToWind
    call RegUnpack(Buf, OutData%RotToWind)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RotFromWind
    call RegUnpack(Buf, OutData%RotFromWind)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Uniform
    call IfW_FlowField_UnpackUniformFieldType(Buf, OutData%Uniform) ! Uniform 
-   ! Grid3D
    call IfW_FlowField_UnpackGrid3DFieldType(Buf, OutData%Grid3D) ! Grid3D 
-   ! Grid4D
    call IfW_FlowField_UnpackGrid4DFieldType(Buf, OutData%Grid4D) ! Grid4D 
-   ! Points
    call IfW_FlowField_UnpackPointsFieldType(Buf, OutData%Points) ! Points 
-   ! User
    call IfW_FlowField_UnpackUserFieldType(Buf, OutData%User) ! User 
 end subroutine
 END MODULE IfW_FlowField_Types

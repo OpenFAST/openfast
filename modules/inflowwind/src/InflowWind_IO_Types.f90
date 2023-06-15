@@ -141,114 +141,84 @@ IMPLICIT NONE
   END TYPE Points_InitInputType
 ! =======================
 CONTAINS
- SUBROUTINE InflowWind_IO_CopyWindFileDat( SrcWindFileDatData, DstWindFileDatData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(WindFileDat), INTENT(IN) :: SrcWindFileDatData
-   TYPE(WindFileDat), INTENT(INOUT) :: DstWindFileDatData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_CopyWindFileDat'
-! 
+
+subroutine InflowWind_IO_CopyWindFileDat(SrcWindFileDatData, DstWindFileDatData, CtrlCode, ErrStat, ErrMsg)
+   type(WindFileDat), intent(in) :: SrcWindFileDatData
+   type(WindFileDat), intent(inout) :: DstWindFileDatData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_CopyWindFileDat'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstWindFileDatData%FileName = SrcWindFileDatData%FileName
-    DstWindFileDatData%WindType = SrcWindFileDatData%WindType
-    DstWindFileDatData%RefHt = SrcWindFileDatData%RefHt
-    DstWindFileDatData%RefHt_Set = SrcWindFileDatData%RefHt_Set
-    DstWindFileDatData%DT = SrcWindFileDatData%DT
-    DstWindFileDatData%NumTSteps = SrcWindFileDatData%NumTSteps
-    DstWindFileDatData%ConstantDT = SrcWindFileDatData%ConstantDT
-    DstWindFileDatData%TRange = SrcWindFileDatData%TRange
-    DstWindFileDatData%TRange_Limited = SrcWindFileDatData%TRange_Limited
-    DstWindFileDatData%YRange = SrcWindFileDatData%YRange
-    DstWindFileDatData%YRange_Limited = SrcWindFileDatData%YRange_Limited
-    DstWindFileDatData%ZRange = SrcWindFileDatData%ZRange
-    DstWindFileDatData%ZRange_Limited = SrcWindFileDatData%ZRange_Limited
-    DstWindFileDatData%BinaryFormat = SrcWindFileDatData%BinaryFormat
-    DstWindFileDatData%IsBinary = SrcWindFileDatData%IsBinary
-    DstWindFileDatData%TI = SrcWindFileDatData%TI
-    DstWindFileDatData%TI_listed = SrcWindFileDatData%TI_listed
-    DstWindFileDatData%MWS = SrcWindFileDatData%MWS
- END SUBROUTINE InflowWind_IO_CopyWindFileDat
+   ErrMsg  = ''
+   DstWindFileDatData%FileName = SrcWindFileDatData%FileName
+   DstWindFileDatData%WindType = SrcWindFileDatData%WindType
+   DstWindFileDatData%RefHt = SrcWindFileDatData%RefHt
+   DstWindFileDatData%RefHt_Set = SrcWindFileDatData%RefHt_Set
+   DstWindFileDatData%DT = SrcWindFileDatData%DT
+   DstWindFileDatData%NumTSteps = SrcWindFileDatData%NumTSteps
+   DstWindFileDatData%ConstantDT = SrcWindFileDatData%ConstantDT
+   DstWindFileDatData%TRange = SrcWindFileDatData%TRange
+   DstWindFileDatData%TRange_Limited = SrcWindFileDatData%TRange_Limited
+   DstWindFileDatData%YRange = SrcWindFileDatData%YRange
+   DstWindFileDatData%YRange_Limited = SrcWindFileDatData%YRange_Limited
+   DstWindFileDatData%ZRange = SrcWindFileDatData%ZRange
+   DstWindFileDatData%ZRange_Limited = SrcWindFileDatData%ZRange_Limited
+   DstWindFileDatData%BinaryFormat = SrcWindFileDatData%BinaryFormat
+   DstWindFileDatData%IsBinary = SrcWindFileDatData%IsBinary
+   DstWindFileDatData%TI = SrcWindFileDatData%TI
+   DstWindFileDatData%TI_listed = SrcWindFileDatData%TI_listed
+   DstWindFileDatData%MWS = SrcWindFileDatData%MWS
+end subroutine
 
- SUBROUTINE InflowWind_IO_DestroyWindFileDat( WindFileDatData, ErrStat, ErrMsg )
-  TYPE(WindFileDat), INTENT(INOUT) :: WindFileDatData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyWindFileDat'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE InflowWind_IO_DestroyWindFileDat
-
+subroutine InflowWind_IO_DestroyWindFileDat(WindFileDatData, ErrStat, ErrMsg)
+   type(WindFileDat), intent(inout) :: WindFileDatData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_DestroyWindFileDat'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine InflowWind_IO_PackWindFileDat(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(WindFileDat), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackWindFileDat'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! FileName
    call RegPack(Buf, InData%FileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WindType
    call RegPack(Buf, InData%WindType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefHt
    call RegPack(Buf, InData%RefHt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefHt_Set
    call RegPack(Buf, InData%RefHt_Set)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DT
    call RegPack(Buf, InData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumTSteps
    call RegPack(Buf, InData%NumTSteps)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ConstantDT
    call RegPack(Buf, InData%ConstantDT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TRange
    call RegPack(Buf, InData%TRange)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TRange_Limited
    call RegPack(Buf, InData%TRange_Limited)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! YRange
    call RegPack(Buf, InData%YRange)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! YRange_Limited
    call RegPack(Buf, InData%YRange_Limited)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ZRange
    call RegPack(Buf, InData%ZRange)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ZRange_Limited
    call RegPack(Buf, InData%ZRange_Limited)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BinaryFormat
    call RegPack(Buf, InData%BinaryFormat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! IsBinary
    call RegPack(Buf, InData%IsBinary)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TI
    call RegPack(Buf, InData%TI)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TI_listed
    call RegPack(Buf, InData%TI_listed)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MWS
    call RegPack(Buf, InData%MWS)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -258,108 +228,76 @@ subroutine InflowWind_IO_UnPackWindFileDat(Buf, OutData)
    type(WindFileDat), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackWindFileDat'
    if (Buf%ErrStat /= ErrID_None) return
-   ! FileName
    call RegUnpack(Buf, OutData%FileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WindType
    call RegUnpack(Buf, OutData%WindType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefHt
    call RegUnpack(Buf, OutData%RefHt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefHt_Set
    call RegUnpack(Buf, OutData%RefHt_Set)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DT
    call RegUnpack(Buf, OutData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumTSteps
    call RegUnpack(Buf, OutData%NumTSteps)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ConstantDT
    call RegUnpack(Buf, OutData%ConstantDT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TRange
    call RegUnpack(Buf, OutData%TRange)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TRange_Limited
    call RegUnpack(Buf, OutData%TRange_Limited)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! YRange
    call RegUnpack(Buf, OutData%YRange)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! YRange_Limited
    call RegUnpack(Buf, OutData%YRange_Limited)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ZRange
    call RegUnpack(Buf, OutData%ZRange)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ZRange_Limited
    call RegUnpack(Buf, OutData%ZRange_Limited)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BinaryFormat
    call RegUnpack(Buf, OutData%BinaryFormat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! IsBinary
    call RegUnpack(Buf, OutData%IsBinary)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TI
    call RegUnpack(Buf, OutData%TI)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TI_listed
    call RegUnpack(Buf, OutData%TI_listed)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MWS
    call RegUnpack(Buf, OutData%MWS)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE InflowWind_IO_CopySteady_InitInputType( SrcSteady_InitInputTypeData, DstSteady_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Steady_InitInputType), INTENT(IN) :: SrcSteady_InitInputTypeData
-   TYPE(Steady_InitInputType), INTENT(INOUT) :: DstSteady_InitInputTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_CopySteady_InitInputType'
-! 
+
+subroutine InflowWind_IO_CopySteady_InitInputType(SrcSteady_InitInputTypeData, DstSteady_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(Steady_InitInputType), intent(in) :: SrcSteady_InitInputTypeData
+   type(Steady_InitInputType), intent(inout) :: DstSteady_InitInputTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_CopySteady_InitInputType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstSteady_InitInputTypeData%HWindSpeed = SrcSteady_InitInputTypeData%HWindSpeed
-    DstSteady_InitInputTypeData%RefHt = SrcSteady_InitInputTypeData%RefHt
-    DstSteady_InitInputTypeData%PLExp = SrcSteady_InitInputTypeData%PLExp
- END SUBROUTINE InflowWind_IO_CopySteady_InitInputType
+   ErrMsg  = ''
+   DstSteady_InitInputTypeData%HWindSpeed = SrcSteady_InitInputTypeData%HWindSpeed
+   DstSteady_InitInputTypeData%RefHt = SrcSteady_InitInputTypeData%RefHt
+   DstSteady_InitInputTypeData%PLExp = SrcSteady_InitInputTypeData%PLExp
+end subroutine
 
- SUBROUTINE InflowWind_IO_DestroySteady_InitInputType( Steady_InitInputTypeData, ErrStat, ErrMsg )
-  TYPE(Steady_InitInputType), INTENT(INOUT) :: Steady_InitInputTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroySteady_InitInputType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE InflowWind_IO_DestroySteady_InitInputType
-
+subroutine InflowWind_IO_DestroySteady_InitInputType(Steady_InitInputTypeData, ErrStat, ErrMsg)
+   type(Steady_InitInputType), intent(inout) :: Steady_InitInputTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_DestroySteady_InitInputType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine InflowWind_IO_PackSteady_InitInputType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Steady_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackSteady_InitInputType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! HWindSpeed
    call RegPack(Buf, InData%HWindSpeed)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefHt
    call RegPack(Buf, InData%RefHt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PLExp
    call RegPack(Buf, InData%PLExp)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -369,79 +307,61 @@ subroutine InflowWind_IO_UnPackSteady_InitInputType(Buf, OutData)
    type(Steady_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackSteady_InitInputType'
    if (Buf%ErrStat /= ErrID_None) return
-   ! HWindSpeed
    call RegUnpack(Buf, OutData%HWindSpeed)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefHt
    call RegUnpack(Buf, OutData%RefHt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PLExp
    call RegUnpack(Buf, OutData%PLExp)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE InflowWind_IO_CopyUniform_InitInputType( SrcUniform_InitInputTypeData, DstUniform_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Uniform_InitInputType), INTENT(IN) :: SrcUniform_InitInputTypeData
-   TYPE(Uniform_InitInputType), INTENT(INOUT) :: DstUniform_InitInputTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_CopyUniform_InitInputType'
-! 
+
+subroutine InflowWind_IO_CopyUniform_InitInputType(SrcUniform_InitInputTypeData, DstUniform_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(Uniform_InitInputType), intent(in) :: SrcUniform_InitInputTypeData
+   type(Uniform_InitInputType), intent(inout) :: DstUniform_InitInputTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_CopyUniform_InitInputType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstUniform_InitInputTypeData%WindFileName = SrcUniform_InitInputTypeData%WindFileName
-    DstUniform_InitInputTypeData%RefHt = SrcUniform_InitInputTypeData%RefHt
-    DstUniform_InitInputTypeData%RefLength = SrcUniform_InitInputTypeData%RefLength
-    DstUniform_InitInputTypeData%PropagationDir = SrcUniform_InitInputTypeData%PropagationDir
-    DstUniform_InitInputTypeData%UseInputFile = SrcUniform_InitInputTypeData%UseInputFile
-      CALL NWTC_Library_Copyfileinfotype( SrcUniform_InitInputTypeData%PassedFileData, DstUniform_InitInputTypeData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE InflowWind_IO_CopyUniform_InitInputType
+   ErrMsg  = ''
+   DstUniform_InitInputTypeData%WindFileName = SrcUniform_InitInputTypeData%WindFileName
+   DstUniform_InitInputTypeData%RefHt = SrcUniform_InitInputTypeData%RefHt
+   DstUniform_InitInputTypeData%RefLength = SrcUniform_InitInputTypeData%RefLength
+   DstUniform_InitInputTypeData%PropagationDir = SrcUniform_InitInputTypeData%PropagationDir
+   DstUniform_InitInputTypeData%UseInputFile = SrcUniform_InitInputTypeData%UseInputFile
+   call NWTC_Library_CopyFileInfoType(SrcUniform_InitInputTypeData%PassedFileData, DstUniform_InitInputTypeData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE InflowWind_IO_DestroyUniform_InitInputType( Uniform_InitInputTypeData, ErrStat, ErrMsg )
-  TYPE(Uniform_InitInputType), INTENT(INOUT) :: Uniform_InitInputTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyUniform_InitInputType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL NWTC_Library_DestroyFileInfoType( Uniform_InitInputTypeData%PassedFileData, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE InflowWind_IO_DestroyUniform_InitInputType
-
+subroutine InflowWind_IO_DestroyUniform_InitInputType(Uniform_InitInputTypeData, ErrStat, ErrMsg)
+   type(Uniform_InitInputType), intent(inout) :: Uniform_InitInputTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_DestroyUniform_InitInputType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine InflowWind_IO_PackUniform_InitInputType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Uniform_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackUniform_InitInputType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! WindFileName
    call RegPack(Buf, InData%WindFileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefHt
    call RegPack(Buf, InData%RefHt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefLength
    call RegPack(Buf, InData%RefLength)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PropagationDir
    call RegPack(Buf, InData%PropagationDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UseInputFile
    call RegPack(Buf, InData%UseInputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PassedFileData
    call NWTC_Library_PackFileInfoType(Buf, InData%PassedFileData) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -451,108 +371,78 @@ subroutine InflowWind_IO_UnPackUniform_InitInputType(Buf, OutData)
    type(Uniform_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackUniform_InitInputType'
    if (Buf%ErrStat /= ErrID_None) return
-   ! WindFileName
    call RegUnpack(Buf, OutData%WindFileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefHt
    call RegUnpack(Buf, OutData%RefHt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefLength
    call RegUnpack(Buf, OutData%RefLength)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PropagationDir
    call RegUnpack(Buf, OutData%PropagationDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UseInputFile
    call RegUnpack(Buf, OutData%UseInputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PassedFileData
    call NWTC_Library_UnpackFileInfoType(Buf, OutData%PassedFileData) ! PassedFileData 
 end subroutine
- SUBROUTINE InflowWind_IO_CopyGrid3D_InitInputType( SrcGrid3D_InitInputTypeData, DstGrid3D_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Grid3D_InitInputType), INTENT(IN) :: SrcGrid3D_InitInputTypeData
-   TYPE(Grid3D_InitInputType), INTENT(INOUT) :: DstGrid3D_InitInputTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_CopyGrid3D_InitInputType'
-! 
+
+subroutine InflowWind_IO_CopyGrid3D_InitInputType(SrcGrid3D_InitInputTypeData, DstGrid3D_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(Grid3D_InitInputType), intent(in) :: SrcGrid3D_InitInputTypeData
+   type(Grid3D_InitInputType), intent(inout) :: DstGrid3D_InitInputTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_CopyGrid3D_InitInputType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstGrid3D_InitInputTypeData%ScaleMethod = SrcGrid3D_InitInputTypeData%ScaleMethod
-    DstGrid3D_InitInputTypeData%SF = SrcGrid3D_InitInputTypeData%SF
-    DstGrid3D_InitInputTypeData%SigmaF = SrcGrid3D_InitInputTypeData%SigmaF
-    DstGrid3D_InitInputTypeData%WindProfileType = SrcGrid3D_InitInputTypeData%WindProfileType
-    DstGrid3D_InitInputTypeData%RefHt = SrcGrid3D_InitInputTypeData%RefHt
-    DstGrid3D_InitInputTypeData%URef = SrcGrid3D_InitInputTypeData%URef
-    DstGrid3D_InitInputTypeData%PLExp = SrcGrid3D_InitInputTypeData%PLExp
-    DstGrid3D_InitInputTypeData%VLinShr = SrcGrid3D_InitInputTypeData%VLinShr
-    DstGrid3D_InitInputTypeData%HLinShr = SrcGrid3D_InitInputTypeData%HLinShr
-    DstGrid3D_InitInputTypeData%RefLength = SrcGrid3D_InitInputTypeData%RefLength
-    DstGrid3D_InitInputTypeData%Z0 = SrcGrid3D_InitInputTypeData%Z0
-    DstGrid3D_InitInputTypeData%XOffset = SrcGrid3D_InitInputTypeData%XOffset
- END SUBROUTINE InflowWind_IO_CopyGrid3D_InitInputType
+   ErrMsg  = ''
+   DstGrid3D_InitInputTypeData%ScaleMethod = SrcGrid3D_InitInputTypeData%ScaleMethod
+   DstGrid3D_InitInputTypeData%SF = SrcGrid3D_InitInputTypeData%SF
+   DstGrid3D_InitInputTypeData%SigmaF = SrcGrid3D_InitInputTypeData%SigmaF
+   DstGrid3D_InitInputTypeData%WindProfileType = SrcGrid3D_InitInputTypeData%WindProfileType
+   DstGrid3D_InitInputTypeData%RefHt = SrcGrid3D_InitInputTypeData%RefHt
+   DstGrid3D_InitInputTypeData%URef = SrcGrid3D_InitInputTypeData%URef
+   DstGrid3D_InitInputTypeData%PLExp = SrcGrid3D_InitInputTypeData%PLExp
+   DstGrid3D_InitInputTypeData%VLinShr = SrcGrid3D_InitInputTypeData%VLinShr
+   DstGrid3D_InitInputTypeData%HLinShr = SrcGrid3D_InitInputTypeData%HLinShr
+   DstGrid3D_InitInputTypeData%RefLength = SrcGrid3D_InitInputTypeData%RefLength
+   DstGrid3D_InitInputTypeData%Z0 = SrcGrid3D_InitInputTypeData%Z0
+   DstGrid3D_InitInputTypeData%XOffset = SrcGrid3D_InitInputTypeData%XOffset
+end subroutine
 
- SUBROUTINE InflowWind_IO_DestroyGrid3D_InitInputType( Grid3D_InitInputTypeData, ErrStat, ErrMsg )
-  TYPE(Grid3D_InitInputType), INTENT(INOUT) :: Grid3D_InitInputTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyGrid3D_InitInputType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE InflowWind_IO_DestroyGrid3D_InitInputType
-
+subroutine InflowWind_IO_DestroyGrid3D_InitInputType(Grid3D_InitInputTypeData, ErrStat, ErrMsg)
+   type(Grid3D_InitInputType), intent(inout) :: Grid3D_InitInputTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_DestroyGrid3D_InitInputType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine InflowWind_IO_PackGrid3D_InitInputType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Grid3D_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackGrid3D_InitInputType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! ScaleMethod
    call RegPack(Buf, InData%ScaleMethod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SF
    call RegPack(Buf, InData%SF)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SigmaF
    call RegPack(Buf, InData%SigmaF)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WindProfileType
    call RegPack(Buf, InData%WindProfileType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefHt
    call RegPack(Buf, InData%RefHt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! URef
    call RegPack(Buf, InData%URef)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PLExp
    call RegPack(Buf, InData%PLExp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VLinShr
    call RegPack(Buf, InData%VLinShr)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HLinShr
    call RegPack(Buf, InData%HLinShr)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefLength
    call RegPack(Buf, InData%RefLength)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Z0
    call RegPack(Buf, InData%Z0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! XOffset
    call RegPack(Buf, InData%XOffset)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -562,82 +452,58 @@ subroutine InflowWind_IO_UnPackGrid3D_InitInputType(Buf, OutData)
    type(Grid3D_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackGrid3D_InitInputType'
    if (Buf%ErrStat /= ErrID_None) return
-   ! ScaleMethod
    call RegUnpack(Buf, OutData%ScaleMethod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SF
    call RegUnpack(Buf, OutData%SF)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SigmaF
    call RegUnpack(Buf, OutData%SigmaF)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WindProfileType
    call RegUnpack(Buf, OutData%WindProfileType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefHt
    call RegUnpack(Buf, OutData%RefHt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! URef
    call RegUnpack(Buf, OutData%URef)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PLExp
    call RegUnpack(Buf, OutData%PLExp)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VLinShr
    call RegUnpack(Buf, OutData%VLinShr)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HLinShr
    call RegUnpack(Buf, OutData%HLinShr)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RefLength
    call RegUnpack(Buf, OutData%RefLength)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Z0
    call RegUnpack(Buf, OutData%Z0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! XOffset
    call RegUnpack(Buf, OutData%XOffset)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE InflowWind_IO_CopyTurbSim_InitInputType( SrcTurbSim_InitInputTypeData, DstTurbSim_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(TurbSim_InitInputType), INTENT(IN) :: SrcTurbSim_InitInputTypeData
-   TYPE(TurbSim_InitInputType), INTENT(INOUT) :: DstTurbSim_InitInputTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_CopyTurbSim_InitInputType'
-! 
+
+subroutine InflowWind_IO_CopyTurbSim_InitInputType(SrcTurbSim_InitInputTypeData, DstTurbSim_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(TurbSim_InitInputType), intent(in) :: SrcTurbSim_InitInputTypeData
+   type(TurbSim_InitInputType), intent(inout) :: DstTurbSim_InitInputTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_CopyTurbSim_InitInputType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstTurbSim_InitInputTypeData%WindFileName = SrcTurbSim_InitInputTypeData%WindFileName
- END SUBROUTINE InflowWind_IO_CopyTurbSim_InitInputType
+   ErrMsg  = ''
+   DstTurbSim_InitInputTypeData%WindFileName = SrcTurbSim_InitInputTypeData%WindFileName
+end subroutine
 
- SUBROUTINE InflowWind_IO_DestroyTurbSim_InitInputType( TurbSim_InitInputTypeData, ErrStat, ErrMsg )
-  TYPE(TurbSim_InitInputType), INTENT(INOUT) :: TurbSim_InitInputTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyTurbSim_InitInputType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE InflowWind_IO_DestroyTurbSim_InitInputType
-
+subroutine InflowWind_IO_DestroyTurbSim_InitInputType(TurbSim_InitInputTypeData, ErrStat, ErrMsg)
+   type(TurbSim_InitInputType), intent(inout) :: TurbSim_InitInputTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_DestroyTurbSim_InitInputType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine InflowWind_IO_PackTurbSim_InitInputType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(TurbSim_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackTurbSim_InitInputType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! WindFileName
    call RegPack(Buf, InData%WindFileName)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -647,69 +513,51 @@ subroutine InflowWind_IO_UnPackTurbSim_InitInputType(Buf, OutData)
    type(TurbSim_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackTurbSim_InitInputType'
    if (Buf%ErrStat /= ErrID_None) return
-   ! WindFileName
    call RegUnpack(Buf, OutData%WindFileName)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE InflowWind_IO_CopyBladed_InitInputType( SrcBladed_InitInputTypeData, DstBladed_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Bladed_InitInputType), INTENT(IN) :: SrcBladed_InitInputTypeData
-   TYPE(Bladed_InitInputType), INTENT(INOUT) :: DstBladed_InitInputTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_CopyBladed_InitInputType'
-! 
+
+subroutine InflowWind_IO_CopyBladed_InitInputType(SrcBladed_InitInputTypeData, DstBladed_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(Bladed_InitInputType), intent(in) :: SrcBladed_InitInputTypeData
+   type(Bladed_InitInputType), intent(inout) :: DstBladed_InitInputTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_CopyBladed_InitInputType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstBladed_InitInputTypeData%WindFileName = SrcBladed_InitInputTypeData%WindFileName
-    DstBladed_InitInputTypeData%WindType = SrcBladed_InitInputTypeData%WindType
-    DstBladed_InitInputTypeData%NativeBladedFmt = SrcBladed_InitInputTypeData%NativeBladedFmt
-    DstBladed_InitInputTypeData%TowerFileExist = SrcBladed_InitInputTypeData%TowerFileExist
-    DstBladed_InitInputTypeData%TurbineID = SrcBladed_InitInputTypeData%TurbineID
-    DstBladed_InitInputTypeData%FixedWindFileRootName = SrcBladed_InitInputTypeData%FixedWindFileRootName
- END SUBROUTINE InflowWind_IO_CopyBladed_InitInputType
+   ErrMsg  = ''
+   DstBladed_InitInputTypeData%WindFileName = SrcBladed_InitInputTypeData%WindFileName
+   DstBladed_InitInputTypeData%WindType = SrcBladed_InitInputTypeData%WindType
+   DstBladed_InitInputTypeData%NativeBladedFmt = SrcBladed_InitInputTypeData%NativeBladedFmt
+   DstBladed_InitInputTypeData%TowerFileExist = SrcBladed_InitInputTypeData%TowerFileExist
+   DstBladed_InitInputTypeData%TurbineID = SrcBladed_InitInputTypeData%TurbineID
+   DstBladed_InitInputTypeData%FixedWindFileRootName = SrcBladed_InitInputTypeData%FixedWindFileRootName
+end subroutine
 
- SUBROUTINE InflowWind_IO_DestroyBladed_InitInputType( Bladed_InitInputTypeData, ErrStat, ErrMsg )
-  TYPE(Bladed_InitInputType), INTENT(INOUT) :: Bladed_InitInputTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyBladed_InitInputType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE InflowWind_IO_DestroyBladed_InitInputType
-
+subroutine InflowWind_IO_DestroyBladed_InitInputType(Bladed_InitInputTypeData, ErrStat, ErrMsg)
+   type(Bladed_InitInputType), intent(inout) :: Bladed_InitInputTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_DestroyBladed_InitInputType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine InflowWind_IO_PackBladed_InitInputType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Bladed_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackBladed_InitInputType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! WindFileName
    call RegPack(Buf, InData%WindFileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WindType
    call RegPack(Buf, InData%WindType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NativeBladedFmt
    call RegPack(Buf, InData%NativeBladedFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TowerFileExist
    call RegPack(Buf, InData%TowerFileExist)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TurbineID
    call RegPack(Buf, InData%TurbineID)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FixedWindFileRootName
    call RegPack(Buf, InData%FixedWindFileRootName)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -719,68 +567,49 @@ subroutine InflowWind_IO_UnPackBladed_InitInputType(Buf, OutData)
    type(Bladed_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackBladed_InitInputType'
    if (Buf%ErrStat /= ErrID_None) return
-   ! WindFileName
    call RegUnpack(Buf, OutData%WindFileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WindType
    call RegUnpack(Buf, OutData%WindType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NativeBladedFmt
    call RegUnpack(Buf, OutData%NativeBladedFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TowerFileExist
    call RegUnpack(Buf, OutData%TowerFileExist)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TurbineID
    call RegUnpack(Buf, OutData%TurbineID)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FixedWindFileRootName
    call RegUnpack(Buf, OutData%FixedWindFileRootName)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE InflowWind_IO_CopyBladed_InitOutputType( SrcBladed_InitOutputTypeData, DstBladed_InitOutputTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Bladed_InitOutputType), INTENT(IN) :: SrcBladed_InitOutputTypeData
-   TYPE(Bladed_InitOutputType), INTENT(INOUT) :: DstBladed_InitOutputTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_CopyBladed_InitOutputType'
-! 
+
+subroutine InflowWind_IO_CopyBladed_InitOutputType(SrcBladed_InitOutputTypeData, DstBladed_InitOutputTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(Bladed_InitOutputType), intent(in) :: SrcBladed_InitOutputTypeData
+   type(Bladed_InitOutputType), intent(inout) :: DstBladed_InitOutputTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_CopyBladed_InitOutputType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstBladed_InitOutputTypeData%PropagationDir = SrcBladed_InitOutputTypeData%PropagationDir
-    DstBladed_InitOutputTypeData%VFlowAngle = SrcBladed_InitOutputTypeData%VFlowAngle
- END SUBROUTINE InflowWind_IO_CopyBladed_InitOutputType
+   ErrMsg  = ''
+   DstBladed_InitOutputTypeData%PropagationDir = SrcBladed_InitOutputTypeData%PropagationDir
+   DstBladed_InitOutputTypeData%VFlowAngle = SrcBladed_InitOutputTypeData%VFlowAngle
+end subroutine
 
- SUBROUTINE InflowWind_IO_DestroyBladed_InitOutputType( Bladed_InitOutputTypeData, ErrStat, ErrMsg )
-  TYPE(Bladed_InitOutputType), INTENT(INOUT) :: Bladed_InitOutputTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyBladed_InitOutputType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE InflowWind_IO_DestroyBladed_InitOutputType
-
+subroutine InflowWind_IO_DestroyBladed_InitOutputType(Bladed_InitOutputTypeData, ErrStat, ErrMsg)
+   type(Bladed_InitOutputType), intent(inout) :: Bladed_InitOutputTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_DestroyBladed_InitOutputType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine InflowWind_IO_PackBladed_InitOutputType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Bladed_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackBladed_InitOutputType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! PropagationDir
    call RegPack(Buf, InData%PropagationDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VFlowAngle
    call RegPack(Buf, InData%VFlowAngle)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -790,85 +619,65 @@ subroutine InflowWind_IO_UnPackBladed_InitOutputType(Buf, OutData)
    type(Bladed_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackBladed_InitOutputType'
    if (Buf%ErrStat /= ErrID_None) return
-   ! PropagationDir
    call RegUnpack(Buf, OutData%PropagationDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! VFlowAngle
    call RegUnpack(Buf, OutData%VFlowAngle)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE InflowWind_IO_CopyHAWC_InitInputType( SrcHAWC_InitInputTypeData, DstHAWC_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(HAWC_InitInputType), INTENT(IN) :: SrcHAWC_InitInputTypeData
-   TYPE(HAWC_InitInputType), INTENT(INOUT) :: DstHAWC_InitInputTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_CopyHAWC_InitInputType'
-! 
+
+subroutine InflowWind_IO_CopyHAWC_InitInputType(SrcHAWC_InitInputTypeData, DstHAWC_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(HAWC_InitInputType), intent(in) :: SrcHAWC_InitInputTypeData
+   type(HAWC_InitInputType), intent(inout) :: DstHAWC_InitInputTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_CopyHAWC_InitInputType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstHAWC_InitInputTypeData%WindFileName = SrcHAWC_InitInputTypeData%WindFileName
-    DstHAWC_InitInputTypeData%nx = SrcHAWC_InitInputTypeData%nx
-    DstHAWC_InitInputTypeData%ny = SrcHAWC_InitInputTypeData%ny
-    DstHAWC_InitInputTypeData%nz = SrcHAWC_InitInputTypeData%nz
-    DstHAWC_InitInputTypeData%dx = SrcHAWC_InitInputTypeData%dx
-    DstHAWC_InitInputTypeData%dy = SrcHAWC_InitInputTypeData%dy
-    DstHAWC_InitInputTypeData%dz = SrcHAWC_InitInputTypeData%dz
-      CALL InflowWind_IO_Copygrid3d_initinputtype( SrcHAWC_InitInputTypeData%G3D, DstHAWC_InitInputTypeData%G3D, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE InflowWind_IO_CopyHAWC_InitInputType
+   ErrMsg  = ''
+   DstHAWC_InitInputTypeData%WindFileName = SrcHAWC_InitInputTypeData%WindFileName
+   DstHAWC_InitInputTypeData%nx = SrcHAWC_InitInputTypeData%nx
+   DstHAWC_InitInputTypeData%ny = SrcHAWC_InitInputTypeData%ny
+   DstHAWC_InitInputTypeData%nz = SrcHAWC_InitInputTypeData%nz
+   DstHAWC_InitInputTypeData%dx = SrcHAWC_InitInputTypeData%dx
+   DstHAWC_InitInputTypeData%dy = SrcHAWC_InitInputTypeData%dy
+   DstHAWC_InitInputTypeData%dz = SrcHAWC_InitInputTypeData%dz
+   call InflowWind_IO_CopyGrid3D_InitInputType(SrcHAWC_InitInputTypeData%G3D, DstHAWC_InitInputTypeData%G3D, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE InflowWind_IO_DestroyHAWC_InitInputType( HAWC_InitInputTypeData, ErrStat, ErrMsg )
-  TYPE(HAWC_InitInputType), INTENT(INOUT) :: HAWC_InitInputTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyHAWC_InitInputType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL InflowWind_IO_DestroyGrid3D_InitInputType( HAWC_InitInputTypeData%G3D, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE InflowWind_IO_DestroyHAWC_InitInputType
-
+subroutine InflowWind_IO_DestroyHAWC_InitInputType(HAWC_InitInputTypeData, ErrStat, ErrMsg)
+   type(HAWC_InitInputType), intent(inout) :: HAWC_InitInputTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_DestroyHAWC_InitInputType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine InflowWind_IO_PackHAWC_InitInputType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(HAWC_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackHAWC_InitInputType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! WindFileName
    call RegPack(Buf, InData%WindFileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nx
    call RegPack(Buf, InData%nx)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ny
    call RegPack(Buf, InData%ny)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nz
    call RegPack(Buf, InData%nz)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dx
    call RegPack(Buf, InData%dx)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dy
    call RegPack(Buf, InData%dy)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dz
    call RegPack(Buf, InData%dz)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! G3D
    call InflowWind_IO_PackGrid3D_InitInputType(Buf, InData%G3D) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -878,69 +687,49 @@ subroutine InflowWind_IO_UnPackHAWC_InitInputType(Buf, OutData)
    type(HAWC_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackHAWC_InitInputType'
    if (Buf%ErrStat /= ErrID_None) return
-   ! WindFileName
    call RegUnpack(Buf, OutData%WindFileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nx
    call RegUnpack(Buf, OutData%nx)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ny
    call RegUnpack(Buf, OutData%ny)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nz
    call RegUnpack(Buf, OutData%nz)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dx
    call RegUnpack(Buf, OutData%dx)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dy
    call RegUnpack(Buf, OutData%dy)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dz
    call RegUnpack(Buf, OutData%dz)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! G3D
    call InflowWind_IO_UnpackGrid3D_InitInputType(Buf, OutData%G3D) ! G3D 
 end subroutine
- SUBROUTINE InflowWind_IO_CopyUser_InitInputType( SrcUser_InitInputTypeData, DstUser_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(User_InitInputType), INTENT(IN) :: SrcUser_InitInputTypeData
-   TYPE(User_InitInputType), INTENT(INOUT) :: DstUser_InitInputTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_CopyUser_InitInputType'
-! 
+
+subroutine InflowWind_IO_CopyUser_InitInputType(SrcUser_InitInputTypeData, DstUser_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(User_InitInputType), intent(in) :: SrcUser_InitInputTypeData
+   type(User_InitInputType), intent(inout) :: DstUser_InitInputTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_CopyUser_InitInputType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstUser_InitInputTypeData%Dummy = SrcUser_InitInputTypeData%Dummy
- END SUBROUTINE InflowWind_IO_CopyUser_InitInputType
+   ErrMsg  = ''
+   DstUser_InitInputTypeData%Dummy = SrcUser_InitInputTypeData%Dummy
+end subroutine
 
- SUBROUTINE InflowWind_IO_DestroyUser_InitInputType( User_InitInputTypeData, ErrStat, ErrMsg )
-  TYPE(User_InitInputType), INTENT(INOUT) :: User_InitInputTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyUser_InitInputType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE InflowWind_IO_DestroyUser_InitInputType
-
+subroutine InflowWind_IO_DestroyUser_InitInputType(User_InitInputTypeData, ErrStat, ErrMsg)
+   type(User_InitInputType), intent(inout) :: User_InitInputTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_DestroyUser_InitInputType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine InflowWind_IO_PackUser_InitInputType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(User_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackUser_InitInputType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Dummy
    call RegPack(Buf, InData%Dummy)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -950,51 +739,36 @@ subroutine InflowWind_IO_UnPackUser_InitInputType(Buf, OutData)
    type(User_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackUser_InitInputType'
    if (Buf%ErrStat /= ErrID_None) return
-   ! Dummy
    call RegUnpack(Buf, OutData%Dummy)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE InflowWind_IO_CopyGrid4D_InitInputType( SrcGrid4D_InitInputTypeData, DstGrid4D_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Grid4D_InitInputType), INTENT(IN) :: SrcGrid4D_InitInputTypeData
-   TYPE(Grid4D_InitInputType), INTENT(INOUT) :: DstGrid4D_InitInputTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_CopyGrid4D_InitInputType'
-! 
+
+subroutine InflowWind_IO_CopyGrid4D_InitInputType(SrcGrid4D_InitInputTypeData, DstGrid4D_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(Grid4D_InitInputType), intent(in) :: SrcGrid4D_InitInputTypeData
+   type(Grid4D_InitInputType), intent(inout) :: DstGrid4D_InitInputTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(5), UB(5)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_CopyGrid4D_InitInputType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstGrid4D_InitInputTypeData%n = SrcGrid4D_InitInputTypeData%n
-    DstGrid4D_InitInputTypeData%delta = SrcGrid4D_InitInputTypeData%delta
-    DstGrid4D_InitInputTypeData%pZero = SrcGrid4D_InitInputTypeData%pZero
-    DstGrid4D_InitInputTypeData%Vel => SrcGrid4D_InitInputTypeData%Vel
- END SUBROUTINE InflowWind_IO_CopyGrid4D_InitInputType
+   ErrMsg  = ''
+   DstGrid4D_InitInputTypeData%n = SrcGrid4D_InitInputTypeData%n
+   DstGrid4D_InitInputTypeData%delta = SrcGrid4D_InitInputTypeData%delta
+   DstGrid4D_InitInputTypeData%pZero = SrcGrid4D_InitInputTypeData%pZero
+   DstGrid4D_InitInputTypeData%Vel => SrcGrid4D_InitInputTypeData%Vel
+end subroutine
 
- SUBROUTINE InflowWind_IO_DestroyGrid4D_InitInputType( Grid4D_InitInputTypeData, ErrStat, ErrMsg )
-  TYPE(Grid4D_InitInputType), INTENT(INOUT) :: Grid4D_InitInputTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyGrid4D_InitInputType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-NULLIFY(Grid4D_InitInputTypeData%Vel)
- END SUBROUTINE InflowWind_IO_DestroyGrid4D_InitInputType
-
+subroutine InflowWind_IO_DestroyGrid4D_InitInputType(Grid4D_InitInputTypeData, ErrStat, ErrMsg)
+   type(Grid4D_InitInputType), intent(inout) :: Grid4D_InitInputTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_DestroyGrid4D_InitInputType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   nullify(Grid4D_InitInputTypeData%Vel)
+end subroutine
 
 subroutine InflowWind_IO_PackGrid4D_InitInputType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -1002,16 +776,12 @@ subroutine InflowWind_IO_PackGrid4D_InitInputType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackGrid4D_InitInputType'
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
-   ! n
    call RegPack(Buf, InData%n)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! delta
    call RegPack(Buf, InData%delta)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pZero
    call RegPack(Buf, InData%pZero)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Vel
    call RegPack(Buf, associated(InData%Vel))
    if (associated(InData%Vel)) then
       call RegPackBounds(Buf, 5, lbound(InData%Vel), ubound(InData%Vel))
@@ -1033,16 +803,12 @@ subroutine InflowWind_IO_UnPackGrid4D_InitInputType(Buf, OutData)
    integer(IntKi)  :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
-   ! n
    call RegUnpack(Buf, OutData%n)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! delta
    call RegUnpack(Buf, OutData%delta)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pZero
    call RegUnpack(Buf, OutData%pZero)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Vel
    if (associated(OutData%Vel)) deallocate(OutData%Vel)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1068,45 +834,33 @@ subroutine InflowWind_IO_UnPackGrid4D_InitInputType(Buf, OutData)
       OutData%Vel => null()
    end if
 end subroutine
- SUBROUTINE InflowWind_IO_CopyPoints_InitInputType( SrcPoints_InitInputTypeData, DstPoints_InitInputTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Points_InitInputType), INTENT(IN) :: SrcPoints_InitInputTypeData
-   TYPE(Points_InitInputType), INTENT(INOUT) :: DstPoints_InitInputTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'InflowWind_IO_CopyPoints_InitInputType'
-! 
+
+subroutine InflowWind_IO_CopyPoints_InitInputType(SrcPoints_InitInputTypeData, DstPoints_InitInputTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(Points_InitInputType), intent(in) :: SrcPoints_InitInputTypeData
+   type(Points_InitInputType), intent(inout) :: DstPoints_InitInputTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_CopyPoints_InitInputType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstPoints_InitInputTypeData%NumWindPoints = SrcPoints_InitInputTypeData%NumWindPoints
- END SUBROUTINE InflowWind_IO_CopyPoints_InitInputType
+   ErrMsg  = ''
+   DstPoints_InitInputTypeData%NumWindPoints = SrcPoints_InitInputTypeData%NumWindPoints
+end subroutine
 
- SUBROUTINE InflowWind_IO_DestroyPoints_InitInputType( Points_InitInputTypeData, ErrStat, ErrMsg )
-  TYPE(Points_InitInputType), INTENT(INOUT) :: Points_InitInputTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'InflowWind_IO_DestroyPoints_InitInputType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE InflowWind_IO_DestroyPoints_InitInputType
-
+subroutine InflowWind_IO_DestroyPoints_InitInputType(Points_InitInputTypeData, ErrStat, ErrMsg)
+   type(Points_InitInputType), intent(inout) :: Points_InitInputTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'InflowWind_IO_DestroyPoints_InitInputType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine InflowWind_IO_PackPoints_InitInputType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Points_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'InflowWind_IO_PackPoints_InitInputType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! NumWindPoints
    call RegPack(Buf, InData%NumWindPoints)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1116,7 +870,6 @@ subroutine InflowWind_IO_UnPackPoints_InitInputType(Buf, OutData)
    type(Points_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'InflowWind_IO_UnPackPoints_InitInputType'
    if (Buf%ErrStat /= ErrID_None) return
-   ! NumWindPoints
    call RegUnpack(Buf, OutData%NumWindPoints)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

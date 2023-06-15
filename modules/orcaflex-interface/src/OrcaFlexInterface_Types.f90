@@ -107,53 +107,39 @@ IMPLICIT NONE
   END TYPE Orca_ConstraintStateType
 ! =======================
 CONTAINS
- SUBROUTINE Orca_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Orca_InitInputType), INTENT(IN) :: SrcInitInputData
-   TYPE(Orca_InitInputType), INTENT(INOUT) :: DstInitInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_CopyInitInput'
-! 
+
+subroutine Orca_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
+   type(Orca_InitInputType), intent(in) :: SrcInitInputData
+   type(Orca_InitInputType), intent(inout) :: DstInitInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Orca_CopyInitInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInitInputData%InputFile = SrcInitInputData%InputFile
-    DstInitInputData%RootName = SrcInitInputData%RootName
-    DstInitInputData%TMax = SrcInitInputData%TMax
- END SUBROUTINE Orca_CopyInitInput
+   ErrMsg  = ''
+   DstInitInputData%InputFile = SrcInitInputData%InputFile
+   DstInitInputData%RootName = SrcInitInputData%RootName
+   DstInitInputData%TMax = SrcInitInputData%TMax
+end subroutine
 
- SUBROUTINE Orca_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
-  TYPE(Orca_InitInputType), INTENT(INOUT) :: InitInputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Orca_DestroyInitInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE Orca_DestroyInitInput
-
+subroutine Orca_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
+   type(Orca_InitInputType), intent(inout) :: InitInputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Orca_DestroyInitInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine Orca_PackInitInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Orca_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Orca_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! InputFile
    call RegPack(Buf, InData%InputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RootName
    call RegPack(Buf, InData%RootName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TMax
    call RegPack(Buf, InData%TMax)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -163,100 +149,89 @@ subroutine Orca_UnPackInitInput(Buf, OutData)
    type(Orca_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Orca_UnPackInitInput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! InputFile
    call RegUnpack(Buf, OutData%InputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RootName
    call RegUnpack(Buf, OutData%RootName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TMax
    call RegUnpack(Buf, OutData%TMax)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE Orca_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Orca_InitOutputType), INTENT(IN) :: SrcInitOutputData
-   TYPE(Orca_InitOutputType), INTENT(INOUT) :: DstInitOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_CopyInitOutput'
-! 
+
+subroutine Orca_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(Orca_InitOutputType), intent(in) :: SrcInitOutputData
+   type(Orca_InitOutputType), intent(inout) :: DstInitOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Orca_CopyInitOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL NWTC_Library_Copyprogdesc( SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcInitOutputData%WriteOutputHdr)) THEN
-  i1_l = LBOUND(SrcInitOutputData%WriteOutputHdr,1)
-  i1_u = UBOUND(SrcInitOutputData%WriteOutputHdr,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%WriteOutputHdr)) THEN 
-    ALLOCATE(DstInitOutputData%WriteOutputHdr(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputHdr.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%WriteOutputUnt)) THEN
-  i1_l = LBOUND(SrcInitOutputData%WriteOutputUnt,1)
-  i1_u = UBOUND(SrcInitOutputData%WriteOutputUnt,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%WriteOutputUnt)) THEN 
-    ALLOCATE(DstInitOutputData%WriteOutputUnt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputUnt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-ENDIF
- END SUBROUTINE Orca_CopyInitOutput
+   ErrMsg  = ''
+   call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcInitOutputData%WriteOutputHdr)) then
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
+      if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
+         allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputHdr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
+   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
+      deallocate(DstInitOutputData%WriteOutputHdr)
+   end if
+   if (allocated(SrcInitOutputData%WriteOutputUnt)) then
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
+      if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
+         allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputUnt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
+   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
+      deallocate(DstInitOutputData%WriteOutputUnt)
+   end if
+end subroutine
 
- SUBROUTINE Orca_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
-  TYPE(Orca_InitOutputType), INTENT(INOUT) :: InitOutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Orca_DestroyInitOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL NWTC_Library_DestroyProgDesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(InitOutputData%WriteOutputHdr)) THEN
-  DEALLOCATE(InitOutputData%WriteOutputHdr)
-ENDIF
-IF (ALLOCATED(InitOutputData%WriteOutputUnt)) THEN
-  DEALLOCATE(InitOutputData%WriteOutputUnt)
-ENDIF
- END SUBROUTINE Orca_DestroyInitOutput
-
+subroutine Orca_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
+   type(Orca_InitOutputType), intent(inout) :: InitOutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Orca_DestroyInitOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InitOutputData%WriteOutputHdr)) then
+      deallocate(InitOutputData%WriteOutputHdr)
+   end if
+   if (allocated(InitOutputData%WriteOutputUnt)) then
+      deallocate(InitOutputData%WriteOutputUnt)
+   end if
+end subroutine
 
 subroutine Orca_PackInitOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Orca_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Orca_PackInitOutput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Ver
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WriteOutputHdr
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WriteOutputUnt
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
@@ -273,9 +248,7 @@ subroutine Orca_UnPackInitOutput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! Ver
    call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
-   ! WriteOutputHdr
    if (allocated(OutData%WriteOutputHdr)) deallocate(OutData%WriteOutputHdr)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -290,7 +263,6 @@ subroutine Orca_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%WriteOutputHdr)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WriteOutputUnt
    if (allocated(OutData%WriteOutputUnt)) deallocate(OutData%WriteOutputUnt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -306,61 +278,45 @@ subroutine Orca_UnPackInitOutput(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE Orca_CopyInputFile( SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Orca_InputFile), INTENT(IN) :: SrcInputFileData
-   TYPE(Orca_InputFile), INTENT(INOUT) :: DstInputFileData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_CopyInputFile'
-! 
+
+subroutine Orca_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
+   type(Orca_InputFile), intent(in) :: SrcInputFileData
+   type(Orca_InputFile), intent(inout) :: DstInputFileData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Orca_CopyInputFile'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInputFileData%DLL_FileName = SrcInputFileData%DLL_FileName
-    DstInputFileData%DLL_InitProcName = SrcInputFileData%DLL_InitProcName
-    DstInputFileData%DLL_CalcProcName = SrcInputFileData%DLL_CalcProcName
-    DstInputFileData%DLL_EndProcName = SrcInputFileData%DLL_EndProcName
-    DstInputFileData%DirRoot = SrcInputFileData%DirRoot
- END SUBROUTINE Orca_CopyInputFile
+   ErrMsg  = ''
+   DstInputFileData%DLL_FileName = SrcInputFileData%DLL_FileName
+   DstInputFileData%DLL_InitProcName = SrcInputFileData%DLL_InitProcName
+   DstInputFileData%DLL_CalcProcName = SrcInputFileData%DLL_CalcProcName
+   DstInputFileData%DLL_EndProcName = SrcInputFileData%DLL_EndProcName
+   DstInputFileData%DirRoot = SrcInputFileData%DirRoot
+end subroutine
 
- SUBROUTINE Orca_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
-  TYPE(Orca_InputFile), INTENT(INOUT) :: InputFileData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Orca_DestroyInputFile'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE Orca_DestroyInputFile
-
+subroutine Orca_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
+   type(Orca_InputFile), intent(inout) :: InputFileData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Orca_DestroyInputFile'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine Orca_PackInputFile(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Orca_InputFile), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Orca_PackInputFile'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! DLL_FileName
    call RegPack(Buf, InData%DLL_FileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DLL_InitProcName
    call RegPack(Buf, InData%DLL_InitProcName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DLL_CalcProcName
    call RegPack(Buf, InData%DLL_CalcProcName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DLL_EndProcName
    call RegPack(Buf, InData%DLL_EndProcName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DirRoot
    call RegPack(Buf, InData%DirRoot)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -370,61 +326,44 @@ subroutine Orca_UnPackInputFile(Buf, OutData)
    type(Orca_InputFile), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Orca_UnPackInputFile'
    if (Buf%ErrStat /= ErrID_None) return
-   ! DLL_FileName
    call RegUnpack(Buf, OutData%DLL_FileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DLL_InitProcName
    call RegUnpack(Buf, OutData%DLL_InitProcName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DLL_CalcProcName
    call RegUnpack(Buf, OutData%DLL_CalcProcName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DLL_EndProcName
    call RegUnpack(Buf, OutData%DLL_EndProcName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DirRoot
    call RegUnpack(Buf, OutData%DirRoot)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE Orca_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Orca_OtherStateType), INTENT(IN) :: SrcOtherStateData
-   TYPE(Orca_OtherStateType), INTENT(INOUT) :: DstOtherStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_CopyOtherState'
-! 
+
+subroutine Orca_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg)
+   type(Orca_OtherStateType), intent(in) :: SrcOtherStateData
+   type(Orca_OtherStateType), intent(inout) :: DstOtherStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Orca_CopyOtherState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstOtherStateData%DummyOtherState = SrcOtherStateData%DummyOtherState
- END SUBROUTINE Orca_CopyOtherState
+   ErrMsg  = ''
+   DstOtherStateData%DummyOtherState = SrcOtherStateData%DummyOtherState
+end subroutine
 
- SUBROUTINE Orca_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
-  TYPE(Orca_OtherStateType), INTENT(INOUT) :: OtherStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Orca_DestroyOtherState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE Orca_DestroyOtherState
-
+subroutine Orca_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
+   type(Orca_OtherStateType), intent(inout) :: OtherStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Orca_DestroyOtherState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine Orca_PackOtherState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Orca_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Orca_PackOtherState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! DummyOtherState
    call RegPack(Buf, InData%DummyOtherState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -434,85 +373,70 @@ subroutine Orca_UnPackOtherState(Buf, OutData)
    type(Orca_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Orca_UnPackOtherState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! DummyOtherState
    call RegUnpack(Buf, OutData%DummyOtherState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE Orca_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Orca_MiscVarType), INTENT(IN) :: SrcMiscData
-   TYPE(Orca_MiscVarType), INTENT(INOUT) :: DstMiscData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_CopyMisc'
-! 
+
+subroutine Orca_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(Orca_MiscVarType), intent(in) :: SrcMiscData
+   type(Orca_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'Orca_CopyMisc'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstMiscData%PtfmAM = SrcMiscData%PtfmAM
-    DstMiscData%PtfmFt = SrcMiscData%PtfmFt
-    DstMiscData%F_PtfmAM = SrcMiscData%F_PtfmAM
-IF (ALLOCATED(SrcMiscData%AllOuts)) THEN
-  i1_l = LBOUND(SrcMiscData%AllOuts,1)
-  i1_u = UBOUND(SrcMiscData%AllOuts,1)
-  IF (.NOT. ALLOCATED(DstMiscData%AllOuts)) THEN 
-    ALLOCATE(DstMiscData%AllOuts(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%AllOuts.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%AllOuts = SrcMiscData%AllOuts
-ENDIF
-    DstMiscData%LastTimeStep = SrcMiscData%LastTimeStep
- END SUBROUTINE Orca_CopyMisc
+   ErrMsg  = ''
+   DstMiscData%PtfmAM = SrcMiscData%PtfmAM
+   DstMiscData%PtfmFt = SrcMiscData%PtfmFt
+   DstMiscData%F_PtfmAM = SrcMiscData%F_PtfmAM
+   if (allocated(SrcMiscData%AllOuts)) then
+      LB(1:1) = lbound(SrcMiscData%AllOuts)
+      UB(1:1) = ubound(SrcMiscData%AllOuts)
+      if (.not. allocated(DstMiscData%AllOuts)) then
+         allocate(DstMiscData%AllOuts(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%AllOuts.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%AllOuts = SrcMiscData%AllOuts
+   else if (allocated(DstMiscData%AllOuts)) then
+      deallocate(DstMiscData%AllOuts)
+   end if
+   DstMiscData%LastTimeStep = SrcMiscData%LastTimeStep
+end subroutine
 
- SUBROUTINE Orca_DestroyMisc( MiscData, ErrStat, ErrMsg )
-  TYPE(Orca_MiscVarType), INTENT(INOUT) :: MiscData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Orca_DestroyMisc'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(MiscData%AllOuts)) THEN
-  DEALLOCATE(MiscData%AllOuts)
-ENDIF
- END SUBROUTINE Orca_DestroyMisc
-
+subroutine Orca_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(Orca_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Orca_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(MiscData%AllOuts)) then
+      deallocate(MiscData%AllOuts)
+   end if
+end subroutine
 
 subroutine Orca_PackMisc(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Orca_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Orca_PackMisc'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! PtfmAM
    call RegPack(Buf, InData%PtfmAM)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmFt
    call RegPack(Buf, InData%PtfmFt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F_PtfmAM
    call RegPack(Buf, InData%F_PtfmAM)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AllOuts
    call RegPack(Buf, allocated(InData%AllOuts))
    if (allocated(InData%AllOuts)) then
       call RegPackBounds(Buf, 1, lbound(InData%AllOuts), ubound(InData%AllOuts))
       call RegPack(Buf, InData%AllOuts)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LastTimeStep
    call RegPack(Buf, InData%LastTimeStep)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -525,16 +449,12 @@ subroutine Orca_UnPackMisc(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! PtfmAM
    call RegUnpack(Buf, OutData%PtfmAM)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmFt
    call RegUnpack(Buf, OutData%PtfmFt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F_PtfmAM
    call RegUnpack(Buf, OutData%F_PtfmAM)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AllOuts
    if (allocated(OutData%AllOuts)) deallocate(OutData%AllOuts)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -549,72 +469,69 @@ subroutine Orca_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%AllOuts)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! LastTimeStep
    call RegUnpack(Buf, OutData%LastTimeStep)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE Orca_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Orca_ParameterType), INTENT(IN) :: SrcParamData
-   TYPE(Orca_ParameterType), INTENT(INOUT) :: DstParamData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_CopyParam'
-! 
+
+subroutine Orca_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
+   type(Orca_ParameterType), intent(in) :: SrcParamData
+   type(Orca_ParameterType), intent(inout) :: DstParamData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Orca_CopyParam'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstParamData%DT = SrcParamData%DT
-      DstParamData%DLL_Orca = SrcParamData%DLL_Orca
-    DstParamData%SimNamePath = SrcParamData%SimNamePath
-    DstParamData%SimNamePathLen = SrcParamData%SimNamePathLen
-    DstParamData%NumOuts = SrcParamData%NumOuts
-IF (ALLOCATED(SrcParamData%OutParam)) THEN
-  i1_l = LBOUND(SrcParamData%OutParam,1)
-  i1_u = UBOUND(SrcParamData%OutParam,1)
-  IF (.NOT. ALLOCATED(DstParamData%OutParam)) THEN 
-    ALLOCATE(DstParamData%OutParam(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%OutParam.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcParamData%OutParam,1), UBOUND(SrcParamData%OutParam,1)
-      CALL NWTC_Library_Copyoutparmtype( SrcParamData%OutParam(i1), DstParamData%OutParam(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
- END SUBROUTINE Orca_CopyParam
+   ErrMsg  = ''
+   DstParamData%DT = SrcParamData%DT
+   DstParamData%DLL_Orca = SrcParamData%DLL_Orca
+   DstParamData%SimNamePath = SrcParamData%SimNamePath
+   DstParamData%SimNamePathLen = SrcParamData%SimNamePathLen
+   DstParamData%NumOuts = SrcParamData%NumOuts
+   if (allocated(SrcParamData%OutParam)) then
+      LB(1:1) = lbound(SrcParamData%OutParam)
+      UB(1:1) = ubound(SrcParamData%OutParam)
+      if (.not. allocated(DstParamData%OutParam)) then
+         allocate(DstParamData%OutParam(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%OutParam.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_CopyOutParmType(SrcParamData%OutParam(i1), DstParamData%OutParam(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstParamData%OutParam)) then
+      deallocate(DstParamData%OutParam)
+   end if
+end subroutine
 
- SUBROUTINE Orca_DestroyParam( ParamData, ErrStat, ErrMsg )
-  TYPE(Orca_ParameterType), INTENT(INOUT) :: ParamData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Orca_DestroyParam'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL FreeDynamicLib( ParamData%DLL_Orca, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(ParamData%OutParam)) THEN
-DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_DestroyOutParmType( ParamData%OutParam(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(ParamData%OutParam)
-ENDIF
- END SUBROUTINE Orca_DestroyParam
-
+subroutine Orca_DestroyParam(ParamData, ErrStat, ErrMsg)
+   type(Orca_ParameterType), intent(inout) :: ParamData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Orca_DestroyParam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(ParamData%OutParam)) then
+      LB(1:1) = lbound(ParamData%OutParam)
+      UB(1:1) = ubound(ParamData%OutParam)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_DestroyOutParmType(ParamData%OutParam(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ParamData%OutParam)
+   end if
+end subroutine
 
 subroutine Orca_PackParam(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -623,22 +540,16 @@ subroutine Orca_PackParam(Buf, Indata)
    integer(IntKi)  :: i1
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
-   ! DT
    call RegPack(Buf, InData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DLL_Orca
    call DLLTypePack(Buf, InData%DLL_Orca) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SimNamePath
    call RegPack(Buf, InData%SimNamePath)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SimNamePathLen
    call RegPack(Buf, InData%SimNamePathLen)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumOuts
    call RegPack(Buf, InData%NumOuts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutParam
    call RegPack(Buf, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutParam), ubound(InData%OutParam))
@@ -660,21 +571,15 @@ subroutine Orca_UnPackParam(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! DT
    call RegUnpack(Buf, OutData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DLL_Orca
    call DLLTypeUnpack(Buf, OutData%DLL_Orca) ! DLL_Orca 
-   ! SimNamePath
    call RegUnpack(Buf, OutData%SimNamePath)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SimNamePathLen
    call RegUnpack(Buf, OutData%SimNamePathLen)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumOuts
    call RegUnpack(Buf, OutData%NumOuts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutParam
    if (allocated(OutData%OutParam)) deallocate(OutData%OutParam)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -691,49 +596,39 @@ subroutine Orca_UnPackParam(Buf, OutData)
       end do
    end if
 end subroutine
- SUBROUTINE Orca_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Orca_InputType), INTENT(INOUT) :: SrcInputData
-   TYPE(Orca_InputType), INTENT(INOUT) :: DstInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_CopyInput'
-! 
+
+subroutine Orca_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
+   type(Orca_InputType), intent(inout) :: SrcInputData
+   type(Orca_InputType), intent(inout) :: DstInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Orca_CopyInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL MeshCopy( SrcInputData%PtfmMesh, DstInputData%PtfmMesh, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE Orca_CopyInput
+   ErrMsg  = ''
+   call MeshCopy(SrcInputData%PtfmMesh, DstInputData%PtfmMesh, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE Orca_DestroyInput( InputData, ErrStat, ErrMsg )
-  TYPE(Orca_InputType), INTENT(INOUT) :: InputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Orca_DestroyInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL MeshDestroy( InputData%PtfmMesh, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE Orca_DestroyInput
-
+subroutine Orca_DestroyInput(InputData, ErrStat, ErrMsg)
+   type(Orca_InputType), intent(inout) :: InputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Orca_DestroyInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine Orca_PackInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Orca_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Orca_PackInput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! PtfmMesh
    call MeshPack(Buf, InData%PtfmMesh) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -743,71 +638,61 @@ subroutine Orca_UnPackInput(Buf, OutData)
    type(Orca_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Orca_UnPackInput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! PtfmMesh
    call MeshUnpack(Buf, OutData%PtfmMesh) ! PtfmMesh 
 end subroutine
- SUBROUTINE Orca_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Orca_OutputType), INTENT(INOUT) :: SrcOutputData
-   TYPE(Orca_OutputType), INTENT(INOUT) :: DstOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_CopyOutput'
-! 
+
+subroutine Orca_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(Orca_OutputType), intent(inout) :: SrcOutputData
+   type(Orca_OutputType), intent(inout) :: DstOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Orca_CopyOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL MeshCopy( SrcOutputData%PtfmMesh, DstOutputData%PtfmMesh, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
-  i1_l = LBOUND(SrcOutputData%WriteOutput,1)
-  i1_u = UBOUND(SrcOutputData%WriteOutput,1)
-  IF (.NOT. ALLOCATED(DstOutputData%WriteOutput)) THEN 
-    ALLOCATE(DstOutputData%WriteOutput(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WriteOutput.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-ENDIF
- END SUBROUTINE Orca_CopyOutput
+   ErrMsg  = ''
+   call MeshCopy(SrcOutputData%PtfmMesh, DstOutputData%PtfmMesh, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcOutputData%WriteOutput)) then
+      LB(1:1) = lbound(SrcOutputData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput)
+      if (.not. allocated(DstOutputData%WriteOutput)) then
+         allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WriteOutput.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%WriteOutput = SrcOutputData%WriteOutput
+   else if (allocated(DstOutputData%WriteOutput)) then
+      deallocate(DstOutputData%WriteOutput)
+   end if
+end subroutine
 
- SUBROUTINE Orca_DestroyOutput( OutputData, ErrStat, ErrMsg )
-  TYPE(Orca_OutputType), INTENT(INOUT) :: OutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Orca_DestroyOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL MeshDestroy( OutputData%PtfmMesh, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(OutputData%WriteOutput)) THEN
-  DEALLOCATE(OutputData%WriteOutput)
-ENDIF
- END SUBROUTINE Orca_DestroyOutput
-
+subroutine Orca_DestroyOutput(OutputData, ErrStat, ErrMsg)
+   type(Orca_OutputType), intent(inout) :: OutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Orca_DestroyOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(OutputData%WriteOutput)) then
+      deallocate(OutputData%WriteOutput)
+   end if
+end subroutine
 
 subroutine Orca_PackOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Orca_OutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Orca_PackOutput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! PtfmMesh
    call MeshPack(Buf, InData%PtfmMesh) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WriteOutput
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
@@ -824,9 +709,7 @@ subroutine Orca_UnPackOutput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! PtfmMesh
    call MeshUnpack(Buf, OutData%PtfmMesh) ! PtfmMesh 
-   ! WriteOutput
    if (allocated(OutData%WriteOutput)) deallocate(OutData%WriteOutput)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -842,45 +725,33 @@ subroutine Orca_UnPackOutput(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE Orca_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Orca_ContinuousStateType), INTENT(IN) :: SrcContStateData
-   TYPE(Orca_ContinuousStateType), INTENT(INOUT) :: DstContStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_CopyContState'
-! 
+
+subroutine Orca_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
+   type(Orca_ContinuousStateType), intent(in) :: SrcContStateData
+   type(Orca_ContinuousStateType), intent(inout) :: DstContStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Orca_CopyContState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstContStateData%Dummy = SrcContStateData%Dummy
- END SUBROUTINE Orca_CopyContState
+   ErrMsg  = ''
+   DstContStateData%Dummy = SrcContStateData%Dummy
+end subroutine
 
- SUBROUTINE Orca_DestroyContState( ContStateData, ErrStat, ErrMsg )
-  TYPE(Orca_ContinuousStateType), INTENT(INOUT) :: ContStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Orca_DestroyContState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE Orca_DestroyContState
-
+subroutine Orca_DestroyContState(ContStateData, ErrStat, ErrMsg)
+   type(Orca_ContinuousStateType), intent(inout) :: ContStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Orca_DestroyContState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine Orca_PackContState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Orca_ContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Orca_PackContState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Dummy
    call RegPack(Buf, InData%Dummy)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -890,49 +761,36 @@ subroutine Orca_UnPackContState(Buf, OutData)
    type(Orca_ContinuousStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Orca_UnPackContState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! Dummy
    call RegUnpack(Buf, OutData%Dummy)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE Orca_CopyDiscState( SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Orca_DiscreteStateType), INTENT(IN) :: SrcDiscStateData
-   TYPE(Orca_DiscreteStateType), INTENT(INOUT) :: DstDiscStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_CopyDiscState'
-! 
+
+subroutine Orca_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg)
+   type(Orca_DiscreteStateType), intent(in) :: SrcDiscStateData
+   type(Orca_DiscreteStateType), intent(inout) :: DstDiscStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Orca_CopyDiscState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstDiscStateData%Dummy = SrcDiscStateData%Dummy
- END SUBROUTINE Orca_CopyDiscState
+   ErrMsg  = ''
+   DstDiscStateData%Dummy = SrcDiscStateData%Dummy
+end subroutine
 
- SUBROUTINE Orca_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
-  TYPE(Orca_DiscreteStateType), INTENT(INOUT) :: DiscStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Orca_DestroyDiscState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE Orca_DestroyDiscState
-
+subroutine Orca_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
+   type(Orca_DiscreteStateType), intent(inout) :: DiscStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Orca_DestroyDiscState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine Orca_PackDiscState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Orca_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Orca_PackDiscState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Dummy
    call RegPack(Buf, InData%Dummy)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -942,49 +800,36 @@ subroutine Orca_UnPackDiscState(Buf, OutData)
    type(Orca_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Orca_UnPackDiscState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! Dummy
    call RegUnpack(Buf, OutData%Dummy)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE Orca_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Orca_ConstraintStateType), INTENT(IN) :: SrcConstrStateData
-   TYPE(Orca_ConstraintStateType), INTENT(INOUT) :: DstConstrStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Orca_CopyConstrState'
-! 
+
+subroutine Orca_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
+   type(Orca_ConstraintStateType), intent(in) :: SrcConstrStateData
+   type(Orca_ConstraintStateType), intent(inout) :: DstConstrStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Orca_CopyConstrState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstConstrStateData%DummyConstrState = SrcConstrStateData%DummyConstrState
- END SUBROUTINE Orca_CopyConstrState
+   ErrMsg  = ''
+   DstConstrStateData%DummyConstrState = SrcConstrStateData%DummyConstrState
+end subroutine
 
- SUBROUTINE Orca_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
-  TYPE(Orca_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Orca_DestroyConstrState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE Orca_DestroyConstrState
-
+subroutine Orca_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
+   type(Orca_ConstraintStateType), intent(inout) :: ConstrStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Orca_DestroyConstrState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine Orca_PackConstrState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Orca_ConstraintStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Orca_PackConstrState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! DummyConstrState
    call RegPack(Buf, InData%DummyConstrState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -994,7 +839,6 @@ subroutine Orca_UnPackConstrState(Buf, OutData)
    type(Orca_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Orca_UnPackConstrState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! DummyConstrState
    call RegUnpack(Buf, OutData%DummyConstrState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

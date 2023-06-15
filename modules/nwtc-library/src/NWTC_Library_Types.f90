@@ -86,53 +86,39 @@ IMPLICIT NONE
   END TYPE NWTC_RandomNumber_ParameterType
 ! =======================
 CONTAINS
- SUBROUTINE NWTC_Library_CopyProgDesc( SrcProgDescData, DstProgDescData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(ProgDesc), INTENT(IN) :: SrcProgDescData
-   TYPE(ProgDesc), INTENT(INOUT) :: DstProgDescData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_CopyProgDesc'
-! 
+
+subroutine NWTC_Library_CopyProgDesc(SrcProgDescData, DstProgDescData, CtrlCode, ErrStat, ErrMsg)
+   type(ProgDesc), intent(in) :: SrcProgDescData
+   type(ProgDesc), intent(inout) :: DstProgDescData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'NWTC_Library_CopyProgDesc'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstProgDescData%Name = SrcProgDescData%Name
-    DstProgDescData%Ver = SrcProgDescData%Ver
-    DstProgDescData%Date = SrcProgDescData%Date
- END SUBROUTINE NWTC_Library_CopyProgDesc
+   ErrMsg  = ''
+   DstProgDescData%Name = SrcProgDescData%Name
+   DstProgDescData%Ver = SrcProgDescData%Ver
+   DstProgDescData%Date = SrcProgDescData%Date
+end subroutine
 
- SUBROUTINE NWTC_Library_DestroyProgDesc( ProgDescData, ErrStat, ErrMsg )
-  TYPE(ProgDesc), INTENT(INOUT) :: ProgDescData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyProgDesc'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE NWTC_Library_DestroyProgDesc
-
+subroutine NWTC_Library_DestroyProgDesc(ProgDescData, ErrStat, ErrMsg)
+   type(ProgDesc), intent(inout) :: ProgDescData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyProgDesc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine NWTC_Library_PackProgDesc(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(ProgDesc), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'NWTC_Library_PackProgDesc'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Name
    call RegPack(Buf, InData%Name)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Ver
    call RegPack(Buf, InData%Ver)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Date
    call RegPack(Buf, InData%Date)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -142,137 +128,119 @@ subroutine NWTC_Library_UnPackProgDesc(Buf, OutData)
    type(ProgDesc), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackProgDesc'
    if (Buf%ErrStat /= ErrID_None) return
-   ! Name
    call RegUnpack(Buf, OutData%Name)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Ver
    call RegUnpack(Buf, OutData%Ver)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Date
    call RegUnpack(Buf, OutData%Date)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE NWTC_Library_CopyFASTdataType( SrcFASTdataTypeData, DstFASTdataTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(FASTdataType), INTENT(IN) :: SrcFASTdataTypeData
-   TYPE(FASTdataType), INTENT(INOUT) :: DstFASTdataTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_CopyFASTdataType'
-! 
+
+subroutine NWTC_Library_CopyFASTdataType(SrcFASTdataTypeData, DstFASTdataTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(FASTdataType), intent(in) :: SrcFASTdataTypeData
+   type(FASTdataType), intent(inout) :: DstFASTdataTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'NWTC_Library_CopyFASTdataType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstFASTdataTypeData%File = SrcFASTdataTypeData%File
-    DstFASTdataTypeData%Descr = SrcFASTdataTypeData%Descr
-    DstFASTdataTypeData%NumChans = SrcFASTdataTypeData%NumChans
-    DstFASTdataTypeData%NumRecs = SrcFASTdataTypeData%NumRecs
-    DstFASTdataTypeData%TimeStep = SrcFASTdataTypeData%TimeStep
-IF (ALLOCATED(SrcFASTdataTypeData%ChanNames)) THEN
-  i1_l = LBOUND(SrcFASTdataTypeData%ChanNames,1)
-  i1_u = UBOUND(SrcFASTdataTypeData%ChanNames,1)
-  IF (.NOT. ALLOCATED(DstFASTdataTypeData%ChanNames)) THEN 
-    ALLOCATE(DstFASTdataTypeData%ChanNames(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstFASTdataTypeData%ChanNames.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstFASTdataTypeData%ChanNames = SrcFASTdataTypeData%ChanNames
-ENDIF
-IF (ALLOCATED(SrcFASTdataTypeData%ChanUnits)) THEN
-  i1_l = LBOUND(SrcFASTdataTypeData%ChanUnits,1)
-  i1_u = UBOUND(SrcFASTdataTypeData%ChanUnits,1)
-  IF (.NOT. ALLOCATED(DstFASTdataTypeData%ChanUnits)) THEN 
-    ALLOCATE(DstFASTdataTypeData%ChanUnits(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstFASTdataTypeData%ChanUnits.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstFASTdataTypeData%ChanUnits = SrcFASTdataTypeData%ChanUnits
-ENDIF
-IF (ALLOCATED(SrcFASTdataTypeData%Data)) THEN
-  i1_l = LBOUND(SrcFASTdataTypeData%Data,1)
-  i1_u = UBOUND(SrcFASTdataTypeData%Data,1)
-  i2_l = LBOUND(SrcFASTdataTypeData%Data,2)
-  i2_u = UBOUND(SrcFASTdataTypeData%Data,2)
-  IF (.NOT. ALLOCATED(DstFASTdataTypeData%Data)) THEN 
-    ALLOCATE(DstFASTdataTypeData%Data(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstFASTdataTypeData%Data.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstFASTdataTypeData%Data = SrcFASTdataTypeData%Data
-ENDIF
- END SUBROUTINE NWTC_Library_CopyFASTdataType
+   ErrMsg  = ''
+   DstFASTdataTypeData%File = SrcFASTdataTypeData%File
+   DstFASTdataTypeData%Descr = SrcFASTdataTypeData%Descr
+   DstFASTdataTypeData%NumChans = SrcFASTdataTypeData%NumChans
+   DstFASTdataTypeData%NumRecs = SrcFASTdataTypeData%NumRecs
+   DstFASTdataTypeData%TimeStep = SrcFASTdataTypeData%TimeStep
+   if (allocated(SrcFASTdataTypeData%ChanNames)) then
+      LB(1:1) = lbound(SrcFASTdataTypeData%ChanNames)
+      UB(1:1) = ubound(SrcFASTdataTypeData%ChanNames)
+      if (.not. allocated(DstFASTdataTypeData%ChanNames)) then
+         allocate(DstFASTdataTypeData%ChanNames(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstFASTdataTypeData%ChanNames.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstFASTdataTypeData%ChanNames = SrcFASTdataTypeData%ChanNames
+   else if (allocated(DstFASTdataTypeData%ChanNames)) then
+      deallocate(DstFASTdataTypeData%ChanNames)
+   end if
+   if (allocated(SrcFASTdataTypeData%ChanUnits)) then
+      LB(1:1) = lbound(SrcFASTdataTypeData%ChanUnits)
+      UB(1:1) = ubound(SrcFASTdataTypeData%ChanUnits)
+      if (.not. allocated(DstFASTdataTypeData%ChanUnits)) then
+         allocate(DstFASTdataTypeData%ChanUnits(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstFASTdataTypeData%ChanUnits.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstFASTdataTypeData%ChanUnits = SrcFASTdataTypeData%ChanUnits
+   else if (allocated(DstFASTdataTypeData%ChanUnits)) then
+      deallocate(DstFASTdataTypeData%ChanUnits)
+   end if
+   if (allocated(SrcFASTdataTypeData%Data)) then
+      LB(1:2) = lbound(SrcFASTdataTypeData%Data)
+      UB(1:2) = ubound(SrcFASTdataTypeData%Data)
+      if (.not. allocated(DstFASTdataTypeData%Data)) then
+         allocate(DstFASTdataTypeData%Data(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstFASTdataTypeData%Data.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstFASTdataTypeData%Data = SrcFASTdataTypeData%Data
+   else if (allocated(DstFASTdataTypeData%Data)) then
+      deallocate(DstFASTdataTypeData%Data)
+   end if
+end subroutine
 
- SUBROUTINE NWTC_Library_DestroyFASTdataType( FASTdataTypeData, ErrStat, ErrMsg )
-  TYPE(FASTdataType), INTENT(INOUT) :: FASTdataTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyFASTdataType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(FASTdataTypeData%ChanNames)) THEN
-  DEALLOCATE(FASTdataTypeData%ChanNames)
-ENDIF
-IF (ALLOCATED(FASTdataTypeData%ChanUnits)) THEN
-  DEALLOCATE(FASTdataTypeData%ChanUnits)
-ENDIF
-IF (ALLOCATED(FASTdataTypeData%Data)) THEN
-  DEALLOCATE(FASTdataTypeData%Data)
-ENDIF
- END SUBROUTINE NWTC_Library_DestroyFASTdataType
-
+subroutine NWTC_Library_DestroyFASTdataType(FASTdataTypeData, ErrStat, ErrMsg)
+   type(FASTdataType), intent(inout) :: FASTdataTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyFASTdataType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(FASTdataTypeData%ChanNames)) then
+      deallocate(FASTdataTypeData%ChanNames)
+   end if
+   if (allocated(FASTdataTypeData%ChanUnits)) then
+      deallocate(FASTdataTypeData%ChanUnits)
+   end if
+   if (allocated(FASTdataTypeData%Data)) then
+      deallocate(FASTdataTypeData%Data)
+   end if
+end subroutine
 
 subroutine NWTC_Library_PackFASTdataType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(FASTdataType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'NWTC_Library_PackFASTdataType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! File
    call RegPack(Buf, InData%File)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Descr
    call RegPack(Buf, InData%Descr)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumChans
    call RegPack(Buf, InData%NumChans)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumRecs
    call RegPack(Buf, InData%NumRecs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TimeStep
    call RegPack(Buf, InData%TimeStep)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ChanNames
    call RegPack(Buf, allocated(InData%ChanNames))
    if (allocated(InData%ChanNames)) then
       call RegPackBounds(Buf, 1, lbound(InData%ChanNames), ubound(InData%ChanNames))
       call RegPack(Buf, InData%ChanNames)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ChanUnits
    call RegPack(Buf, allocated(InData%ChanUnits))
    if (allocated(InData%ChanUnits)) then
       call RegPackBounds(Buf, 1, lbound(InData%ChanUnits), ubound(InData%ChanUnits))
       call RegPack(Buf, InData%ChanUnits)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Data
    call RegPack(Buf, allocated(InData%Data))
    if (allocated(InData%Data)) then
       call RegPackBounds(Buf, 2, lbound(InData%Data), ubound(InData%Data))
@@ -289,22 +257,16 @@ subroutine NWTC_Library_UnPackFASTdataType(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! File
    call RegUnpack(Buf, OutData%File)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Descr
    call RegUnpack(Buf, OutData%Descr)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumChans
    call RegUnpack(Buf, OutData%NumChans)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumRecs
    call RegUnpack(Buf, OutData%NumRecs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TimeStep
    call RegUnpack(Buf, OutData%TimeStep)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ChanNames
    if (allocated(OutData%ChanNames)) deallocate(OutData%ChanNames)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -319,7 +281,6 @@ subroutine NWTC_Library_UnPackFASTdataType(Buf, OutData)
       call RegUnpack(Buf, OutData%ChanNames)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! ChanUnits
    if (allocated(OutData%ChanUnits)) deallocate(OutData%ChanUnits)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -334,7 +295,6 @@ subroutine NWTC_Library_UnPackFASTdataType(Buf, OutData)
       call RegUnpack(Buf, OutData%ChanUnits)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Data
    if (allocated(OutData%Data)) deallocate(OutData%Data)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -350,57 +310,42 @@ subroutine NWTC_Library_UnPackFASTdataType(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE NWTC_Library_CopyOutParmType( SrcOutParmTypeData, DstOutParmTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(OutParmType), INTENT(IN) :: SrcOutParmTypeData
-   TYPE(OutParmType), INTENT(INOUT) :: DstOutParmTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_CopyOutParmType'
-! 
+
+subroutine NWTC_Library_CopyOutParmType(SrcOutParmTypeData, DstOutParmTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(OutParmType), intent(in) :: SrcOutParmTypeData
+   type(OutParmType), intent(inout) :: DstOutParmTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'NWTC_Library_CopyOutParmType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstOutParmTypeData%Indx = SrcOutParmTypeData%Indx
-    DstOutParmTypeData%Name = SrcOutParmTypeData%Name
-    DstOutParmTypeData%Units = SrcOutParmTypeData%Units
-    DstOutParmTypeData%SignM = SrcOutParmTypeData%SignM
- END SUBROUTINE NWTC_Library_CopyOutParmType
+   ErrMsg  = ''
+   DstOutParmTypeData%Indx = SrcOutParmTypeData%Indx
+   DstOutParmTypeData%Name = SrcOutParmTypeData%Name
+   DstOutParmTypeData%Units = SrcOutParmTypeData%Units
+   DstOutParmTypeData%SignM = SrcOutParmTypeData%SignM
+end subroutine
 
- SUBROUTINE NWTC_Library_DestroyOutParmType( OutParmTypeData, ErrStat, ErrMsg )
-  TYPE(OutParmType), INTENT(INOUT) :: OutParmTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyOutParmType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE NWTC_Library_DestroyOutParmType
-
+subroutine NWTC_Library_DestroyOutParmType(OutParmTypeData, ErrStat, ErrMsg)
+   type(OutParmType), intent(inout) :: OutParmTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyOutParmType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine NWTC_Library_PackOutParmType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(OutParmType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'NWTC_Library_PackOutParmType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Indx
    call RegPack(Buf, InData%Indx)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Name
    call RegPack(Buf, InData%Name)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Units
    call RegPack(Buf, InData%Units)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SignM
    call RegPack(Buf, InData%SignM)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -410,147 +355,135 @@ subroutine NWTC_Library_UnPackOutParmType(Buf, OutData)
    type(OutParmType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackOutParmType'
    if (Buf%ErrStat /= ErrID_None) return
-   ! Indx
    call RegUnpack(Buf, OutData%Indx)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Name
    call RegUnpack(Buf, OutData%Name)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Units
    call RegUnpack(Buf, OutData%Units)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SignM
    call RegUnpack(Buf, OutData%SignM)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE NWTC_Library_CopyFileInfoType( SrcFileInfoTypeData, DstFileInfoTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(FileInfoType), INTENT(IN) :: SrcFileInfoTypeData
-   TYPE(FileInfoType), INTENT(INOUT) :: DstFileInfoTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_CopyFileInfoType'
-! 
+
+subroutine NWTC_Library_CopyFileInfoType(SrcFileInfoTypeData, DstFileInfoTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(FileInfoType), intent(in) :: SrcFileInfoTypeData
+   type(FileInfoType), intent(inout) :: DstFileInfoTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'NWTC_Library_CopyFileInfoType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstFileInfoTypeData%NumLines = SrcFileInfoTypeData%NumLines
-    DstFileInfoTypeData%NumFiles = SrcFileInfoTypeData%NumFiles
-IF (ALLOCATED(SrcFileInfoTypeData%FileLine)) THEN
-  i1_l = LBOUND(SrcFileInfoTypeData%FileLine,1)
-  i1_u = UBOUND(SrcFileInfoTypeData%FileLine,1)
-  IF (.NOT. ALLOCATED(DstFileInfoTypeData%FileLine)) THEN 
-    ALLOCATE(DstFileInfoTypeData%FileLine(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstFileInfoTypeData%FileLine.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstFileInfoTypeData%FileLine = SrcFileInfoTypeData%FileLine
-ENDIF
-IF (ALLOCATED(SrcFileInfoTypeData%FileIndx)) THEN
-  i1_l = LBOUND(SrcFileInfoTypeData%FileIndx,1)
-  i1_u = UBOUND(SrcFileInfoTypeData%FileIndx,1)
-  IF (.NOT. ALLOCATED(DstFileInfoTypeData%FileIndx)) THEN 
-    ALLOCATE(DstFileInfoTypeData%FileIndx(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstFileInfoTypeData%FileIndx.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstFileInfoTypeData%FileIndx = SrcFileInfoTypeData%FileIndx
-ENDIF
-IF (ALLOCATED(SrcFileInfoTypeData%FileList)) THEN
-  i1_l = LBOUND(SrcFileInfoTypeData%FileList,1)
-  i1_u = UBOUND(SrcFileInfoTypeData%FileList,1)
-  IF (.NOT. ALLOCATED(DstFileInfoTypeData%FileList)) THEN 
-    ALLOCATE(DstFileInfoTypeData%FileList(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstFileInfoTypeData%FileList.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstFileInfoTypeData%FileList = SrcFileInfoTypeData%FileList
-ENDIF
-IF (ALLOCATED(SrcFileInfoTypeData%Lines)) THEN
-  i1_l = LBOUND(SrcFileInfoTypeData%Lines,1)
-  i1_u = UBOUND(SrcFileInfoTypeData%Lines,1)
-  IF (.NOT. ALLOCATED(DstFileInfoTypeData%Lines)) THEN 
-    ALLOCATE(DstFileInfoTypeData%Lines(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstFileInfoTypeData%Lines.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstFileInfoTypeData%Lines = SrcFileInfoTypeData%Lines
-ENDIF
- END SUBROUTINE NWTC_Library_CopyFileInfoType
+   ErrMsg  = ''
+   DstFileInfoTypeData%NumLines = SrcFileInfoTypeData%NumLines
+   DstFileInfoTypeData%NumFiles = SrcFileInfoTypeData%NumFiles
+   if (allocated(SrcFileInfoTypeData%FileLine)) then
+      LB(1:1) = lbound(SrcFileInfoTypeData%FileLine)
+      UB(1:1) = ubound(SrcFileInfoTypeData%FileLine)
+      if (.not. allocated(DstFileInfoTypeData%FileLine)) then
+         allocate(DstFileInfoTypeData%FileLine(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstFileInfoTypeData%FileLine.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstFileInfoTypeData%FileLine = SrcFileInfoTypeData%FileLine
+   else if (allocated(DstFileInfoTypeData%FileLine)) then
+      deallocate(DstFileInfoTypeData%FileLine)
+   end if
+   if (allocated(SrcFileInfoTypeData%FileIndx)) then
+      LB(1:1) = lbound(SrcFileInfoTypeData%FileIndx)
+      UB(1:1) = ubound(SrcFileInfoTypeData%FileIndx)
+      if (.not. allocated(DstFileInfoTypeData%FileIndx)) then
+         allocate(DstFileInfoTypeData%FileIndx(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstFileInfoTypeData%FileIndx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstFileInfoTypeData%FileIndx = SrcFileInfoTypeData%FileIndx
+   else if (allocated(DstFileInfoTypeData%FileIndx)) then
+      deallocate(DstFileInfoTypeData%FileIndx)
+   end if
+   if (allocated(SrcFileInfoTypeData%FileList)) then
+      LB(1:1) = lbound(SrcFileInfoTypeData%FileList)
+      UB(1:1) = ubound(SrcFileInfoTypeData%FileList)
+      if (.not. allocated(DstFileInfoTypeData%FileList)) then
+         allocate(DstFileInfoTypeData%FileList(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstFileInfoTypeData%FileList.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstFileInfoTypeData%FileList = SrcFileInfoTypeData%FileList
+   else if (allocated(DstFileInfoTypeData%FileList)) then
+      deallocate(DstFileInfoTypeData%FileList)
+   end if
+   if (allocated(SrcFileInfoTypeData%Lines)) then
+      LB(1:1) = lbound(SrcFileInfoTypeData%Lines)
+      UB(1:1) = ubound(SrcFileInfoTypeData%Lines)
+      if (.not. allocated(DstFileInfoTypeData%Lines)) then
+         allocate(DstFileInfoTypeData%Lines(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstFileInfoTypeData%Lines.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstFileInfoTypeData%Lines = SrcFileInfoTypeData%Lines
+   else if (allocated(DstFileInfoTypeData%Lines)) then
+      deallocate(DstFileInfoTypeData%Lines)
+   end if
+end subroutine
 
- SUBROUTINE NWTC_Library_DestroyFileInfoType( FileInfoTypeData, ErrStat, ErrMsg )
-  TYPE(FileInfoType), INTENT(INOUT) :: FileInfoTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyFileInfoType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(FileInfoTypeData%FileLine)) THEN
-  DEALLOCATE(FileInfoTypeData%FileLine)
-ENDIF
-IF (ALLOCATED(FileInfoTypeData%FileIndx)) THEN
-  DEALLOCATE(FileInfoTypeData%FileIndx)
-ENDIF
-IF (ALLOCATED(FileInfoTypeData%FileList)) THEN
-  DEALLOCATE(FileInfoTypeData%FileList)
-ENDIF
-IF (ALLOCATED(FileInfoTypeData%Lines)) THEN
-  DEALLOCATE(FileInfoTypeData%Lines)
-ENDIF
- END SUBROUTINE NWTC_Library_DestroyFileInfoType
-
+subroutine NWTC_Library_DestroyFileInfoType(FileInfoTypeData, ErrStat, ErrMsg)
+   type(FileInfoType), intent(inout) :: FileInfoTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyFileInfoType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(FileInfoTypeData%FileLine)) then
+      deallocate(FileInfoTypeData%FileLine)
+   end if
+   if (allocated(FileInfoTypeData%FileIndx)) then
+      deallocate(FileInfoTypeData%FileIndx)
+   end if
+   if (allocated(FileInfoTypeData%FileList)) then
+      deallocate(FileInfoTypeData%FileList)
+   end if
+   if (allocated(FileInfoTypeData%Lines)) then
+      deallocate(FileInfoTypeData%Lines)
+   end if
+end subroutine
 
 subroutine NWTC_Library_PackFileInfoType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(FileInfoType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'NWTC_Library_PackFileInfoType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! NumLines
    call RegPack(Buf, InData%NumLines)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumFiles
    call RegPack(Buf, InData%NumFiles)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FileLine
    call RegPack(Buf, allocated(InData%FileLine))
    if (allocated(InData%FileLine)) then
       call RegPackBounds(Buf, 1, lbound(InData%FileLine), ubound(InData%FileLine))
       call RegPack(Buf, InData%FileLine)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FileIndx
    call RegPack(Buf, allocated(InData%FileIndx))
    if (allocated(InData%FileIndx)) then
       call RegPackBounds(Buf, 1, lbound(InData%FileIndx), ubound(InData%FileIndx))
       call RegPack(Buf, InData%FileIndx)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FileList
    call RegPack(Buf, allocated(InData%FileList))
    if (allocated(InData%FileList)) then
       call RegPackBounds(Buf, 1, lbound(InData%FileList), ubound(InData%FileList))
       call RegPack(Buf, InData%FileList)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Lines
    call RegPack(Buf, allocated(InData%Lines))
    if (allocated(InData%Lines)) then
       call RegPackBounds(Buf, 1, lbound(InData%Lines), ubound(InData%Lines))
@@ -567,13 +500,10 @@ subroutine NWTC_Library_UnPackFileInfoType(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! NumLines
    call RegUnpack(Buf, OutData%NumLines)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumFiles
    call RegUnpack(Buf, OutData%NumFiles)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FileLine
    if (allocated(OutData%FileLine)) deallocate(OutData%FileLine)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -588,7 +518,6 @@ subroutine NWTC_Library_UnPackFileInfoType(Buf, OutData)
       call RegUnpack(Buf, OutData%FileLine)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! FileIndx
    if (allocated(OutData%FileIndx)) deallocate(OutData%FileIndx)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -603,7 +532,6 @@ subroutine NWTC_Library_UnPackFileInfoType(Buf, OutData)
       call RegUnpack(Buf, OutData%FileIndx)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! FileList
    if (allocated(OutData%FileList)) deallocate(OutData%FileList)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -618,7 +546,6 @@ subroutine NWTC_Library_UnPackFileInfoType(Buf, OutData)
       call RegUnpack(Buf, OutData%FileList)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Lines
    if (allocated(OutData%Lines)) deallocate(OutData%Lines)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -634,50 +561,36 @@ subroutine NWTC_Library_UnPackFileInfoType(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE NWTC_Library_CopyQuaternion( SrcQuaternionData, DstQuaternionData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Quaternion), INTENT(IN) :: SrcQuaternionData
-   TYPE(Quaternion), INTENT(INOUT) :: DstQuaternionData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_CopyQuaternion'
-! 
+
+subroutine NWTC_Library_CopyQuaternion(SrcQuaternionData, DstQuaternionData, CtrlCode, ErrStat, ErrMsg)
+   type(Quaternion), intent(in) :: SrcQuaternionData
+   type(Quaternion), intent(inout) :: DstQuaternionData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'NWTC_Library_CopyQuaternion'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstQuaternionData%q0 = SrcQuaternionData%q0
-    DstQuaternionData%v = SrcQuaternionData%v
- END SUBROUTINE NWTC_Library_CopyQuaternion
+   ErrMsg  = ''
+   DstQuaternionData%q0 = SrcQuaternionData%q0
+   DstQuaternionData%v = SrcQuaternionData%v
+end subroutine
 
- SUBROUTINE NWTC_Library_DestroyQuaternion( QuaternionData, ErrStat, ErrMsg )
-  TYPE(Quaternion), INTENT(INOUT) :: QuaternionData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyQuaternion'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE NWTC_Library_DestroyQuaternion
-
+subroutine NWTC_Library_DestroyQuaternion(QuaternionData, ErrStat, ErrMsg)
+   type(Quaternion), intent(inout) :: QuaternionData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyQuaternion'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine NWTC_Library_PackQuaternion(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Quaternion), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'NWTC_Library_PackQuaternion'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! q0
    call RegPack(Buf, InData%q0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! v
    call RegPack(Buf, InData%v)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -687,83 +600,69 @@ subroutine NWTC_Library_UnPackQuaternion(Buf, OutData)
    type(Quaternion), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'NWTC_Library_UnPackQuaternion'
    if (Buf%ErrStat /= ErrID_None) return
-   ! q0
    call RegUnpack(Buf, OutData%q0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! v
    call RegUnpack(Buf, OutData%v)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE NWTC_Library_CopyNWTC_RandomNumber_ParameterType( SrcNWTC_RandomNumber_ParameterTypeData, DstNWTC_RandomNumber_ParameterTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(NWTC_RandomNumber_ParameterType), INTENT(IN) :: SrcNWTC_RandomNumber_ParameterTypeData
-   TYPE(NWTC_RandomNumber_ParameterType), INTENT(INOUT) :: DstNWTC_RandomNumber_ParameterTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_CopyNWTC_RandomNumber_ParameterType'
-! 
+
+subroutine NWTC_Library_CopyNWTC_RandomNumber_ParameterType(SrcNWTC_RandomNumber_ParameterTypeData, DstNWTC_RandomNumber_ParameterTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(NWTC_RandomNumber_ParameterType), intent(in) :: SrcNWTC_RandomNumber_ParameterTypeData
+   type(NWTC_RandomNumber_ParameterType), intent(inout) :: DstNWTC_RandomNumber_ParameterTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'NWTC_Library_CopyNWTC_RandomNumber_ParameterType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstNWTC_RandomNumber_ParameterTypeData%pRNG = SrcNWTC_RandomNumber_ParameterTypeData%pRNG
-    DstNWTC_RandomNumber_ParameterTypeData%RandSeed = SrcNWTC_RandomNumber_ParameterTypeData%RandSeed
-IF (ALLOCATED(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry)) THEN
-  i1_l = LBOUND(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry,1)
-  i1_u = UBOUND(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry,1)
-  IF (.NOT. ALLOCATED(DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry)) THEN 
-    ALLOCATE(DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry = SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry
-ENDIF
-    DstNWTC_RandomNumber_ParameterTypeData%RNG_type = SrcNWTC_RandomNumber_ParameterTypeData%RNG_type
- END SUBROUTINE NWTC_Library_CopyNWTC_RandomNumber_ParameterType
+   ErrMsg  = ''
+   DstNWTC_RandomNumber_ParameterTypeData%pRNG = SrcNWTC_RandomNumber_ParameterTypeData%pRNG
+   DstNWTC_RandomNumber_ParameterTypeData%RandSeed = SrcNWTC_RandomNumber_ParameterTypeData%RandSeed
+   if (allocated(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry)) then
+      LB(1:1) = lbound(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry)
+      UB(1:1) = ubound(SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry)
+      if (.not. allocated(DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry)) then
+         allocate(DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry = SrcNWTC_RandomNumber_ParameterTypeData%RandSeedAry
+   else if (allocated(DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry)) then
+      deallocate(DstNWTC_RandomNumber_ParameterTypeData%RandSeedAry)
+   end if
+   DstNWTC_RandomNumber_ParameterTypeData%RNG_type = SrcNWTC_RandomNumber_ParameterTypeData%RNG_type
+end subroutine
 
- SUBROUTINE NWTC_Library_DestroyNWTC_RandomNumber_ParameterType( NWTC_RandomNumber_ParameterTypeData, ErrStat, ErrMsg )
-  TYPE(NWTC_RandomNumber_ParameterType), INTENT(INOUT) :: NWTC_RandomNumber_ParameterTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyNWTC_RandomNumber_ParameterType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(NWTC_RandomNumber_ParameterTypeData%RandSeedAry)) THEN
-  DEALLOCATE(NWTC_RandomNumber_ParameterTypeData%RandSeedAry)
-ENDIF
- END SUBROUTINE NWTC_Library_DestroyNWTC_RandomNumber_ParameterType
-
+subroutine NWTC_Library_DestroyNWTC_RandomNumber_ParameterType(NWTC_RandomNumber_ParameterTypeData, ErrStat, ErrMsg)
+   type(NWTC_RandomNumber_ParameterType), intent(inout) :: NWTC_RandomNumber_ParameterTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'NWTC_Library_DestroyNWTC_RandomNumber_ParameterType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(NWTC_RandomNumber_ParameterTypeData%RandSeedAry)) then
+      deallocate(NWTC_RandomNumber_ParameterTypeData%RandSeedAry)
+   end if
+end subroutine
 
 subroutine NWTC_Library_PackNWTC_RandomNumber_ParameterType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(NWTC_RandomNumber_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'NWTC_Library_PackNWTC_RandomNumber_ParameterType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! pRNG
    call RegPack(Buf, InData%pRNG)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RandSeed
    call RegPack(Buf, InData%RandSeed)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RandSeedAry
    call RegPack(Buf, allocated(InData%RandSeedAry))
    if (allocated(InData%RandSeedAry)) then
       call RegPackBounds(Buf, 1, lbound(InData%RandSeedAry), ubound(InData%RandSeedAry))
       call RegPack(Buf, InData%RandSeedAry)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RNG_type
    call RegPack(Buf, InData%RNG_type)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -776,13 +675,10 @@ subroutine NWTC_Library_UnPackNWTC_RandomNumber_ParameterType(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! pRNG
    call RegUnpack(Buf, OutData%pRNG)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RandSeed
    call RegUnpack(Buf, OutData%RandSeed)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RandSeedAry
    if (allocated(OutData%RandSeedAry)) deallocate(OutData%RandSeedAry)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -797,7 +693,6 @@ subroutine NWTC_Library_UnPackNWTC_RandomNumber_ParameterType(Buf, OutData)
       call RegUnpack(Buf, OutData%RandSeedAry)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! RNG_type
    call RegUnpack(Buf, OutData%RNG_type)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

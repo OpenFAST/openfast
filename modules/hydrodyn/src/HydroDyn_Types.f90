@@ -234,484 +234,448 @@ IMPLICIT NONE
   END TYPE HydroDyn_OutputType
 ! =======================
 CONTAINS
- SUBROUTINE HydroDyn_CopyInputFile( SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(HydroDyn_InputFile), INTENT(IN) :: SrcInputFileData
-   TYPE(HydroDyn_InputFile), INTENT(INOUT) :: DstInputFileData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'HydroDyn_CopyInputFile'
-! 
+
+subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg)
+   type(HydroDyn_InputFile), intent(in) :: SrcInputFileData
+   type(HydroDyn_InputFile), intent(inout) :: DstInputFileData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(3), UB(3)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_CopyInputFile'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInputFileData%EchoFlag = SrcInputFileData%EchoFlag
-IF (ALLOCATED(SrcInputFileData%AddF0)) THEN
-  i1_l = LBOUND(SrcInputFileData%AddF0,1)
-  i1_u = UBOUND(SrcInputFileData%AddF0,1)
-  i2_l = LBOUND(SrcInputFileData%AddF0,2)
-  i2_u = UBOUND(SrcInputFileData%AddF0,2)
-  IF (.NOT. ALLOCATED(DstInputFileData%AddF0)) THEN 
-    ALLOCATE(DstInputFileData%AddF0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%AddF0.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%AddF0 = SrcInputFileData%AddF0
-ENDIF
-IF (ALLOCATED(SrcInputFileData%AddCLin)) THEN
-  i1_l = LBOUND(SrcInputFileData%AddCLin,1)
-  i1_u = UBOUND(SrcInputFileData%AddCLin,1)
-  i2_l = LBOUND(SrcInputFileData%AddCLin,2)
-  i2_u = UBOUND(SrcInputFileData%AddCLin,2)
-  i3_l = LBOUND(SrcInputFileData%AddCLin,3)
-  i3_u = UBOUND(SrcInputFileData%AddCLin,3)
-  IF (.NOT. ALLOCATED(DstInputFileData%AddCLin)) THEN 
-    ALLOCATE(DstInputFileData%AddCLin(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%AddCLin.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%AddCLin = SrcInputFileData%AddCLin
-ENDIF
-IF (ALLOCATED(SrcInputFileData%AddBLin)) THEN
-  i1_l = LBOUND(SrcInputFileData%AddBLin,1)
-  i1_u = UBOUND(SrcInputFileData%AddBLin,1)
-  i2_l = LBOUND(SrcInputFileData%AddBLin,2)
-  i2_u = UBOUND(SrcInputFileData%AddBLin,2)
-  i3_l = LBOUND(SrcInputFileData%AddBLin,3)
-  i3_u = UBOUND(SrcInputFileData%AddBLin,3)
-  IF (.NOT. ALLOCATED(DstInputFileData%AddBLin)) THEN 
-    ALLOCATE(DstInputFileData%AddBLin(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%AddBLin.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%AddBLin = SrcInputFileData%AddBLin
-ENDIF
-IF (ALLOCATED(SrcInputFileData%AddBQuad)) THEN
-  i1_l = LBOUND(SrcInputFileData%AddBQuad,1)
-  i1_u = UBOUND(SrcInputFileData%AddBQuad,1)
-  i2_l = LBOUND(SrcInputFileData%AddBQuad,2)
-  i2_u = UBOUND(SrcInputFileData%AddBQuad,2)
-  i3_l = LBOUND(SrcInputFileData%AddBQuad,3)
-  i3_u = UBOUND(SrcInputFileData%AddBQuad,3)
-  IF (.NOT. ALLOCATED(DstInputFileData%AddBQuad)) THEN 
-    ALLOCATE(DstInputFileData%AddBQuad(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%AddBQuad.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%AddBQuad = SrcInputFileData%AddBQuad
-ENDIF
-      CALL SeaSt_CopyInitInput( SrcInputFileData%SeaState, DstInputFileData%SeaState, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcInputFileData%PotFile)) THEN
-  i1_l = LBOUND(SrcInputFileData%PotFile,1)
-  i1_u = UBOUND(SrcInputFileData%PotFile,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%PotFile)) THEN 
-    ALLOCATE(DstInputFileData%PotFile(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PotFile.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%PotFile = SrcInputFileData%PotFile
-ENDIF
-    DstInputFileData%nWAMITObj = SrcInputFileData%nWAMITObj
-    DstInputFileData%vecMultiplier = SrcInputFileData%vecMultiplier
-    DstInputFileData%NBody = SrcInputFileData%NBody
-    DstInputFileData%NBodyMod = SrcInputFileData%NBodyMod
-IF (ALLOCATED(SrcInputFileData%PtfmVol0)) THEN
-  i1_l = LBOUND(SrcInputFileData%PtfmVol0,1)
-  i1_u = UBOUND(SrcInputFileData%PtfmVol0,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%PtfmVol0)) THEN 
-    ALLOCATE(DstInputFileData%PtfmVol0(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PtfmVol0.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%PtfmVol0 = SrcInputFileData%PtfmVol0
-ENDIF
-    DstInputFileData%HasWAMIT = SrcInputFileData%HasWAMIT
-IF (ALLOCATED(SrcInputFileData%WAMITULEN)) THEN
-  i1_l = LBOUND(SrcInputFileData%WAMITULEN,1)
-  i1_u = UBOUND(SrcInputFileData%WAMITULEN,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%WAMITULEN)) THEN 
-    ALLOCATE(DstInputFileData%WAMITULEN(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%WAMITULEN.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%WAMITULEN = SrcInputFileData%WAMITULEN
-ENDIF
-IF (ALLOCATED(SrcInputFileData%PtfmRefxt)) THEN
-  i1_l = LBOUND(SrcInputFileData%PtfmRefxt,1)
-  i1_u = UBOUND(SrcInputFileData%PtfmRefxt,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%PtfmRefxt)) THEN 
-    ALLOCATE(DstInputFileData%PtfmRefxt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PtfmRefxt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%PtfmRefxt = SrcInputFileData%PtfmRefxt
-ENDIF
-IF (ALLOCATED(SrcInputFileData%PtfmRefyt)) THEN
-  i1_l = LBOUND(SrcInputFileData%PtfmRefyt,1)
-  i1_u = UBOUND(SrcInputFileData%PtfmRefyt,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%PtfmRefyt)) THEN 
-    ALLOCATE(DstInputFileData%PtfmRefyt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PtfmRefyt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%PtfmRefyt = SrcInputFileData%PtfmRefyt
-ENDIF
-IF (ALLOCATED(SrcInputFileData%PtfmRefzt)) THEN
-  i1_l = LBOUND(SrcInputFileData%PtfmRefzt,1)
-  i1_u = UBOUND(SrcInputFileData%PtfmRefzt,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%PtfmRefzt)) THEN 
-    ALLOCATE(DstInputFileData%PtfmRefzt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PtfmRefzt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%PtfmRefzt = SrcInputFileData%PtfmRefzt
-ENDIF
-IF (ALLOCATED(SrcInputFileData%PtfmRefztRot)) THEN
-  i1_l = LBOUND(SrcInputFileData%PtfmRefztRot,1)
-  i1_u = UBOUND(SrcInputFileData%PtfmRefztRot,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%PtfmRefztRot)) THEN 
-    ALLOCATE(DstInputFileData%PtfmRefztRot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PtfmRefztRot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%PtfmRefztRot = SrcInputFileData%PtfmRefztRot
-ENDIF
-IF (ALLOCATED(SrcInputFileData%PtfmCOBxt)) THEN
-  i1_l = LBOUND(SrcInputFileData%PtfmCOBxt,1)
-  i1_u = UBOUND(SrcInputFileData%PtfmCOBxt,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%PtfmCOBxt)) THEN 
-    ALLOCATE(DstInputFileData%PtfmCOBxt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PtfmCOBxt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%PtfmCOBxt = SrcInputFileData%PtfmCOBxt
-ENDIF
-IF (ALLOCATED(SrcInputFileData%PtfmCOByt)) THEN
-  i1_l = LBOUND(SrcInputFileData%PtfmCOByt,1)
-  i1_u = UBOUND(SrcInputFileData%PtfmCOByt,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%PtfmCOByt)) THEN 
-    ALLOCATE(DstInputFileData%PtfmCOByt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PtfmCOByt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%PtfmCOByt = SrcInputFileData%PtfmCOByt
-ENDIF
-      CALL WAMIT_CopyInitInput( SrcInputFileData%WAMIT, DstInputFileData%WAMIT, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL WAMIT2_CopyInitInput( SrcInputFileData%WAMIT2, DstInputFileData%WAMIT2, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL Morison_CopyInitInput( SrcInputFileData%Morison, DstInputFileData%Morison, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    DstInputFileData%Echo = SrcInputFileData%Echo
-    DstInputFileData%PotMod = SrcInputFileData%PotMod
-    DstInputFileData%NUserOutputs = SrcInputFileData%NUserOutputs
-IF (ALLOCATED(SrcInputFileData%UserOutputs)) THEN
-  i1_l = LBOUND(SrcInputFileData%UserOutputs,1)
-  i1_u = UBOUND(SrcInputFileData%UserOutputs,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%UserOutputs)) THEN 
-    ALLOCATE(DstInputFileData%UserOutputs(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%UserOutputs.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%UserOutputs = SrcInputFileData%UserOutputs
-ENDIF
-    DstInputFileData%OutSwtch = SrcInputFileData%OutSwtch
-    DstInputFileData%OutAll = SrcInputFileData%OutAll
-    DstInputFileData%NumOuts = SrcInputFileData%NumOuts
-IF (ALLOCATED(SrcInputFileData%OutList)) THEN
-  i1_l = LBOUND(SrcInputFileData%OutList,1)
-  i1_u = UBOUND(SrcInputFileData%OutList,1)
-  IF (.NOT. ALLOCATED(DstInputFileData%OutList)) THEN 
-    ALLOCATE(DstInputFileData%OutList(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%OutList.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputFileData%OutList = SrcInputFileData%OutList
-ENDIF
-    DstInputFileData%HDSum = SrcInputFileData%HDSum
-    DstInputFileData%UnSum = SrcInputFileData%UnSum
-    DstInputFileData%OutFmt = SrcInputFileData%OutFmt
-    DstInputFileData%OutSFmt = SrcInputFileData%OutSFmt
- END SUBROUTINE HydroDyn_CopyInputFile
+   ErrMsg  = ''
+   DstInputFileData%EchoFlag = SrcInputFileData%EchoFlag
+   if (allocated(SrcInputFileData%AddF0)) then
+      LB(1:2) = lbound(SrcInputFileData%AddF0)
+      UB(1:2) = ubound(SrcInputFileData%AddF0)
+      if (.not. allocated(DstInputFileData%AddF0)) then
+         allocate(DstInputFileData%AddF0(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%AddF0.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%AddF0 = SrcInputFileData%AddF0
+   else if (allocated(DstInputFileData%AddF0)) then
+      deallocate(DstInputFileData%AddF0)
+   end if
+   if (allocated(SrcInputFileData%AddCLin)) then
+      LB(1:3) = lbound(SrcInputFileData%AddCLin)
+      UB(1:3) = ubound(SrcInputFileData%AddCLin)
+      if (.not. allocated(DstInputFileData%AddCLin)) then
+         allocate(DstInputFileData%AddCLin(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%AddCLin.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%AddCLin = SrcInputFileData%AddCLin
+   else if (allocated(DstInputFileData%AddCLin)) then
+      deallocate(DstInputFileData%AddCLin)
+   end if
+   if (allocated(SrcInputFileData%AddBLin)) then
+      LB(1:3) = lbound(SrcInputFileData%AddBLin)
+      UB(1:3) = ubound(SrcInputFileData%AddBLin)
+      if (.not. allocated(DstInputFileData%AddBLin)) then
+         allocate(DstInputFileData%AddBLin(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%AddBLin.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%AddBLin = SrcInputFileData%AddBLin
+   else if (allocated(DstInputFileData%AddBLin)) then
+      deallocate(DstInputFileData%AddBLin)
+   end if
+   if (allocated(SrcInputFileData%AddBQuad)) then
+      LB(1:3) = lbound(SrcInputFileData%AddBQuad)
+      UB(1:3) = ubound(SrcInputFileData%AddBQuad)
+      if (.not. allocated(DstInputFileData%AddBQuad)) then
+         allocate(DstInputFileData%AddBQuad(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%AddBQuad.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%AddBQuad = SrcInputFileData%AddBQuad
+   else if (allocated(DstInputFileData%AddBQuad)) then
+      deallocate(DstInputFileData%AddBQuad)
+   end if
+   call SeaSt_CopyInitInput(SrcInputFileData%SeaState, DstInputFileData%SeaState, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcInputFileData%PotFile)) then
+      LB(1:1) = lbound(SrcInputFileData%PotFile)
+      UB(1:1) = ubound(SrcInputFileData%PotFile)
+      if (.not. allocated(DstInputFileData%PotFile)) then
+         allocate(DstInputFileData%PotFile(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PotFile.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%PotFile = SrcInputFileData%PotFile
+   else if (allocated(DstInputFileData%PotFile)) then
+      deallocate(DstInputFileData%PotFile)
+   end if
+   DstInputFileData%nWAMITObj = SrcInputFileData%nWAMITObj
+   DstInputFileData%vecMultiplier = SrcInputFileData%vecMultiplier
+   DstInputFileData%NBody = SrcInputFileData%NBody
+   DstInputFileData%NBodyMod = SrcInputFileData%NBodyMod
+   if (allocated(SrcInputFileData%PtfmVol0)) then
+      LB(1:1) = lbound(SrcInputFileData%PtfmVol0)
+      UB(1:1) = ubound(SrcInputFileData%PtfmVol0)
+      if (.not. allocated(DstInputFileData%PtfmVol0)) then
+         allocate(DstInputFileData%PtfmVol0(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PtfmVol0.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%PtfmVol0 = SrcInputFileData%PtfmVol0
+   else if (allocated(DstInputFileData%PtfmVol0)) then
+      deallocate(DstInputFileData%PtfmVol0)
+   end if
+   DstInputFileData%HasWAMIT = SrcInputFileData%HasWAMIT
+   if (allocated(SrcInputFileData%WAMITULEN)) then
+      LB(1:1) = lbound(SrcInputFileData%WAMITULEN)
+      UB(1:1) = ubound(SrcInputFileData%WAMITULEN)
+      if (.not. allocated(DstInputFileData%WAMITULEN)) then
+         allocate(DstInputFileData%WAMITULEN(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%WAMITULEN.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%WAMITULEN = SrcInputFileData%WAMITULEN
+   else if (allocated(DstInputFileData%WAMITULEN)) then
+      deallocate(DstInputFileData%WAMITULEN)
+   end if
+   if (allocated(SrcInputFileData%PtfmRefxt)) then
+      LB(1:1) = lbound(SrcInputFileData%PtfmRefxt)
+      UB(1:1) = ubound(SrcInputFileData%PtfmRefxt)
+      if (.not. allocated(DstInputFileData%PtfmRefxt)) then
+         allocate(DstInputFileData%PtfmRefxt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PtfmRefxt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%PtfmRefxt = SrcInputFileData%PtfmRefxt
+   else if (allocated(DstInputFileData%PtfmRefxt)) then
+      deallocate(DstInputFileData%PtfmRefxt)
+   end if
+   if (allocated(SrcInputFileData%PtfmRefyt)) then
+      LB(1:1) = lbound(SrcInputFileData%PtfmRefyt)
+      UB(1:1) = ubound(SrcInputFileData%PtfmRefyt)
+      if (.not. allocated(DstInputFileData%PtfmRefyt)) then
+         allocate(DstInputFileData%PtfmRefyt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PtfmRefyt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%PtfmRefyt = SrcInputFileData%PtfmRefyt
+   else if (allocated(DstInputFileData%PtfmRefyt)) then
+      deallocate(DstInputFileData%PtfmRefyt)
+   end if
+   if (allocated(SrcInputFileData%PtfmRefzt)) then
+      LB(1:1) = lbound(SrcInputFileData%PtfmRefzt)
+      UB(1:1) = ubound(SrcInputFileData%PtfmRefzt)
+      if (.not. allocated(DstInputFileData%PtfmRefzt)) then
+         allocate(DstInputFileData%PtfmRefzt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PtfmRefzt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%PtfmRefzt = SrcInputFileData%PtfmRefzt
+   else if (allocated(DstInputFileData%PtfmRefzt)) then
+      deallocate(DstInputFileData%PtfmRefzt)
+   end if
+   if (allocated(SrcInputFileData%PtfmRefztRot)) then
+      LB(1:1) = lbound(SrcInputFileData%PtfmRefztRot)
+      UB(1:1) = ubound(SrcInputFileData%PtfmRefztRot)
+      if (.not. allocated(DstInputFileData%PtfmRefztRot)) then
+         allocate(DstInputFileData%PtfmRefztRot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PtfmRefztRot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%PtfmRefztRot = SrcInputFileData%PtfmRefztRot
+   else if (allocated(DstInputFileData%PtfmRefztRot)) then
+      deallocate(DstInputFileData%PtfmRefztRot)
+   end if
+   if (allocated(SrcInputFileData%PtfmCOBxt)) then
+      LB(1:1) = lbound(SrcInputFileData%PtfmCOBxt)
+      UB(1:1) = ubound(SrcInputFileData%PtfmCOBxt)
+      if (.not. allocated(DstInputFileData%PtfmCOBxt)) then
+         allocate(DstInputFileData%PtfmCOBxt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PtfmCOBxt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%PtfmCOBxt = SrcInputFileData%PtfmCOBxt
+   else if (allocated(DstInputFileData%PtfmCOBxt)) then
+      deallocate(DstInputFileData%PtfmCOBxt)
+   end if
+   if (allocated(SrcInputFileData%PtfmCOByt)) then
+      LB(1:1) = lbound(SrcInputFileData%PtfmCOByt)
+      UB(1:1) = ubound(SrcInputFileData%PtfmCOByt)
+      if (.not. allocated(DstInputFileData%PtfmCOByt)) then
+         allocate(DstInputFileData%PtfmCOByt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%PtfmCOByt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%PtfmCOByt = SrcInputFileData%PtfmCOByt
+   else if (allocated(DstInputFileData%PtfmCOByt)) then
+      deallocate(DstInputFileData%PtfmCOByt)
+   end if
+   call WAMIT_CopyInitInput(SrcInputFileData%WAMIT, DstInputFileData%WAMIT, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call WAMIT2_CopyInitInput(SrcInputFileData%WAMIT2, DstInputFileData%WAMIT2, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call Morison_CopyInitInput(SrcInputFileData%Morison, DstInputFileData%Morison, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstInputFileData%Echo = SrcInputFileData%Echo
+   DstInputFileData%PotMod = SrcInputFileData%PotMod
+   DstInputFileData%NUserOutputs = SrcInputFileData%NUserOutputs
+   if (allocated(SrcInputFileData%UserOutputs)) then
+      LB(1:1) = lbound(SrcInputFileData%UserOutputs)
+      UB(1:1) = ubound(SrcInputFileData%UserOutputs)
+      if (.not. allocated(DstInputFileData%UserOutputs)) then
+         allocate(DstInputFileData%UserOutputs(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%UserOutputs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%UserOutputs = SrcInputFileData%UserOutputs
+   else if (allocated(DstInputFileData%UserOutputs)) then
+      deallocate(DstInputFileData%UserOutputs)
+   end if
+   DstInputFileData%OutSwtch = SrcInputFileData%OutSwtch
+   DstInputFileData%OutAll = SrcInputFileData%OutAll
+   DstInputFileData%NumOuts = SrcInputFileData%NumOuts
+   if (allocated(SrcInputFileData%OutList)) then
+      LB(1:1) = lbound(SrcInputFileData%OutList)
+      UB(1:1) = ubound(SrcInputFileData%OutList)
+      if (.not. allocated(DstInputFileData%OutList)) then
+         allocate(DstInputFileData%OutList(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%OutList.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputFileData%OutList = SrcInputFileData%OutList
+   else if (allocated(DstInputFileData%OutList)) then
+      deallocate(DstInputFileData%OutList)
+   end if
+   DstInputFileData%HDSum = SrcInputFileData%HDSum
+   DstInputFileData%UnSum = SrcInputFileData%UnSum
+   DstInputFileData%OutFmt = SrcInputFileData%OutFmt
+   DstInputFileData%OutSFmt = SrcInputFileData%OutSFmt
+end subroutine
 
- SUBROUTINE HydroDyn_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
-  TYPE(HydroDyn_InputFile), INTENT(INOUT) :: InputFileData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyInputFile'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(InputFileData%AddF0)) THEN
-  DEALLOCATE(InputFileData%AddF0)
-ENDIF
-IF (ALLOCATED(InputFileData%AddCLin)) THEN
-  DEALLOCATE(InputFileData%AddCLin)
-ENDIF
-IF (ALLOCATED(InputFileData%AddBLin)) THEN
-  DEALLOCATE(InputFileData%AddBLin)
-ENDIF
-IF (ALLOCATED(InputFileData%AddBQuad)) THEN
-  DEALLOCATE(InputFileData%AddBQuad)
-ENDIF
-  CALL SeaSt_DestroyInitInput( InputFileData%SeaState, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(InputFileData%PotFile)) THEN
-  DEALLOCATE(InputFileData%PotFile)
-ENDIF
-IF (ALLOCATED(InputFileData%PtfmVol0)) THEN
-  DEALLOCATE(InputFileData%PtfmVol0)
-ENDIF
-IF (ALLOCATED(InputFileData%WAMITULEN)) THEN
-  DEALLOCATE(InputFileData%WAMITULEN)
-ENDIF
-IF (ALLOCATED(InputFileData%PtfmRefxt)) THEN
-  DEALLOCATE(InputFileData%PtfmRefxt)
-ENDIF
-IF (ALLOCATED(InputFileData%PtfmRefyt)) THEN
-  DEALLOCATE(InputFileData%PtfmRefyt)
-ENDIF
-IF (ALLOCATED(InputFileData%PtfmRefzt)) THEN
-  DEALLOCATE(InputFileData%PtfmRefzt)
-ENDIF
-IF (ALLOCATED(InputFileData%PtfmRefztRot)) THEN
-  DEALLOCATE(InputFileData%PtfmRefztRot)
-ENDIF
-IF (ALLOCATED(InputFileData%PtfmCOBxt)) THEN
-  DEALLOCATE(InputFileData%PtfmCOBxt)
-ENDIF
-IF (ALLOCATED(InputFileData%PtfmCOByt)) THEN
-  DEALLOCATE(InputFileData%PtfmCOByt)
-ENDIF
-  CALL WAMIT_DestroyInitInput( InputFileData%WAMIT, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL WAMIT2_DestroyInitInput( InputFileData%WAMIT2, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Morison_DestroyInitInput( InputFileData%Morison, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(InputFileData%UserOutputs)) THEN
-  DEALLOCATE(InputFileData%UserOutputs)
-ENDIF
-IF (ALLOCATED(InputFileData%OutList)) THEN
-  DEALLOCATE(InputFileData%OutList)
-ENDIF
- END SUBROUTINE HydroDyn_DestroyInputFile
-
+subroutine HydroDyn_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
+   type(HydroDyn_InputFile), intent(inout) :: InputFileData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_DestroyInputFile'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InputFileData%AddF0)) then
+      deallocate(InputFileData%AddF0)
+   end if
+   if (allocated(InputFileData%AddCLin)) then
+      deallocate(InputFileData%AddCLin)
+   end if
+   if (allocated(InputFileData%AddBLin)) then
+      deallocate(InputFileData%AddBLin)
+   end if
+   if (allocated(InputFileData%AddBQuad)) then
+      deallocate(InputFileData%AddBQuad)
+   end if
+   if (allocated(InputFileData%PotFile)) then
+      deallocate(InputFileData%PotFile)
+   end if
+   if (allocated(InputFileData%PtfmVol0)) then
+      deallocate(InputFileData%PtfmVol0)
+   end if
+   if (allocated(InputFileData%WAMITULEN)) then
+      deallocate(InputFileData%WAMITULEN)
+   end if
+   if (allocated(InputFileData%PtfmRefxt)) then
+      deallocate(InputFileData%PtfmRefxt)
+   end if
+   if (allocated(InputFileData%PtfmRefyt)) then
+      deallocate(InputFileData%PtfmRefyt)
+   end if
+   if (allocated(InputFileData%PtfmRefzt)) then
+      deallocate(InputFileData%PtfmRefzt)
+   end if
+   if (allocated(InputFileData%PtfmRefztRot)) then
+      deallocate(InputFileData%PtfmRefztRot)
+   end if
+   if (allocated(InputFileData%PtfmCOBxt)) then
+      deallocate(InputFileData%PtfmCOBxt)
+   end if
+   if (allocated(InputFileData%PtfmCOByt)) then
+      deallocate(InputFileData%PtfmCOByt)
+   end if
+   if (allocated(InputFileData%UserOutputs)) then
+      deallocate(InputFileData%UserOutputs)
+   end if
+   if (allocated(InputFileData%OutList)) then
+      deallocate(InputFileData%OutList)
+   end if
+end subroutine
 
 subroutine HydroDyn_PackInputFile(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(HydroDyn_InputFile), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackInputFile'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! EchoFlag
    call RegPack(Buf, InData%EchoFlag)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AddF0
    call RegPack(Buf, allocated(InData%AddF0))
    if (allocated(InData%AddF0)) then
       call RegPackBounds(Buf, 2, lbound(InData%AddF0), ubound(InData%AddF0))
       call RegPack(Buf, InData%AddF0)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AddCLin
    call RegPack(Buf, allocated(InData%AddCLin))
    if (allocated(InData%AddCLin)) then
       call RegPackBounds(Buf, 3, lbound(InData%AddCLin), ubound(InData%AddCLin))
       call RegPack(Buf, InData%AddCLin)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AddBLin
    call RegPack(Buf, allocated(InData%AddBLin))
    if (allocated(InData%AddBLin)) then
       call RegPackBounds(Buf, 3, lbound(InData%AddBLin), ubound(InData%AddBLin))
       call RegPack(Buf, InData%AddBLin)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AddBQuad
    call RegPack(Buf, allocated(InData%AddBQuad))
    if (allocated(InData%AddBQuad)) then
       call RegPackBounds(Buf, 3, lbound(InData%AddBQuad), ubound(InData%AddBQuad))
       call RegPack(Buf, InData%AddBQuad)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SeaState
    call SeaSt_PackInitInput(Buf, InData%SeaState) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PotFile
    call RegPack(Buf, allocated(InData%PotFile))
    if (allocated(InData%PotFile)) then
       call RegPackBounds(Buf, 1, lbound(InData%PotFile), ubound(InData%PotFile))
       call RegPack(Buf, InData%PotFile)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nWAMITObj
    call RegPack(Buf, InData%nWAMITObj)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! vecMultiplier
    call RegPack(Buf, InData%vecMultiplier)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NBody
    call RegPack(Buf, InData%NBody)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NBodyMod
    call RegPack(Buf, InData%NBodyMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmVol0
    call RegPack(Buf, allocated(InData%PtfmVol0))
    if (allocated(InData%PtfmVol0)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmVol0), ubound(InData%PtfmVol0))
       call RegPack(Buf, InData%PtfmVol0)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HasWAMIT
    call RegPack(Buf, InData%HasWAMIT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMITULEN
    call RegPack(Buf, allocated(InData%WAMITULEN))
    if (allocated(InData%WAMITULEN)) then
       call RegPackBounds(Buf, 1, lbound(InData%WAMITULEN), ubound(InData%WAMITULEN))
       call RegPack(Buf, InData%WAMITULEN)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmRefxt
    call RegPack(Buf, allocated(InData%PtfmRefxt))
    if (allocated(InData%PtfmRefxt)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmRefxt), ubound(InData%PtfmRefxt))
       call RegPack(Buf, InData%PtfmRefxt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmRefyt
    call RegPack(Buf, allocated(InData%PtfmRefyt))
    if (allocated(InData%PtfmRefyt)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmRefyt), ubound(InData%PtfmRefyt))
       call RegPack(Buf, InData%PtfmRefyt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmRefzt
    call RegPack(Buf, allocated(InData%PtfmRefzt))
    if (allocated(InData%PtfmRefzt)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmRefzt), ubound(InData%PtfmRefzt))
       call RegPack(Buf, InData%PtfmRefzt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmRefztRot
    call RegPack(Buf, allocated(InData%PtfmRefztRot))
    if (allocated(InData%PtfmRefztRot)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmRefztRot), ubound(InData%PtfmRefztRot))
       call RegPack(Buf, InData%PtfmRefztRot)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmCOBxt
    call RegPack(Buf, allocated(InData%PtfmCOBxt))
    if (allocated(InData%PtfmCOBxt)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmCOBxt), ubound(InData%PtfmCOBxt))
       call RegPack(Buf, InData%PtfmCOBxt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmCOByt
    call RegPack(Buf, allocated(InData%PtfmCOByt))
    if (allocated(InData%PtfmCOByt)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmCOByt), ubound(InData%PtfmCOByt))
       call RegPack(Buf, InData%PtfmCOByt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMIT
    call WAMIT_PackInitInput(Buf, InData%WAMIT) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMIT2
    call WAMIT2_PackInitInput(Buf, InData%WAMIT2) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Morison
    call Morison_PackInitInput(Buf, InData%Morison) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Echo
    call RegPack(Buf, InData%Echo)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PotMod
    call RegPack(Buf, InData%PotMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NUserOutputs
    call RegPack(Buf, InData%NUserOutputs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UserOutputs
    call RegPack(Buf, allocated(InData%UserOutputs))
    if (allocated(InData%UserOutputs)) then
       call RegPackBounds(Buf, 1, lbound(InData%UserOutputs), ubound(InData%UserOutputs))
       call RegPack(Buf, InData%UserOutputs)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutSwtch
    call RegPack(Buf, InData%OutSwtch)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutAll
    call RegPack(Buf, InData%OutAll)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumOuts
    call RegPack(Buf, InData%NumOuts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutList
    call RegPack(Buf, allocated(InData%OutList))
    if (allocated(InData%OutList)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutList), ubound(InData%OutList))
       call RegPack(Buf, InData%OutList)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HDSum
    call RegPack(Buf, InData%HDSum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UnSum
    call RegPack(Buf, InData%UnSum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutFmt
    call RegPack(Buf, InData%OutFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutSFmt
    call RegPack(Buf, InData%OutSFmt)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -724,10 +688,8 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! EchoFlag
    call RegUnpack(Buf, OutData%EchoFlag)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AddF0
    if (allocated(OutData%AddF0)) deallocate(OutData%AddF0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -742,7 +704,6 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%AddF0)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! AddCLin
    if (allocated(OutData%AddCLin)) deallocate(OutData%AddCLin)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -757,7 +718,6 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%AddCLin)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! AddBLin
    if (allocated(OutData%AddBLin)) deallocate(OutData%AddBLin)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -772,7 +732,6 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%AddBLin)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! AddBQuad
    if (allocated(OutData%AddBQuad)) deallocate(OutData%AddBQuad)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -787,9 +746,7 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%AddBQuad)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! SeaState
    call SeaSt_UnpackInitInput(Buf, OutData%SeaState) ! SeaState 
-   ! PotFile
    if (allocated(OutData%PotFile)) deallocate(OutData%PotFile)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -804,19 +761,14 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%PotFile)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! nWAMITObj
    call RegUnpack(Buf, OutData%nWAMITObj)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! vecMultiplier
    call RegUnpack(Buf, OutData%vecMultiplier)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NBody
    call RegUnpack(Buf, OutData%NBody)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NBodyMod
    call RegUnpack(Buf, OutData%NBodyMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmVol0
    if (allocated(OutData%PtfmVol0)) deallocate(OutData%PtfmVol0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -831,10 +783,8 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%PtfmVol0)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! HasWAMIT
    call RegUnpack(Buf, OutData%HasWAMIT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMITULEN
    if (allocated(OutData%WAMITULEN)) deallocate(OutData%WAMITULEN)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -849,7 +799,6 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%WAMITULEN)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PtfmRefxt
    if (allocated(OutData%PtfmRefxt)) deallocate(OutData%PtfmRefxt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -864,7 +813,6 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%PtfmRefxt)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PtfmRefyt
    if (allocated(OutData%PtfmRefyt)) deallocate(OutData%PtfmRefyt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -879,7 +827,6 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%PtfmRefyt)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PtfmRefzt
    if (allocated(OutData%PtfmRefzt)) deallocate(OutData%PtfmRefzt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -894,7 +841,6 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%PtfmRefzt)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PtfmRefztRot
    if (allocated(OutData%PtfmRefztRot)) deallocate(OutData%PtfmRefztRot)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -909,7 +855,6 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%PtfmRefztRot)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PtfmCOBxt
    if (allocated(OutData%PtfmCOBxt)) deallocate(OutData%PtfmCOBxt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -924,7 +869,6 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%PtfmCOBxt)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PtfmCOByt
    if (allocated(OutData%PtfmCOByt)) deallocate(OutData%PtfmCOByt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -939,22 +883,15 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%PtfmCOByt)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WAMIT
    call WAMIT_UnpackInitInput(Buf, OutData%WAMIT) ! WAMIT 
-   ! WAMIT2
    call WAMIT2_UnpackInitInput(Buf, OutData%WAMIT2) ! WAMIT2 
-   ! Morison
    call Morison_UnpackInitInput(Buf, OutData%Morison) ! Morison 
-   ! Echo
    call RegUnpack(Buf, OutData%Echo)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PotMod
    call RegUnpack(Buf, OutData%PotMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NUserOutputs
    call RegUnpack(Buf, OutData%NUserOutputs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UserOutputs
    if (allocated(OutData%UserOutputs)) deallocate(OutData%UserOutputs)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -969,16 +906,12 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%UserOutputs)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! OutSwtch
    call RegUnpack(Buf, OutData%OutSwtch)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutAll
    call RegUnpack(Buf, OutData%OutAll)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumOuts
    call RegUnpack(Buf, OutData%NumOuts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutList
    if (allocated(OutData%OutList)) deallocate(OutData%OutList)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -993,124 +926,109 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%OutList)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! HDSum
    call RegUnpack(Buf, OutData%HDSum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UnSum
    call RegUnpack(Buf, OutData%UnSum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutFmt
    call RegUnpack(Buf, OutData%OutFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutSFmt
    call RegUnpack(Buf, OutData%OutSFmt)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE HydroDyn_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(HydroDyn_InitInputType), INTENT(IN) :: SrcInitInputData
-   TYPE(HydroDyn_InitInputType), INTENT(INOUT) :: DstInitInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'HydroDyn_CopyInitInput'
-! 
+
+subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
+   type(HydroDyn_InitInputType), intent(in) :: SrcInitInputData
+   type(HydroDyn_InitInputType), intent(inout) :: DstInitInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(3), UB(3)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_CopyInitInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInitInputData%InputFile = SrcInitInputData%InputFile
-    DstInitInputData%UseInputFile = SrcInitInputData%UseInputFile
-      CALL NWTC_Library_Copyfileinfotype( SrcInitInputData%PassedFileData, DstInitInputData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    DstInitInputData%OutRootName = SrcInitInputData%OutRootName
-    DstInitInputData%Linearize = SrcInitInputData%Linearize
-    DstInitInputData%Gravity = SrcInitInputData%Gravity
-    DstInitInputData%WtrDens = SrcInitInputData%WtrDens
-    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
-    DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
-    DstInitInputData%TMax = SrcInitInputData%TMax
-    DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
-    DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
-    DstInitInputData%NStepWave = SrcInitInputData%NStepWave
-    DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
-    DstInitInputData%RhoXg = SrcInitInputData%RhoXg
-    DstInitInputData%WaveMod = SrcInitInputData%WaveMod
-    DstInitInputData%WaveStMod = SrcInitInputData%WaveStMod
-    DstInitInputData%WaveDirMod = SrcInitInputData%WaveDirMod
-    DstInitInputData%WvLowCOff = SrcInitInputData%WvLowCOff
-    DstInitInputData%WvHiCOff = SrcInitInputData%WvHiCOff
-    DstInitInputData%WvLowCOffD = SrcInitInputData%WvLowCOffD
-    DstInitInputData%WvHiCOffD = SrcInitInputData%WvHiCOffD
-    DstInitInputData%WvLowCOffS = SrcInitInputData%WvLowCOffS
-    DstInitInputData%WvHiCOffS = SrcInitInputData%WvHiCOffS
-    DstInitInputData%InvalidWithSSExctn = SrcInitInputData%InvalidWithSSExctn
-IF (ALLOCATED(SrcInitInputData%WaveElev0)) THEN
-  i1_l = LBOUND(SrcInitInputData%WaveElev0,1)
-  i1_u = UBOUND(SrcInitInputData%WaveElev0,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%WaveElev0)) THEN 
-    ALLOCATE(DstInitInputData%WaveElev0(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveElev0.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%WaveElev0 = SrcInitInputData%WaveElev0
-ENDIF
-IF (ALLOCATED(SrcInitInputData%WaveElevC)) THEN
-  i1_l = LBOUND(SrcInitInputData%WaveElevC,1)
-  i1_u = UBOUND(SrcInitInputData%WaveElevC,1)
-  i2_l = LBOUND(SrcInitInputData%WaveElevC,2)
-  i2_u = UBOUND(SrcInitInputData%WaveElevC,2)
-  i3_l = LBOUND(SrcInitInputData%WaveElevC,3)
-  i3_u = UBOUND(SrcInitInputData%WaveElevC,3)
-  IF (.NOT. ALLOCATED(DstInitInputData%WaveElevC)) THEN 
-    ALLOCATE(DstInitInputData%WaveElevC(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveElevC.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%WaveElevC = SrcInitInputData%WaveElevC
-ENDIF
-    DstInitInputData%WaveDirMin = SrcInitInputData%WaveDirMin
-    DstInitInputData%WaveDirMax = SrcInitInputData%WaveDirMax
-    DstInitInputData%WaveDir = SrcInitInputData%WaveDir
-    DstInitInputData%WaveMultiDir = SrcInitInputData%WaveMultiDir
-    DstInitInputData%WaveDOmega = SrcInitInputData%WaveDOmega
-    DstInitInputData%MCFD = SrcInitInputData%MCFD
-    DstInitInputData%WaveField => SrcInitInputData%WaveField
- END SUBROUTINE HydroDyn_CopyInitInput
+   ErrMsg  = ''
+   DstInitInputData%InputFile = SrcInitInputData%InputFile
+   DstInitInputData%UseInputFile = SrcInitInputData%UseInputFile
+   call NWTC_Library_CopyFileInfoType(SrcInitInputData%PassedFileData, DstInitInputData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstInitInputData%OutRootName = SrcInitInputData%OutRootName
+   DstInitInputData%Linearize = SrcInitInputData%Linearize
+   DstInitInputData%Gravity = SrcInitInputData%Gravity
+   DstInitInputData%WtrDens = SrcInitInputData%WtrDens
+   DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
+   DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
+   DstInitInputData%TMax = SrcInitInputData%TMax
+   DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
+   DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
+   DstInitInputData%NStepWave = SrcInitInputData%NStepWave
+   DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
+   DstInitInputData%RhoXg = SrcInitInputData%RhoXg
+   DstInitInputData%WaveMod = SrcInitInputData%WaveMod
+   DstInitInputData%WaveStMod = SrcInitInputData%WaveStMod
+   DstInitInputData%WaveDirMod = SrcInitInputData%WaveDirMod
+   DstInitInputData%WvLowCOff = SrcInitInputData%WvLowCOff
+   DstInitInputData%WvHiCOff = SrcInitInputData%WvHiCOff
+   DstInitInputData%WvLowCOffD = SrcInitInputData%WvLowCOffD
+   DstInitInputData%WvHiCOffD = SrcInitInputData%WvHiCOffD
+   DstInitInputData%WvLowCOffS = SrcInitInputData%WvLowCOffS
+   DstInitInputData%WvHiCOffS = SrcInitInputData%WvHiCOffS
+   DstInitInputData%InvalidWithSSExctn = SrcInitInputData%InvalidWithSSExctn
+   if (allocated(SrcInitInputData%WaveElev0)) then
+      LB(1:1) = lbound(SrcInitInputData%WaveElev0)
+      UB(1:1) = ubound(SrcInitInputData%WaveElev0)
+      if (.not. allocated(DstInitInputData%WaveElev0)) then
+         allocate(DstInitInputData%WaveElev0(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveElev0.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%WaveElev0 = SrcInitInputData%WaveElev0
+   else if (allocated(DstInitInputData%WaveElev0)) then
+      deallocate(DstInitInputData%WaveElev0)
+   end if
+   if (allocated(SrcInitInputData%WaveElevC)) then
+      LB(1:3) = lbound(SrcInitInputData%WaveElevC)
+      UB(1:3) = ubound(SrcInitInputData%WaveElevC)
+      if (.not. allocated(DstInitInputData%WaveElevC)) then
+         allocate(DstInitInputData%WaveElevC(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveElevC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%WaveElevC = SrcInitInputData%WaveElevC
+   else if (allocated(DstInitInputData%WaveElevC)) then
+      deallocate(DstInitInputData%WaveElevC)
+   end if
+   DstInitInputData%WaveDirMin = SrcInitInputData%WaveDirMin
+   DstInitInputData%WaveDirMax = SrcInitInputData%WaveDirMax
+   DstInitInputData%WaveDir = SrcInitInputData%WaveDir
+   DstInitInputData%WaveMultiDir = SrcInitInputData%WaveMultiDir
+   DstInitInputData%WaveDOmega = SrcInitInputData%WaveDOmega
+   DstInitInputData%MCFD = SrcInitInputData%MCFD
+   DstInitInputData%WaveField => SrcInitInputData%WaveField
+end subroutine
 
- SUBROUTINE HydroDyn_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
-  TYPE(HydroDyn_InitInputType), INTENT(INOUT) :: InitInputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyInitInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL NWTC_Library_DestroyFileInfoType( InitInputData%PassedFileData, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(InitInputData%WaveElev0)) THEN
-  DEALLOCATE(InitInputData%WaveElev0)
-ENDIF
-IF (ALLOCATED(InitInputData%WaveElevC)) THEN
-  DEALLOCATE(InitInputData%WaveElevC)
-ENDIF
-NULLIFY(InitInputData%WaveField)
- END SUBROUTINE HydroDyn_DestroyInitInput
-
+subroutine HydroDyn_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
+   type(HydroDyn_InitInputType), intent(inout) :: InitInputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_DestroyInitInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InitInputData%WaveElev0)) then
+      deallocate(InitInputData%WaveElev0)
+   end if
+   if (allocated(InitInputData%WaveElevC)) then
+      deallocate(InitInputData%WaveElevC)
+   end if
+   nullify(InitInputData%WaveField)
+end subroutine
 
 subroutine HydroDyn_PackInitInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -1118,114 +1036,80 @@ subroutine HydroDyn_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'HydroDyn_PackInitInput'
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
-   ! InputFile
    call RegPack(Buf, InData%InputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UseInputFile
    call RegPack(Buf, InData%UseInputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PassedFileData
    call NWTC_Library_PackFileInfoType(Buf, InData%PassedFileData) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutRootName
    call RegPack(Buf, InData%OutRootName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Linearize
    call RegPack(Buf, InData%Linearize)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Gravity
    call RegPack(Buf, InData%Gravity)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDens
    call RegPack(Buf, InData%WtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDpth
    call RegPack(Buf, InData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MSL2SWL
    call RegPack(Buf, InData%MSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TMax
    call RegPack(Buf, InData%TMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmLocationX
    call RegPack(Buf, InData%PtfmLocationX)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmLocationY
    call RegPack(Buf, InData%PtfmLocationY)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NStepWave
    call RegPack(Buf, InData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NStepWave2
    call RegPack(Buf, InData%NStepWave2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RhoXg
    call RegPack(Buf, InData%RhoXg)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveMod
    call RegPack(Buf, InData%WaveMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveStMod
    call RegPack(Buf, InData%WaveStMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirMod
    call RegPack(Buf, InData%WaveDirMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvLowCOff
    call RegPack(Buf, InData%WvLowCOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvHiCOff
    call RegPack(Buf, InData%WvHiCOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvLowCOffD
    call RegPack(Buf, InData%WvLowCOffD)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvHiCOffD
    call RegPack(Buf, InData%WvHiCOffD)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvLowCOffS
    call RegPack(Buf, InData%WvLowCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvHiCOffS
    call RegPack(Buf, InData%WvHiCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InvalidWithSSExctn
    call RegPack(Buf, InData%InvalidWithSSExctn)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElev0
    call RegPack(Buf, allocated(InData%WaveElev0))
    if (allocated(InData%WaveElev0)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveElev0), ubound(InData%WaveElev0))
       call RegPack(Buf, InData%WaveElev0)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevC
    call RegPack(Buf, allocated(InData%WaveElevC))
    if (allocated(InData%WaveElevC)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElevC), ubound(InData%WaveElevC))
       call RegPack(Buf, InData%WaveElevC)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirMin
    call RegPack(Buf, InData%WaveDirMin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirMax
    call RegPack(Buf, InData%WaveDirMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDir
    call RegPack(Buf, InData%WaveDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveMultiDir
    call RegPack(Buf, InData%WaveMultiDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDOmega
    call RegPack(Buf, InData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MCFD
    call RegPack(Buf, InData%MCFD)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveField
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
       call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
@@ -1246,81 +1130,55 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
    integer(IntKi)  :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
-   ! InputFile
    call RegUnpack(Buf, OutData%InputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UseInputFile
    call RegUnpack(Buf, OutData%UseInputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PassedFileData
    call NWTC_Library_UnpackFileInfoType(Buf, OutData%PassedFileData) ! PassedFileData 
-   ! OutRootName
    call RegUnpack(Buf, OutData%OutRootName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Linearize
    call RegUnpack(Buf, OutData%Linearize)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Gravity
    call RegUnpack(Buf, OutData%Gravity)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDens
    call RegUnpack(Buf, OutData%WtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDpth
    call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MSL2SWL
    call RegUnpack(Buf, OutData%MSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TMax
    call RegUnpack(Buf, OutData%TMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmLocationX
    call RegUnpack(Buf, OutData%PtfmLocationX)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmLocationY
    call RegUnpack(Buf, OutData%PtfmLocationY)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NStepWave
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NStepWave2
    call RegUnpack(Buf, OutData%NStepWave2)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RhoXg
    call RegUnpack(Buf, OutData%RhoXg)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveMod
    call RegUnpack(Buf, OutData%WaveMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveStMod
    call RegUnpack(Buf, OutData%WaveStMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirMod
    call RegUnpack(Buf, OutData%WaveDirMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvLowCOff
    call RegUnpack(Buf, OutData%WvLowCOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvHiCOff
    call RegUnpack(Buf, OutData%WvHiCOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvLowCOffD
    call RegUnpack(Buf, OutData%WvLowCOffD)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvHiCOffD
    call RegUnpack(Buf, OutData%WvHiCOffD)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvLowCOffS
    call RegUnpack(Buf, OutData%WvLowCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WvHiCOffS
    call RegUnpack(Buf, OutData%WvHiCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! InvalidWithSSExctn
    call RegUnpack(Buf, OutData%InvalidWithSSExctn)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElev0
    if (allocated(OutData%WaveElev0)) deallocate(OutData%WaveElev0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1335,7 +1193,6 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveElev0)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveElevC
    if (allocated(OutData%WaveElevC)) deallocate(OutData%WaveElevC)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1350,25 +1207,18 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveElevC)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveDirMin
    call RegUnpack(Buf, OutData%WaveDirMin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirMax
    call RegUnpack(Buf, OutData%WaveDirMax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDir
    call RegUnpack(Buf, OutData%WaveDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveMultiDir
    call RegUnpack(Buf, OutData%WaveMultiDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDOmega
    call RegUnpack(Buf, OutData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MCFD
    call RegUnpack(Buf, OutData%MCFD)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveField
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1390,208 +1240,202 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
       OutData%WaveField => null()
    end if
 end subroutine
- SUBROUTINE HydroDyn_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(HydroDyn_InitOutputType), INTENT(IN) :: SrcInitOutputData
-   TYPE(HydroDyn_InitOutputType), INTENT(INOUT) :: DstInitOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'HydroDyn_CopyInitOutput'
-! 
+
+subroutine HydroDyn_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(HydroDyn_InitOutputType), intent(in) :: SrcInitOutputData
+   type(HydroDyn_InitOutputType), intent(inout) :: DstInitOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_CopyInitOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL Morison_CopyInitOutput( SrcInitOutputData%Morison, DstInitOutputData%Morison, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcInitOutputData%WriteOutputHdr)) THEN
-  i1_l = LBOUND(SrcInitOutputData%WriteOutputHdr,1)
-  i1_u = UBOUND(SrcInitOutputData%WriteOutputHdr,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%WriteOutputHdr)) THEN 
-    ALLOCATE(DstInitOutputData%WriteOutputHdr(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputHdr.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%WriteOutputUnt)) THEN
-  i1_l = LBOUND(SrcInitOutputData%WriteOutputUnt,1)
-  i1_u = UBOUND(SrcInitOutputData%WriteOutputUnt,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%WriteOutputUnt)) THEN 
-    ALLOCATE(DstInitOutputData%WriteOutputUnt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputUnt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
-ENDIF
-      CALL NWTC_Library_Copyprogdesc( SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcInitOutputData%LinNames_y)) THEN
-  i1_l = LBOUND(SrcInitOutputData%LinNames_y,1)
-  i1_u = UBOUND(SrcInitOutputData%LinNames_y,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%LinNames_y)) THEN 
-    ALLOCATE(DstInitOutputData%LinNames_y(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_y.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%LinNames_x)) THEN
-  i1_l = LBOUND(SrcInitOutputData%LinNames_x,1)
-  i1_u = UBOUND(SrcInitOutputData%LinNames_x,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%LinNames_x)) THEN 
-    ALLOCATE(DstInitOutputData%LinNames_x(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_x.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%LinNames_u)) THEN
-  i1_l = LBOUND(SrcInitOutputData%LinNames_u,1)
-  i1_u = UBOUND(SrcInitOutputData%LinNames_u,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%LinNames_u)) THEN 
-    ALLOCATE(DstInitOutputData%LinNames_u(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_u.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%DerivOrder_x)) THEN
-  i1_l = LBOUND(SrcInitOutputData%DerivOrder_x,1)
-  i1_u = UBOUND(SrcInitOutputData%DerivOrder_x,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%DerivOrder_x)) THEN 
-    ALLOCATE(DstInitOutputData%DerivOrder_x(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%DerivOrder_x.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%IsLoad_u)) THEN
-  i1_l = LBOUND(SrcInitOutputData%IsLoad_u,1)
-  i1_u = UBOUND(SrcInitOutputData%IsLoad_u,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%IsLoad_u)) THEN 
-    ALLOCATE(DstInitOutputData%IsLoad_u(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%IsLoad_u.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
-ENDIF
- END SUBROUTINE HydroDyn_CopyInitOutput
+   ErrMsg  = ''
+   call Morison_CopyInitOutput(SrcInitOutputData%Morison, DstInitOutputData%Morison, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcInitOutputData%WriteOutputHdr)) then
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
+      if (.not. allocated(DstInitOutputData%WriteOutputHdr)) then
+         allocate(DstInitOutputData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputHdr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%WriteOutputHdr = SrcInitOutputData%WriteOutputHdr
+   else if (allocated(DstInitOutputData%WriteOutputHdr)) then
+      deallocate(DstInitOutputData%WriteOutputHdr)
+   end if
+   if (allocated(SrcInitOutputData%WriteOutputUnt)) then
+      LB(1:1) = lbound(SrcInitOutputData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%WriteOutputUnt)
+      if (.not. allocated(DstInitOutputData%WriteOutputUnt)) then
+         allocate(DstInitOutputData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WriteOutputUnt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%WriteOutputUnt = SrcInitOutputData%WriteOutputUnt
+   else if (allocated(DstInitOutputData%WriteOutputUnt)) then
+      deallocate(DstInitOutputData%WriteOutputUnt)
+   end if
+   call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcInitOutputData%LinNames_y)) then
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
+      if (.not. allocated(DstInitOutputData%LinNames_y)) then
+         allocate(DstInitOutputData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_y.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
+   else if (allocated(DstInitOutputData%LinNames_y)) then
+      deallocate(DstInitOutputData%LinNames_y)
+   end if
+   if (allocated(SrcInitOutputData%LinNames_x)) then
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_x)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_x)
+      if (.not. allocated(DstInitOutputData%LinNames_x)) then
+         allocate(DstInitOutputData%LinNames_x(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_x.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
+   else if (allocated(DstInitOutputData%LinNames_x)) then
+      deallocate(DstInitOutputData%LinNames_x)
+   end if
+   if (allocated(SrcInitOutputData%LinNames_u)) then
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_u)
+      if (.not. allocated(DstInitOutputData%LinNames_u)) then
+         allocate(DstInitOutputData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_u.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
+   else if (allocated(DstInitOutputData%LinNames_u)) then
+      deallocate(DstInitOutputData%LinNames_u)
+   end if
+   if (allocated(SrcInitOutputData%DerivOrder_x)) then
+      LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x)
+      UB(1:1) = ubound(SrcInitOutputData%DerivOrder_x)
+      if (.not. allocated(DstInitOutputData%DerivOrder_x)) then
+         allocate(DstInitOutputData%DerivOrder_x(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%DerivOrder_x.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
+   else if (allocated(DstInitOutputData%DerivOrder_x)) then
+      deallocate(DstInitOutputData%DerivOrder_x)
+   end if
+   if (allocated(SrcInitOutputData%IsLoad_u)) then
+      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
+      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u)
+      if (.not. allocated(DstInitOutputData%IsLoad_u)) then
+         allocate(DstInitOutputData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%IsLoad_u.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
+   else if (allocated(DstInitOutputData%IsLoad_u)) then
+      deallocate(DstInitOutputData%IsLoad_u)
+   end if
+end subroutine
 
- SUBROUTINE HydroDyn_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
-  TYPE(HydroDyn_InitOutputType), INTENT(INOUT) :: InitOutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyInitOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL Morison_DestroyInitOutput( InitOutputData%Morison, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(InitOutputData%WriteOutputHdr)) THEN
-  DEALLOCATE(InitOutputData%WriteOutputHdr)
-ENDIF
-IF (ALLOCATED(InitOutputData%WriteOutputUnt)) THEN
-  DEALLOCATE(InitOutputData%WriteOutputUnt)
-ENDIF
-  CALL NWTC_Library_DestroyProgDesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(InitOutputData%LinNames_y)) THEN
-  DEALLOCATE(InitOutputData%LinNames_y)
-ENDIF
-IF (ALLOCATED(InitOutputData%LinNames_x)) THEN
-  DEALLOCATE(InitOutputData%LinNames_x)
-ENDIF
-IF (ALLOCATED(InitOutputData%LinNames_u)) THEN
-  DEALLOCATE(InitOutputData%LinNames_u)
-ENDIF
-IF (ALLOCATED(InitOutputData%DerivOrder_x)) THEN
-  DEALLOCATE(InitOutputData%DerivOrder_x)
-ENDIF
-IF (ALLOCATED(InitOutputData%IsLoad_u)) THEN
-  DEALLOCATE(InitOutputData%IsLoad_u)
-ENDIF
- END SUBROUTINE HydroDyn_DestroyInitOutput
-
+subroutine HydroDyn_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
+   type(HydroDyn_InitOutputType), intent(inout) :: InitOutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_DestroyInitOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InitOutputData%WriteOutputHdr)) then
+      deallocate(InitOutputData%WriteOutputHdr)
+   end if
+   if (allocated(InitOutputData%WriteOutputUnt)) then
+      deallocate(InitOutputData%WriteOutputUnt)
+   end if
+   if (allocated(InitOutputData%LinNames_y)) then
+      deallocate(InitOutputData%LinNames_y)
+   end if
+   if (allocated(InitOutputData%LinNames_x)) then
+      deallocate(InitOutputData%LinNames_x)
+   end if
+   if (allocated(InitOutputData%LinNames_u)) then
+      deallocate(InitOutputData%LinNames_u)
+   end if
+   if (allocated(InitOutputData%DerivOrder_x)) then
+      deallocate(InitOutputData%DerivOrder_x)
+   end if
+   if (allocated(InitOutputData%IsLoad_u)) then
+      deallocate(InitOutputData%IsLoad_u)
+   end if
+end subroutine
 
 subroutine HydroDyn_PackInitOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(HydroDyn_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackInitOutput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Morison
    call Morison_PackInitOutput(Buf, InData%Morison) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WriteOutputHdr
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
       call RegPack(Buf, InData%WriteOutputHdr)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WriteOutputUnt
    call RegPack(Buf, allocated(InData%WriteOutputUnt))
    if (allocated(InData%WriteOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Ver
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LinNames_y
    call RegPack(Buf, allocated(InData%LinNames_y))
    if (allocated(InData%LinNames_y)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames_y), ubound(InData%LinNames_y))
       call RegPack(Buf, InData%LinNames_y)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LinNames_x
    call RegPack(Buf, allocated(InData%LinNames_x))
    if (allocated(InData%LinNames_x)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames_x), ubound(InData%LinNames_x))
       call RegPack(Buf, InData%LinNames_x)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LinNames_u
    call RegPack(Buf, allocated(InData%LinNames_u))
    if (allocated(InData%LinNames_u)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames_u), ubound(InData%LinNames_u))
       call RegPack(Buf, InData%LinNames_u)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DerivOrder_x
    call RegPack(Buf, allocated(InData%DerivOrder_x))
    if (allocated(InData%DerivOrder_x)) then
       call RegPackBounds(Buf, 1, lbound(InData%DerivOrder_x), ubound(InData%DerivOrder_x))
       call RegPack(Buf, InData%DerivOrder_x)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! IsLoad_u
    call RegPack(Buf, allocated(InData%IsLoad_u))
    if (allocated(InData%IsLoad_u)) then
       call RegPackBounds(Buf, 1, lbound(InData%IsLoad_u), ubound(InData%IsLoad_u))
@@ -1608,9 +1452,7 @@ subroutine HydroDyn_UnPackInitOutput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! Morison
    call Morison_UnpackInitOutput(Buf, OutData%Morison) ! Morison 
-   ! WriteOutputHdr
    if (allocated(OutData%WriteOutputHdr)) deallocate(OutData%WriteOutputHdr)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1625,7 +1467,6 @@ subroutine HydroDyn_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%WriteOutputHdr)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WriteOutputUnt
    if (allocated(OutData%WriteOutputUnt)) deallocate(OutData%WriteOutputUnt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1640,9 +1481,7 @@ subroutine HydroDyn_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%WriteOutputUnt)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Ver
    call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
-   ! LinNames_y
    if (allocated(OutData%LinNames_y)) deallocate(OutData%LinNames_y)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1657,7 +1496,6 @@ subroutine HydroDyn_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%LinNames_y)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! LinNames_x
    if (allocated(OutData%LinNames_x)) deallocate(OutData%LinNames_x)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1672,7 +1510,6 @@ subroutine HydroDyn_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%LinNames_x)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! LinNames_u
    if (allocated(OutData%LinNames_u)) deallocate(OutData%LinNames_u)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1687,7 +1524,6 @@ subroutine HydroDyn_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%LinNames_u)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! DerivOrder_x
    if (allocated(OutData%DerivOrder_x)) deallocate(OutData%DerivOrder_x)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1702,7 +1538,6 @@ subroutine HydroDyn_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%DerivOrder_x)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! IsLoad_u
    if (allocated(OutData%IsLoad_u)) deallocate(OutData%IsLoad_u)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1718,65 +1553,49 @@ subroutine HydroDyn_UnPackInitOutput(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE HydroDyn_CopyHD_ModuleMapType( SrcHD_ModuleMapTypeData, DstHD_ModuleMapTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(HD_ModuleMapType), INTENT(INOUT) :: SrcHD_ModuleMapTypeData
-   TYPE(HD_ModuleMapType), INTENT(INOUT) :: DstHD_ModuleMapTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'HydroDyn_CopyHD_ModuleMapType'
-! 
+
+subroutine HydroDyn_CopyHD_ModuleMapType(SrcHD_ModuleMapTypeData, DstHD_ModuleMapTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(HD_ModuleMapType), intent(inout) :: SrcHD_ModuleMapTypeData
+   type(HD_ModuleMapType), intent(inout) :: DstHD_ModuleMapTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_CopyHD_ModuleMapType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL NWTC_Library_Copymeshmaptype( SrcHD_ModuleMapTypeData%uW_P_2_PRP_P, DstHD_ModuleMapTypeData%uW_P_2_PRP_P, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL NWTC_Library_Copymeshmaptype( SrcHD_ModuleMapTypeData%W_P_2_PRP_P, DstHD_ModuleMapTypeData%W_P_2_PRP_P, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL NWTC_Library_Copymeshmaptype( SrcHD_ModuleMapTypeData%M_P_2_PRP_P, DstHD_ModuleMapTypeData%M_P_2_PRP_P, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE HydroDyn_CopyHD_ModuleMapType
+   ErrMsg  = ''
+   call NWTC_Library_CopyMeshMapType(SrcHD_ModuleMapTypeData%uW_P_2_PRP_P, DstHD_ModuleMapTypeData%uW_P_2_PRP_P, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyMeshMapType(SrcHD_ModuleMapTypeData%W_P_2_PRP_P, DstHD_ModuleMapTypeData%W_P_2_PRP_P, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyMeshMapType(SrcHD_ModuleMapTypeData%M_P_2_PRP_P, DstHD_ModuleMapTypeData%M_P_2_PRP_P, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE HydroDyn_DestroyHD_ModuleMapType( HD_ModuleMapTypeData, ErrStat, ErrMsg )
-  TYPE(HD_ModuleMapType), INTENT(INOUT) :: HD_ModuleMapTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyHD_ModuleMapType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL NWTC_Library_DestroyMeshMapType( HD_ModuleMapTypeData%uW_P_2_PRP_P, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL NWTC_Library_DestroyMeshMapType( HD_ModuleMapTypeData%W_P_2_PRP_P, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL NWTC_Library_DestroyMeshMapType( HD_ModuleMapTypeData%M_P_2_PRP_P, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE HydroDyn_DestroyHD_ModuleMapType
-
+subroutine HydroDyn_DestroyHD_ModuleMapType(HD_ModuleMapTypeData, ErrStat, ErrMsg)
+   type(HD_ModuleMapType), intent(inout) :: HD_ModuleMapTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_DestroyHD_ModuleMapType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine HydroDyn_PackHD_ModuleMapType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(HD_ModuleMapType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackHD_ModuleMapType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! uW_P_2_PRP_P
    call NWTC_Library_PackMeshMapType(Buf, InData%uW_P_2_PRP_P) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! W_P_2_PRP_P
    call NWTC_Library_PackMeshMapType(Buf, InData%W_P_2_PRP_P) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! M_P_2_PRP_P
    call NWTC_Library_PackMeshMapType(Buf, InData%M_P_2_PRP_P) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1786,73 +1605,68 @@ subroutine HydroDyn_UnPackHD_ModuleMapType(Buf, OutData)
    type(HD_ModuleMapType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackHD_ModuleMapType'
    if (Buf%ErrStat /= ErrID_None) return
-   ! uW_P_2_PRP_P
    call NWTC_Library_UnpackMeshMapType(Buf, OutData%uW_P_2_PRP_P) ! uW_P_2_PRP_P 
-   ! W_P_2_PRP_P
    call NWTC_Library_UnpackMeshMapType(Buf, OutData%W_P_2_PRP_P) ! W_P_2_PRP_P 
-   ! M_P_2_PRP_P
    call NWTC_Library_UnpackMeshMapType(Buf, OutData%M_P_2_PRP_P) ! M_P_2_PRP_P 
 end subroutine
- SUBROUTINE HydroDyn_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(HydroDyn_ContinuousStateType), INTENT(IN) :: SrcContStateData
-   TYPE(HydroDyn_ContinuousStateType), INTENT(INOUT) :: DstContStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'HydroDyn_CopyContState'
-! 
+
+subroutine HydroDyn_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
+   type(HydroDyn_ContinuousStateType), intent(in) :: SrcContStateData
+   type(HydroDyn_ContinuousStateType), intent(inout) :: DstContStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_CopyContState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcContStateData%WAMIT)) THEN
-  i1_l = LBOUND(SrcContStateData%WAMIT,1)
-  i1_u = UBOUND(SrcContStateData%WAMIT,1)
-  IF (.NOT. ALLOCATED(DstContStateData%WAMIT)) THEN 
-    ALLOCATE(DstContStateData%WAMIT(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstContStateData%WAMIT.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcContStateData%WAMIT,1), UBOUND(SrcContStateData%WAMIT,1)
-      CALL WAMIT_CopyContState( SrcContStateData%WAMIT(i1), DstContStateData%WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-      CALL Morison_CopyContState( SrcContStateData%Morison, DstContStateData%Morison, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE HydroDyn_CopyContState
+   ErrMsg  = ''
+   if (allocated(SrcContStateData%WAMIT)) then
+      LB(1:1) = lbound(SrcContStateData%WAMIT)
+      UB(1:1) = ubound(SrcContStateData%WAMIT)
+      if (.not. allocated(DstContStateData%WAMIT)) then
+         allocate(DstContStateData%WAMIT(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstContStateData%WAMIT.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call WAMIT_CopyContState(SrcContStateData%WAMIT(i1), DstContStateData%WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstContStateData%WAMIT)) then
+      deallocate(DstContStateData%WAMIT)
+   end if
+   call Morison_CopyContState(SrcContStateData%Morison, DstContStateData%Morison, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE HydroDyn_DestroyContState( ContStateData, ErrStat, ErrMsg )
-  TYPE(HydroDyn_ContinuousStateType), INTENT(INOUT) :: ContStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyContState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(ContStateData%WAMIT)) THEN
-DO i1 = LBOUND(ContStateData%WAMIT,1), UBOUND(ContStateData%WAMIT,1)
-  CALL WAMIT_DestroyContState( ContStateData%WAMIT(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(ContStateData%WAMIT)
-ENDIF
-  CALL Morison_DestroyContState( ContStateData%Morison, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE HydroDyn_DestroyContState
-
+subroutine HydroDyn_DestroyContState(ContStateData, ErrStat, ErrMsg)
+   type(HydroDyn_ContinuousStateType), intent(inout) :: ContStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_DestroyContState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(ContStateData%WAMIT)) then
+      LB(1:1) = lbound(ContStateData%WAMIT)
+      UB(1:1) = ubound(ContStateData%WAMIT)
+      do i1 = LB(1), UB(1)
+         call WAMIT_DestroyContState(ContStateData%WAMIT(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ContStateData%WAMIT)
+   end if
+end subroutine
 
 subroutine HydroDyn_PackContState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -1861,7 +1675,6 @@ subroutine HydroDyn_PackContState(Buf, Indata)
    integer(IntKi)  :: i1
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
-   ! WAMIT
    call RegPack(Buf, allocated(InData%WAMIT))
    if (allocated(InData%WAMIT)) then
       call RegPackBounds(Buf, 1, lbound(InData%WAMIT), ubound(InData%WAMIT))
@@ -1872,7 +1685,6 @@ subroutine HydroDyn_PackContState(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Morison
    call Morison_PackContState(Buf, InData%Morison) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1886,7 +1698,6 @@ subroutine HydroDyn_UnPackContState(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! WAMIT
    if (allocated(OutData%WAMIT)) deallocate(OutData%WAMIT)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1902,69 +1713,66 @@ subroutine HydroDyn_UnPackContState(Buf, OutData)
          call WAMIT_UnpackContState(Buf, OutData%WAMIT(i1)) ! WAMIT 
       end do
    end if
-   ! Morison
    call Morison_UnpackContState(Buf, OutData%Morison) ! Morison 
 end subroutine
- SUBROUTINE HydroDyn_CopyDiscState( SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(HydroDyn_DiscreteStateType), INTENT(IN) :: SrcDiscStateData
-   TYPE(HydroDyn_DiscreteStateType), INTENT(INOUT) :: DstDiscStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'HydroDyn_CopyDiscState'
-! 
+
+subroutine HydroDyn_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg)
+   type(HydroDyn_DiscreteStateType), intent(in) :: SrcDiscStateData
+   type(HydroDyn_DiscreteStateType), intent(inout) :: DstDiscStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_CopyDiscState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcDiscStateData%WAMIT)) THEN
-  i1_l = LBOUND(SrcDiscStateData%WAMIT,1)
-  i1_u = UBOUND(SrcDiscStateData%WAMIT,1)
-  IF (.NOT. ALLOCATED(DstDiscStateData%WAMIT)) THEN 
-    ALLOCATE(DstDiscStateData%WAMIT(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%WAMIT.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcDiscStateData%WAMIT,1), UBOUND(SrcDiscStateData%WAMIT,1)
-      CALL WAMIT_CopyDiscState( SrcDiscStateData%WAMIT(i1), DstDiscStateData%WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-      CALL Morison_CopyDiscState( SrcDiscStateData%Morison, DstDiscStateData%Morison, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE HydroDyn_CopyDiscState
+   ErrMsg  = ''
+   if (allocated(SrcDiscStateData%WAMIT)) then
+      LB(1:1) = lbound(SrcDiscStateData%WAMIT)
+      UB(1:1) = ubound(SrcDiscStateData%WAMIT)
+      if (.not. allocated(DstDiscStateData%WAMIT)) then
+         allocate(DstDiscStateData%WAMIT(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%WAMIT.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call WAMIT_CopyDiscState(SrcDiscStateData%WAMIT(i1), DstDiscStateData%WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstDiscStateData%WAMIT)) then
+      deallocate(DstDiscStateData%WAMIT)
+   end if
+   call Morison_CopyDiscState(SrcDiscStateData%Morison, DstDiscStateData%Morison, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE HydroDyn_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
-  TYPE(HydroDyn_DiscreteStateType), INTENT(INOUT) :: DiscStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyDiscState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(DiscStateData%WAMIT)) THEN
-DO i1 = LBOUND(DiscStateData%WAMIT,1), UBOUND(DiscStateData%WAMIT,1)
-  CALL WAMIT_DestroyDiscState( DiscStateData%WAMIT(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(DiscStateData%WAMIT)
-ENDIF
-  CALL Morison_DestroyDiscState( DiscStateData%Morison, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE HydroDyn_DestroyDiscState
-
+subroutine HydroDyn_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
+   type(HydroDyn_DiscreteStateType), intent(inout) :: DiscStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_DestroyDiscState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(DiscStateData%WAMIT)) then
+      LB(1:1) = lbound(DiscStateData%WAMIT)
+      UB(1:1) = ubound(DiscStateData%WAMIT)
+      do i1 = LB(1), UB(1)
+         call WAMIT_DestroyDiscState(DiscStateData%WAMIT(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(DiscStateData%WAMIT)
+   end if
+end subroutine
 
 subroutine HydroDyn_PackDiscState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -1973,7 +1781,6 @@ subroutine HydroDyn_PackDiscState(Buf, Indata)
    integer(IntKi)  :: i1
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
-   ! WAMIT
    call RegPack(Buf, allocated(InData%WAMIT))
    if (allocated(InData%WAMIT)) then
       call RegPackBounds(Buf, 1, lbound(InData%WAMIT), ubound(InData%WAMIT))
@@ -1984,7 +1791,6 @@ subroutine HydroDyn_PackDiscState(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Morison
    call Morison_PackDiscState(Buf, InData%Morison) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1998,7 +1804,6 @@ subroutine HydroDyn_UnPackDiscState(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! WAMIT
    if (allocated(OutData%WAMIT)) deallocate(OutData%WAMIT)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2014,60 +1819,46 @@ subroutine HydroDyn_UnPackDiscState(Buf, OutData)
          call WAMIT_UnpackDiscState(Buf, OutData%WAMIT(i1)) ! WAMIT 
       end do
    end if
-   ! Morison
    call Morison_UnpackDiscState(Buf, OutData%Morison) ! Morison 
 end subroutine
- SUBROUTINE HydroDyn_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(HydroDyn_ConstraintStateType), INTENT(IN) :: SrcConstrStateData
-   TYPE(HydroDyn_ConstraintStateType), INTENT(INOUT) :: DstConstrStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'HydroDyn_CopyConstrState'
-! 
+
+subroutine HydroDyn_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
+   type(HydroDyn_ConstraintStateType), intent(in) :: SrcConstrStateData
+   type(HydroDyn_ConstraintStateType), intent(inout) :: DstConstrStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_CopyConstrState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL WAMIT_CopyConstrState( SrcConstrStateData%WAMIT, DstConstrStateData%WAMIT, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL Morison_CopyConstrState( SrcConstrStateData%Morison, DstConstrStateData%Morison, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE HydroDyn_CopyConstrState
+   ErrMsg  = ''
+   call WAMIT_CopyConstrState(SrcConstrStateData%WAMIT, DstConstrStateData%WAMIT, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call Morison_CopyConstrState(SrcConstrStateData%Morison, DstConstrStateData%Morison, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE HydroDyn_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
-  TYPE(HydroDyn_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyConstrState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL WAMIT_DestroyConstrState( ConstrStateData%WAMIT, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL Morison_DestroyConstrState( ConstrStateData%Morison, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE HydroDyn_DestroyConstrState
-
+subroutine HydroDyn_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
+   type(HydroDyn_ConstraintStateType), intent(inout) :: ConstrStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_DestroyConstrState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine HydroDyn_PackConstrState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(HydroDyn_ConstraintStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackConstrState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! WAMIT
    call WAMIT_PackConstrState(Buf, InData%WAMIT) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Morison
    call Morison_PackConstrState(Buf, InData%Morison) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -2077,71 +1868,67 @@ subroutine HydroDyn_UnPackConstrState(Buf, OutData)
    type(HydroDyn_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackConstrState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! WAMIT
    call WAMIT_UnpackConstrState(Buf, OutData%WAMIT) ! WAMIT 
-   ! Morison
    call Morison_UnpackConstrState(Buf, OutData%Morison) ! Morison 
 end subroutine
- SUBROUTINE HydroDyn_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(HydroDyn_OtherStateType), INTENT(IN) :: SrcOtherStateData
-   TYPE(HydroDyn_OtherStateType), INTENT(INOUT) :: DstOtherStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'HydroDyn_CopyOtherState'
-! 
+
+subroutine HydroDyn_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg)
+   type(HydroDyn_OtherStateType), intent(in) :: SrcOtherStateData
+   type(HydroDyn_OtherStateType), intent(inout) :: DstOtherStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_CopyOtherState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcOtherStateData%WAMIT)) THEN
-  i1_l = LBOUND(SrcOtherStateData%WAMIT,1)
-  i1_u = UBOUND(SrcOtherStateData%WAMIT,1)
-  IF (.NOT. ALLOCATED(DstOtherStateData%WAMIT)) THEN 
-    ALLOCATE(DstOtherStateData%WAMIT(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%WAMIT.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcOtherStateData%WAMIT,1), UBOUND(SrcOtherStateData%WAMIT,1)
-      CALL WAMIT_CopyOtherState( SrcOtherStateData%WAMIT(i1), DstOtherStateData%WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-      CALL Morison_CopyOtherState( SrcOtherStateData%Morison, DstOtherStateData%Morison, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE HydroDyn_CopyOtherState
+   ErrMsg  = ''
+   if (allocated(SrcOtherStateData%WAMIT)) then
+      LB(1:1) = lbound(SrcOtherStateData%WAMIT)
+      UB(1:1) = ubound(SrcOtherStateData%WAMIT)
+      if (.not. allocated(DstOtherStateData%WAMIT)) then
+         allocate(DstOtherStateData%WAMIT(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%WAMIT.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call WAMIT_CopyOtherState(SrcOtherStateData%WAMIT(i1), DstOtherStateData%WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstOtherStateData%WAMIT)) then
+      deallocate(DstOtherStateData%WAMIT)
+   end if
+   call Morison_CopyOtherState(SrcOtherStateData%Morison, DstOtherStateData%Morison, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE HydroDyn_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
-  TYPE(HydroDyn_OtherStateType), INTENT(INOUT) :: OtherStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyOtherState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(OtherStateData%WAMIT)) THEN
-DO i1 = LBOUND(OtherStateData%WAMIT,1), UBOUND(OtherStateData%WAMIT,1)
-  CALL WAMIT_DestroyOtherState( OtherStateData%WAMIT(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(OtherStateData%WAMIT)
-ENDIF
-  CALL Morison_DestroyOtherState( OtherStateData%Morison, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE HydroDyn_DestroyOtherState
-
+subroutine HydroDyn_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
+   type(HydroDyn_OtherStateType), intent(inout) :: OtherStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_DestroyOtherState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(OtherStateData%WAMIT)) then
+      LB(1:1) = lbound(OtherStateData%WAMIT)
+      UB(1:1) = ubound(OtherStateData%WAMIT)
+      do i1 = LB(1), UB(1)
+         call WAMIT_DestroyOtherState(OtherStateData%WAMIT(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(OtherStateData%WAMIT)
+   end if
+end subroutine
 
 subroutine HydroDyn_PackOtherState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -2150,7 +1937,6 @@ subroutine HydroDyn_PackOtherState(Buf, Indata)
    integer(IntKi)  :: i1
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
-   ! WAMIT
    call RegPack(Buf, allocated(InData%WAMIT))
    if (allocated(InData%WAMIT)) then
       call RegPackBounds(Buf, 1, lbound(InData%WAMIT), ubound(InData%WAMIT))
@@ -2161,7 +1947,6 @@ subroutine HydroDyn_PackOtherState(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Morison
    call Morison_PackOtherState(Buf, InData%Morison) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -2175,7 +1960,6 @@ subroutine HydroDyn_UnPackOtherState(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! WAMIT
    if (allocated(OutData%WAMIT)) deallocate(OutData%WAMIT)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2191,159 +1975,164 @@ subroutine HydroDyn_UnPackOtherState(Buf, OutData)
          call WAMIT_UnpackOtherState(Buf, OutData%WAMIT(i1)) ! WAMIT 
       end do
    end if
-   ! Morison
    call Morison_UnpackOtherState(Buf, OutData%Morison) ! Morison 
 end subroutine
- SUBROUTINE HydroDyn_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(HydroDyn_MiscVarType), INTENT(INOUT) :: SrcMiscData
-   TYPE(HydroDyn_MiscVarType), INTENT(INOUT) :: DstMiscData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'HydroDyn_CopyMisc'
-! 
+
+subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(HydroDyn_MiscVarType), intent(inout) :: SrcMiscData
+   type(HydroDyn_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_CopyMisc'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL MeshCopy( SrcMiscData%AllHdroOrigin, DstMiscData%AllHdroOrigin, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL HydroDyn_Copyhd_modulemaptype( SrcMiscData%HD_MeshMap, DstMiscData%HD_MeshMap, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    DstMiscData%Decimate = SrcMiscData%Decimate
-    DstMiscData%LastOutTime = SrcMiscData%LastOutTime
-    DstMiscData%LastIndWave = SrcMiscData%LastIndWave
-IF (ALLOCATED(SrcMiscData%F_PtfmAdd)) THEN
-  i1_l = LBOUND(SrcMiscData%F_PtfmAdd,1)
-  i1_u = UBOUND(SrcMiscData%F_PtfmAdd,1)
-  IF (.NOT. ALLOCATED(DstMiscData%F_PtfmAdd)) THEN 
-    ALLOCATE(DstMiscData%F_PtfmAdd(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_PtfmAdd.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%F_PtfmAdd = SrcMiscData%F_PtfmAdd
-ENDIF
-    DstMiscData%F_Hydro = SrcMiscData%F_Hydro
-IF (ALLOCATED(SrcMiscData%F_Waves)) THEN
-  i1_l = LBOUND(SrcMiscData%F_Waves,1)
-  i1_u = UBOUND(SrcMiscData%F_Waves,1)
-  IF (.NOT. ALLOCATED(DstMiscData%F_Waves)) THEN 
-    ALLOCATE(DstMiscData%F_Waves(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_Waves.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%F_Waves = SrcMiscData%F_Waves
-ENDIF
-IF (ALLOCATED(SrcMiscData%WAMIT)) THEN
-  i1_l = LBOUND(SrcMiscData%WAMIT,1)
-  i1_u = UBOUND(SrcMiscData%WAMIT,1)
-  IF (.NOT. ALLOCATED(DstMiscData%WAMIT)) THEN 
-    ALLOCATE(DstMiscData%WAMIT(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WAMIT.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcMiscData%WAMIT,1), UBOUND(SrcMiscData%WAMIT,1)
-      CALL WAMIT_CopyMisc( SrcMiscData%WAMIT(i1), DstMiscData%WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-IF (ALLOCATED(SrcMiscData%WAMIT2)) THEN
-  i1_l = LBOUND(SrcMiscData%WAMIT2,1)
-  i1_u = UBOUND(SrcMiscData%WAMIT2,1)
-  IF (.NOT. ALLOCATED(DstMiscData%WAMIT2)) THEN 
-    ALLOCATE(DstMiscData%WAMIT2(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WAMIT2.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcMiscData%WAMIT2,1), UBOUND(SrcMiscData%WAMIT2,1)
-      CALL WAMIT2_CopyMisc( SrcMiscData%WAMIT2(i1), DstMiscData%WAMIT2(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-      CALL Morison_CopyMisc( SrcMiscData%Morison, DstMiscData%Morison, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcMiscData%u_WAMIT)) THEN
-  i1_l = LBOUND(SrcMiscData%u_WAMIT,1)
-  i1_u = UBOUND(SrcMiscData%u_WAMIT,1)
-  IF (.NOT. ALLOCATED(DstMiscData%u_WAMIT)) THEN 
-    ALLOCATE(DstMiscData%u_WAMIT(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%u_WAMIT.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcMiscData%u_WAMIT,1), UBOUND(SrcMiscData%u_WAMIT,1)
-      CALL WAMIT_CopyInput( SrcMiscData%u_WAMIT(i1), DstMiscData%u_WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
- END SUBROUTINE HydroDyn_CopyMisc
+   ErrMsg  = ''
+   call MeshCopy(SrcMiscData%AllHdroOrigin, DstMiscData%AllHdroOrigin, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call HydroDyn_CopyHD_ModuleMapType(SrcMiscData%HD_MeshMap, DstMiscData%HD_MeshMap, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstMiscData%Decimate = SrcMiscData%Decimate
+   DstMiscData%LastOutTime = SrcMiscData%LastOutTime
+   DstMiscData%LastIndWave = SrcMiscData%LastIndWave
+   if (allocated(SrcMiscData%F_PtfmAdd)) then
+      LB(1:1) = lbound(SrcMiscData%F_PtfmAdd)
+      UB(1:1) = ubound(SrcMiscData%F_PtfmAdd)
+      if (.not. allocated(DstMiscData%F_PtfmAdd)) then
+         allocate(DstMiscData%F_PtfmAdd(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_PtfmAdd.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%F_PtfmAdd = SrcMiscData%F_PtfmAdd
+   else if (allocated(DstMiscData%F_PtfmAdd)) then
+      deallocate(DstMiscData%F_PtfmAdd)
+   end if
+   DstMiscData%F_Hydro = SrcMiscData%F_Hydro
+   if (allocated(SrcMiscData%F_Waves)) then
+      LB(1:1) = lbound(SrcMiscData%F_Waves)
+      UB(1:1) = ubound(SrcMiscData%F_Waves)
+      if (.not. allocated(DstMiscData%F_Waves)) then
+         allocate(DstMiscData%F_Waves(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%F_Waves.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%F_Waves = SrcMiscData%F_Waves
+   else if (allocated(DstMiscData%F_Waves)) then
+      deallocate(DstMiscData%F_Waves)
+   end if
+   if (allocated(SrcMiscData%WAMIT)) then
+      LB(1:1) = lbound(SrcMiscData%WAMIT)
+      UB(1:1) = ubound(SrcMiscData%WAMIT)
+      if (.not. allocated(DstMiscData%WAMIT)) then
+         allocate(DstMiscData%WAMIT(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WAMIT.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call WAMIT_CopyMisc(SrcMiscData%WAMIT(i1), DstMiscData%WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstMiscData%WAMIT)) then
+      deallocate(DstMiscData%WAMIT)
+   end if
+   if (allocated(SrcMiscData%WAMIT2)) then
+      LB(1:1) = lbound(SrcMiscData%WAMIT2)
+      UB(1:1) = ubound(SrcMiscData%WAMIT2)
+      if (.not. allocated(DstMiscData%WAMIT2)) then
+         allocate(DstMiscData%WAMIT2(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%WAMIT2.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call WAMIT2_CopyMisc(SrcMiscData%WAMIT2(i1), DstMiscData%WAMIT2(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstMiscData%WAMIT2)) then
+      deallocate(DstMiscData%WAMIT2)
+   end if
+   call Morison_CopyMisc(SrcMiscData%Morison, DstMiscData%Morison, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcMiscData%u_WAMIT)) then
+      LB(1:1) = lbound(SrcMiscData%u_WAMIT)
+      UB(1:1) = ubound(SrcMiscData%u_WAMIT)
+      if (.not. allocated(DstMiscData%u_WAMIT)) then
+         allocate(DstMiscData%u_WAMIT(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%u_WAMIT.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call WAMIT_CopyInput(SrcMiscData%u_WAMIT(i1), DstMiscData%u_WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstMiscData%u_WAMIT)) then
+      deallocate(DstMiscData%u_WAMIT)
+   end if
+end subroutine
 
- SUBROUTINE HydroDyn_DestroyMisc( MiscData, ErrStat, ErrMsg )
-  TYPE(HydroDyn_MiscVarType), INTENT(INOUT) :: MiscData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyMisc'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL MeshDestroy( MiscData%AllHdroOrigin, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL HydroDyn_DestroyHD_ModuleMapType( MiscData%HD_MeshMap, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(MiscData%F_PtfmAdd)) THEN
-  DEALLOCATE(MiscData%F_PtfmAdd)
-ENDIF
-IF (ALLOCATED(MiscData%F_Waves)) THEN
-  DEALLOCATE(MiscData%F_Waves)
-ENDIF
-IF (ALLOCATED(MiscData%WAMIT)) THEN
-DO i1 = LBOUND(MiscData%WAMIT,1), UBOUND(MiscData%WAMIT,1)
-  CALL WAMIT_DestroyMisc( MiscData%WAMIT(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(MiscData%WAMIT)
-ENDIF
-IF (ALLOCATED(MiscData%WAMIT2)) THEN
-DO i1 = LBOUND(MiscData%WAMIT2,1), UBOUND(MiscData%WAMIT2,1)
-  CALL WAMIT2_DestroyMisc( MiscData%WAMIT2(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(MiscData%WAMIT2)
-ENDIF
-  CALL Morison_DestroyMisc( MiscData%Morison, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(MiscData%u_WAMIT)) THEN
-DO i1 = LBOUND(MiscData%u_WAMIT,1), UBOUND(MiscData%u_WAMIT,1)
-  CALL WAMIT_DestroyInput( MiscData%u_WAMIT(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(MiscData%u_WAMIT)
-ENDIF
- END SUBROUTINE HydroDyn_DestroyMisc
-
+subroutine HydroDyn_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(HydroDyn_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(MiscData%F_PtfmAdd)) then
+      deallocate(MiscData%F_PtfmAdd)
+   end if
+   if (allocated(MiscData%F_Waves)) then
+      deallocate(MiscData%F_Waves)
+   end if
+   if (allocated(MiscData%WAMIT)) then
+      LB(1:1) = lbound(MiscData%WAMIT)
+      UB(1:1) = ubound(MiscData%WAMIT)
+      do i1 = LB(1), UB(1)
+         call WAMIT_DestroyMisc(MiscData%WAMIT(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%WAMIT)
+   end if
+   if (allocated(MiscData%WAMIT2)) then
+      LB(1:1) = lbound(MiscData%WAMIT2)
+      UB(1:1) = ubound(MiscData%WAMIT2)
+      do i1 = LB(1), UB(1)
+         call WAMIT2_DestroyMisc(MiscData%WAMIT2(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%WAMIT2)
+   end if
+   if (allocated(MiscData%u_WAMIT)) then
+      LB(1:1) = lbound(MiscData%u_WAMIT)
+      UB(1:1) = ubound(MiscData%u_WAMIT)
+      do i1 = LB(1), UB(1)
+         call WAMIT_DestroyInput(MiscData%u_WAMIT(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%u_WAMIT)
+   end if
+end subroutine
 
 subroutine HydroDyn_PackMisc(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -2352,39 +2141,30 @@ subroutine HydroDyn_PackMisc(Buf, Indata)
    integer(IntKi)  :: i1
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
-   ! AllHdroOrigin
    call MeshPack(Buf, InData%AllHdroOrigin) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! HD_MeshMap
    call HydroDyn_PackHD_ModuleMapType(Buf, InData%HD_MeshMap) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Decimate
    call RegPack(Buf, InData%Decimate)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LastOutTime
    call RegPack(Buf, InData%LastOutTime)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LastIndWave
    call RegPack(Buf, InData%LastIndWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F_PtfmAdd
    call RegPack(Buf, allocated(InData%F_PtfmAdd))
    if (allocated(InData%F_PtfmAdd)) then
       call RegPackBounds(Buf, 1, lbound(InData%F_PtfmAdd), ubound(InData%F_PtfmAdd))
       call RegPack(Buf, InData%F_PtfmAdd)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F_Hydro
    call RegPack(Buf, InData%F_Hydro)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F_Waves
    call RegPack(Buf, allocated(InData%F_Waves))
    if (allocated(InData%F_Waves)) then
       call RegPackBounds(Buf, 1, lbound(InData%F_Waves), ubound(InData%F_Waves))
       call RegPack(Buf, InData%F_Waves)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMIT
    call RegPack(Buf, allocated(InData%WAMIT))
    if (allocated(InData%WAMIT)) then
       call RegPackBounds(Buf, 1, lbound(InData%WAMIT), ubound(InData%WAMIT))
@@ -2395,7 +2175,6 @@ subroutine HydroDyn_PackMisc(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMIT2
    call RegPack(Buf, allocated(InData%WAMIT2))
    if (allocated(InData%WAMIT2)) then
       call RegPackBounds(Buf, 1, lbound(InData%WAMIT2), ubound(InData%WAMIT2))
@@ -2406,10 +2185,8 @@ subroutine HydroDyn_PackMisc(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Morison
    call Morison_PackMisc(Buf, InData%Morison) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! u_WAMIT
    call RegPack(Buf, allocated(InData%u_WAMIT))
    if (allocated(InData%u_WAMIT)) then
       call RegPackBounds(Buf, 1, lbound(InData%u_WAMIT), ubound(InData%u_WAMIT))
@@ -2431,20 +2208,14 @@ subroutine HydroDyn_UnPackMisc(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! AllHdroOrigin
    call MeshUnpack(Buf, OutData%AllHdroOrigin) ! AllHdroOrigin 
-   ! HD_MeshMap
    call HydroDyn_UnpackHD_ModuleMapType(Buf, OutData%HD_MeshMap) ! HD_MeshMap 
-   ! Decimate
    call RegUnpack(Buf, OutData%Decimate)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LastOutTime
    call RegUnpack(Buf, OutData%LastOutTime)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LastIndWave
    call RegUnpack(Buf, OutData%LastIndWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F_PtfmAdd
    if (allocated(OutData%F_PtfmAdd)) deallocate(OutData%F_PtfmAdd)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2459,10 +2230,8 @@ subroutine HydroDyn_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%F_PtfmAdd)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! F_Hydro
    call RegUnpack(Buf, OutData%F_Hydro)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F_Waves
    if (allocated(OutData%F_Waves)) deallocate(OutData%F_Waves)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2477,7 +2246,6 @@ subroutine HydroDyn_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%F_Waves)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WAMIT
    if (allocated(OutData%WAMIT)) deallocate(OutData%WAMIT)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2493,7 +2261,6 @@ subroutine HydroDyn_UnPackMisc(Buf, OutData)
          call WAMIT_UnpackMisc(Buf, OutData%WAMIT(i1)) ! WAMIT 
       end do
    end if
-   ! WAMIT2
    if (allocated(OutData%WAMIT2)) deallocate(OutData%WAMIT2)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2509,9 +2276,7 @@ subroutine HydroDyn_UnPackMisc(Buf, OutData)
          call WAMIT2_UnpackMisc(Buf, OutData%WAMIT2(i1)) ! WAMIT2 
       end do
    end if
-   ! Morison
    call Morison_UnpackMisc(Buf, OutData%Morison) ! Morison 
-   ! u_WAMIT
    if (allocated(OutData%u_WAMIT)) deallocate(OutData%u_WAMIT)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2528,259 +2293,261 @@ subroutine HydroDyn_UnPackMisc(Buf, OutData)
       end do
    end if
 end subroutine
- SUBROUTINE HydroDyn_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(HydroDyn_ParameterType), INTENT(IN) :: SrcParamData
-   TYPE(HydroDyn_ParameterType), INTENT(INOUT) :: DstParamData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'HydroDyn_CopyParam'
-! 
+
+subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
+   type(HydroDyn_ParameterType), intent(in) :: SrcParamData
+   type(HydroDyn_ParameterType), intent(inout) :: DstParamData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1, i2, i3
+   integer(IntKi)                 :: LB(3), UB(3)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_CopyParam'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstParamData%nWAMITObj = SrcParamData%nWAMITObj
-    DstParamData%vecMultiplier = SrcParamData%vecMultiplier
-IF (ALLOCATED(SrcParamData%WAMIT)) THEN
-  i1_l = LBOUND(SrcParamData%WAMIT,1)
-  i1_u = UBOUND(SrcParamData%WAMIT,1)
-  IF (.NOT. ALLOCATED(DstParamData%WAMIT)) THEN 
-    ALLOCATE(DstParamData%WAMIT(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WAMIT.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcParamData%WAMIT,1), UBOUND(SrcParamData%WAMIT,1)
-      CALL WAMIT_CopyParam( SrcParamData%WAMIT(i1), DstParamData%WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-IF (ALLOCATED(SrcParamData%WAMIT2)) THEN
-  i1_l = LBOUND(SrcParamData%WAMIT2,1)
-  i1_u = UBOUND(SrcParamData%WAMIT2,1)
-  IF (.NOT. ALLOCATED(DstParamData%WAMIT2)) THEN 
-    ALLOCATE(DstParamData%WAMIT2(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WAMIT2.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcParamData%WAMIT2,1), UBOUND(SrcParamData%WAMIT2,1)
-      CALL WAMIT2_CopyParam( SrcParamData%WAMIT2(i1), DstParamData%WAMIT2(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-    DstParamData%WAMIT2used = SrcParamData%WAMIT2used
-      CALL Morison_CopyParam( SrcParamData%Morison, DstParamData%Morison, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    DstParamData%PotMod = SrcParamData%PotMod
-    DstParamData%NBody = SrcParamData%NBody
-    DstParamData%NBodyMod = SrcParamData%NBodyMod
-    DstParamData%totalStates = SrcParamData%totalStates
-    DstParamData%totalExctnStates = SrcParamData%totalExctnStates
-    DstParamData%totalRdtnStates = SrcParamData%totalRdtnStates
-    DstParamData%WaveTime => SrcParamData%WaveTime
-    DstParamData%NStepWave = SrcParamData%NStepWave
-    DstParamData%WtrDpth = SrcParamData%WtrDpth
-IF (ALLOCATED(SrcParamData%AddF0)) THEN
-  i1_l = LBOUND(SrcParamData%AddF0,1)
-  i1_u = UBOUND(SrcParamData%AddF0,1)
-  i2_l = LBOUND(SrcParamData%AddF0,2)
-  i2_u = UBOUND(SrcParamData%AddF0,2)
-  IF (.NOT. ALLOCATED(DstParamData%AddF0)) THEN 
-    ALLOCATE(DstParamData%AddF0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%AddF0.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%AddF0 = SrcParamData%AddF0
-ENDIF
-IF (ALLOCATED(SrcParamData%AddCLin)) THEN
-  i1_l = LBOUND(SrcParamData%AddCLin,1)
-  i1_u = UBOUND(SrcParamData%AddCLin,1)
-  i2_l = LBOUND(SrcParamData%AddCLin,2)
-  i2_u = UBOUND(SrcParamData%AddCLin,2)
-  i3_l = LBOUND(SrcParamData%AddCLin,3)
-  i3_u = UBOUND(SrcParamData%AddCLin,3)
-  IF (.NOT. ALLOCATED(DstParamData%AddCLin)) THEN 
-    ALLOCATE(DstParamData%AddCLin(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%AddCLin.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%AddCLin = SrcParamData%AddCLin
-ENDIF
-IF (ALLOCATED(SrcParamData%AddBLin)) THEN
-  i1_l = LBOUND(SrcParamData%AddBLin,1)
-  i1_u = UBOUND(SrcParamData%AddBLin,1)
-  i2_l = LBOUND(SrcParamData%AddBLin,2)
-  i2_u = UBOUND(SrcParamData%AddBLin,2)
-  i3_l = LBOUND(SrcParamData%AddBLin,3)
-  i3_u = UBOUND(SrcParamData%AddBLin,3)
-  IF (.NOT. ALLOCATED(DstParamData%AddBLin)) THEN 
-    ALLOCATE(DstParamData%AddBLin(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%AddBLin.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%AddBLin = SrcParamData%AddBLin
-ENDIF
-IF (ALLOCATED(SrcParamData%AddBQuad)) THEN
-  i1_l = LBOUND(SrcParamData%AddBQuad,1)
-  i1_u = UBOUND(SrcParamData%AddBQuad,1)
-  i2_l = LBOUND(SrcParamData%AddBQuad,2)
-  i2_u = UBOUND(SrcParamData%AddBQuad,2)
-  i3_l = LBOUND(SrcParamData%AddBQuad,3)
-  i3_u = UBOUND(SrcParamData%AddBQuad,3)
-  IF (.NOT. ALLOCATED(DstParamData%AddBQuad)) THEN 
-    ALLOCATE(DstParamData%AddBQuad(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%AddBQuad.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%AddBQuad = SrcParamData%AddBQuad
-ENDIF
-    DstParamData%DT = SrcParamData%DT
-IF (ALLOCATED(SrcParamData%OutParam)) THEN
-  i1_l = LBOUND(SrcParamData%OutParam,1)
-  i1_u = UBOUND(SrcParamData%OutParam,1)
-  IF (.NOT. ALLOCATED(DstParamData%OutParam)) THEN 
-    ALLOCATE(DstParamData%OutParam(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%OutParam.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcParamData%OutParam,1), UBOUND(SrcParamData%OutParam,1)
-      CALL NWTC_Library_Copyoutparmtype( SrcParamData%OutParam(i1), DstParamData%OutParam(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-    DstParamData%NumOuts = SrcParamData%NumOuts
-    DstParamData%NumTotalOuts = SrcParamData%NumTotalOuts
-    DstParamData%OutSwtch = SrcParamData%OutSwtch
-    DstParamData%OutFmt = SrcParamData%OutFmt
-    DstParamData%OutSFmt = SrcParamData%OutSFmt
-    DstParamData%Delim = SrcParamData%Delim
-    DstParamData%UnOutFile = SrcParamData%UnOutFile
-    DstParamData%OutDec = SrcParamData%OutDec
-IF (ALLOCATED(SrcParamData%Jac_u_indx)) THEN
-  i1_l = LBOUND(SrcParamData%Jac_u_indx,1)
-  i1_u = UBOUND(SrcParamData%Jac_u_indx,1)
-  i2_l = LBOUND(SrcParamData%Jac_u_indx,2)
-  i2_u = UBOUND(SrcParamData%Jac_u_indx,2)
-  IF (.NOT. ALLOCATED(DstParamData%Jac_u_indx)) THEN 
-    ALLOCATE(DstParamData%Jac_u_indx(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_u_indx.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
-ENDIF
-IF (ALLOCATED(SrcParamData%du)) THEN
-  i1_l = LBOUND(SrcParamData%du,1)
-  i1_u = UBOUND(SrcParamData%du,1)
-  IF (.NOT. ALLOCATED(DstParamData%du)) THEN 
-    ALLOCATE(DstParamData%du(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%du.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%du = SrcParamData%du
-ENDIF
-IF (ALLOCATED(SrcParamData%dx)) THEN
-  i1_l = LBOUND(SrcParamData%dx,1)
-  i1_u = UBOUND(SrcParamData%dx,1)
-  IF (.NOT. ALLOCATED(DstParamData%dx)) THEN 
-    ALLOCATE(DstParamData%dx(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%dx.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%dx = SrcParamData%dx
-ENDIF
-    DstParamData%Jac_ny = SrcParamData%Jac_ny
-    DstParamData%PointsToSeaState = SrcParamData%PointsToSeaState
- END SUBROUTINE HydroDyn_CopyParam
+   ErrMsg  = ''
+   DstParamData%nWAMITObj = SrcParamData%nWAMITObj
+   DstParamData%vecMultiplier = SrcParamData%vecMultiplier
+   if (allocated(SrcParamData%WAMIT)) then
+      LB(1:1) = lbound(SrcParamData%WAMIT)
+      UB(1:1) = ubound(SrcParamData%WAMIT)
+      if (.not. allocated(DstParamData%WAMIT)) then
+         allocate(DstParamData%WAMIT(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WAMIT.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call WAMIT_CopyParam(SrcParamData%WAMIT(i1), DstParamData%WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstParamData%WAMIT)) then
+      deallocate(DstParamData%WAMIT)
+   end if
+   if (allocated(SrcParamData%WAMIT2)) then
+      LB(1:1) = lbound(SrcParamData%WAMIT2)
+      UB(1:1) = ubound(SrcParamData%WAMIT2)
+      if (.not. allocated(DstParamData%WAMIT2)) then
+         allocate(DstParamData%WAMIT2(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WAMIT2.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call WAMIT2_CopyParam(SrcParamData%WAMIT2(i1), DstParamData%WAMIT2(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstParamData%WAMIT2)) then
+      deallocate(DstParamData%WAMIT2)
+   end if
+   DstParamData%WAMIT2used = SrcParamData%WAMIT2used
+   call Morison_CopyParam(SrcParamData%Morison, DstParamData%Morison, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstParamData%PotMod = SrcParamData%PotMod
+   DstParamData%NBody = SrcParamData%NBody
+   DstParamData%NBodyMod = SrcParamData%NBodyMod
+   DstParamData%totalStates = SrcParamData%totalStates
+   DstParamData%totalExctnStates = SrcParamData%totalExctnStates
+   DstParamData%totalRdtnStates = SrcParamData%totalRdtnStates
+   DstParamData%WaveTime => SrcParamData%WaveTime
+   DstParamData%NStepWave = SrcParamData%NStepWave
+   DstParamData%WtrDpth = SrcParamData%WtrDpth
+   if (allocated(SrcParamData%AddF0)) then
+      LB(1:2) = lbound(SrcParamData%AddF0)
+      UB(1:2) = ubound(SrcParamData%AddF0)
+      if (.not. allocated(DstParamData%AddF0)) then
+         allocate(DstParamData%AddF0(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%AddF0.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%AddF0 = SrcParamData%AddF0
+   else if (allocated(DstParamData%AddF0)) then
+      deallocate(DstParamData%AddF0)
+   end if
+   if (allocated(SrcParamData%AddCLin)) then
+      LB(1:3) = lbound(SrcParamData%AddCLin)
+      UB(1:3) = ubound(SrcParamData%AddCLin)
+      if (.not. allocated(DstParamData%AddCLin)) then
+         allocate(DstParamData%AddCLin(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%AddCLin.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%AddCLin = SrcParamData%AddCLin
+   else if (allocated(DstParamData%AddCLin)) then
+      deallocate(DstParamData%AddCLin)
+   end if
+   if (allocated(SrcParamData%AddBLin)) then
+      LB(1:3) = lbound(SrcParamData%AddBLin)
+      UB(1:3) = ubound(SrcParamData%AddBLin)
+      if (.not. allocated(DstParamData%AddBLin)) then
+         allocate(DstParamData%AddBLin(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%AddBLin.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%AddBLin = SrcParamData%AddBLin
+   else if (allocated(DstParamData%AddBLin)) then
+      deallocate(DstParamData%AddBLin)
+   end if
+   if (allocated(SrcParamData%AddBQuad)) then
+      LB(1:3) = lbound(SrcParamData%AddBQuad)
+      UB(1:3) = ubound(SrcParamData%AddBQuad)
+      if (.not. allocated(DstParamData%AddBQuad)) then
+         allocate(DstParamData%AddBQuad(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%AddBQuad.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%AddBQuad = SrcParamData%AddBQuad
+   else if (allocated(DstParamData%AddBQuad)) then
+      deallocate(DstParamData%AddBQuad)
+   end if
+   DstParamData%DT = SrcParamData%DT
+   if (allocated(SrcParamData%OutParam)) then
+      LB(1:1) = lbound(SrcParamData%OutParam)
+      UB(1:1) = ubound(SrcParamData%OutParam)
+      if (.not. allocated(DstParamData%OutParam)) then
+         allocate(DstParamData%OutParam(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%OutParam.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_CopyOutParmType(SrcParamData%OutParam(i1), DstParamData%OutParam(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstParamData%OutParam)) then
+      deallocate(DstParamData%OutParam)
+   end if
+   DstParamData%NumOuts = SrcParamData%NumOuts
+   DstParamData%NumTotalOuts = SrcParamData%NumTotalOuts
+   DstParamData%OutSwtch = SrcParamData%OutSwtch
+   DstParamData%OutFmt = SrcParamData%OutFmt
+   DstParamData%OutSFmt = SrcParamData%OutSFmt
+   DstParamData%Delim = SrcParamData%Delim
+   DstParamData%UnOutFile = SrcParamData%UnOutFile
+   DstParamData%OutDec = SrcParamData%OutDec
+   if (allocated(SrcParamData%Jac_u_indx)) then
+      LB(1:2) = lbound(SrcParamData%Jac_u_indx)
+      UB(1:2) = ubound(SrcParamData%Jac_u_indx)
+      if (.not. allocated(DstParamData%Jac_u_indx)) then
+         allocate(DstParamData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_u_indx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
+   else if (allocated(DstParamData%Jac_u_indx)) then
+      deallocate(DstParamData%Jac_u_indx)
+   end if
+   if (allocated(SrcParamData%du)) then
+      LB(1:1) = lbound(SrcParamData%du)
+      UB(1:1) = ubound(SrcParamData%du)
+      if (.not. allocated(DstParamData%du)) then
+         allocate(DstParamData%du(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%du.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%du = SrcParamData%du
+   else if (allocated(DstParamData%du)) then
+      deallocate(DstParamData%du)
+   end if
+   if (allocated(SrcParamData%dx)) then
+      LB(1:1) = lbound(SrcParamData%dx)
+      UB(1:1) = ubound(SrcParamData%dx)
+      if (.not. allocated(DstParamData%dx)) then
+         allocate(DstParamData%dx(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%dx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%dx = SrcParamData%dx
+   else if (allocated(DstParamData%dx)) then
+      deallocate(DstParamData%dx)
+   end if
+   DstParamData%Jac_ny = SrcParamData%Jac_ny
+   DstParamData%PointsToSeaState = SrcParamData%PointsToSeaState
+end subroutine
 
- SUBROUTINE HydroDyn_DestroyParam( ParamData, ErrStat, ErrMsg )
-  TYPE(HydroDyn_ParameterType), INTENT(INOUT) :: ParamData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyParam'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(ParamData%WAMIT)) THEN
-DO i1 = LBOUND(ParamData%WAMIT,1), UBOUND(ParamData%WAMIT,1)
-  CALL WAMIT_DestroyParam( ParamData%WAMIT(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(ParamData%WAMIT)
-ENDIF
-IF (ALLOCATED(ParamData%WAMIT2)) THEN
-DO i1 = LBOUND(ParamData%WAMIT2,1), UBOUND(ParamData%WAMIT2,1)
-  CALL WAMIT2_DestroyParam( ParamData%WAMIT2(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(ParamData%WAMIT2)
-ENDIF
-  CALL Morison_DestroyParam( ParamData%Morison, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-NULLIFY(ParamData%WaveTime)
-IF (ALLOCATED(ParamData%AddF0)) THEN
-  DEALLOCATE(ParamData%AddF0)
-ENDIF
-IF (ALLOCATED(ParamData%AddCLin)) THEN
-  DEALLOCATE(ParamData%AddCLin)
-ENDIF
-IF (ALLOCATED(ParamData%AddBLin)) THEN
-  DEALLOCATE(ParamData%AddBLin)
-ENDIF
-IF (ALLOCATED(ParamData%AddBQuad)) THEN
-  DEALLOCATE(ParamData%AddBQuad)
-ENDIF
-IF (ALLOCATED(ParamData%OutParam)) THEN
-DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_DestroyOutParmType( ParamData%OutParam(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(ParamData%OutParam)
-ENDIF
-IF (ALLOCATED(ParamData%Jac_u_indx)) THEN
-  DEALLOCATE(ParamData%Jac_u_indx)
-ENDIF
-IF (ALLOCATED(ParamData%du)) THEN
-  DEALLOCATE(ParamData%du)
-ENDIF
-IF (ALLOCATED(ParamData%dx)) THEN
-  DEALLOCATE(ParamData%dx)
-ENDIF
- END SUBROUTINE HydroDyn_DestroyParam
-
+subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
+   type(HydroDyn_ParameterType), intent(inout) :: ParamData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1, i2, i3
+   integer(IntKi)  :: LB(3), UB(3)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_DestroyParam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(ParamData%WAMIT)) then
+      LB(1:1) = lbound(ParamData%WAMIT)
+      UB(1:1) = ubound(ParamData%WAMIT)
+      do i1 = LB(1), UB(1)
+         call WAMIT_DestroyParam(ParamData%WAMIT(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ParamData%WAMIT)
+   end if
+   if (allocated(ParamData%WAMIT2)) then
+      LB(1:1) = lbound(ParamData%WAMIT2)
+      UB(1:1) = ubound(ParamData%WAMIT2)
+      do i1 = LB(1), UB(1)
+         call WAMIT2_DestroyParam(ParamData%WAMIT2(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ParamData%WAMIT2)
+   end if
+   nullify(ParamData%WaveTime)
+   if (allocated(ParamData%AddF0)) then
+      deallocate(ParamData%AddF0)
+   end if
+   if (allocated(ParamData%AddCLin)) then
+      deallocate(ParamData%AddCLin)
+   end if
+   if (allocated(ParamData%AddBLin)) then
+      deallocate(ParamData%AddBLin)
+   end if
+   if (allocated(ParamData%AddBQuad)) then
+      deallocate(ParamData%AddBQuad)
+   end if
+   if (allocated(ParamData%OutParam)) then
+      LB(1:1) = lbound(ParamData%OutParam)
+      UB(1:1) = ubound(ParamData%OutParam)
+      do i1 = LB(1), UB(1)
+         call NWTC_Library_DestroyOutParmType(ParamData%OutParam(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ParamData%OutParam)
+   end if
+   if (allocated(ParamData%Jac_u_indx)) then
+      deallocate(ParamData%Jac_u_indx)
+   end if
+   if (allocated(ParamData%du)) then
+      deallocate(ParamData%du)
+   end if
+   if (allocated(ParamData%dx)) then
+      deallocate(ParamData%dx)
+   end if
+end subroutine
 
 subroutine HydroDyn_PackParam(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -2790,13 +2557,10 @@ subroutine HydroDyn_PackParam(Buf, Indata)
    integer(IntKi)  :: LB(3), UB(3)
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
-   ! nWAMITObj
    call RegPack(Buf, InData%nWAMITObj)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! vecMultiplier
    call RegPack(Buf, InData%vecMultiplier)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMIT
    call RegPack(Buf, allocated(InData%WAMIT))
    if (allocated(InData%WAMIT)) then
       call RegPackBounds(Buf, 1, lbound(InData%WAMIT), ubound(InData%WAMIT))
@@ -2807,7 +2571,6 @@ subroutine HydroDyn_PackParam(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMIT2
    call RegPack(Buf, allocated(InData%WAMIT2))
    if (allocated(InData%WAMIT2)) then
       call RegPackBounds(Buf, 1, lbound(InData%WAMIT2), ubound(InData%WAMIT2))
@@ -2818,31 +2581,22 @@ subroutine HydroDyn_PackParam(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMIT2used
    call RegPack(Buf, InData%WAMIT2used)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Morison
    call Morison_PackParam(Buf, InData%Morison) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PotMod
    call RegPack(Buf, InData%PotMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NBody
    call RegPack(Buf, InData%NBody)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NBodyMod
    call RegPack(Buf, InData%NBodyMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! totalStates
    call RegPack(Buf, InData%totalStates)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! totalExctnStates
    call RegPack(Buf, InData%totalExctnStates)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! totalRdtnStates
    call RegPack(Buf, InData%totalRdtnStates)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveTime
    call RegPack(Buf, associated(InData%WaveTime))
    if (associated(InData%WaveTime)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveTime), ubound(InData%WaveTime))
@@ -2852,44 +2606,36 @@ subroutine HydroDyn_PackParam(Buf, Indata)
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NStepWave
    call RegPack(Buf, InData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDpth
    call RegPack(Buf, InData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AddF0
    call RegPack(Buf, allocated(InData%AddF0))
    if (allocated(InData%AddF0)) then
       call RegPackBounds(Buf, 2, lbound(InData%AddF0), ubound(InData%AddF0))
       call RegPack(Buf, InData%AddF0)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AddCLin
    call RegPack(Buf, allocated(InData%AddCLin))
    if (allocated(InData%AddCLin)) then
       call RegPackBounds(Buf, 3, lbound(InData%AddCLin), ubound(InData%AddCLin))
       call RegPack(Buf, InData%AddCLin)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AddBLin
    call RegPack(Buf, allocated(InData%AddBLin))
    if (allocated(InData%AddBLin)) then
       call RegPackBounds(Buf, 3, lbound(InData%AddBLin), ubound(InData%AddBLin))
       call RegPack(Buf, InData%AddBLin)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AddBQuad
    call RegPack(Buf, allocated(InData%AddBQuad))
    if (allocated(InData%AddBQuad)) then
       call RegPackBounds(Buf, 3, lbound(InData%AddBQuad), ubound(InData%AddBQuad))
       call RegPack(Buf, InData%AddBQuad)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DT
    call RegPack(Buf, InData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutParam
    call RegPack(Buf, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutParam), ubound(InData%OutParam))
@@ -2900,55 +2646,42 @@ subroutine HydroDyn_PackParam(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumOuts
    call RegPack(Buf, InData%NumOuts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumTotalOuts
    call RegPack(Buf, InData%NumTotalOuts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutSwtch
    call RegPack(Buf, InData%OutSwtch)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutFmt
    call RegPack(Buf, InData%OutFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutSFmt
    call RegPack(Buf, InData%OutSFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Delim
    call RegPack(Buf, InData%Delim)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UnOutFile
    call RegPack(Buf, InData%UnOutFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutDec
    call RegPack(Buf, InData%OutDec)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Jac_u_indx
    call RegPack(Buf, allocated(InData%Jac_u_indx))
    if (allocated(InData%Jac_u_indx)) then
       call RegPackBounds(Buf, 2, lbound(InData%Jac_u_indx), ubound(InData%Jac_u_indx))
       call RegPack(Buf, InData%Jac_u_indx)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! du
    call RegPack(Buf, allocated(InData%du))
    if (allocated(InData%du)) then
       call RegPackBounds(Buf, 1, lbound(InData%du), ubound(InData%du))
       call RegPack(Buf, InData%du)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dx
    call RegPack(Buf, allocated(InData%dx))
    if (allocated(InData%dx)) then
       call RegPackBounds(Buf, 1, lbound(InData%dx), ubound(InData%dx))
       call RegPack(Buf, InData%dx)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Jac_ny
    call RegPack(Buf, InData%Jac_ny)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PointsToSeaState
    call RegPack(Buf, InData%PointsToSeaState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -2964,13 +2697,10 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
    integer(IntKi)  :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
-   ! nWAMITObj
    call RegUnpack(Buf, OutData%nWAMITObj)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! vecMultiplier
    call RegUnpack(Buf, OutData%vecMultiplier)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMIT
    if (allocated(OutData%WAMIT)) deallocate(OutData%WAMIT)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2986,7 +2716,6 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
          call WAMIT_UnpackParam(Buf, OutData%WAMIT(i1)) ! WAMIT 
       end do
    end if
-   ! WAMIT2
    if (allocated(OutData%WAMIT2)) deallocate(OutData%WAMIT2)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3002,30 +2731,21 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
          call WAMIT2_UnpackParam(Buf, OutData%WAMIT2(i1)) ! WAMIT2 
       end do
    end if
-   ! WAMIT2used
    call RegUnpack(Buf, OutData%WAMIT2used)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Morison
    call Morison_UnpackParam(Buf, OutData%Morison) ! Morison 
-   ! PotMod
    call RegUnpack(Buf, OutData%PotMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NBody
    call RegUnpack(Buf, OutData%NBody)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NBodyMod
    call RegUnpack(Buf, OutData%NBodyMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! totalStates
    call RegUnpack(Buf, OutData%totalStates)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! totalExctnStates
    call RegUnpack(Buf, OutData%totalExctnStates)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! totalRdtnStates
    call RegUnpack(Buf, OutData%totalRdtnStates)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveTime
    if (associated(OutData%WaveTime)) deallocate(OutData%WaveTime)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3050,13 +2770,10 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
    else
       OutData%WaveTime => null()
    end if
-   ! NStepWave
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDpth
    call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AddF0
    if (allocated(OutData%AddF0)) deallocate(OutData%AddF0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3071,7 +2788,6 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%AddF0)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! AddCLin
    if (allocated(OutData%AddCLin)) deallocate(OutData%AddCLin)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3086,7 +2802,6 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%AddCLin)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! AddBLin
    if (allocated(OutData%AddBLin)) deallocate(OutData%AddBLin)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3101,7 +2816,6 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%AddBLin)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! AddBQuad
    if (allocated(OutData%AddBQuad)) deallocate(OutData%AddBQuad)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3116,10 +2830,8 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%AddBQuad)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! DT
    call RegUnpack(Buf, OutData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutParam
    if (allocated(OutData%OutParam)) deallocate(OutData%OutParam)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3135,31 +2847,22 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
          call NWTC_Library_UnpackOutParmType(Buf, OutData%OutParam(i1)) ! OutParam 
       end do
    end if
-   ! NumOuts
    call RegUnpack(Buf, OutData%NumOuts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumTotalOuts
    call RegUnpack(Buf, OutData%NumTotalOuts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutSwtch
    call RegUnpack(Buf, OutData%OutSwtch)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutFmt
    call RegUnpack(Buf, OutData%OutFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutSFmt
    call RegUnpack(Buf, OutData%OutSFmt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Delim
    call RegUnpack(Buf, OutData%Delim)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UnOutFile
    call RegUnpack(Buf, OutData%UnOutFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutDec
    call RegUnpack(Buf, OutData%OutDec)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Jac_u_indx
    if (allocated(OutData%Jac_u_indx)) deallocate(OutData%Jac_u_indx)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3174,7 +2877,6 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%Jac_u_indx)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! du
    if (allocated(OutData%du)) deallocate(OutData%du)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3189,7 +2891,6 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%du)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! dx
    if (allocated(OutData%dx)) deallocate(OutData%dx)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3204,72 +2905,54 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%dx)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Jac_ny
    call RegUnpack(Buf, OutData%Jac_ny)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PointsToSeaState
    call RegUnpack(Buf, OutData%PointsToSeaState)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE HydroDyn_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(HydroDyn_InputType), INTENT(INOUT) :: SrcInputData
-   TYPE(HydroDyn_InputType), INTENT(INOUT) :: DstInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'HydroDyn_CopyInput'
-! 
+
+subroutine HydroDyn_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
+   type(HydroDyn_InputType), intent(inout) :: SrcInputData
+   type(HydroDyn_InputType), intent(inout) :: DstInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_CopyInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-      CALL Morison_CopyInput( SrcInputData%Morison, DstInputData%Morison, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL MeshCopy( SrcInputData%WAMITMesh, DstInputData%WAMITMesh, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL MeshCopy( SrcInputData%PRPMesh, DstInputData%PRPMesh, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE HydroDyn_CopyInput
+   ErrMsg  = ''
+   call Morison_CopyInput(SrcInputData%Morison, DstInputData%Morison, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call MeshCopy(SrcInputData%WAMITMesh, DstInputData%WAMITMesh, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call MeshCopy(SrcInputData%PRPMesh, DstInputData%PRPMesh, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
 
- SUBROUTINE HydroDyn_DestroyInput( InputData, ErrStat, ErrMsg )
-  TYPE(HydroDyn_InputType), INTENT(INOUT) :: InputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-  CALL Morison_DestroyInput( InputData%Morison, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL MeshDestroy( InputData%WAMITMesh, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL MeshDestroy( InputData%PRPMesh, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE HydroDyn_DestroyInput
-
+subroutine HydroDyn_DestroyInput(InputData, ErrStat, ErrMsg)
+   type(HydroDyn_InputType), intent(inout) :: InputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_DestroyInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine HydroDyn_PackInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(HydroDyn_InputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'HydroDyn_PackInput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Morison
    call Morison_PackInput(Buf, InData%Morison) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMITMesh
    call MeshPack(Buf, InData%WAMITMesh) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PRPMesh
    call MeshPack(Buf, InData%PRPMesh) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -3279,116 +2962,115 @@ subroutine HydroDyn_UnPackInput(Buf, OutData)
    type(HydroDyn_InputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackInput'
    if (Buf%ErrStat /= ErrID_None) return
-   ! Morison
    call Morison_UnpackInput(Buf, OutData%Morison) ! Morison 
-   ! WAMITMesh
    call MeshUnpack(Buf, OutData%WAMITMesh) ! WAMITMesh 
-   ! PRPMesh
    call MeshUnpack(Buf, OutData%PRPMesh) ! PRPMesh 
 end subroutine
- SUBROUTINE HydroDyn_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(HydroDyn_OutputType), INTENT(INOUT) :: SrcOutputData
-   TYPE(HydroDyn_OutputType), INTENT(INOUT) :: DstOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'HydroDyn_CopyOutput'
-! 
+
+subroutine HydroDyn_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(HydroDyn_OutputType), intent(inout) :: SrcOutputData
+   type(HydroDyn_OutputType), intent(inout) :: DstOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_CopyOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcOutputData%WAMIT)) THEN
-  i1_l = LBOUND(SrcOutputData%WAMIT,1)
-  i1_u = UBOUND(SrcOutputData%WAMIT,1)
-  IF (.NOT. ALLOCATED(DstOutputData%WAMIT)) THEN 
-    ALLOCATE(DstOutputData%WAMIT(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WAMIT.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcOutputData%WAMIT,1), UBOUND(SrcOutputData%WAMIT,1)
-      CALL WAMIT_CopyOutput( SrcOutputData%WAMIT(i1), DstOutputData%WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-IF (ALLOCATED(SrcOutputData%WAMIT2)) THEN
-  i1_l = LBOUND(SrcOutputData%WAMIT2,1)
-  i1_u = UBOUND(SrcOutputData%WAMIT2,1)
-  IF (.NOT. ALLOCATED(DstOutputData%WAMIT2)) THEN 
-    ALLOCATE(DstOutputData%WAMIT2(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WAMIT2.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcOutputData%WAMIT2,1), UBOUND(SrcOutputData%WAMIT2,1)
-      CALL WAMIT2_CopyOutput( SrcOutputData%WAMIT2(i1), DstOutputData%WAMIT2(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-      CALL Morison_CopyOutput( SrcOutputData%Morison, DstOutputData%Morison, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL MeshCopy( SrcOutputData%WAMITMesh, DstOutputData%WAMITMesh, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
-  i1_l = LBOUND(SrcOutputData%WriteOutput,1)
-  i1_u = UBOUND(SrcOutputData%WriteOutput,1)
-  IF (.NOT. ALLOCATED(DstOutputData%WriteOutput)) THEN 
-    ALLOCATE(DstOutputData%WriteOutput(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WriteOutput.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-ENDIF
- END SUBROUTINE HydroDyn_CopyOutput
+   ErrMsg  = ''
+   if (allocated(SrcOutputData%WAMIT)) then
+      LB(1:1) = lbound(SrcOutputData%WAMIT)
+      UB(1:1) = ubound(SrcOutputData%WAMIT)
+      if (.not. allocated(DstOutputData%WAMIT)) then
+         allocate(DstOutputData%WAMIT(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WAMIT.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call WAMIT_CopyOutput(SrcOutputData%WAMIT(i1), DstOutputData%WAMIT(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstOutputData%WAMIT)) then
+      deallocate(DstOutputData%WAMIT)
+   end if
+   if (allocated(SrcOutputData%WAMIT2)) then
+      LB(1:1) = lbound(SrcOutputData%WAMIT2)
+      UB(1:1) = ubound(SrcOutputData%WAMIT2)
+      if (.not. allocated(DstOutputData%WAMIT2)) then
+         allocate(DstOutputData%WAMIT2(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WAMIT2.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call WAMIT2_CopyOutput(SrcOutputData%WAMIT2(i1), DstOutputData%WAMIT2(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstOutputData%WAMIT2)) then
+      deallocate(DstOutputData%WAMIT2)
+   end if
+   call Morison_CopyOutput(SrcOutputData%Morison, DstOutputData%Morison, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call MeshCopy(SrcOutputData%WAMITMesh, DstOutputData%WAMITMesh, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcOutputData%WriteOutput)) then
+      LB(1:1) = lbound(SrcOutputData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput)
+      if (.not. allocated(DstOutputData%WriteOutput)) then
+         allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WriteOutput.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%WriteOutput = SrcOutputData%WriteOutput
+   else if (allocated(DstOutputData%WriteOutput)) then
+      deallocate(DstOutputData%WriteOutput)
+   end if
+end subroutine
 
- SUBROUTINE HydroDyn_DestroyOutput( OutputData, ErrStat, ErrMsg )
-  TYPE(HydroDyn_OutputType), INTENT(INOUT) :: OutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'HydroDyn_DestroyOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(OutputData%WAMIT)) THEN
-DO i1 = LBOUND(OutputData%WAMIT,1), UBOUND(OutputData%WAMIT,1)
-  CALL WAMIT_DestroyOutput( OutputData%WAMIT(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(OutputData%WAMIT)
-ENDIF
-IF (ALLOCATED(OutputData%WAMIT2)) THEN
-DO i1 = LBOUND(OutputData%WAMIT2,1), UBOUND(OutputData%WAMIT2,1)
-  CALL WAMIT2_DestroyOutput( OutputData%WAMIT2(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(OutputData%WAMIT2)
-ENDIF
-  CALL Morison_DestroyOutput( OutputData%Morison, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL MeshDestroy( OutputData%WAMITMesh, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(OutputData%WriteOutput)) THEN
-  DEALLOCATE(OutputData%WriteOutput)
-ENDIF
- END SUBROUTINE HydroDyn_DestroyOutput
-
+subroutine HydroDyn_DestroyOutput(OutputData, ErrStat, ErrMsg)
+   type(HydroDyn_OutputType), intent(inout) :: OutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'HydroDyn_DestroyOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(OutputData%WAMIT)) then
+      LB(1:1) = lbound(OutputData%WAMIT)
+      UB(1:1) = ubound(OutputData%WAMIT)
+      do i1 = LB(1), UB(1)
+         call WAMIT_DestroyOutput(OutputData%WAMIT(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(OutputData%WAMIT)
+   end if
+   if (allocated(OutputData%WAMIT2)) then
+      LB(1:1) = lbound(OutputData%WAMIT2)
+      UB(1:1) = ubound(OutputData%WAMIT2)
+      do i1 = LB(1), UB(1)
+         call WAMIT2_DestroyOutput(OutputData%WAMIT2(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(OutputData%WAMIT2)
+   end if
+   if (allocated(OutputData%WriteOutput)) then
+      deallocate(OutputData%WriteOutput)
+   end if
+end subroutine
 
 subroutine HydroDyn_PackOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -3397,7 +3079,6 @@ subroutine HydroDyn_PackOutput(Buf, Indata)
    integer(IntKi)  :: i1
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
-   ! WAMIT
    call RegPack(Buf, allocated(InData%WAMIT))
    if (allocated(InData%WAMIT)) then
       call RegPackBounds(Buf, 1, lbound(InData%WAMIT), ubound(InData%WAMIT))
@@ -3408,7 +3089,6 @@ subroutine HydroDyn_PackOutput(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMIT2
    call RegPack(Buf, allocated(InData%WAMIT2))
    if (allocated(InData%WAMIT2)) then
       call RegPackBounds(Buf, 1, lbound(InData%WAMIT2), ubound(InData%WAMIT2))
@@ -3419,13 +3099,10 @@ subroutine HydroDyn_PackOutput(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Morison
    call Morison_PackOutput(Buf, InData%Morison) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WAMITMesh
    call MeshPack(Buf, InData%WAMITMesh) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WriteOutput
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
@@ -3443,7 +3120,6 @@ subroutine HydroDyn_UnPackOutput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! WAMIT
    if (allocated(OutData%WAMIT)) deallocate(OutData%WAMIT)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3459,7 +3135,6 @@ subroutine HydroDyn_UnPackOutput(Buf, OutData)
          call WAMIT_UnpackOutput(Buf, OutData%WAMIT(i1)) ! WAMIT 
       end do
    end if
-   ! WAMIT2
    if (allocated(OutData%WAMIT2)) deallocate(OutData%WAMIT2)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3475,11 +3150,8 @@ subroutine HydroDyn_UnPackOutput(Buf, OutData)
          call WAMIT2_UnpackOutput(Buf, OutData%WAMIT2(i1)) ! WAMIT2 
       end do
    end if
-   ! Morison
    call Morison_UnpackOutput(Buf, OutData%Morison) ! Morison 
-   ! WAMITMesh
    call MeshUnpack(Buf, OutData%WAMITMesh) ! WAMITMesh 
-   ! WriteOutput
    if (allocated(OutData%WriteOutput)) deallocate(OutData%WriteOutput)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return

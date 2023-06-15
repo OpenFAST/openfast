@@ -59,112 +59,91 @@ IMPLICIT NONE
   END TYPE Current_InitOutputType
 ! =======================
 CONTAINS
- SUBROUTINE Current_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Current_InitInputType), INTENT(IN) :: SrcInitInputData
-   TYPE(Current_InitInputType), INTENT(INOUT) :: DstInitInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Current_CopyInitInput'
-! 
+
+subroutine Current_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
+   type(Current_InitInputType), intent(in) :: SrcInitInputData
+   type(Current_InitInputType), intent(inout) :: DstInitInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'Current_CopyInitInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInitInputData%CurrSSV0 = SrcInitInputData%CurrSSV0
-    DstInitInputData%CurrSSDirChr = SrcInitInputData%CurrSSDirChr
-    DstInitInputData%CurrSSDir = SrcInitInputData%CurrSSDir
-    DstInitInputData%CurrNSRef = SrcInitInputData%CurrNSRef
-    DstInitInputData%CurrNSV0 = SrcInitInputData%CurrNSV0
-    DstInitInputData%CurrNSDir = SrcInitInputData%CurrNSDir
-    DstInitInputData%CurrDIV = SrcInitInputData%CurrDIV
-    DstInitInputData%CurrDIDir = SrcInitInputData%CurrDIDir
-    DstInitInputData%CurrMod = SrcInitInputData%CurrMod
-    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
-IF (ALLOCATED(SrcInitInputData%WaveKinGridzi)) THEN
-  i1_l = LBOUND(SrcInitInputData%WaveKinGridzi,1)
-  i1_u = UBOUND(SrcInitInputData%WaveKinGridzi,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%WaveKinGridzi)) THEN 
-    ALLOCATE(DstInitInputData%WaveKinGridzi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveKinGridzi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%WaveKinGridzi = SrcInitInputData%WaveKinGridzi
-ENDIF
-    DstInitInputData%NGridPts = SrcInitInputData%NGridPts
-    DstInitInputData%DirRoot = SrcInitInputData%DirRoot
- END SUBROUTINE Current_CopyInitInput
+   ErrMsg  = ''
+   DstInitInputData%CurrSSV0 = SrcInitInputData%CurrSSV0
+   DstInitInputData%CurrSSDirChr = SrcInitInputData%CurrSSDirChr
+   DstInitInputData%CurrSSDir = SrcInitInputData%CurrSSDir
+   DstInitInputData%CurrNSRef = SrcInitInputData%CurrNSRef
+   DstInitInputData%CurrNSV0 = SrcInitInputData%CurrNSV0
+   DstInitInputData%CurrNSDir = SrcInitInputData%CurrNSDir
+   DstInitInputData%CurrDIV = SrcInitInputData%CurrDIV
+   DstInitInputData%CurrDIDir = SrcInitInputData%CurrDIDir
+   DstInitInputData%CurrMod = SrcInitInputData%CurrMod
+   DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
+   if (allocated(SrcInitInputData%WaveKinGridzi)) then
+      LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi)
+      UB(1:1) = ubound(SrcInitInputData%WaveKinGridzi)
+      if (.not. allocated(DstInitInputData%WaveKinGridzi)) then
+         allocate(DstInitInputData%WaveKinGridzi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveKinGridzi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%WaveKinGridzi = SrcInitInputData%WaveKinGridzi
+   else if (allocated(DstInitInputData%WaveKinGridzi)) then
+      deallocate(DstInitInputData%WaveKinGridzi)
+   end if
+   DstInitInputData%NGridPts = SrcInitInputData%NGridPts
+   DstInitInputData%DirRoot = SrcInitInputData%DirRoot
+end subroutine
 
- SUBROUTINE Current_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
-  TYPE(Current_InitInputType), INTENT(INOUT) :: InitInputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Current_DestroyInitInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(InitInputData%WaveKinGridzi)) THEN
-  DEALLOCATE(InitInputData%WaveKinGridzi)
-ENDIF
- END SUBROUTINE Current_DestroyInitInput
-
+subroutine Current_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
+   type(Current_InitInputType), intent(inout) :: InitInputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Current_DestroyInitInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InitInputData%WaveKinGridzi)) then
+      deallocate(InitInputData%WaveKinGridzi)
+   end if
+end subroutine
 
 subroutine Current_PackInitInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Current_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Current_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! CurrSSV0
    call RegPack(Buf, InData%CurrSSV0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrSSDirChr
    call RegPack(Buf, InData%CurrSSDirChr)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrSSDir
    call RegPack(Buf, InData%CurrSSDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrNSRef
    call RegPack(Buf, InData%CurrNSRef)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrNSV0
    call RegPack(Buf, InData%CurrNSV0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrNSDir
    call RegPack(Buf, InData%CurrNSDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrDIV
    call RegPack(Buf, InData%CurrDIV)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrDIDir
    call RegPack(Buf, InData%CurrDIDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrMod
    call RegPack(Buf, InData%CurrMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDpth
    call RegPack(Buf, InData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveKinGridzi
    call RegPack(Buf, allocated(InData%WaveKinGridzi))
    if (allocated(InData%WaveKinGridzi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridzi), ubound(InData%WaveKinGridzi))
       call RegPack(Buf, InData%WaveKinGridzi)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NGridPts
    call RegPack(Buf, InData%NGridPts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DirRoot
    call RegPack(Buf, InData%DirRoot)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -177,37 +156,26 @@ subroutine Current_UnPackInitInput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! CurrSSV0
    call RegUnpack(Buf, OutData%CurrSSV0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrSSDirChr
    call RegUnpack(Buf, OutData%CurrSSDirChr)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrSSDir
    call RegUnpack(Buf, OutData%CurrSSDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrNSRef
    call RegUnpack(Buf, OutData%CurrNSRef)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrNSV0
    call RegUnpack(Buf, OutData%CurrNSV0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrNSDir
    call RegUnpack(Buf, OutData%CurrNSDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrDIV
    call RegUnpack(Buf, OutData%CurrDIV)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrDIDir
    call RegUnpack(Buf, OutData%CurrDIDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrMod
    call RegUnpack(Buf, OutData%CurrMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDpth
    call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveKinGridzi
    if (allocated(OutData%WaveKinGridzi)) deallocate(OutData%WaveKinGridzi)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -222,101 +190,89 @@ subroutine Current_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveKinGridzi)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! NGridPts
    call RegUnpack(Buf, OutData%NGridPts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DirRoot
    call RegUnpack(Buf, OutData%DirRoot)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE Current_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(Current_InitOutputType), INTENT(IN) :: SrcInitOutputData
-   TYPE(Current_InitOutputType), INTENT(INOUT) :: DstInitOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'Current_CopyInitOutput'
-! 
+
+subroutine Current_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(Current_InitOutputType), intent(in) :: SrcInitOutputData
+   type(Current_InitOutputType), intent(inout) :: DstInitOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'Current_CopyInitOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcInitOutputData%CurrVxi)) THEN
-  i1_l = LBOUND(SrcInitOutputData%CurrVxi,1)
-  i1_u = UBOUND(SrcInitOutputData%CurrVxi,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%CurrVxi)) THEN 
-    ALLOCATE(DstInitOutputData%CurrVxi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%CurrVxi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%CurrVxi = SrcInitOutputData%CurrVxi
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%CurrVyi)) THEN
-  i1_l = LBOUND(SrcInitOutputData%CurrVyi,1)
-  i1_u = UBOUND(SrcInitOutputData%CurrVyi,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%CurrVyi)) THEN 
-    ALLOCATE(DstInitOutputData%CurrVyi(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%CurrVyi.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%CurrVyi = SrcInitOutputData%CurrVyi
-ENDIF
-    DstInitOutputData%PCurrVxiPz0 = SrcInitOutputData%PCurrVxiPz0
-    DstInitOutputData%PCurrVyiPz0 = SrcInitOutputData%PCurrVyiPz0
- END SUBROUTINE Current_CopyInitOutput
+   ErrMsg  = ''
+   if (allocated(SrcInitOutputData%CurrVxi)) then
+      LB(1:1) = lbound(SrcInitOutputData%CurrVxi)
+      UB(1:1) = ubound(SrcInitOutputData%CurrVxi)
+      if (.not. allocated(DstInitOutputData%CurrVxi)) then
+         allocate(DstInitOutputData%CurrVxi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%CurrVxi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%CurrVxi = SrcInitOutputData%CurrVxi
+   else if (allocated(DstInitOutputData%CurrVxi)) then
+      deallocate(DstInitOutputData%CurrVxi)
+   end if
+   if (allocated(SrcInitOutputData%CurrVyi)) then
+      LB(1:1) = lbound(SrcInitOutputData%CurrVyi)
+      UB(1:1) = ubound(SrcInitOutputData%CurrVyi)
+      if (.not. allocated(DstInitOutputData%CurrVyi)) then
+         allocate(DstInitOutputData%CurrVyi(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%CurrVyi.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%CurrVyi = SrcInitOutputData%CurrVyi
+   else if (allocated(DstInitOutputData%CurrVyi)) then
+      deallocate(DstInitOutputData%CurrVyi)
+   end if
+   DstInitOutputData%PCurrVxiPz0 = SrcInitOutputData%PCurrVxiPz0
+   DstInitOutputData%PCurrVyiPz0 = SrcInitOutputData%PCurrVyiPz0
+end subroutine
 
- SUBROUTINE Current_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
-  TYPE(Current_InitOutputType), INTENT(INOUT) :: InitOutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'Current_DestroyInitOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(InitOutputData%CurrVxi)) THEN
-  DEALLOCATE(InitOutputData%CurrVxi)
-ENDIF
-IF (ALLOCATED(InitOutputData%CurrVyi)) THEN
-  DEALLOCATE(InitOutputData%CurrVyi)
-ENDIF
- END SUBROUTINE Current_DestroyInitOutput
-
+subroutine Current_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
+   type(Current_InitOutputType), intent(inout) :: InitOutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'Current_DestroyInitOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InitOutputData%CurrVxi)) then
+      deallocate(InitOutputData%CurrVxi)
+   end if
+   if (allocated(InitOutputData%CurrVyi)) then
+      deallocate(InitOutputData%CurrVyi)
+   end if
+end subroutine
 
 subroutine Current_PackInitOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Current_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Current_PackInitOutput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! CurrVxi
    call RegPack(Buf, allocated(InData%CurrVxi))
    if (allocated(InData%CurrVxi)) then
       call RegPackBounds(Buf, 1, lbound(InData%CurrVxi), ubound(InData%CurrVxi))
       call RegPack(Buf, InData%CurrVxi)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CurrVyi
    call RegPack(Buf, allocated(InData%CurrVyi))
    if (allocated(InData%CurrVyi)) then
       call RegPackBounds(Buf, 1, lbound(InData%CurrVyi), ubound(InData%CurrVyi))
       call RegPack(Buf, InData%CurrVyi)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PCurrVxiPz0
    call RegPack(Buf, InData%PCurrVxiPz0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PCurrVyiPz0
    call RegPack(Buf, InData%PCurrVyiPz0)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -329,7 +285,6 @@ subroutine Current_UnPackInitOutput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! CurrVxi
    if (allocated(OutData%CurrVxi)) deallocate(OutData%CurrVxi)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -344,7 +299,6 @@ subroutine Current_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%CurrVxi)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! CurrVyi
    if (allocated(OutData%CurrVyi)) deallocate(OutData%CurrVyi)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -359,10 +313,8 @@ subroutine Current_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%CurrVyi)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PCurrVxiPz0
    call RegUnpack(Buf, OutData%PCurrVxiPz0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PCurrVyiPz0
    call RegUnpack(Buf, OutData%PCurrVyiPz0)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

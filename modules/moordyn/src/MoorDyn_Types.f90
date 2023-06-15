@@ -462,57 +462,42 @@ IMPLICIT NONE
   END TYPE MD_OutputType
 ! =======================
 CONTAINS
- SUBROUTINE MD_CopyInputFileType( SrcInputFileTypeData, DstInputFileTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_InputFileType), INTENT(IN) :: SrcInputFileTypeData
-   TYPE(MD_InputFileType), INTENT(INOUT) :: DstInputFileTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyInputFileType'
-! 
+
+subroutine MD_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_InputFileType), intent(in) :: SrcInputFileTypeData
+   type(MD_InputFileType), intent(inout) :: DstInputFileTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_CopyInputFileType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInputFileTypeData%DTIC = SrcInputFileTypeData%DTIC
-    DstInputFileTypeData%TMaxIC = SrcInputFileTypeData%TMaxIC
-    DstInputFileTypeData%CdScaleIC = SrcInputFileTypeData%CdScaleIC
-    DstInputFileTypeData%threshIC = SrcInputFileTypeData%threshIC
- END SUBROUTINE MD_CopyInputFileType
+   ErrMsg  = ''
+   DstInputFileTypeData%DTIC = SrcInputFileTypeData%DTIC
+   DstInputFileTypeData%TMaxIC = SrcInputFileTypeData%TMaxIC
+   DstInputFileTypeData%CdScaleIC = SrcInputFileTypeData%CdScaleIC
+   DstInputFileTypeData%threshIC = SrcInputFileTypeData%threshIC
+end subroutine
 
- SUBROUTINE MD_DestroyInputFileType( InputFileTypeData, ErrStat, ErrMsg )
-  TYPE(MD_InputFileType), INTENT(INOUT) :: InputFileTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyInputFileType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE MD_DestroyInputFileType
-
+subroutine MD_DestroyInputFileType(InputFileTypeData, ErrStat, ErrMsg)
+   type(MD_InputFileType), intent(inout) :: InputFileTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_DestroyInputFileType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine MD_PackInputFileType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(MD_InputFileType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MD_PackInputFileType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! DTIC
    call RegPack(Buf, InData%DTIC)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TMaxIC
    call RegPack(Buf, InData%TMaxIC)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CdScaleIC
    call RegPack(Buf, InData%CdScaleIC)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! threshIC
    call RegPack(Buf, InData%threshIC)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -522,174 +507,148 @@ subroutine MD_UnPackInputFileType(Buf, OutData)
    type(MD_InputFileType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MD_UnPackInputFileType'
    if (Buf%ErrStat /= ErrID_None) return
-   ! DTIC
    call RegUnpack(Buf, OutData%DTIC)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TMaxIC
    call RegUnpack(Buf, OutData%TMaxIC)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CdScaleIC
    call RegUnpack(Buf, OutData%CdScaleIC)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! threshIC
    call RegUnpack(Buf, OutData%threshIC)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE MD_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_InitInputType), INTENT(IN) :: SrcInitInputData
-   TYPE(MD_InitInputType), INTENT(INOUT) :: DstInitInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyInitInput'
-! 
+
+subroutine MD_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_InitInputType), intent(in) :: SrcInitInputData
+   type(MD_InitInputType), intent(inout) :: DstInitInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'MD_CopyInitInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstInitInputData%g = SrcInitInputData%g
-    DstInitInputData%rhoW = SrcInitInputData%rhoW
-    DstInitInputData%WtrDepth = SrcInitInputData%WtrDepth
-IF (ALLOCATED(SrcInitInputData%PtfmInit)) THEN
-  i1_l = LBOUND(SrcInitInputData%PtfmInit,1)
-  i1_u = UBOUND(SrcInitInputData%PtfmInit,1)
-  i2_l = LBOUND(SrcInitInputData%PtfmInit,2)
-  i2_u = UBOUND(SrcInitInputData%PtfmInit,2)
-  IF (.NOT. ALLOCATED(DstInitInputData%PtfmInit)) THEN 
-    ALLOCATE(DstInitInputData%PtfmInit(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmInit.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%PtfmInit = SrcInitInputData%PtfmInit
-ENDIF
-    DstInitInputData%FarmSize = SrcInitInputData%FarmSize
-IF (ALLOCATED(SrcInitInputData%TurbineRefPos)) THEN
-  i1_l = LBOUND(SrcInitInputData%TurbineRefPos,1)
-  i1_u = UBOUND(SrcInitInputData%TurbineRefPos,1)
-  i2_l = LBOUND(SrcInitInputData%TurbineRefPos,2)
-  i2_u = UBOUND(SrcInitInputData%TurbineRefPos,2)
-  IF (.NOT. ALLOCATED(DstInitInputData%TurbineRefPos)) THEN 
-    ALLOCATE(DstInitInputData%TurbineRefPos(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%TurbineRefPos.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%TurbineRefPos = SrcInitInputData%TurbineRefPos
-ENDIF
-    DstInitInputData%Tmax = SrcInitInputData%Tmax
-    DstInitInputData%FileName = SrcInitInputData%FileName
-    DstInitInputData%RootName = SrcInitInputData%RootName
-    DstInitInputData%UsePrimaryInputFile = SrcInitInputData%UsePrimaryInputFile
-      CALL NWTC_Library_Copyfileinfotype( SrcInitInputData%PassedPrimaryInputData, DstInitInputData%PassedPrimaryInputData, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    DstInitInputData%Echo = SrcInitInputData%Echo
-IF (ALLOCATED(SrcInitInputData%OutList)) THEN
-  i1_l = LBOUND(SrcInitInputData%OutList,1)
-  i1_u = UBOUND(SrcInitInputData%OutList,1)
-  IF (.NOT. ALLOCATED(DstInitInputData%OutList)) THEN 
-    ALLOCATE(DstInitInputData%OutList(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%OutList.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitInputData%OutList = SrcInitInputData%OutList
-ENDIF
-    DstInitInputData%Linearize = SrcInitInputData%Linearize
- END SUBROUTINE MD_CopyInitInput
+   ErrMsg  = ''
+   DstInitInputData%g = SrcInitInputData%g
+   DstInitInputData%rhoW = SrcInitInputData%rhoW
+   DstInitInputData%WtrDepth = SrcInitInputData%WtrDepth
+   if (allocated(SrcInitInputData%PtfmInit)) then
+      LB(1:2) = lbound(SrcInitInputData%PtfmInit)
+      UB(1:2) = ubound(SrcInitInputData%PtfmInit)
+      if (.not. allocated(DstInitInputData%PtfmInit)) then
+         allocate(DstInitInputData%PtfmInit(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%PtfmInit.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%PtfmInit = SrcInitInputData%PtfmInit
+   else if (allocated(DstInitInputData%PtfmInit)) then
+      deallocate(DstInitInputData%PtfmInit)
+   end if
+   DstInitInputData%FarmSize = SrcInitInputData%FarmSize
+   if (allocated(SrcInitInputData%TurbineRefPos)) then
+      LB(1:2) = lbound(SrcInitInputData%TurbineRefPos)
+      UB(1:2) = ubound(SrcInitInputData%TurbineRefPos)
+      if (.not. allocated(DstInitInputData%TurbineRefPos)) then
+         allocate(DstInitInputData%TurbineRefPos(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%TurbineRefPos.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%TurbineRefPos = SrcInitInputData%TurbineRefPos
+   else if (allocated(DstInitInputData%TurbineRefPos)) then
+      deallocate(DstInitInputData%TurbineRefPos)
+   end if
+   DstInitInputData%Tmax = SrcInitInputData%Tmax
+   DstInitInputData%FileName = SrcInitInputData%FileName
+   DstInitInputData%RootName = SrcInitInputData%RootName
+   DstInitInputData%UsePrimaryInputFile = SrcInitInputData%UsePrimaryInputFile
+   call NWTC_Library_CopyFileInfoType(SrcInitInputData%PassedPrimaryInputData, DstInitInputData%PassedPrimaryInputData, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstInitInputData%Echo = SrcInitInputData%Echo
+   if (allocated(SrcInitInputData%OutList)) then
+      LB(1:1) = lbound(SrcInitInputData%OutList)
+      UB(1:1) = ubound(SrcInitInputData%OutList)
+      if (.not. allocated(DstInitInputData%OutList)) then
+         allocate(DstInitInputData%OutList(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%OutList.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitInputData%OutList = SrcInitInputData%OutList
+   else if (allocated(DstInitInputData%OutList)) then
+      deallocate(DstInitInputData%OutList)
+   end if
+   DstInitInputData%Linearize = SrcInitInputData%Linearize
+end subroutine
 
- SUBROUTINE MD_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
-  TYPE(MD_InitInputType), INTENT(INOUT) :: InitInputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyInitInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(InitInputData%PtfmInit)) THEN
-  DEALLOCATE(InitInputData%PtfmInit)
-ENDIF
-IF (ALLOCATED(InitInputData%TurbineRefPos)) THEN
-  DEALLOCATE(InitInputData%TurbineRefPos)
-ENDIF
-  CALL NWTC_Library_DestroyFileInfoType( InitInputData%PassedPrimaryInputData, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(InitInputData%OutList)) THEN
-  DEALLOCATE(InitInputData%OutList)
-ENDIF
- END SUBROUTINE MD_DestroyInitInput
-
+subroutine MD_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
+   type(MD_InitInputType), intent(inout) :: InitInputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'MD_DestroyInitInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InitInputData%PtfmInit)) then
+      deallocate(InitInputData%PtfmInit)
+   end if
+   if (allocated(InitInputData%TurbineRefPos)) then
+      deallocate(InitInputData%TurbineRefPos)
+   end if
+   if (allocated(InitInputData%OutList)) then
+      deallocate(InitInputData%OutList)
+   end if
+end subroutine
 
 subroutine MD_PackInitInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(MD_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MD_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! g
    call RegPack(Buf, InData%g)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rhoW
    call RegPack(Buf, InData%rhoW)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDepth
    call RegPack(Buf, InData%WtrDepth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmInit
    call RegPack(Buf, allocated(InData%PtfmInit))
    if (allocated(InData%PtfmInit)) then
       call RegPackBounds(Buf, 2, lbound(InData%PtfmInit), ubound(InData%PtfmInit))
       call RegPack(Buf, InData%PtfmInit)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FarmSize
    call RegPack(Buf, InData%FarmSize)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TurbineRefPos
    call RegPack(Buf, allocated(InData%TurbineRefPos))
    if (allocated(InData%TurbineRefPos)) then
       call RegPackBounds(Buf, 2, lbound(InData%TurbineRefPos), ubound(InData%TurbineRefPos))
       call RegPack(Buf, InData%TurbineRefPos)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Tmax
    call RegPack(Buf, InData%Tmax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FileName
    call RegPack(Buf, InData%FileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RootName
    call RegPack(Buf, InData%RootName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UsePrimaryInputFile
    call RegPack(Buf, InData%UsePrimaryInputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PassedPrimaryInputData
    call NWTC_Library_PackFileInfoType(Buf, InData%PassedPrimaryInputData) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Echo
    call RegPack(Buf, InData%Echo)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutList
    call RegPack(Buf, allocated(InData%OutList))
    if (allocated(InData%OutList)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutList), ubound(InData%OutList))
       call RegPack(Buf, InData%OutList)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Linearize
    call RegPack(Buf, InData%Linearize)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -702,16 +661,12 @@ subroutine MD_UnPackInitInput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! g
    call RegUnpack(Buf, OutData%g)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rhoW
    call RegUnpack(Buf, OutData%rhoW)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDepth
    call RegUnpack(Buf, OutData%WtrDepth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmInit
    if (allocated(OutData%PtfmInit)) deallocate(OutData%PtfmInit)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -726,10 +681,8 @@ subroutine MD_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%PtfmInit)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! FarmSize
    call RegUnpack(Buf, OutData%FarmSize)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TurbineRefPos
    if (allocated(OutData%TurbineRefPos)) deallocate(OutData%TurbineRefPos)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -744,24 +697,17 @@ subroutine MD_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%TurbineRefPos)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Tmax
    call RegUnpack(Buf, OutData%Tmax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FileName
    call RegUnpack(Buf, OutData%FileName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RootName
    call RegUnpack(Buf, OutData%RootName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UsePrimaryInputFile
    call RegUnpack(Buf, OutData%UsePrimaryInputFile)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PassedPrimaryInputData
    call NWTC_Library_UnpackFileInfoType(Buf, OutData%PassedPrimaryInputData) ! PassedPrimaryInputData 
-   ! Echo
    call RegUnpack(Buf, OutData%Echo)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutList
    if (allocated(OutData%OutList)) deallocate(OutData%OutList)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -776,138 +722,102 @@ subroutine MD_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%OutList)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Linearize
    call RegUnpack(Buf, OutData%Linearize)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE MD_CopyLineProp( SrcLinePropData, DstLinePropData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_LineProp), INTENT(IN) :: SrcLinePropData
-   TYPE(MD_LineProp), INTENT(INOUT) :: DstLinePropData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyLineProp'
-! 
+
+subroutine MD_CopyLineProp(SrcLinePropData, DstLinePropData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_LineProp), intent(in) :: SrcLinePropData
+   type(MD_LineProp), intent(inout) :: DstLinePropData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_CopyLineProp'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstLinePropData%IdNum = SrcLinePropData%IdNum
-    DstLinePropData%name = SrcLinePropData%name
-    DstLinePropData%d = SrcLinePropData%d
-    DstLinePropData%w = SrcLinePropData%w
-    DstLinePropData%EA = SrcLinePropData%EA
-    DstLinePropData%EA_D = SrcLinePropData%EA_D
-    DstLinePropData%BA = SrcLinePropData%BA
-    DstLinePropData%BA_D = SrcLinePropData%BA_D
-    DstLinePropData%EI = SrcLinePropData%EI
-    DstLinePropData%Can = SrcLinePropData%Can
-    DstLinePropData%Cat = SrcLinePropData%Cat
-    DstLinePropData%Cdn = SrcLinePropData%Cdn
-    DstLinePropData%Cdt = SrcLinePropData%Cdt
-    DstLinePropData%ElasticMod = SrcLinePropData%ElasticMod
-    DstLinePropData%nEApoints = SrcLinePropData%nEApoints
-    DstLinePropData%stiffXs = SrcLinePropData%stiffXs
-    DstLinePropData%stiffYs = SrcLinePropData%stiffYs
-    DstLinePropData%nBApoints = SrcLinePropData%nBApoints
-    DstLinePropData%dampXs = SrcLinePropData%dampXs
-    DstLinePropData%dampYs = SrcLinePropData%dampYs
-    DstLinePropData%nEIpoints = SrcLinePropData%nEIpoints
-    DstLinePropData%bstiffXs = SrcLinePropData%bstiffXs
-    DstLinePropData%bstiffYs = SrcLinePropData%bstiffYs
- END SUBROUTINE MD_CopyLineProp
+   ErrMsg  = ''
+   DstLinePropData%IdNum = SrcLinePropData%IdNum
+   DstLinePropData%name = SrcLinePropData%name
+   DstLinePropData%d = SrcLinePropData%d
+   DstLinePropData%w = SrcLinePropData%w
+   DstLinePropData%EA = SrcLinePropData%EA
+   DstLinePropData%EA_D = SrcLinePropData%EA_D
+   DstLinePropData%BA = SrcLinePropData%BA
+   DstLinePropData%BA_D = SrcLinePropData%BA_D
+   DstLinePropData%EI = SrcLinePropData%EI
+   DstLinePropData%Can = SrcLinePropData%Can
+   DstLinePropData%Cat = SrcLinePropData%Cat
+   DstLinePropData%Cdn = SrcLinePropData%Cdn
+   DstLinePropData%Cdt = SrcLinePropData%Cdt
+   DstLinePropData%ElasticMod = SrcLinePropData%ElasticMod
+   DstLinePropData%nEApoints = SrcLinePropData%nEApoints
+   DstLinePropData%stiffXs = SrcLinePropData%stiffXs
+   DstLinePropData%stiffYs = SrcLinePropData%stiffYs
+   DstLinePropData%nBApoints = SrcLinePropData%nBApoints
+   DstLinePropData%dampXs = SrcLinePropData%dampXs
+   DstLinePropData%dampYs = SrcLinePropData%dampYs
+   DstLinePropData%nEIpoints = SrcLinePropData%nEIpoints
+   DstLinePropData%bstiffXs = SrcLinePropData%bstiffXs
+   DstLinePropData%bstiffYs = SrcLinePropData%bstiffYs
+end subroutine
 
- SUBROUTINE MD_DestroyLineProp( LinePropData, ErrStat, ErrMsg )
-  TYPE(MD_LineProp), INTENT(INOUT) :: LinePropData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyLineProp'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE MD_DestroyLineProp
-
+subroutine MD_DestroyLineProp(LinePropData, ErrStat, ErrMsg)
+   type(MD_LineProp), intent(inout) :: LinePropData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_DestroyLineProp'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine MD_PackLineProp(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(MD_LineProp), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MD_PackLineProp'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! IdNum
    call RegPack(Buf, InData%IdNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! name
    call RegPack(Buf, InData%name)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! d
    call RegPack(Buf, InData%d)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! w
    call RegPack(Buf, InData%w)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EA
    call RegPack(Buf, InData%EA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EA_D
    call RegPack(Buf, InData%EA_D)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BA
    call RegPack(Buf, InData%BA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BA_D
    call RegPack(Buf, InData%BA_D)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EI
    call RegPack(Buf, InData%EI)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Can
    call RegPack(Buf, InData%Can)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cat
    call RegPack(Buf, InData%Cat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cdn
    call RegPack(Buf, InData%Cdn)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cdt
    call RegPack(Buf, InData%Cdt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ElasticMod
    call RegPack(Buf, InData%ElasticMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nEApoints
    call RegPack(Buf, InData%nEApoints)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! stiffXs
    call RegPack(Buf, InData%stiffXs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! stiffYs
    call RegPack(Buf, InData%stiffYs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nBApoints
    call RegPack(Buf, InData%nBApoints)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dampXs
    call RegPack(Buf, InData%dampXs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dampYs
    call RegPack(Buf, InData%dampYs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nEIpoints
    call RegPack(Buf, InData%nEIpoints)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bstiffXs
    call RegPack(Buf, InData%bstiffXs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bstiffYs
    call RegPack(Buf, InData%bstiffYs)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -917,151 +827,107 @@ subroutine MD_UnPackLineProp(Buf, OutData)
    type(MD_LineProp), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MD_UnPackLineProp'
    if (Buf%ErrStat /= ErrID_None) return
-   ! IdNum
    call RegUnpack(Buf, OutData%IdNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! name
    call RegUnpack(Buf, OutData%name)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! d
    call RegUnpack(Buf, OutData%d)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! w
    call RegUnpack(Buf, OutData%w)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EA
    call RegUnpack(Buf, OutData%EA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EA_D
    call RegUnpack(Buf, OutData%EA_D)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BA
    call RegUnpack(Buf, OutData%BA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BA_D
    call RegUnpack(Buf, OutData%BA_D)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EI
    call RegUnpack(Buf, OutData%EI)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Can
    call RegUnpack(Buf, OutData%Can)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cat
    call RegUnpack(Buf, OutData%Cat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cdn
    call RegUnpack(Buf, OutData%Cdn)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cdt
    call RegUnpack(Buf, OutData%Cdt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ElasticMod
    call RegUnpack(Buf, OutData%ElasticMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nEApoints
    call RegUnpack(Buf, OutData%nEApoints)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! stiffXs
    call RegUnpack(Buf, OutData%stiffXs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! stiffYs
    call RegUnpack(Buf, OutData%stiffYs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nBApoints
    call RegUnpack(Buf, OutData%nBApoints)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dampXs
    call RegUnpack(Buf, OutData%dampXs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dampYs
    call RegUnpack(Buf, OutData%dampYs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nEIpoints
    call RegUnpack(Buf, OutData%nEIpoints)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bstiffXs
    call RegUnpack(Buf, OutData%bstiffXs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bstiffYs
    call RegUnpack(Buf, OutData%bstiffYs)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE MD_CopyRodProp( SrcRodPropData, DstRodPropData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_RodProp), INTENT(IN) :: SrcRodPropData
-   TYPE(MD_RodProp), INTENT(INOUT) :: DstRodPropData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyRodProp'
-! 
+
+subroutine MD_CopyRodProp(SrcRodPropData, DstRodPropData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_RodProp), intent(in) :: SrcRodPropData
+   type(MD_RodProp), intent(inout) :: DstRodPropData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_CopyRodProp'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstRodPropData%IdNum = SrcRodPropData%IdNum
-    DstRodPropData%name = SrcRodPropData%name
-    DstRodPropData%d = SrcRodPropData%d
-    DstRodPropData%w = SrcRodPropData%w
-    DstRodPropData%Can = SrcRodPropData%Can
-    DstRodPropData%Cat = SrcRodPropData%Cat
-    DstRodPropData%Cdn = SrcRodPropData%Cdn
-    DstRodPropData%Cdt = SrcRodPropData%Cdt
-    DstRodPropData%CdEnd = SrcRodPropData%CdEnd
-    DstRodPropData%CaEnd = SrcRodPropData%CaEnd
- END SUBROUTINE MD_CopyRodProp
+   ErrMsg  = ''
+   DstRodPropData%IdNum = SrcRodPropData%IdNum
+   DstRodPropData%name = SrcRodPropData%name
+   DstRodPropData%d = SrcRodPropData%d
+   DstRodPropData%w = SrcRodPropData%w
+   DstRodPropData%Can = SrcRodPropData%Can
+   DstRodPropData%Cat = SrcRodPropData%Cat
+   DstRodPropData%Cdn = SrcRodPropData%Cdn
+   DstRodPropData%Cdt = SrcRodPropData%Cdt
+   DstRodPropData%CdEnd = SrcRodPropData%CdEnd
+   DstRodPropData%CaEnd = SrcRodPropData%CaEnd
+end subroutine
 
- SUBROUTINE MD_DestroyRodProp( RodPropData, ErrStat, ErrMsg )
-  TYPE(MD_RodProp), INTENT(INOUT) :: RodPropData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyRodProp'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE MD_DestroyRodProp
-
+subroutine MD_DestroyRodProp(RodPropData, ErrStat, ErrMsg)
+   type(MD_RodProp), intent(inout) :: RodPropData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_DestroyRodProp'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine MD_PackRodProp(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(MD_RodProp), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MD_PackRodProp'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! IdNum
    call RegPack(Buf, InData%IdNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! name
    call RegPack(Buf, InData%name)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! d
    call RegPack(Buf, InData%d)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! w
    call RegPack(Buf, InData%w)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Can
    call RegPack(Buf, InData%Can)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cat
    call RegPack(Buf, InData%Cat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cdn
    call RegPack(Buf, InData%Cdn)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cdt
    call RegPack(Buf, InData%Cdt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CdEnd
    call RegPack(Buf, InData%CdEnd)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CaEnd
    call RegPack(Buf, InData%CaEnd)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1071,178 +937,129 @@ subroutine MD_UnPackRodProp(Buf, OutData)
    type(MD_RodProp), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MD_UnPackRodProp'
    if (Buf%ErrStat /= ErrID_None) return
-   ! IdNum
    call RegUnpack(Buf, OutData%IdNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! name
    call RegUnpack(Buf, OutData%name)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! d
    call RegUnpack(Buf, OutData%d)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! w
    call RegUnpack(Buf, OutData%w)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Can
    call RegUnpack(Buf, OutData%Can)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cat
    call RegUnpack(Buf, OutData%Cat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cdn
    call RegUnpack(Buf, OutData%Cdn)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cdt
    call RegUnpack(Buf, OutData%Cdt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CdEnd
    call RegUnpack(Buf, OutData%CdEnd)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CaEnd
    call RegUnpack(Buf, OutData%CaEnd)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE MD_CopyBody( SrcBodyData, DstBodyData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_Body), INTENT(IN) :: SrcBodyData
-   TYPE(MD_Body), INTENT(INOUT) :: DstBodyData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyBody'
-! 
+
+subroutine MD_CopyBody(SrcBodyData, DstBodyData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_Body), intent(in) :: SrcBodyData
+   type(MD_Body), intent(inout) :: DstBodyData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_CopyBody'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstBodyData%IdNum = SrcBodyData%IdNum
-    DstBodyData%typeNum = SrcBodyData%typeNum
-    DstBodyData%AttachedC = SrcBodyData%AttachedC
-    DstBodyData%AttachedR = SrcBodyData%AttachedR
-    DstBodyData%nAttachedC = SrcBodyData%nAttachedC
-    DstBodyData%nAttachedR = SrcBodyData%nAttachedR
-    DstBodyData%rConnectRel = SrcBodyData%rConnectRel
-    DstBodyData%r6RodRel = SrcBodyData%r6RodRel
-    DstBodyData%bodyM = SrcBodyData%bodyM
-    DstBodyData%bodyV = SrcBodyData%bodyV
-    DstBodyData%bodyI = SrcBodyData%bodyI
-    DstBodyData%bodyCdA = SrcBodyData%bodyCdA
-    DstBodyData%bodyCa = SrcBodyData%bodyCa
-    DstBodyData%time = SrcBodyData%time
-    DstBodyData%r6 = SrcBodyData%r6
-    DstBodyData%v6 = SrcBodyData%v6
-    DstBodyData%a6 = SrcBodyData%a6
-    DstBodyData%U = SrcBodyData%U
-    DstBodyData%Ud = SrcBodyData%Ud
-    DstBodyData%zeta = SrcBodyData%zeta
-    DstBodyData%F6net = SrcBodyData%F6net
-    DstBodyData%M6net = SrcBodyData%M6net
-    DstBodyData%M = SrcBodyData%M
-    DstBodyData%M0 = SrcBodyData%M0
-    DstBodyData%OrMat = SrcBodyData%OrMat
-    DstBodyData%rCG = SrcBodyData%rCG
- END SUBROUTINE MD_CopyBody
+   ErrMsg  = ''
+   DstBodyData%IdNum = SrcBodyData%IdNum
+   DstBodyData%typeNum = SrcBodyData%typeNum
+   DstBodyData%AttachedC = SrcBodyData%AttachedC
+   DstBodyData%AttachedR = SrcBodyData%AttachedR
+   DstBodyData%nAttachedC = SrcBodyData%nAttachedC
+   DstBodyData%nAttachedR = SrcBodyData%nAttachedR
+   DstBodyData%rConnectRel = SrcBodyData%rConnectRel
+   DstBodyData%r6RodRel = SrcBodyData%r6RodRel
+   DstBodyData%bodyM = SrcBodyData%bodyM
+   DstBodyData%bodyV = SrcBodyData%bodyV
+   DstBodyData%bodyI = SrcBodyData%bodyI
+   DstBodyData%bodyCdA = SrcBodyData%bodyCdA
+   DstBodyData%bodyCa = SrcBodyData%bodyCa
+   DstBodyData%time = SrcBodyData%time
+   DstBodyData%r6 = SrcBodyData%r6
+   DstBodyData%v6 = SrcBodyData%v6
+   DstBodyData%a6 = SrcBodyData%a6
+   DstBodyData%U = SrcBodyData%U
+   DstBodyData%Ud = SrcBodyData%Ud
+   DstBodyData%zeta = SrcBodyData%zeta
+   DstBodyData%F6net = SrcBodyData%F6net
+   DstBodyData%M6net = SrcBodyData%M6net
+   DstBodyData%M = SrcBodyData%M
+   DstBodyData%M0 = SrcBodyData%M0
+   DstBodyData%OrMat = SrcBodyData%OrMat
+   DstBodyData%rCG = SrcBodyData%rCG
+end subroutine
 
- SUBROUTINE MD_DestroyBody( BodyData, ErrStat, ErrMsg )
-  TYPE(MD_Body), INTENT(INOUT) :: BodyData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyBody'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE MD_DestroyBody
-
+subroutine MD_DestroyBody(BodyData, ErrStat, ErrMsg)
+   type(MD_Body), intent(inout) :: BodyData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_DestroyBody'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine MD_PackBody(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(MD_Body), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MD_PackBody'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! IdNum
    call RegPack(Buf, InData%IdNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! typeNum
    call RegPack(Buf, InData%typeNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AttachedC
    call RegPack(Buf, InData%AttachedC)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AttachedR
    call RegPack(Buf, InData%AttachedR)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nAttachedC
    call RegPack(Buf, InData%nAttachedC)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nAttachedR
    call RegPack(Buf, InData%nAttachedR)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rConnectRel
    call RegPack(Buf, InData%rConnectRel)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! r6RodRel
    call RegPack(Buf, InData%r6RodRel)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bodyM
    call RegPack(Buf, InData%bodyM)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bodyV
    call RegPack(Buf, InData%bodyV)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bodyI
    call RegPack(Buf, InData%bodyI)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bodyCdA
    call RegPack(Buf, InData%bodyCdA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bodyCa
    call RegPack(Buf, InData%bodyCa)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! time
    call RegPack(Buf, InData%time)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! r6
    call RegPack(Buf, InData%r6)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! v6
    call RegPack(Buf, InData%v6)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! a6
    call RegPack(Buf, InData%a6)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! U
    call RegPack(Buf, InData%U)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Ud
    call RegPack(Buf, InData%Ud)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! zeta
    call RegPack(Buf, InData%zeta)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F6net
    call RegPack(Buf, InData%F6net)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! M6net
    call RegPack(Buf, InData%M6net)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! M
    call RegPack(Buf, InData%M)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! M0
    call RegPack(Buf, InData%M0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OrMat
    call RegPack(Buf, InData%OrMat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rCG
    call RegPack(Buf, InData%rCG)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1252,232 +1069,174 @@ subroutine MD_UnPackBody(Buf, OutData)
    type(MD_Body), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MD_UnPackBody'
    if (Buf%ErrStat /= ErrID_None) return
-   ! IdNum
    call RegUnpack(Buf, OutData%IdNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! typeNum
    call RegUnpack(Buf, OutData%typeNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AttachedC
    call RegUnpack(Buf, OutData%AttachedC)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AttachedR
    call RegUnpack(Buf, OutData%AttachedR)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nAttachedC
    call RegUnpack(Buf, OutData%nAttachedC)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nAttachedR
    call RegUnpack(Buf, OutData%nAttachedR)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rConnectRel
    call RegUnpack(Buf, OutData%rConnectRel)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! r6RodRel
    call RegUnpack(Buf, OutData%r6RodRel)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bodyM
    call RegUnpack(Buf, OutData%bodyM)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bodyV
    call RegUnpack(Buf, OutData%bodyV)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bodyI
    call RegUnpack(Buf, OutData%bodyI)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bodyCdA
    call RegUnpack(Buf, OutData%bodyCdA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bodyCa
    call RegUnpack(Buf, OutData%bodyCa)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! time
    call RegUnpack(Buf, OutData%time)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! r6
    call RegUnpack(Buf, OutData%r6)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! v6
    call RegUnpack(Buf, OutData%v6)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! a6
    call RegUnpack(Buf, OutData%a6)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! U
    call RegUnpack(Buf, OutData%U)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Ud
    call RegUnpack(Buf, OutData%Ud)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! zeta
    call RegUnpack(Buf, OutData%zeta)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F6net
    call RegUnpack(Buf, OutData%F6net)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! M6net
    call RegUnpack(Buf, OutData%M6net)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! M
    call RegUnpack(Buf, OutData%M)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! M0
    call RegUnpack(Buf, OutData%M0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OrMat
    call RegUnpack(Buf, OutData%OrMat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rCG
    call RegUnpack(Buf, OutData%rCG)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE MD_CopyConnect( SrcConnectData, DstConnectData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_Connect), INTENT(IN) :: SrcConnectData
-   TYPE(MD_Connect), INTENT(INOUT) :: DstConnectData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyConnect'
-! 
+
+subroutine MD_CopyConnect(SrcConnectData, DstConnectData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_Connect), intent(in) :: SrcConnectData
+   type(MD_Connect), intent(inout) :: DstConnectData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'MD_CopyConnect'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstConnectData%IdNum = SrcConnectData%IdNum
-    DstConnectData%type = SrcConnectData%type
-    DstConnectData%typeNum = SrcConnectData%typeNum
-    DstConnectData%Attached = SrcConnectData%Attached
-    DstConnectData%Top = SrcConnectData%Top
-    DstConnectData%nAttached = SrcConnectData%nAttached
-    DstConnectData%conM = SrcConnectData%conM
-    DstConnectData%conV = SrcConnectData%conV
-    DstConnectData%conFX = SrcConnectData%conFX
-    DstConnectData%conFY = SrcConnectData%conFY
-    DstConnectData%conFZ = SrcConnectData%conFZ
-    DstConnectData%conCa = SrcConnectData%conCa
-    DstConnectData%conCdA = SrcConnectData%conCdA
-    DstConnectData%time = SrcConnectData%time
-    DstConnectData%r = SrcConnectData%r
-    DstConnectData%rd = SrcConnectData%rd
-    DstConnectData%a = SrcConnectData%a
-    DstConnectData%U = SrcConnectData%U
-    DstConnectData%Ud = SrcConnectData%Ud
-    DstConnectData%zeta = SrcConnectData%zeta
-IF (ALLOCATED(SrcConnectData%PDyn)) THEN
-  i1_l = LBOUND(SrcConnectData%PDyn,1)
-  i1_u = UBOUND(SrcConnectData%PDyn,1)
-  IF (.NOT. ALLOCATED(DstConnectData%PDyn)) THEN 
-    ALLOCATE(DstConnectData%PDyn(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstConnectData%PDyn.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstConnectData%PDyn = SrcConnectData%PDyn
-ENDIF
-    DstConnectData%Fnet = SrcConnectData%Fnet
-    DstConnectData%M = SrcConnectData%M
- END SUBROUTINE MD_CopyConnect
+   ErrMsg  = ''
+   DstConnectData%IdNum = SrcConnectData%IdNum
+   DstConnectData%type = SrcConnectData%type
+   DstConnectData%typeNum = SrcConnectData%typeNum
+   DstConnectData%Attached = SrcConnectData%Attached
+   DstConnectData%Top = SrcConnectData%Top
+   DstConnectData%nAttached = SrcConnectData%nAttached
+   DstConnectData%conM = SrcConnectData%conM
+   DstConnectData%conV = SrcConnectData%conV
+   DstConnectData%conFX = SrcConnectData%conFX
+   DstConnectData%conFY = SrcConnectData%conFY
+   DstConnectData%conFZ = SrcConnectData%conFZ
+   DstConnectData%conCa = SrcConnectData%conCa
+   DstConnectData%conCdA = SrcConnectData%conCdA
+   DstConnectData%time = SrcConnectData%time
+   DstConnectData%r = SrcConnectData%r
+   DstConnectData%rd = SrcConnectData%rd
+   DstConnectData%a = SrcConnectData%a
+   DstConnectData%U = SrcConnectData%U
+   DstConnectData%Ud = SrcConnectData%Ud
+   DstConnectData%zeta = SrcConnectData%zeta
+   if (allocated(SrcConnectData%PDyn)) then
+      LB(1:1) = lbound(SrcConnectData%PDyn)
+      UB(1:1) = ubound(SrcConnectData%PDyn)
+      if (.not. allocated(DstConnectData%PDyn)) then
+         allocate(DstConnectData%PDyn(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstConnectData%PDyn.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstConnectData%PDyn = SrcConnectData%PDyn
+   else if (allocated(DstConnectData%PDyn)) then
+      deallocate(DstConnectData%PDyn)
+   end if
+   DstConnectData%Fnet = SrcConnectData%Fnet
+   DstConnectData%M = SrcConnectData%M
+end subroutine
 
- SUBROUTINE MD_DestroyConnect( ConnectData, ErrStat, ErrMsg )
-  TYPE(MD_Connect), INTENT(INOUT) :: ConnectData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyConnect'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(ConnectData%PDyn)) THEN
-  DEALLOCATE(ConnectData%PDyn)
-ENDIF
- END SUBROUTINE MD_DestroyConnect
-
+subroutine MD_DestroyConnect(ConnectData, ErrStat, ErrMsg)
+   type(MD_Connect), intent(inout) :: ConnectData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_DestroyConnect'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(ConnectData%PDyn)) then
+      deallocate(ConnectData%PDyn)
+   end if
+end subroutine
 
 subroutine MD_PackConnect(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(MD_Connect), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MD_PackConnect'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! IdNum
    call RegPack(Buf, InData%IdNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! type
    call RegPack(Buf, InData%type)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! typeNum
    call RegPack(Buf, InData%typeNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Attached
    call RegPack(Buf, InData%Attached)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Top
    call RegPack(Buf, InData%Top)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nAttached
    call RegPack(Buf, InData%nAttached)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! conM
    call RegPack(Buf, InData%conM)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! conV
    call RegPack(Buf, InData%conV)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! conFX
    call RegPack(Buf, InData%conFX)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! conFY
    call RegPack(Buf, InData%conFY)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! conFZ
    call RegPack(Buf, InData%conFZ)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! conCa
    call RegPack(Buf, InData%conCa)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! conCdA
    call RegPack(Buf, InData%conCdA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! time
    call RegPack(Buf, InData%time)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! r
    call RegPack(Buf, InData%r)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rd
    call RegPack(Buf, InData%rd)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! a
    call RegPack(Buf, InData%a)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! U
    call RegPack(Buf, InData%U)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Ud
    call RegPack(Buf, InData%Ud)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! zeta
    call RegPack(Buf, InData%zeta)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PDyn
    call RegPack(Buf, allocated(InData%PDyn))
    if (allocated(InData%PDyn)) then
       call RegPackBounds(Buf, 1, lbound(InData%PDyn), ubound(InData%PDyn))
       call RegPack(Buf, InData%PDyn)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Fnet
    call RegPack(Buf, InData%Fnet)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! M
    call RegPack(Buf, InData%M)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1490,67 +1249,46 @@ subroutine MD_UnPackConnect(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! IdNum
    call RegUnpack(Buf, OutData%IdNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! type
    call RegUnpack(Buf, OutData%type)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! typeNum
    call RegUnpack(Buf, OutData%typeNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Attached
    call RegUnpack(Buf, OutData%Attached)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Top
    call RegUnpack(Buf, OutData%Top)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nAttached
    call RegUnpack(Buf, OutData%nAttached)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! conM
    call RegUnpack(Buf, OutData%conM)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! conV
    call RegUnpack(Buf, OutData%conV)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! conFX
    call RegUnpack(Buf, OutData%conFX)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! conFY
    call RegUnpack(Buf, OutData%conFY)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! conFZ
    call RegUnpack(Buf, OutData%conFZ)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! conCa
    call RegUnpack(Buf, OutData%conCa)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! conCdA
    call RegUnpack(Buf, OutData%conCdA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! time
    call RegUnpack(Buf, OutData%time)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! r
    call RegUnpack(Buf, OutData%r)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rd
    call RegUnpack(Buf, OutData%rd)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! a
    call RegUnpack(Buf, OutData%a)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! U
    call RegUnpack(Buf, OutData%U)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Ud
    call RegUnpack(Buf, OutData%Ud)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! zeta
    call RegUnpack(Buf, OutData%zeta)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PDyn
    if (allocated(OutData%PDyn)) deallocate(OutData%PDyn)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1565,651 +1303,587 @@ subroutine MD_UnPackConnect(Buf, OutData)
       call RegUnpack(Buf, OutData%PDyn)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Fnet
    call RegUnpack(Buf, OutData%Fnet)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! M
    call RegUnpack(Buf, OutData%M)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE MD_CopyRod( SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_Rod), INTENT(IN) :: SrcRodData
-   TYPE(MD_Rod), INTENT(INOUT) :: DstRodData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyRod'
-! 
+
+subroutine MD_CopyRod(SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_Rod), intent(in) :: SrcRodData
+   type(MD_Rod), intent(inout) :: DstRodData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(3), UB(3)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'MD_CopyRod'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstRodData%IdNum = SrcRodData%IdNum
-    DstRodData%type = SrcRodData%type
-    DstRodData%PropsIdNum = SrcRodData%PropsIdNum
-    DstRodData%typeNum = SrcRodData%typeNum
-    DstRodData%AttachedA = SrcRodData%AttachedA
-    DstRodData%AttachedB = SrcRodData%AttachedB
-    DstRodData%TopA = SrcRodData%TopA
-    DstRodData%TopB = SrcRodData%TopB
-    DstRodData%nAttachedA = SrcRodData%nAttachedA
-    DstRodData%nAttachedB = SrcRodData%nAttachedB
-    DstRodData%OutFlagList = SrcRodData%OutFlagList
-    DstRodData%N = SrcRodData%N
-    DstRodData%endTypeA = SrcRodData%endTypeA
-    DstRodData%endTypeB = SrcRodData%endTypeB
-    DstRodData%UnstrLen = SrcRodData%UnstrLen
-    DstRodData%mass = SrcRodData%mass
-    DstRodData%rho = SrcRodData%rho
-    DstRodData%d = SrcRodData%d
-    DstRodData%Can = SrcRodData%Can
-    DstRodData%Cat = SrcRodData%Cat
-    DstRodData%Cdn = SrcRodData%Cdn
-    DstRodData%Cdt = SrcRodData%Cdt
-    DstRodData%CdEnd = SrcRodData%CdEnd
-    DstRodData%CaEnd = SrcRodData%CaEnd
-    DstRodData%time = SrcRodData%time
-    DstRodData%roll = SrcRodData%roll
-    DstRodData%pitch = SrcRodData%pitch
-    DstRodData%h0 = SrcRodData%h0
-IF (ALLOCATED(SrcRodData%r)) THEN
-  i1_l = LBOUND(SrcRodData%r,1)
-  i1_u = UBOUND(SrcRodData%r,1)
-  i2_l = LBOUND(SrcRodData%r,2)
-  i2_u = UBOUND(SrcRodData%r,2)
-  IF (.NOT. ALLOCATED(DstRodData%r)) THEN 
-    ALLOCATE(DstRodData%r(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%r.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%r = SrcRodData%r
-ENDIF
-IF (ALLOCATED(SrcRodData%rd)) THEN
-  i1_l = LBOUND(SrcRodData%rd,1)
-  i1_u = UBOUND(SrcRodData%rd,1)
-  i2_l = LBOUND(SrcRodData%rd,2)
-  i2_u = UBOUND(SrcRodData%rd,2)
-  IF (.NOT. ALLOCATED(DstRodData%rd)) THEN 
-    ALLOCATE(DstRodData%rd(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%rd.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%rd = SrcRodData%rd
-ENDIF
-    DstRodData%q = SrcRodData%q
-IF (ALLOCATED(SrcRodData%l)) THEN
-  i1_l = LBOUND(SrcRodData%l,1)
-  i1_u = UBOUND(SrcRodData%l,1)
-  IF (.NOT. ALLOCATED(DstRodData%l)) THEN 
-    ALLOCATE(DstRodData%l(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%l.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%l = SrcRodData%l
-ENDIF
-IF (ALLOCATED(SrcRodData%V)) THEN
-  i1_l = LBOUND(SrcRodData%V,1)
-  i1_u = UBOUND(SrcRodData%V,1)
-  IF (.NOT. ALLOCATED(DstRodData%V)) THEN 
-    ALLOCATE(DstRodData%V(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%V.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%V = SrcRodData%V
-ENDIF
-IF (ALLOCATED(SrcRodData%U)) THEN
-  i1_l = LBOUND(SrcRodData%U,1)
-  i1_u = UBOUND(SrcRodData%U,1)
-  i2_l = LBOUND(SrcRodData%U,2)
-  i2_u = UBOUND(SrcRodData%U,2)
-  IF (.NOT. ALLOCATED(DstRodData%U)) THEN 
-    ALLOCATE(DstRodData%U(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%U.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%U = SrcRodData%U
-ENDIF
-IF (ALLOCATED(SrcRodData%Ud)) THEN
-  i1_l = LBOUND(SrcRodData%Ud,1)
-  i1_u = UBOUND(SrcRodData%Ud,1)
-  i2_l = LBOUND(SrcRodData%Ud,2)
-  i2_u = UBOUND(SrcRodData%Ud,2)
-  IF (.NOT. ALLOCATED(DstRodData%Ud)) THEN 
-    ALLOCATE(DstRodData%Ud(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Ud.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%Ud = SrcRodData%Ud
-ENDIF
-IF (ALLOCATED(SrcRodData%zeta)) THEN
-  i1_l = LBOUND(SrcRodData%zeta,1)
-  i1_u = UBOUND(SrcRodData%zeta,1)
-  IF (.NOT. ALLOCATED(DstRodData%zeta)) THEN 
-    ALLOCATE(DstRodData%zeta(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%zeta.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%zeta = SrcRodData%zeta
-ENDIF
-IF (ALLOCATED(SrcRodData%PDyn)) THEN
-  i1_l = LBOUND(SrcRodData%PDyn,1)
-  i1_u = UBOUND(SrcRodData%PDyn,1)
-  IF (.NOT. ALLOCATED(DstRodData%PDyn)) THEN 
-    ALLOCATE(DstRodData%PDyn(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%PDyn.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%PDyn = SrcRodData%PDyn
-ENDIF
-IF (ALLOCATED(SrcRodData%W)) THEN
-  i1_l = LBOUND(SrcRodData%W,1)
-  i1_u = UBOUND(SrcRodData%W,1)
-  i2_l = LBOUND(SrcRodData%W,2)
-  i2_u = UBOUND(SrcRodData%W,2)
-  IF (.NOT. ALLOCATED(DstRodData%W)) THEN 
-    ALLOCATE(DstRodData%W(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%W.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%W = SrcRodData%W
-ENDIF
-IF (ALLOCATED(SrcRodData%Bo)) THEN
-  i1_l = LBOUND(SrcRodData%Bo,1)
-  i1_u = UBOUND(SrcRodData%Bo,1)
-  i2_l = LBOUND(SrcRodData%Bo,2)
-  i2_u = UBOUND(SrcRodData%Bo,2)
-  IF (.NOT. ALLOCATED(DstRodData%Bo)) THEN 
-    ALLOCATE(DstRodData%Bo(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Bo.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%Bo = SrcRodData%Bo
-ENDIF
-IF (ALLOCATED(SrcRodData%Pd)) THEN
-  i1_l = LBOUND(SrcRodData%Pd,1)
-  i1_u = UBOUND(SrcRodData%Pd,1)
-  i2_l = LBOUND(SrcRodData%Pd,2)
-  i2_u = UBOUND(SrcRodData%Pd,2)
-  IF (.NOT. ALLOCATED(DstRodData%Pd)) THEN 
-    ALLOCATE(DstRodData%Pd(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Pd.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%Pd = SrcRodData%Pd
-ENDIF
-IF (ALLOCATED(SrcRodData%Dp)) THEN
-  i1_l = LBOUND(SrcRodData%Dp,1)
-  i1_u = UBOUND(SrcRodData%Dp,1)
-  i2_l = LBOUND(SrcRodData%Dp,2)
-  i2_u = UBOUND(SrcRodData%Dp,2)
-  IF (.NOT. ALLOCATED(DstRodData%Dp)) THEN 
-    ALLOCATE(DstRodData%Dp(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Dp.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%Dp = SrcRodData%Dp
-ENDIF
-IF (ALLOCATED(SrcRodData%Dq)) THEN
-  i1_l = LBOUND(SrcRodData%Dq,1)
-  i1_u = UBOUND(SrcRodData%Dq,1)
-  i2_l = LBOUND(SrcRodData%Dq,2)
-  i2_u = UBOUND(SrcRodData%Dq,2)
-  IF (.NOT. ALLOCATED(DstRodData%Dq)) THEN 
-    ALLOCATE(DstRodData%Dq(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Dq.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%Dq = SrcRodData%Dq
-ENDIF
-IF (ALLOCATED(SrcRodData%Ap)) THEN
-  i1_l = LBOUND(SrcRodData%Ap,1)
-  i1_u = UBOUND(SrcRodData%Ap,1)
-  i2_l = LBOUND(SrcRodData%Ap,2)
-  i2_u = UBOUND(SrcRodData%Ap,2)
-  IF (.NOT. ALLOCATED(DstRodData%Ap)) THEN 
-    ALLOCATE(DstRodData%Ap(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Ap.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%Ap = SrcRodData%Ap
-ENDIF
-IF (ALLOCATED(SrcRodData%Aq)) THEN
-  i1_l = LBOUND(SrcRodData%Aq,1)
-  i1_u = UBOUND(SrcRodData%Aq,1)
-  i2_l = LBOUND(SrcRodData%Aq,2)
-  i2_u = UBOUND(SrcRodData%Aq,2)
-  IF (.NOT. ALLOCATED(DstRodData%Aq)) THEN 
-    ALLOCATE(DstRodData%Aq(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Aq.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%Aq = SrcRodData%Aq
-ENDIF
-IF (ALLOCATED(SrcRodData%B)) THEN
-  i1_l = LBOUND(SrcRodData%B,1)
-  i1_u = UBOUND(SrcRodData%B,1)
-  i2_l = LBOUND(SrcRodData%B,2)
-  i2_u = UBOUND(SrcRodData%B,2)
-  IF (.NOT. ALLOCATED(DstRodData%B)) THEN 
-    ALLOCATE(DstRodData%B(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%B.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%B = SrcRodData%B
-ENDIF
-IF (ALLOCATED(SrcRodData%Fnet)) THEN
-  i1_l = LBOUND(SrcRodData%Fnet,1)
-  i1_u = UBOUND(SrcRodData%Fnet,1)
-  i2_l = LBOUND(SrcRodData%Fnet,2)
-  i2_u = UBOUND(SrcRodData%Fnet,2)
-  IF (.NOT. ALLOCATED(DstRodData%Fnet)) THEN 
-    ALLOCATE(DstRodData%Fnet(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Fnet.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%Fnet = SrcRodData%Fnet
-ENDIF
-IF (ALLOCATED(SrcRodData%M)) THEN
-  i1_l = LBOUND(SrcRodData%M,1)
-  i1_u = UBOUND(SrcRodData%M,1)
-  i2_l = LBOUND(SrcRodData%M,2)
-  i2_u = UBOUND(SrcRodData%M,2)
-  i3_l = LBOUND(SrcRodData%M,3)
-  i3_u = UBOUND(SrcRodData%M,3)
-  IF (.NOT. ALLOCATED(DstRodData%M)) THEN 
-    ALLOCATE(DstRodData%M(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%M.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%M = SrcRodData%M
-ENDIF
-    DstRodData%FextA = SrcRodData%FextA
-    DstRodData%FextB = SrcRodData%FextB
-    DstRodData%Mext = SrcRodData%Mext
-    DstRodData%r6 = SrcRodData%r6
-    DstRodData%v6 = SrcRodData%v6
-    DstRodData%a6 = SrcRodData%a6
-    DstRodData%F6net = SrcRodData%F6net
-    DstRodData%M6net = SrcRodData%M6net
-    DstRodData%OrMat = SrcRodData%OrMat
-    DstRodData%RodUnOut = SrcRodData%RodUnOut
-IF (ALLOCATED(SrcRodData%RodWrOutput)) THEN
-  i1_l = LBOUND(SrcRodData%RodWrOutput,1)
-  i1_u = UBOUND(SrcRodData%RodWrOutput,1)
-  IF (.NOT. ALLOCATED(DstRodData%RodWrOutput)) THEN 
-    ALLOCATE(DstRodData%RodWrOutput(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%RodWrOutput.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRodData%RodWrOutput = SrcRodData%RodWrOutput
-ENDIF
- END SUBROUTINE MD_CopyRod
+   ErrMsg  = ''
+   DstRodData%IdNum = SrcRodData%IdNum
+   DstRodData%type = SrcRodData%type
+   DstRodData%PropsIdNum = SrcRodData%PropsIdNum
+   DstRodData%typeNum = SrcRodData%typeNum
+   DstRodData%AttachedA = SrcRodData%AttachedA
+   DstRodData%AttachedB = SrcRodData%AttachedB
+   DstRodData%TopA = SrcRodData%TopA
+   DstRodData%TopB = SrcRodData%TopB
+   DstRodData%nAttachedA = SrcRodData%nAttachedA
+   DstRodData%nAttachedB = SrcRodData%nAttachedB
+   DstRodData%OutFlagList = SrcRodData%OutFlagList
+   DstRodData%N = SrcRodData%N
+   DstRodData%endTypeA = SrcRodData%endTypeA
+   DstRodData%endTypeB = SrcRodData%endTypeB
+   DstRodData%UnstrLen = SrcRodData%UnstrLen
+   DstRodData%mass = SrcRodData%mass
+   DstRodData%rho = SrcRodData%rho
+   DstRodData%d = SrcRodData%d
+   DstRodData%Can = SrcRodData%Can
+   DstRodData%Cat = SrcRodData%Cat
+   DstRodData%Cdn = SrcRodData%Cdn
+   DstRodData%Cdt = SrcRodData%Cdt
+   DstRodData%CdEnd = SrcRodData%CdEnd
+   DstRodData%CaEnd = SrcRodData%CaEnd
+   DstRodData%time = SrcRodData%time
+   DstRodData%roll = SrcRodData%roll
+   DstRodData%pitch = SrcRodData%pitch
+   DstRodData%h0 = SrcRodData%h0
+   if (allocated(SrcRodData%r)) then
+      LB(1:2) = lbound(SrcRodData%r)
+      UB(1:2) = ubound(SrcRodData%r)
+      if (.not. allocated(DstRodData%r)) then
+         allocate(DstRodData%r(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%r.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%r = SrcRodData%r
+   else if (allocated(DstRodData%r)) then
+      deallocate(DstRodData%r)
+   end if
+   if (allocated(SrcRodData%rd)) then
+      LB(1:2) = lbound(SrcRodData%rd)
+      UB(1:2) = ubound(SrcRodData%rd)
+      if (.not. allocated(DstRodData%rd)) then
+         allocate(DstRodData%rd(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%rd.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%rd = SrcRodData%rd
+   else if (allocated(DstRodData%rd)) then
+      deallocate(DstRodData%rd)
+   end if
+   DstRodData%q = SrcRodData%q
+   if (allocated(SrcRodData%l)) then
+      LB(1:1) = lbound(SrcRodData%l)
+      UB(1:1) = ubound(SrcRodData%l)
+      if (.not. allocated(DstRodData%l)) then
+         allocate(DstRodData%l(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%l.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%l = SrcRodData%l
+   else if (allocated(DstRodData%l)) then
+      deallocate(DstRodData%l)
+   end if
+   if (allocated(SrcRodData%V)) then
+      LB(1:1) = lbound(SrcRodData%V)
+      UB(1:1) = ubound(SrcRodData%V)
+      if (.not. allocated(DstRodData%V)) then
+         allocate(DstRodData%V(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%V.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%V = SrcRodData%V
+   else if (allocated(DstRodData%V)) then
+      deallocate(DstRodData%V)
+   end if
+   if (allocated(SrcRodData%U)) then
+      LB(1:2) = lbound(SrcRodData%U)
+      UB(1:2) = ubound(SrcRodData%U)
+      if (.not. allocated(DstRodData%U)) then
+         allocate(DstRodData%U(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%U.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%U = SrcRodData%U
+   else if (allocated(DstRodData%U)) then
+      deallocate(DstRodData%U)
+   end if
+   if (allocated(SrcRodData%Ud)) then
+      LB(1:2) = lbound(SrcRodData%Ud)
+      UB(1:2) = ubound(SrcRodData%Ud)
+      if (.not. allocated(DstRodData%Ud)) then
+         allocate(DstRodData%Ud(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Ud.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%Ud = SrcRodData%Ud
+   else if (allocated(DstRodData%Ud)) then
+      deallocate(DstRodData%Ud)
+   end if
+   if (allocated(SrcRodData%zeta)) then
+      LB(1:1) = lbound(SrcRodData%zeta)
+      UB(1:1) = ubound(SrcRodData%zeta)
+      if (.not. allocated(DstRodData%zeta)) then
+         allocate(DstRodData%zeta(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%zeta.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%zeta = SrcRodData%zeta
+   else if (allocated(DstRodData%zeta)) then
+      deallocate(DstRodData%zeta)
+   end if
+   if (allocated(SrcRodData%PDyn)) then
+      LB(1:1) = lbound(SrcRodData%PDyn)
+      UB(1:1) = ubound(SrcRodData%PDyn)
+      if (.not. allocated(DstRodData%PDyn)) then
+         allocate(DstRodData%PDyn(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%PDyn.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%PDyn = SrcRodData%PDyn
+   else if (allocated(DstRodData%PDyn)) then
+      deallocate(DstRodData%PDyn)
+   end if
+   if (allocated(SrcRodData%W)) then
+      LB(1:2) = lbound(SrcRodData%W)
+      UB(1:2) = ubound(SrcRodData%W)
+      if (.not. allocated(DstRodData%W)) then
+         allocate(DstRodData%W(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%W.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%W = SrcRodData%W
+   else if (allocated(DstRodData%W)) then
+      deallocate(DstRodData%W)
+   end if
+   if (allocated(SrcRodData%Bo)) then
+      LB(1:2) = lbound(SrcRodData%Bo)
+      UB(1:2) = ubound(SrcRodData%Bo)
+      if (.not. allocated(DstRodData%Bo)) then
+         allocate(DstRodData%Bo(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Bo.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%Bo = SrcRodData%Bo
+   else if (allocated(DstRodData%Bo)) then
+      deallocate(DstRodData%Bo)
+   end if
+   if (allocated(SrcRodData%Pd)) then
+      LB(1:2) = lbound(SrcRodData%Pd)
+      UB(1:2) = ubound(SrcRodData%Pd)
+      if (.not. allocated(DstRodData%Pd)) then
+         allocate(DstRodData%Pd(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Pd.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%Pd = SrcRodData%Pd
+   else if (allocated(DstRodData%Pd)) then
+      deallocate(DstRodData%Pd)
+   end if
+   if (allocated(SrcRodData%Dp)) then
+      LB(1:2) = lbound(SrcRodData%Dp)
+      UB(1:2) = ubound(SrcRodData%Dp)
+      if (.not. allocated(DstRodData%Dp)) then
+         allocate(DstRodData%Dp(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Dp.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%Dp = SrcRodData%Dp
+   else if (allocated(DstRodData%Dp)) then
+      deallocate(DstRodData%Dp)
+   end if
+   if (allocated(SrcRodData%Dq)) then
+      LB(1:2) = lbound(SrcRodData%Dq)
+      UB(1:2) = ubound(SrcRodData%Dq)
+      if (.not. allocated(DstRodData%Dq)) then
+         allocate(DstRodData%Dq(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Dq.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%Dq = SrcRodData%Dq
+   else if (allocated(DstRodData%Dq)) then
+      deallocate(DstRodData%Dq)
+   end if
+   if (allocated(SrcRodData%Ap)) then
+      LB(1:2) = lbound(SrcRodData%Ap)
+      UB(1:2) = ubound(SrcRodData%Ap)
+      if (.not. allocated(DstRodData%Ap)) then
+         allocate(DstRodData%Ap(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Ap.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%Ap = SrcRodData%Ap
+   else if (allocated(DstRodData%Ap)) then
+      deallocate(DstRodData%Ap)
+   end if
+   if (allocated(SrcRodData%Aq)) then
+      LB(1:2) = lbound(SrcRodData%Aq)
+      UB(1:2) = ubound(SrcRodData%Aq)
+      if (.not. allocated(DstRodData%Aq)) then
+         allocate(DstRodData%Aq(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Aq.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%Aq = SrcRodData%Aq
+   else if (allocated(DstRodData%Aq)) then
+      deallocate(DstRodData%Aq)
+   end if
+   if (allocated(SrcRodData%B)) then
+      LB(1:2) = lbound(SrcRodData%B)
+      UB(1:2) = ubound(SrcRodData%B)
+      if (.not. allocated(DstRodData%B)) then
+         allocate(DstRodData%B(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%B.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%B = SrcRodData%B
+   else if (allocated(DstRodData%B)) then
+      deallocate(DstRodData%B)
+   end if
+   if (allocated(SrcRodData%Fnet)) then
+      LB(1:2) = lbound(SrcRodData%Fnet)
+      UB(1:2) = ubound(SrcRodData%Fnet)
+      if (.not. allocated(DstRodData%Fnet)) then
+         allocate(DstRodData%Fnet(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%Fnet.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%Fnet = SrcRodData%Fnet
+   else if (allocated(DstRodData%Fnet)) then
+      deallocate(DstRodData%Fnet)
+   end if
+   if (allocated(SrcRodData%M)) then
+      LB(1:3) = lbound(SrcRodData%M)
+      UB(1:3) = ubound(SrcRodData%M)
+      if (.not. allocated(DstRodData%M)) then
+         allocate(DstRodData%M(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%M.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%M = SrcRodData%M
+   else if (allocated(DstRodData%M)) then
+      deallocate(DstRodData%M)
+   end if
+   DstRodData%FextA = SrcRodData%FextA
+   DstRodData%FextB = SrcRodData%FextB
+   DstRodData%Mext = SrcRodData%Mext
+   DstRodData%r6 = SrcRodData%r6
+   DstRodData%v6 = SrcRodData%v6
+   DstRodData%a6 = SrcRodData%a6
+   DstRodData%F6net = SrcRodData%F6net
+   DstRodData%M6net = SrcRodData%M6net
+   DstRodData%OrMat = SrcRodData%OrMat
+   DstRodData%RodUnOut = SrcRodData%RodUnOut
+   if (allocated(SrcRodData%RodWrOutput)) then
+      LB(1:1) = lbound(SrcRodData%RodWrOutput)
+      UB(1:1) = ubound(SrcRodData%RodWrOutput)
+      if (.not. allocated(DstRodData%RodWrOutput)) then
+         allocate(DstRodData%RodWrOutput(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRodData%RodWrOutput.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRodData%RodWrOutput = SrcRodData%RodWrOutput
+   else if (allocated(DstRodData%RodWrOutput)) then
+      deallocate(DstRodData%RodWrOutput)
+   end if
+end subroutine
 
- SUBROUTINE MD_DestroyRod( RodData, ErrStat, ErrMsg )
-  TYPE(MD_Rod), INTENT(INOUT) :: RodData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyRod'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(RodData%r)) THEN
-  DEALLOCATE(RodData%r)
-ENDIF
-IF (ALLOCATED(RodData%rd)) THEN
-  DEALLOCATE(RodData%rd)
-ENDIF
-IF (ALLOCATED(RodData%l)) THEN
-  DEALLOCATE(RodData%l)
-ENDIF
-IF (ALLOCATED(RodData%V)) THEN
-  DEALLOCATE(RodData%V)
-ENDIF
-IF (ALLOCATED(RodData%U)) THEN
-  DEALLOCATE(RodData%U)
-ENDIF
-IF (ALLOCATED(RodData%Ud)) THEN
-  DEALLOCATE(RodData%Ud)
-ENDIF
-IF (ALLOCATED(RodData%zeta)) THEN
-  DEALLOCATE(RodData%zeta)
-ENDIF
-IF (ALLOCATED(RodData%PDyn)) THEN
-  DEALLOCATE(RodData%PDyn)
-ENDIF
-IF (ALLOCATED(RodData%W)) THEN
-  DEALLOCATE(RodData%W)
-ENDIF
-IF (ALLOCATED(RodData%Bo)) THEN
-  DEALLOCATE(RodData%Bo)
-ENDIF
-IF (ALLOCATED(RodData%Pd)) THEN
-  DEALLOCATE(RodData%Pd)
-ENDIF
-IF (ALLOCATED(RodData%Dp)) THEN
-  DEALLOCATE(RodData%Dp)
-ENDIF
-IF (ALLOCATED(RodData%Dq)) THEN
-  DEALLOCATE(RodData%Dq)
-ENDIF
-IF (ALLOCATED(RodData%Ap)) THEN
-  DEALLOCATE(RodData%Ap)
-ENDIF
-IF (ALLOCATED(RodData%Aq)) THEN
-  DEALLOCATE(RodData%Aq)
-ENDIF
-IF (ALLOCATED(RodData%B)) THEN
-  DEALLOCATE(RodData%B)
-ENDIF
-IF (ALLOCATED(RodData%Fnet)) THEN
-  DEALLOCATE(RodData%Fnet)
-ENDIF
-IF (ALLOCATED(RodData%M)) THEN
-  DEALLOCATE(RodData%M)
-ENDIF
-IF (ALLOCATED(RodData%RodWrOutput)) THEN
-  DEALLOCATE(RodData%RodWrOutput)
-ENDIF
- END SUBROUTINE MD_DestroyRod
-
+subroutine MD_DestroyRod(RodData, ErrStat, ErrMsg)
+   type(MD_Rod), intent(inout) :: RodData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_DestroyRod'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(RodData%r)) then
+      deallocate(RodData%r)
+   end if
+   if (allocated(RodData%rd)) then
+      deallocate(RodData%rd)
+   end if
+   if (allocated(RodData%l)) then
+      deallocate(RodData%l)
+   end if
+   if (allocated(RodData%V)) then
+      deallocate(RodData%V)
+   end if
+   if (allocated(RodData%U)) then
+      deallocate(RodData%U)
+   end if
+   if (allocated(RodData%Ud)) then
+      deallocate(RodData%Ud)
+   end if
+   if (allocated(RodData%zeta)) then
+      deallocate(RodData%zeta)
+   end if
+   if (allocated(RodData%PDyn)) then
+      deallocate(RodData%PDyn)
+   end if
+   if (allocated(RodData%W)) then
+      deallocate(RodData%W)
+   end if
+   if (allocated(RodData%Bo)) then
+      deallocate(RodData%Bo)
+   end if
+   if (allocated(RodData%Pd)) then
+      deallocate(RodData%Pd)
+   end if
+   if (allocated(RodData%Dp)) then
+      deallocate(RodData%Dp)
+   end if
+   if (allocated(RodData%Dq)) then
+      deallocate(RodData%Dq)
+   end if
+   if (allocated(RodData%Ap)) then
+      deallocate(RodData%Ap)
+   end if
+   if (allocated(RodData%Aq)) then
+      deallocate(RodData%Aq)
+   end if
+   if (allocated(RodData%B)) then
+      deallocate(RodData%B)
+   end if
+   if (allocated(RodData%Fnet)) then
+      deallocate(RodData%Fnet)
+   end if
+   if (allocated(RodData%M)) then
+      deallocate(RodData%M)
+   end if
+   if (allocated(RodData%RodWrOutput)) then
+      deallocate(RodData%RodWrOutput)
+   end if
+end subroutine
 
 subroutine MD_PackRod(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(MD_Rod), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MD_PackRod'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! IdNum
    call RegPack(Buf, InData%IdNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! type
    call RegPack(Buf, InData%type)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PropsIdNum
    call RegPack(Buf, InData%PropsIdNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! typeNum
    call RegPack(Buf, InData%typeNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AttachedA
    call RegPack(Buf, InData%AttachedA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AttachedB
    call RegPack(Buf, InData%AttachedB)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TopA
    call RegPack(Buf, InData%TopA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TopB
    call RegPack(Buf, InData%TopB)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nAttachedA
    call RegPack(Buf, InData%nAttachedA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nAttachedB
    call RegPack(Buf, InData%nAttachedB)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutFlagList
    call RegPack(Buf, InData%OutFlagList)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! N
    call RegPack(Buf, InData%N)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! endTypeA
    call RegPack(Buf, InData%endTypeA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! endTypeB
    call RegPack(Buf, InData%endTypeB)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UnstrLen
    call RegPack(Buf, InData%UnstrLen)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! mass
    call RegPack(Buf, InData%mass)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rho
    call RegPack(Buf, InData%rho)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! d
    call RegPack(Buf, InData%d)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Can
    call RegPack(Buf, InData%Can)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cat
    call RegPack(Buf, InData%Cat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cdn
    call RegPack(Buf, InData%Cdn)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cdt
    call RegPack(Buf, InData%Cdt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CdEnd
    call RegPack(Buf, InData%CdEnd)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CaEnd
    call RegPack(Buf, InData%CaEnd)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! time
    call RegPack(Buf, InData%time)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! roll
    call RegPack(Buf, InData%roll)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pitch
    call RegPack(Buf, InData%pitch)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! h0
    call RegPack(Buf, InData%h0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! r
    call RegPack(Buf, allocated(InData%r))
    if (allocated(InData%r)) then
       call RegPackBounds(Buf, 2, lbound(InData%r), ubound(InData%r))
       call RegPack(Buf, InData%r)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rd
    call RegPack(Buf, allocated(InData%rd))
    if (allocated(InData%rd)) then
       call RegPackBounds(Buf, 2, lbound(InData%rd), ubound(InData%rd))
       call RegPack(Buf, InData%rd)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! q
    call RegPack(Buf, InData%q)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! l
    call RegPack(Buf, allocated(InData%l))
    if (allocated(InData%l)) then
       call RegPackBounds(Buf, 1, lbound(InData%l), ubound(InData%l))
       call RegPack(Buf, InData%l)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! V
    call RegPack(Buf, allocated(InData%V))
    if (allocated(InData%V)) then
       call RegPackBounds(Buf, 1, lbound(InData%V), ubound(InData%V))
       call RegPack(Buf, InData%V)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! U
    call RegPack(Buf, allocated(InData%U))
    if (allocated(InData%U)) then
       call RegPackBounds(Buf, 2, lbound(InData%U), ubound(InData%U))
       call RegPack(Buf, InData%U)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Ud
    call RegPack(Buf, allocated(InData%Ud))
    if (allocated(InData%Ud)) then
       call RegPackBounds(Buf, 2, lbound(InData%Ud), ubound(InData%Ud))
       call RegPack(Buf, InData%Ud)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! zeta
    call RegPack(Buf, allocated(InData%zeta))
    if (allocated(InData%zeta)) then
       call RegPackBounds(Buf, 1, lbound(InData%zeta), ubound(InData%zeta))
       call RegPack(Buf, InData%zeta)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PDyn
    call RegPack(Buf, allocated(InData%PDyn))
    if (allocated(InData%PDyn)) then
       call RegPackBounds(Buf, 1, lbound(InData%PDyn), ubound(InData%PDyn))
       call RegPack(Buf, InData%PDyn)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! W
    call RegPack(Buf, allocated(InData%W))
    if (allocated(InData%W)) then
       call RegPackBounds(Buf, 2, lbound(InData%W), ubound(InData%W))
       call RegPack(Buf, InData%W)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Bo
    call RegPack(Buf, allocated(InData%Bo))
    if (allocated(InData%Bo)) then
       call RegPackBounds(Buf, 2, lbound(InData%Bo), ubound(InData%Bo))
       call RegPack(Buf, InData%Bo)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Pd
    call RegPack(Buf, allocated(InData%Pd))
    if (allocated(InData%Pd)) then
       call RegPackBounds(Buf, 2, lbound(InData%Pd), ubound(InData%Pd))
       call RegPack(Buf, InData%Pd)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Dp
    call RegPack(Buf, allocated(InData%Dp))
    if (allocated(InData%Dp)) then
       call RegPackBounds(Buf, 2, lbound(InData%Dp), ubound(InData%Dp))
       call RegPack(Buf, InData%Dp)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Dq
    call RegPack(Buf, allocated(InData%Dq))
    if (allocated(InData%Dq)) then
       call RegPackBounds(Buf, 2, lbound(InData%Dq), ubound(InData%Dq))
       call RegPack(Buf, InData%Dq)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Ap
    call RegPack(Buf, allocated(InData%Ap))
    if (allocated(InData%Ap)) then
       call RegPackBounds(Buf, 2, lbound(InData%Ap), ubound(InData%Ap))
       call RegPack(Buf, InData%Ap)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Aq
    call RegPack(Buf, allocated(InData%Aq))
    if (allocated(InData%Aq)) then
       call RegPackBounds(Buf, 2, lbound(InData%Aq), ubound(InData%Aq))
       call RegPack(Buf, InData%Aq)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! B
    call RegPack(Buf, allocated(InData%B))
    if (allocated(InData%B)) then
       call RegPackBounds(Buf, 2, lbound(InData%B), ubound(InData%B))
       call RegPack(Buf, InData%B)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Fnet
    call RegPack(Buf, allocated(InData%Fnet))
    if (allocated(InData%Fnet)) then
       call RegPackBounds(Buf, 2, lbound(InData%Fnet), ubound(InData%Fnet))
       call RegPack(Buf, InData%Fnet)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! M
    call RegPack(Buf, allocated(InData%M))
    if (allocated(InData%M)) then
       call RegPackBounds(Buf, 3, lbound(InData%M), ubound(InData%M))
       call RegPack(Buf, InData%M)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FextA
    call RegPack(Buf, InData%FextA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FextB
    call RegPack(Buf, InData%FextB)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Mext
    call RegPack(Buf, InData%Mext)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! r6
    call RegPack(Buf, InData%r6)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! v6
    call RegPack(Buf, InData%v6)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! a6
    call RegPack(Buf, InData%a6)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F6net
    call RegPack(Buf, InData%F6net)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! M6net
    call RegPack(Buf, InData%M6net)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OrMat
    call RegPack(Buf, InData%OrMat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RodUnOut
    call RegPack(Buf, InData%RodUnOut)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RodWrOutput
    call RegPack(Buf, allocated(InData%RodWrOutput))
    if (allocated(InData%RodWrOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%RodWrOutput), ubound(InData%RodWrOutput))
@@ -2226,91 +1900,62 @@ subroutine MD_UnPackRod(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! IdNum
    call RegUnpack(Buf, OutData%IdNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! type
    call RegUnpack(Buf, OutData%type)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PropsIdNum
    call RegUnpack(Buf, OutData%PropsIdNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! typeNum
    call RegUnpack(Buf, OutData%typeNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AttachedA
    call RegUnpack(Buf, OutData%AttachedA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AttachedB
    call RegUnpack(Buf, OutData%AttachedB)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TopA
    call RegUnpack(Buf, OutData%TopA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TopB
    call RegUnpack(Buf, OutData%TopB)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nAttachedA
    call RegUnpack(Buf, OutData%nAttachedA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nAttachedB
    call RegUnpack(Buf, OutData%nAttachedB)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutFlagList
    call RegUnpack(Buf, OutData%OutFlagList)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! N
    call RegUnpack(Buf, OutData%N)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! endTypeA
    call RegUnpack(Buf, OutData%endTypeA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! endTypeB
    call RegUnpack(Buf, OutData%endTypeB)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UnstrLen
    call RegUnpack(Buf, OutData%UnstrLen)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! mass
    call RegUnpack(Buf, OutData%mass)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rho
    call RegUnpack(Buf, OutData%rho)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! d
    call RegUnpack(Buf, OutData%d)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Can
    call RegUnpack(Buf, OutData%Can)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cat
    call RegUnpack(Buf, OutData%Cat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cdn
    call RegUnpack(Buf, OutData%Cdn)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cdt
    call RegUnpack(Buf, OutData%Cdt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CdEnd
    call RegUnpack(Buf, OutData%CdEnd)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CaEnd
    call RegUnpack(Buf, OutData%CaEnd)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! time
    call RegUnpack(Buf, OutData%time)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! roll
    call RegUnpack(Buf, OutData%roll)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pitch
    call RegUnpack(Buf, OutData%pitch)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! h0
    call RegUnpack(Buf, OutData%h0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! r
    if (allocated(OutData%r)) deallocate(OutData%r)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2325,7 +1970,6 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%r)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! rd
    if (allocated(OutData%rd)) deallocate(OutData%rd)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2340,10 +1984,8 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%rd)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! q
    call RegUnpack(Buf, OutData%q)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! l
    if (allocated(OutData%l)) deallocate(OutData%l)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2358,7 +2000,6 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%l)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! V
    if (allocated(OutData%V)) deallocate(OutData%V)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2373,7 +2014,6 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%V)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! U
    if (allocated(OutData%U)) deallocate(OutData%U)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2388,7 +2028,6 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%U)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Ud
    if (allocated(OutData%Ud)) deallocate(OutData%Ud)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2403,7 +2042,6 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%Ud)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! zeta
    if (allocated(OutData%zeta)) deallocate(OutData%zeta)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2418,7 +2056,6 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%zeta)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PDyn
    if (allocated(OutData%PDyn)) deallocate(OutData%PDyn)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2433,7 +2070,6 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%PDyn)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! W
    if (allocated(OutData%W)) deallocate(OutData%W)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2448,7 +2084,6 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%W)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Bo
    if (allocated(OutData%Bo)) deallocate(OutData%Bo)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2463,7 +2098,6 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%Bo)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Pd
    if (allocated(OutData%Pd)) deallocate(OutData%Pd)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2478,7 +2112,6 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%Pd)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Dp
    if (allocated(OutData%Dp)) deallocate(OutData%Dp)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2493,7 +2126,6 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%Dp)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Dq
    if (allocated(OutData%Dq)) deallocate(OutData%Dq)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2508,7 +2140,6 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%Dq)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Ap
    if (allocated(OutData%Ap)) deallocate(OutData%Ap)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2523,7 +2154,6 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%Ap)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Aq
    if (allocated(OutData%Aq)) deallocate(OutData%Aq)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2538,7 +2168,6 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%Aq)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! B
    if (allocated(OutData%B)) deallocate(OutData%B)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2553,7 +2182,6 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%B)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Fnet
    if (allocated(OutData%Fnet)) deallocate(OutData%Fnet)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2568,7 +2196,6 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%Fnet)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! M
    if (allocated(OutData%M)) deallocate(OutData%M)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2583,37 +2210,26 @@ subroutine MD_UnPackRod(Buf, OutData)
       call RegUnpack(Buf, OutData%M)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! FextA
    call RegUnpack(Buf, OutData%FextA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FextB
    call RegUnpack(Buf, OutData%FextB)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Mext
    call RegUnpack(Buf, OutData%Mext)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! r6
    call RegUnpack(Buf, OutData%r6)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! v6
    call RegUnpack(Buf, OutData%v6)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! a6
    call RegUnpack(Buf, OutData%a6)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! F6net
    call RegUnpack(Buf, OutData%F6net)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! M6net
    call RegUnpack(Buf, OutData%M6net)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OrMat
    call RegUnpack(Buf, OutData%OrMat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RodUnOut
    call RegUnpack(Buf, OutData%RodUnOut)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RodWrOutput
    if (allocated(OutData%RodWrOutput)) deallocate(OutData%RodWrOutput)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2629,836 +2245,777 @@ subroutine MD_UnPackRod(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE MD_CopyLine( SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_Line), INTENT(IN) :: SrcLineData
-   TYPE(MD_Line), INTENT(INOUT) :: DstLineData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyLine'
-! 
+
+subroutine MD_CopyLine(SrcLineData, DstLineData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_Line), intent(in) :: SrcLineData
+   type(MD_Line), intent(inout) :: DstLineData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(3), UB(3)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'MD_CopyLine'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstLineData%IdNum = SrcLineData%IdNum
-    DstLineData%PropsIdNum = SrcLineData%PropsIdNum
-    DstLineData%ElasticMod = SrcLineData%ElasticMod
-    DstLineData%OutFlagList = SrcLineData%OutFlagList
-    DstLineData%CtrlChan = SrcLineData%CtrlChan
-    DstLineData%FairConnect = SrcLineData%FairConnect
-    DstLineData%AnchConnect = SrcLineData%AnchConnect
-    DstLineData%N = SrcLineData%N
-    DstLineData%endTypeA = SrcLineData%endTypeA
-    DstLineData%endTypeB = SrcLineData%endTypeB
-    DstLineData%UnstrLen = SrcLineData%UnstrLen
-    DstLineData%rho = SrcLineData%rho
-    DstLineData%d = SrcLineData%d
-    DstLineData%EA = SrcLineData%EA
-    DstLineData%EA_D = SrcLineData%EA_D
-    DstLineData%BA = SrcLineData%BA
-    DstLineData%BA_D = SrcLineData%BA_D
-    DstLineData%EI = SrcLineData%EI
-    DstLineData%Can = SrcLineData%Can
-    DstLineData%Cat = SrcLineData%Cat
-    DstLineData%Cdn = SrcLineData%Cdn
-    DstLineData%Cdt = SrcLineData%Cdt
-    DstLineData%nEApoints = SrcLineData%nEApoints
-    DstLineData%stiffXs = SrcLineData%stiffXs
-    DstLineData%stiffYs = SrcLineData%stiffYs
-    DstLineData%nBApoints = SrcLineData%nBApoints
-    DstLineData%dampXs = SrcLineData%dampXs
-    DstLineData%dampYs = SrcLineData%dampYs
-    DstLineData%nEIpoints = SrcLineData%nEIpoints
-    DstLineData%bstiffXs = SrcLineData%bstiffXs
-    DstLineData%bstiffYs = SrcLineData%bstiffYs
-    DstLineData%time = SrcLineData%time
-IF (ALLOCATED(SrcLineData%r)) THEN
-  i1_l = LBOUND(SrcLineData%r,1)
-  i1_u = UBOUND(SrcLineData%r,1)
-  i2_l = LBOUND(SrcLineData%r,2)
-  i2_u = UBOUND(SrcLineData%r,2)
-  IF (.NOT. ALLOCATED(DstLineData%r)) THEN 
-    ALLOCATE(DstLineData%r(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%r.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%r = SrcLineData%r
-ENDIF
-IF (ALLOCATED(SrcLineData%rd)) THEN
-  i1_l = LBOUND(SrcLineData%rd,1)
-  i1_u = UBOUND(SrcLineData%rd,1)
-  i2_l = LBOUND(SrcLineData%rd,2)
-  i2_u = UBOUND(SrcLineData%rd,2)
-  IF (.NOT. ALLOCATED(DstLineData%rd)) THEN 
-    ALLOCATE(DstLineData%rd(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%rd.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%rd = SrcLineData%rd
-ENDIF
-IF (ALLOCATED(SrcLineData%q)) THEN
-  i1_l = LBOUND(SrcLineData%q,1)
-  i1_u = UBOUND(SrcLineData%q,1)
-  i2_l = LBOUND(SrcLineData%q,2)
-  i2_u = UBOUND(SrcLineData%q,2)
-  IF (.NOT. ALLOCATED(DstLineData%q)) THEN 
-    ALLOCATE(DstLineData%q(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%q.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%q = SrcLineData%q
-ENDIF
-IF (ALLOCATED(SrcLineData%qs)) THEN
-  i1_l = LBOUND(SrcLineData%qs,1)
-  i1_u = UBOUND(SrcLineData%qs,1)
-  i2_l = LBOUND(SrcLineData%qs,2)
-  i2_u = UBOUND(SrcLineData%qs,2)
-  IF (.NOT. ALLOCATED(DstLineData%qs)) THEN 
-    ALLOCATE(DstLineData%qs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%qs.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%qs = SrcLineData%qs
-ENDIF
-IF (ALLOCATED(SrcLineData%l)) THEN
-  i1_l = LBOUND(SrcLineData%l,1)
-  i1_u = UBOUND(SrcLineData%l,1)
-  IF (.NOT. ALLOCATED(DstLineData%l)) THEN 
-    ALLOCATE(DstLineData%l(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%l.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%l = SrcLineData%l
-ENDIF
-IF (ALLOCATED(SrcLineData%ld)) THEN
-  i1_l = LBOUND(SrcLineData%ld,1)
-  i1_u = UBOUND(SrcLineData%ld,1)
-  IF (.NOT. ALLOCATED(DstLineData%ld)) THEN 
-    ALLOCATE(DstLineData%ld(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%ld.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%ld = SrcLineData%ld
-ENDIF
-IF (ALLOCATED(SrcLineData%lstr)) THEN
-  i1_l = LBOUND(SrcLineData%lstr,1)
-  i1_u = UBOUND(SrcLineData%lstr,1)
-  IF (.NOT. ALLOCATED(DstLineData%lstr)) THEN 
-    ALLOCATE(DstLineData%lstr(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%lstr.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%lstr = SrcLineData%lstr
-ENDIF
-IF (ALLOCATED(SrcLineData%lstrd)) THEN
-  i1_l = LBOUND(SrcLineData%lstrd,1)
-  i1_u = UBOUND(SrcLineData%lstrd,1)
-  IF (.NOT. ALLOCATED(DstLineData%lstrd)) THEN 
-    ALLOCATE(DstLineData%lstrd(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%lstrd.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%lstrd = SrcLineData%lstrd
-ENDIF
-IF (ALLOCATED(SrcLineData%Kurv)) THEN
-  i1_l = LBOUND(SrcLineData%Kurv,1)
-  i1_u = UBOUND(SrcLineData%Kurv,1)
-  IF (.NOT. ALLOCATED(DstLineData%Kurv)) THEN 
-    ALLOCATE(DstLineData%Kurv(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Kurv.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%Kurv = SrcLineData%Kurv
-ENDIF
-IF (ALLOCATED(SrcLineData%dl_1)) THEN
-  i1_l = LBOUND(SrcLineData%dl_1,1)
-  i1_u = UBOUND(SrcLineData%dl_1,1)
-  IF (.NOT. ALLOCATED(DstLineData%dl_1)) THEN 
-    ALLOCATE(DstLineData%dl_1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%dl_1.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%dl_1 = SrcLineData%dl_1
-ENDIF
-IF (ALLOCATED(SrcLineData%V)) THEN
-  i1_l = LBOUND(SrcLineData%V,1)
-  i1_u = UBOUND(SrcLineData%V,1)
-  IF (.NOT. ALLOCATED(DstLineData%V)) THEN 
-    ALLOCATE(DstLineData%V(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%V.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%V = SrcLineData%V
-ENDIF
-IF (ALLOCATED(SrcLineData%U)) THEN
-  i1_l = LBOUND(SrcLineData%U,1)
-  i1_u = UBOUND(SrcLineData%U,1)
-  i2_l = LBOUND(SrcLineData%U,2)
-  i2_u = UBOUND(SrcLineData%U,2)
-  IF (.NOT. ALLOCATED(DstLineData%U)) THEN 
-    ALLOCATE(DstLineData%U(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%U.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%U = SrcLineData%U
-ENDIF
-IF (ALLOCATED(SrcLineData%Ud)) THEN
-  i1_l = LBOUND(SrcLineData%Ud,1)
-  i1_u = UBOUND(SrcLineData%Ud,1)
-  i2_l = LBOUND(SrcLineData%Ud,2)
-  i2_u = UBOUND(SrcLineData%Ud,2)
-  IF (.NOT. ALLOCATED(DstLineData%Ud)) THEN 
-    ALLOCATE(DstLineData%Ud(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Ud.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%Ud = SrcLineData%Ud
-ENDIF
-IF (ALLOCATED(SrcLineData%zeta)) THEN
-  i1_l = LBOUND(SrcLineData%zeta,1)
-  i1_u = UBOUND(SrcLineData%zeta,1)
-  IF (.NOT. ALLOCATED(DstLineData%zeta)) THEN 
-    ALLOCATE(DstLineData%zeta(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%zeta.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%zeta = SrcLineData%zeta
-ENDIF
-IF (ALLOCATED(SrcLineData%PDyn)) THEN
-  i1_l = LBOUND(SrcLineData%PDyn,1)
-  i1_u = UBOUND(SrcLineData%PDyn,1)
-  IF (.NOT. ALLOCATED(DstLineData%PDyn)) THEN 
-    ALLOCATE(DstLineData%PDyn(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%PDyn.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%PDyn = SrcLineData%PDyn
-ENDIF
-IF (ALLOCATED(SrcLineData%T)) THEN
-  i1_l = LBOUND(SrcLineData%T,1)
-  i1_u = UBOUND(SrcLineData%T,1)
-  i2_l = LBOUND(SrcLineData%T,2)
-  i2_u = UBOUND(SrcLineData%T,2)
-  IF (.NOT. ALLOCATED(DstLineData%T)) THEN 
-    ALLOCATE(DstLineData%T(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%T.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%T = SrcLineData%T
-ENDIF
-IF (ALLOCATED(SrcLineData%Td)) THEN
-  i1_l = LBOUND(SrcLineData%Td,1)
-  i1_u = UBOUND(SrcLineData%Td,1)
-  i2_l = LBOUND(SrcLineData%Td,2)
-  i2_u = UBOUND(SrcLineData%Td,2)
-  IF (.NOT. ALLOCATED(DstLineData%Td)) THEN 
-    ALLOCATE(DstLineData%Td(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Td.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%Td = SrcLineData%Td
-ENDIF
-IF (ALLOCATED(SrcLineData%W)) THEN
-  i1_l = LBOUND(SrcLineData%W,1)
-  i1_u = UBOUND(SrcLineData%W,1)
-  i2_l = LBOUND(SrcLineData%W,2)
-  i2_u = UBOUND(SrcLineData%W,2)
-  IF (.NOT. ALLOCATED(DstLineData%W)) THEN 
-    ALLOCATE(DstLineData%W(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%W.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%W = SrcLineData%W
-ENDIF
-IF (ALLOCATED(SrcLineData%Dp)) THEN
-  i1_l = LBOUND(SrcLineData%Dp,1)
-  i1_u = UBOUND(SrcLineData%Dp,1)
-  i2_l = LBOUND(SrcLineData%Dp,2)
-  i2_u = UBOUND(SrcLineData%Dp,2)
-  IF (.NOT. ALLOCATED(DstLineData%Dp)) THEN 
-    ALLOCATE(DstLineData%Dp(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Dp.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%Dp = SrcLineData%Dp
-ENDIF
-IF (ALLOCATED(SrcLineData%Dq)) THEN
-  i1_l = LBOUND(SrcLineData%Dq,1)
-  i1_u = UBOUND(SrcLineData%Dq,1)
-  i2_l = LBOUND(SrcLineData%Dq,2)
-  i2_u = UBOUND(SrcLineData%Dq,2)
-  IF (.NOT. ALLOCATED(DstLineData%Dq)) THEN 
-    ALLOCATE(DstLineData%Dq(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Dq.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%Dq = SrcLineData%Dq
-ENDIF
-IF (ALLOCATED(SrcLineData%Ap)) THEN
-  i1_l = LBOUND(SrcLineData%Ap,1)
-  i1_u = UBOUND(SrcLineData%Ap,1)
-  i2_l = LBOUND(SrcLineData%Ap,2)
-  i2_u = UBOUND(SrcLineData%Ap,2)
-  IF (.NOT. ALLOCATED(DstLineData%Ap)) THEN 
-    ALLOCATE(DstLineData%Ap(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Ap.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%Ap = SrcLineData%Ap
-ENDIF
-IF (ALLOCATED(SrcLineData%Aq)) THEN
-  i1_l = LBOUND(SrcLineData%Aq,1)
-  i1_u = UBOUND(SrcLineData%Aq,1)
-  i2_l = LBOUND(SrcLineData%Aq,2)
-  i2_u = UBOUND(SrcLineData%Aq,2)
-  IF (.NOT. ALLOCATED(DstLineData%Aq)) THEN 
-    ALLOCATE(DstLineData%Aq(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Aq.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%Aq = SrcLineData%Aq
-ENDIF
-IF (ALLOCATED(SrcLineData%B)) THEN
-  i1_l = LBOUND(SrcLineData%B,1)
-  i1_u = UBOUND(SrcLineData%B,1)
-  i2_l = LBOUND(SrcLineData%B,2)
-  i2_u = UBOUND(SrcLineData%B,2)
-  IF (.NOT. ALLOCATED(DstLineData%B)) THEN 
-    ALLOCATE(DstLineData%B(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%B.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%B = SrcLineData%B
-ENDIF
-IF (ALLOCATED(SrcLineData%Bs)) THEN
-  i1_l = LBOUND(SrcLineData%Bs,1)
-  i1_u = UBOUND(SrcLineData%Bs,1)
-  i2_l = LBOUND(SrcLineData%Bs,2)
-  i2_u = UBOUND(SrcLineData%Bs,2)
-  IF (.NOT. ALLOCATED(DstLineData%Bs)) THEN 
-    ALLOCATE(DstLineData%Bs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Bs.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%Bs = SrcLineData%Bs
-ENDIF
-IF (ALLOCATED(SrcLineData%Fnet)) THEN
-  i1_l = LBOUND(SrcLineData%Fnet,1)
-  i1_u = UBOUND(SrcLineData%Fnet,1)
-  i2_l = LBOUND(SrcLineData%Fnet,2)
-  i2_u = UBOUND(SrcLineData%Fnet,2)
-  IF (.NOT. ALLOCATED(DstLineData%Fnet)) THEN 
-    ALLOCATE(DstLineData%Fnet(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Fnet.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%Fnet = SrcLineData%Fnet
-ENDIF
-IF (ALLOCATED(SrcLineData%S)) THEN
-  i1_l = LBOUND(SrcLineData%S,1)
-  i1_u = UBOUND(SrcLineData%S,1)
-  i2_l = LBOUND(SrcLineData%S,2)
-  i2_u = UBOUND(SrcLineData%S,2)
-  i3_l = LBOUND(SrcLineData%S,3)
-  i3_u = UBOUND(SrcLineData%S,3)
-  IF (.NOT. ALLOCATED(DstLineData%S)) THEN 
-    ALLOCATE(DstLineData%S(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%S.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%S = SrcLineData%S
-ENDIF
-IF (ALLOCATED(SrcLineData%M)) THEN
-  i1_l = LBOUND(SrcLineData%M,1)
-  i1_u = UBOUND(SrcLineData%M,1)
-  i2_l = LBOUND(SrcLineData%M,2)
-  i2_u = UBOUND(SrcLineData%M,2)
-  i3_l = LBOUND(SrcLineData%M,3)
-  i3_u = UBOUND(SrcLineData%M,3)
-  IF (.NOT. ALLOCATED(DstLineData%M)) THEN 
-    ALLOCATE(DstLineData%M(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%M.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%M = SrcLineData%M
-ENDIF
-    DstLineData%EndMomentA = SrcLineData%EndMomentA
-    DstLineData%EndMomentB = SrcLineData%EndMomentB
-    DstLineData%LineUnOut = SrcLineData%LineUnOut
-IF (ALLOCATED(SrcLineData%LineWrOutput)) THEN
-  i1_l = LBOUND(SrcLineData%LineWrOutput,1)
-  i1_u = UBOUND(SrcLineData%LineWrOutput,1)
-  IF (.NOT. ALLOCATED(DstLineData%LineWrOutput)) THEN 
-    ALLOCATE(DstLineData%LineWrOutput(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%LineWrOutput.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstLineData%LineWrOutput = SrcLineData%LineWrOutput
-ENDIF
- END SUBROUTINE MD_CopyLine
+   ErrMsg  = ''
+   DstLineData%IdNum = SrcLineData%IdNum
+   DstLineData%PropsIdNum = SrcLineData%PropsIdNum
+   DstLineData%ElasticMod = SrcLineData%ElasticMod
+   DstLineData%OutFlagList = SrcLineData%OutFlagList
+   DstLineData%CtrlChan = SrcLineData%CtrlChan
+   DstLineData%FairConnect = SrcLineData%FairConnect
+   DstLineData%AnchConnect = SrcLineData%AnchConnect
+   DstLineData%N = SrcLineData%N
+   DstLineData%endTypeA = SrcLineData%endTypeA
+   DstLineData%endTypeB = SrcLineData%endTypeB
+   DstLineData%UnstrLen = SrcLineData%UnstrLen
+   DstLineData%rho = SrcLineData%rho
+   DstLineData%d = SrcLineData%d
+   DstLineData%EA = SrcLineData%EA
+   DstLineData%EA_D = SrcLineData%EA_D
+   DstLineData%BA = SrcLineData%BA
+   DstLineData%BA_D = SrcLineData%BA_D
+   DstLineData%EI = SrcLineData%EI
+   DstLineData%Can = SrcLineData%Can
+   DstLineData%Cat = SrcLineData%Cat
+   DstLineData%Cdn = SrcLineData%Cdn
+   DstLineData%Cdt = SrcLineData%Cdt
+   DstLineData%nEApoints = SrcLineData%nEApoints
+   DstLineData%stiffXs = SrcLineData%stiffXs
+   DstLineData%stiffYs = SrcLineData%stiffYs
+   DstLineData%nBApoints = SrcLineData%nBApoints
+   DstLineData%dampXs = SrcLineData%dampXs
+   DstLineData%dampYs = SrcLineData%dampYs
+   DstLineData%nEIpoints = SrcLineData%nEIpoints
+   DstLineData%bstiffXs = SrcLineData%bstiffXs
+   DstLineData%bstiffYs = SrcLineData%bstiffYs
+   DstLineData%time = SrcLineData%time
+   if (allocated(SrcLineData%r)) then
+      LB(1:2) = lbound(SrcLineData%r)
+      UB(1:2) = ubound(SrcLineData%r)
+      if (.not. allocated(DstLineData%r)) then
+         allocate(DstLineData%r(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%r.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%r = SrcLineData%r
+   else if (allocated(DstLineData%r)) then
+      deallocate(DstLineData%r)
+   end if
+   if (allocated(SrcLineData%rd)) then
+      LB(1:2) = lbound(SrcLineData%rd)
+      UB(1:2) = ubound(SrcLineData%rd)
+      if (.not. allocated(DstLineData%rd)) then
+         allocate(DstLineData%rd(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%rd.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%rd = SrcLineData%rd
+   else if (allocated(DstLineData%rd)) then
+      deallocate(DstLineData%rd)
+   end if
+   if (allocated(SrcLineData%q)) then
+      LB(1:2) = lbound(SrcLineData%q)
+      UB(1:2) = ubound(SrcLineData%q)
+      if (.not. allocated(DstLineData%q)) then
+         allocate(DstLineData%q(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%q.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%q = SrcLineData%q
+   else if (allocated(DstLineData%q)) then
+      deallocate(DstLineData%q)
+   end if
+   if (allocated(SrcLineData%qs)) then
+      LB(1:2) = lbound(SrcLineData%qs)
+      UB(1:2) = ubound(SrcLineData%qs)
+      if (.not. allocated(DstLineData%qs)) then
+         allocate(DstLineData%qs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%qs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%qs = SrcLineData%qs
+   else if (allocated(DstLineData%qs)) then
+      deallocate(DstLineData%qs)
+   end if
+   if (allocated(SrcLineData%l)) then
+      LB(1:1) = lbound(SrcLineData%l)
+      UB(1:1) = ubound(SrcLineData%l)
+      if (.not. allocated(DstLineData%l)) then
+         allocate(DstLineData%l(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%l.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%l = SrcLineData%l
+   else if (allocated(DstLineData%l)) then
+      deallocate(DstLineData%l)
+   end if
+   if (allocated(SrcLineData%ld)) then
+      LB(1:1) = lbound(SrcLineData%ld)
+      UB(1:1) = ubound(SrcLineData%ld)
+      if (.not. allocated(DstLineData%ld)) then
+         allocate(DstLineData%ld(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%ld.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%ld = SrcLineData%ld
+   else if (allocated(DstLineData%ld)) then
+      deallocate(DstLineData%ld)
+   end if
+   if (allocated(SrcLineData%lstr)) then
+      LB(1:1) = lbound(SrcLineData%lstr)
+      UB(1:1) = ubound(SrcLineData%lstr)
+      if (.not. allocated(DstLineData%lstr)) then
+         allocate(DstLineData%lstr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%lstr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%lstr = SrcLineData%lstr
+   else if (allocated(DstLineData%lstr)) then
+      deallocate(DstLineData%lstr)
+   end if
+   if (allocated(SrcLineData%lstrd)) then
+      LB(1:1) = lbound(SrcLineData%lstrd)
+      UB(1:1) = ubound(SrcLineData%lstrd)
+      if (.not. allocated(DstLineData%lstrd)) then
+         allocate(DstLineData%lstrd(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%lstrd.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%lstrd = SrcLineData%lstrd
+   else if (allocated(DstLineData%lstrd)) then
+      deallocate(DstLineData%lstrd)
+   end if
+   if (allocated(SrcLineData%Kurv)) then
+      LB(1:1) = lbound(SrcLineData%Kurv)
+      UB(1:1) = ubound(SrcLineData%Kurv)
+      if (.not. allocated(DstLineData%Kurv)) then
+         allocate(DstLineData%Kurv(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Kurv.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%Kurv = SrcLineData%Kurv
+   else if (allocated(DstLineData%Kurv)) then
+      deallocate(DstLineData%Kurv)
+   end if
+   if (allocated(SrcLineData%dl_1)) then
+      LB(1:1) = lbound(SrcLineData%dl_1)
+      UB(1:1) = ubound(SrcLineData%dl_1)
+      if (.not. allocated(DstLineData%dl_1)) then
+         allocate(DstLineData%dl_1(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%dl_1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%dl_1 = SrcLineData%dl_1
+   else if (allocated(DstLineData%dl_1)) then
+      deallocate(DstLineData%dl_1)
+   end if
+   if (allocated(SrcLineData%V)) then
+      LB(1:1) = lbound(SrcLineData%V)
+      UB(1:1) = ubound(SrcLineData%V)
+      if (.not. allocated(DstLineData%V)) then
+         allocate(DstLineData%V(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%V.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%V = SrcLineData%V
+   else if (allocated(DstLineData%V)) then
+      deallocate(DstLineData%V)
+   end if
+   if (allocated(SrcLineData%U)) then
+      LB(1:2) = lbound(SrcLineData%U)
+      UB(1:2) = ubound(SrcLineData%U)
+      if (.not. allocated(DstLineData%U)) then
+         allocate(DstLineData%U(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%U.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%U = SrcLineData%U
+   else if (allocated(DstLineData%U)) then
+      deallocate(DstLineData%U)
+   end if
+   if (allocated(SrcLineData%Ud)) then
+      LB(1:2) = lbound(SrcLineData%Ud)
+      UB(1:2) = ubound(SrcLineData%Ud)
+      if (.not. allocated(DstLineData%Ud)) then
+         allocate(DstLineData%Ud(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Ud.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%Ud = SrcLineData%Ud
+   else if (allocated(DstLineData%Ud)) then
+      deallocate(DstLineData%Ud)
+   end if
+   if (allocated(SrcLineData%zeta)) then
+      LB(1:1) = lbound(SrcLineData%zeta)
+      UB(1:1) = ubound(SrcLineData%zeta)
+      if (.not. allocated(DstLineData%zeta)) then
+         allocate(DstLineData%zeta(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%zeta.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%zeta = SrcLineData%zeta
+   else if (allocated(DstLineData%zeta)) then
+      deallocate(DstLineData%zeta)
+   end if
+   if (allocated(SrcLineData%PDyn)) then
+      LB(1:1) = lbound(SrcLineData%PDyn)
+      UB(1:1) = ubound(SrcLineData%PDyn)
+      if (.not. allocated(DstLineData%PDyn)) then
+         allocate(DstLineData%PDyn(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%PDyn.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%PDyn = SrcLineData%PDyn
+   else if (allocated(DstLineData%PDyn)) then
+      deallocate(DstLineData%PDyn)
+   end if
+   if (allocated(SrcLineData%T)) then
+      LB(1:2) = lbound(SrcLineData%T)
+      UB(1:2) = ubound(SrcLineData%T)
+      if (.not. allocated(DstLineData%T)) then
+         allocate(DstLineData%T(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%T.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%T = SrcLineData%T
+   else if (allocated(DstLineData%T)) then
+      deallocate(DstLineData%T)
+   end if
+   if (allocated(SrcLineData%Td)) then
+      LB(1:2) = lbound(SrcLineData%Td)
+      UB(1:2) = ubound(SrcLineData%Td)
+      if (.not. allocated(DstLineData%Td)) then
+         allocate(DstLineData%Td(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Td.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%Td = SrcLineData%Td
+   else if (allocated(DstLineData%Td)) then
+      deallocate(DstLineData%Td)
+   end if
+   if (allocated(SrcLineData%W)) then
+      LB(1:2) = lbound(SrcLineData%W)
+      UB(1:2) = ubound(SrcLineData%W)
+      if (.not. allocated(DstLineData%W)) then
+         allocate(DstLineData%W(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%W.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%W = SrcLineData%W
+   else if (allocated(DstLineData%W)) then
+      deallocate(DstLineData%W)
+   end if
+   if (allocated(SrcLineData%Dp)) then
+      LB(1:2) = lbound(SrcLineData%Dp)
+      UB(1:2) = ubound(SrcLineData%Dp)
+      if (.not. allocated(DstLineData%Dp)) then
+         allocate(DstLineData%Dp(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Dp.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%Dp = SrcLineData%Dp
+   else if (allocated(DstLineData%Dp)) then
+      deallocate(DstLineData%Dp)
+   end if
+   if (allocated(SrcLineData%Dq)) then
+      LB(1:2) = lbound(SrcLineData%Dq)
+      UB(1:2) = ubound(SrcLineData%Dq)
+      if (.not. allocated(DstLineData%Dq)) then
+         allocate(DstLineData%Dq(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Dq.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%Dq = SrcLineData%Dq
+   else if (allocated(DstLineData%Dq)) then
+      deallocate(DstLineData%Dq)
+   end if
+   if (allocated(SrcLineData%Ap)) then
+      LB(1:2) = lbound(SrcLineData%Ap)
+      UB(1:2) = ubound(SrcLineData%Ap)
+      if (.not. allocated(DstLineData%Ap)) then
+         allocate(DstLineData%Ap(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Ap.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%Ap = SrcLineData%Ap
+   else if (allocated(DstLineData%Ap)) then
+      deallocate(DstLineData%Ap)
+   end if
+   if (allocated(SrcLineData%Aq)) then
+      LB(1:2) = lbound(SrcLineData%Aq)
+      UB(1:2) = ubound(SrcLineData%Aq)
+      if (.not. allocated(DstLineData%Aq)) then
+         allocate(DstLineData%Aq(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Aq.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%Aq = SrcLineData%Aq
+   else if (allocated(DstLineData%Aq)) then
+      deallocate(DstLineData%Aq)
+   end if
+   if (allocated(SrcLineData%B)) then
+      LB(1:2) = lbound(SrcLineData%B)
+      UB(1:2) = ubound(SrcLineData%B)
+      if (.not. allocated(DstLineData%B)) then
+         allocate(DstLineData%B(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%B.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%B = SrcLineData%B
+   else if (allocated(DstLineData%B)) then
+      deallocate(DstLineData%B)
+   end if
+   if (allocated(SrcLineData%Bs)) then
+      LB(1:2) = lbound(SrcLineData%Bs)
+      UB(1:2) = ubound(SrcLineData%Bs)
+      if (.not. allocated(DstLineData%Bs)) then
+         allocate(DstLineData%Bs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Bs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%Bs = SrcLineData%Bs
+   else if (allocated(DstLineData%Bs)) then
+      deallocate(DstLineData%Bs)
+   end if
+   if (allocated(SrcLineData%Fnet)) then
+      LB(1:2) = lbound(SrcLineData%Fnet)
+      UB(1:2) = ubound(SrcLineData%Fnet)
+      if (.not. allocated(DstLineData%Fnet)) then
+         allocate(DstLineData%Fnet(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%Fnet.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%Fnet = SrcLineData%Fnet
+   else if (allocated(DstLineData%Fnet)) then
+      deallocate(DstLineData%Fnet)
+   end if
+   if (allocated(SrcLineData%S)) then
+      LB(1:3) = lbound(SrcLineData%S)
+      UB(1:3) = ubound(SrcLineData%S)
+      if (.not. allocated(DstLineData%S)) then
+         allocate(DstLineData%S(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%S.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%S = SrcLineData%S
+   else if (allocated(DstLineData%S)) then
+      deallocate(DstLineData%S)
+   end if
+   if (allocated(SrcLineData%M)) then
+      LB(1:3) = lbound(SrcLineData%M)
+      UB(1:3) = ubound(SrcLineData%M)
+      if (.not. allocated(DstLineData%M)) then
+         allocate(DstLineData%M(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%M.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%M = SrcLineData%M
+   else if (allocated(DstLineData%M)) then
+      deallocate(DstLineData%M)
+   end if
+   DstLineData%EndMomentA = SrcLineData%EndMomentA
+   DstLineData%EndMomentB = SrcLineData%EndMomentB
+   DstLineData%LineUnOut = SrcLineData%LineUnOut
+   if (allocated(SrcLineData%LineWrOutput)) then
+      LB(1:1) = lbound(SrcLineData%LineWrOutput)
+      UB(1:1) = ubound(SrcLineData%LineWrOutput)
+      if (.not. allocated(DstLineData%LineWrOutput)) then
+         allocate(DstLineData%LineWrOutput(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstLineData%LineWrOutput.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstLineData%LineWrOutput = SrcLineData%LineWrOutput
+   else if (allocated(DstLineData%LineWrOutput)) then
+      deallocate(DstLineData%LineWrOutput)
+   end if
+end subroutine
 
- SUBROUTINE MD_DestroyLine( LineData, ErrStat, ErrMsg )
-  TYPE(MD_Line), INTENT(INOUT) :: LineData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyLine'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(LineData%r)) THEN
-  DEALLOCATE(LineData%r)
-ENDIF
-IF (ALLOCATED(LineData%rd)) THEN
-  DEALLOCATE(LineData%rd)
-ENDIF
-IF (ALLOCATED(LineData%q)) THEN
-  DEALLOCATE(LineData%q)
-ENDIF
-IF (ALLOCATED(LineData%qs)) THEN
-  DEALLOCATE(LineData%qs)
-ENDIF
-IF (ALLOCATED(LineData%l)) THEN
-  DEALLOCATE(LineData%l)
-ENDIF
-IF (ALLOCATED(LineData%ld)) THEN
-  DEALLOCATE(LineData%ld)
-ENDIF
-IF (ALLOCATED(LineData%lstr)) THEN
-  DEALLOCATE(LineData%lstr)
-ENDIF
-IF (ALLOCATED(LineData%lstrd)) THEN
-  DEALLOCATE(LineData%lstrd)
-ENDIF
-IF (ALLOCATED(LineData%Kurv)) THEN
-  DEALLOCATE(LineData%Kurv)
-ENDIF
-IF (ALLOCATED(LineData%dl_1)) THEN
-  DEALLOCATE(LineData%dl_1)
-ENDIF
-IF (ALLOCATED(LineData%V)) THEN
-  DEALLOCATE(LineData%V)
-ENDIF
-IF (ALLOCATED(LineData%U)) THEN
-  DEALLOCATE(LineData%U)
-ENDIF
-IF (ALLOCATED(LineData%Ud)) THEN
-  DEALLOCATE(LineData%Ud)
-ENDIF
-IF (ALLOCATED(LineData%zeta)) THEN
-  DEALLOCATE(LineData%zeta)
-ENDIF
-IF (ALLOCATED(LineData%PDyn)) THEN
-  DEALLOCATE(LineData%PDyn)
-ENDIF
-IF (ALLOCATED(LineData%T)) THEN
-  DEALLOCATE(LineData%T)
-ENDIF
-IF (ALLOCATED(LineData%Td)) THEN
-  DEALLOCATE(LineData%Td)
-ENDIF
-IF (ALLOCATED(LineData%W)) THEN
-  DEALLOCATE(LineData%W)
-ENDIF
-IF (ALLOCATED(LineData%Dp)) THEN
-  DEALLOCATE(LineData%Dp)
-ENDIF
-IF (ALLOCATED(LineData%Dq)) THEN
-  DEALLOCATE(LineData%Dq)
-ENDIF
-IF (ALLOCATED(LineData%Ap)) THEN
-  DEALLOCATE(LineData%Ap)
-ENDIF
-IF (ALLOCATED(LineData%Aq)) THEN
-  DEALLOCATE(LineData%Aq)
-ENDIF
-IF (ALLOCATED(LineData%B)) THEN
-  DEALLOCATE(LineData%B)
-ENDIF
-IF (ALLOCATED(LineData%Bs)) THEN
-  DEALLOCATE(LineData%Bs)
-ENDIF
-IF (ALLOCATED(LineData%Fnet)) THEN
-  DEALLOCATE(LineData%Fnet)
-ENDIF
-IF (ALLOCATED(LineData%S)) THEN
-  DEALLOCATE(LineData%S)
-ENDIF
-IF (ALLOCATED(LineData%M)) THEN
-  DEALLOCATE(LineData%M)
-ENDIF
-IF (ALLOCATED(LineData%LineWrOutput)) THEN
-  DEALLOCATE(LineData%LineWrOutput)
-ENDIF
- END SUBROUTINE MD_DestroyLine
-
+subroutine MD_DestroyLine(LineData, ErrStat, ErrMsg)
+   type(MD_Line), intent(inout) :: LineData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_DestroyLine'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(LineData%r)) then
+      deallocate(LineData%r)
+   end if
+   if (allocated(LineData%rd)) then
+      deallocate(LineData%rd)
+   end if
+   if (allocated(LineData%q)) then
+      deallocate(LineData%q)
+   end if
+   if (allocated(LineData%qs)) then
+      deallocate(LineData%qs)
+   end if
+   if (allocated(LineData%l)) then
+      deallocate(LineData%l)
+   end if
+   if (allocated(LineData%ld)) then
+      deallocate(LineData%ld)
+   end if
+   if (allocated(LineData%lstr)) then
+      deallocate(LineData%lstr)
+   end if
+   if (allocated(LineData%lstrd)) then
+      deallocate(LineData%lstrd)
+   end if
+   if (allocated(LineData%Kurv)) then
+      deallocate(LineData%Kurv)
+   end if
+   if (allocated(LineData%dl_1)) then
+      deallocate(LineData%dl_1)
+   end if
+   if (allocated(LineData%V)) then
+      deallocate(LineData%V)
+   end if
+   if (allocated(LineData%U)) then
+      deallocate(LineData%U)
+   end if
+   if (allocated(LineData%Ud)) then
+      deallocate(LineData%Ud)
+   end if
+   if (allocated(LineData%zeta)) then
+      deallocate(LineData%zeta)
+   end if
+   if (allocated(LineData%PDyn)) then
+      deallocate(LineData%PDyn)
+   end if
+   if (allocated(LineData%T)) then
+      deallocate(LineData%T)
+   end if
+   if (allocated(LineData%Td)) then
+      deallocate(LineData%Td)
+   end if
+   if (allocated(LineData%W)) then
+      deallocate(LineData%W)
+   end if
+   if (allocated(LineData%Dp)) then
+      deallocate(LineData%Dp)
+   end if
+   if (allocated(LineData%Dq)) then
+      deallocate(LineData%Dq)
+   end if
+   if (allocated(LineData%Ap)) then
+      deallocate(LineData%Ap)
+   end if
+   if (allocated(LineData%Aq)) then
+      deallocate(LineData%Aq)
+   end if
+   if (allocated(LineData%B)) then
+      deallocate(LineData%B)
+   end if
+   if (allocated(LineData%Bs)) then
+      deallocate(LineData%Bs)
+   end if
+   if (allocated(LineData%Fnet)) then
+      deallocate(LineData%Fnet)
+   end if
+   if (allocated(LineData%S)) then
+      deallocate(LineData%S)
+   end if
+   if (allocated(LineData%M)) then
+      deallocate(LineData%M)
+   end if
+   if (allocated(LineData%LineWrOutput)) then
+      deallocate(LineData%LineWrOutput)
+   end if
+end subroutine
 
 subroutine MD_PackLine(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(MD_Line), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MD_PackLine'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! IdNum
    call RegPack(Buf, InData%IdNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PropsIdNum
    call RegPack(Buf, InData%PropsIdNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ElasticMod
    call RegPack(Buf, InData%ElasticMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutFlagList
    call RegPack(Buf, InData%OutFlagList)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CtrlChan
    call RegPack(Buf, InData%CtrlChan)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FairConnect
    call RegPack(Buf, InData%FairConnect)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AnchConnect
    call RegPack(Buf, InData%AnchConnect)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! N
    call RegPack(Buf, InData%N)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! endTypeA
    call RegPack(Buf, InData%endTypeA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! endTypeB
    call RegPack(Buf, InData%endTypeB)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UnstrLen
    call RegPack(Buf, InData%UnstrLen)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rho
    call RegPack(Buf, InData%rho)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! d
    call RegPack(Buf, InData%d)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EA
    call RegPack(Buf, InData%EA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EA_D
    call RegPack(Buf, InData%EA_D)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BA
    call RegPack(Buf, InData%BA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BA_D
    call RegPack(Buf, InData%BA_D)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EI
    call RegPack(Buf, InData%EI)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Can
    call RegPack(Buf, InData%Can)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cat
    call RegPack(Buf, InData%Cat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cdn
    call RegPack(Buf, InData%Cdn)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cdt
    call RegPack(Buf, InData%Cdt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nEApoints
    call RegPack(Buf, InData%nEApoints)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! stiffXs
    call RegPack(Buf, InData%stiffXs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! stiffYs
    call RegPack(Buf, InData%stiffYs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nBApoints
    call RegPack(Buf, InData%nBApoints)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dampXs
    call RegPack(Buf, InData%dampXs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dampYs
    call RegPack(Buf, InData%dampYs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nEIpoints
    call RegPack(Buf, InData%nEIpoints)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bstiffXs
    call RegPack(Buf, InData%bstiffXs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bstiffYs
    call RegPack(Buf, InData%bstiffYs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! time
    call RegPack(Buf, InData%time)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! r
    call RegPack(Buf, allocated(InData%r))
    if (allocated(InData%r)) then
       call RegPackBounds(Buf, 2, lbound(InData%r), ubound(InData%r))
       call RegPack(Buf, InData%r)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rd
    call RegPack(Buf, allocated(InData%rd))
    if (allocated(InData%rd)) then
       call RegPackBounds(Buf, 2, lbound(InData%rd), ubound(InData%rd))
       call RegPack(Buf, InData%rd)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! q
    call RegPack(Buf, allocated(InData%q))
    if (allocated(InData%q)) then
       call RegPackBounds(Buf, 2, lbound(InData%q), ubound(InData%q))
       call RegPack(Buf, InData%q)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! qs
    call RegPack(Buf, allocated(InData%qs))
    if (allocated(InData%qs)) then
       call RegPackBounds(Buf, 2, lbound(InData%qs), ubound(InData%qs))
       call RegPack(Buf, InData%qs)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! l
    call RegPack(Buf, allocated(InData%l))
    if (allocated(InData%l)) then
       call RegPackBounds(Buf, 1, lbound(InData%l), ubound(InData%l))
       call RegPack(Buf, InData%l)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ld
    call RegPack(Buf, allocated(InData%ld))
    if (allocated(InData%ld)) then
       call RegPackBounds(Buf, 1, lbound(InData%ld), ubound(InData%ld))
       call RegPack(Buf, InData%ld)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! lstr
    call RegPack(Buf, allocated(InData%lstr))
    if (allocated(InData%lstr)) then
       call RegPackBounds(Buf, 1, lbound(InData%lstr), ubound(InData%lstr))
       call RegPack(Buf, InData%lstr)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! lstrd
    call RegPack(Buf, allocated(InData%lstrd))
    if (allocated(InData%lstrd)) then
       call RegPackBounds(Buf, 1, lbound(InData%lstrd), ubound(InData%lstrd))
       call RegPack(Buf, InData%lstrd)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Kurv
    call RegPack(Buf, allocated(InData%Kurv))
    if (allocated(InData%Kurv)) then
       call RegPackBounds(Buf, 1, lbound(InData%Kurv), ubound(InData%Kurv))
       call RegPack(Buf, InData%Kurv)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dl_1
    call RegPack(Buf, allocated(InData%dl_1))
    if (allocated(InData%dl_1)) then
       call RegPackBounds(Buf, 1, lbound(InData%dl_1), ubound(InData%dl_1))
       call RegPack(Buf, InData%dl_1)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! V
    call RegPack(Buf, allocated(InData%V))
    if (allocated(InData%V)) then
       call RegPackBounds(Buf, 1, lbound(InData%V), ubound(InData%V))
       call RegPack(Buf, InData%V)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! U
    call RegPack(Buf, allocated(InData%U))
    if (allocated(InData%U)) then
       call RegPackBounds(Buf, 2, lbound(InData%U), ubound(InData%U))
       call RegPack(Buf, InData%U)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Ud
    call RegPack(Buf, allocated(InData%Ud))
    if (allocated(InData%Ud)) then
       call RegPackBounds(Buf, 2, lbound(InData%Ud), ubound(InData%Ud))
       call RegPack(Buf, InData%Ud)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! zeta
    call RegPack(Buf, allocated(InData%zeta))
    if (allocated(InData%zeta)) then
       call RegPackBounds(Buf, 1, lbound(InData%zeta), ubound(InData%zeta))
       call RegPack(Buf, InData%zeta)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PDyn
    call RegPack(Buf, allocated(InData%PDyn))
    if (allocated(InData%PDyn)) then
       call RegPackBounds(Buf, 1, lbound(InData%PDyn), ubound(InData%PDyn))
       call RegPack(Buf, InData%PDyn)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! T
    call RegPack(Buf, allocated(InData%T))
    if (allocated(InData%T)) then
       call RegPackBounds(Buf, 2, lbound(InData%T), ubound(InData%T))
       call RegPack(Buf, InData%T)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Td
    call RegPack(Buf, allocated(InData%Td))
    if (allocated(InData%Td)) then
       call RegPackBounds(Buf, 2, lbound(InData%Td), ubound(InData%Td))
       call RegPack(Buf, InData%Td)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! W
    call RegPack(Buf, allocated(InData%W))
    if (allocated(InData%W)) then
       call RegPackBounds(Buf, 2, lbound(InData%W), ubound(InData%W))
       call RegPack(Buf, InData%W)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Dp
    call RegPack(Buf, allocated(InData%Dp))
    if (allocated(InData%Dp)) then
       call RegPackBounds(Buf, 2, lbound(InData%Dp), ubound(InData%Dp))
       call RegPack(Buf, InData%Dp)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Dq
    call RegPack(Buf, allocated(InData%Dq))
    if (allocated(InData%Dq)) then
       call RegPackBounds(Buf, 2, lbound(InData%Dq), ubound(InData%Dq))
       call RegPack(Buf, InData%Dq)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Ap
    call RegPack(Buf, allocated(InData%Ap))
    if (allocated(InData%Ap)) then
       call RegPackBounds(Buf, 2, lbound(InData%Ap), ubound(InData%Ap))
       call RegPack(Buf, InData%Ap)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Aq
    call RegPack(Buf, allocated(InData%Aq))
    if (allocated(InData%Aq)) then
       call RegPackBounds(Buf, 2, lbound(InData%Aq), ubound(InData%Aq))
       call RegPack(Buf, InData%Aq)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! B
    call RegPack(Buf, allocated(InData%B))
    if (allocated(InData%B)) then
       call RegPackBounds(Buf, 2, lbound(InData%B), ubound(InData%B))
       call RegPack(Buf, InData%B)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Bs
    call RegPack(Buf, allocated(InData%Bs))
    if (allocated(InData%Bs)) then
       call RegPackBounds(Buf, 2, lbound(InData%Bs), ubound(InData%Bs))
       call RegPack(Buf, InData%Bs)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Fnet
    call RegPack(Buf, allocated(InData%Fnet))
    if (allocated(InData%Fnet)) then
       call RegPackBounds(Buf, 2, lbound(InData%Fnet), ubound(InData%Fnet))
       call RegPack(Buf, InData%Fnet)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! S
    call RegPack(Buf, allocated(InData%S))
    if (allocated(InData%S)) then
       call RegPackBounds(Buf, 3, lbound(InData%S), ubound(InData%S))
       call RegPack(Buf, InData%S)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! M
    call RegPack(Buf, allocated(InData%M))
    if (allocated(InData%M)) then
       call RegPackBounds(Buf, 3, lbound(InData%M), ubound(InData%M))
       call RegPack(Buf, InData%M)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EndMomentA
    call RegPack(Buf, InData%EndMomentA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EndMomentB
    call RegPack(Buf, InData%EndMomentB)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LineUnOut
    call RegPack(Buf, InData%LineUnOut)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LineWrOutput
    call RegPack(Buf, allocated(InData%LineWrOutput))
    if (allocated(InData%LineWrOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%LineWrOutput), ubound(InData%LineWrOutput))
@@ -3475,103 +3032,70 @@ subroutine MD_UnPackLine(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! IdNum
    call RegUnpack(Buf, OutData%IdNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PropsIdNum
    call RegUnpack(Buf, OutData%PropsIdNum)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ElasticMod
    call RegUnpack(Buf, OutData%ElasticMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutFlagList
    call RegUnpack(Buf, OutData%OutFlagList)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CtrlChan
    call RegUnpack(Buf, OutData%CtrlChan)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FairConnect
    call RegUnpack(Buf, OutData%FairConnect)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! AnchConnect
    call RegUnpack(Buf, OutData%AnchConnect)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! N
    call RegUnpack(Buf, OutData%N)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! endTypeA
    call RegUnpack(Buf, OutData%endTypeA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! endTypeB
    call RegUnpack(Buf, OutData%endTypeB)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UnstrLen
    call RegUnpack(Buf, OutData%UnstrLen)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rho
    call RegUnpack(Buf, OutData%rho)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! d
    call RegUnpack(Buf, OutData%d)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EA
    call RegUnpack(Buf, OutData%EA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EA_D
    call RegUnpack(Buf, OutData%EA_D)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BA
    call RegUnpack(Buf, OutData%BA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BA_D
    call RegUnpack(Buf, OutData%BA_D)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EI
    call RegUnpack(Buf, OutData%EI)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Can
    call RegUnpack(Buf, OutData%Can)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cat
    call RegUnpack(Buf, OutData%Cat)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cdn
    call RegUnpack(Buf, OutData%Cdn)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Cdt
    call RegUnpack(Buf, OutData%Cdt)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nEApoints
    call RegUnpack(Buf, OutData%nEApoints)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! stiffXs
    call RegUnpack(Buf, OutData%stiffXs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! stiffYs
    call RegUnpack(Buf, OutData%stiffYs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nBApoints
    call RegUnpack(Buf, OutData%nBApoints)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dampXs
    call RegUnpack(Buf, OutData%dampXs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dampYs
    call RegUnpack(Buf, OutData%dampYs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nEIpoints
    call RegUnpack(Buf, OutData%nEIpoints)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bstiffXs
    call RegUnpack(Buf, OutData%bstiffXs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! bstiffYs
    call RegUnpack(Buf, OutData%bstiffYs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! time
    call RegUnpack(Buf, OutData%time)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! r
    if (allocated(OutData%r)) deallocate(OutData%r)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3586,7 +3110,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%r)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! rd
    if (allocated(OutData%rd)) deallocate(OutData%rd)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3601,7 +3124,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%rd)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! q
    if (allocated(OutData%q)) deallocate(OutData%q)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3616,7 +3138,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%q)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! qs
    if (allocated(OutData%qs)) deallocate(OutData%qs)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3631,7 +3152,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%qs)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! l
    if (allocated(OutData%l)) deallocate(OutData%l)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3646,7 +3166,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%l)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! ld
    if (allocated(OutData%ld)) deallocate(OutData%ld)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3661,7 +3180,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%ld)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! lstr
    if (allocated(OutData%lstr)) deallocate(OutData%lstr)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3676,7 +3194,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%lstr)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! lstrd
    if (allocated(OutData%lstrd)) deallocate(OutData%lstrd)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3691,7 +3208,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%lstrd)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Kurv
    if (allocated(OutData%Kurv)) deallocate(OutData%Kurv)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3706,7 +3222,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%Kurv)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! dl_1
    if (allocated(OutData%dl_1)) deallocate(OutData%dl_1)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3721,7 +3236,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%dl_1)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! V
    if (allocated(OutData%V)) deallocate(OutData%V)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3736,7 +3250,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%V)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! U
    if (allocated(OutData%U)) deallocate(OutData%U)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3751,7 +3264,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%U)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Ud
    if (allocated(OutData%Ud)) deallocate(OutData%Ud)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3766,7 +3278,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%Ud)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! zeta
    if (allocated(OutData%zeta)) deallocate(OutData%zeta)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3781,7 +3292,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%zeta)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PDyn
    if (allocated(OutData%PDyn)) deallocate(OutData%PDyn)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3796,7 +3306,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%PDyn)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! T
    if (allocated(OutData%T)) deallocate(OutData%T)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3811,7 +3320,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%T)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Td
    if (allocated(OutData%Td)) deallocate(OutData%Td)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3826,7 +3334,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%Td)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! W
    if (allocated(OutData%W)) deallocate(OutData%W)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3841,7 +3348,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%W)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Dp
    if (allocated(OutData%Dp)) deallocate(OutData%Dp)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3856,7 +3362,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%Dp)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Dq
    if (allocated(OutData%Dq)) deallocate(OutData%Dq)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3871,7 +3376,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%Dq)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Ap
    if (allocated(OutData%Ap)) deallocate(OutData%Ap)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3886,7 +3390,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%Ap)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Aq
    if (allocated(OutData%Aq)) deallocate(OutData%Aq)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3901,7 +3404,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%Aq)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! B
    if (allocated(OutData%B)) deallocate(OutData%B)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3916,7 +3418,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%B)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Bs
    if (allocated(OutData%Bs)) deallocate(OutData%Bs)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3931,7 +3432,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%Bs)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Fnet
    if (allocated(OutData%Fnet)) deallocate(OutData%Fnet)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3946,7 +3446,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%Fnet)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! S
    if (allocated(OutData%S)) deallocate(OutData%S)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3961,7 +3460,6 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%S)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! M
    if (allocated(OutData%M)) deallocate(OutData%M)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3976,16 +3474,12 @@ subroutine MD_UnPackLine(Buf, OutData)
       call RegUnpack(Buf, OutData%M)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! EndMomentA
    call RegUnpack(Buf, OutData%EndMomentA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EndMomentB
    call RegUnpack(Buf, OutData%EndMomentB)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LineUnOut
    call RegUnpack(Buf, OutData%LineUnOut)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LineWrOutput
    if (allocated(OutData%LineWrOutput)) deallocate(OutData%LineWrOutput)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4001,45 +3495,33 @@ subroutine MD_UnPackLine(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE MD_CopyFail( SrcFailData, DstFailData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_Fail), INTENT(IN) :: SrcFailData
-   TYPE(MD_Fail), INTENT(INOUT) :: DstFailData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyFail'
-! 
+
+subroutine MD_CopyFail(SrcFailData, DstFailData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_Fail), intent(in) :: SrcFailData
+   type(MD_Fail), intent(inout) :: DstFailData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_CopyFail'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstFailData%IdNum = SrcFailData%IdNum
- END SUBROUTINE MD_CopyFail
+   ErrMsg  = ''
+   DstFailData%IdNum = SrcFailData%IdNum
+end subroutine
 
- SUBROUTINE MD_DestroyFail( FailData, ErrStat, ErrMsg )
-  TYPE(MD_Fail), INTENT(INOUT) :: FailData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyFail'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE MD_DestroyFail
-
+subroutine MD_DestroyFail(FailData, ErrStat, ErrMsg)
+   type(MD_Fail), intent(inout) :: FailData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_DestroyFail'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine MD_PackFail(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(MD_Fail), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MD_PackFail'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! IdNum
    call RegPack(Buf, InData%IdNum)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -4049,69 +3531,51 @@ subroutine MD_UnPackFail(Buf, OutData)
    type(MD_Fail), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MD_UnPackFail'
    if (Buf%ErrStat /= ErrID_None) return
-   ! IdNum
    call RegUnpack(Buf, OutData%IdNum)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE MD_CopyOutParmType( SrcOutParmTypeData, DstOutParmTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_OutParmType), INTENT(IN) :: SrcOutParmTypeData
-   TYPE(MD_OutParmType), INTENT(INOUT) :: DstOutParmTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyOutParmType'
-! 
+
+subroutine MD_CopyOutParmType(SrcOutParmTypeData, DstOutParmTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_OutParmType), intent(in) :: SrcOutParmTypeData
+   type(MD_OutParmType), intent(inout) :: DstOutParmTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_CopyOutParmType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstOutParmTypeData%Name = SrcOutParmTypeData%Name
-    DstOutParmTypeData%Units = SrcOutParmTypeData%Units
-    DstOutParmTypeData%QType = SrcOutParmTypeData%QType
-    DstOutParmTypeData%OType = SrcOutParmTypeData%OType
-    DstOutParmTypeData%NodeID = SrcOutParmTypeData%NodeID
-    DstOutParmTypeData%ObjID = SrcOutParmTypeData%ObjID
- END SUBROUTINE MD_CopyOutParmType
+   ErrMsg  = ''
+   DstOutParmTypeData%Name = SrcOutParmTypeData%Name
+   DstOutParmTypeData%Units = SrcOutParmTypeData%Units
+   DstOutParmTypeData%QType = SrcOutParmTypeData%QType
+   DstOutParmTypeData%OType = SrcOutParmTypeData%OType
+   DstOutParmTypeData%NodeID = SrcOutParmTypeData%NodeID
+   DstOutParmTypeData%ObjID = SrcOutParmTypeData%ObjID
+end subroutine
 
- SUBROUTINE MD_DestroyOutParmType( OutParmTypeData, ErrStat, ErrMsg )
-  TYPE(MD_OutParmType), INTENT(INOUT) :: OutParmTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyOutParmType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE MD_DestroyOutParmType
-
+subroutine MD_DestroyOutParmType(OutParmTypeData, ErrStat, ErrMsg)
+   type(MD_OutParmType), intent(inout) :: OutParmTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_DestroyOutParmType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine MD_PackOutParmType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(MD_OutParmType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MD_PackOutParmType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! Name
    call RegPack(Buf, InData%Name)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Units
    call RegPack(Buf, InData%Units)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! QType
    call RegPack(Buf, InData%QType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OType
    call RegPack(Buf, InData%OType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NodeID
    call RegPack(Buf, InData%NodeID)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ObjID
    call RegPack(Buf, InData%ObjID)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -4121,307 +3585,302 @@ subroutine MD_UnPackOutParmType(Buf, OutData)
    type(MD_OutParmType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MD_UnPackOutParmType'
    if (Buf%ErrStat /= ErrID_None) return
-   ! Name
    call RegUnpack(Buf, OutData%Name)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Units
    call RegUnpack(Buf, OutData%Units)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! QType
    call RegUnpack(Buf, OutData%QType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OType
    call RegUnpack(Buf, OutData%OType)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NodeID
    call RegUnpack(Buf, OutData%NodeID)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ObjID
    call RegUnpack(Buf, OutData%ObjID)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE MD_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_InitOutputType), INTENT(IN) :: SrcInitOutputData
-   TYPE(MD_InitOutputType), INTENT(INOUT) :: DstInitOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyInitOutput'
-! 
+
+subroutine MD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_InitOutputType), intent(in) :: SrcInitOutputData
+   type(MD_InitOutputType), intent(inout) :: DstInitOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'MD_CopyInitOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcInitOutputData%writeOutputHdr)) THEN
-  i1_l = LBOUND(SrcInitOutputData%writeOutputHdr,1)
-  i1_u = UBOUND(SrcInitOutputData%writeOutputHdr,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%writeOutputHdr)) THEN 
-    ALLOCATE(DstInitOutputData%writeOutputHdr(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%writeOutputHdr.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%writeOutputHdr = SrcInitOutputData%writeOutputHdr
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%writeOutputUnt)) THEN
-  i1_l = LBOUND(SrcInitOutputData%writeOutputUnt,1)
-  i1_u = UBOUND(SrcInitOutputData%writeOutputUnt,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%writeOutputUnt)) THEN 
-    ALLOCATE(DstInitOutputData%writeOutputUnt(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%writeOutputUnt.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%writeOutputUnt = SrcInitOutputData%writeOutputUnt
-ENDIF
-      CALL NWTC_Library_Copyprogdesc( SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcInitOutputData%CableCChanRqst)) THEN
-  i1_l = LBOUND(SrcInitOutputData%CableCChanRqst,1)
-  i1_u = UBOUND(SrcInitOutputData%CableCChanRqst,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%CableCChanRqst)) THEN 
-    ALLOCATE(DstInitOutputData%CableCChanRqst(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%CableCChanRqst.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%CableCChanRqst = SrcInitOutputData%CableCChanRqst
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%LinNames_y)) THEN
-  i1_l = LBOUND(SrcInitOutputData%LinNames_y,1)
-  i1_u = UBOUND(SrcInitOutputData%LinNames_y,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%LinNames_y)) THEN 
-    ALLOCATE(DstInitOutputData%LinNames_y(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_y.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%LinNames_x)) THEN
-  i1_l = LBOUND(SrcInitOutputData%LinNames_x,1)
-  i1_u = UBOUND(SrcInitOutputData%LinNames_x,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%LinNames_x)) THEN 
-    ALLOCATE(DstInitOutputData%LinNames_x(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_x.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%LinNames_u)) THEN
-  i1_l = LBOUND(SrcInitOutputData%LinNames_u,1)
-  i1_u = UBOUND(SrcInitOutputData%LinNames_u,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%LinNames_u)) THEN 
-    ALLOCATE(DstInitOutputData%LinNames_u(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_u.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%RotFrame_y)) THEN
-  i1_l = LBOUND(SrcInitOutputData%RotFrame_y,1)
-  i1_u = UBOUND(SrcInitOutputData%RotFrame_y,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%RotFrame_y)) THEN 
-    ALLOCATE(DstInitOutputData%RotFrame_y(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_y.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%RotFrame_x)) THEN
-  i1_l = LBOUND(SrcInitOutputData%RotFrame_x,1)
-  i1_u = UBOUND(SrcInitOutputData%RotFrame_x,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%RotFrame_x)) THEN 
-    ALLOCATE(DstInitOutputData%RotFrame_x(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_x.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%RotFrame_x = SrcInitOutputData%RotFrame_x
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%RotFrame_u)) THEN
-  i1_l = LBOUND(SrcInitOutputData%RotFrame_u,1)
-  i1_u = UBOUND(SrcInitOutputData%RotFrame_u,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%RotFrame_u)) THEN 
-    ALLOCATE(DstInitOutputData%RotFrame_u(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_u.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%IsLoad_u)) THEN
-  i1_l = LBOUND(SrcInitOutputData%IsLoad_u,1)
-  i1_u = UBOUND(SrcInitOutputData%IsLoad_u,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%IsLoad_u)) THEN 
-    ALLOCATE(DstInitOutputData%IsLoad_u(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%IsLoad_u.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
-ENDIF
-IF (ALLOCATED(SrcInitOutputData%DerivOrder_x)) THEN
-  i1_l = LBOUND(SrcInitOutputData%DerivOrder_x,1)
-  i1_u = UBOUND(SrcInitOutputData%DerivOrder_x,1)
-  IF (.NOT. ALLOCATED(DstInitOutputData%DerivOrder_x)) THEN 
-    ALLOCATE(DstInitOutputData%DerivOrder_x(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%DerivOrder_x.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
-ENDIF
- END SUBROUTINE MD_CopyInitOutput
+   ErrMsg  = ''
+   if (allocated(SrcInitOutputData%writeOutputHdr)) then
+      LB(1:1) = lbound(SrcInitOutputData%writeOutputHdr)
+      UB(1:1) = ubound(SrcInitOutputData%writeOutputHdr)
+      if (.not. allocated(DstInitOutputData%writeOutputHdr)) then
+         allocate(DstInitOutputData%writeOutputHdr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%writeOutputHdr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%writeOutputHdr = SrcInitOutputData%writeOutputHdr
+   else if (allocated(DstInitOutputData%writeOutputHdr)) then
+      deallocate(DstInitOutputData%writeOutputHdr)
+   end if
+   if (allocated(SrcInitOutputData%writeOutputUnt)) then
+      LB(1:1) = lbound(SrcInitOutputData%writeOutputUnt)
+      UB(1:1) = ubound(SrcInitOutputData%writeOutputUnt)
+      if (.not. allocated(DstInitOutputData%writeOutputUnt)) then
+         allocate(DstInitOutputData%writeOutputUnt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%writeOutputUnt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%writeOutputUnt = SrcInitOutputData%writeOutputUnt
+   else if (allocated(DstInitOutputData%writeOutputUnt)) then
+      deallocate(DstInitOutputData%writeOutputUnt)
+   end if
+   call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcInitOutputData%CableCChanRqst)) then
+      LB(1:1) = lbound(SrcInitOutputData%CableCChanRqst)
+      UB(1:1) = ubound(SrcInitOutputData%CableCChanRqst)
+      if (.not. allocated(DstInitOutputData%CableCChanRqst)) then
+         allocate(DstInitOutputData%CableCChanRqst(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%CableCChanRqst.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%CableCChanRqst = SrcInitOutputData%CableCChanRqst
+   else if (allocated(DstInitOutputData%CableCChanRqst)) then
+      deallocate(DstInitOutputData%CableCChanRqst)
+   end if
+   if (allocated(SrcInitOutputData%LinNames_y)) then
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
+      if (.not. allocated(DstInitOutputData%LinNames_y)) then
+         allocate(DstInitOutputData%LinNames_y(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_y.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
+   else if (allocated(DstInitOutputData%LinNames_y)) then
+      deallocate(DstInitOutputData%LinNames_y)
+   end if
+   if (allocated(SrcInitOutputData%LinNames_x)) then
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_x)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_x)
+      if (.not. allocated(DstInitOutputData%LinNames_x)) then
+         allocate(DstInitOutputData%LinNames_x(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_x.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%LinNames_x = SrcInitOutputData%LinNames_x
+   else if (allocated(DstInitOutputData%LinNames_x)) then
+      deallocate(DstInitOutputData%LinNames_x)
+   end if
+   if (allocated(SrcInitOutputData%LinNames_u)) then
+      LB(1:1) = lbound(SrcInitOutputData%LinNames_u)
+      UB(1:1) = ubound(SrcInitOutputData%LinNames_u)
+      if (.not. allocated(DstInitOutputData%LinNames_u)) then
+         allocate(DstInitOutputData%LinNames_u(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_u.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
+   else if (allocated(DstInitOutputData%LinNames_u)) then
+      deallocate(DstInitOutputData%LinNames_u)
+   end if
+   if (allocated(SrcInitOutputData%RotFrame_y)) then
+      LB(1:1) = lbound(SrcInitOutputData%RotFrame_y)
+      UB(1:1) = ubound(SrcInitOutputData%RotFrame_y)
+      if (.not. allocated(DstInitOutputData%RotFrame_y)) then
+         allocate(DstInitOutputData%RotFrame_y(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_y.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%RotFrame_y = SrcInitOutputData%RotFrame_y
+   else if (allocated(DstInitOutputData%RotFrame_y)) then
+      deallocate(DstInitOutputData%RotFrame_y)
+   end if
+   if (allocated(SrcInitOutputData%RotFrame_x)) then
+      LB(1:1) = lbound(SrcInitOutputData%RotFrame_x)
+      UB(1:1) = ubound(SrcInitOutputData%RotFrame_x)
+      if (.not. allocated(DstInitOutputData%RotFrame_x)) then
+         allocate(DstInitOutputData%RotFrame_x(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_x.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%RotFrame_x = SrcInitOutputData%RotFrame_x
+   else if (allocated(DstInitOutputData%RotFrame_x)) then
+      deallocate(DstInitOutputData%RotFrame_x)
+   end if
+   if (allocated(SrcInitOutputData%RotFrame_u)) then
+      LB(1:1) = lbound(SrcInitOutputData%RotFrame_u)
+      UB(1:1) = ubound(SrcInitOutputData%RotFrame_u)
+      if (.not. allocated(DstInitOutputData%RotFrame_u)) then
+         allocate(DstInitOutputData%RotFrame_u(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%RotFrame_u.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%RotFrame_u = SrcInitOutputData%RotFrame_u
+   else if (allocated(DstInitOutputData%RotFrame_u)) then
+      deallocate(DstInitOutputData%RotFrame_u)
+   end if
+   if (allocated(SrcInitOutputData%IsLoad_u)) then
+      LB(1:1) = lbound(SrcInitOutputData%IsLoad_u)
+      UB(1:1) = ubound(SrcInitOutputData%IsLoad_u)
+      if (.not. allocated(DstInitOutputData%IsLoad_u)) then
+         allocate(DstInitOutputData%IsLoad_u(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%IsLoad_u.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
+   else if (allocated(DstInitOutputData%IsLoad_u)) then
+      deallocate(DstInitOutputData%IsLoad_u)
+   end if
+   if (allocated(SrcInitOutputData%DerivOrder_x)) then
+      LB(1:1) = lbound(SrcInitOutputData%DerivOrder_x)
+      UB(1:1) = ubound(SrcInitOutputData%DerivOrder_x)
+      if (.not. allocated(DstInitOutputData%DerivOrder_x)) then
+         allocate(DstInitOutputData%DerivOrder_x(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%DerivOrder_x.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
+   else if (allocated(DstInitOutputData%DerivOrder_x)) then
+      deallocate(DstInitOutputData%DerivOrder_x)
+   end if
+end subroutine
 
- SUBROUTINE MD_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
-  TYPE(MD_InitOutputType), INTENT(INOUT) :: InitOutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyInitOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(InitOutputData%writeOutputHdr)) THEN
-  DEALLOCATE(InitOutputData%writeOutputHdr)
-ENDIF
-IF (ALLOCATED(InitOutputData%writeOutputUnt)) THEN
-  DEALLOCATE(InitOutputData%writeOutputUnt)
-ENDIF
-  CALL NWTC_Library_DestroyProgDesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(InitOutputData%CableCChanRqst)) THEN
-  DEALLOCATE(InitOutputData%CableCChanRqst)
-ENDIF
-IF (ALLOCATED(InitOutputData%LinNames_y)) THEN
-  DEALLOCATE(InitOutputData%LinNames_y)
-ENDIF
-IF (ALLOCATED(InitOutputData%LinNames_x)) THEN
-  DEALLOCATE(InitOutputData%LinNames_x)
-ENDIF
-IF (ALLOCATED(InitOutputData%LinNames_u)) THEN
-  DEALLOCATE(InitOutputData%LinNames_u)
-ENDIF
-IF (ALLOCATED(InitOutputData%RotFrame_y)) THEN
-  DEALLOCATE(InitOutputData%RotFrame_y)
-ENDIF
-IF (ALLOCATED(InitOutputData%RotFrame_x)) THEN
-  DEALLOCATE(InitOutputData%RotFrame_x)
-ENDIF
-IF (ALLOCATED(InitOutputData%RotFrame_u)) THEN
-  DEALLOCATE(InitOutputData%RotFrame_u)
-ENDIF
-IF (ALLOCATED(InitOutputData%IsLoad_u)) THEN
-  DEALLOCATE(InitOutputData%IsLoad_u)
-ENDIF
-IF (ALLOCATED(InitOutputData%DerivOrder_x)) THEN
-  DEALLOCATE(InitOutputData%DerivOrder_x)
-ENDIF
- END SUBROUTINE MD_DestroyInitOutput
-
+subroutine MD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
+   type(MD_InitOutputType), intent(inout) :: InitOutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'MD_DestroyInitOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InitOutputData%writeOutputHdr)) then
+      deallocate(InitOutputData%writeOutputHdr)
+   end if
+   if (allocated(InitOutputData%writeOutputUnt)) then
+      deallocate(InitOutputData%writeOutputUnt)
+   end if
+   if (allocated(InitOutputData%CableCChanRqst)) then
+      deallocate(InitOutputData%CableCChanRqst)
+   end if
+   if (allocated(InitOutputData%LinNames_y)) then
+      deallocate(InitOutputData%LinNames_y)
+   end if
+   if (allocated(InitOutputData%LinNames_x)) then
+      deallocate(InitOutputData%LinNames_x)
+   end if
+   if (allocated(InitOutputData%LinNames_u)) then
+      deallocate(InitOutputData%LinNames_u)
+   end if
+   if (allocated(InitOutputData%RotFrame_y)) then
+      deallocate(InitOutputData%RotFrame_y)
+   end if
+   if (allocated(InitOutputData%RotFrame_x)) then
+      deallocate(InitOutputData%RotFrame_x)
+   end if
+   if (allocated(InitOutputData%RotFrame_u)) then
+      deallocate(InitOutputData%RotFrame_u)
+   end if
+   if (allocated(InitOutputData%IsLoad_u)) then
+      deallocate(InitOutputData%IsLoad_u)
+   end if
+   if (allocated(InitOutputData%DerivOrder_x)) then
+      deallocate(InitOutputData%DerivOrder_x)
+   end if
+end subroutine
 
 subroutine MD_PackInitOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(MD_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MD_PackInitOutput'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! writeOutputHdr
    call RegPack(Buf, allocated(InData%writeOutputHdr))
    if (allocated(InData%writeOutputHdr)) then
       call RegPackBounds(Buf, 1, lbound(InData%writeOutputHdr), ubound(InData%writeOutputHdr))
       call RegPack(Buf, InData%writeOutputHdr)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! writeOutputUnt
    call RegPack(Buf, allocated(InData%writeOutputUnt))
    if (allocated(InData%writeOutputUnt)) then
       call RegPackBounds(Buf, 1, lbound(InData%writeOutputUnt), ubound(InData%writeOutputUnt))
       call RegPack(Buf, InData%writeOutputUnt)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Ver
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CableCChanRqst
    call RegPack(Buf, allocated(InData%CableCChanRqst))
    if (allocated(InData%CableCChanRqst)) then
       call RegPackBounds(Buf, 1, lbound(InData%CableCChanRqst), ubound(InData%CableCChanRqst))
       call RegPack(Buf, InData%CableCChanRqst)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LinNames_y
    call RegPack(Buf, allocated(InData%LinNames_y))
    if (allocated(InData%LinNames_y)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames_y), ubound(InData%LinNames_y))
       call RegPack(Buf, InData%LinNames_y)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LinNames_x
    call RegPack(Buf, allocated(InData%LinNames_x))
    if (allocated(InData%LinNames_x)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames_x), ubound(InData%LinNames_x))
       call RegPack(Buf, InData%LinNames_x)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LinNames_u
    call RegPack(Buf, allocated(InData%LinNames_u))
    if (allocated(InData%LinNames_u)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames_u), ubound(InData%LinNames_u))
       call RegPack(Buf, InData%LinNames_u)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RotFrame_y
    call RegPack(Buf, allocated(InData%RotFrame_y))
    if (allocated(InData%RotFrame_y)) then
       call RegPackBounds(Buf, 1, lbound(InData%RotFrame_y), ubound(InData%RotFrame_y))
       call RegPack(Buf, InData%RotFrame_y)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RotFrame_x
    call RegPack(Buf, allocated(InData%RotFrame_x))
    if (allocated(InData%RotFrame_x)) then
       call RegPackBounds(Buf, 1, lbound(InData%RotFrame_x), ubound(InData%RotFrame_x))
       call RegPack(Buf, InData%RotFrame_x)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RotFrame_u
    call RegPack(Buf, allocated(InData%RotFrame_u))
    if (allocated(InData%RotFrame_u)) then
       call RegPackBounds(Buf, 1, lbound(InData%RotFrame_u), ubound(InData%RotFrame_u))
       call RegPack(Buf, InData%RotFrame_u)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! IsLoad_u
    call RegPack(Buf, allocated(InData%IsLoad_u))
    if (allocated(InData%IsLoad_u)) then
       call RegPackBounds(Buf, 1, lbound(InData%IsLoad_u), ubound(InData%IsLoad_u))
       call RegPack(Buf, InData%IsLoad_u)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DerivOrder_x
    call RegPack(Buf, allocated(InData%DerivOrder_x))
    if (allocated(InData%DerivOrder_x)) then
       call RegPackBounds(Buf, 1, lbound(InData%DerivOrder_x), ubound(InData%DerivOrder_x))
@@ -4438,7 +3897,6 @@ subroutine MD_UnPackInitOutput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! writeOutputHdr
    if (allocated(OutData%writeOutputHdr)) deallocate(OutData%writeOutputHdr)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4453,7 +3911,6 @@ subroutine MD_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%writeOutputHdr)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! writeOutputUnt
    if (allocated(OutData%writeOutputUnt)) deallocate(OutData%writeOutputUnt)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4468,9 +3925,7 @@ subroutine MD_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%writeOutputUnt)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Ver
    call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
-   ! CableCChanRqst
    if (allocated(OutData%CableCChanRqst)) deallocate(OutData%CableCChanRqst)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4485,7 +3940,6 @@ subroutine MD_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%CableCChanRqst)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! LinNames_y
    if (allocated(OutData%LinNames_y)) deallocate(OutData%LinNames_y)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4500,7 +3954,6 @@ subroutine MD_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%LinNames_y)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! LinNames_x
    if (allocated(OutData%LinNames_x)) deallocate(OutData%LinNames_x)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4515,7 +3968,6 @@ subroutine MD_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%LinNames_x)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! LinNames_u
    if (allocated(OutData%LinNames_u)) deallocate(OutData%LinNames_u)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4530,7 +3982,6 @@ subroutine MD_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%LinNames_u)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! RotFrame_y
    if (allocated(OutData%RotFrame_y)) deallocate(OutData%RotFrame_y)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4545,7 +3996,6 @@ subroutine MD_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%RotFrame_y)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! RotFrame_x
    if (allocated(OutData%RotFrame_x)) deallocate(OutData%RotFrame_x)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4560,7 +4010,6 @@ subroutine MD_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%RotFrame_x)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! RotFrame_u
    if (allocated(OutData%RotFrame_u)) deallocate(OutData%RotFrame_u)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4575,7 +4024,6 @@ subroutine MD_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%RotFrame_u)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! IsLoad_u
    if (allocated(OutData%IsLoad_u)) deallocate(OutData%IsLoad_u)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4590,7 +4038,6 @@ subroutine MD_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%IsLoad_u)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! DerivOrder_x
    if (allocated(OutData%DerivOrder_x)) deallocate(OutData%DerivOrder_x)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4606,60 +4053,51 @@ subroutine MD_UnPackInitOutput(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE MD_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_ContinuousStateType), INTENT(IN) :: SrcContStateData
-   TYPE(MD_ContinuousStateType), INTENT(INOUT) :: DstContStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyContState'
-! 
+
+subroutine MD_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_ContinuousStateType), intent(in) :: SrcContStateData
+   type(MD_ContinuousStateType), intent(inout) :: DstContStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'MD_CopyContState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcContStateData%states)) THEN
-  i1_l = LBOUND(SrcContStateData%states,1)
-  i1_u = UBOUND(SrcContStateData%states,1)
-  IF (.NOT. ALLOCATED(DstContStateData%states)) THEN 
-    ALLOCATE(DstContStateData%states(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstContStateData%states.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstContStateData%states = SrcContStateData%states
-ENDIF
- END SUBROUTINE MD_CopyContState
+   ErrMsg  = ''
+   if (allocated(SrcContStateData%states)) then
+      LB(1:1) = lbound(SrcContStateData%states)
+      UB(1:1) = ubound(SrcContStateData%states)
+      if (.not. allocated(DstContStateData%states)) then
+         allocate(DstContStateData%states(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstContStateData%states.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstContStateData%states = SrcContStateData%states
+   else if (allocated(DstContStateData%states)) then
+      deallocate(DstContStateData%states)
+   end if
+end subroutine
 
- SUBROUTINE MD_DestroyContState( ContStateData, ErrStat, ErrMsg )
-  TYPE(MD_ContinuousStateType), INTENT(INOUT) :: ContStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyContState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(ContStateData%states)) THEN
-  DEALLOCATE(ContStateData%states)
-ENDIF
- END SUBROUTINE MD_DestroyContState
-
+subroutine MD_DestroyContState(ContStateData, ErrStat, ErrMsg)
+   type(MD_ContinuousStateType), intent(inout) :: ContStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_DestroyContState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(ContStateData%states)) then
+      deallocate(ContStateData%states)
+   end if
+end subroutine
 
 subroutine MD_PackContState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(MD_ContinuousStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MD_PackContState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! states
    call RegPack(Buf, allocated(InData%states))
    if (allocated(InData%states)) then
       call RegPackBounds(Buf, 1, lbound(InData%states), ubound(InData%states))
@@ -4676,7 +4114,6 @@ subroutine MD_UnPackContState(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! states
    if (allocated(OutData%states)) deallocate(OutData%states)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4692,45 +4129,33 @@ subroutine MD_UnPackContState(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE MD_CopyDiscState( SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_DiscreteStateType), INTENT(IN) :: SrcDiscStateData
-   TYPE(MD_DiscreteStateType), INTENT(INOUT) :: DstDiscStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyDiscState'
-! 
+
+subroutine MD_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_DiscreteStateType), intent(in) :: SrcDiscStateData
+   type(MD_DiscreteStateType), intent(inout) :: DstDiscStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_CopyDiscState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstDiscStateData%dummy = SrcDiscStateData%dummy
- END SUBROUTINE MD_CopyDiscState
+   ErrMsg  = ''
+   DstDiscStateData%dummy = SrcDiscStateData%dummy
+end subroutine
 
- SUBROUTINE MD_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
-  TYPE(MD_DiscreteStateType), INTENT(INOUT) :: DiscStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyDiscState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE MD_DestroyDiscState
-
+subroutine MD_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
+   type(MD_DiscreteStateType), intent(inout) :: DiscStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_DestroyDiscState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine MD_PackDiscState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(MD_DiscreteStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MD_PackDiscState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! dummy
    call RegPack(Buf, InData%dummy)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -4740,49 +4165,36 @@ subroutine MD_UnPackDiscState(Buf, OutData)
    type(MD_DiscreteStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MD_UnPackDiscState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! dummy
    call RegUnpack(Buf, OutData%dummy)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE MD_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_ConstraintStateType), INTENT(IN) :: SrcConstrStateData
-   TYPE(MD_ConstraintStateType), INTENT(INOUT) :: DstConstrStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyConstrState'
-! 
+
+subroutine MD_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_ConstraintStateType), intent(in) :: SrcConstrStateData
+   type(MD_ConstraintStateType), intent(inout) :: DstConstrStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_CopyConstrState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstConstrStateData%dummy = SrcConstrStateData%dummy
- END SUBROUTINE MD_CopyConstrState
+   ErrMsg  = ''
+   DstConstrStateData%dummy = SrcConstrStateData%dummy
+end subroutine
 
- SUBROUTINE MD_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
-  TYPE(MD_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyConstrState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE MD_DestroyConstrState
-
+subroutine MD_DestroyConstrState(ConstrStateData, ErrStat, ErrMsg)
+   type(MD_ConstraintStateType), intent(inout) :: ConstrStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_DestroyConstrState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine MD_PackConstrState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(MD_ConstraintStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MD_PackConstrState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! dummy
    call RegPack(Buf, InData%dummy)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -4792,49 +4204,36 @@ subroutine MD_UnPackConstrState(Buf, OutData)
    type(MD_ConstraintStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MD_UnPackConstrState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! dummy
    call RegUnpack(Buf, OutData%dummy)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE MD_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_OtherStateType), INTENT(IN) :: SrcOtherStateData
-   TYPE(MD_OtherStateType), INTENT(INOUT) :: DstOtherStateData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyOtherState'
-! 
+
+subroutine MD_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_OtherStateType), intent(in) :: SrcOtherStateData
+   type(MD_OtherStateType), intent(inout) :: DstOtherStateData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_CopyOtherState'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstOtherStateData%dummy = SrcOtherStateData%dummy
- END SUBROUTINE MD_CopyOtherState
+   ErrMsg  = ''
+   DstOtherStateData%dummy = SrcOtherStateData%dummy
+end subroutine
 
- SUBROUTINE MD_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
-  TYPE(MD_OtherStateType), INTENT(INOUT) :: OtherStateData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyOtherState'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE MD_DestroyOtherState
-
+subroutine MD_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
+   type(MD_OtherStateType), intent(inout) :: OtherStateData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'MD_DestroyOtherState'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
 subroutine MD_PackOtherState(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(MD_OtherStateType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'MD_PackOtherState'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! dummy
    call RegPack(Buf, InData%dummy)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -4844,517 +4243,563 @@ subroutine MD_UnPackOtherState(Buf, OutData)
    type(MD_OtherStateType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'MD_UnPackOtherState'
    if (Buf%ErrStat /= ErrID_None) return
-   ! dummy
    call RegUnpack(Buf, OutData%dummy)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
- SUBROUTINE MD_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_MiscVarType), INTENT(IN) :: SrcMiscData
-   TYPE(MD_MiscVarType), INTENT(INOUT) :: DstMiscData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyMisc'
-! 
+
+subroutine MD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_MiscVarType), intent(in) :: SrcMiscData
+   type(MD_MiscVarType), intent(inout) :: DstMiscData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1, i2
+   integer(IntKi)                 :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'MD_CopyMisc'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcMiscData%LineTypeList)) THEN
-  i1_l = LBOUND(SrcMiscData%LineTypeList,1)
-  i1_u = UBOUND(SrcMiscData%LineTypeList,1)
-  IF (.NOT. ALLOCATED(DstMiscData%LineTypeList)) THEN 
-    ALLOCATE(DstMiscData%LineTypeList(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%LineTypeList.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcMiscData%LineTypeList,1), UBOUND(SrcMiscData%LineTypeList,1)
-      CALL MD_Copylineprop( SrcMiscData%LineTypeList(i1), DstMiscData%LineTypeList(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-IF (ALLOCATED(SrcMiscData%RodTypeList)) THEN
-  i1_l = LBOUND(SrcMiscData%RodTypeList,1)
-  i1_u = UBOUND(SrcMiscData%RodTypeList,1)
-  IF (.NOT. ALLOCATED(DstMiscData%RodTypeList)) THEN 
-    ALLOCATE(DstMiscData%RodTypeList(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%RodTypeList.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcMiscData%RodTypeList,1), UBOUND(SrcMiscData%RodTypeList,1)
-      CALL MD_Copyrodprop( SrcMiscData%RodTypeList(i1), DstMiscData%RodTypeList(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-      CALL MD_Copybody( SrcMiscData%GroundBody, DstMiscData%GroundBody, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcMiscData%BodyList)) THEN
-  i1_l = LBOUND(SrcMiscData%BodyList,1)
-  i1_u = UBOUND(SrcMiscData%BodyList,1)
-  IF (.NOT. ALLOCATED(DstMiscData%BodyList)) THEN 
-    ALLOCATE(DstMiscData%BodyList(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BodyList.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcMiscData%BodyList,1), UBOUND(SrcMiscData%BodyList,1)
-      CALL MD_Copybody( SrcMiscData%BodyList(i1), DstMiscData%BodyList(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-IF (ALLOCATED(SrcMiscData%RodList)) THEN
-  i1_l = LBOUND(SrcMiscData%RodList,1)
-  i1_u = UBOUND(SrcMiscData%RodList,1)
-  IF (.NOT. ALLOCATED(DstMiscData%RodList)) THEN 
-    ALLOCATE(DstMiscData%RodList(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%RodList.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcMiscData%RodList,1), UBOUND(SrcMiscData%RodList,1)
-      CALL MD_Copyrod( SrcMiscData%RodList(i1), DstMiscData%RodList(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-IF (ALLOCATED(SrcMiscData%ConnectList)) THEN
-  i1_l = LBOUND(SrcMiscData%ConnectList,1)
-  i1_u = UBOUND(SrcMiscData%ConnectList,1)
-  IF (.NOT. ALLOCATED(DstMiscData%ConnectList)) THEN 
-    ALLOCATE(DstMiscData%ConnectList(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ConnectList.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcMiscData%ConnectList,1), UBOUND(SrcMiscData%ConnectList,1)
-      CALL MD_Copyconnect( SrcMiscData%ConnectList(i1), DstMiscData%ConnectList(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-IF (ALLOCATED(SrcMiscData%LineList)) THEN
-  i1_l = LBOUND(SrcMiscData%LineList,1)
-  i1_u = UBOUND(SrcMiscData%LineList,1)
-  IF (.NOT. ALLOCATED(DstMiscData%LineList)) THEN 
-    ALLOCATE(DstMiscData%LineList(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%LineList.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcMiscData%LineList,1), UBOUND(SrcMiscData%LineList,1)
-      CALL MD_Copyline( SrcMiscData%LineList(i1), DstMiscData%LineList(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-IF (ALLOCATED(SrcMiscData%FailList)) THEN
-  i1_l = LBOUND(SrcMiscData%FailList,1)
-  i1_u = UBOUND(SrcMiscData%FailList,1)
-  IF (.NOT. ALLOCATED(DstMiscData%FailList)) THEN 
-    ALLOCATE(DstMiscData%FailList(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FailList.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcMiscData%FailList,1), UBOUND(SrcMiscData%FailList,1)
-      CALL MD_Copyfail( SrcMiscData%FailList(i1), DstMiscData%FailList(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-IF (ALLOCATED(SrcMiscData%FreeConIs)) THEN
-  i1_l = LBOUND(SrcMiscData%FreeConIs,1)
-  i1_u = UBOUND(SrcMiscData%FreeConIs,1)
-  IF (.NOT. ALLOCATED(DstMiscData%FreeConIs)) THEN 
-    ALLOCATE(DstMiscData%FreeConIs(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FreeConIs.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%FreeConIs = SrcMiscData%FreeConIs
-ENDIF
-IF (ALLOCATED(SrcMiscData%CpldConIs)) THEN
-  i1_l = LBOUND(SrcMiscData%CpldConIs,1)
-  i1_u = UBOUND(SrcMiscData%CpldConIs,1)
-  i2_l = LBOUND(SrcMiscData%CpldConIs,2)
-  i2_u = UBOUND(SrcMiscData%CpldConIs,2)
-  IF (.NOT. ALLOCATED(DstMiscData%CpldConIs)) THEN 
-    ALLOCATE(DstMiscData%CpldConIs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%CpldConIs.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%CpldConIs = SrcMiscData%CpldConIs
-ENDIF
-IF (ALLOCATED(SrcMiscData%FreeRodIs)) THEN
-  i1_l = LBOUND(SrcMiscData%FreeRodIs,1)
-  i1_u = UBOUND(SrcMiscData%FreeRodIs,1)
-  IF (.NOT. ALLOCATED(DstMiscData%FreeRodIs)) THEN 
-    ALLOCATE(DstMiscData%FreeRodIs(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FreeRodIs.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%FreeRodIs = SrcMiscData%FreeRodIs
-ENDIF
-IF (ALLOCATED(SrcMiscData%CpldRodIs)) THEN
-  i1_l = LBOUND(SrcMiscData%CpldRodIs,1)
-  i1_u = UBOUND(SrcMiscData%CpldRodIs,1)
-  i2_l = LBOUND(SrcMiscData%CpldRodIs,2)
-  i2_u = UBOUND(SrcMiscData%CpldRodIs,2)
-  IF (.NOT. ALLOCATED(DstMiscData%CpldRodIs)) THEN 
-    ALLOCATE(DstMiscData%CpldRodIs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%CpldRodIs.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%CpldRodIs = SrcMiscData%CpldRodIs
-ENDIF
-IF (ALLOCATED(SrcMiscData%FreeBodyIs)) THEN
-  i1_l = LBOUND(SrcMiscData%FreeBodyIs,1)
-  i1_u = UBOUND(SrcMiscData%FreeBodyIs,1)
-  IF (.NOT. ALLOCATED(DstMiscData%FreeBodyIs)) THEN 
-    ALLOCATE(DstMiscData%FreeBodyIs(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FreeBodyIs.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%FreeBodyIs = SrcMiscData%FreeBodyIs
-ENDIF
-IF (ALLOCATED(SrcMiscData%CpldBodyIs)) THEN
-  i1_l = LBOUND(SrcMiscData%CpldBodyIs,1)
-  i1_u = UBOUND(SrcMiscData%CpldBodyIs,1)
-  i2_l = LBOUND(SrcMiscData%CpldBodyIs,2)
-  i2_u = UBOUND(SrcMiscData%CpldBodyIs,2)
-  IF (.NOT. ALLOCATED(DstMiscData%CpldBodyIs)) THEN 
-    ALLOCATE(DstMiscData%CpldBodyIs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%CpldBodyIs.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%CpldBodyIs = SrcMiscData%CpldBodyIs
-ENDIF
-IF (ALLOCATED(SrcMiscData%LineStateIs1)) THEN
-  i1_l = LBOUND(SrcMiscData%LineStateIs1,1)
-  i1_u = UBOUND(SrcMiscData%LineStateIs1,1)
-  IF (.NOT. ALLOCATED(DstMiscData%LineStateIs1)) THEN 
-    ALLOCATE(DstMiscData%LineStateIs1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%LineStateIs1.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%LineStateIs1 = SrcMiscData%LineStateIs1
-ENDIF
-IF (ALLOCATED(SrcMiscData%LineStateIsN)) THEN
-  i1_l = LBOUND(SrcMiscData%LineStateIsN,1)
-  i1_u = UBOUND(SrcMiscData%LineStateIsN,1)
-  IF (.NOT. ALLOCATED(DstMiscData%LineStateIsN)) THEN 
-    ALLOCATE(DstMiscData%LineStateIsN(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%LineStateIsN.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%LineStateIsN = SrcMiscData%LineStateIsN
-ENDIF
-IF (ALLOCATED(SrcMiscData%ConStateIs1)) THEN
-  i1_l = LBOUND(SrcMiscData%ConStateIs1,1)
-  i1_u = UBOUND(SrcMiscData%ConStateIs1,1)
-  IF (.NOT. ALLOCATED(DstMiscData%ConStateIs1)) THEN 
-    ALLOCATE(DstMiscData%ConStateIs1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ConStateIs1.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%ConStateIs1 = SrcMiscData%ConStateIs1
-ENDIF
-IF (ALLOCATED(SrcMiscData%ConStateIsN)) THEN
-  i1_l = LBOUND(SrcMiscData%ConStateIsN,1)
-  i1_u = UBOUND(SrcMiscData%ConStateIsN,1)
-  IF (.NOT. ALLOCATED(DstMiscData%ConStateIsN)) THEN 
-    ALLOCATE(DstMiscData%ConStateIsN(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ConStateIsN.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%ConStateIsN = SrcMiscData%ConStateIsN
-ENDIF
-IF (ALLOCATED(SrcMiscData%RodStateIs1)) THEN
-  i1_l = LBOUND(SrcMiscData%RodStateIs1,1)
-  i1_u = UBOUND(SrcMiscData%RodStateIs1,1)
-  IF (.NOT. ALLOCATED(DstMiscData%RodStateIs1)) THEN 
-    ALLOCATE(DstMiscData%RodStateIs1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%RodStateIs1.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%RodStateIs1 = SrcMiscData%RodStateIs1
-ENDIF
-IF (ALLOCATED(SrcMiscData%RodStateIsN)) THEN
-  i1_l = LBOUND(SrcMiscData%RodStateIsN,1)
-  i1_u = UBOUND(SrcMiscData%RodStateIsN,1)
-  IF (.NOT. ALLOCATED(DstMiscData%RodStateIsN)) THEN 
-    ALLOCATE(DstMiscData%RodStateIsN(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%RodStateIsN.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%RodStateIsN = SrcMiscData%RodStateIsN
-ENDIF
-IF (ALLOCATED(SrcMiscData%BodyStateIs1)) THEN
-  i1_l = LBOUND(SrcMiscData%BodyStateIs1,1)
-  i1_u = UBOUND(SrcMiscData%BodyStateIs1,1)
-  IF (.NOT. ALLOCATED(DstMiscData%BodyStateIs1)) THEN 
-    ALLOCATE(DstMiscData%BodyStateIs1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BodyStateIs1.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%BodyStateIs1 = SrcMiscData%BodyStateIs1
-ENDIF
-IF (ALLOCATED(SrcMiscData%BodyStateIsN)) THEN
-  i1_l = LBOUND(SrcMiscData%BodyStateIsN,1)
-  i1_u = UBOUND(SrcMiscData%BodyStateIsN,1)
-  IF (.NOT. ALLOCATED(DstMiscData%BodyStateIsN)) THEN 
-    ALLOCATE(DstMiscData%BodyStateIsN(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BodyStateIsN.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%BodyStateIsN = SrcMiscData%BodyStateIsN
-ENDIF
-    DstMiscData%Nx = SrcMiscData%Nx
-    DstMiscData%WaveTi = SrcMiscData%WaveTi
-      CALL MD_CopyContState( SrcMiscData%xTemp, DstMiscData%xTemp, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-      CALL MD_CopyContState( SrcMiscData%xdTemp, DstMiscData%xdTemp, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    DstMiscData%zeros6 = SrcMiscData%zeros6
-IF (ALLOCATED(SrcMiscData%MDWrOutput)) THEN
-  i1_l = LBOUND(SrcMiscData%MDWrOutput,1)
-  i1_u = UBOUND(SrcMiscData%MDWrOutput,1)
-  IF (.NOT. ALLOCATED(DstMiscData%MDWrOutput)) THEN 
-    ALLOCATE(DstMiscData%MDWrOutput(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%MDWrOutput.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%MDWrOutput = SrcMiscData%MDWrOutput
-ENDIF
-    DstMiscData%LastOutTime = SrcMiscData%LastOutTime
-    DstMiscData%PtfmInit = SrcMiscData%PtfmInit
-IF (ALLOCATED(SrcMiscData%BathymetryGrid)) THEN
-  i1_l = LBOUND(SrcMiscData%BathymetryGrid,1)
-  i1_u = UBOUND(SrcMiscData%BathymetryGrid,1)
-  i2_l = LBOUND(SrcMiscData%BathymetryGrid,2)
-  i2_u = UBOUND(SrcMiscData%BathymetryGrid,2)
-  IF (.NOT. ALLOCATED(DstMiscData%BathymetryGrid)) THEN 
-    ALLOCATE(DstMiscData%BathymetryGrid(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BathymetryGrid.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%BathymetryGrid = SrcMiscData%BathymetryGrid
-ENDIF
-IF (ALLOCATED(SrcMiscData%BathGrid_Xs)) THEN
-  i1_l = LBOUND(SrcMiscData%BathGrid_Xs,1)
-  i1_u = UBOUND(SrcMiscData%BathGrid_Xs,1)
-  IF (.NOT. ALLOCATED(DstMiscData%BathGrid_Xs)) THEN 
-    ALLOCATE(DstMiscData%BathGrid_Xs(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BathGrid_Xs.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%BathGrid_Xs = SrcMiscData%BathGrid_Xs
-ENDIF
-IF (ALLOCATED(SrcMiscData%BathGrid_Ys)) THEN
-  i1_l = LBOUND(SrcMiscData%BathGrid_Ys,1)
-  i1_u = UBOUND(SrcMiscData%BathGrid_Ys,1)
-  IF (.NOT. ALLOCATED(DstMiscData%BathGrid_Ys)) THEN 
-    ALLOCATE(DstMiscData%BathGrid_Ys(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BathGrid_Ys.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%BathGrid_Ys = SrcMiscData%BathGrid_Ys
-ENDIF
-IF (ALLOCATED(SrcMiscData%BathGrid_npoints)) THEN
-  i1_l = LBOUND(SrcMiscData%BathGrid_npoints,1)
-  i1_u = UBOUND(SrcMiscData%BathGrid_npoints,1)
-  IF (.NOT. ALLOCATED(DstMiscData%BathGrid_npoints)) THEN 
-    ALLOCATE(DstMiscData%BathGrid_npoints(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BathGrid_npoints.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstMiscData%BathGrid_npoints = SrcMiscData%BathGrid_npoints
-ENDIF
- END SUBROUTINE MD_CopyMisc
+   ErrMsg  = ''
+   if (allocated(SrcMiscData%LineTypeList)) then
+      LB(1:1) = lbound(SrcMiscData%LineTypeList)
+      UB(1:1) = ubound(SrcMiscData%LineTypeList)
+      if (.not. allocated(DstMiscData%LineTypeList)) then
+         allocate(DstMiscData%LineTypeList(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%LineTypeList.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MD_CopyLineProp(SrcMiscData%LineTypeList(i1), DstMiscData%LineTypeList(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstMiscData%LineTypeList)) then
+      deallocate(DstMiscData%LineTypeList)
+   end if
+   if (allocated(SrcMiscData%RodTypeList)) then
+      LB(1:1) = lbound(SrcMiscData%RodTypeList)
+      UB(1:1) = ubound(SrcMiscData%RodTypeList)
+      if (.not. allocated(DstMiscData%RodTypeList)) then
+         allocate(DstMiscData%RodTypeList(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%RodTypeList.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MD_CopyRodProp(SrcMiscData%RodTypeList(i1), DstMiscData%RodTypeList(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstMiscData%RodTypeList)) then
+      deallocate(DstMiscData%RodTypeList)
+   end if
+   call MD_CopyBody(SrcMiscData%GroundBody, DstMiscData%GroundBody, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcMiscData%BodyList)) then
+      LB(1:1) = lbound(SrcMiscData%BodyList)
+      UB(1:1) = ubound(SrcMiscData%BodyList)
+      if (.not. allocated(DstMiscData%BodyList)) then
+         allocate(DstMiscData%BodyList(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BodyList.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MD_CopyBody(SrcMiscData%BodyList(i1), DstMiscData%BodyList(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstMiscData%BodyList)) then
+      deallocate(DstMiscData%BodyList)
+   end if
+   if (allocated(SrcMiscData%RodList)) then
+      LB(1:1) = lbound(SrcMiscData%RodList)
+      UB(1:1) = ubound(SrcMiscData%RodList)
+      if (.not. allocated(DstMiscData%RodList)) then
+         allocate(DstMiscData%RodList(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%RodList.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MD_CopyRod(SrcMiscData%RodList(i1), DstMiscData%RodList(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstMiscData%RodList)) then
+      deallocate(DstMiscData%RodList)
+   end if
+   if (allocated(SrcMiscData%ConnectList)) then
+      LB(1:1) = lbound(SrcMiscData%ConnectList)
+      UB(1:1) = ubound(SrcMiscData%ConnectList)
+      if (.not. allocated(DstMiscData%ConnectList)) then
+         allocate(DstMiscData%ConnectList(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ConnectList.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MD_CopyConnect(SrcMiscData%ConnectList(i1), DstMiscData%ConnectList(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstMiscData%ConnectList)) then
+      deallocate(DstMiscData%ConnectList)
+   end if
+   if (allocated(SrcMiscData%LineList)) then
+      LB(1:1) = lbound(SrcMiscData%LineList)
+      UB(1:1) = ubound(SrcMiscData%LineList)
+      if (.not. allocated(DstMiscData%LineList)) then
+         allocate(DstMiscData%LineList(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%LineList.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MD_CopyLine(SrcMiscData%LineList(i1), DstMiscData%LineList(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstMiscData%LineList)) then
+      deallocate(DstMiscData%LineList)
+   end if
+   if (allocated(SrcMiscData%FailList)) then
+      LB(1:1) = lbound(SrcMiscData%FailList)
+      UB(1:1) = ubound(SrcMiscData%FailList)
+      if (.not. allocated(DstMiscData%FailList)) then
+         allocate(DstMiscData%FailList(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FailList.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MD_CopyFail(SrcMiscData%FailList(i1), DstMiscData%FailList(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstMiscData%FailList)) then
+      deallocate(DstMiscData%FailList)
+   end if
+   if (allocated(SrcMiscData%FreeConIs)) then
+      LB(1:1) = lbound(SrcMiscData%FreeConIs)
+      UB(1:1) = ubound(SrcMiscData%FreeConIs)
+      if (.not. allocated(DstMiscData%FreeConIs)) then
+         allocate(DstMiscData%FreeConIs(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FreeConIs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%FreeConIs = SrcMiscData%FreeConIs
+   else if (allocated(DstMiscData%FreeConIs)) then
+      deallocate(DstMiscData%FreeConIs)
+   end if
+   if (allocated(SrcMiscData%CpldConIs)) then
+      LB(1:2) = lbound(SrcMiscData%CpldConIs)
+      UB(1:2) = ubound(SrcMiscData%CpldConIs)
+      if (.not. allocated(DstMiscData%CpldConIs)) then
+         allocate(DstMiscData%CpldConIs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%CpldConIs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%CpldConIs = SrcMiscData%CpldConIs
+   else if (allocated(DstMiscData%CpldConIs)) then
+      deallocate(DstMiscData%CpldConIs)
+   end if
+   if (allocated(SrcMiscData%FreeRodIs)) then
+      LB(1:1) = lbound(SrcMiscData%FreeRodIs)
+      UB(1:1) = ubound(SrcMiscData%FreeRodIs)
+      if (.not. allocated(DstMiscData%FreeRodIs)) then
+         allocate(DstMiscData%FreeRodIs(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FreeRodIs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%FreeRodIs = SrcMiscData%FreeRodIs
+   else if (allocated(DstMiscData%FreeRodIs)) then
+      deallocate(DstMiscData%FreeRodIs)
+   end if
+   if (allocated(SrcMiscData%CpldRodIs)) then
+      LB(1:2) = lbound(SrcMiscData%CpldRodIs)
+      UB(1:2) = ubound(SrcMiscData%CpldRodIs)
+      if (.not. allocated(DstMiscData%CpldRodIs)) then
+         allocate(DstMiscData%CpldRodIs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%CpldRodIs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%CpldRodIs = SrcMiscData%CpldRodIs
+   else if (allocated(DstMiscData%CpldRodIs)) then
+      deallocate(DstMiscData%CpldRodIs)
+   end if
+   if (allocated(SrcMiscData%FreeBodyIs)) then
+      LB(1:1) = lbound(SrcMiscData%FreeBodyIs)
+      UB(1:1) = ubound(SrcMiscData%FreeBodyIs)
+      if (.not. allocated(DstMiscData%FreeBodyIs)) then
+         allocate(DstMiscData%FreeBodyIs(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FreeBodyIs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%FreeBodyIs = SrcMiscData%FreeBodyIs
+   else if (allocated(DstMiscData%FreeBodyIs)) then
+      deallocate(DstMiscData%FreeBodyIs)
+   end if
+   if (allocated(SrcMiscData%CpldBodyIs)) then
+      LB(1:2) = lbound(SrcMiscData%CpldBodyIs)
+      UB(1:2) = ubound(SrcMiscData%CpldBodyIs)
+      if (.not. allocated(DstMiscData%CpldBodyIs)) then
+         allocate(DstMiscData%CpldBodyIs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%CpldBodyIs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%CpldBodyIs = SrcMiscData%CpldBodyIs
+   else if (allocated(DstMiscData%CpldBodyIs)) then
+      deallocate(DstMiscData%CpldBodyIs)
+   end if
+   if (allocated(SrcMiscData%LineStateIs1)) then
+      LB(1:1) = lbound(SrcMiscData%LineStateIs1)
+      UB(1:1) = ubound(SrcMiscData%LineStateIs1)
+      if (.not. allocated(DstMiscData%LineStateIs1)) then
+         allocate(DstMiscData%LineStateIs1(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%LineStateIs1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%LineStateIs1 = SrcMiscData%LineStateIs1
+   else if (allocated(DstMiscData%LineStateIs1)) then
+      deallocate(DstMiscData%LineStateIs1)
+   end if
+   if (allocated(SrcMiscData%LineStateIsN)) then
+      LB(1:1) = lbound(SrcMiscData%LineStateIsN)
+      UB(1:1) = ubound(SrcMiscData%LineStateIsN)
+      if (.not. allocated(DstMiscData%LineStateIsN)) then
+         allocate(DstMiscData%LineStateIsN(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%LineStateIsN.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%LineStateIsN = SrcMiscData%LineStateIsN
+   else if (allocated(DstMiscData%LineStateIsN)) then
+      deallocate(DstMiscData%LineStateIsN)
+   end if
+   if (allocated(SrcMiscData%ConStateIs1)) then
+      LB(1:1) = lbound(SrcMiscData%ConStateIs1)
+      UB(1:1) = ubound(SrcMiscData%ConStateIs1)
+      if (.not. allocated(DstMiscData%ConStateIs1)) then
+         allocate(DstMiscData%ConStateIs1(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ConStateIs1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%ConStateIs1 = SrcMiscData%ConStateIs1
+   else if (allocated(DstMiscData%ConStateIs1)) then
+      deallocate(DstMiscData%ConStateIs1)
+   end if
+   if (allocated(SrcMiscData%ConStateIsN)) then
+      LB(1:1) = lbound(SrcMiscData%ConStateIsN)
+      UB(1:1) = ubound(SrcMiscData%ConStateIsN)
+      if (.not. allocated(DstMiscData%ConStateIsN)) then
+         allocate(DstMiscData%ConStateIsN(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ConStateIsN.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%ConStateIsN = SrcMiscData%ConStateIsN
+   else if (allocated(DstMiscData%ConStateIsN)) then
+      deallocate(DstMiscData%ConStateIsN)
+   end if
+   if (allocated(SrcMiscData%RodStateIs1)) then
+      LB(1:1) = lbound(SrcMiscData%RodStateIs1)
+      UB(1:1) = ubound(SrcMiscData%RodStateIs1)
+      if (.not. allocated(DstMiscData%RodStateIs1)) then
+         allocate(DstMiscData%RodStateIs1(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%RodStateIs1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%RodStateIs1 = SrcMiscData%RodStateIs1
+   else if (allocated(DstMiscData%RodStateIs1)) then
+      deallocate(DstMiscData%RodStateIs1)
+   end if
+   if (allocated(SrcMiscData%RodStateIsN)) then
+      LB(1:1) = lbound(SrcMiscData%RodStateIsN)
+      UB(1:1) = ubound(SrcMiscData%RodStateIsN)
+      if (.not. allocated(DstMiscData%RodStateIsN)) then
+         allocate(DstMiscData%RodStateIsN(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%RodStateIsN.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%RodStateIsN = SrcMiscData%RodStateIsN
+   else if (allocated(DstMiscData%RodStateIsN)) then
+      deallocate(DstMiscData%RodStateIsN)
+   end if
+   if (allocated(SrcMiscData%BodyStateIs1)) then
+      LB(1:1) = lbound(SrcMiscData%BodyStateIs1)
+      UB(1:1) = ubound(SrcMiscData%BodyStateIs1)
+      if (.not. allocated(DstMiscData%BodyStateIs1)) then
+         allocate(DstMiscData%BodyStateIs1(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BodyStateIs1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%BodyStateIs1 = SrcMiscData%BodyStateIs1
+   else if (allocated(DstMiscData%BodyStateIs1)) then
+      deallocate(DstMiscData%BodyStateIs1)
+   end if
+   if (allocated(SrcMiscData%BodyStateIsN)) then
+      LB(1:1) = lbound(SrcMiscData%BodyStateIsN)
+      UB(1:1) = ubound(SrcMiscData%BodyStateIsN)
+      if (.not. allocated(DstMiscData%BodyStateIsN)) then
+         allocate(DstMiscData%BodyStateIsN(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BodyStateIsN.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%BodyStateIsN = SrcMiscData%BodyStateIsN
+   else if (allocated(DstMiscData%BodyStateIsN)) then
+      deallocate(DstMiscData%BodyStateIsN)
+   end if
+   DstMiscData%Nx = SrcMiscData%Nx
+   DstMiscData%WaveTi = SrcMiscData%WaveTi
+   call MD_CopyContState(SrcMiscData%xTemp, DstMiscData%xTemp, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call MD_CopyContState(SrcMiscData%xdTemp, DstMiscData%xdTemp, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstMiscData%zeros6 = SrcMiscData%zeros6
+   if (allocated(SrcMiscData%MDWrOutput)) then
+      LB(1:1) = lbound(SrcMiscData%MDWrOutput)
+      UB(1:1) = ubound(SrcMiscData%MDWrOutput)
+      if (.not. allocated(DstMiscData%MDWrOutput)) then
+         allocate(DstMiscData%MDWrOutput(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%MDWrOutput.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%MDWrOutput = SrcMiscData%MDWrOutput
+   else if (allocated(DstMiscData%MDWrOutput)) then
+      deallocate(DstMiscData%MDWrOutput)
+   end if
+   DstMiscData%LastOutTime = SrcMiscData%LastOutTime
+   DstMiscData%PtfmInit = SrcMiscData%PtfmInit
+   if (allocated(SrcMiscData%BathymetryGrid)) then
+      LB(1:2) = lbound(SrcMiscData%BathymetryGrid)
+      UB(1:2) = ubound(SrcMiscData%BathymetryGrid)
+      if (.not. allocated(DstMiscData%BathymetryGrid)) then
+         allocate(DstMiscData%BathymetryGrid(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BathymetryGrid.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%BathymetryGrid = SrcMiscData%BathymetryGrid
+   else if (allocated(DstMiscData%BathymetryGrid)) then
+      deallocate(DstMiscData%BathymetryGrid)
+   end if
+   if (allocated(SrcMiscData%BathGrid_Xs)) then
+      LB(1:1) = lbound(SrcMiscData%BathGrid_Xs)
+      UB(1:1) = ubound(SrcMiscData%BathGrid_Xs)
+      if (.not. allocated(DstMiscData%BathGrid_Xs)) then
+         allocate(DstMiscData%BathGrid_Xs(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BathGrid_Xs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%BathGrid_Xs = SrcMiscData%BathGrid_Xs
+   else if (allocated(DstMiscData%BathGrid_Xs)) then
+      deallocate(DstMiscData%BathGrid_Xs)
+   end if
+   if (allocated(SrcMiscData%BathGrid_Ys)) then
+      LB(1:1) = lbound(SrcMiscData%BathGrid_Ys)
+      UB(1:1) = ubound(SrcMiscData%BathGrid_Ys)
+      if (.not. allocated(DstMiscData%BathGrid_Ys)) then
+         allocate(DstMiscData%BathGrid_Ys(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BathGrid_Ys.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%BathGrid_Ys = SrcMiscData%BathGrid_Ys
+   else if (allocated(DstMiscData%BathGrid_Ys)) then
+      deallocate(DstMiscData%BathGrid_Ys)
+   end if
+   if (allocated(SrcMiscData%BathGrid_npoints)) then
+      LB(1:1) = lbound(SrcMiscData%BathGrid_npoints)
+      UB(1:1) = ubound(SrcMiscData%BathGrid_npoints)
+      if (.not. allocated(DstMiscData%BathGrid_npoints)) then
+         allocate(DstMiscData%BathGrid_npoints(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%BathGrid_npoints.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%BathGrid_npoints = SrcMiscData%BathGrid_npoints
+   else if (allocated(DstMiscData%BathGrid_npoints)) then
+      deallocate(DstMiscData%BathGrid_npoints)
+   end if
+end subroutine
 
- SUBROUTINE MD_DestroyMisc( MiscData, ErrStat, ErrMsg )
-  TYPE(MD_MiscVarType), INTENT(INOUT) :: MiscData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyMisc'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(MiscData%LineTypeList)) THEN
-DO i1 = LBOUND(MiscData%LineTypeList,1), UBOUND(MiscData%LineTypeList,1)
-  CALL MD_DestroyLineProp( MiscData%LineTypeList(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(MiscData%LineTypeList)
-ENDIF
-IF (ALLOCATED(MiscData%RodTypeList)) THEN
-DO i1 = LBOUND(MiscData%RodTypeList,1), UBOUND(MiscData%RodTypeList,1)
-  CALL MD_DestroyRodProp( MiscData%RodTypeList(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(MiscData%RodTypeList)
-ENDIF
-  CALL MD_DestroyBody( MiscData%GroundBody, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(MiscData%BodyList)) THEN
-DO i1 = LBOUND(MiscData%BodyList,1), UBOUND(MiscData%BodyList,1)
-  CALL MD_DestroyBody( MiscData%BodyList(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(MiscData%BodyList)
-ENDIF
-IF (ALLOCATED(MiscData%RodList)) THEN
-DO i1 = LBOUND(MiscData%RodList,1), UBOUND(MiscData%RodList,1)
-  CALL MD_DestroyRod( MiscData%RodList(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(MiscData%RodList)
-ENDIF
-IF (ALLOCATED(MiscData%ConnectList)) THEN
-DO i1 = LBOUND(MiscData%ConnectList,1), UBOUND(MiscData%ConnectList,1)
-  CALL MD_DestroyConnect( MiscData%ConnectList(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(MiscData%ConnectList)
-ENDIF
-IF (ALLOCATED(MiscData%LineList)) THEN
-DO i1 = LBOUND(MiscData%LineList,1), UBOUND(MiscData%LineList,1)
-  CALL MD_DestroyLine( MiscData%LineList(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(MiscData%LineList)
-ENDIF
-IF (ALLOCATED(MiscData%FailList)) THEN
-DO i1 = LBOUND(MiscData%FailList,1), UBOUND(MiscData%FailList,1)
-  CALL MD_DestroyFail( MiscData%FailList(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(MiscData%FailList)
-ENDIF
-IF (ALLOCATED(MiscData%FreeConIs)) THEN
-  DEALLOCATE(MiscData%FreeConIs)
-ENDIF
-IF (ALLOCATED(MiscData%CpldConIs)) THEN
-  DEALLOCATE(MiscData%CpldConIs)
-ENDIF
-IF (ALLOCATED(MiscData%FreeRodIs)) THEN
-  DEALLOCATE(MiscData%FreeRodIs)
-ENDIF
-IF (ALLOCATED(MiscData%CpldRodIs)) THEN
-  DEALLOCATE(MiscData%CpldRodIs)
-ENDIF
-IF (ALLOCATED(MiscData%FreeBodyIs)) THEN
-  DEALLOCATE(MiscData%FreeBodyIs)
-ENDIF
-IF (ALLOCATED(MiscData%CpldBodyIs)) THEN
-  DEALLOCATE(MiscData%CpldBodyIs)
-ENDIF
-IF (ALLOCATED(MiscData%LineStateIs1)) THEN
-  DEALLOCATE(MiscData%LineStateIs1)
-ENDIF
-IF (ALLOCATED(MiscData%LineStateIsN)) THEN
-  DEALLOCATE(MiscData%LineStateIsN)
-ENDIF
-IF (ALLOCATED(MiscData%ConStateIs1)) THEN
-  DEALLOCATE(MiscData%ConStateIs1)
-ENDIF
-IF (ALLOCATED(MiscData%ConStateIsN)) THEN
-  DEALLOCATE(MiscData%ConStateIsN)
-ENDIF
-IF (ALLOCATED(MiscData%RodStateIs1)) THEN
-  DEALLOCATE(MiscData%RodStateIs1)
-ENDIF
-IF (ALLOCATED(MiscData%RodStateIsN)) THEN
-  DEALLOCATE(MiscData%RodStateIsN)
-ENDIF
-IF (ALLOCATED(MiscData%BodyStateIs1)) THEN
-  DEALLOCATE(MiscData%BodyStateIs1)
-ENDIF
-IF (ALLOCATED(MiscData%BodyStateIsN)) THEN
-  DEALLOCATE(MiscData%BodyStateIsN)
-ENDIF
-  CALL MD_DestroyContState( MiscData%xTemp, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-  CALL MD_DestroyContState( MiscData%xdTemp, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(MiscData%MDWrOutput)) THEN
-  DEALLOCATE(MiscData%MDWrOutput)
-ENDIF
-IF (ALLOCATED(MiscData%BathymetryGrid)) THEN
-  DEALLOCATE(MiscData%BathymetryGrid)
-ENDIF
-IF (ALLOCATED(MiscData%BathGrid_Xs)) THEN
-  DEALLOCATE(MiscData%BathGrid_Xs)
-ENDIF
-IF (ALLOCATED(MiscData%BathGrid_Ys)) THEN
-  DEALLOCATE(MiscData%BathGrid_Ys)
-ENDIF
-IF (ALLOCATED(MiscData%BathGrid_npoints)) THEN
-  DEALLOCATE(MiscData%BathGrid_npoints)
-ENDIF
- END SUBROUTINE MD_DestroyMisc
-
+subroutine MD_DestroyMisc(MiscData, ErrStat, ErrMsg)
+   type(MD_MiscVarType), intent(inout) :: MiscData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1, i2
+   integer(IntKi)  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'MD_DestroyMisc'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(MiscData%LineTypeList)) then
+      LB(1:1) = lbound(MiscData%LineTypeList)
+      UB(1:1) = ubound(MiscData%LineTypeList)
+      do i1 = LB(1), UB(1)
+         call MD_DestroyLineProp(MiscData%LineTypeList(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%LineTypeList)
+   end if
+   if (allocated(MiscData%RodTypeList)) then
+      LB(1:1) = lbound(MiscData%RodTypeList)
+      UB(1:1) = ubound(MiscData%RodTypeList)
+      do i1 = LB(1), UB(1)
+         call MD_DestroyRodProp(MiscData%RodTypeList(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%RodTypeList)
+   end if
+   if (allocated(MiscData%BodyList)) then
+      LB(1:1) = lbound(MiscData%BodyList)
+      UB(1:1) = ubound(MiscData%BodyList)
+      do i1 = LB(1), UB(1)
+         call MD_DestroyBody(MiscData%BodyList(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%BodyList)
+   end if
+   if (allocated(MiscData%RodList)) then
+      LB(1:1) = lbound(MiscData%RodList)
+      UB(1:1) = ubound(MiscData%RodList)
+      do i1 = LB(1), UB(1)
+         call MD_DestroyRod(MiscData%RodList(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%RodList)
+   end if
+   if (allocated(MiscData%ConnectList)) then
+      LB(1:1) = lbound(MiscData%ConnectList)
+      UB(1:1) = ubound(MiscData%ConnectList)
+      do i1 = LB(1), UB(1)
+         call MD_DestroyConnect(MiscData%ConnectList(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%ConnectList)
+   end if
+   if (allocated(MiscData%LineList)) then
+      LB(1:1) = lbound(MiscData%LineList)
+      UB(1:1) = ubound(MiscData%LineList)
+      do i1 = LB(1), UB(1)
+         call MD_DestroyLine(MiscData%LineList(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%LineList)
+   end if
+   if (allocated(MiscData%FailList)) then
+      LB(1:1) = lbound(MiscData%FailList)
+      UB(1:1) = ubound(MiscData%FailList)
+      do i1 = LB(1), UB(1)
+         call MD_DestroyFail(MiscData%FailList(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(MiscData%FailList)
+   end if
+   if (allocated(MiscData%FreeConIs)) then
+      deallocate(MiscData%FreeConIs)
+   end if
+   if (allocated(MiscData%CpldConIs)) then
+      deallocate(MiscData%CpldConIs)
+   end if
+   if (allocated(MiscData%FreeRodIs)) then
+      deallocate(MiscData%FreeRodIs)
+   end if
+   if (allocated(MiscData%CpldRodIs)) then
+      deallocate(MiscData%CpldRodIs)
+   end if
+   if (allocated(MiscData%FreeBodyIs)) then
+      deallocate(MiscData%FreeBodyIs)
+   end if
+   if (allocated(MiscData%CpldBodyIs)) then
+      deallocate(MiscData%CpldBodyIs)
+   end if
+   if (allocated(MiscData%LineStateIs1)) then
+      deallocate(MiscData%LineStateIs1)
+   end if
+   if (allocated(MiscData%LineStateIsN)) then
+      deallocate(MiscData%LineStateIsN)
+   end if
+   if (allocated(MiscData%ConStateIs1)) then
+      deallocate(MiscData%ConStateIs1)
+   end if
+   if (allocated(MiscData%ConStateIsN)) then
+      deallocate(MiscData%ConStateIsN)
+   end if
+   if (allocated(MiscData%RodStateIs1)) then
+      deallocate(MiscData%RodStateIs1)
+   end if
+   if (allocated(MiscData%RodStateIsN)) then
+      deallocate(MiscData%RodStateIsN)
+   end if
+   if (allocated(MiscData%BodyStateIs1)) then
+      deallocate(MiscData%BodyStateIs1)
+   end if
+   if (allocated(MiscData%BodyStateIsN)) then
+      deallocate(MiscData%BodyStateIsN)
+   end if
+   if (allocated(MiscData%MDWrOutput)) then
+      deallocate(MiscData%MDWrOutput)
+   end if
+   if (allocated(MiscData%BathymetryGrid)) then
+      deallocate(MiscData%BathymetryGrid)
+   end if
+   if (allocated(MiscData%BathGrid_Xs)) then
+      deallocate(MiscData%BathGrid_Xs)
+   end if
+   if (allocated(MiscData%BathGrid_Ys)) then
+      deallocate(MiscData%BathGrid_Ys)
+   end if
+   if (allocated(MiscData%BathGrid_npoints)) then
+      deallocate(MiscData%BathGrid_npoints)
+   end if
+end subroutine
 
 subroutine MD_PackMisc(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -5363,7 +4808,6 @@ subroutine MD_PackMisc(Buf, Indata)
    integer(IntKi)  :: i1, i2
    integer(IntKi)  :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
-   ! LineTypeList
    call RegPack(Buf, allocated(InData%LineTypeList))
    if (allocated(InData%LineTypeList)) then
       call RegPackBounds(Buf, 1, lbound(InData%LineTypeList), ubound(InData%LineTypeList))
@@ -5374,7 +4818,6 @@ subroutine MD_PackMisc(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RodTypeList
    call RegPack(Buf, allocated(InData%RodTypeList))
    if (allocated(InData%RodTypeList)) then
       call RegPackBounds(Buf, 1, lbound(InData%RodTypeList), ubound(InData%RodTypeList))
@@ -5385,10 +4828,8 @@ subroutine MD_PackMisc(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! GroundBody
    call MD_PackBody(Buf, InData%GroundBody) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BodyList
    call RegPack(Buf, allocated(InData%BodyList))
    if (allocated(InData%BodyList)) then
       call RegPackBounds(Buf, 1, lbound(InData%BodyList), ubound(InData%BodyList))
@@ -5399,7 +4840,6 @@ subroutine MD_PackMisc(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RodList
    call RegPack(Buf, allocated(InData%RodList))
    if (allocated(InData%RodList)) then
       call RegPackBounds(Buf, 1, lbound(InData%RodList), ubound(InData%RodList))
@@ -5410,7 +4850,6 @@ subroutine MD_PackMisc(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ConnectList
    call RegPack(Buf, allocated(InData%ConnectList))
    if (allocated(InData%ConnectList)) then
       call RegPackBounds(Buf, 1, lbound(InData%ConnectList), ubound(InData%ConnectList))
@@ -5421,7 +4860,6 @@ subroutine MD_PackMisc(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LineList
    call RegPack(Buf, allocated(InData%LineList))
    if (allocated(InData%LineList)) then
       call RegPackBounds(Buf, 1, lbound(InData%LineList), ubound(InData%LineList))
@@ -5432,7 +4870,6 @@ subroutine MD_PackMisc(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FailList
    call RegPack(Buf, allocated(InData%FailList))
    if (allocated(InData%FailList)) then
       call RegPackBounds(Buf, 1, lbound(InData%FailList), ubound(InData%FailList))
@@ -5443,154 +4880,128 @@ subroutine MD_PackMisc(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FreeConIs
    call RegPack(Buf, allocated(InData%FreeConIs))
    if (allocated(InData%FreeConIs)) then
       call RegPackBounds(Buf, 1, lbound(InData%FreeConIs), ubound(InData%FreeConIs))
       call RegPack(Buf, InData%FreeConIs)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CpldConIs
    call RegPack(Buf, allocated(InData%CpldConIs))
    if (allocated(InData%CpldConIs)) then
       call RegPackBounds(Buf, 2, lbound(InData%CpldConIs), ubound(InData%CpldConIs))
       call RegPack(Buf, InData%CpldConIs)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FreeRodIs
    call RegPack(Buf, allocated(InData%FreeRodIs))
    if (allocated(InData%FreeRodIs)) then
       call RegPackBounds(Buf, 1, lbound(InData%FreeRodIs), ubound(InData%FreeRodIs))
       call RegPack(Buf, InData%FreeRodIs)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CpldRodIs
    call RegPack(Buf, allocated(InData%CpldRodIs))
    if (allocated(InData%CpldRodIs)) then
       call RegPackBounds(Buf, 2, lbound(InData%CpldRodIs), ubound(InData%CpldRodIs))
       call RegPack(Buf, InData%CpldRodIs)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! FreeBodyIs
    call RegPack(Buf, allocated(InData%FreeBodyIs))
    if (allocated(InData%FreeBodyIs)) then
       call RegPackBounds(Buf, 1, lbound(InData%FreeBodyIs), ubound(InData%FreeBodyIs))
       call RegPack(Buf, InData%FreeBodyIs)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! CpldBodyIs
    call RegPack(Buf, allocated(InData%CpldBodyIs))
    if (allocated(InData%CpldBodyIs)) then
       call RegPackBounds(Buf, 2, lbound(InData%CpldBodyIs), ubound(InData%CpldBodyIs))
       call RegPack(Buf, InData%CpldBodyIs)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LineStateIs1
    call RegPack(Buf, allocated(InData%LineStateIs1))
    if (allocated(InData%LineStateIs1)) then
       call RegPackBounds(Buf, 1, lbound(InData%LineStateIs1), ubound(InData%LineStateIs1))
       call RegPack(Buf, InData%LineStateIs1)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LineStateIsN
    call RegPack(Buf, allocated(InData%LineStateIsN))
    if (allocated(InData%LineStateIsN)) then
       call RegPackBounds(Buf, 1, lbound(InData%LineStateIsN), ubound(InData%LineStateIsN))
       call RegPack(Buf, InData%LineStateIsN)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ConStateIs1
    call RegPack(Buf, allocated(InData%ConStateIs1))
    if (allocated(InData%ConStateIs1)) then
       call RegPackBounds(Buf, 1, lbound(InData%ConStateIs1), ubound(InData%ConStateIs1))
       call RegPack(Buf, InData%ConStateIs1)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ConStateIsN
    call RegPack(Buf, allocated(InData%ConStateIsN))
    if (allocated(InData%ConStateIsN)) then
       call RegPackBounds(Buf, 1, lbound(InData%ConStateIsN), ubound(InData%ConStateIsN))
       call RegPack(Buf, InData%ConStateIsN)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RodStateIs1
    call RegPack(Buf, allocated(InData%RodStateIs1))
    if (allocated(InData%RodStateIs1)) then
       call RegPackBounds(Buf, 1, lbound(InData%RodStateIs1), ubound(InData%RodStateIs1))
       call RegPack(Buf, InData%RodStateIs1)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RodStateIsN
    call RegPack(Buf, allocated(InData%RodStateIsN))
    if (allocated(InData%RodStateIsN)) then
       call RegPackBounds(Buf, 1, lbound(InData%RodStateIsN), ubound(InData%RodStateIsN))
       call RegPack(Buf, InData%RodStateIsN)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BodyStateIs1
    call RegPack(Buf, allocated(InData%BodyStateIs1))
    if (allocated(InData%BodyStateIs1)) then
       call RegPackBounds(Buf, 1, lbound(InData%BodyStateIs1), ubound(InData%BodyStateIs1))
       call RegPack(Buf, InData%BodyStateIs1)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BodyStateIsN
    call RegPack(Buf, allocated(InData%BodyStateIsN))
    if (allocated(InData%BodyStateIsN)) then
       call RegPackBounds(Buf, 1, lbound(InData%BodyStateIsN), ubound(InData%BodyStateIsN))
       call RegPack(Buf, InData%BodyStateIsN)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Nx
    call RegPack(Buf, InData%Nx)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveTi
    call RegPack(Buf, InData%WaveTi)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! xTemp
    call MD_PackContState(Buf, InData%xTemp) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! xdTemp
    call MD_PackContState(Buf, InData%xdTemp) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! zeros6
    call RegPack(Buf, InData%zeros6)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MDWrOutput
    call RegPack(Buf, allocated(InData%MDWrOutput))
    if (allocated(InData%MDWrOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%MDWrOutput), ubound(InData%MDWrOutput))
       call RegPack(Buf, InData%MDWrOutput)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! LastOutTime
    call RegPack(Buf, InData%LastOutTime)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmInit
    call RegPack(Buf, InData%PtfmInit)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BathymetryGrid
    call RegPack(Buf, allocated(InData%BathymetryGrid))
    if (allocated(InData%BathymetryGrid)) then
       call RegPackBounds(Buf, 2, lbound(InData%BathymetryGrid), ubound(InData%BathymetryGrid))
       call RegPack(Buf, InData%BathymetryGrid)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BathGrid_Xs
    call RegPack(Buf, allocated(InData%BathGrid_Xs))
    if (allocated(InData%BathGrid_Xs)) then
       call RegPackBounds(Buf, 1, lbound(InData%BathGrid_Xs), ubound(InData%BathGrid_Xs))
       call RegPack(Buf, InData%BathGrid_Xs)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BathGrid_Ys
    call RegPack(Buf, allocated(InData%BathGrid_Ys))
    if (allocated(InData%BathGrid_Ys)) then
       call RegPackBounds(Buf, 1, lbound(InData%BathGrid_Ys), ubound(InData%BathGrid_Ys))
       call RegPack(Buf, InData%BathGrid_Ys)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BathGrid_npoints
    call RegPack(Buf, allocated(InData%BathGrid_npoints))
    if (allocated(InData%BathGrid_npoints)) then
       call RegPackBounds(Buf, 1, lbound(InData%BathGrid_npoints), ubound(InData%BathGrid_npoints))
@@ -5608,7 +5019,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! LineTypeList
    if (allocated(OutData%LineTypeList)) deallocate(OutData%LineTypeList)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5624,7 +5034,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
          call MD_UnpackLineProp(Buf, OutData%LineTypeList(i1)) ! LineTypeList 
       end do
    end if
-   ! RodTypeList
    if (allocated(OutData%RodTypeList)) deallocate(OutData%RodTypeList)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5640,9 +5049,7 @@ subroutine MD_UnPackMisc(Buf, OutData)
          call MD_UnpackRodProp(Buf, OutData%RodTypeList(i1)) ! RodTypeList 
       end do
    end if
-   ! GroundBody
    call MD_UnpackBody(Buf, OutData%GroundBody) ! GroundBody 
-   ! BodyList
    if (allocated(OutData%BodyList)) deallocate(OutData%BodyList)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5658,7 +5065,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
          call MD_UnpackBody(Buf, OutData%BodyList(i1)) ! BodyList 
       end do
    end if
-   ! RodList
    if (allocated(OutData%RodList)) deallocate(OutData%RodList)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5674,7 +5080,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
          call MD_UnpackRod(Buf, OutData%RodList(i1)) ! RodList 
       end do
    end if
-   ! ConnectList
    if (allocated(OutData%ConnectList)) deallocate(OutData%ConnectList)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5690,7 +5095,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
          call MD_UnpackConnect(Buf, OutData%ConnectList(i1)) ! ConnectList 
       end do
    end if
-   ! LineList
    if (allocated(OutData%LineList)) deallocate(OutData%LineList)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5706,7 +5110,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
          call MD_UnpackLine(Buf, OutData%LineList(i1)) ! LineList 
       end do
    end if
-   ! FailList
    if (allocated(OutData%FailList)) deallocate(OutData%FailList)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5722,7 +5125,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
          call MD_UnpackFail(Buf, OutData%FailList(i1)) ! FailList 
       end do
    end if
-   ! FreeConIs
    if (allocated(OutData%FreeConIs)) deallocate(OutData%FreeConIs)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5737,7 +5139,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%FreeConIs)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! CpldConIs
    if (allocated(OutData%CpldConIs)) deallocate(OutData%CpldConIs)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5752,7 +5153,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%CpldConIs)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! FreeRodIs
    if (allocated(OutData%FreeRodIs)) deallocate(OutData%FreeRodIs)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5767,7 +5167,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%FreeRodIs)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! CpldRodIs
    if (allocated(OutData%CpldRodIs)) deallocate(OutData%CpldRodIs)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5782,7 +5181,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%CpldRodIs)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! FreeBodyIs
    if (allocated(OutData%FreeBodyIs)) deallocate(OutData%FreeBodyIs)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5797,7 +5195,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%FreeBodyIs)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! CpldBodyIs
    if (allocated(OutData%CpldBodyIs)) deallocate(OutData%CpldBodyIs)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5812,7 +5209,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%CpldBodyIs)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! LineStateIs1
    if (allocated(OutData%LineStateIs1)) deallocate(OutData%LineStateIs1)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5827,7 +5223,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%LineStateIs1)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! LineStateIsN
    if (allocated(OutData%LineStateIsN)) deallocate(OutData%LineStateIsN)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5842,7 +5237,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%LineStateIsN)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! ConStateIs1
    if (allocated(OutData%ConStateIs1)) deallocate(OutData%ConStateIs1)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5857,7 +5251,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%ConStateIs1)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! ConStateIsN
    if (allocated(OutData%ConStateIsN)) deallocate(OutData%ConStateIsN)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5872,7 +5265,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%ConStateIsN)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! RodStateIs1
    if (allocated(OutData%RodStateIs1)) deallocate(OutData%RodStateIs1)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5887,7 +5279,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%RodStateIs1)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! RodStateIsN
    if (allocated(OutData%RodStateIsN)) deallocate(OutData%RodStateIsN)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5902,7 +5293,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%RodStateIsN)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! BodyStateIs1
    if (allocated(OutData%BodyStateIs1)) deallocate(OutData%BodyStateIs1)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5917,7 +5307,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%BodyStateIs1)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! BodyStateIsN
    if (allocated(OutData%BodyStateIsN)) deallocate(OutData%BodyStateIsN)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5932,20 +5321,14 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%BodyStateIsN)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Nx
    call RegUnpack(Buf, OutData%Nx)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveTi
    call RegUnpack(Buf, OutData%WaveTi)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! xTemp
    call MD_UnpackContState(Buf, OutData%xTemp) ! xTemp 
-   ! xdTemp
    call MD_UnpackContState(Buf, OutData%xdTemp) ! xdTemp 
-   ! zeros6
    call RegUnpack(Buf, OutData%zeros6)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MDWrOutput
    if (allocated(OutData%MDWrOutput)) deallocate(OutData%MDWrOutput)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5960,13 +5343,10 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%MDWrOutput)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! LastOutTime
    call RegUnpack(Buf, OutData%LastOutTime)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PtfmInit
    call RegUnpack(Buf, OutData%PtfmInit)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! BathymetryGrid
    if (allocated(OutData%BathymetryGrid)) deallocate(OutData%BathymetryGrid)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5981,7 +5361,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%BathymetryGrid)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! BathGrid_Xs
    if (allocated(OutData%BathGrid_Xs)) deallocate(OutData%BathGrid_Xs)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5996,7 +5375,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%BathGrid_Xs)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! BathGrid_Ys
    if (allocated(OutData%BathGrid_Ys)) deallocate(OutData%BathGrid_Ys)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -6011,7 +5389,6 @@ subroutine MD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%BathGrid_Ys)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! BathGrid_npoints
    if (allocated(OutData%BathGrid_npoints)) deallocate(OutData%BathGrid_npoints)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -6027,490 +5404,481 @@ subroutine MD_UnPackMisc(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE MD_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_ParameterType), INTENT(IN) :: SrcParamData
-   TYPE(MD_ParameterType), INTENT(INOUT) :: DstParamData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyParam'
-! 
+
+subroutine MD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_ParameterType), intent(in) :: SrcParamData
+   type(MD_ParameterType), intent(inout) :: DstParamData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1, i2, i3, i4
+   integer(IntKi)                 :: LB(4), UB(4)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'MD_CopyParam'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstParamData%nLineTypes = SrcParamData%nLineTypes
-    DstParamData%nRodTypes = SrcParamData%nRodTypes
-    DstParamData%nConnects = SrcParamData%nConnects
-    DstParamData%nConnectsExtra = SrcParamData%nConnectsExtra
-    DstParamData%nBodies = SrcParamData%nBodies
-    DstParamData%nRods = SrcParamData%nRods
-    DstParamData%nLines = SrcParamData%nLines
-    DstParamData%nCtrlChans = SrcParamData%nCtrlChans
-    DstParamData%nFails = SrcParamData%nFails
-    DstParamData%nFreeBodies = SrcParamData%nFreeBodies
-    DstParamData%nFreeRods = SrcParamData%nFreeRods
-    DstParamData%nFreeCons = SrcParamData%nFreeCons
-IF (ALLOCATED(SrcParamData%nCpldBodies)) THEN
-  i1_l = LBOUND(SrcParamData%nCpldBodies,1)
-  i1_u = UBOUND(SrcParamData%nCpldBodies,1)
-  IF (.NOT. ALLOCATED(DstParamData%nCpldBodies)) THEN 
-    ALLOCATE(DstParamData%nCpldBodies(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%nCpldBodies.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%nCpldBodies = SrcParamData%nCpldBodies
-ENDIF
-IF (ALLOCATED(SrcParamData%nCpldRods)) THEN
-  i1_l = LBOUND(SrcParamData%nCpldRods,1)
-  i1_u = UBOUND(SrcParamData%nCpldRods,1)
-  IF (.NOT. ALLOCATED(DstParamData%nCpldRods)) THEN 
-    ALLOCATE(DstParamData%nCpldRods(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%nCpldRods.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%nCpldRods = SrcParamData%nCpldRods
-ENDIF
-IF (ALLOCATED(SrcParamData%nCpldCons)) THEN
-  i1_l = LBOUND(SrcParamData%nCpldCons,1)
-  i1_u = UBOUND(SrcParamData%nCpldCons,1)
-  IF (.NOT. ALLOCATED(DstParamData%nCpldCons)) THEN 
-    ALLOCATE(DstParamData%nCpldCons(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%nCpldCons.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%nCpldCons = SrcParamData%nCpldCons
-ENDIF
-    DstParamData%NConns = SrcParamData%NConns
-    DstParamData%NAnchs = SrcParamData%NAnchs
-    DstParamData%Tmax = SrcParamData%Tmax
-    DstParamData%g = SrcParamData%g
-    DstParamData%rhoW = SrcParamData%rhoW
-    DstParamData%WtrDpth = SrcParamData%WtrDpth
-    DstParamData%kBot = SrcParamData%kBot
-    DstParamData%cBot = SrcParamData%cBot
-    DstParamData%dtM0 = SrcParamData%dtM0
-    DstParamData%dtCoupling = SrcParamData%dtCoupling
-    DstParamData%NumOuts = SrcParamData%NumOuts
-    DstParamData%dtOut = SrcParamData%dtOut
-    DstParamData%RootName = SrcParamData%RootName
-IF (ALLOCATED(SrcParamData%OutParam)) THEN
-  i1_l = LBOUND(SrcParamData%OutParam,1)
-  i1_u = UBOUND(SrcParamData%OutParam,1)
-  IF (.NOT. ALLOCATED(DstParamData%OutParam)) THEN 
-    ALLOCATE(DstParamData%OutParam(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%OutParam.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcParamData%OutParam,1), UBOUND(SrcParamData%OutParam,1)
-      CALL MD_Copyoutparmtype( SrcParamData%OutParam(i1), DstParamData%OutParam(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-    DstParamData%Delim = SrcParamData%Delim
-    DstParamData%MDUnOut = SrcParamData%MDUnOut
-    DstParamData%PriPath = SrcParamData%PriPath
-    DstParamData%writeLog = SrcParamData%writeLog
-    DstParamData%UnLog = SrcParamData%UnLog
-    DstParamData%WaveKin = SrcParamData%WaveKin
-    DstParamData%Current = SrcParamData%Current
-    DstParamData%nTurbines = SrcParamData%nTurbines
-IF (ALLOCATED(SrcParamData%TurbineRefPos)) THEN
-  i1_l = LBOUND(SrcParamData%TurbineRefPos,1)
-  i1_u = UBOUND(SrcParamData%TurbineRefPos,1)
-  i2_l = LBOUND(SrcParamData%TurbineRefPos,2)
-  i2_u = UBOUND(SrcParamData%TurbineRefPos,2)
-  IF (.NOT. ALLOCATED(DstParamData%TurbineRefPos)) THEN 
-    ALLOCATE(DstParamData%TurbineRefPos(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%TurbineRefPos.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%TurbineRefPos = SrcParamData%TurbineRefPos
-ENDIF
-    DstParamData%mu_kT = SrcParamData%mu_kT
-    DstParamData%mu_kA = SrcParamData%mu_kA
-    DstParamData%mc = SrcParamData%mc
-    DstParamData%cv = SrcParamData%cv
-    DstParamData%nxWave = SrcParamData%nxWave
-    DstParamData%nyWave = SrcParamData%nyWave
-    DstParamData%nzWave = SrcParamData%nzWave
-    DstParamData%ntWave = SrcParamData%ntWave
-IF (ALLOCATED(SrcParamData%pxWave)) THEN
-  i1_l = LBOUND(SrcParamData%pxWave,1)
-  i1_u = UBOUND(SrcParamData%pxWave,1)
-  IF (.NOT. ALLOCATED(DstParamData%pxWave)) THEN 
-    ALLOCATE(DstParamData%pxWave(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%pxWave.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%pxWave = SrcParamData%pxWave
-ENDIF
-IF (ALLOCATED(SrcParamData%pyWave)) THEN
-  i1_l = LBOUND(SrcParamData%pyWave,1)
-  i1_u = UBOUND(SrcParamData%pyWave,1)
-  IF (.NOT. ALLOCATED(DstParamData%pyWave)) THEN 
-    ALLOCATE(DstParamData%pyWave(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%pyWave.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%pyWave = SrcParamData%pyWave
-ENDIF
-IF (ALLOCATED(SrcParamData%pzWave)) THEN
-  i1_l = LBOUND(SrcParamData%pzWave,1)
-  i1_u = UBOUND(SrcParamData%pzWave,1)
-  IF (.NOT. ALLOCATED(DstParamData%pzWave)) THEN 
-    ALLOCATE(DstParamData%pzWave(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%pzWave.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%pzWave = SrcParamData%pzWave
-ENDIF
-    DstParamData%dtWave = SrcParamData%dtWave
-IF (ALLOCATED(SrcParamData%uxWave)) THEN
-  i1_l = LBOUND(SrcParamData%uxWave,1)
-  i1_u = UBOUND(SrcParamData%uxWave,1)
-  i2_l = LBOUND(SrcParamData%uxWave,2)
-  i2_u = UBOUND(SrcParamData%uxWave,2)
-  i3_l = LBOUND(SrcParamData%uxWave,3)
-  i3_u = UBOUND(SrcParamData%uxWave,3)
-  i4_l = LBOUND(SrcParamData%uxWave,4)
-  i4_u = UBOUND(SrcParamData%uxWave,4)
-  IF (.NOT. ALLOCATED(DstParamData%uxWave)) THEN 
-    ALLOCATE(DstParamData%uxWave(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%uxWave.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%uxWave = SrcParamData%uxWave
-ENDIF
-IF (ALLOCATED(SrcParamData%uyWave)) THEN
-  i1_l = LBOUND(SrcParamData%uyWave,1)
-  i1_u = UBOUND(SrcParamData%uyWave,1)
-  i2_l = LBOUND(SrcParamData%uyWave,2)
-  i2_u = UBOUND(SrcParamData%uyWave,2)
-  i3_l = LBOUND(SrcParamData%uyWave,3)
-  i3_u = UBOUND(SrcParamData%uyWave,3)
-  i4_l = LBOUND(SrcParamData%uyWave,4)
-  i4_u = UBOUND(SrcParamData%uyWave,4)
-  IF (.NOT. ALLOCATED(DstParamData%uyWave)) THEN 
-    ALLOCATE(DstParamData%uyWave(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%uyWave.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%uyWave = SrcParamData%uyWave
-ENDIF
-IF (ALLOCATED(SrcParamData%uzWave)) THEN
-  i1_l = LBOUND(SrcParamData%uzWave,1)
-  i1_u = UBOUND(SrcParamData%uzWave,1)
-  i2_l = LBOUND(SrcParamData%uzWave,2)
-  i2_u = UBOUND(SrcParamData%uzWave,2)
-  i3_l = LBOUND(SrcParamData%uzWave,3)
-  i3_u = UBOUND(SrcParamData%uzWave,3)
-  i4_l = LBOUND(SrcParamData%uzWave,4)
-  i4_u = UBOUND(SrcParamData%uzWave,4)
-  IF (.NOT. ALLOCATED(DstParamData%uzWave)) THEN 
-    ALLOCATE(DstParamData%uzWave(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%uzWave.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%uzWave = SrcParamData%uzWave
-ENDIF
-IF (ALLOCATED(SrcParamData%axWave)) THEN
-  i1_l = LBOUND(SrcParamData%axWave,1)
-  i1_u = UBOUND(SrcParamData%axWave,1)
-  i2_l = LBOUND(SrcParamData%axWave,2)
-  i2_u = UBOUND(SrcParamData%axWave,2)
-  i3_l = LBOUND(SrcParamData%axWave,3)
-  i3_u = UBOUND(SrcParamData%axWave,3)
-  i4_l = LBOUND(SrcParamData%axWave,4)
-  i4_u = UBOUND(SrcParamData%axWave,4)
-  IF (.NOT. ALLOCATED(DstParamData%axWave)) THEN 
-    ALLOCATE(DstParamData%axWave(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%axWave.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%axWave = SrcParamData%axWave
-ENDIF
-IF (ALLOCATED(SrcParamData%ayWave)) THEN
-  i1_l = LBOUND(SrcParamData%ayWave,1)
-  i1_u = UBOUND(SrcParamData%ayWave,1)
-  i2_l = LBOUND(SrcParamData%ayWave,2)
-  i2_u = UBOUND(SrcParamData%ayWave,2)
-  i3_l = LBOUND(SrcParamData%ayWave,3)
-  i3_u = UBOUND(SrcParamData%ayWave,3)
-  i4_l = LBOUND(SrcParamData%ayWave,4)
-  i4_u = UBOUND(SrcParamData%ayWave,4)
-  IF (.NOT. ALLOCATED(DstParamData%ayWave)) THEN 
-    ALLOCATE(DstParamData%ayWave(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ayWave.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%ayWave = SrcParamData%ayWave
-ENDIF
-IF (ALLOCATED(SrcParamData%azWave)) THEN
-  i1_l = LBOUND(SrcParamData%azWave,1)
-  i1_u = UBOUND(SrcParamData%azWave,1)
-  i2_l = LBOUND(SrcParamData%azWave,2)
-  i2_u = UBOUND(SrcParamData%azWave,2)
-  i3_l = LBOUND(SrcParamData%azWave,3)
-  i3_u = UBOUND(SrcParamData%azWave,3)
-  i4_l = LBOUND(SrcParamData%azWave,4)
-  i4_u = UBOUND(SrcParamData%azWave,4)
-  IF (.NOT. ALLOCATED(DstParamData%azWave)) THEN 
-    ALLOCATE(DstParamData%azWave(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%azWave.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%azWave = SrcParamData%azWave
-ENDIF
-IF (ALLOCATED(SrcParamData%PDyn)) THEN
-  i1_l = LBOUND(SrcParamData%PDyn,1)
-  i1_u = UBOUND(SrcParamData%PDyn,1)
-  i2_l = LBOUND(SrcParamData%PDyn,2)
-  i2_u = UBOUND(SrcParamData%PDyn,2)
-  i3_l = LBOUND(SrcParamData%PDyn,3)
-  i3_u = UBOUND(SrcParamData%PDyn,3)
-  i4_l = LBOUND(SrcParamData%PDyn,4)
-  i4_u = UBOUND(SrcParamData%PDyn,4)
-  IF (.NOT. ALLOCATED(DstParamData%PDyn)) THEN 
-    ALLOCATE(DstParamData%PDyn(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PDyn.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%PDyn = SrcParamData%PDyn
-ENDIF
-IF (ALLOCATED(SrcParamData%zeta)) THEN
-  i1_l = LBOUND(SrcParamData%zeta,1)
-  i1_u = UBOUND(SrcParamData%zeta,1)
-  i2_l = LBOUND(SrcParamData%zeta,2)
-  i2_u = UBOUND(SrcParamData%zeta,2)
-  i3_l = LBOUND(SrcParamData%zeta,3)
-  i3_u = UBOUND(SrcParamData%zeta,3)
-  IF (.NOT. ALLOCATED(DstParamData%zeta)) THEN 
-    ALLOCATE(DstParamData%zeta(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%zeta.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%zeta = SrcParamData%zeta
-ENDIF
-    DstParamData%nzCurrent = SrcParamData%nzCurrent
-IF (ALLOCATED(SrcParamData%pzCurrent)) THEN
-  i1_l = LBOUND(SrcParamData%pzCurrent,1)
-  i1_u = UBOUND(SrcParamData%pzCurrent,1)
-  IF (.NOT. ALLOCATED(DstParamData%pzCurrent)) THEN 
-    ALLOCATE(DstParamData%pzCurrent(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%pzCurrent.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%pzCurrent = SrcParamData%pzCurrent
-ENDIF
-IF (ALLOCATED(SrcParamData%uxCurrent)) THEN
-  i1_l = LBOUND(SrcParamData%uxCurrent,1)
-  i1_u = UBOUND(SrcParamData%uxCurrent,1)
-  IF (.NOT. ALLOCATED(DstParamData%uxCurrent)) THEN 
-    ALLOCATE(DstParamData%uxCurrent(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%uxCurrent.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%uxCurrent = SrcParamData%uxCurrent
-ENDIF
-IF (ALLOCATED(SrcParamData%uyCurrent)) THEN
-  i1_l = LBOUND(SrcParamData%uyCurrent,1)
-  i1_u = UBOUND(SrcParamData%uyCurrent,1)
-  IF (.NOT. ALLOCATED(DstParamData%uyCurrent)) THEN 
-    ALLOCATE(DstParamData%uyCurrent(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%uyCurrent.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%uyCurrent = SrcParamData%uyCurrent
-ENDIF
-    DstParamData%Nx0 = SrcParamData%Nx0
-IF (ALLOCATED(SrcParamData%Jac_u_indx)) THEN
-  i1_l = LBOUND(SrcParamData%Jac_u_indx,1)
-  i1_u = UBOUND(SrcParamData%Jac_u_indx,1)
-  i2_l = LBOUND(SrcParamData%Jac_u_indx,2)
-  i2_u = UBOUND(SrcParamData%Jac_u_indx,2)
-  IF (.NOT. ALLOCATED(DstParamData%Jac_u_indx)) THEN 
-    ALLOCATE(DstParamData%Jac_u_indx(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_u_indx.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
-ENDIF
-IF (ALLOCATED(SrcParamData%du)) THEN
-  i1_l = LBOUND(SrcParamData%du,1)
-  i1_u = UBOUND(SrcParamData%du,1)
-  IF (.NOT. ALLOCATED(DstParamData%du)) THEN 
-    ALLOCATE(DstParamData%du(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%du.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%du = SrcParamData%du
-ENDIF
-IF (ALLOCATED(SrcParamData%dx)) THEN
-  i1_l = LBOUND(SrcParamData%dx,1)
-  i1_u = UBOUND(SrcParamData%dx,1)
-  IF (.NOT. ALLOCATED(DstParamData%dx)) THEN 
-    ALLOCATE(DstParamData%dx(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%dx.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%dx = SrcParamData%dx
-ENDIF
-    DstParamData%Jac_ny = SrcParamData%Jac_ny
-    DstParamData%Jac_nx = SrcParamData%Jac_nx
-IF (ALLOCATED(SrcParamData%dxIdx_map2_xStateIdx)) THEN
-  i1_l = LBOUND(SrcParamData%dxIdx_map2_xStateIdx,1)
-  i1_u = UBOUND(SrcParamData%dxIdx_map2_xStateIdx,1)
-  IF (.NOT. ALLOCATED(DstParamData%dxIdx_map2_xStateIdx)) THEN 
-    ALLOCATE(DstParamData%dxIdx_map2_xStateIdx(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%dxIdx_map2_xStateIdx.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%dxIdx_map2_xStateIdx = SrcParamData%dxIdx_map2_xStateIdx
-ENDIF
- END SUBROUTINE MD_CopyParam
+   ErrMsg  = ''
+   DstParamData%nLineTypes = SrcParamData%nLineTypes
+   DstParamData%nRodTypes = SrcParamData%nRodTypes
+   DstParamData%nConnects = SrcParamData%nConnects
+   DstParamData%nConnectsExtra = SrcParamData%nConnectsExtra
+   DstParamData%nBodies = SrcParamData%nBodies
+   DstParamData%nRods = SrcParamData%nRods
+   DstParamData%nLines = SrcParamData%nLines
+   DstParamData%nCtrlChans = SrcParamData%nCtrlChans
+   DstParamData%nFails = SrcParamData%nFails
+   DstParamData%nFreeBodies = SrcParamData%nFreeBodies
+   DstParamData%nFreeRods = SrcParamData%nFreeRods
+   DstParamData%nFreeCons = SrcParamData%nFreeCons
+   if (allocated(SrcParamData%nCpldBodies)) then
+      LB(1:1) = lbound(SrcParamData%nCpldBodies)
+      UB(1:1) = ubound(SrcParamData%nCpldBodies)
+      if (.not. allocated(DstParamData%nCpldBodies)) then
+         allocate(DstParamData%nCpldBodies(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%nCpldBodies.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%nCpldBodies = SrcParamData%nCpldBodies
+   else if (allocated(DstParamData%nCpldBodies)) then
+      deallocate(DstParamData%nCpldBodies)
+   end if
+   if (allocated(SrcParamData%nCpldRods)) then
+      LB(1:1) = lbound(SrcParamData%nCpldRods)
+      UB(1:1) = ubound(SrcParamData%nCpldRods)
+      if (.not. allocated(DstParamData%nCpldRods)) then
+         allocate(DstParamData%nCpldRods(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%nCpldRods.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%nCpldRods = SrcParamData%nCpldRods
+   else if (allocated(DstParamData%nCpldRods)) then
+      deallocate(DstParamData%nCpldRods)
+   end if
+   if (allocated(SrcParamData%nCpldCons)) then
+      LB(1:1) = lbound(SrcParamData%nCpldCons)
+      UB(1:1) = ubound(SrcParamData%nCpldCons)
+      if (.not. allocated(DstParamData%nCpldCons)) then
+         allocate(DstParamData%nCpldCons(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%nCpldCons.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%nCpldCons = SrcParamData%nCpldCons
+   else if (allocated(DstParamData%nCpldCons)) then
+      deallocate(DstParamData%nCpldCons)
+   end if
+   DstParamData%NConns = SrcParamData%NConns
+   DstParamData%NAnchs = SrcParamData%NAnchs
+   DstParamData%Tmax = SrcParamData%Tmax
+   DstParamData%g = SrcParamData%g
+   DstParamData%rhoW = SrcParamData%rhoW
+   DstParamData%WtrDpth = SrcParamData%WtrDpth
+   DstParamData%kBot = SrcParamData%kBot
+   DstParamData%cBot = SrcParamData%cBot
+   DstParamData%dtM0 = SrcParamData%dtM0
+   DstParamData%dtCoupling = SrcParamData%dtCoupling
+   DstParamData%NumOuts = SrcParamData%NumOuts
+   DstParamData%dtOut = SrcParamData%dtOut
+   DstParamData%RootName = SrcParamData%RootName
+   if (allocated(SrcParamData%OutParam)) then
+      LB(1:1) = lbound(SrcParamData%OutParam)
+      UB(1:1) = ubound(SrcParamData%OutParam)
+      if (.not. allocated(DstParamData%OutParam)) then
+         allocate(DstParamData%OutParam(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%OutParam.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MD_CopyOutParmType(SrcParamData%OutParam(i1), DstParamData%OutParam(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstParamData%OutParam)) then
+      deallocate(DstParamData%OutParam)
+   end if
+   DstParamData%Delim = SrcParamData%Delim
+   DstParamData%MDUnOut = SrcParamData%MDUnOut
+   DstParamData%PriPath = SrcParamData%PriPath
+   DstParamData%writeLog = SrcParamData%writeLog
+   DstParamData%UnLog = SrcParamData%UnLog
+   DstParamData%WaveKin = SrcParamData%WaveKin
+   DstParamData%Current = SrcParamData%Current
+   DstParamData%nTurbines = SrcParamData%nTurbines
+   if (allocated(SrcParamData%TurbineRefPos)) then
+      LB(1:2) = lbound(SrcParamData%TurbineRefPos)
+      UB(1:2) = ubound(SrcParamData%TurbineRefPos)
+      if (.not. allocated(DstParamData%TurbineRefPos)) then
+         allocate(DstParamData%TurbineRefPos(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%TurbineRefPos.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%TurbineRefPos = SrcParamData%TurbineRefPos
+   else if (allocated(DstParamData%TurbineRefPos)) then
+      deallocate(DstParamData%TurbineRefPos)
+   end if
+   DstParamData%mu_kT = SrcParamData%mu_kT
+   DstParamData%mu_kA = SrcParamData%mu_kA
+   DstParamData%mc = SrcParamData%mc
+   DstParamData%cv = SrcParamData%cv
+   DstParamData%nxWave = SrcParamData%nxWave
+   DstParamData%nyWave = SrcParamData%nyWave
+   DstParamData%nzWave = SrcParamData%nzWave
+   DstParamData%ntWave = SrcParamData%ntWave
+   if (allocated(SrcParamData%pxWave)) then
+      LB(1:1) = lbound(SrcParamData%pxWave)
+      UB(1:1) = ubound(SrcParamData%pxWave)
+      if (.not. allocated(DstParamData%pxWave)) then
+         allocate(DstParamData%pxWave(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%pxWave.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%pxWave = SrcParamData%pxWave
+   else if (allocated(DstParamData%pxWave)) then
+      deallocate(DstParamData%pxWave)
+   end if
+   if (allocated(SrcParamData%pyWave)) then
+      LB(1:1) = lbound(SrcParamData%pyWave)
+      UB(1:1) = ubound(SrcParamData%pyWave)
+      if (.not. allocated(DstParamData%pyWave)) then
+         allocate(DstParamData%pyWave(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%pyWave.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%pyWave = SrcParamData%pyWave
+   else if (allocated(DstParamData%pyWave)) then
+      deallocate(DstParamData%pyWave)
+   end if
+   if (allocated(SrcParamData%pzWave)) then
+      LB(1:1) = lbound(SrcParamData%pzWave)
+      UB(1:1) = ubound(SrcParamData%pzWave)
+      if (.not. allocated(DstParamData%pzWave)) then
+         allocate(DstParamData%pzWave(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%pzWave.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%pzWave = SrcParamData%pzWave
+   else if (allocated(DstParamData%pzWave)) then
+      deallocate(DstParamData%pzWave)
+   end if
+   DstParamData%dtWave = SrcParamData%dtWave
+   if (allocated(SrcParamData%uxWave)) then
+      LB(1:4) = lbound(SrcParamData%uxWave)
+      UB(1:4) = ubound(SrcParamData%uxWave)
+      if (.not. allocated(DstParamData%uxWave)) then
+         allocate(DstParamData%uxWave(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%uxWave.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%uxWave = SrcParamData%uxWave
+   else if (allocated(DstParamData%uxWave)) then
+      deallocate(DstParamData%uxWave)
+   end if
+   if (allocated(SrcParamData%uyWave)) then
+      LB(1:4) = lbound(SrcParamData%uyWave)
+      UB(1:4) = ubound(SrcParamData%uyWave)
+      if (.not. allocated(DstParamData%uyWave)) then
+         allocate(DstParamData%uyWave(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%uyWave.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%uyWave = SrcParamData%uyWave
+   else if (allocated(DstParamData%uyWave)) then
+      deallocate(DstParamData%uyWave)
+   end if
+   if (allocated(SrcParamData%uzWave)) then
+      LB(1:4) = lbound(SrcParamData%uzWave)
+      UB(1:4) = ubound(SrcParamData%uzWave)
+      if (.not. allocated(DstParamData%uzWave)) then
+         allocate(DstParamData%uzWave(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%uzWave.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%uzWave = SrcParamData%uzWave
+   else if (allocated(DstParamData%uzWave)) then
+      deallocate(DstParamData%uzWave)
+   end if
+   if (allocated(SrcParamData%axWave)) then
+      LB(1:4) = lbound(SrcParamData%axWave)
+      UB(1:4) = ubound(SrcParamData%axWave)
+      if (.not. allocated(DstParamData%axWave)) then
+         allocate(DstParamData%axWave(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%axWave.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%axWave = SrcParamData%axWave
+   else if (allocated(DstParamData%axWave)) then
+      deallocate(DstParamData%axWave)
+   end if
+   if (allocated(SrcParamData%ayWave)) then
+      LB(1:4) = lbound(SrcParamData%ayWave)
+      UB(1:4) = ubound(SrcParamData%ayWave)
+      if (.not. allocated(DstParamData%ayWave)) then
+         allocate(DstParamData%ayWave(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%ayWave.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%ayWave = SrcParamData%ayWave
+   else if (allocated(DstParamData%ayWave)) then
+      deallocate(DstParamData%ayWave)
+   end if
+   if (allocated(SrcParamData%azWave)) then
+      LB(1:4) = lbound(SrcParamData%azWave)
+      UB(1:4) = ubound(SrcParamData%azWave)
+      if (.not. allocated(DstParamData%azWave)) then
+         allocate(DstParamData%azWave(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%azWave.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%azWave = SrcParamData%azWave
+   else if (allocated(DstParamData%azWave)) then
+      deallocate(DstParamData%azWave)
+   end if
+   if (allocated(SrcParamData%PDyn)) then
+      LB(1:4) = lbound(SrcParamData%PDyn)
+      UB(1:4) = ubound(SrcParamData%PDyn)
+      if (.not. allocated(DstParamData%PDyn)) then
+         allocate(DstParamData%PDyn(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PDyn.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%PDyn = SrcParamData%PDyn
+   else if (allocated(DstParamData%PDyn)) then
+      deallocate(DstParamData%PDyn)
+   end if
+   if (allocated(SrcParamData%zeta)) then
+      LB(1:3) = lbound(SrcParamData%zeta)
+      UB(1:3) = ubound(SrcParamData%zeta)
+      if (.not. allocated(DstParamData%zeta)) then
+         allocate(DstParamData%zeta(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%zeta.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%zeta = SrcParamData%zeta
+   else if (allocated(DstParamData%zeta)) then
+      deallocate(DstParamData%zeta)
+   end if
+   DstParamData%nzCurrent = SrcParamData%nzCurrent
+   if (allocated(SrcParamData%pzCurrent)) then
+      LB(1:1) = lbound(SrcParamData%pzCurrent)
+      UB(1:1) = ubound(SrcParamData%pzCurrent)
+      if (.not. allocated(DstParamData%pzCurrent)) then
+         allocate(DstParamData%pzCurrent(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%pzCurrent.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%pzCurrent = SrcParamData%pzCurrent
+   else if (allocated(DstParamData%pzCurrent)) then
+      deallocate(DstParamData%pzCurrent)
+   end if
+   if (allocated(SrcParamData%uxCurrent)) then
+      LB(1:1) = lbound(SrcParamData%uxCurrent)
+      UB(1:1) = ubound(SrcParamData%uxCurrent)
+      if (.not. allocated(DstParamData%uxCurrent)) then
+         allocate(DstParamData%uxCurrent(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%uxCurrent.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%uxCurrent = SrcParamData%uxCurrent
+   else if (allocated(DstParamData%uxCurrent)) then
+      deallocate(DstParamData%uxCurrent)
+   end if
+   if (allocated(SrcParamData%uyCurrent)) then
+      LB(1:1) = lbound(SrcParamData%uyCurrent)
+      UB(1:1) = ubound(SrcParamData%uyCurrent)
+      if (.not. allocated(DstParamData%uyCurrent)) then
+         allocate(DstParamData%uyCurrent(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%uyCurrent.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%uyCurrent = SrcParamData%uyCurrent
+   else if (allocated(DstParamData%uyCurrent)) then
+      deallocate(DstParamData%uyCurrent)
+   end if
+   DstParamData%Nx0 = SrcParamData%Nx0
+   if (allocated(SrcParamData%Jac_u_indx)) then
+      LB(1:2) = lbound(SrcParamData%Jac_u_indx)
+      UB(1:2) = ubound(SrcParamData%Jac_u_indx)
+      if (.not. allocated(DstParamData%Jac_u_indx)) then
+         allocate(DstParamData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_u_indx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
+   else if (allocated(DstParamData%Jac_u_indx)) then
+      deallocate(DstParamData%Jac_u_indx)
+   end if
+   if (allocated(SrcParamData%du)) then
+      LB(1:1) = lbound(SrcParamData%du)
+      UB(1:1) = ubound(SrcParamData%du)
+      if (.not. allocated(DstParamData%du)) then
+         allocate(DstParamData%du(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%du.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%du = SrcParamData%du
+   else if (allocated(DstParamData%du)) then
+      deallocate(DstParamData%du)
+   end if
+   if (allocated(SrcParamData%dx)) then
+      LB(1:1) = lbound(SrcParamData%dx)
+      UB(1:1) = ubound(SrcParamData%dx)
+      if (.not. allocated(DstParamData%dx)) then
+         allocate(DstParamData%dx(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%dx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%dx = SrcParamData%dx
+   else if (allocated(DstParamData%dx)) then
+      deallocate(DstParamData%dx)
+   end if
+   DstParamData%Jac_ny = SrcParamData%Jac_ny
+   DstParamData%Jac_nx = SrcParamData%Jac_nx
+   if (allocated(SrcParamData%dxIdx_map2_xStateIdx)) then
+      LB(1:1) = lbound(SrcParamData%dxIdx_map2_xStateIdx)
+      UB(1:1) = ubound(SrcParamData%dxIdx_map2_xStateIdx)
+      if (.not. allocated(DstParamData%dxIdx_map2_xStateIdx)) then
+         allocate(DstParamData%dxIdx_map2_xStateIdx(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%dxIdx_map2_xStateIdx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%dxIdx_map2_xStateIdx = SrcParamData%dxIdx_map2_xStateIdx
+   else if (allocated(DstParamData%dxIdx_map2_xStateIdx)) then
+      deallocate(DstParamData%dxIdx_map2_xStateIdx)
+   end if
+end subroutine
 
- SUBROUTINE MD_DestroyParam( ParamData, ErrStat, ErrMsg )
-  TYPE(MD_ParameterType), INTENT(INOUT) :: ParamData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyParam'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(ParamData%nCpldBodies)) THEN
-  DEALLOCATE(ParamData%nCpldBodies)
-ENDIF
-IF (ALLOCATED(ParamData%nCpldRods)) THEN
-  DEALLOCATE(ParamData%nCpldRods)
-ENDIF
-IF (ALLOCATED(ParamData%nCpldCons)) THEN
-  DEALLOCATE(ParamData%nCpldCons)
-ENDIF
-IF (ALLOCATED(ParamData%OutParam)) THEN
-DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL MD_DestroyOutParmType( ParamData%OutParam(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(ParamData%OutParam)
-ENDIF
-IF (ALLOCATED(ParamData%TurbineRefPos)) THEN
-  DEALLOCATE(ParamData%TurbineRefPos)
-ENDIF
-IF (ALLOCATED(ParamData%pxWave)) THEN
-  DEALLOCATE(ParamData%pxWave)
-ENDIF
-IF (ALLOCATED(ParamData%pyWave)) THEN
-  DEALLOCATE(ParamData%pyWave)
-ENDIF
-IF (ALLOCATED(ParamData%pzWave)) THEN
-  DEALLOCATE(ParamData%pzWave)
-ENDIF
-IF (ALLOCATED(ParamData%uxWave)) THEN
-  DEALLOCATE(ParamData%uxWave)
-ENDIF
-IF (ALLOCATED(ParamData%uyWave)) THEN
-  DEALLOCATE(ParamData%uyWave)
-ENDIF
-IF (ALLOCATED(ParamData%uzWave)) THEN
-  DEALLOCATE(ParamData%uzWave)
-ENDIF
-IF (ALLOCATED(ParamData%axWave)) THEN
-  DEALLOCATE(ParamData%axWave)
-ENDIF
-IF (ALLOCATED(ParamData%ayWave)) THEN
-  DEALLOCATE(ParamData%ayWave)
-ENDIF
-IF (ALLOCATED(ParamData%azWave)) THEN
-  DEALLOCATE(ParamData%azWave)
-ENDIF
-IF (ALLOCATED(ParamData%PDyn)) THEN
-  DEALLOCATE(ParamData%PDyn)
-ENDIF
-IF (ALLOCATED(ParamData%zeta)) THEN
-  DEALLOCATE(ParamData%zeta)
-ENDIF
-IF (ALLOCATED(ParamData%pzCurrent)) THEN
-  DEALLOCATE(ParamData%pzCurrent)
-ENDIF
-IF (ALLOCATED(ParamData%uxCurrent)) THEN
-  DEALLOCATE(ParamData%uxCurrent)
-ENDIF
-IF (ALLOCATED(ParamData%uyCurrent)) THEN
-  DEALLOCATE(ParamData%uyCurrent)
-ENDIF
-IF (ALLOCATED(ParamData%Jac_u_indx)) THEN
-  DEALLOCATE(ParamData%Jac_u_indx)
-ENDIF
-IF (ALLOCATED(ParamData%du)) THEN
-  DEALLOCATE(ParamData%du)
-ENDIF
-IF (ALLOCATED(ParamData%dx)) THEN
-  DEALLOCATE(ParamData%dx)
-ENDIF
-IF (ALLOCATED(ParamData%dxIdx_map2_xStateIdx)) THEN
-  DEALLOCATE(ParamData%dxIdx_map2_xStateIdx)
-ENDIF
- END SUBROUTINE MD_DestroyParam
-
+subroutine MD_DestroyParam(ParamData, ErrStat, ErrMsg)
+   type(MD_ParameterType), intent(inout) :: ParamData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1, i2, i3, i4
+   integer(IntKi)  :: LB(4), UB(4)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'MD_DestroyParam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(ParamData%nCpldBodies)) then
+      deallocate(ParamData%nCpldBodies)
+   end if
+   if (allocated(ParamData%nCpldRods)) then
+      deallocate(ParamData%nCpldRods)
+   end if
+   if (allocated(ParamData%nCpldCons)) then
+      deallocate(ParamData%nCpldCons)
+   end if
+   if (allocated(ParamData%OutParam)) then
+      LB(1:1) = lbound(ParamData%OutParam)
+      UB(1:1) = ubound(ParamData%OutParam)
+      do i1 = LB(1), UB(1)
+         call MD_DestroyOutParmType(ParamData%OutParam(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(ParamData%OutParam)
+   end if
+   if (allocated(ParamData%TurbineRefPos)) then
+      deallocate(ParamData%TurbineRefPos)
+   end if
+   if (allocated(ParamData%pxWave)) then
+      deallocate(ParamData%pxWave)
+   end if
+   if (allocated(ParamData%pyWave)) then
+      deallocate(ParamData%pyWave)
+   end if
+   if (allocated(ParamData%pzWave)) then
+      deallocate(ParamData%pzWave)
+   end if
+   if (allocated(ParamData%uxWave)) then
+      deallocate(ParamData%uxWave)
+   end if
+   if (allocated(ParamData%uyWave)) then
+      deallocate(ParamData%uyWave)
+   end if
+   if (allocated(ParamData%uzWave)) then
+      deallocate(ParamData%uzWave)
+   end if
+   if (allocated(ParamData%axWave)) then
+      deallocate(ParamData%axWave)
+   end if
+   if (allocated(ParamData%ayWave)) then
+      deallocate(ParamData%ayWave)
+   end if
+   if (allocated(ParamData%azWave)) then
+      deallocate(ParamData%azWave)
+   end if
+   if (allocated(ParamData%PDyn)) then
+      deallocate(ParamData%PDyn)
+   end if
+   if (allocated(ParamData%zeta)) then
+      deallocate(ParamData%zeta)
+   end if
+   if (allocated(ParamData%pzCurrent)) then
+      deallocate(ParamData%pzCurrent)
+   end if
+   if (allocated(ParamData%uxCurrent)) then
+      deallocate(ParamData%uxCurrent)
+   end if
+   if (allocated(ParamData%uyCurrent)) then
+      deallocate(ParamData%uyCurrent)
+   end if
+   if (allocated(ParamData%Jac_u_indx)) then
+      deallocate(ParamData%Jac_u_indx)
+   end if
+   if (allocated(ParamData%du)) then
+      deallocate(ParamData%du)
+   end if
+   if (allocated(ParamData%dx)) then
+      deallocate(ParamData%dx)
+   end if
+   if (allocated(ParamData%dxIdx_map2_xStateIdx)) then
+      deallocate(ParamData%dxIdx_map2_xStateIdx)
+   end if
+end subroutine
 
 subroutine MD_PackParam(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -6519,103 +5887,74 @@ subroutine MD_PackParam(Buf, Indata)
    integer(IntKi)  :: i1, i2, i3, i4
    integer(IntKi)  :: LB(4), UB(4)
    if (Buf%ErrStat >= AbortErrLev) return
-   ! nLineTypes
    call RegPack(Buf, InData%nLineTypes)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nRodTypes
    call RegPack(Buf, InData%nRodTypes)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nConnects
    call RegPack(Buf, InData%nConnects)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nConnectsExtra
    call RegPack(Buf, InData%nConnectsExtra)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nBodies
    call RegPack(Buf, InData%nBodies)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nRods
    call RegPack(Buf, InData%nRods)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nLines
    call RegPack(Buf, InData%nLines)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nCtrlChans
    call RegPack(Buf, InData%nCtrlChans)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nFails
    call RegPack(Buf, InData%nFails)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nFreeBodies
    call RegPack(Buf, InData%nFreeBodies)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nFreeRods
    call RegPack(Buf, InData%nFreeRods)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nFreeCons
    call RegPack(Buf, InData%nFreeCons)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nCpldBodies
    call RegPack(Buf, allocated(InData%nCpldBodies))
    if (allocated(InData%nCpldBodies)) then
       call RegPackBounds(Buf, 1, lbound(InData%nCpldBodies), ubound(InData%nCpldBodies))
       call RegPack(Buf, InData%nCpldBodies)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nCpldRods
    call RegPack(Buf, allocated(InData%nCpldRods))
    if (allocated(InData%nCpldRods)) then
       call RegPackBounds(Buf, 1, lbound(InData%nCpldRods), ubound(InData%nCpldRods))
       call RegPack(Buf, InData%nCpldRods)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nCpldCons
    call RegPack(Buf, allocated(InData%nCpldCons))
    if (allocated(InData%nCpldCons)) then
       call RegPackBounds(Buf, 1, lbound(InData%nCpldCons), ubound(InData%nCpldCons))
       call RegPack(Buf, InData%nCpldCons)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NConns
    call RegPack(Buf, InData%NConns)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NAnchs
    call RegPack(Buf, InData%NAnchs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Tmax
    call RegPack(Buf, InData%Tmax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! g
    call RegPack(Buf, InData%g)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rhoW
    call RegPack(Buf, InData%rhoW)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDpth
    call RegPack(Buf, InData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! kBot
    call RegPack(Buf, InData%kBot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! cBot
    call RegPack(Buf, InData%cBot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dtM0
    call RegPack(Buf, InData%dtM0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dtCoupling
    call RegPack(Buf, InData%dtCoupling)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumOuts
    call RegPack(Buf, InData%NumOuts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dtOut
    call RegPack(Buf, InData%dtOut)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RootName
    call RegPack(Buf, InData%RootName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutParam
    call RegPack(Buf, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutParam), ubound(InData%OutParam))
@@ -6626,196 +5965,156 @@ subroutine MD_PackParam(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Delim
    call RegPack(Buf, InData%Delim)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MDUnOut
    call RegPack(Buf, InData%MDUnOut)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PriPath
    call RegPack(Buf, InData%PriPath)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! writeLog
    call RegPack(Buf, InData%writeLog)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UnLog
    call RegPack(Buf, InData%UnLog)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveKin
    call RegPack(Buf, InData%WaveKin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Current
    call RegPack(Buf, InData%Current)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nTurbines
    call RegPack(Buf, InData%nTurbines)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TurbineRefPos
    call RegPack(Buf, allocated(InData%TurbineRefPos))
    if (allocated(InData%TurbineRefPos)) then
       call RegPackBounds(Buf, 2, lbound(InData%TurbineRefPos), ubound(InData%TurbineRefPos))
       call RegPack(Buf, InData%TurbineRefPos)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! mu_kT
    call RegPack(Buf, InData%mu_kT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! mu_kA
    call RegPack(Buf, InData%mu_kA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! mc
    call RegPack(Buf, InData%mc)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! cv
    call RegPack(Buf, InData%cv)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nxWave
    call RegPack(Buf, InData%nxWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nyWave
    call RegPack(Buf, InData%nyWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nzWave
    call RegPack(Buf, InData%nzWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ntWave
    call RegPack(Buf, InData%ntWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pxWave
    call RegPack(Buf, allocated(InData%pxWave))
    if (allocated(InData%pxWave)) then
       call RegPackBounds(Buf, 1, lbound(InData%pxWave), ubound(InData%pxWave))
       call RegPack(Buf, InData%pxWave)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pyWave
    call RegPack(Buf, allocated(InData%pyWave))
    if (allocated(InData%pyWave)) then
       call RegPackBounds(Buf, 1, lbound(InData%pyWave), ubound(InData%pyWave))
       call RegPack(Buf, InData%pyWave)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pzWave
    call RegPack(Buf, allocated(InData%pzWave))
    if (allocated(InData%pzWave)) then
       call RegPackBounds(Buf, 1, lbound(InData%pzWave), ubound(InData%pzWave))
       call RegPack(Buf, InData%pzWave)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dtWave
    call RegPack(Buf, InData%dtWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! uxWave
    call RegPack(Buf, allocated(InData%uxWave))
    if (allocated(InData%uxWave)) then
       call RegPackBounds(Buf, 4, lbound(InData%uxWave), ubound(InData%uxWave))
       call RegPack(Buf, InData%uxWave)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! uyWave
    call RegPack(Buf, allocated(InData%uyWave))
    if (allocated(InData%uyWave)) then
       call RegPackBounds(Buf, 4, lbound(InData%uyWave), ubound(InData%uyWave))
       call RegPack(Buf, InData%uyWave)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! uzWave
    call RegPack(Buf, allocated(InData%uzWave))
    if (allocated(InData%uzWave)) then
       call RegPackBounds(Buf, 4, lbound(InData%uzWave), ubound(InData%uzWave))
       call RegPack(Buf, InData%uzWave)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! axWave
    call RegPack(Buf, allocated(InData%axWave))
    if (allocated(InData%axWave)) then
       call RegPackBounds(Buf, 4, lbound(InData%axWave), ubound(InData%axWave))
       call RegPack(Buf, InData%axWave)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ayWave
    call RegPack(Buf, allocated(InData%ayWave))
    if (allocated(InData%ayWave)) then
       call RegPackBounds(Buf, 4, lbound(InData%ayWave), ubound(InData%ayWave))
       call RegPack(Buf, InData%ayWave)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! azWave
    call RegPack(Buf, allocated(InData%azWave))
    if (allocated(InData%azWave)) then
       call RegPackBounds(Buf, 4, lbound(InData%azWave), ubound(InData%azWave))
       call RegPack(Buf, InData%azWave)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PDyn
    call RegPack(Buf, allocated(InData%PDyn))
    if (allocated(InData%PDyn)) then
       call RegPackBounds(Buf, 4, lbound(InData%PDyn), ubound(InData%PDyn))
       call RegPack(Buf, InData%PDyn)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! zeta
    call RegPack(Buf, allocated(InData%zeta))
    if (allocated(InData%zeta)) then
       call RegPackBounds(Buf, 3, lbound(InData%zeta), ubound(InData%zeta))
       call RegPack(Buf, InData%zeta)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nzCurrent
    call RegPack(Buf, InData%nzCurrent)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pzCurrent
    call RegPack(Buf, allocated(InData%pzCurrent))
    if (allocated(InData%pzCurrent)) then
       call RegPackBounds(Buf, 1, lbound(InData%pzCurrent), ubound(InData%pzCurrent))
       call RegPack(Buf, InData%pzCurrent)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! uxCurrent
    call RegPack(Buf, allocated(InData%uxCurrent))
    if (allocated(InData%uxCurrent)) then
       call RegPackBounds(Buf, 1, lbound(InData%uxCurrent), ubound(InData%uxCurrent))
       call RegPack(Buf, InData%uxCurrent)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! uyCurrent
    call RegPack(Buf, allocated(InData%uyCurrent))
    if (allocated(InData%uyCurrent)) then
       call RegPackBounds(Buf, 1, lbound(InData%uyCurrent), ubound(InData%uyCurrent))
       call RegPack(Buf, InData%uyCurrent)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Nx0
    call RegPack(Buf, InData%Nx0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Jac_u_indx
    call RegPack(Buf, allocated(InData%Jac_u_indx))
    if (allocated(InData%Jac_u_indx)) then
       call RegPackBounds(Buf, 2, lbound(InData%Jac_u_indx), ubound(InData%Jac_u_indx))
       call RegPack(Buf, InData%Jac_u_indx)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! du
    call RegPack(Buf, allocated(InData%du))
    if (allocated(InData%du)) then
       call RegPackBounds(Buf, 1, lbound(InData%du), ubound(InData%du))
       call RegPack(Buf, InData%du)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dx
    call RegPack(Buf, allocated(InData%dx))
    if (allocated(InData%dx)) then
       call RegPackBounds(Buf, 1, lbound(InData%dx), ubound(InData%dx))
       call RegPack(Buf, InData%dx)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Jac_ny
    call RegPack(Buf, InData%Jac_ny)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Jac_nx
    call RegPack(Buf, InData%Jac_nx)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dxIdx_map2_xStateIdx
    call RegPack(Buf, allocated(InData%dxIdx_map2_xStateIdx))
    if (allocated(InData%dxIdx_map2_xStateIdx)) then
       call RegPackBounds(Buf, 1, lbound(InData%dxIdx_map2_xStateIdx), ubound(InData%dxIdx_map2_xStateIdx))
@@ -6833,43 +6132,30 @@ subroutine MD_UnPackParam(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! nLineTypes
    call RegUnpack(Buf, OutData%nLineTypes)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nRodTypes
    call RegUnpack(Buf, OutData%nRodTypes)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nConnects
    call RegUnpack(Buf, OutData%nConnects)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nConnectsExtra
    call RegUnpack(Buf, OutData%nConnectsExtra)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nBodies
    call RegUnpack(Buf, OutData%nBodies)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nRods
    call RegUnpack(Buf, OutData%nRods)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nLines
    call RegUnpack(Buf, OutData%nLines)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nCtrlChans
    call RegUnpack(Buf, OutData%nCtrlChans)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nFails
    call RegUnpack(Buf, OutData%nFails)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nFreeBodies
    call RegUnpack(Buf, OutData%nFreeBodies)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nFreeRods
    call RegUnpack(Buf, OutData%nFreeRods)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nFreeCons
    call RegUnpack(Buf, OutData%nFreeCons)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nCpldBodies
    if (allocated(OutData%nCpldBodies)) deallocate(OutData%nCpldBodies)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -6884,7 +6170,6 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%nCpldBodies)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! nCpldRods
    if (allocated(OutData%nCpldRods)) deallocate(OutData%nCpldRods)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -6899,7 +6184,6 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%nCpldRods)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! nCpldCons
    if (allocated(OutData%nCpldCons)) deallocate(OutData%nCpldCons)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -6914,46 +6198,32 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%nCpldCons)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! NConns
    call RegUnpack(Buf, OutData%NConns)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NAnchs
    call RegUnpack(Buf, OutData%NAnchs)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Tmax
    call RegUnpack(Buf, OutData%Tmax)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! g
    call RegUnpack(Buf, OutData%g)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! rhoW
    call RegUnpack(Buf, OutData%rhoW)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WtrDpth
    call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! kBot
    call RegUnpack(Buf, OutData%kBot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! cBot
    call RegUnpack(Buf, OutData%cBot)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dtM0
    call RegUnpack(Buf, OutData%dtM0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dtCoupling
    call RegUnpack(Buf, OutData%dtCoupling)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! NumOuts
    call RegUnpack(Buf, OutData%NumOuts)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dtOut
    call RegUnpack(Buf, OutData%dtOut)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! RootName
    call RegUnpack(Buf, OutData%RootName)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! OutParam
    if (allocated(OutData%OutParam)) deallocate(OutData%OutParam)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -6969,31 +6239,22 @@ subroutine MD_UnPackParam(Buf, OutData)
          call MD_UnpackOutParmType(Buf, OutData%OutParam(i1)) ! OutParam 
       end do
    end if
-   ! Delim
    call RegUnpack(Buf, OutData%Delim)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MDUnOut
    call RegUnpack(Buf, OutData%MDUnOut)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PriPath
    call RegUnpack(Buf, OutData%PriPath)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! writeLog
    call RegUnpack(Buf, OutData%writeLog)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! UnLog
    call RegUnpack(Buf, OutData%UnLog)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveKin
    call RegUnpack(Buf, OutData%WaveKin)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Current
    call RegUnpack(Buf, OutData%Current)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nTurbines
    call RegUnpack(Buf, OutData%nTurbines)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! TurbineRefPos
    if (allocated(OutData%TurbineRefPos)) deallocate(OutData%TurbineRefPos)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7008,31 +6269,22 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%TurbineRefPos)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! mu_kT
    call RegUnpack(Buf, OutData%mu_kT)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! mu_kA
    call RegUnpack(Buf, OutData%mu_kA)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! mc
    call RegUnpack(Buf, OutData%mc)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! cv
    call RegUnpack(Buf, OutData%cv)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nxWave
    call RegUnpack(Buf, OutData%nxWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nyWave
    call RegUnpack(Buf, OutData%nyWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! nzWave
    call RegUnpack(Buf, OutData%nzWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! ntWave
    call RegUnpack(Buf, OutData%ntWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pxWave
    if (allocated(OutData%pxWave)) deallocate(OutData%pxWave)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7047,7 +6299,6 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%pxWave)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! pyWave
    if (allocated(OutData%pyWave)) deallocate(OutData%pyWave)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7062,7 +6313,6 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%pyWave)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! pzWave
    if (allocated(OutData%pzWave)) deallocate(OutData%pzWave)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7077,10 +6327,8 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%pzWave)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! dtWave
    call RegUnpack(Buf, OutData%dtWave)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! uxWave
    if (allocated(OutData%uxWave)) deallocate(OutData%uxWave)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7095,7 +6343,6 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%uxWave)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! uyWave
    if (allocated(OutData%uyWave)) deallocate(OutData%uyWave)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7110,7 +6357,6 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%uyWave)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! uzWave
    if (allocated(OutData%uzWave)) deallocate(OutData%uzWave)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7125,7 +6371,6 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%uzWave)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! axWave
    if (allocated(OutData%axWave)) deallocate(OutData%axWave)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7140,7 +6385,6 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%axWave)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! ayWave
    if (allocated(OutData%ayWave)) deallocate(OutData%ayWave)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7155,7 +6399,6 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%ayWave)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! azWave
    if (allocated(OutData%azWave)) deallocate(OutData%azWave)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7170,7 +6413,6 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%azWave)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PDyn
    if (allocated(OutData%PDyn)) deallocate(OutData%PDyn)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7185,7 +6427,6 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%PDyn)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! zeta
    if (allocated(OutData%zeta)) deallocate(OutData%zeta)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7200,10 +6441,8 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%zeta)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! nzCurrent
    call RegUnpack(Buf, OutData%nzCurrent)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! pzCurrent
    if (allocated(OutData%pzCurrent)) deallocate(OutData%pzCurrent)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7218,7 +6457,6 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%pzCurrent)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! uxCurrent
    if (allocated(OutData%uxCurrent)) deallocate(OutData%uxCurrent)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7233,7 +6471,6 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%uxCurrent)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! uyCurrent
    if (allocated(OutData%uyCurrent)) deallocate(OutData%uyCurrent)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7248,10 +6485,8 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%uyCurrent)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Nx0
    call RegUnpack(Buf, OutData%Nx0)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Jac_u_indx
    if (allocated(OutData%Jac_u_indx)) deallocate(OutData%Jac_u_indx)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7266,7 +6501,6 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%Jac_u_indx)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! du
    if (allocated(OutData%du)) deallocate(OutData%du)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7281,7 +6515,6 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%du)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! dx
    if (allocated(OutData%dx)) deallocate(OutData%dx)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7296,13 +6529,10 @@ subroutine MD_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%dx)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! Jac_ny
    call RegUnpack(Buf, OutData%Jac_ny)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! Jac_nx
    call RegUnpack(Buf, OutData%Jac_nx)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! dxIdx_map2_xStateIdx
    if (allocated(OutData%dxIdx_map2_xStateIdx)) deallocate(OutData%dxIdx_map2_xStateIdx)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7318,91 +6548,95 @@ subroutine MD_UnPackParam(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE MD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_InputType), INTENT(INOUT) :: SrcInputData
-   TYPE(MD_InputType), INTENT(INOUT) :: DstInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyInput'
-! 
+
+subroutine MD_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_InputType), intent(inout) :: SrcInputData
+   type(MD_InputType), intent(inout) :: DstInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'MD_CopyInput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcInputData%CoupledKinematics)) THEN
-  i1_l = LBOUND(SrcInputData%CoupledKinematics,1)
-  i1_u = UBOUND(SrcInputData%CoupledKinematics,1)
-  IF (.NOT. ALLOCATED(DstInputData%CoupledKinematics)) THEN 
-    ALLOCATE(DstInputData%CoupledKinematics(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%CoupledKinematics.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcInputData%CoupledKinematics,1), UBOUND(SrcInputData%CoupledKinematics,1)
-      CALL MeshCopy( SrcInputData%CoupledKinematics(i1), DstInputData%CoupledKinematics(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-IF (ALLOCATED(SrcInputData%DeltaL)) THEN
-  i1_l = LBOUND(SrcInputData%DeltaL,1)
-  i1_u = UBOUND(SrcInputData%DeltaL,1)
-  IF (.NOT. ALLOCATED(DstInputData%DeltaL)) THEN 
-    ALLOCATE(DstInputData%DeltaL(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%DeltaL.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputData%DeltaL = SrcInputData%DeltaL
-ENDIF
-IF (ALLOCATED(SrcInputData%DeltaLdot)) THEN
-  i1_l = LBOUND(SrcInputData%DeltaLdot,1)
-  i1_u = UBOUND(SrcInputData%DeltaLdot,1)
-  IF (.NOT. ALLOCATED(DstInputData%DeltaLdot)) THEN 
-    ALLOCATE(DstInputData%DeltaLdot(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%DeltaLdot.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstInputData%DeltaLdot = SrcInputData%DeltaLdot
-ENDIF
- END SUBROUTINE MD_CopyInput
+   ErrMsg  = ''
+   if (allocated(SrcInputData%CoupledKinematics)) then
+      LB(1:1) = lbound(SrcInputData%CoupledKinematics)
+      UB(1:1) = ubound(SrcInputData%CoupledKinematics)
+      if (.not. allocated(DstInputData%CoupledKinematics)) then
+         allocate(DstInputData%CoupledKinematics(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%CoupledKinematics.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshCopy(SrcInputData%CoupledKinematics(i1), DstInputData%CoupledKinematics(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstInputData%CoupledKinematics)) then
+      deallocate(DstInputData%CoupledKinematics)
+   end if
+   if (allocated(SrcInputData%DeltaL)) then
+      LB(1:1) = lbound(SrcInputData%DeltaL)
+      UB(1:1) = ubound(SrcInputData%DeltaL)
+      if (.not. allocated(DstInputData%DeltaL)) then
+         allocate(DstInputData%DeltaL(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%DeltaL.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputData%DeltaL = SrcInputData%DeltaL
+   else if (allocated(DstInputData%DeltaL)) then
+      deallocate(DstInputData%DeltaL)
+   end if
+   if (allocated(SrcInputData%DeltaLdot)) then
+      LB(1:1) = lbound(SrcInputData%DeltaLdot)
+      UB(1:1) = ubound(SrcInputData%DeltaLdot)
+      if (.not. allocated(DstInputData%DeltaLdot)) then
+         allocate(DstInputData%DeltaLdot(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%DeltaLdot.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInputData%DeltaLdot = SrcInputData%DeltaLdot
+   else if (allocated(DstInputData%DeltaLdot)) then
+      deallocate(DstInputData%DeltaLdot)
+   end if
+end subroutine
 
- SUBROUTINE MD_DestroyInput( InputData, ErrStat, ErrMsg )
-  TYPE(MD_InputType), INTENT(INOUT) :: InputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(InputData%CoupledKinematics)) THEN
-DO i1 = LBOUND(InputData%CoupledKinematics,1), UBOUND(InputData%CoupledKinematics,1)
-  CALL MeshDestroy( InputData%CoupledKinematics(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(InputData%CoupledKinematics)
-ENDIF
-IF (ALLOCATED(InputData%DeltaL)) THEN
-  DEALLOCATE(InputData%DeltaL)
-ENDIF
-IF (ALLOCATED(InputData%DeltaLdot)) THEN
-  DEALLOCATE(InputData%DeltaLdot)
-ENDIF
- END SUBROUTINE MD_DestroyInput
-
+subroutine MD_DestroyInput(InputData, ErrStat, ErrMsg)
+   type(MD_InputType), intent(inout) :: InputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'MD_DestroyInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(InputData%CoupledKinematics)) then
+      LB(1:1) = lbound(InputData%CoupledKinematics)
+      UB(1:1) = ubound(InputData%CoupledKinematics)
+      do i1 = LB(1), UB(1)
+         call MeshDestroy( InputData%CoupledKinematics(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(InputData%CoupledKinematics)
+   end if
+   if (allocated(InputData%DeltaL)) then
+      deallocate(InputData%DeltaL)
+   end if
+   if (allocated(InputData%DeltaLdot)) then
+      deallocate(InputData%DeltaLdot)
+   end if
+end subroutine
 
 subroutine MD_PackInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -7411,7 +6645,6 @@ subroutine MD_PackInput(Buf, Indata)
    integer(IntKi)  :: i1
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
-   ! CoupledKinematics
    call RegPack(Buf, allocated(InData%CoupledKinematics))
    if (allocated(InData%CoupledKinematics)) then
       call RegPackBounds(Buf, 1, lbound(InData%CoupledKinematics), ubound(InData%CoupledKinematics))
@@ -7422,14 +6655,12 @@ subroutine MD_PackInput(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DeltaL
    call RegPack(Buf, allocated(InData%DeltaL))
    if (allocated(InData%DeltaL)) then
       call RegPackBounds(Buf, 1, lbound(InData%DeltaL), ubound(InData%DeltaL))
       call RegPack(Buf, InData%DeltaL)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! DeltaLdot
    call RegPack(Buf, allocated(InData%DeltaLdot))
    if (allocated(InData%DeltaLdot)) then
       call RegPackBounds(Buf, 1, lbound(InData%DeltaLdot), ubound(InData%DeltaLdot))
@@ -7447,7 +6678,6 @@ subroutine MD_UnPackInput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! CoupledKinematics
    if (allocated(OutData%CoupledKinematics)) deallocate(OutData%CoupledKinematics)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7463,7 +6693,6 @@ subroutine MD_UnPackInput(Buf, OutData)
          call MeshUnpack(Buf, OutData%CoupledKinematics(i1)) ! CoupledKinematics 
       end do
    end if
-   ! DeltaL
    if (allocated(OutData%DeltaL)) deallocate(OutData%DeltaL)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7478,7 +6707,6 @@ subroutine MD_UnPackInput(Buf, OutData)
       call RegUnpack(Buf, OutData%DeltaL)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! DeltaLdot
    if (allocated(OutData%DeltaLdot)) deallocate(OutData%DeltaLdot)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7494,76 +6722,78 @@ subroutine MD_UnPackInput(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
- SUBROUTINE MD_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_OutputType), INTENT(INOUT) :: SrcOutputData
-   TYPE(MD_OutputType), INTENT(INOUT) :: DstOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyOutput'
-! 
+
+subroutine MD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(MD_OutputType), intent(inout) :: SrcOutputData
+   type(MD_OutputType), intent(inout) :: DstOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'MD_CopyOutput'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcOutputData%CoupledLoads)) THEN
-  i1_l = LBOUND(SrcOutputData%CoupledLoads,1)
-  i1_u = UBOUND(SrcOutputData%CoupledLoads,1)
-  IF (.NOT. ALLOCATED(DstOutputData%CoupledLoads)) THEN 
-    ALLOCATE(DstOutputData%CoupledLoads(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%CoupledLoads.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DO i1 = LBOUND(SrcOutputData%CoupledLoads,1), UBOUND(SrcOutputData%CoupledLoads,1)
-      CALL MeshCopy( SrcOutputData%CoupledLoads(i1), DstOutputData%CoupledLoads(i1), CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    ENDDO
-ENDIF
-IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
-  i1_l = LBOUND(SrcOutputData%WriteOutput,1)
-  i1_u = UBOUND(SrcOutputData%WriteOutput,1)
-  IF (.NOT. ALLOCATED(DstOutputData%WriteOutput)) THEN 
-    ALLOCATE(DstOutputData%WriteOutput(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WriteOutput.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-ENDIF
- END SUBROUTINE MD_CopyOutput
+   ErrMsg  = ''
+   if (allocated(SrcOutputData%CoupledLoads)) then
+      LB(1:1) = lbound(SrcOutputData%CoupledLoads)
+      UB(1:1) = ubound(SrcOutputData%CoupledLoads)
+      if (.not. allocated(DstOutputData%CoupledLoads)) then
+         allocate(DstOutputData%CoupledLoads(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%CoupledLoads.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call MeshCopy(SrcOutputData%CoupledLoads(i1), DstOutputData%CoupledLoads(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   else if (allocated(DstOutputData%CoupledLoads)) then
+      deallocate(DstOutputData%CoupledLoads)
+   end if
+   if (allocated(SrcOutputData%WriteOutput)) then
+      LB(1:1) = lbound(SrcOutputData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputData%WriteOutput)
+      if (.not. allocated(DstOutputData%WriteOutput)) then
+         allocate(DstOutputData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WriteOutput.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%WriteOutput = SrcOutputData%WriteOutput
+   else if (allocated(DstOutputData%WriteOutput)) then
+      deallocate(DstOutputData%WriteOutput)
+   end if
+end subroutine
 
- SUBROUTINE MD_DestroyOutput( OutputData, ErrStat, ErrMsg )
-  TYPE(MD_OutputType), INTENT(INOUT) :: OutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(OutputData%CoupledLoads)) THEN
-DO i1 = LBOUND(OutputData%CoupledLoads,1), UBOUND(OutputData%CoupledLoads,1)
-  CALL MeshDestroy( OutputData%CoupledLoads(i1), ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-ENDDO
-  DEALLOCATE(OutputData%CoupledLoads)
-ENDIF
-IF (ALLOCATED(OutputData%WriteOutput)) THEN
-  DEALLOCATE(OutputData%WriteOutput)
-ENDIF
- END SUBROUTINE MD_DestroyOutput
-
+subroutine MD_DestroyOutput(OutputData, ErrStat, ErrMsg)
+   type(MD_OutputType), intent(inout) :: OutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'MD_DestroyOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(OutputData%CoupledLoads)) then
+      LB(1:1) = lbound(OutputData%CoupledLoads)
+      UB(1:1) = ubound(OutputData%CoupledLoads)
+      do i1 = LB(1), UB(1)
+         call MeshDestroy( OutputData%CoupledLoads(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(OutputData%CoupledLoads)
+   end if
+   if (allocated(OutputData%WriteOutput)) then
+      deallocate(OutputData%WriteOutput)
+   end if
+end subroutine
 
 subroutine MD_PackOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
@@ -7572,7 +6802,6 @@ subroutine MD_PackOutput(Buf, Indata)
    integer(IntKi)  :: i1
    integer(IntKi)  :: LB(1), UB(1)
    if (Buf%ErrStat >= AbortErrLev) return
-   ! CoupledLoads
    call RegPack(Buf, allocated(InData%CoupledLoads))
    if (allocated(InData%CoupledLoads)) then
       call RegPackBounds(Buf, 1, lbound(InData%CoupledLoads), ubound(InData%CoupledLoads))
@@ -7583,7 +6812,6 @@ subroutine MD_PackOutput(Buf, Indata)
       end do
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WriteOutput
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
@@ -7601,7 +6829,6 @@ subroutine MD_UnPackOutput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! CoupledLoads
    if (allocated(OutData%CoupledLoads)) deallocate(OutData%CoupledLoads)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -7617,7 +6844,6 @@ subroutine MD_UnPackOutput(Buf, OutData)
          call MeshUnpack(Buf, OutData%CoupledLoads(i1)) ! CoupledLoads 
       end do
    end if
-   ! WriteOutput
    if (allocated(OutData%WriteOutput)) deallocate(OutData%WriteOutput)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return

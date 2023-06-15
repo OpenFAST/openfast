@@ -58,458 +58,390 @@ IMPLICIT NONE
   END TYPE SeaSt_WaveFieldType
 ! =======================
 CONTAINS
- SUBROUTINE SeaSt_WaveField_CopySeaSt_WaveFieldType( SrcSeaSt_WaveFieldTypeData, DstSeaSt_WaveFieldTypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SeaSt_WaveFieldType), INTENT(IN) :: SrcSeaSt_WaveFieldTypeData
-   TYPE(SeaSt_WaveFieldType), INTENT(INOUT) :: DstSeaSt_WaveFieldTypeData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
-   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
-   INTEGER(IntKi)                 :: i4, i4_l, i4_u  !  bounds (upper/lower) for an array dimension 4
-   INTEGER(IntKi)                 :: i5, i5_l, i5_u  !  bounds (upper/lower) for an array dimension 5
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SeaSt_WaveField_CopySeaSt_WaveFieldType'
-! 
+
+subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, DstSeaSt_WaveFieldTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(SeaSt_WaveFieldType), intent(in) :: SrcSeaSt_WaveFieldTypeData
+   type(SeaSt_WaveFieldType), intent(inout) :: DstSeaSt_WaveFieldTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(5), UB(5)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_WaveField_CopySeaSt_WaveFieldType'
    ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ALLOCATED(SrcSeaSt_WaveFieldTypeData%WaveTime)) THEN
-  i1_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveTime,1)
-  i1_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveTime,1)
-  IF (.NOT. ALLOCATED(DstSeaSt_WaveFieldTypeData%WaveTime)) THEN 
-    ALLOCATE(DstSeaSt_WaveFieldTypeData%WaveTime(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveTime.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstSeaSt_WaveFieldTypeData%WaveTime = SrcSeaSt_WaveFieldTypeData%WaveTime
-ENDIF
-IF (ALLOCATED(SrcSeaSt_WaveFieldTypeData%WaveDynP)) THEN
-  i1_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveDynP,1)
-  i1_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveDynP,1)
-  i2_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveDynP,2)
-  i2_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveDynP,2)
-  i3_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveDynP,3)
-  i3_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveDynP,3)
-  i4_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveDynP,4)
-  i4_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveDynP,4)
-  IF (.NOT. ALLOCATED(DstSeaSt_WaveFieldTypeData%WaveDynP)) THEN 
-    ALLOCATE(DstSeaSt_WaveFieldTypeData%WaveDynP(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveDynP.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstSeaSt_WaveFieldTypeData%WaveDynP = SrcSeaSt_WaveFieldTypeData%WaveDynP
-ENDIF
-IF (ALLOCATED(SrcSeaSt_WaveFieldTypeData%WaveAcc)) THEN
-  i1_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveAcc,1)
-  i1_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveAcc,1)
-  i2_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveAcc,2)
-  i2_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveAcc,2)
-  i3_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveAcc,3)
-  i3_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveAcc,3)
-  i4_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveAcc,4)
-  i4_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveAcc,4)
-  i5_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveAcc,5)
-  i5_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveAcc,5)
-  IF (.NOT. ALLOCATED(DstSeaSt_WaveFieldTypeData%WaveAcc)) THEN 
-    ALLOCATE(DstSeaSt_WaveFieldTypeData%WaveAcc(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveAcc.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstSeaSt_WaveFieldTypeData%WaveAcc = SrcSeaSt_WaveFieldTypeData%WaveAcc
-ENDIF
-IF (ALLOCATED(SrcSeaSt_WaveFieldTypeData%WaveAccMCF)) THEN
-  i1_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveAccMCF,1)
-  i1_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveAccMCF,1)
-  i2_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveAccMCF,2)
-  i2_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveAccMCF,2)
-  i3_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveAccMCF,3)
-  i3_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveAccMCF,3)
-  i4_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveAccMCF,4)
-  i4_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveAccMCF,4)
-  i5_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveAccMCF,5)
-  i5_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveAccMCF,5)
-  IF (.NOT. ALLOCATED(DstSeaSt_WaveFieldTypeData%WaveAccMCF)) THEN 
-    ALLOCATE(DstSeaSt_WaveFieldTypeData%WaveAccMCF(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveAccMCF.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstSeaSt_WaveFieldTypeData%WaveAccMCF = SrcSeaSt_WaveFieldTypeData%WaveAccMCF
-ENDIF
-IF (ALLOCATED(SrcSeaSt_WaveFieldTypeData%WaveVel)) THEN
-  i1_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveVel,1)
-  i1_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveVel,1)
-  i2_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveVel,2)
-  i2_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveVel,2)
-  i3_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveVel,3)
-  i3_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveVel,3)
-  i4_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveVel,4)
-  i4_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveVel,4)
-  i5_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveVel,5)
-  i5_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveVel,5)
-  IF (.NOT. ALLOCATED(DstSeaSt_WaveFieldTypeData%WaveVel)) THEN 
-    ALLOCATE(DstSeaSt_WaveFieldTypeData%WaveVel(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u,i5_l:i5_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveVel.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstSeaSt_WaveFieldTypeData%WaveVel = SrcSeaSt_WaveFieldTypeData%WaveVel
-ENDIF
-IF (ALLOCATED(SrcSeaSt_WaveFieldTypeData%PWaveDynP0)) THEN
-  i1_l = LBOUND(SrcSeaSt_WaveFieldTypeData%PWaveDynP0,1)
-  i1_u = UBOUND(SrcSeaSt_WaveFieldTypeData%PWaveDynP0,1)
-  i2_l = LBOUND(SrcSeaSt_WaveFieldTypeData%PWaveDynP0,2)
-  i2_u = UBOUND(SrcSeaSt_WaveFieldTypeData%PWaveDynP0,2)
-  i3_l = LBOUND(SrcSeaSt_WaveFieldTypeData%PWaveDynP0,3)
-  i3_u = UBOUND(SrcSeaSt_WaveFieldTypeData%PWaveDynP0,3)
-  IF (.NOT. ALLOCATED(DstSeaSt_WaveFieldTypeData%PWaveDynP0)) THEN 
-    ALLOCATE(DstSeaSt_WaveFieldTypeData%PWaveDynP0(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%PWaveDynP0.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstSeaSt_WaveFieldTypeData%PWaveDynP0 = SrcSeaSt_WaveFieldTypeData%PWaveDynP0
-ENDIF
-IF (ALLOCATED(SrcSeaSt_WaveFieldTypeData%PWaveAcc0)) THEN
-  i1_l = LBOUND(SrcSeaSt_WaveFieldTypeData%PWaveAcc0,1)
-  i1_u = UBOUND(SrcSeaSt_WaveFieldTypeData%PWaveAcc0,1)
-  i2_l = LBOUND(SrcSeaSt_WaveFieldTypeData%PWaveAcc0,2)
-  i2_u = UBOUND(SrcSeaSt_WaveFieldTypeData%PWaveAcc0,2)
-  i3_l = LBOUND(SrcSeaSt_WaveFieldTypeData%PWaveAcc0,3)
-  i3_u = UBOUND(SrcSeaSt_WaveFieldTypeData%PWaveAcc0,3)
-  i4_l = LBOUND(SrcSeaSt_WaveFieldTypeData%PWaveAcc0,4)
-  i4_u = UBOUND(SrcSeaSt_WaveFieldTypeData%PWaveAcc0,4)
-  IF (.NOT. ALLOCATED(DstSeaSt_WaveFieldTypeData%PWaveAcc0)) THEN 
-    ALLOCATE(DstSeaSt_WaveFieldTypeData%PWaveAcc0(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%PWaveAcc0.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstSeaSt_WaveFieldTypeData%PWaveAcc0 = SrcSeaSt_WaveFieldTypeData%PWaveAcc0
-ENDIF
-IF (ALLOCATED(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0)) THEN
-  i1_l = LBOUND(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0,1)
-  i1_u = UBOUND(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0,1)
-  i2_l = LBOUND(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0,2)
-  i2_u = UBOUND(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0,2)
-  i3_l = LBOUND(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0,3)
-  i3_u = UBOUND(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0,3)
-  i4_l = LBOUND(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0,4)
-  i4_u = UBOUND(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0,4)
-  IF (.NOT. ALLOCATED(DstSeaSt_WaveFieldTypeData%PWaveAccMCF0)) THEN 
-    ALLOCATE(DstSeaSt_WaveFieldTypeData%PWaveAccMCF0(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%PWaveAccMCF0.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstSeaSt_WaveFieldTypeData%PWaveAccMCF0 = SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0
-ENDIF
-IF (ALLOCATED(SrcSeaSt_WaveFieldTypeData%PWaveVel0)) THEN
-  i1_l = LBOUND(SrcSeaSt_WaveFieldTypeData%PWaveVel0,1)
-  i1_u = UBOUND(SrcSeaSt_WaveFieldTypeData%PWaveVel0,1)
-  i2_l = LBOUND(SrcSeaSt_WaveFieldTypeData%PWaveVel0,2)
-  i2_u = UBOUND(SrcSeaSt_WaveFieldTypeData%PWaveVel0,2)
-  i3_l = LBOUND(SrcSeaSt_WaveFieldTypeData%PWaveVel0,3)
-  i3_u = UBOUND(SrcSeaSt_WaveFieldTypeData%PWaveVel0,3)
-  i4_l = LBOUND(SrcSeaSt_WaveFieldTypeData%PWaveVel0,4)
-  i4_u = UBOUND(SrcSeaSt_WaveFieldTypeData%PWaveVel0,4)
-  IF (.NOT. ALLOCATED(DstSeaSt_WaveFieldTypeData%PWaveVel0)) THEN 
-    ALLOCATE(DstSeaSt_WaveFieldTypeData%PWaveVel0(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%PWaveVel0.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstSeaSt_WaveFieldTypeData%PWaveVel0 = SrcSeaSt_WaveFieldTypeData%PWaveVel0
-ENDIF
-IF (ALLOCATED(SrcSeaSt_WaveFieldTypeData%WaveElev0)) THEN
-  i1_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveElev0,1)
-  i1_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveElev0,1)
-  IF (.NOT. ALLOCATED(DstSeaSt_WaveFieldTypeData%WaveElev0)) THEN 
-    ALLOCATE(DstSeaSt_WaveFieldTypeData%WaveElev0(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveElev0.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstSeaSt_WaveFieldTypeData%WaveElev0 = SrcSeaSt_WaveFieldTypeData%WaveElev0
-ENDIF
-IF (ALLOCATED(SrcSeaSt_WaveFieldTypeData%WaveElev1)) THEN
-  i1_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveElev1,1)
-  i1_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveElev1,1)
-  i2_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveElev1,2)
-  i2_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveElev1,2)
-  i3_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveElev1,3)
-  i3_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveElev1,3)
-  IF (.NOT. ALLOCATED(DstSeaSt_WaveFieldTypeData%WaveElev1)) THEN 
-    ALLOCATE(DstSeaSt_WaveFieldTypeData%WaveElev1(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveElev1.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstSeaSt_WaveFieldTypeData%WaveElev1 = SrcSeaSt_WaveFieldTypeData%WaveElev1
-ENDIF
-IF (ALLOCATED(SrcSeaSt_WaveFieldTypeData%WaveElev2)) THEN
-  i1_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveElev2,1)
-  i1_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveElev2,1)
-  i2_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveElev2,2)
-  i2_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveElev2,2)
-  i3_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveElev2,3)
-  i3_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveElev2,3)
-  IF (.NOT. ALLOCATED(DstSeaSt_WaveFieldTypeData%WaveElev2)) THEN 
-    ALLOCATE(DstSeaSt_WaveFieldTypeData%WaveElev2(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveElev2.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstSeaSt_WaveFieldTypeData%WaveElev2 = SrcSeaSt_WaveFieldTypeData%WaveElev2
-ENDIF
-      CALL SeaSt_Interp_CopyParam( SrcSeaSt_WaveFieldTypeData%SeaSt_Interp_p, DstSeaSt_WaveFieldTypeData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
-    DstSeaSt_WaveFieldTypeData%WaveStMod = SrcSeaSt_WaveFieldTypeData%WaveStMod
-    DstSeaSt_WaveFieldTypeData%EffWtrDpth = SrcSeaSt_WaveFieldTypeData%EffWtrDpth
-    DstSeaSt_WaveFieldTypeData%MSL2SWL = SrcSeaSt_WaveFieldTypeData%MSL2SWL
-IF (ALLOCATED(SrcSeaSt_WaveFieldTypeData%WaveElevC)) THEN
-  i1_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveElevC,1)
-  i1_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveElevC,1)
-  i2_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveElevC,2)
-  i2_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveElevC,2)
-  i3_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveElevC,3)
-  i3_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveElevC,3)
-  IF (.NOT. ALLOCATED(DstSeaSt_WaveFieldTypeData%WaveElevC)) THEN 
-    ALLOCATE(DstSeaSt_WaveFieldTypeData%WaveElevC(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveElevC.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstSeaSt_WaveFieldTypeData%WaveElevC = SrcSeaSt_WaveFieldTypeData%WaveElevC
-ENDIF
-IF (ALLOCATED(SrcSeaSt_WaveFieldTypeData%WaveElevC0)) THEN
-  i1_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveElevC0,1)
-  i1_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveElevC0,1)
-  i2_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveElevC0,2)
-  i2_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveElevC0,2)
-  IF (.NOT. ALLOCATED(DstSeaSt_WaveFieldTypeData%WaveElevC0)) THEN 
-    ALLOCATE(DstSeaSt_WaveFieldTypeData%WaveElevC0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveElevC0.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstSeaSt_WaveFieldTypeData%WaveElevC0 = SrcSeaSt_WaveFieldTypeData%WaveElevC0
-ENDIF
-IF (ALLOCATED(SrcSeaSt_WaveFieldTypeData%WaveDirArr)) THEN
-  i1_l = LBOUND(SrcSeaSt_WaveFieldTypeData%WaveDirArr,1)
-  i1_u = UBOUND(SrcSeaSt_WaveFieldTypeData%WaveDirArr,1)
-  IF (.NOT. ALLOCATED(DstSeaSt_WaveFieldTypeData%WaveDirArr)) THEN 
-    ALLOCATE(DstSeaSt_WaveFieldTypeData%WaveDirArr(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveDirArr.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstSeaSt_WaveFieldTypeData%WaveDirArr = SrcSeaSt_WaveFieldTypeData%WaveDirArr
-ENDIF
- END SUBROUTINE SeaSt_WaveField_CopySeaSt_WaveFieldType
+   ErrMsg  = ''
+   if (allocated(SrcSeaSt_WaveFieldTypeData%WaveTime)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveFieldTypeData%WaveTime)
+      UB(1:1) = ubound(SrcSeaSt_WaveFieldTypeData%WaveTime)
+      if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveTime)) then
+         allocate(DstSeaSt_WaveFieldTypeData%WaveTime(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveTime.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveFieldTypeData%WaveTime = SrcSeaSt_WaveFieldTypeData%WaveTime
+   else if (allocated(DstSeaSt_WaveFieldTypeData%WaveTime)) then
+      deallocate(DstSeaSt_WaveFieldTypeData%WaveTime)
+   end if
+   if (allocated(SrcSeaSt_WaveFieldTypeData%WaveDynP)) then
+      LB(1:4) = lbound(SrcSeaSt_WaveFieldTypeData%WaveDynP)
+      UB(1:4) = ubound(SrcSeaSt_WaveFieldTypeData%WaveDynP)
+      if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveDynP)) then
+         allocate(DstSeaSt_WaveFieldTypeData%WaveDynP(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveDynP.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveFieldTypeData%WaveDynP = SrcSeaSt_WaveFieldTypeData%WaveDynP
+   else if (allocated(DstSeaSt_WaveFieldTypeData%WaveDynP)) then
+      deallocate(DstSeaSt_WaveFieldTypeData%WaveDynP)
+   end if
+   if (allocated(SrcSeaSt_WaveFieldTypeData%WaveAcc)) then
+      LB(1:5) = lbound(SrcSeaSt_WaveFieldTypeData%WaveAcc)
+      UB(1:5) = ubound(SrcSeaSt_WaveFieldTypeData%WaveAcc)
+      if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveAcc)) then
+         allocate(DstSeaSt_WaveFieldTypeData%WaveAcc(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveAcc.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveFieldTypeData%WaveAcc = SrcSeaSt_WaveFieldTypeData%WaveAcc
+   else if (allocated(DstSeaSt_WaveFieldTypeData%WaveAcc)) then
+      deallocate(DstSeaSt_WaveFieldTypeData%WaveAcc)
+   end if
+   if (allocated(SrcSeaSt_WaveFieldTypeData%WaveAccMCF)) then
+      LB(1:5) = lbound(SrcSeaSt_WaveFieldTypeData%WaveAccMCF)
+      UB(1:5) = ubound(SrcSeaSt_WaveFieldTypeData%WaveAccMCF)
+      if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveAccMCF)) then
+         allocate(DstSeaSt_WaveFieldTypeData%WaveAccMCF(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveAccMCF.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveFieldTypeData%WaveAccMCF = SrcSeaSt_WaveFieldTypeData%WaveAccMCF
+   else if (allocated(DstSeaSt_WaveFieldTypeData%WaveAccMCF)) then
+      deallocate(DstSeaSt_WaveFieldTypeData%WaveAccMCF)
+   end if
+   if (allocated(SrcSeaSt_WaveFieldTypeData%WaveVel)) then
+      LB(1:5) = lbound(SrcSeaSt_WaveFieldTypeData%WaveVel)
+      UB(1:5) = ubound(SrcSeaSt_WaveFieldTypeData%WaveVel)
+      if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveVel)) then
+         allocate(DstSeaSt_WaveFieldTypeData%WaveVel(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4),LB(5):UB(5)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveVel.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveFieldTypeData%WaveVel = SrcSeaSt_WaveFieldTypeData%WaveVel
+   else if (allocated(DstSeaSt_WaveFieldTypeData%WaveVel)) then
+      deallocate(DstSeaSt_WaveFieldTypeData%WaveVel)
+   end if
+   if (allocated(SrcSeaSt_WaveFieldTypeData%PWaveDynP0)) then
+      LB(1:3) = lbound(SrcSeaSt_WaveFieldTypeData%PWaveDynP0)
+      UB(1:3) = ubound(SrcSeaSt_WaveFieldTypeData%PWaveDynP0)
+      if (.not. allocated(DstSeaSt_WaveFieldTypeData%PWaveDynP0)) then
+         allocate(DstSeaSt_WaveFieldTypeData%PWaveDynP0(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%PWaveDynP0.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveFieldTypeData%PWaveDynP0 = SrcSeaSt_WaveFieldTypeData%PWaveDynP0
+   else if (allocated(DstSeaSt_WaveFieldTypeData%PWaveDynP0)) then
+      deallocate(DstSeaSt_WaveFieldTypeData%PWaveDynP0)
+   end if
+   if (allocated(SrcSeaSt_WaveFieldTypeData%PWaveAcc0)) then
+      LB(1:4) = lbound(SrcSeaSt_WaveFieldTypeData%PWaveAcc0)
+      UB(1:4) = ubound(SrcSeaSt_WaveFieldTypeData%PWaveAcc0)
+      if (.not. allocated(DstSeaSt_WaveFieldTypeData%PWaveAcc0)) then
+         allocate(DstSeaSt_WaveFieldTypeData%PWaveAcc0(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%PWaveAcc0.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveFieldTypeData%PWaveAcc0 = SrcSeaSt_WaveFieldTypeData%PWaveAcc0
+   else if (allocated(DstSeaSt_WaveFieldTypeData%PWaveAcc0)) then
+      deallocate(DstSeaSt_WaveFieldTypeData%PWaveAcc0)
+   end if
+   if (allocated(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0)) then
+      LB(1:4) = lbound(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0)
+      UB(1:4) = ubound(SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0)
+      if (.not. allocated(DstSeaSt_WaveFieldTypeData%PWaveAccMCF0)) then
+         allocate(DstSeaSt_WaveFieldTypeData%PWaveAccMCF0(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%PWaveAccMCF0.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveFieldTypeData%PWaveAccMCF0 = SrcSeaSt_WaveFieldTypeData%PWaveAccMCF0
+   else if (allocated(DstSeaSt_WaveFieldTypeData%PWaveAccMCF0)) then
+      deallocate(DstSeaSt_WaveFieldTypeData%PWaveAccMCF0)
+   end if
+   if (allocated(SrcSeaSt_WaveFieldTypeData%PWaveVel0)) then
+      LB(1:4) = lbound(SrcSeaSt_WaveFieldTypeData%PWaveVel0)
+      UB(1:4) = ubound(SrcSeaSt_WaveFieldTypeData%PWaveVel0)
+      if (.not. allocated(DstSeaSt_WaveFieldTypeData%PWaveVel0)) then
+         allocate(DstSeaSt_WaveFieldTypeData%PWaveVel0(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%PWaveVel0.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveFieldTypeData%PWaveVel0 = SrcSeaSt_WaveFieldTypeData%PWaveVel0
+   else if (allocated(DstSeaSt_WaveFieldTypeData%PWaveVel0)) then
+      deallocate(DstSeaSt_WaveFieldTypeData%PWaveVel0)
+   end if
+   if (allocated(SrcSeaSt_WaveFieldTypeData%WaveElev0)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveFieldTypeData%WaveElev0)
+      UB(1:1) = ubound(SrcSeaSt_WaveFieldTypeData%WaveElev0)
+      if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveElev0)) then
+         allocate(DstSeaSt_WaveFieldTypeData%WaveElev0(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveElev0.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveFieldTypeData%WaveElev0 = SrcSeaSt_WaveFieldTypeData%WaveElev0
+   else if (allocated(DstSeaSt_WaveFieldTypeData%WaveElev0)) then
+      deallocate(DstSeaSt_WaveFieldTypeData%WaveElev0)
+   end if
+   if (allocated(SrcSeaSt_WaveFieldTypeData%WaveElev1)) then
+      LB(1:3) = lbound(SrcSeaSt_WaveFieldTypeData%WaveElev1)
+      UB(1:3) = ubound(SrcSeaSt_WaveFieldTypeData%WaveElev1)
+      if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveElev1)) then
+         allocate(DstSeaSt_WaveFieldTypeData%WaveElev1(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveElev1.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveFieldTypeData%WaveElev1 = SrcSeaSt_WaveFieldTypeData%WaveElev1
+   else if (allocated(DstSeaSt_WaveFieldTypeData%WaveElev1)) then
+      deallocate(DstSeaSt_WaveFieldTypeData%WaveElev1)
+   end if
+   if (allocated(SrcSeaSt_WaveFieldTypeData%WaveElev2)) then
+      LB(1:3) = lbound(SrcSeaSt_WaveFieldTypeData%WaveElev2)
+      UB(1:3) = ubound(SrcSeaSt_WaveFieldTypeData%WaveElev2)
+      if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveElev2)) then
+         allocate(DstSeaSt_WaveFieldTypeData%WaveElev2(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveElev2.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveFieldTypeData%WaveElev2 = SrcSeaSt_WaveFieldTypeData%WaveElev2
+   else if (allocated(DstSeaSt_WaveFieldTypeData%WaveElev2)) then
+      deallocate(DstSeaSt_WaveFieldTypeData%WaveElev2)
+   end if
+   call SeaSt_Interp_CopyParam(SrcSeaSt_WaveFieldTypeData%SeaSt_Interp_p, DstSeaSt_WaveFieldTypeData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstSeaSt_WaveFieldTypeData%WaveStMod = SrcSeaSt_WaveFieldTypeData%WaveStMod
+   DstSeaSt_WaveFieldTypeData%EffWtrDpth = SrcSeaSt_WaveFieldTypeData%EffWtrDpth
+   DstSeaSt_WaveFieldTypeData%MSL2SWL = SrcSeaSt_WaveFieldTypeData%MSL2SWL
+   if (allocated(SrcSeaSt_WaveFieldTypeData%WaveElevC)) then
+      LB(1:3) = lbound(SrcSeaSt_WaveFieldTypeData%WaveElevC)
+      UB(1:3) = ubound(SrcSeaSt_WaveFieldTypeData%WaveElevC)
+      if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveElevC)) then
+         allocate(DstSeaSt_WaveFieldTypeData%WaveElevC(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveElevC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveFieldTypeData%WaveElevC = SrcSeaSt_WaveFieldTypeData%WaveElevC
+   else if (allocated(DstSeaSt_WaveFieldTypeData%WaveElevC)) then
+      deallocate(DstSeaSt_WaveFieldTypeData%WaveElevC)
+   end if
+   if (allocated(SrcSeaSt_WaveFieldTypeData%WaveElevC0)) then
+      LB(1:2) = lbound(SrcSeaSt_WaveFieldTypeData%WaveElevC0)
+      UB(1:2) = ubound(SrcSeaSt_WaveFieldTypeData%WaveElevC0)
+      if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveElevC0)) then
+         allocate(DstSeaSt_WaveFieldTypeData%WaveElevC0(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveElevC0.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveFieldTypeData%WaveElevC0 = SrcSeaSt_WaveFieldTypeData%WaveElevC0
+   else if (allocated(DstSeaSt_WaveFieldTypeData%WaveElevC0)) then
+      deallocate(DstSeaSt_WaveFieldTypeData%WaveElevC0)
+   end if
+   if (allocated(SrcSeaSt_WaveFieldTypeData%WaveDirArr)) then
+      LB(1:1) = lbound(SrcSeaSt_WaveFieldTypeData%WaveDirArr)
+      UB(1:1) = ubound(SrcSeaSt_WaveFieldTypeData%WaveDirArr)
+      if (.not. allocated(DstSeaSt_WaveFieldTypeData%WaveDirArr)) then
+         allocate(DstSeaSt_WaveFieldTypeData%WaveDirArr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstSeaSt_WaveFieldTypeData%WaveDirArr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstSeaSt_WaveFieldTypeData%WaveDirArr = SrcSeaSt_WaveFieldTypeData%WaveDirArr
+   else if (allocated(DstSeaSt_WaveFieldTypeData%WaveDirArr)) then
+      deallocate(DstSeaSt_WaveFieldTypeData%WaveDirArr)
+   end if
+end subroutine
 
- SUBROUTINE SeaSt_WaveField_DestroySeaSt_WaveFieldType( SeaSt_WaveFieldTypeData, ErrStat, ErrMsg )
-  TYPE(SeaSt_WaveFieldType), INTENT(INOUT) :: SeaSt_WaveFieldTypeData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SeaSt_WaveField_DestroySeaSt_WaveFieldType'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ALLOCATED(SeaSt_WaveFieldTypeData%WaveTime)) THEN
-  DEALLOCATE(SeaSt_WaveFieldTypeData%WaveTime)
-ENDIF
-IF (ALLOCATED(SeaSt_WaveFieldTypeData%WaveDynP)) THEN
-  DEALLOCATE(SeaSt_WaveFieldTypeData%WaveDynP)
-ENDIF
-IF (ALLOCATED(SeaSt_WaveFieldTypeData%WaveAcc)) THEN
-  DEALLOCATE(SeaSt_WaveFieldTypeData%WaveAcc)
-ENDIF
-IF (ALLOCATED(SeaSt_WaveFieldTypeData%WaveAccMCF)) THEN
-  DEALLOCATE(SeaSt_WaveFieldTypeData%WaveAccMCF)
-ENDIF
-IF (ALLOCATED(SeaSt_WaveFieldTypeData%WaveVel)) THEN
-  DEALLOCATE(SeaSt_WaveFieldTypeData%WaveVel)
-ENDIF
-IF (ALLOCATED(SeaSt_WaveFieldTypeData%PWaveDynP0)) THEN
-  DEALLOCATE(SeaSt_WaveFieldTypeData%PWaveDynP0)
-ENDIF
-IF (ALLOCATED(SeaSt_WaveFieldTypeData%PWaveAcc0)) THEN
-  DEALLOCATE(SeaSt_WaveFieldTypeData%PWaveAcc0)
-ENDIF
-IF (ALLOCATED(SeaSt_WaveFieldTypeData%PWaveAccMCF0)) THEN
-  DEALLOCATE(SeaSt_WaveFieldTypeData%PWaveAccMCF0)
-ENDIF
-IF (ALLOCATED(SeaSt_WaveFieldTypeData%PWaveVel0)) THEN
-  DEALLOCATE(SeaSt_WaveFieldTypeData%PWaveVel0)
-ENDIF
-IF (ALLOCATED(SeaSt_WaveFieldTypeData%WaveElev0)) THEN
-  DEALLOCATE(SeaSt_WaveFieldTypeData%WaveElev0)
-ENDIF
-IF (ALLOCATED(SeaSt_WaveFieldTypeData%WaveElev1)) THEN
-  DEALLOCATE(SeaSt_WaveFieldTypeData%WaveElev1)
-ENDIF
-IF (ALLOCATED(SeaSt_WaveFieldTypeData%WaveElev2)) THEN
-  DEALLOCATE(SeaSt_WaveFieldTypeData%WaveElev2)
-ENDIF
-  CALL SeaSt_Interp_DestroyParam( SeaSt_WaveFieldTypeData%SeaSt_Interp_p, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-IF (ALLOCATED(SeaSt_WaveFieldTypeData%WaveElevC)) THEN
-  DEALLOCATE(SeaSt_WaveFieldTypeData%WaveElevC)
-ENDIF
-IF (ALLOCATED(SeaSt_WaveFieldTypeData%WaveElevC0)) THEN
-  DEALLOCATE(SeaSt_WaveFieldTypeData%WaveElevC0)
-ENDIF
-IF (ALLOCATED(SeaSt_WaveFieldTypeData%WaveDirArr)) THEN
-  DEALLOCATE(SeaSt_WaveFieldTypeData%WaveDirArr)
-ENDIF
- END SUBROUTINE SeaSt_WaveField_DestroySeaSt_WaveFieldType
-
+subroutine SeaSt_WaveField_DestroySeaSt_WaveFieldType(SeaSt_WaveFieldTypeData, ErrStat, ErrMsg)
+   type(SeaSt_WaveFieldType), intent(inout) :: SeaSt_WaveFieldTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SeaSt_WaveField_DestroySeaSt_WaveFieldType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(SeaSt_WaveFieldTypeData%WaveTime)) then
+      deallocate(SeaSt_WaveFieldTypeData%WaveTime)
+   end if
+   if (allocated(SeaSt_WaveFieldTypeData%WaveDynP)) then
+      deallocate(SeaSt_WaveFieldTypeData%WaveDynP)
+   end if
+   if (allocated(SeaSt_WaveFieldTypeData%WaveAcc)) then
+      deallocate(SeaSt_WaveFieldTypeData%WaveAcc)
+   end if
+   if (allocated(SeaSt_WaveFieldTypeData%WaveAccMCF)) then
+      deallocate(SeaSt_WaveFieldTypeData%WaveAccMCF)
+   end if
+   if (allocated(SeaSt_WaveFieldTypeData%WaveVel)) then
+      deallocate(SeaSt_WaveFieldTypeData%WaveVel)
+   end if
+   if (allocated(SeaSt_WaveFieldTypeData%PWaveDynP0)) then
+      deallocate(SeaSt_WaveFieldTypeData%PWaveDynP0)
+   end if
+   if (allocated(SeaSt_WaveFieldTypeData%PWaveAcc0)) then
+      deallocate(SeaSt_WaveFieldTypeData%PWaveAcc0)
+   end if
+   if (allocated(SeaSt_WaveFieldTypeData%PWaveAccMCF0)) then
+      deallocate(SeaSt_WaveFieldTypeData%PWaveAccMCF0)
+   end if
+   if (allocated(SeaSt_WaveFieldTypeData%PWaveVel0)) then
+      deallocate(SeaSt_WaveFieldTypeData%PWaveVel0)
+   end if
+   if (allocated(SeaSt_WaveFieldTypeData%WaveElev0)) then
+      deallocate(SeaSt_WaveFieldTypeData%WaveElev0)
+   end if
+   if (allocated(SeaSt_WaveFieldTypeData%WaveElev1)) then
+      deallocate(SeaSt_WaveFieldTypeData%WaveElev1)
+   end if
+   if (allocated(SeaSt_WaveFieldTypeData%WaveElev2)) then
+      deallocate(SeaSt_WaveFieldTypeData%WaveElev2)
+   end if
+   if (allocated(SeaSt_WaveFieldTypeData%WaveElevC)) then
+      deallocate(SeaSt_WaveFieldTypeData%WaveElevC)
+   end if
+   if (allocated(SeaSt_WaveFieldTypeData%WaveElevC0)) then
+      deallocate(SeaSt_WaveFieldTypeData%WaveElevC0)
+   end if
+   if (allocated(SeaSt_WaveFieldTypeData%WaveDirArr)) then
+      deallocate(SeaSt_WaveFieldTypeData%WaveDirArr)
+   end if
+end subroutine
 
 subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SeaSt_WaveFieldType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_WaveField_PackSeaSt_WaveFieldType'
    if (Buf%ErrStat >= AbortErrLev) return
-   ! WaveTime
    call RegPack(Buf, allocated(InData%WaveTime))
    if (allocated(InData%WaveTime)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveTime), ubound(InData%WaveTime))
       call RegPack(Buf, InData%WaveTime)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDynP
    call RegPack(Buf, allocated(InData%WaveDynP))
    if (allocated(InData%WaveDynP)) then
       call RegPackBounds(Buf, 4, lbound(InData%WaveDynP), ubound(InData%WaveDynP))
       call RegPack(Buf, InData%WaveDynP)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveAcc
    call RegPack(Buf, allocated(InData%WaveAcc))
    if (allocated(InData%WaveAcc)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveAcc), ubound(InData%WaveAcc))
       call RegPack(Buf, InData%WaveAcc)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveAccMCF
    call RegPack(Buf, allocated(InData%WaveAccMCF))
    if (allocated(InData%WaveAccMCF)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveAccMCF), ubound(InData%WaveAccMCF))
       call RegPack(Buf, InData%WaveAccMCF)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveVel
    call RegPack(Buf, allocated(InData%WaveVel))
    if (allocated(InData%WaveVel)) then
       call RegPackBounds(Buf, 5, lbound(InData%WaveVel), ubound(InData%WaveVel))
       call RegPack(Buf, InData%WaveVel)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PWaveDynP0
    call RegPack(Buf, allocated(InData%PWaveDynP0))
    if (allocated(InData%PWaveDynP0)) then
       call RegPackBounds(Buf, 3, lbound(InData%PWaveDynP0), ubound(InData%PWaveDynP0))
       call RegPack(Buf, InData%PWaveDynP0)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PWaveAcc0
    call RegPack(Buf, allocated(InData%PWaveAcc0))
    if (allocated(InData%PWaveAcc0)) then
       call RegPackBounds(Buf, 4, lbound(InData%PWaveAcc0), ubound(InData%PWaveAcc0))
       call RegPack(Buf, InData%PWaveAcc0)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PWaveAccMCF0
    call RegPack(Buf, allocated(InData%PWaveAccMCF0))
    if (allocated(InData%PWaveAccMCF0)) then
       call RegPackBounds(Buf, 4, lbound(InData%PWaveAccMCF0), ubound(InData%PWaveAccMCF0))
       call RegPack(Buf, InData%PWaveAccMCF0)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! PWaveVel0
    call RegPack(Buf, allocated(InData%PWaveVel0))
    if (allocated(InData%PWaveVel0)) then
       call RegPackBounds(Buf, 4, lbound(InData%PWaveVel0), ubound(InData%PWaveVel0))
       call RegPack(Buf, InData%PWaveVel0)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElev0
    call RegPack(Buf, allocated(InData%WaveElev0))
    if (allocated(InData%WaveElev0)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveElev0), ubound(InData%WaveElev0))
       call RegPack(Buf, InData%WaveElev0)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElev1
    call RegPack(Buf, allocated(InData%WaveElev1))
    if (allocated(InData%WaveElev1)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElev1), ubound(InData%WaveElev1))
       call RegPack(Buf, InData%WaveElev1)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElev2
    call RegPack(Buf, allocated(InData%WaveElev2))
    if (allocated(InData%WaveElev2)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElev2), ubound(InData%WaveElev2))
       call RegPack(Buf, InData%WaveElev2)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! SeaSt_Interp_p
    call SeaSt_Interp_PackParam(Buf, InData%SeaSt_Interp_p) 
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveStMod
    call RegPack(Buf, InData%WaveStMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EffWtrDpth
    call RegPack(Buf, InData%EffWtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MSL2SWL
    call RegPack(Buf, InData%MSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevC
    call RegPack(Buf, allocated(InData%WaveElevC))
    if (allocated(InData%WaveElevC)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElevC), ubound(InData%WaveElevC))
       call RegPack(Buf, InData%WaveElevC)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevC0
    call RegPack(Buf, allocated(InData%WaveElevC0))
    if (allocated(InData%WaveElevC0)) then
       call RegPackBounds(Buf, 2, lbound(InData%WaveElevC0), ubound(InData%WaveElevC0))
       call RegPack(Buf, InData%WaveElevC0)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveDirArr
    call RegPack(Buf, allocated(InData%WaveDirArr))
    if (allocated(InData%WaveDirArr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveDirArr), ubound(InData%WaveDirArr))
@@ -526,7 +458,6 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   ! WaveTime
    if (allocated(OutData%WaveTime)) deallocate(OutData%WaveTime)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -541,7 +472,6 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveTime)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveDynP
    if (allocated(OutData%WaveDynP)) deallocate(OutData%WaveDynP)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -556,7 +486,6 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveDynP)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveAcc
    if (allocated(OutData%WaveAcc)) deallocate(OutData%WaveAcc)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -571,7 +500,6 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveAcc)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveAccMCF
    if (allocated(OutData%WaveAccMCF)) deallocate(OutData%WaveAccMCF)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -586,7 +514,6 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveAccMCF)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveVel
    if (allocated(OutData%WaveVel)) deallocate(OutData%WaveVel)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -601,7 +528,6 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveVel)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PWaveDynP0
    if (allocated(OutData%PWaveDynP0)) deallocate(OutData%PWaveDynP0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -616,7 +542,6 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%PWaveDynP0)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PWaveAcc0
    if (allocated(OutData%PWaveAcc0)) deallocate(OutData%PWaveAcc0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -631,7 +556,6 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%PWaveAcc0)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PWaveAccMCF0
    if (allocated(OutData%PWaveAccMCF0)) deallocate(OutData%PWaveAccMCF0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -646,7 +570,6 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%PWaveAccMCF0)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! PWaveVel0
    if (allocated(OutData%PWaveVel0)) deallocate(OutData%PWaveVel0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -661,7 +584,6 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%PWaveVel0)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveElev0
    if (allocated(OutData%WaveElev0)) deallocate(OutData%WaveElev0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -676,7 +598,6 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveElev0)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveElev1
    if (allocated(OutData%WaveElev1)) deallocate(OutData%WaveElev1)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -691,7 +612,6 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveElev1)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveElev2
    if (allocated(OutData%WaveElev2)) deallocate(OutData%WaveElev2)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -706,18 +626,13 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveElev2)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! SeaSt_Interp_p
    call SeaSt_Interp_UnpackParam(Buf, OutData%SeaSt_Interp_p) ! SeaSt_Interp_p 
-   ! WaveStMod
    call RegUnpack(Buf, OutData%WaveStMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! EffWtrDpth
    call RegUnpack(Buf, OutData%EffWtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! MSL2SWL
    call RegUnpack(Buf, OutData%MSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
-   ! WaveElevC
    if (allocated(OutData%WaveElevC)) deallocate(OutData%WaveElevC)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -732,7 +647,6 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveElevC)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveElevC0
    if (allocated(OutData%WaveElevC0)) deallocate(OutData%WaveElevC0)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -747,7 +661,6 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveElevC0)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   ! WaveDirArr
    if (allocated(OutData%WaveDirArr)) deallocate(OutData%WaveDirArr)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
