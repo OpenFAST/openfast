@@ -14,19 +14,20 @@
 # ...... Include files (definitions from NWTC Library) ............................................................................
 # make sure that the file name does not have any trailing white spaces!
 include   Registry_NWTC_Library.txt
-usefrom   Current.txt
-usefrom   Waves.txt
-usefrom   Waves2.txt
+#usefrom   Current.txt
+#usefrom   Waves.txt
+#usefrom   Waves2.txt
 usefrom   Conv_Radiation.txt
 usefrom   SS_Radiation.txt
 usefrom   SS_Excitation.txt
 usefrom   WAMIT.txt
 usefrom   WAMIT2.txt
 usefrom   Morison.txt
+usefrom   SeaState.txt
 #usefrom   FIT.txt
 
-param     HydroDyn/HydroDyn            unused                        INTEGER                  MaxHDOutputs                    -          537        -         "The maximum number of output channels supported by this module"    -
-param     HydroDyn/HydroDyn            unused                        INTEGER                  MaxUserOutputs                  -         4583        -         " Total possible number of output channels:  Waves2 = 18 + SS_Excitation = 7 + SS_Radiation = 7 + Morison= 4032 + HydroDyn=519   =  4583" -
+param     HydroDyn/HydroDyn            unused                        INTEGER                  MaxHDOutputs                    -          510        -         "The maximum number of output channels supported by this module"    -
+param     HydroDyn/HydroDyn            unused                        INTEGER                  MaxUserOutputs                  -         5150        -         " Total possible number of output channels:  SS_Excitation = 7 + SS_Radiation = 7 + Morison= 4626 + HydroDyn=510   =  5150" -
 
 #########################
 # ..... Input file data ...........................................................................................................
@@ -37,9 +38,9 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     AddCLin                         {:}{:}{:}   -          -         "Additional stiffness matrix"    -
 typedef   ^                            ^                             ReKi                     AddBLin                         {:}{:}{:}   -          -         "Additional linear damping matrix"    -
 typedef   ^                            ^                             ReKi                     AddBQuad                        {:}{:}{:}   -          -         "Additional quadratic damping (drag) matrix"    -
-typedef   ^                            ^                             Waves_InitInputType      Waves                           -          -          -         "Initialization data for Waves module"    -
-typedef   ^                            ^                             Waves2_InitInputType     Waves2                          -          -          -         "Initialization data for Waves module"    -
-typedef   ^                            ^                             Current_InitInputType    Current                         -          -          -         "Initialization data for Current module"    -
+#typedef   ^                            ^                             Waves_InitInputType      Waves                           -          -          -         "Initialization data for Waves module"    -
+#typedef   ^                            ^                             Waves2_InitInputType     Waves2                          -          -          -         "Initialization data for Waves module"    -
+typedef   ^                            ^                             SeaSt_InitInputType   SeaState                         -          -          -         "Initialization data for SeaState module"    -
 typedef   ^                            ^                             CHARACTER(1024)          PotFile                         {:}        -          -         "The name of the root potential flow file (without extension for WAMIT, complete name for FIT)"    -
 typedef   ^                            ^                             INTEGER                  nWAMITObj                       -          -          -         "number of WAMIT input files.  If NBodyMod = 1 then nPotFiles will be 1 even if NBody > 1" -
 typedef   ^                            ^                             INTEGER                  vecMultiplier                   -          -          -         "multiplier for the WAMIT vectors and matrices.  If NBodyMod=1 then this = NBody, else 1" -
@@ -76,43 +77,63 @@ typedef   HydroDyn/HydroDyn            InitInputType                 CHARACTER(1
 typedef   ^                            ^                             LOGICAL                  UseInputFile                    -       .TRUE.        -         "Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller"    -
 typedef   ^                            ^                             FileInfoType             PassedFileData                  -          -          -         "If we don't use the input file, pass everything through this"   -
 typedef   ^                            ^                             CHARACTER(1024)          OutRootName                     -          -          -         "Supplied by Driver:  The name of the root file (without extension) including the full path"    -
-typedef	 ^	                           ^                            	Logical	                Linearize	                     -	     .FALSE.	    -	        "Flag that tells this module if the glue code wants to linearize."	-
+typedef	  ^	                           ^                             Logical	              Linearize                       -       .FALSE.       -         "Flag that tells this module if the glue code wants to linearize."	-
 typedef   ^                            ^                             ReKi                     Gravity                         -          -          -         "Supplied by Driver:  Gravitational acceleration"  "(m/s^2)"
-typedef   ^                            ^                             ReKi                     defWtrDens                      -          -          -         "Default water density from the driver; may be overwritten                      "  "(kg/m^3)"
-typedef   ^                            ^                             ReKi                     defWtrDpth                      -          -          -         "Default water depth from the driver; may be overwritten                        "  "m"
-typedef   ^                            ^                             ReKi                     defMSL2SWL                      -          -          -         "Default mean sea level to still water level from the driver; may be overwritten"  "m"
+typedef   ^                            ^                             ReKi                     WtrDens                         -          -          -         "Water density from the driver; may be overwritten                      "  "(kg/m^3)"
+typedef   ^                            ^                             ReKi                     WtrDpth                         -          -          -         "Water depth from the driver; may be overwritten                        "  "m"
+typedef   ^                            ^                             ReKi                     MSL2SWL                         -          -          -         "Mean sea level to still water level from the driver; may be overwritten"  "m"
 typedef   ^                            ^                             DbKi                     TMax                            -          -          -         "Supplied by Driver:  The total simulation time"    "(sec)"
-typedef   ^                            ^                             LOGICAL                  HasIce                          -          -          -         "Supplied by Driver:  Whether this simulation has ice loading (flag)"    -
-typedef   ^                            ^                             SiKi                     WaveElevXY                      {:}{:}     -          -         "Supplied by Driver:  X-Y locations for WaveElevation output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number."    "m,-"
-typedef   ^                            ^                             INTEGER                  WaveFieldMod                    -          -          -         "Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin"   -
 typedef   ^                            ^                             ReKi                     PtfmLocationX                   -          -          -         "Supplied by Driver:  X coordinate of platform location in the wave field"    "m"
 typedef   ^                            ^                             ReKi                     PtfmLocationY                   -          -          -         "Supplied by Driver:  Y coordinate of platform location in the wave field"    "m"
+#
+typedef     ^                 ^                 INTEGER              NStepWave         -        0        -        "Total number of frequency components = total number of time steps in the incident wave" -
+typedef     ^                 ^                 INTEGER              NStepWave2        -        0        -        "NStepWave / 2" -
+typedef     ^                 ^                 SiKi                 RhoXg             -        -        -        "= WtrDens*Gravity" -
+typedef     ^                 ^                 INTEGER              WaveMod           -        -        -        "Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED }" -
+typedef     ^                 ^                 INTEGER              WaveStMod         -        -        -        "Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching}"   -
+typedef     ^                 ^                 INTEGER              WaveDirMod        -        -        -        "Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6]"   -
+typedef     ^                 ^                 SiKi                 WvLowCOff         -        -        -        "Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4]"   (rad/s)
+typedef     ^                 ^                 SiKi                 WvHiCOff          -        -        -        "High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4]"   (rad/s)
+typedef     ^                 ^                 SiKi                 WvLowCOffD        -        -        -        "Minimum frequency used in the difference methods [Ignored if all difference methods = 0]"   (rad/s)
+typedef     ^                 ^                 SiKi                 WvHiCOffD         -        -        -        "Maximum frequency used in the difference methods [Ignored if all difference methods = 0]"   (rad/s)
+typedef     ^                 ^                 SiKi                 WvLowCOffS        -        -        -        "Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
+typedef     ^                 ^                 SiKi                 WvHiCOffS         -        -        -        "Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
+typedef     ^                 ^                 LOGICAL              InvalidWithSSExctn -       -        -        "Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
+typedef     ^                 ^                 SiKi                 WaveElev1         {*}{*}{*}      -          -         "First order wave elevation (points to SeaState module data)"        -
+typedef     ^                 ^                 SiKi                 WaveElev2         {*}{*}{*}      -          -         "Second order wave elevation (points to SeaState module data)"        -
+typedef     ^                 ^                 SiKi                 WaveElev0         {:}      -        -        "Instantaneous elevation time-series of incident waves at the platform reference point" (meters)
+typedef     ^                 ^                 SiKi                 WaveTime          {*}      -        -        "Simulation times at which the instantaneous elevation of, velocity of, acceleration of, and loads associated with the incident waves are determined (points to SeaState module data)" (sec)
+typedef     ^                 ^                 SiKi                 WaveDynP          {*}{*}{*}{*}   -        -        "Instantaneous dynamic pressure of incident waves                                                          , accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (points to SeaState module data)" (N/m^2)
+typedef     ^                 ^                 SiKi                 WaveAcc           {*}{*}{*}{*}{*} -       -        "Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (points to SeaState module data)" (m/s^2)
+typedef     ^                 ^                 SiKi                 WaveAccMCF        {*}{*}{*}{*}{*} -       -        "Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (points to SeaState module data)" (m/s^2)
+typedef     ^                 ^                 SiKi                 WaveVel           {*}{*}{*}{*}{*} -       -        "Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) (points to SeaState module data)" (m/s)
+typedef     ^                 ^                 SiKi                 PWaveDynP0        {*}{*}{*}   -        -        "Instantaneous dynamic pressure of incident waves                                                          , accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (points to SeaState module data)" (N/m^2)
+typedef     ^                 ^                 SiKi                 PWaveAcc0         {*}{*}{*}{*} -       -        "Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (points to SeaState module data)" (m/s^2)
+typedef     ^                 ^                 SiKi                 PWaveAccMCF0      {*}{*}{*}{*} -       -        "Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (points to SeaState module data)" (m/s^2)
+typedef     ^                 ^                 SiKi                 PWaveVel0         {*}{*}{*}{*} -       -        "Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) (points to SeaState module data)" (m/s)
+typedef     ^                 ^                 SiKi                 WaveElevC0        {*}{*}   -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part (points to SeaState module data)"   (meters)
+typedef     ^                 ^                 SiKi                 WaveElevC         {:}{:}{:}   -        -     "Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part"   (meters)
+typedef     ^                 ^                 SiKi                 WaveDirArr        {*}      -        -        "Wave direction array.  Each frequency has a unique direction of WaveNDir > 1 (points to SeaState module data)" (degrees)
+typedef     ^                 ^                 SiKi                 WaveDirMin        -        -        -        "Minimum wave direction."  (degrees)
+typedef     ^                 ^                 SiKi                 WaveDirMax        -        -        -        "Maximum wave direction."  (degrees)
+typedef     ^                 ^                 SiKi                 WaveDir           -        -        -        "Incident wave propagation heading direction" (degrees)
+typedef     ^                 ^                 LOGICAL              WaveMultiDir      -        -        -        "Indicates the waves are multidirectional -- set by HydroDyn_Input"  -
+typedef     ^                 ^                 SiKi                 WaveDOmega        -        -        -        "Frequency step for incident wave calculations" (rad/s)
+typedef     ^                 ^                 SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
+typedef     ^                 ^                 SiKi                 MCFD              -        -        -        "Diameter of MacCamy-Fuchs members" (meters)
 #
 #
 # Define outputs from the initialization routine here:
 #
-typedef   ^                            InitOutputType                WAMIT_InitOutputType     WAMIT                           {:}        -        -         "Initialization output from the WAMIT module"    -
-typedef   ^                            InitOutputType                WAMIT2_InitOutputType    WAMIT2                          {:}         -        -         "Initialization output from the WAMIT2 module"    -
-typedef   ^                            InitOutputType                Waves2_InitOutputType    Waves2                           -          -        -         "Initialization output from the Waves2 module"    -
-typedef   ^                            ^                             Morison_InitOutputType   Morison                         -          -        -         "Initialization output from the Morison module"    -
-typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputHdr                  {:}        -        -         "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
+typedef   ^                            InitOutputType                Morison_InitOutputType   Morison                         -          -        -         "Initialization output from the Morison module"    -
+typedef   ^                            InitOutputType                CHARACTER(ChanLen)       WriteOutputHdr                  {:}        -        -         "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
 typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputUnt                  {:}        -        -         "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
-typedef   ^                            ^                             SiKi                     WaveElevSeries                  {:}{:}     -        -         "Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second dimension is XY point number corresponding to second dimension of WaveElevXY." (m)
 typedef   ^                            ^                             ProgDesc                 Ver                             -          -        -         "Version of HydroDyn"
-typedef   ^                            ^                             ReKi                     WtrDens                         -          -        -         "Water density"    (kg/m^3)
-typedef   ^                            ^                             ReKi                     WtrDpth                         -          -        -         "Water depth"    (m)
-typedef   ^                            ^                             ReKi                     MSL2SWL                         -          -        -         "Offset between still-water level and mean sea level"    (m)
 typedef   ^                            ^                             CHARACTER(LinChanLen)    LinNames_y                      {:}        -        -         "Names of the outputs used in linearization"	-
 typedef   ^                            ^                             CHARACTER(LinChanLen)    LinNames_x                      {:}        -        -         "Names of the continuous states used in linearization"	-
 typedef   ^                            ^                             CHARACTER(LinChanLen)    LinNames_u                      {:}        -        -         "Names of the inputs used in linearization"	-
 typedef   ^                            InitOutputType                INTEGER                  DerivOrder_x                    {:}        -        -         "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization"	-
 typedef   ^                            ^                             LOGICAL                  IsLoad_u                        {:}        -        -         "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
-
-typedef   ^                            ^                             ReKi                     WaveVel          {:}{:}{:}  -        -         "output for now just to pass to MoorDyn"    -
-typedef   ^                            ^                             ReKi                     WaveAcc          {:}{:}{:}  -        -         "output for now just to pass to MoorDyn"    -
-typedef   ^                            ^                             ReKi                     WaveDynP         {:}{:}     -        -         "output for now just to pass to MoorDyn"    -
-typedef   ^                            ^                             ReKi                     WaveElev         {:}{:}     -        -         "output for now just to pass to MoorDyn"    -
-typedef   ^                            ^                             ReKi                     WaveTime         {:}        -        -         "output for now just to pass to MoorDyn"    -
 
 
 # ..... HD_ModuleMapType ....................................................................................................................
@@ -126,41 +147,31 @@ typedef   ^                            HD_ModuleMapType              MeshMapType
 # Define continuous (differentiable) states here:
 #
 typedef   ^                            ContinuousStateType           WAMIT_ContinuousStateType            WAMIT               {:}        -          -         "continuous states from the wamit module"        -
-typedef   ^                            ContinuousStateType           WAMIT2_ContinuousStateType           WAMIT2              {:}        -          -         "continuous states from the wamit2 module"        -
-typedef   ^                            ContinuousStateType           Waves2_ContinuousStateType           Waves2              -          -          -         "continuous states from the waves2 module"        -
 typedef   ^                            ContinuousStateType           Morison_ContinuousStateType          Morison             -          -          -         "continuous states from the Morison module"        -
 #
 #
 # Define discrete (nondifferentiable) states here:
 #
 typedef   ^                            DiscreteStateType             WAMIT_DiscreteStateType              WAMIT               {:}        -          -         "discrete states from the wamit module"        -
-typedef   ^                            DiscreteStateType             WAMIT2_DiscreteStateType             WAMIT2              {:}        -          -         "discrete states from the wamit2 module"        -
-#typedef   ^                            DiscreteStateType             FIT_DiscreteStateType                FIT                 -          -          -         "discrete states from the FIT module"        -
-typedef   ^                            DiscreteStateType             Waves2_DiscreteStateType             Waves2              -          -          -         "discrete states from the waves2 module"        -
 typedef   ^                            DiscreteStateType             Morison_DiscreteStateType            Morison             -          -          -         "discrete states from the Morison module"        -
 #
 #
 # Define constraint states here:
 #
 typedef   ^                            ConstraintStateType           WAMIT_ConstraintStateType           WAMIT  -        -          -                      "constraint states from WAMIT (may be empty)"        -
-typedef   ^                            ConstraintStateType           WAMIT2_ConstraintStateType          WAMIT2 -          -          -                      "constraint states from WAMIT2 (may be empty)"        -
-typedef   ^                            ConstraintStateType           Waves2_ConstraintStateType          Waves2 -          -          -                      "constraint states from the waves2 module"        -
 typedef   ^                            ConstraintStateType           Morison_ConstraintStateType         Morison -         -          -                      "constraint states from the Morison module"        -
 #
 #
 # Define any other states here:
 #
 typedef   ^                            OtherStateType                WAMIT_OtherStateType     WAMIT                           {:}        -          -         "OtherState information from the WAMIT module"   -
-typedef   ^                            OtherStateType                WAMIT2_OtherStateType    WAMIT2                          {:}        -          -         "OtherState information from the WAMIT2 module"   -
 #typedef   ^                            OtherStateType                FIT_OtherStateType       FIT                             -          -          -         "OtherState information from the FIT module"   -
-typedef   ^                            OtherStateType                Waves2_OtherStateType    Waves2                          -          -          -         "OtherState information from the Waves2 module"   -
 typedef   ^                            ^                             Morison_OtherStateType   Morison                         -          -          -         "OtherState information from the Morison module"   -
 
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef   ^                            MiscVarType                   MeshType                 AllHdroOrigin                   -          -          -         "An intermediate mesh used to transfer hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
-typedef   ^                            ^                             MeshType                 MrsnMesh_position               -          -          -         "A motions mesh which has all translational displacements set to zero.  Used in the transfer of hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
 typedef   ^                            ^                             HD_ModuleMapType         HD_MeshMap                      -          -          -
 typedef   ^                            ^                             INTEGER                  Decimate                        -          -          -         "The output decimation counter" -
 typedef   ^                            ^                             DbKi                     LastOutTime                     -          -          -         "Last time step which was written to the output file (sec)"    -
@@ -170,11 +181,8 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     F_Waves                         {:}        -          -         "The total waves forces on a WAMIT body calculated by first and second order methods (WAMIT and WAMIT2 modules)"   -
 typedef   ^                            ^                             WAMIT_MiscVarType        WAMIT                           {:}        -          -          "misc var information from the WAMIT module"   -
 typedef   ^                            ^                             WAMIT2_MiscVarType       WAMIT2                          {:}        -          -         "misc var information from the WAMIT2 module"   -
-typedef   ^                            ^                             Waves2_MiscVarType       Waves2                          -          -          -         "misc var information from the Waves2 module"   -
 typedef   ^                            ^                             Morison_MiscVarType      Morison                         -          -          -         "misc var information from the Morison module"   -
 typedef   ^                            ^                             WAMIT_InputType          u_WAMIT                        {:}         -          -         "WAMIT module inputs" -
-typedef   ^                            ^                             WAMIT2_InputType         u_WAMIT2                       {:}         -          -         "WAMIT2 module inputs" -
-typedef   ^                            ^                             Waves2_InputType         u_Waves2                        -          -          -         "Waves2 module inputs" -
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
@@ -185,7 +193,6 @@ typedef   ^                            ^                             WAMIT_Param
 typedef   ^                            ^                             WAMIT2_ParameterType     WAMIT2                          {:}        -          -         "Parameter data for the WAMIT2 module"  -
 typedef   ^                            ^                             LOGICAL                  WAMIT2used                      -          .FALSE.    -         "Indicates when WAMIT2 is used.  Shortcuts some calculations" -
 #typedef   ^                            ^                             FIT_ParameterType        FIT                             -          -          -         "Parameter data for the FIT module"        -
-typedef   ^                            ^                             Waves2_ParameterType     Waves2                          -          -          -         "Parameter data for the Waves2 module"  -
 typedef   ^                            ^                             Morison_ParameterType    Morison                         -          -          -         "Parameter data for the Morison module"        -
 typedef   ^                            ^                             INTEGER                  PotMod                          -          -          -         "1 if using WAMIT model, 0 if no potential flow model, or 2 if FIT model"    -
 typedef   ^                            ^                             INTEGER                  NBody                           -          -          -         "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
@@ -193,12 +200,8 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  totalStates                     -          -          -         "Number of excitation and radiation states for all WAMIT bodies"        -
 typedef   ^                            ^                             INTEGER                  totalExctnStates                -          -          -         "Number of excitation states for all WAMIT bodies"        -
 typedef   ^                            ^                             INTEGER                  totalRdtnStates                 -          -          -         "Number of radiation states for all WAMIT bodies"        -
-typedef   ^                            ^                             SiKi                     WaveTime                       {:}         -          -         "Array of time samples, (sec)"        -
+typedef   ^                            ^                             SiKi                     WaveTime                       {*}         -          -         "Array of time samples, (sec)"        -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -          -         "Number of data points in the wave kinematics arrays"        -
-typedef   ^                            ^                             INTEGER                  NWaveElev                       -          -          -         "Number of wave elevation outputs"        -
-typedef   ^                            ^                             SiKi                     WaveElev                    {:}{:}         -          -         "Total wave elevation"   -
-typedef   ^                            ^                             SiKi                     WaveElev1                   {:}{:}         -          -         "First order wave elevation"        -
-typedef   ^                            ^                             SiKi                     WaveElev2                   {:}{:}         -          -         "Second order wave elevation"        -
 typedef   ^                            ^                             ReKi                     WtrDpth                         -          -          -         "Water depth"    (m)
 typedef   ^                            ^                             ReKi                     AddF0                       {:}{:}         -          -         "Additional pre-load forces and moments (N,N,N,N-m,N-m,N-m)"    -
 typedef   ^                            ^                             ReKi                     AddCLin                     {:}{:}{:}      -          -         "Additional stiffness matrix"    -
@@ -218,6 +221,7 @@ typedef	 ^	                           ^                             Integer	    
 typedef	 ^	                           ^                             R8Ki	                  du	                         {:}	     -	        -	      "vector that determines size of perturbation for u (inputs)" -
 typedef	 ^	                           ^                             R8Ki	                  dx	                         {:}	     -	        -	      "vector that determines size of perturbation for x (continuous states)" -
 typedef	 ^	                           ^                             Integer	              Jac_ny	                      -	         -	        -	      "number of outputs in jacobian matrix"	-
+typedef	 ^	                           ParameterType                 LOGICAL	              PointsToSeaState                -          .TRUE.     -         "Flag that determines if the data contains pointers to SeaState module or if new copies (from restart)"	-
 #
 #
 # ..... Inputs ....................................................................................................................
@@ -232,7 +236,6 @@ typedef   ^                            InputType                     MeshType   
 # Define outputs that are contained on the mesh here:
 typedef   ^                            OutputType                   WAMIT_OutputType          WAMIT                           {:}        -          -         "WAMIT module outputs"  -
 typedef   ^                            OutputType                   WAMIT2_OutputType         WAMIT2                          {:}        -          -         "WAMIT2 module outputs"  -
-typedef   ^                            OutputType                   Waves2_OutputType         Waves2                          -          -          -         "Waves2 module outputs"  -
 typedef   ^                            ^                            Morison_OutputType        Morison                         -          -          -         "Morison module outputs"  -
 typedef   ^                            OutputType                   MeshType                  WAMITMesh                       -        -          -           "Point Loads at the WAMIT reference point(s) in the inertial frame" -
 typedef   ^                            ^                            ReKi                      WriteOutput                    {:}         -          -         "Outputs to be written to the output file(s)"  -

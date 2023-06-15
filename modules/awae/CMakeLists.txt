@@ -17,13 +17,11 @@ if (GENERATE_TYPES)
   generate_f90_types(src/AWAE_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AWAE_Types.f90 -noextrap)
 endif()
 
-set(AWAE_LIBS_SOURCES
+add_library(awaelib 
   src/AWAE.f90
   src/AWAE_IO.f90
   src/AWAE_Types.f90
-  )
-
-add_library(awaelib ${AWAE_LIBS_SOURCES})
+)
 target_link_libraries(awaelib ifwlib nwtclibs)
 
 install(TARGETS awaelib

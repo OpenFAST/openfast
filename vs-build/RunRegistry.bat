@@ -28,6 +28,7 @@ SET ED_Loc=%Modules_Loc%\elastodyn\src
 SET AD14_Loc=%Modules_Loc%\aerodyn14\src
 SET IfW_Loc=%Modules_Loc%\inflowwind\src
 SET HD_Loc=%Modules_Loc%\hydrodyn\src
+SET SEAST_Loc=%Modules_Loc%\seastate\src
 SET SD_Loc=%Modules_Loc%\subdyn\src
 SET MAP_Loc=%Modules_Loc%\map\src
 SET FEAM_Loc=%Modules_Loc%\feamooring\src
@@ -49,7 +50,7 @@ SET Farm_Loc=%Root_Loc%\glue-codes\fast-farm\src
 
 SET ALL_FAST_Includes=-I "%FAST_Loc%" -I "%NWTC_Lib_Loc%" -I "%ED_Loc%" -I "%SrvD_Loc%" -I "%AD14_Loc%" -I^
  "%AD_Loc%" -I "%BD_Loc%" -I "%SC_Loc%" -I^
- "%IfW_Loc%" -I "%SD_Loc%" -I "%HD_Loc%" -I "%MAP_Loc%" -I "%FEAM_Loc%"  -I^
+ "%IfW_Loc%" -I "%SD_Loc%" -I "%HD_Loc%" -I "%SEAST_Loc%" -I "%MAP_Loc%" -I "%FEAM_Loc%"  -I^
  "%IceF_Loc%" -I "%IceD_Loc%" -I "%MD_Loc%" -I "%OpFM_Loc%" -I "%Orca_Loc%" -I "%ExtPtfm_Loc%"
 
 
@@ -118,13 +119,8 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
 GOTO checkError
 
-:IfW_TSFFWind
-:IfW_HAWCWind
-:IfW_BladedFFWind
-:IfW_UserWind
-:IfW_4Dext
-:IfW_FFWind_Base
-:IfW_UniformWind
+:IfW_FlowField
+:InflowWind_IO
 SET CURR_LOC=%IfW_Loc%
 SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -noextrap  -O "%Output_Loc%"
@@ -194,9 +190,6 @@ SET Output_Loc=%CURR_LOC%
 GOTO checkError
 
 :HydroDyn
-:Current
-:Waves
-:Waves2
 :SS_Excitation
 :SS_Radiation
 :Conv_Radiation
@@ -205,7 +198,18 @@ GOTO checkError
 :Morison
 SET CURR_LOC=%HD_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -I "%SEAST_Loc%" -O "%Output_Loc%"
+GOTO checkError
+
+:SeaState
+:Current
+:Waves
+:Waves2
+:SeaState_Interp
+
+SET CURR_LOC=%SEAST_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%"  -I "%CURR_LOC%" -noextrap -O "%Output_Loc%"
 GOTO checkError
 
 :SubDyn

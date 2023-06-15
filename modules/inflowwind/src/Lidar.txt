@@ -9,60 +9,76 @@
 #include	Registry_NWTC_Library.txt
 
 # LIDAR Constants
-param	Lidar	-	IntKi	SensorType_None	-	-1	-		-
-param	Lidar	-	IntKi	SensorType_SinglePoint	-	0	-		-
-param	^	-	IntKi	SensorType_ContinuousLidar	-	1	-		-
-param	^	-	IntKi	SensorType_PulsedLidar	-	2	-		-
+param	Lidar	-	IntKi	SensorType_None	            -	0	-		-
+param	Lidar	-	IntKi	SensorType_SinglePoint	    -	1	-		-
+param	^	-	IntKi	SensorType_ContinuousLidar  -	2	-		-
+param	^	-	IntKi	SensorType_PulsedLidar      -	3	-		-
 
 # ..... LIDAR_InitInputType data .......................................................................................................
-typedef	^	Lidar_InitInputType	IntKi	SensorType	-	SensorType_None	-	"SensorType_* parameter"	-
-typedef	^	Lidar_InitInputType	DbKi	Tmax	-	-	-	"the length of the simulation"	"s"
-typedef	^	Lidar_InitInputType	ReKi	RotorApexOffsetPos	{3}	-	-	"position of the lidar unit relative to the rotor apex of rotation"	m
-typedef	^	Lidar_InitInputType	ReKi	HubPosition	{3}	-	-	"initial position of the hub (lidar mounted on hub) [0,0,HubHeight]"	"m"
-typedef	^	Lidar_InitInputType	IntKi	NumPulseGate	-	-	-	"the number of range gates to return wind speeds at"	-
-typedef	^	Lidar_InitInputType	LOGICAL	LidRadialVel	-	-	-	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
+typedef	^	Lidar_InitInputType	IntKi	SensorType	     -	SensorType_None	- "SensorType_* parameter"	-
+typedef	^	Lidar_InitInputType	DbKi	Tmax	             -	    -	   -	"the length of the simulation" "s"
+typedef	^	Lidar_InitInputType	ReKi	RotorApexOffsetPos  {3}     -	   -	"position of the lidar unit relative to the rotor apex of rotation" "m"
+typedef	^	Lidar_InitInputType	ReKi	HubPosition	    {3}     -	   -	"initial position of the hub (lidar mounted on hub) [0,0,HubHeight]" "m"
+typedef	^	Lidar_InitInputType	IntKi	NumPulseGate	     -	    -	   -	"the number of range gates to return wind speeds at"	-
+typedef	^	Lidar_InitInputType	LOGICAL	LidRadialVel	     -	    -	   -	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
 
 # ..... LIDAR_InitInputType data .......................................................................................................
-typedef	^	Lidar_InitOutputType	ReKi	DummyInitOut	-
+typedef	^	Lidar_InitOutputType	ReKi	DummyInitOut	     -
 
 # ..... LIDAR_ParameterType data .......................................................................................................
-typedef	^	Lidar_ParameterType	IntKi	NumPulseGate	-	-	-	"the number of range gates to return wind speeds at; pulsed lidar only"	-
-typedef	^	Lidar_ParameterType	ReKi	RotorApexOffsetPos	{3}	-	-	"position of the lidar unit relative to the rotor apex of rotation"	m
-typedef	^	Lidar_ParameterType	ReKi	RayRangeSq	-	-	-	"Rayleigh Range Squared"
-typedef	^	Lidar_ParameterType	ReKi	SpatialRes	-	-	-	"spatial sampling distance of weighting function (1/2)*(avg ws)*dt"
-typedef	^	Lidar_ParameterType	IntKi	SensorType	-	-	-	"SensorType_* parameter"	-
-typedef	^	Lidar_ParameterType	ReKi	WtFnTrunc	-	-	-	"Percentage of the peak value at which to truncate weighting function"
-typedef	^	Lidar_ParameterType	ReKi	PulseRangeOne	-	-	-	"the range to the closest range gate"
-typedef	^	Lidar_ParameterType	ReKi	DeltaP    	-	-	-	"the distance between range gates"
-typedef	^	Lidar_ParameterType	ReKi	DeltaR    	-	-	-	"the FWHM width of the pulse"
-typedef	^	Lidar_ParameterType	ReKi	r_p	-	-	-
-typedef	^	Lidar_ParameterType	LOGICAL	LidRadialVel	-	-	-	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
+typedef	^	Lidar_ParameterType	IntKi	NumPulseGate	     -      -	   -	"the number of range gates to return wind speeds at; pulsed lidar only"	-
+typedef	^	Lidar_ParameterType	ReKi	RotorApexOffsetPos  {3}     -      -	"position of the lidar unit relative to the rotor apex of rotation" "m"
+typedef	^	Lidar_ParameterType	ReKi	RayRangeSq	     -      -	   -	"Rayleigh Range Squared"
+typedef	^	Lidar_ParameterType	ReKi	SpatialRes	     -      -      -	"spatial sampling distance of weighting function (1/2)*(avg ws)*dt"
+typedef	^	Lidar_ParameterType	IntKi	SensorType	     -      -	   -	"SensorType_* parameter"	-
+typedef	^	Lidar_ParameterType	ReKi	WtFnTrunc	     -      -	   -	"Percentage of the peak value at which to truncate weighting function"
+typedef	^	Lidar_ParameterType	ReKi	PulseRangeOne	     -      -	   -	"the range to the closest range gate" "m"
+typedef	^	Lidar_ParameterType	ReKi	DeltaP    	     -      -	   -	"the distance between range gates" "m"
+typedef	^	Lidar_ParameterType	ReKi	DeltaR    	     -      -	   -	"the FWHM width of the pulse"
+typedef	^	Lidar_ParameterType	ReKi	r_p	             -      -	   -
+typedef	^	Lidar_ParameterType	LOGICAL	LidRadialVel	     -      -      -	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
+typedef	^	Lidar_ParameterType	ReKi	DisplacementLidarX   -      -      -	"Displacement of the lidar system from the focal measurement point" "m"
+typedef	^	Lidar_ParameterType	ReKi	DisplacementLidarY   -      -      -	"Displacement of the lidar system from the focal measurement point" "m"
+typedef	^	Lidar_ParameterType	ReKi	DisplacementLidarZ   -      -      -	"Displacement of the lidar system from the focal measurement point" "m"
+typedef	^	Lidar_ParameterType	IntKi	NumBeam              -      -      -   "Number of lidar beams"	-
+typedef	^	Lidar_ParameterType	ReKi	FocalDistanceX       :      -      -   "LIDAR LOS focal distance co-ordinates in the x direction" "m"
+typedef	^	Lidar_ParameterType	ReKi	FocalDistanceY       :      -      -   "LIDAR LOS focal distance co-ordinates in the y direction" "m"
+typedef	^	Lidar_ParameterType	ReKi	FocalDistanceZ       :      -      -   "LIDAR LOS focal distance co-ordinates in the z direction" "m"
+typedef	^	Lidar_ParameterType	ReKi	MsrPosition      {:}{:}     -      -	"Position of the desired wind measurement (was XMsrPt, YMsrPt, ZMsrPt)"	"m"
+typedef	^	Lidar_ParameterType	ReKi	PulseSpacing         -      -      -   "Distance between range gates" "m"
+typedef	^	Lidar_ParameterType	ReKi	URefLid		     -      -      -	"Reference average wind speed for the lidar" "m/s"
+typedef	^	Lidar_ParameterType	IntKi	ConsiderHubMotion    -      -      -	"Flag whether to consider the hub motion's impact on the Lidar measurement"	-
+typedef	^	Lidar_ParameterType	ReKi	MeasurementInterval  -      -      -	"Time steps between lidar measurements" "s"
+typedef	^	Lidar_ParameterType	ReKi	LidPosition	    {3}     -	   -	"Position of the Lidar unit (was XLidPt, YLidPt, ZLidPt)" "m"
+
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
-typedef	^	ContinuousStateType	ReKi	DummyContState	-	-	-	"Remove this variable if you have continuous states"	-
+typedef	^	ContinuousStateType	ReKi	DummyContState	  -	-     -	"Remove this variable if you have continuous states"	-
 # Define discrete (nondifferentiable) states here:
-typedef	^	DiscreteStateType	ReKi	DummyDiscState	-	-	-	"Remove this variable if you have discrete states"	-
-# Define constraint states here:
-typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable if you have constraint states"	-
+typedef	^	DiscreteStateType	ReKi	DummyDiscState    -	-     -	"Remove this variable if you have discrete states"	-
+# Define constraint states here: 
+typedef	^	ConstraintStateType	ReKi	DummyConstrState  -	-     -	"Remove this variable if you have constraint states"	-
 # Define "other" states (any data that are not considered actual states) here:
-typedef	^	OtherStateType	ReKi	DummyOtherState	-	-	-
+typedef	^	OtherStateType	        ReKi	DummyOtherState	  -	-     -
 
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef    ^              MiscVarType          ReKi     DummyMiscVar - - -  "Remove this variable if you have misc variables" -
+typedef ^       MiscVarType             ReKi     DummyMiscVar     -     -     -  "Remove this variable if you have misc variables" -
 
 
 # ..... LIDAR_InputType data .......................................................................................................
-typedef	^	Lidar_InputType	ReKi	LidPosition	{3}	-	-	"Position of the Lidar unit (was XLidPt, YLidPt, ZLidPt)"	m
-typedef	^	Lidar_InputType	ReKi	MsrPosition	{3}	-	-	"Position of the desired wind measurement (was XMsrPt, YMsrPt, ZMsrPt)"	m
-typedef	^	Lidar_InputType	ReKi	PulseLidEl	-	-	-	"the angle off of the x axis that the lidar is aimed (0 would be staring directly upwind, pi/2 would be staring perpendicular to the x axis)"
-typedef	^	Lidar_InputType	ReKi	PulseLidAz	-	-	-	"the angle in the YZ plane that the lidar is staring (if PulseLidEl is set to pi/2, then 0 would be aligned with the positive z axis, pi/2 would be aligned with the positive y axis)"
-
+typedef	^	Lidar_InputType	        ReKi	PulseLidEl	  -	-     -	 "the angle off of the x axis that the lidar is aimed (0 would be staring directly upwind, pi/2 would be staring perpendicular to the x axis)"
+typedef	^	Lidar_InputType	        ReKi	PulseLidAz	  -	-     -	 "the angle in the YZ plane that the lidar is staring (if PulseLidEl is set to pi/2, then 0 would be aligned with the positive z axis, pi/2 would be aligned with the positive y axis)"
+typedef	^	Lidar_InputType	        ReKi	HubDisplacementX  -	-     -	 "X direction hub displacement of the lidar (from ElastoDyn)" "m"
+typedef	^	Lidar_InputType	        ReKi	HubDisplacementY  -	-     -	 "Y direction hub displacement of the lidar (from ElastoDyn)" "m"
+typedef	^	Lidar_InputType	        ReKi	HubDisplacementZ  -	-     -	 "Z direction hub displacement of the lidar (from ElastoDyn)" "m"
 
 # ..... LIDAR_OutputType data .......................................................................................................
-typedef	^	Lidar_OutputType	ReKi	LidSpeed	{:}	-	-	"Speed detected by Lidar at measurement point (range gates for pulsed lidar)"	"m/s"
-typedef	^	Lidar_OutputType	ReKi	WtTrunc	{:}	-	-	"Contains the fraction of the peak that the weighting function was truncated at (for when truncated early)."
-#typedef	^	Lidar_OutputType	IntKi	LidErr	{:}	-	-	"Error code; THIS NEEDS TO GET FIXED (no integer outputs)"
-
+typedef	^	Lidar_OutputType	ReKi	LidSpeed	 {:}	-     -	 "Speed detected by Lidar at measurement point (range gates for pulsed lidar)"	"m/s"
+typedef	^	Lidar_OutputType	ReKi	WtTrunc	         {:}	-     -	 "Contains the fraction of the peak that the weighting function was truncated at (for when truncated early)."
+typedef	^	Lidar_OutputType	ReKi	MsrPositionsX	 {:}	-     -	 "Lidar X direction measurement points" "m"
+typedef	^	Lidar_OutputType	ReKi	MsrPositionsY	 {:}	-     -	 "Lidar Y direction measurement points" "m"
+typedef	^	Lidar_OutputType	ReKi	MsrPositionsZ	 {:}	-     -	 "Lidar Z direction measurement points" "m"
+#typedef	^	Lidar_OutputType	IntKi	LidErr	         {:}	-     -	 "Error code; THIS NEEDS TO GET FIXED (no integer outputs)"

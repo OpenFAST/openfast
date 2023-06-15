@@ -19,7 +19,6 @@
 #===============================================================================
 
 function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TESTNAME LABEL)
-  file(TO_NATIVE_PATH "${PYTHON_EXECUTABLE}" PYTHON_EXECUTABLE)
 
   file(TO_NATIVE_PATH "${EXECUTABLE}" EXECUTABLE)
   file(TO_NATIVE_PATH "${TEST_SCRIPT}" TEST_SCRIPT)
@@ -55,7 +54,7 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
   endif()
   
   add_test(
-    ${TESTNAME} ${PYTHON_EXECUTABLE}
+    ${TESTNAME} ${Python_EXECUTABLE}
        ${TEST_SCRIPT}
        ${TESTDIR}
        ${EXECUTABLE}
@@ -149,7 +148,7 @@ endfunction(ad_regression)
 # aerodyn-Py
 function(py_ad_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeAerodynPyRegressionCase.py")
-  set(AERODYN_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(AERODYN_EXECUTABLE "${Python_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/aerodyn")
   regression(${TEST_SCRIPT} ${AERODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
@@ -187,7 +186,7 @@ endfunction(hd_regression)
 # py_hydrodyn
 function(py_hd_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeHydrodynPyRegressionCase.py")
-  set(HYDRODYN_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(HYDRODYN_EXECUTABLE "${Python_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/hydrodyn")
   regression(${TEST_SCRIPT} ${HYDRODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
@@ -214,11 +213,20 @@ endfunction(ifw_regression)
 # py_inflowwind
 function(py_ifw_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeInflowwindPyRegressionCase.py")
-  set(INFLOWWIND_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(INFLOWWIND_EXECUTABLE "${Python_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/inflowwind")
   regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(py_ifw_regression)
+
+# seastate
+function(seast_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeSeaStateRegressionCase.py")
+  set(SEASTATE_EXECUTABLE "${CTEST_SEASTATE_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/seastate")
+  regression(${TEST_SCRIPT} ${SEASTATE_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(seast_regression)
 
 # moordyn
 function(md_regression TESTNAME LABEL)
@@ -232,7 +240,7 @@ endfunction(md_regression)
 # py_moordyn c-bindings interface
 function(py_md_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeMoordynPyRegressionCase.py")
-  set(MOORDYN_EXECUTABLE "${PYTHON_EXECUTABLE}")
+  set(MOORDYN_EXECUTABLE "${Python_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/moordyn")
   regression(${TEST_SCRIPT} ${MOORDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
@@ -242,7 +250,7 @@ endfunction(py_md_regression)
 # function(py_openfast_library_regression TESTNAME LABEL)
 #   set(test_module "${CMAKE_SOURCE_DIR}/modules/openfast-library/tests/test_openfast_library.py")
 #   set(input_file "${CMAKE_SOURCE_DIR}/reg_tests/r-test/glue-codes/openfast/5MW_OC4Jckt_ExtPtfm/5MW_OC4Jckt_ExtPtfm.fst")
-#   add_test(${TESTNAME} ${PYTHON_EXECUTABLE} ${test_module} ${input_file} )
+#   add_test(${TESTNAME} ${Python_EXECUTABLE} ${test_module} ${input_file} )
 # endfunction(py_openfast_library_regression)
 
 
@@ -282,6 +290,7 @@ of_regression("HelicalWake_OLAF"                       "openfast;aerodyn15;olaf"
 of_regression("EllipticalWing_OLAF"                    "openfast;aerodyn15;olaf")
 of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrodyn;moordyn;offshore;stc")
 of_regression("MHK_RM1_Fixed"                          "openfast;elastodyn;aerodyn15;mhk")
+of_regression("MHK_RM1_Floating"                       "openfast;elastodyn;aerodyn15;hydrodyn;moordyn;mhk")
 
 # OpenFAST C++ API test
 if(BUILD_OPENFAST_CPP_API)
@@ -331,6 +340,7 @@ ad_regression("ad_MultipleHAWT"             "aerodyn;bem")
 ad_regression("ad_QuadRotor_OLAF"           "aerodyn;bem")
 ad_regression("ad_VerticalAxis_OLAF"        "aerodyn;bem")
 ad_regression("ad_MHK_RM1_Fixed"            "aerodyn;bem;mhk")
+ad_regression("ad_MHK_RM1_Floating"         "aerodyn;bem;mhk")
 ad_regression("ad_BAR_CombinedCases"        "aerodyn;bem") # NOTE: doing BAR at the end to avoid copy errors
 ad_regression("ad_BAR_OLAF"                 "aerodyn;bem")
 ad_regression("ad_BAR_SineMotion"           "aerodyn;bem")
@@ -381,9 +391,18 @@ sd_regression("SD_AnsysComp3_PinBeamCable"                    "subdyn;offshore")
 
 # InflowWind regression tests
 ifw_regression("ifw_turbsimff"                                "inflowwind")
+ifw_regression("ifw_uniform"                                  "inflowwind")
+ifw_regression("ifw_nativeBladed"                             "inflowwind")
+ifw_regression("ifw_BoxExceed"                                "inflowwind")
+ifw_regression("ifw_BoxExceedTwr"                             "inflowwind")
 
 # Py-InflowWind regression tests
 py_ifw_regression("py_ifw_turbsimff"                          "inflowwind;python")
+
+# SeaState regression tests
+seast_regression("seastate_1"                                "seastate")
+seast_regression("seastate_wavemod5"                         "seastate")
+seast_regression("seastate_wr_kin1"                          "seastate")
 
 # MoorDyn regression tests
 md_regression("md_5MW_OC4Semi"                                "moordyn")

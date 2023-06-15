@@ -30,10 +30,10 @@ MODULE HydroDyn
    use Morison
    USE WAMIT
    USE WAMIT2
+   use SeaState
    USE HydroDyn_Input
    USE HydroDyn_Output
-   USE Current
-   USE Waves2
+
 #ifdef USE_FIT
    USE FIT_MODULES
    USE FIT_Types
@@ -76,148 +76,6 @@ MODULE HydroDyn
    
    CONTAINS
    
-SUBROUTINE WvStretch_Init(WaveStMod, WtrDpth, NStepWave, NNodes,  &
-                          NWaveElev, WaveElev, WaveKinzi, WaveTime, &
-                          WaveVel0, WaveAcc0, WaveDynP0, &
-                          WavePVel0, WavePAcc0, WavePDynP0, &
-                          WaveVel , WaveAcc , WaveDynP , &
-                          nodeInWater, ErrStat, ErrMsg )
-
- 
-   INTEGER,          INTENT(IN   )  :: WaveStMod
-   REAL(SiKi),       INTENT(IN   )  :: WtrDpth
-   INTEGER,          INTENT(IN   )  :: NStepWave
-   INTEGER,          INTENT(IN   )  :: NNodes
-   INTEGER,          INTENT(IN   )  :: NWaveElev
-   REAL(SiKi),       INTENT(IN   )  :: WaveElev(0:,:)
-   REAL(SiKi),       INTENT(IN   )  :: WaveKinzi(:)
-   REAL(SiKi),       INTENT(IN   )  :: WaveTime(0:)
-   REAL(SiKi),       INTENT(IN   )  :: WaveVel0(0:,:,:)               !< Wave velocity in Global coordinate system at Z = 0.  Each point in this array has a corresponding entry (same index #) in the WaveVel array
-   REAL(SiKi),       INTENT(IN   )  :: WaveAcc0(0:,:,:)
-   REAL(SiKi),       INTENT(IN   )  :: WaveDynP0(0:,:)
-   REAL(SiKi),       INTENT(IN   )  :: WavePVel0(0:,:,:)               !< Wave velocity in Global coordinate system at Z = 0.  Each point in this array has a corresponding entry (same index #) in the WaveVel array
-   REAL(SiKi),       INTENT(IN   )  :: WavePAcc0(0:,:,:)
-   REAL(SiKi),       INTENT(IN   )  :: WavePDynP0(0:,:)
-   REAL(SiKi),       INTENT(INOUT)  :: WaveVel(0:,:,:)
-   REAL(SiKi),       INTENT(INOUT)  :: WaveAcc(0:,:,:)
-   REAL(SiKi),       INTENT(INOUT)  :: WaveDynP(0:,:)
-   INTEGER(IntKi),   INTENT(INOUT)  :: nodeInWater(0:,:)
-   INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat             !< Error status of the operation
-   CHARACTER(*),     INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-      ! Local variables
-   INTEGER(IntKi) ::  I, J                            !< Local loop counters
-   REAL(SiKi) :: wavekinzloc ,WavePVel0loc
-   
-       ! Initialize ErrStat      
-   ErrStat = ErrID_None         
-   ErrMsg  = ""               
-      
-      
-   DO I = 0,NStepWave-1       ! Loop through all time steps
-       
-      DO J = 1,NNodes
-         
-         SELECT CASE ( WaveStMod )  ! Which model are we using to extrapolate the incident wave kinematics to the instantaneous free surface?
-
-            CASE ( 0 )                 ! None = no stretching.
-               ! Since we have no stretching, the wave kinematics between the seabed and
-               !   the mean sea level are left unchanged; below the seabed or above the
-               !   mean sea level, the wave kinematics are zero:                     
-               IF (   ( WaveKinzi(J) < -WtrDpth ) .OR. ( WaveKinzi(J) > 0.0          ) )  THEN   ! .TRUE. if the elevation of the point defined by WaveKinzi(J) lies below the seabed or above mean sea level (exclusive)
-
-                  WaveDynP   (I,J  )  = 0.0
-                  WaveVel    (I,J,:)  = 0.0
-                  WaveAcc    (I,J,:)  = 0.0
-                  nodeInWater(I,J  )  = 0
-               ELSE   
-                  nodeInWater(I,J  )  = 1
-               END IF
-            CASE ( 1 )                 ! Vertical stretching.
-
-
-               ! Vertical stretching says that the wave kinematics above the mean sea level
-               !   equal the wave kinematics at the mean sea level.  The wave kinematics
-               !   below the mean sea level are left unchanged:
-               IF (   ( WaveKinzi(J) < -WtrDpth ) .OR. ( WaveKinzi(J) > WaveElev(I,J) ) ) THEN   ! .TRUE. if the elevation of the point defined by WaveKinzi(J) lies below the seabed or above the instantaneous wave elevation (exclusive)
-
-                  WaveDynP   (I,J  )  = 0.0
-                  WaveVel    (I,J,:)  = 0.0
-                  WaveAcc    (I,J,:)  = 0.0
-                  nodeInWater(I,J  )  = 0
-               ELSE 
-                  nodeInWater(I,J  )  = 1
-                  IF   ( WaveKinzi(J) >= 0.0_ReKi ) THEN
-                     ! Set the wave kinematics to the kinematics at mean sea level for locations above MSL, but below the wave elevation.
-                     WaveDynP   (I,J  )  = WaveDynP0  (I,J  )
-                     WaveVel    (I,J,:)  = WaveVel0   (I,J,:)
-                     WaveAcc    (I,J,:)  = WaveAcc0   (I,J,:)
-                  END IF
-                  ! Otherwise, do nothing because the kinematics have already be set correctly via the various Waves modules
-               END IF
-            
-
-
-
-            CASE ( 2 )                 ! Extrapolation stretching.
-
-
-            ! Extrapolation stretching uses a linear Taylor expansion of the wave
-            !   kinematics (and their partial derivatives with respect to z) at the mean
-            !   sea level to find the wave kinematics above the mean sea level.  The
-            !   wave kinematics below the mean sea level are left unchanged:
-
-              
-               IF (   ( WaveKinzi(J) < -WtrDpth ) .OR. ( WaveKinzi(J) > WaveElev(I,J) ) ) THEN   ! .TRUE. if the elevation of the point defined by WaveKinzi(J) lies below the seabed or above the instantaneous wave elevation (exclusive)
-
-                  WaveDynP   (I,J  )  = 0.0
-                  WaveVel    (I,J,:)  = 0.0
-                  WaveAcc    (I,J,:)  = 0.0
-                  nodeInWater(I,J  )  = 0
-               ELSE 
-                  nodeInWater(I,J  )  = 1
-                  wavekinzloc = WaveKinzi(J)
-                  WavePVel0loc = WavePVel0   (I,J,1)
-                  IF   ( WaveKinzi(J) >= 0.0_ReKi ) THEN
-                     ! Set the wave kinematics to the kinematics at mean sea level for locations above MSL, but below the wave elevation.
-                     WaveDynP   (I,J  )  = WaveDynP0  (I,J  ) + WaveKinzi(J)*WavePDynP0  (I,J  )
-                     WaveVel    (I,J,:)  = WaveVel0   (I,J,:) + WaveKinzi(J)*WavePVel0   (I,J,:)
-                     WaveAcc    (I,J,:)  = WaveAcc0   (I,J,:) + WaveKinzi(J)*WavePAcc0   (I,J,:)
-                  END IF
-                  ! Otherwise, do nothing because the kinematics have already be set correctly via the various Waves modules
-               END IF
-
-
-            CASE ( 3 )                 ! Wheeler stretching.
-
-
-            ! Wheeler stretching says that wave kinematics calculated using Airy theory
-            !   at the mean sea level should actually be applied at the instantaneous
-            !   free surface and that Airy wave kinematics computed at locations between
-            !   the seabed and the mean sea level should be shifted vertically to new
-            !   locations in proportion to their elevation above the seabed.
-            !
-            ! Computing the wave kinematics with Wheeler stretching requires that first
-            !   say that the wave kinematics we computed at the elevations defined by
-            !   the WaveKinzi0Prime(:) array are actual applied at the elevations found
-            !   by stretching the elevations in the WaveKinzi0Prime(:) array using the
-            !   instantaneous wave elevation--these new elevations are stored in the
-            !   WaveKinzi0St(:) array.  Next, we interpolate the wave kinematics
-            !   computed without stretching to the desired elevations (defined in the
-            !   WaveKinzi(:) array) using the WaveKinzi0St(:) array:
-
- 
-         ENDSELECT
-      END DO                   ! J - All points where the incident wave kinematics will be computed
-   END DO                      ! I - All time steps
-   
-   ! Set the ending timestep to the same as the first timestep
-   WaveDynP (NStepWave,:  )  = WaveDynP (0,:  )
-   WaveVel  (NStepWave,:,:)  = WaveVel  (0,:,:)
-   WaveAcc  (NStepWave,:,:)  = WaveAcc  (0,:,:)
-         
-END SUBROUTINE WvStretch_Init
-   
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps. 
 !! The parameters are set here and not changed during the simulation.
@@ -225,7 +83,7 @@ END SUBROUTINE WvStretch_Init
 SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(HydroDyn_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine.
+      TYPE(HydroDyn_InitInputType),       INTENT(INOUT)  :: InitInp     !< Input data for initialization routine. [INOUT because of a move_alloc() statement]
       TYPE(HydroDyn_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
       TYPE(HydroDyn_ParameterType),       INTENT(  OUT)  :: p           !< Parameters      
       TYPE(HydroDyn_ContinuousStateType), INTENT(  OUT)  :: x           !< Initial continuous states
@@ -251,35 +109,12 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       CHARACTER(1024)                        :: SummaryName                         ! name of the HydroDyn summary file   
       TYPE(HydroDyn_InputFile)               :: InputFileData                       !< Data from input file
       TYPE(FileInfoType)                     :: InFileInfo                          !< The derived type for holding the full input file for parsing -- we may pass this in the future
-      TYPE(Waves_InitOutputType)             :: Waves_InitOut                       ! Initialization Outputs from the Waves module initialization
-!      TYPE(Waves2_InitOutputType)            :: Waves2_InitOut                      ! Initialization Outputs from the Waves2 module initialization
-      TYPE(Current_InitOutputType)           :: Current_InitOut                     ! Initialization Outputs from the Current module initialization
 !      LOGICAL                                :: hasWAMITOuts                        ! Are there any WAMIT-related outputs
 !      LOGICAL                                :: hasMorisonOuts                      ! Are there any Morison-related outputs
 !      INTEGER                                :: numHydroOuts                        ! total number of WAMIT and Morison outputs
       INTEGER                                :: I, J, k, iBody                                ! Generic counters
-      REAL(SiKi)                             :: WaveNmbr                            ! Wavenumber of the current frequency component (1/meter)
          ! These are dummy variables to satisfy the framework, but are not used 
          
-      TYPE(Waves_InputType)                  :: Waves_u                             ! Waves module initial guess for the input; the input mesh is not defined because it is not used by the waves module
-      TYPE(Waves_ParameterType)              :: Waves_p                             ! Waves module parameters
-      TYPE(Waves_ContinuousStateType)        :: Waves_x                             ! Waves module initial continuous states
-      TYPE(Waves_DiscreteStateType)          :: Waves_xd                            ! Waves module discrete states
-      TYPE(Waves_ConstraintStateType)        :: Waves_z                             ! Waves module initial guess of the constraint states
-      TYPE(Waves_OtherStateType)             :: WavesOtherState                     ! Waves module other states 
-      TYPE(Waves_MiscVarType)                :: Waves_m                             ! Waves module misc/optimization data 
-      TYPE(Waves_OutputType)                 :: Waves_y                             ! Waves module outputs   
-
-
-      TYPE(Current_InputType)                :: Current_u                           ! Current module initial guess for the input; the input mesh is not defined because it is not used by the Current module
-      TYPE(Current_ParameterType)            :: Current_p                           ! Current module parameters
-      TYPE(Current_ContinuousStateType)      :: Current_x                           ! Current module initial continuous states
-      TYPE(Current_DiscreteStateType)        :: Current_xd                          ! Current module discrete states
-      TYPE(Current_ConstraintStateType)      :: Current_z                           ! Current module initial guess of the constraint states
-      TYPE(Current_OtherStateType)           :: CurrentOtherState                   ! Current module other states 
-      TYPE(Current_OutputType)               :: Current_y                           ! Current module outputs   
-      TYPE(Current_MiscVarType)              :: Current_m                           ! Current module misc/optimization data 
-      
  
 #ifdef USE_FIT
          ! FIT - related data
@@ -294,42 +129,21 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       TYPE(FIT_InitOutputType)               :: FIT_InitOut                       ! Initialization Outputs from the FIT module initialization
 #endif
 
-      Real(ReKi)                             :: Np      
-      Real(ReKi)                             :: dftreal
-      Real(ReKi)                             :: dftimag 
    
          ! WAMIT Mesh
       real(R8Ki)                             :: theta(3), orientation(3,3)        
       
-         ! Wave Stretching Data
-      REAL(SiKi), ALLOCATABLE  :: tmpWaveKinzi(:    )
-      INTEGER                  :: tmpNWaveElev
-      REAL(SiKi), ALLOCATABLE  :: tmpWaveElevxi(:    )
-      REAL(SiKi), ALLOCATABLE  :: tmpWaveElevyi(:    )
-      REAL(SiKi), ALLOCATABLE  :: tmpWaveElevXY(:,:  )
-      REAL(SiKi), ALLOCATABLE  :: WaveElevSt  (:,:  ) 
-      REAL(SiKi), ALLOCATABLE  :: WaveVel0    (:,:,:) 
-      REAL(SiKi), ALLOCATABLE  :: WaveAcc0    (:,:,:)                              
-      REAL(SiKi), ALLOCATABLE  :: WaveDynP0   (:,:  )  
-      REAL(SiKi), ALLOCATABLE  :: WaveVel2S0  (:,:,:)
-      REAL(SiKi), ALLOCATABLE  :: WaveAcc2S0  (:,:,:)                                   
-      REAL(SiKi), ALLOCATABLE  :: WaveDynP2S0 (:,:  )   
-      REAL(SiKi), ALLOCATABLE  :: WaveVel2D0  (:,:,:)    
-      REAL(SiKi), ALLOCATABLE  :: WaveAcc2D0  (:,:,:)                              
-      REAL(SiKi), ALLOCATABLE  :: WaveDynP2D0 (:,:  )                                     
-
-                                       
       INTEGER(IntKi)                         :: ErrStat2                            ! local error status
       CHARACTER(ErrMsgLen)                   :: ErrMsg2                             ! local error message
       CHARACTER(*), PARAMETER                :: RoutineName = 'HydroDyn_Init'
    
 
-      
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
       ErrMsg  = ""               
       p%UnOutFile = -1 !bjj: this was being written to the screen when I had an error in my HD input file, so I'm going to initialize here.
+      p%PointsToSeaState = .true.  ! this should be true unless we are initializing from restart (in a different driver/routine)
       
 #ifdef BETA_BUILD
    CALL DispBetaNotice( "This is a beta version of HydroDyn and is for testing purposes only."//NewLine//"This version includes user waves, WaveMod=6 and the ability to write example user waves." )
@@ -367,13 +181,18 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
 
       ! Parse all HydroDyn-related input and populate the InputFileData structure 
-      CALL HydroDyn_ParseInput( InitInp%InputFile, InitInp%OutRootName, InitInp%defWtrDens, InitInp%defWtrDpth, InitInp%defMSL2SWL, InFileInfo, InputFileData, ErrStat2, ErrMsg2 )
+      CALL HydroDyn_ParseInput( InitInp%InputFile, InitInp%OutRootName, InFileInfo, InputFileData, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
             RETURN
          END IF
       
+      InputFileData%Morison%WtrDens = InitInp%WtrDens
+      InputFileData%Morison%WtrDpth = InitInp%WtrDpth
+      InputFileData%Morison%MSL2SWL = InitInp%MSL2SWL
+   
+         
       
          ! Verify all the necessary initialization data. Do this at the HydroDynInput module-level 
          !   because the HydroDynInput module is also responsible for parsing all this 
@@ -399,7 +218,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       ELSE IF (Initlocal%PotMod == 2) THEN
          ! This is the FIT potential flow model and the time step needs to be >= the driver timestep, and and integer multiple if larger
          ! We example WaveDT for this timestep size because FIT is tied to WaveDT
-         IF ( ( .NOT. EqualRealNos(mod(real(Initlocal%Waves%WaveDT,ReKi), real(Interval,ReKi)) , 0.0_ReKi) ) .OR. Initlocal%Waves%WaveDT <= 0.0_DbKi ) THEn
+         IF ( ( .NOT. EqualRealNos(mod(real(Initlocal%WaveDT,ReKi), real(Interval,ReKi)) , 0.0_ReKi) ) .OR. Initlocal%WaveDT <= 0.0_DbKi ) THEn
             CALL SetErrStat(ErrID_Fatal,'The value of WaveDT is not greater than zero and an integer multiple of the glue code timestep.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
@@ -420,8 +239,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          
       IF ( InputFileData%HDSum ) THEN 
          
-         SummaryName = TRIM(InitInp%OutRootName)//'.HD.sum'
-         CALL HDOut_OpenSum( InputFileData%UnSum, SummaryName, HydroDyn_ProgDesc, ErrStat2, ErrMsg2 )    !this must be called before the Waves_Init() routine so that the appropriate wave data can be written to the summary file
+         SummaryName = TRIM(InitInp%OutRootName)//'.sum'
+         CALL HDOut_OpenSum( InputFileData%UnSum, SummaryName, HydroDyn_ProgDesc, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
@@ -441,418 +260,21 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       p%AddBQuad     = InputFileData%AddBQuad
       
       
-         ! Set summary unit number in Waves, Radiation, and Morison initialization input data
-      InputFileData%Waves%UnSum           = InputFileData%UnSum
-      InputFileData%WAMIT%Conv_Rdtn%UnSum = InputFileData%UnSum
-      InputFileData%Morison%UnSum         = InputFileData%UnSum      
+         ! Set summary unit number in Morison initialization input data
+      InputFileData%Morison%UnSum         = InputFileData%UnSum
     
-         ! distribute wave field and turbine location variables as needed to submodule initInputs
-      InputFileData%Waves%WaveFieldMod  = InitInp%WaveFieldMod
-      InputFileData%Waves%PtfmLocationX = InitInp%PtfmLocationX
-      InputFileData%Waves%PtfmLocationY = InitInp%PtfmLocationY
-      
          ! Now call each sub-module's *_Init subroutine
          ! to fully initialize each sub-module based on the necessary initialization data
-      
-
-         ! Initialize Current module
-         
-      CALL Current_Init(InputFileData%Current, Current_u, Current_p, Current_x, Current_xd, Current_z, CurrentOtherState, &
-                                 Current_y, Current_m, Interval, Current_InitOut, ErrStat2, ErrMsg2 )   
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
-
-      ! Verify that Current_Init() did not request a different Interval!
-      
-      IF ( p%DT /= Interval ) THEN
-         CALL SetErrStat(ErrID_Fatal,'Current Module attempted to change timestep interval, but this is not allowed.  Current Module must use the HydroDyn Interval.',ErrStat,ErrMsg,RoutineName)
-         CALL CleanUp()
-         RETURN
-      END IF
-      
-      
-         ! Move initialization output data from Current module into the initialization input data for the Waves module
-                    
-      IF (ALLOCATED(Current_InitOut%CurrVxi)) CALL Move_Alloc( Current_InitOut%CurrVxi, InputFileData%Waves%CurrVxi )
-      IF (ALLOCATED(Current_InitOut%CurrVyi)) CALL Move_Alloc( Current_InitOut%CurrVyi, InputFileData%Waves%CurrVyi )
-      
-      InputFileData%Waves%PCurrVxiPz0   = Current_InitOut%PCurrVxiPz0
-      InputFileData%Waves%PCurrVyiPz0   = Current_InitOut%PCurrVyiPz0
-         
-
-         ! Copy the WaveElevXY data in from the HydroDyn InitInp
-
-      IF (ALLOCATED(InitInp%WaveElevXY)) THEN
-         call AllocAry(tmpWaveElevXY,size(InitInp%WaveElevXY,DIM=1),size(InitInp%WaveElevXY,DIM=2),'tmpWaveElevXY',ErrStat2,ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
-         tmpWaveElevXY = InitInp%WaveElevXY
-      ENDIF
-
- 
-         ! Initialize Waves module
-      
-!==========================================================================
-! Initialize Wave Stretching data for 1st Order Waves
-!==========================================================================
-      IF (InputFileData%Waves%WaveStMod > 0) THEN      
-            ! Allocate the temporary storage array for the WvKinxi
-         ALLOCATE ( tmpWaveKinzi(InputFileData%Waves%NWaveKin), STAT = ErrStat2 )
-         IF ( ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'Error allocating space for tmpWaveKinzi array.', ErrStat, ErrMsg, RoutineName)
-            CALL CleanUp()
-            RETURN
-         END IF
-            
-            
-         
-         tmpWaveKinzi = InputFileData%Waves%WaveKinzi
-         InputFileData%Waves%WaveKinzi = 0.0_ReKi         ! Force all zi coordinates to 0.0 for this version of the Waves initialization
-         
-         
-            ! We will use the user-requested wave elevation arrays to compute the wave elevations for stretching at ALL node locations.
-            ! We are going to store the user-requested wave elevation output locations so that we can restore them after we done.
-         IF (InputFileData%Waves%NWaveElev > 0) THEN
-            tmpNWaveElev = InputFileData%Waves%NWaveElev
-            CALL MOVE_ALLOC( InputFileData%Waves%WaveElevxi, tmpWaveElevxi  )  ! (from, to)
-            CALL MOVE_ALLOC( InputFileData%Waves%WaveElevyi, tmpWaveElevyi  ) 
-         END IF
-           
-           
-         ALLOCATE ( InputFileData%Waves%WaveElevxi(InputFileData%Waves%NWaveKin), STAT = ErrStat2 )
-         IF ( ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'Error allocating space for tmpWaveKinzi array.', ErrStat, ErrMsg, RoutineName)
-            CALL CleanUp()
-            RETURN
-         END IF
-         ALLOCATE ( InputFileData%Waves%WaveElevyi(InputFileData%Waves%NWaveKin), STAT = ErrStat2 )
-         IF ( ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'Error allocating space for tmpWaveKinzi array.', ErrStat, ErrMsg, RoutineName)
-            CALL CleanUp()
-            RETURN
-         END IF    
-         
-         InputFileData%Waves%NWaveElev  = InputFileData%Waves%NWaveKin
-         InputFileData%Waves%WaveElevxi = InputFileData%Waves%WaveKinxi
-         InputFileData%Waves%WaveElevyi = InputFileData%Waves%WaveKinyi
-         
-         
-         CALL Waves_Init(InputFileData%Waves, Waves_u, Waves_p, Waves_x, Waves_xd, Waves_z, WavesOtherState, &
-                                    Waves_y, Waves_m, Interval, Waves_InitOut, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
-         
-            ! Store the wave elevations coming out of the Waves_Init for use in the stretching calculations
-         ALLOCATE ( WaveElevSt(0:Waves_InitOut%NStepWave,InputFileData%Waves%NWaveKin), STAT = ErrStat2 )
-         IF ( ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveElevSt array.', ErrStat, ErrMsg, RoutineName)
-            CALL CleanUp()
-            RETURN
-         END IF    
-         WaveElevSt = Waves_InitOut%WaveElev
-         
-         
-            ! We need to reset the wave elevation arrays
-         DEALLOCATE(InputFileData%Waves%WaveElevxi)
-         DEALLOCATE(InputFileData%Waves%WaveElevyi)
-         InputFileData%Waves%NWaveElev = tmpNWaveElev
-         
-         IF (InputFileData%Waves%NWaveElev > 0) THEN
-            CALL MOVE_ALLOC( tmpWaveElevxi, InputFileData%Waves%WaveElevxi  )  ! (from, to)
-            CALL MOVE_ALLOC( tmpWaveElevyi, InputFileData%Waves%WaveElevyi  ) 
-         END IF
-         
-         ALLOCATE ( WaveDynP0 (0:Waves_InitOut%NStepWave,InputFileData%Waves%NWaveKin  ), STAT=ErrStat2 )
-         IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP0.', ErrStat, ErrMsg, RoutineName)
-
-         ALLOCATE ( WaveVel0  (0:Waves_InitOut%NStepWave,InputFileData%Waves%NWaveKin,3), STAT=ErrStat2 )
-         IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel0.',  ErrStat, ErrMsg, RoutineName)
-
-         ALLOCATE ( WaveAcc0  (0:Waves_InitOut%NStepWave,InputFileData%Waves%NWaveKin,3), STAT=ErrStat2 )
-         IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc0.',  ErrStat, ErrMsg, RoutineName)
-              
-         
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN         
-         END IF
-         
-               ! Copy the init output arrays into the MSL versions
-         WaveDynP0  =      Waves_InitOut%WaveDynP     
-         WaveAcc0   =      Waves_InitOut%WaveAcc  
-         WaveVel0   =      Waves_InitOut%WaveVel
-         
-         
-         InputFileData%Waves%WaveKinzi =  tmpWaveKinzi
-         
-            ! Deallocate data which will be allocated again within the Waves_Init routine
-         DEALLOCATE( Waves_InitOut%WaveDynP )
-         DEALLOCATE( Waves_InitOut%WaveAcc )
-         DEALLOCATE( Waves_InitOut%WaveVel )
-         DEALLOCATE( Waves_InitOut%PWaveDynP0 )
-         DEALLOCATE( Waves_InitOut%PWaveAcc0 )
-         DEALLOCATE( Waves_InitOut%PWaveVel0 )
-         DEALLOCATE( Waves_InitOut%WaveElevC0)   
-         DEALLOCATE( Waves_InitOut%WaveDirArr)   
-         DEALLOCATE( Waves_InitOut%WaveElev  )
-         DEALLOCATE( Waves_InitOut%WaveTime  )
-         DEALLOCATE( Waves_InitOut%NodeInWater  )
-      END IF       
-!==========================================================================     
-          
-      CALL Waves_Init(InputFileData%Waves, Waves_u, Waves_p, Waves_x, Waves_xd, Waves_z, WavesOtherState, &
-                                 Waves_y, Waves_m, Interval, Waves_InitOut, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-      
-      
-      ! Verify that Waves_Init() did not request a different Interval!
-      
-      IF ( p%DT /= Interval ) THEN
-         CALL SetErrStat(ErrID_Fatal,'Waves Module attempted to change timestep interval, but this is not allowed.  Waves Module must use the HydroDyn Interval.',ErrStat,ErrMsg,RoutineName)
-         CALL CleanUp()
-         RETURN
-      END IF
-     
-         ! Copy the wave elevation time series corresponding to WaveElevXY to the output.
-
-      IF (ALLOCATED(Waves_InitOut%WaveElevSeries)) CALL MOVE_ALLOC( Waves_InitOut%WaveElevSeries, InitOut%WaveElevSeries )
-      IF (ALLOCATED(InputFileData%Waves%WaveElevXY)) CALL MOVE_ALLOC(InputFileData%Waves%WaveElevXY, tmpWaveElevXY) ! move this back for waves2 later 
 
       
          ! Copy Waves initialization output into the initialization input type for the WAMIT module
-      p%NWaveElev    = InputFileData%Waves%NWaveElev  
-      p%NStepWave    = Waves_InitOut%NStepWave
+      !p%NWaveElev    = InputFileData%Waves%NWaveElev  
+      p%NStepWave    = InitInp%NStepWave
       
-      CALL MOVE_ALLOC( Waves_InitOut%WaveTime, p%WaveTime  ) 
-      CALL MOVE_ALLOC( Waves_InitOut%WaveElev, p%WaveElev1 ) ! allocate p%WaveElev1, set p%WaveElev1 = Waves_InitOut%WaveElev, and deallocate Waves_InitOut%WaveElev
-      
-         ! Copy the first order wave elevation information to p%WaveElev1 so that we can output the total, first, and second order wave elevation separately
-      ALLOCATE ( p%WaveElev   (0:p%NStepWave, p%NWaveElev ) , STAT=ErrStat2 )
-      IF ( ErrStat2 /= 0 )  THEN
-         CALL SetErrStat(ErrID_Fatal,'Error allocating memory for the WaveElev array.',ErrStat,ErrMsg,RoutineName)
-         CALL CleanUp()
-         RETURN         
-      END IF
-      p%WaveElev = p%WaveElev1
-
-
+      p%WaveTime =>  InitInp%WaveTime
 
       m%LastIndWave = 1
 
-      
-      IF ( InputFileData%Waves%WaveMod /= 6 ) THEN
-   
-            !----------------------------------
-            ! Initialize Waves2 module
-            !----------------------------------
-   
-   
-         IF (InputFileData%Waves2%WvDiffQTFF .OR. InputFileData%Waves2%WvSumQTFF ) THEN
-               ! Set a few things from the Waves module output
-            InputFileData%Waves2%NStepWave   = Waves_InitOut%NStepWave
-            InputFileData%Waves2%NStepWave2  = Waves_InitOut%NStepWave2
-            InputFileData%Waves2%WaveDOmega  = Waves_InitOut%WaveDOmega
-                                                
-               ! Copy the WaveElevXY data in from the HydroDyn InputFileData
-            IF (ALLOCATED(tmpWaveElevXY)) CALL MOVE_ALLOC(tmpWaveElevXY, InputFileData%Waves2%WaveElevXY) 
-   
-               ! Temporarily move arrays to init input for Waves2 (save some space)
-            CALL MOVE_ALLOC(p%WaveTime, InputFileData%Waves2%WaveTime) 
-            CALL MOVE_ALLOC(Waves_InitOut%WaveElevC0, InputFileData%Waves2%WaveElevC0)
-            CALL MOVE_ALLOC(Waves_InitOut%WaveDirArr, InputFileData%Waves2%WaveDirArr)
-   
-!==========================================================================
-! Initialize Wave Stretching data for 2nd Order Waves
-!==========================================================================
-            IF (InputFileData%Waves%WaveStMod > 0) THEN      
-                  ! Set the wave kinematics zi locations to zero to generate kinematics at MSL
-               InputFileData%Waves2%WaveKinzi = 0
-         
-                  ! We will use the user-requested wave elevation arrays to compute the wave elevations for stretching at ALL node locations.
-                  ! We are going to store the user-requested wave elevation output locations so that we can restore them after we done.
-               IF (InputFileData%Waves2%NWaveElev > 0) THEN
-                  tmpNWaveElev = InputFileData%Waves2%NWaveElev
-                  CALL MOVE_ALLOC( InputFileData%Waves2%WaveElevxi, tmpWaveElevxi  )  ! (from, to)
-                  CALL MOVE_ALLOC( InputFileData%Waves2%WaveElevyi, tmpWaveElevyi  ) 
-               END IF
-           
-           
-               ALLOCATE ( InputFileData%Waves2%WaveElevxi(InputFileData%Waves2%NWaveKin), STAT = ErrStat2 )
-               IF ( ErrStat2 /= 0 ) THEN
-                  CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveElevxi array.', ErrStat, ErrMsg, RoutineName)
-                  CALL CleanUp()
-                  RETURN
-               END IF
-               ALLOCATE ( InputFileData%Waves2%WaveElevyi(InputFileData%Waves2%NWaveKin), STAT = ErrStat2 )
-               IF ( ErrStat2 /= 0 ) THEN
-                  CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveElevyi array.', ErrStat, ErrMsg, RoutineName)
-                  CALL CleanUp()
-                  RETURN
-               END IF    
-         
-               InputFileData%Waves2%NWaveElev  = InputFileData%Waves2%NWaveKin
-               InputFileData%Waves2%WaveElevxi = InputFileData%Waves2%WaveKinxi
-               InputFileData%Waves2%WaveElevyi = InputFileData%Waves2%WaveKinyi                        
-                  
-               CALL Waves2_Init(InputFileData%Waves2, m%u_Waves2, p%Waves2, x%Waves2, xd%Waves2, z%Waves2, OtherState%Waves2, &
-                                          y%Waves2, m%Waves2, Interval, InitOut%Waves2, ErrStat2, ErrMsg2 )
-                  CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-                  IF ( ErrStat >= AbortErrLev ) THEN
-                     CALL CleanUp()
-                     RETURN
-                  END IF
-            
-  
-                  ! Store the wave elevations coming out of the Waves_Init for use in the stretching calculations      
-               WaveElevSt = WaveElevSt + p%Waves2%WaveElev2
-         
-                  ! We need to reset the wave elevation arrays
-               DEALLOCATE(InputFileData%Waves2%WaveElevxi)
-               DEALLOCATE(InputFileData%Waves2%WaveElevyi)
-               InputFileData%Waves2%NWaveElev = tmpNWaveElev
-         
-               IF (InputFileData%Waves2%NWaveElev > 0) THEN
-                  CALL MOVE_ALLOC( tmpWaveElevxi, InputFileData%Waves2%WaveElevxi  )  ! (from, to)
-                  CALL MOVE_ALLOC( tmpWaveElevyi, InputFileData%Waves2%WaveElevyi  ) 
-               END IF
-                  
-                  
-               ALLOCATE ( WaveDynP2D0 (0:Waves_InitOut%NStepWave,InputFileData%Waves%NWaveKin  ), STAT=ErrStat2 )
-               IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2D0.', ErrStat, ErrMsg, RoutineName)
-
-               ALLOCATE ( WaveVel2D0  (0:Waves_InitOut%NStepWave,InputFileData%Waves%NWaveKin,3), STAT=ErrStat2 )
-               IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2D0.',  ErrStat, ErrMsg, RoutineName)
-
-               ALLOCATE ( WaveAcc2D0  (0:Waves_InitOut%NStepWave,InputFileData%Waves%NWaveKin,3), STAT=ErrStat2 )
-               IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2D0.',  ErrStat, ErrMsg, RoutineName)
-         
-               ALLOCATE ( WaveDynP2S0 (0:Waves_InitOut%NStepWave,InputFileData%Waves%NWaveKin  ), STAT=ErrStat2 )
-               IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP2S0.', ErrStat, ErrMsg, RoutineName)
-
-               ALLOCATE ( WaveVel2S0  (0:Waves_InitOut%NStepWave,InputFileData%Waves%NWaveKin,3), STAT=ErrStat2 )
-               IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel2S0.',  ErrStat, ErrMsg, RoutineName)
-
-               ALLOCATE ( WaveAcc2S0  (0:Waves_InitOut%NStepWave,InputFileData%Waves%NWaveKin,3), STAT=ErrStat2 )
-               IF (ErrStat2 /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc2S0.',  ErrStat, ErrMsg, RoutineName)      
-         
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  CALL CleanUp()
-                  RETURN         
-               END IF
-
-                     ! Copy the init output arrays into the MSL versions
-               WaveDynP2D0  =      InitOut%Waves2%WaveDynP2D     
-               WaveAcc2D0   =      InitOut%Waves2%WaveAcc2D  
-               WaveVel2D0   =      InitOut%Waves2%WaveVel2D
-               WaveDynP2S0  =      InitOut%Waves2%WaveDynP2S     
-               WaveAcc2S0   =      InitOut%Waves2%WaveAcc2S  
-               WaveVel2S0   =      InitOut%Waves2%WaveVel2S
-         
-                  ! Reset the wave kinematics zi locations 
-               InputFileData%Waves2%WaveKinzi = InputFileData%Waves%WaveKinzi
-         
-                  ! Deallocate arrays which will be re-allocated in the next call to Waves2_Init
-               DEALLOCATE ( p%Waves2%WaveElev2        )
-               DEALLOCATE ( InitOut%Waves2%WaveVel2D  )
-               DEALLOCATE ( InitOut%Waves2%WaveAcc2D  )
-               DEALLOCATE ( InitOut%Waves2%WaveDynP2D )
-               DEALLOCATE ( InitOut%Waves2%WaveVel2S  )
-               DEALLOCATE ( InitOut%Waves2%WaveAcc2S  )
-               DEALLOCATE ( InitOut%Waves2%WaveDynP2S )
-               
-            END IF       
-!==========================================================================     
-            
-                               
-            
-            
-            
-            
-!FIXME: why is this called again? I'm either not remembering something, or I don't undestand the wave stretching above.  -- ADP
-            CALL Waves2_Init(InputFileData%Waves2, m%u_Waves2, p%Waves2, x%Waves2, xd%Waves2, z%Waves2, OtherState%Waves2, &
-                                    y%Waves2, m%Waves2, Interval, InitOut%Waves2, ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            IF ( ErrStat >= AbortErrLev ) THEN
-               CALL CleanUp()
-               RETURN
-            END IF
-   
-               ! move arrays back
-            CALL MOVE_ALLOC(InputFileData%Waves2%WaveTime, p%WaveTime) 
-            CALL MOVE_ALLOC(InputFileData%Waves2%WaveElevC0, Waves_InitOut%WaveElevC0)
-            CALL MOVE_ALLOC(InputFileData%Waves2%WaveDirArr, Waves_InitOut%WaveDirArr)
-                  
-            ! Verify that Waves2_Init() did not request a different Interval!
-   
-            IF ( p%DT /= Interval ) THEN
-               CALL SetErrStat(ErrID_Fatal,'Waves2 Module attempted to change timestep interval, but this is not allowed. '// &
-                                          ' Waves2 Module must use the HydroDyn Interval.',ErrStat,ErrMsg,RoutineName)
-               CALL CleanUp()
-               RETURN
-            END IF
-   
-   
-            ! If we calculated the wave elevation series data (for visualization purposes), add the second order corrections to the first order.
-            IF (ALLOCATED(InputFileData%Waves2%WaveElevXY)) THEN
-                  ! Make sure the sizes of the two resulting arrays are identical...
-               IF ( SIZE(InitOut%WaveElevSeries,DIM=1) /= SIZE(InitOut%Waves2%WaveElevSeries2,DIM=1) .OR. &
-                    SIZE(InitOut%WaveElevSeries,DIM=2) /= SIZE(InitOut%Waves2%WaveElevSeries2,DIM=2)) THEN
-                  CALL SetErrStat(ErrID_Fatal,' WaveElevSeries arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,RoutineName)
-                  CALL CleanUp()
-                  RETURN
-               ELSE
-                  DO J=1,SIZE(InitOut%WaveElevSeries,DIM=2)
-                     DO I = 0,p%NStepWave
-                        InitOut%WaveElevSeries(I,J)  =  InitOut%Waves2%WaveElevSeries2(I,J) + InitOut%WaveElevSeries(I,J)
-                     ENDDO
-                  ENDDO
-               ENDIF
-            ENDIF
-   
-            ! If we calculated wave elevations, it is now stored in p%WaveElev.  So we need to add the corrections.
-            IF (p%Waves2%NWaveElev > 0 ) THEN
-                  ! Make sure the sizes of the two resulting arrays are identical...
-               IF ( SIZE(p%WaveElev,DIM=1) /= SIZE(p%Waves2%WaveElev2,DIM=1) .OR. &
-                    SIZE(p%WaveElev,DIM=2) /= SIZE(p%Waves2%WaveElev2,DIM=2)) THEN
-                  CALL SetErrStat(ErrID_Fatal,' WaveElev(NWaveElev) arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,RoutineName)
-                  CALL CleanUp()
-                  RETURN
-               ELSE
-                  DO J=1,SIZE(p%Waves2%WaveElev2,DIM=2)
-                     DO I = 0,p%NStepWave
-                        p%WaveElev(I,J)  =  p%Waves2%WaveElev2(I,J) + p%WaveElev(I,J)
-                     ENDDO
-                  ENDDO
-                  CALL MOVE_ALLOC(p%Waves2%WaveElev2,p%WaveElev2)
-               ENDIF
-            ENDIF
-   
-            ! The acceleration, velocity, and dynamic pressures will get added to the parts passed to the morrison module later...
-   
-         ELSE
-                  ! these need to be set to zero since we don't have a UseWaves2 flag:
-               p%Waves2%NWaveElev  = 0
-               p%Waves2%WvDiffQTFF = .FALSE.
-               p%Waves2%WvSumQTFF  = .FALSE.
-               p%Waves2%NumOuts    = 0
-               
-         ENDIF ! InputFileData%Waves2%WvDiffQTFF .OR. InputFileData%Waves2%WvSumQTFF 
-   
-   
-   
    
             ! Is there a WAMIT body? 
          
@@ -864,7 +286,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             InputFileData%WAMIT%WtrDpth  = InputFileData%Morison%WtrDpth ! The data in InputFileData%Morison%WtrDpth was directly placed there when we parsed the HydroDyn input file
             p%NBody                  = InputFileData%NBody
             p%NBodyMod               = InputFileData%NBodyMod
-            
+            InputFileData%WAMIT%WaveElev1 => InitInp%WaveElev1
             call AllocAry( m%F_PtfmAdd, 6*InputFileData%NBody, "m%F_PtfmAdd", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             call AllocAry( m%F_Waves  , 6*InputFileData%NBody, "m%F_Waves"  , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             
@@ -887,7 +309,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                allocate( y%WAMIT(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array y%WAMIT.', ErrStat, ErrMsg, RoutineName )
                allocate( m%WAMIT(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%WAMIT.', ErrStat, ErrMsg, RoutineName )
                allocate( m%u_WAMIT(       1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%u_WAMIT.', ErrStat, ErrMsg, RoutineName )
-               allocate( InitOut%WAMIT(   1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array InitOut%WAMIT.', ErrStat, ErrMsg, RoutineName )
                      
                InputFileData%WAMIT%PtfmVol0       = InputFileData%PtfmVol0    
                InputFileData%WAMIT%WAMITULEN      = InputFileData%WAMITULEN(1)   
@@ -915,7 +336,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                allocate( y%WAMIT(         InputFileData%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array y%WAMIT.', ErrStat, ErrMsg, RoutineName )
                allocate( m%WAMIT(         InputFileData%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%WAMIT.', ErrStat, ErrMsg, RoutineName )
                allocate( m%u_WAMIT(       InputFileData%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%u_WAMIT.', ErrStat, ErrMsg, RoutineName )
-               allocate( InitOut%WAMIT(   InputFileData%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array InitOut%WAMIT.', ErrStat, ErrMsg, RoutineName )
                InputFileData%WAMIT%PtfmVol0    (1)  = InputFileData%PtfmVol0    (1)
                InputFileData%WAMIT%WAMITULEN        = InputFileData%WAMITULEN   (1)
                InputFileData%WAMIT%PtfmRefxt   (1)  = InputFileData%PtfmRefxt   (1)
@@ -932,26 +352,28 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                return
             end if
             
-                ! Copy Waves initialization output into the initialization input type for the WAMIT module
+                ! Copy SeaState initialization output into the initialization input type for the WAMIT module
                   
-            InputFileData%WAMIT%RhoXg        = Waves_InitOut%RhoXg
-            InputFileData%WAMIT%NStepWave    = Waves_InitOut%NStepWave
-            InputFileData%WAMIT%NStepWave2   = Waves_InitOut%NStepWave2
-            InputFileData%WAMIT%WaveDirMin   = Waves_InitOut%WaveDirMin
-            InputFileData%WAMIT%WaveDirMax   = Waves_InitOut%WaveDirMax
-            InputFileData%WAMIT%WaveDOmega   = Waves_InitOut%WaveDOmega   
+            InputFileData%WAMIT%RhoXg        = InitInp%RhoXg
+            InputFileData%WAMIT%NStepWave    = InitInp%NStepWave
+            InputFileData%WAMIT%NStepWave2   = InitInp%NStepWave2
+            InputFileData%WAMIT%WaveDirMin   = InitInp%WaveDirMin
+            InputFileData%WAMIT%WaveDirMax   = InitInp%WaveDirMax
+            InputFileData%WAMIT%WaveDOmega   = InitInp%WaveDOmega   
 
                ! Init inputs for the SS_Excitation model (set this just in case it will be used)
-            InputFileData%WAMIT%WaveDir = Waves_InitOut%WaveDir
-            CALL MOVE_ALLOC(Waves_InitOut%WaveElev0, InputFileData%WAMIT%WaveElev0)          
-               
+            InputFileData%WAMIT%WaveDir   =  InitInp%WaveDir
+            CALL MOVE_ALLOC(  InitInp%WaveElev0, InputFileData%WAMIT%WaveElev0 )  
                 ! Temporarily move arrays to init input for WAMIT (save some space)
-            CALL MOVE_ALLOC(p%WaveTime,               InputFileData%WAMIT%WaveTime) 
-            CALL MOVE_ALLOC(Waves_InitOut%WaveElevC0, InputFileData%WAMIT%WaveElevC0) 
-            CALL MOVE_ALLOC(Waves_InitOut%WaveDirArr, InputFileData%WAMIT%WaveDirArr) 
+            
+            InputFileData%WAMIT%WaveTime   => InitInp%WaveTime
+            InputFileData%WAMIT%WaveElevC0 => InitInp%WaveElevC0
+            CALL MOVE_ALLOC( InitInp%WaveElevC, InputFileData%WAMIT%WaveElevC ) 
+            InputFileData%WAMIT%seast_interp_p = InitInp%seast_interp_p
+            InputFileData%WAMIT%WaveDirArr => InitInp%WaveDirArr
                
             CALL WAMIT_Init(InputFileData%WAMIT, m%u_WAMIT(1), p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1), z%WAMIT, OtherState%WAMIT(1), &
-                                    y%WAMIT(1), m%WAMIT(1), Interval, InitOut%WAMIT(1), ErrStat2, ErrMsg2 )
+                                    y%WAMIT(1), m%WAMIT(1), Interval, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                 CALL CleanUp()
@@ -975,7 +397,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                 InputFileData%WAMIT%PtfmCOByt   (1)  = InputFileData%PtfmCOByt   (i)
  
                 CALL WAMIT_Init(InputFileData%WAMIT, m%u_WAMIT(i), p%WAMIT(i), x%WAMIT(i), xd%WAMIT(i), z%WAMIT, OtherState%WAMIT(i), &
-                                        y%WAMIT(i), m%WAMIT(i), Interval, InitOut%WAMIT(i), ErrStat2, ErrMsg2 )
+                                        y%WAMIT(i), m%WAMIT(i), Interval, ErrStat2, ErrMsg2 )
                 CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                 IF ( ErrStat >= AbortErrLev ) THEN
                     CALL CleanUp()
@@ -999,22 +421,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                     WRITE( InputFileData%UnSum, '(A18,6(2X,ES20.6))') '  External:       ',0.0,0.0,InputFileData%WAMIT%RhoXg*InputFileData%PtfmVol0(iBody),InputFileData%WAMIT%RhoXg*InputFileData%PtfmVol0(iBody)*InputFileData%PtfmCOByt(iBody), -InputFileData%WAMIT%RhoXg*InputFileData%PtfmVol0(iBody)*InputFileData%PtfmCOBxt(iBody), 0.0   ! and the moment about Y due to the COB being offset from the WAMIT reference point
                 end do
             END IF
-            
-            
-                ! Verify that WAMIT_Init() did not request a different Interval!
-         
-            IF ( p%DT /= Interval ) THEN
-                CALL SetErrStat(ErrID_Fatal,'WAMIT Module attempted to change timestep interval, but this is not allowed.  WAMIT Module must use the HydroDyn Interval.',ErrStat,ErrMsg,RoutineName)
-                CALL CleanUp()
-                RETURN
-            END IF
 
-            
-               ! move arrays back
-            CALL MOVE_ALLOC(InputFileData%WAMIT%WaveTime,               p%WaveTime  ) 
-            CALL MOVE_ALLOC(InputFileData%WAMIT%WaveElevC0, Waves_InitOut%WaveElevC0) 
-            CALL MOVE_ALLOC(InputFileData%WAMIT%WaveDirArr, Waves_InitOut%WaveDirArr) 
-               
 
                !-----------------------------------------
                ! Initialize the WAMIT2 Calculations
@@ -1026,18 +433,18 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   ! Flag required for indicating when to try using arrays that are allocated
                p%WAMIT2used   = .TRUE.
 
-                  ! Temporarily move arrays to init input for WAMIT2 (save some space)
-               CALL MOVE_ALLOC(p%WaveTime, InputFileData%WAMIT2%WaveTime)
-               CALL MOVE_ALLOC(Waves_InitOut%WaveElevC0, InputFileData%WAMIT2%WaveElevC0)
-               CALL MOVE_ALLOC(Waves_InitOut%WaveDirArr, InputFileData%WAMIT2%WaveDirArr)
+                  ! init input for WAMIT2 pointers to save space
+               !InputFileData%WAMIT2%WaveTime   => InitInp%WaveTime     ! This isn't actually used within WAMIT2  GJH 9/30/2021
+               InputFileData%WAMIT2%WaveElevC0 => InitInp%WaveElevC0
+               InputFileData%WAMIT2%WaveDirArr => InitInp%WaveDirArr
 
                   ! Copy Waves initialization output into the initialization input type for the WAMIT module
-               InputFileData%WAMIT2%RhoXg       = Waves_InitOut%RhoXg
-               InputFileData%WAMIT2%NStepWave   = Waves_InitOut%NStepWave
-               InputFileData%WAMIT2%NStepWave2  = Waves_InitOut%NStepWave2
-               InputFileData%WAMIT2%WaveDirMin  = Waves_InitOut%WaveDirMin
-               InputFileData%WAMIT2%WaveDirMax  = Waves_InitOut%WaveDirMax
-               InputFileData%WAMIT2%WaveDOmega  = Waves_InitOut%WaveDOmega
+               InputFileData%WAMIT2%RhoXg       = InitInp%RhoXg
+               InputFileData%WAMIT2%NStepWave   = InitInp%NStepWave
+               InputFileData%WAMIT2%NStepWave2  = InitInp%NStepWave2
+               InputFileData%WAMIT2%WaveDirMin  = InitInp%WaveDirMin
+               InputFileData%WAMIT2%WaveDirMax  = InitInp%WaveDirMax
+               InputFileData%WAMIT2%WaveDOmega  = InitInp%WaveDOmega
                InputFileData%WAMIT2%Gravity     = InitInp%Gravity
                InputFileData%WAMIT2%WtrDpth     = InputFileData%Morison%WtrDpth ! The data in InputFileData%Morison%WtrDpth was directly placed there when we parsed the HydroDyn input file
 
@@ -1055,13 +462,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   call AllocAry( InputFileData%WAMIT2%PtfmRefzt   , InputFileData%NBody, "PtfmRefzt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   call AllocAry( InputFileData%WAMIT2%PtfmRefztRot, InputFileData%NBody, "PtfmRefztRot", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   allocate( p%WAMIT2(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array p%WAMIT2.', ErrStat, ErrMsg, RoutineName )
-                  allocate( x%WAMIT2(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array x%WAMIT2.', ErrStat, ErrMsg, RoutineName )
-                  allocate( xd%WAMIT2(        1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array xd%WAMIT2.', ErrStat, ErrMsg, RoutineName )
-                  allocate( OtherState%WAMIT2(1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array OtherState%WAMIT2.', ErrStat, ErrMsg, RoutineName )
                   allocate( y%WAMIT2(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array y%WAMIT2.', ErrStat, ErrMsg, RoutineName )
                   allocate( m%WAMIT2(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%WAMIT2.', ErrStat, ErrMsg, RoutineName )
-                  allocate( m%u_WAMIT2(       1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%u_WAMIT2.', ErrStat, ErrMsg, RoutineName )
-                  allocate( InitOut%WAMIT2(   1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array InitOut%WAMIT2.', ErrStat, ErrMsg, RoutineName )
                   InputFileData%WAMIT2%PtfmRefxt     = InputFileData%PtfmRefxt
                   InputFileData%WAMIT2%PtfmRefyt     = InputFileData%PtfmRefyt
                   InputFileData%WAMIT2%PtfmRefzt     = InputFileData%PtfmRefzt
@@ -1076,13 +478,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   call AllocAry( InputFileData%WAMIT2%PtfmRefzt   , 1, "PtfmRefzt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   call AllocAry( InputFileData%WAMIT2%PtfmRefztRot, 1, "PtfmRefztRot", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   allocate( p%WAMIT2(         InputFileData%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array p%WAMIT2.', ErrStat, ErrMsg, RoutineName )
-                  allocate( x%WAMIT2(         InputFileData%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array x%WAMIT2.', ErrStat, ErrMsg, RoutineName )
-                  allocate( xd%WAMIT2(        InputFileData%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array xd%WAMIT2.', ErrStat, ErrMsg, RoutineName )
-                  allocate( OtherState%WAMIT2(InputFileData%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array OtherState%WAMIT2.', ErrStat, ErrMsg, RoutineName )
                   allocate( y%WAMIT2(         InputFileData%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array y%WAMIT2.', ErrStat, ErrMsg, RoutineName )
                   allocate( m%WAMIT2(         InputFileData%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%WAMIT2.', ErrStat, ErrMsg, RoutineName )
-                  allocate( m%u_WAMIT2(       InputFileData%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%u_WAMIT2.', ErrStat, ErrMsg, RoutineName )
-                  allocate( InitOut%WAMIT2(   InputFileData%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array InitOut%WAMIT2.', ErrStat, ErrMsg, RoutineName )
                   InputFileData%WAMIT2%PtfmRefxt   (1)  = InputFileData%PtfmRefxt   (1)
                   InputFileData%WAMIT2%PtfmRefyt   (1)  = InputFileData%PtfmRefyt   (1)
                   InputFileData%WAMIT2%PtfmRefzt   (1)  = InputFileData%PtfmRefzt   (1)
@@ -1095,8 +492,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                    return
                 end if
 
-               CALL WAMIT2_Init(InputFileData%WAMIT2, m%u_WAMIT2(1), p%WAMIT2(1), x%WAMIT2(1), xd%WAMIT2(1), z%WAMIT2, OtherState%WAMIT2(1), &
-                                       y%WAMIT2(1), m%WAMIT2(1), Interval, InitOut%WAMIT2(1), ErrStat2, ErrMsg2 )
+               CALL WAMIT2_Init(InputFileData%WAMIT2, p%WAMIT2(1), y%WAMIT2(1), m%WAMIT2(1), ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                IF ( ErrStat >= AbortErrLev ) THEN
                   CALL CleanUp()
@@ -1112,8 +508,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                    InputFileData%WAMIT2%PtfmRefzt   (1)  = InputFileData%PtfmRefzt   (i)
                    InputFileData%WAMIT2%PtfmRefztRot(1)  = InputFileData%PtfmRefztRot(i)
 
-                   CALL WAMIT2_Init(InputFileData%WAMIT2, m%u_WAMIT2(i), p%WAMIT2(i), x%WAMIT2(i), xd%WAMIT2(i), z%WAMIT2, OtherState%WAMIT2(i), &
-                                           y%WAMIT2(i), m%WAMIT2(i), Interval, InitOut%WAMIT2(i), ErrStat2, ErrMsg2 )
+                   CALL WAMIT2_Init(InputFileData%WAMIT2, p%WAMIT2(i), y%WAMIT2(i), m%WAMIT2(i), ErrStat2, ErrMsg2 )
                    CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                    IF ( ErrStat >= AbortErrLev ) THEN
                        CALL CleanUp()
@@ -1121,21 +516,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                    END IF
                end do
 
-
-                  ! move arrays back
-               CALL MOVE_ALLOC(InputFileData%WAMIT2%WaveTime,               p%WaveTime  )
-               CALL MOVE_ALLOC(InputFileData%WAMIT2%WaveElevC0, Waves_InitOut%WaveElevC0)
-               CALL MOVE_ALLOC(InputFileData%WAMIT2%WaveDirArr, Waves_InitOut%WaveDirArr)
- 
-
-                  ! Verify that WAMIT2_Init() did not request a different Interval!
-   
-               IF ( p%DT /= Interval ) THEN
-                  CALL SetErrStat(ErrID_Fatal,'WAMIT2 Module attempted to change timestep interval, but this is not allowed.  '// &
-                                             'WAMIT2 Module must use the HydroDyn Interval.',ErrStat,ErrMsg,RoutineName)
-                  CALL CleanUp()
-                  RETURN
-               END IF
 
             ELSE
                   ! Flag used in output handling to indicate when to ignore WAMIT2 outputs.
@@ -1154,14 +534,14 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                ! General
             FITInitData%InputFile      = InputFileData%PotFile
             FITInitData%Gravity        = InputFileData%Gravity
-            FITInitData%Rho            = InputFileData%Waves%WtrDens
+            FITInitData%Rho            = InputFileData%Morison%WtrDens
             FITInitData%time_end       = InitInp%TMax
-            FITInitData%dtime          = InputFileData%Waves%WaveDT  ! Set the FIT module's timestep equal to the WaveDT timestep, this was checked earlier to make sure it is an integer muliple of the glue-code timestep!
+            FITInitData%dtime          = InitInp%WaveDT  ! Set the FIT module's timestep equal to the WaveDT timestep, this was checked earlier to make sure it is an integer muliple of the glue-code timestep!
                ! Waves
                ! Need to pre-process the incoming wave data to be compatible with FIT
             
-            FITInitData%N_omega        = Waves_InitOut%NStepWave2
-            FITInitData%Wave_angle     = Waves_InitOut%WaveDir
+            FITInitData%N_omega        = InitInp%NStepWave2
+            FITInitData%Wave_angle     = InitInp%WaveDir
             
                ! allocate waves data arrays for FIT
             CALL AllocAry( FITInitData%Wave_amp, FITInitData%N_omega, "Wave_amp", ErrStat2, ErrMsg2 )
@@ -1178,14 +558,14 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                END IF
                
                ! Populate wave arrays
-            Np = 2*(Waves_InitOut%WaveDOmega + 1)
-            DO I = 1 , Waves_InitOut%NStepWave2
+            Np = 2*(InitInp%WaveDOmega + 1)
+            DO I = 1 , InitInp%NStepWave2
                
-               dftreal        = Waves_InitOut%WaveElevC0( 1,ABS(I ) )
-               dftimag        = Waves_InitOut%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
+               dftreal        = InitInp%WaveElevC0( 1,ABS(I ) )
+               dftimag        = InitInp%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
                FITInitData%Wave_amp   (I) = sqrt( dftreal**2 + dftimag**2 )  * 2.0 / Np
-               FITInitData%Wave_omega (I) = I*Waves_InitOut%WaveDOmega
-               FITInitData%Wave_number(I) = I*Waves_InitOut%WaveDOmega**2. / InputFileData%Gravity
+               FITInitData%Wave_omega (I) = I*InitInp%WaveDOmega
+               FITInitData%Wave_number(I) = I*InitInp%WaveDOmega**2. / InputFileData%Gravity
                FITInitData%Wave_phase (I) = atan2( dftimag, dftreal ) 
               
             END DO         
@@ -1201,8 +581,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
          END IF
    
-   
-      END IF  ! Check for WaveMod = 6
 
 
          ! Are there Morison elements?
@@ -1210,162 +588,32 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       IF ( InputFileData%Morison%NMembers > 0 ) THEN
 
          
-                ! Copy Waves initialization output into the initialization input type for the Morison module                              
+                ! Copy SeaState initialization output into the initialization input type for the Morison module
          
-         InputFileData%Morison%NStepWave    = Waves_InitOut%NStepWave
+         InputFileData%Morison%NStepWave =  InitInp%NStepWave
+         InputFileData%Morison%WaveTime  => InitInp%WaveTime
          
+         InputFileData%Morison%WaveAcc    => InitInp%WaveAcc         
+         InputFileData%Morison%WaveDynP   => InitInp%WaveDynP        
+         InputFileData%Morison%WaveVel    => InitInp%WaveVel  
+         InputFileData%Morison%PWaveAcc0  => InitInp%PWaveAcc0       
+         InputFileData%Morison%PWaveDynP0 => InitInp%PWaveDynP0        
+         InputFileData%Morison%PWaveVel0  => InitInp%PWaveVel0  
+         InputFileData%Morison%WaveElev1  => InitInp%WaveElev1
+         InputFileData%Morison%WaveElev2  => InitInp%WaveElev2
          
-            ! Temporarily move array to init input for Morison (save some space)
-         CALL MOVE_ALLOC( p%WaveTime,               InputFileData%Morison%WaveTime )
+         InputFileData%Morison%MCFD          =  InitInp%MCFD
+         InputFileData%Morison%WaveAccMCF    => InitInp%WaveAccMCF
+         InputFileData%Morison%PWaveAccMCF0  => InitInp%PWaveAccMCF0
          
-            ! Permanently move these wave values to Morison init input (and note they are potentially modified by 2nd order stuff before being sent to Morison)
-         CALL MOVE_ALLOC( Waves_InitOut%WaveAcc,   InputFileData%Morison%WaveAcc )            
-         CALL MOVE_ALLOC( Waves_InitOut%WaveDynP,  InputFileData%Morison%WaveDynP )         
-         CALL MOVE_ALLOC( Waves_InitOut%WaveVel,   InputFileData%Morison%WaveVel )         
-         CALL MOVE_ALLOC( Waves_InitOut%nodeInWater,InputFileData%Morison%nodeInWater )  ! moved to Morison%p%nodeInWater in the init routine
-
+         InputFileData%Morison%WaveStMod = InitInp%WaveStMod
 
                ! If we did some second order wave kinematics corrections to the acceleration, velocity or
                ! dynamic pressure using the Waves2 module, then we need to add these to the values that we
                ! will be passing into the Morrison module.
 
-            ! Difference frequency results
-         IF ( p%Waves2%WvDiffQTFF ) THEN
-
-               ! Dynamic pressure -- difference frequency terms
-            IF ( SIZE(InputFileData%Morison%WaveDynP,DIM=1) /= SIZE(InitOut%Waves2%WaveDynP2D,DIM=1) .OR. &
-                 SIZE(InputFileData%Morison%WaveDynP,DIM=2) /= SIZE(InitOut%Waves2%WaveDynP2D,DIM=2)) THEN
-               CALL SetErrStat(ErrID_Fatal, &
-                  ' WaveDynP arrays for first and second order wave elevations are of different sizes.  '//NewLine// &
-                  'Morrison: '// TRIM(Num2LStr(SIZE(InputFileData%Morison%WaveDynP,DIM=1)))//'x'//          &
-                                 TRIM(Num2LStr(SIZE(InputFileData%Morison%WaveDynP,DIM=2)))//NewLine//      &
-                  'Waves2:   '// TRIM(Num2LStr(SIZE(InitOut%Waves2%WaveDynP2D,DIM=1)))//'x'//            &
-                                 TRIM(Num2LStr(SIZE(InitOut%Waves2%WaveDynP2D,DIM=2))),                  &
-                  ErrStat,ErrMsg,RoutineName)
-               CALL CleanUp()
-               RETURN
-            ELSE
-               InputFileData%Morison%WaveDynP = InputFileData%Morison%WaveDynP + InitOut%Waves2%WaveDynP2D
-               IF (InputFileData%Waves%WaveStMod > 0 ) WaveDynP0 = WaveDynP0 + WaveDynP2D0
-            ENDIF
-
-               ! Particle velocity -- difference frequency terms
-            IF ( SIZE(InputFileData%Morison%WaveVel,DIM=1) /= SIZE(InitOut%Waves2%WaveVel2D,DIM=1) .OR. &
-                 SIZE(InputFileData%Morison%WaveVel,DIM=2) /= SIZE(InitOut%Waves2%WaveVel2D,DIM=2) .OR. &
-                 SIZE(InputFileData%Morison%WaveVel,DIM=3) /= SIZE(InitOut%Waves2%WaveVel2D,DIM=3)) THEN
-               CALL SetErrStat(ErrID_Fatal, &
-                  ' WaveVel arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,RoutineName)
-               CALL CleanUp()
-               RETURN
-            ELSE
-               InputFileData%Morison%WaveVel = InputFileData%Morison%WaveVel + InitOut%Waves2%WaveVel2D
-               IF (InputFileData%Waves%WaveStMod > 0 ) WaveVel0 = WaveVel0 + WaveVel2D0
-            ENDIF
-
-
-               ! Particle acceleration -- difference frequency terms
-            IF ( SIZE(InputFileData%Morison%WaveAcc,DIM=1) /= SIZE(InitOut%Waves2%WaveAcc2D,DIM=1) .OR. &
-                 SIZE(InputFileData%Morison%WaveAcc,DIM=2) /= SIZE(InitOut%Waves2%WaveAcc2D,DIM=2) .OR. &
-                 SIZE(InputFileData%Morison%WaveAcc,DIM=3) /= SIZE(InitOut%Waves2%WaveAcc2D,DIM=3)) THEN
-               CALL SetErrStat(ErrID_Fatal, &
-                  ' WaveAcc arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,RoutineName)
-               CALL CleanUp()
-               RETURN
-            ELSE
-               InputFileData%Morison%WaveAcc = InputFileData%Morison%WaveAcc + InitOut%Waves2%WaveAcc2D
-               IF (InputFileData%Waves%WaveStMod > 0 ) WaveAcc0 = WaveAcc0 + WaveAcc2D0
-            ENDIF
-
-         ENDIF ! second order wave kinematics difference frequency results
-
-            ! Sum frequency results
-         IF ( p%Waves2%WvSumQTFF ) THEN
-
-               ! Dynamic pressure -- sum frequency terms
-            IF ( SIZE(InputFileData%Morison%WaveDynP,DIM=1) /= SIZE(InitOut%Waves2%WaveDynP2S,DIM=1) .OR. &
-                 SIZE(InputFileData%Morison%WaveDynP,DIM=2) /= SIZE(InitOut%Waves2%WaveDynP2S,DIM=2)) THEN
-               CALL SetErrStat(ErrID_Fatal, &
-                  ' WaveDynP arrays for first and second order wave elevations are of different sizes.  '//NewLine// &
-                  'Morrison: '// TRIM(Num2LStr(SIZE(InputFileData%Morison%WaveDynP,DIM=1)))//'x'//          &
-                                 TRIM(Num2LStr(SIZE(InputFileData%Morison%WaveDynP,DIM=2)))//NewLine//      &
-                  'Waves2:   '// TRIM(Num2LStr(SIZE(InitOut%Waves2%WaveDynP2D,DIM=1)))//'x'//            &
-                                 TRIM(Num2LStr(SIZE(InitOut%Waves2%WaveDynP2D,DIM=2))),                  &
-                  ErrStat,ErrMsg,RoutineName)
-               CALL CleanUp()
-               RETURN
-            ELSE
-               InputFileData%Morison%WaveDynP = InputFileData%Morison%WaveDynP + InitOut%Waves2%WaveDynP2S
-               IF (InputFileData%Waves%WaveStMod > 0 ) WaveDynP0 = WaveDynP0 + WaveDynP2S0
-            ENDIF
-
-               ! Particle velocity -- sum frequency terms
-            IF ( SIZE(InputFileData%Morison%WaveVel,DIM=1) /= SIZE(InitOut%Waves2%WaveVel2S,DIM=1) .OR. &
-                 SIZE(InputFileData%Morison%WaveVel,DIM=2) /= SIZE(InitOut%Waves2%WaveVel2S,DIM=2) .OR. &
-                 SIZE(InputFileData%Morison%WaveVel,DIM=3) /= SIZE(InitOut%Waves2%WaveVel2S,DIM=3)) THEN
-               CALL SetErrStat(ErrID_Fatal, &
-                  ' WaveVel arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,RoutineName)
-               CALL CleanUp()
-               RETURN
-            ELSE
-               InputFileData%Morison%WaveVel = InputFileData%Morison%WaveVel + InitOut%Waves2%WaveVel2S
-               IF (InputFileData%Waves%WaveStMod > 0 ) WaveVel0 = WaveVel0 + WaveVel2S0
-            ENDIF
-
-               ! Particle velocity -- sum frequency terms
-            IF ( SIZE(InputFileData%Morison%WaveAcc,DIM=1) /= SIZE(InitOut%Waves2%WaveAcc2S,DIM=1) .OR. &
-                 SIZE(InputFileData%Morison%WaveAcc,DIM=2) /= SIZE(InitOut%Waves2%WaveAcc2S,DIM=2) .OR. &
-                 SIZE(InputFileData%Morison%WaveAcc,DIM=3) /= SIZE(InitOut%Waves2%WaveAcc2S,DIM=3)) THEN
-               CALL SetErrStat(ErrID_Fatal, &
-                  ' WaveAcc arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,RoutineName)
-               CALL CleanUp()
-               RETURN
-            ELSE
-               InputFileData%Morison%WaveAcc = InputFileData%Morison%WaveAcc + InitOut%Waves2%WaveAcc2S
-               IF (InputFileData%Waves%WaveStMod > 0 ) WaveAcc0 = WaveAcc0 + WaveAcc2S0
-            ENDIF
-
-         ENDIF ! second order wave kinematics sum frequency results
-
-!==============================================================================
-         ! TODO: 1/29/2016 GJH
-         ! This is where we need to perform Wave Stretching, now that the wave kinematics have been combined.
-         ! We will call a new subroutine to perform this work. 
-         ! As an input, this code needs the kinematics at the (X,Y,0) location which in a Z-line above/below all the nodes where kinematics are computed.
-         ! This code will alter the kinematics for stretching AND alter the nodeInWater array based on the combined wave elevation information
-         IF (InputFileData%Waves%WaveStMod > 0 ) THEN
-            call WvStretch_Init( InputFileData%Waves%WaveStMod, InputFileData%Waves%WtrDpth, InputFileData%Morison%NStepWave, InputFileData%Morison%NNodes,  &
-                              p%NWaveElev, WaveElevSt, InputFileData%Waves%WaveKinzi, InputFileData%Morison%WaveTime, &
-                              WaveVel0, WaveAcc0, WaveDynP0, &
-                              Waves_InitOut%PWaveVel0, Waves_InitOut%PWaveAcc0, Waves_InitOut%PWaveDynP0, &
-                              InputFileData%Morison%WaveVel, InputFileData%Morison%WaveAcc, InputFileData%Morison%WaveDynP, &
-                              InputFileData%Morison%nodeInWater, ErrStat, ErrMsg )  
-            DEALLOCATE(WaveElevSt)
-            DEALLOCATE(WaveVel0)
-            DEALLOCATE(WaveAcc0)
-            DEALLOCATE(WaveDynP0)
-         END IF
-!==============================================================================
-         ! In this version, this can only be TRUE if the precomiler flag WRITE_WV_KIN set and WaveMod not equal to 5 or 6 and WvKinFile is a valid string  
-         IF ( ( InputFileData%Waves%WaveMod == 5 .OR. InputFileData%Waves%WaveMod == 6 ) .AND.  InputFileData%Echo ) THEN
-            call HDOut_WriteWvKinFiles( TRIM(InputFileData%Waves%WvKinFile)//'_ech', HydroDyn_ProgDesc, InputFileData%Morison%NStepWave, InputFileData%Morison%NNodes,  &
-                                             p%NWaveElev, InputFileData%Morison%nodeInWater, p%WaveElev, InputFileData%Waves%WaveKinzi, InputFileData%Morison%WaveTime, &
-                                        InputFileData%Morison%WaveVel, InputFileData%Morison%WaveAcc, InputFileData%Morison%WaveDynP, &
-                                        ErrStat, ErrMsg )  
-         ELSE IF (InputFileData%Waves%WriteWvKin ) THEN
-            call HDOut_WriteWvKinFiles( TRIM(InputFileData%Waves%WvKinFile), HydroDyn_ProgDesc, InputFileData%Morison%NStepWave, InputFileData%Morison%NNodes,  &
-                                             p%NWaveElev, InputFileData%Morison%nodeInWater, p%WaveElev, InputFileData%Waves%WaveKinzi, InputFileData%Morison%WaveTime, &
-                                        InputFileData%Morison%WaveVel, InputFileData%Morison%WaveAcc, InputFileData%Morison%WaveDynP, &
-                                        ErrStat, ErrMsg )  
-         END IF
-
-         
-            ! Check the output switch to see if Morison is needing to send outputs back to HydroDyn via the WriteOutput array
-            
-         IF ( InputFileData%OutSwtch > 0 ) THEN
-            InputFileData%Morison%OutSwtch     = 2  ! only HydroDyn or the Driver code will write outputs to the file, that's why we are forcing this to 2.
-         ELSE
-            InputFileData%Morison%OutSwtch     = 0
-         END IF
+        
+         InputFileData%Morison%seast_interp_p = InitInp%seast_interp_p
         
             ! Initialize the Morison Element Calculations 
       
@@ -1377,62 +625,13 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             RETURN
          END IF
          
-            ! move array back
-         CALL MOVE_ALLOC( InputFileData%Morison%WaveTime, p%WaveTime  )
-         
-         
-         IF ( u%Morison%Mesh%Committed ) THEN
-                  ! we need the translation displacement mesh for loads transfer:
-            CALL MeshCopy ( SrcMesh  = u%Morison%Mesh            &
-                    , DestMesh = m%MrsnMesh_position   &
-                    , CtrlCode = MESH_NEWCOPY        &
-                    , IOS      = COMPONENT_INPUT     &
-                    , TranslationDisp = .TRUE.       &
-                    , ErrStat  = ErrStat2            &
-                    , ErrMess  = ErrMsg2              )  ! automatically sets    DestMesh%RemapFlag = .TRUE.
-                    
-               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init:m%MrsnMesh_position')
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  CALL CleanUp()
-                  RETURN
-               END IF
-            m%MrsnMesh_position%TranslationDisp = 0.0  ! bjj: this is actually initialized in the ModMesh module, but I'll do it here anyway.
-            
-         END IF
-         
-            ! Verify that Morison_Init() did not request a different Interval!
-      
-         IF ( p%DT /= Interval ) THEN
-            CALL SetErrStat(ErrID_Fatal,'Morison Module attempted to change timestep interval, but this is not allowed.  Morison Module must use the HydroDyn Interval.',ErrStat,ErrMsg,RoutineName)
-            CALL CleanUp()
-            RETURN
-         END IF
-         
       END IF  ! ( InputFileData%Morison%NMembers > 0 )
     
 !===============================================
       p%PotMod = InputFileData%Potmod      
       IF ( InputFileData%UnSum > 0 ) THEN
       
-         IF (InputFileData%Waves%WaveMod /= 0 .AND. InputFileData%Waves%WaveMod /= 6)  THEN
-               ! Write the header for this section
-            WRITE( InputFileData%UnSum,  '(//)' )         
-            WRITE( InputFileData%UnSum, '(1X,A15)' )   'Wave Kinematics'
-            WRITE( InputFileData%UnSum,  '(/)' )
-            WRITE( InputFileData%UnSum, '(1X,A10,2X,A14,2X,A14,2X,A14,2X,A19,2X,A19)' )  &
-                     '    m   ', '    k    ', '   Omega[m]  ', '   Direction  ', 'REAL(DFT{WaveElev})','IMAG(DFT{WaveElev})'
-            WRITE( InputFileData%UnSum, '(1X,A10,2X,A14,2X,A14,2X,A14,2X,A19,2X,A19)' )  &
-                     '   (-)  ', '  (1/m)  ', '   (rad/s)   ', '     (deg)    ', '       (m)         ','       (m)         '
-
-            ! Write the data
-            DO I = -1*Waves_InitOut%NStepWave2+1,Waves_InitOut%NStepWave2
-               WaveNmbr   = WaveNumber ( I*Waves_InitOut%WaveDOmega, InitInp%Gravity, InputFileData%Waves%WtrDpth )
-               WRITE( InputFileData%UnSum, '(1X,I10,2X,ES14.5,2X,ES14.5,2X,ES14.5,2X,ES14.5,7X,ES14.5)' ) I, WaveNmbr, I*Waves_InitOut%WaveDOmega, &
-                      Waves_InitOut%WaveDirArr(ABS(I)),  Waves_InitOut%WaveElevC0( 1,ABS(I ) ) ,   Waves_InitOut%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
-            END DO
-         END IF
-         
-         
+  
          IF ( InputFileData%PotMod == 1 .AND.  InputFileData%WAMIT%RdtnMod == 1) THEN
             ! Write the header for this section:  Note: When NBodyMod = 1 the kernel is now 6*NBody by 6*Nbody in size,
             !   and we have NBody 6 by 6 kernels for NBodyMod=2 or 3
@@ -1507,15 +706,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       END IF
 
 !==========================================
-      
-         ! Deallocate any remaining Waves Output data
-      IF(ALLOCATED( Waves_InitOut%WaveElevC0 ))  DEALLOCATE( Waves_InitOut%WaveElevC0 )
-      IF(ALLOCATED( Waves_InitOut%WaveAcc   ))  DEALLOCATE( Waves_InitOut%WaveAcc   )
-      IF(ALLOCATED( Waves_InitOut%WaveDynP  ))  DEALLOCATE( Waves_InitOut%WaveDynP  )
-      IF(ALLOCATED( Waves_InitOut%WaveTime   ))  DEALLOCATE( Waves_InitOut%WaveTime   )
-      IF(ALLOCATED( Waves_InitOut%WaveVel   ))  DEALLOCATE( Waves_InitOut%WaveVel   )
-      IF(ALLOCATED( Waves_InitOut%WaveElevC0 ))  DEALLOCATE( Waves_InitOut%WaveElevC0 )
-      !IF(ALLOCATED( InputFileData%WAMIT%WaveElevC0 ))  DEALLOCATE( InputFileData%WAMIT%WaveElevC0)
       
          ! Close the summary file
       IF ( InputFileData%HDSum ) THEN
@@ -1668,15 +858,15 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       END IF
       m%AllHdroOrigin%RemapFlag  = .TRUE.
 
-         ! Create the Output file if requested      
+         ! Set some more parameters
       p%OutSwtch      = InputFileData%OutSwtch 
       p%Delim         = ''
-      !p%Morison%Delim = p%Delim  ! Need to set this from within Morison to follow framework
-      !p%WAMIT%Delim   = p%Delim  ! Need to set this from within Morison to follow framework
       p%OutFmt        = InputFileData%OutFmt
       p%OutSFmt       = InputFileData%OutSFmt
       p%NumOuts       = InputFileData%NumOuts
-      
+      p%WtrDpth       = InputFileData%Morison%WtrDpth
+
+
       CALL HDOUT_Init( HydroDyn_ProgDesc, InitInp%OutRootName, InputFileData, y,  p, m, InitOut, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
@@ -1698,17 +888,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          
       ! Define initialization-routine output here:
       InitOut%Ver = HydroDyn_ProgDesc         
-         ! These three come directly from processing the inputs, and so will exist even if not using Morison elements:
-      InitOut%WtrDens = InputFileData%Morison%WtrDens
-      InitOut%WtrDpth = InputFileData%Morison%WtrDpth
-      InitOut%MSL2SWL = InputFileData%Morison%MSL2SWL
-      p%WtrDpth       = InitOut%WtrDpth  
          
-      IF ( InitInp%hasIce ) THEN
-         IF ((InputFileData%Waves%WaveMod /= 0) .OR. (InputFileData%Current%CurrMod /= 0) ) THEN
-            CALL SetErrStat(ErrID_Fatal,'Waves and Current must be turned off in HydroDyn when ice loading is computed. Set WaveMod=0 and CurrMod=0.',ErrStat,ErrMsg,RoutineName)
-         END IF
-      END IF
       
       !............................................................................................
       ! Initialize Jacobian:
@@ -1729,48 +909,12 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 CONTAINS
 !................................
    SUBROUTINE CleanUp()
-      
-      CALL HydroDyn_DestroyInputFile( InputFileData,   ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      CALL NWTC_Library_DestroyFileInfoType(InFileInfo,ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      ! Use DEALLOCATEpointers = .false.
+      ! NOTE: All of the pointer data originated in SeaState, and SeaState is responsible for deallocating the data
+      !        all other modules are responsible for nullifying their versions of the pointers when they are done with the data
 
-      CALL Waves_DestroyInitOutput(   Waves_InitOut,   ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-      CALL Current_DestroyInitOutput( Current_InitOut, ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-   
-      
-         ! These are dummy variables to satisfy the framework, but are not used again:
-      
-      CALL Waves_DestroyInput(       Waves_u,          ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
-      CALL Waves_DestroyParam(       Waves_p,          ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
-      CALL Waves_DestroyContState(   Waves_x,          ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
-      CALL Waves_DestroyDiscState(   Waves_xd,         ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
-      CALL Waves_DestroyConstrState( Waves_z,          ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
-      CALL Waves_DestroyOtherState(  WavesOtherState,  ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
-      CALL Waves_DestroyOutput(      Waves_y,          ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
-
-      
-      CALL Current_DestroyInput(       Current_u,          ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
-      CALL Current_DestroyParam(       Current_p,          ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
-      CALL Current_DestroyContState(   Current_x,          ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
-      CALL Current_DestroyDiscState(   Current_xd,         ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
-      CALL Current_DestroyConstrState( Current_z,          ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
-      CALL Current_DestroyOtherState(  CurrentOtherState,  ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
-      CALL Current_DestroyOutput(      Current_y,          ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
-      CALL Current_DestroyMisc(        Current_m,          ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
-      
-      if (allocated(tmpWaveKinzi ))    deallocate(tmpWaveKinzi )
-      if (allocated(tmpWaveElevxi))    deallocate(tmpWaveElevxi)
-      if (allocated(tmpWaveElevyi))    deallocate(tmpWaveElevyi)
-      if (allocated(tmpWaveElevXY))    deallocate(tmpWaveElevXY)
-      if (allocated(WaveElevSt   ))    deallocate(WaveElevSt   )
-      if (allocated(WaveVel0     ))    deallocate(WaveVel0     )
-      if (allocated(WaveAcc0     ))    deallocate(WaveAcc0     )
-      if (allocated(WaveDynP0    ))    deallocate(WaveDynP0    )
-      if (allocated(WaveVel2S0   ))    deallocate(WaveVel2S0   )
-      if (allocated(WaveAcc2S0   ))    deallocate(WaveAcc2S0   )
-      if (allocated(WaveDynP2S0  ))    deallocate(WaveDynP2S0  )
-      if (allocated(WaveVel2D0   ))    deallocate(WaveVel2D0   )
-      if (allocated(WaveAcc2D0   ))    deallocate(WaveAcc2D0   )
-      if (allocated(WaveDynP2D0  ))    deallocate(WaveDynP2D0  )
+      CALL HydroDyn_DestroyInputFile( InputFileData,   ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      CALL NWTC_Library_DestroyFileInfoType(InFileInfo,ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)  
 
    END SUBROUTINE CleanUp
 !................................
@@ -1788,10 +932,10 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       TYPE(HydroDyn_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
       TYPE(HydroDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other/optimization states            
       TYPE(HydroDyn_OutputType),          INTENT(INOUT)  :: y           !< System outputs
-      TYPE(HydroDyn_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
+      TYPE(HydroDyn_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
+      
 
       INTEGER(IntKi)                         :: ErrStat2                            ! local error status
       CHARACTER(ErrMsgLen)                   :: ErrMsg2                             ! local error message
@@ -1801,10 +945,12 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          
       ErrStat = ErrID_None         
       ErrMsg  = ""               
+
       
             
-         ! Write the HydroDyn-level output file data if the user requested module-level output
+         ! Write the HydroDyn-level output file data FROM THE LAST COMPLETED TIME STEP if the user requested module-level output
          ! and the current time has advanced since the last stored time step.
+         
       IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3) THEN               
          CALL HDOut_WriteOutputs( m%LastOutTime, y, p, m%Decimate, ErrStat2, ErrMsg2 )
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
@@ -1816,24 +962,27 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
           
 
          ! Destroy the input data: (ignore errors)
-      CALL HydroDyn_DestroyInput( u, ErrStat2, ErrMsg2 )
+      CALL HydroDyn_DestroyInput( u, ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
 
 
          ! Destroy the parameter data: (ignore errors)
-      CALL HydroDyn_DestroyParam( p, ErrStat2, ErrMsg2 )
+      ! Need to nullify pointers so that SeaState module data is not deallocated by HD (i.e., use DEALLOCATEpointers=.false. when it points to SeaState data)
+      ! on restart, the data is a separate copy of the SeaState module data, hence the PointsToSeaState parameter
+      CALL HydroDyn_DestroyParam( p, ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
 
 
          ! Destroy the state data: (ignore errors)
-      CALL HydroDyn_DestroyContState(   x,           ErrStat2, ErrMsg2 )
-      CALL HydroDyn_DestroyDiscState(   xd,          ErrStat2, ErrMsg2 )
-      CALL HydroDyn_DestroyConstrState( z,           ErrStat2, ErrMsg2 )
-      CALL HydroDyn_DestroyOtherState(  OtherState,  ErrStat2, ErrMsg2 )
          
+      CALL HydroDyn_DestroyContState(   x,           ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyDiscState(   xd,          ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyConstrState( z,           ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyOtherState(  OtherState,  ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+
          ! Destroy misc variables: (ignore errors)
-      CALL HydroDyn_DestroyMisc( m, ErrStat2, ErrMsg2 )
+      CALL HydroDyn_DestroyMisc( m, ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
 
          ! Destroy the output data: (ignore errors)
-      CALL HydroDyn_DestroyOutput( y, ErrStat2, ErrMsg2 )
+      CALL HydroDyn_DestroyOutput( y, ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
       
 
 END SUBROUTINE HydroDyn_End
@@ -1862,16 +1011,14 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
          ! Local variables
-      INTEGER                                            :: I, iWAMIT, iBody ! Generic loop counters
-!      TYPE(HydroDyn_ContinuousStateType)                 :: dxdt            ! Continuous state derivatives at t
-      TYPE(HydroDyn_DiscreteStateType)                   :: xd_t            ! Discrete states at t (copy)
-      TYPE(HydroDyn_ConstraintStateType)                 :: z_Residual      ! Residual of the constraint state functions (Z)
-      TYPE(HydroDyn_InputType)                           :: u               ! Instantaneous inputs
+      INTEGER                                            :: I, iWAMIT       ! Generic loop counters
       INTEGER(IntKi)                                     :: ErrStat2        ! Error status of the operation (secondary error)
       CHARACTER(ErrMsgLen)                               :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
       INTEGER                                            :: nTime           ! number of inputs 
 
       TYPE(WAMIT_InputType), ALLOCATABLE                 :: Inputs_WAMIT(:)  
+      TYPE(Morison_InputType), ALLOCATABLE               :: Inputs_Morison(:)  
+      TYPE(Morison_InputType)                            :: u_Morison
       CHARACTER(*), PARAMETER                            :: RoutineName = 'HydroDyn_UpdateStates'
       
           ! Create dummy variables required by framework but which are not used by the module
@@ -1882,84 +1029,115 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
       TYPE(FIT_ContinuousStateType)      :: FIT_x              ! Input: Continuous states at t;
 #endif      
       
-      REAL(ReKi)                         :: rotdisp(3)
          ! Initialize variables
 
       ErrStat   = ErrID_None           ! no error has occurred
       ErrMsg    = ""
+      nTime = size(Inputs)
+
+      IF (INPUTS(1)%Morison%Mesh%Committed) THEN
       
+         ALLOCATE( Inputs_Morison(nTime), STAT = ErrStat2 )
+         IF (ErrStat2 /=0) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Failed to allocate array Inputs_Morison.', ErrStat, ErrMsg, RoutineName )
+            RETURN
+         END IF
+         
+         DO i=1,nTime
+            CALL Morison_CopyInput(Inputs(i)%Morison, Inputs_Morison(i), MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         END DO
+         CALL Morison_CopyInput(Inputs(1)%Morison, u_Morison, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            
+         CALL Morison_Input_ExtrapInterp(Inputs_Morison, InputTimes, u_Morison, t, ErrStat2, ErrMsg2) ! get inputs at time t
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
+         IF (ErrStat < AbortErrLev) THEN
+            ! Update the discrete states of Morison - The state of the high-pass velocity filter
+            CALL Morison_UpdateDiscState( t, u_Morison, p%Morison, x%Morison, xd%Morison, &
+                                   z%Morison, OtherState%Morison, m%Morison, ErrStat2, ErrMsg2 )
+               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         END IF
+            
+         call Morison_DestroyInput(u_Morison, ErrStat2, ErrMsg2)
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
+         do i=1,size(Inputs_Morison)
+            call Morison_DestroyInput(Inputs_Morison(i), ErrStat2, ErrMsg2)
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         end do
+         deallocate(Inputs_Morison)
+            
+      END IF
          
          ! Return without doing any work if the we are not using a potential flow model
-      IF ( p%PotMod == 0  ) RETURN
-      
-      ! Return without doing any work if the input mesh is not initialized (NOT USING WAMIT)
-      !IF ( .NOT. Inputs(1)%WAMIT%Mesh%Initialized  ) RETURN
-      
-      nTime = size(Inputs)   
-      
-      
-         ! Allocate array of WAMIT inputs
-         
-!FIXME: Error handling appears to be broken here
-
-   IF ( p%PotMod == 1 ) THEN
-       
-      ALLOCATE( Inputs_WAMIT(nTime), STAT = ErrStat2 )
-      IF (ErrStat2 /=0) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Failed to allocate array Inputs_WAMIT.', ErrStat, ErrMsg, RoutineName )
+      IF ( p%PotMod == 0  ) THEN
          RETURN
-      END IF
+      ELSEIF ( p%PotMod == 1 ) THEN
+       
+         ALLOCATE( Inputs_WAMIT(nTime), STAT = ErrStat2 )
+         IF (ErrStat2 /=0) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Failed to allocate array Inputs_WAMIT.', ErrStat, ErrMsg, RoutineName )
+            RETURN
+         END IF
 
-      if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then
-         ! For this NBodyMod or NBody=1, there is only one WAMIT object, so copy the necessary inputs and then call WAMIT_UpdateStates
-         do I=1,nTime
-               ! Copy the inputs from the HD mesh into the WAMIT mesh         
-            call MeshCopy( Inputs(I)%WAMITMesh, Inputs_WAMIT(I)%Mesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-         end do
-         
-         if (ErrStat < AbortErrLev) then    ! if there was an error copying the input meshes, we'll skip this step and then cleanup the temporary input meshes     
-               ! Update the WAMIT module states
-      
-            call WAMIT_UpdateStates( t, n, Inputs_WAMIT, InputTimes, p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1), z%WAMIT, OtherState%WAMIT(1), m%WAMIT(1), ErrStat2, ErrMsg2 )
-               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
-
-         end if
-         
-      else
-         
-         ! We have multiple WAMIT objects
-
-            ! Loop over number of inputs and copy them into an array of WAMIT inputs
-         do iWAMIT = 1, p%nWAMITObj
-            
+         if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then
+            ! For this NBodyMod or NBody=1, there is only one WAMIT object, so copy the necessary inputs and then call WAMIT_UpdateStates
             do I=1,nTime
-                  ! We need to create to valid mesh data structures in our Inputs_WAMIT(I)%Mesh using the miscvar version as a template, but the actually data will be generated below      
-               call MeshCopy( m%u_WAMIT(iWAMIT)%Mesh, Inputs_WAMIT(I)%Mesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-                  ! We need to copy the iWAMIT-th node data from the Inputs(I)%WAMITMesh onto the 1st node of the Inputs_WAMIT(I)%Mesh
-               Inputs_WAMIT(I)%Mesh%TranslationDisp(:,1)  = Inputs(I)%WAMITMesh%TranslationDisp(:,iWAMIT)
-               Inputs_WAMIT(I)%Mesh%Orientation    (:,:,1)= Inputs(I)%WAMITMesh%Orientation    (:,:,iWAMIT)
-               Inputs_WAMIT(I)%Mesh%TranslationVel (:,1)  = Inputs(I)%WAMITMesh%TranslationVel (:,iWAMIT)
-               Inputs_WAMIT(I)%Mesh%RotationVel    (:,1)  = Inputs(I)%WAMITMesh%RotationVel    (:,iWAMIT)
-               Inputs_WAMIT(I)%Mesh%TranslationAcc (:,1)  = Inputs(I)%WAMITMesh%TranslationAcc (:,iWAMIT)
-               Inputs_WAMIT(I)%Mesh%RotationAcc    (:,1)  = Inputs(I)%WAMITMesh%RotationAcc    (:,iWAMIT)               
+                  ! Copy the inputs from the HD mesh into the WAMIT mesh         
+               call MeshCopy( Inputs(I)%WAMITMesh, Inputs_WAMIT(I)%Mesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
             end do
+         
+            if (ErrStat < AbortErrLev) then    ! if there was an error copying the input meshes, we'll skip this step and then cleanup the temporary input meshes     
+                  ! Update the WAMIT module states
+      
+               call WAMIT_UpdateStates( t, n, Inputs_WAMIT, InputTimes, p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1), z%WAMIT, OtherState%WAMIT(1), m%WAMIT(1), ErrStat2, ErrMsg2 )
+                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
+
+            end if
+         
+         else
+         
+            ! We have multiple WAMIT objects
+
+               ! Loop over number of inputs and copy them into an array of WAMIT inputs
+            do iWAMIT = 1, p%nWAMITObj
             
-               ! UpdateStates for the iWAMIT-th body
-            call WAMIT_UpdateStates( t, n, Inputs_WAMIT, InputTimes, p%WAMIT(iWAMIT), x%WAMIT(iWAMIT), xd%WAMIT(iWAMIT), z%WAMIT, OtherState%WAMIT(iWAMIT), m%WAMIT(iWAMIT), ErrStat2, ErrMsg2 )
-               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )     
+               do I=1,nTime
+                     ! We need to create to valid mesh data structures in our Inputs_WAMIT(I)%Mesh using the miscvar version as a template, but the actually data will be generated below      
+                  call MeshCopy( m%u_WAMIT(iWAMIT)%Mesh, Inputs_WAMIT(I)%Mesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               end do
                if (ErrStat > AbortErrLev) exit
                
-         end do
+               do I=1,nTime
+                     ! We need to copy the iWAMIT-th node data from the Inputs(I)%WAMITMesh onto the 1st node of the Inputs_WAMIT(I)%Mesh
+                  Inputs_WAMIT(I)%Mesh%TranslationDisp(:,1)  = Inputs(I)%WAMITMesh%TranslationDisp(:,iWAMIT)
+                  Inputs_WAMIT(I)%Mesh%Orientation    (:,:,1)= Inputs(I)%WAMITMesh%Orientation    (:,:,iWAMIT)
+                  Inputs_WAMIT(I)%Mesh%TranslationVel (:,1)  = Inputs(I)%WAMITMesh%TranslationVel (:,iWAMIT)
+                  Inputs_WAMIT(I)%Mesh%RotationVel    (:,1)  = Inputs(I)%WAMITMesh%RotationVel    (:,iWAMIT)
+                  Inputs_WAMIT(I)%Mesh%TranslationAcc (:,1)  = Inputs(I)%WAMITMesh%TranslationAcc (:,iWAMIT)
+                  Inputs_WAMIT(I)%Mesh%RotationAcc    (:,1)  = Inputs(I)%WAMITMesh%RotationAcc    (:,iWAMIT)               
+               end do
+            
+                  ! UpdateStates for the iWAMIT-th body
+               call WAMIT_UpdateStates( t, n, Inputs_WAMIT, InputTimes, p%WAMIT(iWAMIT), x%WAMIT(iWAMIT), xd%WAMIT(iWAMIT), z%WAMIT, OtherState%WAMIT(iWAMIT), m%WAMIT(iWAMIT), ErrStat2, ErrMsg2 )
+                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )     
+                  if (ErrStat > AbortErrLev) exit
+               
+            end do
          
-      end if
+         end if
        
-         ! deallocate temporary inputs
-      do I=1,nTime
-         call WAMIT_DestroyInput( Inputs_WAMIT(I), ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
-      end do
+            ! deallocate temporary inputs
+         do I=1,nTime
+            call WAMIT_DestroyInput( Inputs_WAMIT(I), ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         end do
       
-      deallocate(Inputs_WAMIT)
+         deallocate(Inputs_WAMIT)
 
 #ifdef USE_FIT      
    ELSE IF ( p%PotMod == 2 ) THEN  ! FIT
@@ -2006,6 +1184,28 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
 
    END IF
    
+   !CALL Cleanup()
+   
+contains
+   subroutine Cleanup()
+   
+      if (allocated(Inputs_Morison)) then
+         do i=1,size(Inputs_Morison)
+            call Morison_DestroyInput(Inputs_Morison(i), ErrStat2, ErrMsg2)
+         end do
+         deallocate(Inputs_Morison)
+      end if
+      call Morison_DestroyInput(u_Morison, ErrStat2, ErrMsg2)
+      
+   
+      if (allocated(Inputs_WAMIT)) then
+         do i=1,size(Inputs_WAMIT)
+            call Wamit_DestroyInput(Inputs_WAMIT(i), ErrStat2, ErrMsg2)
+         end do
+         deallocate(Inputs_WAMIT)
+      end if
+      
+   end subroutine Cleanup
       
 END SUBROUTINE HydroDyn_UpdateStates
 
@@ -2022,7 +1222,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       TYPE(HydroDyn_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
       TYPE(HydroDyn_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time
       TYPE(HydroDyn_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at Time (Input only so that mesh con-
-                                                                        !!   nectivity information does not have to be recalculated)
+                                                                        !!   nectivity information does not have to be recalculated) + for previous WriteOutput results
       TYPE(HydroDyn_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables           
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !! Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !! Error message if ErrStat /= ErrID_None
@@ -2037,40 +1237,34 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       TYPE(FIT_ConstraintStateType)        :: FIT_z             ! Initial guess of the constraint states 
       TYPE(FIT_InputType)                  :: Inputs_FIT
 #endif      
-      REAL(ReKi)                           :: WaveElev (p%NWaveElev) ! Instantaneous total elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
-      REAL(ReKi)                           :: WaveElev1(p%NWaveElev)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
-      REAL(ReKi)                           :: WaveElev2(p%NWaveElev)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
-      
+     
       REAL(ReKi)                           :: q(6*p%NBody), qdot(6*p%NBody), qdotsq(6*p%NBody), qdotdot(6*p%NBody)
       REAL(ReKi)                           :: rotdisp(3)                              ! small angle rotational displacements
-      REAL(ReKi)                           :: AllOuts(MaxHDOutputs)  
-      integer(IntKi)                       :: iBody, indxStart, indxEnd, iWAMIT  ! Counters
+      integer(IntKi)                       :: iBody, indxStart, indxEnd  ! Counters
       
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
       ErrMsg  = ""
-      WaveElev1 = 0.0_ReKi
-      WaveElev2 = 0.0_ReKi    ! In case we don't use 2nd order waves
+       
       
+      ! Write the Hydrodyn-level output file data FROM THE LAST COMPLETED TIME STEP if the user requested module-level output
+      ! and the current time has advanced since the last stored time step. Note that this must be done before filling y%WriteOutput
+      ! so that we don't get recent results. Also note that this may give strange results in the .HD.out files of linearization simulations.
+         
+      IF ( (p%OutSwtch == 1 .OR. p%OutSwtch == 3) .AND. ( Time > m%LastOutTime ) ) THEN               
+         CALL HDOut_WriteOutputs( m%LastOutTime, y, p, m%Decimate, ErrStat2, ErrMsg2 )         
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
+      END IF
+      m%LastOutTime   = Time ! time associated with the next values of y%WriteOutput
       
-         ! Compute outputs here:
          
-         
+      
          !-------------------------------------------------------------------
          ! Additional stiffness, damping forces.  These need to be placed on a point mesh which is located at the WAMIT reference point (WRP).
          ! This mesh will need to get mapped by the glue code for use by either ElastoDyn or SubDyn.
          !-------------------------------------------------------------------
 
-         ! Deal with any output from the Waves2 module....
-      IF (p%Waves2%WvDiffQTFF .OR. p%Waves2%WvSumQTFF ) THEN
-
-            ! Waves2_CalcOutput is called only so that the wave elevations can be output (if requested).
-         CALL Waves2_CalcOutput( Time, m%u_Waves2, p%Waves2, x%Waves2, xd%Waves2,  &
-                                z%Waves2, OtherState%Waves2, y%Waves2, m%Waves2, ErrStat2, ErrMsg2 )
-
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
-      END IF
 
 
       if ( p%PotMod == 1 ) then
@@ -2165,12 +1359,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
          if (p%WAMIT2used) then
 
             if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then
-                  ! Copy the inputs from the HD mesh into the WAMIT mesh
-               call MeshCopy( u%WAMITMesh, m%u_WAMIT2(1)%Mesh, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
-                     if ( ErrStat >= AbortErrLev ) return
-               call WAMIT2_CalcOutput( Time, p%WaveTime, m%u_WAMIT2(1), p%WAMIT2(1), x%WAMIT2(1), xd%WAMIT2(1),  &
-                                       z%WAMIT2, OtherState%WAMIT2(1), y%WAMIT2(1), m%WAMIT2(1), ErrStat2, ErrMsg2 )
+               call WAMIT2_CalcOutput( Time, p%WaveTime, p%WAMIT2(1), y%WAMIT2(1), m%WAMIT2(1), ErrStat2, ErrMsg2 )
                   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
                do iBody=1,p%NBody
                   y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT2(1)%Mesh%Force (:,iBody)
@@ -2181,16 +1370,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
             else
                do iBody=1,p%NBody
 
-                     ! We need to copy the iWAMIT2-th node data from the Inputs(I)%WAMIT2Mesh onto the 1st node of the Inputs_WAMIT2(I)%Mesh
-                  m%u_WAMIT2(iBody)%Mesh%TranslationDisp(:,1)  = u%WAMITMesh%TranslationDisp(:,iBody)
-                  m%u_WAMIT2(iBody)%Mesh%Orientation    (:,:,1)= u%WAMITMesh%Orientation    (:,:,iBody)
-                  m%u_WAMIT2(iBody)%Mesh%TranslationVel (:,1)  = u%WAMITMesh%TranslationVel (:,iBody)
-                  m%u_WAMIT2(iBody)%Mesh%RotationVel    (:,1)  = u%WAMITMesh%RotationVel    (:,iBody)
-                  m%u_WAMIT2(iBody)%Mesh%TranslationAcc (:,1)  = u%WAMITMesh%TranslationAcc (:,iBody)
-                  m%u_WAMIT2(iBody)%Mesh%RotationAcc    (:,1)  = u%WAMITMesh%RotationAcc    (:,iBody)
-
-                  call WAMIT2_CalcOutput( Time, p%WaveTime, m%u_WAMIT2(iBody), p%WAMIT2(iBody), x%WAMIT2(iBody), xd%WAMIT2(iBody),  &
-                                       z%WAMIT2, OtherState%WAMIT2(iBody), y%WAMIT2(iBody), m%WAMIT2(iBody), ErrStat2, ErrMsg2 )
+                  call WAMIT2_CalcOutput( Time, p%WaveTime, p%WAMIT2(iBody), y%WAMIT2(iBody), m%WAMIT2(iBody), ErrStat2, ErrMsg2 )
                      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
                   y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT2(iBody)%Mesh%Force (:,1)
                   y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT2(iBody)%Mesh%Moment(:,1)
@@ -2227,70 +1407,24 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
       END IF
       
-      
          ! Integrate all the mesh loads onto the platfrom reference Point (PRP) at (0,0,0)
-      m%F_Hydro = CalcLoadsAtWRP( y, u, m%AllHdroOrigin, u%PRPMesh, m%MrsnMesh_position, m%HD_MeshMap, ErrStat2, ErrMsg2 )
+      m%F_Hydro = CalcLoadsAtWRP( y, u, m%AllHdroOrigin, m%HD_MeshMap, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
+        
+      
+      
+         ! Map calculated results into the first p%NumOuts values of the y%WriteOutput Array
+      CALL HDOut_MapOutputs( p, y, m%WAMIT, m%WAMIT2, m%F_PtfmAdd, m%F_Waves, m%F_Hydro, u%PRPMesh, q, qdot, qdotdot, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
       
-      
-         ! Compute the wave elevations at the requested output locations for this time.  Note that p%WaveElev has the second order added to it already.
-         
-         ! Second order wave elevation, if calculated (This array is split out for speed because of the if)
-      if (allocated(p%WaveElev2)) then
-         DO I=1,p%NWaveElev
-            WaveElev2(I)   = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveElev2(:,I),          &
-                                       m%LastIndWave, p%NStepWave + 1       )
-         END DO
-      endif
-
-      DO I=1,p%NWaveElev
-         WaveElev1(I)   = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveElev1(:,I),          &
-                                    m%LastIndWave, p%NStepWave + 1       )                      
-         WaveElev(I)    = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveElev(:,I), &
-                                    m%LastIndWave, p%NStepWave + 1       )
-
-      END DO
-      
-      
-          
-      
-         ! Write the HydroDyn-level output file data if the user requested module-level output
-         ! and the current time has advanced since the last stored time step.
-         
-      IF ( (p%OutSwtch == 1 .OR. p%OutSwtch == 3) .AND. ( Time > m%LastOutTime ) ) THEN               
-         CALL HDOut_WriteOutputs( m%LastOutTime, y, p, m%Decimate, ErrStat2, ErrMsg2 )         
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
-      END IF
-      
-      
-         ! Map calculated results into the AllOuts Array
-      CALL HDOut_MapOutputs( Time, p, y, m%WAMIT, m%WAMIT2, p%NWaveElev, WaveElev, WaveElev1, WaveElev2, m%F_PtfmAdd, m%F_Waves, m%F_Hydro, u%PRPMesh, q, qdot, qdotdot, AllOuts, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
-      
-      DO I = 1,p%NumOuts
-            y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
-      END DO    
       
          ! Aggregate the sub-module outputs 
-         
-      IF ( p%OutSwtch > 0) THEN
-         
-         J = p%NumOuts + 1        
-         
-         IF (ALLOCATED( p%Waves2%OutParam ) .AND. p%Waves2%NumOuts > 0) THEN
-            DO I=1, p%Waves2%NumOuts
-               y%WriteOutput(J) = y%Waves2%WriteOutput(I)
-               J = J + 1
-            END DO
-         END IF
-
-         IF (ALLOCATED( p%Morison%OutParam ) .AND. p%Morison%NumOuts > 0) THEN
-            DO I=1, p%Morison%NumOuts
-               y%WriteOutput(J) = y%Morison%WriteOutput(I)
-               J = J + 1
-            END DO
-         END IF
-         
+      IF (p%Morison%NumOuts > 0) THEN
+         J = p%NumOuts + 1
+         DO I=1, p%Morison%NumOuts
+            y%WriteOutput(J) = y%Morison%WriteOutput(I)
+            J = J + 1
+         END DO
       END IF
       
       m%LastOutTime   = Time
@@ -2395,13 +1529,11 @@ END SUBROUTINE HydroDyn_CalcConstrStateResidual
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-function CalcLoadsAtWRP( y, u, AllHdroOrigin, PRP_Position,  MrsnMesh_Position, MeshMapData, ErrStat, ErrMsg )
+function CalcLoadsAtWRP( y, u, AllHdroOrigin, MeshMapData, ErrStat, ErrMsg )
 
    type(HydroDyn_OutputType),  intent(inout)  :: y                        ! Hydrodyn outputs
    type(HydroDyn_InputType),   intent(in   )  :: u                        ! Hydrodyn inputs
    type(MeshType),             intent(inout)  :: AllHdroOrigin            ! This is the mesh which data is mapped onto.  We pass it in to avoid allocating it at each call
-   type(MeshType),             intent(inout)  :: PRP_Position             ! These are the kinematics associated the PRP at (0,0,0).  We pass it in to avoid allocating it at each call
-   type(MeshType),             intent(in   )  :: MrsnMesh_Position        ! These are the kinematics associated with the Morison loads mesh.  We pass it in to avoid allocating it at each call
    type(HD_ModuleMapType),     intent(inout)  :: MeshMapData              ! Mesh mapping data structures 
    integer(IntKi),             intent(  out)  :: ErrStat                  ! Error status of the operation
    character(*),               intent(  out)  :: ErrMsg                   ! Error message if ErrStat /= ErrID_None                                                         
@@ -2416,7 +1548,7 @@ function CalcLoadsAtWRP( y, u, AllHdroOrigin, PRP_Position,  MrsnMesh_Position, 
    if ( y%WAMITMesh%Committed  ) then
 
       ! Just transfer the loads because the meshes are at the same location (0,0,0)
-      call Transfer_Point_to_Point( y%WAMITMesh, AllHdroOrigin, MeshMapData%W_P_2_PRP_P, ErrStat2, ErrMsg2, u%WAMITMesh, PRP_Position )
+      call Transfer_Point_to_Point( y%WAMITMesh, AllHdroOrigin, MeshMapData%W_P_2_PRP_P, ErrStat2, ErrMsg2, u%WAMITMesh, u%PRPMesh )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CalcLoadsAtWRP')
             if (ErrStat >= AbortErrLev) return
             
@@ -2428,7 +1560,7 @@ function CalcLoadsAtWRP( y, u, AllHdroOrigin, PRP_Position,  MrsnMesh_Position, 
    
    if ( y%Morison%Mesh%Committed ) then 
 
-      call Transfer_Point_to_Point( y%Morison%Mesh, AllHdroOrigin, MeshMapData%M_P_2_PRP_P, ErrStat2, ErrMsg2,  u%Morison%Mesh, PRP_Position )
+      call Transfer_Point_to_Point( y%Morison%Mesh, AllHdroOrigin, MeshMapData%M_P_2_PRP_P, ErrStat2, ErrMsg2,  u%Morison%Mesh, u%PRPMesh )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CalcLoadsAtWRP')
             if (ErrStat >= AbortErrLev) return
  
@@ -2479,7 +1611,7 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(HydroDyn_ContinuousStateType)                      :: x_m
    TYPE(HydroDyn_InputType)                                :: u_perturb
    REAL(R8Ki)                                        :: delta        ! delta change in input or state
-   INTEGER(IntKi)                                    :: i, j, k, startingI, startingJ, bOffset, offsetI, offsetJ, n_du_plus1
+   INTEGER(IntKi)                                    :: i, j, k, startingI, startingJ, bOffset, offsetI, n_du_plus1
    
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
@@ -3035,12 +2167,10 @@ SUBROUTINE HD_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
    
       ! local variables:
-   INTEGER(IntKi)                :: i,j,k, index_last, index_next
+   INTEGER(IntKi)                :: i,index_last, index_next
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_Init_Jacobian_y'
-   LOGICAL                                           :: Mask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
-   logical, allocatable                              :: AllOut(:)
    
    
    
@@ -3213,9 +2343,8 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_Init_Jacobian'
    
       ! local variables:
-   INTEGER(IntKi)                :: i, j, k, index, index_last, nu, i_meshField, m, meshFieldCount
-   REAL(R8Ki)                    :: MaxThrust, MaxTorque, perturb_t, perturb
-   REAL(R8Ki)                    :: ScaleLength
+   INTEGER(IntKi)                :: i, j, index, nu, i_meshField, m, meshFieldCount
+   REAL(R8Ki)                    :: perturb_t, perturb
    LOGICAL                       :: FieldMask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
 
    
@@ -3610,7 +2739,6 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
       ! local variables:
 
    integer(IntKi)                                    :: indx_first             ! index indicating next value of dY to be filled 
-   logical                                           :: Mask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
    integer(IntKi)                                    :: k
    
    
@@ -3658,8 +2786,7 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
 
 
-   INTEGER(IntKi)                                    :: i, j, k, index, nu
-   INTEGER(IntKi)                                    :: ny
+   INTEGER(IntKi)                                    :: i, j, index, nu
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'HD_GetOP'

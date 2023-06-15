@@ -42,6 +42,8 @@ IMPLICIT NONE
     LOGICAL  :: CompElast      !< flag to determine if ElastoDyn is computing blade loads (true) or BeamDyn is (false) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
+    INTEGER(IntKi)  :: MHK      !< MHK turbine type switch [-]
+    REAL(ReKi)  :: WtrDpth      !< Water depth [m]
   END TYPE ED_InitInputType
 ! =======================
 ! =========  ED_InitOutputType  =======
@@ -153,12 +155,12 @@ IMPLICIT NONE
     REAL(ReKi)  :: NcIMUyn      !< Lateral distance from the tower-top to the nacelle IMU [meters]
     REAL(ReKi)  :: NcIMUzn      !< Vertical distance from the tower-top to the nacelle IMU [meters]
     REAL(ReKi)  :: Twr2Shft      !< Vertical distance from the tower-top to the rotor shaft [meters]
-    REAL(ReKi)  :: TowerHt      !< Height of tower above ground level [onshore], MSL [offshore], or seabed [MHK] [meters]
-    REAL(ReKi)  :: TowerBsHt      !< Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK] [meters]
-    REAL(ReKi)  :: PtfmCMxt      !< Downwind distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM [meters]
-    REAL(ReKi)  :: PtfmCMyt      !< Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM [meters]
-    REAL(ReKi)  :: PtfmCMzt      !< Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM [meters]
-    REAL(ReKi)  :: PtfmRefzt      !< Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point [meters]
+    REAL(ReKi)  :: TowerHt      !< Height of tower relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] [meters]
+    REAL(ReKi)  :: TowerBsHt      !< Height of tower base relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] [meters]
+    REAL(ReKi)  :: PtfmCMxt      !< Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM [meters]
+    REAL(ReKi)  :: PtfmCMyt      !< Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM [meters]
+    REAL(ReKi)  :: PtfmCMzt      !< Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM [meters]
+    REAL(ReKi)  :: PtfmRefzt      !< Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point [meters]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TipMass      !< Tip-brake masses [kg]
     REAL(ReKi)  :: HubMass      !< Hub mass [kg]
     REAL(ReKi)  :: HubIner      !< Hub inertia about teeter axis (2-blader) or rotor axis (3-blader) [kg m^2]
@@ -578,7 +580,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: NacCMzn      !< Vertical distance from tower-top to nacelle CM [-]
     REAL(ReKi)  :: OverHang      !< Distance from yaw axis to rotor apex or teeter pin [-]
     REAL(ReKi)  :: ProjArea      !< Swept area of the rotor projected onto the rotor plane (the plane normal to the low-speed shaft) [-]
-    REAL(ReKi)  :: PtfmRefzt      !< Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point [-]
+    REAL(ReKi)  :: PtfmRefzt      !< Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point [-]
     REAL(ReKi)  :: RefTwrHt      !< Vertical distance between FAST's undisplaced tower height (variable TowerHt) and FAST's inertia frame reference point (variable PtfmRef); that is, RefTwrHt = TowerHt - PtfmRefzt [-]
     REAL(ReKi) , DIMENSION(1:3)  :: RFrlPnt_n      !< Vector from tower-top to arbitrary point on rotor-furl axis [-]
     REAL(ReKi)  :: rVDxn      !< xn-component of position vector Rvd [-]
@@ -612,8 +614,8 @@ IMPLICIT NONE
     REAL(R8Ki)  :: STFrlTlt2      !< Sine-squared of the tail-furl axis tilt angle [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TFrlPnt_n      !< Vector from tower-top to arbitrary point on tail-furl axis [-]
     REAL(ReKi)  :: TipRad      !< Preconed blade-tip radius [-]
-    REAL(ReKi)  :: TowerHt      !< Height of tower above ground level [-]
-    REAL(ReKi)  :: TowerBsHt      !< Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK] [meters]
+    REAL(ReKi)  :: TowerHt      !< Height of tower relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] [meters]
+    REAL(ReKi)  :: TowerBsHt      !< Height of tower base relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] [meters]
     REAL(ReKi)  :: UndSling      !< Undersling length [-]
     INTEGER(IntKi)  :: NumBl      !< Number of turbine blades [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AxRedTFA      !< The axial-reduction terms for the fore-aft tower mode shapes [-]
@@ -632,6 +634,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: TwrSSSF      !< Tower side-to-side shape functions [-]
     INTEGER(IntKi)  :: TTopNode      !< Index of the additional node located at the tower-top = TwrNodes + 1 [-]
     INTEGER(IntKi)  :: TwrNodes      !< Number of tower nodes used in the analysis [-]
+    INTEGER(IntKi)  :: MHK      !< MHK turbine type switch [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: StiffTFA      !< Interpolated fore-aft tower stiffness [-]
     REAL(ReKi)  :: AtfaIner      !< Inertia of tail boom about the tail-furl axis whose origin is the tail boom center of mass [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: BldCG      !< Blade center of mass wrt the blade root [-]
@@ -737,8 +740,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BElmntMass      !< Mass of the blade elements [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TElmntMass      !< Mass of the tower elements [-]
     INTEGER(IntKi)  :: method      !< Identifier for integration method (1 [RK4], 2 [AB4], or 3 [ABM4]) [-]
-    REAL(ReKi)  :: PtfmCMxt      !< Downwind distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM [meters]
-    REAL(ReKi)  :: PtfmCMyt      !< Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM [meters]
+    REAL(ReKi)  :: PtfmCMxt      !< Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM [meters]
+    REAL(ReKi)  :: PtfmCMyt      !< Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM [meters]
     LOGICAL  :: BD4Blades      !< flag to determine if BeamDyn is computing blade loads (true) or ElastoDyn is (false) [-]
     LOGICAL  :: UseAD14      !< flag to determine if AeroDyn14 is being used. Will remove this later when we've replaced AD14. [-]
     INTEGER(IntKi)  :: BldNd_NumOuts      !< Number of requested output channels per blade node (ED_AllBldNdOuts) [-]
@@ -836,6 +839,8 @@ CONTAINS
     DstInitInputData%CompElast = SrcInitInputData%CompElast
     DstInitInputData%RootName = SrcInitInputData%RootName
     DstInitInputData%Gravity = SrcInitInputData%Gravity
+    DstInitInputData%MHK = SrcInitInputData%MHK
+    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
  END SUBROUTINE ED_CopyInitInput
 
  SUBROUTINE ED_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -902,6 +907,8 @@ CONTAINS
       Int_BufSz  = Int_BufSz  + 1  ! CompElast
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
+      Int_BufSz  = Int_BufSz  + 1  ! MHK
+      Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -946,6 +953,10 @@ CONTAINS
       Int_Xferred = Int_Xferred + 1
     END DO ! I
     ReKiBuf(Re_Xferred) = InData%Gravity
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%MHK
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%WtrDpth
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ED_PackInitInput
 
@@ -997,6 +1008,10 @@ CONTAINS
       Int_Xferred = Int_Xferred + 1
     END DO ! I
     OutData%Gravity = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%MHK = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%WtrDpth = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ED_UnPackInitInput
 
@@ -15765,6 +15780,7 @@ IF (ALLOCATED(SrcParamData%TwrSSSF)) THEN
 ENDIF
     DstParamData%TTopNode = SrcParamData%TTopNode
     DstParamData%TwrNodes = SrcParamData%TwrNodes
+    DstParamData%MHK = SrcParamData%MHK
 IF (ALLOCATED(SrcParamData%StiffTFA)) THEN
   i1_l = LBOUND(SrcParamData%StiffTFA,1)
   i1_u = UBOUND(SrcParamData%StiffTFA,1)
@@ -16863,6 +16879,7 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! TTopNode
       Int_BufSz  = Int_BufSz  + 1  ! TwrNodes
+      Int_BufSz  = Int_BufSz  + 1  ! MHK
   Int_BufSz   = Int_BufSz   + 1     ! StiffTFA allocated yes/no
   IF ( ALLOCATED(InData%StiffTFA) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! StiffTFA upper/lower bounds for each dimension
@@ -17723,6 +17740,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%TTopNode
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%TwrNodes
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%MHK
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%StiffTFA) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -19379,6 +19398,8 @@ ENDIF
     OutData%TTopNode = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%TwrNodes = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%MHK = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! StiffTFA not allocated
     Int_Xferred = Int_Xferred + 1

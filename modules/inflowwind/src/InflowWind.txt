@@ -7,13 +7,8 @@
 # keyword <InflowWind[/ModuleAbvr]> <TypeName>   <FieldType>    <FieldName>  <Dims>  <Ctrl> <DNAME> <DESCRIP> <UNITS>
 ###################################################################################################################################
 
-usefrom IfW_UniformWind.txt
-usefrom IfW_TSFFWind.txt
-usefrom IfW_FFWind_Base.txt
-usefrom IfW_BladedFFWind.txt
-usefrom IfW_HAWCWind.txt
-usefrom IfW_UserWind.txt
-usefrom IfW_4Dext.txt
+usefrom IfW_FlowField.txt
+usefrom InflowWind_IO.txt
 usefrom Lidar.txt
 
 include Registry_NWTC_Library.txt
@@ -28,33 +23,10 @@ param    ^                       -                 IntKi             HAWC_WindNu
 param    ^                       -                 IntKi             User_WindNumber      -     6     -     "User defined wind."                                                       -
 param    ^                       -                 IntKi             BladedFF_Shr_WindNumber  - 7     -     "Native Bladed binary full-field file."      -
 param    ^                       -                 IntKi             FDext_WindNumber     -     8     -     "4D wind from external souce (i.e., FAST.Farm)."                                                       -
-param    ^                       -                 IntKi             Highest_WindNumber   -     8     -     "Highest wind number supported."                                           -
+param    ^                       -                 IntKi             Point_WindNumber     -     9     -     "1D wind components from ExtInflow"                                                       -
+param    ^                       -                 IntKi             Highest_WindNumber   -     9     -     "Highest wind number supported."                                           -
 
 param    ^                       -                 IntKi             IfW_NumPtsAvg        -     144    -     "Number of points averaged for rotor-average wind speed"                                           -
-
-#########################
-# ..... WindFile metadata ........................................................................................................
-# This is metadata about the windfile that is retrieved when InflowWind is initialized
-# ................................................................................................................................
-typedef  InflowWind/InflowWind   WindFileMetaData  CHARACTER(1024)   FileName          -     -     -     "Name of the windfile retrieved"                         -
-typedef  ^                       ^                 IntKi             WindType          -     0     -     "Type of the windfile"                                   -
-typedef  ^                       ^                 ReKi              RefHt             -     -     -     "Reference height given in file"                         meters
-typedef  ^                       ^                 Logical           RefHt_Set         -     -     -     "Reference height was given in file"                     -
-typedef  ^                       ^                 DbKi              DT                -     -     -     "TimeStep of the wind file -- zero value for none"       seconds
-typedef  ^                       ^                 IntKi             NumTSteps         -     -     -     "Number of timesteps in the time range of wind file"     -
-typedef  ^                       ^                 Logical           ConstantDT        -     -     -     "Timesteps are the same throughout file"                 -
-typedef  ^                       ^                 ReKi              TRange            {2}   -     -     "Time range of the wind file"                            seconds
-typedef  ^                       ^                 Logical           TRange_Limited    -     -     -     "TRange limits strictly enforced"                        -
-typedef  ^                       ^                 ReKi              YRange            {2}   -     -     "Range in y direction"                                   meters
-typedef  ^                       ^                 Logical           YRange_Limited    -     -     -     "YRange limits strictly enforced"                        -
-typedef  ^                       ^                 ReKi              ZRange            {2}   -     -     "Range in z direction"                                   meters
-typedef  ^                       ^                 Logical           ZRange_Limited    -     -     -     "ZRange limits strictly enforced"                        -
-typedef  ^                       ^                 IntKi             BinaryFormat      -     -     -     "Binary format identifier"                               -
-typedef  ^                       ^                 Logical           IsBinary          -     -     -     "Windfile is a binary file"                              -
-typedef  ^                       ^                 ReKi              TI                {3}   -     -     "Turbulence intensity (U,V,W)"                           -
-typedef  ^                       ^                 Logical           TI_listed         -     -     -     "Turbulence intesity given in file"                      -
-typedef  ^                       ^                 ReKi              MWS               -     -     -     "Approximate mean wind speed"                            -
-
 
 #########################
 # ..... Input file data ...........................................................................................................
@@ -64,6 +36,7 @@ typedef  InflowWind/InflowWind   InflowWind_InputFile   LOGICAL      EchoFlag   
 typedef  ^                       ^                 IntKi             WindType          -     0     -     "Type of windfile"                                       -
 typedef  ^                       ^                 ReKi              PropagationDir    -     -     -     "Direction of wind propagation (meteorological direction)"  (degrees)
 typedef  ^                       ^                 ReKi              VFlowAngle        -     -     -     "Vertical (upflow) angle"                                degrees
+typedef  ^                       ^                 LOGICAL           VelInterpCubic    -   .FALSE. -     "Use cubic interpolation for velocity in time (false=linear, true=cubic) [Used with WindType=2,3,4,5,7]" -
 typedef  ^                       ^                 IntKi             NWindVel          -     -     -     "Number of points to output the wind velocity (0 to 9)"
 typedef  ^                       ^                 ReKi              WindVxiList       :     -     -     "List of X coordinates for wind velocity measurements"   meters
 typedef  ^                       ^                 ReKi              WindVyiList       :     -     -     "List of Y coordinates for wind velocity measurements"   meters
@@ -91,12 +64,20 @@ typedef  ^                       ^                 ReKi              HAWC_dy    
 typedef  ^                       ^                 ReKi              HAWC_dz           -     -     -     "HAWC -- distance between points in z direction"         meters
 typedef  ^                       ^                 LOGICAL           SumPrint          -     -     -     "Write summary info to a file <ROOTNAME>.IfW.Sum"        -
 typedef  ^                       ^                 IntKi             NumOuts           -     -     -     "Number of parameters in the output list (number of outputs requested)" -
-typedef  ^                       ^                 CHARACTER(ChanLen) OutList           :     -     -     "List of user-requested output channels"                 -
-typedef  ^                       ^                 IntKi             SensorType        -  SensorType_None    -     "Sensor type (for lidar/sensor module)"                 -
-typedef  ^                       ^                 IntKi             NumPulseGate      -     -     -     "the number of range gates to return wind speeds at"                 -
-typedef  ^                       ^                 ReKi              RotorApexOffsetPos 3    -     -     "position of the lidar unit relative to the rotor apex of rotation"	m
-typedef  ^                       ^                 LOGICAL           LidRadialVel      -     -     -     "TRUE => return radial component, FALSE => return 'x' direction estimate"	-
-typedef  ^                       ^                 IfW_FFWind_InitInputType     FF                -     -     -     "scaling data" -
+typedef  ^                       ^                 CHARACTER(ChanLen) OutList          :     -     -     "List of user-requested output channels"                 -
+typedef  ^                       ^                 IntKi             SensorType        -     -     -     "Sensor type (for lidar/sensor module)"                  -
+typedef  ^                       ^                 IntKi             NumBeam           -     -     -     "Number of lidar beams"                                  -
+typedef  ^                       ^                 IntKi             NumPulseGate      -     -     -     "The number of range gates to return wind speeds at"     -
+typedef  ^                       ^                 ReKi              RotorApexOffsetPos {3}  -     -     "Position of the lidar unit relative to the rotor apex of rotation" m
+typedef  ^                       ^                 ReKi              FocalDistanceX    :     -     -     "LIDAR LOS focal distance co-ordinates in the x direction" m
+typedef  ^                       ^                 ReKi              FocalDistanceY    :     -     -     "LIDAR LOS focal distance co-ordinates in the y direction" m
+typedef  ^                       ^                 ReKi              FocalDistanceZ    :     -     -     "LIDAR LOS focal distance co-ordinates in the z direction" m 
+typedef  ^                       ^                 ReKi              PulseSpacing      -     -     -     "Distance between range gates" m
+typedef  ^                       ^                 ReKi              MeasurementInterval -   -    -      "Time between each measurement" s
+typedef  ^                       ^                 ReKi              URefLid           -     -     -     "Reference average wind speed for the lidar" m/s 
+typedef  ^                       ^                 LOGICAL           LidRadialVel      -     -     -     "TRUE => return radial component, FALSE => return 'x' direction estimate" - 
+typedef  ^                       ^                 IntKi             ConsiderHubMotion -     -     -     "Flag whether or not the hub motion's impact on the Lidar measurement will be considered [0 for no, 1 for yes]" -
+typedef  ^                       ^                 Grid3D_InitInputType     FF     -     -     -     "scaling data" -
 
 
 
@@ -109,18 +90,24 @@ typedef  ^                       ^                 LOGICAL           FixedWindFi
 typedef  ^                       ^                 LOGICAL           UseInputFile      -   .TRUE.  -     "Should we read everthing from an input file, or do we get it some other way" -
 typedef  ^                       ^                 CHARACTER(1024)   RootName          -     -     -     "RootName for writing output files"
 typedef  ^                       ^                 FileInfoType      PassedFileData    -     -     -     "If we don't use the input file, pass everything through this"                -
-typedef  ^                       ^                 LOGICAL           WindType2UseInputFile    -     .TRUE.     -      "Flag for toggling file based IO in wind type 2."                -
-typedef  ^                       ^                 FileInfoType      WindType2Data    -     -     -      "Optional slot for wind type 2 data if file IO is not used."                -
-typedef  ^                       ^          Lidar_InitInputType      lidar             -     -     -     "InitInput for lidar data"                                             -
-typedef  ^                       ^          IfW_4Dext_InitInputType  FDext             -     -     -     "InitInput for 4D external wind data"                                             -
-typedef  ^                       ^                 ReKi              RadAvg                   -       -        -     "Radius (from hub) used for averaging wind speed" -
+typedef  ^                       ^                 LOGICAL           WindType2UseInputFile   -     .TRUE.     -      "Flag for toggling file based IO in wind type 2."                -
+typedef  ^                       ^                 FileInfoType      WindType2Data     -     -     -      "Optional slot for wind type 2 data if file IO is not used."                -
+typedef  ^                       ^                 LOGICAL           OutputAccel      -     .FALSE.     -      "Flag to output wind acceleration"                                    -
+typedef  ^                       ^              Lidar_InitInputType  lidar             -     -     -     "InitInput for lidar data"                                             -
+typedef  ^                       ^              Grid4D_InitInputType FDext             -     -     -     "InitInput for 4D external wind data"                                             -
+typedef  ^                       ^                 ReKi              RadAvg            -     -     -     "Radius (from hub) used for averaging wind speed" -
+typedef  ^                       ^                 IntKi             MHK               -     -     -     "MHK turbine type switch"   -
+typedef  ^                       ^                 ReKi              WtrDpth           -     -     -     "Water depth" m
+typedef  ^                       ^                 ReKi              MSL2SWL           -     -     -     "Mean sea level to still water level" m
+typedef  ^                       ^                 IntKi             BoxExceedAllowIdx    -  -1       -     "Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim)" -
+typedef  ^                       ^                 LOGICAL           BoxExceedAllowF      -  .FALSE.  -     "Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim)" -
 
 
 # Init Output
 typedef  ^                       InitOutputType    CHARACTER(ChanLen)     WriteOutputHdr    :   -   -    "Names of output-to-file channels"                       -
 typedef  ^                       ^                 CHARACTER(ChanLen)     WriteOutputUnt    :   -   -    "Units of output-to-file channels"                       -
 typedef  ^                       ^                 ProgDesc               Ver               -   -   -    "Version information of InflowWind module"               -
-typedef  ^                       ^                 WindFileMetaData       WindFileInfo      -   -   -    "Meta data from the wind file"                           -
+typedef  ^                       ^                 WindFileDat            WindFileInfo      -   -   -    "Meta data from the wind file"                           -
 typedef  ^                       InitOutputType    CHARACTER(LinChanLen)  LinNames_y       {:}  -   -    "Names of the outputs used in linearization" -
 typedef  ^                       InitOutputType    CHARACTER(LinChanLen)  LinNames_u       {:}  -   -    "Names of the inputs used in linearization" -
 typedef  ^                       InitOutputType    LOGICAL                RotFrame_y       {:}  -   -    "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
@@ -133,33 +120,18 @@ typedef  ^                       InitOutputType    LOGICAL                IsLoad
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef  ^                    ParameterType        CHARACTER(1024)   RootFileName      -     -     -     "Root of the InflowWind input   filename"                -
-typedef  ^                       ^                 LOGICAL           CTTS_Flag         -  .FALSE.  -     "determines if coherent turbulence is used"              -
-typedef  ^                       ^                 LOGICAL           RotateWindBox     -  .FALSE.  -     "determines if wind will be rotated"              -
-typedef  ^                       ^                 DbKi              DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
-typedef  ^                       ^                 ReKi              PropagationDir    -     -     -     "Direction of wind propagation"                          radians
-typedef  ^                       ^                 ReKi              VFlowAngle        -     -     -     "Vertical (upflow) angle"                                radians
-
-typedef  ^                       ^                 ReKi              RotToWind        {3}{3} -     -     "Rotation matrix for rotating from the global XYZ coordinate system to the wind coordinate system (wind along X')"   -
-typedef  ^                       ^                 ReKi              RotFromWind      {3}{3} -     -     "Rotation matrix for rotating from the wind coordinate system (wind along X') back to the global XYZ coordinate system.  Equal to TRANSPOSE(RotToWind)"   -
-typedef  ^                       ^                 ReKi              WindViXYZprime    ::    -     -     "List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ )"  meters
-
 typedef  ^                       ^                 IntKi             WindType          -     0     -     "Type of wind -- set to Undef_Wind initially"            -
-typedef  ^                       ^                 ReKi              ReferenceHeight   -     -     -     "Height of the wind turbine"                             meters
-typedef  ^                       ^                 ReKi              RefPosition       3     -     -     "Reference position (point where box is rotated)"        meters
-typedef  ^                       ^                 IntKi             NWindVel          -     -     -     "Number of points in the wind velocity list"             -
+typedef  ^                       ^                 DbKi              DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
+typedef  ^                       ^                 ReKi              WindViXYZprime    ::    -     -     "List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ )"  meters
 typedef  ^                       ^                 ReKi              WindViXYZ         ::    -     -     "List of XYZ coordinates for wind velocity measurements, 3xNWindVel" meters
-typedef  ^                       ^     IfW_UniformWind_ParameterType UniformWind       -     -     -     "Parameters from UniformWind"                            -
-typedef  ^                       ^        IfW_TSFFWind_ParameterType TSFFWind          -     -     -     "Parameters from TSFFWind -- TurbSim full-field format"  -
-typedef  ^                       ^    IfW_BladedFFWind_ParameterType BladedFFWind      -     -     -     "Parameters from BladedFFWind -- Bladed-style full-field format"  -
-typedef  ^                       ^        IfW_HAWCWind_ParameterType HAWCWind          -     -     -     "Parameters from HAWCWind"                               -
-typedef  ^                       ^        IfW_UserWind_ParameterType UserWind          -     -     -     "Parameters from UserWind"                               -
-typedef  ^                       ^           IfW_4Dext_ParameterType FDext             -     -     -     "Parameters from FDext"                                  -
-#typedef  ^                       ^          IfW_CTWind_ParameterType CTWind            -     -     -     "Parameters from CTWind"                                 -
+typedef  ^                       ^                 FlowFieldType     FlowField         -     -     -     "Parameters from Full-Field"  -
+typedef  ^                       ^                 ReKi              PositionAvg       ::    -     -     "(non-rotated) positions of points used for averaging wind speed"  meters
+typedef  ^                       ^                 IntKi             NWindVel          -     -     -     "Number of points in the wind velocity list"             -
 typedef  ^                       ^                 IntKi             NumOuts           -     0     -     "Number of parameters in the output list (number of outputs requested)" -
 typedef  ^                       ^                 OutParmType       OutParam          {:}   -     -     "Names and units (and other characteristics) of all requested output parameters" -
 typedef  ^                       ^                 IntKi             OutParamLinIndx  {:}{:} -     -     "Index into WriteOutput for WindViXYZ in linearization analysis" -
-typedef  ^                       ^          lidar_ParameterType      lidar             -     -     -     "Lidar parameter data"                                       -
-typedef  ^                       ^                 ReKi              PositionAvg       ::    -     -     "(non-rotated) positions of points used for averaging wind speed"  meters
+typedef  ^                       ^               lidar_ParameterType lidar             -     -     -     "Lidar parameter data"                                       -
+typedef  ^                       ^                 LOGICAL           OutputAccel      -     .FALSE.     -      "Flag to output wind acceleration"                                    -
 
 
 # ..... Inputs ....................................................................................................................
@@ -173,11 +145,11 @@ typedef  ^                       ^                 ReKi              HubOrientat
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef  ^                    OutputType           ReKi              VelocityUVW       ::    -     -     "Array holding the U,V,W velocity for a given timestep"  meters/sec
+typedef  ^                    OutputType           ReKi              AccelUVW          ::    -     -     "Array holding the U,V,W acceleration for a given timestep"  meters/sec
 typedef  ^                    OutputType           ReKi              WriteOutput       :     -     -     "Array with values to output to file"                    -
 typedef  ^                       ^                 ReKi              DiskVel           {3}   -     -     "Vector holding the U,V,W average velocity of the disk"  meters/sec
 typedef  ^                       ^                 ReKi              HubVel            {3}   -     -     "Vector holding the U,V,W velocity at the hub"  meters/sec
 typedef  ^                       ^              lidar_OutputType     lidar             -     -     -     "Lidar data"                                       -
-#typedef  ^                       ^       IfW_UniformWind_OutputType  UniformWind       -     -     -     "uniform/steady wind operating point"
 
 # ..... States not used by this module ...................................................................................................................
 typedef  ^                    ContinuousStateType  ReKi              DummyContState    -     -     -     "Remove this variable if you have continuous states"     -
@@ -189,16 +161,10 @@ typedef  ^                    OtherStateType       ReKi              DummyOtherS
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef  ^                       MiscVarType       IntKi             TimeIndex         -     0     -     "An Index into the TData array"                          -
-typedef  ^                       ^      IfW_UniformWind_MiscVarType  UniformWind       -     -     -     "MiscVars from UniformWind"                 -
-typedef  ^                       ^         IfW_TSFFWind_MiscVarType  TSFFWind          -     -     -     "MiscVars from TSFFWind"                              -
-typedef  ^                       ^         IfW_HAWCWind_MiscVarType  HAWCWind          -     -     -     "MiscVars from HAWCWind"                              -
-typedef  ^                       ^     IfW_BladedFFWind_MiscVarType  BladedFFWind      -     -     -     "MiscVars from BladedFFWind"                          -
-typedef  ^                       ^         IfW_UserWind_MiscVarType  UserWind          -     -     -     "MiscVars from UserWind"                              -
-typedef  ^                       ^            IfW_4Dext_MiscVarType  FDext             -     -     -     "MiscVars from FDext"                                -
-typedef  ^                       ^                 ReKi              AllOuts           :     -     -     "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
+typedef  ^                       MiscVarType       ReKi              AllOuts           :     -     -     "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
 typedef  ^                       ^                 ReKi              WindViUVW         ::    -     -     "List of UVW velocities for wind velocity measurements, 3xNWindVel. corresponds to ParamData%WindViXYZ"  meters/second
-typedef  ^                    MiscVarType          InflowWind_InputType  u_Avg             -     -     -     "inputs for computing rotor-averaged values"  -
-typedef  ^                    MiscVarType          InflowWind_OutputType y_Avg             -     -     -     "outputs for computing rotor-averaged values"  -
-typedef  ^                    MiscVarType          InflowWind_InputType  u_Hub             -     -     -     "inputs for computing hub values"  -
-typedef  ^                    MiscVarType          InflowWind_OutputType y_Hub             -     -     -     "outputs for computing hub values"  -
+typedef  ^                       ^                 ReKi              WindAiUVW         ::    -     -     "List of UVW accelerations for wind acceleration measurements, 3xNWindVel. corresponds to ParamData%WindViXYZ"  m/s^2
+typedef  ^                       ^                 InflowWind_InputType  u_Avg         -     -     -     "inputs for computing rotor-averaged values"  -
+typedef  ^                       ^                 InflowWind_OutputType y_Avg         -     -     -     "outputs for computing rotor-averaged values"  -
+typedef  ^                       ^                 InflowWind_InputType  u_Hub         -     -     -     "inputs for computing hub values"  -
+typedef  ^                       ^                 InflowWind_OutputType y_Hub         -     -     -     "outputs for computing hub values"  -

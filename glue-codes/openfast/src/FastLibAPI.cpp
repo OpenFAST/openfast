@@ -8,7 +8,6 @@
 #include <cstring>
 #include <stdexcept>
 
-
 FastLibAPI::FastLibAPI(std::string input_file):
 n_turbines(1),
 i_turb(0),

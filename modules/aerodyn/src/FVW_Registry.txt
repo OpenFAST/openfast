@@ -93,6 +93,8 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               DbKi                             DTaero        -  - -   "Time interval for calls calculations"   s
 typedef     ^                   ^               DbKi                             DTfvw         -  - -   "Time interval for calculating wake induced velocities"   s
 typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"   m^2/s
+typedef     ^                   ^               IntKi                            MHK           -  - -   "MHK flag"   -
+typedef     ^                   ^               ReKi                             WtrDpth       -  - -   "Water depth"   m
 # Parameters output options
 typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
@@ -258,6 +260,8 @@ typedef     ^                   ^               MeshType                        
 typedef     ^                   ^               IntKi                            numBladeNodes     -  -  - "Number of nodes on each blade"          -
 typedef     ^                   ^               DbKi                             DTaero            -  -  - "Time interval for calls (from AD15)"   s
 typedef     ^                   ^               ReKi                             KinVisc       -  - -   "Kinematic air viscosity"   m^2/s
+typedef     ^                   ^               IntKi                            MHK           -  - -   "MHK flag"   -
+typedef     ^                   ^               ReKi                             WtrDpth       -  - -   "Water depth"   m
 # TODO UA - Should be part of AeroDyn
 typedef     ^                   ^              IntKi                             UAMod             - - -   "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
 typedef     ^                   ^              LOGICAL                           UA_Flag           - - -   "logical flag indicating whether to use UnsteadyAero"        -

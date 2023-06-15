@@ -1,0 +1,124 @@
+#----------------------------------------------------------------------------------------------------------------------------------
+# Data structures for representing flow fields.
+#----------------------------------------------------------------------------------------------------------------------------------
+# <KW>   <Module>       <TypeName>             <FieldType>         <FieldName>      <Dims> <Ctrl>  <DNA ME> <Description> <Units>
+#----------------------------------------------------------------------------------------------------------------------------------
+
+param    IfW_FlowField  -                      IntKi               Undef_FieldType     -     0         -     "This is the code for an undefined FieldType"                  -
+param    ^              -                      IntKi               Uniform_FieldType   -     1         -     "Uniform FieldType from SteadyWind or Uniform Wind"            -
+param    ^              -                      IntKi               Grid3D_FieldType    -     2         -     "3D Grid FieldType from TurbSim, Bladed, HAWC"                 -
+param    ^              -                      IntKi               Grid4D_FieldType    -     3         -     "4D Grid FieldType from FAST.Farm"                             -
+param    ^              -                      IntKi               Point_FieldType     -     4         -     "Points FieldType from ExtInflow"                              -
+param    ^              -                      IntKi               User_FieldType      -     5         -     "User FieldType configured by the user"                        -
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              UniformFieldType       ReKi                RefHeight           -     -         -     "reference height; used to center the wind"                   meters
+typedef  ^              ^                      ReKi                RefLength           -     -         -     "reference length used to scale the linear shear"             meters
+typedef  ^              ^                      IntKi               DataSize            -     -         -     "size of data in HH file"       
+typedef  ^              ^                      ReKi                Time                :     -         -     "HH time array"                                               seconds
+typedef  ^              ^                      ReKi                VelH                :     -         -     "HH horizontal wind speed"                                    meters/sec
+typedef  ^              ^                      ReKi                VelHDot             :     -         -     "Derivative of HH horizontal wind speed wrt time"             meters/sec
+typedef  ^              ^                      ReKi                VelV                :     -         -     "HH vertical wind speed, including tower shadow"              meters/sec
+typedef  ^              ^                      ReKi                VelVDot             :     -         -     "Derivative of HH vertical wind speed wrt time"               meters/sec
+typedef  ^              ^                      ReKi                VelGust             :     -         -     "HH wind gust speed"                                          -
+typedef  ^              ^                      ReKi                VelGustDot          :     -         -     "Derivative of HH wind gust speed wrt time"                   -
+typedef  ^              ^                      ReKi                AngleH              :     -         -     "HH wind direction angle"                                     degrees
+typedef  ^              ^                      ReKi                AngleHDot           :     -         -     "Derivative of HH wind direction angle wrt time"              degrees
+typedef  ^              ^                      ReKi                AngleV              :     -         -     "HH upflow angle"                                             degrees
+typedef  ^              ^                      ReKi                AngleVDot           :     -         -     "Derivative of HH upflow angle wrt time"                      degrees
+typedef  ^              ^                      ReKi                ShrH                :     -         -     "HH horizontal linear shear"                                  -
+typedef  ^              ^                      ReKi                ShrHDot             :     -         -     "Derivative of HH horizontal linear shear wrt time"           -
+typedef  ^              ^                      ReKi                ShrV                :     -         -     "HH vertical shear exponent"                                  -
+typedef  ^              ^                      ReKi                ShrVDot             :     -         -     "Derivative of HH vertical shear exponent wrt time"           -
+typedef  ^              ^                      ReKi                LinShrV             :     -         -     "HH vertical linear shear"                                    seconds
+typedef  ^              ^                      ReKi                LinShrVDot          :     -         -     "Derivative of HH vertical linear shear wrt time"             seconds
+
+typedef  ^              UniformField_Interp    ReKi                VelH                -     -         -     "HH horizontal wind speed"                                    meters/sec
+typedef  ^              ^                      ReKi                VelHDot             -     -         -     "derivative of HH horizontal wind speed wrt Time"                      meters/sec
+typedef  ^              ^                      ReKi                VelV                -     -         -     "HH vertical wind speed, including tower shadow"              meters/sec
+typedef  ^              ^                      ReKi                VelVDot             -     -         -     "derivative of HH vertical wind speed wrt Time"               meters/sec
+typedef  ^              ^                      ReKi                VelGust             -     -         -     "HH wind gust speed"                                          -
+typedef  ^              ^                      ReKi                VelGustDot          -     -         -     "derivative of HH wind gust speed wrt Time"                            -
+typedef  ^              ^                      ReKi                AngleH              -     -         -     "HH wind direction angle"                                     degrees
+typedef  ^              ^                      ReKi                AngleHDot           -     -         -     "derivative of HH wind direction angle wrt Time"                       degrees
+typedef  ^              ^                      ReKi                AngleV              -     -         -     "HH upflow angle"                                             degrees
+typedef  ^              ^                      ReKi                AngleVDot           -     -         -     "derivative of HH upflow angle wrt Time"                               degrees
+typedef  ^              ^                      ReKi                ShrH                -     -         -     "HH horizontal linear shear"                                  -
+typedef  ^              ^                      ReKi                ShrHDot             -     -         -     "derivative of HH horizontal linear shear wrt Time"                    -
+typedef  ^              ^                      ReKi                ShrV                -     -         -     "HH vertical shear exponent"                                  -
+typedef  ^              ^                      ReKi                ShrVDot             -     -         -     "derivative of HH vertical shear exponent wrt Time"                    -
+typedef  ^              ^                      ReKi                LinShrV             -     -         -     "HH vertical linear shear"                                    seconds
+typedef  ^              ^                      ReKi                LinShrVDot          -     -         -     "derivative of HH vertical linear shear wrt Time"                      seconds
+typedef  ^              ^                      ReKi                CosAngleH           -     -         -     "Horizontal angle components"                                 -
+typedef  ^              ^                      ReKi                SinAngleH           -     -         -     "Horizontal angle components"                                 -
+typedef  ^              ^                      ReKi                CosAngleV           -     -         -     "Vertical angle components"                                   -
+typedef  ^              ^                      ReKi                SinAngleV           -     -         -     "Vertical angle components"                                   -
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              Grid3DFieldType        IntKi               WindFileFormat      -     -         -     "Binary file format description number"                       -
+typedef  ^              ^                      IntKi               WindProfileType     -     -1        -     "Wind profile type (0=constant;1=logarithmic;2=power law)"    -
+typedef  ^              ^                      Logical             Periodic            -     .false.   -     "Flag to indicate if the wind file is periodic"                -
+typedef  ^              ^                      Logical             InterpTower         -     .false.   -     "Flag to indicate if we should interpolate wind speeds below the tower"                -
+typedef  ^              ^                      Logical             AddMeanAfterInterp  -     .false.   -     "Add the mean wind speed after interpolating at a given height?" -
+typedef  ^              ^                      ReKi                RefHeight           -     0         -     "Reference (hub) height of the grid"                           meters
+typedef  ^              ^                      ReKi                RefLength           -   1.0_ReKi    -     "Reference (rotor) length of the grid (used for horizontal wind profile type only)"   -
+typedef  ^              ^                      SiKi                Vel                 ::::  -         -     "Array of field velocities"                                    -
+typedef  ^              ^                      SiKi                Acc                 ::::  -         -     "Array of field accelerations"                                 -
+typedef  ^              ^                      SiKi                VelTower            :::   -         -     "Array of tower velocities"                                    -
+typedef  ^              ^                      SiKi                AccTower            :::   -         -     "Array of tower accelerations"                                 -
+typedef  ^              ^                      SiKi                VelAvg              :::   -         -     "Average velocity profile by Z and time"                       -
+typedef  ^              ^                      SiKi                AccAvg              :::   -         -     "Average acceleration profile by Z and time"                       -
+typedef  ^              ^                      ReKi                DTime               -     0         -     "Delta time"                                                   seconds
+typedef  ^              ^                      ReKi                Rate                -     0         -     "Data rate (1/FFDTime)"                                         Hertz
+typedef  ^              ^                      ReKi                YHWid               -     0         -     "Half the grid width"                                          meters
+typedef  ^              ^                      ReKi                ZHWid               -     0         -     "Half the grid height"                                         meters
+typedef  ^              ^                      ReKi                GridBase            -     0         -     "the height of the bottom of the grid"                         meters
+typedef  ^              ^                      ReKi                InitXPosition       -     0         -     "the initial x position of grid (distance in FF is offset)"    meters
+typedef  ^              ^                      ReKi                InvDY               -     0         -     "reciprocal of delta y"                                        1/meters
+typedef  ^              ^                      ReKi                InvDZ               -     0         -     "reciprocal of delta z"                                        1/meters
+typedef  ^              ^                      ReKi                MeanWS              -     0         -     "Mean wind speed (as defined in FF file), not necessarily of the portion used"  meters/second
+typedef  ^              ^                      ReKi                InvMWS              -     0         -     "reciprocal of mean wind speed (MeanFFWS)"                     seconds/meter
+typedef  ^              ^                      ReKi                TotalTime           -     0         -     "The total time of the simulation"                             seconds
+typedef  ^              ^                      IntKi               NComp               -     3         -     "Number of wind components"                                    -
+typedef  ^              ^                      IntKi               NYGrids             -     0         -     "Number of points in the lateral (y) direction of the grids"   -
+typedef  ^              ^                      IntKi               NZGrids             -     0         -     "Number of points in the vertical (z) direction of the grids"  -
+typedef  ^              ^                      IntKi               NTGrids             -     0         -     "Number of points in the vertical (z) direction on the tower (below the grids)"  -
+typedef  ^              ^                      IntKi               NSteps              -     0         -     "Number of time steps in the FF array"                         -
+typedef  ^              ^                      ReKi                PLExp               -     0         -     "Power law exponent (used for PL wind profile type only)"         -
+typedef  ^              ^                      ReKi                Z0                  -     0         -     "Surface roughness length (used for LOG wind profile type only)"  -
+typedef  ^              ^                      ReKi                VLinShr             -     0         -     "Vertical linear wind shear coefficient (used for vertical linear wind profile type only)"   -
+typedef  ^              ^                      ReKi                HLinShr             -     0         -     "Horizontal linear wind shear coefficient (used for horizontal wind profile type only)"   -
+typedef  ^              ^                      LOGICAL             BoxExceedAllowF     -  .FALSE.      -     "Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim)" -
+typedef  ^              ^                      IntKi               BoxExceedAllowIdx   -    -1         -     "Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim)" -
+typedef  ^              ^                      LOGICAL             BoxExceedWarned     -  .FALSE.      -     "Has a warning been issued for points extrapolated beyond FFWind grid" -
+
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              Grid4DFieldType        IntKi               n                   4     -         -     "number of evenly-spaced grid points in the x, y, z, and t directions"      -
+typedef  ^              ^                      ReKi                delta               4     -         -     "size between 2 consecutive grid points in each grid direction"            "m,m,m,s"
+typedef  ^              ^                      ReKi                pZero               3     -         -     "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))" "m"
+typedef  ^              ^                      SiKi                Vel                 ::::: -         -     "this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]" -
+typedef  ^              ^                      ReKi                TimeStart           -     -         -     "this is the time where the first time grid in m%V starts (i.e, the time associated with m%V(:,:,:,:,1))" s
+typedef  ^              ^                      ReKi                RefHeight           -     -         -     "reference height; used to center the wind"                   meters
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              PointsFieldType        ReKi                Vel                 ::    -         -     "Point velocities populated by external driver [uvw,point]"                  -
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              UserFieldType          ReKi                RefHeight           -     -         -     "reference height; used to center the wind"                   meters
+
+#----------------------------------------------------------------------------------------------------------------------------------
+typedef  ^              FlowFieldType          IntKi               FieldType           -     0         -     "Switch for flow field type {1=Uniform, 2=Grid, 3=User, 4=External}" -
+typedef  ^              ^                      ReKi                RefPosition         3     0.0_ReKi  -     "Reference position (point where box is rotated)"                 meters
+typedef  ^              ^                      ReKi                PropagationDir      -     -         -     "Direction of wind propagation"                                   radians
+typedef  ^              ^                      ReKi                VFlowAngle          -     -         -     "Vertical (upflow) angle"                                         radians
+typedef  ^              ^                      logical             VelInterpCubic      -  .false.      -     "Velocity interpolation order in time (1=linear; 3=cubic) [Used with WindType=2,3,4,5,7]" -
+typedef  ^              ^                      logical             RotateWindBox       -  .false.      -     "flag indicating if the wind will be rotated"                     -
+typedef  ^              ^                      logical             AccFieldValid       -  .false.      -     "flag indicating that acceleration field has been calculated" -
+typedef  ^              ^                      ReKi                RotToWind         {3}{3}  -         -     "Rotation matrix for rotating from the global XYZ coordinate system to the wind coordinate system (wind along X')"   -
+typedef  ^              ^                      ReKi                RotFromWind       {3}{3}  -         -     "Rotation matrix for rotating from the wind coordinate system (wind along X') back to the global XYZ coordinate system.  Equal to TRANSPOSE(RotToWind)"   -
+typedef  ^              ^                      UniformFieldType    Uniform             -     -         -     "Uniform Flow Data"
+typedef  ^              ^                      Grid3DFieldType     Grid3D              -     -         -     "Grid Field Wind Data"
+typedef  ^              ^                      Grid4DFieldType     Grid4D              -     -         -     "External Grid Flow Data"
+typedef  ^              ^                      PointsFieldType     Points              -     -         -     "External Point Flow Data"
+typedef  ^              ^                      UserFieldType       User                -     -         -     "User Field Wind Data"

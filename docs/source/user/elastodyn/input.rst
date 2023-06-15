@@ -134,7 +134,7 @@ Turbine Configuration
 
 **Delta3**      - Delta-3 angle for teetering rotors (degrees) [unused for 3 blades]
 
-**AzimB1Up**    - Azimuth value to use for I/O when blade 1 points up (degrees)
+**AzimB1Up**    - Azimuth value to use for I/O when blade 1 points up (degrees); for floating MHK turbines, blade 1 will be pointed up (opposite gravity) when `AzimB1Up` = 0; the user can set `AzimB1Up` to 180 degrees to give the same azimuth convention relative to the tower for floating MHK turbines as for fixed MHK turbines
 
 **OverHang**    - Distance from yaw axis to rotor apex [3 blades] or teeter pin [2 blades] (meters)
 
@@ -146,27 +146,27 @@ Turbine Configuration
 
 **NacCMyn**     - Lateral  distance from the tower-top to the nacelle CM (meters)
 
-**NacCMzn**     - Vertical distance from the tower-top to the nacelle CM (meters)
+**NacCMzn**     - Vertical distance from the tower-top to the nacelle CM, typically negative for floating MHK turbines (meters)
 
 **NcIMUxn**     - Downwind distance from the tower-top to the nacelle IMU (meters)
 
 **NcIMUyn**     - Lateral  distance from the tower-top to the nacelle IMU (meters)
 
-**NcIMUzn**     - Vertical distance from the tower-top to the nacelle IMU (meters)
+**NcIMUzn**     - Vertical distance from the tower-top to the nacelle IMU, typically negative for floating MHK turbines (meters)
 
-**Twr2Shft**    - Vertical distance from the tower-top to the rotor shaft (meters)
+**Twr2Shft**    - Vertical distance from the tower-top to the rotor shaft, typically negative for floating MHK turbines (meters)
 
-**TowerHt**     - Height of tower above ground level [onshore], MSL [offshore], or seabed [MHK] (meters)
+**TowerHt**     - Height of tower relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] (meters)
 
-**TowerBsHt**   - Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK] (meters)
+**TowerBsHt**   - Height of tower base relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] (meters)
 
-**PtfmCMxt**    - Downwind distance from the ground level [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)
+**PtfmCMxt**    - Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters)
 
-**PtfmCMyt**    - Lateral distance from the ground level [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)
+**PtfmCMyt**    - Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters)
 
-**PtfmCMzt**    - Vertical distance from the ground level [onshore], MSL [offshore], or seabed [MHK] to the platform CM (meters)
+**PtfmCMzt**    - Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM (meters)
 
-**PtfmRefzt**   - Vertical distance from the ground level [onshore], MSL [offshore], or seabed [MHK] to the platform reference point (meters)
+**PtfmRefzt**   - Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point (meters)
 
 
 

@@ -18,23 +18,23 @@ if (GENERATE_TYPES)
   generate_f90_types(src/OrcaFlexInterface.txt ${CMAKE_CURRENT_LIST_DIR}/src/OrcaFlexInterface_Types.f90)
 endif()
 
-if (ORCA_DLL_LOAD)
-  add_definitions(-DLibLoad)
-else (ORCA_DLL_LOAD)
-  add_definitions(-DNO_LibLoad)
-endif (ORCA_DLL_LOAD)
-
-add_library(orcaflexlib
+add_library(orcaflexlib 
   src/OrcaFlexInterface.f90
   src/OrcaFlexInterface_Types.f90
 )
 target_link_libraries(orcaflexlib nwtclibs)
+if (ORCA_DLL_LOAD)
+  target_compile_definitions(orcaflexlib PUBLIC LibLoad)
+else ()
+  target_compile_definitions(orcaflexlib PUBLIC NO_LibLoad)
+endif ()
 
 add_executable(orca_driver
   src/OrcaDriver_Subs.f90
   src/OrcaDriver_Types.f90
-  src/OrcaDriver.f90)
-target_link_libraries(orca_driver orcaflexlib)
+  src/OrcaDriver.f90
+)
+target_link_libraries(orca_driver orcaflexlib versioninfolib)
 
 install(TARGETS orcaflexlib orca_driver
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

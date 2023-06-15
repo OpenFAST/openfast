@@ -1999,7 +1999,7 @@ END SUBROUTINE CheckR8Var
    INTEGER(IntKi), INTENT(IN) :: ErrID          !< error status/level
 
       ! Function delcaration
-   CHARACTER(13)              :: GetErrStr      !< description of the ErrID level
+   CHARACTER(25)              :: GetErrStr      !< description of the ErrID level
 
       SELECT CASE ( ErrID )
          CASE ( ErrID_None )
@@ -2013,7 +2013,7 @@ END SUBROUTINE CheckR8Var
          CASE ( ErrID_Fatal )
             GetErrStr = 'FATAL ERROR'
          CASE DEFAULT
-            GetErrStr = 'Unknown ErrID'
+            GetErrStr = 'Unknown ErrID '//TRIM(Num2LStr(ErrID))
       END SELECT
 
 
@@ -5561,7 +5561,7 @@ END SUBROUTINE CheckR8Var
 
    IF ( PRESENT(UnEc) )  THEN
       IF ( UnEc > 0 ) &
-         WRITE (UnEc,Ec_IntFrmt)  Var, VarName, VarDescr
+         WRITE (UnEc,Ec_LgFrmt)  Var, VarName, VarDescr
    END IF
 
 
@@ -5813,15 +5813,17 @@ END SUBROUTINE CheckR8Var
 
       IF ( AryLenRead > MaxAryLen )  THEN
 
-         ErrStat = ErrID_Fatal
+         ErrStat = ErrID_Severe
          ErrMsg = 'ReadOutputList:The maximum number of output channels allowed is '//TRIM( Int2LStr(MaxAryLen) )//'.'
-         RETURN
+         AryLenRead = AryLenRead - NumWords ! The total number of output channels read in so far.
+!         RETURN ! finish reading the file instead of returning first
 
       ELSE
 
          CALL GetWords ( OutLine, CharAry((AryLenRead - NumWords + 1):AryLenRead), NumWords )
 
       END IF
+
 
    END DO
 
@@ -5851,10 +5853,11 @@ END SUBROUTINE CheckR8Var
 
    INTEGER                          :: MaxAryLen                                   ! Maximum length of the array being read
    INTEGER                          :: NumWords                                    ! Number of words contained on a line
+   INTEGER                          :: ErrStat2
 
-   INTEGER                          :: QuoteCh                                     ! Character position.
+!   INTEGER                          :: QuoteCh                                     ! Character position.
 
-   CHARACTER(1000)                  :: OutLine                                     ! Character string read from file, containing output list
+   CHARACTER(MaxFileInfoLineLen)    :: OutLine                                     ! Character string read from file, containing output list
    CHARACTER(3)                     :: EndOfFile
 
 
@@ -5876,21 +5879,27 @@ END SUBROUTINE CheckR8Var
       IF ( PRESENT(UnEc) )  THEN
          if (UnEc > 0) WRITE(UnEc, '(A)')  trim(FileInfo%Lines(LineNum))
       ENDIF
-      OutLine = adjustl(trim(FileInfo%Lines(LineNum)))   ! remove leading whitespace
+      
+!      OutLine = adjustl(trim(FileInfo%Lines(LineNum)))   ! remove leading whitespace
+      READ (FileInfo%Lines(LineNum),*,IOSTAT=ErrStat2)  OutLine ! read first output channel name, or remove quotes on list of outputs so that this behaves like ReadOutputList
+      IF (ErrStat2 /= 0) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Error reading from OutList. Line # '//trim(num2lstr(LineNum))//': "'//trim(FileInfo%Lines(LineNum))//'".'
+         RETURN
+      END IF
+
+      !IF ( PRESENT(UnEc) )  THEN
+      !   IF ( UnEc > 0 ) WRITE (UnEc,Ec_StrFrmt)  OutLine, "List of user-requested output channels", '"OutList"'
+      !END IF      
+      
+      LineNum = LineNum + 1
+      
 
       EndOfFile = OutLine(1:3)            ! EndOfFile is the 1st 3 characters of OutLine
       CALL Conv2UC( EndOfFile )           ! Convert EndOfFile to upper case
       IF ( EndOfFile == 'END' ) THEN
-         LineNum = LineNum + 1
          EXIT     ! End of OutList has been reached; therefore, exit this DO
       ENDIF
-
-      ! Check if we have a quoted string at the begining.  Ignore anything outside the quotes if so (this is the ReadVar behaviour for quoted strings).
-      if (SCAN(OutLine(1:1), '''"' ) == 1_IntKi ) then
-         QuoteCh = SCAN( OutLine(2:), '''"' )            ! last quote
-         if (QuoteCh < 1)  QuoteCh = LEN_TRIM(OutLine)   ! in case no end quote
-         OutLine(QuoteCh+2:) = ' '    ! blank out everything after last quote
-      endif
 
       NumWords = CountWords( OutLine )    ! The number of words in OutLine.
 
@@ -5900,9 +5909,10 @@ END SUBROUTINE CheckR8Var
 
       IF ( AryLenRead > MaxAryLen )  THEN
 
-         ErrStat = ErrID_Fatal
+         ErrStat = ErrID_Severe
          ErrMsg = 'ReadOutputList:The maximum number of output channels allowed is '//TRIM( Int2LStr(MaxAryLen) )//'.'
-         RETURN
+         AryLenRead = AryLenRead - NumWords ! The total number of output channels read in so far.
+!        RETURN ! finish processing the OutList variable before returning
 
       ELSE
 
@@ -5910,7 +5920,6 @@ END SUBROUTINE CheckR8Var
 
       END IF
 
-      LineNum = LineNum+1
 
       if (LineNum > FileInfo%NumLines) exit  ! Don't overrun end of file in case no END found
 
@@ -6235,7 +6244,6 @@ END SUBROUTINE CheckR8Var
 
    CALL ReadNum ( UnIn, Fil, Word, VarName, ErrStat, ErrMsg )
    IF ( ErrStat >= AbortErrLev) RETURN  ! If we're about to read a T/F and treat it as a number, we have a less severe ErrStat
-
 
    READ (Word,*,IOSTAT=IOS)  Var
 
@@ -7788,6 +7796,5 @@ END SUBROUTINE CheckR8Var
 
    RETURN
    END SUBROUTINE WrScr1
-
       
 END MODULE NWTC_IO

@@ -24,6 +24,8 @@ typedef	^	InitInputType	CHARACTER(1024)	ADInputFile	-	-	-	"Name of the AeroDyn i
 typedef	^	InitInputType	LOGICAL	CompElast	-	-	-	"flag to determine if ElastoDyn is computing blade loads (true) or BeamDyn is (false)"	-
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"
 typedef ^   InitInputType   ReKi Gravity	-	-	-	"Gravitational acceleration"	m/s^2
+typedef ^   InitInputType   IntKi MHK     -   -   -   "MHK turbine type switch"   -
+typedef ^   InitInputType   ReKi WtrDpth -  -   -    "Water depth" m
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
@@ -131,12 +133,12 @@ typedef	^	ED_InputFile	ReKi	NcIMUxn	-	-	-	"Downwind distance from the tower-top 
 typedef	^	ED_InputFile	ReKi	NcIMUyn	-	-	-	"Lateral distance from the tower-top to the nacelle IMU"	meters
 typedef	^	ED_InputFile	ReKi	NcIMUzn	-	-	-	"Vertical distance from the tower-top to the nacelle IMU"	meters
 typedef	^	ED_InputFile	ReKi	Twr2Shft	-	-	-	"Vertical distance from the tower-top to the rotor shaft"	meters
-typedef	^	ED_InputFile	ReKi	TowerHt	-	-	-	"Height of tower above ground level [onshore], MSL [offshore], or seabed [MHK]"	meters
-typedef	^	ED_InputFile	ReKi	TowerBsHt	-	-	-	"Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK]"	meters
-typedef	^	ED_InputFile	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM"	meters
-typedef	^	ED_InputFile	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM"	meters
-typedef	^	ED_InputFile	ReKi	PtfmCMzt	-	-	-	"Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM"	meters
-typedef	^	ED_InputFile	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point"	meters
+typedef	^	ED_InputFile	ReKi	TowerHt	    -	-	-	"Height of tower relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK]"	meters
+typedef	^	ED_InputFile	ReKi	TowerBsHt	-	-	-	"Height of tower base relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK]"	meters
+typedef	^	ED_InputFile	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
+typedef	^	ED_InputFile	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
+typedef	^	ED_InputFile	ReKi	PtfmCMzt	-	-	-	"Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
+typedef	^	ED_InputFile	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point"	meters
 typedef	^	ED_InputFile	ReKi	TipMass	{:}	-	-	"Tip-brake masses"	kg
 typedef	^	ED_InputFile	ReKi	HubMass	-	-	-	"Hub mass"	kg
 typedef	^	ED_InputFile	ReKi	HubIner	-	-	-	"Hub inertia about teeter axis (2-blader) or rotor axis (3-blader)"	"kg m^2"
@@ -569,7 +571,7 @@ typedef	^	ParameterType	ReKi	NacCMyn	-	-	-	"Lateral distance from tower-top to n
 typedef	^	ParameterType	ReKi	NacCMzn	-	-	-	"Vertical distance from tower-top to nacelle CM"
 typedef	^	ParameterType	ReKi	OverHang	-	-	-	"Distance from yaw axis to rotor apex or teeter pin"
 typedef	^	ParameterType	ReKi	ProjArea	-	-	-	"Swept area of the rotor projected onto the rotor plane (the plane normal to the low-speed shaft)"
-typedef	^	ParameterType	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point"
+typedef	^	ParameterType	ReKi	PtfmRefzt	-	-	-	"Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point"
 typedef	^	ParameterType	ReKi	RefTwrHt	-	-	-	"Vertical distance between FAST's undisplaced tower height (variable TowerHt) and FAST's inertia frame reference point (variable PtfmRef); that is, RefTwrHt = TowerHt - PtfmRefzt"
 typedef	^	ParameterType	ReKi	RFrlPnt_n	3	-	-	"Vector from tower-top to arbitrary point on rotor-furl axis"
 typedef	^	ParameterType	ReKi	rVDxn	-	-	-	"xn-component of position vector Rvd"
@@ -603,8 +605,8 @@ typedef	^	ParameterType	R8Ki	STFrlTilt	-	-	-	"Sine of the tail-furl axis tilt an
 typedef	^	ParameterType	R8Ki	STFrlTlt2	-	-	-	"Sine-squared of the tail-furl axis tilt angle"
 typedef	^	ParameterType	ReKi	TFrlPnt_n	3	-	-	"Vector from tower-top to arbitrary point on tail-furl axis"
 typedef	^	ParameterType	ReKi	TipRad	-	-	-	"Preconed blade-tip radius"
-typedef	^	ParameterType	ReKi	TowerHt	-	-	-	"Height of tower above ground level"
-typedef	^	ParameterType	ReKi	TowerBsHt	-	-	-	"Height of tower base above ground level [onshore], MSL [offshore], or seabed [MHK]"	meters
+typedef	^	ParameterType	ReKi	TowerHt	-	-	-	"Height of tower relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK]"	meters
+typedef	^	ParameterType	ReKi	TowerBsHt	-	-	-	"Height of tower base relative to ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK]"	meters
 typedef	^	ParameterType	ReKi	UndSling	-	-	-	"Undersling length"
 typedef	^	ParameterType	IntKi	NumBl	-	-	-	"Number of turbine blades"	-
 typedef	^	ParameterType	ReKi	AxRedTFA	{:}{:}{:}	-	-	"The axial-reduction terms for the fore-aft tower mode shapes"
@@ -623,6 +625,7 @@ typedef	^	ParameterType	ReKi	TwrFlexL	-	-	-	"Height / length of the flexible por
 typedef	^	ParameterType	ReKi	TwrSSSF	{:}{:}{:}	-	-	"Tower side-to-side shape functions"
 typedef	^	ParameterType	IntKi	TTopNode	-	-	-	"Index of the additional node located at the tower-top = TwrNodes + 1"
 typedef	^	ParameterType	IntKi	TwrNodes	-	-	-	"Number of tower nodes used in the analysis"
+typedef	^	ParameterType	IntKi   MHK         -   -   -   "MHK turbine type switch"   -
 typedef	^	ParameterType	ReKi	StiffTFA	{:}	-	-	"Interpolated fore-aft tower stiffness"
 typedef	^	ParameterType	ReKi	AtfaIner	-	-	-	"Inertia of tail boom about the tail-furl axis whose origin is the tail boom center of mass"
 typedef	^	ParameterType	ReKi	BldCG	{:}	-	-	"Blade center of mass wrt the blade root"
@@ -730,8 +733,8 @@ typedef	^	ParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing out
 typedef	^	ParameterType	ReKi	BElmntMass	{:}{:}	-	-	"Mass of the blade elements"
 typedef	^	ParameterType	ReKi	TElmntMass	{:}	-	-	"Mass of the tower elements"
 typedef	^	ParameterType	IntKi	method	-	-	-	"Identifier for integration method (1 [RK4], 2 [AB4], or 3 [ABM4])"	-
-typedef	^	ParameterType	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM"	meters
-typedef	^	ParameterType	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform CM"	meters
+typedef	^	ParameterType	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
+typedef	^	ParameterType	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform CM"	meters
 typedef	^	ParameterType	LOGICAL	BD4Blades	-	-	-	"flag to determine if BeamDyn is computing blade loads (true) or ElastoDyn is (false)"	-
 typedef	^	ParameterType	LOGICAL	UseAD14	-	-	-	"flag to determine if AeroDyn14 is being used. Will remove this later when we've replaced AD14."	-
 # .... ED_AllBlNds option ........................................................................................................

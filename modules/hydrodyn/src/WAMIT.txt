@@ -16,12 +16,13 @@ include   Registry_NWTC_Library.txt
 usefrom   Conv_Radiation.txt
 usefrom   SS_Radiation.txt
 usefrom   SS_Excitation.txt
-usefrom   Waves.txt
-param     WAMIT/WAMIT                  unused                        INTEGER                  MaxWAMITOutputs                 -         18        -         ""    -
-typedef   ^                            InitInputType                 INTEGER                  NBody                           -          -        -         "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
+#usefrom   Waves.txt
+usefrom   SeaState_Interp.txt
+
+typedef   WAMIT/WAMIT                  InitInputType                 INTEGER                  NBody                           -          -        -         "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
 typedef   ^                            ^                             INTEGER                  NBodyMod                        -          -        -         "Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]" -
 typedef   ^                            ^                             ReKi                     Gravity                         -          -        -         "Supplied by Driver:  Gravitational acceleration"  "(m/s^2)"
-typedef   ^                            ^                             SiKi                     WtrDpth                         -          -        -         "Water depth (positive-valued)"    m
+typedef   ^                            ^                             ReKi                     WtrDpth                         -          -        -         "Water depth (positive-valued)"    m
 typedef   ^                            ^                             ReKi                     PtfmVol0                        {:}        -        -         ""    -
 typedef   ^                            ^                             LOGICAL                  HasWAMIT                        -          -        -         ".TRUE. if using WAMIT model, .FALSE. otherwise"    -
 typedef   ^                            ^                             ReKi                     WAMITULEN                       -          -        -         ""    -
@@ -33,6 +34,8 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     PtfmCOByt                       {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  RdtnMod                         -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  ExctnMod                        -          -        -         ""    -
+typedef   ^                            ^                             INTEGER                  ExctnDisp                       -          -        -          "0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]" -
+typedef   ^                            ^                             ReKi                     ExctnCutOff                     -          -        -          "Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] " Hz
 typedef   ^                            ^                             DbKi                     RdtnTMax                        -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     WaveDir                         -          -        -         ""    -
 typedef   ^                            ^                             CHARACTER(1024)          WAMITFile                       -          -        -         ""    -
@@ -44,20 +47,20 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  NStepWave2                      -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     WaveDOmega                      -          -        -         ""    -
 typedef   ^                            ^                             SiKi                     WaveElev0                      {:}         -        -         "Wave elevation time history at origin (needed for SS_Excitation module)" m
-typedef   ^                            ^                             SiKi                     WaveElevC0                      {:}{:}     -        -         "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part"   (meters)
-typedef   ^                            ^                             SiKi                     WaveTime                        {:}        -        -         ""    -
+typedef   ^                            ^                             SiKi                     WaveElev1                {*}{*}{*}         -        -         "First order wave elevation (points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     WaveElevC0                      {*}{*}     -        -         "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part (points to SeaState module data)"   (meters)
+typedef   ^                            ^                             SiKi                     WaveElevC                      {:}{:}{:}   -        -         "Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part"   (meters)
+typedef   ^                            ^                             SiKi                     WaveTime                        {*}        -        -         "(points to SeaState module data)"    -
 typedef   ^                            ^                             INTEGER                  WaveMod                         -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     WtrDens                         -          -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveDirArr                      {:}        -        -         "Array of wave directions (one per frequency) from the Waves module"    -
+typedef   ^                            ^                             SiKi                     WaveDirArr                      {*}        -        -         "Array of wave directions (one per frequency) from the Waves module (points to SeaState module data)"    -
 typedef   ^                            ^                             SiKi                     WaveDirMin                      -          -        -         "Minimum wave direction from Waves module"    -
 typedef   ^                            ^                             SiKi                     WaveDirMax                      -          -        -         "Maximum wave direction from Waves module"    -
-typedef   ^                            ^                             CHARACTER(ChanLen)       OutList                         {18}       -        -         "This should really be dimensioned with MaxOutPts"    -
-typedef   ^                            ^                             LOGICAL                  OutAll                          -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NumOuts                         -          -        -         ""    -
+typedef     ^                 ^                 SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
 #
 #
 # Define outputs from the initialization routine here:
-typedef   ^                            InitOutputType                ReKi                      NULLVAL                        -          -        -         ""  -
+#typedef   ^                            InitOutputType                IntKi                      NULLVAL                        -          -        -         ""  -
 #
 #
 # ..... States ....................................................................................................................
@@ -73,6 +76,7 @@ typedef   ^                            ^                             Conv_Rdtn_C
 typedef   ^                            DiscreteStateType             Conv_Rdtn_DiscreteStateType           Conv_Rdtn         -          -         -       "discrete states from the convolution radiation module"        -
 typedef   ^                            DiscreteStateType             SS_Rad_DiscreteStateType              SS_Rdtn           -          -         -       "placeholder"        -
 typedef   ^                            DiscreteStateType             SS_Exc_DiscreteStateType              SS_Exctn          -          -         -       "placeholder"        -
+typedef   ^                            DiscreteStateType             ReKi                                  BdyPosFilt        {:}{:}{:}  -         -       "Low-pass filtered WAMIT body position at the current and previous steps used when ExctnDisp=2"
 #
 #
 # Define constraint states here:
@@ -106,6 +110,7 @@ typedef   ^                            ^                             SS_Exc_Outp
 typedef   ^                            ^                             Conv_Rdtn_MiscVarType    Conv_Rdtn                       -              -         -         ""   -
 typedef   ^                            ^                             Conv_Rdtn_InputType      Conv_Rdtn_u                     -              -         -         ""   -
 typedef   ^                            ^                             Conv_Rdtn_OutputType     Conv_Rdtn_y                     -              -         -         ""   -
+typedef   ^                            ^                             SeaSt_Interp_MiscVarType SeaSt_Interp_m                  -              -         -         "misc var information from the SeaState Interpolation module"   -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -118,19 +123,17 @@ typedef   ^                            ^                             SiKi       
 typedef   ^                            ^                             SiKi                     HdroSttc                 {:}{:}     -         -         ""        -
 typedef   ^                            ^                             INTEGER                  RdtnMod                  -          -         -         ""        -
 typedef   ^                            ^                             INTEGER                  ExctnMod                 -          -        -          ""        -
+typedef   ^                            ^                             INTEGER                  ExctnDisp                -          -        -          "0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]" -
+typedef   ^                            ^                             ReKi                     ExctnCutOff              -          -        -          "Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] " Hz
+typedef   ^                            ^                             ReKi                     ExctnFiltConst           -          -        -          "Low-pass time filter constant computed from ExctnCutOff"
 typedef   ^                            ^                             SiKi                     WaveExctn                {:}{:}     -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveExctnGrid            {:}{:}{:}{:}     -         -         "WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: Force component for eac WAMIT Body"        -
 typedef   ^                            ^                             INTEGER                  NStepWave                -          -         -         ""        -
 typedef   ^                            ^                             Conv_Rdtn_ParameterType  Conv_Rdtn                -          -         -         ""        -
 typedef   ^                            ^                             SS_Rad_ParameterType     SS_Rdtn                  -          -         -         ""        -
 typedef   ^                            ^                             SS_Exc_ParameterType     SS_Exctn                 -          -         -         ""        -
 typedef   ^                            ^                             DbKi                     DT                       -          -         -         ""        -
-typedef   ^                            ^                             OutParmType              OutParam                 {:}        -         -         ""        -
-typedef   ^                            ^                             INTEGER                  NumOuts                  -          -         -         ""        -
-typedef   ^                            ^                             INTEGER                  NumOutAll                -          -         -         ""        -
-typedef   ^                            ^                             CHARACTER(20)            OutFmt                   -          -         -         ""        -
-typedef   ^                            ^                             CHARACTER(20)            OutSFmt                  -          -         -         ""        -
-typedef   ^                            ^                             CHARACTER(ChanLen)       Delim                    -          -         -         ""        -
-typedef   ^                            ^                             INTEGER                  UnOutFile                -          -         -         ""        -
+typedef     ^                 ^                 SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
 #
 #
 # ..... Inputs ....................................................................................................................

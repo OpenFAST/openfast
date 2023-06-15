@@ -71,13 +71,9 @@ set(CTEST_INFLOWWIND_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/inflowwind/inflowwi
 # Set the MoorDyn executable configuration option and default
 set(CTEST_MOORDYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/moordyn/moordyn_driver${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the MoorDyn driver executable to use in testing.")
 
-# Set the python executable configuration option and default
-if(NOT EXISTS ${PYTHON_EXECUTABLE})
-  find_program(PYTHON_EXECUTABLE NAMES python3 python py)
-  if(NOT EXISTS ${PYTHON_EXECUTABLE})
-    message(FATAL_ERROR "CMake cannot find a Python interpreter in your path. Python is required to run OpenFAST tests." )
-  endif()
-endif()
+# Set the SeaState executable configuration option and default
+set(CTEST_SEASTATE_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/seastate/seastate_driver" CACHE FILEPATH "Specify the SeaState driver executable to use in testing.")
+
 
 # Set the testing tolerance
 set(CTEST_RTEST_RTOL "2" CACHE STRING "Sets the relative orders of magnitude to allow to deviate from the baseline.")
@@ -195,5 +191,6 @@ add_custom_target(
     hydrodyn_driver
     inflowwind_driver
     moordyn_driver
+    seastate_driver
     subdyn_driver
 )

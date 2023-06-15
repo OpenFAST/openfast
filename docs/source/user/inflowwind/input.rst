@@ -4,6 +4,10 @@
 InflowWind Input Files
 ======================
 
+For fixed and floating MHK turbines, all InflowWind parameters should be defined relative to the seabed.
+To maintain consistency between the turbine and inflow coordinate systems for MHK turbines, the query points 
+passed to InflowWind are adjusted at the glue code/driver level to place the origin at the seabed.
+
 .. _ifw_native_bladed:
 
 Native Bladed wind file support in InflowWind

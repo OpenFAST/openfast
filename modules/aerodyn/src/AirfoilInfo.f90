@@ -1051,7 +1051,7 @@ ALPHA_LOOP: DO Row=1,p%Table(iTable)%NumAlf-1
                
                ! Compute variables to help x3 state with +/-180-degree wrap-around issues
                ! and make sure that the separation function is monotonic before iLow and after iHigh:
-               call ComputeUASeparationFunction_zero(p, ColUAf, p%Coefs(:,ColCl)) ! this was comparing with alpha0, but now we compaer with alphaUpper and alphaLower
+               call ComputeUASeparationFunction_zero(p, ColUAf, p%Coefs(:,ColCl)) ! this was comparing with alpha0, but now we compare with alphaUpper and alphaLower
             
             
                ! Ensuring everything is in harmony 

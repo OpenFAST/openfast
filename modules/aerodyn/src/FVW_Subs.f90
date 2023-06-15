@@ -1047,8 +1047,8 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
       if (p%RegDeterMethod==idRegDeterConstant) then
          ! Constant reg param throughout the wake
          if (p%WakeRegMethod==idRegAge) then ! NOTE: age method implies a division by rc
-            p%WingRegParam=max(0.01, p%WingRegParam)
-            p%WakeRegParam=max(0.01, p%WakeRegParam)
+            p%WingRegParam=max(0.01_ReKi, p%WingRegParam)
+            p%WakeRegParam=max(0.01_ReKi, p%WakeRegParam)
          endif
 
          ! Set reg param on wing and first NW
@@ -1620,10 +1620,18 @@ subroutine FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    integer(IntKi) :: iAge, iW, iSpan
    integer(IntKi) :: nBelow
-   real(ReKi), parameter:: GROUND         = 1.e-4_ReKi
-   real(ReKi), parameter:: ABOVE_GROUND   = 0.1_ReKi
+   real(ReKi) :: GROUND
+   real(ReKi) :: ABOVE_GROUND
    ErrStat = ErrID_None
    ErrMsg  = ""
+
+   if ( p%MHK == 1 .or. p%MHK == 2 ) then
+      GROUND         = 1.e-4_ReKi - p%WtrDpth
+      ABOVE_GROUND   = 0.1_ReKi - p%WtrDpth
+   else
+      GROUND         = 1.e-4_ReKi
+      ABOVE_GROUND   = 0.1_ReKi
+   endif
 
    nBelow=0
    do iW = 1,p%nWings
