@@ -18,7 +18,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/MoorDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/MoorDyn_Types.f90)
 endif()
 
-add_library(moordynlib
+add_library(moordynlib STATIC
   src/MoorDyn.f90
   src/MoorDyn_Body.f90
   src/MoorDyn_IO.f90

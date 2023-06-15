@@ -22,7 +22,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/SeaState.txt ${CMAKE_CURRENT_LIST_DIR}/src/SeaState_Types.f90 -noextrap)
 endif()
 
-add_library(seastlib
+add_library(seastlib STATIC
   src/Current.f90
   src/Waves.f90
   src/Waves2.f90
