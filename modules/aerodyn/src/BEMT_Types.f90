@@ -1023,6 +1023,8 @@ subroutine BEMT_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, E
       deallocate(DstOtherStateData%ValidPhi)
    end if
    DstOtherStateData%nodesInitialized = SrcOtherStateData%nodesInitialized
+   LB(1:1) = lbound(SrcOtherStateData%xdot)
+   UB(1:1) = ubound(SrcOtherStateData%xdot)
    do i1 = LB(1), UB(1)
       call BEMT_CopyContState(SrcOtherStateData%xdot(i1), DstOtherStateData%xdot(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1159,11 +1161,15 @@ subroutine BEMT_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    else if (allocated(DstMiscData%u_UA)) then
       deallocate(DstMiscData%u_UA)
    end if
+   LB(1:1) = lbound(SrcMiscData%u_DBEMT)
+   UB(1:1) = ubound(SrcMiscData%u_DBEMT)
    do i1 = LB(1), UB(1)
       call DBEMT_CopyInput(SrcMiscData%u_DBEMT(i1), DstMiscData%u_DBEMT(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcMiscData%u_SkewWake)
+   UB(1:1) = ubound(SrcMiscData%u_SkewWake)
    do i1 = LB(1), UB(1)
       call BEMT_CopySkewWake_InputType(SrcMiscData%u_SkewWake(i1), DstMiscData%u_SkewWake(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

@@ -6622,6 +6622,8 @@ subroutine FAST_CopyLinFileType(SrcLinFileTypeData, DstLinFileTypeData, CtrlCode
    character(*), parameter        :: RoutineName = 'FAST_CopyLinFileType'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SrcLinFileTypeData%Modules)
+   UB(1:1) = ubound(SrcLinFileTypeData%Modules)
    do i1 = LB(1), UB(1)
       call FAST_CopyModLinType(SrcLinFileTypeData%Modules(i1), DstLinFileTypeData%Modules(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -7064,6 +7066,8 @@ subroutine FAST_CopyOutputFileType(SrcOutputFileTypeData, DstOutputFileTypeData,
    else if (allocated(DstOutputFileTypeData%ChannelUnits)) then
       deallocate(DstOutputFileTypeData%ChannelUnits)
    end if
+   LB(1:1) = lbound(SrcOutputFileTypeData%Module_Ver)
+   UB(1:1) = ubound(SrcOutputFileTypeData%Module_Ver)
    do i1 = LB(1), UB(1)
       call NWTC_Library_CopyProgDesc(SrcOutputFileTypeData%Module_Ver(i1), DstOutputFileTypeData%Module_Ver(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -8588,21 +8592,29 @@ subroutine FAST_CopyElastoDyn_Data(SrcElastoDyn_DataData, DstElastoDyn_DataData,
    character(*), parameter        :: RoutineName = 'FAST_CopyElastoDyn_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SrcElastoDyn_DataData%x)
+   UB(1:1) = ubound(SrcElastoDyn_DataData%x)
    do i1 = LB(1), UB(1)
       call ED_CopyContState(SrcElastoDyn_DataData%x(i1), DstElastoDyn_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcElastoDyn_DataData%xd)
+   UB(1:1) = ubound(SrcElastoDyn_DataData%xd)
    do i1 = LB(1), UB(1)
       call ED_CopyDiscState(SrcElastoDyn_DataData%xd(i1), DstElastoDyn_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcElastoDyn_DataData%z)
+   UB(1:1) = ubound(SrcElastoDyn_DataData%z)
    do i1 = LB(1), UB(1)
       call ED_CopyConstrState(SrcElastoDyn_DataData%z(i1), DstElastoDyn_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcElastoDyn_DataData%OtherSt)
+   UB(1:1) = ubound(SrcElastoDyn_DataData%OtherSt)
    do i1 = LB(1), UB(1)
       call ED_CopyOtherState(SrcElastoDyn_DataData%OtherSt(i1), DstElastoDyn_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -8871,21 +8883,29 @@ subroutine FAST_CopyServoDyn_Data(SrcServoDyn_DataData, DstServoDyn_DataData, Ct
    character(*), parameter        :: RoutineName = 'FAST_CopyServoDyn_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SrcServoDyn_DataData%x)
+   UB(1:1) = ubound(SrcServoDyn_DataData%x)
    do i1 = LB(1), UB(1)
       call SrvD_CopyContState(SrcServoDyn_DataData%x(i1), DstServoDyn_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcServoDyn_DataData%xd)
+   UB(1:1) = ubound(SrcServoDyn_DataData%xd)
    do i1 = LB(1), UB(1)
       call SrvD_CopyDiscState(SrcServoDyn_DataData%xd(i1), DstServoDyn_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcServoDyn_DataData%z)
+   UB(1:1) = ubound(SrcServoDyn_DataData%z)
    do i1 = LB(1), UB(1)
       call SrvD_CopyConstrState(SrcServoDyn_DataData%z(i1), DstServoDyn_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcServoDyn_DataData%OtherSt)
+   UB(1:1) = ubound(SrcServoDyn_DataData%OtherSt)
    do i1 = LB(1), UB(1)
       call SrvD_CopyOtherState(SrcServoDyn_DataData%OtherSt(i1), DstServoDyn_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -9154,21 +9174,29 @@ subroutine FAST_CopyAeroDyn14_Data(SrcAeroDyn14_DataData, DstAeroDyn14_DataData,
    character(*), parameter        :: RoutineName = 'FAST_CopyAeroDyn14_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SrcAeroDyn14_DataData%x)
+   UB(1:1) = ubound(SrcAeroDyn14_DataData%x)
    do i1 = LB(1), UB(1)
       call AD14_CopyContState(SrcAeroDyn14_DataData%x(i1), DstAeroDyn14_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcAeroDyn14_DataData%xd)
+   UB(1:1) = ubound(SrcAeroDyn14_DataData%xd)
    do i1 = LB(1), UB(1)
       call AD14_CopyDiscState(SrcAeroDyn14_DataData%xd(i1), DstAeroDyn14_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcAeroDyn14_DataData%z)
+   UB(1:1) = ubound(SrcAeroDyn14_DataData%z)
    do i1 = LB(1), UB(1)
       call AD14_CopyConstrState(SrcAeroDyn14_DataData%z(i1), DstAeroDyn14_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcAeroDyn14_DataData%OtherSt)
+   UB(1:1) = ubound(SrcAeroDyn14_DataData%OtherSt)
    do i1 = LB(1), UB(1)
       call AD14_CopyOtherState(SrcAeroDyn14_DataData%OtherSt(i1), DstAeroDyn14_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -9379,21 +9407,29 @@ subroutine FAST_CopyAeroDyn_Data(SrcAeroDyn_DataData, DstAeroDyn_DataData, CtrlC
    character(*), parameter        :: RoutineName = 'FAST_CopyAeroDyn_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SrcAeroDyn_DataData%x)
+   UB(1:1) = ubound(SrcAeroDyn_DataData%x)
    do i1 = LB(1), UB(1)
       call AD_CopyContState(SrcAeroDyn_DataData%x(i1), DstAeroDyn_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcAeroDyn_DataData%xd)
+   UB(1:1) = ubound(SrcAeroDyn_DataData%xd)
    do i1 = LB(1), UB(1)
       call AD_CopyDiscState(SrcAeroDyn_DataData%xd(i1), DstAeroDyn_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcAeroDyn_DataData%z)
+   UB(1:1) = ubound(SrcAeroDyn_DataData%z)
    do i1 = LB(1), UB(1)
       call AD_CopyConstrState(SrcAeroDyn_DataData%z(i1), DstAeroDyn_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcAeroDyn_DataData%OtherSt)
+   UB(1:1) = ubound(SrcAeroDyn_DataData%OtherSt)
    do i1 = LB(1), UB(1)
       call AD_CopyOtherState(SrcAeroDyn_DataData%OtherSt(i1), DstAeroDyn_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -9662,21 +9698,29 @@ subroutine FAST_CopyInflowWind_Data(SrcInflowWind_DataData, DstInflowWind_DataDa
    character(*), parameter        :: RoutineName = 'FAST_CopyInflowWind_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SrcInflowWind_DataData%x)
+   UB(1:1) = ubound(SrcInflowWind_DataData%x)
    do i1 = LB(1), UB(1)
       call InflowWind_CopyContState(SrcInflowWind_DataData%x(i1), DstInflowWind_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcInflowWind_DataData%xd)
+   UB(1:1) = ubound(SrcInflowWind_DataData%xd)
    do i1 = LB(1), UB(1)
       call InflowWind_CopyDiscState(SrcInflowWind_DataData%xd(i1), DstInflowWind_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcInflowWind_DataData%z)
+   UB(1:1) = ubound(SrcInflowWind_DataData%z)
    do i1 = LB(1), UB(1)
       call InflowWind_CopyConstrState(SrcInflowWind_DataData%z(i1), DstInflowWind_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcInflowWind_DataData%OtherSt)
+   UB(1:1) = ubound(SrcInflowWind_DataData%OtherSt)
    do i1 = LB(1), UB(1)
       call InflowWind_CopyOtherState(SrcInflowWind_DataData%OtherSt(i1), DstInflowWind_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -10063,21 +10107,29 @@ subroutine FAST_CopySubDyn_Data(SrcSubDyn_DataData, DstSubDyn_DataData, CtrlCode
    character(*), parameter        :: RoutineName = 'FAST_CopySubDyn_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SrcSubDyn_DataData%x)
+   UB(1:1) = ubound(SrcSubDyn_DataData%x)
    do i1 = LB(1), UB(1)
       call SD_CopyContState(SrcSubDyn_DataData%x(i1), DstSubDyn_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcSubDyn_DataData%xd)
+   UB(1:1) = ubound(SrcSubDyn_DataData%xd)
    do i1 = LB(1), UB(1)
       call SD_CopyDiscState(SrcSubDyn_DataData%xd(i1), DstSubDyn_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcSubDyn_DataData%z)
+   UB(1:1) = ubound(SrcSubDyn_DataData%z)
    do i1 = LB(1), UB(1)
       call SD_CopyConstrState(SrcSubDyn_DataData%z(i1), DstSubDyn_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcSubDyn_DataData%OtherSt)
+   UB(1:1) = ubound(SrcSubDyn_DataData%OtherSt)
    do i1 = LB(1), UB(1)
       call SD_CopyOtherState(SrcSubDyn_DataData%OtherSt(i1), DstSubDyn_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -10346,21 +10398,29 @@ subroutine FAST_CopyExtPtfm_Data(SrcExtPtfm_DataData, DstExtPtfm_DataData, CtrlC
    character(*), parameter        :: RoutineName = 'FAST_CopyExtPtfm_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SrcExtPtfm_DataData%x)
+   UB(1:1) = ubound(SrcExtPtfm_DataData%x)
    do i1 = LB(1), UB(1)
       call ExtPtfm_CopyContState(SrcExtPtfm_DataData%x(i1), DstExtPtfm_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcExtPtfm_DataData%xd)
+   UB(1:1) = ubound(SrcExtPtfm_DataData%xd)
    do i1 = LB(1), UB(1)
       call ExtPtfm_CopyDiscState(SrcExtPtfm_DataData%xd(i1), DstExtPtfm_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcExtPtfm_DataData%z)
+   UB(1:1) = ubound(SrcExtPtfm_DataData%z)
    do i1 = LB(1), UB(1)
       call ExtPtfm_CopyConstrState(SrcExtPtfm_DataData%z(i1), DstExtPtfm_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcExtPtfm_DataData%OtherSt)
+   UB(1:1) = ubound(SrcExtPtfm_DataData%OtherSt)
    do i1 = LB(1), UB(1)
       call ExtPtfm_CopyOtherState(SrcExtPtfm_DataData%OtherSt(i1), DstExtPtfm_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -10571,21 +10631,29 @@ subroutine FAST_CopySeaState_Data(SrcSeaState_DataData, DstSeaState_DataData, Ct
    character(*), parameter        :: RoutineName = 'FAST_CopySeaState_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SrcSeaState_DataData%x)
+   UB(1:1) = ubound(SrcSeaState_DataData%x)
    do i1 = LB(1), UB(1)
       call SeaSt_CopyContState(SrcSeaState_DataData%x(i1), DstSeaState_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcSeaState_DataData%xd)
+   UB(1:1) = ubound(SrcSeaState_DataData%xd)
    do i1 = LB(1), UB(1)
       call SeaSt_CopyDiscState(SrcSeaState_DataData%xd(i1), DstSeaState_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcSeaState_DataData%z)
+   UB(1:1) = ubound(SrcSeaState_DataData%z)
    do i1 = LB(1), UB(1)
       call SeaSt_CopyConstrState(SrcSeaState_DataData%z(i1), DstSeaState_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcSeaState_DataData%OtherSt)
+   UB(1:1) = ubound(SrcSeaState_DataData%OtherSt)
    do i1 = LB(1), UB(1)
       call SeaSt_CopyOtherState(SrcSeaState_DataData%OtherSt(i1), DstSeaState_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -10854,21 +10922,29 @@ subroutine FAST_CopyHydroDyn_Data(SrcHydroDyn_DataData, DstHydroDyn_DataData, Ct
    character(*), parameter        :: RoutineName = 'FAST_CopyHydroDyn_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SrcHydroDyn_DataData%x)
+   UB(1:1) = ubound(SrcHydroDyn_DataData%x)
    do i1 = LB(1), UB(1)
       call HydroDyn_CopyContState(SrcHydroDyn_DataData%x(i1), DstHydroDyn_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcHydroDyn_DataData%xd)
+   UB(1:1) = ubound(SrcHydroDyn_DataData%xd)
    do i1 = LB(1), UB(1)
       call HydroDyn_CopyDiscState(SrcHydroDyn_DataData%xd(i1), DstHydroDyn_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcHydroDyn_DataData%z)
+   UB(1:1) = ubound(SrcHydroDyn_DataData%z)
    do i1 = LB(1), UB(1)
       call HydroDyn_CopyConstrState(SrcHydroDyn_DataData%z(i1), DstHydroDyn_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcHydroDyn_DataData%OtherSt)
+   UB(1:1) = ubound(SrcHydroDyn_DataData%OtherSt)
    do i1 = LB(1), UB(1)
       call HydroDyn_CopyOtherState(SrcHydroDyn_DataData%OtherSt(i1), DstHydroDyn_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -11137,21 +11213,29 @@ subroutine FAST_CopyIceFloe_Data(SrcIceFloe_DataData, DstIceFloe_DataData, CtrlC
    character(*), parameter        :: RoutineName = 'FAST_CopyIceFloe_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SrcIceFloe_DataData%x)
+   UB(1:1) = ubound(SrcIceFloe_DataData%x)
    do i1 = LB(1), UB(1)
       call IceFloe_CopyContState(SrcIceFloe_DataData%x(i1), DstIceFloe_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcIceFloe_DataData%xd)
+   UB(1:1) = ubound(SrcIceFloe_DataData%xd)
    do i1 = LB(1), UB(1)
       call IceFloe_CopyDiscState(SrcIceFloe_DataData%xd(i1), DstIceFloe_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcIceFloe_DataData%z)
+   UB(1:1) = ubound(SrcIceFloe_DataData%z)
    do i1 = LB(1), UB(1)
       call IceFloe_CopyConstrState(SrcIceFloe_DataData%z(i1), DstIceFloe_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcIceFloe_DataData%OtherSt)
+   UB(1:1) = ubound(SrcIceFloe_DataData%OtherSt)
    do i1 = LB(1), UB(1)
       call IceFloe_CopyOtherState(SrcIceFloe_DataData%OtherSt(i1), DstIceFloe_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -11362,16 +11446,22 @@ subroutine FAST_CopyMAP_Data(SrcMAP_DataData, DstMAP_DataData, CtrlCode, ErrStat
    character(*), parameter        :: RoutineName = 'FAST_CopyMAP_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SrcMAP_DataData%x)
+   UB(1:1) = ubound(SrcMAP_DataData%x)
    do i1 = LB(1), UB(1)
       call MAP_CopyContState(SrcMAP_DataData%x(i1), DstMAP_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcMAP_DataData%xd)
+   UB(1:1) = ubound(SrcMAP_DataData%xd)
    do i1 = LB(1), UB(1)
       call MAP_CopyDiscState(SrcMAP_DataData%xd(i1), DstMAP_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcMAP_DataData%z)
+   UB(1:1) = ubound(SrcMAP_DataData%z)
    do i1 = LB(1), UB(1)
       call MAP_CopyConstrState(SrcMAP_DataData%z(i1), DstMAP_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -11635,21 +11725,29 @@ subroutine FAST_CopyFEAMooring_Data(SrcFEAMooring_DataData, DstFEAMooring_DataDa
    character(*), parameter        :: RoutineName = 'FAST_CopyFEAMooring_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SrcFEAMooring_DataData%x)
+   UB(1:1) = ubound(SrcFEAMooring_DataData%x)
    do i1 = LB(1), UB(1)
       call FEAM_CopyContState(SrcFEAMooring_DataData%x(i1), DstFEAMooring_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcFEAMooring_DataData%xd)
+   UB(1:1) = ubound(SrcFEAMooring_DataData%xd)
    do i1 = LB(1), UB(1)
       call FEAM_CopyDiscState(SrcFEAMooring_DataData%xd(i1), DstFEAMooring_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcFEAMooring_DataData%z)
+   UB(1:1) = ubound(SrcFEAMooring_DataData%z)
    do i1 = LB(1), UB(1)
       call FEAM_CopyConstrState(SrcFEAMooring_DataData%z(i1), DstFEAMooring_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcFEAMooring_DataData%OtherSt)
+   UB(1:1) = ubound(SrcFEAMooring_DataData%OtherSt)
    do i1 = LB(1), UB(1)
       call FEAM_CopyOtherState(SrcFEAMooring_DataData%OtherSt(i1), DstFEAMooring_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -11860,21 +11958,29 @@ subroutine FAST_CopyMoorDyn_Data(SrcMoorDyn_DataData, DstMoorDyn_DataData, CtrlC
    character(*), parameter        :: RoutineName = 'FAST_CopyMoorDyn_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SrcMoorDyn_DataData%x)
+   UB(1:1) = ubound(SrcMoorDyn_DataData%x)
    do i1 = LB(1), UB(1)
       call MD_CopyContState(SrcMoorDyn_DataData%x(i1), DstMoorDyn_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcMoorDyn_DataData%xd)
+   UB(1:1) = ubound(SrcMoorDyn_DataData%xd)
    do i1 = LB(1), UB(1)
       call MD_CopyDiscState(SrcMoorDyn_DataData%xd(i1), DstMoorDyn_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcMoorDyn_DataData%z)
+   UB(1:1) = ubound(SrcMoorDyn_DataData%z)
    do i1 = LB(1), UB(1)
       call MD_CopyConstrState(SrcMoorDyn_DataData%z(i1), DstMoorDyn_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcMoorDyn_DataData%OtherSt)
+   UB(1:1) = ubound(SrcMoorDyn_DataData%OtherSt)
    do i1 = LB(1), UB(1)
       call MD_CopyOtherState(SrcMoorDyn_DataData%OtherSt(i1), DstMoorDyn_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -12143,21 +12249,29 @@ subroutine FAST_CopyOrcaFlex_Data(SrcOrcaFlex_DataData, DstOrcaFlex_DataData, Ct
    character(*), parameter        :: RoutineName = 'FAST_CopyOrcaFlex_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   LB(1:1) = lbound(SrcOrcaFlex_DataData%x)
+   UB(1:1) = ubound(SrcOrcaFlex_DataData%x)
    do i1 = LB(1), UB(1)
       call Orca_CopyContState(SrcOrcaFlex_DataData%x(i1), DstOrcaFlex_DataData%x(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcOrcaFlex_DataData%xd)
+   UB(1:1) = ubound(SrcOrcaFlex_DataData%xd)
    do i1 = LB(1), UB(1)
       call Orca_CopyDiscState(SrcOrcaFlex_DataData%xd(i1), DstOrcaFlex_DataData%xd(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcOrcaFlex_DataData%z)
+   UB(1:1) = ubound(SrcOrcaFlex_DataData%z)
    do i1 = LB(1), UB(1)
       call Orca_CopyConstrState(SrcOrcaFlex_DataData%z(i1), DstOrcaFlex_DataData%z(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcOrcaFlex_DataData%OtherSt)
+   UB(1:1) = ubound(SrcOrcaFlex_DataData%OtherSt)
    do i1 = LB(1), UB(1)
       call Orca_CopyOtherState(SrcOrcaFlex_DataData%OtherSt(i1), DstOrcaFlex_DataData%OtherSt(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

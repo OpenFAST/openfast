@@ -353,6 +353,8 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%NumOuts = SrcParamData%NumOuts
    DstParamData%NOutSteps = SrcParamData%NOutSteps
    DstParamData%FileDescLines = SrcParamData%FileDescLines
+   LB(1:1) = lbound(SrcParamData%Module_Ver)
+   UB(1:1) = ubound(SrcParamData%Module_Ver)
    do i1 = LB(1), UB(1)
       call NWTC_Library_CopyProgDesc(SrcParamData%Module_Ver(i1), DstParamData%Module_Ver(i1), CtrlCode, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

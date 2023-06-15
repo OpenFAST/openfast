@@ -380,6 +380,13 @@ void gen_copy(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
         {
             auto &ddt = field.data_type->derived;
 
+            // Get bounds for non-allocated field
+            if (field.rank > 0 && !field.is_allocatable)
+            {
+                w << indent << "LB(1:" << field.rank << ") = lbound(" << src << ")";
+                w << indent << "UB(1:" << field.rank << ") = ubound(" << src << ")";
+            }
+
             for (int d = field.rank; d >= 1; d--)
             {
                 w << indent << "do i" << d << " = LB(" << d << "), UB(" << d << ")";
