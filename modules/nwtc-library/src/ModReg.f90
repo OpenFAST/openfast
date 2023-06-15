@@ -20,7 +20,7 @@ module ModReg
    
 
    interface RegPack
-      module procedure :: Pack_C1, Pack_C1_Rank1, Pack_C1_Rank2, Pack_C1_Rank3, &
+      module procedure Pack_C1, Pack_C1_Rank1, Pack_C1_Rank2, Pack_C1_Rank3, &
          Pack_C1_Rank4, Pack_C1_Rank5, Pack_L1, Pack_L1_Rank1, Pack_L1_Rank2, &
          Pack_L1_Rank3, Pack_L1_Rank4, Pack_L1_Rank5, Pack_I4, Pack_I4_Rank1, &
          Pack_I4_Rank2, Pack_I4_Rank3, Pack_I4_Rank4, Pack_I4_Rank5, Pack_R4, &
@@ -30,7 +30,7 @@ module ModReg
    end interface
 
    interface RegUnpack
-      module procedure :: Unpack_C1, Unpack_C1_Rank1, Unpack_C1_Rank2, &
+      module procedure Unpack_C1, Unpack_C1_Rank1, Unpack_C1_Rank2, &
          Unpack_C1_Rank3, Unpack_C1_Rank4, Unpack_C1_Rank5, Unpack_L1, &
          Unpack_L1_Rank1, Unpack_L1_Rank2, Unpack_L1_Rank3, Unpack_L1_Rank4, &
          Unpack_L1_Rank5, Unpack_I4, Unpack_I4_Rank1, Unpack_I4_Rank2, &

@@ -581,7 +581,7 @@ ranks = [''] + [f'_Rank{r}' for r in range(1,num_ranks+1)]
 for attr, punp in product([''], ['Pack', 'Unpack']):
    ifc_lines += f'\n\n   interface Reg{punp}{attr}'
    funcs = [f'{punp}{attr}_{dt}{rank}'for dt, rank in product(type_map.keys(), ranks)]
-   lines = textwrap.wrap('module procedure :: ' + ', '.join(funcs), 80,
+   lines = textwrap.wrap('module procedure ' + ', '.join(funcs), 80,
                   initial_indent=" "*6, subsequent_indent=' '*9,break_long_words=False)
    ifc_lines += '\n' + ' &\n'.join(lines)
    ifc_lines += '\n   end interface'
