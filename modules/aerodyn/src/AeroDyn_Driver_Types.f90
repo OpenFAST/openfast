@@ -63,15 +63,15 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: unOutFile      !< unit number for writing output file for each rotor [-]
     INTEGER(IntKi)  :: ActualChanLen = 0_IntKi      !< Actual length of channels written to text file (less than or equal to ChanLen) [-]
     INTEGER(IntKi)  :: nDvrOutputs = 0_IntKi      !< Number of outputs for the driver (without AD and IW) [-]
-    character(20)  :: Fmt_t = ''      !< Format specifier for time channel [-]
-    character(25)  :: Fmt_a = ''      !< Format specifier for each column (including delimiter) [-]
-    character(1)  :: delim = ''      !< column delimiter [-]
-    character(20)  :: outFmt = ''      !< Format specifier [-]
+    character(20)  :: Fmt_t      !< Format specifier for time channel [-]
+    character(25)  :: Fmt_a      !< Format specifier for each column (including delimiter) [-]
+    character(1)  :: delim      !< column delimiter [-]
+    character(20)  :: outFmt      !< Format specifier [-]
     INTEGER(IntKi)  :: fileFmt = 0_IntKi      !< Output format 1=Text, 2=Binary, 3=Both [-]
     INTEGER(IntKi)  :: wrVTK = 0_IntKi      !< 0= no vtk, 1=init only, 2=animation [-]
     INTEGER(IntKi)  :: WrVTK_Type = 0_IntKi      !< Flag for VTK output type (1=surface, 2=line, 3=both) [-]
-    character(1024)  :: Root = ''      !< Output file rootname [-]
-    character(1024)  :: VTK_OutFileRoot = ''      !< Output file rootname for vtk [-]
+    character(1024)  :: Root      !< Output file rootname [-]
+    character(1024)  :: VTK_OutFileRoot      !< Output file rootname for vtk [-]
     character(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Channel headers [-]
     character(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Channel units [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: storage      !< nTurbines x nChannel x nTime [-]
@@ -98,7 +98,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: motionType = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: iMotion = 0_IntKi      !< Stored index to optimize time interpolation [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: motion      !<  [-]
-    character(1024)  :: motionFileName = ''      !<  [-]
+    character(1024)  :: motionFileName      !<  [-]
   END TYPE BladeData
 ! =======================
 ! =========  HubData  =======
@@ -110,7 +110,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: azimuth = 0.0_ReKi      !< rotor position [rad]
     REAL(ReKi)  :: rotSpeed = 0.0_ReKi      !< rotor speed [rad/s]
     REAL(ReKi)  :: rotAcc = 0.0_ReKi      !< rotor acceleration [rad/s/s]
-    character(1024)  :: motionFileName = ''      !<  [-]
+    character(1024)  :: motionFileName      !<  [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: motion      !<  [-]
   END TYPE HubData
 ! =======================
@@ -122,7 +122,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: yaw = 0.0_ReKi      !< rad [rad]
     REAL(ReKi)  :: yawSpeed = 0.0_ReKi      !< yawspeed  [rad/s]
     REAL(ReKi)  :: yawAcc = 0.0_ReKi      !< yawAcceleration [rad/s^2]
-    character(1024)  :: motionFileName = ''      !<  [-]
+    character(1024)  :: motionFileName      !<  [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: motion      !<  [-]
   END TYPE NacData
 ! =======================
@@ -155,14 +155,14 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: degreeOfFreedom = 0_IntKi      !<  [-]
     REAL(ReKi)  :: amplitude = 0.0_ReKi      !<  [-]
     REAL(ReKi)  :: frequency = 0.0_ReKi      !<  [-]
-    character(1024)  :: motionFileName = ''      !<  [-]
+    character(1024)  :: motionFileName      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< WriteOutputs of the driver only [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: userSwapArray      !< Array to store user data for user-defined functions [-]
   END TYPE WTData
 ! =======================
 ! =========  Dvr_SimData  =======
   TYPE, PUBLIC :: Dvr_SimData
-    character(1024)  :: AD_InputFile = ''      !< Name of AeroDyn input file [-]
+    character(1024)  :: AD_InputFile      !< Name of AeroDyn input file [-]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type (switch) {0: not an MHK turbine, 1: fixed MHK turbine, 2: floating MHK turbine} [-]
     INTEGER(IntKi)  :: AnalysisType = 0_IntKi      !< 0=Steady Wind, 1=InflowWind [-]
     REAL(ReKi)  :: FldDens = 0.0_ReKi      !< Density of working fluid [kg/m^3]
@@ -182,7 +182,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: iCase = 0_IntKi      !< Current Case being run [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: timeSeries      !< Times series inputs when AnalysisType=1, 6 columns, Time, WndSpeed, ShearExp, RotSpd, Pitch, Yaw [-]
     INTEGER(IntKi)  :: iTimeSeries = 0_IntKi      !< Stored index to optimize time interpolation [-]
-    character(1024)  :: root = ''      !< Output file rootname [-]
+    character(1024)  :: root      !< Output file rootname [-]
     TYPE(Dvr_Outputs)  :: out      !< data for driver output file [-]
     TYPE(ADI_IW_InputData)  :: IW_InitInp      !<  [-]
   END TYPE Dvr_SimData
@@ -193,7 +193,7 @@ IMPLICIT NONE
     TYPE(ADI_Data)  :: ADI      !< AeroDyn InflowWind Data [-]
     TYPE(FED_Data)  :: FED      !< Elastic wind turbine data (Fake ElastoDyn) [-]
     INTEGER(IntKi)  :: errStat = 0_IntKi      !<  [-]
-    character(ErrMsgLen)  :: errMsg = ''      !<  [-]
+    character(ErrMsgLen)  :: errMsg      !<  [-]
     LOGICAL  :: initialized = .false.      !<  [-]
   END TYPE AllData
 ! =======================

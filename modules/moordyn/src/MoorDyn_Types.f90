@@ -50,8 +50,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: FarmSize = 0      !< Indicates normal FAST module mode if 0, FAST.Farm coupled mode and =nTurbines if >0 [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TurbineRefPos      !< reference position of turbines in farm, shape: 3, nTurbines [-]
     REAL(ReKi)  :: Tmax = 0.0_ReKi      !< simulation duration [[s]]
-    CHARACTER(1024)  :: FileName = ''      !< MoorDyn input file [-]
-    CHARACTER(1024)  :: RootName = ''      !< RootName for writing output files [-]
+    CHARACTER(1024)  :: FileName      !< MoorDyn input file [-]
+    CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     LOGICAL  :: UsePrimaryInputFile = .TRUE.      !< Read input file instead of passed data [-]
     TYPE(FileInfoType)  :: PassedPrimaryInputData      !< Primary input file as FileInfoType (set by driver/glue code) -- String array with metadata [-]
     LOGICAL  :: Echo = .false.      !< echo parameter - do we want to echo the header line describing the input file? [-]
@@ -62,7 +62,7 @@ IMPLICIT NONE
 ! =========  MD_LineProp  =======
   TYPE, PUBLIC :: MD_LineProp
     INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this set of line properties [-]
-    CHARACTER(20)  :: name = ''      !< name/identifier of this set of line properties [-]
+    CHARACTER(20)  :: name      !< name/identifier of this set of line properties [-]
     REAL(DbKi)  :: d = 0.0_R8Ki      !< volume-equivalent diameter [[m]]
     REAL(DbKi)  :: w = 0.0_R8Ki      !< per-length weight in air [[kg/m]]
     REAL(DbKi)  :: EA = 0.0_R8Ki      !< axial stiffness [[N]]
@@ -89,7 +89,7 @@ IMPLICIT NONE
 ! =========  MD_RodProp  =======
   TYPE, PUBLIC :: MD_RodProp
     INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this set of rod properties [-]
-    CHARACTER(10)  :: name = ''      !< name/identifier of this set of rod properties [-]
+    CHARACTER(10)  :: name      !< name/identifier of this set of rod properties [-]
     REAL(DbKi)  :: d = 0.0_R8Ki      !< volume-equivalent diameter [[m]]
     REAL(DbKi)  :: w = 0.0_R8Ki      !< per-length weight in air [[kg/m]]
     REAL(DbKi)  :: Can = 0.0_R8Ki      !< transverse added mass coefficient [-]
@@ -133,7 +133,7 @@ IMPLICIT NONE
 ! =========  MD_Connect  =======
   TYPE, PUBLIC :: MD_Connect
     INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this Connection [-]
-    CHARACTER(10)  :: type = ''      !< type of Connect: fix, vessel, connect [-]
+    CHARACTER(10)  :: type      !< type of Connect: fix, vessel, connect [-]
     INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=fixed, 1=vessel, 2=connect [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: Attached = 0_IntKi      !< list of IdNums of lines attached to this connection node [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: Top = 0_IntKi      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
@@ -160,7 +160,7 @@ IMPLICIT NONE
 ! =========  MD_Rod  =======
   TYPE, PUBLIC :: MD_Rod
     INTEGER(IntKi)  :: IdNum = 0_IntKi      !< integer identifier of this Line [-]
-    CHARACTER(10)  :: type = ''      !< type of Rod.  should match one of RodProp names [-]
+    CHARACTER(10)  :: type      !< type of Rod.  should match one of RodProp names [-]
     INTEGER(IntKi)  :: PropsIdNum = 0_IntKi      !< the IdNum of the associated rod properties [-]
     INTEGER(IntKi)  :: typeNum = 0_IntKi      !< integer identifying the type.  0=fixed, 1=vessel, 2=connect [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedA = 0_IntKi      !< list of IdNums of lines attached to end A [-]
@@ -293,8 +293,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  MD_OutParmType  =======
   TYPE, PUBLIC :: MD_OutParmType
-    CHARACTER(10)  :: Name = ''      !< name of output channel [-]
-    CHARACTER(10)  :: Units = ''      !< units string [-]
+    CHARACTER(10)  :: Name      !< name of output channel [-]
+    CHARACTER(10)  :: Units      !< units string [-]
     INTEGER(IntKi)  :: QType = 0_IntKi      !< type of quantity - 0=tension, 1=x, 2=y, 3=z... [-]
     INTEGER(IntKi)  :: OType = 0_IntKi      !< type of object - 0=line, 1=connect [-]
     INTEGER(IntKi)  :: NodeID = 0_IntKi      !< node number if OType=0.  0=anchor, -1=N=Fairlead [-]
@@ -404,11 +404,11 @@ IMPLICIT NONE
     REAL(DbKi)  :: dtCoupling = 0.0_R8Ki      !< coupling time step that MoorDyn should expect [[s]]
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of parameters in the output list (number of outputs requested) [-]
     REAL(DbKi)  :: dtOut = 0.0_R8Ki      !< interval for writing output file lines [[s]]
-    CHARACTER(1024)  :: RootName = ''      !< RootName for writing output files [-]
+    CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(MD_OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
-    CHARACTER(1)  :: Delim = ''      !< Column delimiter for output text files [-]
+    CHARACTER(1)  :: Delim      !< Column delimiter for output text files [-]
     INTEGER(IntKi)  :: MDUnOut = 0_IntKi      !< Unit number of main output file [-]
-    CHARACTER(1024)  :: PriPath = ''      !< The path to the primary MoorDyn input file, used if looking for additional input files [-]
+    CHARACTER(1024)  :: PriPath      !< The path to the primary MoorDyn input file, used if looking for additional input files [-]
     INTEGER(IntKi)  :: writeLog = -1      !< Switch for level of log file output [-]
     INTEGER(IntKi)  :: UnLog = -1      !< Unit number of log file [-]
     INTEGER(IntKi)  :: WaveKin = 0_IntKi      !< Flag for whether or how to consider water kinematics [-]

@@ -37,7 +37,7 @@ IMPLICIT NONE
 ! =========  FWrap_InitInputType  =======
   TYPE, PUBLIC :: FWrap_InitInputType
     INTEGER(IntKi)  :: nr = 0_IntKi      !< Number of radii in the radial finite-difference grid [-]
-    CHARACTER(1024)  :: FASTInFile = ''      !< Filename of primary FAST input file of this turbine [-]
+    CHARACTER(1024)  :: FASTInFile      !< Filename of primary FAST input file of this turbine [-]
     REAL(ReKi)  :: dr = 0.0_ReKi      !< Radial increment of radial finite-difference grid [m]
     REAL(DbKi)  :: tmax = 0.0_R8Ki      !< Simulation length [s]
     REAL(ReKi) , DIMENSION(1:3)  :: p_ref_Turbine = 0.0_ReKi      !< Undisplaced global coordinates of this turbine [m]
@@ -52,7 +52,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: dY_high = 0.0_ReKi      !< Y-component of the spatial increment of the high-resolution spatial domain for this turbine [m]
     REAL(ReKi)  :: dZ_high = 0.0_ReKi      !< Z-component of the spatial increment of the high-resolution spatial domain for this turbine [m]
     INTEGER(IntKi)  :: TurbNum = 0_IntKi      !< Turbine ID number (start with 1; end with number of turbines) [-]
-    CHARACTER(1024)  :: RootName = ''      !< The root name derived from the primary FAST.Farm input file [For output reporting in this module we need to have Rootname include the turbine number] [-]
+    CHARACTER(1024)  :: RootName      !< The root name derived from the primary FAST.Farm input file [For output reporting in this module we need to have Rootname include the turbine number] [-]
     INTEGER(IntKi)  :: NumSC2Ctrl = 0_IntKi      !< Number of turbine-specific controller inputs [from supercontroller] [-]
     INTEGER(IntKi)  :: NumSC2CtrlGlob = 0_IntKi      !< Number of global controller inputs [from supercontroller] [-]
     INTEGER(IntKi)  :: NumCtrl2SC = 0_IntKi      !< Number of turbine-specific controller outputs [to supercontroller] [-]

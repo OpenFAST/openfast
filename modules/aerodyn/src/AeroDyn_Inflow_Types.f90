@@ -53,7 +53,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  ADI_IW_InputData  =======
   TYPE, PUBLIC :: ADI_IW_InputData
-    Character(1024)  :: InputFile = ''      !< Name of InfloWind input file [-]
+    Character(1024)  :: InputFile      !< Name of InfloWind input file [-]
     INTEGER(IntKi)  :: CompInflow = 0_IntKi      !< 0=Steady Wind, 1=InflowWind [-]
     REAL(ReKi)  :: HWindSpeed = 0.0_ReKi      !< RefHeight Wind speed [-]
     REAL(ReKi)  :: RefHt = 0.0_ReKi      !< RefHeight [-]
@@ -68,7 +68,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: ADI_InitInputType
     TYPE(AD_InitInputType)  :: AD      !< AD Init input types [-]
     TYPE(ADI_IW_InputData)  :: IW_InitInp      !< IW Init input types [-]
-    Character(1024)  :: RootName = ''      !< RootName for writing output files [-]
+    Character(1024)  :: RootName      !< RootName for writing output files [-]
     LOGICAL  :: storeHHVel = .false.      !< If True, hub height velocity will be computed by infow wind [-]
     INTEGER(IntKi)  :: WrVTK = 0      !< 0= no vtk, 1=init only, 2=animation [-]
     INTEGER(IntKi)  :: WrVTK_Type = 1      !< Flag for VTK output type (1=surface, 2=line, 3=both) [-]

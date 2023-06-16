@@ -39,7 +39,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: idGridVelVorticity = 2      ! Grid stores velocity and vorticity [-]
 ! =========  GridOutType  =======
   TYPE, PUBLIC :: GridOutType
-    CHARACTER(100)  :: name = ''      !< Grid name [-]
+    CHARACTER(100)  :: name      !< Grid name [-]
     INTEGER(IntKi)  :: type = 0_IntKi      !< Grid type [-]
     REAL(ReKi)  :: tStart = 0.0_ReKi      !< Time at which outputs starts [-]
     REAL(ReKi)  :: tEnd = 0.0_ReKi      !< Time at which outputs ends [-]
@@ -131,9 +131,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: VTKBlades = 0_IntKi      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
     REAL(DbKi)  :: DTvtk = 0.0_R8Ki      !< DT between vtk writes [s]
     INTEGER(IntKi)  :: VTKCoord = 0_IntKi      !< Switch for VTK outputs coordinate  system [-]
-    CHARACTER(1024)  :: RootName = ''      !< RootName for writing output files [-]
-    CHARACTER(1024)  :: VTK_OutFileRoot = ''      !< Rootdirectory for writing VTK files [-]
-    CHARACTER(1024)  :: VTK_OutFileBase = ''      !< Basename for writing VTK files [-]
+    CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
+    CHARACTER(1024)  :: VTK_OutFileRoot      !< Rootdirectory for writing VTK files [-]
+    CHARACTER(1024)  :: VTK_OutFileBase      !< Basename for writing VTK files [-]
     INTEGER(IntKi)  :: nGridOut = 0_IntKi      !< Number of VTK grid to output [-]
     LOGICAL  :: InductionAtCP = .true.      !< Compute induced velocities at nodes or CP [-]
     LOGICAL  :: WakeAtTE = .true.      !< Start the wake at the trailing edge, or at the LL [-]
@@ -297,8 +297,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  FVW_InitInputType  =======
   TYPE, PUBLIC :: FVW_InitInputType
-    CHARACTER(1024)  :: FVWFileName = ''      !< Main FVW input file name [-]
-    CHARACTER(1024)  :: RootName = ''      !< RootName for writing output files [-]
+    CHARACTER(1024)  :: FVWFileName      !< Main FVW input file name [-]
+    CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(Wng_InitInputType) , DIMENSION(:), ALLOCATABLE  :: W      !< Number of blades [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: WingsMesh      !< Input Mesh defining position and orientation of wings (nSpan+1)  [-]
     INTEGER(IntKi)  :: numBladeNodes = 0_IntKi      !< Number of nodes on each blade [-]
@@ -316,7 +316,7 @@ IMPLICIT NONE
 ! =========  FVW_InputFile  =======
   TYPE, PUBLIC :: FVW_InputFile
     INTEGER(IntKi)  :: CircSolvMethod = 0_IntKi      !< Method to determine the circulation [-]
-    CHARACTER(1024)  :: CirculationFile = ''      !< Prescribed circulation file [-]
+    CHARACTER(1024)  :: CirculationFile      !< Prescribed circulation file [-]
     INTEGER(IntKi)  :: CircSolvMaxIter = 0_IntKi      !< Maximum number of iterations for circulation solving [-]
     REAL(ReKi)  :: CircSolvConvCrit = 0.0_ReKi      !< Convergence criterion for circulation solving [-]
     REAL(ReKi)  :: CircSolvRelaxation = 0.0_ReKi      !< Relaxation factor for circulation solving [-]

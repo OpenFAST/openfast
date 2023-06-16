@@ -41,9 +41,9 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: User_FieldType = 5      ! User FieldType configured by the user [-]
 ! =========  UniformFieldType  =======
   TYPE, PUBLIC :: UniformFieldType
-    REAL(ReKi)  :: RefHeight      !< reference height; used to center the wind [meters]
-    REAL(ReKi)  :: RefLength      !< reference length used to scale the linear shear [meters]
-    INTEGER(IntKi)  :: DataSize      !< size of data in HH file [-]
+    REAL(ReKi)  :: RefHeight = 0.0_ReKi      !< reference height; used to center the wind [meters]
+    REAL(ReKi)  :: RefLength = 0.0_ReKi      !< reference length used to scale the linear shear [meters]
+    INTEGER(IntKi)  :: DataSize = 0_IntKi      !< size of data in HH file [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Time      !< HH time array [seconds]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: VelH      !< HH horizontal wind speed [meters/sec]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: VelHDot      !< Derivative of HH horizontal wind speed wrt time [meters/sec]
@@ -65,31 +65,31 @@ IMPLICIT NONE
 ! =======================
 ! =========  UniformField_Interp  =======
   TYPE, PUBLIC :: UniformField_Interp
-    REAL(ReKi)  :: VelH      !< HH horizontal wind speed [meters/sec]
-    REAL(ReKi)  :: VelHDot      !< derivative of HH horizontal wind speed wrt Time [meters/sec]
-    REAL(ReKi)  :: VelV      !< HH vertical wind speed, including tower shadow [meters/sec]
-    REAL(ReKi)  :: VelVDot      !< derivative of HH vertical wind speed wrt Time [meters/sec]
-    REAL(ReKi)  :: VelGust      !< HH wind gust speed [-]
-    REAL(ReKi)  :: VelGustDot      !< derivative of HH wind gust speed wrt Time [-]
-    REAL(ReKi)  :: AngleH      !< HH wind direction angle [degrees]
-    REAL(ReKi)  :: AngleHDot      !< derivative of HH wind direction angle wrt Time [degrees]
-    REAL(ReKi)  :: AngleV      !< HH upflow angle [degrees]
-    REAL(ReKi)  :: AngleVDot      !< derivative of HH upflow angle wrt Time [degrees]
-    REAL(ReKi)  :: ShrH      !< HH horizontal linear shear [-]
-    REAL(ReKi)  :: ShrHDot      !< derivative of HH horizontal linear shear wrt Time [-]
-    REAL(ReKi)  :: ShrV      !< HH vertical shear exponent [-]
-    REAL(ReKi)  :: ShrVDot      !< derivative of HH vertical shear exponent wrt Time [-]
-    REAL(ReKi)  :: LinShrV      !< HH vertical linear shear [seconds]
-    REAL(ReKi)  :: LinShrVDot      !< derivative of HH vertical linear shear wrt Time [seconds]
-    REAL(ReKi)  :: CosAngleH      !< Horizontal angle components [-]
-    REAL(ReKi)  :: SinAngleH      !< Horizontal angle components [-]
-    REAL(ReKi)  :: CosAngleV      !< Vertical angle components [-]
-    REAL(ReKi)  :: SinAngleV      !< Vertical angle components [-]
+    REAL(ReKi)  :: VelH = 0.0_ReKi      !< HH horizontal wind speed [meters/sec]
+    REAL(ReKi)  :: VelHDot = 0.0_ReKi      !< derivative of HH horizontal wind speed wrt Time [meters/sec]
+    REAL(ReKi)  :: VelV = 0.0_ReKi      !< HH vertical wind speed, including tower shadow [meters/sec]
+    REAL(ReKi)  :: VelVDot = 0.0_ReKi      !< derivative of HH vertical wind speed wrt Time [meters/sec]
+    REAL(ReKi)  :: VelGust = 0.0_ReKi      !< HH wind gust speed [-]
+    REAL(ReKi)  :: VelGustDot = 0.0_ReKi      !< derivative of HH wind gust speed wrt Time [-]
+    REAL(ReKi)  :: AngleH = 0.0_ReKi      !< HH wind direction angle [degrees]
+    REAL(ReKi)  :: AngleHDot = 0.0_ReKi      !< derivative of HH wind direction angle wrt Time [degrees]
+    REAL(ReKi)  :: AngleV = 0.0_ReKi      !< HH upflow angle [degrees]
+    REAL(ReKi)  :: AngleVDot = 0.0_ReKi      !< derivative of HH upflow angle wrt Time [degrees]
+    REAL(ReKi)  :: ShrH = 0.0_ReKi      !< HH horizontal linear shear [-]
+    REAL(ReKi)  :: ShrHDot = 0.0_ReKi      !< derivative of HH horizontal linear shear wrt Time [-]
+    REAL(ReKi)  :: ShrV = 0.0_ReKi      !< HH vertical shear exponent [-]
+    REAL(ReKi)  :: ShrVDot = 0.0_ReKi      !< derivative of HH vertical shear exponent wrt Time [-]
+    REAL(ReKi)  :: LinShrV = 0.0_ReKi      !< HH vertical linear shear [seconds]
+    REAL(ReKi)  :: LinShrVDot = 0.0_ReKi      !< derivative of HH vertical linear shear wrt Time [seconds]
+    REAL(ReKi)  :: CosAngleH = 0.0_ReKi      !< Horizontal angle components [-]
+    REAL(ReKi)  :: SinAngleH = 0.0_ReKi      !< Horizontal angle components [-]
+    REAL(ReKi)  :: CosAngleV = 0.0_ReKi      !< Vertical angle components [-]
+    REAL(ReKi)  :: SinAngleV = 0.0_ReKi      !< Vertical angle components [-]
   END TYPE UniformField_Interp
 ! =======================
 ! =========  Grid3DFieldType  =======
   TYPE, PUBLIC :: Grid3DFieldType
-    INTEGER(IntKi)  :: WindFileFormat      !< Binary file format description number [-]
+    INTEGER(IntKi)  :: WindFileFormat = 0_IntKi      !< Binary file format description number [-]
     INTEGER(IntKi)  :: WindProfileType = -1      !< Wind profile type (0=constant;1=logarithmic;2=power law) [-]
     LOGICAL  :: Periodic = .false.      !< Flag to indicate if the wind file is periodic [-]
     LOGICAL  :: InterpTower = .false.      !< Flag to indicate if we should interpolate wind speeds below the tower [-]
@@ -129,12 +129,12 @@ IMPLICIT NONE
 ! =======================
 ! =========  Grid4DFieldType  =======
   TYPE, PUBLIC :: Grid4DFieldType
-    INTEGER(IntKi) , DIMENSION(1:4)  :: n      !< number of evenly-spaced grid points in the x, y, z, and t directions [-]
-    REAL(ReKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
-    REAL(ReKi) , DIMENSION(1:3)  :: pZero      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
+    INTEGER(IntKi) , DIMENSION(1:4)  :: n = 0_IntKi      !< number of evenly-spaced grid points in the x, y, z, and t directions [-]
+    REAL(ReKi) , DIMENSION(1:4)  :: delta = 0.0_ReKi      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
+    REAL(ReKi) , DIMENSION(1:3)  :: pZero = 0.0_ReKi      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: Vel => NULL()      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt] [-]
-    REAL(ReKi)  :: TimeStart      !< this is the time where the first time grid in m%V starts (i.e, the time associated with m%V(:,:,:,:,1)) [s]
-    REAL(ReKi)  :: RefHeight      !< reference height; used to center the wind [meters]
+    REAL(ReKi)  :: TimeStart = 0.0_ReKi      !< this is the time where the first time grid in m%V starts (i.e, the time associated with m%V(:,:,:,:,1)) [s]
+    REAL(ReKi)  :: RefHeight = 0.0_ReKi      !< reference height; used to center the wind [meters]
   END TYPE Grid4DFieldType
 ! =======================
 ! =========  PointsFieldType  =======
@@ -144,20 +144,20 @@ IMPLICIT NONE
 ! =======================
 ! =========  UserFieldType  =======
   TYPE, PUBLIC :: UserFieldType
-    REAL(ReKi)  :: RefHeight      !< reference height; used to center the wind [meters]
+    REAL(ReKi)  :: RefHeight = 0.0_ReKi      !< reference height; used to center the wind [meters]
   END TYPE UserFieldType
 ! =======================
 ! =========  FlowFieldType  =======
   TYPE, PUBLIC :: FlowFieldType
     INTEGER(IntKi)  :: FieldType = 0      !< Switch for flow field type {1=Uniform, 2=Grid, 3=User, 4=External} [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: RefPosition      !< Reference position (point where box is rotated) [meters]
-    REAL(ReKi)  :: PropagationDir      !< Direction of wind propagation [radians]
-    REAL(ReKi)  :: VFlowAngle      !< Vertical (upflow) angle [radians]
+    REAL(ReKi) , DIMENSION(1:3)  :: RefPosition = 0.0_ReKi      !< Reference position (point where box is rotated) [meters]
+    REAL(ReKi)  :: PropagationDir = 0.0_ReKi      !< Direction of wind propagation [radians]
+    REAL(ReKi)  :: VFlowAngle = 0.0_ReKi      !< Vertical (upflow) angle [radians]
     LOGICAL  :: VelInterpCubic = .false.      !< Velocity interpolation order in time (1=linear; 3=cubic) [Used with WindType=2,3,4,5,7] [-]
     LOGICAL  :: RotateWindBox = .false.      !< flag indicating if the wind will be rotated [-]
     LOGICAL  :: AccFieldValid = .false.      !< flag indicating that acceleration field has been calculated [-]
-    REAL(ReKi) , DIMENSION(1:3,1:3)  :: RotToWind      !< Rotation matrix for rotating from the global XYZ coordinate system to the wind coordinate system (wind along X') [-]
-    REAL(ReKi) , DIMENSION(1:3,1:3)  :: RotFromWind      !< Rotation matrix for rotating from the wind coordinate system (wind along X') back to the global XYZ coordinate system.  Equal to TRANSPOSE(RotToWind) [-]
+    REAL(ReKi) , DIMENSION(1:3,1:3)  :: RotToWind = 0.0_ReKi      !< Rotation matrix for rotating from the global XYZ coordinate system to the wind coordinate system (wind along X') [-]
+    REAL(ReKi) , DIMENSION(1:3,1:3)  :: RotFromWind = 0.0_ReKi      !< Rotation matrix for rotating from the wind coordinate system (wind along X') back to the global XYZ coordinate system.  Equal to TRANSPOSE(RotToWind) [-]
     TYPE(UniformFieldType)  :: Uniform      !< Uniform Flow Data [-]
     TYPE(Grid3DFieldType)  :: Grid3D      !< Grid Field Wind Data [-]
     TYPE(Grid4DFieldType)  :: Grid4D      !< External Grid Flow Data [-]

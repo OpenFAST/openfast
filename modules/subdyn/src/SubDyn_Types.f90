@@ -82,8 +82,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  SD_InitInputType  =======
   TYPE, PUBLIC :: SD_InitInputType
-    CHARACTER(1024)  :: SDInputFile = ''      !< Name of the input file [-]
-    CHARACTER(1024)  :: RootName = ''      !< SubDyn rootname [-]
+    CHARACTER(1024)  :: SDInputFile      !< Name of the input file [-]
+    CHARACTER(1024)  :: RootName      !< SubDyn rootname [-]
     REAL(ReKi)  :: g = 0.0_ReKi      !< Gravity acceleration [-]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water Depth (positive valued) [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TP_RefPoint = 0.0_ReKi      !< global position of transition piece reference point (could also be defined in SubDyn itself) [-]
@@ -111,7 +111,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  SD_InitType  =======
   TYPE, PUBLIC :: SD_InitType
-    CHARACTER(1024)  :: RootName = ''      !< SubDyn rootname [-]
+    CHARACTER(1024)  :: RootName      !< SubDyn rootname [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TP_RefPoint = 0.0_ReKi      !< global position of transition piece reference point (could also be defined in SubDyn itself) [-]
     REAL(ReKi)  :: SubRotateZ = 0.0_ReKi      !< Rotation angle in degrees about global Z [-]
     REAL(ReKi)  :: g = 0.0_ReKi      !< Gravity acceleration [-]
@@ -304,9 +304,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of output channels read from input file [-]
     INTEGER(IntKi)  :: OutSwtch = 0_IntKi      !< Output Requested Channels to local or global output file [1/2/3] [-]
     INTEGER(IntKi)  :: UnJckF = 0_IntKi      !< Unit of SD ouput file [-]
-    CHARACTER(1)  :: Delim = ''      !< Column delimiter for output text files [-]
-    CHARACTER(20)  :: OutFmt = ''      !< Format for Output [-]
-    CHARACTER(20)  :: OutSFmt = ''      !< Format for Output Headers [-]
+    CHARACTER(1)  :: Delim      !< Column delimiter for output text files [-]
+    CHARACTER(20)  :: OutFmt      !< Format for Output [-]
+    CHARACTER(20)  :: OutSFmt      !< Format for Output Headers [-]
     TYPE(MeshAuxDataType) , DIMENSION(:), ALLOCATABLE  :: MoutLst      !< List of user requested members and nodes [-]
     TYPE(MeshAuxDataType) , DIMENSION(:), ALLOCATABLE  :: MoutLst2      !< List of all member joint nodes and elements for output [-]
     TYPE(MeshAuxDataType) , DIMENSION(:), ALLOCATABLE  :: MoutLst3      !< List of all member joint nodes and elements for output [-]

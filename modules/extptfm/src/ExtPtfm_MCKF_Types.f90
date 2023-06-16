@@ -35,10 +35,10 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  ExtPtfm_InitInputType  =======
   TYPE, PUBLIC :: ExtPtfm_InitInputType
-    CHARACTER(1024)  :: InputFile = ''      !< Name of the input file; remove if there is no file [-]
+    CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     REAL(ReKi)  :: PtfmRefzt = 0.0_ReKi      !< Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point [meters]
-    CHARACTER(1024)  :: RootName = ''      !< RootName for writing output files [-]
+    CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
   END TYPE ExtPtfm_InitInputType
 ! =======================
 ! =========  ExtPtfm_InputFile  =======
@@ -46,8 +46,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Requested integration time for ElastoDyn [seconds]
     INTEGER(IntKi)  :: IntMethod = 0_IntKi      !< Integration Method (1=RK4, 2=AB4, 3=ABM4) [-]
     INTEGER(IntKi)  :: FileFormat = 0_IntKi      !< File format switch [-]
-    CHARACTER(1024)  :: RedFile = ''      !< File containing reduction inputs [-]
-    CHARACTER(1024)  :: RedFileCst = ''      !< File containing constant reduction inputs [-]
+    CHARACTER(1024)  :: RedFile      !< File containing reduction inputs [-]
+    CHARACTER(1024)  :: RedFileCst      !< File containing constant reduction inputs [-]
     LOGICAL  :: EquilStart = .false.      !< Flag to determine the equilibrium positions of the CB modes at initialization (first call) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ActiveCBDOF      !< List of active CB DOF [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: InitPosList      !< Initial positions of the CB DOFs [-]
@@ -55,7 +55,7 @@ IMPLICIT NONE
     LOGICAL  :: SumPrint = .false.      !< Print summary data to <RootName>.sum [-]
     INTEGER(IntKi)  :: OutFile = 0_IntKi      !< Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both) [-]
     LOGICAL  :: TabDelim = .false.      !< Flag to cause tab-delimited text output (delimited by space otherwise) [-]
-    CHARACTER(20)  :: OutFmt = ''      !< Format used for module's text tabular output (except time); resulting field should be 10 characters [-]
+    CHARACTER(20)  :: OutFmt      !< Format used for module's text tabular output (except time); resulting field should be 10 characters [-]
     REAL(DbKi)  :: Tstart = 0.0_R8Ki      !< Time to start module's tabular output [seconds]
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]

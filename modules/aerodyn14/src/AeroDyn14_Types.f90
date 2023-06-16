@@ -303,7 +303,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: TShadC2 = 0.0_ReKi      !< Tower-shadow constant [-]
     REAL(ReKi)  :: TwrShad = 0.0_ReKi      !< Tower-shadow velocity deficit [-]
     LOGICAL  :: PJM_Version = .false.      !< Only true if new tower influence model, by PJM [-]
-    CHARACTER(1024)  :: TwrFile = ''      !< Tower data file name [-]
+    CHARACTER(1024)  :: TwrFile      !< Tower data file name [-]
     REAL(ReKi)  :: T_Shad_Refpt = 0.0_ReKi      !< Tower-shadow reference point [m]
     LOGICAL  :: CalcTwrAero = .false.      !< Flag to tell AeroDyn to calculate drag on the tower [m]
     INTEGER(IntKi)  :: NumTwrNodes = 0_IntKi      !< Number of ElastoDyn tower nodes.  Tower drag will be computed at those points. [-]
@@ -338,9 +338,9 @@ IMPLICIT NONE
 ! =======================
 ! =========  AD14_InitInputType  =======
   TYPE, PUBLIC :: AD14_InitInputType
-    CHARACTER(1024)  :: Title = ''      !< Title [-]
-    CHARACTER(1024)  :: OutRootName = '' 
-    CHARACTER(1024)  :: ADFileName = ''      !< AeroDyn file name [-]
+    CHARACTER(1024)  :: Title      !< Title [-]
+    CHARACTER(1024)  :: OutRootName 
+    CHARACTER(1024)  :: ADFileName      !< AeroDyn file name [-]
     LOGICAL  :: WrSumFile = .false.      !< T/F: Write an AeroDyn summary [-]
     INTEGER(IntKi)  :: NumBl = 0_IntKi      !< Number of Blades [-]
     REAL(ReKi)  :: BladeLength = 0.0_ReKi      !< Blade Length [-]
@@ -416,7 +416,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  AD14_ParameterType  =======
   TYPE, PUBLIC :: AD14_ParameterType
-    CHARACTER(1024)  :: Title = ''      !< Title [-]
+    CHARACTER(1024)  :: Title      !< Title [-]
     LOGICAL  :: SIUnit = .false. 
     LOGICAL  :: Echo = .FALSE. 
     LOGICAL  :: MultiTab = .false. 

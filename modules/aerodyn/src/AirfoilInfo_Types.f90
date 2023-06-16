@@ -142,7 +142,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  AFI_InitInputType  =======
   TYPE, PUBLIC :: AFI_InitInputType
-    CHARACTER(1024)  :: FileName = ''      !< The name of the file the data is read from [-]
+    CHARACTER(1024)  :: FileName      !< The name of the file the data is read from [-]
     INTEGER(IntKi)  :: AFTabMod = 0_IntKi      !< Interpolation method for multiple airfoil tables {1 = 1D on AoA (only first table is used); 2 = 2D on AoA and Re; 3 = 2D on AoA and UserProp} [-]
     INTEGER(IntKi)  :: InCol_Alfa = 0_IntKi      !< The column of the coefficient tables that holds the angle of attack [-]
     INTEGER(IntKi)  :: InCol_Cl = 0_IntKi      !< The column of the coefficient tables that holds the lift coefficient [-]
@@ -174,8 +174,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y_Coord      !< Y-coordinate for the airfoil shape [unused] [-]
     INTEGER(IntKi)  :: NumTabs = 0_IntKi      !< The number of airfoil tables in the airfoil file [-]
     TYPE(AFI_Table_Type) , DIMENSION(:), ALLOCATABLE  :: Table      !< The tables of airfoil data for given Re and control setting [-]
-    CHARACTER(1024)  :: BL_file = ''      !< The name of the file with the boundary layer data [-]
-    CHARACTER(1024)  :: FileName = ''      !< The name of the file that stored this information. [-]
+    CHARACTER(1024)  :: BL_file      !< The name of the file with the boundary layer data [-]
+    CHARACTER(1024)  :: FileName      !< The name of the file that stored this information. [-]
   END TYPE AFI_ParameterType
 ! =======================
 ! =========  AFI_InputType  =======

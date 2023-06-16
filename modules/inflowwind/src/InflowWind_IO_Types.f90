@@ -36,7 +36,7 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  WindFileDat  =======
   TYPE, PUBLIC :: WindFileDat
-    character(1024)  :: FileName = ''      !< Name of the windfile retrieved [-]
+    character(1024)  :: FileName      !< Name of the windfile retrieved [-]
     INTEGER(IntKi)  :: WindType = 0      !< Type of the windfile [-]
     REAL(ReKi)  :: RefHt = 0.0_ReKi      !< Reference height given in file [meters]
     LOGICAL  :: RefHt_Set = .false.      !< Reference height was given in file [-]
@@ -65,7 +65,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  Uniform_InitInputType  =======
   TYPE, PUBLIC :: Uniform_InitInputType
-    character(1024)  :: WindFileName = ''      !< Name of the wind file to use [-]
+    character(1024)  :: WindFileName      !< Name of the wind file to use [-]
     REAL(ReKi)  :: RefHt = 0.0_ReKi      !< Reference height for horizontal wind speed [meters]
     REAL(ReKi)  :: RefLength = 0.0_ReKi      !< Reference length for linear horizontal and vertical sheer [-]
     REAL(ReKi)  :: PropagationDir = 0.0_ReKi      !< Direction of wind propagation [radians]
@@ -91,12 +91,12 @@ IMPLICIT NONE
 ! =======================
 ! =========  TurbSim_InitInputType  =======
   TYPE, PUBLIC :: TurbSim_InitInputType
-    character(1024)  :: WindFileName = ''      !< Name of the wind file to use [-]
+    character(1024)  :: WindFileName      !< Name of the wind file to use [-]
   END TYPE TurbSim_InitInputType
 ! =======================
 ! =========  Bladed_InitInputType  =======
   TYPE, PUBLIC :: Bladed_InitInputType
-    character(1024)  :: WindFileName = ''      !< Root filename [-]
+    character(1024)  :: WindFileName      !< Root filename [-]
     INTEGER(IntKi)  :: WindType = 0_IntKi      !< Whether this is native Bladed (needs wind profile and TI scaling) or not [-]
     LOGICAL  :: NativeBladedFmt = .false.      !< Whether this is native Bladed (needs wind profile and TI scaling) or not [-]
     LOGICAL  :: TowerFileExist = .false.      !< Tower file exists [-]
@@ -112,7 +112,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  HAWC_InitInputType  =======
   TYPE, PUBLIC :: HAWC_InitInputType
-    character(1024) , DIMENSION(1:3)  :: WindFileName = ''      !< Name of the wind file to use [-]
+    character(1024) , DIMENSION(1:3)  :: WindFileName      !< Name of the wind file to use [-]
     INTEGER(IntKi)  :: nx = 0      !< Number of grids in the x direction (in the 3 files above) [-]
     INTEGER(IntKi)  :: ny = 0      !< Number of grids in the y direction (in the 3 files above) [-]
     INTEGER(IntKi)  :: nz = 0      !< Number of grids in the z direction (in the 3 files above) [-]

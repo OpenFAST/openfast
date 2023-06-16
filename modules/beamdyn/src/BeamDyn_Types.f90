@@ -41,8 +41,8 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: BD_MESH_STATIONS = 3      ! Constant for creating y%BldMotion at the blade property input stations [-]
 ! =========  BD_InitInputType  =======
   TYPE, PUBLIC :: BD_InitInputType
-    CHARACTER(1024)  :: InputFile = ''      !< Name of the input file; remove if there is no file [-]
-    CHARACTER(1024)  :: RootName = ''      !< RootName for writing output files [-]
+    CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
+    CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     REAL(ReKi) , DIMENSION(1:3)  :: gravity = 0.0_ReKi      !< Gravitational acceleration [m/s^2]
     REAL(ReKi) , DIMENSION(1:3)  :: GlbPos = 0.0_ReKi      !< Initial Position Vector of the local blade coordinate system [-]
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: GlbRot = 0.0_R8Ki      !< Initial direction cosine matrix of the local blade coordinate system -- in BD coords [-]
@@ -97,7 +97,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: rhoinf = 0.0_R8Ki      !< Numerical damping parameter for generalized-alpha integrator [-]
     REAL(DbKi)  :: DTBeam = 0.0_R8Ki      !< Time interval for BeamDyn  calculations {or default} (s) [-]
     TYPE(BladeInputData)  :: InpBl      !< Input data for individual blades [see BladeInputData Type]
-    CHARACTER(1024)  :: BldFile = ''      !< Name of blade input file [-]
+    CHARACTER(1024)  :: BldFile      !< Name of blade input file [-]
     LOGICAL  :: UsePitchAct = .false.      !< Whether to use a pitch actuator inside BeamDyn [(flag)]
     LOGICAL  :: QuasiStaticInit = .false.      !< Use quasistatic pre-conditioning with centripetal accelerations in initialization (flag) [dynamic solve and enFAST only] [-]
     REAL(R8Ki)  :: stop_tol = 0.0_R8Ki      !< Tolerance for stopping criterion [-]
@@ -117,11 +117,11 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
     LOGICAL  :: SumPrint = .false.      !< Print summary data to file? (.sum) [-]
-    CHARACTER(20)  :: OutFmt = ''      !< Format specifier [-]
+    CHARACTER(20)  :: OutFmt      !< Format specifier [-]
     INTEGER(IntKi)  :: BldNd_NumOuts = 0_IntKi      !< Number of requested output channels per blade node (BD_BldNdOuts) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: BldNd_OutList      !< List of user-requested output channels (BD_BldNdOuts) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BldNd_BlOutNd      !< The blade nodes to actually output (BD_BldNdOuts) [-]
-    CHARACTER(1024)  :: BldNd_BlOutNd_Str = ''      !< String to parse for the blade nodes to actually output (BD_BldNdOuts) [-]
+    CHARACTER(1024)  :: BldNd_BlOutNd_Str      !< String to parse for the blade nodes to actually output (BD_BldNdOuts) [-]
   END TYPE BD_InputFile
 ! =======================
 ! =========  BD_ContinuousStateType  =======
@@ -207,7 +207,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NdIndx      !< Index into BldMotion mesh (to number the nodes for output without using collocated nodes) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NdIndxInverse      !< Index from BldMotion mesh to unique nodes (to number the nodes for output without using collocated nodes) [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: OutNd2NdElem      !< To go from an output node number to a node/elem pair [-]
-    CHARACTER(20)  :: OutFmt = ''      !< Format specifier [-]
+    CHARACTER(20)  :: OutFmt      !< Format specifier [-]
     LOGICAL  :: UsePitchAct = .false.      !< Whether to use a pitch actuator inside BeamDyn [(flag)]
     REAL(ReKi)  :: pitchJ = 0.0_ReKi      !< Pitch actuator inertia [(kg-m^2)]
     REAL(ReKi)  :: pitchK = 0.0_ReKi      !< Pitch actuator stiffness [(kg-m^2/s^2)]

@@ -36,7 +36,7 @@ IMPLICIT NONE
 ! =========  Current_InitInputType  =======
   TYPE, PUBLIC :: Current_InitInputType
     REAL(SiKi)  :: CurrSSV0 = 0.0_R4Ki      !<  [-]
-    CHARACTER(80)  :: CurrSSDirChr = ''      !<  [-]
+    CHARACTER(80)  :: CurrSSDirChr      !<  [-]
     REAL(SiKi)  :: CurrSSDir = 0.0_R4Ki      !<  [-]
     REAL(SiKi)  :: CurrNSRef = 0.0_R4Ki      !<  [-]
     REAL(SiKi)  :: CurrNSV0 = 0.0_R4Ki      !<  [-]
@@ -47,7 +47,7 @@ IMPLICIT NONE
     REAL(SiKi)  :: WtrDpth = 0.0_R4Ki      !<  [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinGridzi      !<  [-]
     INTEGER(IntKi)  :: NGridPts = 0_IntKi      !<  [-]
-    CHARACTER(1024)  :: DirRoot = ''      !<  [-]
+    CHARACTER(1024)  :: DirRoot      !<  [-]
   END TYPE Current_InitInputType
 ! =======================
 ! =========  Current_InitOutputType  =======

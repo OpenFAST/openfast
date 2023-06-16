@@ -35,7 +35,7 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  StC_InputFile  =======
   TYPE, PUBLIC :: StC_InputFile
-    CHARACTER(1024)  :: StCFileName = ''      !< Name of the input file; remove if there is no file [-]
+    CHARACTER(1024)  :: StCFileName      !< Name of the input file; remove if there is no file [-]
     LOGICAL  :: Echo = .false.      !< Echo input file to echo file [-]
     INTEGER(IntKi)  :: StC_CMODE = 0_IntKi      !< control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;}  [-]
     INTEGER(IntKi)  :: StC_SA_MODE = 0_IntKi      !< Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force}  [-]
@@ -46,7 +46,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: StC_X_DSP = 0.0_ReKi      !< StC_X initial displacement [m]
     REAL(ReKi)  :: StC_Y_DSP = 0.0_ReKi      !< StC_Y initial displacement [m]
     REAL(ReKi)  :: StC_Z_DSP = 0.0_ReKi      !< StC_Z initial displacement [m]
-    Character(10)  :: StC_Z_PreLdC = ''      !< StC_Z spring preload [N]
+    Character(10)  :: StC_Z_PreLdC      !< StC_Z spring preload [N]
     REAL(ReKi)  :: StC_X_M = 0.0_ReKi      !< StC X mass [kg]
     REAL(ReKi)  :: StC_Y_M = 0.0_ReKi      !< StC Y mass [kg]
     REAL(ReKi)  :: StC_Z_M = 0.0_ReKi      !< StC Z mass [kg]
@@ -95,18 +95,18 @@ IMPLICIT NONE
     REAL(ReKi)  :: rho_Y = 0.0_ReKi      !< Side-Side TLCD liquid density [kg/m^3]
     LOGICAL  :: USE_F_TBL = .false.      !< use spring force from user-defined table (flag) [-]
     INTEGER(IntKi)  :: NKInpSt = 0_IntKi      !< Number of input spring force rows in table [-]
-    CHARACTER(1024)  :: StC_F_TBL_FILE = ''      !< user-defined spring table filename [-]
+    CHARACTER(1024)  :: StC_F_TBL_FILE      !< user-defined spring table filename [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_TBL      !< user-defined spring force [N]
     INTEGER(IntKi)  :: PrescribedForcesCoordSys = 0_IntKi      !< Prescribed forces coordinate system {0: global; 1: local} [-]
-    CHARACTER(1024)  :: PrescribedForcesFile = ''      !< Prescribed force time-series filename [-]
+    CHARACTER(1024)  :: PrescribedForcesFile      !< Prescribed force time-series filename [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: StC_PrescribedForce      !< StC prescribed force time-series info [(s,N,N-m)]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: StC_CChan      !< StC control chan to use -- one per instance [-]
   END TYPE StC_InputFile
 ! =======================
 ! =========  StC_InitInputType  =======
   TYPE, PUBLIC :: StC_InitInputType
-    CHARACTER(1024)  :: InputFile = ''      !< Name of the input file; remove if there is no file [-]
-    CHARACTER(1024)  :: RootName = ''      !< RootName for writing output files [-]
+    CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
+    CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     REAL(ReKi) , DIMENSION(1:3)  :: Gravity = 0.0_ReKi      !< Gravitational acceleration vector [m/s^2]
     INTEGER(IntKi)  :: NumMeshPts = 0_IntKi      !< Number of mesh points [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: InitRefPos      !< X-Y-Z reference position of point: i.e. each blade root (3 x NumBlades) [m]
@@ -180,7 +180,7 @@ IMPLICIT NONE
 ! =========  StC_ParameterType  =======
   TYPE, PUBLIC :: StC_ParameterType
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for cont. state integration & disc. state update [seconds]
-    CHARACTER(1024)  :: RootName = ''      !< RootName for writing output files [-]
+    CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     INTEGER(IntKi)  :: StC_DOF_MODE = 0_IntKi      !< DOF mode {0: NO StC_DOF; 1: StC_X_DOF and StC_Y_DOF; 2: StC_XY_DOF; 3: TLCD; 4: Prescribed force/moment time series} [-]
     LOGICAL  :: StC_X_DOF = .false.      !< DOF on or off [-]
     LOGICAL  :: StC_Y_DOF = .false.      !< DOF on or off [-]

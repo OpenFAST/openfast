@@ -36,7 +36,7 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  SS_Exc_InitInputType  =======
   TYPE, PUBLIC :: SS_Exc_InitInputType
-    CHARACTER(1024)  :: InputFile = ''      !< Name of the input file [-]
+    CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< Number of WAMIT bodies for this State Space model [-]
     INTEGER(IntKi)  :: ExctnDisp = 0_IntKi      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
     REAL(ReKi)  :: WaveDir = 0.0_ReKi      !< Wave direction [rad]

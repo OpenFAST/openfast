@@ -57,7 +57,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: ExctnCutOff = 0.0_ReKi      !< Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0]  [Hz]
     REAL(DbKi)  :: RdtnTMax = 0.0_R8Ki      !<  [-]
     REAL(ReKi)  :: WaveDir = 0.0_ReKi      !<  [-]
-    CHARACTER(1024)  :: WAMITFile = ''      !<  [-]
+    CHARACTER(1024)  :: WAMITFile      !<  [-]
     TYPE(Conv_Rdtn_InitInputType)  :: Conv_Rdtn      !<  [-]
     REAL(ReKi)  :: Rhoxg = 0.0_ReKi      !<  [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !<  [-]

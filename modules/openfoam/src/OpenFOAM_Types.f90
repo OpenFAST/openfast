@@ -49,14 +49,14 @@ IMPLICIT NONE
   END TYPE OpFM_InitInputType_C
   TYPE, PUBLIC :: OpFM_InitInputType
     TYPE( OpFM_InitInputType_C ) :: C_obj
-    INTEGER(IntKi)  :: NumActForcePtsBlade      !< number of actuator line force points in blade -- from extern (used to linearly interpolate along AD15 blades) [-]
-    INTEGER(IntKi)  :: NumActForcePtsTower      !< number of actuator line force points in tower -- from extern (used to linearly interpolate along AD15 tower) [-]
+    INTEGER(IntKi)  :: NumActForcePtsBlade = 0_IntKi      !< number of actuator line force points in blade -- from extern (used to linearly interpolate along AD15 blades) [-]
+    INTEGER(IntKi)  :: NumActForcePtsTower = 0_IntKi      !< number of actuator line force points in tower -- from extern (used to linearly interpolate along AD15 tower) [-]
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: StructBldRNodes => NULL()      !< Radius to structural model analysis nodes relative to hub [-]
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: StructTwrHNodes => NULL()      !< Location of tower nodes from AD15 (relative to the tower rigid base height) [-]
-    REAL(ReKi)  :: BladeLength      !< Blade length [meters]
-    REAL(ReKi)  :: TowerHeight      !< Tower Height [meters]
-    REAL(ReKi)  :: TowerBaseHeight      !< Tower Base Height [meters]
-    INTEGER(IntKi)  :: NodeClusterType      !< Node clustering (0 - Uniform, 1 - Non-uniform clustered towards tip) [-]
+    REAL(ReKi)  :: BladeLength = 0.0_ReKi      !< Blade length [meters]
+    REAL(ReKi)  :: TowerHeight = 0.0_ReKi      !< Tower Height [meters]
+    REAL(ReKi)  :: TowerBaseHeight = 0.0_ReKi      !< Tower Base Height [meters]
+    INTEGER(IntKi)  :: NodeClusterType = 0_IntKi      !< Node clustering (0 - Uniform, 1 - Non-uniform clustered towards tip) [-]
   END TYPE OpFM_InitInputType
 ! =======================
 ! =========  OpFM_InitOutputType_C  =======
@@ -107,19 +107,19 @@ IMPLICIT NONE
   END TYPE OpFM_ParameterType_C
   TYPE, PUBLIC :: OpFM_ParameterType
     TYPE( OpFM_ParameterType_C ) :: C_obj
-    REAL(ReKi)  :: AirDens      !< Air density for normalization of loads sent to OpenFOAM [kg/m^3]
-    INTEGER(IntKi)  :: NumBl      !< Number of blades [-]
-    INTEGER(IntKi)  :: NMappings      !< Number of mappings [-]
-    INTEGER(IntKi)  :: NnodesVel      !< number of velocity nodes on FAST v8-OpenFOAM interface [-]
-    INTEGER(IntKi)  :: NnodesForce      !< number of force nodes on FAST v8-OpenFOAM interface [-]
-    INTEGER(IntKi)  :: NnodesForceBlade      !< number of force nodes on FAST v8-OpenFOAM interface [-]
-    INTEGER(IntKi)  :: NnodesForceTower      !< number of force nodes on FAST v8-OpenFOAM interface [-]
+    REAL(ReKi)  :: AirDens = 0.0_ReKi      !< Air density for normalization of loads sent to OpenFOAM [kg/m^3]
+    INTEGER(IntKi)  :: NumBl = 0_IntKi      !< Number of blades [-]
+    INTEGER(IntKi)  :: NMappings = 0_IntKi      !< Number of mappings [-]
+    INTEGER(IntKi)  :: NnodesVel = 0_IntKi      !< number of velocity nodes on FAST v8-OpenFOAM interface [-]
+    INTEGER(IntKi)  :: NnodesForce = 0_IntKi      !< number of force nodes on FAST v8-OpenFOAM interface [-]
+    INTEGER(IntKi)  :: NnodesForceBlade = 0_IntKi      !< number of force nodes on FAST v8-OpenFOAM interface [-]
+    INTEGER(IntKi)  :: NnodesForceTower = 0_IntKi      !< number of force nodes on FAST v8-OpenFOAM interface [-]
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: forceBldRnodes => NULL()      !< Radial location of force nodes [-]
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: forceTwrHnodes => NULL()      !< Vertical location of force nodes [-]
-    REAL(ReKi)  :: BladeLength      !< Blade length (same for all blades) [m]
-    REAL(ReKi)  :: TowerHeight      !< Tower height [m]
-    REAL(ReKi)  :: TowerBaseHeight      !< Tower base height [m]
-    INTEGER(IntKi)  :: NodeClusterType      !< Node clustering (0 - Uniform, 1 - Non-uniform clustered towards tip) [-]
+    REAL(ReKi)  :: BladeLength = 0.0_ReKi      !< Blade length (same for all blades) [m]
+    REAL(ReKi)  :: TowerHeight = 0.0_ReKi      !< Tower height [m]
+    REAL(ReKi)  :: TowerBaseHeight = 0.0_ReKi      !< Tower base height [m]
+    INTEGER(IntKi)  :: NodeClusterType = 0_IntKi      !< Node clustering (0 - Uniform, 1 - Non-uniform clustered towards tip) [-]
   END TYPE OpFM_ParameterType
 ! =======================
 ! =========  OpFM_InputType_C  =======

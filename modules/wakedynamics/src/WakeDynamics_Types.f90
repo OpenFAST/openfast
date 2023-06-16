@@ -80,7 +80,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: WD_InitInputType
     TYPE(WD_InputFileType)  :: InputFileData      !< FAST.Farm input-file data for wake dynamics [-]
     INTEGER(IntKi)  :: TurbNum = 0      !< Turbine ID number (start with 1; end with number of turbines) [-]
-    CHARACTER(1024)  :: OutFileRoot = ''      !< The root name derived from the primary FAST.Farm input file [-]
+    CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
   END TYPE WD_InitInputType
 ! =======================
 ! =========  WD_InitOutputType  =======
@@ -190,8 +190,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: FilterInit = 0_IntKi      !< Switch to filter the initial wake plane deficit and select the number of grid points for the filter {0: no filter, 1: filter of size 1} or DEFAULT [DEFAULT=0: if Mod_Wake is 1 or 3, or DEFAULT=2: if Mod_Wwake is 2] (switch) [-]
     REAL(ReKi)  :: k_vCurl = 0.0_ReKi      !< Calibrated parameter for the eddy viscosity in curled-wake model [>=0.0] [-]
     LOGICAL  :: OutAllPlanes = .false.      !< Output all planes [-]
-    CHARACTER(1024)  :: OutFileRoot = ''      !< The root name derived from the primary FAST.Farm input file [-]
-    CHARACTER(1024)  :: OutFileVTKDir = ''      !< The parent directory for all VTK files written by WD [-]
+    CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
+    CHARACTER(1024)  :: OutFileVTKDir      !< The parent directory for all VTK files written by WD [-]
     INTEGER(IntKi)  :: TurbNum = 0      !< Turbine ID number (start with 1; end with number of turbines) [-]
     LOGICAL  :: WAT = .false.      !< Switch for turning on and off wake-added turbulence [-]
     REAL(ReKi)  :: WAT_k_Def = 0.0_ReKi      !< Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6] [-]

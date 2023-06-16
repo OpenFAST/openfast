@@ -42,7 +42,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: SC_InitInputType
     TYPE( SC_InitInputType_C ) :: C_obj
     INTEGER(IntKi)  :: nTurbines = 0_IntKi      !< Number of turbines in the simulation [-]
-    CHARACTER(1024)  :: DLL_FileName = ''      !< Name of the shared library which the super controller logic [-]
+    CHARACTER(1024)  :: DLL_FileName      !< Name of the shared library which the super controller logic [-]
   END TYPE SC_InitInputType
 ! =======================
 ! =========  SC_InitOutputType_C  =======

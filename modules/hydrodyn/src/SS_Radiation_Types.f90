@@ -35,7 +35,7 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  SS_Rad_InitInputType  =======
   TYPE, PUBLIC :: SS_Rad_InitInputType
-    CHARACTER(1024)  :: InputFile = ''      !< Name of the input file [-]
+    CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: enabledDOFs      !< Vector with enable platf. DOFs [(m/s]
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< Number of WAMIT bodies for this State Space model [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: PtfmRefztRot      !< The rotation about zt of the body reference frame(s) from xt/yt [radians]

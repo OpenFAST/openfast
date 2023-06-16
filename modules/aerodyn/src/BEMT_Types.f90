@@ -76,7 +76,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: yawCorrFactor = 0.0_ReKi      !< constant used in Pitt/Peters skewed wake model (default is 15*pi/32) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: UAOff_innerNode      !< Last node on each blade where UA should be turned off based on span location from blade root (0 if always on) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: UAOff_outerNode      !< First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on) [-]
-    CHARACTER(1024)  :: RootName = ''      !< RootName for writing output files [-]
+    CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     LOGICAL  :: SumPrint = .false.      !< logical flag indicating whether to use UnsteadyAero [-]
     INTEGER(IntKi)  :: BEM_Mod = 0_IntKi      !< BEM Model 0=OpenFAST 2=Envision  [-]
   END TYPE BEMT_InitInputType

@@ -35,11 +35,11 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  IceFloe_InitInputType  =======
   TYPE, PUBLIC :: IceFloe_InitInputType
-    CHARACTER(1024)  :: InputFile = ''      !< Name of the input file [-]
+    CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
     REAL(ReKi)  :: simLength = 0.0_ReKi      !< Duration of simulation [sec]
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Offset between still-water level and mean sea level [m]
     REAL(ReKi)  :: gravity = 0.0_ReKi      !< Gravitational acceleration [m/s^2]
-    character(1024)  :: RootName = ''      !< Output file root name [-]
+    character(1024)  :: RootName      !< Output file root name [-]
   END TYPE IceFloe_InitInputType
 ! =======================
 ! =========  IceFloe_InitOutputType  =======

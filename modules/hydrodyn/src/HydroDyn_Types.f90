@@ -77,16 +77,16 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< The user-requested output channel labels for this modules. This should really be dimensioned with MaxOutPts [-]
     LOGICAL  :: HDSum = .false.      !< Generate a HydroDyn summary file [T/F] [-]
     INTEGER(IntKi)  :: UnSum = 0_IntKi      !< File unit for the HydroDyn summary file [-1 = no summary file] [-]
-    CHARACTER(20)  :: OutFmt = ''      !< Output format for numerical results [-]
-    CHARACTER(20)  :: OutSFmt = ''      !< Output format for header strings [-]
+    CHARACTER(20)  :: OutFmt      !< Output format for numerical results [-]
+    CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
   END TYPE HydroDyn_InputFile
 ! =======================
 ! =========  HydroDyn_InitInputType  =======
   TYPE, PUBLIC :: HydroDyn_InitInputType
-    CHARACTER(1024)  :: InputFile = ''      !< Supplied by Driver:  full path and filename for the HydroDyn module [-]
+    CHARACTER(1024)  :: InputFile      !< Supplied by Driver:  full path and filename for the HydroDyn module [-]
     LOGICAL  :: UseInputFile = .TRUE.      !< Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller [-]
     TYPE(FileInfoType)  :: PassedFileData      !< If we don't use the input file, pass everything through this [-]
-    CHARACTER(1024)  :: OutRootName = ''      !< Supplied by Driver:  The name of the root file (without extension) including the full path [-]
+    CHARACTER(1024)  :: OutRootName      !< Supplied by Driver:  The name of the root file (without extension) including the full path [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
     REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density from the driver; may be overwritten                       [(kg/m^3)]
@@ -205,9 +205,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of HydroDyn module-level outputs (not the total number including sub-modules [-]
     INTEGER(IntKi)  :: NumTotalOuts = 0_IntKi      !< Number of all requested outputs including sub-modules [-]
     INTEGER(IntKi)  :: OutSwtch = 0_IntKi      !< Output requested channels to: [1=Hydrodyn.out 2=GlueCode.out  3=both files] [-]
-    CHARACTER(20)  :: OutFmt = ''      !< Output format for numerical results [-]
-    CHARACTER(20)  :: OutSFmt = ''      !< Output format for header strings [-]
-    CHARACTER(ChanLen)  :: Delim = ''      !< Delimiter string for outputs, defaults to tab-delimiters [-]
+    CHARACTER(20)  :: OutFmt      !< Output format for numerical results [-]
+    CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
+    CHARACTER(ChanLen)  :: Delim      !< Delimiter string for outputs, defaults to tab-delimiters [-]
     INTEGER(IntKi)  :: UnOutFile = 0_IntKi      !< File unit for the HydroDyn outputs [-]
     INTEGER(IntKi)  :: OutDec = 0_IntKi      !< Write every OutDec time steps [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]

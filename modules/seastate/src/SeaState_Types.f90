@@ -64,16 +64,16 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< The number of outputs for this module as requested in the input file [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< The user-requested output channel labels for this modules. This should really be dimensioned with MaxOutPts [-]
     LOGICAL  :: SeaStSum = .false.      !< Generate a SeaState summary file [T/F] [-]
-    CHARACTER(20)  :: OutFmt = ''      !< Output format for numerical results [-]
-    CHARACTER(20)  :: OutSFmt = ''      !< Output format for header strings [-]
+    CHARACTER(20)  :: OutFmt      !< Output format for numerical results [-]
+    CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
   END TYPE SeaSt_InputFile
 ! =======================
 ! =========  SeaSt_InitInputType  =======
   TYPE, PUBLIC :: SeaSt_InitInputType
-    CHARACTER(1024)  :: InputFile = ''      !< Supplied by Driver:  full path and filename for the SeaState module [-]
+    CHARACTER(1024)  :: InputFile      !< Supplied by Driver:  full path and filename for the SeaState module [-]
     LOGICAL  :: UseInputFile = .TRUE.      !< Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller [-]
     TYPE(FileInfoType)  :: PassedFileData      !< If we don't use the input file, pass everything through this [-]
-    CHARACTER(1024)  :: OutRootName = ''      !< Supplied by Driver:  The name of the root file (without extension) including the full path [-]
+    CHARACTER(1024)  :: OutRootName      !< Supplied by Driver:  The name of the root file (without extension) including the full path [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
     REAL(ReKi)  :: defWtrDens = 0.0_ReKi      !< Default water density from the driver; may be overwritten                       [(kg/m^3)]
     REAL(ReKi)  :: defWtrDpth = 0.0_ReKi      !< Default water depth from the driver; may be overwritten                         [m]
@@ -200,9 +200,9 @@ IMPLICIT NONE
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !<  [-]
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of SeaState module-level outputs (not the total number including sub-modules [-]
     INTEGER(IntKi)  :: OutSwtch = 0_IntKi      !< Output requested channels to: [1=SeaState.out 2=GlueCode.out  3=both files] [-]
-    CHARACTER(20)  :: OutFmt = ''      !< Output format for numerical results [-]
-    CHARACTER(20)  :: OutSFmt = ''      !< Output format for header strings [-]
-    CHARACTER(1)  :: Delim = ''      !< Delimiter string for outputs, defaults to space [-]
+    CHARACTER(20)  :: OutFmt      !< Output format for numerical results [-]
+    CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
+    CHARACTER(1)  :: Delim      !< Delimiter string for outputs, defaults to space [-]
     INTEGER(IntKi)  :: UnOutFile = 0_IntKi      !< File unit for the SeaState outputs [-]
     INTEGER(IntKi)  :: OutDec = 0_IntKi      !< Write every OutDec time steps [-]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]

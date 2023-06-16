@@ -62,7 +62,7 @@ IMPLICIT NONE
     LOGICAL  :: SumPrint = .false.      !< Print summary data to <RootName>.fsm? [-]
     INTEGER(IntKi)  :: OutFile = 0_IntKi      !< Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both) [-]
     LOGICAL  :: TabDelim = .false.      !< Use tab delimiters in text tabular output file? [-]
-    CHARACTER(20)  :: OutFmt = ''      !< Format used for text tabular output (except time) [-]
+    CHARACTER(20)  :: OutFmt      !< Format used for text tabular output (except time) [-]
     REAL(DbKi)  :: Tstart = 0.0_R8Ki      !< Time to start module's tabular output [s]
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
@@ -70,8 +70,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  FEAM_InitInputType  =======
   TYPE, PUBLIC :: FEAM_InitInputType
-    CHARACTER(1024)  :: InputFile = ''      !< Name of the input file [-]
-    CHARACTER(1024)  :: RootName = ''      !< RootName for writing output files [-]
+    CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
+    CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     REAL(ReKi) , DIMENSION(1:6)  :: PtfmInit = 0.0_ReKi      !< Platform Initial Position [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !<  [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveAcc0      !<  [-]
@@ -203,9 +203,9 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3,1:3,1:4)  :: PPA = 0.0_ReKi      !< Internal [-]
     REAL(ReKi)  :: PtfmRefzt = 0.0_ReKi      !< Platform reference [-]
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of parameters in the output list (number of outputs requested) [-]
-    CHARACTER(1024)  :: RootName = ''      !< RootName for writing output files [-]
+    CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
-    CHARACTER(1)  :: Delim = ''      !< Column delimiter for output text files [-]
+    CHARACTER(1)  :: Delim      !< Column delimiter for output text files [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: GLUZR      !< Line coordinate & direction cosine [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: GTZER      !< Line tension [-]
   END TYPE FEAM_ParameterType

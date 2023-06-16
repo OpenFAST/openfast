@@ -57,7 +57,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumTurbines = 0_IntKi      !< Number of wind turbines in the farm [>=1] [-]
     INTEGER(IntKi)  :: NumRadii = 0_IntKi      !< Number of radii in the radial finite-difference grid  [>=2] [-]
     INTEGER(IntKi)  :: NumPlanes = 0_IntKi      !< Number of wake planes downwind of the rotor where the wake is propagated [>=2] [-]
-    CHARACTER(1024)  :: WindFilePath = ''      !< Path name to the Root folder containing the wind data files from ABLSolver precursor [-]
+    CHARACTER(1024)  :: WindFilePath      !< Path name to the Root folder containing the wind data files from ABLSolver precursor [-]
     LOGICAL  :: WrDisWind = .false.      !< Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? [-]
     INTEGER(IntKi)  :: NOutDisWindXY = 0_IntKi      !< Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk [0 to 9] [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OutDisWindZ      !< Z coordinates of XY planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXY] [meters]
@@ -70,7 +70,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Mod_Meander = 0_IntKi      !< Spatial filter model for wake meandering {1: uniform, 2: truncated jinc, 3: windowed jinc} [DEFAULT=2] [-]
     REAL(ReKi)  :: C_Meander = 0.0_ReKi      !< Calibrated parameter for wake meandering [>=1.0] [DEFAULT=1.9] [-]
     INTEGER(IntKi)  :: Mod_AmbWind = 0_IntKi      !< Ambient wind model {1: high-fidelity precursor in VTK format, 2: InflowWind module} [-]
-    CHARACTER(1024)  :: InflowFile = ''      !< Name of file containing InflowWind module input parameters [-]
+    CHARACTER(1024)  :: InflowFile      !< Name of file containing InflowWind module input parameters [-]
     REAL(DbKi)  :: dt_high = 0.0_R8Ki      !< High-resolution (FAST) time step [s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: X0_high      !< X-component of the origin of the high-resolution spatial domain for each turbine [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Y0_high      !< Y-component of the origin of the high-resolution spatial domain for each turbine [m]
@@ -99,7 +99,7 @@ IMPLICIT NONE
     TYPE(AWAE_InputFileType)  :: InputFileData      !< FAST.Farm input-file data for AWAE module [-]
     INTEGER(IntKi)  :: n_high_low = 0_IntKi      !< Number of high-resolution time steps per low [-]
     INTEGER(IntKi)  :: NumDT = 0_IntKi      !< Number of low-resolution (FAST.Farm driver/glue code) time steps [-]
-    CHARACTER(1024)  :: OutFileRoot = ''      !< The root name derived from the primary FAST.Farm input file [-]
+    CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
   END TYPE AWAE_InitInputType
 ! =======================
 ! =========  AWAE_InitOutputType  =======
@@ -172,7 +172,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  AWAE_ParameterType  =======
   TYPE, PUBLIC :: AWAE_ParameterType
-    CHARACTER(1024)  :: WindFilePath = ''      !< Path name to the Root folder containing the wind data files from ABLSolver precursor [-]
+    CHARACTER(1024)  :: WindFilePath      !< Path name to the Root folder containing the wind data files from ABLSolver precursor [-]
     INTEGER(IntKi)  :: NumTurbines = 0_IntKi      !< Number of wind turbines in the farm [>=1] [-]
     INTEGER(IntKi)  :: NumRadii = 0_IntKi      !< Number of radii in the radial finite-difference grid  [>=2] [-]
     INTEGER(IntKi)  :: NumPlanes = 0_IntKi      !< Number of wake planes downwind of the rotor where the wake is propagated [>=2] [-]
@@ -221,8 +221,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OutDisWindX      !< X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindYZ] [meters]
     INTEGER(IntKi)  :: NOutDisWindXZ = 0_IntKi      !< Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9] [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OutDisWindY      !< Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ] [meters]
-    CHARACTER(1024)  :: OutFileRoot = ''      !< The root name derived from the primary FAST.Farm input file [-]
-    CHARACTER(1024)  :: OutFileVTKRoot = ''      !< The root name for VTK outputs [-]
+    CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
+    CHARACTER(1024)  :: OutFileVTKRoot      !< The root name for VTK outputs [-]
     INTEGER(IntKi)  :: VTK_tWidth = 0_IntKi      !< Number of characters for VTK timestamp outputs [-]
   END TYPE AWAE_ParameterType
 ! =======================

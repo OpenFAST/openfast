@@ -251,7 +251,7 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
                     w << "= .false. ";
                     break;
                 case DataType::Tag::Character:
-                    w << "= '' ";
+                    // w << "= '' "; // This breaks MAP (TODO)
                     break;
                 case DataType::Tag::Derived:
                     break;

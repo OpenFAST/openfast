@@ -36,10 +36,10 @@ IMPLICIT NONE
 ! =========  Conv_Rdtn_InitInputType  =======
   TYPE, PUBLIC :: Conv_Rdtn_InitInputType
     REAL(DbKi)  :: RdtnDT = 0.0_R8Ki      !<  [-]
-    CHARACTER(80)  :: RdtnDTChr = '' 
+    CHARACTER(80)  :: RdtnDTChr 
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
     REAL(ReKi)  :: HighFreq = 0.0_ReKi      !<  [-]
-    CHARACTER(1024)  :: WAMITFile = ''      !<  [-]
+    CHARACTER(1024)  :: WAMITFile      !<  [-]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: HdroAddMs      !<  [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: HdroFreq      !<  [-]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: HdroDmpng      !<  [-]

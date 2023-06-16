@@ -35,8 +35,8 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  Orca_InitInputType  =======
   TYPE, PUBLIC :: Orca_InitInputType
-    CHARACTER(1024)  :: InputFile = ''      !< Name of the input file; remove if there is no file [-]
-    CHARACTER(1024)  :: RootName = ''      !< RootName for writing output files (echo file) [-]
+    CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
+    CHARACTER(1024)  :: RootName      !< RootName for writing output files (echo file) [-]
     REAL(ReKi)  :: TMax = 0.0_ReKi      !< Maximum Time [seconds]
   END TYPE Orca_InitInputType
 ! =======================
@@ -49,11 +49,11 @@ IMPLICIT NONE
 ! =======================
 ! =========  Orca_InputFile  =======
   TYPE, PUBLIC :: Orca_InputFile
-    CHARACTER(1024)  :: DLL_FileName = ''      !< Name of the DLL file [-]
-    CHARACTER(1024)  :: DLL_InitProcName = ''      !< Name of the DLL procedure to call during initialisation [-]
-    CHARACTER(1024)  :: DLL_CalcProcName = ''      !< Name of the DLL procedure to call during CalcOutput [-]
-    CHARACTER(1024)  :: DLL_EndProcName = ''      !< Name of the DLL procedure to call during End [-]
-    CHARACTER(1024)  :: DirRoot = ''      !< Directory and rootname of simulation input file [-]
+    CHARACTER(1024)  :: DLL_FileName      !< Name of the DLL file [-]
+    CHARACTER(1024)  :: DLL_InitProcName      !< Name of the DLL procedure to call during initialisation [-]
+    CHARACTER(1024)  :: DLL_CalcProcName      !< Name of the DLL procedure to call during CalcOutput [-]
+    CHARACTER(1024)  :: DLL_EndProcName      !< Name of the DLL procedure to call during End [-]
+    CHARACTER(1024)  :: DirRoot      !< Directory and rootname of simulation input file [-]
   END TYPE Orca_InputFile
 ! =======================
 ! =========  Orca_OtherStateType  =======
@@ -74,7 +74,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: Orca_ParameterType
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
     TYPE(DLL_Type)  :: DLL_Orca      !< Info for the OrcaFlex DLL [-]
-    CHARACTER(1024)  :: SimNamePath = ''      !< Path with simulation rootname with null end character for passing to C [-]
+    CHARACTER(1024)  :: SimNamePath      !< Path with simulation rootname with null end character for passing to C [-]
     INTEGER(IntKi)  :: SimNamePathLen = 0_IntKi      !< Length of SimNamePath (including null char) [-]
     INTEGER(IntKi)  :: NumOuts = 0      !< Number of parameters in the output list (number of outputs requested) [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]

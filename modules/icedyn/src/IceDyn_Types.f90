@@ -99,8 +99,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  IceD_InitInputType  =======
   TYPE, PUBLIC :: IceD_InitInputType
-    CHARACTER(1024)  :: InputFile = ''      !< Name of the input file; remove if there is no file [-]
-    CHARACTER(1024)  :: RootName = ''      !< Root name of the output file [-]
+    CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
+    CHARACTER(1024)  :: RootName      !< Root name of the output file [-]
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Offset between still-water level and mean sea level [m]
     REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Density of water [kg/m^3]
     REAL(ReKi)  :: gravity = 0.0_ReKi      !< Gravitational acceleration [m/s^2]
@@ -169,7 +169,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: TmStep = 0_IntKi      !< Total time step [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutName      !< Names of all requested output parameters [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutUnit      !< Units of all requested output parameters [-]
-    CHARACTER(1024)  :: RootName = ''      !< Rootname [-]
+    CHARACTER(1024)  :: RootName      !< Rootname [-]
     REAL(ReKi)  :: tm1a = 0.0_ReKi      !< Time for the maximum force to be reached for model 1a [s]
     REAL(ReKi)  :: tm1b = 0.0_ReKi      !< Time for the maximum force to be reached for model 1b [s]
     REAL(ReKi)  :: tm1c = 0.0_ReKi      !< Time for the maximum force to be reached for model 1c [s]

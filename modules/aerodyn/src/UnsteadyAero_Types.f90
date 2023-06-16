@@ -44,7 +44,7 @@ IMPLICIT NONE
 ! =========  UA_InitInputType  =======
   TYPE, PUBLIC :: UA_InitInputType
     REAL(DbKi)  :: dt = 0.0_R8Ki      !< time step [s]
-    CHARACTER(1024)  :: OutRootName = ''      !< Supplied by Driver:  The name of the root file (without extension) including the full path [-]
+    CHARACTER(1024)  :: OutRootName      !< Supplied by Driver:  The name of the root file (without extension) including the full path [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: c      !< Chord length at node [m]
     INTEGER(IntKi)  :: numBlades = 0_IntKi      !< Number nodes of all blades [-]
     INTEGER(IntKi)  :: nNodesPerBlade = 0_IntKi      !< Number nodes per blades [-]
@@ -214,9 +214,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: a_s = 0.0_ReKi      !< speed of sound [m/s]
     INTEGER(IntKi)  :: NumOuts = 0      !< Number of outputs [-]
     INTEGER(IntKi)  :: OutSwtch = 0_IntKi      !< Output requested channels to: [1=Unsteady.out 2=GlueCode.out  3=both files] [-]
-    CHARACTER(20)  :: OutFmt = ''      !< Output format for numerical results [-]
-    CHARACTER(20)  :: OutSFmt = ''      !< Output format for header strings [-]
-    CHARACTER(1)  :: Delim = ''      !< Delimiter string for outputs, defaults to tab-delimiters [-]
+    CHARACTER(20)  :: OutFmt      !< Output format for numerical results [-]
+    CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
+    CHARACTER(1)  :: Delim      !< Delimiter string for outputs, defaults to tab-delimiters [-]
     INTEGER(IntKi)  :: UnOutFile = 0      !< File unit for the UnsteadyAero outputs [-]
     LOGICAL  :: ShedEffect = .false.      !< Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods) [-]
     INTEGER(IntKi)  :: lin_nx = 0      !< Number of continuous states for linearization [-]
