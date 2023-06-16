@@ -809,7 +809,7 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          m%AllOuts( TipRDxb(K) ) = DOT_PRODUCT( m%RtHS%AngPosHM(:,K,p%TipNode), m%CoordSys%j1(K,         :) )*R2D
          m%AllOuts( TipRDyb(K) ) = DOT_PRODUCT( m%RtHS%AngPosHM(:,K,p%TipNode), m%CoordSys%j2(K,         :) )*R2D
          ! There is no sense computing AllOuts( TipRDzc(K) ) here since it is always zero for FAST simulation results.
-         IF ( p%MHK == 2 ) THEN
+         IF ( p%MHK == MHK_Floating ) THEN
             IF ( rOSTipzn < 0.0 )  THEN   ! Tip of blade K is above the yaw bearing.
                m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn + rOSTipzn*rOSTipzn ) ! Absolute distance from the tower top / yaw bearing to the tip of blade 1.
             ELSE                          ! Tip of blade K is below the yaw bearing.
@@ -3462,7 +3462,7 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
    p%DT        = InputFileData%DT
    p%OverHang  = InputFileData%OverHang
    p%ShftGagL  = InputFileData%ShftGagL
-   IF ( InitInp%MHK == 1 ) THEN
+   IF ( InitInp%MHK == MHK_FixedBottom ) THEN
       p%TowerHt   = InputFileData%TowerHt - InitInp%WtrDpth
       p%TowerBsHt = InputFileData%TowerBsHt - InitInp%WtrDpth
       p%PtfmRefzt = InputFileData%PtfmRefzt - InitInp%WtrDpth
@@ -3551,7 +3551,7 @@ SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
    p%BldFlexL  = p%TipRad    - p%HubRad                                            ! Length of the flexible portion of the blade.
    if (p%BD4Blades) p%BldFlexL = 0.0_ReKi
    
-   IF ( InitInp%MHK == 1 ) THEN
+   IF ( InitInp%MHK == MHK_FixedBottom ) THEN
       p%rZYzt     = InputFileData%PtfmCMzt - InitInp%WtrDpth - p%PtfmRefzt
    ELSE
       p%rZYzt     = InputFileData%PtfmCMzt - p%PtfmRefzt

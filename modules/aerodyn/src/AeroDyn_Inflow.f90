@@ -458,7 +458,7 @@ subroutine ADI_Set_IW_Inputs(p_AD, u_AD, o_AD, u_IfW, hubHeightFirst, errStat, e
       enddo
    endif
    call AD_SetExternalWindPositions(u_AD, o_AD, u_IfW%PositionXYZ, node, errStat, errMsg)
-   if ( p_AD%MHK == 1 .or. p_AD%MHK == 2 ) then
+   if ( p_AD%MHK /= MHK_None ) then
       u_IfW%PositionXYZ(3,:) = u_IfW%PositionXYZ(3,:) + p_AD%WtrDpth
    endif 
 end subroutine ADI_Set_IW_Inputs
@@ -584,7 +584,7 @@ subroutine Init_MeshMap_For_ADI(FED, p, uAD, errStat, errMsg)
          if (y_ED%hasTower) then
             twrHeightAD=uAD%rotors(iWT)%TowerMotion%Position(3,uAD%rotors(iWT)%TowerMotion%nNodes)-uAD%rotors(iWT)%TowerMotion%Position(3,1)
             ! Check tower height
-            if ( p%MHK==2 ) then
+            if ( p%MHK==MHK_Floating ) then
                if (twrHeightAD>0) then
                   errStat=ErrID_Fatal
                   errMsg='First AeroDyn tower height should be larger than last AD tower height for a floating MHK turbine'
@@ -597,9 +597,9 @@ subroutine Init_MeshMap_For_ADI(FED, p, uAD, errStat, errMsg)
             endif
 
             twrHeightAD=uAD%rotors(iWT)%TowerMotion%Position(3,uAD%rotors(iWT)%TowerMotion%nNodes) ! NOTE: assuming start a z=0
-            if ( p%MHK==1 ) then
+            if ( p%MHK==MHK_FixedBottom ) then
                twrHeightAD = twrHeightAD + p%WtrDpth
-            elseif ( p%MHK==2 ) then
+            elseif ( p%MHK==MHK_Floating ) then
                twrHeightAD = abs(twrHeightAD)
             endif
 
@@ -615,13 +615,13 @@ subroutine Init_MeshMap_For_ADI(FED, p, uAD, errStat, errMsg)
             ! Adjust tower position (AeroDyn return values assuming (0,0,0) for tower base
             Pbase = y_ED%TwrPtMesh%Position(:,1)
             Ptop = y_ED%NacelleMotion%Position(:,1)
-            if ( p%MHK==2 ) then
+            if ( p%MHK==MHK_Floating ) then
                DeltaP = Pbase-Ptop
             else
                DeltaP = Ptop-Pbase
             endif
             do i = 1, uAD%rotors(iWT)%TowerMotion%nNodes
-               if ( p%MHK==1 ) then
+               if ( p%MHK==MHK_FixedBottom ) then
                   zBar = (uAD%rotors(iWT)%TowerMotion%Position(3,i) + p%WtrDpth) / twrHeight
                else
                   zBar = uAD%rotors(iWT)%TowerMotion%Position(3,i)/twrHeight
