@@ -369,6 +369,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  Morison_MiscVarType  =======
   TYPE, PUBLIC :: Morison_MiscVarType
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DispNodePosHdn      !< Instantaneous displaced position of the line element nodes at time t for hydrodynamic load calculation [(m)]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DispNodePosHst      !< Instantaneous displaced position of the line element nodes at time t for hydrostatic and other load calcuation [(m)]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: FV      !< Fluid velocity at line element node at time t, which may not correspond to the WaveTime array of times [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: FA      !< Fluid acceleration at line element node at time t, which may not correspond to the WaveTime array of times [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: FAMCF      !< Fluid acceleration at line element node at time t, which may not correspond to the WaveTime array of times [-]
@@ -9017,6 +9019,34 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
+IF (ALLOCATED(SrcMiscData%DispNodePosHdn)) THEN
+  i1_l = LBOUND(SrcMiscData%DispNodePosHdn,1)
+  i1_u = UBOUND(SrcMiscData%DispNodePosHdn,1)
+  i2_l = LBOUND(SrcMiscData%DispNodePosHdn,2)
+  i2_u = UBOUND(SrcMiscData%DispNodePosHdn,2)
+  IF (.NOT. ALLOCATED(DstMiscData%DispNodePosHdn)) THEN 
+    ALLOCATE(DstMiscData%DispNodePosHdn(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%DispNodePosHdn.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%DispNodePosHdn = SrcMiscData%DispNodePosHdn
+ENDIF
+IF (ALLOCATED(SrcMiscData%DispNodePosHst)) THEN
+  i1_l = LBOUND(SrcMiscData%DispNodePosHst,1)
+  i1_u = UBOUND(SrcMiscData%DispNodePosHst,1)
+  i2_l = LBOUND(SrcMiscData%DispNodePosHst,2)
+  i2_u = UBOUND(SrcMiscData%DispNodePosHst,2)
+  IF (.NOT. ALLOCATED(DstMiscData%DispNodePosHst)) THEN 
+    ALLOCATE(DstMiscData%DispNodePosHst(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%DispNodePosHst.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%DispNodePosHst = SrcMiscData%DispNodePosHst
+ENDIF
 IF (ALLOCATED(SrcMiscData%FV)) THEN
   i1_l = LBOUND(SrcMiscData%FV,1)
   i1_u = UBOUND(SrcMiscData%FV,1)
@@ -9273,6 +9303,12 @@ ENDIF
   ErrStat = ErrID_None
   ErrMsg  = ""
 
+IF (ALLOCATED(MiscData%DispNodePosHdn)) THEN
+  DEALLOCATE(MiscData%DispNodePosHdn)
+ENDIF
+IF (ALLOCATED(MiscData%DispNodePosHst)) THEN
+  DEALLOCATE(MiscData%DispNodePosHst)
+ENDIF
 IF (ALLOCATED(MiscData%FV)) THEN
   DEALLOCATE(MiscData%FV)
 ENDIF
@@ -9368,6 +9404,16 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
+  Int_BufSz   = Int_BufSz   + 1     ! DispNodePosHdn allocated yes/no
+  IF ( ALLOCATED(InData%DispNodePosHdn) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! DispNodePosHdn upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%DispNodePosHdn)  ! DispNodePosHdn
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! DispNodePosHst allocated yes/no
+  IF ( ALLOCATED(InData%DispNodePosHst) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! DispNodePosHst upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%DispNodePosHst)  ! DispNodePosHst
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! FV allocated yes/no
   IF ( ALLOCATED(InData%FV) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! FV upper/lower bounds for each dimension
@@ -9505,6 +9551,46 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
+  IF ( .NOT. ALLOCATED(InData%DispNodePosHdn) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DispNodePosHdn,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DispNodePosHdn,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DispNodePosHdn,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DispNodePosHdn,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%DispNodePosHdn,2), UBOUND(InData%DispNodePosHdn,2)
+        DO i1 = LBOUND(InData%DispNodePosHdn,1), UBOUND(InData%DispNodePosHdn,1)
+          ReKiBuf(Re_Xferred) = InData%DispNodePosHdn(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%DispNodePosHst) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DispNodePosHst,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DispNodePosHst,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DispNodePosHst,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DispNodePosHst,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%DispNodePosHst,2), UBOUND(InData%DispNodePosHst,2)
+        DO i1 = LBOUND(InData%DispNodePosHst,1), UBOUND(InData%DispNodePosHst,1)
+          ReKiBuf(Re_Xferred) = InData%DispNodePosHst(i1,i2)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%FV) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -9883,6 +9969,52 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! DispNodePosHdn not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%DispNodePosHdn)) DEALLOCATE(OutData%DispNodePosHdn)
+    ALLOCATE(OutData%DispNodePosHdn(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%DispNodePosHdn.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%DispNodePosHdn,2), UBOUND(OutData%DispNodePosHdn,2)
+        DO i1 = LBOUND(OutData%DispNodePosHdn,1), UBOUND(OutData%DispNodePosHdn,1)
+          OutData%DispNodePosHdn(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! DispNodePosHst not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%DispNodePosHst)) DEALLOCATE(OutData%DispNodePosHst)
+    ALLOCATE(OutData%DispNodePosHst(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%DispNodePosHst.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%DispNodePosHst,2), UBOUND(OutData%DispNodePosHst,2)
+        DO i1 = LBOUND(OutData%DispNodePosHst,1), UBOUND(OutData%DispNodePosHst,1)
+          OutData%DispNodePosHst(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
+        END DO
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FV not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
