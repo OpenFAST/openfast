@@ -42,9 +42,9 @@ IMPLICIT NONE
   END TYPE SC_DX_InitInputType_C
   TYPE, PUBLIC :: SC_DX_InitInputType
     TYPE( SC_DX_InitInputType_C ) :: C_obj
-    INTEGER(IntKi)  :: NumSC2Ctrl      !< number of turbine specific controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumSC2CtrlGlob      !< number of global controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumCtrl2SC      !< number of controller outputs [to supercontroller] [-]
+    INTEGER(IntKi)  :: NumSC2Ctrl = 0_IntKi      !< number of turbine specific controller inputs [from supercontroller] [-]
+    INTEGER(IntKi)  :: NumSC2CtrlGlob = 0_IntKi      !< number of global controller inputs [from supercontroller] [-]
+    INTEGER(IntKi)  :: NumCtrl2SC = 0_IntKi      !< number of controller outputs [to supercontroller] [-]
   END TYPE SC_DX_InitInputType
 ! =======================
 ! =========  SC_DX_InitOutputType_C  =======

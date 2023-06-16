@@ -41,8 +41,8 @@ IMPLICIT NONE
   END TYPE SC_InitInputType_C
   TYPE, PUBLIC :: SC_InitInputType
     TYPE( SC_InitInputType_C ) :: C_obj
-    INTEGER(IntKi)  :: nTurbines      !< Number of turbines in the simulation [-]
-    CHARACTER(1024)  :: DLL_FileName      !< Name of the shared library which the super controller logic [-]
+    INTEGER(IntKi)  :: nTurbines = 0_IntKi      !< Number of turbines in the simulation [-]
+    CHARACTER(1024)  :: DLL_FileName = ''      !< Name of the shared library which the super controller logic [-]
   END TYPE SC_InitInputType
 ! =======================
 ! =========  SC_InitOutputType_C  =======
@@ -56,10 +56,10 @@ IMPLICIT NONE
   TYPE, PUBLIC :: SC_InitOutputType
     TYPE( SC_InitOutputType_C ) :: C_obj
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
-    INTEGER(IntKi)  :: NumCtrl2SC      !< Number of turbine controller outputs [to supercontroller] [-]
-    INTEGER(IntKi)  :: nInpGlobal      !< Number of global inputs to SC [-]
-    INTEGER(IntKi)  :: NumSC2Ctrl      !< Number of turbine specific controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumSC2CtrlGlob      !< Number of global controller inputs [from supercontroller] [-]
+    INTEGER(IntKi)  :: NumCtrl2SC = 0_IntKi      !< Number of turbine controller outputs [to supercontroller] [-]
+    INTEGER(IntKi)  :: nInpGlobal = 0_IntKi      !< Number of global inputs to SC [-]
+    INTEGER(IntKi)  :: NumSC2Ctrl = 0_IntKi      !< Number of turbine specific controller inputs [from supercontroller] [-]
+    INTEGER(IntKi)  :: NumSC2CtrlGlob = 0_IntKi      !< Number of global controller inputs [from supercontroller] [-]
   END TYPE SC_InitOutputType
 ! =======================
 ! =========  SC_ParameterType_C  =======
@@ -82,16 +82,16 @@ IMPLICIT NONE
   END TYPE SC_ParameterType_C
   TYPE, PUBLIC :: SC_ParameterType
     TYPE( SC_ParameterType_C ) :: C_obj
-    REAL(DbKi)  :: DT      !< Time step for continuous state integration & discrete state update [secondstypedef]
-    INTEGER(IntKi)  :: nTurbines      !< Number of turbines in the simulation [-]
-    INTEGER(IntKi)  :: NumCtrl2SC      !< Number of turbine controller outputs [to supercontroller] [-]
-    INTEGER(IntKi)  :: nInpGlobal      !< Number of global inputs [-]
-    INTEGER(IntKi)  :: NumSC2Ctrl      !< Number of turbine specific controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumSC2CtrlGlob      !< Number of global controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumStatesGlobal      !< Number of global states [-]
-    INTEGER(IntKi)  :: NumStatesTurbine      !< Number of states per turbine [-]
-    INTEGER(IntKi)  :: NumParamGlobal      !< Number of global parameters [-]
-    INTEGER(IntKi)  :: NumParamTurbine      !< Number of parameters per turbine [-]
+    REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [secondstypedef]
+    INTEGER(IntKi)  :: nTurbines = 0_IntKi      !< Number of turbines in the simulation [-]
+    INTEGER(IntKi)  :: NumCtrl2SC = 0_IntKi      !< Number of turbine controller outputs [to supercontroller] [-]
+    INTEGER(IntKi)  :: nInpGlobal = 0_IntKi      !< Number of global inputs [-]
+    INTEGER(IntKi)  :: NumSC2Ctrl = 0_IntKi      !< Number of turbine specific controller inputs [from supercontroller] [-]
+    INTEGER(IntKi)  :: NumSC2CtrlGlob = 0_IntKi      !< Number of global controller inputs [from supercontroller] [-]
+    INTEGER(IntKi)  :: NumStatesGlobal = 0_IntKi      !< Number of global states [-]
+    INTEGER(IntKi)  :: NumStatesTurbine = 0_IntKi      !< Number of states per turbine [-]
+    INTEGER(IntKi)  :: NumParamGlobal = 0_IntKi      !< Number of global parameters [-]
+    INTEGER(IntKi)  :: NumParamTurbine = 0_IntKi      !< Number of parameters per turbine [-]
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: ParamGlobal => NULL()      !< Global parameters [-]
     REAL(KIND=C_FLOAT) , DIMENSION(:), POINTER  :: ParamTurbine => NULL()      !< Parameters per turbine [-]
     TYPE(DLL_Type)  :: DLL_Trgt      !< The addresses and names of the super controller shared library and its procedures [-]
@@ -118,7 +118,7 @@ IMPLICIT NONE
   END TYPE SC_ContinuousStateType_C
   TYPE, PUBLIC :: SC_ContinuousStateType
     TYPE( SC_ContinuousStateType_C ) :: C_obj
-    REAL(SiKi)  :: Dummy      !< Remove this variable if you have continuous states [-]
+    REAL(SiKi)  :: Dummy = 0.0_R4Ki      !< Remove this variable if you have continuous states [-]
   END TYPE SC_ContinuousStateType
 ! =======================
 ! =========  SC_ConstraintStateType_C  =======
@@ -128,7 +128,7 @@ IMPLICIT NONE
   END TYPE SC_ConstraintStateType_C
   TYPE, PUBLIC :: SC_ConstraintStateType
     TYPE( SC_ConstraintStateType_C ) :: C_obj
-    REAL(SiKi)  :: Dummy      !< Remove this variable if you have constraint states [-]
+    REAL(SiKi)  :: Dummy = 0.0_R4Ki      !< Remove this variable if you have constraint states [-]
   END TYPE SC_ConstraintStateType
 ! =======================
 ! =========  SC_MiscVarType_C  =======
@@ -138,7 +138,7 @@ IMPLICIT NONE
   END TYPE SC_MiscVarType_C
   TYPE, PUBLIC :: SC_MiscVarType
     TYPE( SC_MiscVarType_C ) :: C_obj
-    REAL(SiKi)  :: Dummy      !< Remove this variable if you have misc vars [-]
+    REAL(SiKi)  :: Dummy = 0.0_R4Ki      !< Remove this variable if you have misc vars [-]
   END TYPE SC_MiscVarType
 ! =======================
 ! =========  SC_OtherStateType_C  =======
@@ -148,7 +148,7 @@ IMPLICIT NONE
   END TYPE SC_OtherStateType_C
   TYPE, PUBLIC :: SC_OtherStateType
     TYPE( SC_OtherStateType_C ) :: C_obj
-    INTEGER(IntKi)  :: Dummy      !< Dummy Other State [-]
+    INTEGER(IntKi)  :: Dummy = 0_IntKi      !< Dummy Other State [-]
   END TYPE SC_OtherStateType
 ! =======================
 ! =========  SC_InputType_C  =======

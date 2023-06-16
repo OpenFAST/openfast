@@ -35,11 +35,11 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  IceFloe_InitInputType  =======
   TYPE, PUBLIC :: IceFloe_InitInputType
-    CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
-    REAL(ReKi)  :: simLength      !< Duration of simulation [sec]
-    REAL(ReKi)  :: MSL2SWL      !< Offset between still-water level and mean sea level [m]
-    REAL(ReKi)  :: gravity      !< Gravitational acceleration [m/s^2]
-    character(1024)  :: RootName      !< Output file root name [-]
+    CHARACTER(1024)  :: InputFile = ''      !< Name of the input file [-]
+    REAL(ReKi)  :: simLength = 0.0_ReKi      !< Duration of simulation [sec]
+    REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Offset between still-water level and mean sea level [m]
+    REAL(ReKi)  :: gravity = 0.0_ReKi      !< Gravitational acceleration [m/s^2]
+    character(1024)  :: RootName = ''      !< Output file root name [-]
   END TYPE IceFloe_InitInputType
 ! =======================
 ! =========  IceFloe_InitOutputType  =======
@@ -51,50 +51,50 @@ IMPLICIT NONE
 ! =======================
 ! =========  IceFloe_ContinuousStateType  =======
   TYPE, PUBLIC :: IceFloe_ContinuousStateType
-    REAL(SiKi)  :: DummyContStateVar      !< None currently used [-]
+    REAL(SiKi)  :: DummyContStateVar = 0.0_R4Ki      !< None currently used [-]
   END TYPE IceFloe_ContinuousStateType
 ! =======================
 ! =========  IceFloe_DiscreteStateType  =======
   TYPE, PUBLIC :: IceFloe_DiscreteStateType
-    REAL(SiKi)  :: DummyDiscStateVar      !< None currently used [-]
+    REAL(SiKi)  :: DummyDiscStateVar = 0.0_R4Ki      !< None currently used [-]
   END TYPE IceFloe_DiscreteStateType
 ! =======================
 ! =========  IceFloe_ConstraintStateType  =======
   TYPE, PUBLIC :: IceFloe_ConstraintStateType
-    REAL(SiKi)  :: DummyConstrStateVar      !< None currently used [-]
+    REAL(SiKi)  :: DummyConstrStateVar = 0.0_R4Ki      !< None currently used [-]
   END TYPE IceFloe_ConstraintStateType
 ! =======================
 ! =========  IceFloe_OtherStateType  =======
   TYPE, PUBLIC :: IceFloe_OtherStateType
-    INTEGER(IntKi)  :: DummyOtherState      !< Remove this variable if you have other states [-]
+    INTEGER(IntKi)  :: DummyOtherState = 0_IntKi      !< Remove this variable if you have other states [-]
   END TYPE IceFloe_OtherStateType
 ! =======================
 ! =========  IceFloe_MiscVarType  =======
   TYPE, PUBLIC :: IceFloe_MiscVarType
-    INTEGER(IntKi)  :: DummyMiscVar      !< Remove this variable if you have misc/optimization variables [-]
+    INTEGER(IntKi)  :: DummyMiscVar = 0_IntKi      !< Remove this variable if you have misc/optimization variables [-]
   END TYPE IceFloe_MiscVarType
 ! =======================
 ! =========  IceFloe_ParameterType  =======
   TYPE, PUBLIC :: IceFloe_ParameterType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: loadSeries      !< - [precalculated time series of ice loads for each leg]
-    REAL(ReKi)  :: iceVel      !< ice floe velocity [m/s]
-    REAL(ReKi)  :: iceDirection      !< ice floe direction [degrees]
-    REAL(ReKi)  :: minStrength      !< minimum dynamic ice strength [Pa]
-    REAL(ReKi)  :: minStrengthNegVel      !< minimum dynamic ice strength for negative velocity [Pa]
-    REAL(ReKi)  :: defaultArea      !< structure width to use in cpld crushin [m]
-    REAL(ReKi)  :: crushArea      !< cross sectional area of ice against tower [m^2]
-    REAL(ReKi)  :: coeffStressRate      !< coefficient to calc stress rate from relative vellocity [Pa/m]
-    REAL(ReKi)  :: C(4)      !< coefficient of cubic transition curve for negative stress rates [-]
-    REAL(ReKi)  :: dt      !< time step [sec]
-    REAL(ReKi)  :: rampTime      !< load ramp up time [sec]
+    REAL(ReKi)  :: iceVel = 0.0_ReKi      !< ice floe velocity [m/s]
+    REAL(ReKi)  :: iceDirection = 0.0_ReKi      !< ice floe direction [degrees]
+    REAL(ReKi)  :: minStrength = 0.0_ReKi      !< minimum dynamic ice strength [Pa]
+    REAL(ReKi)  :: minStrengthNegVel = 0.0_ReKi      !< minimum dynamic ice strength for negative velocity [Pa]
+    REAL(ReKi)  :: defaultArea = 0.0_ReKi      !< structure width to use in cpld crushin [m]
+    REAL(ReKi)  :: crushArea = 0.0_ReKi      !< cross sectional area of ice against tower [m^2]
+    REAL(ReKi)  :: coeffStressRate = 0.0_ReKi      !< coefficient to calc stress rate from relative vellocity [Pa/m]
+    REAL(ReKi)  :: C(4) = 0.0_ReKi      !< coefficient of cubic transition curve for negative stress rates [-]
+    REAL(ReKi)  :: dt = 0.0_ReKi      !< time step [sec]
+    REAL(ReKi)  :: rampTime = 0.0_ReKi      !< load ramp up time [sec]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: legX      !< - [x position of each leg relative to structure center]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: legY      !< - [y position of each leg relative to structure center]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ks      !< - [shelter factor due to upstream leg]
-    INTEGER(IntKi)  :: numLegs      !< Number of tower legs (=1 for monopile) [-]
-    INTEGER(IntKi)  :: iceType      !< Type of ice Floe: flex, crush, etc. [-]
-    INTEGER(IntKi)  :: logUnitNum      !< Unit number for log file [-]
-    LOGICAL  :: singleLoad      !< Flag for load application at single point vs multiple legs [-]
-    LOGICAL  :: initFlag      !< Flag for successful initialization [-]
+    INTEGER(IntKi)  :: numLegs = 0_IntKi      !< Number of tower legs (=1 for monopile) [-]
+    INTEGER(IntKi)  :: iceType = 0_IntKi      !< Type of ice Floe: flex, crush, etc. [-]
+    INTEGER(IntKi)  :: logUnitNum = 0_IntKi      !< Unit number for log file [-]
+    LOGICAL  :: singleLoad = .false.      !< Flag for load application at single point vs multiple legs [-]
+    LOGICAL  :: initFlag = .false.      !< Flag for successful initialization [-]
   END TYPE IceFloe_ParameterType
 ! =======================
 ! =========  IceFloe_InputType  =======

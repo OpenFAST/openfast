@@ -36,27 +36,27 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  FWrap_InitInputType  =======
   TYPE, PUBLIC :: FWrap_InitInputType
-    INTEGER(IntKi)  :: nr      !< Number of radii in the radial finite-difference grid [-]
-    CHARACTER(1024)  :: FASTInFile      !< Filename of primary FAST input file of this turbine [-]
-    REAL(ReKi)  :: dr      !< Radial increment of radial finite-difference grid [m]
-    REAL(DbKi)  :: tmax      !< Simulation length [s]
-    REAL(ReKi) , DIMENSION(1:3)  :: p_ref_Turbine      !< Undisplaced global coordinates of this turbine [m]
-    INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
-    INTEGER(IntKi)  :: n_high_low      !< Number of high-resolution time steps per low-resolution time step [-]
-    REAL(DbKi)  :: dt_high      !< High-resolution time step [s]
-    REAL(ReKi) , DIMENSION(1:3)  :: p_ref_high      !< Position of the origin of the high-resolution spatial domain for this turbine [m]
-    INTEGER(IntKi)  :: nX_high      !< Number of high-resolution spatial nodes in X direction [-]
-    INTEGER(IntKi)  :: nY_high      !< Number of high-resolution spatial nodes in Y direction [-]
-    INTEGER(IntKi)  :: nZ_high      !< Number of high-resolution spatial nodes in Z direction [-]
-    REAL(ReKi)  :: dX_high      !< X-component of the spatial increment of the high-resolution spatial domain for this turbine [m]
-    REAL(ReKi)  :: dY_high      !< Y-component of the spatial increment of the high-resolution spatial domain for this turbine [m]
-    REAL(ReKi)  :: dZ_high      !< Z-component of the spatial increment of the high-resolution spatial domain for this turbine [m]
-    INTEGER(IntKi)  :: TurbNum      !< Turbine ID number (start with 1; end with number of turbines) [-]
-    CHARACTER(1024)  :: RootName      !< The root name derived from the primary FAST.Farm input file [For output reporting in this module we need to have Rootname include the turbine number] [-]
-    INTEGER(IntKi)  :: NumSC2Ctrl      !< Number of turbine-specific controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumSC2CtrlGlob      !< Number of global controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumCtrl2SC      !< Number of turbine-specific controller outputs [to supercontroller] [-]
-    LOGICAL  :: UseSC      !< Use the SuperController? (flag) [-]
+    INTEGER(IntKi)  :: nr = 0_IntKi      !< Number of radii in the radial finite-difference grid [-]
+    CHARACTER(1024)  :: FASTInFile = ''      !< Filename of primary FAST input file of this turbine [-]
+    REAL(ReKi)  :: dr = 0.0_ReKi      !< Radial increment of radial finite-difference grid [m]
+    REAL(DbKi)  :: tmax = 0.0_R8Ki      !< Simulation length [s]
+    REAL(ReKi) , DIMENSION(1:3)  :: p_ref_Turbine = 0.0_ReKi      !< Undisplaced global coordinates of this turbine [m]
+    INTEGER(IntKi)  :: WaveFieldMod = 0_IntKi      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
+    INTEGER(IntKi)  :: n_high_low = 0_IntKi      !< Number of high-resolution time steps per low-resolution time step [-]
+    REAL(DbKi)  :: dt_high = 0.0_R8Ki      !< High-resolution time step [s]
+    REAL(ReKi) , DIMENSION(1:3)  :: p_ref_high = 0.0_ReKi      !< Position of the origin of the high-resolution spatial domain for this turbine [m]
+    INTEGER(IntKi)  :: nX_high = 0_IntKi      !< Number of high-resolution spatial nodes in X direction [-]
+    INTEGER(IntKi)  :: nY_high = 0_IntKi      !< Number of high-resolution spatial nodes in Y direction [-]
+    INTEGER(IntKi)  :: nZ_high = 0_IntKi      !< Number of high-resolution spatial nodes in Z direction [-]
+    REAL(ReKi)  :: dX_high = 0.0_ReKi      !< X-component of the spatial increment of the high-resolution spatial domain for this turbine [m]
+    REAL(ReKi)  :: dY_high = 0.0_ReKi      !< Y-component of the spatial increment of the high-resolution spatial domain for this turbine [m]
+    REAL(ReKi)  :: dZ_high = 0.0_ReKi      !< Z-component of the spatial increment of the high-resolution spatial domain for this turbine [m]
+    INTEGER(IntKi)  :: TurbNum = 0_IntKi      !< Turbine ID number (start with 1; end with number of turbines) [-]
+    CHARACTER(1024)  :: RootName = ''      !< The root name derived from the primary FAST.Farm input file [For output reporting in this module we need to have Rootname include the turbine number] [-]
+    INTEGER(IntKi)  :: NumSC2Ctrl = 0_IntKi      !< Number of turbine-specific controller inputs [from supercontroller] [-]
+    INTEGER(IntKi)  :: NumSC2CtrlGlob = 0_IntKi      !< Number of global controller inputs [from supercontroller] [-]
+    INTEGER(IntKi)  :: NumCtrl2SC = 0_IntKi      !< Number of turbine-specific controller outputs [to supercontroller] [-]
+    LOGICAL  :: UseSC = .false.      !< Use the SuperController? (flag) [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSCGlob      !< Global outputs from SuperController [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: fromSC      !< Turbine-specific outputs from SuperController [-]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: Vdist_High => NULL()      !< Pointer to UVW components of disturbed wind [nx^high, ny^high, nz^high, n^high/low] (ambient + deficits) across the high-resolution domain around the turbine for each high-resolution time step within a low-resolution time step [(m/s)]
@@ -64,28 +64,28 @@ IMPLICIT NONE
 ! =======================
 ! =========  FWrap_InitOutputType  =======
   TYPE, PUBLIC :: FWrap_InitOutputType
-    REAL(DbKi) , DIMENSION(1:6)  :: PtfmInit      !< Initial platform position/rotation vector - surge,sway,heave,roll,pitch,yaw - needed for mooring module initInp [-]
+    REAL(DbKi) , DIMENSION(1:6)  :: PtfmInit = 0.0_R8Ki      !< Initial platform position/rotation vector - surge,sway,heave,roll,pitch,yaw - needed for mooring module initInp [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
   END TYPE FWrap_InitOutputType
 ! =======================
 ! =========  FWrap_ContinuousStateType  =======
   TYPE, PUBLIC :: FWrap_ContinuousStateType
-    REAL(ReKi)  :: dummy      !< Remove this variable if you have continuous states [-]
+    REAL(ReKi)  :: dummy = 0.0_ReKi      !< Remove this variable if you have continuous states [-]
   END TYPE FWrap_ContinuousStateType
 ! =======================
 ! =========  FWrap_DiscreteStateType  =======
   TYPE, PUBLIC :: FWrap_DiscreteStateType
-    REAL(ReKi)  :: dummy      !< Remove this variable if you have continuous states [-]
+    REAL(ReKi)  :: dummy = 0.0_ReKi      !< Remove this variable if you have continuous states [-]
   END TYPE FWrap_DiscreteStateType
 ! =======================
 ! =========  FWrap_ConstraintStateType  =======
   TYPE, PUBLIC :: FWrap_ConstraintStateType
-    REAL(ReKi)  :: dummy      !< Remove this variable if you have constraint states [-]
+    REAL(ReKi)  :: dummy = 0.0_ReKi      !< Remove this variable if you have constraint states [-]
   END TYPE FWrap_ConstraintStateType
 ! =======================
 ! =========  FWrap_OtherStateType  =======
   TYPE, PUBLIC :: FWrap_OtherStateType
-    INTEGER(IntKi)  :: dummy      !< Remove this variable if you have other states [-]
+    INTEGER(IntKi)  :: dummy = 0_IntKi      !< Remove this variable if you have other states [-]
   END TYPE FWrap_OtherStateType
 ! =======================
 ! =========  FWrap_MiscVarType  =======
@@ -99,10 +99,10 @@ IMPLICIT NONE
 ! =======================
 ! =========  FWrap_ParameterType  =======
   TYPE, PUBLIC :: FWrap_ParameterType
-    INTEGER(IntKi)  :: nr      !< Number of radii in the radial finite-difference grid [-]
+    INTEGER(IntKi)  :: nr = 0_IntKi      !< Number of radii in the radial finite-difference grid [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: r      !< Discretization of radial finite-difference grid [m]
-    INTEGER(IntKi)  :: n_FAST_low      !< Number of FAST time steps per low-resolution time step [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: p_ref_Turbine      !< Undisplaced global position of this turbine [m]
+    INTEGER(IntKi)  :: n_FAST_low = 0_IntKi      !< Number of FAST time steps per low-resolution time step [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: p_ref_Turbine = 0.0_ReKi      !< Undisplaced global position of this turbine [m]
   END TYPE FWrap_ParameterType
 ! =======================
 ! =========  FWrap_InputType  =======
@@ -114,13 +114,13 @@ IMPLICIT NONE
 ! =========  FWrap_OutputType  =======
   TYPE, PUBLIC :: FWrap_OutputType
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: toSC      !< Turbine-dependent commands to the super controller [(various units)]
-    REAL(ReKi) , DIMENSION(1:3)  :: xHat_Disk      !< Orientation of rotor centerline, normal to disk [-]
-    REAL(ReKi)  :: YawErr      !< Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind velocity (ambients + deficits + motion), both projected onto the horizontal plane [rad]
-    REAL(ReKi)  :: psi_skew      !< Azimuth angle from the nominally vertical axis in the disk plane to the vector about which the inflow skew angle is defined [rad]
-    REAL(ReKi)  :: chi_skew      !< Inflow skew angle [rad]
-    REAL(ReKi) , DIMENSION(1:3)  :: p_hub      !< Center position of hub [m]
-    REAL(ReKi)  :: D_rotor      !< Rotor diameter [m]
-    REAL(ReKi)  :: DiskAvg_Vx_Rel      !< Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk [m/s]
+    REAL(ReKi) , DIMENSION(1:3)  :: xHat_Disk = 0.0_ReKi      !< Orientation of rotor centerline, normal to disk [-]
+    REAL(ReKi)  :: YawErr = 0.0_ReKi      !< Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind velocity (ambients + deficits + motion), both projected onto the horizontal plane [rad]
+    REAL(ReKi)  :: psi_skew = 0.0_ReKi      !< Azimuth angle from the nominally vertical axis in the disk plane to the vector about which the inflow skew angle is defined [rad]
+    REAL(ReKi)  :: chi_skew = 0.0_ReKi      !< Inflow skew angle [rad]
+    REAL(ReKi) , DIMENSION(1:3)  :: p_hub = 0.0_ReKi      !< Center position of hub [m]
+    REAL(ReKi)  :: D_rotor = 0.0_ReKi      !< Rotor diameter [m]
+    REAL(ReKi)  :: DiskAvg_Vx_Rel = 0.0_ReKi      !< Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AzimAvg_Ct      !< Azimuthally averaged thrust force coefficient (normal to disk), distributed radially [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AzimAvg_Cq      !< Azimuthally averaged torque coefficient (normal to disk), distributed radially [-]
   END TYPE FWrap_OutputType

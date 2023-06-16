@@ -36,39 +36,39 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  WindFileDat  =======
   TYPE, PUBLIC :: WindFileDat
-    character(1024)  :: FileName      !< Name of the windfile retrieved [-]
+    character(1024)  :: FileName = ''      !< Name of the windfile retrieved [-]
     INTEGER(IntKi)  :: WindType = 0      !< Type of the windfile [-]
-    REAL(ReKi)  :: RefHt      !< Reference height given in file [meters]
-    LOGICAL  :: RefHt_Set      !< Reference height was given in file [-]
-    REAL(DbKi)  :: DT      !< TimeStep of the wind file -- zero value for none [seconds]
-    INTEGER(IntKi)  :: NumTSteps      !< Number of timesteps in the time range of wind file [-]
-    LOGICAL  :: ConstantDT      !< Timesteps are the same throughout file [-]
-    REAL(ReKi) , DIMENSION(1:2)  :: TRange      !< Time range of the wind file [seconds]
-    LOGICAL  :: TRange_Limited      !< TRange limits strictly enforced [-]
-    REAL(ReKi) , DIMENSION(1:2)  :: YRange      !< Range in y direction [meters]
-    LOGICAL  :: YRange_Limited      !< YRange limits strictly enforced [-]
-    REAL(ReKi) , DIMENSION(1:2)  :: ZRange      !< Range in z direction [meters]
-    LOGICAL  :: ZRange_Limited      !< ZRange limits strictly enforced [-]
-    INTEGER(IntKi)  :: BinaryFormat      !< Binary format identifier [-]
-    LOGICAL  :: IsBinary      !< Windfile is a binary file [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: TI      !< Turbulence intensity (U,V,W) [-]
-    LOGICAL  :: TI_listed      !< Turbulence intesity given in file [-]
-    REAL(ReKi)  :: MWS      !< Approximate mean wind speed [-]
+    REAL(ReKi)  :: RefHt = 0.0_ReKi      !< Reference height given in file [meters]
+    LOGICAL  :: RefHt_Set = .false.      !< Reference height was given in file [-]
+    REAL(DbKi)  :: DT = 0.0_R8Ki      !< TimeStep of the wind file -- zero value for none [seconds]
+    INTEGER(IntKi)  :: NumTSteps = 0_IntKi      !< Number of timesteps in the time range of wind file [-]
+    LOGICAL  :: ConstantDT = .false.      !< Timesteps are the same throughout file [-]
+    REAL(ReKi) , DIMENSION(1:2)  :: TRange = 0.0_ReKi      !< Time range of the wind file [seconds]
+    LOGICAL  :: TRange_Limited = .false.      !< TRange limits strictly enforced [-]
+    REAL(ReKi) , DIMENSION(1:2)  :: YRange = 0.0_ReKi      !< Range in y direction [meters]
+    LOGICAL  :: YRange_Limited = .false.      !< YRange limits strictly enforced [-]
+    REAL(ReKi) , DIMENSION(1:2)  :: ZRange = 0.0_ReKi      !< Range in z direction [meters]
+    LOGICAL  :: ZRange_Limited = .false.      !< ZRange limits strictly enforced [-]
+    INTEGER(IntKi)  :: BinaryFormat = 0_IntKi      !< Binary format identifier [-]
+    LOGICAL  :: IsBinary = .false.      !< Windfile is a binary file [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: TI = 0.0_ReKi      !< Turbulence intensity (U,V,W) [-]
+    LOGICAL  :: TI_listed = .false.      !< Turbulence intesity given in file [-]
+    REAL(ReKi)  :: MWS = 0.0_ReKi      !< Approximate mean wind speed [-]
   END TYPE WindFileDat
 ! =======================
 ! =========  Steady_InitInputType  =======
   TYPE, PUBLIC :: Steady_InitInputType
-    REAL(ReKi)  :: HWindSpeed      !< Horizontal wind speed [m/s]
-    REAL(ReKi)  :: RefHt      !< Reference height for horizontal wind speed [meters]
-    REAL(ReKi)  :: PLExp      !< Power law exponent [-]
+    REAL(ReKi)  :: HWindSpeed = 0.0_ReKi      !< Horizontal wind speed [m/s]
+    REAL(ReKi)  :: RefHt = 0.0_ReKi      !< Reference height for horizontal wind speed [meters]
+    REAL(ReKi)  :: PLExp = 0.0_ReKi      !< Power law exponent [-]
   END TYPE Steady_InitInputType
 ! =======================
 ! =========  Uniform_InitInputType  =======
   TYPE, PUBLIC :: Uniform_InitInputType
-    character(1024)  :: WindFileName      !< Name of the wind file to use [-]
-    REAL(ReKi)  :: RefHt      !< Reference height for horizontal wind speed [meters]
-    REAL(ReKi)  :: RefLength      !< Reference length for linear horizontal and vertical sheer [-]
-    REAL(ReKi)  :: PropagationDir      !< Direction of wind propagation [radians]
+    character(1024)  :: WindFileName = ''      !< Name of the wind file to use [-]
+    REAL(ReKi)  :: RefHt = 0.0_ReKi      !< Reference height for horizontal wind speed [meters]
+    REAL(ReKi)  :: RefLength = 0.0_ReKi      !< Reference length for linear horizontal and vertical sheer [-]
+    REAL(ReKi)  :: PropagationDir = 0.0_ReKi      !< Direction of wind propagation [radians]
     LOGICAL  :: UseInputFile = .true.      !< Flag for toggling file based IO in wind type 2. [-]
     TYPE(FileInfoType)  :: PassedFileData      !< Optional slot for wind type 2 data if file IO is not used. [-]
   END TYPE Uniform_InitInputType
@@ -76,8 +76,8 @@ IMPLICIT NONE
 ! =========  Grid3D_InitInputType  =======
   TYPE, PUBLIC :: Grid3D_InitInputType
     INTEGER(IntKi)  :: ScaleMethod = 0      !< Turbulence scaling method [0=none, 1=direct scaling, 2= calculate scaling factor based on a desired standard deviation] [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: SF      !< Turbulence scaling factor for each direction [ScaleMethod=1] [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: SigmaF      !< Turbulence standard deviation to calculate scaling from in each direction [ScaleMethod=2] [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: SF = 0      !< Turbulence scaling factor for each direction [ScaleMethod=1] [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: SigmaF = 0      !< Turbulence standard deviation to calculate scaling from in each direction [ScaleMethod=2] [-]
     INTEGER(IntKi)  :: WindProfileType = -1      !< Wind profile type (0=constant;1=logarithmic;2=power law) [-]
     REAL(ReKi)  :: RefHt = 0      !< Reference (hub) height of the grid [meters]
     REAL(ReKi)  :: URef = 0      !< Mean u-component wind speed at the reference height [meters]
@@ -91,28 +91,28 @@ IMPLICIT NONE
 ! =======================
 ! =========  TurbSim_InitInputType  =======
   TYPE, PUBLIC :: TurbSim_InitInputType
-    character(1024)  :: WindFileName      !< Name of the wind file to use [-]
+    character(1024)  :: WindFileName = ''      !< Name of the wind file to use [-]
   END TYPE TurbSim_InitInputType
 ! =======================
 ! =========  Bladed_InitInputType  =======
   TYPE, PUBLIC :: Bladed_InitInputType
-    character(1024)  :: WindFileName      !< Root filename [-]
-    INTEGER(IntKi)  :: WindType      !< Whether this is native Bladed (needs wind profile and TI scaling) or not [-]
-    LOGICAL  :: NativeBladedFmt      !< Whether this is native Bladed (needs wind profile and TI scaling) or not [-]
-    LOGICAL  :: TowerFileExist      !< Tower file exists [-]
+    character(1024)  :: WindFileName = ''      !< Root filename [-]
+    INTEGER(IntKi)  :: WindType = 0_IntKi      !< Whether this is native Bladed (needs wind profile and TI scaling) or not [-]
+    LOGICAL  :: NativeBladedFmt = .false.      !< Whether this is native Bladed (needs wind profile and TI scaling) or not [-]
+    LOGICAL  :: TowerFileExist = .false.      !< Tower file exists [-]
     INTEGER(IntKi)  :: TurbineID = 0      !< Wind turbine ID number in the fixed (DEFAULT) file name when FixedWindFileRootName = .TRUE. (used by FAST.Farm) [-]
     LOGICAL  :: FixedWindFileRootName = .false.      !< Do the wind data files have a fixed (DEFAULT) file name? (used by FAST.Farm) [-]
   END TYPE Bladed_InitInputType
 ! =======================
 ! =========  Bladed_InitOutputType  =======
   TYPE, PUBLIC :: Bladed_InitOutputType
-    REAL(ReKi)  :: PropagationDir      !< Propogation direction from native Bladed format [degrees]
-    REAL(ReKi)  :: VFlowAngle      !< Vertical flow angle from native Bladed format [degrees]
+    REAL(ReKi)  :: PropagationDir = 0.0_ReKi      !< Propogation direction from native Bladed format [degrees]
+    REAL(ReKi)  :: VFlowAngle = 0.0_ReKi      !< Vertical flow angle from native Bladed format [degrees]
   END TYPE Bladed_InitOutputType
 ! =======================
 ! =========  HAWC_InitInputType  =======
   TYPE, PUBLIC :: HAWC_InitInputType
-    character(1024) , DIMENSION(1:3)  :: WindFileName      !< Name of the wind file to use [-]
+    character(1024) , DIMENSION(1:3)  :: WindFileName = ''      !< Name of the wind file to use [-]
     INTEGER(IntKi)  :: nx = 0      !< Number of grids in the x direction (in the 3 files above) [-]
     INTEGER(IntKi)  :: ny = 0      !< Number of grids in the y direction (in the 3 files above) [-]
     INTEGER(IntKi)  :: nz = 0      !< Number of grids in the z direction (in the 3 files above) [-]
@@ -124,20 +124,20 @@ IMPLICIT NONE
 ! =======================
 ! =========  User_InitInputType  =======
   TYPE, PUBLIC :: User_InitInputType
-    REAL(SiKi)  :: Dummy      !< User field initialization input dummy value [-]
+    REAL(SiKi)  :: Dummy = 0.0_R4Ki      !< User field initialization input dummy value [-]
   END TYPE User_InitInputType
 ! =======================
 ! =========  Grid4D_InitInputType  =======
   TYPE, PUBLIC :: Grid4D_InitInputType
-    INTEGER(IntKi) , DIMENSION(1:4)  :: n      !< number of grid points in the x, y, z, and t directions [-]
-    REAL(ReKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
-    REAL(ReKi) , DIMENSION(1:3)  :: pZero      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
+    INTEGER(IntKi) , DIMENSION(1:4)  :: n = 0_IntKi      !< number of grid points in the x, y, z, and t directions [-]
+    REAL(ReKi) , DIMENSION(1:4)  :: delta = 0.0_ReKi      !< size between 2 consecutive grid points in each grid direction [m,m,m,s]
+    REAL(ReKi) , DIMENSION(1:3)  :: pZero = 0.0_ReKi      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: Vel => NULL()      !< pointer to 4D grid velocity data [m/s]
   END TYPE Grid4D_InitInputType
 ! =======================
 ! =========  Points_InitInputType  =======
   TYPE, PUBLIC :: Points_InitInputType
-    INTEGER(IntKi)  :: NumWindPoints      !< Number of points where wind components will be provided [-]
+    INTEGER(IntKi)  :: NumWindPoints = 0_IntKi      !< Number of points where wind components will be provided [-]
   END TYPE Points_InitInputType
 ! =======================
 CONTAINS

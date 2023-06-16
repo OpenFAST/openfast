@@ -213,13 +213,49 @@ void Registry::gen_fortran_module(const Module &mod, const std::string &out_dir)
 
             w << " :: " << field.name << " ";
 
+            // Add field initialization
             if (field.is_pointer)
             {
                 w << "=> NULL() ";
             }
-            else if (field.rank == 0 && !field.init_value.empty())
+            else if (field.is_allocatable)
+            {
+                // No initialization
+            }
+            else if (!field.init_value.empty())
             {
                 w << "= " << field.init_value << " ";
+            }
+            else
+            {
+                switch (field.data_type->tag)
+                {
+                case DataType::Tag::Real:
+                    switch (field.data_type->basic.bit_size)
+                    {
+                    case 0:
+                        w << "= 0.0_ReKi ";
+                        break;
+                    case 32:
+                        w << "= 0.0_R4Ki ";
+                        break;
+                    case 64:
+                        w << "= 0.0_R8Ki ";
+                        break;
+                    }
+                    break;
+                case DataType::Tag::Integer:
+                    w << "= 0_IntKi ";
+                    break;
+                case DataType::Tag::Logical:
+                    w << "= .false. ";
+                    break;
+                case DataType::Tag::Character:
+                    w << "= '' ";
+                    break;
+                case DataType::Tag::Derived:
+                    break;
+                }
             }
 
             if (field.desc.compare("-") != 0 || field.units.compare("-") != 0)
@@ -359,7 +395,8 @@ void gen_copy(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
             w << indent << "end if";
 
             // bjj: this needs to be updated if we've got multidimensional arrays
-            if (gen_c_code && field.is_pointer)
+            if (gen_c_code && field.is_pointer &&
+                (field.data_type->tag != DataType::Tag::Derived))
             {
                 std::string dst_c = "Dst" + ddt.name_short + "Data%C_obj%" + field.name;
                 w << indent << dst_c << "_Len = size(" << dst << ")";
@@ -551,13 +588,13 @@ void gen_destroy(std::ostream &w, const Module &mod, const DataType::Derived &dd
             if (field.is_pointer)
             {
                 w << indent << var << " => null()";
-            }
 
-            if (gen_c_code && field.is_pointer)
-            {
-                auto var_c = ddt_data + "%C_obj%" + field.name;
-                w << indent << var_c << " = c_null_ptr";
-                w << indent << var_c << "_Len = 0";
+                if (gen_c_code && (field.data_type->tag != DataType::Tag::Derived))
+                {
+                    auto var_c = ddt_data + "%C_obj%" + field.name;
+                    w << indent << var_c << " = c_null_ptr";
+                    w << indent << var_c << "_Len = 0";
+                }
             }
 
             indent.erase(indent.size() - 3);
@@ -691,7 +728,7 @@ void gen_pack(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
             w << indent << "end if";
         }
     }
-    
+
     // Check for pack errors at end of routine
     w << indent << "if (RegCheckErr(Buf, RoutineName)) return";
 
@@ -809,7 +846,8 @@ void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt
         }
 
         // bjj: this needs to be updated if we've got multiple dimension arrays
-        if (gen_c_code && field.is_pointer)
+        if (gen_c_code && field.is_pointer &&
+            (field.data_type->tag != DataType::Tag::Derived))
         {
             w << indent << var_c << "_Len = size(" << var << ")";
             w << indent << "if (" << var_c << "_Len > 0) " << var_c << " = c_loc(" << var << "(";

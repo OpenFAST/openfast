@@ -35,27 +35,27 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  Current_InitInputType  =======
   TYPE, PUBLIC :: Current_InitInputType
-    REAL(SiKi)  :: CurrSSV0      !<  [-]
-    CHARACTER(80)  :: CurrSSDirChr      !<  [-]
-    REAL(SiKi)  :: CurrSSDir      !<  [-]
-    REAL(SiKi)  :: CurrNSRef      !<  [-]
-    REAL(SiKi)  :: CurrNSV0      !<  [-]
-    REAL(SiKi)  :: CurrNSDir      !<  [-]
-    REAL(SiKi)  :: CurrDIV      !<  [-]
-    REAL(SiKi)  :: CurrDIDir      !<  [-]
-    INTEGER(IntKi)  :: CurrMod      !<  [-]
-    REAL(SiKi)  :: WtrDpth      !<  [-]
+    REAL(SiKi)  :: CurrSSV0 = 0.0_R4Ki      !<  [-]
+    CHARACTER(80)  :: CurrSSDirChr = ''      !<  [-]
+    REAL(SiKi)  :: CurrSSDir = 0.0_R4Ki      !<  [-]
+    REAL(SiKi)  :: CurrNSRef = 0.0_R4Ki      !<  [-]
+    REAL(SiKi)  :: CurrNSV0 = 0.0_R4Ki      !<  [-]
+    REAL(SiKi)  :: CurrNSDir = 0.0_R4Ki      !<  [-]
+    REAL(SiKi)  :: CurrDIV = 0.0_R4Ki      !<  [-]
+    REAL(SiKi)  :: CurrDIDir = 0.0_R4Ki      !<  [-]
+    INTEGER(IntKi)  :: CurrMod = 0_IntKi      !<  [-]
+    REAL(SiKi)  :: WtrDpth = 0.0_R4Ki      !<  [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinGridzi      !<  [-]
-    INTEGER(IntKi)  :: NGridPts      !<  [-]
-    CHARACTER(1024)  :: DirRoot      !<  [-]
+    INTEGER(IntKi)  :: NGridPts = 0_IntKi      !<  [-]
+    CHARACTER(1024)  :: DirRoot = ''      !<  [-]
   END TYPE Current_InitInputType
 ! =======================
 ! =========  Current_InitOutputType  =======
   TYPE, PUBLIC :: Current_InitOutputType
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CurrVxi      !<  [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: CurrVyi      !<  [-]
-    REAL(SiKi)  :: PCurrVxiPz0      !<  [-]
-    REAL(SiKi)  :: PCurrVyiPz0      !<  [-]
+    REAL(SiKi)  :: PCurrVxiPz0 = 0.0_R4Ki      !<  [-]
+    REAL(SiKi)  :: PCurrVyiPz0 = 0.0_R4Ki      !<  [-]
   END TYPE Current_InitOutputType
 ! =======================
 CONTAINS

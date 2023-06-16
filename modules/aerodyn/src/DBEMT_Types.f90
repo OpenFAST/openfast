@@ -39,10 +39,10 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: DBEMT_cont_tauConst = 3      ! use continuous formulation with constant tau1 [-]
 ! =========  DBEMT_InitInputType  =======
   TYPE, PUBLIC :: DBEMT_InitInputType
-    INTEGER(IntKi)  :: NumBlades      !< Number of blades on the turbine [-]
-    INTEGER(IntKi)  :: NumNodes      !< Number of nodes on each blade [-]
-    REAL(ReKi)  :: tau1_const      !< delay value based on disk-averaged quantities [-]
-    INTEGER(IntKi)  :: DBEMT_Mod      !< DBEMT Model.  1 = constant tau1, 2 = time dependent tau1, 3=continuous form with constant tau1 [-]
+    INTEGER(IntKi)  :: NumBlades = 0_IntKi      !< Number of blades on the turbine [-]
+    INTEGER(IntKi)  :: NumNodes = 0_IntKi      !< Number of nodes on each blade [-]
+    REAL(ReKi)  :: tau1_const = 0.0_ReKi      !< delay value based on disk-averaged quantities [-]
+    INTEGER(IntKi)  :: DBEMT_Mod = 0_IntKi      !< DBEMT Model.  1 = constant tau1, 2 = time dependent tau1, 3=continuous form with constant tau1 [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: rLocal      !< Radial distance to blade node from the center of rotation, measured in the rotor plane, needed for DBEMT [m]
   END TYPE DBEMT_InitInputType
 ! =======================
@@ -53,8 +53,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  DBEMT_ElementContinuousStateType  =======
   TYPE, PUBLIC :: DBEMT_ElementContinuousStateType
-    REAL(R8Ki) , DIMENSION(1:2)  :: vind      !< The filtered induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tantential induced velocity (Vy*a') [m/s]
-    REAL(R8Ki) , DIMENSION(1:2)  :: vind_1      !< The filtered reduced or intermediate induced velocity [m/s]
+    REAL(R8Ki) , DIMENSION(1:2)  :: vind = 0.0_R8Ki      !< The filtered induced velocity, [1,i,j] is the axial induced velocity (-Vx*a) at node i on blade j and [2,i,j] is the tantential induced velocity (Vy*a') [m/s]
+    REAL(R8Ki) , DIMENSION(1:2)  :: vind_1 = 0.0_R8Ki      !< The filtered reduced or intermediate induced velocity [m/s]
   END TYPE DBEMT_ElementContinuousStateType
 ! =======================
 ! =========  DBEMT_ContinuousStateType  =======
@@ -64,51 +64,51 @@ IMPLICIT NONE
 ! =======================
 ! =========  DBEMT_DiscreteStateType  =======
   TYPE, PUBLIC :: DBEMT_DiscreteStateType
-    REAL(SiKi)  :: DummyState      !< Remove this variable if you have continuous states [-]
+    REAL(SiKi)  :: DummyState = 0.0_R4Ki      !< Remove this variable if you have continuous states [-]
   END TYPE DBEMT_DiscreteStateType
 ! =======================
 ! =========  DBEMT_ConstraintStateType  =======
   TYPE, PUBLIC :: DBEMT_ConstraintStateType
-    REAL(SiKi)  :: DummyState      !< Remove this variable if you have constraint states [-]
+    REAL(SiKi)  :: DummyState = 0.0_R4Ki      !< Remove this variable if you have constraint states [-]
   END TYPE DBEMT_ConstraintStateType
 ! =======================
 ! =========  DBEMT_OtherStateType  =======
   TYPE, PUBLIC :: DBEMT_OtherStateType
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: areStatesInitialized      !< Flag indicating whether the module's states have been initialized properly [-]
-    REAL(ReKi)  :: tau1      !< value of tau1 used in updateStates (for output-to-file only) [-]
-    REAL(ReKi)  :: tau2      !< value of tau2 used in updateStates (equal to k_tau * tau1, not used between time steps) [-]
+    REAL(ReKi)  :: tau1 = 0.0_ReKi      !< value of tau1 used in updateStates (for output-to-file only) [-]
+    REAL(ReKi)  :: tau2 = 0.0_ReKi      !< value of tau2 used in updateStates (equal to k_tau * tau1, not used between time steps) [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: n      !< time step # value used for continuous state integrator [-]
     TYPE(DBEMT_ContinuousStateType) , DIMENSION(1:4)  :: xdot      !< derivative history for continuous state integrators [-]
   END TYPE DBEMT_OtherStateType
 ! =======================
 ! =========  DBEMT_MiscVarType  =======
   TYPE, PUBLIC :: DBEMT_MiscVarType
-    LOGICAL  :: FirstWarn_tau1      !< flag so tau1 limit warning doesn't get repeated forever [-]
+    LOGICAL  :: FirstWarn_tau1 = .false.      !< flag so tau1 limit warning doesn't get repeated forever [-]
   END TYPE DBEMT_MiscVarType
 ! =======================
 ! =========  DBEMT_ParameterType  =======
   TYPE, PUBLIC :: DBEMT_ParameterType
-    REAL(DbKi)  :: DT      !< Time step for continuous state integration & discrete state update [seconds]
+    REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
     INTEGER(IntKi)  :: lin_nx = 0      !< Number of continuous states for linearization [-]
-    INTEGER(IntKi)  :: NumBlades      !< Number of blades on the turbine [-]
-    INTEGER(IntKi)  :: NumNodes      !< Number of nodes on each blade [-]
-    REAL(ReKi)  :: k_0ye      !< Filter dynamics constant [default = 0.6 ] [-]
-    REAL(ReKi)  :: tau1_const      !< constant version of the delay value [-]
+    INTEGER(IntKi)  :: NumBlades = 0_IntKi      !< Number of blades on the turbine [-]
+    INTEGER(IntKi)  :: NumNodes = 0_IntKi      !< Number of nodes on each blade [-]
+    REAL(ReKi)  :: k_0ye = 0.0_ReKi      !< Filter dynamics constant [default = 0.6 ] [-]
+    REAL(ReKi)  :: tau1_const = 0.0_ReKi      !< constant version of the delay value [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: spanRatio      !< static span ratio of each blade node [-]
-    INTEGER(IntKi)  :: DBEMT_Mod      !< DBEMT Model.  1 = constant tau1, 2 = time dependent tau1, 3=continuous form of constant tau1 [-]
+    INTEGER(IntKi)  :: DBEMT_Mod = 0_IntKi      !< DBEMT Model.  1 = constant tau1, 2 = time dependent tau1, 3=continuous form of constant tau1 [-]
   END TYPE DBEMT_ParameterType
 ! =======================
 ! =========  DBEMT_ElementInputType  =======
   TYPE, PUBLIC :: DBEMT_ElementInputType
-    REAL(ReKi) , DIMENSION(1:2)  :: vind_s      !< The unfiltered induced velocity, [1] is the axial induced velocity (-Vx*a) and [2] is the tangential induced velocity (Vy*a') at node i on blade j. Note that the inputs are used only operated on at a particular node and blade, so we don't store all elements [m/s]
-    REAL(ReKi)  :: spanRatio      !< Normalized span location of blade node [-]
+    REAL(ReKi) , DIMENSION(1:2)  :: vind_s = 0.0_ReKi      !< The unfiltered induced velocity, [1] is the axial induced velocity (-Vx*a) and [2] is the tangential induced velocity (Vy*a') at node i on blade j. Note that the inputs are used only operated on at a particular node and blade, so we don't store all elements [m/s]
+    REAL(ReKi)  :: spanRatio = 0.0_ReKi      !< Normalized span location of blade node [-]
   END TYPE DBEMT_ElementInputType
 ! =======================
 ! =========  DBEMT_InputType  =======
   TYPE, PUBLIC :: DBEMT_InputType
-    REAL(ReKi)  :: AxInd_disk      !< Disk-averaged axial induction (for time-varying tau) [-]
-    REAL(ReKi)  :: Un_disk      !< Disk-averaged normal relative inflow velocity (for time-varying tau) [m/s]
-    REAL(ReKi)  :: R_disk      !< Disk-averaged rotor radius (for time-varying tau) [m]
+    REAL(ReKi)  :: AxInd_disk = 0.0_ReKi      !< Disk-averaged axial induction (for time-varying tau) [-]
+    REAL(ReKi)  :: Un_disk = 0.0_ReKi      !< Disk-averaged normal relative inflow velocity (for time-varying tau) [m/s]
+    REAL(ReKi)  :: R_disk = 0.0_ReKi      !< Disk-averaged rotor radius (for time-varying tau) [m]
     TYPE(DBEMT_ElementInputType) , DIMENSION(:,:), ALLOCATABLE  :: element      !< The element-level inputs at each blade node [-]
   END TYPE DBEMT_InputType
 ! =======================

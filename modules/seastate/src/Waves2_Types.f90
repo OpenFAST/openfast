@@ -35,29 +35,29 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  Waves2_InitInputType  =======
   TYPE, PUBLIC :: Waves2_InitInputType
-    REAL(ReKi)  :: Gravity      !< Gravitational acceleration [(m/s^2)]
-    REAL(ReKi)  :: WtrDens      !< Water density [(kg/m^3)]
-    REAL(ReKi)  :: WtrDpth      !< Water depth [(meters)]
-    INTEGER(IntKi)  :: NStepWave      !< Total number of frequency components = total number of time steps in the incident wave [-]
-    INTEGER(IntKi)  :: NStepWave2      !< NStepWave / 2 [-]
-    REAL(SiKi)  :: WaveDOmega      !< Frequency step for incident wave calculations [(rad/s)]
-    INTEGER(IntKi)  :: WaveStMod      !< Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} [-]
-    LOGICAL  :: WaveMultiDir      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
+    REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravitational acceleration [(m/s^2)]
+    REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density [(kg/m^3)]
+    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [(meters)]
+    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
+    INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
+    REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
+    INTEGER(IntKi)  :: WaveStMod = 0_IntKi      !< Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} [-]
+    LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
     REAL(SiKi) , DIMENSION(:), POINTER  :: WaveDirArr => NULL()      !< Wave direction array.  Each frequency has a unique direction of WaveNDir > 1 [(degrees)]
     REAL(SiKi) , DIMENSION(:,:), POINTER  :: WaveElevC0 => NULL()      !< Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part [(meters)]
     REAL(SiKi) , DIMENSION(:), POINTER  :: WaveTime => NULL()      !< Simulation times at which the instantaneous second order loads associated with the incident waves are determined [sec]
-    INTEGER(IntKi) , DIMENSION(1:3)  :: nGrid      !< Grid dimensions [-]
-    INTEGER(IntKi)  :: NWaveElevGrid      !< Number of grid points where the incident wave elevations can be output [-]
-    INTEGER(IntKi)  :: NWaveKinGrid      !< Number of grid points where the incident wave kinematics will be computed [-]
+    INTEGER(IntKi) , DIMENSION(1:3)  :: nGrid = 0_IntKi      !< Grid dimensions [-]
+    INTEGER(IntKi)  :: NWaveElevGrid = 0_IntKi      !< Number of grid points where the incident wave elevations can be output [-]
+    INTEGER(IntKi)  :: NWaveKinGrid = 0_IntKi      !< Number of grid points where the incident wave kinematics will be computed [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinGridxi      !< xi-coordinates for grid points where the incident wave kinematics will be computed; these are relative to the mean sea level [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinGridyi      !< yi-coordinates for grid points where the incident wave kinematics will be computed; these are relative to the mean sea level [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinGridzi      !< zi-coordinates for grid points where the incident wave kinematics will be computed; these are relative to the mean sea level [(meters)]
-    LOGICAL  :: WvDiffQTFF      !< Full difference QTF second order forces flag [(-)]
-    LOGICAL  :: WvSumQTFF      !< Full sum QTF second order forces flag [(-)]
-    REAL(SiKi)  :: WvLowCOffD      !< Minimum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
-    REAL(SiKi)  :: WvHiCOffD      !< Maximum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
-    REAL(SiKi)  :: WvLowCOffS      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
-    REAL(SiKi)  :: WvHiCOffS      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
+    LOGICAL  :: WvDiffQTFF = .false.      !< Full difference QTF second order forces flag [(-)]
+    LOGICAL  :: WvSumQTFF = .false.      !< Full sum QTF second order forces flag [(-)]
+    REAL(SiKi)  :: WvLowCOffD = 0.0_R4Ki      !< Minimum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
+    REAL(SiKi)  :: WvHiCOffD = 0.0_R4Ki      !< Maximum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
+    REAL(SiKi)  :: WvLowCOffS = 0.0_R4Ki      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
+    REAL(SiKi)  :: WvHiCOffS = 0.0_R4Ki      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
   END TYPE Waves2_InitInputType
 ! =======================
 ! =========  Waves2_InitOutputType  =======
@@ -73,8 +73,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  Waves2_ParameterType  =======
   TYPE, PUBLIC :: Waves2_ParameterType
-    LOGICAL  :: WvDiffQTFF      !< Full difference QTF second order forces flag [(-)]
-    LOGICAL  :: WvSumQTFF      !< Full sum QTF second order forces flag [(-)]
+    LOGICAL  :: WvDiffQTFF = .false.      !< Full difference QTF second order forces flag [(-)]
+    LOGICAL  :: WvSumQTFF = .false.      !< Full sum QTF second order forces flag [(-)]
   END TYPE Waves2_ParameterType
 ! =======================
 CONTAINS

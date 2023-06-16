@@ -35,29 +35,29 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  ExtPtfm_InitInputType  =======
   TYPE, PUBLIC :: ExtPtfm_InitInputType
-    CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
+    CHARACTER(1024)  :: InputFile = ''      !< Name of the input file; remove if there is no file [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
-    REAL(ReKi)  :: PtfmRefzt      !< Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point [meters]
-    CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
+    REAL(ReKi)  :: PtfmRefzt = 0.0_ReKi      !< Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point [meters]
+    CHARACTER(1024)  :: RootName = ''      !< RootName for writing output files [-]
   END TYPE ExtPtfm_InitInputType
 ! =======================
 ! =========  ExtPtfm_InputFile  =======
   TYPE, PUBLIC :: ExtPtfm_InputFile
-    REAL(DbKi)  :: DT      !< Requested integration time for ElastoDyn [seconds]
-    INTEGER(IntKi)  :: IntMethod      !< Integration Method (1=RK4, 2=AB4, 3=ABM4) [-]
-    INTEGER(IntKi)  :: FileFormat      !< File format switch [-]
-    CHARACTER(1024)  :: RedFile      !< File containing reduction inputs [-]
-    CHARACTER(1024)  :: RedFileCst      !< File containing constant reduction inputs [-]
-    LOGICAL  :: EquilStart      !< Flag to determine the equilibrium positions of the CB modes at initialization (first call) [-]
+    REAL(DbKi)  :: DT = 0.0_R8Ki      !< Requested integration time for ElastoDyn [seconds]
+    INTEGER(IntKi)  :: IntMethod = 0_IntKi      !< Integration Method (1=RK4, 2=AB4, 3=ABM4) [-]
+    INTEGER(IntKi)  :: FileFormat = 0_IntKi      !< File format switch [-]
+    CHARACTER(1024)  :: RedFile = ''      !< File containing reduction inputs [-]
+    CHARACTER(1024)  :: RedFileCst = ''      !< File containing constant reduction inputs [-]
+    LOGICAL  :: EquilStart = .false.      !< Flag to determine the equilibrium positions of the CB modes at initialization (first call) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ActiveCBDOF      !< List of active CB DOF [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: InitPosList      !< Initial positions of the CB DOFs [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: InitVelList      !< Initial velocities of the CB DOFs [-]
-    LOGICAL  :: SumPrint      !< Print summary data to <RootName>.sum [-]
-    INTEGER(IntKi)  :: OutFile      !< Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both) [-]
-    LOGICAL  :: TabDelim      !< Flag to cause tab-delimited text output (delimited by space otherwise) [-]
-    CHARACTER(20)  :: OutFmt      !< Format used for module's text tabular output (except time); resulting field should be 10 characters [-]
-    REAL(DbKi)  :: Tstart      !< Time to start module's tabular output [seconds]
-    INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
+    LOGICAL  :: SumPrint = .false.      !< Print summary data to <RootName>.sum [-]
+    INTEGER(IntKi)  :: OutFile = 0_IntKi      !< Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both) [-]
+    LOGICAL  :: TabDelim = .false.      !< Flag to cause tab-delimited text output (delimited by space otherwise) [-]
+    CHARACTER(20)  :: OutFmt = ''      !< Format used for module's text tabular output (except time); resulting field should be 10 characters [-]
+    REAL(DbKi)  :: Tstart = 0.0_R8Ki      !< Time to start module's tabular output [seconds]
+    INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
   END TYPE ExtPtfm_InputFile
 ! =======================
@@ -84,27 +84,27 @@ IMPLICIT NONE
 ! =======================
 ! =========  ExtPtfm_DiscreteStateType  =======
   TYPE, PUBLIC :: ExtPtfm_DiscreteStateType
-    REAL(ReKi)  :: DummyDiscState      !< Remove this variable if you have discrete states [-]
+    REAL(ReKi)  :: DummyDiscState = 0.0_ReKi      !< Remove this variable if you have discrete states [-]
   END TYPE ExtPtfm_DiscreteStateType
 ! =======================
 ! =========  ExtPtfm_ConstraintStateType  =======
   TYPE, PUBLIC :: ExtPtfm_ConstraintStateType
-    REAL(ReKi)  :: DummyConstrState      !< Remove this variable if you have constraint states [-]
+    REAL(ReKi)  :: DummyConstrState = 0.0_ReKi      !< Remove this variable if you have constraint states [-]
   END TYPE ExtPtfm_ConstraintStateType
 ! =======================
 ! =========  ExtPtfm_OtherStateType  =======
   TYPE, PUBLIC :: ExtPtfm_OtherStateType
     TYPE(ExtPtfm_ContinuousStateType) , DIMENSION(:), ALLOCATABLE  :: xdot      !< Previous state derivs for m-step time integrator [-]
-    INTEGER(IntKi)  :: n      !< Tracks time step for which OtherState was updated last [-]
+    INTEGER(IntKi)  :: n = 0_IntKi      !< Tracks time step for which OtherState was updated last [-]
   END TYPE ExtPtfm_OtherStateType
 ! =======================
 ! =========  ExtPtfm_MiscVarType  =======
   TYPE, PUBLIC :: ExtPtfm_MiscVarType
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: xFlat      !< Flattened vector of states [-]
-    REAL(ReKi) , DIMENSION(1:18)  :: uFlat      !< Flattened vector of inputs [-]
+    REAL(ReKi) , DIMENSION(1:18)  :: uFlat = 0.0_ReKi      !< Flattened vector of inputs [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_at_t      !< The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion). [N, N-m]
-    INTEGER(IntKi)  :: Indx      !< Index into times, to speed up interpolation [-]
-    LOGICAL  :: EquilStart      !< Flag to determine the equilibrium position of the CB DOF at initialization (first call) [-]
+    INTEGER(IntKi)  :: Indx = 0_IntKi      !< Index into times, to speed up interpolation [-]
+    LOGICAL  :: EquilStart = .false.      !< Flag to determine the equilibrium position of the CB DOF at initialization (first call) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [see OutListParameters.xlsx spreadsheet]
   END TYPE ExtPtfm_MiscVarType
 ! =======================
@@ -131,13 +131,13 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C12      !< Matrix C12 []
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C22      !< Matrix C22 []
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C21      !< Matrix C21 []
-    REAL(DbKi)  :: EP_DeltaT      !< Time step (for integration of continuous states) [seconds]
-    INTEGER(IntKi)  :: nTimeSteps      !< Number of values of Forces and times [-]
-    INTEGER(IntKi)  :: nCB      !< Number of CraigBampton modes active [-]
-    INTEGER(IntKi)  :: nCBFull      !< Totla number of CraigBampton modes given as input [-]
-    INTEGER(IntKi)  :: nTot      !< Total number of debrees of freedom (CB + interface) [-]
-    INTEGER(IntKi)  :: NumOuts      !< Number of values in WriteOutput [-]
-    INTEGER(IntKi)  :: IntMethod      !< Integration Method (1=RK4, 2=AB4, 3=ABM4) [-]
+    REAL(DbKi)  :: EP_DeltaT = 0.0_R8Ki      !< Time step (for integration of continuous states) [seconds]
+    INTEGER(IntKi)  :: nTimeSteps = 0_IntKi      !< Number of values of Forces and times [-]
+    INTEGER(IntKi)  :: nCB = 0_IntKi      !< Number of CraigBampton modes active [-]
+    INTEGER(IntKi)  :: nCBFull = 0_IntKi      !< Totla number of CraigBampton modes given as input [-]
+    INTEGER(IntKi)  :: nTot = 0_IntKi      !< Total number of debrees of freedom (CB + interface) [-]
+    INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of values in WriteOutput [-]
+    INTEGER(IntKi)  :: IntMethod = 0_IntKi      !< Integration Method (1=RK4, 2=AB4, 3=ABM4) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ActiveCBDOF      !< List of active CB DOF [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: OutParamLinIndx      !< Index into WriteOutput for linearization analysis [-]

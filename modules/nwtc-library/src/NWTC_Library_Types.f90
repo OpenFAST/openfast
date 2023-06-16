@@ -36,18 +36,18 @@ USE ModReg
 IMPLICIT NONE
 ! =========  ProgDesc  =======
   TYPE, PUBLIC :: ProgDesc
-    CHARACTER(99)  :: Name      !< Name of the program or module [-]
-    CHARACTER(99)  :: Ver      !< Version number of the program or module [-]
-    CHARACTER(24)  :: Date      !< String containing date module was last updated [-]
+    CHARACTER(99)  :: Name = ''      !< Name of the program or module [-]
+    CHARACTER(99)  :: Ver = ''      !< Version number of the program or module [-]
+    CHARACTER(24)  :: Date = ''      !< String containing date module was last updated [-]
   END TYPE ProgDesc
 ! =======================
 ! =========  FASTdataType  =======
   TYPE, PUBLIC :: FASTdataType
-    CHARACTER(1024)  :: File      !< Name of the FAST-style binary file [-]
-    CHARACTER(1024)  :: Descr      !< String describing file [-]
-    INTEGER(IntKi)  :: NumChans      !< Number of output channels in this binary file (not including the time channel) [-]
-    INTEGER(IntKi)  :: NumRecs      !< Number of records (rows) of data in the file [-]
-    REAL(DbKi)  :: TimeStep      !< Time step for evenly-spaced data in the output file (when NumRecs is not allo [-]
+    CHARACTER(1024)  :: File = ''      !< Name of the FAST-style binary file [-]
+    CHARACTER(1024)  :: Descr = ''      !< String describing file [-]
+    INTEGER(IntKi)  :: NumChans = 0_IntKi      !< Number of output channels in this binary file (not including the time channel) [-]
+    INTEGER(IntKi)  :: NumRecs = 0_IntKi      !< Number of records (rows) of data in the file [-]
+    REAL(DbKi)  :: TimeStep = 0.0_R8Ki      !< Time step for evenly-spaced data in the output file (when NumRecs is not allo [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ChanNames      !< Strings describing the names of the channels from the binary file (including the time channel) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: ChanUnits      !< Strings describing the units of the channels from the binary file (including the time channel) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Data      !< numeric data (rows and columns) from the binary file, including the time channel [-]
@@ -55,16 +55,16 @@ IMPLICIT NONE
 ! =======================
 ! =========  OutParmType  =======
   TYPE, PUBLIC :: OutParmType
-    INTEGER(IntKi)  :: Indx      !< An index into AllOuts array where this channel is computed/stored [-]
-    CHARACTER(ChanLen)  :: Name      !< Name of the output channel [-]
-    CHARACTER(ChanLen)  :: Units      !< Units this channel is specified in [-]
-    INTEGER(IntKi)  :: SignM      !< Multiplier for output channel; usually -1 (minus) or 0 (invalid channel) [-]
+    INTEGER(IntKi)  :: Indx = 0_IntKi      !< An index into AllOuts array where this channel is computed/stored [-]
+    CHARACTER(ChanLen)  :: Name = ''      !< Name of the output channel [-]
+    CHARACTER(ChanLen)  :: Units = ''      !< Units this channel is specified in [-]
+    INTEGER(IntKi)  :: SignM = 0_IntKi      !< Multiplier for output channel; usually -1 (minus) or 0 (invalid channel) [-]
   END TYPE OutParmType
 ! =======================
 ! =========  FileInfoType  =======
   TYPE, PUBLIC :: FileInfoType
-    INTEGER(IntKi)  :: NumLines 
-    INTEGER(IntKi)  :: NumFiles 
+    INTEGER(IntKi)  :: NumLines = 0_IntKi 
+    INTEGER(IntKi)  :: NumFiles = 0_IntKi 
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FileLine 
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FileIndx 
     CHARACTER(MaxFileInfoLineLen) , DIMENSION(:), ALLOCATABLE  :: FileList 
@@ -73,16 +73,16 @@ IMPLICIT NONE
 ! =======================
 ! =========  Quaternion  =======
   TYPE, PUBLIC :: Quaternion
-    REAL(ReKi)  :: q0 
-    REAL(ReKi) , DIMENSION(1:3)  :: v 
+    REAL(ReKi)  :: q0 = 0.0_ReKi 
+    REAL(ReKi) , DIMENSION(1:3)  :: v = 0.0_ReKi 
   END TYPE Quaternion
 ! =======================
 ! =========  NWTC_RandomNumber_ParameterType  =======
   TYPE, PUBLIC :: NWTC_RandomNumber_ParameterType
-    INTEGER(IntKi)  :: pRNG 
-    INTEGER(IntKi) , DIMENSION(1:3)  :: RandSeed 
+    INTEGER(IntKi)  :: pRNG = 0_IntKi 
+    INTEGER(IntKi) , DIMENSION(1:3)  :: RandSeed = 0_IntKi 
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: RandSeedAry 
-    CHARACTER(6)  :: RNG_type 
+    CHARACTER(6)  :: RNG_type = '' 
   END TYPE NWTC_RandomNumber_ParameterType
 ! =======================
 CONTAINS

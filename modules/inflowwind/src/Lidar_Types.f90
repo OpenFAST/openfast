@@ -40,78 +40,78 @@ IMPLICIT NONE
 ! =========  Lidar_InitInputType  =======
   TYPE, PUBLIC :: Lidar_InitInputType
     INTEGER(IntKi)  :: SensorType = SensorType_None      !< SensorType_* parameter [-]
-    REAL(DbKi)  :: Tmax      !< the length of the simulation [s]
-    REAL(ReKi) , DIMENSION(1:3)  :: RotorApexOffsetPos      !< position of the lidar unit relative to the rotor apex of rotation [m]
-    REAL(ReKi) , DIMENSION(1:3)  :: HubPosition      !< initial position of the hub (lidar mounted on hub) [0,0,HubHeight] [m]
-    INTEGER(IntKi)  :: NumPulseGate      !< the number of range gates to return wind speeds at [-]
-    LOGICAL  :: LidRadialVel      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
+    REAL(DbKi)  :: Tmax = 0.0_R8Ki      !< the length of the simulation [s]
+    REAL(ReKi) , DIMENSION(1:3)  :: RotorApexOffsetPos = 0.0_ReKi      !< position of the lidar unit relative to the rotor apex of rotation [m]
+    REAL(ReKi) , DIMENSION(1:3)  :: HubPosition = 0.0_ReKi      !< initial position of the hub (lidar mounted on hub) [0,0,HubHeight] [m]
+    INTEGER(IntKi)  :: NumPulseGate = 0_IntKi      !< the number of range gates to return wind speeds at [-]
+    LOGICAL  :: LidRadialVel = .false.      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
   END TYPE Lidar_InitInputType
 ! =======================
 ! =========  Lidar_InitOutputType  =======
   TYPE, PUBLIC :: Lidar_InitOutputType
-    REAL(ReKi)  :: DummyInitOut 
+    REAL(ReKi)  :: DummyInitOut = 0.0_ReKi 
   END TYPE Lidar_InitOutputType
 ! =======================
 ! =========  Lidar_ParameterType  =======
   TYPE, PUBLIC :: Lidar_ParameterType
-    INTEGER(IntKi)  :: NumPulseGate      !< the number of range gates to return wind speeds at; pulsed lidar only [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: RotorApexOffsetPos      !< position of the lidar unit relative to the rotor apex of rotation [m]
-    REAL(ReKi)  :: RayRangeSq      !< Rayleigh Range Squared [-]
-    REAL(ReKi)  :: SpatialRes      !< spatial sampling distance of weighting function (1/2)*(avg ws)*dt [-]
-    INTEGER(IntKi)  :: SensorType      !< SensorType_* parameter [-]
-    REAL(ReKi)  :: WtFnTrunc      !< Percentage of the peak value at which to truncate weighting function [-]
-    REAL(ReKi)  :: PulseRangeOne      !< the range to the closest range gate [m]
-    REAL(ReKi)  :: DeltaP      !< the distance between range gates [m]
-    REAL(ReKi)  :: DeltaR      !< the FWHM width of the pulse [-]
-    REAL(ReKi)  :: r_p 
-    LOGICAL  :: LidRadialVel      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
-    REAL(ReKi)  :: DisplacementLidarX      !< Displacement of the lidar system from the focal measurement point [m]
-    REAL(ReKi)  :: DisplacementLidarY      !< Displacement of the lidar system from the focal measurement point [m]
-    REAL(ReKi)  :: DisplacementLidarZ      !< Displacement of the lidar system from the focal measurement point [m]
-    INTEGER(IntKi)  :: NumBeam      !< Number of lidar beams [-]
+    INTEGER(IntKi)  :: NumPulseGate = 0_IntKi      !< the number of range gates to return wind speeds at; pulsed lidar only [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: RotorApexOffsetPos = 0.0_ReKi      !< position of the lidar unit relative to the rotor apex of rotation [m]
+    REAL(ReKi)  :: RayRangeSq = 0.0_ReKi      !< Rayleigh Range Squared [-]
+    REAL(ReKi)  :: SpatialRes = 0.0_ReKi      !< spatial sampling distance of weighting function (1/2)*(avg ws)*dt [-]
+    INTEGER(IntKi)  :: SensorType = 0_IntKi      !< SensorType_* parameter [-]
+    REAL(ReKi)  :: WtFnTrunc = 0.0_ReKi      !< Percentage of the peak value at which to truncate weighting function [-]
+    REAL(ReKi)  :: PulseRangeOne = 0.0_ReKi      !< the range to the closest range gate [m]
+    REAL(ReKi)  :: DeltaP = 0.0_ReKi      !< the distance between range gates [m]
+    REAL(ReKi)  :: DeltaR = 0.0_ReKi      !< the FWHM width of the pulse [-]
+    REAL(ReKi)  :: r_p = 0.0_ReKi 
+    LOGICAL  :: LidRadialVel = .false.      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
+    REAL(ReKi)  :: DisplacementLidarX = 0.0_ReKi      !< Displacement of the lidar system from the focal measurement point [m]
+    REAL(ReKi)  :: DisplacementLidarY = 0.0_ReKi      !< Displacement of the lidar system from the focal measurement point [m]
+    REAL(ReKi)  :: DisplacementLidarZ = 0.0_ReKi      !< Displacement of the lidar system from the focal measurement point [m]
+    INTEGER(IntKi)  :: NumBeam = 0_IntKi      !< Number of lidar beams [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FocalDistanceX      !< LIDAR LOS focal distance co-ordinates in the x direction [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FocalDistanceY      !< LIDAR LOS focal distance co-ordinates in the y direction [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FocalDistanceZ      !< LIDAR LOS focal distance co-ordinates in the z direction [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MsrPosition      !< Position of the desired wind measurement (was XMsrPt, YMsrPt, ZMsrPt) [m]
-    REAL(ReKi)  :: PulseSpacing      !< Distance between range gates [m]
-    REAL(ReKi)  :: URefLid      !< Reference average wind speed for the lidar [m/s]
-    INTEGER(IntKi)  :: ConsiderHubMotion      !< Flag whether to consider the hub motion's impact on the Lidar measurement [-]
-    REAL(ReKi)  :: MeasurementInterval      !< Time steps between lidar measurements [s]
-    REAL(ReKi) , DIMENSION(1:3)  :: LidPosition      !< Position of the Lidar unit (was XLidPt, YLidPt, ZLidPt) [m]
+    REAL(ReKi)  :: PulseSpacing = 0.0_ReKi      !< Distance between range gates [m]
+    REAL(ReKi)  :: URefLid = 0.0_ReKi      !< Reference average wind speed for the lidar [m/s]
+    INTEGER(IntKi)  :: ConsiderHubMotion = 0_IntKi      !< Flag whether to consider the hub motion's impact on the Lidar measurement [-]
+    REAL(ReKi)  :: MeasurementInterval = 0.0_ReKi      !< Time steps between lidar measurements [s]
+    REAL(ReKi) , DIMENSION(1:3)  :: LidPosition = 0.0_ReKi      !< Position of the Lidar unit (was XLidPt, YLidPt, ZLidPt) [m]
   END TYPE Lidar_ParameterType
 ! =======================
 ! =========  Lidar_ContinuousStateType  =======
   TYPE, PUBLIC :: Lidar_ContinuousStateType
-    REAL(ReKi)  :: DummyContState      !< Remove this variable if you have continuous states [-]
+    REAL(ReKi)  :: DummyContState = 0.0_ReKi      !< Remove this variable if you have continuous states [-]
   END TYPE Lidar_ContinuousStateType
 ! =======================
 ! =========  Lidar_DiscreteStateType  =======
   TYPE, PUBLIC :: Lidar_DiscreteStateType
-    REAL(ReKi)  :: DummyDiscState      !< Remove this variable if you have discrete states [-]
+    REAL(ReKi)  :: DummyDiscState = 0.0_ReKi      !< Remove this variable if you have discrete states [-]
   END TYPE Lidar_DiscreteStateType
 ! =======================
 ! =========  Lidar_ConstraintStateType  =======
   TYPE, PUBLIC :: Lidar_ConstraintStateType
-    REAL(ReKi)  :: DummyConstrState      !< Remove this variable if you have constraint states [-]
+    REAL(ReKi)  :: DummyConstrState = 0.0_ReKi      !< Remove this variable if you have constraint states [-]
   END TYPE Lidar_ConstraintStateType
 ! =======================
 ! =========  Lidar_OtherStateType  =======
   TYPE, PUBLIC :: Lidar_OtherStateType
-    REAL(ReKi)  :: DummyOtherState 
+    REAL(ReKi)  :: DummyOtherState = 0.0_ReKi 
   END TYPE Lidar_OtherStateType
 ! =======================
 ! =========  Lidar_MiscVarType  =======
   TYPE, PUBLIC :: Lidar_MiscVarType
-    REAL(ReKi)  :: DummyMiscVar      !< Remove this variable if you have misc variables [-]
+    REAL(ReKi)  :: DummyMiscVar = 0.0_ReKi      !< Remove this variable if you have misc variables [-]
   END TYPE Lidar_MiscVarType
 ! =======================
 ! =========  Lidar_InputType  =======
   TYPE, PUBLIC :: Lidar_InputType
-    REAL(ReKi)  :: PulseLidEl      !< the angle off of the x axis that the lidar is aimed (0 would be staring directly upwind, pi/2 would be staring perpendicular to the x axis) [-]
-    REAL(ReKi)  :: PulseLidAz      !< the angle in the YZ plane that the lidar is staring (if PulseLidEl is set to pi/2, then 0 would be aligned with the positive z axis, pi/2 would be aligned with the positive y axis) [-]
-    REAL(ReKi)  :: HubDisplacementX      !< X direction hub displacement of the lidar (from ElastoDyn) [m]
-    REAL(ReKi)  :: HubDisplacementY      !< Y direction hub displacement of the lidar (from ElastoDyn) [m]
-    REAL(ReKi)  :: HubDisplacementZ      !< Z direction hub displacement of the lidar (from ElastoDyn) [m]
+    REAL(ReKi)  :: PulseLidEl = 0.0_ReKi      !< the angle off of the x axis that the lidar is aimed (0 would be staring directly upwind, pi/2 would be staring perpendicular to the x axis) [-]
+    REAL(ReKi)  :: PulseLidAz = 0.0_ReKi      !< the angle in the YZ plane that the lidar is staring (if PulseLidEl is set to pi/2, then 0 would be aligned with the positive z axis, pi/2 would be aligned with the positive y axis) [-]
+    REAL(ReKi)  :: HubDisplacementX = 0.0_ReKi      !< X direction hub displacement of the lidar (from ElastoDyn) [m]
+    REAL(ReKi)  :: HubDisplacementY = 0.0_ReKi      !< Y direction hub displacement of the lidar (from ElastoDyn) [m]
+    REAL(ReKi)  :: HubDisplacementZ = 0.0_ReKi      !< Z direction hub displacement of the lidar (from ElastoDyn) [m]
   END TYPE Lidar_InputType
 ! =======================
 ! =========  Lidar_OutputType  =======

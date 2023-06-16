@@ -52,12 +52,12 @@ IMPLICIT NONE
     REAL(R8Ki)  :: gravity = -999.9      !< gravity constant [[m/s^2]]
     REAL(R8Ki)  :: sea_density = -999.9      !< sea density [[kg/m^3]]
     REAL(R8Ki)  :: depth = -999.9      !< depth of water [[m]]
-    CHARACTER(255)  :: file_name      !< MAP input file [-]
-    CHARACTER(255)  :: summary_file_name      !< MAP summary file name [-]
-    CHARACTER(255)  :: library_input_str      !< cable library string information (from input file) [-]
-    CHARACTER(255)  :: node_input_str      !< node string information (from input file) [-]
-    CHARACTER(255)  :: line_input_str      !< element library string information (from input file) [-]
-    CHARACTER(255)  :: option_input_str      !< solver options library string information (from input file) [-]
+    CHARACTER(255)  :: file_name = ''      !< MAP input file [-]
+    CHARACTER(255)  :: summary_file_name = ''      !< MAP summary file name [-]
+    CHARACTER(255)  :: library_input_str = ''      !< cable library string information (from input file) [-]
+    CHARACTER(255)  :: node_input_str = ''      !< node string information (from input file) [-]
+    CHARACTER(255)  :: line_input_str = ''      !< element library string information (from input file) [-]
+    CHARACTER(255)  :: option_input_str = ''      !< solver options library string information (from input file) [-]
     TYPE(Lin_InitInputType)  :: LinInitInp      !<   [-]
   END TYPE MAP_InitInputType
 ! =======================
@@ -74,9 +74,9 @@ IMPLICIT NONE
   END TYPE MAP_InitOutputType_C
   TYPE, PUBLIC :: MAP_InitOutputType
     TYPE( MAP_InitOutputType_C ) :: C_obj
-    CHARACTER(99)  :: progName      !< program name [-]
-    CHARACTER(99)  :: version      !< version numnber [-]
-    CHARACTER(24)  :: compilingData      !< compiling data [-]
+    CHARACTER(99)  :: progName = ''      !< program name [-]
+    CHARACTER(99)  :: version = ''      !< version numnber [-]
+    CHARACTER(24)  :: compilingData = ''      !< compiling data [-]
     CHARACTER(15) , DIMENSION(:), ALLOCATABLE  :: writeOutputHdr      !< first line output file contents: output variable names [-]
     CHARACTER(15) , DIMENSION(:), ALLOCATABLE  :: writeOutputUnt      !< second line of output file contents: units [-]
     TYPE(ProgDesc)  :: Ver      !< this module's name, version, and date [-]
@@ -90,7 +90,7 @@ IMPLICIT NONE
   END TYPE MAP_ContinuousStateType_C
   TYPE, PUBLIC :: MAP_ContinuousStateType
     TYPE( MAP_ContinuousStateType_C ) :: C_obj
-    REAL(R8Ki)  :: dummy      !< Remove this variable if you have continuous states [-]
+    REAL(R8Ki)  :: dummy = 0.0_R8Ki      !< Remove this variable if you have continuous states [-]
   END TYPE MAP_ContinuousStateType
 ! =======================
 ! =========  MAP_DiscreteStateType_C  =======
@@ -100,7 +100,7 @@ IMPLICIT NONE
   END TYPE MAP_DiscreteStateType_C
   TYPE, PUBLIC :: MAP_DiscreteStateType
     TYPE( MAP_DiscreteStateType_C ) :: C_obj
-    REAL(R8Ki)  :: dummy      !< Remove this variable if you have discrete states [-]
+    REAL(R8Ki)  :: dummy = 0.0_R8Ki      !< Remove this variable if you have discrete states [-]
   END TYPE MAP_DiscreteStateType
 ! =======================
 ! =========  MAP_OtherStateType_C  =======
@@ -193,12 +193,12 @@ IMPLICIT NONE
   END TYPE MAP_ParameterType_C
   TYPE, PUBLIC :: MAP_ParameterType
     TYPE( MAP_ParameterType_C ) :: C_obj
-    REAL(R8Ki)  :: g      !< gravitational constant [[kg/m^2]]
-    REAL(R8Ki)  :: depth      !< distance to seabed [[m]]
-    REAL(R8Ki)  :: rho_sea      !< density of seawater [[m]]
-    REAL(R8Ki)  :: dt      !< time step coupling interval [[sec]]
-    CHARACTER(255) , DIMENSION(1:500)  :: InputLines      !< input file line for restart [-]
-    CHARACTER(1) , DIMENSION(1:500)  :: InputLineType      !< input file line type for restart [-]
+    REAL(R8Ki)  :: g = 0.0_R8Ki      !< gravitational constant [[kg/m^2]]
+    REAL(R8Ki)  :: depth = 0.0_R8Ki      !< distance to seabed [[m]]
+    REAL(R8Ki)  :: rho_sea = 0.0_R8Ki      !< density of seawater [[m]]
+    REAL(R8Ki)  :: dt = 0.0_R8Ki      !< time step coupling interval [[sec]]
+    CHARACTER(255) , DIMENSION(1:500)  :: InputLines = ''      !< input file line for restart [-]
+    CHARACTER(1) , DIMENSION(1:500)  :: InputLineType = ''      !< input file line type for restart [-]
     INTEGER(IntKi)  :: numOuts = 0      !< Number of write outputs [-]
     TYPE(Lin_ParamType)  :: LinParams      !< Parameter linearization data (fortran-only) [-]
   END TYPE MAP_ParameterType

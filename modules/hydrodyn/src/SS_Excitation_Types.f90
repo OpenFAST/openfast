@@ -36,11 +36,11 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  SS_Exc_InitInputType  =======
   TYPE, PUBLIC :: SS_Exc_InitInputType
-    CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
-    INTEGER(IntKi)  :: NBody      !< Number of WAMIT bodies for this State Space model [-]
-    INTEGER(IntKi)  :: ExctnDisp      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
-    REAL(ReKi)  :: WaveDir      !< Wave direction [rad]
-    INTEGER(IntKi)  :: NStepWave      !< Number of timesteps in the WaveTime array [-]
+    CHARACTER(1024)  :: InputFile = ''      !< Name of the input file [-]
+    INTEGER(IntKi)  :: NBody = 0_IntKi      !< Number of WAMIT bodies for this State Space model [-]
+    INTEGER(IntKi)  :: ExctnDisp = 0_IntKi      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
+    REAL(ReKi)  :: WaveDir = 0.0_ReKi      !< Wave direction [rad]
+    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Number of timesteps in the WaveTime array [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: PtfmRefztRot      !< The rotation about zt of the body reference frame(s) from xt/yt [radians]
     REAL(SiKi) , DIMENSION(:), POINTER  :: WaveElev0 => NULL()      !< Wave elevation time history at origin [m]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev1 => NULL()      !< First order wave elevation (points to SeaState module data) [-]
@@ -61,17 +61,17 @@ IMPLICIT NONE
 ! =======================
 ! =========  SS_Exc_DiscreteStateType  =======
   TYPE, PUBLIC :: SS_Exc_DiscreteStateType
-    REAL(SiKi)  :: DummyDiscState      !<  [-]
+    REAL(SiKi)  :: DummyDiscState = 0.0_R4Ki      !<  [-]
   END TYPE SS_Exc_DiscreteStateType
 ! =======================
 ! =========  SS_Exc_ConstraintStateType  =======
   TYPE, PUBLIC :: SS_Exc_ConstraintStateType
-    REAL(SiKi)  :: DummyConstrState      !<  [-]
+    REAL(SiKi)  :: DummyConstrState = 0.0_R4Ki      !<  [-]
   END TYPE SS_Exc_ConstraintStateType
 ! =======================
 ! =========  SS_Exc_OtherStateType  =======
   TYPE, PUBLIC :: SS_Exc_OtherStateType
-    INTEGER(IntKi)  :: n      !< Current Time step [-]
+    INTEGER(IntKi)  :: n = 0_IntKi      !< Current Time step [-]
     TYPE(SS_Exc_ContinuousStateType) , DIMENSION(1:4)  :: xdot      !< Old Values of dxdt to used by the solver (multistep method) [-]
   END TYPE SS_Exc_OtherStateType
 ! =======================
@@ -83,16 +83,16 @@ IMPLICIT NONE
 ! =======================
 ! =========  SS_Exc_ParameterType  =======
   TYPE, PUBLIC :: SS_Exc_ParameterType
-    REAL(DbKi)  :: DT      !< Time step [s]
-    INTEGER(IntKi)  :: NBody      !< Number of WAMIT bodies for this State Space model [-]
-    INTEGER(IntKi)  :: ExctnDisp      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
-    INTEGER(IntKi)  :: NStepWave      !< Number of timesteps in the WaveTime array [-]
+    REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step [s]
+    INTEGER(IntKi)  :: NBody = 0_IntKi      !< Number of WAMIT bodies for this State Space model [-]
+    INTEGER(IntKi)  :: ExctnDisp = 0_IntKi      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
+    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Number of timesteps in the WaveTime array [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: spDOF      !< States per DOF [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: A      !< A matrix [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: B      !< B matrix [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C      !< C matrix [-]
     INTEGER(IntKi)  :: numStates = 0      !< Number of states [-]
-    REAL(DbKi)  :: Tc      !< Time shift [s]
+    REAL(DbKi)  :: Tc = 0.0_R8Ki      !< Time shift [s]
     REAL(SiKi) , DIMENSION(:), POINTER  :: WaveElev0 => NULL()      !< Wave elevation time history at origin [m]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev1 => NULL()      !< First order wave elevation (points to SeaState module data) [-]
     REAL(SiKi) , DIMENSION(:), POINTER  :: WaveTime => NULL()      !< Times where wave elevation is known (points to SeaState module data) [s]

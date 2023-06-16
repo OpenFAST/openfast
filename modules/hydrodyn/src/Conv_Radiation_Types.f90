@@ -35,57 +35,57 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  Conv_Rdtn_InitInputType  =======
   TYPE, PUBLIC :: Conv_Rdtn_InitInputType
-    REAL(DbKi)  :: RdtnDT      !<  [-]
-    CHARACTER(80)  :: RdtnDTChr 
-    INTEGER(IntKi)  :: NBody      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
-    REAL(ReKi)  :: HighFreq      !<  [-]
-    CHARACTER(1024)  :: WAMITFile      !<  [-]
+    REAL(DbKi)  :: RdtnDT = 0.0_R8Ki      !<  [-]
+    CHARACTER(80)  :: RdtnDTChr = '' 
+    INTEGER(IntKi)  :: NBody = 0_IntKi      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
+    REAL(ReKi)  :: HighFreq = 0.0_ReKi      !<  [-]
+    CHARACTER(1024)  :: WAMITFile = ''      !<  [-]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: HdroAddMs      !<  [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: HdroFreq      !<  [-]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: HdroDmpng      !<  [-]
-    INTEGER(IntKi)  :: NInpFreq      !<  [-]
-    REAL(DbKi)  :: RdtnTMax      !<  [-]
+    INTEGER(IntKi)  :: NInpFreq = 0_IntKi      !<  [-]
+    REAL(DbKi)  :: RdtnTMax = 0.0_R8Ki      !<  [-]
   END TYPE Conv_Rdtn_InitInputType
 ! =======================
 ! =========  Conv_Rdtn_InitOutputType  =======
   TYPE, PUBLIC :: Conv_Rdtn_InitOutputType
-    INTEGER(IntKi)  :: DummyInitOut      !<  [-]
+    INTEGER(IntKi)  :: DummyInitOut = 0_IntKi      !<  [-]
   END TYPE Conv_Rdtn_InitOutputType
 ! =======================
 ! =========  Conv_Rdtn_ContinuousStateType  =======
   TYPE, PUBLIC :: Conv_Rdtn_ContinuousStateType
-    REAL(SiKi)  :: DummyContState      !< Remove this variable if you have continuous states [-]
+    REAL(SiKi)  :: DummyContState = 0.0_R4Ki      !< Remove this variable if you have continuous states [-]
   END TYPE Conv_Rdtn_ContinuousStateType
 ! =======================
 ! =========  Conv_Rdtn_DiscreteStateType  =======
   TYPE, PUBLIC :: Conv_Rdtn_DiscreteStateType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: XDHistory      !<  [-]
-    REAL(DbKi)  :: LastTime      !<  [-]
+    REAL(DbKi)  :: LastTime = 0.0_R8Ki      !<  [-]
   END TYPE Conv_Rdtn_DiscreteStateType
 ! =======================
 ! =========  Conv_Rdtn_ConstraintStateType  =======
   TYPE, PUBLIC :: Conv_Rdtn_ConstraintStateType
-    REAL(SiKi)  :: DummyConstrState      !< Remove this variable if you have constraint states [-]
+    REAL(SiKi)  :: DummyConstrState = 0.0_R4Ki      !< Remove this variable if you have constraint states [-]
   END TYPE Conv_Rdtn_ConstraintStateType
 ! =======================
 ! =========  Conv_Rdtn_OtherStateType  =======
   TYPE, PUBLIC :: Conv_Rdtn_OtherStateType
-    INTEGER(IntKi)  :: IndRdtn      !<  [-]
+    INTEGER(IntKi)  :: IndRdtn = 0_IntKi      !<  [-]
   END TYPE Conv_Rdtn_OtherStateType
 ! =======================
 ! =========  Conv_Rdtn_MiscVarType  =======
   TYPE, PUBLIC :: Conv_Rdtn_MiscVarType
-    INTEGER(IntKi)  :: LastIndRdtn      !<  [-]
+    INTEGER(IntKi)  :: LastIndRdtn = 0_IntKi      !<  [-]
   END TYPE Conv_Rdtn_MiscVarType
 ! =======================
 ! =========  Conv_Rdtn_ParameterType  =======
   TYPE, PUBLIC :: Conv_Rdtn_ParameterType
-    REAL(DbKi)  :: DT      !< Time step for continuous state integration & discrete state update [seconds]
-    REAL(DbKi)  :: RdtnDT      !<  [-]
-    INTEGER(IntKi)  :: NBody      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
+    REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
+    REAL(DbKi)  :: RdtnDT = 0.0_R8Ki      !<  [-]
+    INTEGER(IntKi)  :: NBody = 0_IntKi      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: RdtnKrnl      !<  [-]
-    INTEGER(IntKi)  :: NStepRdtn      !<  [-]
-    INTEGER(IntKi)  :: NStepRdtn1      !<  [-]
+    INTEGER(IntKi)  :: NStepRdtn = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: NStepRdtn1 = 0_IntKi      !<  [-]
   END TYPE Conv_Rdtn_ParameterType
 ! =======================
 ! =========  Conv_Rdtn_InputType  =======

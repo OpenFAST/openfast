@@ -35,10 +35,10 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  SeaSt_Interp_InitInputType  =======
   TYPE, PUBLIC :: SeaSt_Interp_InitInputType
-    INTEGER(IntKi) , DIMENSION(1:4)  :: n      !< number of grid points in the t, x, y, and z directions [-]
-    REAL(ReKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction (time, x, y, z) [s,m,m,m]
-    REAL(ReKi) , DIMENSION(1:4)  :: pZero      !< fixed position of the time-X-Y-Z grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
-    REAL(ReKi)  :: Z_Depth      !< grid depth [m]
+    INTEGER(IntKi) , DIMENSION(1:4)  :: n = 0_IntKi      !< number of grid points in the t, x, y, and z directions [-]
+    REAL(ReKi) , DIMENSION(1:4)  :: delta = 0.0_ReKi      !< size between 2 consecutive grid points in each grid direction (time, x, y, z) [s,m,m,m]
+    REAL(ReKi) , DIMENSION(1:4)  :: pZero = 0.0_ReKi      !< fixed position of the time-X-Y-Z grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
+    REAL(ReKi)  :: Z_Depth = 0.0_ReKi      !< grid depth [m]
   END TYPE SeaSt_Interp_InitInputType
 ! =======================
 ! =========  SeaSt_Interp_InitOutputType  =======
@@ -48,19 +48,19 @@ IMPLICIT NONE
 ! =======================
 ! =========  SeaSt_Interp_MiscVarType  =======
   TYPE, PUBLIC :: SeaSt_Interp_MiscVarType
-    REAL(SiKi) , DIMENSION(1:8)  :: N3D      !< this is the 3-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
-    REAL(SiKi) , DIMENSION(1:16)  :: N4D      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
-    INTEGER(IntKi) , DIMENSION(1:4)  :: Indx_Lo      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
-    INTEGER(IntKi) , DIMENSION(1:4)  :: Indx_Hi      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
+    REAL(SiKi) , DIMENSION(1:8)  :: N3D = 0.0_R4Ki      !< this is the 3-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
+    REAL(SiKi) , DIMENSION(1:16)  :: N4D = 0.0_R4Ki      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
+    INTEGER(IntKi) , DIMENSION(1:4)  :: Indx_Lo = 0_IntKi      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
+    INTEGER(IntKi) , DIMENSION(1:4)  :: Indx_Hi = 0_IntKi      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
     LOGICAL  :: FirstWarn_Clamp = .true.      !< used to avoid too many 'Position has been clamped to the grid boundary' warning messages  [-]
   END TYPE SeaSt_Interp_MiscVarType
 ! =======================
 ! =========  SeaSt_Interp_ParameterType  =======
   TYPE, PUBLIC :: SeaSt_Interp_ParameterType
-    INTEGER(IntKi) , DIMENSION(1:4)  :: n      !< number of evenly-spaced grid points in the t, x, y, and z directions [-]
-    REAL(ReKi) , DIMENSION(1:4)  :: delta      !< size between 2 consecutive grid points in each grid direction [s,m,m,m]
-    REAL(ReKi) , DIMENSION(1:4)  :: pZero      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
-    REAL(ReKi)  :: Z_Depth      !< grid depth [m]
+    INTEGER(IntKi) , DIMENSION(1:4)  :: n = 0_IntKi      !< number of evenly-spaced grid points in the t, x, y, and z directions [-]
+    REAL(ReKi) , DIMENSION(1:4)  :: delta = 0.0_ReKi      !< size between 2 consecutive grid points in each grid direction [s,m,m,m]
+    REAL(ReKi) , DIMENSION(1:4)  :: pZero = 0.0_ReKi      !< fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:)) [m]
+    REAL(ReKi)  :: Z_Depth = 0.0_ReKi      !< grid depth [m]
   END TYPE SeaSt_Interp_ParameterType
 ! =======================
 CONTAINS

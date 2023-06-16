@@ -50,74 +50,74 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: IfW_NumPtsAvg = 144      ! Number of points averaged for rotor-average wind speed [-]
 ! =========  InflowWind_InputFile  =======
   TYPE, PUBLIC :: InflowWind_InputFile
-    LOGICAL  :: EchoFlag      !< Echo the input file [-]
+    LOGICAL  :: EchoFlag = .false.      !< Echo the input file [-]
     INTEGER(IntKi)  :: WindType = 0      !< Type of windfile [-]
-    REAL(ReKi)  :: PropagationDir      !< Direction of wind propagation (meteorological direction) [(degrees)]
-    REAL(ReKi)  :: VFlowAngle      !< Vertical (upflow) angle [degrees]
+    REAL(ReKi)  :: PropagationDir = 0.0_ReKi      !< Direction of wind propagation (meteorological direction) [(degrees)]
+    REAL(ReKi)  :: VFlowAngle = 0.0_ReKi      !< Vertical (upflow) angle [degrees]
     LOGICAL  :: VelInterpCubic = .FALSE.      !< Use cubic interpolation for velocity in time (false=linear, true=cubic) [Used with WindType=2,3,4,5,7] [-]
-    INTEGER(IntKi)  :: NWindVel      !< Number of points to output the wind velocity (0 to 9) [-]
+    INTEGER(IntKi)  :: NWindVel = 0_IntKi      !< Number of points to output the wind velocity (0 to 9) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WindVxiList      !< List of X coordinates for wind velocity measurements [meters]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WindVyiList      !< List of Y coordinates for wind velocity measurements [meters]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WindVziList      !< List of Z coordinates for wind velocity measurements [meters]
-    REAL(ReKi)  :: Steady_HWindSpeed      !< Steady wind -- horizontal windspeed [meters/s]
-    REAL(ReKi)  :: Steady_RefHt      !< Steady wind -- reference height [meters]
-    REAL(ReKi)  :: Steady_PLexp      !< Steady wind -- power law exponent [-]
-    CHARACTER(1024)  :: Uniform_FileName      !< Uniform wind -- filename [-]
-    REAL(ReKi)  :: Uniform_RefHt      !< Uniform wind -- reference height [meters]
-    REAL(ReKi)  :: Uniform_RefLength      !< Uniform wind -- reference length [meters]
-    CHARACTER(1024)  :: TSFF_FileName      !< TurbSim Full-Field -- filename [-]
-    CHARACTER(1024)  :: BladedFF_FileName      !< Bladed-style Full-Field -- filename [-]
-    LOGICAL  :: BladedFF_TowerFile      !< Bladed-style Full-Field -- tower file exists [-]
+    REAL(ReKi)  :: Steady_HWindSpeed = 0.0_ReKi      !< Steady wind -- horizontal windspeed [meters/s]
+    REAL(ReKi)  :: Steady_RefHt = 0.0_ReKi      !< Steady wind -- reference height [meters]
+    REAL(ReKi)  :: Steady_PLexp = 0.0_ReKi      !< Steady wind -- power law exponent [-]
+    CHARACTER(1024)  :: Uniform_FileName = ''      !< Uniform wind -- filename [-]
+    REAL(ReKi)  :: Uniform_RefHt = 0.0_ReKi      !< Uniform wind -- reference height [meters]
+    REAL(ReKi)  :: Uniform_RefLength = 0.0_ReKi      !< Uniform wind -- reference length [meters]
+    CHARACTER(1024)  :: TSFF_FileName = ''      !< TurbSim Full-Field -- filename [-]
+    CHARACTER(1024)  :: BladedFF_FileName = ''      !< Bladed-style Full-Field -- filename [-]
+    LOGICAL  :: BladedFF_TowerFile = .false.      !< Bladed-style Full-Field -- tower file exists [-]
     LOGICAL  :: CTTS_CoherentTurb = .FALSE.      !< Coherent turbulence data exists [-]
-    CHARACTER(1024)  :: CTTS_FileName      !< Name of coherent turbulence file [-]
-    CHARACTER(1024)  :: CTTS_Path      !< Path to coherent turbulence binary data files [-]
-    CHARACTER(1024)  :: HAWC_FileName_u      !< HAWC -- u component binary data file name [-]
-    CHARACTER(1024)  :: HAWC_FileName_v      !< HAWC -- v component binary data file name [-]
-    CHARACTER(1024)  :: HAWC_FileName_w      !< HAWC -- w component binary data file name [-]
-    INTEGER(IntKi)  :: HAWC_nx      !< HAWC -- number of grids in x direction [-]
-    INTEGER(IntKi)  :: HAWC_ny      !< HAWC -- number of grids in y direction [-]
-    INTEGER(IntKi)  :: HAWC_nz      !< HAWC -- number of grids in z direction [-]
-    REAL(ReKi)  :: HAWC_dx      !< HAWC -- distance between points in x direction [meters]
-    REAL(ReKi)  :: HAWC_dy      !< HAWC -- distance between points in y direction [meters]
-    REAL(ReKi)  :: HAWC_dz      !< HAWC -- distance between points in z direction [meters]
-    LOGICAL  :: SumPrint      !< Write summary info to a file <ROOTNAME>.IfW.Sum [-]
-    INTEGER(IntKi)  :: NumOuts      !< Number of parameters in the output list (number of outputs requested) [-]
+    CHARACTER(1024)  :: CTTS_FileName = ''      !< Name of coherent turbulence file [-]
+    CHARACTER(1024)  :: CTTS_Path = ''      !< Path to coherent turbulence binary data files [-]
+    CHARACTER(1024)  :: HAWC_FileName_u = ''      !< HAWC -- u component binary data file name [-]
+    CHARACTER(1024)  :: HAWC_FileName_v = ''      !< HAWC -- v component binary data file name [-]
+    CHARACTER(1024)  :: HAWC_FileName_w = ''      !< HAWC -- w component binary data file name [-]
+    INTEGER(IntKi)  :: HAWC_nx = 0_IntKi      !< HAWC -- number of grids in x direction [-]
+    INTEGER(IntKi)  :: HAWC_ny = 0_IntKi      !< HAWC -- number of grids in y direction [-]
+    INTEGER(IntKi)  :: HAWC_nz = 0_IntKi      !< HAWC -- number of grids in z direction [-]
+    REAL(ReKi)  :: HAWC_dx = 0.0_ReKi      !< HAWC -- distance between points in x direction [meters]
+    REAL(ReKi)  :: HAWC_dy = 0.0_ReKi      !< HAWC -- distance between points in y direction [meters]
+    REAL(ReKi)  :: HAWC_dz = 0.0_ReKi      !< HAWC -- distance between points in z direction [meters]
+    LOGICAL  :: SumPrint = .false.      !< Write summary info to a file <ROOTNAME>.IfW.Sum [-]
+    INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
-    INTEGER(IntKi)  :: SensorType      !< Sensor type (for lidar/sensor module) [-]
-    INTEGER(IntKi)  :: NumBeam      !< Number of lidar beams [-]
-    INTEGER(IntKi)  :: NumPulseGate      !< The number of range gates to return wind speeds at [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: RotorApexOffsetPos      !< Position of the lidar unit relative to the rotor apex of rotation [m]
+    INTEGER(IntKi)  :: SensorType = 0_IntKi      !< Sensor type (for lidar/sensor module) [-]
+    INTEGER(IntKi)  :: NumBeam = 0_IntKi      !< Number of lidar beams [-]
+    INTEGER(IntKi)  :: NumPulseGate = 0_IntKi      !< The number of range gates to return wind speeds at [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: RotorApexOffsetPos = 0.0_ReKi      !< Position of the lidar unit relative to the rotor apex of rotation [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FocalDistanceX      !< LIDAR LOS focal distance co-ordinates in the x direction [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FocalDistanceY      !< LIDAR LOS focal distance co-ordinates in the y direction [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: FocalDistanceZ      !< LIDAR LOS focal distance co-ordinates in the z direction [m]
-    REAL(ReKi)  :: PulseSpacing      !< Distance between range gates [m]
-    REAL(ReKi)  :: MeasurementInterval      !< Time between each measurement [s]
-    REAL(ReKi)  :: URefLid      !< Reference average wind speed for the lidar [m/s]
-    LOGICAL  :: LidRadialVel      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
-    INTEGER(IntKi)  :: ConsiderHubMotion      !< Flag whether or not the hub motion's impact on the Lidar measurement will be considered [0 for no, 1 for yes] [-]
+    REAL(ReKi)  :: PulseSpacing = 0.0_ReKi      !< Distance between range gates [m]
+    REAL(ReKi)  :: MeasurementInterval = 0.0_ReKi      !< Time between each measurement [s]
+    REAL(ReKi)  :: URefLid = 0.0_ReKi      !< Reference average wind speed for the lidar [m/s]
+    LOGICAL  :: LidRadialVel = .false.      !< TRUE => return radial component, FALSE => return 'x' direction estimate [-]
+    INTEGER(IntKi)  :: ConsiderHubMotion = 0_IntKi      !< Flag whether or not the hub motion's impact on the Lidar measurement will be considered [0 for no, 1 for yes] [-]
     TYPE(Grid3D_InitInputType)  :: FF      !< scaling data [-]
   END TYPE InflowWind_InputFile
 ! =======================
 ! =========  InflowWind_InitInputType  =======
   TYPE, PUBLIC :: InflowWind_InitInputType
-    CHARACTER(1024)  :: InputFileName      !< Name of the InflowWind input file to use [-]
+    CHARACTER(1024)  :: InputFileName = ''      !< Name of the InflowWind input file to use [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     LOGICAL  :: Use4Dext = .FALSE.      !< Flag that tells this module if an external module will pass it 4-D velocity grids. [-]
-    INTEGER(IntKi)  :: NumWindPoints      !< Number of wind velocity points expected [-]
+    INTEGER(IntKi)  :: NumWindPoints = 0_IntKi      !< Number of wind velocity points expected [-]
     INTEGER(IntKi)  :: TurbineID = 0      !< Wind turbine ID number in the fixed (DEFAULT) file name when FixedWindFileRootName = .TRUE. (used by FAST.Farm) [-]
     LOGICAL  :: FixedWindFileRootName = .FALSE.      !< Do the wind data files have a fixed (DEFAULT) file name? (used by FAST.Farm) [-]
     LOGICAL  :: UseInputFile = .TRUE.      !< Should we read everthing from an input file, or do we get it some other way [-]
-    CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
+    CHARACTER(1024)  :: RootName = ''      !< RootName for writing output files [-]
     TYPE(FileInfoType)  :: PassedFileData      !< If we don't use the input file, pass everything through this [-]
     LOGICAL  :: WindType2UseInputFile = .TRUE.      !< Flag for toggling file based IO in wind type 2. [-]
     TYPE(FileInfoType)  :: WindType2Data      !< Optional slot for wind type 2 data if file IO is not used. [-]
     LOGICAL  :: OutputAccel = .FALSE.      !< Flag to output wind acceleration [-]
     TYPE(Lidar_InitInputType)  :: lidar      !< InitInput for lidar data [-]
     TYPE(Grid4D_InitInputType)  :: FDext      !< InitInput for 4D external wind data [-]
-    REAL(ReKi)  :: RadAvg      !< Radius (from hub) used for averaging wind speed [-]
-    INTEGER(IntKi)  :: MHK      !< MHK turbine type switch [-]
-    REAL(ReKi)  :: WtrDpth      !< Water depth [m]
-    REAL(ReKi)  :: MSL2SWL      !< Mean sea level to still water level [m]
+    REAL(ReKi)  :: RadAvg = 0.0_ReKi      !< Radius (from hub) used for averaging wind speed [-]
+    INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type switch [-]
+    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
+    REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Mean sea level to still water level [m]
     INTEGER(IntKi)  :: BoxExceedAllowIdx = -1      !< Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
     LOGICAL  :: BoxExceedAllowF = .FALSE.      !< Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
   END TYPE InflowWind_InitInputType
@@ -138,13 +138,13 @@ IMPLICIT NONE
 ! =======================
 ! =========  InflowWind_ParameterType  =======
   TYPE, PUBLIC :: InflowWind_ParameterType
-    CHARACTER(1024)  :: RootFileName      !< Root of the InflowWind input   filename [-]
-    REAL(DbKi)  :: DT      !< Time step for cont. state integration & disc. state update [seconds]
+    CHARACTER(1024)  :: RootFileName = ''      !< Root of the InflowWind input   filename [-]
+    REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for cont. state integration & disc. state update [seconds]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindViXYZprime      !< List of XYZ coordinates for velocity measurements, translated to the wind coordinate system (prime coordinates).  This equals MATMUL( RotToWind, ParamData%WindViXYZ ) [meters]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindViXYZ      !< List of XYZ coordinates for wind velocity measurements, 3xNWindVel [meters]
     TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Flow field data to represent all wind types [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PositionAvg      !< (non-rotated) positions of points used for averaging wind speed [meters]
-    INTEGER(IntKi)  :: NWindVel      !< Number of points in the wind velocity list [-]
+    INTEGER(IntKi)  :: NWindVel = 0_IntKi      !< Number of points in the wind velocity list [-]
     INTEGER(IntKi)  :: NumOuts = 0      !< Number of parameters in the output list (number of outputs requested) [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: OutParamLinIndx      !< Index into WriteOutput for WindViXYZ in linearization analysis [-]
@@ -156,8 +156,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: InflowWind_InputType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PositionXYZ      !< Array holding the input positions at a given timestep [meters]
     TYPE(Lidar_InputType)  :: lidar      !< Lidar data [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: HubPosition      !< position of the hub (inertial frame) [m]
-    REAL(ReKi) , DIMENSION(1:3,1:3)  :: HubOrientation      !< orientation of the hub (direction cosine matrix) [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: HubPosition = 0.0_ReKi      !< position of the hub (inertial frame) [m]
+    REAL(ReKi) , DIMENSION(1:3,1:3)  :: HubOrientation = 0.0_ReKi      !< orientation of the hub (direction cosine matrix) [-]
   END TYPE InflowWind_InputType
 ! =======================
 ! =========  InflowWind_OutputType  =======
@@ -165,29 +165,29 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: VelocityUVW      !< Array holding the U,V,W velocity for a given timestep [meters/sec]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AccelUVW      !< Array holding the U,V,W acceleration for a given timestep [meters/sec]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< Array with values to output to file [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: DiskVel      !< Vector holding the U,V,W average velocity of the disk [meters/sec]
-    REAL(ReKi) , DIMENSION(1:3)  :: HubVel      !< Vector holding the U,V,W velocity at the hub [meters/sec]
+    REAL(ReKi) , DIMENSION(1:3)  :: DiskVel = 0.0_ReKi      !< Vector holding the U,V,W average velocity of the disk [meters/sec]
+    REAL(ReKi) , DIMENSION(1:3)  :: HubVel = 0.0_ReKi      !< Vector holding the U,V,W velocity at the hub [meters/sec]
     TYPE(Lidar_OutputType)  :: lidar      !< Lidar data [-]
   END TYPE InflowWind_OutputType
 ! =======================
 ! =========  InflowWind_ContinuousStateType  =======
   TYPE, PUBLIC :: InflowWind_ContinuousStateType
-    REAL(ReKi)  :: DummyContState      !< Remove this variable if you have continuous states [-]
+    REAL(ReKi)  :: DummyContState = 0.0_ReKi      !< Remove this variable if you have continuous states [-]
   END TYPE InflowWind_ContinuousStateType
 ! =======================
 ! =========  InflowWind_DiscreteStateType  =======
   TYPE, PUBLIC :: InflowWind_DiscreteStateType
-    REAL(ReKi)  :: DummyDiscState      !< Remove this variable if you have discrete states [-]
+    REAL(ReKi)  :: DummyDiscState = 0.0_ReKi      !< Remove this variable if you have discrete states [-]
   END TYPE InflowWind_DiscreteStateType
 ! =======================
 ! =========  InflowWind_ConstraintStateType  =======
   TYPE, PUBLIC :: InflowWind_ConstraintStateType
-    REAL(ReKi)  :: DummyConstrState      !< Remove this variable if you have constraint states [-]
+    REAL(ReKi)  :: DummyConstrState = 0.0_ReKi      !< Remove this variable if you have constraint states [-]
   END TYPE InflowWind_ConstraintStateType
 ! =======================
 ! =========  InflowWind_OtherStateType  =======
   TYPE, PUBLIC :: InflowWind_OtherStateType
-    REAL(ReKi)  :: DummyOtherState      !< Remove this variable if you have other states [-]
+    REAL(ReKi)  :: DummyOtherState = 0.0_ReKi      !< Remove this variable if you have other states [-]
   END TYPE InflowWind_OtherStateType
 ! =======================
 ! =========  InflowWind_MiscVarType  =======

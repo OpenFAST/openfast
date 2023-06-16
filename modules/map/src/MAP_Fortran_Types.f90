@@ -48,8 +48,8 @@ IMPLICIT NONE
 ! =========  Lin_ParamType  =======
   TYPE, PUBLIC :: Lin_ParamType
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian (fortran-only) [-]
-    REAL(R8Ki)  :: du      !< determines size of the translational displacement perturbation for u (inputs) (fortran-only) [-]
-    INTEGER(IntKi)  :: Jac_ny      !< number of outputs in jacobian matrix (fortran-only) [-]
+    REAL(R8Ki)  :: du = 0.0_R8Ki      !< determines size of the translational displacement perturbation for u (inputs) (fortran-only) [-]
+    INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix (fortran-only) [-]
   END TYPE Lin_ParamType
 ! =======================
 CONTAINS

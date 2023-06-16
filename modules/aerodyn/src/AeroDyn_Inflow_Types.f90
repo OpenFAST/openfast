@@ -45,20 +45,20 @@ IMPLICIT NONE
     TYPE(InflowWind_MiscVarType)  :: m      !< Misc/optimization variables [-]
     TYPE(InflowWind_InputType)  :: u      !< Array of inputs associated with InputTimes [-]
     TYPE(InflowWind_OutputType)  :: y      !< System outputs [-]
-    INTEGER(IntKi)  :: CompInflow      !< 0=Steady Wind, 1=InflowWind [-]
-    REAL(ReKi)  :: HWindSpeed      !< RefHeight Wind speed [-]
-    REAL(ReKi)  :: RefHt      !< RefHeight [-]
-    REAL(ReKi)  :: PLExp      !< PLExp [-]
+    INTEGER(IntKi)  :: CompInflow = 0_IntKi      !< 0=Steady Wind, 1=InflowWind [-]
+    REAL(ReKi)  :: HWindSpeed = 0.0_ReKi      !< RefHeight Wind speed [-]
+    REAL(ReKi)  :: RefHt = 0.0_ReKi      !< RefHeight [-]
+    REAL(ReKi)  :: PLExp = 0.0_ReKi      !< PLExp [-]
   END TYPE ADI_InflowWindData
 ! =======================
 ! =========  ADI_IW_InputData  =======
   TYPE, PUBLIC :: ADI_IW_InputData
-    Character(1024)  :: InputFile      !< Name of InfloWind input file [-]
-    INTEGER(IntKi)  :: CompInflow      !< 0=Steady Wind, 1=InflowWind [-]
-    REAL(ReKi)  :: HWindSpeed      !< RefHeight Wind speed [-]
-    REAL(ReKi)  :: RefHt      !< RefHeight [-]
-    REAL(ReKi)  :: PLExp      !< PLExp [-]
-    INTEGER(IntKi)  :: MHK      !< MHK turbine type switch [-]
+    Character(1024)  :: InputFile = ''      !< Name of InfloWind input file [-]
+    INTEGER(IntKi)  :: CompInflow = 0_IntKi      !< 0=Steady Wind, 1=InflowWind [-]
+    REAL(ReKi)  :: HWindSpeed = 0.0_ReKi      !< RefHeight Wind speed [-]
+    REAL(ReKi)  :: RefHt = 0.0_ReKi      !< RefHeight [-]
+    REAL(ReKi)  :: PLExp = 0.0_ReKi      !< PLExp [-]
+    INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type switch [-]
     LOGICAL  :: UseInputFile = .TRUE.      !< Should we read everthing from an input file, or is it passed in? [-]
     TYPE(FileInfoType)  :: PassedFileData      !< If we don't use the input file, pass everything through this [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
@@ -68,11 +68,11 @@ IMPLICIT NONE
   TYPE, PUBLIC :: ADI_InitInputType
     TYPE(AD_InitInputType)  :: AD      !< AD Init input types [-]
     TYPE(ADI_IW_InputData)  :: IW_InitInp      !< IW Init input types [-]
-    Character(1024)  :: RootName      !< RootName for writing output files [-]
+    Character(1024)  :: RootName = ''      !< RootName for writing output files [-]
     LOGICAL  :: storeHHVel = .false.      !< If True, hub height velocity will be computed by infow wind [-]
     INTEGER(IntKi)  :: WrVTK = 0      !< 0= no vtk, 1=init only, 2=animation [-]
     INTEGER(IntKi)  :: WrVTK_Type = 1      !< Flag for VTK output type (1=surface, 2=line, 3=both) [-]
-    REAL(ReKi)  :: WtrDpth      !< Water depth [m]
+    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
   END TYPE ADI_InitInputType
 ! =======================
 ! =========  ADI_InitOutputType  =======
@@ -112,13 +112,13 @@ IMPLICIT NONE
 ! =========  ADI_ParameterType  =======
   TYPE, PUBLIC :: ADI_ParameterType
     TYPE(AD_ParameterType)  :: AD      !< Parameters [-]
-    REAL(DbKi)  :: dt      !< time increment [s]
-    LOGICAL  :: storeHHVel      !< If True, hub height velocity will be computed by infow wind [-]
-    INTEGER(IntKi)  :: wrVTK      !< 0= no vtk, 1=init only, 2=animation [-]
-    INTEGER(IntKi)  :: WrVTK_Type      !< Flag for VTK output type (1=surface, 2=line, 3=both) [-]
+    REAL(DbKi)  :: dt = 0.0_R8Ki      !< time increment [s]
+    LOGICAL  :: storeHHVel = .false.      !< If True, hub height velocity will be computed by infow wind [-]
+    INTEGER(IntKi)  :: wrVTK = 0_IntKi      !< 0= no vtk, 1=init only, 2=animation [-]
+    INTEGER(IntKi)  :: WrVTK_Type = 0_IntKi      !< Flag for VTK output type (1=surface, 2=line, 3=both) [-]
     INTEGER(IntKi)  :: NumOuts = 0      !< Total number of WriteOutput outputs [-]
-    INTEGER(IntKi)  :: MHK      !< MHK turbine type switch [-]
-    REAL(ReKi)  :: WtrDpth      !< Water depth [m]
+    INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type switch [-]
+    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
   END TYPE ADI_ParameterType
 ! =======================
 ! =========  ADI_InputType  =======
@@ -130,7 +130,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: ADI_OutputType
     TYPE(AD_OutputType)  :: AD      !< System outputs [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: HHVel      !< Hub Height velocities for each rotors [-]
-    REAL(ReKi)  :: PLExp      !< Power law exponents (for outputs only) [-]
+    REAL(ReKi)  :: PLExp = 0.0_ReKi      !< Power law exponents (for outputs only) [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: IW_WriteOutput      !< WriteOutputs for inflow wind [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< System outputs [-]
   END TYPE ADI_OutputType
@@ -159,7 +159,7 @@ IMPLICIT NONE
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeLn2Mesh      !< (only if elastic blades) BladeLn2Mesh    Line mesh along blade [-]
     LOGICAL  :: hasTower = .true.      !< True if a tower is present [-]
     LOGICAL  :: rigidBlades = .true.      !< True if blades are rigid (using BladeRootMotion) or not (Useing BldeLn2Mesh) [-]
-    INTEGER(IntKi)  :: numBlades      !< Number of blades [-]
+    INTEGER(IntKi)  :: numBlades = 0_IntKi      !< Number of blades [-]
     TYPE(MeshMapType)  :: ED_P_2_AD_P_T      !< (only if hasTower) Mesh mapping from tower base to AD tower base [-]
     TYPE(MeshMapType)  :: AD_P_2_AD_L_T      !< (only if hasTower) Mesh mapping from tower base to AD tower line [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: AD_P_2_AD_L_B      !< (only for rigid blades) Mesh mapping from AD blade root to AD line mesh [-]

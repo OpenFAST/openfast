@@ -35,9 +35,9 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  Orca_InitInputType  =======
   TYPE, PUBLIC :: Orca_InitInputType
-    CHARACTER(1024)  :: InputFile      !< Name of the input file; remove if there is no file [-]
-    CHARACTER(1024)  :: RootName      !< RootName for writing output files (echo file) [-]
-    REAL(ReKi)  :: TMax      !< Maximum Time [seconds]
+    CHARACTER(1024)  :: InputFile = ''      !< Name of the input file; remove if there is no file [-]
+    CHARACTER(1024)  :: RootName = ''      !< RootName for writing output files (echo file) [-]
+    REAL(ReKi)  :: TMax = 0.0_ReKi      !< Maximum Time [seconds]
   END TYPE Orca_InitInputType
 ! =======================
 ! =========  Orca_InitOutputType  =======
@@ -49,33 +49,33 @@ IMPLICIT NONE
 ! =======================
 ! =========  Orca_InputFile  =======
   TYPE, PUBLIC :: Orca_InputFile
-    CHARACTER(1024)  :: DLL_FileName      !< Name of the DLL file [-]
-    CHARACTER(1024)  :: DLL_InitProcName      !< Name of the DLL procedure to call during initialisation [-]
-    CHARACTER(1024)  :: DLL_CalcProcName      !< Name of the DLL procedure to call during CalcOutput [-]
-    CHARACTER(1024)  :: DLL_EndProcName      !< Name of the DLL procedure to call during End [-]
-    CHARACTER(1024)  :: DirRoot      !< Directory and rootname of simulation input file [-]
+    CHARACTER(1024)  :: DLL_FileName = ''      !< Name of the DLL file [-]
+    CHARACTER(1024)  :: DLL_InitProcName = ''      !< Name of the DLL procedure to call during initialisation [-]
+    CHARACTER(1024)  :: DLL_CalcProcName = ''      !< Name of the DLL procedure to call during CalcOutput [-]
+    CHARACTER(1024)  :: DLL_EndProcName = ''      !< Name of the DLL procedure to call during End [-]
+    CHARACTER(1024)  :: DirRoot = ''      !< Directory and rootname of simulation input file [-]
   END TYPE Orca_InputFile
 ! =======================
 ! =========  Orca_OtherStateType  =======
   TYPE, PUBLIC :: Orca_OtherStateType
-    REAL(SiKi)  :: DummyOtherState      !< Remove if you have OtherStates [-]
+    REAL(SiKi)  :: DummyOtherState = 0.0_R4Ki      !< Remove if you have OtherStates [-]
   END TYPE Orca_OtherStateType
 ! =======================
 ! =========  Orca_MiscVarType  =======
   TYPE, PUBLIC :: Orca_MiscVarType
-    REAL(ReKi) , DIMENSION(1:6,1:6)  :: PtfmAM      !< Added mass matrix results from OrcaFlex [-]
-    REAL(ReKi) , DIMENSION(1:6)  :: PtfmFt      !< Force/moment results from OrcaFlex [-]
-    REAL(ReKi) , DIMENSION(1:6)  :: F_PtfmAM      !< Force/moment results calculated from the added mass and accel [-]
+    REAL(ReKi) , DIMENSION(1:6,1:6)  :: PtfmAM = 0.0_ReKi      !< Added mass matrix results from OrcaFlex [-]
+    REAL(ReKi) , DIMENSION(1:6)  :: PtfmFt = 0.0_ReKi      !< Force/moment results from OrcaFlex [-]
+    REAL(ReKi) , DIMENSION(1:6)  :: F_PtfmAM = 0.0_ReKi      !< Force/moment results calculated from the added mass and accel [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [see OutListParameters.xlsx spreadsheet]
-    REAL(DbKi)  :: LastTimeStep      !< The last timestep called [-]
+    REAL(DbKi)  :: LastTimeStep = 0.0_R8Ki      !< The last timestep called [-]
   END TYPE Orca_MiscVarType
 ! =======================
 ! =========  Orca_ParameterType  =======
   TYPE, PUBLIC :: Orca_ParameterType
-    REAL(DbKi)  :: DT      !< Time step for continuous state integration & discrete state update [seconds]
+    REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
     TYPE(DLL_Type)  :: DLL_Orca      !< Info for the OrcaFlex DLL [-]
-    CHARACTER(1024)  :: SimNamePath      !< Path with simulation rootname with null end character for passing to C [-]
-    INTEGER(IntKi)  :: SimNamePathLen      !< Length of SimNamePath (including null char) [-]
+    CHARACTER(1024)  :: SimNamePath = ''      !< Path with simulation rootname with null end character for passing to C [-]
+    INTEGER(IntKi)  :: SimNamePathLen = 0_IntKi      !< Length of SimNamePath (including null char) [-]
     INTEGER(IntKi)  :: NumOuts = 0      !< Number of parameters in the output list (number of outputs requested) [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
   END TYPE Orca_ParameterType
@@ -93,17 +93,17 @@ IMPLICIT NONE
 ! =======================
 ! =========  Orca_ContinuousStateType  =======
   TYPE, PUBLIC :: Orca_ContinuousStateType
-    REAL(ReKi)  :: Dummy      !< Dummy placeholder [-]
+    REAL(ReKi)  :: Dummy = 0.0_ReKi      !< Dummy placeholder [-]
   END TYPE Orca_ContinuousStateType
 ! =======================
 ! =========  Orca_DiscreteStateType  =======
   TYPE, PUBLIC :: Orca_DiscreteStateType
-    REAL(ReKi)  :: Dummy      !< Dummy placeholder [-]
+    REAL(ReKi)  :: Dummy = 0.0_ReKi      !< Dummy placeholder [-]
   END TYPE Orca_DiscreteStateType
 ! =======================
 ! =========  Orca_ConstraintStateType  =======
   TYPE, PUBLIC :: Orca_ConstraintStateType
-    REAL(ReKi)  :: DummyConstrState      !< Dummy placeholder [-]
+    REAL(ReKi)  :: DummyConstrState = 0.0_ReKi      !< Dummy placeholder [-]
   END TYPE Orca_ConstraintStateType
 ! =======================
 CONTAINS

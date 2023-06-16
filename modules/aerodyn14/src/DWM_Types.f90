@@ -54,30 +54,30 @@ IMPLICIT NONE
 ! =======================
 ! =========  DWM_Wake_Deficit_Data  =======
   TYPE, PUBLIC :: DWM_Wake_Deficit_Data
-    INTEGER(IntKi)  :: np_x      !< point per axial distance [-]
-    REAL(ReKi)  :: X_length      !< normalized length in axial direction [-]
+    INTEGER(IntKi)  :: np_x = 0_IntKi      !< point per axial distance [-]
+    REAL(ReKi)  :: X_length = 0.0_ReKi      !< normalized length in axial direction [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Turb_Stress_DWM      !<  [-]
-    INTEGER(IntKi)  :: n_x_vector      !<  [-]
-    INTEGER(IntKi)  :: n_r_vector      !<  [-]
-    REAL(ReKi)  :: ppR      !< Point_per_R_resoulution [-]
+    INTEGER(IntKi)  :: n_x_vector = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: n_r_vector = 0_IntKi      !<  [-]
+    REAL(ReKi)  :: ppR = 0.0_ReKi      !< Point_per_R_resoulution [-]
   END TYPE DWM_Wake_Deficit_Data
 ! =======================
 ! =========  MeanderData  =======
   TYPE, PUBLIC :: MeanderData
-    INTEGER(IntKi)  :: scale_factor      !<  [-]
-    INTEGER(IntKi)  :: moving_time      !<  [-]
+    INTEGER(IntKi)  :: scale_factor = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: moving_time = 0_IntKi      !<  [-]
   END TYPE MeanderData
 ! =======================
 ! =========  read_turbine_position_data  =======
   TYPE, PUBLIC :: read_turbine_position_data
-    INTEGER(IntKi)  :: SimulationOrder_index      !<  [-]
+    INTEGER(IntKi)  :: SimulationOrder_index = 0_IntKi      !<  [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: Turbine_sort_order      !<  [-]
-    INTEGER(IntKi)  :: WT_index      !< wind turbine index in the wind farm [-]
+    INTEGER(IntKi)  :: WT_index = 0_IntKi      !< wind turbine index in the wind farm [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: TurbineInfluenceData      !<  [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: upwind_turbine_index      !< the upwind turbines that affecting this turbine [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: downwind_turbine_index      !<  [-]
-    INTEGER(IntKi)  :: upwindturbine_number      !< the number of upwind turbines affecting the downwind turbine [-]
-    INTEGER(IntKi)  :: downwindturbine_number      !<  [-]
+    INTEGER(IntKi)  :: upwindturbine_number = 0_IntKi      !< the number of upwind turbines affecting the downwind turbine [-]
+    INTEGER(IntKi)  :: downwindturbine_number = 0_IntKi      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: turbine_windorigin_length      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: upwind_turbine_projected_distance      !< the projected distance between two turbines [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: downwind_turbine_projected_distance      !<  [-]
@@ -95,52 +95,52 @@ IMPLICIT NONE
 ! =========  WeiMethod  =======
   TYPE, PUBLIC :: WeiMethod
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: sweptarea      !<  [-]
-    REAL(ReKi)  :: weighting_denominator      !<  [-]
+    REAL(ReKi)  :: weighting_denominator = 0.0_ReKi      !<  [-]
   END TYPE WeiMethod
 ! =======================
 ! =========  TIDownstream  =======
   TYPE, PUBLIC :: TIDownstream
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TI_downstream_matrix      !<  [-]
-    INTEGER(IntKi)  :: i      !<  [-]
-    INTEGER(IntKi)  :: j      !<  [-]
-    INTEGER(IntKi)  :: k      !<  [-]
-    INTEGER(IntKi)  :: cross_plane_position_ds      !< the cross plane position which to be investigated in term of the flying time [-]
-    INTEGER(IntKi)  :: cross_plane_position_TI      !< the cross plane position which to be investigated in term of the n_x_vector [-]
-    INTEGER(IntKi)  :: distance_index      !< the index of the distance in the TI axisymmetric array [-]
-    INTEGER(IntKi)  :: counter1      !<  [-]
-    INTEGER(IntKi)  :: counter2      !<  [-]
-    INTEGER(IntKi)  :: initial_timestep      !<  [-]
-    REAL(ReKi)  :: y_axis_turbine      !<  [-]
-    REAL(ReKi)  :: z_axis_turbine      !<  [-]
-    REAL(ReKi)  :: distance      !< the distance between one point to the meandered wake center [-]
-    REAL(ReKi)  :: TI_downstream_node      !< the TI at a specfic point in the inbestigated cross plane [-]
-    REAL(ReKi)  :: TI_node_temp      !<  [-]
-    REAL(ReKi)  :: TI_node      !<  [-]
-    REAL(ReKi)  :: TI_accumulation      !<  [-]
-    REAL(ReKi)  :: TI_apprant_accumulation      !<  [-]
-    REAL(ReKi)  :: TI_average      !< THE AVERAGE TI OF THE CROSS PLANE [-]
-    REAL(ReKi)  :: TI_apprant      !< The TI due to the meadering [-]
-    REAL(ReKi)  :: HubHt      !<  [-]
-    REAL(ReKi)  :: wake_center_y      !<  [-]
-    REAL(ReKi)  :: wake_center_z      !<  [-]
-    REAL(ReKi)  :: Rscale      !<  [-]
-    REAL(ReKi)  :: y      !<  [-]
-    REAL(ReKi)  :: z      !<  [-]
-    REAL(ReKi)  :: zero_spacing      !<  [-]
-    REAL(ReKi)  :: temp1      !<  [-]
-    REAL(ReKi)  :: temp2      !<  [-]
-    REAL(ReKi)  :: temp3      !<  [-]
+    INTEGER(IntKi)  :: i = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: j = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: k = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: cross_plane_position_ds = 0_IntKi      !< the cross plane position which to be investigated in term of the flying time [-]
+    INTEGER(IntKi)  :: cross_plane_position_TI = 0_IntKi      !< the cross plane position which to be investigated in term of the n_x_vector [-]
+    INTEGER(IntKi)  :: distance_index = 0_IntKi      !< the index of the distance in the TI axisymmetric array [-]
+    INTEGER(IntKi)  :: counter1 = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: counter2 = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: initial_timestep = 0_IntKi      !<  [-]
+    REAL(ReKi)  :: y_axis_turbine = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: z_axis_turbine = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: distance = 0.0_ReKi      !< the distance between one point to the meandered wake center [-]
+    REAL(ReKi)  :: TI_downstream_node = 0.0_ReKi      !< the TI at a specfic point in the inbestigated cross plane [-]
+    REAL(ReKi)  :: TI_node_temp = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: TI_node = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: TI_accumulation = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: TI_apprant_accumulation = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: TI_average = 0.0_ReKi      !< THE AVERAGE TI OF THE CROSS PLANE [-]
+    REAL(ReKi)  :: TI_apprant = 0.0_ReKi      !< The TI due to the meadering [-]
+    REAL(ReKi)  :: HubHt = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: wake_center_y = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: wake_center_z = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: Rscale = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: y = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: z = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: zero_spacing = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: temp1 = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: temp2 = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: temp3 = 0.0_ReKi      !<  [-]
   END TYPE TIDownstream
 ! =======================
 ! =========  TurbKaimal  =======
   TYPE, PUBLIC :: TurbKaimal
-    INTEGER(IntKi)  :: fs      !< sample frequency [-]
-    INTEGER(IntKi)  :: temp_n      !<  [-]
-    INTEGER(IntKi)  :: i      !<  [-]
-    REAL(ReKi)  :: low_f      !< lower bound of frequency range [-]
-    REAL(ReKi)  :: high_f      !< upper bound of frequency range [-]
-    REAL(ReKi)  :: lk_facor      !< turbulence length-scale [-]
-    REAL(ReKi)  :: STD      !< standard deviation of the turbulence [-]
+    INTEGER(IntKi)  :: fs = 0_IntKi      !< sample frequency [-]
+    INTEGER(IntKi)  :: temp_n = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: i = 0_IntKi      !<  [-]
+    REAL(ReKi)  :: low_f = 0.0_ReKi      !< lower bound of frequency range [-]
+    REAL(ReKi)  :: high_f = 0.0_ReKi      !< upper bound of frequency range [-]
+    REAL(ReKi)  :: lk_facor = 0.0_ReKi      !< turbulence length-scale [-]
+    REAL(ReKi)  :: STD = 0.0_ReKi      !< standard deviation of the turbulence [-]
   END TYPE TurbKaimal
 ! =======================
 ! =========  Shinozuka  =======
@@ -150,29 +150,29 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: phi      !< random phase angle [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: p_k      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: a_k      !<  [-]
-    INTEGER(IntKi)  :: num_points      !< total number of points [-]
-    INTEGER(IntKi)  :: ILo      !<  [-]
-    INTEGER(IntKi)  :: i      !<  [-]
-    INTEGER(IntKi)  :: j      !<  [-]
-    REAL(ReKi)  :: dt      !< time step [-]
-    REAL(ReKi)  :: t_min      !<  [-]
-    REAL(ReKi)  :: t_max      !<  [-]
-    REAL(ReKi)  :: df      !< frequency step [-]
+    INTEGER(IntKi)  :: num_points = 0_IntKi      !< total number of points [-]
+    INTEGER(IntKi)  :: ILo = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: i = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: j = 0_IntKi      !<  [-]
+    REAL(ReKi)  :: dt = 0.0_ReKi      !< time step [-]
+    REAL(ReKi)  :: t_min = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: t_max = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: df = 0.0_ReKi      !< frequency step [-]
   END TYPE Shinozuka
 ! =======================
 ! =========  smooth_out_wake_data  =======
   TYPE, PUBLIC :: smooth_out_wake_data
-    INTEGER(IntKi)  :: length_velocity_array      !< the length of velocity_array [-]
+    INTEGER(IntKi)  :: length_velocity_array = 0_IntKi      !< the length of velocity_array [-]
   END TYPE smooth_out_wake_data
 ! =======================
 ! =========  SWSV  =======
   TYPE, PUBLIC :: SWSV
-    INTEGER(IntKi)  :: p1      !<  [-]
-    INTEGER(IntKi)  :: p2      !<  [-]
-    REAL(ReKi)  :: distance      !< the distance from the point to the meandered wake center [-]
-    REAL(ReKi)  :: y0      !< wake center position on y axis [-]
-    REAL(ReKi)  :: z0      !< wake center position on z axis [-]
-    REAL(ReKi)  :: unit      !< single unit length  R/ppR [-]
+    INTEGER(IntKi)  :: p1 = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: p2 = 0_IntKi      !<  [-]
+    REAL(ReKi)  :: distance = 0.0_ReKi      !< the distance from the point to the meandered wake center [-]
+    REAL(ReKi)  :: y0 = 0.0_ReKi      !< wake center position on y axis [-]
+    REAL(ReKi)  :: z0 = 0.0_ReKi      !< wake center position on z axis [-]
+    REAL(ReKi)  :: unit = 0.0_ReKi      !< single unit length  R/ppR [-]
   END TYPE SWSV
 ! =======================
 ! =========  read_upwind_result  =======
@@ -197,9 +197,9 @@ IMPLICIT NONE
 ! =======================
 ! =========  DWM_turbine_blade  =======
   TYPE, PUBLIC :: DWM_turbine_blade
-    INTEGER(IntKi)  :: Aerodyn_turbine_num      !<  [-]
-    INTEGER(IntKi)  :: Blade_index      !<  the index of Aerodyn Blade [-]
-    INTEGER(IntKi)  :: Element_index      !<  the index of Aerodyn Element [-]
+    INTEGER(IntKi)  :: Aerodyn_turbine_num = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: Blade_index = 0_IntKi      !<  the index of Aerodyn Blade [-]
+    INTEGER(IntKi)  :: Element_index = 0_IntKi      !<  the index of Aerodyn Element [-]
   END TYPE DWM_turbine_blade
 ! =======================
 ! =========  DWM_ParameterType  =======
@@ -207,28 +207,28 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: velocityU      !< the wake velocity profile @ the downstream turbine plane [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: smoothed_wake      !<  [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WakePosition      !< meandered wake center [-]
-    INTEGER(IntKi)  :: WakePosition_1      !< size of the WakePosition [-]
-    INTEGER(IntKi)  :: WakePosition_2      !< size of the WakePosition [-]
-    INTEGER(IntKi)  :: smooth_flag      !< Whether or not use the smoothed out upstream wake profile (1-yes, 0-no) [-]
-    INTEGER(IntKi)  :: p_p_r      !<  [-]
-    INTEGER(IntKi)  :: NumWT      !< Number of wind turbines [-]
-    INTEGER(IntKi)  :: Tinfluencer      !<  [-]
-    REAL(ReKi)  :: RotorR      !< Rotor radius [-]
-    REAL(ReKi)  :: r_domain      !<  [-]
-    REAL(ReKi)  :: x_domain      !<  [-]
-    REAL(ReKi)  :: Uambient      !< The ambient wind velocity [-]
-    REAL(ReKi)  :: TI_amb      !< Ambient turbulence intensity [%]
-    REAL(ReKi)  :: TI_wake      !<  [-]
-    REAL(ReKi)  :: hub_height      !<  [-]
-    REAL(ReKi)  :: length_velocityU      !<  [-]
-    REAL(ReKi)  :: WFLowerBd      !< The lower bound height of the wind file [-]
-    REAL(ReKi)  :: Wind_file_Mean_u      !< The mean velocity of the first turbine [-]
-    REAL(ReKi)  :: Winddir      !<  [-]
-    REAL(ReKi)  :: air_density      !< air density [-]
-    REAL(ReKi)  :: RR      !<  [-]
+    INTEGER(IntKi)  :: WakePosition_1 = 0_IntKi      !< size of the WakePosition [-]
+    INTEGER(IntKi)  :: WakePosition_2 = 0_IntKi      !< size of the WakePosition [-]
+    INTEGER(IntKi)  :: smooth_flag = 0_IntKi      !< Whether or not use the smoothed out upstream wake profile (1-yes, 0-no) [-]
+    INTEGER(IntKi)  :: p_p_r = 0_IntKi      !<  [-]
+    INTEGER(IntKi)  :: NumWT = 0_IntKi      !< Number of wind turbines [-]
+    INTEGER(IntKi)  :: Tinfluencer = 0_IntKi      !<  [-]
+    REAL(ReKi)  :: RotorR = 0.0_ReKi      !< Rotor radius [-]
+    REAL(ReKi)  :: r_domain = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: x_domain = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: Uambient = 0.0_ReKi      !< The ambient wind velocity [-]
+    REAL(ReKi)  :: TI_amb = 0.0_ReKi      !< Ambient turbulence intensity [%]
+    REAL(ReKi)  :: TI_wake = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: hub_height = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: length_velocityU = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: WFLowerBd = 0.0_ReKi      !< The lower bound height of the wind file [-]
+    REAL(ReKi)  :: Wind_file_Mean_u = 0.0_ReKi      !< The mean velocity of the first turbine [-]
+    REAL(ReKi)  :: Winddir = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: air_density = 0.0_ReKi      !< air density [-]
+    REAL(ReKi)  :: RR = 0.0_ReKi      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: ElementRad      !<  the element node radius [-]
-    INTEGER(IntKi)  :: Bnum      !<  the number of blade [-]
-    INTEGER(IntKi)  :: ElementNum      !<  the number of element [-]
+    INTEGER(IntKi)  :: Bnum = 0_IntKi      !<  the number of blade [-]
+    INTEGER(IntKi)  :: ElementNum = 0_IntKi      !<  the number of element [-]
     TYPE(read_turbine_position_data)  :: RTPD 
     TYPE(InflowWind_ParameterType)  :: IfW 
   END TYPE DWM_ParameterType
@@ -241,16 +241,16 @@ IMPLICIT NONE
 ! =========  DWM_MiscVarType  =======
   TYPE, PUBLIC :: DWM_MiscVarType
     TYPE(InflowWind_MiscVarType)  :: IfW 
-    REAL(ReKi)  :: position_y      !< the y position of the blade node [-]
-    REAL(ReKi)  :: position_z      !< the z position of the blade node [-]
-    REAL(ReKi)  :: velocity_wake_mean      !<  [-]
-    REAL(ReKi)  :: shifted_velocity_Aerodyn      !<  [-]
-    REAL(ReKi)  :: U_velocity      !<  the u component velocity of blade [-]
-    REAL(ReKi)  :: V_velocity      !<  the v component velocity of blade [-]
+    REAL(ReKi)  :: position_y = 0.0_ReKi      !< the y position of the blade node [-]
+    REAL(ReKi)  :: position_z = 0.0_ReKi      !< the z position of the blade node [-]
+    REAL(ReKi)  :: velocity_wake_mean = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: shifted_velocity_Aerodyn = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: U_velocity = 0.0_ReKi      !<  the u component velocity of blade [-]
+    REAL(ReKi)  :: V_velocity = 0.0_ReKi      !<  the v component velocity of blade [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Nforce      !<  the normal force [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: blade_dr      !<  blade dr [-]
-    REAL(ReKi)  :: NacYaw      !<  [-]
-    REAL(ReKi)  :: TI_original      !<  [-]
+    REAL(ReKi)  :: NacYaw = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: TI_original = 0.0_ReKi      !<  [-]
     TYPE(turbine_average_velocity_data)  :: TAVD 
     TYPE(CVSD)  :: CalVelScale_data 
     TYPE(MeanderData)  :: meandering_data 
@@ -261,8 +261,8 @@ IMPLICIT NONE
     TYPE(smooth_out_wake_data)  :: SmoothOut 
     TYPE(SWSV)  :: smooth_wake_shifted_velocity_data 
     TYPE(DWM_Wake_Deficit_Data)  :: DWDD 
-    REAL(ReKi)  :: ct_tilde      !< the tilde Ct [-]
-    REAL(ReKi)  :: FAST_Time      !< FAST simulation time [-]
+    REAL(ReKi)  :: ct_tilde = 0.0_ReKi      !< the tilde Ct [-]
+    REAL(ReKi)  :: FAST_Time = 0.0_ReKi      !< FAST simulation time [-]
     INTEGER(IntKi)  :: SDtimestep = 0      !<  [-]
     TYPE(DWM_turbine_blade)  :: DWM_tb 
     TYPE(wake_meandered_center)  :: WMC 
@@ -281,47 +281,47 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: r_initial      !< scaled rotor radius [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: U_initial      !< scaled velocity at the rotor [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Mean_FFWS_array      !< Mean velocity of each section on the blade [-]
-    REAL(ReKi)  :: Mean_FFWS      !< Mean (total) wind speed at the hub height [m/s]
-    REAL(ReKi)  :: TI      !< the turbulence intensity of the turbine [-]
-    REAL(ReKi)  :: TI_downstream      !< the TI of a downstream turbine before normalization [-]
+    REAL(ReKi)  :: Mean_FFWS = 0.0_ReKi      !< Mean (total) wind speed at the hub height [m/s]
+    REAL(ReKi)  :: TI = 0.0_ReKi      !< the turbulence intensity of the turbine [-]
+    REAL(ReKi)  :: TI_downstream = 0.0_ReKi      !< the TI of a downstream turbine before normalization [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: wake_u      !< wake velocity [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: wake_position      !< wake center position [m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: smoothed_velocity_array      !< smoothed out upstream axisymetric wake profile [-]
-    REAL(ReKi)  :: AtmUscale      !< atmospheric velocity scale before introducing TI [-]
-    REAL(ReKi)  :: du_dz_ABL      !< atmosperic shear gradient [-]
+    REAL(ReKi)  :: AtmUscale = 0.0_ReKi      !< atmospheric velocity scale before introducing TI [-]
+    REAL(ReKi)  :: du_dz_ABL = 0.0_ReKi      !< atmosperic shear gradient [-]
     REAL(ReKi)  :: total_SDgenpwr = 0.0      !<  [-]
-    REAL(ReKi)  :: mean_SDgenpwr      !<  [-]
-    REAL(ReKi)  :: avg_ct      !< average Ct over the rotor [-]
+    REAL(ReKi)  :: mean_SDgenpwr = 0.0_ReKi      !<  [-]
+    REAL(ReKi)  :: avg_ct = 0.0_ReKi      !< average Ct over the rotor [-]
     TYPE(InflowWind_OutputType)  :: IfW 
   END TYPE DWM_OutputType
 ! =======================
 ! =========  DWM_ContinuousStateType  =======
   TYPE, PUBLIC :: DWM_ContinuousStateType
-    REAL(ReKi)  :: dummy      !<  [-]
+    REAL(ReKi)  :: dummy = 0.0_ReKi      !<  [-]
     TYPE(InflowWind_ContinuousStateType)  :: IfW 
   END TYPE DWM_ContinuousStateType
 ! =======================
 ! =========  DWM_DiscreteStateType  =======
   TYPE, PUBLIC :: DWM_DiscreteStateType
-    REAL(ReKi)  :: dummy      !<  [-]
+    REAL(ReKi)  :: dummy = 0.0_ReKi      !<  [-]
     TYPE(InflowWind_DiscreteStateType)  :: IfW 
   END TYPE DWM_DiscreteStateType
 ! =======================
 ! =========  DWM_ConstraintStateType  =======
   TYPE, PUBLIC :: DWM_ConstraintStateType
-    REAL(ReKi)  :: dummy      !<  [-]
+    REAL(ReKi)  :: dummy = 0.0_ReKi      !<  [-]
     TYPE(InflowWind_ConstraintStateType)  :: IfW 
   END TYPE DWM_ConstraintStateType
 ! =======================
 ! =========  DWM_InitInputType  =======
   TYPE, PUBLIC :: DWM_InitInputType
-    REAL(ReKi)  :: dummy      !<  [-]
+    REAL(ReKi)  :: dummy = 0.0_ReKi      !<  [-]
     TYPE(InflowWind_InitInputType)  :: IfW 
   END TYPE DWM_InitInputType
 ! =======================
 ! =========  DWM_InitOutputType  =======
   TYPE, PUBLIC :: DWM_InitOutputType
-    REAL(ReKi)  :: dummy      !<  [-]
+    REAL(ReKi)  :: dummy = 0.0_ReKi      !<  [-]
     TYPE(InflowWind_InitOutputType)  :: IfW 
   END TYPE DWM_InitOutputType
 ! =======================

@@ -43,14 +43,14 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: UA_BV = 7      ! Boeing-Vertol dynamic stall model (e.g. used in CACTUS) [-]
 ! =========  UA_InitInputType  =======
   TYPE, PUBLIC :: UA_InitInputType
-    REAL(DbKi)  :: dt      !< time step [s]
-    CHARACTER(1024)  :: OutRootName      !< Supplied by Driver:  The name of the root file (without extension) including the full path [-]
+    REAL(DbKi)  :: dt = 0.0_R8Ki      !< time step [s]
+    CHARACTER(1024)  :: OutRootName = ''      !< Supplied by Driver:  The name of the root file (without extension) including the full path [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: c      !< Chord length at node [m]
-    INTEGER(IntKi)  :: numBlades      !< Number nodes of all blades [-]
-    INTEGER(IntKi)  :: nNodesPerBlade      !< Number nodes per blades [-]
-    INTEGER(IntKi)  :: UAMod      !< Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema] [-]
-    REAL(ReKi)  :: a_s      !< speed of sound [m/s]
-    LOGICAL  :: Flookup      !< Use table lookup for f' and f''  [-]
+    INTEGER(IntKi)  :: numBlades = 0_IntKi      !< Number nodes of all blades [-]
+    INTEGER(IntKi)  :: nNodesPerBlade = 0_IntKi      !< Number nodes per blades [-]
+    INTEGER(IntKi)  :: UAMod = 0_IntKi      !< Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema] [-]
+    REAL(ReKi)  :: a_s = 0.0_ReKi      !< speed of sound [m/s]
+    LOGICAL  :: Flookup = .false.      !< Use table lookup for f' and f''  [-]
     LOGICAL  :: ShedEffect = .True.      !< Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods) [-]
     LOGICAL  :: WrSum = .false.      !< Write UA AFI parameters to summary file? [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: UAOff_innerNode      !< Last node on each blade where UA should be turned off based on span location from blade root (0 if always on) [-]
@@ -121,7 +121,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  UA_ElementContinuousStateType  =======
   TYPE, PUBLIC :: UA_ElementContinuousStateType
-    REAL(R8Ki) , DIMENSION(1:5)  :: x      !< continuous states when UA_Mod=4 (x1 and x2:Downwash memory terms; x3:Clp', Lift coefficient with a time lag to the attached lift coeff; x4: f'' , Final separation point function) [{rad, rad, - -}]
+    REAL(R8Ki) , DIMENSION(1:5)  :: x = 0.0_R8Ki      !< continuous states when UA_Mod=4 (x1 and x2:Downwash memory terms; x3:Clp', Lift coefficient with a time lag to the attached lift coeff; x4: f'' , Final separation point function) [{rad, rad, - -}]
   END TYPE UA_ElementContinuousStateType
 ! =======================
 ! =========  UA_ContinuousStateType  =======
@@ -169,7 +169,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  UA_ConstraintStateType  =======
   TYPE, PUBLIC :: UA_ConstraintStateType
-    REAL(ReKi)  :: DummyConstraintState      !<  [-]
+    REAL(ReKi)  :: DummyConstraintState = 0.0_ReKi      !<  [-]
   END TYPE UA_ConstraintStateType
 ! =======================
 ! =========  UA_OtherStateType  =======
@@ -192,9 +192,9 @@ IMPLICIT NONE
 ! =======================
 ! =========  UA_MiscVarType  =======
   TYPE, PUBLIC :: UA_MiscVarType
-    LOGICAL  :: FirstWarn_M      !< flag so Mach number warning doesn't get repeated forever [-]
-    LOGICAL  :: FirstWarn_UA      !< flag so UA state warning doesn't get repeated forever [-]
-    LOGICAL  :: FirstWarn_UA_off      !< flag so UA state warning doesn't get repeated forever [-]
+    LOGICAL  :: FirstWarn_M = .false.      !< flag so Mach number warning doesn't get repeated forever [-]
+    LOGICAL  :: FirstWarn_UA = .false.      !< flag so UA state warning doesn't get repeated forever [-]
+    LOGICAL  :: FirstWarn_UA_off = .false.      !< flag so UA state warning doesn't get repeated forever [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: TESF      !< logical flag indicating if trailing edge separation is possible [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: LESF      !< logical flag indicating if leading edge separation is possible [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: VRTX      !< logical flag indicating if a vortex is being processed [-]
@@ -205,41 +205,41 @@ IMPLICIT NONE
 ! =======================
 ! =========  UA_ParameterType  =======
   TYPE, PUBLIC :: UA_ParameterType
-    REAL(DbKi)  :: dt      !< time step [s]
+    REAL(DbKi)  :: dt = 0.0_R8Ki      !< time step [s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: c      !< Chord length at node [m]
-    INTEGER(IntKi)  :: numBlades      !< Number nodes of all blades [-]
-    INTEGER(IntKi)  :: nNodesPerBlade      !< Number nodes per blades [-]
-    INTEGER(IntKi)  :: UAMod      !< Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema] [-]
-    LOGICAL  :: Flookup      !< Use table lookup for f' and f''  [-]
-    REAL(ReKi)  :: a_s      !< speed of sound [m/s]
+    INTEGER(IntKi)  :: numBlades = 0_IntKi      !< Number nodes of all blades [-]
+    INTEGER(IntKi)  :: nNodesPerBlade = 0_IntKi      !< Number nodes per blades [-]
+    INTEGER(IntKi)  :: UAMod = 0_IntKi      !< Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema] [-]
+    LOGICAL  :: Flookup = .false.      !< Use table lookup for f' and f''  [-]
+    REAL(ReKi)  :: a_s = 0.0_ReKi      !< speed of sound [m/s]
     INTEGER(IntKi)  :: NumOuts = 0      !< Number of outputs [-]
-    INTEGER(IntKi)  :: OutSwtch      !< Output requested channels to: [1=Unsteady.out 2=GlueCode.out  3=both files] [-]
-    CHARACTER(20)  :: OutFmt      !< Output format for numerical results [-]
-    CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
-    CHARACTER(1)  :: Delim      !< Delimiter string for outputs, defaults to tab-delimiters [-]
+    INTEGER(IntKi)  :: OutSwtch = 0_IntKi      !< Output requested channels to: [1=Unsteady.out 2=GlueCode.out  3=both files] [-]
+    CHARACTER(20)  :: OutFmt = ''      !< Output format for numerical results [-]
+    CHARACTER(20)  :: OutSFmt = ''      !< Output format for header strings [-]
+    CHARACTER(1)  :: Delim = ''      !< Delimiter string for outputs, defaults to tab-delimiters [-]
     INTEGER(IntKi)  :: UnOutFile = 0      !< File unit for the UnsteadyAero outputs [-]
-    LOGICAL  :: ShedEffect      !< Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods) [-]
+    LOGICAL  :: ShedEffect = .false.      !< Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods) [-]
     INTEGER(IntKi)  :: lin_nx = 0      !< Number of continuous states for linearization [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: UA_off_forGood      !< logical flag indicating if UA is off for good [-]
   END TYPE UA_ParameterType
 ! =======================
 ! =========  UA_InputType  =======
   TYPE, PUBLIC :: UA_InputType
-    REAL(ReKi)  :: U      !< air velocity magnitude relative to the airfoil [m/s]
-    REAL(ReKi)  :: alpha      !< angle of attack [rad]
-    REAL(ReKi)  :: Re      !< Reynold's number [-]
+    REAL(ReKi)  :: U = 0.0_ReKi      !< air velocity magnitude relative to the airfoil [m/s]
+    REAL(ReKi)  :: alpha = 0.0_ReKi      !< angle of attack [rad]
+    REAL(ReKi)  :: Re = 0.0_ReKi      !< Reynold's number [-]
     REAL(ReKi)  :: UserProp = 0.0      !< UserProp value for interpolating airfoil tables [-]
-    REAL(ReKi) , DIMENSION(1:2)  :: v_ac      !< Relative fluid velocity at the aerodynamic center (UAMod=4) [m/s]
-    REAL(ReKi)  :: omega      !< pitching/twisting rate of the airfoil section (UAMod=4) [rad/s]
+    REAL(ReKi) , DIMENSION(1:2)  :: v_ac = 0.0_ReKi      !< Relative fluid velocity at the aerodynamic center (UAMod=4) [m/s]
+    REAL(ReKi)  :: omega = 0.0_ReKi      !< pitching/twisting rate of the airfoil section (UAMod=4) [rad/s]
   END TYPE UA_InputType
 ! =======================
 ! =========  UA_OutputType  =======
   TYPE, PUBLIC :: UA_OutputType
-    REAL(ReKi)  :: Cn      !< 2D, normal to chord, force coefficient [-]
-    REAL(ReKi)  :: Cc      !< 2D, tangent to chord, force coefficient [-]
-    REAL(ReKi)  :: Cm      !< 2D pitching moment coefficient about the 1/4 chord, positive when nose is up [-]
-    REAL(ReKi)  :: Cl      !< 2D lift coefficient [-]
-    REAL(ReKi)  :: Cd      !< 2D drag coefficient [-]
+    REAL(ReKi)  :: Cn = 0.0_ReKi      !< 2D, normal to chord, force coefficient [-]
+    REAL(ReKi)  :: Cc = 0.0_ReKi      !< 2D, tangent to chord, force coefficient [-]
+    REAL(ReKi)  :: Cm = 0.0_ReKi      !< 2D pitching moment coefficient about the 1/4 chord, positive when nose is up [-]
+    REAL(ReKi)  :: Cl = 0.0_ReKi      !< 2D lift coefficient [-]
+    REAL(ReKi)  :: Cd = 0.0_ReKi      !< 2D drag coefficient [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< outputs to be written to a file [-]
   END TYPE UA_OutputType
 ! =======================

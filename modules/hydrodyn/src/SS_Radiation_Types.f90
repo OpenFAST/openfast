@@ -35,9 +35,9 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  SS_Rad_InitInputType  =======
   TYPE, PUBLIC :: SS_Rad_InitInputType
-    CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
+    CHARACTER(1024)  :: InputFile = ''      !< Name of the input file [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: enabledDOFs      !< Vector with enable platf. DOFs [(m/s]
-    INTEGER(IntKi)  :: NBody      !< Number of WAMIT bodies for this State Space model [-]
+    INTEGER(IntKi)  :: NBody = 0_IntKi      !< Number of WAMIT bodies for this State Space model [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: PtfmRefztRot      !< The rotation about zt of the body reference frame(s) from xt/yt [radians]
   END TYPE SS_Rad_InitInputType
 ! =======================
@@ -54,34 +54,34 @@ IMPLICIT NONE
 ! =======================
 ! =========  SS_Rad_DiscreteStateType  =======
   TYPE, PUBLIC :: SS_Rad_DiscreteStateType
-    REAL(SiKi)  :: DummyDiscState      !<  [-]
+    REAL(SiKi)  :: DummyDiscState = 0.0_R4Ki      !<  [-]
   END TYPE SS_Rad_DiscreteStateType
 ! =======================
 ! =========  SS_Rad_ConstraintStateType  =======
   TYPE, PUBLIC :: SS_Rad_ConstraintStateType
-    REAL(SiKi)  :: DummyConstrState      !<  [-]
+    REAL(SiKi)  :: DummyConstrState = 0.0_R4Ki      !<  [-]
   END TYPE SS_Rad_ConstraintStateType
 ! =======================
 ! =========  SS_Rad_OtherStateType  =======
   TYPE, PUBLIC :: SS_Rad_OtherStateType
-    INTEGER(IntKi)  :: n      !< Current Time step [-]
+    INTEGER(IntKi)  :: n = 0_IntKi      !< Current Time step [-]
     TYPE(SS_Rad_ContinuousStateType) , DIMENSION(1:4)  :: xdot      !< Old Values of dxdt to used by the solver (multistep method) [-]
   END TYPE SS_Rad_OtherStateType
 ! =======================
 ! =========  SS_Rad_MiscVarType  =======
   TYPE, PUBLIC :: SS_Rad_MiscVarType
-    REAL(SiKi)  :: DummyMiscVar      !< Remove this variable if you have misc/optimization variables [-]
+    REAL(SiKi)  :: DummyMiscVar = 0.0_R4Ki      !< Remove this variable if you have misc/optimization variables [-]
   END TYPE SS_Rad_MiscVarType
 ! =======================
 ! =========  SS_Rad_ParameterType  =======
   TYPE, PUBLIC :: SS_Rad_ParameterType
-    REAL(DbKi)  :: DT      !< Time step [(s)]
+    REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step [(s)]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: A      !< A matrix [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: B      !< B matrix [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C      !< C matrix [-]
     INTEGER(IntKi)  :: numStates = 0      !< Number of states [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: spdof      !< States per dof [-]
-    INTEGER(IntKi)  :: NBody      !< Number of WAMIT bodies for this State Space model [-]
+    INTEGER(IntKi)  :: NBody = 0_IntKi      !< Number of WAMIT bodies for this State Space model [-]
   END TYPE SS_Rad_ParameterType
 ! =======================
 ! =========  SS_Rad_InputType  =======

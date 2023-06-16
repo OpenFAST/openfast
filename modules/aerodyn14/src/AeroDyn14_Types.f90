@@ -36,10 +36,10 @@ USE NWTC_Library
 IMPLICIT NONE
 ! =========  Marker  =======
   TYPE, PUBLIC :: Marker
-    REAL(ReKi) , DIMENSION(1:3)  :: Position 
-    REAL(ReKi) , DIMENSION(1:3,1:3)  :: Orientation 
-    REAL(ReKi) , DIMENSION(1:3)  :: TranslationVel 
-    REAL(ReKi) , DIMENSION(1:3)  :: RotationVel 
+    REAL(ReKi) , DIMENSION(1:3)  :: Position = 0.0 
+    REAL(ReKi) , DIMENSION(1:3,1:3)  :: Orientation = 0.0 
+    REAL(ReKi) , DIMENSION(1:3)  :: TranslationVel = 0.0 
+    REAL(ReKi) , DIMENSION(1:3)  :: RotationVel = 0.0 
   END TYPE Marker
 ! =======================
 ! =========  AeroConfig  =======
@@ -52,7 +52,7 @@ IMPLICIT NONE
     TYPE(Marker)  :: Tower 
     TYPE(Marker)  :: SubStructure 
     TYPE(Marker)  :: Foundation 
-    REAL(ReKi)  :: BladeLength 
+    REAL(ReKi)  :: BladeLength = 0.0_ReKi 
   END TYPE AeroConfig
 ! =======================
 ! =========  AirFoil  =======
@@ -61,8 +61,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: CD 
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: CL 
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: CM 
-    REAL(ReKi)  :: PMC 
-    REAL(ReKi)  :: MulTabLoc 
+    REAL(ReKi)  :: PMC = 0.0_ReKi 
+    REAL(ReKi)  :: MulTabLoc = 0.0_ReKi 
   END TYPE AirFoil
 ! =======================
 ! =========  AirFoilParms  =======
@@ -70,8 +70,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: MaxTable = 20 
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NTables 
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NLift 
-    INTEGER(IntKi)  :: NumCL 
-    INTEGER(IntKi)  :: NumFoil 
+    INTEGER(IntKi)  :: NumCL = 0_IntKi 
+    INTEGER(IntKi)  :: NumFoil = 0_IntKi 
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NFoil 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MulTabMet 
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: FoilNm 
@@ -83,21 +83,21 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: ADOT1 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AFE 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AFE1 
-    REAL(ReKi)  :: AN 
+    REAL(ReKi)  :: AN = 0.0_ReKi 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: ANE 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: ANE1 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AOD 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AOL 
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: BEDSEP 
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: OLDSEP 
-    REAL(ReKi)  :: CC 
+    REAL(ReKi)  :: CC = 0.0_ReKi 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CDO 
-    REAL(ReKi)  :: CMI 
-    REAL(ReKi)  :: CMQ 
-    REAL(ReKi)  :: CN 
+    REAL(ReKi)  :: CMI = 0.0_ReKi 
+    REAL(ReKi)  :: CMQ = 0.0_ReKi 
+    REAL(ReKi)  :: CN = 0.0_ReKi 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CNA 
-    REAL(ReKi)  :: CNCP 
-    REAL(ReKi)  :: CNIQ 
+    REAL(ReKi)  :: CNCP = 0.0_ReKi 
+    REAL(ReKi)  :: CNIQ = 0.0_ReKi 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CNP 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CNP1 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CNPD 
@@ -118,10 +118,10 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DQ 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DQP 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DQP1 
-    REAL(ReKi)  :: DS 
-    REAL(ReKi)  :: FK 
-    REAL(ReKi)  :: FP 
-    REAL(ReKi)  :: FPC 
+    REAL(ReKi)  :: DS = 0.0_ReKi 
+    REAL(ReKi)  :: FK = 0.0_ReKi 
+    REAL(ReKi)  :: FP = 0.0_ReKi 
+    REAL(ReKi)  :: FPC = 0.0_ReKi 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: FSP 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: FSP1 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: FSPC 
@@ -142,61 +142,61 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TAU 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: XN 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: YN 
-    LOGICAL  :: SHIFT 
-    LOGICAL  :: VOR 
+    LOGICAL  :: SHIFT = .false. 
+    LOGICAL  :: VOR = .false. 
   END TYPE Beddoes
 ! =======================
 ! =========  BeddoesParms  =======
   TYPE, PUBLIC :: BeddoesParms
-    REAL(ReKi)  :: AS      !< Speed of sound for mach num calc [-]
-    REAL(ReKi)  :: TF      !< Time constant applied to loc of separation pt [-]
-    REAL(ReKi)  :: TP      !< Time constant for pressure lag [-]
-    REAL(ReKi)  :: TV      !< Time constant for strength and shed of vortex [-]
-    REAL(ReKi)  :: TVL      !< Nondim time of transit of vort moving across airfoil surf [-]
+    REAL(ReKi)  :: AS = 0.0_ReKi      !< Speed of sound for mach num calc [-]
+    REAL(ReKi)  :: TF = 0.0_ReKi      !< Time constant applied to loc of separation pt [-]
+    REAL(ReKi)  :: TP = 0.0_ReKi      !< Time constant for pressure lag [-]
+    REAL(ReKi)  :: TV = 0.0_ReKi      !< Time constant for strength and shed of vortex [-]
+    REAL(ReKi)  :: TVL = 0.0_ReKi      !< Nondim time of transit of vort moving across airfoil surf [-]
   END TYPE BeddoesParms
 ! =======================
 ! =========  BladeParms  =======
   TYPE, PUBLIC :: BladeParms
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: C      !< Chord of each blade element from input file [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: DR      !< Span-wise width of elem (len of elem ctred at RELM(i) [-]
-    REAL(ReKi)  :: R      !< Rotor radius [-]
-    REAL(ReKi)  :: BladeLength      !< Blade Length [-]
+    REAL(ReKi)  :: R = 0.0_ReKi      !< Rotor radius [-]
+    REAL(ReKi)  :: BladeLength = 0.0_ReKi      !< Blade Length [-]
   END TYPE BladeParms
 ! =======================
 ! =========  DynInflow  =======
   TYPE, PUBLIC :: DynInflow
-    REAL(ReKi) , DIMENSION(1:6,1:4)  :: dAlph_dt 
-    REAL(ReKi) , DIMENSION(3:6,1:4)  :: dBeta_dt 
-    REAL(ReKi)  :: DTO 
-    REAL(ReKi) , DIMENSION(1:6)  :: old_Alph 
-    REAL(ReKi) , DIMENSION(3:6)  :: old_Beta 
-    REAL(ReKi)  :: old_LmdM 
-    REAL(ReKi)  :: oldKai 
-    REAL(ReKi) , DIMENSION(1:6)  :: PhiLqC 
-    REAL(ReKi) , DIMENSION(3:6)  :: PhiLqS 
-    REAL(ReKi)  :: Pzero 
+    REAL(ReKi) , DIMENSION(1:6,1:4)  :: dAlph_dt = 0.0_ReKi 
+    REAL(ReKi) , DIMENSION(3:6,1:4)  :: dBeta_dt = 0.0_ReKi 
+    REAL(ReKi)  :: DTO = 0.0_ReKi 
+    REAL(ReKi) , DIMENSION(1:6)  :: old_Alph = 0.0_ReKi 
+    REAL(ReKi) , DIMENSION(3:6)  :: old_Beta = 0.0_ReKi 
+    REAL(ReKi)  :: old_LmdM = 0.0_ReKi 
+    REAL(ReKi)  :: oldKai = 0.0_ReKi 
+    REAL(ReKi) , DIMENSION(1:6)  :: PhiLqC = 0.0_ReKi 
+    REAL(ReKi) , DIMENSION(3:6)  :: PhiLqS = 0.0_ReKi 
+    REAL(ReKi)  :: Pzero = 0.0_ReKi 
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: RMC_SAVE 
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: RMS_SAVE 
-    REAL(ReKi)  :: TipSpeed 
-    REAL(ReKi)  :: totalInf 
-    REAL(ReKi)  :: Vparam 
-    REAL(ReKi)  :: Vtotal 
-    REAL(ReKi) , DIMENSION(1:6)  :: xAlpha 
-    REAL(ReKi) , DIMENSION(3:6)  :: xBeta 
-    REAL(ReKi)  :: xKai 
-    REAL(ReKi)  :: XLAMBDA_M 
-    REAL(ReKi) , DIMENSION(1:6,1:6)  :: xLcos 
-    REAL(ReKi) , DIMENSION(3:6,3:6)  :: xLsin 
-    INTEGER(IntKi) , DIMENSION(1:6,1:6)  :: MminR 
-    INTEGER(IntKi) , DIMENSION(1:6,1:6)  :: MminusR 
-    INTEGER(IntKi) , DIMENSION(1:6,1:6)  :: MplusR 
-    REAL(ReKi) , DIMENSION(1:6,1:6)  :: GAMMA 
+    REAL(ReKi)  :: TipSpeed = 0.0_ReKi 
+    REAL(ReKi)  :: totalInf = 0.0_ReKi 
+    REAL(ReKi)  :: Vparam = 0.0_ReKi 
+    REAL(ReKi)  :: Vtotal = 0.0_ReKi 
+    REAL(ReKi) , DIMENSION(1:6)  :: xAlpha = 0.0_ReKi 
+    REAL(ReKi) , DIMENSION(3:6)  :: xBeta = 0.0_ReKi 
+    REAL(ReKi)  :: xKai = 0.0_ReKi 
+    REAL(ReKi)  :: XLAMBDA_M = 0.0_ReKi 
+    REAL(ReKi) , DIMENSION(1:6,1:6)  :: xLcos = 0.0_ReKi 
+    REAL(ReKi) , DIMENSION(3:6,3:6)  :: xLsin = 0.0_ReKi 
+    INTEGER(IntKi) , DIMENSION(1:6,1:6)  :: MminR = 0_IntKi 
+    INTEGER(IntKi) , DIMENSION(1:6,1:6)  :: MminusR = 0_IntKi 
+    INTEGER(IntKi) , DIMENSION(1:6,1:6)  :: MplusR = 0_IntKi 
+    REAL(ReKi) , DIMENSION(1:6,1:6)  :: GAMMA = 0.0_ReKi 
   END TYPE DynInflow
 ! =======================
 ! =========  DynInflowParms  =======
   TYPE, PUBLIC :: DynInflowParms
     INTEGER(IntKi)  :: MAXINFLO = 2 
-    REAL(ReKi) , DIMENSION(1:6)  :: xMinv 
+    REAL(ReKi) , DIMENSION(1:6)  :: xMinv = 0.0_ReKi 
   END TYPE DynInflowParms
 ! =======================
 ! =========  Element  =======
@@ -212,7 +212,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  ElementParms  =======
   TYPE, PUBLIC :: ElementParms
-    INTEGER(IntKi)  :: NELM      !< - [Number of elements (constant)]
+    INTEGER(IntKi)  :: NELM = 0_IntKi      !< - [Number of elements (constant)]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TWIST      !< - [Airfoil twist angle (constant)]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: RELM      !< - [Radius of element (constant)]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: HLCNST      !< - [Hub loss constant B/2*(r-rh)/rh (constant)]
@@ -239,15 +239,15 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SaveVX 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SaveVY 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SaveVZ 
-    REAL(ReKi)  :: VXSAV 
-    REAL(ReKi)  :: VYSAV 
-    REAL(ReKi)  :: VZSAV 
-    INTEGER(IntKi)  :: NumWndElOut      !< Number of Blade Elements [-]
+    REAL(ReKi)  :: VXSAV = 0.0_ReKi 
+    REAL(ReKi)  :: VYSAV = 0.0_ReKi 
+    REAL(ReKi)  :: VZSAV = 0.0_ReKi 
+    INTEGER(IntKi)  :: NumWndElOut = 0_IntKi      !< Number of Blade Elements [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: WndElPrList 
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: WndElPrNum 
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ElPrList 
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ElPrNum 
-    INTEGER(IntKi)  :: NumElOut      !< Number of Blade Elements [-]
+    INTEGER(IntKi)  :: NumElOut = 0_IntKi      !< Number of Blade Elements [-]
   END TYPE ElOutParms
 ! =======================
 ! =========  InducedVel  =======
@@ -257,31 +257,31 @@ IMPLICIT NONE
 ! =======================
 ! =========  InducedVelParms  =======
   TYPE, PUBLIC :: InducedVelParms
-    REAL(ReKi)  :: AToler      !< Convergence tolerance for induction factor [-]
-    REAL(ReKi)  :: EqAIDmult      !< Multiplier for drag term in axial-induction equation. [-]
-    LOGICAL  :: EquilDA      !< False unless DB or DA appended to EQUIL [-]
-    LOGICAL  :: EquilDT      !< False unless DB or DT appended to EQUIL [-]
-    LOGICAL  :: TLoss      !< Tip-loss model (EQUIL only) [PRANDtl, GTECH, or NONE] [-]
-    LOGICAL  :: GTech      !< Tip-loss model (EQUIL only) [PRANDtl, GTECH, or NONE] [-]
-    LOGICAL  :: HLoss      !< Hub-loss model (EQUIL only) [PRANDtl or NONE] [-]
+    REAL(ReKi)  :: AToler = 0.0_ReKi      !< Convergence tolerance for induction factor [-]
+    REAL(ReKi)  :: EqAIDmult = 0.0_ReKi      !< Multiplier for drag term in axial-induction equation. [-]
+    LOGICAL  :: EquilDA = .false.      !< False unless DB or DA appended to EQUIL [-]
+    LOGICAL  :: EquilDT = .false.      !< False unless DB or DT appended to EQUIL [-]
+    LOGICAL  :: TLoss = .false.      !< Tip-loss model (EQUIL only) [PRANDtl, GTECH, or NONE] [-]
+    LOGICAL  :: GTech = .false.      !< Tip-loss model (EQUIL only) [PRANDtl, GTECH, or NONE] [-]
+    LOGICAL  :: HLoss = .false.      !< Hub-loss model (EQUIL only) [PRANDtl or NONE] [-]
   END TYPE InducedVelParms
 ! =======================
 ! =========  Rotor  =======
   TYPE, PUBLIC :: Rotor
-    REAL(ReKi)  :: AVGINFL      !< average induced velocity at the previous time [-]
-    REAL(ReKi)  :: CTILT 
-    REAL(ReKi)  :: CYaw 
-    REAL(ReKi)  :: REVS 
-    REAL(ReKi)  :: STILT 
-    REAL(ReKi)  :: SYaw 
-    REAL(ReKi)  :: TILT 
-    REAL(ReKi)  :: YawAng 
-    REAL(ReKi)  :: YawVEL 
+    REAL(ReKi)  :: AVGINFL = 0.0_ReKi      !< average induced velocity at the previous time [-]
+    REAL(ReKi)  :: CTILT = 0.0_ReKi 
+    REAL(ReKi)  :: CYaw = 0.0_ReKi 
+    REAL(ReKi)  :: REVS = 0.0_ReKi 
+    REAL(ReKi)  :: STILT = 0.0_ReKi 
+    REAL(ReKi)  :: SYaw = 0.0_ReKi 
+    REAL(ReKi)  :: TILT = 0.0_ReKi 
+    REAL(ReKi)  :: YawAng = 0.0_ReKi 
+    REAL(ReKi)  :: YawVEL = 0.0_ReKi 
   END TYPE Rotor
 ! =======================
 ! =========  RotorParms  =======
   TYPE, PUBLIC :: RotorParms
-    REAL(ReKi)  :: HH 
+    REAL(ReKi)  :: HH = 0.0_ReKi 
   END TYPE RotorParms
 ! =======================
 ! =========  TwrPropsParms  =======
@@ -290,66 +290,66 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrWid 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TwrCD 
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrRe 
-    REAL(ReKi) , DIMENSION(1:3)  :: VTwr 
-    REAL(ReKi)  :: Tower_Wake_Constant 
+    REAL(ReKi) , DIMENSION(1:3)  :: VTwr = 0.0_ReKi 
+    REAL(ReKi)  :: Tower_Wake_Constant = 0.0_ReKi 
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: NTwrCDCol      !< The tower CD column that represents a particular twr ht [-]
-    INTEGER(IntKi)  :: NTwrHT      !< The number of tower height rows in the table [-]
-    INTEGER(IntKi)  :: NTwrRe      !< The number of tower Re entry rows in the table [-]
-    INTEGER(IntKi)  :: NTwrCD      !< The number of tower CD columns in the table [-]
-    LOGICAL  :: TwrPotent      !< Tower influence model [-]
-    LOGICAL  :: TwrShadow      !< Tower shadow model [-]
-    REAL(ReKi)  :: ShadHWid      !< Tower-shadow half width [m]
-    REAL(ReKi)  :: TShadC1      !< Tower-shadow constant [-]
-    REAL(ReKi)  :: TShadC2      !< Tower-shadow constant [-]
-    REAL(ReKi)  :: TwrShad      !< Tower-shadow velocity deficit [-]
-    LOGICAL  :: PJM_Version      !< Only true if new tower influence model, by PJM [-]
-    CHARACTER(1024)  :: TwrFile      !< Tower data file name [-]
-    REAL(ReKi)  :: T_Shad_Refpt      !< Tower-shadow reference point [m]
-    LOGICAL  :: CalcTwrAero      !< Flag to tell AeroDyn to calculate drag on the tower [m]
-    INTEGER(IntKi)  :: NumTwrNodes      !< Number of ElastoDyn tower nodes.  Tower drag will be computed at those points. [-]
+    INTEGER(IntKi)  :: NTwrHT = 0_IntKi      !< The number of tower height rows in the table [-]
+    INTEGER(IntKi)  :: NTwrRe = 0_IntKi      !< The number of tower Re entry rows in the table [-]
+    INTEGER(IntKi)  :: NTwrCD = 0_IntKi      !< The number of tower CD columns in the table [-]
+    LOGICAL  :: TwrPotent = .false.      !< Tower influence model [-]
+    LOGICAL  :: TwrShadow = .false.      !< Tower shadow model [-]
+    REAL(ReKi)  :: ShadHWid = 0.0_ReKi      !< Tower-shadow half width [m]
+    REAL(ReKi)  :: TShadC1 = 0.0_ReKi      !< Tower-shadow constant [-]
+    REAL(ReKi)  :: TShadC2 = 0.0_ReKi      !< Tower-shadow constant [-]
+    REAL(ReKi)  :: TwrShad = 0.0_ReKi      !< Tower-shadow velocity deficit [-]
+    LOGICAL  :: PJM_Version = .false.      !< Only true if new tower influence model, by PJM [-]
+    CHARACTER(1024)  :: TwrFile = ''      !< Tower data file name [-]
+    REAL(ReKi)  :: T_Shad_Refpt = 0.0_ReKi      !< Tower-shadow reference point [m]
+    LOGICAL  :: CalcTwrAero = .false.      !< Flag to tell AeroDyn to calculate drag on the tower [m]
+    INTEGER(IntKi)  :: NumTwrNodes = 0_IntKi      !< Number of ElastoDyn tower nodes.  Tower drag will be computed at those points. [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: TwrNodeWidth      !< The width (diameter) of the tower at the ElastoDyn node locations. [-]
   END TYPE TwrPropsParms
 ! =======================
 ! =========  Wind  =======
   TYPE, PUBLIC :: Wind
-    REAL(ReKi)  :: ANGFLW 
-    REAL(ReKi)  :: CDEL 
-    REAL(ReKi)  :: VROTORX 
-    REAL(ReKi)  :: VROTORY 
-    REAL(ReKi)  :: VROTORZ 
-    REAL(ReKi)  :: SDEL 
+    REAL(ReKi)  :: ANGFLW = 0.0_ReKi 
+    REAL(ReKi)  :: CDEL = 0.0_ReKi 
+    REAL(ReKi)  :: VROTORX = 0.0_ReKi 
+    REAL(ReKi)  :: VROTORY = 0.0_ReKi 
+    REAL(ReKi)  :: VROTORZ = 0.0_ReKi 
+    REAL(ReKi)  :: SDEL = 0.0_ReKi 
   END TYPE Wind
 ! =======================
 ! =========  WindParms  =======
   TYPE, PUBLIC :: WindParms
-    REAL(ReKi)  :: Rho      !< Air density [kg/m^3]
-    REAL(ReKi)  :: KinVisc      !< Kinematic air viscosity [(m^2/sec)]
+    REAL(ReKi)  :: Rho = 0.0_ReKi      !< Air density [kg/m^3]
+    REAL(ReKi)  :: KinVisc = 0.0_ReKi      !< Kinematic air viscosity [(m^2/sec)]
   END TYPE WindParms
 ! =======================
 ! =========  PositionType  =======
   TYPE, PUBLIC :: PositionType
-    REAL(ReKi) , DIMENSION(1:3)  :: Pos      !< X,Y,Z coordinate of a point [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: Pos = 0.0_ReKi      !< X,Y,Z coordinate of a point [-]
   END TYPE PositionType
 ! =======================
 ! =========  OrientationType  =======
   TYPE, PUBLIC :: OrientationType
-    REAL(ReKi) , DIMENSION(1:3,1:3)  :: Orient      !< Direction Cosine Matrix [-]
+    REAL(ReKi) , DIMENSION(1:3,1:3)  :: Orient = 0.0_ReKi      !< Direction Cosine Matrix [-]
   END TYPE OrientationType
 ! =======================
 ! =========  AD14_InitInputType  =======
   TYPE, PUBLIC :: AD14_InitInputType
-    CHARACTER(1024)  :: Title      !< Title [-]
-    CHARACTER(1024)  :: OutRootName 
-    CHARACTER(1024)  :: ADFileName      !< AeroDyn file name [-]
-    LOGICAL  :: WrSumFile      !< T/F: Write an AeroDyn summary [-]
-    INTEGER(IntKi)  :: NumBl      !< Number of Blades [-]
-    REAL(ReKi)  :: BladeLength      !< Blade Length [-]
-    LOGICAL  :: LinearizeFlag 
+    CHARACTER(1024)  :: Title = ''      !< Title [-]
+    CHARACTER(1024)  :: OutRootName = '' 
+    CHARACTER(1024)  :: ADFileName = ''      !< AeroDyn file name [-]
+    LOGICAL  :: WrSumFile = .false.      !< T/F: Write an AeroDyn summary [-]
+    INTEGER(IntKi)  :: NumBl = 0_IntKi      !< Number of Blades [-]
+    REAL(ReKi)  :: BladeLength = 0.0_ReKi      !< Blade Length [-]
+    LOGICAL  :: LinearizeFlag = .false. 
     LOGICAL  :: UseDWM = .FALSE.      !< flag to determine if DWM module should be used [-]
     TYPE(AeroConfig)  :: TurbineComponents 
-    INTEGER(IntKi)  :: NumTwrNodes      !< Number of ElastoDyn tower nodes.  Tower drag will be computed at those points. [-]
+    INTEGER(IntKi)  :: NumTwrNodes = 0_IntKi      !< Number of ElastoDyn tower nodes.  Tower drag will be computed at those points. [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TwrNodeLocs      !< Location of ElastoDyn tower nodes with respect to the inertial origin. [-]
-    REAL(ReKi)  :: HubHt      !< hub height wrt inertial origin [m]
+    REAL(ReKi)  :: HubHt = 0.0_ReKi      !< hub height wrt inertial origin [m]
     TYPE(DWM_InitInputType)  :: DWM 
   END TYPE AD14_InitInputType
 ! =======================
@@ -357,7 +357,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: AD14_InitOutputType
     TYPE(ProgDesc)  :: Ver      !< version information [-]
     TYPE(DWM_InitOutputType)  :: DWM 
-    REAL(ReKi)  :: AirDens      !< Air density [kg/m^3]
+    REAL(ReKi)  :: AirDens = 0.0_ReKi      !< Air density [kg/m^3]
   END TYPE AD14_InitOutputType
 ! =======================
 ! =========  AD14_ContinuousStateType  =======
@@ -385,13 +385,13 @@ IMPLICIT NONE
     TYPE(DWM_MiscVarType)  :: DWM      !< variables for DWM module [-]
     TYPE(DWM_InputType)  :: DWM_Inputs 
     TYPE(DWM_OutputType)  :: DWM_Outputs 
-    REAL(DbKi)  :: DT      !< actual Time step [seconds]
+    REAL(DbKi)  :: DT = 0.0_R8Ki      !< actual Time step [seconds]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ElPrNum 
-    REAL(DbKi)  :: OldTime 
+    REAL(DbKi)  :: OldTime = 0.0_R8Ki 
     REAL(ReKi)  :: HubLoss = 1 
     REAL(ReKi)  :: Loss = 1 
     REAL(ReKi)  :: TipLoss = 1 
-    REAL(ReKi)  :: TLpt7 
+    REAL(ReKi)  :: TLpt7 = 0.0_ReKi 
     LOGICAL  :: FirstPassGTL = .TRUE. 
     LOGICAL  :: SuperSonic = .FALSE. 
     LOGICAL  :: AFLAGVinderr = .FALSE. 
@@ -407,34 +407,34 @@ IMPLICIT NONE
     TYPE(Wind)  :: Wind 
     TYPE(InducedVel)  :: InducedVel 
     TYPE(ElOutParms)  :: ElOut 
-    LOGICAL  :: Skew 
-    LOGICAL  :: DynInit      !< FALSE=EQUIL, TRUE=DYNIN [-]
-    LOGICAL  :: FirstWarn      !< If it's the first warning about AeroDyn not recalculating loads [-]
+    LOGICAL  :: Skew = .false. 
+    LOGICAL  :: DynInit = .false.      !< FALSE=EQUIL, TRUE=DYNIN [-]
+    LOGICAL  :: FirstWarn = .false.      !< If it's the first warning about AeroDyn not recalculating loads [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: StoredForces 
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: StoredMoments 
   END TYPE AD14_MiscVarType
 ! =======================
 ! =========  AD14_ParameterType  =======
   TYPE, PUBLIC :: AD14_ParameterType
-    CHARACTER(1024)  :: Title      !< Title [-]
-    LOGICAL  :: SIUnit 
+    CHARACTER(1024)  :: Title = ''      !< Title [-]
+    LOGICAL  :: SIUnit = .false. 
     LOGICAL  :: Echo = .FALSE. 
-    LOGICAL  :: MultiTab 
-    LOGICAL  :: LinearizeFlag 
+    LOGICAL  :: MultiTab = .false. 
+    LOGICAL  :: LinearizeFlag = .false. 
     LOGICAL  :: OutputPlottingInfo = .FALSE. 
     LOGICAL  :: UseDWM = .FALSE.      !< flag to determine if DWM module should be used [-]
-    REAL(ReKi)  :: TwoPiNB      !< 2*pi/num of blades [-]
-    INTEGER(IntKi)  :: NumBl      !< Number of Blades [-]
-    INTEGER(IntKi)  :: NBlInpSt      !< Number of Blade Input Stations [-]
-    LOGICAL  :: ElemPrn 
-    LOGICAL  :: DStall      !< FALSE=Steady, TRUE=BEDDOES [-]
-    LOGICAL  :: PMoment      !< FALSE=NO_CM, TRUE=USE_CM [-]
-    LOGICAL  :: Reynolds 
-    LOGICAL  :: DynInfl      !< FALSE=EQUIL, TRUE=DYNIN [-]
-    LOGICAL  :: Wake      !< False unless WAKE or SWIRL [-]
-    LOGICAL  :: Swirl      !< False unless WAKE or SWIRL [-]
-    REAL(DbKi)  :: DtAero      !< Time interval for aerodynamic calculations [-]
-    REAL(ReKi)  :: HubRad      !< Hub radius [m]
+    REAL(ReKi)  :: TwoPiNB = 0.0_ReKi      !< 2*pi/num of blades [-]
+    INTEGER(IntKi)  :: NumBl = 0_IntKi      !< Number of Blades [-]
+    INTEGER(IntKi)  :: NBlInpSt = 0_IntKi      !< Number of Blade Input Stations [-]
+    LOGICAL  :: ElemPrn = .false. 
+    LOGICAL  :: DStall = .false.      !< FALSE=Steady, TRUE=BEDDOES [-]
+    LOGICAL  :: PMoment = .false.      !< FALSE=NO_CM, TRUE=USE_CM [-]
+    LOGICAL  :: Reynolds = .false. 
+    LOGICAL  :: DynInfl = .false.      !< FALSE=EQUIL, TRUE=DYNIN [-]
+    LOGICAL  :: Wake = .false.      !< False unless WAKE or SWIRL [-]
+    LOGICAL  :: Swirl = .false.      !< False unless WAKE or SWIRL [-]
+    REAL(DbKi)  :: DtAero = 0.0_R8Ki      !< Time interval for aerodynamic calculations [-]
+    REAL(ReKi)  :: HubRad = 0.0_ReKi      !< Hub radius [m]
     INTEGER(IntKi)  :: UnEc = -1 
     INTEGER(IntKi)  :: UnElem = -1 
     INTEGER(IntKi)  :: UnWndOut = -1 
@@ -460,7 +460,7 @@ IMPLICIT NONE
     TYPE(AeroConfig)  :: TurbineComponents      !< Current locations of components [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: MulTabLoc 
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: InflowVelocity      !< U,V,W wind inflow speeds at all locations on the Inputmarker and Twr_InputMarker meshes [m/s]
-    REAL(ReKi) , DIMENSION(1:3)  :: AvgInfVel      !< an average disk velocity (depends on wind type and should be removed) [m/s]
+    REAL(ReKi) , DIMENSION(1:3)  :: AvgInfVel = 0.0_ReKi      !< an average disk velocity (depends on wind type and should be removed) [m/s]
   END TYPE AD14_InputType
 ! =======================
 ! =========  AD14_OutputType  =======
