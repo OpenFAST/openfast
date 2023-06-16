@@ -34,6 +34,7 @@ typedef   ^         InitInputType ReKi            HubPos    {3}    - - "Initial 
 typedef   ^         InitInputType R8Ki            HubRot    {3}{3} - - "Initial Hub direction cosine matrix"
 typedef   ^         InitInputType Logical         Linearize - .FALSE. - "Flag that tells this module if the glue code wants to linearize." -
 typedef   ^         InitInputType Logical         DynamicSolve - .TRUE. - "Use dynamic solve option.  Set to False for static solving (handled by glue code or driver code)." -
+typedef   ^         InitInputType LOGICAL         CompAeroMaps -   .FALSE. - "flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false)"	-
 
 
 # Define outputs that the initialization routine may need here:
@@ -249,6 +250,7 @@ typedef   ^        ParameterType    Integer     Jac_ny                  -       
 typedef   ^        ParameterType    Integer     Jac_nx                  -            - - "half the number of continuous states in jacobian matrix" -
 typedef   ^        ParameterType    logical     RotStates               -            - - "Orient states in rotating frame during linearization? (flag)" -
 typedef   ^        ParameterType    Logical     RelStates               -            - - "Define states relative to root motion during linearization? (flag)" -
+typedef   ^        ParameterType    LOGICAL     CompAeroMaps            -   .FALSE.    - "flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false)"	-
 
 
 # ..... Inputs
