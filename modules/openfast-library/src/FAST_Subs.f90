@@ -237,6 +237,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       END IF
 
    Init%InData_ED%Linearize = p_FAST%Linearize
+   Init%InData_ED%CompAeroMaps = .FALSE.
+   Init%InData_ED%RotSpeed = 0.0 ! will set this in a future commit that includes the OpenFAST AeroMap/Steady-State solver
    Init%InData_ED%InputFile = p_FAST%EDFile
    IF ( p_FAST%CompAero == Module_AD14 ) THEN
       Init%InData_ED%ADInputFile = p_FAST%AeroFile
