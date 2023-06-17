@@ -3018,58 +3018,59 @@ subroutine BEMT_UnPackOutput(Buf, OutData)
    end if
 end subroutine
 
- SUBROUTINE BEMT_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )
-!
-! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
-! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
-!
-!  expressions below based on either
-!
-!  f(t) = a
-!  f(t) = a + b * t, or
-!  f(t) = a + b * t + c * t**2
-!
-!  where a, b and c are determined as the solution to
-!  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
-!
-!..................................................................................................................................
-
- TYPE(BEMT_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
- REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
- TYPE(BEMT_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
- REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+subroutine BEMT_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
+   !
+   ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
+   ! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
+   !
+   !  expressions below based on either
+   !
+   !  f(t) = a
+   !  f(t) = a + b * t, or
+   !  f(t) = a + b * t + c * t**2
+   !
+   !  where a, b and c are determined as the solution to
+   !  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
+   !
+   !----------------------------------------------------------------------------------------------------------------------------------
+   
+   type(BEMT_InputType), intent(in)  :: u(:) ! Input at t1 > t2 > t3
+   real(DbKi),                 intent(in   )  :: t(:)           ! Times associated with the Inputs
+   type(BEMT_InputType), intent(inout)  :: u_out ! Input at tin_out
+   real(DbKi),                 intent(in   )  :: t_out           ! time to be extrap/interp'd to
+   integer(IntKi),             intent(  out)  :: ErrStat         ! Error status of the operation
+   character(*),               intent(  out)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
    ! local variables
- INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
- INTEGER(IntKi)                             :: ErrStat2        ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
- CHARACTER(*),    PARAMETER                 :: RoutineName = 'BEMT_Input_ExtrapInterp'
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
- if ( size(t) .ne. size(u)) then
-    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(u)',ErrStat,ErrMsg,RoutineName)
-    RETURN
- endif
- order = SIZE(u) - 1
- IF ( order .eq. 0 ) THEN
-   CALL BEMT_CopyInput(u(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 1 ) THEN
-   CALL BEMT_Input_ExtrapInterp1(u(1), u(2), t, u_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 2 ) THEN
-   CALL BEMT_Input_ExtrapInterp2(u(1), u(2), u(3), t, u_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE 
-   CALL SetErrStat(ErrID_Fatal,'size(u) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
-   RETURN
- ENDIF 
- END SUBROUTINE BEMT_Input_ExtrapInterp
+   integer(IntKi)                             :: order           ! order of polynomial fit (max 2)
+   integer(IntKi)                             :: ErrStat2        ! local errors
+   character(ErrMsgLen)                       :: ErrMsg2         ! local errors
+   character(*),    PARAMETER                 :: RoutineName = 'BEMT_Input_ExtrapInterp'
+   
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (size(t) /= size(u)) then
+      call SetErrStat(ErrID_Fatal, 'size(t) must equal size(u)', ErrStat, ErrMsg, RoutineName)
+      return
+   endif
+   order = size(u) - 1
+   select case (order)
+   case (0)
+      call BEMT_CopyInput(u(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case (1)
+      call BEMT_Input_ExtrapInterp1(u(1), u(2), t, u_out, t_out, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case (2)
+      call BEMT_Input_ExtrapInterp2(u(1), u(2), u(3), t, u_out, t_out, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case default
+      call SetErrStat(ErrID_Fatal, 'size(u) must be less than 4 (order must be less than 3).', ErrStat, ErrMsg, RoutineName)
+      return
+   end select
+end subroutine
 
-
- SUBROUTINE BEMT_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
+SUBROUTINE BEMT_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
 ! values of u (which has values associated with times in t).  Order of the interpolation is 1.
@@ -3081,155 +3082,87 @@ end subroutine
 !
 !..................................................................................................................................
 
- TYPE(BEMT_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
- TYPE(BEMT_InputType), INTENT(IN)  :: u2    ! Input at t2 
- REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
- TYPE(BEMT_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
- REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
- INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
- CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
+   TYPE(BEMT_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
+   TYPE(BEMT_InputType), INTENT(IN)  :: u2    ! Input at t2 
+   REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
+   TYPE(BEMT_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
+   REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
+   INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
+   CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(DbKi)                                 :: t(2)     ! Times associated with the Inputs
- REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
- CHARACTER(*),                    PARAMETER :: RoutineName = 'BEMT_Input_ExtrapInterp1'
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
- INTEGER                                    :: i2    ! dim2 counter variable for arrays
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
-   IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+   REAL(DbKi)                                 :: t(2)     ! Times associated with the Inputs
+   REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
+   CHARACTER(*),                    PARAMETER :: RoutineName = 'BEMT_Input_ExtrapInterp1'
+   REAL(DbKi)                                 :: a1, a2   ! temporary for extrapolation/interpolation
+   INTEGER(IntKi)                             :: ErrStat2 ! local errors
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   INTEGER                                    :: i01      ! dim1 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i02      ! dim2 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i1       ! dim1 counter variable for arrays
+   INTEGER                                    :: i2       ! dim2 counter variable for arrays
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! we'll subtract a constant from the times to resolve some 
+   ! numerical issues when t gets large (and to simplify the equations)
+   t = tin - tin(1)
+   t_out = tin_out - tin(1)
+   
+   IF (EqualRealNos(t(1), t(2))) THEN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg, RoutineName)
+      RETURN
    END IF
+   
+   ! Calculate weighting factors from Lagrange polynomial
+   a1 = -(t_out - t(2))/t(2)
+   a2 = t_out/t(2)
+   
+   IF (ALLOCATED(u_out%theta) .AND. ALLOCATED(u1%theta)) THEN
+      u_out%theta = a1*u1%theta + a2*u2%theta
+   END IF ! check if allocated
+   u_out%chi0 = a1*u1%chi0 + a2*u2%chi0
+   u_out%psiSkewOffset = a1*u1%psiSkewOffset + a2*u2%psiSkewOffset
+   IF (ALLOCATED(u_out%psi) .AND. ALLOCATED(u1%psi)) THEN
+      u_out%psi = a1*u1%psi + a2*u2%psi
+   END IF ! check if allocated
+   u_out%omega = a1*u1%omega + a2*u2%omega
+   u_out%TSR = a1*u1%TSR + a2*u2%TSR
+   IF (ALLOCATED(u_out%Vx) .AND. ALLOCATED(u1%Vx)) THEN
+      u_out%Vx = a1*u1%Vx + a2*u2%Vx
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%Vy) .AND. ALLOCATED(u1%Vy)) THEN
+      u_out%Vy = a1*u1%Vy + a2*u2%Vy
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%Vz) .AND. ALLOCATED(u1%Vz)) THEN
+      u_out%Vz = a1*u1%Vz + a2*u2%Vz
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%omega_z) .AND. ALLOCATED(u1%omega_z)) THEN
+      u_out%omega_z = a1*u1%omega_z + a2*u2%omega_z
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%xVelCorr) .AND. ALLOCATED(u1%xVelCorr)) THEN
+      u_out%xVelCorr = a1*u1%xVelCorr + a2*u2%xVelCorr
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%rLocal) .AND. ALLOCATED(u1%rLocal)) THEN
+      u_out%rLocal = a1*u1%rLocal + a2*u2%rLocal
+   END IF ! check if allocated
+   u_out%Un_disk = a1*u1%Un_disk + a2*u2%Un_disk
+   u_out%V0 = a1*u1%V0 + a2*u2%V0
+   u_out%x_hat_disk = a1*u1%x_hat_disk + a2*u2%x_hat_disk
+   IF (ALLOCATED(u_out%UserProp) .AND. ALLOCATED(u1%UserProp)) THEN
+      u_out%UserProp = a1*u1%UserProp + a2*u2%UserProp
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%CantAngle) .AND. ALLOCATED(u1%CantAngle)) THEN
+      u_out%CantAngle = a1*u1%CantAngle + a2*u2%CantAngle
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%drdz) .AND. ALLOCATED(u1%drdz)) THEN
+      u_out%drdz = a1*u1%drdz + a2*u2%drdz
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%toeAngle) .AND. ALLOCATED(u1%toeAngle)) THEN
+      u_out%toeAngle = a1*u1%toeAngle + a2*u2%toeAngle
+   END IF ! check if allocated
+END SUBROUTINE
 
-   ScaleFactor = t_out / t(2)
-IF (ALLOCATED(u_out%theta) .AND. ALLOCATED(u1%theta)) THEN
-  DO i2 = LBOUND(u_out%theta,2),UBOUND(u_out%theta,2)
-    DO i1 = LBOUND(u_out%theta,1),UBOUND(u_out%theta,1)
-      b = -(u1%theta(i1,i2) - u2%theta(i1,i2))
-      u_out%theta(i1,i2) = u1%theta(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-  b = -(u1%chi0 - u2%chi0)
-  u_out%chi0 = u1%chi0 + b * ScaleFactor
-  b = -(u1%psiSkewOffset - u2%psiSkewOffset)
-  u_out%psiSkewOffset = u1%psiSkewOffset + b * ScaleFactor
-IF (ALLOCATED(u_out%psi) .AND. ALLOCATED(u1%psi)) THEN
-  DO i1 = LBOUND(u_out%psi,1),UBOUND(u_out%psi,1)
-    b = -(u1%psi(i1) - u2%psi(i1))
-    u_out%psi(i1) = u1%psi(i1) + b * ScaleFactor
-  END DO
-END IF ! check if allocated
-  b = -(u1%omega - u2%omega)
-  u_out%omega = u1%omega + b * ScaleFactor
-  b = -(u1%TSR - u2%TSR)
-  u_out%TSR = u1%TSR + b * ScaleFactor
-IF (ALLOCATED(u_out%Vx) .AND. ALLOCATED(u1%Vx)) THEN
-  DO i2 = LBOUND(u_out%Vx,2),UBOUND(u_out%Vx,2)
-    DO i1 = LBOUND(u_out%Vx,1),UBOUND(u_out%Vx,1)
-      b = -(u1%Vx(i1,i2) - u2%Vx(i1,i2))
-      u_out%Vx(i1,i2) = u1%Vx(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%Vy) .AND. ALLOCATED(u1%Vy)) THEN
-  DO i2 = LBOUND(u_out%Vy,2),UBOUND(u_out%Vy,2)
-    DO i1 = LBOUND(u_out%Vy,1),UBOUND(u_out%Vy,1)
-      b = -(u1%Vy(i1,i2) - u2%Vy(i1,i2))
-      u_out%Vy(i1,i2) = u1%Vy(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%Vz) .AND. ALLOCATED(u1%Vz)) THEN
-  DO i2 = LBOUND(u_out%Vz,2),UBOUND(u_out%Vz,2)
-    DO i1 = LBOUND(u_out%Vz,1),UBOUND(u_out%Vz,1)
-      b = -(u1%Vz(i1,i2) - u2%Vz(i1,i2))
-      u_out%Vz(i1,i2) = u1%Vz(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%omega_z) .AND. ALLOCATED(u1%omega_z)) THEN
-  DO i2 = LBOUND(u_out%omega_z,2),UBOUND(u_out%omega_z,2)
-    DO i1 = LBOUND(u_out%omega_z,1),UBOUND(u_out%omega_z,1)
-      b = -(u1%omega_z(i1,i2) - u2%omega_z(i1,i2))
-      u_out%omega_z(i1,i2) = u1%omega_z(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%xVelCorr) .AND. ALLOCATED(u1%xVelCorr)) THEN
-  DO i2 = LBOUND(u_out%xVelCorr,2),UBOUND(u_out%xVelCorr,2)
-    DO i1 = LBOUND(u_out%xVelCorr,1),UBOUND(u_out%xVelCorr,1)
-      b = -(u1%xVelCorr(i1,i2) - u2%xVelCorr(i1,i2))
-      u_out%xVelCorr(i1,i2) = u1%xVelCorr(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%rLocal) .AND. ALLOCATED(u1%rLocal)) THEN
-  DO i2 = LBOUND(u_out%rLocal,2),UBOUND(u_out%rLocal,2)
-    DO i1 = LBOUND(u_out%rLocal,1),UBOUND(u_out%rLocal,1)
-      b = -(u1%rLocal(i1,i2) - u2%rLocal(i1,i2))
-      u_out%rLocal(i1,i2) = u1%rLocal(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-  b = -(u1%Un_disk - u2%Un_disk)
-  u_out%Un_disk = u1%Un_disk + b * ScaleFactor
-  DO i1 = LBOUND(u_out%V0,1),UBOUND(u_out%V0,1)
-    b = -(u1%V0(i1) - u2%V0(i1))
-    u_out%V0(i1) = u1%V0(i1) + b * ScaleFactor
-  END DO
-  DO i1 = LBOUND(u_out%x_hat_disk,1),UBOUND(u_out%x_hat_disk,1)
-    b = -(u1%x_hat_disk(i1) - u2%x_hat_disk(i1))
-    u_out%x_hat_disk(i1) = u1%x_hat_disk(i1) + b * ScaleFactor
-  END DO
-IF (ALLOCATED(u_out%UserProp) .AND. ALLOCATED(u1%UserProp)) THEN
-  DO i2 = LBOUND(u_out%UserProp,2),UBOUND(u_out%UserProp,2)
-    DO i1 = LBOUND(u_out%UserProp,1),UBOUND(u_out%UserProp,1)
-      b = -(u1%UserProp(i1,i2) - u2%UserProp(i1,i2))
-      u_out%UserProp(i1,i2) = u1%UserProp(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%CantAngle) .AND. ALLOCATED(u1%CantAngle)) THEN
-  DO i2 = LBOUND(u_out%CantAngle,2),UBOUND(u_out%CantAngle,2)
-    DO i1 = LBOUND(u_out%CantAngle,1),UBOUND(u_out%CantAngle,1)
-      b = -(u1%CantAngle(i1,i2) - u2%CantAngle(i1,i2))
-      u_out%CantAngle(i1,i2) = u1%CantAngle(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%drdz) .AND. ALLOCATED(u1%drdz)) THEN
-  DO i2 = LBOUND(u_out%drdz,2),UBOUND(u_out%drdz,2)
-    DO i1 = LBOUND(u_out%drdz,1),UBOUND(u_out%drdz,1)
-      b = -(u1%drdz(i1,i2) - u2%drdz(i1,i2))
-      u_out%drdz(i1,i2) = u1%drdz(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%toeAngle) .AND. ALLOCATED(u1%toeAngle)) THEN
-  DO i2 = LBOUND(u_out%toeAngle,2),UBOUND(u_out%toeAngle,2)
-    DO i1 = LBOUND(u_out%toeAngle,1),UBOUND(u_out%toeAngle,1)
-      b = -(u1%toeAngle(i1,i2) - u2%toeAngle(i1,i2))
-      u_out%toeAngle(i1,i2) = u1%toeAngle(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
- END SUBROUTINE BEMT_Input_ExtrapInterp1
-
-
- SUBROUTINE BEMT_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
+SUBROUTINE BEMT_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
 ! values of u (which has values associated with times in t).  Order of the interpolation is 2.
@@ -3243,234 +3176,147 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(BEMT_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
- TYPE(BEMT_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
- TYPE(BEMT_InputType), INTENT(IN)  :: u3      ! Input at t3
- REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
- TYPE(BEMT_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
- REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   TYPE(BEMT_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
+   TYPE(BEMT_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
+   TYPE(BEMT_InputType), INTENT(IN)  :: u3      ! Input at t3
+   REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
+   TYPE(BEMT_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
+   REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
+   INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+   CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(DbKi)                                 :: t(3)      ! Times associated with the Inputs
- REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
- INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- CHARACTER(*),            PARAMETER         :: RoutineName = 'BEMT_Input_ExtrapInterp2'
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
- INTEGER                                    :: i2    ! dim2 counter variable for arrays
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
+   REAL(DbKi)                                 :: t(3)      ! Times associated with the Inputs
+   REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
+   INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
+   REAL(DbKi)                                 :: a1,a2,a3 ! temporary for extrapolation/interpolation
+   INTEGER(IntKi)                             :: ErrStat2 ! local errors
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   CHARACTER(*),            PARAMETER         :: RoutineName = 'BEMT_Input_ExtrapInterp2'
+   INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i1    ! dim1 counter variable for arrays
+   INTEGER                                    :: i2    ! dim2 counter variable for arrays
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! we'll subtract a constant from the times to resolve some 
+   ! numerical issues when t gets large (and to simplify the equations)
+   t = tin - tin(1)
+   t_out = tin_out - tin(1)
+   
    IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    END IF
+   
+   ! Calculate Lagrange polynomial coefficients
+   a1 = (t_out - t(2))*(t_out - t(3))/((t(1) - t(2))*(t(1) - t(3)))
+   a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
+   a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
+   IF (ALLOCATED(u_out%theta) .AND. ALLOCATED(u1%theta)) THEN
+      u_out%theta = a1*u1%theta + a2*u2%theta + a3*u3%theta
+   END IF ! check if allocated
+   u_out%chi0 = a1*u1%chi0 + a2*u2%chi0 + a3*u3%chi0
+   u_out%psiSkewOffset = a1*u1%psiSkewOffset + a2*u2%psiSkewOffset + a3*u3%psiSkewOffset
+   IF (ALLOCATED(u_out%psi) .AND. ALLOCATED(u1%psi)) THEN
+      u_out%psi = a1*u1%psi + a2*u2%psi + a3*u3%psi
+   END IF ! check if allocated
+   u_out%omega = a1*u1%omega + a2*u2%omega + a3*u3%omega
+   u_out%TSR = a1*u1%TSR + a2*u2%TSR + a3*u3%TSR
+   IF (ALLOCATED(u_out%Vx) .AND. ALLOCATED(u1%Vx)) THEN
+      u_out%Vx = a1*u1%Vx + a2*u2%Vx + a3*u3%Vx
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%Vy) .AND. ALLOCATED(u1%Vy)) THEN
+      u_out%Vy = a1*u1%Vy + a2*u2%Vy + a3*u3%Vy
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%Vz) .AND. ALLOCATED(u1%Vz)) THEN
+      u_out%Vz = a1*u1%Vz + a2*u2%Vz + a3*u3%Vz
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%omega_z) .AND. ALLOCATED(u1%omega_z)) THEN
+      u_out%omega_z = a1*u1%omega_z + a2*u2%omega_z + a3*u3%omega_z
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%xVelCorr) .AND. ALLOCATED(u1%xVelCorr)) THEN
+      u_out%xVelCorr = a1*u1%xVelCorr + a2*u2%xVelCorr + a3*u3%xVelCorr
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%rLocal) .AND. ALLOCATED(u1%rLocal)) THEN
+      u_out%rLocal = a1*u1%rLocal + a2*u2%rLocal + a3*u3%rLocal
+   END IF ! check if allocated
+   u_out%Un_disk = a1*u1%Un_disk + a2*u2%Un_disk + a3*u3%Un_disk
+   u_out%V0 = a1*u1%V0 + a2*u2%V0 + a3*u3%V0
+   u_out%x_hat_disk = a1*u1%x_hat_disk + a2*u2%x_hat_disk + a3*u3%x_hat_disk
+   IF (ALLOCATED(u_out%UserProp) .AND. ALLOCATED(u1%UserProp)) THEN
+      u_out%UserProp = a1*u1%UserProp + a2*u2%UserProp + a3*u3%UserProp
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%CantAngle) .AND. ALLOCATED(u1%CantAngle)) THEN
+      u_out%CantAngle = a1*u1%CantAngle + a2*u2%CantAngle + a3*u3%CantAngle
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%drdz) .AND. ALLOCATED(u1%drdz)) THEN
+      u_out%drdz = a1*u1%drdz + a2*u2%drdz + a3*u3%drdz
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%toeAngle) .AND. ALLOCATED(u1%toeAngle)) THEN
+      u_out%toeAngle = a1*u1%toeAngle + a2*u2%toeAngle + a3*u3%toeAngle
+   END IF ! check if allocated
+END SUBROUTINE
 
-   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
-IF (ALLOCATED(u_out%theta) .AND. ALLOCATED(u1%theta)) THEN
-  DO i2 = LBOUND(u_out%theta,2),UBOUND(u_out%theta,2)
-    DO i1 = LBOUND(u_out%theta,1),UBOUND(u_out%theta,1)
-      b = (t(3)**2*(u1%theta(i1,i2) - u2%theta(i1,i2)) + t(2)**2*(-u1%theta(i1,i2) + u3%theta(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%theta(i1,i2) + t(3)*u2%theta(i1,i2) - t(2)*u3%theta(i1,i2) ) * scaleFactor
-      u_out%theta(i1,i2) = u1%theta(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-  b = (t(3)**2*(u1%chi0 - u2%chi0) + t(2)**2*(-u1%chi0 + u3%chi0))* scaleFactor
-  c = ( (t(2)-t(3))*u1%chi0 + t(3)*u2%chi0 - t(2)*u3%chi0 ) * scaleFactor
-  u_out%chi0 = u1%chi0 + b  + c * t_out
-  b = (t(3)**2*(u1%psiSkewOffset - u2%psiSkewOffset) + t(2)**2*(-u1%psiSkewOffset + u3%psiSkewOffset))* scaleFactor
-  c = ( (t(2)-t(3))*u1%psiSkewOffset + t(3)*u2%psiSkewOffset - t(2)*u3%psiSkewOffset ) * scaleFactor
-  u_out%psiSkewOffset = u1%psiSkewOffset + b  + c * t_out
-IF (ALLOCATED(u_out%psi) .AND. ALLOCATED(u1%psi)) THEN
-  DO i1 = LBOUND(u_out%psi,1),UBOUND(u_out%psi,1)
-    b = (t(3)**2*(u1%psi(i1) - u2%psi(i1)) + t(2)**2*(-u1%psi(i1) + u3%psi(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*u1%psi(i1) + t(3)*u2%psi(i1) - t(2)*u3%psi(i1) ) * scaleFactor
-    u_out%psi(i1) = u1%psi(i1) + b  + c * t_out
-  END DO
-END IF ! check if allocated
-  b = (t(3)**2*(u1%omega - u2%omega) + t(2)**2*(-u1%omega + u3%omega))* scaleFactor
-  c = ( (t(2)-t(3))*u1%omega + t(3)*u2%omega - t(2)*u3%omega ) * scaleFactor
-  u_out%omega = u1%omega + b  + c * t_out
-  b = (t(3)**2*(u1%TSR - u2%TSR) + t(2)**2*(-u1%TSR + u3%TSR))* scaleFactor
-  c = ( (t(2)-t(3))*u1%TSR + t(3)*u2%TSR - t(2)*u3%TSR ) * scaleFactor
-  u_out%TSR = u1%TSR + b  + c * t_out
-IF (ALLOCATED(u_out%Vx) .AND. ALLOCATED(u1%Vx)) THEN
-  DO i2 = LBOUND(u_out%Vx,2),UBOUND(u_out%Vx,2)
-    DO i1 = LBOUND(u_out%Vx,1),UBOUND(u_out%Vx,1)
-      b = (t(3)**2*(u1%Vx(i1,i2) - u2%Vx(i1,i2)) + t(2)**2*(-u1%Vx(i1,i2) + u3%Vx(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%Vx(i1,i2) + t(3)*u2%Vx(i1,i2) - t(2)*u3%Vx(i1,i2) ) * scaleFactor
-      u_out%Vx(i1,i2) = u1%Vx(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%Vy) .AND. ALLOCATED(u1%Vy)) THEN
-  DO i2 = LBOUND(u_out%Vy,2),UBOUND(u_out%Vy,2)
-    DO i1 = LBOUND(u_out%Vy,1),UBOUND(u_out%Vy,1)
-      b = (t(3)**2*(u1%Vy(i1,i2) - u2%Vy(i1,i2)) + t(2)**2*(-u1%Vy(i1,i2) + u3%Vy(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%Vy(i1,i2) + t(3)*u2%Vy(i1,i2) - t(2)*u3%Vy(i1,i2) ) * scaleFactor
-      u_out%Vy(i1,i2) = u1%Vy(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%Vz) .AND. ALLOCATED(u1%Vz)) THEN
-  DO i2 = LBOUND(u_out%Vz,2),UBOUND(u_out%Vz,2)
-    DO i1 = LBOUND(u_out%Vz,1),UBOUND(u_out%Vz,1)
-      b = (t(3)**2*(u1%Vz(i1,i2) - u2%Vz(i1,i2)) + t(2)**2*(-u1%Vz(i1,i2) + u3%Vz(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%Vz(i1,i2) + t(3)*u2%Vz(i1,i2) - t(2)*u3%Vz(i1,i2) ) * scaleFactor
-      u_out%Vz(i1,i2) = u1%Vz(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%omega_z) .AND. ALLOCATED(u1%omega_z)) THEN
-  DO i2 = LBOUND(u_out%omega_z,2),UBOUND(u_out%omega_z,2)
-    DO i1 = LBOUND(u_out%omega_z,1),UBOUND(u_out%omega_z,1)
-      b = (t(3)**2*(u1%omega_z(i1,i2) - u2%omega_z(i1,i2)) + t(2)**2*(-u1%omega_z(i1,i2) + u3%omega_z(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%omega_z(i1,i2) + t(3)*u2%omega_z(i1,i2) - t(2)*u3%omega_z(i1,i2) ) * scaleFactor
-      u_out%omega_z(i1,i2) = u1%omega_z(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%xVelCorr) .AND. ALLOCATED(u1%xVelCorr)) THEN
-  DO i2 = LBOUND(u_out%xVelCorr,2),UBOUND(u_out%xVelCorr,2)
-    DO i1 = LBOUND(u_out%xVelCorr,1),UBOUND(u_out%xVelCorr,1)
-      b = (t(3)**2*(u1%xVelCorr(i1,i2) - u2%xVelCorr(i1,i2)) + t(2)**2*(-u1%xVelCorr(i1,i2) + u3%xVelCorr(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%xVelCorr(i1,i2) + t(3)*u2%xVelCorr(i1,i2) - t(2)*u3%xVelCorr(i1,i2) ) * scaleFactor
-      u_out%xVelCorr(i1,i2) = u1%xVelCorr(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%rLocal) .AND. ALLOCATED(u1%rLocal)) THEN
-  DO i2 = LBOUND(u_out%rLocal,2),UBOUND(u_out%rLocal,2)
-    DO i1 = LBOUND(u_out%rLocal,1),UBOUND(u_out%rLocal,1)
-      b = (t(3)**2*(u1%rLocal(i1,i2) - u2%rLocal(i1,i2)) + t(2)**2*(-u1%rLocal(i1,i2) + u3%rLocal(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%rLocal(i1,i2) + t(3)*u2%rLocal(i1,i2) - t(2)*u3%rLocal(i1,i2) ) * scaleFactor
-      u_out%rLocal(i1,i2) = u1%rLocal(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-  b = (t(3)**2*(u1%Un_disk - u2%Un_disk) + t(2)**2*(-u1%Un_disk + u3%Un_disk))* scaleFactor
-  c = ( (t(2)-t(3))*u1%Un_disk + t(3)*u2%Un_disk - t(2)*u3%Un_disk ) * scaleFactor
-  u_out%Un_disk = u1%Un_disk + b  + c * t_out
-  DO i1 = LBOUND(u_out%V0,1),UBOUND(u_out%V0,1)
-    b = (t(3)**2*(u1%V0(i1) - u2%V0(i1)) + t(2)**2*(-u1%V0(i1) + u3%V0(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*u1%V0(i1) + t(3)*u2%V0(i1) - t(2)*u3%V0(i1) ) * scaleFactor
-    u_out%V0(i1) = u1%V0(i1) + b  + c * t_out
-  END DO
-  DO i1 = LBOUND(u_out%x_hat_disk,1),UBOUND(u_out%x_hat_disk,1)
-    b = (t(3)**2*(u1%x_hat_disk(i1) - u2%x_hat_disk(i1)) + t(2)**2*(-u1%x_hat_disk(i1) + u3%x_hat_disk(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*u1%x_hat_disk(i1) + t(3)*u2%x_hat_disk(i1) - t(2)*u3%x_hat_disk(i1) ) * scaleFactor
-    u_out%x_hat_disk(i1) = u1%x_hat_disk(i1) + b  + c * t_out
-  END DO
-IF (ALLOCATED(u_out%UserProp) .AND. ALLOCATED(u1%UserProp)) THEN
-  DO i2 = LBOUND(u_out%UserProp,2),UBOUND(u_out%UserProp,2)
-    DO i1 = LBOUND(u_out%UserProp,1),UBOUND(u_out%UserProp,1)
-      b = (t(3)**2*(u1%UserProp(i1,i2) - u2%UserProp(i1,i2)) + t(2)**2*(-u1%UserProp(i1,i2) + u3%UserProp(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%UserProp(i1,i2) + t(3)*u2%UserProp(i1,i2) - t(2)*u3%UserProp(i1,i2) ) * scaleFactor
-      u_out%UserProp(i1,i2) = u1%UserProp(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%CantAngle) .AND. ALLOCATED(u1%CantAngle)) THEN
-  DO i2 = LBOUND(u_out%CantAngle,2),UBOUND(u_out%CantAngle,2)
-    DO i1 = LBOUND(u_out%CantAngle,1),UBOUND(u_out%CantAngle,1)
-      b = (t(3)**2*(u1%CantAngle(i1,i2) - u2%CantAngle(i1,i2)) + t(2)**2*(-u1%CantAngle(i1,i2) + u3%CantAngle(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%CantAngle(i1,i2) + t(3)*u2%CantAngle(i1,i2) - t(2)*u3%CantAngle(i1,i2) ) * scaleFactor
-      u_out%CantAngle(i1,i2) = u1%CantAngle(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%drdz) .AND. ALLOCATED(u1%drdz)) THEN
-  DO i2 = LBOUND(u_out%drdz,2),UBOUND(u_out%drdz,2)
-    DO i1 = LBOUND(u_out%drdz,1),UBOUND(u_out%drdz,1)
-      b = (t(3)**2*(u1%drdz(i1,i2) - u2%drdz(i1,i2)) + t(2)**2*(-u1%drdz(i1,i2) + u3%drdz(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%drdz(i1,i2) + t(3)*u2%drdz(i1,i2) - t(2)*u3%drdz(i1,i2) ) * scaleFactor
-      u_out%drdz(i1,i2) = u1%drdz(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%toeAngle) .AND. ALLOCATED(u1%toeAngle)) THEN
-  DO i2 = LBOUND(u_out%toeAngle,2),UBOUND(u_out%toeAngle,2)
-    DO i1 = LBOUND(u_out%toeAngle,1),UBOUND(u_out%toeAngle,1)
-      b = (t(3)**2*(u1%toeAngle(i1,i2) - u2%toeAngle(i1,i2)) + t(2)**2*(-u1%toeAngle(i1,i2) + u3%toeAngle(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%toeAngle(i1,i2) + t(3)*u2%toeAngle(i1,i2) - t(2)*u3%toeAngle(i1,i2) ) * scaleFactor
-      u_out%toeAngle(i1,i2) = u1%toeAngle(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
- END SUBROUTINE BEMT_Input_ExtrapInterp2
-
-
- SUBROUTINE BEMT_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg )
-!
-! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
-! values of y (which has values associated with times in t).  Order of the interpolation is given by the size of y
-!
-!  expressions below based on either
-!
-!  f(t) = a
-!  f(t) = a + b * t, or
-!  f(t) = a + b * t + c * t**2
-!
-!  where a, b and c are determined as the solution to
-!  f(t1) = y1, f(t2) = y2, f(t3) = y3  (as appropriate)
-!
-!..................................................................................................................................
-
- TYPE(BEMT_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
- REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
- TYPE(BEMT_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
- REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+subroutine BEMT_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg)
+   !
+   ! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
+   ! values of y (which has values associated with times in t).  Order of the interpolation is given by the size of y
+   !
+   !  expressions below based on either
+   !
+   !  f(t) = a
+   !  f(t) = a + b * t, or
+   !  f(t) = a + b * t + c * t**2
+   !
+   !  where a, b and c are determined as the solution to
+   !  f(t1) = y1, f(t2) = y2, f(t3) = y3  (as appropriate)
+   !
+   !----------------------------------------------------------------------------------------------------------------------------------
+   
+   type(BEMT_OutputType), intent(in)  :: y(:) ! Output at t1 > t2 > t3
+   real(DbKi),                 intent(in   )  :: t(:)           ! Times associated with the Outputs
+   type(BEMT_OutputType), intent(inout)  :: y_out ! Output at tin_out
+   real(DbKi),                 intent(in   )  :: t_out           ! time to be extrap/interp'd to
+   integer(IntKi),             intent(  out)  :: ErrStat         ! Error status of the operation
+   character(*),               intent(  out)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
    ! local variables
- INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
- INTEGER(IntKi)                             :: ErrStat2        ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
- CHARACTER(*),    PARAMETER                 :: RoutineName = 'BEMT_Output_ExtrapInterp'
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
- if ( size(t) .ne. size(y)) then
-    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(y)',ErrStat,ErrMsg,RoutineName)
-    RETURN
- endif
- order = SIZE(y) - 1
- IF ( order .eq. 0 ) THEN
-   CALL BEMT_CopyOutput(y(1), y_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 1 ) THEN
-   CALL BEMT_Output_ExtrapInterp1(y(1), y(2), t, y_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 2 ) THEN
-   CALL BEMT_Output_ExtrapInterp2(y(1), y(2), y(3), t, y_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE 
-   CALL SetErrStat(ErrID_Fatal,'size(y) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
-   RETURN
- ENDIF 
- END SUBROUTINE BEMT_Output_ExtrapInterp
+   integer(IntKi)                             :: order           ! order of polynomial fit (max 2)
+   integer(IntKi)                             :: ErrStat2        ! local errors
+   character(ErrMsgLen)                       :: ErrMsg2         ! local errors
+   character(*),    PARAMETER                 :: RoutineName = 'BEMT_Output_ExtrapInterp'
+   
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (size(t) /= size(y)) then
+      call SetErrStat(ErrID_Fatal, 'size(t) must equal size(y)', ErrStat, ErrMsg, RoutineName)
+      return
+   endif
+   order = size(y) - 1
+   select case (order)
+   case (0)
+      call BEMT_CopyOutput(y(1), y_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case (1)
+      call BEMT_Output_ExtrapInterp1(y(1), y(2), t, y_out, t_out, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case (2)
+      call BEMT_Output_ExtrapInterp2(y(1), y(2), y(3), t, y_out, t_out, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case default
+      call SetErrStat(ErrID_Fatal, 'size(y) must be less than 4 (order must be less than 3).', ErrStat, ErrMsg, RoutineName)
+      return
+   end select
+end subroutine
 
-
- SUBROUTINE BEMT_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg )
+SUBROUTINE BEMT_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
 ! values of y (which has values associated with times in t).  Order of the interpolation is 1.
@@ -3482,179 +3328,95 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(BEMT_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
- TYPE(BEMT_OutputType), INTENT(IN)  :: y2    ! Output at t2 
- REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
- TYPE(BEMT_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
- REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
- INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
- CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
+   TYPE(BEMT_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
+   TYPE(BEMT_OutputType), INTENT(IN)  :: y2    ! Output at t2 
+   REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
+   TYPE(BEMT_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
+   REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
+   INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
+   CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(DbKi)                                 :: t(2)     ! Times associated with the Outputs
- REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
- CHARACTER(*),                    PARAMETER :: RoutineName = 'BEMT_Output_ExtrapInterp1'
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
- INTEGER                                    :: i2    ! dim2 counter variable for arrays
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
-   IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+   REAL(DbKi)                                 :: t(2)     ! Times associated with the Outputs
+   REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
+   CHARACTER(*),                    PARAMETER :: RoutineName = 'BEMT_Output_ExtrapInterp1'
+   REAL(DbKi)                                 :: a1, a2   ! temporary for extrapolation/interpolation
+   INTEGER(IntKi)                             :: ErrStat2 ! local errors
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   INTEGER                                    :: i01      ! dim1 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i02      ! dim2 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i1       ! dim1 counter variable for arrays
+   INTEGER                                    :: i2       ! dim2 counter variable for arrays
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! we'll subtract a constant from the times to resolve some 
+   ! numerical issues when t gets large (and to simplify the equations)
+   t = tin - tin(1)
+   t_out = tin_out - tin(1)
+   
+   IF (EqualRealNos(t(1), t(2))) THEN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg, RoutineName)
+      RETURN
    END IF
+   
+   ! Calculate weighting factors from Lagrange polynomial
+   a1 = -(t_out - t(2))/t(2)
+   a2 = t_out/t(2)
+   
+   IF (ALLOCATED(y_out%Vrel) .AND. ALLOCATED(y1%Vrel)) THEN
+      y_out%Vrel = a1*y1%Vrel + a2*y2%Vrel
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%phi) .AND. ALLOCATED(y1%phi)) THEN
+      y_out%phi = a1*y1%phi + a2*y2%phi
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%axInduction) .AND. ALLOCATED(y1%axInduction)) THEN
+      y_out%axInduction = a1*y1%axInduction + a2*y2%axInduction
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%tanInduction) .AND. ALLOCATED(y1%tanInduction)) THEN
+      y_out%tanInduction = a1*y1%tanInduction + a2*y2%tanInduction
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Re) .AND. ALLOCATED(y1%Re)) THEN
+      y_out%Re = a1*y1%Re + a2*y2%Re
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%AOA) .AND. ALLOCATED(y1%AOA)) THEN
+      y_out%AOA = a1*y1%AOA + a2*y2%AOA
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cx) .AND. ALLOCATED(y1%Cx)) THEN
+      y_out%Cx = a1*y1%Cx + a2*y2%Cx
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cy) .AND. ALLOCATED(y1%Cy)) THEN
+      y_out%Cy = a1*y1%Cy + a2*y2%Cy
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cz) .AND. ALLOCATED(y1%Cz)) THEN
+      y_out%Cz = a1*y1%Cz + a2*y2%Cz
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cmx) .AND. ALLOCATED(y1%Cmx)) THEN
+      y_out%Cmx = a1*y1%Cmx + a2*y2%Cmx
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cmy) .AND. ALLOCATED(y1%Cmy)) THEN
+      y_out%Cmy = a1*y1%Cmy + a2*y2%Cmy
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cmz) .AND. ALLOCATED(y1%Cmz)) THEN
+      y_out%Cmz = a1*y1%Cmz + a2*y2%Cmz
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cm) .AND. ALLOCATED(y1%Cm)) THEN
+      y_out%Cm = a1*y1%Cm + a2*y2%Cm
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cl) .AND. ALLOCATED(y1%Cl)) THEN
+      y_out%Cl = a1*y1%Cl + a2*y2%Cl
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cd) .AND. ALLOCATED(y1%Cd)) THEN
+      y_out%Cd = a1*y1%Cd + a2*y2%Cd
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%chi) .AND. ALLOCATED(y1%chi)) THEN
+      y_out%chi = a1*y1%chi + a2*y2%chi
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cpmin) .AND. ALLOCATED(y1%Cpmin)) THEN
+      y_out%Cpmin = a1*y1%Cpmin + a2*y2%Cpmin
+   END IF ! check if allocated
+END SUBROUTINE
 
-   ScaleFactor = t_out / t(2)
-IF (ALLOCATED(y_out%Vrel) .AND. ALLOCATED(y1%Vrel)) THEN
-  DO i2 = LBOUND(y_out%Vrel,2),UBOUND(y_out%Vrel,2)
-    DO i1 = LBOUND(y_out%Vrel,1),UBOUND(y_out%Vrel,1)
-      b = -(y1%Vrel(i1,i2) - y2%Vrel(i1,i2))
-      y_out%Vrel(i1,i2) = y1%Vrel(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%phi) .AND. ALLOCATED(y1%phi)) THEN
-  DO i2 = LBOUND(y_out%phi,2),UBOUND(y_out%phi,2)
-    DO i1 = LBOUND(y_out%phi,1),UBOUND(y_out%phi,1)
-      b = -(y1%phi(i1,i2) - y2%phi(i1,i2))
-      y_out%phi(i1,i2) = y1%phi(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%axInduction) .AND. ALLOCATED(y1%axInduction)) THEN
-  DO i2 = LBOUND(y_out%axInduction,2),UBOUND(y_out%axInduction,2)
-    DO i1 = LBOUND(y_out%axInduction,1),UBOUND(y_out%axInduction,1)
-      b = -(y1%axInduction(i1,i2) - y2%axInduction(i1,i2))
-      y_out%axInduction(i1,i2) = y1%axInduction(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%tanInduction) .AND. ALLOCATED(y1%tanInduction)) THEN
-  DO i2 = LBOUND(y_out%tanInduction,2),UBOUND(y_out%tanInduction,2)
-    DO i1 = LBOUND(y_out%tanInduction,1),UBOUND(y_out%tanInduction,1)
-      b = -(y1%tanInduction(i1,i2) - y2%tanInduction(i1,i2))
-      y_out%tanInduction(i1,i2) = y1%tanInduction(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Re) .AND. ALLOCATED(y1%Re)) THEN
-  DO i2 = LBOUND(y_out%Re,2),UBOUND(y_out%Re,2)
-    DO i1 = LBOUND(y_out%Re,1),UBOUND(y_out%Re,1)
-      b = -(y1%Re(i1,i2) - y2%Re(i1,i2))
-      y_out%Re(i1,i2) = y1%Re(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%AOA) .AND. ALLOCATED(y1%AOA)) THEN
-  DO i2 = LBOUND(y_out%AOA,2),UBOUND(y_out%AOA,2)
-    DO i1 = LBOUND(y_out%AOA,1),UBOUND(y_out%AOA,1)
-      b = -(y1%AOA(i1,i2) - y2%AOA(i1,i2))
-      y_out%AOA(i1,i2) = y1%AOA(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cx) .AND. ALLOCATED(y1%Cx)) THEN
-  DO i2 = LBOUND(y_out%Cx,2),UBOUND(y_out%Cx,2)
-    DO i1 = LBOUND(y_out%Cx,1),UBOUND(y_out%Cx,1)
-      b = -(y1%Cx(i1,i2) - y2%Cx(i1,i2))
-      y_out%Cx(i1,i2) = y1%Cx(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cy) .AND. ALLOCATED(y1%Cy)) THEN
-  DO i2 = LBOUND(y_out%Cy,2),UBOUND(y_out%Cy,2)
-    DO i1 = LBOUND(y_out%Cy,1),UBOUND(y_out%Cy,1)
-      b = -(y1%Cy(i1,i2) - y2%Cy(i1,i2))
-      y_out%Cy(i1,i2) = y1%Cy(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cz) .AND. ALLOCATED(y1%Cz)) THEN
-  DO i2 = LBOUND(y_out%Cz,2),UBOUND(y_out%Cz,2)
-    DO i1 = LBOUND(y_out%Cz,1),UBOUND(y_out%Cz,1)
-      b = -(y1%Cz(i1,i2) - y2%Cz(i1,i2))
-      y_out%Cz(i1,i2) = y1%Cz(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cmx) .AND. ALLOCATED(y1%Cmx)) THEN
-  DO i2 = LBOUND(y_out%Cmx,2),UBOUND(y_out%Cmx,2)
-    DO i1 = LBOUND(y_out%Cmx,1),UBOUND(y_out%Cmx,1)
-      b = -(y1%Cmx(i1,i2) - y2%Cmx(i1,i2))
-      y_out%Cmx(i1,i2) = y1%Cmx(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cmy) .AND. ALLOCATED(y1%Cmy)) THEN
-  DO i2 = LBOUND(y_out%Cmy,2),UBOUND(y_out%Cmy,2)
-    DO i1 = LBOUND(y_out%Cmy,1),UBOUND(y_out%Cmy,1)
-      b = -(y1%Cmy(i1,i2) - y2%Cmy(i1,i2))
-      y_out%Cmy(i1,i2) = y1%Cmy(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cmz) .AND. ALLOCATED(y1%Cmz)) THEN
-  DO i2 = LBOUND(y_out%Cmz,2),UBOUND(y_out%Cmz,2)
-    DO i1 = LBOUND(y_out%Cmz,1),UBOUND(y_out%Cmz,1)
-      b = -(y1%Cmz(i1,i2) - y2%Cmz(i1,i2))
-      y_out%Cmz(i1,i2) = y1%Cmz(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cm) .AND. ALLOCATED(y1%Cm)) THEN
-  DO i2 = LBOUND(y_out%Cm,2),UBOUND(y_out%Cm,2)
-    DO i1 = LBOUND(y_out%Cm,1),UBOUND(y_out%Cm,1)
-      b = -(y1%Cm(i1,i2) - y2%Cm(i1,i2))
-      y_out%Cm(i1,i2) = y1%Cm(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cl) .AND. ALLOCATED(y1%Cl)) THEN
-  DO i2 = LBOUND(y_out%Cl,2),UBOUND(y_out%Cl,2)
-    DO i1 = LBOUND(y_out%Cl,1),UBOUND(y_out%Cl,1)
-      b = -(y1%Cl(i1,i2) - y2%Cl(i1,i2))
-      y_out%Cl(i1,i2) = y1%Cl(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cd) .AND. ALLOCATED(y1%Cd)) THEN
-  DO i2 = LBOUND(y_out%Cd,2),UBOUND(y_out%Cd,2)
-    DO i1 = LBOUND(y_out%Cd,1),UBOUND(y_out%Cd,1)
-      b = -(y1%Cd(i1,i2) - y2%Cd(i1,i2))
-      y_out%Cd(i1,i2) = y1%Cd(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%chi) .AND. ALLOCATED(y1%chi)) THEN
-  DO i2 = LBOUND(y_out%chi,2),UBOUND(y_out%chi,2)
-    DO i1 = LBOUND(y_out%chi,1),UBOUND(y_out%chi,1)
-      b = -(y1%chi(i1,i2) - y2%chi(i1,i2))
-      y_out%chi(i1,i2) = y1%chi(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cpmin) .AND. ALLOCATED(y1%Cpmin)) THEN
-  DO i2 = LBOUND(y_out%Cpmin,2),UBOUND(y_out%Cpmin,2)
-    DO i1 = LBOUND(y_out%Cpmin,1),UBOUND(y_out%Cpmin,1)
-      b = -(y1%Cpmin(i1,i2) - y2%Cpmin(i1,i2))
-      y_out%Cpmin(i1,i2) = y1%Cpmin(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
- END SUBROUTINE BEMT_Output_ExtrapInterp1
-
-
- SUBROUTINE BEMT_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
+SUBROUTINE BEMT_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
 ! values of y (which has values associated with times in t).  Order of the interpolation is 2.
@@ -3668,202 +3430,100 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(BEMT_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
- TYPE(BEMT_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
- TYPE(BEMT_OutputType), INTENT(IN)  :: y3      ! Output at t3
- REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
- TYPE(BEMT_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
- REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   TYPE(BEMT_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
+   TYPE(BEMT_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
+   TYPE(BEMT_OutputType), INTENT(IN)  :: y3      ! Output at t3
+   REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
+   TYPE(BEMT_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
+   REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
+   INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+   CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(DbKi)                                 :: t(3)      ! Times associated with the Outputs
- REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
- INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- CHARACTER(*),            PARAMETER         :: RoutineName = 'BEMT_Output_ExtrapInterp2'
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
- INTEGER                                    :: i2    ! dim2 counter variable for arrays
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
+   REAL(DbKi)                                 :: t(3)      ! Times associated with the Outputs
+   REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
+   INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
+   REAL(DbKi)                                 :: a1,a2,a3 ! temporary for extrapolation/interpolation
+   INTEGER(IntKi)                             :: ErrStat2 ! local errors
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   CHARACTER(*),            PARAMETER         :: RoutineName = 'BEMT_Output_ExtrapInterp2'
+   INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i1    ! dim1 counter variable for arrays
+   INTEGER                                    :: i2    ! dim2 counter variable for arrays
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! we'll subtract a constant from the times to resolve some 
+   ! numerical issues when t gets large (and to simplify the equations)
+   t = tin - tin(1)
+   t_out = tin_out - tin(1)
+   
    IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    END IF
-
-   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
-IF (ALLOCATED(y_out%Vrel) .AND. ALLOCATED(y1%Vrel)) THEN
-  DO i2 = LBOUND(y_out%Vrel,2),UBOUND(y_out%Vrel,2)
-    DO i1 = LBOUND(y_out%Vrel,1),UBOUND(y_out%Vrel,1)
-      b = (t(3)**2*(y1%Vrel(i1,i2) - y2%Vrel(i1,i2)) + t(2)**2*(-y1%Vrel(i1,i2) + y3%Vrel(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%Vrel(i1,i2) + t(3)*y2%Vrel(i1,i2) - t(2)*y3%Vrel(i1,i2) ) * scaleFactor
-      y_out%Vrel(i1,i2) = y1%Vrel(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%phi) .AND. ALLOCATED(y1%phi)) THEN
-  DO i2 = LBOUND(y_out%phi,2),UBOUND(y_out%phi,2)
-    DO i1 = LBOUND(y_out%phi,1),UBOUND(y_out%phi,1)
-      b = (t(3)**2*(y1%phi(i1,i2) - y2%phi(i1,i2)) + t(2)**2*(-y1%phi(i1,i2) + y3%phi(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%phi(i1,i2) + t(3)*y2%phi(i1,i2) - t(2)*y3%phi(i1,i2) ) * scaleFactor
-      y_out%phi(i1,i2) = y1%phi(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%axInduction) .AND. ALLOCATED(y1%axInduction)) THEN
-  DO i2 = LBOUND(y_out%axInduction,2),UBOUND(y_out%axInduction,2)
-    DO i1 = LBOUND(y_out%axInduction,1),UBOUND(y_out%axInduction,1)
-      b = (t(3)**2*(y1%axInduction(i1,i2) - y2%axInduction(i1,i2)) + t(2)**2*(-y1%axInduction(i1,i2) + y3%axInduction(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%axInduction(i1,i2) + t(3)*y2%axInduction(i1,i2) - t(2)*y3%axInduction(i1,i2) ) * scaleFactor
-      y_out%axInduction(i1,i2) = y1%axInduction(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%tanInduction) .AND. ALLOCATED(y1%tanInduction)) THEN
-  DO i2 = LBOUND(y_out%tanInduction,2),UBOUND(y_out%tanInduction,2)
-    DO i1 = LBOUND(y_out%tanInduction,1),UBOUND(y_out%tanInduction,1)
-      b = (t(3)**2*(y1%tanInduction(i1,i2) - y2%tanInduction(i1,i2)) + t(2)**2*(-y1%tanInduction(i1,i2) + y3%tanInduction(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%tanInduction(i1,i2) + t(3)*y2%tanInduction(i1,i2) - t(2)*y3%tanInduction(i1,i2) ) * scaleFactor
-      y_out%tanInduction(i1,i2) = y1%tanInduction(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Re) .AND. ALLOCATED(y1%Re)) THEN
-  DO i2 = LBOUND(y_out%Re,2),UBOUND(y_out%Re,2)
-    DO i1 = LBOUND(y_out%Re,1),UBOUND(y_out%Re,1)
-      b = (t(3)**2*(y1%Re(i1,i2) - y2%Re(i1,i2)) + t(2)**2*(-y1%Re(i1,i2) + y3%Re(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%Re(i1,i2) + t(3)*y2%Re(i1,i2) - t(2)*y3%Re(i1,i2) ) * scaleFactor
-      y_out%Re(i1,i2) = y1%Re(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%AOA) .AND. ALLOCATED(y1%AOA)) THEN
-  DO i2 = LBOUND(y_out%AOA,2),UBOUND(y_out%AOA,2)
-    DO i1 = LBOUND(y_out%AOA,1),UBOUND(y_out%AOA,1)
-      b = (t(3)**2*(y1%AOA(i1,i2) - y2%AOA(i1,i2)) + t(2)**2*(-y1%AOA(i1,i2) + y3%AOA(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%AOA(i1,i2) + t(3)*y2%AOA(i1,i2) - t(2)*y3%AOA(i1,i2) ) * scaleFactor
-      y_out%AOA(i1,i2) = y1%AOA(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cx) .AND. ALLOCATED(y1%Cx)) THEN
-  DO i2 = LBOUND(y_out%Cx,2),UBOUND(y_out%Cx,2)
-    DO i1 = LBOUND(y_out%Cx,1),UBOUND(y_out%Cx,1)
-      b = (t(3)**2*(y1%Cx(i1,i2) - y2%Cx(i1,i2)) + t(2)**2*(-y1%Cx(i1,i2) + y3%Cx(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%Cx(i1,i2) + t(3)*y2%Cx(i1,i2) - t(2)*y3%Cx(i1,i2) ) * scaleFactor
-      y_out%Cx(i1,i2) = y1%Cx(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cy) .AND. ALLOCATED(y1%Cy)) THEN
-  DO i2 = LBOUND(y_out%Cy,2),UBOUND(y_out%Cy,2)
-    DO i1 = LBOUND(y_out%Cy,1),UBOUND(y_out%Cy,1)
-      b = (t(3)**2*(y1%Cy(i1,i2) - y2%Cy(i1,i2)) + t(2)**2*(-y1%Cy(i1,i2) + y3%Cy(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%Cy(i1,i2) + t(3)*y2%Cy(i1,i2) - t(2)*y3%Cy(i1,i2) ) * scaleFactor
-      y_out%Cy(i1,i2) = y1%Cy(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cz) .AND. ALLOCATED(y1%Cz)) THEN
-  DO i2 = LBOUND(y_out%Cz,2),UBOUND(y_out%Cz,2)
-    DO i1 = LBOUND(y_out%Cz,1),UBOUND(y_out%Cz,1)
-      b = (t(3)**2*(y1%Cz(i1,i2) - y2%Cz(i1,i2)) + t(2)**2*(-y1%Cz(i1,i2) + y3%Cz(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%Cz(i1,i2) + t(3)*y2%Cz(i1,i2) - t(2)*y3%Cz(i1,i2) ) * scaleFactor
-      y_out%Cz(i1,i2) = y1%Cz(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cmx) .AND. ALLOCATED(y1%Cmx)) THEN
-  DO i2 = LBOUND(y_out%Cmx,2),UBOUND(y_out%Cmx,2)
-    DO i1 = LBOUND(y_out%Cmx,1),UBOUND(y_out%Cmx,1)
-      b = (t(3)**2*(y1%Cmx(i1,i2) - y2%Cmx(i1,i2)) + t(2)**2*(-y1%Cmx(i1,i2) + y3%Cmx(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%Cmx(i1,i2) + t(3)*y2%Cmx(i1,i2) - t(2)*y3%Cmx(i1,i2) ) * scaleFactor
-      y_out%Cmx(i1,i2) = y1%Cmx(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cmy) .AND. ALLOCATED(y1%Cmy)) THEN
-  DO i2 = LBOUND(y_out%Cmy,2),UBOUND(y_out%Cmy,2)
-    DO i1 = LBOUND(y_out%Cmy,1),UBOUND(y_out%Cmy,1)
-      b = (t(3)**2*(y1%Cmy(i1,i2) - y2%Cmy(i1,i2)) + t(2)**2*(-y1%Cmy(i1,i2) + y3%Cmy(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%Cmy(i1,i2) + t(3)*y2%Cmy(i1,i2) - t(2)*y3%Cmy(i1,i2) ) * scaleFactor
-      y_out%Cmy(i1,i2) = y1%Cmy(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cmz) .AND. ALLOCATED(y1%Cmz)) THEN
-  DO i2 = LBOUND(y_out%Cmz,2),UBOUND(y_out%Cmz,2)
-    DO i1 = LBOUND(y_out%Cmz,1),UBOUND(y_out%Cmz,1)
-      b = (t(3)**2*(y1%Cmz(i1,i2) - y2%Cmz(i1,i2)) + t(2)**2*(-y1%Cmz(i1,i2) + y3%Cmz(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%Cmz(i1,i2) + t(3)*y2%Cmz(i1,i2) - t(2)*y3%Cmz(i1,i2) ) * scaleFactor
-      y_out%Cmz(i1,i2) = y1%Cmz(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cm) .AND. ALLOCATED(y1%Cm)) THEN
-  DO i2 = LBOUND(y_out%Cm,2),UBOUND(y_out%Cm,2)
-    DO i1 = LBOUND(y_out%Cm,1),UBOUND(y_out%Cm,1)
-      b = (t(3)**2*(y1%Cm(i1,i2) - y2%Cm(i1,i2)) + t(2)**2*(-y1%Cm(i1,i2) + y3%Cm(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%Cm(i1,i2) + t(3)*y2%Cm(i1,i2) - t(2)*y3%Cm(i1,i2) ) * scaleFactor
-      y_out%Cm(i1,i2) = y1%Cm(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cl) .AND. ALLOCATED(y1%Cl)) THEN
-  DO i2 = LBOUND(y_out%Cl,2),UBOUND(y_out%Cl,2)
-    DO i1 = LBOUND(y_out%Cl,1),UBOUND(y_out%Cl,1)
-      b = (t(3)**2*(y1%Cl(i1,i2) - y2%Cl(i1,i2)) + t(2)**2*(-y1%Cl(i1,i2) + y3%Cl(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%Cl(i1,i2) + t(3)*y2%Cl(i1,i2) - t(2)*y3%Cl(i1,i2) ) * scaleFactor
-      y_out%Cl(i1,i2) = y1%Cl(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cd) .AND. ALLOCATED(y1%Cd)) THEN
-  DO i2 = LBOUND(y_out%Cd,2),UBOUND(y_out%Cd,2)
-    DO i1 = LBOUND(y_out%Cd,1),UBOUND(y_out%Cd,1)
-      b = (t(3)**2*(y1%Cd(i1,i2) - y2%Cd(i1,i2)) + t(2)**2*(-y1%Cd(i1,i2) + y3%Cd(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%Cd(i1,i2) + t(3)*y2%Cd(i1,i2) - t(2)*y3%Cd(i1,i2) ) * scaleFactor
-      y_out%Cd(i1,i2) = y1%Cd(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%chi) .AND. ALLOCATED(y1%chi)) THEN
-  DO i2 = LBOUND(y_out%chi,2),UBOUND(y_out%chi,2)
-    DO i1 = LBOUND(y_out%chi,1),UBOUND(y_out%chi,1)
-      b = (t(3)**2*(y1%chi(i1,i2) - y2%chi(i1,i2)) + t(2)**2*(-y1%chi(i1,i2) + y3%chi(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%chi(i1,i2) + t(3)*y2%chi(i1,i2) - t(2)*y3%chi(i1,i2) ) * scaleFactor
-      y_out%chi(i1,i2) = y1%chi(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%Cpmin) .AND. ALLOCATED(y1%Cpmin)) THEN
-  DO i2 = LBOUND(y_out%Cpmin,2),UBOUND(y_out%Cpmin,2)
-    DO i1 = LBOUND(y_out%Cpmin,1),UBOUND(y_out%Cpmin,1)
-      b = (t(3)**2*(y1%Cpmin(i1,i2) - y2%Cpmin(i1,i2)) + t(2)**2*(-y1%Cpmin(i1,i2) + y3%Cpmin(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%Cpmin(i1,i2) + t(3)*y2%Cpmin(i1,i2) - t(2)*y3%Cpmin(i1,i2) ) * scaleFactor
-      y_out%Cpmin(i1,i2) = y1%Cpmin(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
- END SUBROUTINE BEMT_Output_ExtrapInterp2
-
+   
+   ! Calculate Lagrange polynomial coefficients
+   a1 = (t_out - t(2))*(t_out - t(3))/((t(1) - t(2))*(t(1) - t(3)))
+   a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
+   a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
+   IF (ALLOCATED(y_out%Vrel) .AND. ALLOCATED(y1%Vrel)) THEN
+      y_out%Vrel = a1*y1%Vrel + a2*y2%Vrel + a3*y3%Vrel
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%phi) .AND. ALLOCATED(y1%phi)) THEN
+      y_out%phi = a1*y1%phi + a2*y2%phi + a3*y3%phi
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%axInduction) .AND. ALLOCATED(y1%axInduction)) THEN
+      y_out%axInduction = a1*y1%axInduction + a2*y2%axInduction + a3*y3%axInduction
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%tanInduction) .AND. ALLOCATED(y1%tanInduction)) THEN
+      y_out%tanInduction = a1*y1%tanInduction + a2*y2%tanInduction + a3*y3%tanInduction
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Re) .AND. ALLOCATED(y1%Re)) THEN
+      y_out%Re = a1*y1%Re + a2*y2%Re + a3*y3%Re
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%AOA) .AND. ALLOCATED(y1%AOA)) THEN
+      y_out%AOA = a1*y1%AOA + a2*y2%AOA + a3*y3%AOA
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cx) .AND. ALLOCATED(y1%Cx)) THEN
+      y_out%Cx = a1*y1%Cx + a2*y2%Cx + a3*y3%Cx
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cy) .AND. ALLOCATED(y1%Cy)) THEN
+      y_out%Cy = a1*y1%Cy + a2*y2%Cy + a3*y3%Cy
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cz) .AND. ALLOCATED(y1%Cz)) THEN
+      y_out%Cz = a1*y1%Cz + a2*y2%Cz + a3*y3%Cz
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cmx) .AND. ALLOCATED(y1%Cmx)) THEN
+      y_out%Cmx = a1*y1%Cmx + a2*y2%Cmx + a3*y3%Cmx
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cmy) .AND. ALLOCATED(y1%Cmy)) THEN
+      y_out%Cmy = a1*y1%Cmy + a2*y2%Cmy + a3*y3%Cmy
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cmz) .AND. ALLOCATED(y1%Cmz)) THEN
+      y_out%Cmz = a1*y1%Cmz + a2*y2%Cmz + a3*y3%Cmz
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cm) .AND. ALLOCATED(y1%Cm)) THEN
+      y_out%Cm = a1*y1%Cm + a2*y2%Cm + a3*y3%Cm
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cl) .AND. ALLOCATED(y1%Cl)) THEN
+      y_out%Cl = a1*y1%Cl + a2*y2%Cl + a3*y3%Cl
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cd) .AND. ALLOCATED(y1%Cd)) THEN
+      y_out%Cd = a1*y1%Cd + a2*y2%Cd + a3*y3%Cd
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%chi) .AND. ALLOCATED(y1%chi)) THEN
+      y_out%chi = a1*y1%chi + a2*y2%chi + a3*y3%chi
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%Cpmin) .AND. ALLOCATED(y1%Cpmin)) THEN
+      y_out%Cpmin = a1*y1%Cpmin + a2*y2%Cpmin + a3*y3%Cpmin
+   END IF ! check if allocated
+END SUBROUTINE
 END MODULE BEMT_Types
 !ENDOFREGISTRYGENERATEDFILE

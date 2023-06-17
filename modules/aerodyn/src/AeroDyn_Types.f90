@@ -7163,58 +7163,59 @@ subroutine AD_UnPackOutput(Buf, OutData)
    end if
 end subroutine
 
- SUBROUTINE AD_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )
-!
-! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
-! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
-!
-!  expressions below based on either
-!
-!  f(t) = a
-!  f(t) = a + b * t, or
-!  f(t) = a + b * t + c * t**2
-!
-!  where a, b and c are determined as the solution to
-!  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
-!
-!..................................................................................................................................
-
- TYPE(AD_InputType), INTENT(INOUT)  :: u(:) ! Input at t1 > t2 > t3
- REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
- TYPE(AD_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
- REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+subroutine AD_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
+   !
+   ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
+   ! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
+   !
+   !  expressions below based on either
+   !
+   !  f(t) = a
+   !  f(t) = a + b * t, or
+   !  f(t) = a + b * t + c * t**2
+   !
+   !  where a, b and c are determined as the solution to
+   !  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
+   !
+   !----------------------------------------------------------------------------------------------------------------------------------
+   
+   type(AD_InputType), intent(inout)  :: u(:) ! Input at t1 > t2 > t3
+   real(DbKi),                 intent(in   )  :: t(:)           ! Times associated with the Inputs
+   type(AD_InputType), intent(inout)  :: u_out ! Input at tin_out
+   real(DbKi),                 intent(in   )  :: t_out           ! time to be extrap/interp'd to
+   integer(IntKi),             intent(  out)  :: ErrStat         ! Error status of the operation
+   character(*),               intent(  out)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
    ! local variables
- INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
- INTEGER(IntKi)                             :: ErrStat2        ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
- CHARACTER(*),    PARAMETER                 :: RoutineName = 'AD_Input_ExtrapInterp'
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
- if ( size(t) .ne. size(u)) then
-    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(u)',ErrStat,ErrMsg,RoutineName)
-    RETURN
- endif
- order = SIZE(u) - 1
- IF ( order .eq. 0 ) THEN
-   CALL AD_CopyInput(u(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 1 ) THEN
-   CALL AD_Input_ExtrapInterp1(u(1), u(2), t, u_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 2 ) THEN
-   CALL AD_Input_ExtrapInterp2(u(1), u(2), u(3), t, u_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE 
-   CALL SetErrStat(ErrID_Fatal,'size(u) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
-   RETURN
- ENDIF 
- END SUBROUTINE AD_Input_ExtrapInterp
+   integer(IntKi)                             :: order           ! order of polynomial fit (max 2)
+   integer(IntKi)                             :: ErrStat2        ! local errors
+   character(ErrMsgLen)                       :: ErrMsg2         ! local errors
+   character(*),    PARAMETER                 :: RoutineName = 'AD_Input_ExtrapInterp'
+   
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (size(t) /= size(u)) then
+      call SetErrStat(ErrID_Fatal, 'size(t) must equal size(u)', ErrStat, ErrMsg, RoutineName)
+      return
+   endif
+   order = size(u) - 1
+   select case (order)
+   case (0)
+      call AD_CopyInput(u(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case (1)
+      call AD_Input_ExtrapInterp1(u(1), u(2), t, u_out, t_out, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case (2)
+      call AD_Input_ExtrapInterp2(u(1), u(2), u(3), t, u_out, t_out, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case default
+      call SetErrStat(ErrID_Fatal, 'size(u) must be less than 4 (order must be less than 3).', ErrStat, ErrMsg, RoutineName)
+      return
+   end select
+end subroutine
 
-
- SUBROUTINE AD_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
+SUBROUTINE AD_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
 ! values of u (which has values associated with times in t).  Order of the interpolation is 1.
@@ -7226,137 +7227,107 @@ end subroutine
 !
 !..................................................................................................................................
 
- TYPE(AD_InputType), INTENT(INOUT)  :: u1    ! Input at t1 > t2
- TYPE(AD_InputType), INTENT(INOUT)  :: u2    ! Input at t2 
- REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
- TYPE(AD_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
- REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
- INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
- CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
+   TYPE(AD_InputType), INTENT(INOUT)  :: u1    ! Input at t1 > t2
+   TYPE(AD_InputType), INTENT(INOUT)  :: u2    ! Input at t2 
+   REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
+   TYPE(AD_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
+   REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
+   INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
+   CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(DbKi)                                 :: t(2)     ! Times associated with the Inputs
- REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
- CHARACTER(*),                    PARAMETER :: RoutineName = 'AD_Input_ExtrapInterp1'
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i03    ! dim3 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
- INTEGER                                    :: i2    ! dim2 counter variable for arrays
- INTEGER                                    :: i3    ! dim3 counter variable for arrays
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
-   IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+   REAL(DbKi)                                 :: t(2)     ! Times associated with the Inputs
+   REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
+   CHARACTER(*),                    PARAMETER :: RoutineName = 'AD_Input_ExtrapInterp1'
+   REAL(DbKi)                                 :: a1, a2   ! temporary for extrapolation/interpolation
+   INTEGER(IntKi)                             :: ErrStat2 ! local errors
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   INTEGER                                    :: i01      ! dim1 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i02      ! dim2 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i03      ! dim3 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i1       ! dim1 counter variable for arrays
+   INTEGER                                    :: i2       ! dim2 counter variable for arrays
+   INTEGER                                    :: i3       ! dim3 counter variable for arrays
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! we'll subtract a constant from the times to resolve some 
+   ! numerical issues when t gets large (and to simplify the equations)
+   t = tin - tin(1)
+   t_out = tin_out - tin(1)
+   
+   IF (EqualRealNos(t(1), t(2))) THEN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg, RoutineName)
+      RETURN
    END IF
-
-   ScaleFactor = t_out / t(2)
-IF (ALLOCATED(u_out%rotors) .AND. ALLOCATED(u1%rotors)) THEN
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-      CALL MeshExtrapInterp1(u1%rotors(i01)%NacelleMotion, u2%rotors(i01)%NacelleMotion, tin, u_out%rotors(i01)%NacelleMotion, tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-      CALL MeshExtrapInterp1(u1%rotors(i01)%TowerMotion, u2%rotors(i01)%TowerMotion, tin, u_out%rotors(i01)%TowerMotion, tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-      CALL MeshExtrapInterp1(u1%rotors(i01)%HubMotion, u2%rotors(i01)%HubMotion, tin, u_out%rotors(i01)%HubMotion, tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-IF (ALLOCATED(u_out%rotors(i01)%BladeRootMotion) .AND. ALLOCATED(u1%rotors(i01)%BladeRootMotion)) THEN
-  DO i1 = LBOUND(u_out%rotors(i01)%BladeRootMotion,1),UBOUND(u_out%rotors(i01)%BladeRootMotion,1)
-      CALL MeshExtrapInterp1(u1%rotors(i01)%BladeRootMotion(i1), u2%rotors(i01)%BladeRootMotion(i1), tin, u_out%rotors(i01)%BladeRootMotion(i1), tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   ENDDO
-END IF ! check if allocated
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-IF (ALLOCATED(u_out%rotors(i01)%BladeMotion) .AND. ALLOCATED(u1%rotors(i01)%BladeMotion)) THEN
-  DO i1 = LBOUND(u_out%rotors(i01)%BladeMotion,1),UBOUND(u_out%rotors(i01)%BladeMotion,1)
-      CALL MeshExtrapInterp1(u1%rotors(i01)%BladeMotion(i1), u2%rotors(i01)%BladeMotion(i1), tin, u_out%rotors(i01)%BladeMotion(i1), tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   ENDDO
-END IF ! check if allocated
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-      CALL MeshExtrapInterp1(u1%rotors(i01)%TFinMotion, u2%rotors(i01)%TFinMotion, tin, u_out%rotors(i01)%TFinMotion, tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-IF (ALLOCATED(u_out%rotors(i01)%InflowOnBlade) .AND. ALLOCATED(u1%rotors(i01)%InflowOnBlade)) THEN
-  DO i3 = LBOUND(u_out%rotors(i01)%InflowOnBlade,3),UBOUND(u_out%rotors(i01)%InflowOnBlade,3)
-    DO i2 = LBOUND(u_out%rotors(i01)%InflowOnBlade,2),UBOUND(u_out%rotors(i01)%InflowOnBlade,2)
-      DO i1 = LBOUND(u_out%rotors(i01)%InflowOnBlade,1),UBOUND(u_out%rotors(i01)%InflowOnBlade,1)
-        b = -(u1%rotors(i01)%InflowOnBlade(i1,i2,i3) - u2%rotors(i01)%InflowOnBlade(i1,i2,i3))
-        u_out%rotors(i01)%InflowOnBlade(i1,i2,i3) = u1%rotors(i01)%InflowOnBlade(i1,i2,i3) + b * ScaleFactor
+   
+   ! Calculate weighting factors from Lagrange polynomial
+   a1 = -(t_out - t(2))/t(2)
+   a2 = t_out/t(2)
+   
+   IF (ALLOCATED(u_out%rotors) .AND. ALLOCATED(u1%rotors)) THEN
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         CALL MeshExtrapInterp1(u1%rotors(i01)%NacelleMotion, u2%rotors(i01)%NacelleMotion, tin, u_out%rotors(i01)%NacelleMotion, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
-    END DO
-  END DO
-END IF ! check if allocated
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-IF (ALLOCATED(u_out%rotors(i01)%InflowOnTower) .AND. ALLOCATED(u1%rotors(i01)%InflowOnTower)) THEN
-  DO i2 = LBOUND(u_out%rotors(i01)%InflowOnTower,2),UBOUND(u_out%rotors(i01)%InflowOnTower,2)
-    DO i1 = LBOUND(u_out%rotors(i01)%InflowOnTower,1),UBOUND(u_out%rotors(i01)%InflowOnTower,1)
-      b = -(u1%rotors(i01)%InflowOnTower(i1,i2) - u2%rotors(i01)%InflowOnTower(i1,i2))
-      u_out%rotors(i01)%InflowOnTower(i1,i2) = u1%rotors(i01)%InflowOnTower(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-  DO i1 = LBOUND(u_out%rotors(i01)%InflowOnHub,1),UBOUND(u_out%rotors(i01)%InflowOnHub,1)
-    b = -(u1%rotors(i01)%InflowOnHub(i1) - u2%rotors(i01)%InflowOnHub(i1))
-    u_out%rotors(i01)%InflowOnHub(i1) = u1%rotors(i01)%InflowOnHub(i1) + b * ScaleFactor
-  END DO
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-  DO i1 = LBOUND(u_out%rotors(i01)%InflowOnNacelle,1),UBOUND(u_out%rotors(i01)%InflowOnNacelle,1)
-    b = -(u1%rotors(i01)%InflowOnNacelle(i1) - u2%rotors(i01)%InflowOnNacelle(i1))
-    u_out%rotors(i01)%InflowOnNacelle(i1) = u1%rotors(i01)%InflowOnNacelle(i1) + b * ScaleFactor
-  END DO
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-  DO i1 = LBOUND(u_out%rotors(i01)%InflowOnTailFin,1),UBOUND(u_out%rotors(i01)%InflowOnTailFin,1)
-    b = -(u1%rotors(i01)%InflowOnTailFin(i1) - u2%rotors(i01)%InflowOnTailFin(i1))
-    u_out%rotors(i01)%InflowOnTailFin(i1) = u1%rotors(i01)%InflowOnTailFin(i1) + b * ScaleFactor
-  END DO
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-IF (ALLOCATED(u_out%rotors(i01)%UserProp) .AND. ALLOCATED(u1%rotors(i01)%UserProp)) THEN
-  DO i2 = LBOUND(u_out%rotors(i01)%UserProp,2),UBOUND(u_out%rotors(i01)%UserProp,2)
-    DO i1 = LBOUND(u_out%rotors(i01)%UserProp,1),UBOUND(u_out%rotors(i01)%UserProp,1)
-      b = -(u1%rotors(i01)%UserProp(i1,i2) - u2%rotors(i01)%UserProp(i1,i2))
-      u_out%rotors(i01)%UserProp(i1,i2) = u1%rotors(i01)%UserProp(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-  ENDDO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%InflowWakeVel) .AND. ALLOCATED(u1%InflowWakeVel)) THEN
-  DO i2 = LBOUND(u_out%InflowWakeVel,2),UBOUND(u_out%InflowWakeVel,2)
-    DO i1 = LBOUND(u_out%InflowWakeVel,1),UBOUND(u_out%InflowWakeVel,1)
-      b = -(u1%InflowWakeVel(i1,i2) - u2%InflowWakeVel(i1,i2))
-      u_out%InflowWakeVel(i1,i2) = u1%InflowWakeVel(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
- END SUBROUTINE AD_Input_ExtrapInterp1
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         CALL MeshExtrapInterp1(u1%rotors(i01)%TowerMotion, u2%rotors(i01)%TowerMotion, tin, u_out%rotors(i01)%TowerMotion, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         CALL MeshExtrapInterp1(u1%rotors(i01)%HubMotion, u2%rotors(i01)%HubMotion, tin, u_out%rotors(i01)%HubMotion, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         IF (ALLOCATED(u_out%rotors(i01)%BladeRootMotion) .AND. ALLOCATED(u1%rotors(i01)%BladeRootMotion)) THEN
+            DO i1 = LBOUND(u_out%rotors(i01)%BladeRootMotion,1),UBOUND(u_out%rotors(i01)%BladeRootMotion,1)
+               CALL MeshExtrapInterp1(u1%rotors(i01)%BladeRootMotion(i1), u2%rotors(i01)%BladeRootMotion(i1), tin, u_out%rotors(i01)%BladeRootMotion(i1), tin_out, ErrStat2, ErrMsg2)
+                  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+            END DO
+         END IF ! check if allocated
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         IF (ALLOCATED(u_out%rotors(i01)%BladeMotion) .AND. ALLOCATED(u1%rotors(i01)%BladeMotion)) THEN
+            DO i1 = LBOUND(u_out%rotors(i01)%BladeMotion,1),UBOUND(u_out%rotors(i01)%BladeMotion,1)
+               CALL MeshExtrapInterp1(u1%rotors(i01)%BladeMotion(i1), u2%rotors(i01)%BladeMotion(i1), tin, u_out%rotors(i01)%BladeMotion(i1), tin_out, ErrStat2, ErrMsg2)
+                  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+            END DO
+         END IF ! check if allocated
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         CALL MeshExtrapInterp1(u1%rotors(i01)%TFinMotion, u2%rotors(i01)%TFinMotion, tin, u_out%rotors(i01)%TFinMotion, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         IF (ALLOCATED(u_out%rotors(i01)%InflowOnBlade) .AND. ALLOCATED(u1%rotors(i01)%InflowOnBlade)) THEN
+            u_out%rotors(i01)%InflowOnBlade = a1*u1%rotors(i01)%InflowOnBlade + a2*u2%rotors(i01)%InflowOnBlade
+         END IF ! check if allocated
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         IF (ALLOCATED(u_out%rotors(i01)%InflowOnTower) .AND. ALLOCATED(u1%rotors(i01)%InflowOnTower)) THEN
+            u_out%rotors(i01)%InflowOnTower = a1*u1%rotors(i01)%InflowOnTower + a2*u2%rotors(i01)%InflowOnTower
+         END IF ! check if allocated
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         u_out%rotors(i01)%InflowOnHub = a1*u1%rotors(i01)%InflowOnHub + a2*u2%rotors(i01)%InflowOnHub
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         u_out%rotors(i01)%InflowOnNacelle = a1*u1%rotors(i01)%InflowOnNacelle + a2*u2%rotors(i01)%InflowOnNacelle
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         u_out%rotors(i01)%InflowOnTailFin = a1*u1%rotors(i01)%InflowOnTailFin + a2*u2%rotors(i01)%InflowOnTailFin
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         IF (ALLOCATED(u_out%rotors(i01)%UserProp) .AND. ALLOCATED(u1%rotors(i01)%UserProp)) THEN
+            u_out%rotors(i01)%UserProp = a1*u1%rotors(i01)%UserProp + a2*u2%rotors(i01)%UserProp
+         END IF ! check if allocated
+      END DO
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%InflowWakeVel) .AND. ALLOCATED(u1%InflowWakeVel)) THEN
+      u_out%InflowWakeVel = a1*u1%InflowWakeVel + a2*u2%InflowWakeVel
+   END IF ! check if allocated
+END SUBROUTINE
 
-
- SUBROUTINE AD_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
+SUBROUTINE AD_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
 ! values of u (which has values associated with times in t).  Order of the interpolation is 2.
@@ -7370,204 +7341,167 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(AD_InputType), INTENT(INOUT)  :: u1      ! Input at t1 > t2 > t3
- TYPE(AD_InputType), INTENT(INOUT)  :: u2      ! Input at t2 > t3
- TYPE(AD_InputType), INTENT(INOUT)  :: u3      ! Input at t3
- REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
- TYPE(AD_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
- REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   TYPE(AD_InputType), INTENT(INOUT)  :: u1      ! Input at t1 > t2 > t3
+   TYPE(AD_InputType), INTENT(INOUT)  :: u2      ! Input at t2 > t3
+   TYPE(AD_InputType), INTENT(INOUT)  :: u3      ! Input at t3
+   REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
+   TYPE(AD_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
+   REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
+   INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+   CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(DbKi)                                 :: t(3)      ! Times associated with the Inputs
- REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
- INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- CHARACTER(*),            PARAMETER         :: RoutineName = 'AD_Input_ExtrapInterp2'
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i03    ! dim3 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
- INTEGER                                    :: i2    ! dim2 counter variable for arrays
- INTEGER                                    :: i3    ! dim3 counter variable for arrays
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
+   REAL(DbKi)                                 :: t(3)      ! Times associated with the Inputs
+   REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
+   INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
+   REAL(DbKi)                                 :: a1,a2,a3 ! temporary for extrapolation/interpolation
+   INTEGER(IntKi)                             :: ErrStat2 ! local errors
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   CHARACTER(*),            PARAMETER         :: RoutineName = 'AD_Input_ExtrapInterp2'
+   INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i03    ! dim3 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i1    ! dim1 counter variable for arrays
+   INTEGER                                    :: i2    ! dim2 counter variable for arrays
+   INTEGER                                    :: i3    ! dim3 counter variable for arrays
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! we'll subtract a constant from the times to resolve some 
+   ! numerical issues when t gets large (and to simplify the equations)
+   t = tin - tin(1)
+   t_out = tin_out - tin(1)
+   
    IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    END IF
-
-   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
-IF (ALLOCATED(u_out%rotors) .AND. ALLOCATED(u1%rotors)) THEN
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-      CALL MeshExtrapInterp2(u1%rotors(i01)%NacelleMotion, u2%rotors(i01)%NacelleMotion, u3%rotors(i01)%NacelleMotion, tin, u_out%rotors(i01)%NacelleMotion, tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-      CALL MeshExtrapInterp2(u1%rotors(i01)%TowerMotion, u2%rotors(i01)%TowerMotion, u3%rotors(i01)%TowerMotion, tin, u_out%rotors(i01)%TowerMotion, tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-      CALL MeshExtrapInterp2(u1%rotors(i01)%HubMotion, u2%rotors(i01)%HubMotion, u3%rotors(i01)%HubMotion, tin, u_out%rotors(i01)%HubMotion, tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-IF (ALLOCATED(u_out%rotors(i01)%BladeRootMotion) .AND. ALLOCATED(u1%rotors(i01)%BladeRootMotion)) THEN
-  DO i1 = LBOUND(u_out%rotors(i01)%BladeRootMotion,1),UBOUND(u_out%rotors(i01)%BladeRootMotion,1)
-      CALL MeshExtrapInterp2(u1%rotors(i01)%BladeRootMotion(i1), u2%rotors(i01)%BladeRootMotion(i1), u3%rotors(i01)%BladeRootMotion(i1), tin, u_out%rotors(i01)%BladeRootMotion(i1), tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   ENDDO
-END IF ! check if allocated
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-IF (ALLOCATED(u_out%rotors(i01)%BladeMotion) .AND. ALLOCATED(u1%rotors(i01)%BladeMotion)) THEN
-  DO i1 = LBOUND(u_out%rotors(i01)%BladeMotion,1),UBOUND(u_out%rotors(i01)%BladeMotion,1)
-      CALL MeshExtrapInterp2(u1%rotors(i01)%BladeMotion(i1), u2%rotors(i01)%BladeMotion(i1), u3%rotors(i01)%BladeMotion(i1), tin, u_out%rotors(i01)%BladeMotion(i1), tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   ENDDO
-END IF ! check if allocated
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-      CALL MeshExtrapInterp2(u1%rotors(i01)%TFinMotion, u2%rotors(i01)%TFinMotion, u3%rotors(i01)%TFinMotion, tin, u_out%rotors(i01)%TFinMotion, tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-IF (ALLOCATED(u_out%rotors(i01)%InflowOnBlade) .AND. ALLOCATED(u1%rotors(i01)%InflowOnBlade)) THEN
-  DO i3 = LBOUND(u_out%rotors(i01)%InflowOnBlade,3),UBOUND(u_out%rotors(i01)%InflowOnBlade,3)
-    DO i2 = LBOUND(u_out%rotors(i01)%InflowOnBlade,2),UBOUND(u_out%rotors(i01)%InflowOnBlade,2)
-      DO i1 = LBOUND(u_out%rotors(i01)%InflowOnBlade,1),UBOUND(u_out%rotors(i01)%InflowOnBlade,1)
-        b = (t(3)**2*(u1%rotors(i01)%InflowOnBlade(i1,i2,i3) - u2%rotors(i01)%InflowOnBlade(i1,i2,i3)) + t(2)**2*(-u1%rotors(i01)%InflowOnBlade(i1,i2,i3) + u3%rotors(i01)%InflowOnBlade(i1,i2,i3)))* scaleFactor
-        c = ( (t(2)-t(3))*u1%rotors(i01)%InflowOnBlade(i1,i2,i3) + t(3)*u2%rotors(i01)%InflowOnBlade(i1,i2,i3) - t(2)*u3%rotors(i01)%InflowOnBlade(i1,i2,i3) ) * scaleFactor
-        u_out%rotors(i01)%InflowOnBlade(i1,i2,i3) = u1%rotors(i01)%InflowOnBlade(i1,i2,i3) + b  + c * t_out
+   
+   ! Calculate Lagrange polynomial coefficients
+   a1 = (t_out - t(2))*(t_out - t(3))/((t(1) - t(2))*(t(1) - t(3)))
+   a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
+   a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
+   IF (ALLOCATED(u_out%rotors) .AND. ALLOCATED(u1%rotors)) THEN
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         CALL MeshExtrapInterp2(u1%rotors(i01)%NacelleMotion, u2%rotors(i01)%NacelleMotion, u3%rotors(i01)%NacelleMotion, tin, u_out%rotors(i01)%NacelleMotion, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
       END DO
-    END DO
-  END DO
-END IF ! check if allocated
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-IF (ALLOCATED(u_out%rotors(i01)%InflowOnTower) .AND. ALLOCATED(u1%rotors(i01)%InflowOnTower)) THEN
-  DO i2 = LBOUND(u_out%rotors(i01)%InflowOnTower,2),UBOUND(u_out%rotors(i01)%InflowOnTower,2)
-    DO i1 = LBOUND(u_out%rotors(i01)%InflowOnTower,1),UBOUND(u_out%rotors(i01)%InflowOnTower,1)
-      b = (t(3)**2*(u1%rotors(i01)%InflowOnTower(i1,i2) - u2%rotors(i01)%InflowOnTower(i1,i2)) + t(2)**2*(-u1%rotors(i01)%InflowOnTower(i1,i2) + u3%rotors(i01)%InflowOnTower(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%rotors(i01)%InflowOnTower(i1,i2) + t(3)*u2%rotors(i01)%InflowOnTower(i1,i2) - t(2)*u3%rotors(i01)%InflowOnTower(i1,i2) ) * scaleFactor
-      u_out%rotors(i01)%InflowOnTower(i1,i2) = u1%rotors(i01)%InflowOnTower(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-  DO i1 = LBOUND(u_out%rotors(i01)%InflowOnHub,1),UBOUND(u_out%rotors(i01)%InflowOnHub,1)
-    b = (t(3)**2*(u1%rotors(i01)%InflowOnHub(i1) - u2%rotors(i01)%InflowOnHub(i1)) + t(2)**2*(-u1%rotors(i01)%InflowOnHub(i1) + u3%rotors(i01)%InflowOnHub(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*u1%rotors(i01)%InflowOnHub(i1) + t(3)*u2%rotors(i01)%InflowOnHub(i1) - t(2)*u3%rotors(i01)%InflowOnHub(i1) ) * scaleFactor
-    u_out%rotors(i01)%InflowOnHub(i1) = u1%rotors(i01)%InflowOnHub(i1) + b  + c * t_out
-  END DO
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-  DO i1 = LBOUND(u_out%rotors(i01)%InflowOnNacelle,1),UBOUND(u_out%rotors(i01)%InflowOnNacelle,1)
-    b = (t(3)**2*(u1%rotors(i01)%InflowOnNacelle(i1) - u2%rotors(i01)%InflowOnNacelle(i1)) + t(2)**2*(-u1%rotors(i01)%InflowOnNacelle(i1) + u3%rotors(i01)%InflowOnNacelle(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*u1%rotors(i01)%InflowOnNacelle(i1) + t(3)*u2%rotors(i01)%InflowOnNacelle(i1) - t(2)*u3%rotors(i01)%InflowOnNacelle(i1) ) * scaleFactor
-    u_out%rotors(i01)%InflowOnNacelle(i1) = u1%rotors(i01)%InflowOnNacelle(i1) + b  + c * t_out
-  END DO
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-  DO i1 = LBOUND(u_out%rotors(i01)%InflowOnTailFin,1),UBOUND(u_out%rotors(i01)%InflowOnTailFin,1)
-    b = (t(3)**2*(u1%rotors(i01)%InflowOnTailFin(i1) - u2%rotors(i01)%InflowOnTailFin(i1)) + t(2)**2*(-u1%rotors(i01)%InflowOnTailFin(i1) + u3%rotors(i01)%InflowOnTailFin(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*u1%rotors(i01)%InflowOnTailFin(i1) + t(3)*u2%rotors(i01)%InflowOnTailFin(i1) - t(2)*u3%rotors(i01)%InflowOnTailFin(i1) ) * scaleFactor
-    u_out%rotors(i01)%InflowOnTailFin(i1) = u1%rotors(i01)%InflowOnTailFin(i1) + b  + c * t_out
-  END DO
-  ENDDO
-  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
-IF (ALLOCATED(u_out%rotors(i01)%UserProp) .AND. ALLOCATED(u1%rotors(i01)%UserProp)) THEN
-  DO i2 = LBOUND(u_out%rotors(i01)%UserProp,2),UBOUND(u_out%rotors(i01)%UserProp,2)
-    DO i1 = LBOUND(u_out%rotors(i01)%UserProp,1),UBOUND(u_out%rotors(i01)%UserProp,1)
-      b = (t(3)**2*(u1%rotors(i01)%UserProp(i1,i2) - u2%rotors(i01)%UserProp(i1,i2)) + t(2)**2*(-u1%rotors(i01)%UserProp(i1,i2) + u3%rotors(i01)%UserProp(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%rotors(i01)%UserProp(i1,i2) + t(3)*u2%rotors(i01)%UserProp(i1,i2) - t(2)*u3%rotors(i01)%UserProp(i1,i2) ) * scaleFactor
-      u_out%rotors(i01)%UserProp(i1,i2) = u1%rotors(i01)%UserProp(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-  ENDDO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%InflowWakeVel) .AND. ALLOCATED(u1%InflowWakeVel)) THEN
-  DO i2 = LBOUND(u_out%InflowWakeVel,2),UBOUND(u_out%InflowWakeVel,2)
-    DO i1 = LBOUND(u_out%InflowWakeVel,1),UBOUND(u_out%InflowWakeVel,1)
-      b = (t(3)**2*(u1%InflowWakeVel(i1,i2) - u2%InflowWakeVel(i1,i2)) + t(2)**2*(-u1%InflowWakeVel(i1,i2) + u3%InflowWakeVel(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%InflowWakeVel(i1,i2) + t(3)*u2%InflowWakeVel(i1,i2) - t(2)*u3%InflowWakeVel(i1,i2) ) * scaleFactor
-      u_out%InflowWakeVel(i1,i2) = u1%InflowWakeVel(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
- END SUBROUTINE AD_Input_ExtrapInterp2
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         CALL MeshExtrapInterp2(u1%rotors(i01)%TowerMotion, u2%rotors(i01)%TowerMotion, u3%rotors(i01)%TowerMotion, tin, u_out%rotors(i01)%TowerMotion, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         CALL MeshExtrapInterp2(u1%rotors(i01)%HubMotion, u2%rotors(i01)%HubMotion, u3%rotors(i01)%HubMotion, tin, u_out%rotors(i01)%HubMotion, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         IF (ALLOCATED(u_out%rotors(i01)%BladeRootMotion) .AND. ALLOCATED(u1%rotors(i01)%BladeRootMotion)) THEN
+            DO i1 = LBOUND(u_out%rotors(i01)%BladeRootMotion,1),UBOUND(u_out%rotors(i01)%BladeRootMotion,1)
+               CALL MeshExtrapInterp2(u1%rotors(i01)%BladeRootMotion(i1), u2%rotors(i01)%BladeRootMotion(i1), u3%rotors(i01)%BladeRootMotion(i1), tin, u_out%rotors(i01)%BladeRootMotion(i1), tin_out, ErrStat2, ErrMsg2)
+                  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+            END DO
+         END IF ! check if allocated
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         IF (ALLOCATED(u_out%rotors(i01)%BladeMotion) .AND. ALLOCATED(u1%rotors(i01)%BladeMotion)) THEN
+            DO i1 = LBOUND(u_out%rotors(i01)%BladeMotion,1),UBOUND(u_out%rotors(i01)%BladeMotion,1)
+               CALL MeshExtrapInterp2(u1%rotors(i01)%BladeMotion(i1), u2%rotors(i01)%BladeMotion(i1), u3%rotors(i01)%BladeMotion(i1), tin, u_out%rotors(i01)%BladeMotion(i1), tin_out, ErrStat2, ErrMsg2)
+                  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+            END DO
+         END IF ! check if allocated
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         CALL MeshExtrapInterp2(u1%rotors(i01)%TFinMotion, u2%rotors(i01)%TFinMotion, u3%rotors(i01)%TFinMotion, tin, u_out%rotors(i01)%TFinMotion, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         IF (ALLOCATED(u_out%rotors(i01)%InflowOnBlade) .AND. ALLOCATED(u1%rotors(i01)%InflowOnBlade)) THEN
+            u_out%rotors(i01)%InflowOnBlade = a1*u1%rotors(i01)%InflowOnBlade + a2*u2%rotors(i01)%InflowOnBlade + a3*u3%rotors(i01)%InflowOnBlade
+         END IF ! check if allocated
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         IF (ALLOCATED(u_out%rotors(i01)%InflowOnTower) .AND. ALLOCATED(u1%rotors(i01)%InflowOnTower)) THEN
+            u_out%rotors(i01)%InflowOnTower = a1*u1%rotors(i01)%InflowOnTower + a2*u2%rotors(i01)%InflowOnTower + a3*u3%rotors(i01)%InflowOnTower
+         END IF ! check if allocated
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         u_out%rotors(i01)%InflowOnHub = a1*u1%rotors(i01)%InflowOnHub + a2*u2%rotors(i01)%InflowOnHub + a3*u3%rotors(i01)%InflowOnHub
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         u_out%rotors(i01)%InflowOnNacelle = a1*u1%rotors(i01)%InflowOnNacelle + a2*u2%rotors(i01)%InflowOnNacelle + a3*u3%rotors(i01)%InflowOnNacelle
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         u_out%rotors(i01)%InflowOnTailFin = a1*u1%rotors(i01)%InflowOnTailFin + a2*u2%rotors(i01)%InflowOnTailFin + a3*u3%rotors(i01)%InflowOnTailFin
+      END DO
+      DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+         IF (ALLOCATED(u_out%rotors(i01)%UserProp) .AND. ALLOCATED(u1%rotors(i01)%UserProp)) THEN
+            u_out%rotors(i01)%UserProp = a1*u1%rotors(i01)%UserProp + a2*u2%rotors(i01)%UserProp + a3*u3%rotors(i01)%UserProp
+         END IF ! check if allocated
+      END DO
+   END IF ! check if allocated
+   IF (ALLOCATED(u_out%InflowWakeVel) .AND. ALLOCATED(u1%InflowWakeVel)) THEN
+      u_out%InflowWakeVel = a1*u1%InflowWakeVel + a2*u2%InflowWakeVel + a3*u3%InflowWakeVel
+   END IF ! check if allocated
+END SUBROUTINE
 
-
- SUBROUTINE AD_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg )
-!
-! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
-! values of y (which has values associated with times in t).  Order of the interpolation is given by the size of y
-!
-!  expressions below based on either
-!
-!  f(t) = a
-!  f(t) = a + b * t, or
-!  f(t) = a + b * t + c * t**2
-!
-!  where a, b and c are determined as the solution to
-!  f(t1) = y1, f(t2) = y2, f(t3) = y3  (as appropriate)
-!
-!..................................................................................................................................
-
- TYPE(AD_OutputType), INTENT(INOUT)  :: y(:) ! Output at t1 > t2 > t3
- REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
- TYPE(AD_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
- REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+subroutine AD_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg)
+   !
+   ! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
+   ! values of y (which has values associated with times in t).  Order of the interpolation is given by the size of y
+   !
+   !  expressions below based on either
+   !
+   !  f(t) = a
+   !  f(t) = a + b * t, or
+   !  f(t) = a + b * t + c * t**2
+   !
+   !  where a, b and c are determined as the solution to
+   !  f(t1) = y1, f(t2) = y2, f(t3) = y3  (as appropriate)
+   !
+   !----------------------------------------------------------------------------------------------------------------------------------
+   
+   type(AD_OutputType), intent(inout)  :: y(:) ! Output at t1 > t2 > t3
+   real(DbKi),                 intent(in   )  :: t(:)           ! Times associated with the Outputs
+   type(AD_OutputType), intent(inout)  :: y_out ! Output at tin_out
+   real(DbKi),                 intent(in   )  :: t_out           ! time to be extrap/interp'd to
+   integer(IntKi),             intent(  out)  :: ErrStat         ! Error status of the operation
+   character(*),               intent(  out)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
    ! local variables
- INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
- INTEGER(IntKi)                             :: ErrStat2        ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
- CHARACTER(*),    PARAMETER                 :: RoutineName = 'AD_Output_ExtrapInterp'
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
- if ( size(t) .ne. size(y)) then
-    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(y)',ErrStat,ErrMsg,RoutineName)
-    RETURN
- endif
- order = SIZE(y) - 1
- IF ( order .eq. 0 ) THEN
-   CALL AD_CopyOutput(y(1), y_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 1 ) THEN
-   CALL AD_Output_ExtrapInterp1(y(1), y(2), t, y_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 2 ) THEN
-   CALL AD_Output_ExtrapInterp2(y(1), y(2), y(3), t, y_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE 
-   CALL SetErrStat(ErrID_Fatal,'size(y) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
-   RETURN
- ENDIF 
- END SUBROUTINE AD_Output_ExtrapInterp
+   integer(IntKi)                             :: order           ! order of polynomial fit (max 2)
+   integer(IntKi)                             :: ErrStat2        ! local errors
+   character(ErrMsgLen)                       :: ErrMsg2         ! local errors
+   character(*),    PARAMETER                 :: RoutineName = 'AD_Output_ExtrapInterp'
+   
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (size(t) /= size(y)) then
+      call SetErrStat(ErrID_Fatal, 'size(t) must equal size(y)', ErrStat, ErrMsg, RoutineName)
+      return
+   endif
+   order = size(y) - 1
+   select case (order)
+   case (0)
+      call AD_CopyOutput(y(1), y_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case (1)
+      call AD_Output_ExtrapInterp1(y(1), y(2), t, y_out, t_out, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case (2)
+      call AD_Output_ExtrapInterp2(y(1), y(2), y(3), t, y_out, t_out, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case default
+      call SetErrStat(ErrID_Fatal, 'size(y) must be less than 4 (order must be less than 3).', ErrStat, ErrMsg, RoutineName)
+      return
+   end select
+end subroutine
 
-
- SUBROUTINE AD_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg )
+SUBROUTINE AD_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
 ! values of y (which has values associated with times in t).  Order of the interpolation is 1.
@@ -7579,75 +7513,73 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(AD_OutputType), INTENT(INOUT)  :: y1    ! Output at t1 > t2
- TYPE(AD_OutputType), INTENT(INOUT)  :: y2    ! Output at t2 
- REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
- TYPE(AD_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
- REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
- INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
- CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
+   TYPE(AD_OutputType), INTENT(INOUT)  :: y1    ! Output at t1 > t2
+   TYPE(AD_OutputType), INTENT(INOUT)  :: y2    ! Output at t2 
+   REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
+   TYPE(AD_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
+   REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
+   INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
+   CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(DbKi)                                 :: t(2)     ! Times associated with the Outputs
- REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
- CHARACTER(*),                    PARAMETER :: RoutineName = 'AD_Output_ExtrapInterp1'
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
-   IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+   REAL(DbKi)                                 :: t(2)     ! Times associated with the Outputs
+   REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
+   CHARACTER(*),                    PARAMETER :: RoutineName = 'AD_Output_ExtrapInterp1'
+   REAL(DbKi)                                 :: a1, a2   ! temporary for extrapolation/interpolation
+   INTEGER(IntKi)                             :: ErrStat2 ! local errors
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   INTEGER                                    :: i01      ! dim1 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i1       ! dim1 counter variable for arrays
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! we'll subtract a constant from the times to resolve some 
+   ! numerical issues when t gets large (and to simplify the equations)
+   t = tin - tin(1)
+   t_out = tin_out - tin(1)
+   
+   IF (EqualRealNos(t(1), t(2))) THEN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg, RoutineName)
+      RETURN
    END IF
+   
+   ! Calculate weighting factors from Lagrange polynomial
+   a1 = -(t_out - t(2))/t(2)
+   a2 = t_out/t(2)
+   
+   IF (ALLOCATED(y_out%rotors) .AND. ALLOCATED(y1%rotors)) THEN
+      DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
+         CALL MeshExtrapInterp1(y1%rotors(i01)%NacelleLoad, y2%rotors(i01)%NacelleLoad, tin, y_out%rotors(i01)%NacelleLoad, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
+         CALL MeshExtrapInterp1(y1%rotors(i01)%HubLoad, y2%rotors(i01)%HubLoad, tin, y_out%rotors(i01)%HubLoad, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
+         CALL MeshExtrapInterp1(y1%rotors(i01)%TowerLoad, y2%rotors(i01)%TowerLoad, tin, y_out%rotors(i01)%TowerLoad, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
+         IF (ALLOCATED(y_out%rotors(i01)%BladeLoad) .AND. ALLOCATED(y1%rotors(i01)%BladeLoad)) THEN
+            DO i1 = LBOUND(y_out%rotors(i01)%BladeLoad,1),UBOUND(y_out%rotors(i01)%BladeLoad,1)
+               CALL MeshExtrapInterp1(y1%rotors(i01)%BladeLoad(i1), y2%rotors(i01)%BladeLoad(i1), tin, y_out%rotors(i01)%BladeLoad(i1), tin_out, ErrStat2, ErrMsg2)
+                  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+            END DO
+         END IF ! check if allocated
+      END DO
+      DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
+         CALL MeshExtrapInterp1(y1%rotors(i01)%TFinLoad, y2%rotors(i01)%TFinLoad, tin, y_out%rotors(i01)%TFinLoad, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
+         IF (ALLOCATED(y_out%rotors(i01)%WriteOutput) .AND. ALLOCATED(y1%rotors(i01)%WriteOutput)) THEN
+            y_out%rotors(i01)%WriteOutput = a1*y1%rotors(i01)%WriteOutput + a2*y2%rotors(i01)%WriteOutput
+         END IF ! check if allocated
+      END DO
+   END IF ! check if allocated
+END SUBROUTINE
 
-   ScaleFactor = t_out / t(2)
-IF (ALLOCATED(y_out%rotors) .AND. ALLOCATED(y1%rotors)) THEN
-  DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
-      CALL MeshExtrapInterp1(y1%rotors(i01)%NacelleLoad, y2%rotors(i01)%NacelleLoad, tin, y_out%rotors(i01)%NacelleLoad, tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-  ENDDO
-  DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
-      CALL MeshExtrapInterp1(y1%rotors(i01)%HubLoad, y2%rotors(i01)%HubLoad, tin, y_out%rotors(i01)%HubLoad, tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-  ENDDO
-  DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
-      CALL MeshExtrapInterp1(y1%rotors(i01)%TowerLoad, y2%rotors(i01)%TowerLoad, tin, y_out%rotors(i01)%TowerLoad, tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-  ENDDO
-  DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
-IF (ALLOCATED(y_out%rotors(i01)%BladeLoad) .AND. ALLOCATED(y1%rotors(i01)%BladeLoad)) THEN
-  DO i1 = LBOUND(y_out%rotors(i01)%BladeLoad,1),UBOUND(y_out%rotors(i01)%BladeLoad,1)
-      CALL MeshExtrapInterp1(y1%rotors(i01)%BladeLoad(i1), y2%rotors(i01)%BladeLoad(i1), tin, y_out%rotors(i01)%BladeLoad(i1), tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   ENDDO
-END IF ! check if allocated
-  ENDDO
-  DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
-      CALL MeshExtrapInterp1(y1%rotors(i01)%TFinLoad, y2%rotors(i01)%TFinLoad, tin, y_out%rotors(i01)%TFinLoad, tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-  ENDDO
-  DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
-IF (ALLOCATED(y_out%rotors(i01)%WriteOutput) .AND. ALLOCATED(y1%rotors(i01)%WriteOutput)) THEN
-  DO i1 = LBOUND(y_out%rotors(i01)%WriteOutput,1),UBOUND(y_out%rotors(i01)%WriteOutput,1)
-    b = -(y1%rotors(i01)%WriteOutput(i1) - y2%rotors(i01)%WriteOutput(i1))
-    y_out%rotors(i01)%WriteOutput(i1) = y1%rotors(i01)%WriteOutput(i1) + b * ScaleFactor
-  END DO
-END IF ! check if allocated
-  ENDDO
-END IF ! check if allocated
- END SUBROUTINE AD_Output_ExtrapInterp1
-
-
- SUBROUTINE AD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
+SUBROUTINE AD_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
 ! values of y (which has values associated with times in t).  Order of the interpolation is 2.
@@ -7661,82 +7593,78 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(AD_OutputType), INTENT(INOUT)  :: y1      ! Output at t1 > t2 > t3
- TYPE(AD_OutputType), INTENT(INOUT)  :: y2      ! Output at t2 > t3
- TYPE(AD_OutputType), INTENT(INOUT)  :: y3      ! Output at t3
- REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
- TYPE(AD_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
- REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   TYPE(AD_OutputType), INTENT(INOUT)  :: y1      ! Output at t1 > t2 > t3
+   TYPE(AD_OutputType), INTENT(INOUT)  :: y2      ! Output at t2 > t3
+   TYPE(AD_OutputType), INTENT(INOUT)  :: y3      ! Output at t3
+   REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
+   TYPE(AD_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
+   REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
+   INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+   CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(DbKi)                                 :: t(3)      ! Times associated with the Outputs
- REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
- INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- CHARACTER(*),            PARAMETER         :: RoutineName = 'AD_Output_ExtrapInterp2'
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
+   REAL(DbKi)                                 :: t(3)      ! Times associated with the Outputs
+   REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
+   INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
+   REAL(DbKi)                                 :: a1,a2,a3 ! temporary for extrapolation/interpolation
+   INTEGER(IntKi)                             :: ErrStat2 ! local errors
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   CHARACTER(*),            PARAMETER         :: RoutineName = 'AD_Output_ExtrapInterp2'
+   INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i1    ! dim1 counter variable for arrays
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! we'll subtract a constant from the times to resolve some 
+   ! numerical issues when t gets large (and to simplify the equations)
+   t = tin - tin(1)
+   t_out = tin_out - tin(1)
+   
    IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    END IF
-
-   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
-IF (ALLOCATED(y_out%rotors) .AND. ALLOCATED(y1%rotors)) THEN
-  DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
-      CALL MeshExtrapInterp2(y1%rotors(i01)%NacelleLoad, y2%rotors(i01)%NacelleLoad, y3%rotors(i01)%NacelleLoad, tin, y_out%rotors(i01)%NacelleLoad, tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-  ENDDO
-  DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
-      CALL MeshExtrapInterp2(y1%rotors(i01)%HubLoad, y2%rotors(i01)%HubLoad, y3%rotors(i01)%HubLoad, tin, y_out%rotors(i01)%HubLoad, tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-  ENDDO
-  DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
-      CALL MeshExtrapInterp2(y1%rotors(i01)%TowerLoad, y2%rotors(i01)%TowerLoad, y3%rotors(i01)%TowerLoad, tin, y_out%rotors(i01)%TowerLoad, tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-  ENDDO
-  DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
-IF (ALLOCATED(y_out%rotors(i01)%BladeLoad) .AND. ALLOCATED(y1%rotors(i01)%BladeLoad)) THEN
-  DO i1 = LBOUND(y_out%rotors(i01)%BladeLoad,1),UBOUND(y_out%rotors(i01)%BladeLoad,1)
-      CALL MeshExtrapInterp2(y1%rotors(i01)%BladeLoad(i1), y2%rotors(i01)%BladeLoad(i1), y3%rotors(i01)%BladeLoad(i1), tin, y_out%rotors(i01)%BladeLoad(i1), tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-   ENDDO
-END IF ! check if allocated
-  ENDDO
-  DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
-      CALL MeshExtrapInterp2(y1%rotors(i01)%TFinLoad, y2%rotors(i01)%TFinLoad, y3%rotors(i01)%TFinLoad, tin, y_out%rotors(i01)%TFinLoad, tin_out, ErrStat2, ErrMsg2 )
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-  ENDDO
-  DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
-IF (ALLOCATED(y_out%rotors(i01)%WriteOutput) .AND. ALLOCATED(y1%rotors(i01)%WriteOutput)) THEN
-  DO i1 = LBOUND(y_out%rotors(i01)%WriteOutput,1),UBOUND(y_out%rotors(i01)%WriteOutput,1)
-    b = (t(3)**2*(y1%rotors(i01)%WriteOutput(i1) - y2%rotors(i01)%WriteOutput(i1)) + t(2)**2*(-y1%rotors(i01)%WriteOutput(i1) + y3%rotors(i01)%WriteOutput(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*y1%rotors(i01)%WriteOutput(i1) + t(3)*y2%rotors(i01)%WriteOutput(i1) - t(2)*y3%rotors(i01)%WriteOutput(i1) ) * scaleFactor
-    y_out%rotors(i01)%WriteOutput(i1) = y1%rotors(i01)%WriteOutput(i1) + b  + c * t_out
-  END DO
-END IF ! check if allocated
-  ENDDO
-END IF ! check if allocated
- END SUBROUTINE AD_Output_ExtrapInterp2
-
+   
+   ! Calculate Lagrange polynomial coefficients
+   a1 = (t_out - t(2))*(t_out - t(3))/((t(1) - t(2))*(t(1) - t(3)))
+   a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
+   a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
+   IF (ALLOCATED(y_out%rotors) .AND. ALLOCATED(y1%rotors)) THEN
+      DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
+         CALL MeshExtrapInterp2(y1%rotors(i01)%NacelleLoad, y2%rotors(i01)%NacelleLoad, y3%rotors(i01)%NacelleLoad, tin, y_out%rotors(i01)%NacelleLoad, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
+         CALL MeshExtrapInterp2(y1%rotors(i01)%HubLoad, y2%rotors(i01)%HubLoad, y3%rotors(i01)%HubLoad, tin, y_out%rotors(i01)%HubLoad, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
+         CALL MeshExtrapInterp2(y1%rotors(i01)%TowerLoad, y2%rotors(i01)%TowerLoad, y3%rotors(i01)%TowerLoad, tin, y_out%rotors(i01)%TowerLoad, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
+         IF (ALLOCATED(y_out%rotors(i01)%BladeLoad) .AND. ALLOCATED(y1%rotors(i01)%BladeLoad)) THEN
+            DO i1 = LBOUND(y_out%rotors(i01)%BladeLoad,1),UBOUND(y_out%rotors(i01)%BladeLoad,1)
+               CALL MeshExtrapInterp2(y1%rotors(i01)%BladeLoad(i1), y2%rotors(i01)%BladeLoad(i1), y3%rotors(i01)%BladeLoad(i1), tin, y_out%rotors(i01)%BladeLoad(i1), tin_out, ErrStat2, ErrMsg2)
+                  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+            END DO
+         END IF ! check if allocated
+      END DO
+      DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
+         CALL MeshExtrapInterp2(y1%rotors(i01)%TFinLoad, y2%rotors(i01)%TFinLoad, y3%rotors(i01)%TFinLoad, tin, y_out%rotors(i01)%TFinLoad, tin_out, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+      END DO
+      DO i01 = LBOUND(y_out%rotors,1),UBOUND(y_out%rotors,1)
+         IF (ALLOCATED(y_out%rotors(i01)%WriteOutput) .AND. ALLOCATED(y1%rotors(i01)%WriteOutput)) THEN
+            y_out%rotors(i01)%WriteOutput = a1*y1%rotors(i01)%WriteOutput + a2*y2%rotors(i01)%WriteOutput + a3*y3%rotors(i01)%WriteOutput
+         END IF ! check if allocated
+      END DO
+   END IF ! check if allocated
+END SUBROUTINE
 END MODULE AeroDyn_Types
 !ENDOFREGISTRYGENERATEDFILE

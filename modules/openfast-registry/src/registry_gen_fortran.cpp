@@ -942,10 +942,8 @@ void gen_unpack(std::ostream &w, const Module &mod, const DataType::Derived &ddt
 }
 
 void gen_extint_order(std::ostream &w, const Module &mod, std::string uy, const int order,
-                      const Field &field, const std::string &deref, int recurse_level)
+                      const Field &field, const std::string &deref, const int recurse_level, std::string &indent)
 {
-    std::string indent, tmp;
-
     if (recurse_level > MAXRECURSE)
     {
         std::cerr << "REGISTRY ERROR: too many levels of array subtypes\n";
@@ -963,8 +961,8 @@ void gen_extint_order(std::ostream &w, const Module &mod, std::string uy, const 
     // check if this is an allocatable array:
     if (field.is_allocatable)
     {
-        w << "IF (" << assoc_alloc << "(" << vout << ") .AND. " << assoc_alloc << "(" << v1
-          << ")) THEN\n";
+        w << indent << "IF (" << assoc_alloc << "(" << vout << ") .AND. " << assoc_alloc << "(" << v1 << ")) THEN";
+        indent += "   ";
     }
 
     if (field.data_type->tag == DataType::Tag::Derived)
@@ -980,8 +978,8 @@ void gen_extint_order(std::ostream &w, const Module &mod, std::string uy, const 
 
                 for (int j = field.rank; j > 0; j--)
                 {
-                    w << "  DO i" << recurse_level << j << " = LBOUND(" << uy << "_out" << field_var
-                      << "," << j << "),UBOUND(" << uy << "_out" << field_var << "," << j << ")\n";
+                    w << indent << "DO i" << recurse_level << j << " = LBOUND(" << uy << "_out" << field_var << "," << j << "),UBOUND(" << uy << "_out" << field_var << "," << j << ")";
+                    indent += "   ";
                 }
 
                 if (field.rank > 0)
@@ -991,17 +989,17 @@ void gen_extint_order(std::ostream &w, const Module &mod, std::string uy, const 
                     {
                         field_var += "i" + std::to_string(recurse_level) + std::to_string(j);
                         if (j < field.rank)
-                        {
                             field_var += ",";
-                        }
                     }
                     field_var += ")";
                 }
 
-                gen_extint_order(w, mod, uy, order, sub_field, field_var, recurse_level + 1);
+                gen_extint_order(w, mod, uy, order, sub_field, field_var, recurse_level + 1, indent);
+
                 for (int j = field.rank; j > 0; j--)
                 {
-                    w << "  ENDDO\n";
+                    indent.erase(indent.size() - 3);
+                    w << indent << "END DO";
                 }
             }
         }
@@ -1009,58 +1007,59 @@ void gen_extint_order(std::ostream &w, const Module &mod, std::string uy, const 
         {
             for (int j = field.rank; j > 0; j--)
             {
-                w << "  DO i" << j << " = LBOUND(" << vout << "," << j << "),UBOUND(" << vout << ","
-                  << j << ")\n";
+                w << indent << "DO i" << j << " = LBOUND(" << vout << "," << j << "),UBOUND(" << vout << "," << j << ")";
+                indent += "   ";
             }
 
             if (field.data_type->derived.name.compare("MeshType") == 0)
             {
                 if (order == 0)
                 {
-                    w << "      CALL MeshCopy(" << v1 + dims << ", " << vout + dims
-                      << ", MESH_UPDATECOPY, ErrStat2, ErrMsg2 )\n";
+                    w << indent << "CALL MeshCopy(" << v1 + dims << ", " << vout + dims
+                      << ", MESH_UPDATECOPY, ErrStat2, ErrMsg2)";
                 }
                 else if (order == 1)
                 {
-                    w << "      CALL MeshExtrapInterp1(" << v1 + dims << ", " << v2 + dims
-                      << ", tin, " << vout + dims << ", tin_out, ErrStat2, ErrMsg2 )\n";
+                    w << indent << "CALL MeshExtrapInterp1(" << v1 + dims << ", " << v2 + dims
+                      << ", tin, " << vout + dims << ", tin_out, ErrStat2, ErrMsg2)";
                 }
                 else if (order == 2)
                 {
-                    w << "      CALL MeshExtrapInterp2(" << v1 + dims << ", " << v2 + dims << ", "
+                    w << indent << "CALL MeshExtrapInterp2(" << v1 + dims << ", " << v2 + dims << ", "
                       << v3 + dims << ", tin, " << vout + dims
-                      << ", tin_out, ErrStat2, ErrMsg2 )\n";
+                      << ", tin_out, ErrStat2, ErrMsg2)";
                 }
             }
             else
             {
                 if (order == 0)
                 {
-                    w << "      CALL " << field.data_type->derived.module->nickname << "_Copy"
+                    w << indent << "CALL " << field.data_type->derived.module->nickname << "_Copy"
                       << field.data_type->derived.name_short << "(" << v1 + dims << ", "
-                      << vout + dims << ", MESH_UPDATECOPY, ErrStat2, ErrMsg2 )\n";
+                      << vout + dims << ", MESH_UPDATECOPY, ErrStat2, ErrMsg2)";
                 }
                 else if (order == 1)
                 {
-                    w << "      CALL " << field.data_type->derived.module->nickname << "_"
+                    w << indent << "CALL " << field.data_type->derived.module->nickname << "_"
                       << field.data_type->derived.name_short << "_ExtrapInterp1( " << v1 + dims
                       << ", " << v2 + dims << ", tin, " << vout + dims
-                      << ", tin_out, ErrStat2, ErrMsg2 )\n";
+                      << ", tin_out, ErrStat2, ErrMsg2)";
                 }
                 else if (order == 2)
                 {
-                    w << "      CALL " << field.data_type->derived.module->nickname << "_"
+                    w << indent << "CALL " << field.data_type->derived.module->nickname << "_"
                       << field.data_type->derived.name_short << "_ExtrapInterp2( " << v1 + dims
                       << ", " << v2 + dims << ", " << v3 + dims << ", tin, " << vout + dims
-                      << ", tin_out, ErrStat2, ErrMsg2 )\n";
+                      << ", tin_out, ErrStat2, ErrMsg2)";
                 }
             }
 
-            w << "        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n";
+            w << indent << "   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)";
 
             for (int j = field.rank; j >= 1; j--)
             {
-                w << "   ENDDO\n";
+                indent.erase(indent.size() - 3);
+                w << indent << "END DO";
             }
         }
     }
@@ -1068,63 +1067,58 @@ void gen_extint_order(std::ostream &w, const Module &mod, std::string uy, const 
     {
         if (order == 0)
         {
-            // bjj: this should probably have some "IF ALLOCATED" statements around it, but we're
-            // just calling the copy routine
-            w << "  " << vout << " = " << v1 << "\n";
-        }
-        else
-        {
-            indent = "";
+            w << indent << vout << " = " << v1;
         }
 
-        for (int j = field.rank; j > 0; j--)
+        if (order == 0 || field.gen_periodic == Period::TwoPi)
         {
-            w << indent << "  DO i" << j << " = LBOUND(" << vout << "," << j << "),UBOUND(" << vout
-              << "," << j << ")\n";
-            indent += "  ";
+            for (int j = field.rank; j > 0; j--)
+            {
+                w << indent << "DO i" << j << " = LBOUND(" << vout << "," << j << "),UBOUND(" << vout << "," << j << ")";
+                indent += "   ";
+            }
         }
 
         if (order == 1)
         {
             if (field.gen_periodic == Period::TwoPi)
             {
-                w << indent << "  CALL Angles_ExtrapInterp( " << v1 + dims << ", " << v2 + dims
-                  << ", tin, " << vout + dims << ", tin_out )\n";
+                w << indent << "CALL Angles_ExtrapInterp( " << v1 + dims << ", " << v2 + dims
+                  << ", tin, " << vout + dims << ", tin_out )";
             }
             else
             {
-                w << indent << "  b = -(" << v1 + dims << " - " << v2 + dims << ")\n";
-                w << indent << "  " << vout + dims << " = " << v1 + dims << " + b * ScaleFactor\n";
+                w << indent << vout << " = a1*" << v1 << " + a2*" << v2;
             };
         }
         if (order == 2)
         {
             if (field.gen_periodic == Period::TwoPi)
             {
-                w << indent << "  CALL Angles_ExtrapInterp( " << v1 + dims << ", " << v2 + dims
-                  << ", " << v3 + dims << ", tin, " << vout + dims << ", tin_out )\n";
+                w << indent << "CALL Angles_ExtrapInterp( " << v1 + dims << ", " << v2 + dims
+                  << ", " << v3 + dims << ", tin, " << vout + dims << ", tin_out )";
             }
             else
             {
-                w << indent << "  b = (t(3)**2*(" << v1 + dims << " - " << v2 + dims
-                  << ") + t(2)**2*(-" << v1 + dims << " + " << v3 + dims << "))* scaleFactor\n ";
-                w << indent << " c = ( (t(2)-t(3))*" << v1 + dims << " + t(3)*" << v2 + dims
-                  << " - t(2)*" << v3 + dims << " ) * scaleFactor\n";
-                w << indent << "  " << vout + dims << " = " << v1 + dims << " + b  + c * t_out\n";
+                w << indent << vout << " = a1*" << v1 << " + a2*" << v2 << " + a3*" << v3;
             }
         }
-        for (int j = field.rank; j >= 1; j--)
+        if (order == 0 || field.gen_periodic == Period::TwoPi)
         {
-            indent = "";
-            for (int i = 1; i < j; i++)
-                indent += "  ";
-            w << indent << "  END DO\n";
+            for (int j = field.rank; j >= 1; j--)
+            {
+                indent.erase(indent.size() - 3);
+                w << indent << "END DO";
+            }
         }
     }
 
     // check if this is an allocatable array:
     if (field.is_allocatable)
-        w << "END IF ! check if allocated\n";
+    {
+        indent.erase(indent.size() - 3);
+        w << indent << "END IF ! check if allocated";
+    }
 }
 
 void calc_extint_order(std::ostream &w, const Module &mod, const Field &field, int recurse_level,
@@ -1175,182 +1169,167 @@ void gen_ExtrapInterp1(std::ostream &w, const Module &mod, const DataType::Deriv
                        std::string &type_kind, std::string &uy, std::string &mod_prefix,
                        const int max_rank, const int max_nrecurs, const int max_alloc_ndims)
 {
-    w << "\n";
-    w << " SUBROUTINE " << mod.nickname << "_" << ddt.name_short << "_ExtrapInterp1(" << uy << "1, "
-      << uy << "2, tin, " << uy << "_out, tin_out, ErrStat, ErrMsg )\n";
-    w << "!\n";
-    w << "! This subroutine calculates a extrapolated (or interpolated) " << ddt.name_short << " "
-      << uy << "_out at time t_out, from previous/future time\n";
-    w << "! values of " << uy
-      << " (which has values associated with times in t).  Order of the interpolation is 1.\n";
-    w << "!\n";
-    w << "!  f(t) = a + b * t, or\n";
-    w << "!\n";
-    w << "!  where a and b are determined as the solution to\n";
-    w << "!  f(t1) = " << uy << "1, f(t2) = " << uy << "2\n";
-    w << "!\n";
-    w << "!" << std::string(130, '.') << "\n";
-    w << "\n";
+    std::string indent("\n");
+    std::string mod_ddt(mod.nickname + "_" + ddt.name_short);
 
-    w << " TYPE(" << ddt.type_fortran << "), INTENT(" << (ddt.contains_mesh == 1 ? "INOUT" : "IN")
-      << ")  :: " << uy << "1    ! " << ddt.name_short << " at t1 > t2\n";
-    w << " TYPE(" << ddt.type_fortran << "), INTENT(" << (ddt.contains_mesh == 1 ? "INOUT" : "IN")
-      << ")  :: " << uy << "2    ! " << ddt.name_short << " at t2 \n";
-    w << " REAL(" << type_kind
-      << "),         INTENT(IN   )          :: tin(2)   ! Times associated with the "
-      << ddt.name_short << "s\n";
-    w << " TYPE(" << ddt.type_fortran << "), INTENT(INOUT)  :: " << uy << "_out ! "
-      << ddt.name_short << " at tin_out\n";
-    w << " REAL(" << type_kind
-      << "),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to\n";
-    w << " INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation\n";
-    w << " CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None\n";
-    w << "   ! local variables\n";
-    w << " REAL(" << type_kind
-      << ")                                 :: t(2)     ! Times associated with the "
-      << ddt.name_short << "s\n";
-    w << " REAL(" << type_kind
-      << ")                                 :: t_out    ! Time to which to be extrap/interpd\n";
-    w << " CHARACTER(*),                    PARAMETER :: RoutineName = '" << mod.nickname << "_"
-      << ddt.name_short << "_ExtrapInterp1'\n";
+    w << indent << "SUBROUTINE " << mod_ddt << "_ExtrapInterp1(" << uy << "1, " << uy << "2, tin, " << uy << "_out, tin_out, ErrStat, ErrMsg )";
+    w << indent << "!";
+    w << indent << "! This subroutine calculates a extrapolated (or interpolated) " << ddt.name_short << " " << uy << "_out at time t_out, from previous/future time";
+    w << indent << "! values of " << uy << " (which has values associated with times in t).  Order of the interpolation is 1.";
+    w << indent << "!";
+    w << indent << "!  f(t) = a + b * t, or";
+    w << indent << "!";
+    w << indent << "!  where a and b are determined as the solution to";
+    w << indent << "!  f(t1) = " << uy << "1, f(t2) = " << uy << "2";
+    w << indent << "!";
+    w << indent << "!" << std::string(130, '.');
+    w << indent;
+    indent += "   ";
+    w << indent << "TYPE(" << ddt.type_fortran << "), INTENT(" << (ddt.contains_mesh == 1 ? "INOUT" : "IN") << ")  :: " << uy << "1    ! " << ddt.name_short << " at t1 > t2";
+    w << indent << "TYPE(" << ddt.type_fortran << "), INTENT(" << (ddt.contains_mesh == 1 ? "INOUT" : "IN") << ")  :: " << uy << "2    ! " << ddt.name_short << " at t2 ";
+    w << indent << "REAL(" << type_kind << "),         INTENT(IN   )          :: tin(2)   ! Times associated with the " << ddt.name_short << "s";
+    w << indent << "TYPE(" << ddt.type_fortran << "), INTENT(INOUT)  :: " << uy << "_out ! " << ddt.name_short << " at tin_out";
+    w << indent << "REAL(" << type_kind << "),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to";
+    w << indent << "INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation";
+    w << indent << "CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None";
+    w << indent << "! local variables";
+    w << indent << "REAL(" << type_kind << ")                                 :: t(2)     ! Times associated with the " << ddt.name_short << "s";
+    w << indent << "REAL(" << type_kind << ")                                 :: t_out    ! Time to which to be extrap/interpd";
+    w << indent << "CHARACTER(*),                    PARAMETER :: RoutineName = '" << mod_ddt << "_ExtrapInterp1'";
+    w << indent << "REAL(DbKi)                                 :: a1, a2   ! temporary for extrapolation/interpolation";
+    w << indent << "INTEGER(IntKi)                             :: ErrStat2 ! local errors";
+    w << indent << "CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors";
 
-    w << " REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation\n";
-    w << " REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation\n";
-    w << " INTEGER(IntKi)                             :: ErrStat2 ! local errors\n";
-    w << " CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors\n";
     for (int j = 1; j <= max_rank; j++)
     {
         for (int i = 0; i <= max_nrecurs; i++)
         {
-            w << " INTEGER                                    :: i" << i << j << "    ! dim" << j
-              << " level " << i << " counter variable for arrays of ddts\n";
+            w << indent << "INTEGER                                    :: i" << i << j << "      ! dim" << j
+              << " level " << i << " counter variable for arrays of ddts";
         }
     }
     for (int j = 1; j <= max_rank; j++)
     {
-        w << " INTEGER                                    :: i" << j << "    ! dim" << j
-          << " counter variable for arrays\n";
+        w << indent << "INTEGER                                    :: i" << j << "       ! dim" << j
+          << " counter variable for arrays";
     }
-    w << "    ! Initialize ErrStat\n";
-    w << " ErrStat = ErrID_None\n";
-    w << " ErrMsg  = \"\"\n";
-    w << "    ! we'll subtract a constant from the times to resolve some \n";
-    w << "    ! numerical issues when t gets large (and to simplify the equations)\n";
-    w << " t = tin - tin(1)\n";
-    w << " t_out = tin_out - tin(1)\n";
-    w << "\n";
 
-    w << "   IF ( EqualRealNos( t(1), t(2) ) ) THEN\n";
-    w << "     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)\n";
-    w << "     RETURN\n";
-    w << "   END IF\n\n";
+    w << indent << "! Initialize ErrStat";
+    w << indent << "ErrStat = ErrID_None";
+    w << indent << "ErrMsg  = ''";
+    w << indent << "! we'll subtract a constant from the times to resolve some ";
+    w << indent << "! numerical issues when t gets large (and to simplify the equations)";
+    w << indent << "t = tin - tin(1)";
+    w << indent << "t_out = tin_out - tin(1)";
+    w << indent;
+    w << indent << "IF (EqualRealNos(t(1), t(2))) THEN";
+    w << indent << "   CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg, RoutineName)";
+    w << indent << "   RETURN";
+    w << indent << "END IF";
+    w << indent;
+    w << indent << "! Calculate weighting factors from Lagrange polynomial";
+    w << indent << "a1 = -(t_out - t(2))/t(2)";
+    w << indent << "a2 = t_out/t(2)";
+    w << indent;
 
-    w << "   ScaleFactor = t_out / t(2)" << std::endl;
-
+    // Recursively generate extrap interp code
     for (const auto &field : ddt.fields)
-        gen_extint_order(w, mod, uy, 1, field, "", 0);
+        gen_extint_order(w, mod, uy, 1, field, "", 0, indent);
 
-    w << " END SUBROUTINE " << mod.nickname << "_" << ddt.name_short << "_ExtrapInterp1\n";
-    w << "\n";
+    indent.erase(indent.size() - 3);
+    w << indent << "END SUBROUTINE";
+    w << indent;
 }
 
 void gen_ExtrapInterp2(std::ostream &w, const Module &mod, const DataType::Derived &ddt,
                        std::string &type_kind, std::string &uy, std::string &modPrefix,
                        const int max_rank, const int max_nrecurs, const int max_alloc_ndims)
 {
-    w << "\n";
-    w << " SUBROUTINE " << mod.nickname << "_" << ddt.name_short << "_ExtrapInterp2(" << uy << "1, "
-      << uy << "2, " << uy << "3, tin, " << uy << "_out, tin_out, ErrStat, ErrMsg )\n";
-    w << "!\n";
-    w << "! This subroutine calculates a extrapolated (or interpolated) " << ddt.name_short << " "
-      << uy << "_out at time t_out, from previous/future time\n";
-    w << "! values of " << uy
-      << " (which has values associated with times in t).  Order of the interpolation is 2.\n";
-    w << "!\n";
-    w << "!  expressions below based on either\n";
-    w << "!\n";
-    w << "!  f(t) = a + b * t + c * t**2\n";
-    w << "!\n";
-    w << "!  where a, b and c are determined as the solution to\n";
-    w << "!  f(t1) = " << uy << "1, f(t2) = " << uy << "2, f(t3) = " << uy << "3\n";
-    w << "!\n";
-    w << "!" << std::string(130, '.') << "\n";
-    w << "\n";
+    std::string indent("\n");
+    std::string ddt_intent(ddt.contains_mesh == 1 ? "INOUT" : "IN");
 
-    w << " TYPE(" << ddt.type_fortran << "), INTENT(" << (ddt.contains_mesh == 1 ? "INOUT" : "IN")
-      << ")  :: " << uy << "1      ! " << ddt.name_short << " at t1 > t2 > t3\n";
-    w << " TYPE(" << ddt.type_fortran << "), INTENT(" << (ddt.contains_mesh == 1 ? "INOUT" : "IN")
-      << ")  :: " << uy << "2      ! " << ddt.name_short << " at t2 > t3\n";
-    w << " TYPE(" << ddt.type_fortran << "), INTENT(" << (ddt.contains_mesh == 1 ? "INOUT" : "IN")
-      << ")  :: " << uy << "3      ! " << ddt.name_short << " at t3\n";
-    w << " REAL(" << type_kind
-      << "),                 INTENT(IN   )  :: tin(3)    ! Times associated with the "
-      << ddt.name_short << "s\n";
-    w << " TYPE(" << ddt.type_fortran << "), INTENT(INOUT)  :: " << uy << "_out     ! "
-      << ddt.name_short << " at tin_out\n";
-    w << " REAL(" << type_kind
-      << "),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to\n";
+    w << indent << "SUBROUTINE " << mod.nickname << "_" << ddt.name_short << "_ExtrapInterp2(" << uy << "1, "
+      << uy << "2, " << uy << "3, tin, " << uy << "_out, tin_out, ErrStat, ErrMsg )";
+    w << indent << "!";
+    w << indent << "! This subroutine calculates a extrapolated (or interpolated) " << ddt.name_short << " "
+      << uy << "_out at time t_out, from previous/future time";
+    w << indent << "! values of " << uy
+      << " (which has values associated with times in t).  Order of the interpolation is 2.";
+    w << indent << "!";
+    w << indent << "!  expressions below based on either";
+    w << indent << "!";
+    w << indent << "!  f(t) = a + b * t + c * t**2";
+    w << indent << "!";
+    w << indent << "!  where a, b and c are determined as the solution to";
+    w << indent << "!  f(t1) = " << uy << "1, f(t2) = " << uy << "2, f(t3) = " << uy << "3";
+    w << indent << "!";
+    w << indent << "!" << std::string(130, '.') << "";
+    w << indent << "";
+    indent += "   ";
+    w << indent << "TYPE(" << ddt.type_fortran << "), INTENT(" << ddt_intent << ")  :: " << uy << "1      ! " << ddt.name_short << " at t1 > t2 > t3";
+    w << indent << "TYPE(" << ddt.type_fortran << "), INTENT(" << ddt_intent << ")  :: " << uy << "2      ! " << ddt.name_short << " at t2 > t3";
+    w << indent << "TYPE(" << ddt.type_fortran << "), INTENT(" << ddt_intent << ")  :: " << uy << "3      ! " << ddt.name_short << " at t3";
+    w << indent << "REAL(" << type_kind << "),                 INTENT(IN   )  :: tin(3)    ! Times associated with the " << ddt.name_short << "s";
+    w << indent << "TYPE(" << ddt.type_fortran << "), INTENT(INOUT)  :: " << uy << "_out     ! " << ddt.name_short << " at tin_out";
+    w << indent << "REAL(" << type_kind << "),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to";
 
-    w << " INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation\n";
-    w << " CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None\n";
-    w << "   ! local variables\n";
-    w << " REAL(" << type_kind
-      << ")                                 :: t(3)      ! Times associated with the "
-      << ddt.name_short << "s\n";
-    w << " REAL(" << type_kind
-      << ")                                 :: t_out     ! Time to which to be extrap/interpd\n";
-    w << " INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)\n";
+    w << indent << "INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation";
+    w << indent << "CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None";
+    w << indent << "! local variables";
+    w << indent << "REAL(" << type_kind << ")                                 :: t(3)      ! Times associated with the " << ddt.name_short << "s";
+    w << indent << "REAL(" << type_kind << ")                                 :: t_out     ! Time to which to be extrap/interpd";
+    w << indent << "INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)";
 
-    w << " REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation\n";
-    w << " REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation\n";
-    w << " REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation\n";
-    w << " INTEGER(IntKi)                             :: ErrStat2 ! local errors\n";
-    w << " CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors\n";
-    w << " CHARACTER(*),            PARAMETER         :: RoutineName = '" << mod.nickname << "_"
-      << ddt.name_short << "_ExtrapInterp2'\n";
+    w << indent << "REAL(DbKi)                                 :: a1,a2,a3 ! temporary for extrapolation/interpolation";
+    // w << indent << "REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation";
+    // w << indent << "REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation";
+    // w << indent << "REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation";
+    w << indent << "INTEGER(IntKi)                             :: ErrStat2 ! local errors";
+    w << indent << "CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors";
+    w << indent << "CHARACTER(*),            PARAMETER         :: RoutineName = '" << mod.nickname << "_" << ddt.name_short << "_ExtrapInterp2'";
     for (int j = 1; j <= max_rank; j++)
     {
         for (int i = 0; i <= max_nrecurs; i++)
         {
-            w << " INTEGER                                    :: i" << i << j << "    ! dim" << j
-              << " level " << i << " counter variable for arrays of ddts\n";
+            w << indent << "INTEGER                                    :: i" << i << j << "    ! dim" << j << " level " << i << " counter variable for arrays of ddts";
         }
     }
     for (int j = 1; j <= max_rank; j++)
     {
-        w << " INTEGER                                    :: i" << j << "    ! dim" << j
-          << " counter variable for arrays\n";
+        w << indent << "INTEGER                                    :: i" << j << "    ! dim" << j << " counter variable for arrays";
     }
-    w << "    ! Initialize ErrStat\n";
-    w << " ErrStat = ErrID_None\n";
-    w << " ErrMsg  = \"\"\n";
-    w << "    ! we'll subtract a constant from the times to resolve some \n";
-    w << "    ! numerical issues when t gets large (and to simplify the equations)\n";
-    w << " t = tin - tin(1)\n";
-    w << " t_out = tin_out - tin(1)\n";
-    w << "\n";
+    w << indent << "! Initialize ErrStat";
+    w << indent << "ErrStat = ErrID_None";
+    w << indent << "ErrMsg  = ''";
+    w << indent << "! we'll subtract a constant from the times to resolve some ";
+    w << indent << "! numerical issues when t gets large (and to simplify the equations)";
+    w << indent << "t = tin - tin(1)";
+    w << indent << "t_out = tin_out - tin(1)";
+    w << indent;
+    w << indent << "IF ( EqualRealNos( t(1), t(2) ) ) THEN";
+    w << indent << "   CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)";
+    w << indent << "   RETURN";
+    w << indent << "ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN";
+    w << indent << "   CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)";
+    w << indent << "   RETURN";
+    w << indent << "ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN";
+    w << indent << "   CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)";
+    w << indent << "   RETURN";
+    w << indent << "END IF";
+    w << indent;
+    // w << indent << "ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))";
+    w << indent << "! Calculate Lagrange polynomial coefficients";
+    w << indent << "a1 = (t_out - t(2))*(t_out - t(3))/((t(1) - t(2))*(t(1) - t(3)))";
+    w << indent << "a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))";
+    w << indent << "a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))";
 
-    w << "   IF ( EqualRealNos( t(1), t(2) ) ) THEN\n";
-    w << "     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)\n";
-    w << "     RETURN\n";
-    w << "   ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN\n";
-    w << "     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)\n";
-    w << "     RETURN\n";
-    w << "   ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN\n";
-    w << "     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)\n";
-    w << "     RETURN\n";
-    w << "   END IF\n\n";
-
-    w << "   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))\n";
-
-    // recursive
+    // Recursively generate extrap interp code
     for (const auto &field : ddt.fields)
-    {
-        gen_extint_order(w, mod, uy, 2, field, "", 0);
-    }
+        gen_extint_order(w, mod, uy, 2, field, "", 0, indent);
 
-    w << " END SUBROUTINE " << mod.nickname << "_" << ddt.name_short << "_ExtrapInterp2\n";
-    w << "\n";
+    indent.erase(indent.size() - 3);
+    w << indent << "END SUBROUTINE";
+    w << indent;
 }
 
 void gen_ExtrapInterp(std::ostream &w, const Module &mod, std::string type_name_long,
@@ -1366,77 +1345,71 @@ void gen_ExtrapInterp(std::ostream &w, const Module &mod, std::string type_name_
         return;
     const auto &ddt = dt->derived;
 
-    std::string uy = tolower(ddt.name_short).compare("output") == 0 ? "y" : "u";
+    std::string mod_ddt = mod.nickname + "_" + ddt.name_short;
 
-    w << "\n";
-    w << " SUBROUTINE " << mod.nickname << "_" << ddt.name_short << "_ExtrapInterp(" << uy
-      << ", t, " << uy << "_out, t_out, ErrStat, ErrMsg )\n";
-    w << "!\n";
-    w << "! This subroutine calculates a extrapolated (or interpolated) " << ddt.name_short << " "
-      << uy << "_out at time t_out, from previous/future time\n";
-    w << "! values of " << uy
-      << " (which has values associated with times in t).  Order of the interpolation is given by the size of "
-      << uy << "\n";
-    w << "!\n";
-    w << "!  expressions below based on either\n";
-    w << "!\n";
-    w << "!  f(t) = a\n";
-    w << "!  f(t) = a + b * t, or\n";
-    w << "!  f(t) = a + b * t + c * t**2\n";
-    w << "!\n";
-    w << "!  where a, b and c are determined as the solution to\n";
-    w << "!  f(t1) = " << uy << "1, f(t2) = " << uy << "2, f(t3) = " << uy
-      << "3  (as appropriate)\n";
-    w << "!\n";
-    w << "!" << std::string(130, '.') << "\n";
-    w << "\n";
-    w << " TYPE(" << ddt.type_fortran << "), INTENT(" << (ddt.contains_mesh == 1 ? "INOUT" : "IN")
-      << ")  :: " << uy << "(:) ! " << ddt.name_short << " at t1 > t2 > t3\n";
-    w << " REAL(" << type_kind
-      << "),                 INTENT(IN   )  :: t(:)           ! Times associated with the "
-      << ddt.name_short << "s\n";
+    std::string uy = tolower(ddt.name_short).compare("output") == 0 ? "y" : "u";
+    std::string indent("\n");
+
+    w << indent << "subroutine " << mod_ddt << "_ExtrapInterp(" << uy << ", t, " << uy << "_out, t_out, ErrStat, ErrMsg)";
+    indent += "   ";
+    w << indent << "!";
+    w << indent << "! This subroutine calculates a extrapolated (or interpolated) " << ddt.name_short << " "
+      << uy << "_out at time t_out, from previous/future time";
+    w << indent << "! values of " << uy
+      << " (which has values associated with times in t).  Order of the interpolation is given by the size of " << uy;
+    w << indent << "!";
+    w << indent << "!  expressions below based on either";
+    w << indent << "!";
+    w << indent << "!  f(t) = a";
+    w << indent << "!  f(t) = a + b * t, or";
+    w << indent << "!  f(t) = a + b * t + c * t**2";
+    w << indent << "!";
+    w << indent << "!  where a, b and c are determined as the solution to";
+    w << indent << "!  f(t1) = " << uy << "1, f(t2) = " << uy << "2, f(t3) = " << uy << "3  (as appropriate)";
+    w << indent << "!";
+    w << indent << "!" << std::string(130, '-');
+    w << indent << "";
+    w << indent << "type(" << ddt.type_fortran << "), intent(" << (ddt.contains_mesh == 1 ? "inout" : "in")
+      << ")  :: " << uy << "(:) ! " << ddt.name_short << " at t1 > t2 > t3";
+    w << indent << "real(" << type_kind << "),                 intent(in   )  :: t(:)           ! Times associated with the "
+      << ddt.name_short << "s";
     // Intent must be (INOUT) to prevent ALLOCATABLE array arguments in the DDT from
     // being deallocated in this call. See Sec. 5.1.2.7 of Fortran 2003 standard
-    w << " TYPE(" << ddt.type_fortran << "), INTENT(INOUT)  :: " << uy << "_out ! "
-      << ddt.name_short << " at tin_out\n";
-    w << " REAL(" << type_kind
-      << "),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to\n";
-    w << " INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation\n";
-    w << " CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None\n";
-    w << "   ! local variables\n";
-    w << " INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)\n";
-    w << " INTEGER(IntKi)                             :: ErrStat2        ! local errors\n";
-    w << " CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors\n";
-    w << " CHARACTER(*),    PARAMETER                 :: RoutineName = '" << mod.nickname << "_"
-      << ddt.name_short << "_ExtrapInterp'\n";
-    w << "    ! Initialize ErrStat\n";
-    w << " ErrStat = ErrID_None\n";
-    w << " ErrMsg  = \"\"\n";
-    w << " if ( size(t) .ne. size(" << uy << ")) then\n";
-    w << "    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(" << uy
-      << ")',ErrStat,ErrMsg,RoutineName)\n";
-    w << "    RETURN\n";
-    w << " endif\n";
-    w << " order = SIZE(" << uy << ") - 1\n";
-    w << " IF ( order .eq. 0 ) THEN\n";
-    w << "   CALL " << mod.nickname << "_Copy" << ddt.name_short << "(" << uy << "(1), " << uy
-      << "_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )\n";
-    w << "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n";
-    w << " ELSE IF ( order .eq. 1 ) THEN\n";
-    w << "   CALL " << mod.nickname << "_" << ddt.name_short << "_ExtrapInterp1(" << uy << "(1), "
-      << uy << "(2), t, " << uy << "_out, t_out, ErrStat2, ErrMsg2 )\n";
-    w << "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n";
-    w << " ELSE IF ( order .eq. 2 ) THEN\n";
-    w << "   CALL " << mod.nickname << "_" << ddt.name_short << "_ExtrapInterp2(" << uy << "(1), "
-      << uy << "(2), " << uy << "(3), t, " << uy << "_out, t_out, ErrStat2, ErrMsg2 )\n";
-    w << "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n";
-    w << " ELSE \n";
-    w << "   CALL SetErrStat(ErrID_Fatal,'size(" << uy
-      << ") must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)\n";
-    w << "   RETURN\n";
-    w << " ENDIF \n";
-    w << " END SUBROUTINE " << mod.nickname << "_" << ddt.name_short << "_ExtrapInterp\n";
-    w << "\n";
+    w << indent << "type(" << ddt.type_fortran << "), intent(inout)  :: " << uy << "_out ! " << ddt.name_short << " at tin_out";
+    w << indent << "real(" << type_kind << "),                 intent(in   )  :: t_out           ! time to be extrap/interp'd to";
+    w << indent << "integer(IntKi),             intent(  out)  :: ErrStat         ! Error status of the operation";
+    w << indent << "character(*),               intent(  out)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None";
+    w << indent << "! local variables";
+    w << indent << "integer(IntKi)                             :: order           ! order of polynomial fit (max 2)";
+    w << indent << "integer(IntKi)                             :: ErrStat2        ! local errors";
+    w << indent << "character(ErrMsgLen)                       :: ErrMsg2         ! local errors";
+    w << indent << "character(*),    PARAMETER                 :: RoutineName = '" << mod_ddt << "_ExtrapInterp'";
+    w << indent;
+    w << indent << "! Initialize ErrStat";
+    w << indent << "ErrStat = ErrID_None";
+    w << indent << "ErrMsg  = ''";
+    w << indent << "if (size(t) /= size(" << uy << ")) then";
+    w << indent << "   call SetErrStat(ErrID_Fatal, 'size(t) must equal size(" << uy << ")', ErrStat, ErrMsg, RoutineName)";
+    w << indent << "   return";
+    w << indent << "endif";
+    w << indent << "order = size(" << uy << ") - 1";
+    w << indent << "select case (order)";
+    w << indent << "case (0)";
+    w << indent << "   call " << mod.nickname << "_Copy" << ddt.name_short << "(" << uy << "(1), " << uy << "_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2)";
+    w << indent << "      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)";
+    w << indent << "case (1)";
+    w << indent << "   call " << mod_ddt << "_ExtrapInterp1(" << uy << "(1), " << uy << "(2), t, " << uy << "_out, t_out, ErrStat2, ErrMsg2)";
+    w << indent << "      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)";
+    w << indent << "case (2)";
+    w << indent << "   call " << mod_ddt << "_ExtrapInterp2(" << uy << "(1), " << uy << "(2), " << uy << "(3), t, " << uy << "_out, t_out, ErrStat2, ErrMsg2)";
+    w << indent << "      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)";
+    w << indent << "case default";
+    w << indent << "   call SetErrStat(ErrID_Fatal, 'size(" << uy << ") must be less than 4 (order must be less than 3).', ErrStat, ErrMsg, RoutineName)";
+    w << indent << "   return";
+    w << indent << "end select";
+    indent.erase(indent.size() - 3);
+    w << indent << "end subroutine";
+    w << indent;
 
     // bjj: this is max for module, not for type_name_long
     int max_rank = 0;    // mod.module_ddt_list->max_ndims;
@@ -1445,9 +1418,7 @@ void gen_ExtrapInterp(std::ostream &w, const Module &mod, std::string type_name_
 
     // Recursively calculate extrap/interp order
     for (const auto &field : ddt.fields)
-    {
         calc_extint_order(w, mod, field, 0, max_rank, max_nrecurs, max_alloc_ndims);
-    }
 
     // Generate first order extrap/interp routine
     gen_ExtrapInterp1(w, mod, ddt, type_kind, uy, modPrefix, max_rank, max_nrecurs,
@@ -1461,37 +1432,33 @@ void gen_ExtrapInterp(std::ostream &w, const Module &mod, std::string type_name_
 void gen_copy_c2f(std::ostream &w, const Module &mod, const DataType::Derived &ddt)
 {
     std::string routine_name = mod.nickname + "_C2Fary_Copy" + ddt.name_short;
+    std::string indent("\n");
 
-    w << " SUBROUTINE " << routine_name << "( " << ddt.name_short
-      << "Data, ErrStat, ErrMsg, SkipPointers )\n";
-    w << "    TYPE(" << ddt.type_fortran << "), INTENT(INOUT) :: " << ddt.name_short << "Data\n";
-    w << "    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n";
-    w << "    CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n";
-    w << "    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers\n";
-    w << "    ! \n";
-    w << "    LOGICAL                        :: SkipPointers_local\n";
-    w << "    ErrStat = ErrID_None\n";
-    w << "    ErrMsg  = \"\"\n\n";
-    w << "    IF (PRESENT(SkipPointers)) THEN\n";
-    w << "       SkipPointers_local = SkipPointers\n";
-    w << "    ELSE\n";
-    w << "       SkipPointers_local = .false.\n";
-    w << "    END IF\n";
+    w << indent << "SUBROUTINE " << routine_name << "(" << ddt.name_short << "Data, ErrStat, ErrMsg, SkipPointers)";
+    indent += "   ";
+    w << indent << "TYPE(" << ddt.type_fortran << "), INTENT(INOUT) :: " << ddt.name_short << "Data";
+    w << indent << "INTEGER(IntKi),  INTENT(  OUT) :: ErrStat";
+    w << indent << "CHARACTER(*),    INTENT(  OUT) :: ErrMsg";
+    w << indent << "LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers";
+    w << indent << "! ";
+    w << indent << "LOGICAL                        :: SkipPointers_local";
+    w << indent << "ErrStat = ErrID_None";
+    w << indent << "ErrMsg  = \"\"";
+    w << indent;
+    w << indent << "IF (PRESENT(SkipPointers)) THEN";
+    w << indent << "   SkipPointers_local = SkipPointers";
+    w << indent << "ELSE";
+    w << indent << "   SkipPointers_local = .false.";
+    w << indent << "END IF";
 
     // Loop through fields in derived data type
     for (const auto &field : ddt.fields)
     {
-        // If field doesn't have a data type, continue
-        if (field.data_type == nullptr)
-        {
-            continue;
-        }
-
         // If field is a derived type, print warning and continue
         if (field.data_type->tag == DataType::Tag::Derived)
         {
             std::cerr << "Registry WARNING: derived data type " << field.name << " of type "
-                      << field.data_type->derived.name << " is not passed through C interface\n";
+                      << field.data_type->derived.name << " is not passed through C interface";
             continue;
         }
 
@@ -1499,15 +1466,15 @@ void gen_copy_c2f(std::ostream &w, const Module &mod, const DataType::Derived &d
         std::string var_c = ddt.name_short + "Data%C_obj%" + field.name;
         if (field.is_pointer)
         {
-            w << "\n    ! -- " << field.name << " " << ddt.name_short << " Data fields\n";
-            w << "    IF ( .NOT. SkipPointers_local ) THEN\n";
-            w << "       IF ( .NOT. C_ASSOCIATED( " << var_c << " ) ) THEN\n";
-            w << "          NULLIFY( " << var_f << " )\n";
-            w << "       ELSE\n";
-            w << "          CALL C_F_POINTER(" << var_c << ", " << var_f << ", (/" << var_c
-              << "_Len/))\n";
-            w << "       END IF\n";
-            w << "    END IF\n";
+            w << indent;
+            w << indent << "! -- " << field.name << " " << ddt.name_short << " Data fields";
+            w << indent << "IF ( .NOT. SkipPointers_local ) THEN";
+            w << indent << "   IF ( .NOT. C_ASSOCIATED( " << var_c << " ) ) THEN";
+            w << indent << "      NULLIFY( " << var_f << " )";
+            w << indent << "   ELSE";
+            w << indent << "      CALL C_F_POINTER(" << var_c << ", " << var_f << ", [" << var_c << "_Len])";
+            w << indent << "   END IF";
+            w << indent << "END IF";
         }
         else if (!field.is_allocatable)
         {
@@ -1516,11 +1483,11 @@ void gen_copy_c2f(std::ostream &w, const Module &mod, const DataType::Derived &d
             case DataType::Tag::Real:
             case DataType::Tag::Integer:
             case DataType::Tag::Logical:
-                w << "    " << var_f << " = " << var_c << "\n";
+                w << indent << var_f << " = " << var_c;
                 break;
             case DataType::Tag::Character:
                 if (field.rank == 0)
-                    w << "    " << var_f << " = TRANSFER(" << var_c << ", " << var_f << " )\n";
+                    w << indent << var_f << " = TRANSFER(" << var_c << ", " << var_f << " )";
                 break;
             case DataType::Tag::Derived:
                 break;
@@ -1528,38 +1495,35 @@ void gen_copy_c2f(std::ostream &w, const Module &mod, const DataType::Derived &d
         }
     }
 
-    w << " END SUBROUTINE " << routine_name << "\n\n";
+    indent.erase(indent.size() - 3);
+    w << indent << "END SUBROUTINE";
+    w << indent;
 }
 
 void gen_copy_f2c(std::ostream &w, const Module &mod, const DataType::Derived &ddt)
 {
     std::string routine_name = mod.nickname + "_F2C_Copy" + ddt.name_short;
+    std::string indent("\n");
 
-    w << " SUBROUTINE " << routine_name << "( " << ddt.name_short
-      << "Data, ErrStat, ErrMsg, SkipPointers  )\n";
-    w << "    TYPE(" << ddt.type_fortran << "), INTENT(INOUT) :: " << ddt.name_short << "Data\n";
-    w << "    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n";
-    w << "    CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n";
-    w << "    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers\n";
-    w << "    ! \n";
-    w << "    LOGICAL                        :: SkipPointers_local\n";
-    w << "    ErrStat = ErrID_None\n";
-    w << "    ErrMsg  = \"\"\n\n";
-    w << "    IF (PRESENT(SkipPointers)) THEN\n";
-    w << "       SkipPointers_local = SkipPointers\n";
-    w << "    ELSE\n";
-    w << "       SkipPointers_local = .false.\n";
-    w << "    END IF\n";
+    w << indent << "SUBROUTINE " << routine_name << "( " << ddt.name_short << "Data, ErrStat, ErrMsg, SkipPointers  )";
+    indent += "   ";
+    w << indent << "TYPE(" << ddt.type_fortran << "), INTENT(INOUT) :: " << ddt.name_short << "Data";
+    w << indent << "INTEGER(IntKi),  INTENT(  OUT) :: ErrStat";
+    w << indent << "CHARACTER(*),    INTENT(  OUT) :: ErrMsg";
+    w << indent << "LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers";
+    w << indent << "! ";
+    w << indent << "LOGICAL                        :: SkipPointers_local";
+    w << indent << "ErrStat = ErrID_None";
+    w << indent << "ErrMsg  = ''";
+    w << indent;
+    w << indent << "IF (PRESENT(SkipPointers)) THEN";
+    w << indent << "   SkipPointers_local = SkipPointers";
+    w << indent << "ELSE";
+    w << indent << "   SkipPointers_local = .false.";
+    w << indent << "END IF";
 
     for (const auto &field : ddt.fields)
     {
-
-        // If field doesn't have a data type, continue
-        if (field.data_type == nullptr)
-        {
-            continue;
-        }
-
         // If field is a derived type, print warning and continue
         if (field.data_type->tag == DataType::Tag::Derived)
         {
@@ -1573,36 +1537,34 @@ void gen_copy_f2c(std::ostream &w, const Module &mod, const DataType::Derived &d
 
         if (field.is_pointer)
         {
-            w << "\n    ! -- " << field.name << " " << ddt.name_short << " Data fields\n";
-            w << "    IF ( .NOT. SkipPointers_local ) THEN\n";
-            w << "       IF ( .NOT. ASSOCIATED(" << var_f << ")) THEN \n";
-            w << "          " << var_c << "_Len = 0\n";
-            w << "          " << var_c << " = C_NULL_PTR\n";
-            w << "       ELSE\n";
-            w << "          " << var_c << "_Len = SIZE(" << var_f << ")\n";
-            w << "          IF (" << var_c << "_Len > 0) &\n";
-            w << "             " << var_c << " = C_LOC( " << var_f << "(";
+            std::string dims;
             for (int d = 1; d <= field.rank; d++)
-            {
-                w << (d > 1 ? "," : "") << " LBOUND(" << var_f << "," << d << ")";
-            }
-            w << " ) )\n";
-            w << "       END IF\n";
-            w << "    END IF\n";
+                dims += std::string(d > 1 ? "," : "") + "LBOUND(" + var_f + "," + std::to_string(d) + ")";
+            w << indent;
+            w << indent << "! -- " << field.name << " " << ddt.name_short << " Data fields";
+            w << indent << "IF (.NOT. SkipPointers_local ) THEN";
+            w << indent << "   IF (.NOT. ASSOCIATED(" << var_f << ")) THEN ";
+            w << indent << "      " << var_c << "_Len = 0";
+            w << indent << "      " << var_c << " = C_NULL_PTR";
+            w << indent << "   ELSE";
+            w << indent << "      " << var_c << "_Len = SIZE(" << var_f << ")";
+            w << indent << "      IF (" << var_c << "_Len > 0) &";
+            w << indent << "         " << var_c << " = C_LOC(" << var_f << "(" << dims << "))";
+            w << indent << "   END IF";
+            w << indent << "END IF";
         }
         else if (!field.is_allocatable)
         {
-
             switch (field.data_type->tag)
             {
             case DataType::Tag::Real:
             case DataType::Tag::Integer:
             case DataType::Tag::Logical:
-                w << "    " << var_c << " = " << var_f << "\n";
+                w << indent << var_c << " = " << var_f;
                 break;
             case DataType::Tag::Character:
                 if (field.rank == 0)
-                    w << "    " << var_c << " = TRANSFER(" << var_f << ", " << var_c << " )\n";
+                    w << indent << var_c << " = TRANSFER(" << var_f << ", " << var_c << ")";
                 break;
             case DataType::Tag::Derived:
                 break;
@@ -1610,5 +1572,7 @@ void gen_copy_f2c(std::ostream &w, const Module &mod, const DataType::Derived &d
         }
     }
 
-    w << " END SUBROUTINE " << routine_name << "\n\n";
+    indent.erase(indent.size() - 3);
+    w << indent << "END SUBROUTINE";
+    w << indent;
 }
