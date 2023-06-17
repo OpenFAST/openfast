@@ -36,9 +36,11 @@
     char * WriteOutputHdr ;     int WriteOutputHdr_Len ;
     char * WriteOutputUnt ;     int WriteOutputUnt_Len ;
 
+
   } OpFM_InitOutputType_t ;
   typedef struct OpFM_MiscVarType {
     void * object ;
+
 
 
 

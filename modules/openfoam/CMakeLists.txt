@@ -19,7 +19,7 @@ if (GENERATE_TYPES)
 endif()
 
 add_library(foamtypeslib src/OpenFOAM_Types.f90)
-target_link_libraries(foamtypeslib nwtclibs)
+target_link_libraries(foamtypeslib nwtclibs ifwlib)
 
 add_library(foamfastlib src/OpenFOAM.f90)
 target_link_libraries(foamfastlib openfast_prelib)

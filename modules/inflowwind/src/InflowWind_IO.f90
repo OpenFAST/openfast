@@ -747,7 +747,7 @@ subroutine IfW_TurbSim_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
             TRIM(Num2LStr(G3D%RefHeight - G3D%ZHWid))//' : '//TRIM(Num2LStr(G3D%RefHeight + G3D%ZHWid))//' ]'
       end if
 
-      if (G3D%BoxExceedAllowF) then
+      if (G3D%BoxExceedAllow) then
          write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  '// &
             'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
          write (SumFileUnit, '(A)') '                                    '// &
@@ -970,7 +970,7 @@ subroutine IfW_HAWC_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
       write (SumFileUnit, '(A)') '     Z range (m):                 [ '// &
          TRIM(Num2LStr(G3D%GridBase))//' : '//TRIM(Num2LStr(G3D%GridBase + G3D%ZHWid*2.0))//' ]'
 
-      if (G3D%BoxExceedAllowF) then
+      if (G3D%BoxExceedAllow) then
          write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  '// &
             'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
          write (SumFileUnit, '(A)') '                                    '// &
@@ -1389,7 +1389,7 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
             TRIM(Num2LStr(G3D%RefHeight - G3D%ZHWid))//' : '//TRIM(Num2LStr(G3D%RefHeight + G3D%ZHWid))//' ]'
       end if
 
-      if (G3D%BoxExceedAllowF) then
+      if (G3D%BoxExceedAllow) then
          write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  '// &
             'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
          write (SumFileUnit, '(A)') '                                    '// &
