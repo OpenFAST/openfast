@@ -236,6 +236,9 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    AWAE_InitInput%n_high_low                 = farm%p%n_high_low
    AWAE_InitInput%NumDT                      = farm%p%n_TMax
    AWAE_InitInput%OutFileRoot                = farm%p%OutFileRoot
+   if (farm%p%WAT /= Mod_WAT_None .and. associated(farm%WAT_IfW%p%FlowField)) then
+      AWAE_InitInput%WAT_FlowField => farm%WAT_IfW%p%FlowField
+   endif
    call AWAE_Init( AWAE_InitInput, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, farm%AWAE%OtherSt, farm%AWAE%y, &
                    farm%AWAE%m, farm%p%DT_low, AWAE_InitOutput, ErrStat2, ErrMsg2 )
    if(Failed()) return;
@@ -336,24 +339,24 @@ END SUBROUTINE Farm_Initialize
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes all instances of WakeDynamics.
 !! This also sets the WAT InflowWind data storage -- this will be changed later when IfW uses pointers
-SUBROUTINE WAT_init( p, IfW, AWAE_InitInput, ErrStat, ErrMsg )
-   type(farm_ParameterType), intent(inout) :: p                   !< farm parameters data
-   type(WAT_IfW_data),       intent(inout) :: IfW                 !< InflowWind data
-   type(AWAE_InitInputType), intent(inout) :: AWAE_InitInput      !< for error checking, and temporary to pass IfW
-   integer(IntKi),           intent(  out) :: ErrStat             !< Error status of the operation
-   character(*),             intent(  out) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
+SUBROUTINE WAT_init( p, WAT_IfW, AWAE_InitInput, ErrStat, ErrMsg )
+   type(farm_ParameterType),  intent(inout) :: p                     !< farm parameters data
+   type(WAT_IfW_data),        intent(inout) :: WAT_IfW               !< InflowWind data
+   type(AWAE_InitInputType),  intent(inout) :: AWAE_InitInput        !< for error checking, and temporary to pass IfW
+   integer(IntKi),            intent(  out) :: ErrStat               !< Error status of the operation
+   character(*),              intent(  out) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
 
-   type(InflowWind_InitInputType)          :: IfW_InitInp
-   type(InflowWind_InitOutputType)         :: IfW_InitOut
-   character(1024)                         :: BoxFileRoot, BoxFile_u, BoxFile_v, BoxFile_w
-   character(6)                            :: FileEnding(3)
-   integer(IntKi)                          :: i
-   real(ReKi),     parameter               :: fstretch = 2.0_ReKi                       ! stretching factor for checking WAT resolution
-   real(ReKi)                              :: TmpRe3(3)                                 ! Temporary real for checking WAT resolution
-   CHARACTER(ErrMsgLen)                    :: TmpMsg                                    ! Temporary Error message text for WAT resolution checks
-   integer(IntKi)                          :: ErrStat2
-   character(ErrMsgLen)                    :: ErrMsg2
-   character(*), parameter                 :: RoutineName = 'WAT_init'
+   type(InflowWind_InitInputType)           :: IfW_InitInp
+   type(InflowWind_InitOutputType)          :: IfW_InitOut
+   character(1024)                          :: BoxFileRoot, BoxFile_u, BoxFile_v, BoxFile_w
+   character(6)                             :: FileEnding(3)
+   integer(IntKi)                           :: i
+   real(ReKi),     parameter                :: fstretch = 2.0_ReKi   ! stretching factor for checking WAT resolution
+   real(ReKi)                               :: TmpRe3(3)             ! Temporary real for checking WAT resolution
+   CHARACTER(ErrMsgLen)                     :: TmpMsg                ! Temporary Error message text for WAT resolution checks
+   integer(IntKi)                           :: ErrStat2
+   character(ErrMsgLen)                     :: ErrMsg2
+   character(*), parameter                  :: RoutineName = 'WAT_init'
 
    ErrStat  = ErrID_None
    ErrMsg   = ""
@@ -422,20 +425,19 @@ SUBROUTINE WAT_init( p, IfW, AWAE_InitInput, ErrStat, ErrMsg )
                                        ' = '//trim(Num2LStr(TmpRe3(3)))//' for turbine '//trim(Num2LStr(i))//' in Z.',ErrStat,ErrMsg,RoutineName)
    enddo
 
-
    call WrScr("Reading Wake added turbulence files: "//trim(p%WAT_BoxFile))
-!FIXME: revise this after IfW pointers are working
-   call InflowWind_Init( IfW_InitInp,              &
-            AWAE_InitInput%WAT_IfW_data%u,         &
-            AWAE_InitInput%WAT_IfW_data%p,         &
-            AWAE_InitInput%WAT_IfW_data%x,         &
-            AWAE_InitInput%WAT_IfW_data%xd,        &
-            AWAE_InitInput%WAT_IfW_data%z,         &
-            AWAE_InitInput%WAT_IfW_data%OtherSt,   &
-            AWAE_InitInput%WAT_IfW_data%y,         &
-            AWAE_InitInput%WAT_IfW_data%m,         &
+   call InflowWind_Init( IfW_InitInp,  &
+            WAT_IfW%u,                 &
+            WAT_IfW%p,                 &
+            WAT_IfW%x,                 &
+            WAT_IfW%xd,                &
+            WAT_IfW%z,                 &
+            WAT_IfW%OtherSt,           &
+            WAT_IfW%y,                 &
+            WAT_IfW%m,                 &
             p%dt_low, IfW_InitOut, ErrStat2, ErrMsg2 )
       if (Failed()) return;
+   WAT_IfW%IsInitialized = .true.
 
    call Cleanup()
    return
@@ -1763,11 +1765,13 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
 end subroutine FARM_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine ends the modules used in this simulation. It does not exit the program.
-!!    -  In parallel: 
-!!       1. CALL AWAE_End
-!!       2. CALL WD_End
-!!       3. CALL SC_End
-!!       4. CALL F_End
+!!    -  In parallel:
+!!       1. CALL WAT_End 
+!!       2. CALL AWAE_End
+!!       3. CALL WD_End
+!!       4. CALL SC_End
+!!       5. CALL FWrap_End
+!!       6. CALL MD_End
 !!    -  Close Output File   
 subroutine FARM_End(farm, ErrStat, ErrMsg)
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm  
@@ -1789,7 +1793,16 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
    !.......................................................................................
    
       !--------------
-      ! 1. end AWAE   
+      ! 1. end AWAE
+   if (farm%WAT_IfW%IsInitialized) then
+      call InflowWind_End(farm%WAT_IfW%u, farm%WAT_IfW%p, farm%WAT_IfW%x, farm%WAT_IfW%xd, farm%WAT_IfW%z, &
+                     farm%WAT_IfW%OtherSt, farm%WAT_IfW%y, farm%WAT_IfW%m, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         farm%WAT_IfW%IsInitialized = .false.
+   endif
+
+      !--------------
+      ! 2. end AWAE
    if (farm%AWAE%IsInitialized) then      
       call AWAE_End( farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
                      farm%AWAE%OtherSt, farm%AWAE%y, farm%AWAE%m, ErrStat2, ErrMsg2 )
@@ -1797,11 +1810,9 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
          farm%AWAE%IsInitialized = .false.
    end if      
       
-   
       !--------------
-      ! 2. end WakeDynamics
+      ! 3. end WakeDynamics
    if (allocated(farm%WD)) then
-      
       DO nt = 1,farm%p%NumTurbines
          if (farm%WD(nt)%IsInitialized) then      
             call WD_End( farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
@@ -1810,12 +1821,10 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
             farm%WD(nt)%IsInitialized = .false.
          end if      
       END DO
-      
    end if
    
       !--------------
-      ! 3. End supercontroller
-                     
+      ! 4. End supercontroller
    if ( farm%p%useSC ) then
       CALL SC_End(farm%SC%uInputs, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, farm%SC%OtherState, &
                      farm%SC%y, farm%SC%m, ErrStat2, ErrMsg2)
@@ -1823,9 +1832,8 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
    end if
    
       !--------------
-      ! 4. End each instance of FAST (each instance of FAST can be done in parallel, too)   
+      ! 5. End each instance of FAST (each instance of FAST can be done in parallel, too)   
    if (allocated(farm%FWrap)) then
-      
       DO nt = 1,farm%p%NumTurbines
          if (farm%FWrap(nt)%IsInitialized) then
             CALL FWrap_End( farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
@@ -1834,11 +1842,10 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
             farm%FWrap(nt)%IsInitialized = .false.
          end if
       END DO
-      
    end if   
    
       !--------------
-      ! 5. End farm-level MoorDyn
+      ! 6. End farm-level MoorDyn
    if (farm%p%MooringMod == 3) then
       call MD_End(farm%MD%Input(1), farm%MD%p, farm%MD%x, farm%MD%xd, farm%MD%z, farm%MD%OtherSt, farm%MD%y, farm%MD%m, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )

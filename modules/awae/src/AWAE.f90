@@ -1095,17 +1095,8 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    xd%WAT_B_Box(1:3) = 0.0_ReKi
    ! store array of disk average velocities for all turbines
    call AllocAry(m%V_amb_low_disk,3,p%NumTurbines,'m%V_amb_low_disk', ErrStat2, ErrMsg2); if(Failed()) return;
-!FIXME: modify after pointers are available
    if (p%WAT_Enabled) then
-      ! copy data over -- note that this is super slow and time consuming!!!! This entire bit will get changed as soon as IfW supports pointers!
-      call InflowWind_CopyContState  ( InitInp%WAT_IfW_data%x,                x%WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
-      call InflowWind_CopyDiscState  ( InitInp%WAT_IfW_data%xd,              xd%WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
-      call InflowWind_CopyConstrState( InitInp%WAT_IfW_data%z,                z%WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
-      call InflowWind_CopyOtherState ( InitInp%WAT_IfW_data%OtherSt, OtherState%WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
-      call InflowWind_CopyParam      ( InitInp%WAT_IfW_data%p,                p%WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
-      call InflowWind_CopyMisc       ( InitInp%WAT_IfW_data%m,                m%WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
-      call InflowWind_CopyInput      ( InitInp%WAT_IfW_data%u,              m%u_WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
-      call InflowWind_CopyOutput     ( InitInp%WAT_IfW_data%y,              m%y_WAT_IfW, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return;
+      if (associated(InitInp%WAT_FlowField)) p%WAT_FlowField => InitInp%WAT_FlowField
    endif
 
    ! Read-in the ambient wind data for the initial calculate output
