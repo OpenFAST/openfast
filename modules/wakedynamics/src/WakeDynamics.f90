@@ -1542,32 +1542,36 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
 
    ! --- WAT - Compute k_mt and add turbulence
    if ( p%WAT ) then
-      R = u%D_Rotor /2
-      do i = 1,maxPln  
-         if ( EqualRealNos( xd%Vx_wind_disk_filt(i), 0.0_ReKi ) ) then
-            y%WAT_k_mt(:,:,i) = 0.0_ReKi
-         else
-            do iz = -p%NumRadii+1, p%NumRadii-1
-               do iy = -p%NumRadii+1, p%NumRadii-1
-                  ! Polar gradients
-                  r_tmp =  sqrt(p%y(iy)**2 + p%z(iz)**2) 
-                  if (EqualRealNos(r_tmp,0.0_ReKi) ) then
-                     S = 0.0_ReKi 
-                     C = 0.0_ReKi
-                     dvdtheta_r = 0.0_ReKi
-                  else
-                     S=p%z(iz)/r_tmp ! Sine
-                     C=p%y(iy)/r_tmp ! Cosine
-                     dvdtheta_r = (m%dvx_dy(iy,iz,i) * (-p%z(iz)) + m%dvx_dz(iy,iz,i) * p%y(iy)) / r_tmp
-                  endif
-                  dvdr = m%dvx_dy(iy,iz,i) * C  + m%dvx_dz(iy,iz,i) * S
-                  ! Calculate scaling factor k_mt for wake-added Turbulence
-                  y%WAT_k_mt(iy,iz,i) = p%WAT_k_Def *  abs(1 - ((xd%Vx_wind_disk_filt(i)+y%Vx_wake2(iy,iz,i))/xd%Vx_wind_disk_filt(i)) ) & 
-                                      + p%WAT_k_Grad/xd%Vx_wind_disk_filt(i) * R * ( abs(dvdr) + abs(dvdtheta_r) )
-               end do ! iy
-            end do ! iz
-         endif
-      end do ! i, plane
+      if (p%Mod_Wake == Mod_Wake_Polar) then
+!FIXME: need equations for polar wake.
+      else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
+         R = u%D_Rotor /2
+         do i = 1,maxPln  
+            if ( EqualRealNos( xd%Vx_wind_disk_filt(i), 0.0_ReKi ) ) then
+               y%WAT_k_mt(:,:,i) = 0.0_ReKi
+            else
+               do iz = -p%NumRadii+1, p%NumRadii-1
+                  do iy = -p%NumRadii+1, p%NumRadii-1
+                     ! Polar gradients
+                     r_tmp =  sqrt(p%y(iy)**2 + p%z(iz)**2) 
+                     if (EqualRealNos(r_tmp,0.0_ReKi) ) then
+                        S = 0.0_ReKi 
+                        C = 0.0_ReKi
+                        dvdtheta_r = 0.0_ReKi
+                     else
+                        S=p%z(iz)/r_tmp ! Sine
+                        C=p%y(iy)/r_tmp ! Cosine
+                        dvdtheta_r = (m%dvx_dy(iy,iz,i) * (-p%z(iz)) + m%dvx_dz(iy,iz,i) * p%y(iy)) / r_tmp
+                     endif
+                     dvdr = m%dvx_dy(iy,iz,i) * C  + m%dvx_dz(iy,iz,i) * S
+                     ! Calculate scaling factor k_mt for wake-added Turbulence (equation 16)
+                     y%WAT_k_mt(iy,iz,i) = p%WAT_k_Def *  abs(1 - ((xd%Vx_wind_disk_filt(i)+y%Vx_wake2(iy,iz,i))/xd%Vx_wind_disk_filt(i)) ) & 
+                                         + p%WAT_k_Grad/xd%Vx_wind_disk_filt(i) * R * ( abs(dvdr) + abs(dvdtheta_r) )
+                  end do ! iy
+               end do ! iz
+            endif
+         end do ! i, plane
+      endif
 
    end if
    
