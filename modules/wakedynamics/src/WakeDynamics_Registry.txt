@@ -205,5 +205,5 @@ typedef      ^      OutputType         ReKi       Vy_wake2             {:}{:}{:}
 typedef      ^      OutputType         ReKi       Vz_wake2             {:}{:}{:} -    -      "Transverse nominally vertical wake velocity deficit at wake planes, distributed across the plane"      m/s
 typedef      ^      OutputType         ReKi       D_wake               {:}     -      -      "Wake diameters at wake planes"     m
 typedef      ^      OutputType         ReKi       x_plane              {:}     -      -      "Downwind distance from rotor to each wake plane"      m
-typedef      ^      OutputType         ReKi       WAT_k_mt             {:}{:}{:}  -   -      "Scaling factor k_mt(iP,y,z) for wake-added turbulence"    -
+typedef      ^      OutputType         ReKi       WAT_k                {:}{:}{:}  -   -      "Scaling factor k_mt(iP,y,z) for wake-added turbulence"    -
 

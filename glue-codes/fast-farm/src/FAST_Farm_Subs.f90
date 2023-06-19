@@ -1913,7 +1913,7 @@ SUBROUTINE Transfer_WD_to_AWAE(farm)
       farm%AWAE%u%Vz_wake(:,:,:,nt)  = farm%WD(nt)%y%Vz_wake2       ! "Vertical" wake velocity deficit at wake planes, distributed radially, for each turbine
       farm%AWAE%u%D_wake(:,nt)       = farm%WD(nt)%y%D_wake         ! Wake diameters at wake planes for each turbine
       if (farm%p%WAT /= Mod_WAT_None) then
-         farm%AWAE%u%WAT_k(:,:,:,nt) = farm%WD(nt)%y%WAT_k_mt       ! scaling factor for each wake plane for WAT
+         farm%AWAE%u%WAT_k(:,:,:,nt) = farm%WD(nt)%y%WAT_k          ! scaling factor for each wake plane for WAT
       endif
    END DO
    

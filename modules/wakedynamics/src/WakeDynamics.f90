@@ -604,7 +604,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
    allocate ( y%D_wake    (0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%D_wake.' )) return;
    allocate ( y%x_plane   (0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%x_plane.')) return;
-   allocate ( y%WAT_k_mt (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%WAT_k_mt.')) return;
+   allocate ( y%WAT_k    (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('y%WAT_k.')) return;
    
    y%xhat_plane = 0.0_Reki
    y%p_plane    = 0.0_Reki
@@ -615,7 +615,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    y%Vz_wake2   = 0.0_Reki
    y%D_wake     = 0.0_Reki
    y%x_plane    = 0.0_Reki
-   y%WAT_k_mt   = 0.0_Reki
+   y%WAT_k      = 0.0_Reki
 
 contains
    logical function Failed()
@@ -1548,7 +1548,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
          R = u%D_Rotor /2
          do i = 1,maxPln  
             if ( EqualRealNos( xd%Vx_wind_disk_filt(i), 0.0_ReKi ) ) then
-               y%WAT_k_mt(:,:,i) = 0.0_ReKi
+               y%WAT_k(:,:,i) = 0.0_ReKi
             else
                do iz = -p%NumRadii+1, p%NumRadii-1
                   do iy = -p%NumRadii+1, p%NumRadii-1
@@ -1565,7 +1565,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
                      endif
                      dvdr = m%dvx_dy(iy,iz,i) * C  + m%dvx_dz(iy,iz,i) * S
                      ! Calculate scaling factor k_mt for wake-added Turbulence (equation 16)
-                     y%WAT_k_mt(iy,iz,i) = p%WAT_k_Def *  abs(1 - ((xd%Vx_wind_disk_filt(i)+y%Vx_wake2(iy,iz,i))/xd%Vx_wind_disk_filt(i)) ) & 
+                     y%WAT_k(iy,iz,i) = p%WAT_k_Def *  abs(1 - ((xd%Vx_wind_disk_filt(i)+y%Vx_wake2(iy,iz,i))/xd%Vx_wind_disk_filt(i)) ) & 
                                          + p%WAT_k_Grad/xd%Vx_wind_disk_filt(i) * R * ( abs(dvdr) + abs(dvdtheta_r) )
                   end do ! iy
                end do ! iz
@@ -1620,7 +1620,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
                call vtk_point_data_scalar(m%dvx_dz(:,:,i),'dvx_dz', mvtk) 
             endif
             if ( p%WAT ) then
-               call vtk_point_data_scalar(y%WAT_k_mt(:,:,i),'k_mt', mvtk)
+               call vtk_point_data_scalar(y%WAT_k(:,:,i),'WAT_k', mvtk)
             endif             
             call vtk_close_file(mvtk)
          endif

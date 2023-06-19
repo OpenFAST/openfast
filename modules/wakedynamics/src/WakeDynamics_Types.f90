@@ -225,7 +225,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Vz_wake2      !< Transverse nominally vertical wake velocity deficit at wake planes, distributed across the plane [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: D_wake      !< Wake diameters at wake planes [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: x_plane      !< Downwind distance from rotor to each wake plane [m]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WAT_k_mt      !< Scaling factor k_mt(iP,y,z) for wake-added turbulence [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WAT_k      !< Scaling factor k_mt(iP,y,z) for wake-added turbulence [-]
   END TYPE WD_OutputType
 ! =======================
 CONTAINS
@@ -5046,21 +5046,21 @@ IF (ALLOCATED(SrcOutputData%x_plane)) THEN
   END IF
     DstOutputData%x_plane = SrcOutputData%x_plane
 ENDIF
-IF (ALLOCATED(SrcOutputData%WAT_k_mt)) THEN
-  i1_l = LBOUND(SrcOutputData%WAT_k_mt,1)
-  i1_u = UBOUND(SrcOutputData%WAT_k_mt,1)
-  i2_l = LBOUND(SrcOutputData%WAT_k_mt,2)
-  i2_u = UBOUND(SrcOutputData%WAT_k_mt,2)
-  i3_l = LBOUND(SrcOutputData%WAT_k_mt,3)
-  i3_u = UBOUND(SrcOutputData%WAT_k_mt,3)
-  IF (.NOT. ALLOCATED(DstOutputData%WAT_k_mt)) THEN 
-    ALLOCATE(DstOutputData%WAT_k_mt(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcOutputData%WAT_k)) THEN
+  i1_l = LBOUND(SrcOutputData%WAT_k,1)
+  i1_u = UBOUND(SrcOutputData%WAT_k,1)
+  i2_l = LBOUND(SrcOutputData%WAT_k,2)
+  i2_u = UBOUND(SrcOutputData%WAT_k,2)
+  i3_l = LBOUND(SrcOutputData%WAT_k,3)
+  i3_u = UBOUND(SrcOutputData%WAT_k,3)
+  IF (.NOT. ALLOCATED(DstOutputData%WAT_k)) THEN 
+    ALLOCATE(DstOutputData%WAT_k(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WAT_k_mt.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WAT_k.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstOutputData%WAT_k_mt = SrcOutputData%WAT_k_mt
+    DstOutputData%WAT_k = SrcOutputData%WAT_k
 ENDIF
  END SUBROUTINE WD_CopyOutput
 
@@ -5104,8 +5104,8 @@ ENDIF
 IF (ALLOCATED(OutputData%x_plane)) THEN
   DEALLOCATE(OutputData%x_plane)
 ENDIF
-IF (ALLOCATED(OutputData%WAT_k_mt)) THEN
-  DEALLOCATE(OutputData%WAT_k_mt)
+IF (ALLOCATED(OutputData%WAT_k)) THEN
+  DEALLOCATE(OutputData%WAT_k)
 ENDIF
  END SUBROUTINE WD_DestroyOutput
 
@@ -5189,10 +5189,10 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! x_plane upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%x_plane)  ! x_plane
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! WAT_k_mt allocated yes/no
-  IF ( ALLOCATED(InData%WAT_k_mt) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! WAT_k_mt upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WAT_k_mt)  ! WAT_k_mt
+  Int_BufSz   = Int_BufSz   + 1     ! WAT_k allocated yes/no
+  IF ( ALLOCATED(InData%WAT_k) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! WAT_k upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WAT_k)  ! WAT_k
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -5406,26 +5406,26 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%WAT_k_mt) ) THEN
+  IF ( .NOT. ALLOCATED(InData%WAT_k) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WAT_k_mt,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WAT_k_mt,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WAT_k,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WAT_k,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WAT_k_mt,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WAT_k_mt,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WAT_k,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WAT_k,2)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WAT_k_mt,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WAT_k_mt,3)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WAT_k,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WAT_k,3)
     Int_Xferred = Int_Xferred + 2
 
-      DO i3 = LBOUND(InData%WAT_k_mt,3), UBOUND(InData%WAT_k_mt,3)
-        DO i2 = LBOUND(InData%WAT_k_mt,2), UBOUND(InData%WAT_k_mt,2)
-          DO i1 = LBOUND(InData%WAT_k_mt,1), UBOUND(InData%WAT_k_mt,1)
-            ReKiBuf(Re_Xferred) = InData%WAT_k_mt(i1,i2,i3)
+      DO i3 = LBOUND(InData%WAT_k,3), UBOUND(InData%WAT_k,3)
+        DO i2 = LBOUND(InData%WAT_k,2), UBOUND(InData%WAT_k,2)
+          DO i1 = LBOUND(InData%WAT_k,1), UBOUND(InData%WAT_k,1)
+            ReKiBuf(Re_Xferred) = InData%WAT_k(i1,i2,i3)
             Re_Xferred = Re_Xferred + 1
           END DO
         END DO
@@ -5674,7 +5674,7 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WAT_k_mt not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WAT_k not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -5687,16 +5687,16 @@ ENDIF
     i3_l = IntKiBuf( Int_Xferred    )
     i3_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WAT_k_mt)) DEALLOCATE(OutData%WAT_k_mt)
-    ALLOCATE(OutData%WAT_k_mt(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%WAT_k)) DEALLOCATE(OutData%WAT_k)
+    ALLOCATE(OutData%WAT_k(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAT_k_mt.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAT_k.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i3 = LBOUND(OutData%WAT_k_mt,3), UBOUND(OutData%WAT_k_mt,3)
-        DO i2 = LBOUND(OutData%WAT_k_mt,2), UBOUND(OutData%WAT_k_mt,2)
-          DO i1 = LBOUND(OutData%WAT_k_mt,1), UBOUND(OutData%WAT_k_mt,1)
-            OutData%WAT_k_mt(i1,i2,i3) = ReKiBuf(Re_Xferred)
+      DO i3 = LBOUND(OutData%WAT_k,3), UBOUND(OutData%WAT_k,3)
+        DO i2 = LBOUND(OutData%WAT_k,2), UBOUND(OutData%WAT_k,2)
+          DO i1 = LBOUND(OutData%WAT_k,1), UBOUND(OutData%WAT_k,1)
+            OutData%WAT_k(i1,i2,i3) = ReKiBuf(Re_Xferred)
             Re_Xferred = Re_Xferred + 1
           END DO
         END DO
