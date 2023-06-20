@@ -102,7 +102,8 @@ PROGRAM BeamDyn_Driver_Program
    BD_InitInput%RootName = TRIM(RootName)//'.BD'
    BD_InitInput%RootDisp = MATMUL(BD_InitInput%GlbPos(:),DvrData%RootRelInit) - BD_InitInput%GlbPos(:)
    BD_InitInput%DynamicSolve = DvrData%DynamicSolve      ! QuasiStatic options handled within the BD code.
-
+   BD_InitInput%CompAeroMaps = .false.
+   
    t_global = DvrData%t_initial
    n_t_final = ((DvrData%t_final - DvrData%t_initial) / dt_global )
 

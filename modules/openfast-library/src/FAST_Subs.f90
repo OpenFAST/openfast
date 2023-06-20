@@ -237,6 +237,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       END IF
 
    Init%InData_ED%Linearize = p_FAST%Linearize
+   Init%InData_ED%CompAeroMaps = .FALSE.
+   Init%InData_ED%RotSpeed = 0.0 ! will set this in a future commit that includes the OpenFAST AeroMap/Steady-State solver
    Init%InData_ED%InputFile = p_FAST%EDFile
    IF ( p_FAST%CompAero == Module_AD14 ) THEN
       Init%InData_ED%ADInputFile = p_FAST%AeroFile
@@ -333,6 +335,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_BD%DynamicSolve = .TRUE.       ! FAST can only couple to BeamDyn when dynamic solve is used.
 
       Init%InData_BD%Linearize = p_FAST%Linearize
+      Init%InData_BD%CompAeroMaps = .FALSE.
       Init%InData_BD%gravity      = (/ 0.0_ReKi, 0.0_ReKi, -p_FAST%Gravity /)       ! "Gravitational acceleration" m/s^2
       
          ! now initialize BeamDyn for all beams

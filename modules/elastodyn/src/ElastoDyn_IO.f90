@@ -3574,12 +3574,12 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
    !----------- OUTLIST  -----------------------------------------------------------
       ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it and assume that this section does not exist.
    ErrMsg_NoAllBldNdOuts='Nodal outputs section of ElastoDyn input file not found or improperly formatted.'
+   InputFileData%BldNd_NumOuts   = 0 ! initialize in case of error
+   InputFileData%BldNd_BladesOut = 0 ! initialize in case of error
 
    !----------- OUTLIST for BldNd -----------------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: OutList for Blade node channels', ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
-      InputFileData%BldNd_BladesOut = 0
-      InputFileData%BldNd_NumOuts = 0
       call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN
@@ -3592,7 +3592,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
    CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BladesOut, 'BldNd_BladesOut', 'Which blades to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
       InputFileData%BldNd_BladesOut = 0
-      InputFileData%BldNd_NumOuts = 0
       call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN
@@ -3603,8 +3602,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
       ! TODO: Parse this string into an array of nodes to output at (one idea is to set an array of boolean to T/F for which nodes to output).  At present, we ignore it entirely.
    CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BlOutNd_Str, 'BldNd_BlOutNd_Str', 'Which nodes to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
-      InputFileData%BldNd_BladesOut = 0
-      InputFileData%BldNd_NumOuts = 0
       call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN
@@ -3614,8 +3611,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
       ! Section header for outlist
    CALL ReadCom( UnIn, InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
-      InputFileData%BldNd_BladesOut = 0
-      InputFileData%BldNd_NumOuts = 0
       call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN
@@ -3624,12 +3619,13 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
 
       ! OutList - List of user-requested output channels at each node(-):
    CALL ReadOutputList ( UnIn, InputFile, InputFileData%BldNd_OutList, InputFileData%BldNd_NumOuts, 'BldNd_OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
-   IF ( ErrStat2 >= AbortErrLev ) THEN
-      InputFileData%BldNd_BladesOut = 0
+   IF ( ErrStat2 >= AbortErrLev .and. InputFileData%BldNd_NumOuts < 1) THEN
       InputFileData%BldNd_NumOuts = 0
       call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN
+   ELSE
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ENDIF
    !---------------------- END OF FILE -----------------------------------------
    
@@ -4131,9 +4127,7 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
    REAL(ReKi)                               :: SmallAngleLimit_Rad                 ! Largest input angle considered "small" (check in input file), radians
    INTEGER(IntKi)                           :: I                                   ! loop counter
    INTEGER(IntKi)                           :: K                                   ! blade number
-   INTEGER(IntKi)                           :: FmtWidth                            ! width of the field returned by the specified OutFmt
-   INTEGER(IntKi)                           :: ErrStat2                            ! Temporary error status
-   CHARACTER(ErrMsgLen)                     :: ErrMsg2                             ! Temporary rror message
+   !!INTEGER(IntKi)                           :: FmtWidth                            ! width of the field returned by the specified OutFmt
    CHARACTER(*), PARAMETER                  :: RoutineName = 'ValidatePrimaryData'
 
       ! Initialize error status and angle limit defined locally (in correct units)
@@ -4212,7 +4206,7 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
       ! Check that the gearbox efficiency is valid:
    IF ( ( InputFileData%GBoxEff <= 0.0_ReKi ) .OR. ( InputFileData%GBoxEff > 1.0_ReKi ) ) THEN
          CALL SetErrStat( ErrID_Fatal, 'GBoxEff must be in the range (0,1] (i.e., (0,100] percent).',ErrStat,ErrMsg,RoutineName )
-      ENDIF
+   ENDIF
 
       ! warn if 2nd modes are enabled without their corresponding 1st modes
 

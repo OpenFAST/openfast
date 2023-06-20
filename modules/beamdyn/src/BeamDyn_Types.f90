@@ -53,6 +53,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: HubRot      !< Initial Hub direction cosine matrix [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     LOGICAL  :: DynamicSolve = .TRUE.      !< Use dynamic solve option.  Set to False for static solving (handled by glue code or driver code). [-]
+    LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false) [-]
   END TYPE BD_InitInputType
 ! =======================
 ! =========  BD_InitOutputType  =======
@@ -237,6 +238,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Jac_nx      !< half the number of continuous states in jacobian matrix [-]
     LOGICAL  :: RotStates      !< Orient states in rotating frame during linearization? (flag) [-]
     LOGICAL  :: RelStates      !< Define states relative to root motion during linearization? (flag) [-]
+    LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false) [-]
   END TYPE BD_ParameterType
 ! =======================
 ! =========  BD_InputType  =======
@@ -364,6 +366,7 @@ CONTAINS
     DstInitInputData%HubRot = SrcInitInputData%HubRot
     DstInitInputData%Linearize = SrcInitInputData%Linearize
     DstInitInputData%DynamicSolve = SrcInitInputData%DynamicSolve
+    DstInitInputData%CompAeroMaps = SrcInitInputData%CompAeroMaps
  END SUBROUTINE BD_CopyInitInput
 
  SUBROUTINE BD_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -436,6 +439,7 @@ CONTAINS
       Db_BufSz   = Db_BufSz   + SIZE(InData%HubRot)  ! HubRot
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
       Int_BufSz  = Int_BufSz  + 1  ! DynamicSolve
+      Int_BufSz  = Int_BufSz  + 1  ! CompAeroMaps
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -512,6 +516,8 @@ CONTAINS
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Linearize, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%DynamicSolve, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%CompAeroMaps, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE BD_PackInitInput
 
@@ -616,6 +622,8 @@ CONTAINS
     OutData%Linearize = TRANSFER(IntKiBuf(Int_Xferred), OutData%Linearize)
     Int_Xferred = Int_Xferred + 1
     OutData%DynamicSolve = TRANSFER(IntKiBuf(Int_Xferred), OutData%DynamicSolve)
+    Int_Xferred = Int_Xferred + 1
+    OutData%CompAeroMaps = TRANSFER(IntKiBuf(Int_Xferred), OutData%CompAeroMaps)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE BD_UnPackInitInput
 
@@ -4132,6 +4140,7 @@ ENDIF
     DstParamData%Jac_nx = SrcParamData%Jac_nx
     DstParamData%RotStates = SrcParamData%RotStates
     DstParamData%RelStates = SrcParamData%RelStates
+    DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
  END SUBROUTINE BD_CopyParam
 
  SUBROUTINE BD_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -4531,6 +4540,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! Jac_nx
       Int_BufSz  = Int_BufSz  + 1  ! RotStates
       Int_BufSz  = Int_BufSz  + 1  ! RelStates
+      Int_BufSz  = Int_BufSz  + 1  ! CompAeroMaps
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -5339,6 +5349,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%RotStates, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%RelStates, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%CompAeroMaps, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE BD_PackParam
 
@@ -6301,6 +6313,8 @@ ENDIF
     OutData%RotStates = TRANSFER(IntKiBuf(Int_Xferred), OutData%RotStates)
     Int_Xferred = Int_Xferred + 1
     OutData%RelStates = TRANSFER(IntKiBuf(Int_Xferred), OutData%RelStates)
+    Int_Xferred = Int_Xferred + 1
+    OutData%CompAeroMaps = TRANSFER(IntKiBuf(Int_Xferred), OutData%CompAeroMaps)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE BD_UnPackParam
 
