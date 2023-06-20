@@ -401,7 +401,8 @@ SUBROUTINE WAT_init( p, WAT_IfW, AWAE_InitInput, ErrStat, ErrMsg )
    IfW_InitInp%PassedFileData%FF%SF(1:3)        =  1.0_ReKi    ! Turbulence scaling factor for the x direction (-)   [ScaleMethod=1]
 
    ! HAWC wind profile
-   IfW_InitInp%PassedFileData%FF%URef           =  0.0_ReKi    ! Mean u-component wind speed at the reference height (m/s)
+   IfW_InitInp%PassedFileData%FF%URef           =  1.0_ReKi    ! Set to 1.0 so that dX = DTime (this affects data storage)
+   IfW_InitInp%PassedFileData%FF%URef           =  1.0_ReKi    ! Set to 1.0 so that dX = DTime (this affects data storage)
    IfW_InitInp%PassedFileData%FF%WindProfileType=  0           ! Wind profile type (0=constant;1=logarithmic,2=power law)
    IfW_InitInp%PassedFileData%FF%XOffset        =  0.0_ReKi    ! Initial offset in +x direction (shift of wind box)
 

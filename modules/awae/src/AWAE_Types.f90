@@ -231,7 +231,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: VTK_tWidth      !< Number of characters for VTK timestamp outputs [-]
     LOGICAL  :: WAT_Enabled      !< Switch for turning on and off wake-added turbulence [-]
     TYPE(FlowFieldType) , POINTER :: WAT_FlowField => NULL()      !< Pointer to the InflowWinds flow field data type [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: WAT_d_box      !< Spacing (delta x, delta y, delta z) of unit turbulence box for WAT [m]
   END TYPE AWAE_ParameterType
 ! =======================
 ! =========  AWAE_OutputType  =======
@@ -5769,7 +5768,6 @@ ENDIF
     DstParamData%VTK_tWidth = SrcParamData%VTK_tWidth
     DstParamData%WAT_Enabled = SrcParamData%WAT_Enabled
     DstParamData%WAT_FlowField => SrcParamData%WAT_FlowField
-    DstParamData%WAT_d_box = SrcParamData%WAT_d_box
  END SUBROUTINE AWAE_CopyParam
 
  SUBROUTINE AWAE_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -6004,7 +6002,6 @@ NULLIFY(ParamData%WAT_FlowField)
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%OutFileVTKRoot)  ! OutFileVTKRoot
       Int_BufSz  = Int_BufSz  + 1  ! VTK_tWidth
       Int_BufSz  = Int_BufSz  + 1  ! WAT_Enabled
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WAT_d_box)  ! WAT_d_box
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -6387,10 +6384,6 @@ NULLIFY(ParamData%WAT_FlowField)
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%WAT_Enabled, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
-    DO i1 = LBOUND(InData%WAT_d_box,1), UBOUND(InData%WAT_d_box,1)
-      ReKiBuf(Re_Xferred) = InData%WAT_d_box(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
  END SUBROUTINE AWAE_PackParam
 
  SUBROUTINE AWAE_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -6837,12 +6830,6 @@ NULLIFY(ParamData%WAT_FlowField)
     OutData%WAT_Enabled = TRANSFER(IntKiBuf(Int_Xferred), OutData%WAT_Enabled)
     Int_Xferred = Int_Xferred + 1
   NULLIFY(OutData%WAT_FlowField)
-    i1_l = LBOUND(OutData%WAT_d_box,1)
-    i1_u = UBOUND(OutData%WAT_d_box,1)
-    DO i1 = LBOUND(OutData%WAT_d_box,1), UBOUND(OutData%WAT_d_box,1)
-      OutData%WAT_d_box(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
  END SUBROUTINE AWAE_UnPackParam
 
  SUBROUTINE AWAE_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )

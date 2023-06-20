@@ -212,7 +212,6 @@ typedef  ^  ParameterType  IntKi            VTK_tWidth         -  - -   "Number 
 #wake added turbulence
 typedef  ^  ParameterType  Logical          WAT_Enabled        -  - -   "Switch for turning on and off wake-added turbulence" -
 typedef  ^  ParameterType  FlowFieldType   *WAT_FlowField      -  - -   "Pointer to the InflowWinds flow field data type" -
-typedef  ^  ParameterType  ReKi              WAT_d_box        {3} - -   "Spacing (delta x, delta y, delta z) of unit turbulence box for WAT" m
 
 
 # ..... Outputs ....................................................................................................................
