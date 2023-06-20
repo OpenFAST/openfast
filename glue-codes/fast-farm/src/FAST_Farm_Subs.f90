@@ -221,6 +221,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       ! a. read WAT input files using InflowWind
    if (farm%p%WAT /= Mod_WAT_None) then
       call WAT_init( farm%p, farm%WAT_IfW, AWAE_InitInput, ErrStat2, ErrMsg2 )
+      if(Failed()) return;
    endif
 
       !-------------------
@@ -470,10 +471,10 @@ contains
       if (index(FileName,'.u')>0) then
          BaseName = FileName(1:l-2)
          Ending(1)= '.u'
-         inquire(file=trim(FileName)//trim(Ending(1)), exist=foundfile)
+         inquire(file=trim(BaseName)//trim(Ending(1)), exist=foundfile)
          if (.not. foundFile) then
             ErrStat3 = ErrID_Fatal
-            ErrMsg3  = 'Cannot find wake added turbulence Mann box file with name '//trim(FileName)//trim(Ending(1))
+            ErrMsg3  = 'Cannot find wake added turbulence Mann box file with name '//trim(BaseName)//trim(Ending(1))
          endif
          Ending(2)= '.v'
          Ending(3)= '.w'
@@ -481,10 +482,10 @@ contains
       elseif (index(FileName,'u.bin') > 0) then
          BaseName = FileName(1:l-4)
          Ending(1)= 'u.bin'
-         inquire(file=trim(FileName)//trim(Ending(1)), exist=foundfile)
+         inquire(file=trim(BaseName)//trim(Ending(1)), exist=foundfile)
          if (.not. foundFile) then
             ErrStat3 = ErrID_Fatal
-            ErrMsg3  = 'Cannot find wake added turbulence Mann box file with name '//trim(FileName)//trim(Ending(1))
+            ErrMsg3  = 'Cannot find wake added turbulence Mann box file with name '//trim(BaseName)//trim(Ending(1))
          endif
          Ending(2)= 'v.bin'
          Ending(3)= 'w.bin'
@@ -495,17 +496,17 @@ contains
          Ending(1)= '.u'
          Ending(2)= '.v'
          Ending(3)= '.w'
-         inquire(file=trim(FileName)//trim(Ending(1)),  exist=foundFile)
+         inquire(file=trim(BaseName)//trim(Ending(1)),  exist=foundFile)
          if (foundFile) return
          ! is it u.bin for file ending
          Ending(1)= 'u.bin'
          Ending(2)= 'v.bin'
          Ending(3)= 'w.bin'
-         inquire(file=trim(FileName)//trim(Ending(1)),  exist=foundFile)
+         inquire(file=trim(BaseName)//trim(Ending(1)),  exist=foundFile)
          if (foundFile) return
          ! didn't find file, so error out
          ErrStat3 = ErrID_Fatal
-         ErrMsg3  = 'Cannot find wake added turbulence Mann box file with name '//trim(FileName)//'.u '//' or '//trim(FileName)//'u.bin '
+         ErrMsg3  = 'Cannot find wake added turbulence Mann box file with name '//trim(BaseName)//'.u '//' or '//trim(BaseName)//'u.bin '
       endif
    end subroutine SplitFileName
    !> If it is a filename of a library, expect following format: FFDB_512x512x64.u where:
