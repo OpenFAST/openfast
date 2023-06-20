@@ -125,11 +125,6 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       Position = PositionXYZ
    end if
 
-   ! If
-   
-      
-
-
    !----------------------------------------------------------------------------
    ! Get velocities/accelerations based on flow field type
    !----------------------------------------------------------------------------

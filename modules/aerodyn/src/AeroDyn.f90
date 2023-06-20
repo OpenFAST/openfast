@@ -7052,11 +7052,11 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    CASE (24) !Module/Mesh/Field: u%BladeMotion(3)%TranslationAcc = 24;
       u%BladeMotion(3)%TranslationAcc(fieldIndx,node) = u%BladeMotion(3)%TranslationAcc(fieldIndx,node) + du * perturb_sign
 
-   CASE (25) !Module/Mesh/Field: u%InflowOnBlade(:,:,1) = 25;
+   CASE (25) !Module/Mesh/Field: u%Bld(1)%InflowOnBlade(:,:) = 25;
       u%Bld(1)%InflowOnBlade(fieldIndx,node) = u%Bld(1)%InflowOnBlade(fieldIndx,node) + du * perturb_sign
-   CASE (26) !Module/Mesh/Field: u%InflowOnBlade(:,:,2) = 26;
+   CASE (26) !Module/Mesh/Field: u%Bld(2)%InflowOnBlade(:,:) = 26;
       u%Bld(2)%InflowOnBlade(fieldIndx,node) = u%Bld(2)%InflowOnBlade(fieldIndx,node) + du * perturb_sign
-   CASE (27) !Module/Mesh/Field: u%InflowOnBlade(:,:,3) = 27;
+   CASE (27) !Module/Mesh/Field: u%Bld(3)%InflowOnBlade(:,:) = 27;
       u%Bld(3)%InflowOnBlade(fieldIndx,node) = u%Bld(3)%InflowOnBlade(fieldIndx,node) + du * perturb_sign
       
    CASE (28) !Module/Mesh/Field: u%InflowOnTower(:,:)   = 28;
