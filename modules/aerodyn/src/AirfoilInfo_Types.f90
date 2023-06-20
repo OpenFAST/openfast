@@ -1257,58 +1257,59 @@ subroutine AFI_UnPackOutput(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
- SUBROUTINE AFI_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg )
-!
-! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
-! values of y (which has values associated with times in t).  Order of the interpolation is given by the size of y
-!
-!  expressions below based on either
-!
-!  f(t) = a
-!  f(t) = a + b * t, or
-!  f(t) = a + b * t + c * t**2
-!
-!  where a, b and c are determined as the solution to
-!  f(t1) = y1, f(t2) = y2, f(t3) = y3  (as appropriate)
-!
-!..................................................................................................................................
-
- TYPE(AFI_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
- REAL(ReKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
- TYPE(AFI_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
- REAL(ReKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+subroutine AFI_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg)
+   !
+   ! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
+   ! values of y (which has values associated with times in t).  Order of the interpolation is given by the size of y
+   !
+   !  expressions below based on either
+   !
+   !  f(t) = a
+   !  f(t) = a + b * t, or
+   !  f(t) = a + b * t + c * t**2
+   !
+   !  where a, b and c are determined as the solution to
+   !  f(t1) = y1, f(t2) = y2, f(t3) = y3  (as appropriate)
+   !
+   !----------------------------------------------------------------------------------------------------------------------------------
+   
+   type(AFI_OutputType), intent(in)  :: y(:) ! Output at t1 > t2 > t3
+   real(ReKi),                 intent(in   )  :: t(:)           ! Times associated with the Outputs
+   type(AFI_OutputType), intent(inout)  :: y_out ! Output at tin_out
+   real(ReKi),                 intent(in   )  :: t_out           ! time to be extrap/interp'd to
+   integer(IntKi),             intent(  out)  :: ErrStat         ! Error status of the operation
+   character(*),               intent(  out)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
    ! local variables
- INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
- INTEGER(IntKi)                             :: ErrStat2        ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
- CHARACTER(*),    PARAMETER                 :: RoutineName = 'AFI_Output_ExtrapInterp'
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
- if ( size(t) .ne. size(y)) then
-    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(y)',ErrStat,ErrMsg,RoutineName)
-    RETURN
- endif
- order = SIZE(y) - 1
- IF ( order .eq. 0 ) THEN
-   CALL AFI_CopyOutput(y(1), y_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 1 ) THEN
-   CALL AFI_Output_ExtrapInterp1(y(1), y(2), t, y_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 2 ) THEN
-   CALL AFI_Output_ExtrapInterp2(y(1), y(2), y(3), t, y_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE 
-   CALL SetErrStat(ErrID_Fatal,'size(y) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
-   RETURN
- ENDIF 
- END SUBROUTINE AFI_Output_ExtrapInterp
+   integer(IntKi)                             :: order           ! order of polynomial fit (max 2)
+   integer(IntKi)                             :: ErrStat2        ! local errors
+   character(ErrMsgLen)                       :: ErrMsg2         ! local errors
+   character(*),    PARAMETER                 :: RoutineName = 'AFI_Output_ExtrapInterp'
+   
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (size(t) /= size(y)) then
+      call SetErrStat(ErrID_Fatal, 'size(t) must equal size(y)', ErrStat, ErrMsg, RoutineName)
+      return
+   endif
+   order = size(y) - 1
+   select case (order)
+   case (0)
+      call AFI_CopyOutput(y(1), y_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case (1)
+      call AFI_Output_ExtrapInterp1(y(1), y(2), t, y_out, t_out, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case (2)
+      call AFI_Output_ExtrapInterp2(y(1), y(2), y(3), t, y_out, t_out, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case default
+      call SetErrStat(ErrID_Fatal, 'size(y) must be less than 4 (order must be less than 3).', ErrStat, ErrMsg, RoutineName)
+      return
+   end select
+end subroutine
 
-
- SUBROUTINE AFI_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg )
+SUBROUTINE AFI_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
 ! values of y (which has values associated with times in t).  Order of the interpolation is 1.
@@ -1320,57 +1321,49 @@ end subroutine
 !
 !..................................................................................................................................
 
- TYPE(AFI_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
- TYPE(AFI_OutputType), INTENT(IN)  :: y2    ! Output at t2 
- REAL(ReKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
- TYPE(AFI_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
- REAL(ReKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
- INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
- CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
+   TYPE(AFI_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
+   TYPE(AFI_OutputType), INTENT(IN)  :: y2    ! Output at t2 
+   REAL(ReKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
+   TYPE(AFI_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
+   REAL(ReKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
+   INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
+   CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(ReKi)                                 :: t(2)     ! Times associated with the Outputs
- REAL(ReKi)                                 :: t_out    ! Time to which to be extrap/interpd
- CHARACTER(*),                    PARAMETER :: RoutineName = 'AFI_Output_ExtrapInterp1'
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
-   IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+   REAL(ReKi)                                 :: t(2)     ! Times associated with the Outputs
+   REAL(ReKi)                                 :: t_out    ! Time to which to be extrap/interpd
+   CHARACTER(*),                    PARAMETER :: RoutineName = 'AFI_Output_ExtrapInterp1'
+   REAL(DbKi)                                 :: a1, a2   ! temporary for extrapolation/interpolation
+   INTEGER(IntKi)                             :: ErrStat2 ! local errors
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! we'll subtract a constant from the times to resolve some 
+   ! numerical issues when t gets large (and to simplify the equations)
+   t = tin - tin(1)
+   t_out = tin_out - tin(1)
+   
+   IF (EqualRealNos(t(1), t(2))) THEN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg, RoutineName)
+      RETURN
    END IF
+   
+   ! Calculate weighting factors from Lagrange polynomial
+   a1 = -(t_out - t(2))/t(2)
+   a2 = t_out/t(2)
+   
+   y_out%Cl = a1*y1%Cl + a2*y2%Cl
+   y_out%Cd = a1*y1%Cd + a2*y2%Cd
+   y_out%Cm = a1*y1%Cm + a2*y2%Cm
+   y_out%Cpmin = a1*y1%Cpmin + a2*y2%Cpmin
+   y_out%Cd0 = a1*y1%Cd0 + a2*y2%Cd0
+   y_out%Cm0 = a1*y1%Cm0 + a2*y2%Cm0
+   y_out%f_st = a1*y1%f_st + a2*y2%f_st
+   y_out%FullySeparate = a1*y1%FullySeparate + a2*y2%FullySeparate
+   y_out%FullyAttached = a1*y1%FullyAttached + a2*y2%FullyAttached
+END SUBROUTINE
 
-   ScaleFactor = t_out / t(2)
-  b = -(y1%Cl - y2%Cl)
-  y_out%Cl = y1%Cl + b * ScaleFactor
-  b = -(y1%Cd - y2%Cd)
-  y_out%Cd = y1%Cd + b * ScaleFactor
-  b = -(y1%Cm - y2%Cm)
-  y_out%Cm = y1%Cm + b * ScaleFactor
-  b = -(y1%Cpmin - y2%Cpmin)
-  y_out%Cpmin = y1%Cpmin + b * ScaleFactor
-  b = -(y1%Cd0 - y2%Cd0)
-  y_out%Cd0 = y1%Cd0 + b * ScaleFactor
-  b = -(y1%Cm0 - y2%Cm0)
-  y_out%Cm0 = y1%Cm0 + b * ScaleFactor
-  b = -(y1%f_st - y2%f_st)
-  y_out%f_st = y1%f_st + b * ScaleFactor
-  b = -(y1%FullySeparate - y2%FullySeparate)
-  y_out%FullySeparate = y1%FullySeparate + b * ScaleFactor
-  b = -(y1%FullyAttached - y2%FullyAttached)
-  y_out%FullyAttached = y1%FullyAttached + b * ScaleFactor
- END SUBROUTINE AFI_Output_ExtrapInterp1
-
-
- SUBROUTINE AFI_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
+SUBROUTINE AFI_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
 ! values of y (which has values associated with times in t).  Order of the interpolation is 2.
@@ -1384,126 +1377,109 @@ end subroutine
 !
 !..................................................................................................................................
 
- TYPE(AFI_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
- TYPE(AFI_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
- TYPE(AFI_OutputType), INTENT(IN)  :: y3      ! Output at t3
- REAL(ReKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
- TYPE(AFI_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
- REAL(ReKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   TYPE(AFI_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
+   TYPE(AFI_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
+   TYPE(AFI_OutputType), INTENT(IN)  :: y3      ! Output at t3
+   REAL(ReKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
+   TYPE(AFI_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
+   REAL(ReKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
+   INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+   CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(ReKi)                                 :: t(3)      ! Times associated with the Outputs
- REAL(ReKi)                                 :: t_out     ! Time to which to be extrap/interpd
- INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- CHARACTER(*),            PARAMETER         :: RoutineName = 'AFI_Output_ExtrapInterp2'
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
+   REAL(ReKi)                                 :: t(3)      ! Times associated with the Outputs
+   REAL(ReKi)                                 :: t_out     ! Time to which to be extrap/interpd
+   INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
+   REAL(DbKi)                                 :: a1,a2,a3 ! temporary for extrapolation/interpolation
+   INTEGER(IntKi)                             :: ErrStat2 ! local errors
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   CHARACTER(*),            PARAMETER         :: RoutineName = 'AFI_Output_ExtrapInterp2'
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! we'll subtract a constant from the times to resolve some 
+   ! numerical issues when t gets large (and to simplify the equations)
+   t = tin - tin(1)
+   t_out = tin_out - tin(1)
+   
    IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    END IF
+   
+   ! Calculate Lagrange polynomial coefficients
+   a1 = (t_out - t(2))*(t_out - t(3))/((t(1) - t(2))*(t(1) - t(3)))
+   a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
+   a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
+   y_out%Cl = a1*y1%Cl + a2*y2%Cl + a3*y3%Cl
+   y_out%Cd = a1*y1%Cd + a2*y2%Cd + a3*y3%Cd
+   y_out%Cm = a1*y1%Cm + a2*y2%Cm + a3*y3%Cm
+   y_out%Cpmin = a1*y1%Cpmin + a2*y2%Cpmin + a3*y3%Cpmin
+   y_out%Cd0 = a1*y1%Cd0 + a2*y2%Cd0 + a3*y3%Cd0
+   y_out%Cm0 = a1*y1%Cm0 + a2*y2%Cm0 + a3*y3%Cm0
+   y_out%f_st = a1*y1%f_st + a2*y2%f_st + a3*y3%f_st
+   y_out%FullySeparate = a1*y1%FullySeparate + a2*y2%FullySeparate + a3*y3%FullySeparate
+   y_out%FullyAttached = a1*y1%FullyAttached + a2*y2%FullyAttached + a3*y3%FullyAttached
+END SUBROUTINE
 
-   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
-  b = (t(3)**2*(y1%Cl - y2%Cl) + t(2)**2*(-y1%Cl + y3%Cl))* scaleFactor
-  c = ( (t(2)-t(3))*y1%Cl + t(3)*y2%Cl - t(2)*y3%Cl ) * scaleFactor
-  y_out%Cl = y1%Cl + b  + c * t_out
-  b = (t(3)**2*(y1%Cd - y2%Cd) + t(2)**2*(-y1%Cd + y3%Cd))* scaleFactor
-  c = ( (t(2)-t(3))*y1%Cd + t(3)*y2%Cd - t(2)*y3%Cd ) * scaleFactor
-  y_out%Cd = y1%Cd + b  + c * t_out
-  b = (t(3)**2*(y1%Cm - y2%Cm) + t(2)**2*(-y1%Cm + y3%Cm))* scaleFactor
-  c = ( (t(2)-t(3))*y1%Cm + t(3)*y2%Cm - t(2)*y3%Cm ) * scaleFactor
-  y_out%Cm = y1%Cm + b  + c * t_out
-  b = (t(3)**2*(y1%Cpmin - y2%Cpmin) + t(2)**2*(-y1%Cpmin + y3%Cpmin))* scaleFactor
-  c = ( (t(2)-t(3))*y1%Cpmin + t(3)*y2%Cpmin - t(2)*y3%Cpmin ) * scaleFactor
-  y_out%Cpmin = y1%Cpmin + b  + c * t_out
-  b = (t(3)**2*(y1%Cd0 - y2%Cd0) + t(2)**2*(-y1%Cd0 + y3%Cd0))* scaleFactor
-  c = ( (t(2)-t(3))*y1%Cd0 + t(3)*y2%Cd0 - t(2)*y3%Cd0 ) * scaleFactor
-  y_out%Cd0 = y1%Cd0 + b  + c * t_out
-  b = (t(3)**2*(y1%Cm0 - y2%Cm0) + t(2)**2*(-y1%Cm0 + y3%Cm0))* scaleFactor
-  c = ( (t(2)-t(3))*y1%Cm0 + t(3)*y2%Cm0 - t(2)*y3%Cm0 ) * scaleFactor
-  y_out%Cm0 = y1%Cm0 + b  + c * t_out
-  b = (t(3)**2*(y1%f_st - y2%f_st) + t(2)**2*(-y1%f_st + y3%f_st))* scaleFactor
-  c = ( (t(2)-t(3))*y1%f_st + t(3)*y2%f_st - t(2)*y3%f_st ) * scaleFactor
-  y_out%f_st = y1%f_st + b  + c * t_out
-  b = (t(3)**2*(y1%FullySeparate - y2%FullySeparate) + t(2)**2*(-y1%FullySeparate + y3%FullySeparate))* scaleFactor
-  c = ( (t(2)-t(3))*y1%FullySeparate + t(3)*y2%FullySeparate - t(2)*y3%FullySeparate ) * scaleFactor
-  y_out%FullySeparate = y1%FullySeparate + b  + c * t_out
-  b = (t(3)**2*(y1%FullyAttached - y2%FullyAttached) + t(2)**2*(-y1%FullyAttached + y3%FullyAttached))* scaleFactor
-  c = ( (t(2)-t(3))*y1%FullyAttached + t(3)*y2%FullyAttached - t(2)*y3%FullyAttached ) * scaleFactor
-  y_out%FullyAttached = y1%FullyAttached + b  + c * t_out
- END SUBROUTINE AFI_Output_ExtrapInterp2
-
-
- SUBROUTINE AFI_UA_BL_Type_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )
-!
-! This subroutine calculates a extrapolated (or interpolated) UA_BL_Type u_out at time t_out, from previous/future time
-! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
-!
-!  expressions below based on either
-!
-!  f(t) = a
-!  f(t) = a + b * t, or
-!  f(t) = a + b * t + c * t**2
-!
-!  where a, b and c are determined as the solution to
-!  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
-!
-!..................................................................................................................................
-
- TYPE(AFI_UA_BL_Type), INTENT(IN)  :: u(:) ! UA_BL_Type at t1 > t2 > t3
- REAL(ReKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the UA_BL_Types
- TYPE(AFI_UA_BL_Type), INTENT(INOUT)  :: u_out ! UA_BL_Type at tin_out
- REAL(ReKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+subroutine AFI_UA_BL_Type_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
+   !
+   ! This subroutine calculates a extrapolated (or interpolated) UA_BL_Type u_out at time t_out, from previous/future time
+   ! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
+   !
+   !  expressions below based on either
+   !
+   !  f(t) = a
+   !  f(t) = a + b * t, or
+   !  f(t) = a + b * t + c * t**2
+   !
+   !  where a, b and c are determined as the solution to
+   !  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
+   !
+   !----------------------------------------------------------------------------------------------------------------------------------
+   
+   type(AFI_UA_BL_Type), intent(in)  :: u(:) ! UA_BL_Type at t1 > t2 > t3
+   real(ReKi),                 intent(in   )  :: t(:)           ! Times associated with the UA_BL_Types
+   type(AFI_UA_BL_Type), intent(inout)  :: u_out ! UA_BL_Type at tin_out
+   real(ReKi),                 intent(in   )  :: t_out           ! time to be extrap/interp'd to
+   integer(IntKi),             intent(  out)  :: ErrStat         ! Error status of the operation
+   character(*),               intent(  out)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
    ! local variables
- INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
- INTEGER(IntKi)                             :: ErrStat2        ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
- CHARACTER(*),    PARAMETER                 :: RoutineName = 'AFI_UA_BL_Type_ExtrapInterp'
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
- if ( size(t) .ne. size(u)) then
-    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(u)',ErrStat,ErrMsg,RoutineName)
-    RETURN
- endif
- order = SIZE(u) - 1
- IF ( order .eq. 0 ) THEN
-   CALL AFI_CopyUA_BL_Type(u(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 1 ) THEN
-   CALL AFI_UA_BL_Type_ExtrapInterp1(u(1), u(2), t, u_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 2 ) THEN
-   CALL AFI_UA_BL_Type_ExtrapInterp2(u(1), u(2), u(3), t, u_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE 
-   CALL SetErrStat(ErrID_Fatal,'size(u) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
-   RETURN
- ENDIF 
- END SUBROUTINE AFI_UA_BL_Type_ExtrapInterp
+   integer(IntKi)                             :: order           ! order of polynomial fit (max 2)
+   integer(IntKi)                             :: ErrStat2        ! local errors
+   character(ErrMsgLen)                       :: ErrMsg2         ! local errors
+   character(*),    PARAMETER                 :: RoutineName = 'AFI_UA_BL_Type_ExtrapInterp'
+   
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (size(t) /= size(u)) then
+      call SetErrStat(ErrID_Fatal, 'size(t) must equal size(u)', ErrStat, ErrMsg, RoutineName)
+      return
+   endif
+   order = size(u) - 1
+   select case (order)
+   case (0)
+      call AFI_CopyUA_BL_Type(u(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case (1)
+      call AFI_UA_BL_Type_ExtrapInterp1(u(1), u(2), t, u_out, t_out, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case (2)
+      call AFI_UA_BL_Type_ExtrapInterp2(u(1), u(2), u(3), t, u_out, t_out, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case default
+      call SetErrStat(ErrID_Fatal, 'size(u) must be less than 4 (order must be less than 3).', ErrStat, ErrMsg, RoutineName)
+      return
+   end select
+end subroutine
 
-
- SUBROUTINE AFI_UA_BL_Type_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
+SUBROUTINE AFI_UA_BL_Type_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) UA_BL_Type u_out at time t_out, from previous/future time
 ! values of u (which has values associated with times in t).  Order of the interpolation is 1.
@@ -1515,126 +1491,87 @@ end subroutine
 !
 !..................................................................................................................................
 
- TYPE(AFI_UA_BL_Type), INTENT(IN)  :: u1    ! UA_BL_Type at t1 > t2
- TYPE(AFI_UA_BL_Type), INTENT(IN)  :: u2    ! UA_BL_Type at t2 
- REAL(ReKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the UA_BL_Types
- TYPE(AFI_UA_BL_Type), INTENT(INOUT)  :: u_out ! UA_BL_Type at tin_out
- REAL(ReKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
- INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
- CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
+   TYPE(AFI_UA_BL_Type), INTENT(IN)  :: u1    ! UA_BL_Type at t1 > t2
+   TYPE(AFI_UA_BL_Type), INTENT(IN)  :: u2    ! UA_BL_Type at t2 
+   REAL(ReKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the UA_BL_Types
+   TYPE(AFI_UA_BL_Type), INTENT(INOUT)  :: u_out ! UA_BL_Type at tin_out
+   REAL(ReKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
+   INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
+   CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(ReKi)                                 :: t(2)     ! Times associated with the UA_BL_Types
- REAL(ReKi)                                 :: t_out    ! Time to which to be extrap/interpd
- CHARACTER(*),                    PARAMETER :: RoutineName = 'AFI_UA_BL_Type_ExtrapInterp1'
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
-   IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+   REAL(ReKi)                                 :: t(2)     ! Times associated with the UA_BL_Types
+   REAL(ReKi)                                 :: t_out    ! Time to which to be extrap/interpd
+   CHARACTER(*),                    PARAMETER :: RoutineName = 'AFI_UA_BL_Type_ExtrapInterp1'
+   REAL(DbKi)                                 :: a1, a2   ! temporary for extrapolation/interpolation
+   INTEGER(IntKi)                             :: ErrStat2 ! local errors
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! we'll subtract a constant from the times to resolve some 
+   ! numerical issues when t gets large (and to simplify the equations)
+   t = tin - tin(1)
+   t_out = tin_out - tin(1)
+   
+   IF (EqualRealNos(t(1), t(2))) THEN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg, RoutineName)
+      RETURN
    END IF
+   
+   ! Calculate weighting factors from Lagrange polynomial
+   a1 = -(t_out - t(2))/t(2)
+   a2 = t_out/t(2)
+   
+   CALL Angles_ExtrapInterp( u1%alpha0, u2%alpha0, tin, u_out%alpha0, tin_out )
+   CALL Angles_ExtrapInterp( u1%alpha1, u2%alpha1, tin, u_out%alpha1, tin_out )
+   CALL Angles_ExtrapInterp( u1%alpha2, u2%alpha2, tin, u_out%alpha2, tin_out )
+   u_out%eta_e = a1*u1%eta_e + a2*u2%eta_e
+   u_out%C_nalpha = a1*u1%C_nalpha + a2*u2%C_nalpha
+   u_out%C_lalpha = a1*u1%C_lalpha + a2*u2%C_lalpha
+   u_out%T_f0 = a1*u1%T_f0 + a2*u2%T_f0
+   u_out%T_V0 = a1*u1%T_V0 + a2*u2%T_V0
+   u_out%T_p = a1*u1%T_p + a2*u2%T_p
+   u_out%T_VL = a1*u1%T_VL + a2*u2%T_VL
+   u_out%b1 = a1*u1%b1 + a2*u2%b1
+   u_out%b2 = a1*u1%b2 + a2*u2%b2
+   u_out%b5 = a1*u1%b5 + a2*u2%b5
+   u_out%A1 = a1*u1%A1 + a2*u2%A1
+   u_out%A2 = a1*u1%A2 + a2*u2%A2
+   u_out%A5 = a1*u1%A5 + a2*u2%A5
+   u_out%S1 = a1*u1%S1 + a2*u2%S1
+   u_out%S2 = a1*u1%S2 + a2*u2%S2
+   u_out%S3 = a1*u1%S3 + a2*u2%S3
+   u_out%S4 = a1*u1%S4 + a2*u2%S4
+   u_out%Cn1 = a1*u1%Cn1 + a2*u2%Cn1
+   u_out%Cn2 = a1*u1%Cn2 + a2*u2%Cn2
+   u_out%St_sh = a1*u1%St_sh + a2*u2%St_sh
+   u_out%Cd0 = a1*u1%Cd0 + a2*u2%Cd0
+   u_out%Cm0 = a1*u1%Cm0 + a2*u2%Cm0
+   u_out%k0 = a1*u1%k0 + a2*u2%k0
+   u_out%k1 = a1*u1%k1 + a2*u2%k1
+   u_out%k2 = a1*u1%k2 + a2*u2%k2
+   u_out%k3 = a1*u1%k3 + a2*u2%k3
+   u_out%k1_hat = a1*u1%k1_hat + a2*u2%k1_hat
+   u_out%x_cp_bar = a1*u1%x_cp_bar + a2*u2%x_cp_bar
+   u_out%UACutout = a1*u1%UACutout + a2*u2%UACutout
+   u_out%UACutout_delta = a1*u1%UACutout_delta + a2*u2%UACutout_delta
+   u_out%UACutout_blend = a1*u1%UACutout_blend + a2*u2%UACutout_blend
+   u_out%filtCutOff = a1*u1%filtCutOff + a2*u2%filtCutOff
+   CALL Angles_ExtrapInterp( u1%alphaUpper, u2%alphaUpper, tin, u_out%alphaUpper, tin_out )
+   CALL Angles_ExtrapInterp( u1%alphaLower, u2%alphaLower, tin, u_out%alphaLower, tin_out )
+   u_out%c_Rate = a1*u1%c_Rate + a2*u2%c_Rate
+   u_out%c_RateUpper = a1*u1%c_RateUpper + a2*u2%c_RateUpper
+   u_out%c_RateLower = a1*u1%c_RateLower + a2*u2%c_RateLower
+   u_out%c_alphaLower = a1*u1%c_alphaLower + a2*u2%c_alphaLower
+   u_out%c_alphaUpper = a1*u1%c_alphaUpper + a2*u2%c_alphaUpper
+   CALL Angles_ExtrapInterp( u1%alphaUpperWrap, u2%alphaUpperWrap, tin, u_out%alphaUpperWrap, tin_out )
+   CALL Angles_ExtrapInterp( u1%alphaLowerWrap, u2%alphaLowerWrap, tin, u_out%alphaLowerWrap, tin_out )
+   u_out%c_RateWrap = a1*u1%c_RateWrap + a2*u2%c_RateWrap
+   u_out%c_alphaLowerWrap = a1*u1%c_alphaLowerWrap + a2*u2%c_alphaLowerWrap
+   u_out%c_alphaUpperWrap = a1*u1%c_alphaUpperWrap + a2*u2%c_alphaUpperWrap
+END SUBROUTINE
 
-   ScaleFactor = t_out / t(2)
-  CALL Angles_ExtrapInterp( u1%alpha0, u2%alpha0, tin, u_out%alpha0, tin_out )
-  CALL Angles_ExtrapInterp( u1%alpha1, u2%alpha1, tin, u_out%alpha1, tin_out )
-  CALL Angles_ExtrapInterp( u1%alpha2, u2%alpha2, tin, u_out%alpha2, tin_out )
-  b = -(u1%eta_e - u2%eta_e)
-  u_out%eta_e = u1%eta_e + b * ScaleFactor
-  b = -(u1%C_nalpha - u2%C_nalpha)
-  u_out%C_nalpha = u1%C_nalpha + b * ScaleFactor
-  b = -(u1%C_lalpha - u2%C_lalpha)
-  u_out%C_lalpha = u1%C_lalpha + b * ScaleFactor
-  b = -(u1%T_f0 - u2%T_f0)
-  u_out%T_f0 = u1%T_f0 + b * ScaleFactor
-  b = -(u1%T_V0 - u2%T_V0)
-  u_out%T_V0 = u1%T_V0 + b * ScaleFactor
-  b = -(u1%T_p - u2%T_p)
-  u_out%T_p = u1%T_p + b * ScaleFactor
-  b = -(u1%T_VL - u2%T_VL)
-  u_out%T_VL = u1%T_VL + b * ScaleFactor
-  b = -(u1%b1 - u2%b1)
-  u_out%b1 = u1%b1 + b * ScaleFactor
-  b = -(u1%b2 - u2%b2)
-  u_out%b2 = u1%b2 + b * ScaleFactor
-  b = -(u1%b5 - u2%b5)
-  u_out%b5 = u1%b5 + b * ScaleFactor
-  b = -(u1%A1 - u2%A1)
-  u_out%A1 = u1%A1 + b * ScaleFactor
-  b = -(u1%A2 - u2%A2)
-  u_out%A2 = u1%A2 + b * ScaleFactor
-  b = -(u1%A5 - u2%A5)
-  u_out%A5 = u1%A5 + b * ScaleFactor
-  b = -(u1%S1 - u2%S1)
-  u_out%S1 = u1%S1 + b * ScaleFactor
-  b = -(u1%S2 - u2%S2)
-  u_out%S2 = u1%S2 + b * ScaleFactor
-  b = -(u1%S3 - u2%S3)
-  u_out%S3 = u1%S3 + b * ScaleFactor
-  b = -(u1%S4 - u2%S4)
-  u_out%S4 = u1%S4 + b * ScaleFactor
-  b = -(u1%Cn1 - u2%Cn1)
-  u_out%Cn1 = u1%Cn1 + b * ScaleFactor
-  b = -(u1%Cn2 - u2%Cn2)
-  u_out%Cn2 = u1%Cn2 + b * ScaleFactor
-  b = -(u1%St_sh - u2%St_sh)
-  u_out%St_sh = u1%St_sh + b * ScaleFactor
-  b = -(u1%Cd0 - u2%Cd0)
-  u_out%Cd0 = u1%Cd0 + b * ScaleFactor
-  b = -(u1%Cm0 - u2%Cm0)
-  u_out%Cm0 = u1%Cm0 + b * ScaleFactor
-  b = -(u1%k0 - u2%k0)
-  u_out%k0 = u1%k0 + b * ScaleFactor
-  b = -(u1%k1 - u2%k1)
-  u_out%k1 = u1%k1 + b * ScaleFactor
-  b = -(u1%k2 - u2%k2)
-  u_out%k2 = u1%k2 + b * ScaleFactor
-  b = -(u1%k3 - u2%k3)
-  u_out%k3 = u1%k3 + b * ScaleFactor
-  b = -(u1%k1_hat - u2%k1_hat)
-  u_out%k1_hat = u1%k1_hat + b * ScaleFactor
-  b = -(u1%x_cp_bar - u2%x_cp_bar)
-  u_out%x_cp_bar = u1%x_cp_bar + b * ScaleFactor
-  b = -(u1%UACutout - u2%UACutout)
-  u_out%UACutout = u1%UACutout + b * ScaleFactor
-  b = -(u1%UACutout_delta - u2%UACutout_delta)
-  u_out%UACutout_delta = u1%UACutout_delta + b * ScaleFactor
-  b = -(u1%UACutout_blend - u2%UACutout_blend)
-  u_out%UACutout_blend = u1%UACutout_blend + b * ScaleFactor
-  b = -(u1%filtCutOff - u2%filtCutOff)
-  u_out%filtCutOff = u1%filtCutOff + b * ScaleFactor
-  CALL Angles_ExtrapInterp( u1%alphaUpper, u2%alphaUpper, tin, u_out%alphaUpper, tin_out )
-  CALL Angles_ExtrapInterp( u1%alphaLower, u2%alphaLower, tin, u_out%alphaLower, tin_out )
-  b = -(u1%c_Rate - u2%c_Rate)
-  u_out%c_Rate = u1%c_Rate + b * ScaleFactor
-  b = -(u1%c_RateUpper - u2%c_RateUpper)
-  u_out%c_RateUpper = u1%c_RateUpper + b * ScaleFactor
-  b = -(u1%c_RateLower - u2%c_RateLower)
-  u_out%c_RateLower = u1%c_RateLower + b * ScaleFactor
-  b = -(u1%c_alphaLower - u2%c_alphaLower)
-  u_out%c_alphaLower = u1%c_alphaLower + b * ScaleFactor
-  b = -(u1%c_alphaUpper - u2%c_alphaUpper)
-  u_out%c_alphaUpper = u1%c_alphaUpper + b * ScaleFactor
-  CALL Angles_ExtrapInterp( u1%alphaUpperWrap, u2%alphaUpperWrap, tin, u_out%alphaUpperWrap, tin_out )
-  CALL Angles_ExtrapInterp( u1%alphaLowerWrap, u2%alphaLowerWrap, tin, u_out%alphaLowerWrap, tin_out )
-  b = -(u1%c_RateWrap - u2%c_RateWrap)
-  u_out%c_RateWrap = u1%c_RateWrap + b * ScaleFactor
-  b = -(u1%c_alphaLowerWrap - u2%c_alphaLowerWrap)
-  u_out%c_alphaLowerWrap = u1%c_alphaLowerWrap + b * ScaleFactor
-  b = -(u1%c_alphaUpperWrap - u2%c_alphaUpperWrap)
-  u_out%c_alphaUpperWrap = u1%c_alphaUpperWrap + b * ScaleFactor
- END SUBROUTINE AFI_UA_BL_Type_ExtrapInterp1
-
-
- SUBROUTINE AFI_UA_BL_Type_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
+SUBROUTINE AFI_UA_BL_Type_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) UA_BL_Type u_out at time t_out, from previous/future time
 ! values of u (which has values associated with times in t).  Order of the interpolation is 2.
@@ -1648,172 +1585,92 @@ end subroutine
 !
 !..................................................................................................................................
 
- TYPE(AFI_UA_BL_Type), INTENT(IN)  :: u1      ! UA_BL_Type at t1 > t2 > t3
- TYPE(AFI_UA_BL_Type), INTENT(IN)  :: u2      ! UA_BL_Type at t2 > t3
- TYPE(AFI_UA_BL_Type), INTENT(IN)  :: u3      ! UA_BL_Type at t3
- REAL(ReKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the UA_BL_Types
- TYPE(AFI_UA_BL_Type), INTENT(INOUT)  :: u_out     ! UA_BL_Type at tin_out
- REAL(ReKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   TYPE(AFI_UA_BL_Type), INTENT(IN)  :: u1      ! UA_BL_Type at t1 > t2 > t3
+   TYPE(AFI_UA_BL_Type), INTENT(IN)  :: u2      ! UA_BL_Type at t2 > t3
+   TYPE(AFI_UA_BL_Type), INTENT(IN)  :: u3      ! UA_BL_Type at t3
+   REAL(ReKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the UA_BL_Types
+   TYPE(AFI_UA_BL_Type), INTENT(INOUT)  :: u_out     ! UA_BL_Type at tin_out
+   REAL(ReKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
+   INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+   CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(ReKi)                                 :: t(3)      ! Times associated with the UA_BL_Types
- REAL(ReKi)                                 :: t_out     ! Time to which to be extrap/interpd
- INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- CHARACTER(*),            PARAMETER         :: RoutineName = 'AFI_UA_BL_Type_ExtrapInterp2'
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
+   REAL(ReKi)                                 :: t(3)      ! Times associated with the UA_BL_Types
+   REAL(ReKi)                                 :: t_out     ! Time to which to be extrap/interpd
+   INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
+   REAL(DbKi)                                 :: a1,a2,a3 ! temporary for extrapolation/interpolation
+   INTEGER(IntKi)                             :: ErrStat2 ! local errors
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   CHARACTER(*),            PARAMETER         :: RoutineName = 'AFI_UA_BL_Type_ExtrapInterp2'
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! we'll subtract a constant from the times to resolve some 
+   ! numerical issues when t gets large (and to simplify the equations)
+   t = tin - tin(1)
+   t_out = tin_out - tin(1)
+   
    IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    END IF
-
-   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
-  CALL Angles_ExtrapInterp( u1%alpha0, u2%alpha0, u3%alpha0, tin, u_out%alpha0, tin_out )
-  CALL Angles_ExtrapInterp( u1%alpha1, u2%alpha1, u3%alpha1, tin, u_out%alpha1, tin_out )
-  CALL Angles_ExtrapInterp( u1%alpha2, u2%alpha2, u3%alpha2, tin, u_out%alpha2, tin_out )
-  b = (t(3)**2*(u1%eta_e - u2%eta_e) + t(2)**2*(-u1%eta_e + u3%eta_e))* scaleFactor
-  c = ( (t(2)-t(3))*u1%eta_e + t(3)*u2%eta_e - t(2)*u3%eta_e ) * scaleFactor
-  u_out%eta_e = u1%eta_e + b  + c * t_out
-  b = (t(3)**2*(u1%C_nalpha - u2%C_nalpha) + t(2)**2*(-u1%C_nalpha + u3%C_nalpha))* scaleFactor
-  c = ( (t(2)-t(3))*u1%C_nalpha + t(3)*u2%C_nalpha - t(2)*u3%C_nalpha ) * scaleFactor
-  u_out%C_nalpha = u1%C_nalpha + b  + c * t_out
-  b = (t(3)**2*(u1%C_lalpha - u2%C_lalpha) + t(2)**2*(-u1%C_lalpha + u3%C_lalpha))* scaleFactor
-  c = ( (t(2)-t(3))*u1%C_lalpha + t(3)*u2%C_lalpha - t(2)*u3%C_lalpha ) * scaleFactor
-  u_out%C_lalpha = u1%C_lalpha + b  + c * t_out
-  b = (t(3)**2*(u1%T_f0 - u2%T_f0) + t(2)**2*(-u1%T_f0 + u3%T_f0))* scaleFactor
-  c = ( (t(2)-t(3))*u1%T_f0 + t(3)*u2%T_f0 - t(2)*u3%T_f0 ) * scaleFactor
-  u_out%T_f0 = u1%T_f0 + b  + c * t_out
-  b = (t(3)**2*(u1%T_V0 - u2%T_V0) + t(2)**2*(-u1%T_V0 + u3%T_V0))* scaleFactor
-  c = ( (t(2)-t(3))*u1%T_V0 + t(3)*u2%T_V0 - t(2)*u3%T_V0 ) * scaleFactor
-  u_out%T_V0 = u1%T_V0 + b  + c * t_out
-  b = (t(3)**2*(u1%T_p - u2%T_p) + t(2)**2*(-u1%T_p + u3%T_p))* scaleFactor
-  c = ( (t(2)-t(3))*u1%T_p + t(3)*u2%T_p - t(2)*u3%T_p ) * scaleFactor
-  u_out%T_p = u1%T_p + b  + c * t_out
-  b = (t(3)**2*(u1%T_VL - u2%T_VL) + t(2)**2*(-u1%T_VL + u3%T_VL))* scaleFactor
-  c = ( (t(2)-t(3))*u1%T_VL + t(3)*u2%T_VL - t(2)*u3%T_VL ) * scaleFactor
-  u_out%T_VL = u1%T_VL + b  + c * t_out
-  b = (t(3)**2*(u1%b1 - u2%b1) + t(2)**2*(-u1%b1 + u3%b1))* scaleFactor
-  c = ( (t(2)-t(3))*u1%b1 + t(3)*u2%b1 - t(2)*u3%b1 ) * scaleFactor
-  u_out%b1 = u1%b1 + b  + c * t_out
-  b = (t(3)**2*(u1%b2 - u2%b2) + t(2)**2*(-u1%b2 + u3%b2))* scaleFactor
-  c = ( (t(2)-t(3))*u1%b2 + t(3)*u2%b2 - t(2)*u3%b2 ) * scaleFactor
-  u_out%b2 = u1%b2 + b  + c * t_out
-  b = (t(3)**2*(u1%b5 - u2%b5) + t(2)**2*(-u1%b5 + u3%b5))* scaleFactor
-  c = ( (t(2)-t(3))*u1%b5 + t(3)*u2%b5 - t(2)*u3%b5 ) * scaleFactor
-  u_out%b5 = u1%b5 + b  + c * t_out
-  b = (t(3)**2*(u1%A1 - u2%A1) + t(2)**2*(-u1%A1 + u3%A1))* scaleFactor
-  c = ( (t(2)-t(3))*u1%A1 + t(3)*u2%A1 - t(2)*u3%A1 ) * scaleFactor
-  u_out%A1 = u1%A1 + b  + c * t_out
-  b = (t(3)**2*(u1%A2 - u2%A2) + t(2)**2*(-u1%A2 + u3%A2))* scaleFactor
-  c = ( (t(2)-t(3))*u1%A2 + t(3)*u2%A2 - t(2)*u3%A2 ) * scaleFactor
-  u_out%A2 = u1%A2 + b  + c * t_out
-  b = (t(3)**2*(u1%A5 - u2%A5) + t(2)**2*(-u1%A5 + u3%A5))* scaleFactor
-  c = ( (t(2)-t(3))*u1%A5 + t(3)*u2%A5 - t(2)*u3%A5 ) * scaleFactor
-  u_out%A5 = u1%A5 + b  + c * t_out
-  b = (t(3)**2*(u1%S1 - u2%S1) + t(2)**2*(-u1%S1 + u3%S1))* scaleFactor
-  c = ( (t(2)-t(3))*u1%S1 + t(3)*u2%S1 - t(2)*u3%S1 ) * scaleFactor
-  u_out%S1 = u1%S1 + b  + c * t_out
-  b = (t(3)**2*(u1%S2 - u2%S2) + t(2)**2*(-u1%S2 + u3%S2))* scaleFactor
-  c = ( (t(2)-t(3))*u1%S2 + t(3)*u2%S2 - t(2)*u3%S2 ) * scaleFactor
-  u_out%S2 = u1%S2 + b  + c * t_out
-  b = (t(3)**2*(u1%S3 - u2%S3) + t(2)**2*(-u1%S3 + u3%S3))* scaleFactor
-  c = ( (t(2)-t(3))*u1%S3 + t(3)*u2%S3 - t(2)*u3%S3 ) * scaleFactor
-  u_out%S3 = u1%S3 + b  + c * t_out
-  b = (t(3)**2*(u1%S4 - u2%S4) + t(2)**2*(-u1%S4 + u3%S4))* scaleFactor
-  c = ( (t(2)-t(3))*u1%S4 + t(3)*u2%S4 - t(2)*u3%S4 ) * scaleFactor
-  u_out%S4 = u1%S4 + b  + c * t_out
-  b = (t(3)**2*(u1%Cn1 - u2%Cn1) + t(2)**2*(-u1%Cn1 + u3%Cn1))* scaleFactor
-  c = ( (t(2)-t(3))*u1%Cn1 + t(3)*u2%Cn1 - t(2)*u3%Cn1 ) * scaleFactor
-  u_out%Cn1 = u1%Cn1 + b  + c * t_out
-  b = (t(3)**2*(u1%Cn2 - u2%Cn2) + t(2)**2*(-u1%Cn2 + u3%Cn2))* scaleFactor
-  c = ( (t(2)-t(3))*u1%Cn2 + t(3)*u2%Cn2 - t(2)*u3%Cn2 ) * scaleFactor
-  u_out%Cn2 = u1%Cn2 + b  + c * t_out
-  b = (t(3)**2*(u1%St_sh - u2%St_sh) + t(2)**2*(-u1%St_sh + u3%St_sh))* scaleFactor
-  c = ( (t(2)-t(3))*u1%St_sh + t(3)*u2%St_sh - t(2)*u3%St_sh ) * scaleFactor
-  u_out%St_sh = u1%St_sh + b  + c * t_out
-  b = (t(3)**2*(u1%Cd0 - u2%Cd0) + t(2)**2*(-u1%Cd0 + u3%Cd0))* scaleFactor
-  c = ( (t(2)-t(3))*u1%Cd0 + t(3)*u2%Cd0 - t(2)*u3%Cd0 ) * scaleFactor
-  u_out%Cd0 = u1%Cd0 + b  + c * t_out
-  b = (t(3)**2*(u1%Cm0 - u2%Cm0) + t(2)**2*(-u1%Cm0 + u3%Cm0))* scaleFactor
-  c = ( (t(2)-t(3))*u1%Cm0 + t(3)*u2%Cm0 - t(2)*u3%Cm0 ) * scaleFactor
-  u_out%Cm0 = u1%Cm0 + b  + c * t_out
-  b = (t(3)**2*(u1%k0 - u2%k0) + t(2)**2*(-u1%k0 + u3%k0))* scaleFactor
-  c = ( (t(2)-t(3))*u1%k0 + t(3)*u2%k0 - t(2)*u3%k0 ) * scaleFactor
-  u_out%k0 = u1%k0 + b  + c * t_out
-  b = (t(3)**2*(u1%k1 - u2%k1) + t(2)**2*(-u1%k1 + u3%k1))* scaleFactor
-  c = ( (t(2)-t(3))*u1%k1 + t(3)*u2%k1 - t(2)*u3%k1 ) * scaleFactor
-  u_out%k1 = u1%k1 + b  + c * t_out
-  b = (t(3)**2*(u1%k2 - u2%k2) + t(2)**2*(-u1%k2 + u3%k2))* scaleFactor
-  c = ( (t(2)-t(3))*u1%k2 + t(3)*u2%k2 - t(2)*u3%k2 ) * scaleFactor
-  u_out%k2 = u1%k2 + b  + c * t_out
-  b = (t(3)**2*(u1%k3 - u2%k3) + t(2)**2*(-u1%k3 + u3%k3))* scaleFactor
-  c = ( (t(2)-t(3))*u1%k3 + t(3)*u2%k3 - t(2)*u3%k3 ) * scaleFactor
-  u_out%k3 = u1%k3 + b  + c * t_out
-  b = (t(3)**2*(u1%k1_hat - u2%k1_hat) + t(2)**2*(-u1%k1_hat + u3%k1_hat))* scaleFactor
-  c = ( (t(2)-t(3))*u1%k1_hat + t(3)*u2%k1_hat - t(2)*u3%k1_hat ) * scaleFactor
-  u_out%k1_hat = u1%k1_hat + b  + c * t_out
-  b = (t(3)**2*(u1%x_cp_bar - u2%x_cp_bar) + t(2)**2*(-u1%x_cp_bar + u3%x_cp_bar))* scaleFactor
-  c = ( (t(2)-t(3))*u1%x_cp_bar + t(3)*u2%x_cp_bar - t(2)*u3%x_cp_bar ) * scaleFactor
-  u_out%x_cp_bar = u1%x_cp_bar + b  + c * t_out
-  b = (t(3)**2*(u1%UACutout - u2%UACutout) + t(2)**2*(-u1%UACutout + u3%UACutout))* scaleFactor
-  c = ( (t(2)-t(3))*u1%UACutout + t(3)*u2%UACutout - t(2)*u3%UACutout ) * scaleFactor
-  u_out%UACutout = u1%UACutout + b  + c * t_out
-  b = (t(3)**2*(u1%UACutout_delta - u2%UACutout_delta) + t(2)**2*(-u1%UACutout_delta + u3%UACutout_delta))* scaleFactor
-  c = ( (t(2)-t(3))*u1%UACutout_delta + t(3)*u2%UACutout_delta - t(2)*u3%UACutout_delta ) * scaleFactor
-  u_out%UACutout_delta = u1%UACutout_delta + b  + c * t_out
-  b = (t(3)**2*(u1%UACutout_blend - u2%UACutout_blend) + t(2)**2*(-u1%UACutout_blend + u3%UACutout_blend))* scaleFactor
-  c = ( (t(2)-t(3))*u1%UACutout_blend + t(3)*u2%UACutout_blend - t(2)*u3%UACutout_blend ) * scaleFactor
-  u_out%UACutout_blend = u1%UACutout_blend + b  + c * t_out
-  b = (t(3)**2*(u1%filtCutOff - u2%filtCutOff) + t(2)**2*(-u1%filtCutOff + u3%filtCutOff))* scaleFactor
-  c = ( (t(2)-t(3))*u1%filtCutOff + t(3)*u2%filtCutOff - t(2)*u3%filtCutOff ) * scaleFactor
-  u_out%filtCutOff = u1%filtCutOff + b  + c * t_out
-  CALL Angles_ExtrapInterp( u1%alphaUpper, u2%alphaUpper, u3%alphaUpper, tin, u_out%alphaUpper, tin_out )
-  CALL Angles_ExtrapInterp( u1%alphaLower, u2%alphaLower, u3%alphaLower, tin, u_out%alphaLower, tin_out )
-  b = (t(3)**2*(u1%c_Rate - u2%c_Rate) + t(2)**2*(-u1%c_Rate + u3%c_Rate))* scaleFactor
-  c = ( (t(2)-t(3))*u1%c_Rate + t(3)*u2%c_Rate - t(2)*u3%c_Rate ) * scaleFactor
-  u_out%c_Rate = u1%c_Rate + b  + c * t_out
-  b = (t(3)**2*(u1%c_RateUpper - u2%c_RateUpper) + t(2)**2*(-u1%c_RateUpper + u3%c_RateUpper))* scaleFactor
-  c = ( (t(2)-t(3))*u1%c_RateUpper + t(3)*u2%c_RateUpper - t(2)*u3%c_RateUpper ) * scaleFactor
-  u_out%c_RateUpper = u1%c_RateUpper + b  + c * t_out
-  b = (t(3)**2*(u1%c_RateLower - u2%c_RateLower) + t(2)**2*(-u1%c_RateLower + u3%c_RateLower))* scaleFactor
-  c = ( (t(2)-t(3))*u1%c_RateLower + t(3)*u2%c_RateLower - t(2)*u3%c_RateLower ) * scaleFactor
-  u_out%c_RateLower = u1%c_RateLower + b  + c * t_out
-  b = (t(3)**2*(u1%c_alphaLower - u2%c_alphaLower) + t(2)**2*(-u1%c_alphaLower + u3%c_alphaLower))* scaleFactor
-  c = ( (t(2)-t(3))*u1%c_alphaLower + t(3)*u2%c_alphaLower - t(2)*u3%c_alphaLower ) * scaleFactor
-  u_out%c_alphaLower = u1%c_alphaLower + b  + c * t_out
-  b = (t(3)**2*(u1%c_alphaUpper - u2%c_alphaUpper) + t(2)**2*(-u1%c_alphaUpper + u3%c_alphaUpper))* scaleFactor
-  c = ( (t(2)-t(3))*u1%c_alphaUpper + t(3)*u2%c_alphaUpper - t(2)*u3%c_alphaUpper ) * scaleFactor
-  u_out%c_alphaUpper = u1%c_alphaUpper + b  + c * t_out
-  CALL Angles_ExtrapInterp( u1%alphaUpperWrap, u2%alphaUpperWrap, u3%alphaUpperWrap, tin, u_out%alphaUpperWrap, tin_out )
-  CALL Angles_ExtrapInterp( u1%alphaLowerWrap, u2%alphaLowerWrap, u3%alphaLowerWrap, tin, u_out%alphaLowerWrap, tin_out )
-  b = (t(3)**2*(u1%c_RateWrap - u2%c_RateWrap) + t(2)**2*(-u1%c_RateWrap + u3%c_RateWrap))* scaleFactor
-  c = ( (t(2)-t(3))*u1%c_RateWrap + t(3)*u2%c_RateWrap - t(2)*u3%c_RateWrap ) * scaleFactor
-  u_out%c_RateWrap = u1%c_RateWrap + b  + c * t_out
-  b = (t(3)**2*(u1%c_alphaLowerWrap - u2%c_alphaLowerWrap) + t(2)**2*(-u1%c_alphaLowerWrap + u3%c_alphaLowerWrap))* scaleFactor
-  c = ( (t(2)-t(3))*u1%c_alphaLowerWrap + t(3)*u2%c_alphaLowerWrap - t(2)*u3%c_alphaLowerWrap ) * scaleFactor
-  u_out%c_alphaLowerWrap = u1%c_alphaLowerWrap + b  + c * t_out
-  b = (t(3)**2*(u1%c_alphaUpperWrap - u2%c_alphaUpperWrap) + t(2)**2*(-u1%c_alphaUpperWrap + u3%c_alphaUpperWrap))* scaleFactor
-  c = ( (t(2)-t(3))*u1%c_alphaUpperWrap + t(3)*u2%c_alphaUpperWrap - t(2)*u3%c_alphaUpperWrap ) * scaleFactor
-  u_out%c_alphaUpperWrap = u1%c_alphaUpperWrap + b  + c * t_out
- END SUBROUTINE AFI_UA_BL_Type_ExtrapInterp2
-
+   
+   ! Calculate Lagrange polynomial coefficients
+   a1 = (t_out - t(2))*(t_out - t(3))/((t(1) - t(2))*(t(1) - t(3)))
+   a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
+   a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
+   CALL Angles_ExtrapInterp( u1%alpha0, u2%alpha0, u3%alpha0, tin, u_out%alpha0, tin_out )
+   CALL Angles_ExtrapInterp( u1%alpha1, u2%alpha1, u3%alpha1, tin, u_out%alpha1, tin_out )
+   CALL Angles_ExtrapInterp( u1%alpha2, u2%alpha2, u3%alpha2, tin, u_out%alpha2, tin_out )
+   u_out%eta_e = a1*u1%eta_e + a2*u2%eta_e + a3*u3%eta_e
+   u_out%C_nalpha = a1*u1%C_nalpha + a2*u2%C_nalpha + a3*u3%C_nalpha
+   u_out%C_lalpha = a1*u1%C_lalpha + a2*u2%C_lalpha + a3*u3%C_lalpha
+   u_out%T_f0 = a1*u1%T_f0 + a2*u2%T_f0 + a3*u3%T_f0
+   u_out%T_V0 = a1*u1%T_V0 + a2*u2%T_V0 + a3*u3%T_V0
+   u_out%T_p = a1*u1%T_p + a2*u2%T_p + a3*u3%T_p
+   u_out%T_VL = a1*u1%T_VL + a2*u2%T_VL + a3*u3%T_VL
+   u_out%b1 = a1*u1%b1 + a2*u2%b1 + a3*u3%b1
+   u_out%b2 = a1*u1%b2 + a2*u2%b2 + a3*u3%b2
+   u_out%b5 = a1*u1%b5 + a2*u2%b5 + a3*u3%b5
+   u_out%A1 = a1*u1%A1 + a2*u2%A1 + a3*u3%A1
+   u_out%A2 = a1*u1%A2 + a2*u2%A2 + a3*u3%A2
+   u_out%A5 = a1*u1%A5 + a2*u2%A5 + a3*u3%A5
+   u_out%S1 = a1*u1%S1 + a2*u2%S1 + a3*u3%S1
+   u_out%S2 = a1*u1%S2 + a2*u2%S2 + a3*u3%S2
+   u_out%S3 = a1*u1%S3 + a2*u2%S3 + a3*u3%S3
+   u_out%S4 = a1*u1%S4 + a2*u2%S4 + a3*u3%S4
+   u_out%Cn1 = a1*u1%Cn1 + a2*u2%Cn1 + a3*u3%Cn1
+   u_out%Cn2 = a1*u1%Cn2 + a2*u2%Cn2 + a3*u3%Cn2
+   u_out%St_sh = a1*u1%St_sh + a2*u2%St_sh + a3*u3%St_sh
+   u_out%Cd0 = a1*u1%Cd0 + a2*u2%Cd0 + a3*u3%Cd0
+   u_out%Cm0 = a1*u1%Cm0 + a2*u2%Cm0 + a3*u3%Cm0
+   u_out%k0 = a1*u1%k0 + a2*u2%k0 + a3*u3%k0
+   u_out%k1 = a1*u1%k1 + a2*u2%k1 + a3*u3%k1
+   u_out%k2 = a1*u1%k2 + a2*u2%k2 + a3*u3%k2
+   u_out%k3 = a1*u1%k3 + a2*u2%k3 + a3*u3%k3
+   u_out%k1_hat = a1*u1%k1_hat + a2*u2%k1_hat + a3*u3%k1_hat
+   u_out%x_cp_bar = a1*u1%x_cp_bar + a2*u2%x_cp_bar + a3*u3%x_cp_bar
+   u_out%UACutout = a1*u1%UACutout + a2*u2%UACutout + a3*u3%UACutout
+   u_out%UACutout_delta = a1*u1%UACutout_delta + a2*u2%UACutout_delta + a3*u3%UACutout_delta
+   u_out%UACutout_blend = a1*u1%UACutout_blend + a2*u2%UACutout_blend + a3*u3%UACutout_blend
+   u_out%filtCutOff = a1*u1%filtCutOff + a2*u2%filtCutOff + a3*u3%filtCutOff
+   CALL Angles_ExtrapInterp( u1%alphaUpper, u2%alphaUpper, u3%alphaUpper, tin, u_out%alphaUpper, tin_out )
+   CALL Angles_ExtrapInterp( u1%alphaLower, u2%alphaLower, u3%alphaLower, tin, u_out%alphaLower, tin_out )
+   u_out%c_Rate = a1*u1%c_Rate + a2*u2%c_Rate + a3*u3%c_Rate
+   u_out%c_RateUpper = a1*u1%c_RateUpper + a2*u2%c_RateUpper + a3*u3%c_RateUpper
+   u_out%c_RateLower = a1*u1%c_RateLower + a2*u2%c_RateLower + a3*u3%c_RateLower
+   u_out%c_alphaLower = a1*u1%c_alphaLower + a2*u2%c_alphaLower + a3*u3%c_alphaLower
+   u_out%c_alphaUpper = a1*u1%c_alphaUpper + a2*u2%c_alphaUpper + a3*u3%c_alphaUpper
+   CALL Angles_ExtrapInterp( u1%alphaUpperWrap, u2%alphaUpperWrap, u3%alphaUpperWrap, tin, u_out%alphaUpperWrap, tin_out )
+   CALL Angles_ExtrapInterp( u1%alphaLowerWrap, u2%alphaLowerWrap, u3%alphaLowerWrap, tin, u_out%alphaLowerWrap, tin_out )
+   u_out%c_RateWrap = a1*u1%c_RateWrap + a2*u2%c_RateWrap + a3*u3%c_RateWrap
+   u_out%c_alphaLowerWrap = a1*u1%c_alphaLowerWrap + a2*u2%c_alphaLowerWrap + a3*u3%c_alphaLowerWrap
+   u_out%c_alphaUpperWrap = a1*u1%c_alphaUpperWrap + a2*u2%c_alphaUpperWrap + a3*u3%c_alphaUpperWrap
+END SUBROUTINE
 END MODULE AirfoilInfo_Types
 !ENDOFREGISTRYGENERATEDFILE

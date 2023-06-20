@@ -149,46 +149,46 @@ subroutine SC_DX_UnPackInitInput(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    OutData%C_obj%NumCtrl2SC = OutData%NumCtrl2SC
 end subroutine
- SUBROUTINE SC_DX_C2Fary_CopyInitInput( InitInputData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_DX_InitInputType), INTENT(INOUT) :: InitInputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
 
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    InitInputData%NumSC2Ctrl = InitInputData%C_obj%NumSC2Ctrl
-    InitInputData%NumSC2CtrlGlob = InitInputData%C_obj%NumSC2CtrlGlob
-    InitInputData%NumCtrl2SC = InitInputData%C_obj%NumCtrl2SC
- END SUBROUTINE SC_DX_C2Fary_CopyInitInput
+SUBROUTINE SC_DX_C2Fary_CopyInitInput(InitInputData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_DX_InitInputType), INTENT(INOUT) :: InitInputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   InitInputData%NumSC2Ctrl = InitInputData%C_obj%NumSC2Ctrl
+   InitInputData%NumSC2CtrlGlob = InitInputData%C_obj%NumSC2CtrlGlob
+   InitInputData%NumCtrl2SC = InitInputData%C_obj%NumCtrl2SC
+END SUBROUTINE
 
- SUBROUTINE SC_DX_F2C_CopyInitInput( InitInputData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_DX_InitInputType), INTENT(INOUT) :: InitInputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    InitInputData%C_obj%NumSC2Ctrl = InitInputData%NumSC2Ctrl
-    InitInputData%C_obj%NumSC2CtrlGlob = InitInputData%NumSC2CtrlGlob
-    InitInputData%C_obj%NumCtrl2SC = InitInputData%NumCtrl2SC
- END SUBROUTINE SC_DX_F2C_CopyInitInput
-
+SUBROUTINE SC_DX_F2C_CopyInitInput( InitInputData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_DX_InitInputType), INTENT(INOUT) :: InitInputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   InitInputData%C_obj%NumSC2Ctrl = InitInputData%NumSC2Ctrl
+   InitInputData%C_obj%NumSC2CtrlGlob = InitInputData%NumSC2CtrlGlob
+   InitInputData%C_obj%NumCtrl2SC = InitInputData%NumCtrl2SC
+END SUBROUTINE
 
 subroutine SC_DX_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
    type(SC_DX_InitOutputType), intent(in) :: SrcInitOutputData
@@ -239,40 +239,40 @@ subroutine SC_DX_UnPackInitOutput(Buf, OutData)
    if (Buf%ErrStat /= ErrID_None) return
    call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
 end subroutine
- SUBROUTINE SC_DX_C2Fary_CopyInitOutput( InitOutputData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_DX_InitOutputType), INTENT(INOUT) :: InitOutputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
 
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
- END SUBROUTINE SC_DX_C2Fary_CopyInitOutput
+SUBROUTINE SC_DX_C2Fary_CopyInitOutput(InitOutputData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_DX_InitOutputType), INTENT(INOUT) :: InitOutputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+END SUBROUTINE
 
- SUBROUTINE SC_DX_F2C_CopyInitOutput( InitOutputData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_DX_InitOutputType), INTENT(INOUT) :: InitOutputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
- END SUBROUTINE SC_DX_F2C_CopyInitOutput
-
+SUBROUTINE SC_DX_F2C_CopyInitOutput( InitOutputData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_DX_InitOutputType), INTENT(INOUT) :: InitOutputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+END SUBROUTINE
 
 subroutine SC_DX_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    type(SC_DX_ParameterType), intent(in) :: SrcParamData
@@ -318,42 +318,42 @@ subroutine SC_DX_UnPackParam(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    OutData%C_obj%useSC = OutData%useSC
 end subroutine
- SUBROUTINE SC_DX_C2Fary_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_DX_ParameterType), INTENT(INOUT) :: ParamData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
 
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    ParamData%useSC = ParamData%C_obj%useSC
- END SUBROUTINE SC_DX_C2Fary_CopyParam
+SUBROUTINE SC_DX_C2Fary_CopyParam(ParamData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_DX_ParameterType), INTENT(INOUT) :: ParamData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   ParamData%useSC = ParamData%C_obj%useSC
+END SUBROUTINE
 
- SUBROUTINE SC_DX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_DX_ParameterType), INTENT(INOUT) :: ParamData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    ParamData%C_obj%useSC = ParamData%useSC
- END SUBROUTINE SC_DX_F2C_CopyParam
-
+SUBROUTINE SC_DX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_DX_ParameterType), INTENT(INOUT) :: ParamData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   ParamData%C_obj%useSC = ParamData%useSC
+END SUBROUTINE
 
 subroutine SC_DX_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    type(SC_DX_InputType), intent(in) :: SrcInputData
@@ -456,61 +456,61 @@ subroutine SC_DX_UnPackInput(Buf, OutData)
       OutData%toSC => null()
    end if
 end subroutine
- SUBROUTINE SC_DX_C2Fary_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_DX_InputType), INTENT(INOUT) :: InputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
 
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
+SUBROUTINE SC_DX_C2Fary_CopyInput(InputData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_DX_InputType), INTENT(INOUT) :: InputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   
+   ! -- toSC Input Data fields
+   IF ( .NOT. SkipPointers_local ) THEN
+      IF ( .NOT. C_ASSOCIATED( InputData%C_obj%toSC ) ) THEN
+         NULLIFY( InputData%toSC )
+      ELSE
+         CALL C_F_POINTER(InputData%C_obj%toSC, InputData%toSC, [InputData%C_obj%toSC_Len])
+      END IF
+   END IF
+END SUBROUTINE
 
-    ! -- toSC Input Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%toSC ) ) THEN
-          NULLIFY( InputData%toSC )
-       ELSE
-          CALL C_F_POINTER(InputData%C_obj%toSC, InputData%toSC, (/InputData%C_obj%toSC_Len/))
-       END IF
-    END IF
- END SUBROUTINE SC_DX_C2Fary_CopyInput
-
- SUBROUTINE SC_DX_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_DX_InputType), INTENT(INOUT) :: InputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-
-    ! -- toSC Input Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(InputData%toSC)) THEN 
-          InputData%C_obj%toSC_Len = 0
-          InputData%C_obj%toSC = C_NULL_PTR
-       ELSE
-          InputData%C_obj%toSC_Len = SIZE(InputData%toSC)
-          IF (InputData%C_obj%toSC_Len > 0) &
-             InputData%C_obj%toSC = C_LOC( InputData%toSC( LBOUND(InputData%toSC,1) ) )
-       END IF
-    END IF
- END SUBROUTINE SC_DX_F2C_CopyInput
-
+SUBROUTINE SC_DX_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_DX_InputType), INTENT(INOUT) :: InputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   
+   ! -- toSC Input Data fields
+   IF (.NOT. SkipPointers_local ) THEN
+      IF (.NOT. ASSOCIATED(InputData%toSC)) THEN 
+         InputData%C_obj%toSC_Len = 0
+         InputData%C_obj%toSC = C_NULL_PTR
+      ELSE
+         InputData%C_obj%toSC_Len = SIZE(InputData%toSC)
+         IF (InputData%C_obj%toSC_Len > 0) &
+            InputData%C_obj%toSC = C_LOC(InputData%toSC(LBOUND(InputData%toSC,1)))
+      END IF
+   END IF
+END SUBROUTINE
 
 subroutine SC_DX_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
    type(SC_DX_OutputType), intent(in) :: SrcOutputData
@@ -668,81 +668,81 @@ subroutine SC_DX_UnPackOutput(Buf, OutData)
       OutData%fromSCglob => null()
    end if
 end subroutine
- SUBROUTINE SC_DX_C2Fary_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_DX_OutputType), INTENT(INOUT) :: OutputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
 
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
+SUBROUTINE SC_DX_C2Fary_CopyOutput(OutputData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_DX_OutputType), INTENT(INOUT) :: OutputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   
+   ! -- fromSC Output Data fields
+   IF ( .NOT. SkipPointers_local ) THEN
+      IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%fromSC ) ) THEN
+         NULLIFY( OutputData%fromSC )
+      ELSE
+         CALL C_F_POINTER(OutputData%C_obj%fromSC, OutputData%fromSC, [OutputData%C_obj%fromSC_Len])
+      END IF
+   END IF
+   
+   ! -- fromSCglob Output Data fields
+   IF ( .NOT. SkipPointers_local ) THEN
+      IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%fromSCglob ) ) THEN
+         NULLIFY( OutputData%fromSCglob )
+      ELSE
+         CALL C_F_POINTER(OutputData%C_obj%fromSCglob, OutputData%fromSCglob, [OutputData%C_obj%fromSCglob_Len])
+      END IF
+   END IF
+END SUBROUTINE
 
-    ! -- fromSC Output Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%fromSC ) ) THEN
-          NULLIFY( OutputData%fromSC )
-       ELSE
-          CALL C_F_POINTER(OutputData%C_obj%fromSC, OutputData%fromSC, (/OutputData%C_obj%fromSC_Len/))
-       END IF
-    END IF
-
-    ! -- fromSCglob Output Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%fromSCglob ) ) THEN
-          NULLIFY( OutputData%fromSCglob )
-       ELSE
-          CALL C_F_POINTER(OutputData%C_obj%fromSCglob, OutputData%fromSCglob, (/OutputData%C_obj%fromSCglob_Len/))
-       END IF
-    END IF
- END SUBROUTINE SC_DX_C2Fary_CopyOutput
-
- SUBROUTINE SC_DX_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_DX_OutputType), INTENT(INOUT) :: OutputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-
-    ! -- fromSC Output Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(OutputData%fromSC)) THEN 
-          OutputData%C_obj%fromSC_Len = 0
-          OutputData%C_obj%fromSC = C_NULL_PTR
-       ELSE
-          OutputData%C_obj%fromSC_Len = SIZE(OutputData%fromSC)
-          IF (OutputData%C_obj%fromSC_Len > 0) &
-             OutputData%C_obj%fromSC = C_LOC( OutputData%fromSC( LBOUND(OutputData%fromSC,1) ) )
-       END IF
-    END IF
-
-    ! -- fromSCglob Output Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(OutputData%fromSCglob)) THEN 
-          OutputData%C_obj%fromSCglob_Len = 0
-          OutputData%C_obj%fromSCglob = C_NULL_PTR
-       ELSE
-          OutputData%C_obj%fromSCglob_Len = SIZE(OutputData%fromSCglob)
-          IF (OutputData%C_obj%fromSCglob_Len > 0) &
-             OutputData%C_obj%fromSCglob = C_LOC( OutputData%fromSCglob( LBOUND(OutputData%fromSCglob,1) ) )
-       END IF
-    END IF
- END SUBROUTINE SC_DX_F2C_CopyOutput
-
+SUBROUTINE SC_DX_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_DX_OutputType), INTENT(INOUT) :: OutputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   
+   ! -- fromSC Output Data fields
+   IF (.NOT. SkipPointers_local ) THEN
+      IF (.NOT. ASSOCIATED(OutputData%fromSC)) THEN 
+         OutputData%C_obj%fromSC_Len = 0
+         OutputData%C_obj%fromSC = C_NULL_PTR
+      ELSE
+         OutputData%C_obj%fromSC_Len = SIZE(OutputData%fromSC)
+         IF (OutputData%C_obj%fromSC_Len > 0) &
+            OutputData%C_obj%fromSC = C_LOC(OutputData%fromSC(LBOUND(OutputData%fromSC,1)))
+      END IF
+   END IF
+   
+   ! -- fromSCglob Output Data fields
+   IF (.NOT. SkipPointers_local ) THEN
+      IF (.NOT. ASSOCIATED(OutputData%fromSCglob)) THEN 
+         OutputData%C_obj%fromSCglob_Len = 0
+         OutputData%C_obj%fromSCglob = C_NULL_PTR
+      ELSE
+         OutputData%C_obj%fromSCglob_Len = SIZE(OutputData%fromSCglob)
+         IF (OutputData%C_obj%fromSCglob_Len > 0) &
+            OutputData%C_obj%fromSCglob = C_LOC(OutputData%fromSCglob(LBOUND(OutputData%fromSCglob,1)))
+      END IF
+   END IF
+END SUBROUTINE
 END MODULE SCDataEx_Types
 !ENDOFREGISTRYGENERATEDFILE

@@ -231,44 +231,44 @@ subroutine SC_UnPackInitInput(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    OutData%C_obj%DLL_FileName = transfer(OutData%DLL_FileName, OutData%C_obj%DLL_FileName )
 end subroutine
- SUBROUTINE SC_C2Fary_CopyInitInput( InitInputData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_InitInputType), INTENT(INOUT) :: InitInputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
 
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    InitInputData%nTurbines = InitInputData%C_obj%nTurbines
-    InitInputData%DLL_FileName = TRANSFER(InitInputData%C_obj%DLL_FileName, InitInputData%DLL_FileName )
- END SUBROUTINE SC_C2Fary_CopyInitInput
+SUBROUTINE SC_C2Fary_CopyInitInput(InitInputData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_InitInputType), INTENT(INOUT) :: InitInputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   InitInputData%nTurbines = InitInputData%C_obj%nTurbines
+   InitInputData%DLL_FileName = TRANSFER(InitInputData%C_obj%DLL_FileName, InitInputData%DLL_FileName )
+END SUBROUTINE
 
- SUBROUTINE SC_F2C_CopyInitInput( InitInputData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_InitInputType), INTENT(INOUT) :: InitInputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    InitInputData%C_obj%nTurbines = InitInputData%nTurbines
-    InitInputData%C_obj%DLL_FileName = TRANSFER(InitInputData%DLL_FileName, InitInputData%C_obj%DLL_FileName )
- END SUBROUTINE SC_F2C_CopyInitInput
-
+SUBROUTINE SC_F2C_CopyInitInput( InitInputData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_InitInputType), INTENT(INOUT) :: InitInputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   InitInputData%C_obj%nTurbines = InitInputData%nTurbines
+   InitInputData%C_obj%DLL_FileName = TRANSFER(InitInputData%DLL_FileName, InitInputData%C_obj%DLL_FileName)
+END SUBROUTINE
 
 subroutine SC_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
    type(SC_InitOutputType), intent(in) :: SrcInitOutputData
@@ -343,48 +343,48 @@ subroutine SC_UnPackInitOutput(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    OutData%C_obj%NumSC2CtrlGlob = OutData%NumSC2CtrlGlob
 end subroutine
- SUBROUTINE SC_C2Fary_CopyInitOutput( InitOutputData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_InitOutputType), INTENT(INOUT) :: InitOutputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
 
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    InitOutputData%NumCtrl2SC = InitOutputData%C_obj%NumCtrl2SC
-    InitOutputData%nInpGlobal = InitOutputData%C_obj%nInpGlobal
-    InitOutputData%NumSC2Ctrl = InitOutputData%C_obj%NumSC2Ctrl
-    InitOutputData%NumSC2CtrlGlob = InitOutputData%C_obj%NumSC2CtrlGlob
- END SUBROUTINE SC_C2Fary_CopyInitOutput
+SUBROUTINE SC_C2Fary_CopyInitOutput(InitOutputData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_InitOutputType), INTENT(INOUT) :: InitOutputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   InitOutputData%NumCtrl2SC = InitOutputData%C_obj%NumCtrl2SC
+   InitOutputData%nInpGlobal = InitOutputData%C_obj%nInpGlobal
+   InitOutputData%NumSC2Ctrl = InitOutputData%C_obj%NumSC2Ctrl
+   InitOutputData%NumSC2CtrlGlob = InitOutputData%C_obj%NumSC2CtrlGlob
+END SUBROUTINE
 
- SUBROUTINE SC_F2C_CopyInitOutput( InitOutputData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_InitOutputType), INTENT(INOUT) :: InitOutputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    InitOutputData%C_obj%NumCtrl2SC = InitOutputData%NumCtrl2SC
-    InitOutputData%C_obj%nInpGlobal = InitOutputData%nInpGlobal
-    InitOutputData%C_obj%NumSC2Ctrl = InitOutputData%NumSC2Ctrl
-    InitOutputData%C_obj%NumSC2CtrlGlob = InitOutputData%NumSC2CtrlGlob
- END SUBROUTINE SC_F2C_CopyInitOutput
-
+SUBROUTINE SC_F2C_CopyInitOutput( InitOutputData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_InitOutputType), INTENT(INOUT) :: InitOutputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   InitOutputData%C_obj%NumCtrl2SC = InitOutputData%NumCtrl2SC
+   InitOutputData%C_obj%nInpGlobal = InitOutputData%nInpGlobal
+   InitOutputData%C_obj%NumSC2Ctrl = InitOutputData%NumSC2Ctrl
+   InitOutputData%C_obj%NumSC2CtrlGlob = InitOutputData%NumSC2CtrlGlob
+END SUBROUTINE
 
 subroutine SC_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    type(SC_ParameterType), intent(in) :: SrcParamData
@@ -610,102 +610,102 @@ subroutine SC_UnPackParam(Buf, OutData)
    end if
    call DLLTypeUnpack(Buf, OutData%DLL_Trgt) ! DLL_Trgt 
 end subroutine
- SUBROUTINE SC_C2Fary_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_ParameterType), INTENT(INOUT) :: ParamData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
 
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    ParamData%DT = ParamData%C_obj%DT
-    ParamData%nTurbines = ParamData%C_obj%nTurbines
-    ParamData%NumCtrl2SC = ParamData%C_obj%NumCtrl2SC
-    ParamData%nInpGlobal = ParamData%C_obj%nInpGlobal
-    ParamData%NumSC2Ctrl = ParamData%C_obj%NumSC2Ctrl
-    ParamData%NumSC2CtrlGlob = ParamData%C_obj%NumSC2CtrlGlob
-    ParamData%NumStatesGlobal = ParamData%C_obj%NumStatesGlobal
-    ParamData%NumStatesTurbine = ParamData%C_obj%NumStatesTurbine
-    ParamData%NumParamGlobal = ParamData%C_obj%NumParamGlobal
-    ParamData%NumParamTurbine = ParamData%C_obj%NumParamTurbine
+SUBROUTINE SC_C2Fary_CopyParam(ParamData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_ParameterType), INTENT(INOUT) :: ParamData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   ParamData%DT = ParamData%C_obj%DT
+   ParamData%nTurbines = ParamData%C_obj%nTurbines
+   ParamData%NumCtrl2SC = ParamData%C_obj%NumCtrl2SC
+   ParamData%nInpGlobal = ParamData%C_obj%nInpGlobal
+   ParamData%NumSC2Ctrl = ParamData%C_obj%NumSC2Ctrl
+   ParamData%NumSC2CtrlGlob = ParamData%C_obj%NumSC2CtrlGlob
+   ParamData%NumStatesGlobal = ParamData%C_obj%NumStatesGlobal
+   ParamData%NumStatesTurbine = ParamData%C_obj%NumStatesTurbine
+   ParamData%NumParamGlobal = ParamData%C_obj%NumParamGlobal
+   ParamData%NumParamTurbine = ParamData%C_obj%NumParamTurbine
+   
+   ! -- ParamGlobal Param Data fields
+   IF ( .NOT. SkipPointers_local ) THEN
+      IF ( .NOT. C_ASSOCIATED( ParamData%C_obj%ParamGlobal ) ) THEN
+         NULLIFY( ParamData%ParamGlobal )
+      ELSE
+         CALL C_F_POINTER(ParamData%C_obj%ParamGlobal, ParamData%ParamGlobal, [ParamData%C_obj%ParamGlobal_Len])
+      END IF
+   END IF
+   
+   ! -- ParamTurbine Param Data fields
+   IF ( .NOT. SkipPointers_local ) THEN
+      IF ( .NOT. C_ASSOCIATED( ParamData%C_obj%ParamTurbine ) ) THEN
+         NULLIFY( ParamData%ParamTurbine )
+      ELSE
+         CALL C_F_POINTER(ParamData%C_obj%ParamTurbine, ParamData%ParamTurbine, [ParamData%C_obj%ParamTurbine_Len])
+      END IF
+   END IF
+END SUBROUTINE
 
-    ! -- ParamGlobal Param Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( ParamData%C_obj%ParamGlobal ) ) THEN
-          NULLIFY( ParamData%ParamGlobal )
-       ELSE
-          CALL C_F_POINTER(ParamData%C_obj%ParamGlobal, ParamData%ParamGlobal, (/ParamData%C_obj%ParamGlobal_Len/))
-       END IF
-    END IF
-
-    ! -- ParamTurbine Param Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( ParamData%C_obj%ParamTurbine ) ) THEN
-          NULLIFY( ParamData%ParamTurbine )
-       ELSE
-          CALL C_F_POINTER(ParamData%C_obj%ParamTurbine, ParamData%ParamTurbine, (/ParamData%C_obj%ParamTurbine_Len/))
-       END IF
-    END IF
- END SUBROUTINE SC_C2Fary_CopyParam
-
- SUBROUTINE SC_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_ParameterType), INTENT(INOUT) :: ParamData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    ParamData%C_obj%DT = ParamData%DT
-    ParamData%C_obj%nTurbines = ParamData%nTurbines
-    ParamData%C_obj%NumCtrl2SC = ParamData%NumCtrl2SC
-    ParamData%C_obj%nInpGlobal = ParamData%nInpGlobal
-    ParamData%C_obj%NumSC2Ctrl = ParamData%NumSC2Ctrl
-    ParamData%C_obj%NumSC2CtrlGlob = ParamData%NumSC2CtrlGlob
-    ParamData%C_obj%NumStatesGlobal = ParamData%NumStatesGlobal
-    ParamData%C_obj%NumStatesTurbine = ParamData%NumStatesTurbine
-    ParamData%C_obj%NumParamGlobal = ParamData%NumParamGlobal
-    ParamData%C_obj%NumParamTurbine = ParamData%NumParamTurbine
-
-    ! -- ParamGlobal Param Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(ParamData%ParamGlobal)) THEN 
-          ParamData%C_obj%ParamGlobal_Len = 0
-          ParamData%C_obj%ParamGlobal = C_NULL_PTR
-       ELSE
-          ParamData%C_obj%ParamGlobal_Len = SIZE(ParamData%ParamGlobal)
-          IF (ParamData%C_obj%ParamGlobal_Len > 0) &
-             ParamData%C_obj%ParamGlobal = C_LOC( ParamData%ParamGlobal( LBOUND(ParamData%ParamGlobal,1) ) )
-       END IF
-    END IF
-
-    ! -- ParamTurbine Param Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(ParamData%ParamTurbine)) THEN 
-          ParamData%C_obj%ParamTurbine_Len = 0
-          ParamData%C_obj%ParamTurbine = C_NULL_PTR
-       ELSE
-          ParamData%C_obj%ParamTurbine_Len = SIZE(ParamData%ParamTurbine)
-          IF (ParamData%C_obj%ParamTurbine_Len > 0) &
-             ParamData%C_obj%ParamTurbine = C_LOC( ParamData%ParamTurbine( LBOUND(ParamData%ParamTurbine,1) ) )
-       END IF
-    END IF
- END SUBROUTINE SC_F2C_CopyParam
-
+SUBROUTINE SC_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_ParameterType), INTENT(INOUT) :: ParamData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   ParamData%C_obj%DT = ParamData%DT
+   ParamData%C_obj%nTurbines = ParamData%nTurbines
+   ParamData%C_obj%NumCtrl2SC = ParamData%NumCtrl2SC
+   ParamData%C_obj%nInpGlobal = ParamData%nInpGlobal
+   ParamData%C_obj%NumSC2Ctrl = ParamData%NumSC2Ctrl
+   ParamData%C_obj%NumSC2CtrlGlob = ParamData%NumSC2CtrlGlob
+   ParamData%C_obj%NumStatesGlobal = ParamData%NumStatesGlobal
+   ParamData%C_obj%NumStatesTurbine = ParamData%NumStatesTurbine
+   ParamData%C_obj%NumParamGlobal = ParamData%NumParamGlobal
+   ParamData%C_obj%NumParamTurbine = ParamData%NumParamTurbine
+   
+   ! -- ParamGlobal Param Data fields
+   IF (.NOT. SkipPointers_local ) THEN
+      IF (.NOT. ASSOCIATED(ParamData%ParamGlobal)) THEN 
+         ParamData%C_obj%ParamGlobal_Len = 0
+         ParamData%C_obj%ParamGlobal = C_NULL_PTR
+      ELSE
+         ParamData%C_obj%ParamGlobal_Len = SIZE(ParamData%ParamGlobal)
+         IF (ParamData%C_obj%ParamGlobal_Len > 0) &
+            ParamData%C_obj%ParamGlobal = C_LOC(ParamData%ParamGlobal(LBOUND(ParamData%ParamGlobal,1)))
+      END IF
+   END IF
+   
+   ! -- ParamTurbine Param Data fields
+   IF (.NOT. SkipPointers_local ) THEN
+      IF (.NOT. ASSOCIATED(ParamData%ParamTurbine)) THEN 
+         ParamData%C_obj%ParamTurbine_Len = 0
+         ParamData%C_obj%ParamTurbine = C_NULL_PTR
+      ELSE
+         ParamData%C_obj%ParamTurbine_Len = SIZE(ParamData%ParamTurbine)
+         IF (ParamData%C_obj%ParamTurbine_Len > 0) &
+            ParamData%C_obj%ParamTurbine = C_LOC(ParamData%ParamTurbine(LBOUND(ParamData%ParamTurbine,1)))
+      END IF
+   END IF
+END SUBROUTINE
 
 subroutine SC_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrStat, ErrMsg)
    type(SC_DiscreteStateType), intent(in) :: SrcDiscStateData
@@ -863,82 +863,82 @@ subroutine SC_UnPackDiscState(Buf, OutData)
       OutData%Turbine => null()
    end if
 end subroutine
- SUBROUTINE SC_C2Fary_CopyDiscState( DiscStateData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_DiscreteStateType), INTENT(INOUT) :: DiscStateData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
 
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
+SUBROUTINE SC_C2Fary_CopyDiscState(DiscStateData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_DiscreteStateType), INTENT(INOUT) :: DiscStateData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   
+   ! -- Global DiscState Data fields
+   IF ( .NOT. SkipPointers_local ) THEN
+      IF ( .NOT. C_ASSOCIATED( DiscStateData%C_obj%Global ) ) THEN
+         NULLIFY( DiscStateData%Global )
+      ELSE
+         CALL C_F_POINTER(DiscStateData%C_obj%Global, DiscStateData%Global, [DiscStateData%C_obj%Global_Len])
+      END IF
+   END IF
+   
+   ! -- Turbine DiscState Data fields
+   IF ( .NOT. SkipPointers_local ) THEN
+      IF ( .NOT. C_ASSOCIATED( DiscStateData%C_obj%Turbine ) ) THEN
+         NULLIFY( DiscStateData%Turbine )
+      ELSE
+         CALL C_F_POINTER(DiscStateData%C_obj%Turbine, DiscStateData%Turbine, [DiscStateData%C_obj%Turbine_Len])
+      END IF
+   END IF
+END SUBROUTINE
 
-    ! -- Global DiscState Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( DiscStateData%C_obj%Global ) ) THEN
-          NULLIFY( DiscStateData%Global )
-       ELSE
-          CALL C_F_POINTER(DiscStateData%C_obj%Global, DiscStateData%Global, (/DiscStateData%C_obj%Global_Len/))
-       END IF
-    END IF
-
-    ! -- Turbine DiscState Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( DiscStateData%C_obj%Turbine ) ) THEN
-          NULLIFY( DiscStateData%Turbine )
-       ELSE
-          CALL C_F_POINTER(DiscStateData%C_obj%Turbine, DiscStateData%Turbine, (/DiscStateData%C_obj%Turbine_Len/))
-       END IF
-    END IF
- END SUBROUTINE SC_C2Fary_CopyDiscState
-
- SUBROUTINE SC_F2C_CopyDiscState( DiscStateData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_DiscreteStateType), INTENT(INOUT) :: DiscStateData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-
-    ! -- Global DiscState Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(DiscStateData%Global)) THEN 
-          DiscStateData%C_obj%Global_Len = 0
-          DiscStateData%C_obj%Global = C_NULL_PTR
-       ELSE
-          DiscStateData%C_obj%Global_Len = SIZE(DiscStateData%Global)
-          IF (DiscStateData%C_obj%Global_Len > 0) &
-             DiscStateData%C_obj%Global = C_LOC( DiscStateData%Global( LBOUND(DiscStateData%Global,1) ) )
-       END IF
-    END IF
-
-    ! -- Turbine DiscState Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(DiscStateData%Turbine)) THEN 
-          DiscStateData%C_obj%Turbine_Len = 0
-          DiscStateData%C_obj%Turbine = C_NULL_PTR
-       ELSE
-          DiscStateData%C_obj%Turbine_Len = SIZE(DiscStateData%Turbine)
-          IF (DiscStateData%C_obj%Turbine_Len > 0) &
-             DiscStateData%C_obj%Turbine = C_LOC( DiscStateData%Turbine( LBOUND(DiscStateData%Turbine,1) ) )
-       END IF
-    END IF
- END SUBROUTINE SC_F2C_CopyDiscState
-
+SUBROUTINE SC_F2C_CopyDiscState( DiscStateData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_DiscreteStateType), INTENT(INOUT) :: DiscStateData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   
+   ! -- Global DiscState Data fields
+   IF (.NOT. SkipPointers_local ) THEN
+      IF (.NOT. ASSOCIATED(DiscStateData%Global)) THEN 
+         DiscStateData%C_obj%Global_Len = 0
+         DiscStateData%C_obj%Global = C_NULL_PTR
+      ELSE
+         DiscStateData%C_obj%Global_Len = SIZE(DiscStateData%Global)
+         IF (DiscStateData%C_obj%Global_Len > 0) &
+            DiscStateData%C_obj%Global = C_LOC(DiscStateData%Global(LBOUND(DiscStateData%Global,1)))
+      END IF
+   END IF
+   
+   ! -- Turbine DiscState Data fields
+   IF (.NOT. SkipPointers_local ) THEN
+      IF (.NOT. ASSOCIATED(DiscStateData%Turbine)) THEN 
+         DiscStateData%C_obj%Turbine_Len = 0
+         DiscStateData%C_obj%Turbine = C_NULL_PTR
+      ELSE
+         DiscStateData%C_obj%Turbine_Len = SIZE(DiscStateData%Turbine)
+         IF (DiscStateData%C_obj%Turbine_Len > 0) &
+            DiscStateData%C_obj%Turbine = C_LOC(DiscStateData%Turbine(LBOUND(DiscStateData%Turbine,1)))
+      END IF
+   END IF
+END SUBROUTINE
 
 subroutine SC_CopyContState(SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg)
    type(SC_ContinuousStateType), intent(in) :: SrcContStateData
@@ -984,42 +984,42 @@ subroutine SC_UnPackContState(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    OutData%C_obj%Dummy = OutData%Dummy
 end subroutine
- SUBROUTINE SC_C2Fary_CopyContState( ContStateData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_ContinuousStateType), INTENT(INOUT) :: ContStateData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
 
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    ContStateData%Dummy = ContStateData%C_obj%Dummy
- END SUBROUTINE SC_C2Fary_CopyContState
+SUBROUTINE SC_C2Fary_CopyContState(ContStateData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_ContinuousStateType), INTENT(INOUT) :: ContStateData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   ContStateData%Dummy = ContStateData%C_obj%Dummy
+END SUBROUTINE
 
- SUBROUTINE SC_F2C_CopyContState( ContStateData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_ContinuousStateType), INTENT(INOUT) :: ContStateData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    ContStateData%C_obj%Dummy = ContStateData%Dummy
- END SUBROUTINE SC_F2C_CopyContState
-
+SUBROUTINE SC_F2C_CopyContState( ContStateData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_ContinuousStateType), INTENT(INOUT) :: ContStateData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   ContStateData%C_obj%Dummy = ContStateData%Dummy
+END SUBROUTINE
 
 subroutine SC_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
    type(SC_ConstraintStateType), intent(in) :: SrcConstrStateData
@@ -1065,42 +1065,42 @@ subroutine SC_UnPackConstrState(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    OutData%C_obj%Dummy = OutData%Dummy
 end subroutine
- SUBROUTINE SC_C2Fary_CopyConstrState( ConstrStateData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
 
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    ConstrStateData%Dummy = ConstrStateData%C_obj%Dummy
- END SUBROUTINE SC_C2Fary_CopyConstrState
+SUBROUTINE SC_C2Fary_CopyConstrState(ConstrStateData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   ConstrStateData%Dummy = ConstrStateData%C_obj%Dummy
+END SUBROUTINE
 
- SUBROUTINE SC_F2C_CopyConstrState( ConstrStateData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    ConstrStateData%C_obj%Dummy = ConstrStateData%Dummy
- END SUBROUTINE SC_F2C_CopyConstrState
-
+SUBROUTINE SC_F2C_CopyConstrState( ConstrStateData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   ConstrStateData%C_obj%Dummy = ConstrStateData%Dummy
+END SUBROUTINE
 
 subroutine SC_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    type(SC_MiscVarType), intent(in) :: SrcMiscData
@@ -1146,42 +1146,42 @@ subroutine SC_UnPackMisc(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    OutData%C_obj%Dummy = OutData%Dummy
 end subroutine
- SUBROUTINE SC_C2Fary_CopyMisc( MiscData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_MiscVarType), INTENT(INOUT) :: MiscData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
 
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    MiscData%Dummy = MiscData%C_obj%Dummy
- END SUBROUTINE SC_C2Fary_CopyMisc
+SUBROUTINE SC_C2Fary_CopyMisc(MiscData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_MiscVarType), INTENT(INOUT) :: MiscData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   MiscData%Dummy = MiscData%C_obj%Dummy
+END SUBROUTINE
 
- SUBROUTINE SC_F2C_CopyMisc( MiscData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_MiscVarType), INTENT(INOUT) :: MiscData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    MiscData%C_obj%Dummy = MiscData%Dummy
- END SUBROUTINE SC_F2C_CopyMisc
-
+SUBROUTINE SC_F2C_CopyMisc( MiscData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_MiscVarType), INTENT(INOUT) :: MiscData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   MiscData%C_obj%Dummy = MiscData%Dummy
+END SUBROUTINE
 
 subroutine SC_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg)
    type(SC_OtherStateType), intent(in) :: SrcOtherStateData
@@ -1227,42 +1227,42 @@ subroutine SC_UnPackOtherState(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    OutData%C_obj%Dummy = OutData%Dummy
 end subroutine
- SUBROUTINE SC_C2Fary_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_OtherStateType), INTENT(INOUT) :: OtherStateData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
 
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    OtherStateData%Dummy = OtherStateData%C_obj%Dummy
- END SUBROUTINE SC_C2Fary_CopyOtherState
+SUBROUTINE SC_C2Fary_CopyOtherState(OtherStateData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_OtherStateType), INTENT(INOUT) :: OtherStateData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   OtherStateData%Dummy = OtherStateData%C_obj%Dummy
+END SUBROUTINE
 
- SUBROUTINE SC_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_OtherStateType), INTENT(INOUT) :: OtherStateData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    OtherStateData%C_obj%Dummy = OtherStateData%Dummy
- END SUBROUTINE SC_F2C_CopyOtherState
-
+SUBROUTINE SC_F2C_CopyOtherState( OtherStateData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_OtherStateType), INTENT(INOUT) :: OtherStateData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   OtherStateData%C_obj%Dummy = OtherStateData%Dummy
+END SUBROUTINE
 
 subroutine SC_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    type(SC_InputType), intent(in) :: SrcInputData
@@ -1420,82 +1420,82 @@ subroutine SC_UnPackInput(Buf, OutData)
       OutData%toSC => null()
    end if
 end subroutine
- SUBROUTINE SC_C2Fary_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_InputType), INTENT(INOUT) :: InputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
 
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
+SUBROUTINE SC_C2Fary_CopyInput(InputData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_InputType), INTENT(INOUT) :: InputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   
+   ! -- toSCglob Input Data fields
+   IF ( .NOT. SkipPointers_local ) THEN
+      IF ( .NOT. C_ASSOCIATED( InputData%C_obj%toSCglob ) ) THEN
+         NULLIFY( InputData%toSCglob )
+      ELSE
+         CALL C_F_POINTER(InputData%C_obj%toSCglob, InputData%toSCglob, [InputData%C_obj%toSCglob_Len])
+      END IF
+   END IF
+   
+   ! -- toSC Input Data fields
+   IF ( .NOT. SkipPointers_local ) THEN
+      IF ( .NOT. C_ASSOCIATED( InputData%C_obj%toSC ) ) THEN
+         NULLIFY( InputData%toSC )
+      ELSE
+         CALL C_F_POINTER(InputData%C_obj%toSC, InputData%toSC, [InputData%C_obj%toSC_Len])
+      END IF
+   END IF
+END SUBROUTINE
 
-    ! -- toSCglob Input Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%toSCglob ) ) THEN
-          NULLIFY( InputData%toSCglob )
-       ELSE
-          CALL C_F_POINTER(InputData%C_obj%toSCglob, InputData%toSCglob, (/InputData%C_obj%toSCglob_Len/))
-       END IF
-    END IF
-
-    ! -- toSC Input Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%toSC ) ) THEN
-          NULLIFY( InputData%toSC )
-       ELSE
-          CALL C_F_POINTER(InputData%C_obj%toSC, InputData%toSC, (/InputData%C_obj%toSC_Len/))
-       END IF
-    END IF
- END SUBROUTINE SC_C2Fary_CopyInput
-
- SUBROUTINE SC_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_InputType), INTENT(INOUT) :: InputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-
-    ! -- toSCglob Input Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(InputData%toSCglob)) THEN 
-          InputData%C_obj%toSCglob_Len = 0
-          InputData%C_obj%toSCglob = C_NULL_PTR
-       ELSE
-          InputData%C_obj%toSCglob_Len = SIZE(InputData%toSCglob)
-          IF (InputData%C_obj%toSCglob_Len > 0) &
-             InputData%C_obj%toSCglob = C_LOC( InputData%toSCglob( LBOUND(InputData%toSCglob,1) ) )
-       END IF
-    END IF
-
-    ! -- toSC Input Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(InputData%toSC)) THEN 
-          InputData%C_obj%toSC_Len = 0
-          InputData%C_obj%toSC = C_NULL_PTR
-       ELSE
-          InputData%C_obj%toSC_Len = SIZE(InputData%toSC)
-          IF (InputData%C_obj%toSC_Len > 0) &
-             InputData%C_obj%toSC = C_LOC( InputData%toSC( LBOUND(InputData%toSC,1) ) )
-       END IF
-    END IF
- END SUBROUTINE SC_F2C_CopyInput
-
+SUBROUTINE SC_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_InputType), INTENT(INOUT) :: InputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   
+   ! -- toSCglob Input Data fields
+   IF (.NOT. SkipPointers_local ) THEN
+      IF (.NOT. ASSOCIATED(InputData%toSCglob)) THEN 
+         InputData%C_obj%toSCglob_Len = 0
+         InputData%C_obj%toSCglob = C_NULL_PTR
+      ELSE
+         InputData%C_obj%toSCglob_Len = SIZE(InputData%toSCglob)
+         IF (InputData%C_obj%toSCglob_Len > 0) &
+            InputData%C_obj%toSCglob = C_LOC(InputData%toSCglob(LBOUND(InputData%toSCglob,1)))
+      END IF
+   END IF
+   
+   ! -- toSC Input Data fields
+   IF (.NOT. SkipPointers_local ) THEN
+      IF (.NOT. ASSOCIATED(InputData%toSC)) THEN 
+         InputData%C_obj%toSC_Len = 0
+         InputData%C_obj%toSC = C_NULL_PTR
+      ELSE
+         InputData%C_obj%toSC_Len = SIZE(InputData%toSC)
+         IF (InputData%C_obj%toSC_Len > 0) &
+            InputData%C_obj%toSC = C_LOC(InputData%toSC(LBOUND(InputData%toSC,1)))
+      END IF
+   END IF
+END SUBROUTINE
 
 subroutine SC_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
    type(SC_OutputType), intent(in) :: SrcOutputData
@@ -1653,135 +1653,136 @@ subroutine SC_UnPackOutput(Buf, OutData)
       OutData%fromSC => null()
    end if
 end subroutine
- SUBROUTINE SC_C2Fary_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_OutputType), INTENT(INOUT) :: OutputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
 
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
+SUBROUTINE SC_C2Fary_CopyOutput(OutputData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_OutputType), INTENT(INOUT) :: OutputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   
+   ! -- fromSCglob Output Data fields
+   IF ( .NOT. SkipPointers_local ) THEN
+      IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%fromSCglob ) ) THEN
+         NULLIFY( OutputData%fromSCglob )
+      ELSE
+         CALL C_F_POINTER(OutputData%C_obj%fromSCglob, OutputData%fromSCglob, [OutputData%C_obj%fromSCglob_Len])
+      END IF
+   END IF
+   
+   ! -- fromSC Output Data fields
+   IF ( .NOT. SkipPointers_local ) THEN
+      IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%fromSC ) ) THEN
+         NULLIFY( OutputData%fromSC )
+      ELSE
+         CALL C_F_POINTER(OutputData%C_obj%fromSC, OutputData%fromSC, [OutputData%C_obj%fromSC_Len])
+      END IF
+   END IF
+END SUBROUTINE
 
-    ! -- fromSCglob Output Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%fromSCglob ) ) THEN
-          NULLIFY( OutputData%fromSCglob )
-       ELSE
-          CALL C_F_POINTER(OutputData%C_obj%fromSCglob, OutputData%fromSCglob, (/OutputData%C_obj%fromSCglob_Len/))
-       END IF
-    END IF
+SUBROUTINE SC_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_OutputType), INTENT(INOUT) :: OutputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   
+   ! -- fromSCglob Output Data fields
+   IF (.NOT. SkipPointers_local ) THEN
+      IF (.NOT. ASSOCIATED(OutputData%fromSCglob)) THEN 
+         OutputData%C_obj%fromSCglob_Len = 0
+         OutputData%C_obj%fromSCglob = C_NULL_PTR
+      ELSE
+         OutputData%C_obj%fromSCglob_Len = SIZE(OutputData%fromSCglob)
+         IF (OutputData%C_obj%fromSCglob_Len > 0) &
+            OutputData%C_obj%fromSCglob = C_LOC(OutputData%fromSCglob(LBOUND(OutputData%fromSCglob,1)))
+      END IF
+   END IF
+   
+   ! -- fromSC Output Data fields
+   IF (.NOT. SkipPointers_local ) THEN
+      IF (.NOT. ASSOCIATED(OutputData%fromSC)) THEN 
+         OutputData%C_obj%fromSC_Len = 0
+         OutputData%C_obj%fromSC = C_NULL_PTR
+      ELSE
+         OutputData%C_obj%fromSC_Len = SIZE(OutputData%fromSC)
+         IF (OutputData%C_obj%fromSC_Len > 0) &
+            OutputData%C_obj%fromSC = C_LOC(OutputData%fromSC(LBOUND(OutputData%fromSC,1)))
+      END IF
+   END IF
+END SUBROUTINE
 
-    ! -- fromSC Output Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%fromSC ) ) THEN
-          NULLIFY( OutputData%fromSC )
-       ELSE
-          CALL C_F_POINTER(OutputData%C_obj%fromSC, OutputData%fromSC, (/OutputData%C_obj%fromSC_Len/))
-       END IF
-    END IF
- END SUBROUTINE SC_C2Fary_CopyOutput
-
- SUBROUTINE SC_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_OutputType), INTENT(INOUT) :: OutputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-
-    ! -- fromSCglob Output Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(OutputData%fromSCglob)) THEN 
-          OutputData%C_obj%fromSCglob_Len = 0
-          OutputData%C_obj%fromSCglob = C_NULL_PTR
-       ELSE
-          OutputData%C_obj%fromSCglob_Len = SIZE(OutputData%fromSCglob)
-          IF (OutputData%C_obj%fromSCglob_Len > 0) &
-             OutputData%C_obj%fromSCglob = C_LOC( OutputData%fromSCglob( LBOUND(OutputData%fromSCglob,1) ) )
-       END IF
-    END IF
-
-    ! -- fromSC Output Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(OutputData%fromSC)) THEN 
-          OutputData%C_obj%fromSC_Len = 0
-          OutputData%C_obj%fromSC = C_NULL_PTR
-       ELSE
-          OutputData%C_obj%fromSC_Len = SIZE(OutputData%fromSC)
-          IF (OutputData%C_obj%fromSC_Len > 0) &
-             OutputData%C_obj%fromSC = C_LOC( OutputData%fromSC( LBOUND(OutputData%fromSC,1) ) )
-       END IF
-    END IF
- END SUBROUTINE SC_F2C_CopyOutput
-
-
- SUBROUTINE SC_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )
-!
-! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
-! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
-!
-!  expressions below based on either
-!
-!  f(t) = a
-!  f(t) = a + b * t, or
-!  f(t) = a + b * t + c * t**2
-!
-!  where a, b and c are determined as the solution to
-!  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
-!
-!..................................................................................................................................
-
- TYPE(SC_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
- REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
- TYPE(SC_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
- REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+subroutine SC_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg)
+   !
+   ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
+   ! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
+   !
+   !  expressions below based on either
+   !
+   !  f(t) = a
+   !  f(t) = a + b * t, or
+   !  f(t) = a + b * t + c * t**2
+   !
+   !  where a, b and c are determined as the solution to
+   !  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
+   !
+   !----------------------------------------------------------------------------------------------------------------------------------
+   
+   type(SC_InputType), intent(in)  :: u(:) ! Input at t1 > t2 > t3
+   real(DbKi),                 intent(in   )  :: t(:)           ! Times associated with the Inputs
+   type(SC_InputType), intent(inout)  :: u_out ! Input at tin_out
+   real(DbKi),                 intent(in   )  :: t_out           ! time to be extrap/interp'd to
+   integer(IntKi),             intent(  out)  :: ErrStat         ! Error status of the operation
+   character(*),               intent(  out)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
    ! local variables
- INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
- INTEGER(IntKi)                             :: ErrStat2        ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
- CHARACTER(*),    PARAMETER                 :: RoutineName = 'SC_Input_ExtrapInterp'
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
- if ( size(t) .ne. size(u)) then
-    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(u)',ErrStat,ErrMsg,RoutineName)
-    RETURN
- endif
- order = SIZE(u) - 1
- IF ( order .eq. 0 ) THEN
-   CALL SC_CopyInput(u(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 1 ) THEN
-   CALL SC_Input_ExtrapInterp1(u(1), u(2), t, u_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 2 ) THEN
-   CALL SC_Input_ExtrapInterp2(u(1), u(2), u(3), t, u_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE 
-   CALL SetErrStat(ErrID_Fatal,'size(u) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
-   RETURN
- ENDIF 
- END SUBROUTINE SC_Input_ExtrapInterp
+   integer(IntKi)                             :: order           ! order of polynomial fit (max 2)
+   integer(IntKi)                             :: ErrStat2        ! local errors
+   character(ErrMsgLen)                       :: ErrMsg2         ! local errors
+   character(*),    PARAMETER                 :: RoutineName = 'SC_Input_ExtrapInterp'
+   
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (size(t) /= size(u)) then
+      call SetErrStat(ErrID_Fatal, 'size(t) must equal size(u)', ErrStat, ErrMsg, RoutineName)
+      return
+   endif
+   order = size(u) - 1
+   select case (order)
+   case (0)
+      call SC_CopyInput(u(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case (1)
+      call SC_Input_ExtrapInterp1(u(1), u(2), t, u_out, t_out, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case (2)
+      call SC_Input_ExtrapInterp2(u(1), u(2), u(3), t, u_out, t_out, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case default
+      call SetErrStat(ErrID_Fatal, 'size(u) must be less than 4 (order must be less than 3).', ErrStat, ErrMsg, RoutineName)
+      return
+   end select
+end subroutine
 
-
- SUBROUTINE SC_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
+SUBROUTINE SC_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
 ! values of u (which has values associated with times in t).  Order of the interpolation is 1.
@@ -1793,53 +1794,48 @@ end subroutine
 !
 !..................................................................................................................................
 
- TYPE(SC_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
- TYPE(SC_InputType), INTENT(IN)  :: u2    ! Input at t2 
- REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
- TYPE(SC_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
- REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
- INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
- CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
+   TYPE(SC_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
+   TYPE(SC_InputType), INTENT(IN)  :: u2    ! Input at t2 
+   REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
+   TYPE(SC_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
+   REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
+   INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
+   CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(DbKi)                                 :: t(2)     ! Times associated with the Inputs
- REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
- CHARACTER(*),                    PARAMETER :: RoutineName = 'SC_Input_ExtrapInterp1'
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
-   IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+   REAL(DbKi)                                 :: t(2)     ! Times associated with the Inputs
+   REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
+   CHARACTER(*),                    PARAMETER :: RoutineName = 'SC_Input_ExtrapInterp1'
+   REAL(DbKi)                                 :: a1, a2   ! temporary for extrapolation/interpolation
+   INTEGER(IntKi)                             :: ErrStat2 ! local errors
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   INTEGER                                    :: i01      ! dim1 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i1       ! dim1 counter variable for arrays
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! we'll subtract a constant from the times to resolve some 
+   ! numerical issues when t gets large (and to simplify the equations)
+   t = tin - tin(1)
+   t_out = tin_out - tin(1)
+   
+   IF (EqualRealNos(t(1), t(2))) THEN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg, RoutineName)
+      RETURN
    END IF
+   
+   ! Calculate weighting factors from Lagrange polynomial
+   a1 = -(t_out - t(2))/t(2)
+   a2 = t_out/t(2)
+   
+   IF (ASSOCIATED(u_out%toSCglob) .AND. ASSOCIATED(u1%toSCglob)) THEN
+      u_out%toSCglob = a1*u1%toSCglob + a2*u2%toSCglob
+   END IF ! check if allocated
+   IF (ASSOCIATED(u_out%toSC) .AND. ASSOCIATED(u1%toSC)) THEN
+      u_out%toSC = a1*u1%toSC + a2*u2%toSC
+   END IF ! check if allocated
+END SUBROUTINE
 
-   ScaleFactor = t_out / t(2)
-IF (ASSOCIATED(u_out%toSCglob) .AND. ASSOCIATED(u1%toSCglob)) THEN
-  DO i1 = LBOUND(u_out%toSCglob,1),UBOUND(u_out%toSCglob,1)
-    b = -(u1%toSCglob(i1) - u2%toSCglob(i1))
-    u_out%toSCglob(i1) = u1%toSCglob(i1) + b * ScaleFactor
-  END DO
-END IF ! check if allocated
-IF (ASSOCIATED(u_out%toSC) .AND. ASSOCIATED(u1%toSC)) THEN
-  DO i1 = LBOUND(u_out%toSC,1),UBOUND(u_out%toSC,1)
-    b = -(u1%toSC(i1) - u2%toSC(i1))
-    u_out%toSC(i1) = u1%toSC(i1) + b * ScaleFactor
-  END DO
-END IF ! check if allocated
- END SUBROUTINE SC_Input_ExtrapInterp1
-
-
- SUBROUTINE SC_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
+SUBROUTINE SC_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
 ! values of u (which has values associated with times in t).  Order of the interpolation is 2.
@@ -1853,115 +1849,108 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(SC_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
- TYPE(SC_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
- TYPE(SC_InputType), INTENT(IN)  :: u3      ! Input at t3
- REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
- TYPE(SC_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
- REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   TYPE(SC_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
+   TYPE(SC_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
+   TYPE(SC_InputType), INTENT(IN)  :: u3      ! Input at t3
+   REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
+   TYPE(SC_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
+   REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
+   INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+   CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(DbKi)                                 :: t(3)      ! Times associated with the Inputs
- REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
- INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- CHARACTER(*),            PARAMETER         :: RoutineName = 'SC_Input_ExtrapInterp2'
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
+   REAL(DbKi)                                 :: t(3)      ! Times associated with the Inputs
+   REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
+   INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
+   REAL(DbKi)                                 :: a1,a2,a3 ! temporary for extrapolation/interpolation
+   INTEGER(IntKi)                             :: ErrStat2 ! local errors
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   CHARACTER(*),            PARAMETER         :: RoutineName = 'SC_Input_ExtrapInterp2'
+   INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i1    ! dim1 counter variable for arrays
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! we'll subtract a constant from the times to resolve some 
+   ! numerical issues when t gets large (and to simplify the equations)
+   t = tin - tin(1)
+   t_out = tin_out - tin(1)
+   
    IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    END IF
+   
+   ! Calculate Lagrange polynomial coefficients
+   a1 = (t_out - t(2))*(t_out - t(3))/((t(1) - t(2))*(t(1) - t(3)))
+   a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
+   a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
+   IF (ASSOCIATED(u_out%toSCglob) .AND. ASSOCIATED(u1%toSCglob)) THEN
+      u_out%toSCglob = a1*u1%toSCglob + a2*u2%toSCglob + a3*u3%toSCglob
+   END IF ! check if allocated
+   IF (ASSOCIATED(u_out%toSC) .AND. ASSOCIATED(u1%toSC)) THEN
+      u_out%toSC = a1*u1%toSC + a2*u2%toSC + a3*u3%toSC
+   END IF ! check if allocated
+END SUBROUTINE
 
-   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
-IF (ASSOCIATED(u_out%toSCglob) .AND. ASSOCIATED(u1%toSCglob)) THEN
-  DO i1 = LBOUND(u_out%toSCglob,1),UBOUND(u_out%toSCglob,1)
-    b = (t(3)**2*(u1%toSCglob(i1) - u2%toSCglob(i1)) + t(2)**2*(-u1%toSCglob(i1) + u3%toSCglob(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*u1%toSCglob(i1) + t(3)*u2%toSCglob(i1) - t(2)*u3%toSCglob(i1) ) * scaleFactor
-    u_out%toSCglob(i1) = u1%toSCglob(i1) + b  + c * t_out
-  END DO
-END IF ! check if allocated
-IF (ASSOCIATED(u_out%toSC) .AND. ASSOCIATED(u1%toSC)) THEN
-  DO i1 = LBOUND(u_out%toSC,1),UBOUND(u_out%toSC,1)
-    b = (t(3)**2*(u1%toSC(i1) - u2%toSC(i1)) + t(2)**2*(-u1%toSC(i1) + u3%toSC(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*u1%toSC(i1) + t(3)*u2%toSC(i1) - t(2)*u3%toSC(i1) ) * scaleFactor
-    u_out%toSC(i1) = u1%toSC(i1) + b  + c * t_out
-  END DO
-END IF ! check if allocated
- END SUBROUTINE SC_Input_ExtrapInterp2
-
-
- SUBROUTINE SC_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg )
-!
-! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
-! values of y (which has values associated with times in t).  Order of the interpolation is given by the size of y
-!
-!  expressions below based on either
-!
-!  f(t) = a
-!  f(t) = a + b * t, or
-!  f(t) = a + b * t + c * t**2
-!
-!  where a, b and c are determined as the solution to
-!  f(t1) = y1, f(t2) = y2, f(t3) = y3  (as appropriate)
-!
-!..................................................................................................................................
-
- TYPE(SC_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
- REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
- TYPE(SC_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
- REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+subroutine SC_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg)
+   !
+   ! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
+   ! values of y (which has values associated with times in t).  Order of the interpolation is given by the size of y
+   !
+   !  expressions below based on either
+   !
+   !  f(t) = a
+   !  f(t) = a + b * t, or
+   !  f(t) = a + b * t + c * t**2
+   !
+   !  where a, b and c are determined as the solution to
+   !  f(t1) = y1, f(t2) = y2, f(t3) = y3  (as appropriate)
+   !
+   !----------------------------------------------------------------------------------------------------------------------------------
+   
+   type(SC_OutputType), intent(in)  :: y(:) ! Output at t1 > t2 > t3
+   real(DbKi),                 intent(in   )  :: t(:)           ! Times associated with the Outputs
+   type(SC_OutputType), intent(inout)  :: y_out ! Output at tin_out
+   real(DbKi),                 intent(in   )  :: t_out           ! time to be extrap/interp'd to
+   integer(IntKi),             intent(  out)  :: ErrStat         ! Error status of the operation
+   character(*),               intent(  out)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
    ! local variables
- INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
- INTEGER(IntKi)                             :: ErrStat2        ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
- CHARACTER(*),    PARAMETER                 :: RoutineName = 'SC_Output_ExtrapInterp'
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
- if ( size(t) .ne. size(y)) then
-    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(y)',ErrStat,ErrMsg,RoutineName)
-    RETURN
- endif
- order = SIZE(y) - 1
- IF ( order .eq. 0 ) THEN
-   CALL SC_CopyOutput(y(1), y_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 1 ) THEN
-   CALL SC_Output_ExtrapInterp1(y(1), y(2), t, y_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 2 ) THEN
-   CALL SC_Output_ExtrapInterp2(y(1), y(2), y(3), t, y_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE 
-   CALL SetErrStat(ErrID_Fatal,'size(y) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
-   RETURN
- ENDIF 
- END SUBROUTINE SC_Output_ExtrapInterp
+   integer(IntKi)                             :: order           ! order of polynomial fit (max 2)
+   integer(IntKi)                             :: ErrStat2        ! local errors
+   character(ErrMsgLen)                       :: ErrMsg2         ! local errors
+   character(*),    PARAMETER                 :: RoutineName = 'SC_Output_ExtrapInterp'
+   
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (size(t) /= size(y)) then
+      call SetErrStat(ErrID_Fatal, 'size(t) must equal size(y)', ErrStat, ErrMsg, RoutineName)
+      return
+   endif
+   order = size(y) - 1
+   select case (order)
+   case (0)
+      call SC_CopyOutput(y(1), y_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case (1)
+      call SC_Output_ExtrapInterp1(y(1), y(2), t, y_out, t_out, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case (2)
+      call SC_Output_ExtrapInterp2(y(1), y(2), y(3), t, y_out, t_out, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   case default
+      call SetErrStat(ErrID_Fatal, 'size(y) must be less than 4 (order must be less than 3).', ErrStat, ErrMsg, RoutineName)
+      return
+   end select
+end subroutine
 
-
- SUBROUTINE SC_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg )
+SUBROUTINE SC_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
 ! values of y (which has values associated with times in t).  Order of the interpolation is 1.
@@ -1973,53 +1962,48 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(SC_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
- TYPE(SC_OutputType), INTENT(IN)  :: y2    ! Output at t2 
- REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
- TYPE(SC_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
- REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
- INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
- CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
+   TYPE(SC_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
+   TYPE(SC_OutputType), INTENT(IN)  :: y2    ! Output at t2 
+   REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
+   TYPE(SC_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
+   REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
+   INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
+   CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(DbKi)                                 :: t(2)     ! Times associated with the Outputs
- REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
- CHARACTER(*),                    PARAMETER :: RoutineName = 'SC_Output_ExtrapInterp1'
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
-   IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+   REAL(DbKi)                                 :: t(2)     ! Times associated with the Outputs
+   REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
+   CHARACTER(*),                    PARAMETER :: RoutineName = 'SC_Output_ExtrapInterp1'
+   REAL(DbKi)                                 :: a1, a2   ! temporary for extrapolation/interpolation
+   INTEGER(IntKi)                             :: ErrStat2 ! local errors
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   INTEGER                                    :: i01      ! dim1 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i1       ! dim1 counter variable for arrays
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! we'll subtract a constant from the times to resolve some 
+   ! numerical issues when t gets large (and to simplify the equations)
+   t = tin - tin(1)
+   t_out = tin_out - tin(1)
+   
+   IF (EqualRealNos(t(1), t(2))) THEN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg, RoutineName)
+      RETURN
    END IF
+   
+   ! Calculate weighting factors from Lagrange polynomial
+   a1 = -(t_out - t(2))/t(2)
+   a2 = t_out/t(2)
+   
+   IF (ASSOCIATED(y_out%fromSCglob) .AND. ASSOCIATED(y1%fromSCglob)) THEN
+      y_out%fromSCglob = a1*y1%fromSCglob + a2*y2%fromSCglob
+   END IF ! check if allocated
+   IF (ASSOCIATED(y_out%fromSC) .AND. ASSOCIATED(y1%fromSC)) THEN
+      y_out%fromSC = a1*y1%fromSC + a2*y2%fromSC
+   END IF ! check if allocated
+END SUBROUTINE
 
-   ScaleFactor = t_out / t(2)
-IF (ASSOCIATED(y_out%fromSCglob) .AND. ASSOCIATED(y1%fromSCglob)) THEN
-  DO i1 = LBOUND(y_out%fromSCglob,1),UBOUND(y_out%fromSCglob,1)
-    b = -(y1%fromSCglob(i1) - y2%fromSCglob(i1))
-    y_out%fromSCglob(i1) = y1%fromSCglob(i1) + b * ScaleFactor
-  END DO
-END IF ! check if allocated
-IF (ASSOCIATED(y_out%fromSC) .AND. ASSOCIATED(y1%fromSC)) THEN
-  DO i1 = LBOUND(y_out%fromSC,1),UBOUND(y_out%fromSC,1)
-    b = -(y1%fromSC(i1) - y2%fromSC(i1))
-    y_out%fromSC(i1) = y1%fromSC(i1) + b * ScaleFactor
-  END DO
-END IF ! check if allocated
- END SUBROUTINE SC_Output_ExtrapInterp1
-
-
- SUBROUTINE SC_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
+SUBROUTINE SC_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
 ! values of y (which has values associated with times in t).  Order of the interpolation is 2.
@@ -2033,61 +2017,53 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(SC_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
- TYPE(SC_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
- TYPE(SC_OutputType), INTENT(IN)  :: y3      ! Output at t3
- REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
- TYPE(SC_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
- REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   TYPE(SC_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
+   TYPE(SC_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
+   TYPE(SC_OutputType), INTENT(IN)  :: y3      ! Output at t3
+   REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
+   TYPE(SC_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
+   REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
+   INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+   CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(DbKi)                                 :: t(3)      ! Times associated with the Outputs
- REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
- INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- CHARACTER(*),            PARAMETER         :: RoutineName = 'SC_Output_ExtrapInterp2'
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
+   REAL(DbKi)                                 :: t(3)      ! Times associated with the Outputs
+   REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
+   INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
+   REAL(DbKi)                                 :: a1,a2,a3 ! temporary for extrapolation/interpolation
+   INTEGER(IntKi)                             :: ErrStat2 ! local errors
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+   CHARACTER(*),            PARAMETER         :: RoutineName = 'SC_Output_ExtrapInterp2'
+   INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+   INTEGER                                    :: i1    ! dim1 counter variable for arrays
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   ! we'll subtract a constant from the times to resolve some 
+   ! numerical issues when t gets large (and to simplify the equations)
+   t = tin - tin(1)
+   t_out = tin_out - tin(1)
+   
    IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
+      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+      RETURN
    END IF
-
-   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
-IF (ASSOCIATED(y_out%fromSCglob) .AND. ASSOCIATED(y1%fromSCglob)) THEN
-  DO i1 = LBOUND(y_out%fromSCglob,1),UBOUND(y_out%fromSCglob,1)
-    b = (t(3)**2*(y1%fromSCglob(i1) - y2%fromSCglob(i1)) + t(2)**2*(-y1%fromSCglob(i1) + y3%fromSCglob(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*y1%fromSCglob(i1) + t(3)*y2%fromSCglob(i1) - t(2)*y3%fromSCglob(i1) ) * scaleFactor
-    y_out%fromSCglob(i1) = y1%fromSCglob(i1) + b  + c * t_out
-  END DO
-END IF ! check if allocated
-IF (ASSOCIATED(y_out%fromSC) .AND. ASSOCIATED(y1%fromSC)) THEN
-  DO i1 = LBOUND(y_out%fromSC,1),UBOUND(y_out%fromSC,1)
-    b = (t(3)**2*(y1%fromSC(i1) - y2%fromSC(i1)) + t(2)**2*(-y1%fromSC(i1) + y3%fromSC(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*y1%fromSC(i1) + t(3)*y2%fromSC(i1) - t(2)*y3%fromSC(i1) ) * scaleFactor
-    y_out%fromSC(i1) = y1%fromSC(i1) + b  + c * t_out
-  END DO
-END IF ! check if allocated
- END SUBROUTINE SC_Output_ExtrapInterp2
-
+   
+   ! Calculate Lagrange polynomial coefficients
+   a1 = (t_out - t(2))*(t_out - t(3))/((t(1) - t(2))*(t(1) - t(3)))
+   a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
+   a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
+   IF (ASSOCIATED(y_out%fromSCglob) .AND. ASSOCIATED(y1%fromSCglob)) THEN
+      y_out%fromSCglob = a1*y1%fromSCglob + a2*y2%fromSCglob + a3*y3%fromSCglob
+   END IF ! check if allocated
+   IF (ASSOCIATED(y_out%fromSC) .AND. ASSOCIATED(y1%fromSC)) THEN
+      y_out%fromSC = a1*y1%fromSC + a2*y2%fromSC + a3*y3%fromSC
+   END IF ! check if allocated
+END SUBROUTINE
 END MODULE SuperController_Types
 !ENDOFREGISTRYGENERATEDFILE
