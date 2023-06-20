@@ -32,7 +32,9 @@ set(SERVODYN_SRCS
   src/ServoDyn_Types.f90
 )
 
-add_library(servodynlib ${SERVODYN_SRCS})
+add_library(servodynlib STATIC
+  ${SERVODYN_SRCS}
+)
 target_link_libraries(servodynlib nwtclibs)
 
 # Driver

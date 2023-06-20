@@ -27,7 +27,7 @@ if (GENERATE_TYPES)
 endif()
 
 # AeroDyn Library
-add_library(aerodynlib 
+add_library(aerodynlib STATIC
   src/AeroDyn.f90
   src/AeroDyn_IO_Params.f90
   src/AeroDyn_IO.f90
@@ -71,7 +71,7 @@ add_library(aerodynlib
 target_link_libraries(aerodynlib ifwlib nwtclibs)
 
 # AeroDyn Driver Subs Library
-add_library(aerodyn_driver_subs
+add_library(aerodyn_driver_subs STATIC
   src/AeroDyn_Driver_Subs.f90
   src/AeroDyn_Driver_Types.f90
 )

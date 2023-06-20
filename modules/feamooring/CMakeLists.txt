@@ -18,7 +18,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/FEAM_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FEAMooring_Types.f90)
 endif()
 
-add_library(feamlib
+add_library(feamlib STATIC
   src/FEAM.f90
   src/FEAMooring_Types.f90
 )

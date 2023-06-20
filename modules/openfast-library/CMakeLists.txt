@@ -37,7 +37,9 @@ elseif (${_compiler_id} MATCHES "^INTEL" AND ${_build_type} STREQUAL "RELEASE" A
   set_source_files_properties(src/FAST_Types.f90 PROPERTIES COMPILE_FLAGS "-O2")
 endif()
 
-add_library(openfast_prelib src/FAST_Types.f90)
+add_library(openfast_prelib STATIC
+  src/FAST_Types.f90
+)
 target_link_libraries(openfast_prelib 
   nwtclibs
   versioninfolib
@@ -61,7 +63,7 @@ target_link_libraries(openfast_prelib
   subdynlib
 )
 
-add_library(openfast_postlib
+add_library(openfast_postlib STATIC
   src/FAST_Lin.f90
   src/FAST_Mods.f90
   src/FAST_Subs.f90
@@ -78,7 +80,9 @@ add_library(openfastlib_static INTERFACE)
 target_link_libraries(openfastlib_static INTERFACE openfast_postlib)
 
 # OpenFAST Library shared (Python, openfast_cpp, openfastcpplib)
-add_library(openfastlib SHARED src/FAST_Library.f90)
+add_library(openfastlib SHARED 
+  src/FAST_Library.f90
+)
 target_link_libraries(openfastlib openfast_postlib)
 if(APPLE OR UNIX)
   target_compile_definitions(openfastlib PRIVATE IMPLICIT_DLLEXPORT)
