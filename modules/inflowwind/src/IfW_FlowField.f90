@@ -146,7 +146,6 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
          end if
 
          ! Loop throuh points and calcualate velocity and acceleration
-         !$OMP PARALLEL DO SCHEDULE(RUNTIME)
          do i = 1, NumPoints
             if (Position(3, i) > 0.0_ReKi) then
                VelocityUVW(:, i) = UniformField_GetVel(FF%Uniform, UFopVel, Position(:, i))
@@ -160,7 +159,6 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       else  ! Otherwise, only velocity requested
 
          ! Loop throuh points and calcualate velocity
-         !$OMP PARALLEL DO SCHEDULE(RUNTIME)
          do i = 1, NumPoints
             if (Position(3, i) > 0.0_ReKi) then
                VelocityUVW(:, i) = UniformField_GetVel(FF%Uniform, UFopVel, Position(:, i))
@@ -197,7 +195,6 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       AddMeanAfterInterp = FF%Grid3D%AddMeanAfterInterp
 
       ! Loop through points
-      !$OMP PARALLEL DO SCHEDULE(RUNTIME)
       do i = 1, NumPoints
 
          ! If height < zero, set velocity/acceleration to zero, continue
@@ -257,7 +254,6 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       end if
 
       ! Loop through points
-      !$OMP PARALLEL DO SCHEDULE(RUNTIME)
       do i = 1, NumPoints
 
          ! If height greater than zero, calculate velocity, otherwise zero

@@ -862,8 +862,6 @@ end if
 !FFT calculations occur here.  Output to file.
 
 
-
-
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- We are done, so close everything down -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
@@ -925,8 +923,6 @@ end if
       CALL WrScr(' InflowWind_End call 3 of 3:    ok')
    ENDIF
 
-
-
    CALL DriverCleanup()
 
 CONTAINS
@@ -944,7 +940,6 @@ CONTAINS
 
 
    END SUBROUTINE DriverCleanup
-
 
 END PROGRAM InflowWind_Driver
 
