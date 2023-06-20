@@ -202,28 +202,30 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       InputFileData%VelInterpCubic = .false.
    END IF
 
-   ! initialize sensor data:   
-   p%lidar%NumBeam = InputFileData%NumBeam
-   p%lidar%RotorApexOffsetPos = InputFileData%RotorApexOffsetPos
-   p%lidar%SensorType = InputFileData%SensorType      
-   p%lidar%LidRadialVel   = InputFileData%LidRadialVel
-   p%lidar%NumPulseGate = InputFileData%NumPulseGate
-   p%lidar%FocalDistanceX =  InputFileData%FocalDistanceX
-   p%lidar%FocalDistanceY =  InputFileData%FocalDistanceY
-   p%lidar%FocalDistanceZ =  InputFileData%FocalDistanceZ
-   p%lidar%MeasurementInterval = InputFileData%MeasurementInterval
-   p%lidar%PulseSpacing = InputFileData%PulseSpacing
-   p%lidar%URefLid = InputFileData%URefLid
-   p%lidar%ConsiderHubMotion = InputFileData%ConsiderHubMotion  
-         
-         
-   CALL Lidar_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates,   &
-                    y, m, TimeInterval, InitOutData, TmpErrStat, TmpErrMsg ); if (Failed()) return
-   
+
       ! Validate the InflowWind input file information.
    CALL InflowWind_ValidateInput( InitInp, InputFileData, TmpErrStat, TmpErrMsg ); if (Failed()) return
 
       
+   ! initialize sensor data:
+   IF (InputFileData%SensorType /= SensorType_None) THEN
+      p%lidar%NumBeam            = InputFileData%NumBeam
+      p%lidar%RotorApexOffsetPos = InputFileData%RotorApexOffsetPos
+      p%lidar%SensorType         = InputFileData%SensorType
+      p%lidar%LidRadialVel       = InputFileData%LidRadialVel
+      p%lidar%NumPulseGate       = InputFileData%NumPulseGate
+      p%lidar%FocalDistanceX     = InputFileData%FocalDistanceX  ! these are allocatable.  Should allocate then copy
+      p%lidar%FocalDistanceY     = InputFileData%FocalDistanceY
+      p%lidar%FocalDistanceZ     = InputFileData%FocalDistanceZ
+      p%lidar%MeasurementInterval= InputFileData%MeasurementInterval
+      p%lidar%PulseSpacing       = InputFileData%PulseSpacing
+      p%lidar%URefLid            = InputFileData%URefLid
+      p%lidar%ConsiderHubMotion  = InputFileData%ConsiderHubMotion
+
+      CALL Lidar_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates,   &
+                       y, m, TimeInterval, InitOutData, TmpErrStat, TmpErrMsg ); if (Failed()) return
+   endif
+
       ! If a summary file was requested, open it.
    IF ( InputFileData%SumPrint ) THEN
 
