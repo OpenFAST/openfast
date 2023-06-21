@@ -2948,6 +2948,9 @@ subroutine Grid3D_WriteVTKsliceXY(G3D, FileRootName, XYslice_height, unit, ErrSt
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
    call GetPath(FileRootName, RootPathName)
    RootPathName = trim(RootPathName)//PathSep//"vtk"
    call MkDir(trim(RootPathName))  ! make this directory if it doesn't already exist
@@ -2958,7 +2961,7 @@ subroutine Grid3D_WriteVTKsliceXY(G3D, FileRootName, XYslice_height, unit, ErrSt
    write(ht_str,'(i3)') nint(ht)
 
    ! check for errors in slice height
-   if (iz <= 0_IntKi) then
+   if (iz <= 0_IntKi .or. iz > G3D%NZGrids) then
       call SetErrStat(ErrID_Warn,"No grid points near XY slice height of "//trim(num2lstr(XYslice_height))//".  Skipping writing slice file.",ErrStat,ErrMsg,RoutineName)
       return
    endif
@@ -2988,16 +2991,16 @@ subroutine Grid3D_WriteVTKsliceXY(G3D, FileRootName, XYslice_height, unit, ErrSt
       write (unit, '(A,3(f10.2,1X))') 'SPACING ', -G3D%Dtime*G3D%MeanWS, 1.0_ReKi/G3D%InvDY, 0.0_ReKi
       write (unit, '(A,i9)') 'POINT_DATA ', G3D%NSteps*G3D%NYGrids
       write (unit, '(A)') 'VECTORS DisXY float'
- 
+
       do iy = 1, G3D%NYGrids
          do ix = 1, G3D%NSteps      ! time and X are interchangeable
             write (unit, '(3(f10.2,1X))') G3D%Vel(:, iy, iz, ix)
          end do
       end do
 
+      close (unit)
    enddo
 
-   close (unit)
 end subroutine Grid3D_WriteVTKsliceXY
 
 end module InflowWind_IO
