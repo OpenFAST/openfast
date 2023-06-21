@@ -409,6 +409,9 @@ SUBROUTINE WAT_init( p, WAT_IfW, AWAE_InitInput, ErrStat, ErrMsg )
    IfW_InitInp%PassedFileData%SumPrint          =  .false.
    IfW_InitInp%PassedFileData%NumOuts           =  0
 
+   ! turn off lidar
+   IfW_InitInp%PassedFileData%SensorType        = 0            ! no lidar
+
 
    ! check spatial resolution against turbine high res domains -- this would be checked in the ValidateData routine, except we don't have resolution for Mod_WAT_PreDef at that point
    TmpMsg='Ratio of high res domain resolution to wake added turblence resolution should be between '//trim(Num2LStr(1.0_ReKi/fstretch))//' and '//trim(Num2LStr(fstretch))//', but is '
