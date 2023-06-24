@@ -1733,7 +1733,7 @@ SUBROUTINE InflowWind_GetHubValues( Time, InputData, p, x, xd, z, OtherStates, m
 
    IMPLICIT                                                    NONE
 
-   CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_GetSpatialAverage"
+   CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_GetHubValues"
 
 
       ! Inputs / Outputs
