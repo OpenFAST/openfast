@@ -993,6 +993,10 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%BldNd_OutList, InputFileData%BldNd_NumOuts, ErrStat2, ErrMsg2, UnEc )
          if (FailedNodal()) return;
 
+!FIXME: improve logic on the node outputs
+   ! Prevent segfault when no blades specified.  All logic tests on BldNd_NumOuts at present.
+   if (InputFileData%BldNd_BladesOut <= 0)   InputFileData%BldNd_NumOuts = 0
+
    RETURN
 CONTAINS
    !-------------------------------------------------------------------------------------------------
