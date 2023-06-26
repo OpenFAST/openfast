@@ -311,6 +311,9 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Uniform%RefHeight]
 
+      ! Set Mean Wind Speed
+      InitOutData%WindFileInfo%MWS = FileDat%MWS
+
    case (Uniform_WindNumber)
 
       Uniform_InitInput%WindFileName = InputFileData%Uniform_FileName
@@ -331,6 +334,9 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Uniform%RefHeight]
 
+      ! Set Mean Wind Speed
+      InitOutData%WindFileInfo%MWS = FileDat%MWS
+
    case (TSFF_WindNumber)
 
       TurbSim_InitInput%WindFileName = InputFileData%TSFF_FileName
@@ -345,6 +351,9 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
 
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid3D%RefHeight]
+
+      ! Set Mean Wind Speed
+      InitOutData%WindFileInfo%MWS = FileDat%MWS
 
    case (BladedFF_WindNumber)
 
@@ -371,7 +380,10 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
 
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid3D%RefHeight]
-      
+
+      ! Set Mean Wind Speed
+      InitOutData%WindFileInfo%MWS = FileDat%MWS
+
    case (BladedFF_Shr_WindNumber)
 
       Bladed_InitInput%WindType           = BladedFF_Shr_WindNumber
@@ -394,6 +406,9 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
 
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid3D%RefHeight]
+
+      ! Set Mean Wind Speed
+      InitOutData%WindFileInfo%MWS = FileDat%MWS
 
    case (HAWC_WindNumber)
 
@@ -427,6 +442,9 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid3D%RefHeight]
 
+      ! Set Mean Wind Speed
+      InitOutData%WindFileInfo%MWS = FileDat%MWS
+
    case (User_WindNumber)
 
       p%FlowField%FieldType = User_FieldType
@@ -440,6 +458,9 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%User%RefHeight]
 
+      ! Set Mean Wind Speed
+      InitOutData%WindFileInfo%MWS = FileDat%MWS
+
    case (FDext_WindNumber)
 
       p%FlowField%FieldType = Grid4D_FieldType
@@ -451,6 +472,9 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
 
       ! Set reference position for wind rotation
       p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, p%FlowField%Grid4D%RefHeight]
+
+      ! Set Mean Wind Speed
+      InitOutData%WindFileInfo%MWS = FileDat%MWS
 
    case (Point_WindNumber)
 
