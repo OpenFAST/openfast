@@ -4353,7 +4353,7 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
       force_tf(:)    = 0.0_ReKi
       moment_tf(:)    = 0.0_ReKi
       force_tf(1)    = Cx * q
-      force_tf(2)    = Cy * q * p%TFin%TFinChord
+      force_tf(2)    = Cy * q
       force_tf(3)    = 0.0_ReKi
       moment_tf(1:2) = 0.0_ReKi
       moment_tf(3)   = AFI_interp%Cm * q * p%TFin%TFinChord
