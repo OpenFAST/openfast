@@ -132,6 +132,12 @@ SET Output_Loc=%CURR_LOC%
 %REGISTRY% "%CURR_LOC%\%ModuleName%.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -noextrap  -O "%Output_Loc%"
 GOTO checkError
 
+:InflowWind_Driver
+SET CURR_LOC=%IfW_Loc%
+SET Output_Loc=%CURR_LOC%
+%REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -noextrap  -O "%Output_Loc%"
+GOTO checkError
+
 :OpenFOAM
 SET CURR_LOC=%OpFM_Loc%
 SET Output_Loc=%CURR_LOC%
