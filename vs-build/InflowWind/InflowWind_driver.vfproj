@@ -124,6 +124,23 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\InflowWind\src\InflowWind_Types.f90" AdditionalDependencies="..\..\modules\InflowWind\src\Reg-IfW_FFWind.txt;..\..\modules\InflowWind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\InflowWind\src\InflowWind_Types.f90" AdditionalDependencies="..\..\modules\InflowWind\src\Reg-IfW_FFWind.txt;..\..\modules\InflowWind\src\Reg-IfW_HHWind.txt"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\InflowWind\src\InflowWind_Driver_Registry.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_Driver" Description="Running Registry for InflowWind_Driver" Outputs="..\..\modules\InflowWind\src\InflowWind_Driver_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_Driver" Description="Running Registry for InflowWind_Driver" Outputs="..\..\modules\InflowWind\src\InflowWind_Driver_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_Driver" Description="Running Registry for InflowWind_Driver" Outputs="..\..\modules\InflowWind\src\InflowWind_Driver_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_Driver" Description="Running Registry for InflowWind_Driver" Outputs="..\..\modules\InflowWind\src\InflowWind_Driver_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_Driver" Description="Running Registry for InflowWind_Driver" Outputs="..\..\modules\InflowWind\src\InflowWind_Driver_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_Driver" Description="Running Registry for InflowWind_Driver" Outputs="..\..\modules\InflowWind\src\InflowWind_Driver_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_Driver" Description="Running Registry for InflowWind_Driver" Outputs="..\..\modules\InflowWind\src\InflowWind_Driver_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_Driver" Description="Running Registry for InflowWind_Driver" Outputs="..\..\modules\InflowWind\src\InflowWind_Driver_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\InflowWind\src\InflowWind_IO.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\InflowWind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
