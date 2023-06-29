@@ -177,7 +177,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
          return
       end if
 
-      ! Set the initial displacements: p%uu0, p%rrN0, p%E10
+      ! Set the initial displacements: p%uu0, p%E10
    CALL BD_QuadraturePointDataAt0(p)
       if (ErrStat >= AbortErrLev) then
          call cleanup()
@@ -197,26 +197,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
 
       ! Actuator
-   p%UsePitchAct = InputFileData%UsePitchAct
 
    if (p%UsePitchAct) then
-
-      p%pitchK = InputFileData%pitchK
-      p%pitchC = InputFileData%pitchC
-      p%pitchJ = InputFileData%pitchJ
-
-         ! calculate (I-hA)^-1
-
-      p%torqM(1,1) =  p%pitchJ + p%pitchC*p%dt
-      p%torqM(2,1) = -p%pitchK * p%dt
-      p%torqM(1,2) =  p%pitchJ * p%dt
-      p%torqM(2,2) =  p%pitchJ
-      denom        =  p%pitchJ + p%pitchC*p%dt + p%pitchK*p%dt**2
-      if (EqualRealNos(denom,0.0_BDKi)) then
-         call SetErrStat(ErrID_Fatal,"Cannot invert matrix for pitch actuator: J+c*dt+k*dt^2 is zero.",ErrStat,ErrMsg,RoutineName)
-      else
-         p%torqM(:,:) =  p%torqM / denom
-      end if
 
          ! Calculate the pitch angle
       TmpDCM(:,:) = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
@@ -670,8 +652,12 @@ subroutine InitializeNodalLocations(member_total,kp_member,kp_coordinate,p,GLL_n
 
         tangent = tangent / TwoNorm(tangent)
 
+        ! Calculate the node initial rotation
         CALL BD_ComputeIniNodalCrv(tangent, twist, temp_CRV, ErrStat, ErrMsg)
+
+        ! Store rotation in node initial position vector and save node twist
         p%uuN0(4:6,i,elem) = temp_CRV
+        p%twN0(i,elem) = twist
 
       enddo
 
@@ -808,11 +794,11 @@ SUBROUTINE BD_InitShpDerJaco( GLL_Nodes, p )
 
    CALL BD_diffmtc(p%nodes_per_elem,GLL_nodes,p%QPtN,p%nqp,p%Shp,p%ShpDer)
 
+   ! Calculate the Jacobian relating element axial length to real coordinates
    DO nelem = 1,p%elem_total
       DO idx_qp = 1, p%nqp
-         Gup0(:) = 0.0_BDKi
-         DO i=1,p%nodes_per_elem
-            Gup0(:) = Gup0(:) + p%ShpDer(i,idx_qp)*p%uuN0(1:3,i,nelem)
+         DO i=1,3
+            Gup0(i) = dot_product(p%ShpDer(:,idx_qp), p%uuN0(i,:,nelem))
          ENDDO
          p%Jacobian(idx_qp,nelem) = TwoNorm(Gup0)
       ENDDO
@@ -920,6 +906,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    integer(intKi)                               :: ErrStat2          ! temporary Error status
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'SetParameters'
+   real(DbKi)                                   :: denom
 
 
 
@@ -1002,7 +989,25 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    p%dof_elem = p%dof_node     * p%nodes_per_elem
    p%rot_elem = (p%dof_node/2) * p%nodes_per_elem
 
+      ! Actuator
+   p%UsePitchAct = InputFileData%UsePitchAct
+   if (p%UsePitchAct) then
+      p%pitchK = InputFileData%pitchK
+      p%pitchC = InputFileData%pitchC
+      p%pitchJ = InputFileData%pitchJ
 
+         ! calculate (I-hA)^-1
+      p%torqM(1,1) =  p%pitchJ + p%pitchC*p%dt
+      p%torqM(2,1) = -p%pitchK * p%dt
+      p%torqM(1,2) =  p%pitchJ * p%dt
+      p%torqM(2,2) =  p%pitchJ
+      denom        =  p%pitchJ + p%pitchC*p%dt + p%pitchK*p%dt**2
+      if (EqualRealNos(denom,0.0_BDKi)) then
+         call SetErrStat(ErrID_Fatal,"Cannot invert matrix for pitch actuator: J+c*dt+k*dt^2 is zero.",ErrStat,ErrMsg,RoutineName)
+      else
+         p%torqM(:,:) =  p%torqM / denom
+      end if
+   end if
 
    !................................
    ! allocate some parameter arrays
@@ -1024,7 +1029,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    
    
    CALL AllocAry(p%uuN0, p%dof_node,p%nodes_per_elem,      p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(p%rrN0, (p%dof_node/2),p%nodes_per_elem,  p%elem_total,'p%rrN0',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%twN0, p%nodes_per_elem,                 p%elem_total,'twN0 (initial twist) array',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%uu0,  p%dof_node,    p%nqp,             p%elem_total,'p%uu0', ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%E10,  (p%dof_node/2),p%nqp,             p%elem_total,'p%E10', ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -2256,72 +2261,57 @@ SUBROUTINE BD_QuadraturePointDataAt0( p )
 
    TYPE(BD_ParameterType),       INTENT(INOUT)  :: p           !< Parameters
 
-   REAL(BDKi)                    :: rot0_temp(3)
-   REAL(BDKi)                    :: rotu_temp(3)
-   REAL(BDKi)                    :: rot_temp(3)
-   REAL(BDKi)                    :: R0_temp(3,3)
-
+   CHARACTER(*), PARAMETER       :: RoutineName = 'BD_QuadraturePointDataAt0'
+   INTEGER(IntKi)                :: ErrStat2       ! The error status code
+   CHARACTER(ErrMsgLen)          :: ErrMsg2        ! The error message, if an error occurred
    INTEGER(IntKi)                :: nelem          ! number of current element
    INTEGER(IntKi)                :: idx_qp         ! index of current quadrature point
-   INTEGER(IntKi)                :: idx_node       ! index of current GLL node
+   INTEGER(IntKi)                :: i
+   REAL(BDKi)                    :: twist, tan_vect(3), R0(3), u0(3)
 
-   CHARACTER(*), PARAMETER       :: RoutineName = 'BD_QuadraturePointDataAt0'
-
-
-      ! Initialize to zero for the summation
-   p%uu0(:,:,:)   = 0.0_BDKi
-   p%rrN0(:,:,:)  = 0.0_BDKi
-   p%E10(:,:,:)   = 0.0_BDKi
-
-
-      ! calculate rrN0 (Initial relative rotation array)
+   ! Loop through elements
    DO nelem = 1,p%elem_total
-      p%rrN0(1:3,1,nelem) = (/ 0.0_BDKi, 0.0_BDKi, 0.0_BDKi /)    ! first node has no rotation relative to itself.
-      DO idx_node=2,p%nodes_per_elem
-            ! Find resulting rotation parameters R(Nr) = Ri^T(Nu(1)) R(Nu(:))
-            ! where R(Nu(1))^T is the transpose rotation parameters for the root node
-         CALL BD_CrvCompose(p%rrN0(1:3,idx_node,nelem),p%uuN0(4:6,1,nelem),p%uuN0(4:6,idx_node,nelem),FLAG_R1TR2)  ! rrN0  = node composed with root
-      ENDDO
+
+      ! Loop through quadrature points
+      do idx_qp = 1, p%nqp
+
+         ! Loop through displacement DOFs
+         do i = 1,3
+
+            ! Calculate the quadrature point initial positions by using the 
+            ! shape functions to interpolate from the node initial positions
+            ! Initial displacement field \n
+            !    \f$   \underline{u_0}\left( \xi \right) =
+            !                \sum_{k=1}^{p+1} h^k\left( \xi \right) \underline{\hat{u}_0}^k
+            !    \f$
+            u0(i) = dot_product(p%Shp(:,idx_qp), p%uuN0(i,:,nelem))
+
+            ! Calculate \f$ x_0^\prime \f$, the derivative with respect to \f$ \hat{x} \f$-direction
+            ! (tangent to curve through this GLL point)
+            ! This uses the shape function derivative to calculate the tangent at the quadrature points
+            ! with respect to the element axis from the node positions.
+            ! Note: this is a unit vector after scaling by the Jacobian
+            tan_vect(i) = dot_product(p%ShpDer(:,idx_qp), p%uuN0(i,:,nelem)) / p%Jacobian(idx_qp,nelem)
+
+         end do
+
+         ! Interpolate the twist to QP from the shape function and node values
+         twist = dot_product(p%Shp(:,idx_qp), p%twN0(:,nelem))
+
+         ! Calculate quadrature point initial rotation, R0
+         ! The nodal rotation function is used to avoid errors that occur when 
+         ! when interpolating the QP rotations from the node rotations.
+         call BD_ComputeIniNodalCrv(tan_vect, twist, R0, ErrStat2, ErrMsg2)
+
+         ! Save initial position and rotation
+         p%uu0(1:3,idx_qp,nelem) = u0
+         p%uu0(4:6,idx_qp,nelem) = R0
+
+         ! Save initial tangent vector for calculating strain
+         p%E10(1:3,idx_qp,nelem) = tan_vect
+
+      end do
    ENDDO
-
-
-   DO nelem = 1,p%elem_total
-       DO idx_qp = 1,p%nqp
-            !> ### Calculate the the initial displacement fields in an element
-            !! Initial displacement field \n
-            !!    \f$   \underline{u_0}\left( \xi \right) =
-            !!                \sum_{k=1}^{p+1} h^k\left( \xi \right) \underline{\hat{u}_0}^k
-            !!    \f$ \n
-            !! and curvature \n
-            !!    \f$   \underline{c_0}\left( \xi \right) =
-            !!                \sum_{k=1}^{p+1} h^k\left( \xi \right) \underline{\hat{c}_0}^k
-            !!    \f$
-
-            ! Note that p%uu0 was set to zero prior to this routine call, so the following is the summation.
-
-         DO idx_node=1,p%nodes_per_elem
-            p%uu0(1:3,idx_qp,nelem) =  p%uu0(1:3,idx_qp,nelem) + p%Shp(idx_node,idx_qp)*p%uuN0(1:3,idx_node,nelem)
-            p%uu0(4:6,idx_qp,nelem) =  p%uu0(4:6,idx_qp,nelem) + p%Shp(idx_node,idx_qp)*p%rrN0(1:3,idx_node,nelem)
-         ENDDO
-
-
-            !> Add the blade root rotation parameters. That is,
-            !! compose the rotation parameters calculated with the shape functions with the rotation parameters
-            !! for the blade root.
-         rot0_temp(:) = p%uuN0(4:6,1,nelem)        ! Rotation at root
-         rotu_temp(:) = p%uu0( 4:6,idx_qp,nelem)   ! Rotation at current GLL point without root rotation
-
-         CALL BD_CrvCompose(rot_temp,rot0_temp,rotu_temp,FLAG_R1R2)  ! rot_temp = rot0_temp composed with rotu_temp
-         p%uu0(4:6,idx_qp,nelem) = rot_temp(:)     ! Rotation parameters at current GLL point with the root orientation
-
-
-            !> Set the initial value of \f$ x_0^\prime \f$, the derivative with respect to \f$ \hat{x} \f$-direction
-            !! (tangent to curve through this GLL point).  This is simply the
-         CALL BD_CrvMatrixR(p%uu0(4:6,idx_qp,nelem),R0_temp)         ! returns R0_temp (the transpose of the DCM orientation matrix)
-         p%E10(:,idx_qp,nelem) = R0_temp(:,3)                        ! unit vector tangent to curve through this GLL point (derivative with respect to z in IEC coords).
-      ENDDO
-   ENDDO
-
 
 END SUBROUTINE BD_QuadraturePointDataAt0
 
@@ -2370,48 +2360,43 @@ SUBROUTINE BD_DisplacementQP( nelem, p, x, m )
    TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x                 !< Continuous states at t
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< misc/optimization variables
 
-   INTEGER(IntKi)                :: idx_qp            !< index to the current quadrature point
-   INTEGER(IntKi)                :: elem_start        !< Node point of first node in current element
-   INTEGER(IntKi)                :: idx_node
+   INTEGER(IntKi)                :: node_start        !< Node point of first node in current element
+   INTEGER(IntKi)                :: node_end          !< Node point of last node in current element
+   INTEGER(IntKi)                :: i, idx_qp
    CHARACTER(*), PARAMETER       :: RoutineName = 'BD_DisplacementQP'
 
+   ! Node at start and end of element
+   node_start = p%node_elem_idx(nelem,1)
+   node_end = node_start + p%nodes_per_elem - 1
 
-   DO idx_qp=1,p%nqp
-            ! Node point before start of this element
-         elem_start = p%node_elem_idx( nelem,1 )
+   !> ### Calculate the the displacement fields in an element
+   !! Using equations (27) and (28) \n
+   !!    \f$   \underline{u}\left( \xi \right) =
+   !!                \sum_{i=1}^{p+1} h^i\left( \xi \right) \underline{\hat{u}}^i
+   !!    \f$ \n
+   !! and \n
+   !!    \f$   \underline{u}^\prime \left( \xi \right) =
+   !!                \sum_{k=1}^{p+1} h^{k\prime} \left( \xi \right) \underline{\hat{u}}^i
+   !!    \f$
+   !!
+   !! |  Variable                               |  Value                                                                      |
+   !! | :---------:                             |  :------------------------------------------------------------------------- |
+   !! | \f$ \xi \f$                             |  Element natural coordinate \f$ \in [-1,1] \f$                              |
+   !! | \f$ k \f$                               |  Node number of a \f$ p^\text{th} \f$ order Langrangian-interpolant         |
+   !! | \f$ h^i \left( \xi \right ) \f$         |  Component of the shape function matrix, \f$ \underline{\underline{N}} \f$  |
+   !! | \f$ h^{k\prime} \left( \xi \right ) \f$ |  \f$ \frac{\mathrm{d}}{\mathrm{d}x_1} h^i \left( \xi \right) \f$            |
+   !! | \f$ \underline{\hat{u}}^i \f$           |  \f$ k^\text{th} \f$ nodal value        
 
+   ! Loop through all quadrature points and displacement DOFs
+   ! dot_product appears to be more exact that matmul
+   forall (idx_qp = 1:p%nqp, i = 1:3)
+      m%qp%uuu(i,idx_qp,nelem) = dot_product(p%Shp(:,idx_qp), x%q(i,node_start:node_end))
+      m%qp%uup(i,idx_qp,nelem) = dot_product(p%ShpDer(:,idx_qp), x%q(i,node_start:node_end)) / p%Jacobian(idx_qp,nelem)
+   end forall
 
-            !> ### Calculate the the displacement fields in an element
-            !! Using equations (27) and (28) \n
-            !!    \f$   \underline{u}\left( \xi \right) =
-            !!                \sum_{i=1}^{p+1} h^i\left( \xi \right) \underline{\hat{u}}^i
-            !!    \f$ \n
-            !! and \n
-            !!    \f$   \underline{u}^\prime \left( \xi \right) =
-            !!                \sum_{k=1}^{p+1} h^{k\prime} \left( \xi \right) \underline{\hat{u}}^i
-            !!    \f$
-            !!
-            !! |  Variable                               |  Value                                                                      |
-            !! | :---------:                             |  :------------------------------------------------------------------------- |
-            !! | \f$ \xi \f$                             |  Element natural coordinate \f$ \in [-1,1] \f$                              |
-            !! | \f$ k \f$                               |  Node number of a \f$ p^\text{th} \f$ order Langrangian-interpolant         |
-            !! | \f$ h^i \left( \xi \right ) \f$         |  Component of the shape function matrix, \f$ \underline{\underline{N}} \f$  |
-            !! | \f$ h^{k\prime} \left( \xi \right ) \f$ |  \f$ \frac{\mathrm{d}}{\mathrm{d}x_1} h^i \left( \xi \right) \f$            |
-            !! | \f$ \underline{\hat{u}}^i \f$           |  \f$ k^\text{th} \f$ nodal value                                            |
+   !> Calculate \f$ \underline{E}_1 = x_0^\prime + u^\prime \f$ (equation 23).  Note E_1 is along the z direction.
+   m%qp%E1(1:3,:,nelem) = p%E10(1:3,:,nelem) + m%qp%uup(1:3,:,nelem)
 
-            ! Initialize values for summation
-         m%qp%uuu(:,idx_qp,nelem) = 0.0_BDKi    ! displacement field \f$ \underline{u}        \left( \xi \right) \f$
-         m%qp%uup(:,idx_qp,nelem) = 0.0_BDKi    ! displacement field \f$ \underline{u}^\prime \left( \xi \right) \f$
-
-         DO idx_node=1,p%nodes_per_elem
-            m%qp%uuu(1:3,idx_qp,nelem) = m%qp%uuu(1:3,idx_qp,nelem)  + p%Shp(idx_node,idx_qp)                            *x%q(1:3,elem_start - 1 + idx_node)
-            m%qp%uup(1:3,idx_qp,nelem) = m%qp%uup(1:3,idx_qp,nelem)  + p%ShpDer(idx_node,idx_qp)/p%Jacobian(idx_qp,nelem)*x%q(1:3,elem_start - 1 + idx_node)
-         ENDDO
-
-            !> Calculate \f$ \underline{E}_1 = x_0^\prime + u^\prime \f$ (equation 23).  Note E_1 is along the z direction.
-         m%qp%E1(1:3,idx_qp,nelem) = p%E10(1:3,idx_qp,nelem) + m%qp%uup(1:3,idx_qp,nelem)
-
-   ENDDO
 END SUBROUTINE  BD_DisplacementQP
 
 
