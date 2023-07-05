@@ -541,11 +541,20 @@ CONTAINS
               READ (num2,*) nID                      ! node or segment ID
               p%OutParam(I)%NodeID = nID
               qVal = let3                            ! quantity type string
-          ELSE IF (let2 == 'TENA' .OR. let2 == 'TA') THEN
+          ELSE IF (let2 == 'TENA' .OR. let2 == 'TA' .OR. let2(1:2) == 'NA') THEN
               p%OutParam(I)%NodeID =  0
+              IF (let2(1:2) == 'NA') THEN
+               let2 = let2(3:)
+              END IF
               qVal = let2
-          ELSE IF (let2 == 'TENB' .OR. let2 == 'TB') THEN
+          ELSE IF (let2 == 'TENB' .OR. let2 == 'TB' .OR. let2(1:2) == 'NB') THEN
               p%OutParam(I)%NodeID = m%LineList(p%OutParam(I)%ObjID)%N
+              IF (let2(1:2) == 'NB') THEN
+               let2 = let2(3:)
+              END IF
+              qVal = let2
+          ELSE IF (num2 == ' ') THEN
+              p%OutParam(I)%NodeID = 0
               qVal = let2
           ELSE
               CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
