@@ -207,7 +207,7 @@ CONTAINS
       ! r and rd of ends have already been set by setup function or by parent object   <<<<< right? <<<<<
 
 
-      ! Pass kinematics to any attached lines (this is just like what a Connection does, except for both ends)
+      ! Pass kinematics to any attached lines (this is just like what a Point does, except for both ends)
       ! so that they have the correct initial positions at this initialization stage.
       
       if (Rod%typeNum >- 2)  CALL Rod_SetDependentKin(Rod, 0.0_DbKi, m, .TRUE.)  ! don't call this for type -2 coupled Rods as it's already been called
@@ -357,7 +357,7 @@ CONTAINS
 
       Type(MD_Rod),          INTENT(INOUT)  :: Rod            ! the Rod object
       Real(DbKi),            INTENT(IN   )  :: t              ! instantaneous time
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Connections)
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m              ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Points)
       LOGICAL,               INTENT(IN   )  :: initial        ! true if this is the call during initialization (in which case avoid calling any Lines yet)
 
       INTEGER(IntKi)                        :: l              ! index of segments or nodes along line
@@ -390,7 +390,7 @@ CONTAINS
          CALL transformKinematicsAtoB(Rod%r6(1:3), Rod%r6(4:6), Rod%UnstrLen, Rod%v6, Rod%r(:,N), Rod%rd(:,N))   ! end B    
       end if
 
-      ! pass end node kinematics to any attached lines (this is just like what a Connection does, except for both ends)
+      ! pass end node kinematics to any attached lines (this is just like what a Point does, except for both ends)
       DO l=1,Rod%nAttachedA
          CALL Line_SetEndKinematics(m%LineList(Rod%attachedA(l)), Rod%r(:,0), Rod%rd(:,0), t, Rod%TopA(l))
       END DO
@@ -424,7 +424,7 @@ CONTAINS
          Rod%r6(4:6) = Rod%q  ! set orientation angles
       END IF
 
-      ! pass Rod orientation to any attached lines (this is just like what a Connection does, except for both ends)
+      ! pass Rod orientation to any attached lines (this is just like what a Point does, except for both ends)
       DO l=1,Rod%nAttachedA
          CALL Line_SetEndOrientation(m%LineList(Rod%attachedA(l)), Rod%q, Rod%TopA(l), 0)
       END DO
@@ -440,7 +440,7 @@ CONTAINS
 
       Type(MD_Rod),          INTENT(INOUT)  :: Rod              ! the Rod object
       Real(DbKi),            INTENT(INOUT)  :: Xd(:)            ! state derivative vector section for this line
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m         ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Connections)
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m         ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Points)
       TYPE(MD_ParameterType),INTENT(IN   )  :: p                ! Parameters
       
       !TYPE(MD_MiscVarType), INTENT(INOUT)  :: m       ! misc/optimization variables
@@ -1069,10 +1069,10 @@ CONTAINS
    !--------------------------------------------------------------
    
 
-   ! this function handles assigning a line to a connection node
+   ! this function handles assigning a line to a point node
    SUBROUTINE Rod_AddLine(Rod, lineID, TopOfLine, endB)
 
-      Type(MD_Rod), INTENT (INOUT)   :: Rod        ! the Connection object
+      Type(MD_Rod), INTENT (INOUT)   :: Rod        ! the Point object
 
       Integer(IntKi),   INTENT( IN )     :: lineID
       Integer(IntKi),   INTENT( IN )     :: TopOfLine
@@ -1107,10 +1107,10 @@ CONTAINS
    END SUBROUTINE Rod_AddLine
 
 
-   ! this function handles removing a line from a connection node
+   ! this function handles removing a line from a point node
    SUBROUTINE Rod_RemoveLine(Rod, lineID, TopOfLine, endB,  rEnd, rdEnd)
 
-      Type(MD_Rod), INTENT (INOUT)  :: Rod        ! the Connection object
+      Type(MD_Rod), INTENT (INOUT)  :: Rod        ! the Point object
 
       Integer(IntKi),   INTENT( IN )     :: lineID
       Integer(IntKi),   INTENT(  OUT)    :: TopOfLine

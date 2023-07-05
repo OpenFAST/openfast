@@ -107,19 +107,19 @@ IMPLICIT NONE
 ! =======================
 ! =========  MD_Body  =======
   TYPE, PUBLIC :: MD_Body
-    INTEGER(IntKi)  :: IdNum      !< integer identifier of this Connection [-]
-    INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=fixed, 1=vessel, 2=connect [-]
-    INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedC      !< list of IdNums of connections attached to this body [-]
+    INTEGER(IntKi)  :: IdNum      !< integer identifier of this point [-]
+    INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=fixed, 1=vessel, 2=point [-]
+    INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedC      !< list of IdNums of points attached to this body [-]
     INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedR      !< list of IdNums of rods attached to this body [-]
-    INTEGER(IntKi)  :: nAttachedC = 0      !< number of attached connections [-]
+    INTEGER(IntKi)  :: nAttachedC = 0      !< number of attached points [-]
     INTEGER(IntKi)  :: nAttachedR = 0      !< number of attached rods [-]
-    REAL(DbKi) , DIMENSION(1:3,1:30)  :: rConnectRel      !< relative position of connection on body [-]
+    REAL(DbKi) , DIMENSION(1:3,1:30)  :: rPointRel      !< relative position of point on body [-]
     REAL(DbKi) , DIMENSION(1:6,1:30)  :: r6RodRel      !< relative position and orientation of rod on body [-]
     REAL(DbKi)  :: bodyM      !<  [-]
     REAL(DbKi)  :: bodyV      !<  [-]
     REAL(DbKi) , DIMENSION(1:3)  :: bodyI      !<  [-]
-    REAL(DbKi) , DIMENSION(1:6)  :: bodyCdA      !< product of drag force and frontal area of connection point [[m^2]]
-    REAL(DbKi) , DIMENSION(1:6)  :: bodyCa      !< added mass coefficient of connection point [-]
+    REAL(DbKi) , DIMENSION(1:6)  :: bodyCdA      !< product of drag force and frontal area of point [[m^2]]
+    REAL(DbKi) , DIMENSION(1:6)  :: bodyCa      !< added mass coefficient o point [-]
     REAL(DbKi)  :: time      !< current time [[s]]
     REAL(DbKi) , DIMENSION(1:6)  :: r6      !< position [-]
     REAL(DbKi) , DIMENSION(1:6)  :: v6      !< velocity [-]
@@ -135,21 +135,21 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(1:3)  :: rCG      !< vector in body frame from ref point to CG (before rods etc..) [-]
   END TYPE MD_Body
 ! =======================
-! =========  MD_Connect  =======
-  TYPE, PUBLIC :: MD_Connect
-    INTEGER(IntKi)  :: IdNum      !< integer identifier of this Connection [-]
-    CHARACTER(10)  :: type      !< type of Connect: fix, vessel, connect [-]
-    INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=fixed, 1=vessel, 2=connect [-]
-    INTEGER(IntKi) , DIMENSION(1:10)  :: Attached      !< list of IdNums of lines attached to this connection node [-]
+! =========  MD_Point  =======
+  TYPE, PUBLIC :: MD_Point
+    INTEGER(IntKi)  :: IdNum      !< integer identifier of this point [-]
+    CHARACTER(10)  :: type      !< type of Point: fix, vessel, point [-]
+    INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=fixed, 1=vessel, 2=point [-]
+    INTEGER(IntKi) , DIMENSION(1:10)  :: Attached      !< list of IdNums of lines attached to this point node [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: Top      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi)  :: nAttached = 0      !< number of attached lines [-]
-    REAL(DbKi)  :: conM      !<  [-]
-    REAL(DbKi)  :: conV      !<  [-]
-    REAL(DbKi)  :: conFX      !<  [-]
-    REAL(DbKi)  :: conFY      !<  [-]
-    REAL(DbKi)  :: conFZ      !<  [-]
-    REAL(DbKi)  :: conCa      !< added mass coefficient of connection point [-]
-    REAL(DbKi)  :: conCdA      !< product of drag force and frontal area of connection point [[m^2]]
+    REAL(DbKi)  :: pointM      !<  [-]
+    REAL(DbKi)  :: pointV      !<  [-]
+    REAL(DbKi)  :: pointFX      !<  [-]
+    REAL(DbKi)  :: pointFY      !<  [-]
+    REAL(DbKi)  :: pointFZ      !<  [-]
+    REAL(DbKi)  :: pointCa      !< added mass coefficient of point [-]
+    REAL(DbKi)  :: pointCdA      !< product of drag force and frontal area of point [[m^2]]
     REAL(DbKi)  :: time      !< current time [[s]]
     REAL(DbKi) , DIMENSION(1:3)  :: r      !< position [-]
     REAL(DbKi) , DIMENSION(1:3)  :: rd      !< velocity [-]
@@ -160,14 +160,14 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: PDyn      !< water dynamic pressure at node [[Pa]]
     REAL(DbKi) , DIMENSION(1:3)  :: Fnet      !< total force on node (excluding inertial loads) [-]
     REAL(DbKi) , DIMENSION(1:3,1:3)  :: M      !< node mass matrix, from attached lines [-]
-  END TYPE MD_Connect
+  END TYPE MD_Point
 ! =======================
 ! =========  MD_Rod  =======
   TYPE, PUBLIC :: MD_Rod
     INTEGER(IntKi)  :: IdNum      !< integer identifier of this Line [-]
     CHARACTER(10)  :: type      !< type of Rod.  should match one of RodProp names [-]
     INTEGER(IntKi)  :: PropsIdNum      !< the IdNum of the associated rod properties [-]
-    INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=fixed, 1=vessel, 2=connect [-]
+    INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=fixed, 1=vessel, 2=point [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedA      !< list of IdNums of lines attached to end A [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: AttachedB      !< list of IdNums of lines attached to end B [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: TopA      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
@@ -176,8 +176,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nAttachedB = 0      !< number of attached lines to Rod end B [-]
     INTEGER(IntKi) , DIMENSION(1:20)  :: OutFlagList      !< array specifying what line quantities should be output (1 vs 0) [-]
     INTEGER(IntKi)  :: N      !< The number of elements in the line [-]
-    INTEGER(IntKi)  :: endTypeA      !< type of connection at end A: 0=pinned to Connection, 1=cantilevered to Rod. [-]
-    INTEGER(IntKi)  :: endTypeB      !< type of connection at end B: 0=pinned to Connection, 1=cantilevered to Rod. [-]
+    INTEGER(IntKi)  :: endTypeA      !< type of point at end A: 0=pinned to point, 1=cantilevered to Rod. [-]
+    INTEGER(IntKi)  :: endTypeB      !< type of point at end B: 0=pinned to point, 1=cantilevered to Rod. [-]
     REAL(DbKi)  :: UnstrLen      !< length of the rod [[m]]
     REAL(DbKi)  :: mass      !< mass of the rod [[kg]]
     REAL(DbKi)  :: rho      !< density [[kg/m3]]
@@ -231,11 +231,11 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: ElasticMod      !< Which elasticity model to use: {0 basic, 1 viscoelastic, 2 future SYCOM}  [-]
     INTEGER(IntKi) , DIMENSION(1:20)  :: OutFlagList      !< array specifying what line quantities should be output (1 vs 0) [-]
     INTEGER(IntKi)  :: CtrlChan = 0      !< index of control channel that will drive line active tensioning (0 for none) [-]
-    INTEGER(IntKi)  :: FairConnect      !< IdNum of Connection at fairlead [-]
-    INTEGER(IntKi)  :: AnchConnect      !< IdNum of Connection at anchor [-]
+    INTEGER(IntKi)  :: FairPoint      !< IdNum of point at fairlead [-]
+    INTEGER(IntKi)  :: AnchPoint      !< IdNum of point at anchor [-]
     INTEGER(IntKi)  :: N      !< The number of elements in the line [-]
-    INTEGER(IntKi)  :: endTypeA      !< type of connection at end A: 0=pinned to Connection, 1=cantilevered to Rod. [-]
-    INTEGER(IntKi)  :: endTypeB      !< type of connection at end B: 0=pinned to Connection, 1=cantilevered to Rod. [-]
+    INTEGER(IntKi)  :: endTypeA      !< type of point at end A: 0=pinned to point, 1=cantilevered to Rod. [-]
+    INTEGER(IntKi)  :: endTypeB      !< type of point at end B: 0=pinned to point, 1=cantilevered to Rod. [-]
     REAL(DbKi)  :: UnstrLen      !< unstretched length of the line [-]
     REAL(DbKi)  :: rho      !< density [[kg/m3]]
     REAL(DbKi)  :: d      !< volume-equivalent diameter [[m]]
@@ -301,9 +301,9 @@ IMPLICIT NONE
     CHARACTER(10)  :: Name      !< name of output channel [-]
     CHARACTER(10)  :: Units      !< units string [-]
     INTEGER(IntKi)  :: QType      !< type of quantity - 0=tension, 1=x, 2=y, 3=z... [-]
-    INTEGER(IntKi)  :: OType      !< type of object - 0=line, 1=connect [-]
-    INTEGER(IntKi)  :: NodeID      !< node number if OType=0.  0=anchor, -1=N=Fairlead [-]
-    INTEGER(IntKi)  :: ObjID      !< number of Connect or Line object [-]
+    INTEGER(IntKi)  :: OType      !< type of object - 0=line, 1=point [-]
+    INTEGER(IntKi)  :: NodeID      !< node number if OType=0.  0=anchor, -1=Whole Object [-]
+    INTEGER(IntKi)  :: ObjID      !< number of Point or Line object [-]
   END TYPE MD_OutParmType
 ! =======================
 ! =========  MD_InitOutputType  =======
@@ -346,22 +346,22 @@ IMPLICIT NONE
   TYPE, PUBLIC :: MD_MiscVarType
     TYPE(MD_LineProp) , DIMENSION(:), ALLOCATABLE  :: LineTypeList      !< array of properties for each line type [-]
     TYPE(MD_RodProp) , DIMENSION(:), ALLOCATABLE  :: RodTypeList      !< array of properties for each rod type [-]
-    TYPE(MD_Body)  :: GroundBody      !< the single ground body which is the parent of all stationary connections [-]
+    TYPE(MD_Body)  :: GroundBody      !< the single ground body which is the parent of all stationary points [-]
     TYPE(MD_Body) , DIMENSION(:), ALLOCATABLE  :: BodyList      !< array of body objects [-]
     TYPE(MD_Rod) , DIMENSION(:), ALLOCATABLE  :: RodList      !< array of rod objects [-]
-    TYPE(MD_Connect) , DIMENSION(:), ALLOCATABLE  :: ConnectList      !< array of connection objects [-]
+    TYPE(MD_Point) , DIMENSION(:), ALLOCATABLE  :: PointList      !< array of point objects [-]
     TYPE(MD_Line) , DIMENSION(:), ALLOCATABLE  :: LineList      !< array of line objects [-]
     TYPE(MD_Fail) , DIMENSION(:), ALLOCATABLE  :: FailList      !< array of line objects [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FreeConIs      !< array of free connection indices in ConnectList vector []
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: CpldConIs      !< array of coupled/fairlead connection indices in ConnectList vector []
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FreePointIs      !< array of free point indices in PointList vector []
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: CpldPointIs      !< array of coupled/fairlead point indices in PointList vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FreeRodIs      !< array of free rod indices in RodList vector []
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: CpldRodIs      !< array of coupled/fairlead rod indices in RodList vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: FreeBodyIs      !< array of free body indices in BodyList vector []
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: CpldBodyIs      !< array of coupled body indices in BodyList vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: LineStateIs1      !< starting index of each line's states in state vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: LineStateIsN      !< ending index of each line's states in state vector []
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ConStateIs1      !< starting index of each line's states in state vector []
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: ConStateIsN      !< ending index of each line's states in state vector []
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PointStateIs1      !< starting index of each point's states in state vector []
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: PointStateIsN      !< ending index of each point's states in state vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: RodStateIs1      !< starting index of each rod's states in state vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: RodStateIsN      !< ending index of each rod's states in state vector []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BodyStateIs1      !< starting index of each body's states in state vector []
@@ -384,8 +384,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: MD_ParameterType
     INTEGER(IntKi)  :: nLineTypes = 0      !< number of line types []
     INTEGER(IntKi)  :: nRodTypes = 0      !< number of rod types []
-    INTEGER(IntKi)  :: nConnects = 0      !< number of Connection objects []
-    INTEGER(IntKi)  :: nConnectsExtra = 0      !< number of Connection objects including space for extra ones that could arise from line failures []
+    INTEGER(IntKi)  :: nPoints = 0      !< number of point objects []
+    INTEGER(IntKi)  :: nPointsExtra = 0      !< number of point objects including space for extra ones that could arise from line failures []
     INTEGER(IntKi)  :: nBodies = 0      !< number of Body objects []
     INTEGER(IntKi)  :: nRods = 0      !< number of Rod objects []
     INTEGER(IntKi)  :: nLines = 0      !< number of Line objects []
@@ -393,12 +393,12 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nFails = 0      !< number of failure conditions []
     INTEGER(IntKi)  :: nFreeBodies = 0      !<  []
     INTEGER(IntKi)  :: nFreeRods = 0      !<  []
-    INTEGER(IntKi)  :: nFreeCons = 0      !<  []
+    INTEGER(IntKi)  :: nFreePoints = 0      !<  []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: nCpldBodies      !< number of coupled bodies (for FAST.Farm, size>1 with an entry for each turbine) []
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: nCpldRods      !< number of coupled rods (for FAST.Farm, size>1 with an entry for each turbine) []
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: nCpldCons      !< number of coupled points (for FAST.Farm, size>1 with an entry for each turbine) []
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: nCpldPoints      !< number of coupled points (for FAST.Farm, size>1 with an entry for each turbine) []
     INTEGER(IntKi)  :: NConns = 0      !< number of Connect type Connections - not to be confused with NConnects []
-    INTEGER(IntKi)  :: NAnchs = 0      !< number of Anchor type Connections []
+    INTEGER(IntKi)  :: NAnchs = 0      !< number of Anchor type points []
     REAL(DbKi)  :: Tmax      !< simulation duration [[s]]
     REAL(DbKi)  :: g = 9.81      !< gravitational constant (positive) [[m/s^2]]
     REAL(DbKi)  :: rhoW = 1025      !< density of seawater [[kg/m^3]]
@@ -1978,7 +1978,7 @@ ENDIF
     DstBodyData%AttachedR = SrcBodyData%AttachedR
     DstBodyData%nAttachedC = SrcBodyData%nAttachedC
     DstBodyData%nAttachedR = SrcBodyData%nAttachedR
-    DstBodyData%rConnectRel = SrcBodyData%rConnectRel
+    DstBodyData%rPointRel = SrcBodyData%rPointRel
     DstBodyData%r6RodRel = SrcBodyData%r6RodRel
     DstBodyData%bodyM = SrcBodyData%bodyM
     DstBodyData%bodyV = SrcBodyData%bodyV
@@ -2064,7 +2064,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%AttachedR)  ! AttachedR
       Int_BufSz  = Int_BufSz  + 1  ! nAttachedC
       Int_BufSz  = Int_BufSz  + 1  ! nAttachedR
-      Db_BufSz   = Db_BufSz   + SIZE(InData%rConnectRel)  ! rConnectRel
+      Db_BufSz   = Db_BufSz   + SIZE(InData%rPointRel)  ! rPointRel
       Db_BufSz   = Db_BufSz   + SIZE(InData%r6RodRel)  ! r6RodRel
       Db_BufSz   = Db_BufSz   + 1  ! bodyM
       Db_BufSz   = Db_BufSz   + 1  ! bodyV
@@ -2127,9 +2127,9 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nAttachedR
     Int_Xferred = Int_Xferred + 1
-    DO i2 = LBOUND(InData%rConnectRel,2), UBOUND(InData%rConnectRel,2)
-      DO i1 = LBOUND(InData%rConnectRel,1), UBOUND(InData%rConnectRel,1)
-        DbKiBuf(Db_Xferred) = InData%rConnectRel(i1,i2)
+    DO i2 = LBOUND(InData%rPointRel,2), UBOUND(InData%rPointRel,2)
+      DO i1 = LBOUND(InData%rPointRel,1), UBOUND(InData%rPointRel,1)
+        DbKiBuf(Db_Xferred) = InData%rPointRel(i1,i2)
         Db_Xferred = Db_Xferred + 1
       END DO
     END DO
@@ -2261,13 +2261,13 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%nAttachedR = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    i1_l = LBOUND(OutData%rConnectRel,1)
-    i1_u = UBOUND(OutData%rConnectRel,1)
-    i2_l = LBOUND(OutData%rConnectRel,2)
-    i2_u = UBOUND(OutData%rConnectRel,2)
-    DO i2 = LBOUND(OutData%rConnectRel,2), UBOUND(OutData%rConnectRel,2)
-      DO i1 = LBOUND(OutData%rConnectRel,1), UBOUND(OutData%rConnectRel,1)
-        OutData%rConnectRel(i1,i2) = DbKiBuf(Db_Xferred)
+    i1_l = LBOUND(OutData%rPointRel,1)
+    i1_u = UBOUND(OutData%rPointRel,1)
+    i2_l = LBOUND(OutData%rPointRel,2)
+    i2_u = UBOUND(OutData%rPointRel,2)
+    DO i2 = LBOUND(OutData%rPointRel,2), UBOUND(OutData%rPointRel,2)
+      DO i1 = LBOUND(OutData%rPointRel,1), UBOUND(OutData%rPointRel,1)
+        OutData%rPointRel(i1,i2) = DbKiBuf(Db_Xferred)
         Db_Xferred = Db_Xferred + 1
       END DO
     END DO
@@ -2391,9 +2391,9 @@ ENDIF
     END DO
  END SUBROUTINE MD_UnPackBody
 
- SUBROUTINE MD_CopyConnect( SrcConnectData, DstConnectData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(MD_Connect), INTENT(IN) :: SrcConnectData
-   TYPE(MD_Connect), INTENT(INOUT) :: DstConnectData
+ SUBROUTINE MD_CopyPoint( SrcPointData, DstPointData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(MD_Point), INTENT(IN) :: SrcPointData
+   TYPE(MD_Point), INTENT(INOUT) :: DstPointData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
@@ -2403,48 +2403,48 @@ ENDIF
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyConnect'
+   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyPoint'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstConnectData%IdNum = SrcConnectData%IdNum
-    DstConnectData%type = SrcConnectData%type
-    DstConnectData%typeNum = SrcConnectData%typeNum
-    DstConnectData%Attached = SrcConnectData%Attached
-    DstConnectData%Top = SrcConnectData%Top
-    DstConnectData%nAttached = SrcConnectData%nAttached
-    DstConnectData%conM = SrcConnectData%conM
-    DstConnectData%conV = SrcConnectData%conV
-    DstConnectData%conFX = SrcConnectData%conFX
-    DstConnectData%conFY = SrcConnectData%conFY
-    DstConnectData%conFZ = SrcConnectData%conFZ
-    DstConnectData%conCa = SrcConnectData%conCa
-    DstConnectData%conCdA = SrcConnectData%conCdA
-    DstConnectData%time = SrcConnectData%time
-    DstConnectData%r = SrcConnectData%r
-    DstConnectData%rd = SrcConnectData%rd
-    DstConnectData%a = SrcConnectData%a
-    DstConnectData%U = SrcConnectData%U
-    DstConnectData%Ud = SrcConnectData%Ud
-    DstConnectData%zeta = SrcConnectData%zeta
-IF (ALLOCATED(SrcConnectData%PDyn)) THEN
-  i1_l = LBOUND(SrcConnectData%PDyn,1)
-  i1_u = UBOUND(SrcConnectData%PDyn,1)
-  IF (.NOT. ALLOCATED(DstConnectData%PDyn)) THEN 
-    ALLOCATE(DstConnectData%PDyn(i1_l:i1_u),STAT=ErrStat2)
+    DstPointData%IdNum = SrcPointData%IdNum
+    DstPointData%type = SrcPointData%type
+    DstPointData%typeNum = SrcPointData%typeNum
+    DstPointData%Attached = SrcPointData%Attached
+    DstPointData%Top = SrcPointData%Top
+    DstPointData%nAttached = SrcPointData%nAttached
+    DstPointData%pointM = SrcPointData%pointM
+    DstPointData%pointV = SrcPointData%pointV
+    DstPointData%pointFX = SrcPointData%pointFX
+    DstPointData%pointFY = SrcPointData%pointFY
+    DstPointData%pointFZ = SrcPointData%pointFZ
+    DstPointData%pointCa = SrcPointData%pointCa
+    DstPointData%pointCdA = SrcPointData%pointCdA
+    DstPointData%time = SrcPointData%time
+    DstPointData%r = SrcPointData%r
+    DstPointData%rd = SrcPointData%rd
+    DstPointData%a = SrcPointData%a
+    DstPointData%U = SrcPointData%U
+    DstPointData%Ud = SrcPointData%Ud
+    DstPointData%zeta = SrcPointData%zeta
+IF (ALLOCATED(SrcPointData%PDyn)) THEN
+  i1_l = LBOUND(SrcPointData%PDyn,1)
+  i1_u = UBOUND(SrcPointData%PDyn,1)
+  IF (.NOT. ALLOCATED(DstPointData%PDyn)) THEN 
+    ALLOCATE(DstPointData%PDyn(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstConnectData%PDyn.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstPointData%PDyn.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstConnectData%PDyn = SrcConnectData%PDyn
+    DstPointData%PDyn = SrcPointData%PDyn
 ENDIF
-    DstConnectData%Fnet = SrcConnectData%Fnet
-    DstConnectData%M = SrcConnectData%M
- END SUBROUTINE MD_CopyConnect
+    DstPointData%Fnet = SrcPointData%Fnet
+    DstPointData%M = SrcPointData%M
+ END SUBROUTINE MD_CopyPoint
 
- SUBROUTINE MD_DestroyConnect( ConnectData, ErrStat, ErrMsg, DEALLOCATEpointers )
-  TYPE(MD_Connect), INTENT(INOUT) :: ConnectData
+ SUBROUTINE MD_DestroyPoint( PointData, ErrStat, ErrMsg, DEALLOCATEpointers )
+  TYPE(MD_Point), INTENT(INOUT) :: PointData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
@@ -2453,7 +2453,7 @@ ENDIF
   LOGICAL                        :: DEALLOCATEpointers_local
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyConnect'
+  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyPoint'
 
   ErrStat = ErrID_None
   ErrMsg  = ""
@@ -2464,16 +2464,16 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
-IF (ALLOCATED(ConnectData%PDyn)) THEN
-  DEALLOCATE(ConnectData%PDyn)
+IF (ALLOCATED(PointData%PDyn)) THEN
+  DEALLOCATE(PointData%PDyn)
 ENDIF
- END SUBROUTINE MD_DestroyConnect
+ END SUBROUTINE MD_DestroyPoint
 
- SUBROUTINE MD_PackConnect( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE MD_PackPoint( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(MD_Connect),  INTENT(IN) :: InData
+  TYPE(MD_Point),  INTENT(IN) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -2488,7 +2488,7 @@ ENDIF
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'MD_PackConnect'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'MD_PackPoint'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -2510,13 +2510,13 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%Attached)  ! Attached
       Int_BufSz  = Int_BufSz  + SIZE(InData%Top)  ! Top
       Int_BufSz  = Int_BufSz  + 1  ! nAttached
-      Db_BufSz   = Db_BufSz   + 1  ! conM
-      Db_BufSz   = Db_BufSz   + 1  ! conV
-      Db_BufSz   = Db_BufSz   + 1  ! conFX
-      Db_BufSz   = Db_BufSz   + 1  ! conFY
-      Db_BufSz   = Db_BufSz   + 1  ! conFZ
-      Db_BufSz   = Db_BufSz   + 1  ! conCa
-      Db_BufSz   = Db_BufSz   + 1  ! conCdA
+      Db_BufSz   = Db_BufSz   + 1  ! pointM
+      Db_BufSz   = Db_BufSz   + 1  ! pointV
+      Db_BufSz   = Db_BufSz   + 1  ! pointFX
+      Db_BufSz   = Db_BufSz   + 1  ! pointFY
+      Db_BufSz   = Db_BufSz   + 1  ! pointFZ
+      Db_BufSz   = Db_BufSz   + 1  ! pointCa
+      Db_BufSz   = Db_BufSz   + 1  ! pointCdA
       Db_BufSz   = Db_BufSz   + 1  ! time
       Db_BufSz   = Db_BufSz   + SIZE(InData%r)  ! r
       Db_BufSz   = Db_BufSz   + SIZE(InData%rd)  ! rd
@@ -2576,19 +2576,19 @@ ENDIF
     END DO
     IntKiBuf(Int_Xferred) = InData%nAttached
     Int_Xferred = Int_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%conM
+    DbKiBuf(Db_Xferred) = InData%pointM
     Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%conV
+    DbKiBuf(Db_Xferred) = InData%pointV
     Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%conFX
+    DbKiBuf(Db_Xferred) = InData%pointFX
     Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%conFY
+    DbKiBuf(Db_Xferred) = InData%pointFY
     Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%conFZ
+    DbKiBuf(Db_Xferred) = InData%pointFZ
     Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%conCa
+    DbKiBuf(Db_Xferred) = InData%pointCa
     Db_Xferred = Db_Xferred + 1
-    DbKiBuf(Db_Xferred) = InData%conCdA
+    DbKiBuf(Db_Xferred) = InData%pointCdA
     Db_Xferred = Db_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%time
     Db_Xferred = Db_Xferred + 1
@@ -2639,13 +2639,13 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
     END DO
- END SUBROUTINE MD_PackConnect
+ END SUBROUTINE MD_PackPoint
 
- SUBROUTINE MD_UnPackConnect( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE MD_UnPackPoint( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(MD_Connect), INTENT(INOUT) :: OutData
+  TYPE(MD_Point), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -2658,7 +2658,7 @@ ENDIF
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'MD_UnPackConnect'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'MD_UnPackPoint'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -2691,19 +2691,19 @@ ENDIF
     END DO
     OutData%nAttached = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%conM = DbKiBuf(Db_Xferred)
+    OutData%pointM = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-    OutData%conV = DbKiBuf(Db_Xferred)
+    OutData%pointV = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-    OutData%conFX = DbKiBuf(Db_Xferred)
+    OutData%pointFX = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-    OutData%conFY = DbKiBuf(Db_Xferred)
+    OutData%pointFY = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-    OutData%conFZ = DbKiBuf(Db_Xferred)
+    OutData%pointFZ = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-    OutData%conCa = DbKiBuf(Db_Xferred)
+    OutData%pointCa = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-    OutData%conCdA = DbKiBuf(Db_Xferred)
+    OutData%pointCdA = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     OutData%time = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
@@ -2773,7 +2773,7 @@ ENDIF
         Db_Xferred = Db_Xferred + 1
       END DO
     END DO
- END SUBROUTINE MD_UnPackConnect
+ END SUBROUTINE MD_UnPackPoint
 
  SUBROUTINE MD_CopyRod( SrcRodData, DstRodData, CtrlCode, ErrStat, ErrMsg )
    TYPE(MD_Rod), INTENT(IN) :: SrcRodData
@@ -4461,8 +4461,8 @@ ENDIF
     DstLineData%ElasticMod = SrcLineData%ElasticMod
     DstLineData%OutFlagList = SrcLineData%OutFlagList
     DstLineData%CtrlChan = SrcLineData%CtrlChan
-    DstLineData%FairConnect = SrcLineData%FairConnect
-    DstLineData%AnchConnect = SrcLineData%AnchConnect
+    DstLineData%FairPoint = SrcLineData%FairPoint
+    DstLineData%AnchPoint = SrcLineData%AnchPoint
     DstLineData%N = SrcLineData%N
     DstLineData%endTypeA = SrcLineData%endTypeA
     DstLineData%endTypeB = SrcLineData%endTypeB
@@ -5016,8 +5016,8 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! ElasticMod
       Int_BufSz  = Int_BufSz  + SIZE(InData%OutFlagList)  ! OutFlagList
       Int_BufSz  = Int_BufSz  + 1  ! CtrlChan
-      Int_BufSz  = Int_BufSz  + 1  ! FairConnect
-      Int_BufSz  = Int_BufSz  + 1  ! AnchConnect
+      Int_BufSz  = Int_BufSz  + 1  ! FairPoint
+      Int_BufSz  = Int_BufSz  + 1  ! AnchPoint
       Int_BufSz  = Int_BufSz  + 1  ! N
       Int_BufSz  = Int_BufSz  + 1  ! endTypeA
       Int_BufSz  = Int_BufSz  + 1  ! endTypeB
@@ -5225,9 +5225,9 @@ ENDIF
     END DO
     IntKiBuf(Int_Xferred) = InData%CtrlChan
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%FairConnect
+    IntKiBuf(Int_Xferred) = InData%FairPoint
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%AnchConnect
+    IntKiBuf(Int_Xferred) = InData%AnchPoint
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%N
     Int_Xferred = Int_Xferred + 1
@@ -5866,9 +5866,9 @@ ENDIF
     END DO
     OutData%CtrlChan = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%FairConnect = IntKiBuf(Int_Xferred)
+    OutData%FairPoint = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%AnchConnect = IntKiBuf(Int_Xferred)
+    OutData%AnchPoint = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%N = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
@@ -8383,18 +8383,18 @@ IF (ALLOCATED(SrcMiscData%RodList)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
-IF (ALLOCATED(SrcMiscData%ConnectList)) THEN
-  i1_l = LBOUND(SrcMiscData%ConnectList,1)
-  i1_u = UBOUND(SrcMiscData%ConnectList,1)
-  IF (.NOT. ALLOCATED(DstMiscData%ConnectList)) THEN 
-    ALLOCATE(DstMiscData%ConnectList(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcMiscData%PointList)) THEN
+  i1_l = LBOUND(SrcMiscData%PointList,1)
+  i1_u = UBOUND(SrcMiscData%PointList,1)
+  IF (.NOT. ALLOCATED(DstMiscData%PointList)) THEN 
+    ALLOCATE(DstMiscData%PointList(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ConnectList.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%PointList.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DO i1 = LBOUND(SrcMiscData%ConnectList,1), UBOUND(SrcMiscData%ConnectList,1)
-      CALL MD_Copyconnect( SrcMiscData%ConnectList(i1), DstMiscData%ConnectList(i1), CtrlCode, ErrStat2, ErrMsg2 )
+    DO i1 = LBOUND(SrcMiscData%PointList,1), UBOUND(SrcMiscData%PointList,1)
+      CALL MD_Copypoint( SrcMiscData%PointList(i1), DstMiscData%PointList(i1), CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
@@ -8431,31 +8431,31 @@ IF (ALLOCATED(SrcMiscData%FailList)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
-IF (ALLOCATED(SrcMiscData%FreeConIs)) THEN
-  i1_l = LBOUND(SrcMiscData%FreeConIs,1)
-  i1_u = UBOUND(SrcMiscData%FreeConIs,1)
-  IF (.NOT. ALLOCATED(DstMiscData%FreeConIs)) THEN 
-    ALLOCATE(DstMiscData%FreeConIs(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcMiscData%FreePointIs)) THEN
+  i1_l = LBOUND(SrcMiscData%FreePointIs,1)
+  i1_u = UBOUND(SrcMiscData%FreePointIs,1)
+  IF (.NOT. ALLOCATED(DstMiscData%FreePointIs)) THEN 
+    ALLOCATE(DstMiscData%FreePointIs(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FreeConIs.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FreePointIs.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstMiscData%FreeConIs = SrcMiscData%FreeConIs
+    DstMiscData%FreePointIs = SrcMiscData%FreePointIs
 ENDIF
-IF (ALLOCATED(SrcMiscData%CpldConIs)) THEN
-  i1_l = LBOUND(SrcMiscData%CpldConIs,1)
-  i1_u = UBOUND(SrcMiscData%CpldConIs,1)
-  i2_l = LBOUND(SrcMiscData%CpldConIs,2)
-  i2_u = UBOUND(SrcMiscData%CpldConIs,2)
-  IF (.NOT. ALLOCATED(DstMiscData%CpldConIs)) THEN 
-    ALLOCATE(DstMiscData%CpldConIs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcMiscData%CpldPointIs)) THEN
+  i1_l = LBOUND(SrcMiscData%CpldPointIs,1)
+  i1_u = UBOUND(SrcMiscData%CpldPointIs,1)
+  i2_l = LBOUND(SrcMiscData%CpldPointIs,2)
+  i2_u = UBOUND(SrcMiscData%CpldPointIs,2)
+  IF (.NOT. ALLOCATED(DstMiscData%CpldPointIs)) THEN 
+    ALLOCATE(DstMiscData%CpldPointIs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%CpldConIs.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%CpldPointIs.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstMiscData%CpldConIs = SrcMiscData%CpldConIs
+    DstMiscData%CpldPointIs = SrcMiscData%CpldPointIs
 ENDIF
 IF (ALLOCATED(SrcMiscData%FreeRodIs)) THEN
   i1_l = LBOUND(SrcMiscData%FreeRodIs,1)
@@ -8533,29 +8533,29 @@ IF (ALLOCATED(SrcMiscData%LineStateIsN)) THEN
   END IF
     DstMiscData%LineStateIsN = SrcMiscData%LineStateIsN
 ENDIF
-IF (ALLOCATED(SrcMiscData%ConStateIs1)) THEN
-  i1_l = LBOUND(SrcMiscData%ConStateIs1,1)
-  i1_u = UBOUND(SrcMiscData%ConStateIs1,1)
-  IF (.NOT. ALLOCATED(DstMiscData%ConStateIs1)) THEN 
-    ALLOCATE(DstMiscData%ConStateIs1(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcMiscData%PointStateIs1)) THEN
+  i1_l = LBOUND(SrcMiscData%PointStateIs1,1)
+  i1_u = UBOUND(SrcMiscData%PointStateIs1,1)
+  IF (.NOT. ALLOCATED(DstMiscData%PointStateIs1)) THEN 
+    ALLOCATE(DstMiscData%PointStateIs1(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ConStateIs1.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%PointStateIs1.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstMiscData%ConStateIs1 = SrcMiscData%ConStateIs1
+    DstMiscData%PointStateIs1 = SrcMiscData%PointStateIs1
 ENDIF
-IF (ALLOCATED(SrcMiscData%ConStateIsN)) THEN
-  i1_l = LBOUND(SrcMiscData%ConStateIsN,1)
-  i1_u = UBOUND(SrcMiscData%ConStateIsN,1)
-  IF (.NOT. ALLOCATED(DstMiscData%ConStateIsN)) THEN 
-    ALLOCATE(DstMiscData%ConStateIsN(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcMiscData%PointStateIsN)) THEN
+  i1_l = LBOUND(SrcMiscData%PointStateIsN,1)
+  i1_u = UBOUND(SrcMiscData%PointStateIsN,1)
+  IF (.NOT. ALLOCATED(DstMiscData%PointStateIsN)) THEN 
+    ALLOCATE(DstMiscData%PointStateIsN(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ConStateIsN.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%PointStateIsN.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstMiscData%ConStateIsN = SrcMiscData%ConStateIsN
+    DstMiscData%PointStateIsN = SrcMiscData%PointStateIsN
 ENDIF
 IF (ALLOCATED(SrcMiscData%RodStateIs1)) THEN
   i1_l = LBOUND(SrcMiscData%RodStateIs1,1)
@@ -8731,12 +8731,12 @@ DO i1 = LBOUND(MiscData%RodList,1), UBOUND(MiscData%RodList,1)
 ENDDO
   DEALLOCATE(MiscData%RodList)
 ENDIF
-IF (ALLOCATED(MiscData%ConnectList)) THEN
-DO i1 = LBOUND(MiscData%ConnectList,1), UBOUND(MiscData%ConnectList,1)
-  CALL MD_Destroyconnect( MiscData%ConnectList(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+IF (ALLOCATED(MiscData%PointList)) THEN
+DO i1 = LBOUND(MiscData%PointList,1), UBOUND(MiscData%PointList,1)
+  CALL MD_Destroypoint( MiscData%PointList(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
-  DEALLOCATE(MiscData%ConnectList)
+  DEALLOCATE(MiscData%PointList)
 ENDIF
 IF (ALLOCATED(MiscData%LineList)) THEN
 DO i1 = LBOUND(MiscData%LineList,1), UBOUND(MiscData%LineList,1)
@@ -8752,11 +8752,11 @@ DO i1 = LBOUND(MiscData%FailList,1), UBOUND(MiscData%FailList,1)
 ENDDO
   DEALLOCATE(MiscData%FailList)
 ENDIF
-IF (ALLOCATED(MiscData%FreeConIs)) THEN
-  DEALLOCATE(MiscData%FreeConIs)
+IF (ALLOCATED(MiscData%FreePointIs)) THEN
+  DEALLOCATE(MiscData%FreePointIs)
 ENDIF
-IF (ALLOCATED(MiscData%CpldConIs)) THEN
-  DEALLOCATE(MiscData%CpldConIs)
+IF (ALLOCATED(MiscData%CpldPointIs)) THEN
+  DEALLOCATE(MiscData%CpldPointIs)
 ENDIF
 IF (ALLOCATED(MiscData%FreeRodIs)) THEN
   DEALLOCATE(MiscData%FreeRodIs)
@@ -8776,11 +8776,11 @@ ENDIF
 IF (ALLOCATED(MiscData%LineStateIsN)) THEN
   DEALLOCATE(MiscData%LineStateIsN)
 ENDIF
-IF (ALLOCATED(MiscData%ConStateIs1)) THEN
-  DEALLOCATE(MiscData%ConStateIs1)
+IF (ALLOCATED(MiscData%PointStateIs1)) THEN
+  DEALLOCATE(MiscData%PointStateIs1)
 ENDIF
-IF (ALLOCATED(MiscData%ConStateIsN)) THEN
-  DEALLOCATE(MiscData%ConStateIsN)
+IF (ALLOCATED(MiscData%PointStateIsN)) THEN
+  DEALLOCATE(MiscData%PointStateIsN)
 ENDIF
 IF (ALLOCATED(MiscData%RodStateIs1)) THEN
   DEALLOCATE(MiscData%RodStateIs1)
@@ -8960,24 +8960,24 @@ ENDIF
       END IF
     END DO
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! ConnectList allocated yes/no
-  IF ( ALLOCATED(InData%ConnectList) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! ConnectList upper/lower bounds for each dimension
-    DO i1 = LBOUND(InData%ConnectList,1), UBOUND(InData%ConnectList,1)
-      Int_BufSz   = Int_BufSz + 3  ! ConnectList: size of buffers for each call to pack subtype
-      CALL MD_Packconnect( Re_Buf, Db_Buf, Int_Buf, InData%ConnectList(i1), ErrStat2, ErrMsg2, .TRUE. ) ! ConnectList 
+  Int_BufSz   = Int_BufSz   + 1     ! PointList allocated yes/no
+  IF ( ALLOCATED(InData%PointList) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! PointList upper/lower bounds for each dimension
+    DO i1 = LBOUND(InData%PointList,1), UBOUND(InData%PointList,1)
+      Int_BufSz   = Int_BufSz + 3  ! PointList: size of buffers for each call to pack subtype
+      CALL MD_Packpoint( Re_Buf, Db_Buf, Int_Buf, InData%PointList(i1), ErrStat2, ErrMsg2, .TRUE. ) ! PointList 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! ConnectList
+      IF(ALLOCATED(Re_Buf)) THEN ! PointList
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! ConnectList
+      IF(ALLOCATED(Db_Buf)) THEN ! PointList
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! ConnectList
+      IF(ALLOCATED(Int_Buf)) THEN ! PointList
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
@@ -9029,15 +9029,15 @@ ENDIF
       END IF
     END DO
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! FreeConIs allocated yes/no
-  IF ( ALLOCATED(InData%FreeConIs) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! FreeConIs upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%FreeConIs)  ! FreeConIs
+  Int_BufSz   = Int_BufSz   + 1     ! FreePointIs allocated yes/no
+  IF ( ALLOCATED(InData%FreePointIs) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! FreePointIs upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%FreePointIs)  ! FreePointIs
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! CpldConIs allocated yes/no
-  IF ( ALLOCATED(InData%CpldConIs) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! CpldConIs upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%CpldConIs)  ! CpldConIs
+  Int_BufSz   = Int_BufSz   + 1     ! CpldPointIs allocated yes/no
+  IF ( ALLOCATED(InData%CpldPointIs) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! CpldPointIs upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%CpldPointIs)  ! CpldPointIs
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! FreeRodIs allocated yes/no
   IF ( ALLOCATED(InData%FreeRodIs) ) THEN
@@ -9069,15 +9069,15 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! LineStateIsN upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%LineStateIsN)  ! LineStateIsN
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! ConStateIs1 allocated yes/no
-  IF ( ALLOCATED(InData%ConStateIs1) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! ConStateIs1 upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%ConStateIs1)  ! ConStateIs1
+  Int_BufSz   = Int_BufSz   + 1     ! PointStateIs1 allocated yes/no
+  IF ( ALLOCATED(InData%PointStateIs1) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! PointStateIs1 upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%PointStateIs1)  ! PointStateIs1
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! ConStateIsN allocated yes/no
-  IF ( ALLOCATED(InData%ConStateIsN) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! ConStateIsN upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%ConStateIsN)  ! ConStateIsN
+  Int_BufSz   = Int_BufSz   + 1     ! PointStateIsN allocated yes/no
+  IF ( ALLOCATED(InData%PointStateIsN) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! PointStateIsN upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%PointStateIsN)  ! PointStateIsN
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! RodStateIs1 allocated yes/no
   IF ( ALLOCATED(InData%RodStateIs1) ) THEN
@@ -9382,18 +9382,18 @@ ENDIF
       ENDIF
     END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%ConnectList) ) THEN
+  IF ( .NOT. ALLOCATED(InData%PointList) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ConnectList,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ConnectList,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PointList,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PointList,1)
     Int_Xferred = Int_Xferred + 2
 
-    DO i1 = LBOUND(InData%ConnectList,1), UBOUND(InData%ConnectList,1)
-      CALL MD_Packconnect( Re_Buf, Db_Buf, Int_Buf, InData%ConnectList(i1), ErrStat2, ErrMsg2, OnlySize ) ! ConnectList 
+    DO i1 = LBOUND(InData%PointList,1), UBOUND(InData%PointList,1)
+      CALL MD_Packpoint( Re_Buf, Db_Buf, Int_Buf, InData%PointList(i1), ErrStat2, ErrMsg2, OnlySize ) ! PointList 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -9505,37 +9505,37 @@ ENDIF
       ENDIF
     END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%FreeConIs) ) THEN
+  IF ( .NOT. ALLOCATED(InData%FreePointIs) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%FreeConIs,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%FreeConIs,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%FreePointIs,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%FreePointIs,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%FreeConIs,1), UBOUND(InData%FreeConIs,1)
-        IntKiBuf(Int_Xferred) = InData%FreeConIs(i1)
+      DO i1 = LBOUND(InData%FreePointIs,1), UBOUND(InData%FreePointIs,1)
+        IntKiBuf(Int_Xferred) = InData%FreePointIs(i1)
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%CpldConIs) ) THEN
+  IF ( .NOT. ALLOCATED(InData%CpldPointIs) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CpldConIs,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CpldConIs,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CpldPointIs,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CpldPointIs,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CpldConIs,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CpldConIs,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%CpldPointIs,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%CpldPointIs,2)
     Int_Xferred = Int_Xferred + 2
 
-      DO i2 = LBOUND(InData%CpldConIs,2), UBOUND(InData%CpldConIs,2)
-        DO i1 = LBOUND(InData%CpldConIs,1), UBOUND(InData%CpldConIs,1)
-          IntKiBuf(Int_Xferred) = InData%CpldConIs(i1,i2)
+      DO i2 = LBOUND(InData%CpldPointIs,2), UBOUND(InData%CpldPointIs,2)
+        DO i1 = LBOUND(InData%CpldPointIs,1), UBOUND(InData%CpldPointIs,1)
+          IntKiBuf(Int_Xferred) = InData%CpldPointIs(i1,i2)
           Int_Xferred = Int_Xferred + 1
         END DO
       END DO
@@ -9640,33 +9640,33 @@ ENDIF
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%ConStateIs1) ) THEN
+  IF ( .NOT. ALLOCATED(InData%PointStateIs1) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ConStateIs1,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ConStateIs1,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PointStateIs1,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PointStateIs1,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%ConStateIs1,1), UBOUND(InData%ConStateIs1,1)
-        IntKiBuf(Int_Xferred) = InData%ConStateIs1(i1)
+      DO i1 = LBOUND(InData%PointStateIs1,1), UBOUND(InData%PointStateIs1,1)
+        IntKiBuf(Int_Xferred) = InData%PointStateIs1(i1)
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%ConStateIsN) ) THEN
+  IF ( .NOT. ALLOCATED(InData%PointStateIsN) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ConStateIsN,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ConStateIsN,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PointStateIsN,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PointStateIsN,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%ConStateIsN,1), UBOUND(InData%ConStateIsN,1)
-        IntKiBuf(Int_Xferred) = InData%ConStateIsN(i1)
+      DO i1 = LBOUND(InData%PointStateIsN,1), UBOUND(InData%PointStateIsN,1)
+        IntKiBuf(Int_Xferred) = InData%PointStateIsN(i1)
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
@@ -10174,20 +10174,20 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ConnectList not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PointList not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%ConnectList)) DEALLOCATE(OutData%ConnectList)
-    ALLOCATE(OutData%ConnectList(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%PointList)) DEALLOCATE(OutData%PointList)
+    ALLOCATE(OutData%PointList(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ConnectList.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PointList.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    DO i1 = LBOUND(OutData%ConnectList,1), UBOUND(OutData%ConnectList,1)
+    DO i1 = LBOUND(OutData%PointList,1), UBOUND(OutData%PointList,1)
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -10221,7 +10221,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL MD_Unpackconnect( Re_Buf, Db_Buf, Int_Buf, OutData%ConnectList(i1), ErrStat2, ErrMsg2 ) ! ConnectList 
+      CALL MD_Unpackpoint( Re_Buf, Db_Buf, Int_Buf, OutData%PointList(i1), ErrStat2, ErrMsg2 ) ! PointList 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -10342,25 +10342,25 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FreeConIs not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FreePointIs not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%FreeConIs)) DEALLOCATE(OutData%FreeConIs)
-    ALLOCATE(OutData%FreeConIs(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%FreePointIs)) DEALLOCATE(OutData%FreePointIs)
+    ALLOCATE(OutData%FreePointIs(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%FreeConIs.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%FreePointIs.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%FreeConIs,1), UBOUND(OutData%FreeConIs,1)
-        OutData%FreeConIs(i1) = IntKiBuf(Int_Xferred)
+      DO i1 = LBOUND(OutData%FreePointIs,1), UBOUND(OutData%FreePointIs,1)
+        OutData%FreePointIs(i1) = IntKiBuf(Int_Xferred)
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CpldConIs not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! CpldPointIs not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -10370,15 +10370,15 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%CpldConIs)) DEALLOCATE(OutData%CpldConIs)
-    ALLOCATE(OutData%CpldConIs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%CpldPointIs)) DEALLOCATE(OutData%CpldPointIs)
+    ALLOCATE(OutData%CpldPointIs(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CpldConIs.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%CpldPointIs.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i2 = LBOUND(OutData%CpldConIs,2), UBOUND(OutData%CpldConIs,2)
-        DO i1 = LBOUND(OutData%CpldConIs,1), UBOUND(OutData%CpldConIs,1)
-          OutData%CpldConIs(i1,i2) = IntKiBuf(Int_Xferred)
+      DO i2 = LBOUND(OutData%CpldPointIs,2), UBOUND(OutData%CpldPointIs,2)
+        DO i1 = LBOUND(OutData%CpldPointIs,1), UBOUND(OutData%CpldPointIs,1)
+          OutData%CpldPointIs(i1,i2) = IntKiBuf(Int_Xferred)
           Int_Xferred = Int_Xferred + 1
         END DO
       END DO
@@ -10501,39 +10501,39 @@ ENDIF
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ConStateIs1 not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PointStateIs1 not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%ConStateIs1)) DEALLOCATE(OutData%ConStateIs1)
-    ALLOCATE(OutData%ConStateIs1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%PointStateIs1)) DEALLOCATE(OutData%PointStateIs1)
+    ALLOCATE(OutData%PointStateIs1(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ConStateIs1.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PointStateIs1.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%ConStateIs1,1), UBOUND(OutData%ConStateIs1,1)
-        OutData%ConStateIs1(i1) = IntKiBuf(Int_Xferred)
+      DO i1 = LBOUND(OutData%PointStateIs1,1), UBOUND(OutData%PointStateIs1,1)
+        OutData%PointStateIs1(i1) = IntKiBuf(Int_Xferred)
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ConStateIsN not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PointStateIsN not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%ConStateIsN)) DEALLOCATE(OutData%ConStateIsN)
-    ALLOCATE(OutData%ConStateIsN(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%PointStateIsN)) DEALLOCATE(OutData%PointStateIsN)
+    ALLOCATE(OutData%PointStateIsN(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ConStateIsN.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PointStateIsN.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%ConStateIsN,1), UBOUND(OutData%ConStateIsN,1)
-        OutData%ConStateIsN(i1) = IntKiBuf(Int_Xferred)
+      DO i1 = LBOUND(OutData%PointStateIsN,1), UBOUND(OutData%PointStateIsN,1)
+        OutData%PointStateIsN(i1) = IntKiBuf(Int_Xferred)
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
@@ -10824,8 +10824,8 @@ ENDIF
    ErrMsg  = ""
     DstParamData%nLineTypes = SrcParamData%nLineTypes
     DstParamData%nRodTypes = SrcParamData%nRodTypes
-    DstParamData%nConnects = SrcParamData%nConnects
-    DstParamData%nConnectsExtra = SrcParamData%nConnectsExtra
+    DstParamData%nPoints = SrcParamData%nPoints
+    DstParamData%nPointsExtra = SrcParamData%nPointsExtra
     DstParamData%nBodies = SrcParamData%nBodies
     DstParamData%nRods = SrcParamData%nRods
     DstParamData%nLines = SrcParamData%nLines
@@ -10833,7 +10833,7 @@ ENDIF
     DstParamData%nFails = SrcParamData%nFails
     DstParamData%nFreeBodies = SrcParamData%nFreeBodies
     DstParamData%nFreeRods = SrcParamData%nFreeRods
-    DstParamData%nFreeCons = SrcParamData%nFreeCons
+    DstParamData%nFreePoints = SrcParamData%nFreePoints
 IF (ALLOCATED(SrcParamData%nCpldBodies)) THEN
   i1_l = LBOUND(SrcParamData%nCpldBodies,1)
   i1_u = UBOUND(SrcParamData%nCpldBodies,1)
@@ -10858,17 +10858,17 @@ IF (ALLOCATED(SrcParamData%nCpldRods)) THEN
   END IF
     DstParamData%nCpldRods = SrcParamData%nCpldRods
 ENDIF
-IF (ALLOCATED(SrcParamData%nCpldCons)) THEN
-  i1_l = LBOUND(SrcParamData%nCpldCons,1)
-  i1_u = UBOUND(SrcParamData%nCpldCons,1)
-  IF (.NOT. ALLOCATED(DstParamData%nCpldCons)) THEN 
-    ALLOCATE(DstParamData%nCpldCons(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcParamData%nCpldPoints)) THEN
+  i1_l = LBOUND(SrcParamData%nCpldPoints,1)
+  i1_u = UBOUND(SrcParamData%nCpldPoints,1)
+  IF (.NOT. ALLOCATED(DstParamData%nCpldPoints)) THEN 
+    ALLOCATE(DstParamData%nCpldPoints(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%nCpldCons.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%nCpldPoints.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstParamData%nCpldCons = SrcParamData%nCpldCons
+    DstParamData%nCpldPoints = SrcParamData%nCpldPoints
 ENDIF
     DstParamData%NConns = SrcParamData%NConns
     DstParamData%NAnchs = SrcParamData%NAnchs
@@ -11227,8 +11227,8 @@ ENDIF
 IF (ALLOCATED(ParamData%nCpldRods)) THEN
   DEALLOCATE(ParamData%nCpldRods)
 ENDIF
-IF (ALLOCATED(ParamData%nCpldCons)) THEN
-  DEALLOCATE(ParamData%nCpldCons)
+IF (ALLOCATED(ParamData%nCpldPoints)) THEN
+  DEALLOCATE(ParamData%nCpldPoints)
 ENDIF
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
@@ -11333,8 +11333,8 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1  ! nLineTypes
       Int_BufSz  = Int_BufSz  + 1  ! nRodTypes
-      Int_BufSz  = Int_BufSz  + 1  ! nConnects
-      Int_BufSz  = Int_BufSz  + 1  ! nConnectsExtra
+      Int_BufSz  = Int_BufSz  + 1  ! nPoints
+      Int_BufSz  = Int_BufSz  + 1  ! nPointsExtra
       Int_BufSz  = Int_BufSz  + 1  ! nBodies
       Int_BufSz  = Int_BufSz  + 1  ! nRods
       Int_BufSz  = Int_BufSz  + 1  ! nLines
@@ -11342,7 +11342,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! nFails
       Int_BufSz  = Int_BufSz  + 1  ! nFreeBodies
       Int_BufSz  = Int_BufSz  + 1  ! nFreeRods
-      Int_BufSz  = Int_BufSz  + 1  ! nFreeCons
+      Int_BufSz  = Int_BufSz  + 1  ! nFreePoints
   Int_BufSz   = Int_BufSz   + 1     ! nCpldBodies allocated yes/no
   IF ( ALLOCATED(InData%nCpldBodies) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! nCpldBodies upper/lower bounds for each dimension
@@ -11353,10 +11353,10 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! nCpldRods upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%nCpldRods)  ! nCpldRods
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! nCpldCons allocated yes/no
-  IF ( ALLOCATED(InData%nCpldCons) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! nCpldCons upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%nCpldCons)  ! nCpldCons
+  Int_BufSz   = Int_BufSz   + 1     ! nCpldPoints allocated yes/no
+  IF ( ALLOCATED(InData%nCpldPoints) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! nCpldPoints upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%nCpldPoints)  ! nCpldPoints
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NConns
       Int_BufSz  = Int_BufSz  + 1  ! NAnchs
@@ -11542,9 +11542,9 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nRodTypes
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%nConnects
+    IntKiBuf(Int_Xferred) = InData%nPoints
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%nConnectsExtra
+    IntKiBuf(Int_Xferred) = InData%nPointsExtra
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nBodies
     Int_Xferred = Int_Xferred + 1
@@ -11560,7 +11560,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nFreeRods
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%nFreeCons
+    IntKiBuf(Int_Xferred) = InData%nFreePoints
     Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%nCpldBodies) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -11592,18 +11592,18 @@ ENDIF
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%nCpldCons) ) THEN
+  IF ( .NOT. ALLOCATED(InData%nCpldPoints) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%nCpldCons,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%nCpldCons,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%nCpldPoints,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%nCpldPoints,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%nCpldCons,1), UBOUND(InData%nCpldCons,1)
-        IntKiBuf(Int_Xferred) = InData%nCpldCons(i1)
+      DO i1 = LBOUND(InData%nCpldPoints,1), UBOUND(InData%nCpldPoints,1)
+        IntKiBuf(Int_Xferred) = InData%nCpldPoints(i1)
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
@@ -12168,9 +12168,9 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%nRodTypes = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%nConnects = IntKiBuf(Int_Xferred)
+    OutData%nPoints = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%nConnectsExtra = IntKiBuf(Int_Xferred)
+    OutData%nPointsExtra = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%nBodies = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
@@ -12186,7 +12186,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%nFreeRods = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%nFreeCons = IntKiBuf(Int_Xferred)
+    OutData%nFreePoints = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! nCpldBodies not allocated
     Int_Xferred = Int_Xferred + 1
@@ -12224,21 +12224,21 @@ ENDIF
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! nCpldCons not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! nCpldPoints not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%nCpldCons)) DEALLOCATE(OutData%nCpldCons)
-    ALLOCATE(OutData%nCpldCons(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%nCpldPoints)) DEALLOCATE(OutData%nCpldPoints)
+    ALLOCATE(OutData%nCpldPoints(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%nCpldCons.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%nCpldPoints.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%nCpldCons,1), UBOUND(OutData%nCpldCons,1)
-        OutData%nCpldCons(i1) = IntKiBuf(Int_Xferred)
+      DO i1 = LBOUND(OutData%nCpldPoints,1), UBOUND(OutData%nCpldPoints,1)
+        OutData%nCpldPoints(i1) = IntKiBuf(Int_Xferred)
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF

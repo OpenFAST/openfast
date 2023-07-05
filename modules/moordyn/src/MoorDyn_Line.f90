@@ -1005,10 +1005,10 @@ CONTAINS
       !   Real(DbKi), INTENT (IN)       :: t              ! instantaneous time
       !   TYPE(MD_Line), INTENT (INOUT) :: Line           ! label for the current line, for convenience
       !   TYPE(MD_LineProp), INTENT(IN) :: LineProp       ! the single line property set for the line of interest
-      !    Real(DbKi), INTENT(INOUT)     :: FairFtot(:)    ! total force on Connect top of line is attached to
-      !    Real(DbKi), INTENT(INOUT)     :: FairMtot(:,:)  ! total mass of Connect top of line is attached to
-      !    Real(DbKi), INTENT(INOUT)     :: AnchFtot(:)    ! total force on Connect bottom of line is attached to
-      !    Real(DbKi), INTENT(INOUT)     :: AnchMtot(:,:)  ! total mass of Connect bottom of line is attached to
+      !    Real(DbKi), INTENT(INOUT)     :: FairFtot(:)    ! total force on Point top of line is attached to
+      !    Real(DbKi), INTENT(INOUT)     :: FairMtot(:,:)  ! total mass of Point top of line is attached to
+      !    Real(DbKi), INTENT(INOUT)     :: AnchFtot(:)    ! total force on Point bottom of line is attached to
+      !    Real(DbKi), INTENT(INOUT)     :: AnchMtot(:,:)  ! total mass of Point bottom of line is attached to
 
 
       INTEGER(IntKi)                   :: i              ! index of segments or nodes along line
@@ -1070,10 +1070,10 @@ CONTAINS
 
       !   ! set end node positions and velocities from connect objects' states
       !   DO J = 1, 3
-      !      Line%r( J,N) = m%ConnectList(Line%FairConnect)%r(J)
-      !      Line%r( J,0) = m%ConnectList(Line%AnchConnect)%r(J)
-      !      Line%rd(J,N) = m%ConnectList(Line%FairConnect)%rd(J)
-      !      Line%rd(J,0) = m%ConnectList(Line%AnchConnect)%rd(J)
+      !      Line%r( J,N) = m%PointList(Line%FairPoint)%r(J)
+      !      Line%r( J,0) = m%PointList(Line%AnchPoint)%r(J)
+      !      Line%rd(J,N) = m%PointList(Line%FairPoint)%rd(J)
+      !      Line%rd(J,0) = m%PointList(Line%AnchPoint)%rd(J)
       !   END DO
 
 
@@ -1225,10 +1225,10 @@ CONTAINS
          ! loop through all nodes to calculate bending forces due to bending stiffness
          do i=0,N
          
-            ! end node A case (only if attached to a Rod, i.e. a cantilever rather than pinned connection)
+            ! end node A case (only if attached to a Rod, i.e. a cantilever rather than pinned point)
             if (i==0) then
             
-               if (Line%endTypeA > 0) then ! if attached to Rod i.e. cantilever connection
+               if (Line%endTypeA > 0) then ! if attached to Rod i.e. cantilever point
                
                   Kurvi = GetCurvature(Line%lstr(1), Line%q(:,0), Line%qs(:,1))  ! curvature (assuming rod angle is node angle which is middle of if there was a segment -1/2)
          
@@ -1248,10 +1248,10 @@ CONTAINS
                   
                end if
             
-            ! end node A case (only if attached to a Rod, i.e. a cantilever rather than pinned connection)
+            ! end node A case (only if attached to a Rod, i.e. a cantilever rather than pinned point)
             else if (i==N) then
             
-               if (Line%endTypeB > 0) then ! if attached to Rod i.e. cantilever connection
+               if (Line%endTypeB > 0) then ! if attached to Rod i.e. cantilever point
                
                   Kurvi = GetCurvature(Line%lstr(N), Line%qs(:,N), Line%q(:,N))  ! curvature (assuming rod angle is node angle which is middle of if there was a segment -1/2
                   
@@ -1488,7 +1488,7 @@ CONTAINS
       END DO
 
 
-      !   ! add force and mass of end nodes to the Connects they correspond to <<<<<<<<<<<< do this from Connection instead now!
+      !   ! add force and mass of end nodes to the Points they correspond to <<<<<<<<<<<< do this from Point instead now!
       !   DO J = 1,3
       !      FairFtot(J) = FairFtot(J) + Line%F(J,N)
       !      AnchFtot(J) = AnchFtot(J) + Line%F(J,0)
@@ -1516,10 +1516,10 @@ CONTAINS
       
       IF (topOfLine==1) THEN
          inode = Line%N      
-         Line%endTypeB = 0   ! set as ball rather than rigid connection (unless changed later by SetEndOrientation)
+         Line%endTypeB = 0   ! set as ball rather than rigid point (unless changed later by SetEndOrientation)
       ELSE
          inode = 0
-         Line%endTypeA = 0   ! set as ball rather than rigid connection (unless changed later by SetEndOrientation)
+         Line%endTypeA = 0   ! set as ball rather than rigid point (unless changed later by SetEndOrientation)
       END IF 
       
       !Line%r( :,inode) = r_in
