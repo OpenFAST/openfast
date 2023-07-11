@@ -449,13 +449,11 @@ subroutine ApplySkewedWakeCorrection(BEM_Mod, SkewMod, yawCorrFactor, F, azimuth
    
    
    ! Skewed wake correction
-   IF (.true.) then
       if(BEM_Mod==BEMMod_2D) then
          chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
       else
          chi = (0.6_ReKi*a + 1.0_ReKi)*abs(chi0)
       endif
-   END IF
       
    call MPi2Pi( chi ) ! make sure chi is in [-pi, pi] before testing if it's outside a valid range
       

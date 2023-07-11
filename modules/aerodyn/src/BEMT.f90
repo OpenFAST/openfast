@@ -348,12 +348,12 @@ subroutine BEMT_AllocInput( u, p, errStat, errMsg )
    end if 
    u%theta = 0.0_ReKi
    
-   allocate ( u%psi( p%numBlades ), STAT = errStat2 )
+   allocate ( u%psi_s( p%numBlades ), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
-      call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%psi.', errStat, errMsg, RoutineName )
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for u%psi_s.', errStat, errMsg, RoutineName )
       return
    end if 
-   u%psi = 0.0_ReKi
+   u%psi_s = 0.0_ReKi
    
    allocate ( u%Vx( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
@@ -1580,7 +1580,7 @@ subroutine ApplySkewedWakeCorrection_AllNodes(p, u, m, x, phi, OtherState, axInd
          do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
             if ( .not. p%FixedInductions(i,j) ) then
                F = getHubTipLossCorrection(p%BEM_Mod, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), phi(i,j), u%cantAngle(i,j) )
-               call ApplySkewedWakeCorrection( p%BEM_Mod, p%skewWakeMod, p%yawCorrFactor, F, u%psi(j), u%psiSkewOffset, u%chi0, u%rlocal(i,j)/m%Rtip(j), axInduction(i,j), chi(i,j), m%FirstWarn_Skew )
+               call ApplySkewedWakeCorrection( p%BEM_Mod, p%skewWakeMod, p%yawCorrFactor, F, u%psi_s(j), u%psiSkewOffset, u%chi0, u%rlocal(i,j)/m%Rtip(j), axInduction(i,j), chi(i,j), m%FirstWarn_Skew )
             end if ! .not. p%FixedInductions (special case for tip and/or hub loss)
          enddo    ! I - Blade nodes / elements
       enddo       ! J - All blades

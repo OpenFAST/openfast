@@ -181,8 +181,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: BEMT_InputType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: theta      !< Twist angle (includes all sources of twist)  [Array of size (NumBlNds,numBlades)] [rad]
     REAL(ReKi)  :: chi0      !< Angle between the vector normal to the rotor plane and the wind vector (e.g., the yaw angle in the case of no tilt) [rad]
-    REAL(ReKi)  :: psiSkewOffset      !< Azimuth angle offset (relative to 90 deg) of the most downwind blade when chi0 is non-zero [rad]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: psi      !< Azimuth angle [rad]
+    REAL(ReKi)  :: psiSkewOffset      !< Skew azimuth angle offset (relative to 90 deg) of the most downwind blade when chi0 is non-zero [rad]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: psi_s      !< Skew azimuth angle [rad]
     REAL(ReKi)  :: omega      !< Angular velocity of rotor [rad/s]
     REAL(ReKi)  :: TSR      !< Tip-speed ratio (to check if BEM should be turned off) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vx      !< Local axial velocity at node [m/s]
@@ -4917,17 +4917,17 @@ IF (ALLOCATED(SrcInputData%theta)) THEN
 ENDIF
     DstInputData%chi0 = SrcInputData%chi0
     DstInputData%psiSkewOffset = SrcInputData%psiSkewOffset
-IF (ALLOCATED(SrcInputData%psi)) THEN
-  i1_l = LBOUND(SrcInputData%psi,1)
-  i1_u = UBOUND(SrcInputData%psi,1)
-  IF (.NOT. ALLOCATED(DstInputData%psi)) THEN 
-    ALLOCATE(DstInputData%psi(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcInputData%psi_s)) THEN
+  i1_l = LBOUND(SrcInputData%psi_s,1)
+  i1_u = UBOUND(SrcInputData%psi_s,1)
+  IF (.NOT. ALLOCATED(DstInputData%psi_s)) THEN 
+    ALLOCATE(DstInputData%psi_s(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%psi.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%psi_s.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstInputData%psi = SrcInputData%psi
+    DstInputData%psi_s = SrcInputData%psi_s
 ENDIF
     DstInputData%omega = SrcInputData%omega
     DstInputData%TSR = SrcInputData%TSR
@@ -5100,8 +5100,8 @@ ENDIF
 IF (ALLOCATED(InputData%theta)) THEN
   DEALLOCATE(InputData%theta)
 ENDIF
-IF (ALLOCATED(InputData%psi)) THEN
-  DEALLOCATE(InputData%psi)
+IF (ALLOCATED(InputData%psi_s)) THEN
+  DEALLOCATE(InputData%psi_s)
 ENDIF
 IF (ALLOCATED(InputData%Vx)) THEN
   DEALLOCATE(InputData%Vx)
@@ -5177,10 +5177,10 @@ ENDIF
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! chi0
       Re_BufSz   = Re_BufSz   + 1  ! psiSkewOffset
-  Int_BufSz   = Int_BufSz   + 1     ! psi allocated yes/no
-  IF ( ALLOCATED(InData%psi) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! psi upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%psi)  ! psi
+  Int_BufSz   = Int_BufSz   + 1     ! psi_s allocated yes/no
+  IF ( ALLOCATED(InData%psi_s) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! psi_s upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%psi_s)  ! psi_s
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! omega
       Re_BufSz   = Re_BufSz   + 1  ! TSR
@@ -5288,18 +5288,18 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%psiSkewOffset
     Re_Xferred = Re_Xferred + 1
-  IF ( .NOT. ALLOCATED(InData%psi) ) THEN
+  IF ( .NOT. ALLOCATED(InData%psi_s) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%psi,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%psi,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%psi_s,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%psi_s,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%psi,1), UBOUND(InData%psi,1)
-        ReKiBuf(Re_Xferred) = InData%psi(i1)
+      DO i1 = LBOUND(InData%psi_s,1), UBOUND(InData%psi_s,1)
+        ReKiBuf(Re_Xferred) = InData%psi_s(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -5574,21 +5574,21 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%psiSkewOffset = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! psi not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! psi_s not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%psi)) DEALLOCATE(OutData%psi)
-    ALLOCATE(OutData%psi(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%psi_s)) DEALLOCATE(OutData%psi_s)
+    ALLOCATE(OutData%psi_s(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%psi.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%psi_s.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%psi,1), UBOUND(OutData%psi,1)
-        OutData%psi(i1) = ReKiBuf(Re_Xferred)
+      DO i1 = LBOUND(OutData%psi_s,1), UBOUND(OutData%psi_s,1)
+        OutData%psi_s(i1) = ReKiBuf(Re_Xferred)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -7516,10 +7516,10 @@ END IF ! check if allocated
   u_out%chi0 = u1%chi0 + b * ScaleFactor
   b = -(u1%psiSkewOffset - u2%psiSkewOffset)
   u_out%psiSkewOffset = u1%psiSkewOffset + b * ScaleFactor
-IF (ALLOCATED(u_out%psi) .AND. ALLOCATED(u1%psi)) THEN
-  DO i1 = LBOUND(u_out%psi,1),UBOUND(u_out%psi,1)
-    b = -(u1%psi(i1) - u2%psi(i1))
-    u_out%psi(i1) = u1%psi(i1) + b * ScaleFactor
+IF (ALLOCATED(u_out%psi_s) .AND. ALLOCATED(u1%psi_s)) THEN
+  DO i1 = LBOUND(u_out%psi_s,1),UBOUND(u_out%psi_s,1)
+    b = -(u1%psi_s(i1) - u2%psi_s(i1))
+    u_out%psi_s(i1) = u1%psi_s(i1) + b * ScaleFactor
   END DO
 END IF ! check if allocated
   b = -(u1%omega - u2%omega)
@@ -7690,11 +7690,11 @@ END IF ! check if allocated
   b = (t(3)**2*(u1%psiSkewOffset - u2%psiSkewOffset) + t(2)**2*(-u1%psiSkewOffset + u3%psiSkewOffset))* scaleFactor
   c = ( (t(2)-t(3))*u1%psiSkewOffset + t(3)*u2%psiSkewOffset - t(2)*u3%psiSkewOffset ) * scaleFactor
   u_out%psiSkewOffset = u1%psiSkewOffset + b  + c * t_out
-IF (ALLOCATED(u_out%psi) .AND. ALLOCATED(u1%psi)) THEN
-  DO i1 = LBOUND(u_out%psi,1),UBOUND(u_out%psi,1)
-    b = (t(3)**2*(u1%psi(i1) - u2%psi(i1)) + t(2)**2*(-u1%psi(i1) + u3%psi(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*u1%psi(i1) + t(3)*u2%psi(i1) - t(2)*u3%psi(i1) ) * scaleFactor
-    u_out%psi(i1) = u1%psi(i1) + b  + c * t_out
+IF (ALLOCATED(u_out%psi_s) .AND. ALLOCATED(u1%psi_s)) THEN
+  DO i1 = LBOUND(u_out%psi_s,1),UBOUND(u_out%psi_s,1)
+    b = (t(3)**2*(u1%psi_s(i1) - u2%psi_s(i1)) + t(2)**2*(-u1%psi_s(i1) + u3%psi_s(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%psi_s(i1) + t(3)*u2%psi_s(i1) - t(2)*u3%psi_s(i1) ) * scaleFactor
+    u_out%psi_s(i1) = u1%psi_s(i1) + b  + c * t_out
   END DO
 END IF ! check if allocated
   b = (t(3)**2*(u1%omega - u2%omega) + t(2)**2*(-u1%omega + u3%omega))* scaleFactor

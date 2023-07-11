@@ -173,8 +173,8 @@ typedef   ^                            ^                             IntKi      
 #
 typedef   ^                            InputType                     ReKi                     theta                           {:}{:}         -         -         "Twist angle (includes all sources of twist)  [Array of size (NumBlNds,numBlades)]" rad
 typedef   ^                            ^                             ReKi                     chi0                            -              -         -         "Angle between the vector normal to the rotor plane and the wind vector (e.g., the yaw angle in the case of no tilt)" rad
-typedef   ^                            ^                             ReKi                     psiSkewOffset                   -              -         -         "Azimuth angle offset (relative to 90 deg) of the most downwind blade when chi0 is non-zero" rad
-typedef   ^                            ^                             ReKi                     psi                             {:}            -         -         "Azimuth angle" rad
+typedef   ^                            ^                             ReKi                     psiSkewOffset                   -              -         -         "Skew azimuth angle offset (relative to 90 deg) of the most downwind blade when chi0 is non-zero" rad
+typedef   ^                            ^                             ReKi                     psi_s                           {:}            -         -         "Skew azimuth angle" rad
 typedef   ^                            ^                             ReKi                     omega                           -              -         -         "Angular velocity of rotor" rad/s
 typedef   ^                            ^                             ReKi                     TSR                             -              -         -         "Tip-speed ratio (to check if BEM should be turned off)" -
 typedef   ^                            ^                             ReKi                     Vx                              {:}{:}         -         -         "Local axial velocity at node" m/s

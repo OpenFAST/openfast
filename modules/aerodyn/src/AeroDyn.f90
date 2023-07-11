@@ -2642,7 +2642,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    !..........................
    if (p%AeroProjMod==APM_BEM_NoSweepPitchTwist .or. p%AeroProjMod==APM_LiftingLine) then
 
-      m%BEMT_u(indx)%psi = Azimuth
+      m%BEMT_u(indx)%psi_s = Azimuth
    elseif (p%AeroProjMod==APM_BEM_Polar) then
 
       do k=1,p%NumBlades
@@ -2652,7 +2652,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
          ! Extract azimuth angle for blade k
          ! NOTE: EB, this might need improvements (express wrt hub, also deal with case hubRad=0). This is likely not psi_skew. 
          theta = -EulerExtract( transpose(orientationBladeAzimuth(:,:,1)) )
-         m%BEMT_u(indx)%psi(k) = theta(1)
+         m%BEMT_u(indx)%psi_s(k) = theta(1)
       end do !k=blades
          
       ! Find the most-downwind azimuth angle needed by the skewed wake correction model
@@ -2788,8 +2788,9 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
          m%BEMT_u(indx)%Vz(j,k) = dot_product( tmp, m%orientationAnnulus(3,:,j,k) ) ! radial component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
 
          ! NOTE: We'll likely remove that:
-         m%BEMT_u(indx)%xVelCorr(j,k) = TwoNorm(m%DisturbedInflow(:,j,k))*(             sin(yaw)*sin(-m%BEMT_u(indx)%cantAngle(j,k))*sin(m%BEMT_u(indx)%psi(k)) &
-                                                                            + sin(tilt)*cos(yaw)*sin(-m%BEMT_u(indx)%cantAngle(j,k))*cos(m%BEMT_u(indx)%psi(k)) ) !m%BEMT_u(indx)%Vy(j,k)*sin(-theta(2))*sin(m%BEMT_u(indx)%psi(k))
+         !m%BEMT_u(indx)%xVelCorr(j,k) = TwoNorm(m%DisturbedInflow(:,j,k))*(             sin(yaw)*sin(-m%BEMT_u(indx)%cantAngle(j,k))*sin(m%BEMT_u(indx)%psi_s(k)) &
+         !                                                                   + sin(tilt)*cos(yaw)*sin(-m%BEMT_u(indx)%cantAngle(j,k))*cos(m%BEMT_u(indx)%psi_s(k)) ) !m%BEMT_u(indx)%Vy(j,k)*sin(-theta(2))*sin(m%BEMT_u(indx)%psi(k))
+         m%BEMT_u(indx)%xVelCorr(j,k) = 0.0_ReKi ! TODO
       end do !j=nodes
    end do !k=blades
 

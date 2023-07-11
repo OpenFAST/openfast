@@ -399,7 +399,7 @@ CONTAINS
    
          ! blade outputs
       do k=1,min(p%numBlades,AD_MaxBl_Out)    ! limit this
-         m%AllOuts( BAzimuth(k) ) = MODULO( m%BEMT_u(indx)%psi(k)*R2D, 360.0_ReKi )
+         m%AllOuts( BAzimuth(k) ) = MODULO( m%BEMT_u(indx)%psi_s(k)*R2D, 360.0_ReKi )
        ! m%AllOuts( BPitch(  k) ) = calculated in SetInputsForBEMT
       
          do beta=1,p%NBlOuts
