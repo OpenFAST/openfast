@@ -604,9 +604,11 @@ subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ""
    
-   call AllocAry( m%DisturbedInflow, 3_IntKi, p%NumBlNds, p%numBlades, 'OtherState%DisturbedInflow', ErrStat2, ErrMsg2 ) ! must be same size as u%InflowOnBlade
+   call AllocAry( m%DisturbedInflow, 3_IntKi, p%NumBlNds, p%numBlades, 'm%DisturbedInflow', ErrStat2, ErrMsg2 ) ! must be same size as u%InflowOnBlade
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-   call AllocAry( m%orientationAnnulus, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'OtherState%orientationAnnulus', ErrStat2, ErrMsg2 )
+   call AllocAry( m%orientationAnnulus, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'm%orientationAnnulus', ErrStat2, ErrMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+call AllocAry( m%R_pi, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'm%R_pi', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
      
    call allocAry( m%SigmaCavit, p%NumBlNds, p%numBlades, 'm%SigmaCavit', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -651,6 +653,8 @@ end if
    call AllocAry( m%My, p%NumBlNds, p%NumBlades, 'm%My', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    call AllocAry( m%Mz, p%NumBlNds, p%NumBlades, 'm%Mz', ErrStat2, ErrMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   call AllocAry( m%Vind_i, 3, p%NumBlNds, p%NumBlades, 'm%Vind_i', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       ! mesh mapping data for integrating load over entire rotor:
    allocate( m%B_L_2_H_P(p%NumBlades), Stat = ErrStat2)
@@ -1836,11 +1840,12 @@ subroutine RotWriteOutputs( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRo
    
       ! NOTE: m%BEMT_u(i) indices are set differently from the way OpenFAST typically sets up the u and uTimes arrays
    integer, parameter                           :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
-   integer(intKi)                               :: i
+   integer(intKi)                               :: i, k
 
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'RotCalcOutput'
+   real(R8Ki)                                   :: x_hat_disk(3)
 !   LOGICAL                                      :: CalcWriteOutput   
    !-------------------------------------------------------   
    !     get values to output to file:  
@@ -1864,6 +1869,13 @@ subroutine RotWriteOutputs( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRo
 
       ! Now we need to populate the blade node outputs here
       if (p%NumBlades > 0) then
+         ! For all methods (BEM/FVW), computes R_pi: from inertial system to staggered-polar system
+         ! NOTE: this could be placed either in AeroDyn_IO* or in SetInputs
+         !       The issue right now is the Calculate_MeshOrientation_Rel2Hub is in AeroDyn.f90
+         x_hat_disk = u%HubMotion%Orientation(1,:,1)
+         do k=1,p%NumBlades
+            call Calculate_MeshOrientation_Rel2Hub(u%BladeMotion(k), u%HubMotion, x_hat_disk, m%R_pi(:,:,:,k))
+         enddo
          call Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, indx, iRot, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end if

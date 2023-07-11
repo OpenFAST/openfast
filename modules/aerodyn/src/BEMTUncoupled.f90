@@ -63,15 +63,9 @@ contains
    
 !..................................................................................................................................   
    function VelocityIsZero ( v )
-
-      ! passed variables
-
    REAL(ReKi), INTENT(IN )         :: v                                 !< the velocity that needs to be compared with zero
-
    LOGICAL                         :: VelocityIsZero                    !< .true. if and only if the velocity is (almost) equal to zero
-
-   
-      
+  
       VelocityIsZero = abs(v) < 0.001_ReKi ! tolerance in m/s for what we consider zero velocity for BEM computations
    
    end function VelocityIsZero
@@ -234,6 +228,9 @@ contains
       
 end subroutine computeAirfoilOperatingAOA
 !..................................................................................................................................
+!> Transform the aerodynamic coefficients (Cl,Cd,Cm) (directed based on Vrel_xy_a )
+!! from the airfoil coordinate system (a) to the without sweep pitch coordinate system (w)
+!! NOTE: "Cy" is currently "-Cyw"
 subroutine Transform_ClCd_to_CxCy( phi, useAIDrag, useTIDrag, Cl, Cd, Cx, Cy )
    real(ReKi),             intent(in   ) :: phi
    logical,                intent(in   ) :: useAIDrag
@@ -249,12 +246,14 @@ subroutine Transform_ClCd_to_CxCy( phi, useAIDrag, useTIDrag, Cl, Cd, Cx, Cy )
    sphi = sin(phi)
    
       ! resolve into normal (x) and tangential (y) forces
+   ! Cx = Cxw
    if (  useAIDrag ) then
       Cx = Cl*cphi + Cd*sphi
    else      
       Cx = Cl*cphi
    end if
     
+   ! Cy = -Cyw
    if (  useTIDrag ) then     
       Cy = Cl*sphi - Cd*cphi
    else     
@@ -263,6 +262,9 @@ subroutine Transform_ClCd_to_CxCy( phi, useAIDrag, useTIDrag, Cl, Cd, Cx, Cy )
    
 end subroutine Transform_ClCd_to_CxCy
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Transform the aerodynamic coefficients (Cl,Cd,Cm) (directed based on Vrel_xy_a )
+!! from the airfoil coordinate system (a) to the polar coordinate system (p)
+!! NOTE: "Cy" is currently "-Cyp"
 subroutine Transform_ClCdCm_to_CxCyCzCmxCmyCmz( phi, theta, cant,toeAngle ,useAIDrag, useTIDrag, AOA, Cl, Cd, Cm, Cx, Cy, Cz, Cmx, Cmy, Cmz )
 
    implicit none
@@ -279,9 +281,9 @@ subroutine Transform_ClCdCm_to_CxCyCzCmxCmyCmz( phi, theta, cant,toeAngle ,useAI
    real(ReKi), intent(in   ) :: Cm
    real(ReKi), intent(  out) :: Cx, Cy, Cz
    real(ReKi), intent(  out) :: Cmx, Cmy, Cmz
-   real(ReKi)                :: afAxialVec(3)
-   real(ReKi)                :: afNormalVec(3)
-   real(ReKi)                :: afRadialVec(3)
+   real(ReKi)                :: afAxialVec(3)  !xhat_a_in_p
+   real(ReKi)                :: afNormalVec(3) !yhat_a_in_p
+   real(ReKi)                :: afRadialVec(3) !zhat_a_in_p
    real(ReKi)                :: coeffVec(3)
    real(ReKi)                :: Cn
    real(ReKi)                :: Ct
@@ -290,11 +292,13 @@ subroutine Transform_ClCdCm_to_CxCyCzCmxCmyCmz( phi, theta, cant,toeAngle ,useAI
    call getAirfoilOrientation( theta, cant, toeAngle, afAxialVec, afNormalVec, afRadialVec )   
 
    ! transform force coefficients into airfoil frame
+   ! Cn = Cxa
    if ( useAIDrag ) then
       Cn = Cl*cos(AOA) + Cd*sin(AOA)
    else
       Cn = Cl*cos(AOA)
    end if
+   ! Ct = Cya
    if ( useTIDrag ) then
       Ct = -Cl*sin(AOA) + Cd*cos(AOA)
    else
@@ -303,9 +307,9 @@ subroutine Transform_ClCdCm_to_CxCyCzCmxCmyCmz( phi, theta, cant,toeAngle ,useAI
    
    ! Put force coefficients back into rotor plane reference frame
    coeffVec = Cn*afNormalVec + Ct*afAxialVec
-   Cx = coeffVec(1)
-   Cy = -coeffVec(2)
-   Cz = coeffVec(3)
+   Cx = coeffVec(1)   ! Cxp  and  cn
+   Cy = -coeffVec(2)  ! -Cyp      ct
+   Cz = coeffVec(3)   ! Czp
    
    ! Put moment coefficients into the rotor reference frame
    coeffVec = Cm * afRadialVec
@@ -315,7 +319,7 @@ subroutine Transform_ClCdCm_to_CxCyCzCmxCmyCmz( phi, theta, cant,toeAngle ,useAI
 end subroutine Transform_ClCdCm_to_CxCyCzCmxCmyCmz
 !----------------------------------------------------------------------------------------------------------------------------------
 !>This is the residual calculation for the uncoupled BEM solve
-real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValidSolution, ErrStat, ErrMsg, a, ap, k, kp, Cx_out, Cy_out ) result (ResidualVal)
+real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValidSolution, ErrStat, ErrMsg, a, ap, k_out, kp_out, F_out, Cx_out, Cy_out ) result (ResidualVal)
       
 
    type(BEMT_ParameterType),intent(in   ) :: p                  !< parameters
@@ -330,8 +334,9 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
    character(*),           intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
    real(ReKi), optional,   intent(  out) :: a         ! computed axial induction
    real(ReKi), optional,   intent(  out) :: ap        ! computed tangential induction
-   real(ReKi), optional,   intent(  out) :: k         ! k in the induction factors routine
-   real(ReKi), optional,   intent(  out) :: kp        ! kp in the induction factors routine
+   real(ReKi), optional,   intent(  out) :: k_out     ! k in the induction factors routine
+   real(ReKi), optional,   intent(  out) :: kp_out    ! kp in the induction factors routine
+   real(ReKi), optional,   intent(  out) :: F_out     ! Tip/hub loss factor
 
   
    ! Local variables
@@ -344,11 +349,13 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
    real(ReKi)                            :: axInduction
    real(ReKi)                            :: tanInduction
 
-   real(ReKi)                            :: F    ! tip/hub loss factor
+   real(ReKi)                            :: F  !< tip/hub loss factor
    real(ReKi)                            :: Re
-   real(ReKi)                            :: Cx, Cy, Cz
+   real(ReKi)                            :: Cx !< Projected airfoil coefficient used in BET, cn
+   real(ReKi)                            :: Cy !< Projected airfoil coefficient used in BET, ct
+   real(ReKi)                            :: Cz
    real(ReKi), optional,   intent(  out) :: Cx_out, Cy_out
-   real(ReKi)                            :: dumX,dumY,dumZ, k_out, kp_out
+   real(ReKi)                            :: dumX,dumY,dumZ, k, kp
    TYPE(AFI_OutputType)                  :: AFI_interp
    
    ErrStat = ErrID_None
@@ -356,8 +363,8 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
    ResidualVal = 0.0_ReKi
    IsValidSolution = .true.
    
-   k_out = 0
-   kp_out = 0
+   k = 0
+   kp = 0
    
    ! make these return values consistent with what is returned in inductionFactors routine:
       ! Set the local version of the induction factors
@@ -382,6 +389,8 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
          if (ErrStat >= AbortErrLev) return
       
       ! Compute Cx, Cy given Cl, Cd and phi, we honor the useAIDrag and useTIDrag flag because Cx,Cy are only used for the solution of inductions
+      !    BEMMod_2D: Cx = Cxw       and  Cy = - Cyw
+      !    BEMMod_3D: Cx = cn = Cxp  and  Cy = ct =-Cyp
       if(p%BEM_Mod==BEMMod_2D) then
           call Transform_ClCd_to_CxCy( phi, p%useAIDrag, p%useTIDrag, AFI_interp%Cl, AFI_interp%Cd, Cx, Cy )  
       else
@@ -401,10 +410,10 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
          ! Determine axInduction, tanInduction for the current Cl, Cd, phi
       if(p%BEM_Mod==BEMMod_2D) then
           call inductionFactors0(p%numBlades, u%rlocal(i,j), p%chord(i,j), phi, Cx, Cy, u%Vx(i,j), u%Vy(i,j), F, p%useTanInd, &
-                              ResidualVal, axInduction, tanInduction, IsValidSolution)
+                              ResidualVal, axInduction, tanInduction, IsValidSolution, k, kp)
       else
           call inductionFactors2(p%BEM_Mod, p%numBlades, u%rlocal(i,j), p%chord(i,j), phi, Cx, Cy, u%Vx(i,j), u%Vy(i,j), u%drdz(i,j), u%cantAngle(i,j), F, u%CHI0, p%useTanInd, &
-                              ResidualVal, axInduction, tanInduction, p%MomentumCorr, u%xVelCorr(i,j), IsValidSolution, k_out, kp_out )
+                              ResidualVal, axInduction, tanInduction, p%MomentumCorr, u%xVelCorr(i,j), IsValidSolution, k, kp )
 
       endif
       
@@ -412,10 +421,11 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
       
    if (present(a )) a  = axInduction
    if (present(ap)) ap = tanInduction
-   if (present(k )) k  = k_out
-   if (present(kp)) kp = kp_out
+   if (present(k_out )) k_out  = k
+   if (present(kp_out)) kp_out = kp
    if (present(Cx_out)) Cx_out = Cx
    if (present(Cy_out)) Cy_out = Cy
+   if (present(F_out))  F_out = F
    
 end function BEMTU_InductionWithResidual
 !-----------------------------------------------------------------------------------------
@@ -473,7 +483,7 @@ end subroutine ApplySkewedWakeCorrection
 !-----------------------------------------------------------------------------------------
 !> This subroutine computes the induction factors (a) and (ap) along with the residual (fzero)
 subroutine inductionFactors0(B, r, chord, phi, cn, ct, Vx, Vy, F, wakerotation, &
-                              fzero, a_out, ap_out, IsValidSolution)
+                              fzero, a_out, ap_out, IsValidSolution, k_out, kp_out)
 
    implicit none
 
@@ -494,6 +504,8 @@ subroutine inductionFactors0(B, r, chord, phi, cn, ct, Vx, Vy, F, wakerotation, 
    real(ReKi), intent(out) :: a_out         !< axial induction [y%axInduction]
    real(ReKi), intent(out) :: ap_out        !< tangential induction, i.e., a-prime [y%tanInduction]
    logical,    intent(out) :: IsValidSolution !< this is set to false if k<=1 in the propeller brake region or k<-1 in the momentum region, indicating an invalid solution
+   real(ReKi), intent(out) :: k_out
+   real(ReKi), intent(out) :: kp_out
    
    ! local
         
@@ -621,14 +633,14 @@ subroutine inductionFactors0(B, r, chord, phi, cn, ct, Vx, Vy, F, wakerotation, 
    ap_out    = real(    ap, ReKi )
 
 end subroutine inductionFactors0
-subroutine getTangentialInduction(a, cphi, sphi, Vx, F, kCorrectionFactor, sigma_p, ct, VxCorrected, effectiveYaw, H, MomentumCorr, ap, kp)
+subroutine getTangentialInduction(a, cphi, sphi, Vx, F, kpCorrectionFactor, sigma_p, ct, VxCorrected, effectiveYaw, H, MomentumCorr, ap, kp)
    real(ReKi), intent(in) :: Vx             !< velocity component [u%Vx]
    real(ReKi), intent(in) :: F              !< hub/tip loss correction factor
    logical,    intent(in) :: MomentumCorr   !< Include tangential induction in BEMT calculations [flag] [p%useTanInd]
    real(ReKi), intent(in) :: ct             !< tangential force coefficient (tangential to the plane, not chord) of the jth node in the kth blade; [y%cy]
    real(R8Ki), intent(in) :: sigma_p           ! local solidity (B*chord/(TwoPi*r))
    real(R8Ki), intent(in) :: sphi, cphi        ! sin(phi), cos(phi)
-   real(R8Ki), intent(in) :: VxCorrected, kCorrectionFactor
+   real(R8Ki), intent(in) :: VxCorrected, kpCorrectionFactor
    real(R8Ki), intent(in) :: effectiveYaw !
    real(R8Ki), intent(in) :: H              ! scaling factor to gradually phase out tangential induction when axial induction is near 1.0
    real(R8Ki), intent(in) :: a   ! double precision versions of output variables of similar name
@@ -644,15 +656,15 @@ subroutine getTangentialInduction(a, cphi, sphi, Vx, F, kCorrectionFactor, sigma
       
    else
       !H = smoothStep( real(a,ReKi), 0.8, 1.0, 1.0, 0.0 ) + smoothStep( real(a,ReKi), 1.0, 0.0, 1.2, 1.0 )
-      !kp = sigma_p*( cl*sphi - H*cd*cphi )/( 4.0*F*sphi*cphi )*kCorrectionFactor
+      !kp = sigma_p*( cl*sphi - H*cd*cphi )/( 4.0*F*sphi*cphi )*kpCorrectionFactor
       if (MomentumCorr) then             
           if (equalrealnos(a,1.0_R8Ki)) then
-              kp = 0.0_R8Ki !H*sigma_p*ct/( 4.0*F*sphi*cphi )*(kCorrectionFactor)
+              kp = 0.0_R8Ki !H*sigma_p*ct/( 4.0*F*sphi*cphi )*(kpCorrectionFactor)
           else
-              kp = H*sigma_p*ct/( 4.0*F*sphi*cphi )*(kCorrectionFactor)/sqrt(1+(tan(effectiveYaw)/(1.0_ReKi-a))**2)            
+              kp = H*sigma_p*ct/( 4.0*F*sphi*cphi )*(kpCorrectionFactor)/sqrt(1+(tan(effectiveYaw)/(1.0_ReKi-a))**2)            
           endif             
       else
-          kp = H*sigma_p*ct/( 4.0*F*sphi*cphi )*kCorrectionFactor
+          kp = H*sigma_p*ct/( 4.0*F*sphi*cphi )*kpCorrectionFactor
       endif
       
       if ( VxCorrected < 0.0_ReKi ) then
@@ -705,11 +717,12 @@ subroutine inductionFactors2( BEM_Mod, B, r, chord, phi, cn, ct, Vx, Vy, drdz,ca
    real(R8Ki)            :: sigma_p           ! local solidity (B*chord/(TwoPi*r))
    real(R8Ki)            :: sphi, cphi        ! sin(phi), cos(phi)
    real(R8Ki)            :: k, kp             ! non-dimensional parameters 
-   real(R8Ki)            :: VxCorrected, kCorrectionFactor
+   real(R8Ki)            :: VxCorrected, kCorrectionFactor, kpCorrectionFactor
    real(R8Ki)            :: effectiveYaw !
    
    
    real(R8Ki)            :: k0
+   real(R8Ki)            :: ac             !< Critical axial induction factor value above which the high thrust correction is used
    real(R8Ki)            :: H              ! scaling factor to gradually phase out tangential induction when axial induction is near 1.0
    real(R8Ki)            :: fzero, a, ap   ! double precision versions of output variables of similar name
    
@@ -741,10 +754,12 @@ subroutine inductionFactors2( BEM_Mod, B, r, chord, phi, cn, ct, Vx, Vy, drdz,ca
    ! "corrections"
    VxCorrected = Vx*cos(cantAngle)+xVelCorr
    kCorrectionFactor  = 1.0_R8Ki + xVelCorr/(Vx*cos(real(cantAngle,R8Ki)))
+   kpCorrectionFactor  = kCorrectionFactor
    k = k*kCorrectionFactor**2
 
-   !k = sign( k, real(phi,R8Ki) )
-   k0 = a0(effectiveYaw) / (1.0-a0(effectiveYaw))
+
+   ac = ac_val(effectiveYaw)
+   k0 = ac / (1.0_R8Ki-ac)
    if (.not.MomentumCorr) then 
        if (k <= k0 ) then
            if (VxCorrected > 0.0) then
@@ -754,10 +769,11 @@ subroutine inductionFactors2( BEM_Mod, B, r, chord, phi, cn, ct, Vx, Vy, drdz,ca
            end if
            H = 1.0_R8Ki
        else
-           call axialInductionFromEmpiricalThrust( effectiveYaw, phi, k, F, a, H, MomentumCorr )
+           call axialInductionFromEmpiricalThrust( effectiveYaw, phi, k, F, a, H, skewConvention=MomentumCorr, quarticVersion=MomentumCorr )
        endif
    else       
-       call axialInductionFromGlauertMomentum(effectiveYaw, phi, k, F, a, H, MomentumCorr) 
+      ! --- Using convention of axial induction where "a" is "an" (Wn = -an Un)
+       call axialInductionFromGlauertMomentum(effectiveYaw, phi, k, F, a, H) 
        a = sign(a,k)
    endif
 
@@ -766,7 +782,7 @@ subroutine inductionFactors2( BEM_Mod, B, r, chord, phi, cn, ct, Vx, Vy, drdz,ca
    ! compute tangential induction factor:
    !.....................................................
    if (wakerotation) then 
-      call getTangentialInduction(a, cphi, sphi, Vx, F, kCorrectionFactor, sigma_p, ct, VxCorrected, effectiveYaw, H, MomentumCorr, ap, kp)
+      call getTangentialInduction(a, cphi, sphi, Vx, F, kpCorrectionFactor, sigma_p, ct, VxCorrected, effectiveYaw, H, MomentumCorr, ap, kp)
    else 
       
       ! we're not computing tangential induction:       
@@ -800,21 +816,43 @@ subroutine inductionFactors2( BEM_Mod, B, r, chord, phi, cn, ct, Vx, Vy, drdz,ca
    
 end subroutine inductionFactors2
 
-real(R8Ki) function a0(chi0)
+!> Return critical value above which the high thrust correction is applied
+!! Note: since we use the convention for a such that "Wn =- an Un" (and not Wn = - a0 U0)
+!! Then an = a0/cos(chi)
+real(R8Ki) function ac_val(chi)
    implicit none
-   real(R8Ki), intent(in) :: chi0
-   a0 = 0.5*cos(45.0*D2R)/cos(chi0)
-   a0 = min( a0, 0.5_R8Ki )   
-end function a0
+   real(R8Ki), intent(in) :: chi
+   ac_val = 0.35/cos(chi) ! See e.g. Spera
+   ! NOTE: since we use continuation at a=1, we want ac_val to remain far away from 1, so we clip it
+   ac_val = min( ac_val, 0.5_R8Ki )   
+end function ac_val
 
 !-----------------------------------------------------------------------------------------
-subroutine axialInductionFromEmpiricalThrust( chi0, phi, k, F, axInd, H, momentumCorr )
+!> Solve for `a` by equating thrust between
+!!  - blade element theory (BET) and
+!!  - an empirical-hight-thrust (HT) function.
+!! 
+!! Assumes that the HT CT is a second order polynomial.
+!!            BET        =      HT
+!!   CT    = 4kF (1-a^2) =  c2 a^2 + c1 a  + c0    (CT defined using Vxp)  (1)
+!!
+!! Two methods of solutions are used:
+!! 
+!! - Equate them and solve for a:
+!!      (A-c2)a^2 - (2A +c1) a  + (1-c0) =0   with  A = 4kf                (2)
+!!
+!! - Square (2) and solve for a in the following quartic equation:
+!!    (A^2-c_2^2)a^4 + (-4A^2 - 2c_1 c_2) a^3 + (6A^2 - 2c_0 c_2 - c_1^2)a^2 + (-4A^2 -2c_0 c_1) a + (A^2-c_0^2) = 0    (3)
+!! 
+!!  T
+subroutine axialInductionFromEmpiricalThrust( chi0, phi, k, F, axInd, H, quarticVersion, skewConvention )
    implicit none
    real(R8Ki), intent(in) :: chi0
    real(ReKi), intent(in) :: phi
    real(R8Ki), intent(in) :: k
    real(ReKi), intent(in) :: F
-   logical,    intent(in) :: momentumCorr
+   logical,    intent(in) :: skewConvention !< If True, assumes that "a" is "an" (Wn=-an Un) and use Glauert skew momentum. Otherwise "a" is "a0" (Wn = -a0 U0)
+   logical,    intent(in) :: quarticVersion !< If True, solves for the quartic version
    
    real(R8Ki), intent(out) :: axInd
    real(R8Ki), intent(out) :: H
@@ -825,11 +863,11 @@ subroutine axialInductionFromEmpiricalThrust( chi0, phi, k, F, axInd, H, momentu
    complex(R8Ki)           :: roots(4)
    real(R8Ki)              :: tan_chi0
    ! Get Coefficients for Empirical CT
-   call getEmpiricalCoefficients( chi0 ,F , c0, c1, c2,momentumCorr  )
+   call getEmpiricalCoefficients( chi0 ,F , c0, c1, c2, skewConvention  )
   
    ! Solve for axial induction
    A = 4.0*F*k
-   if (.NOT.momentumCorr) then
+   if (.not.quarticVersion) then
        y1 = 2.0*A + c1
        y2 = 4.0*A*(c2+c1+c0) + c1*c1 - 4.0*c0*c2 
        y3 = 2.0*(A-c2)
@@ -843,7 +881,7 @@ subroutine axialInductionFromEmpiricalThrust( chi0, phi, k, F, axInd, H, momentu
           end if
        end if
 
-       if ((axInd>a0(chi0)).AND.(axInd<=1.0)) then
+       if ((axInd>ac_val(chi0)).AND.(axInd<=1.0)) then
           H = (4.0*axInd*(1.0-axInd)*F)/(c0+c1*axInd+c2*axInd*axInd)
        elseif (axInd>1.0) then
           H = (-4.0*axInd*(1.0-axInd)*F)/(c0+c1*axInd+c2*axInd*axInd)
@@ -877,7 +915,7 @@ subroutine axialInductionFromEmpiricalThrust( chi0, phi, k, F, axInd, H, momentu
    
        if (equalrealnos(axInd,1.0_R8Ki)) then
            H = 0       
-       elseif ((axInd>a0(chi0)).AND.(axInd<=1.0)) then
+       elseif ((axInd>ac_val(chi0)).AND.(axInd<=1.0)) then
            H = 4.0_R8Ki*axInd*(1.0_R8Ki-axInd)*F*sqrt(1 + (tan_chi0/(1.0_R8Ki-axInd)*F)**2)/sqrt((c0+c1*axInd+c2*axInd*axInd)**2 + (4.0_R8Ki*axInd*tan_chi0)**2)
            ! Alternatively following implemention can be used but it keeps H from approaching zero as a -> 1
            !H = (4.0_R8Ki*axInd*sqrt(((1.0_R8Ki-axInd)*F)**2 + tan(chi0)**2))/sqrt((c0+c1*axInd+c2*axInd*axInd)**2 + (4.0_R8Ki*axInd*tan(chi0))**2)           
@@ -895,31 +933,45 @@ subroutine axialInductionFromEmpiricalThrust( chi0, phi, k, F, axInd, H, momentu
    
 end subroutine axialInductionFromEmpiricalThrust
 
-subroutine axialInductionFromGlauertMomentum(chi0, phi, k, F, axInd, H,momentumCorr)
+
+!> Solve for `a` by equating thrust between:
+!!  - blade element theory (BET) and
+!!  - momentum theory (MT) function
+!!   or
+!!  - a empirical high-thrust (HT) function.
+!!
+!! At low loading, |k|<kc, Glauert's skew momentum theory is used:
+!!
+!!           BET     =      MT
+!! CT= 4 F (1-a)^2 k = 4 F a sqrt((1-a)^2 + tan(chi)^2)                         (1)
+!!         (1-a)^2 k =     a sqrt((1-a)^2 + tan(chi)^2)                         (2)
+!!
+!! Which, when squared, leads to the fourth order polynomial:
+!!
+!!     (1-k^2)a^4 + (4k^2-2)a^3 + (-6k^2 + tan^2\chi +1)a^2 + 4k^2 a - k^2 = 0  (3)
+!!
+!! At high loading, |k|>kc, a hight thrust correction (2nd order polynomial) is used for "MT"
+!!
+subroutine axialInductionFromGlauertMomentum(chi0, phi, k, F, axInd, H)
   ! axialInductionFromGlauertMomentum calculates axial induction using Glauert Momentum Theory
     implicit none
     real(R8Ki), intent(in) :: chi0
     real(R8Ki), intent(in) :: k 
     real(ReKi), intent(in) :: F
     real(ReKi), intent(in) :: phi
-    logical,    intent(in) :: momentumCorr
     real(R8Ki), intent(out):: axInd
     real(R8Ki), intent(out):: H
-    real(R8Ki)             :: c11, c12, coeffs(5), previousRoot
+    real(R8Ki)             :: c11, c12, coeffs(5)
     complex(R8Ki)          :: roots(4)
-    real(R8Ki)             :: a0_local
-    real(R8Ki)             :: c2, c1, c0 ! Empirical CT = c2*a^2 + c1*a + c0 for a > a0
-    real(R8Ki)             :: k0
+    real(R8Ki)             :: ac !< Critical value of the axial induction above which the high-thrust correction is applied
+    real(R8Ki)             :: kc !< Critical value of the k-factor above which the high-thrust correction is applied
     real(R8Ki)             :: tan_chi0
     
-    ! Get Coefficients for Empirical CT
-    call getEmpiricalCoefficients( chi0, F, c0, c1, c2,momentumCorr)
-    
-    a0_local = a0(chi0)
-    k0 = a0_local / (1.0-a0_local)
-    
     tan_chi0 = min(MaxTanChi0, max(-MaxTanChi0, tan(chi0)))
-    if (abs(k) <= k0*sqrt(1+(tan_chi0/(1-a0_local))**2)) then
+    ac = ac_val(chi0)
+    kc = ac / (1.0-ac) *sqrt(1+(tan_chi0/(1-ac))**2)
+    if (abs(k) <= kc) then
+       ! Use Glauert Skew Momentum (Equation 1&2), and solve for equation (3) above
         c11 = tan_chi0**2
         c12 = k**2
         coeffs(5) = 1.0_R8Ki-c12
@@ -932,6 +984,7 @@ subroutine axialInductionFromGlauertMomentum(chi0, phi, k, F, axInd, H,momentumC
         call sortRoots(roots)
         if (phi >= 0.0) then
            if (real(roots(1))<0.0_R8Ki) then
+              ! Will happen when k \in [0,1], we chose the solution of a in [0,1]
                axInd = real(roots(2))
            else
                axInd = real(roots(1))!min(real(roots(1)),real(roots(2)))
@@ -939,48 +992,77 @@ subroutine axialInductionFromGlauertMomentum(chi0, phi, k, F, axInd, H,momentumC
         else           
            axInd = min(real(roots(1)),real(roots(2)))
         endif
-       
-        previousRoot = axInd    
         H = 1.0_R8Ki
-    else !if (k > k0) then ! High induction/ empirical correction        
-        call axialInductionFromEmpiricalThrust( chi0, phi, k, F, axInd, H, momentumCorr )           
+    else !if (k > kc) then ! High induction/ empirical correction        
+        call axialInductionFromEmpiricalThrust( chi0, phi, k, F, axInd, H, skewConvention=.true., quarticVersion=.true. )           
     endif  
 end subroutine axialInductionFromGlauertMomentum
 
-subroutine getEmpiricalCoefficients( chi0, F, c0, c1, c2, MomentumCorr ) 
+!> Compute the coefficients of a second order polynomial that extends the Momenutm relationship CT(a) 
+!! above a value a>ac. The continuation is done such that the slope and value at a=a_c match 
+!! the momentum relation. The last constraint is the value of CT at a=1. 
+!! Currently a hard-coded model is used for the value at at=1.
+!! The polynomial is:
+!!    CT(a) = c0 + c1*a + c2*a2    a>ac
+!! obtained with the constraints:
+!!    CT(a_c)     = CT_c
+!!    CT(1)       = CT_1
+!!    dCT/da(a_c) = s_c
+subroutine getEmpiricalCoefficients( chi0, F, c0, c1, c2, skewConvention ) 
    real(R8Ki), intent(in) :: chi0
    real(ReKi), intent(in) :: F
-   logical,    intent(in) :: MomentumCorr
+   logical,    intent(in) :: skewConvention !< If True, assumes that "a" is "an" (Wn=-an Un) and use Glauert Skew Momentum. Otherwise "a" is "a0" (Wn = -a0 U0)
    real(R8Ki), intent(inout) :: c0, c1, c2 ! Empirical CT = c2*a^2 + c1*a + c0 for a > a0
-   real(R8Ki) :: a0_local
-   real(R8Ki) :: CTata1
-   real(R8Ki) :: denom, temp1, temp2
+   real(R8Ki):: c0b, c1b, c2b ! Empirical CT = c2*a^2 + c1*a + c0 for a > a0
+   real(R8Ki) :: ac
+   real(R8Ki) :: CT_1, CT_c
+   real(R8Ki) :: s_c !< Slope at a=ac
+   real(R8Ki) :: denom, tanchi2
    
    ! Empirical CT = 4*a*(1-a)*F = c2*a^2 + c1*a + c0 for a > a0
-   ! third Boundary condition (CT@a=1) is based on equations from Bladed. 
-   a0_local = a0(chi0)
-   denom = (a0_local**2 - 2.0_R8Ki*a0_local + 1.0_R8Ki)
-   if (MomentumCorr) then
-       temp2 = (min(MaxTanChi0, max(-MaxTanChi0, tan(chi0))))**2
-       temp1 = sqrt((a0_local-1)**2 +temp2)
-       
-       CTata1 = sqrt(((-0.64755/(cos(chi0)*cos(chi0)) - 0.8509/cos(chi0) + 3.4984)*F)**2 + 16*temp2)
-       CTata1 = max( 1.0_R8Ki, CTata1 ) 
-       
-       c2 = (CTata1 - 4*F/temp1 + 16*F*a0_local/temp1 - 4*F*a0_local*temp1 - 4*temp2*F/temp1 - 20*F*(a0_local**2)/temp1 + 8*F*(a0_local**3)/temp1 + 4*temp2*F*a0_local/temp1 ) /denom
-       c1 = 2*( 2*F/temp1 - a0_local*CTata1 - 6*F*a0_local/temp1 + 2*temp2*F/temp1 + 2*F*(a0_local**2)/temp1 + 4*F*(a0_local**2)*temp1 + 6*F*(a0_local**3)/temp1 - 4*F*(a0_local**4)/temp1 - 2*temp2*F*(a0_local**2)/temp1 )/denom
-       c0 = a0_local*( a0_local*CTata1 - 4*F/temp1 + 4*F*temp1 + 16*F*a0_local/temp1 - 8*F*a0_local*temp1 - 4*temp2*F/temp1 - 20*F*(a0_local**2)/temp1 + 8*F*(a0_local**3)/temp1 + 4*temp2*F*a0_local/temp1 )/denom
-       
+   ac = ac_val(chi0) ! critical value above which we extent momentum theory with a 2nd order polynomial
+   if (skewConvention) then
+       ! Continuation of Glauert Skew Momentum    CT= 4 a F sqrt( (1-a)^2 + tan(chi)^2 ) 
+       ! Using a second 
+       tanchi2 = (min(MaxTanChi0, max(-MaxTanChi0, tan(chi0))))**2
+       CT_c = 4._R8Ki*F*ac * sqrt( (1._R8Ki-ac)**2 + tanchi2 )                            ! CT(ac)
+       s_c  = 4._R8Ki*F*(1._R8Ki-3*ac+2._R8Ki*ac**2+tanchi2)/sqrt( (1-ac)**2 + tanchi2 )  ! dCT/da(ac) (slope)
+       ! Note: model below may change
+       CT_1 =  2.0_R8Ki + 2.113_R8Ki*tanchi2**0.7635  ! CT(1)
+       CT_1 =  max(CT_1, CT_c + s_c * (1._R8Ki-ac) + 0.001_R8Ki ) ! Make sure c2>0  
    else
-       CTata1 = (-0.64755/(cos(chi0)*cos(chi0)) - 0.8509/cos(chi0) + 3.4984)*F      
-       CTata1 = max( 1.0_R8Ki, CTata1 )       
-       c2 =  (-4.0_R8Ki*F*a0_local**2 + 8.0_R8Ki*F*a0_local - 4.0_R8Ki*F + CTata1)/denom    
-       c1 = 2.0_R8Ki*(2.0_R8Ki*F*a0_local**2 - CTata1*a0_local - 4.0_R8Ki*F*a0_local  + 2.0_R8Ki*F)/denom    
-       c0 = CTata1*(a0_local**2)/denom
-   endif
+       ! Continuation of Glauert Momentum    CT= 4 a F (1-a)
+       CT_c = 4._R8Ki*F*ac * (1._R8Ki-ac)                                                     ! CT(ac)
+       s_c  = 4._R8Ki*F*(1._R8Ki-2._R8Ki*ac)                                                  ! dCT/da(ac) (slope)
+       ! Note: model below may change
+       CT_1 =  2.0_R8Ki   ! CT(1)
    
+   endif
+    call secondOrderCoeffC1(ac, s_c, CT_c, CT_1, c0, c1, c2)
    
 end subroutine getEmpiricalCoefficients
+
+!> Compute the polynomial coefficients for a second-order polynomial such that:
+!!    CT(a) = c0 + c1*a + c2*a2 
+!!  with the following constraints to make it C1-continuous at a=ac 
+!!    CT(a_c)     = CT_c
+!!    dCT/da(a_c) = s_c
+!!  and a constraint at a=1
+!!    CT(1)       = CT_1
+!!  The 3 coefficients are entirely determined from the three constraints
+subroutine secondOrderCoeffC1(a_c, s_c, CT_c, CT_1, c0, c1,c2)
+   real(R8Ki), intent(in ) :: a_c        !< value of a above which C1-continuation is sought
+   real(R8Ki), intent(in ) :: s_c        !< dCT/da(a_c),  slope at a=a_c
+   real(R8Ki), intent(in ) :: CT_c       !< CT(a_c), value at a=a_c
+   real(R8Ki), intent(in ) :: CT_1       !< CT(1), value at a=1
+   real(R8Ki), intent(out) :: c0, c1, c2 !< coefficients of the second order polynomial
+   real(R8Ki) :: denom
+   denom = (a_c**2 - 2._R8Ki*a_c + 1.0_R8Ki)
+   c0 = (CT_1*a_c**2 - 2._R8Ki*CT_c*a_c + CT_c + a_c**2*s_c - a_c*s_c)/denom
+   c1 = (-2._R8Ki*CT_1*a_c + 2._R8Ki*CT_c*a_c - a_c**2*s_c + s_c)/denom
+   c2 = (CT_1 - CT_c + a_c*s_c - s_c)/denom
+end subroutine secondOrderCoeffC1
+
 subroutine limitInductionFactors(a,ap)
    real(ReKi), intent(inout)           :: a   ! axial induction
    real(ReKi), intent(inout), optional :: ap  ! tangential induction

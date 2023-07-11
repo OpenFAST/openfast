@@ -44,69 +44,99 @@ MODULE AeroDyn_AllBldNdOuts_IO
    INTEGER(IntKi), PARAMETER      :: BldNd_VDisx     =  7
    INTEGER(IntKi), PARAMETER      :: BldNd_VDisy     =  8
    INTEGER(IntKi), PARAMETER      :: BldNd_VDisz     =  9
-   INTEGER(IntKi), PARAMETER      :: BldNd_STVx      = 10
-   INTEGER(IntKi), PARAMETER      :: BldNd_STVy      = 11
-   INTEGER(IntKi), PARAMETER      :: BldNd_STVz      = 12
-   INTEGER(IntKi), PARAMETER      :: BldNd_VRel      = 13
-   INTEGER(IntKi), PARAMETER      :: BldNd_DynP      = 14
-   INTEGER(IntKi), PARAMETER      :: BldNd_Re        = 15
-   INTEGER(IntKi), PARAMETER      :: BldNd_M         = 16
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vindx     = 17
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vindy     = 18
-   INTEGER(IntKi), PARAMETER      :: BldNd_AxInd     = 19
-   INTEGER(IntKi), PARAMETER      :: BldNd_TnInd     = 20
-   INTEGER(IntKi), PARAMETER      :: BldNd_Alpha     = 21
-   INTEGER(IntKi), PARAMETER      :: BldNd_Theta     = 22
-   INTEGER(IntKi), PARAMETER      :: BldNd_Phi       = 23
-   INTEGER(IntKi), PARAMETER      :: BldNd_Curve     = 24
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cl        = 25
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cd        = 26
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cm        = 27
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cx        = 28
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cy        = 29
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cn        = 30
-   INTEGER(IntKi), PARAMETER      :: BldNd_Ct        = 31
-   INTEGER(IntKi), PARAMETER      :: BldNd_Fl        = 32
-   INTEGER(IntKi), PARAMETER      :: BldNd_Fd        = 33
-   INTEGER(IntKi), PARAMETER      :: BldNd_Mm        = 34
-   INTEGER(IntKi), PARAMETER      :: BldNd_Fx        = 35
-   INTEGER(IntKi), PARAMETER      :: BldNd_Fy        = 36
-   INTEGER(IntKi), PARAMETER      :: BldNd_Fn        = 37
-   INTEGER(IntKi), PARAMETER      :: BldNd_Ft        = 38
-   INTEGER(IntKi), PARAMETER      :: BldNd_Clrnc     = 39
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vx        = 40
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vy        = 41
-   INTEGER(IntKi), PARAMETER      :: BldNd_GeomPhi   = 42
-   INTEGER(IntKi), PARAMETER      :: BldNd_Chi       = 43
-   INTEGER(IntKi), PARAMETER      :: BldNd_UA_Flag   = 44
-   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x1     = 45
-   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x2     = 46
-   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x3     = 47
-   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x4     = 48
-   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x5     = 49
-   INTEGER(IntKi), PARAMETER      :: BldNd_Debug1    = 50
-   INTEGER(IntKi), PARAMETER      :: BldNd_Debug2    = 51
-   INTEGER(IntKi), PARAMETER      :: BldNd_Debug3    = 52
-   INTEGER(IntKi), PARAMETER      :: BldNd_CpMin     = 53
-   INTEGER(IntKi), PARAMETER      :: BldNd_SgCav     = 54
-   INTEGER(IntKi), PARAMETER      :: BldNd_SigCr     = 55
-   INTEGER(IntKi), PARAMETER      :: BldNd_Gam       = 56
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cl_Static = 57
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cd_Static = 58
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cm_Static = 59
-   INTEGER(IntKi), PARAMETER      :: BldNd_Uin       = 60
-   INTEGER(IntKi), PARAMETER      :: BldNd_Uit       = 61
-   INTEGER(IntKi), PARAMETER      :: BldNd_Uir       = 62
-   INTEGER(IntKi), PARAMETER      :: BldNd_Fbn       = 63
-   INTEGER(IntKi), PARAMETER      :: BldNd_Fbt       = 64
-   INTEGER(IntKi), PARAMETER      :: BldNd_Fbs       = 65
-   INTEGER(IntKi), PARAMETER      :: BldNd_Mbn       = 66
-   INTEGER(IntKi), PARAMETER      :: BldNd_Mbt       = 67
-   INTEGER(IntKi), PARAMETER      :: BldNd_Mbs       = 68
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vdisxi    = 10
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vdisyi    = 11
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vdiszi    = 12
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vdisxh    = 13
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vdisyh    = 14
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vdiszh    = 15
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vdisxp    = 16
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vdisyp    = 17
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vdiszp    = 18
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVx      = 19
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVy      = 20
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVz      = 21
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVxi     = 22
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVyi     = 23
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVzi     = 24
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVxh     = 25
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVyh     = 26
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVzh     = 27
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVxp     = 28
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVyp     = 29
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVzp     = 30
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindx     = 31
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindy     = 32
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindxi    = 33
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindyi    = 34
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindzi    = 35
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindxh    = 36
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindyh    = 37
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindzh    = 38
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindxp    = 39
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindyp    = 40
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindzp    = 41
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vx        = 42
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vy        = 43
+   INTEGER(IntKi), PARAMETER      :: BldNd_VRel      = 44
+   INTEGER(IntKi), PARAMETER      :: BldNd_DynP      = 45
+   INTEGER(IntKi), PARAMETER      :: BldNd_Re        = 46
+   INTEGER(IntKi), PARAMETER      :: BldNd_M         = 47
+   INTEGER(IntKi), PARAMETER      :: BldNd_AxInd     = 48
+   INTEGER(IntKi), PARAMETER      :: BldNd_TnInd     = 49
+   INTEGER(IntKi), PARAMETER      :: BldNd_AxInd_qs  = 50
+   INTEGER(IntKi), PARAMETER      :: BldNd_TnInd_qs  = 51
+   INTEGER(IntKi), PARAMETER      :: BldNd_Alpha     = 52
+   INTEGER(IntKi), PARAMETER      :: BldNd_Theta     = 53
+   INTEGER(IntKi), PARAMETER      :: BldNd_Phi       = 54
+   INTEGER(IntKi), PARAMETER      :: BldNd_Curve     = 55
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cl        = 56
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cd        = 57
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cm        = 58
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cx        = 59
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cy        = 60
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cn        = 61
+   INTEGER(IntKi), PARAMETER      :: BldNd_Ct        = 62
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fl        = 63
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fd        = 64
+   INTEGER(IntKi), PARAMETER      :: BldNd_Mm        = 65
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fx        = 66
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fy        = 67
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fn        = 68
+   INTEGER(IntKi), PARAMETER      :: BldNd_Ft        = 69
+   INTEGER(IntKi), PARAMETER      :: BldNd_Gam       = 70
+   INTEGER(IntKi), PARAMETER      :: BldNd_Clrnc     = 71
+   INTEGER(IntKi), PARAMETER      :: BldNd_GeomPhi   = 72
+   INTEGER(IntKi), PARAMETER      :: BldNd_Chi       = 73
+   INTEGER(IntKi), PARAMETER      :: BldNd_UA_Flag   = 74
+   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x1     = 75
+   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x2     = 76
+   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x3     = 77
+   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x4     = 78
+   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x5     = 79
+   INTEGER(IntKi), PARAMETER      :: BldNd_Debug1    = 80
+   INTEGER(IntKi), PARAMETER      :: BldNd_Debug2    = 81
+   INTEGER(IntKi), PARAMETER      :: BldNd_Debug3    = 82
+   INTEGER(IntKi), PARAMETER      :: BldNd_CpMin     = 83
+   INTEGER(IntKi), PARAMETER      :: BldNd_SgCav     = 84
+   INTEGER(IntKi), PARAMETER      :: BldNd_SigCr     = 85
+   INTEGER(IntKi), PARAMETER      :: BldNd_BEM_F     = 86
+   INTEGER(IntKi), PARAMETER      :: BldNd_BEM_k     = 87
+   INTEGER(IntKi), PARAMETER      :: BldNd_BEM_kp    = 88
+   INTEGER(IntKi), PARAMETER      :: BldNd_BEM_CT_qs = 89
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cl_Static = 90
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cd_Static = 91
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cm_Static = 92
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fbn       = 93
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fbt       = 94
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fbs       = 95
+   INTEGER(IntKi), PARAMETER      :: BldNd_Mbn       = 96
+   INTEGER(IntKi), PARAMETER      :: BldNd_Mbt       = 97
+   INTEGER(IntKi), PARAMETER      :: BldNd_Mbs       = 98
 
 
      ! The maximum number of output channels which can be output by the code.
-   INTEGER(IntKi), PARAMETER, PUBLIC  :: BldNd_MaxOutPts       = 68
+   INTEGER(IntKi), PARAMETER, PUBLIC  :: BldNd_MaxOutPts       = 98
 
 !End of code generated by Matlab script Write_ChckOutLst
 ! ===================================================================================================
@@ -203,11 +233,9 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Calc_WriteAllBldNdOutput'
    REAL(ReKi)                                   :: ct, st                  ! cosine, sine of theta
    REAL(ReKi)                                   :: cp, sp                  ! cosine, sine of phi
-   real(ReKi)                                   :: M_ph(3,3)               ! Transformation from hub to "blade-rotor-plane": n,t,r (not the same as AeroDyn)
-   real(ReKi)                                   :: M_pg(3,3,p%NumBlades)   ! Transformation from global to "blade-rotor-plane" (n,t,r), with same x at hub coordinate system
+   real(ReKi)                                   :: R_hH(3,3)               ! Transformation from Hub to rotating-hub "h" ("blade-rotor-plane"): n,t,r (not the same as AeroDyn)
+   real(ReKi)                                   :: R_hi(3,3,p%NumBlades)   ! Transformation from inertial to rotating-hub "h" ("blade-rotor-plane") (n,t,r), with same x at hub coordinate system
    real(ReKi)                                   :: psi_hub                 ! Azimuth wrt hub
-   real(ReKi)                                   :: Vind_g(3)               ! Induced velocity vector in global coordinates
-   real(ReKi)                                   :: Vind_s(3)               ! Induced velocity vector in section coordinates (AeroDyn "x-y")
  
 
          ! Initialize some things
@@ -222,10 +250,10 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          ! Precalculate the M_ph matrix -- no reason to recalculate for each output
       DO IdxBlade=1,p%NumBlades
          psi_hub = TwoPi*(real(IdxBlade-1,ReKi))/real(p%NumBlades,ReKi)
-         M_ph(1,1:3) = (/ 1.0_ReKi, 0.0_ReKi    , 0.0_ReKi     /)
-         M_ph(2,1:3) = (/ 0.0_ReKi, cos(psi_hub), sin(psi_hub) /)
-         M_ph(3,1:3) = (/ 0.0_ReKi,-sin(psi_hub), cos(psi_hub) /)
-         M_pg(1:3,1:3,IdxBlade) = matmul(M_ph, u%HubMotion%Orientation(1:3,1:3,1) ) 
+         R_hH(1,1:3) = (/ 1.0_ReKi, 0.0_ReKi    , 0.0_ReKi     /)
+         R_hH(2,1:3) = (/ 0.0_ReKi, cos(psi_hub), sin(psi_hub) /)
+         R_hH(3,1:3) = (/ 0.0_ReKi,-sin(psi_hub), cos(psi_hub) /)
+         R_hi(1:3,1:3,IdxBlade) = matmul(R_hH, u%HubMotion%Orientation(1:3,1:3,1) ) 
       ENDDO
 
 
@@ -302,7 +330,30 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
                END DO
             END DO
       
+                  ! ***** Disturbed wind velocity in the global blade coordinate system *****
+         CASE ( BldNd_VDisxi )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  =  m%DisturbedInflow(1,IdxNode,IdxBlade)
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
       
+         CASE ( BldNd_VDisyi )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  =  m%DisturbedInflow(2,IdxNode,IdxBlade)
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
+         
+         CASE ( BldNd_VDiszi )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  =  m%DisturbedInflow(3,IdxNode,IdxBlade)
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
 
                   ! ***** Disturbed wind velocity in the local blade coordinate system *****
          CASE ( BldNd_VDisx )
@@ -329,6 +380,80 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
                END DO
             END DO
 
+                  ! ***** Disturbed wind velocity in the rotating hub blade coordinate system *****
+         CASE ( BldNd_VDisxh )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  = dot_product(  R_hi(1,1:3,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
+
+         CASE ( BldNd_VDisyh )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  = dot_product(  R_hi(2,1:3,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
+
+         CASE ( BldNd_VDiszh )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  = dot_product(  R_hi(3,1:3,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
+
+                  ! ***** Disturbed wind velocity in the staggered-polar coordinate system *****
+         CASE ( BldNd_VDisxp )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  = dot_product( m%R_pi(1,:,IdxNode,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
+
+         CASE ( BldNd_VDisyp )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  = dot_product( m%R_pi(2,:,IdxNode,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
+         
+         CASE ( BldNd_VDiszp )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  = dot_product( m%R_pi(3,:,IdxNode,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
+
+               ! ***** Structural translational velocity in global coordinate system ***** 
+         CASE ( BldNd_STVxi )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  = u%BladeMotion(IdxBlade)%TranslationVel(1,IdxNode)
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
+         
+         CASE ( BldNd_STVyi )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  = u%BladeMotion(IdxBlade)%TranslationVel(2,IdxNode)
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
+         
+         CASE ( BldNd_STVzi )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  = u%BladeMotion(IdxBlade)%TranslationVel(3,IdxNode)
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
          
                ! ***** Structural translational velocity in the local blade coordinate system ***** 
          CASE ( BldNd_STVx )
@@ -351,6 +476,56 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
                   y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(3,:,IdxNode,IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
+
+               ! ***** Structural translational velocity in the local hub coordinate system ***** 
+         CASE ( BldNd_STVxh )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  = dot_product( R_hi(1,1:3,IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
+         
+         CASE ( BldNd_STVyh )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  = dot_product( R_hi(2,1:3,IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
+         
+         CASE ( BldNd_STVzh )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  = dot_product( R_hi(3,1:3,IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
+
+               ! ***** Structural translational velocity in the staggered polar coordinate system ***** 
+         CASE ( BldNd_STVxp )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  = dot_product( m%R_pi(1,1:3,IdxNode, IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
+         
+         CASE ( BldNd_STVyp )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  = dot_product( m%R_pi(2,1:3,IdxNode, IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
+                  OutIdx = OutIdx + 1
+               END DO
+            END DO
+         
+         CASE ( BldNd_STVzp )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,p%NumBlNds
+                  y%WriteOutput( OutIdx )  = dot_product( m%R_pi(3,1:3,IdxNode, IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
                   OutIdx = OutIdx + 1
                END DO
             END DO
@@ -509,6 +684,117 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
                END DO
             endif
          
+            ! Quasi-steady Axial and tangential induction factors
+         CASE ( BldNd_AxInd_qs )         
+            if (p_AD%WakeMod /= WakeMod_FVW) then
+               DO IdxBlade=1,p%BldNd_BladesOut
+                  DO IdxNode=1,p%NumBlNds
+                     y%WriteOutput( OutIdx )  = m%BEMT_y%axInduction_qs(IdxNode,IdxBlade)
+                     OutIdx = OutIdx + 1
+                  END DO
+               END DO
+            else
+               DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
+                  DO IdxNode=1,p%NumBlNds
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_AxInd(IdxNode) ! TODO
+                     OutIdx = OutIdx + 1
+                  END DO
+               END DO
+            endif
+
+         CASE ( BldNd_TnInd_qs )
+            if (p_AD%WakeMod /= WakeMod_FVW) then
+               DO IdxBlade=1,p%BldNd_BladesOut
+                  DO IdxNode=1,p%NumBlNds                   
+                     y%WriteOutput( OutIdx )  = m%BEMT_y%tanInduction_qs(IdxNode,IdxBlade)
+                     OutIdx = OutIdx + 1
+                  END DO
+               END DO
+            else
+               DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
+                  DO IdxNode=1,p%NumBlNds                   
+                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_TanInd(IdxNode) ! TODO
+                     OutIdx = OutIdx + 1
+                  END DO
+               END DO
+            endif
+
+            ! Hub/Tip-loss factor (BEM specific)
+         CASE ( BldNd_BEM_F )         
+            if (p_AD%WakeMod /= WakeMod_FVW) then
+               DO IdxBlade=1,p%BldNd_BladesOut
+                  DO IdxNode=1,p%NumBlNds
+                     y%WriteOutput( OutIdx )  = m%BEMT_y%F(IdxNode,IdxBlade)
+                     OutIdx = OutIdx + 1
+                  END DO
+               END DO
+            else
+               DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
+                  DO IdxNode=1,p%NumBlNds
+                     y%WriteOutput( OutIdx )  = 0.0_ReKi ! TODO
+                     OutIdx = OutIdx + 1
+                  END DO
+               END DO
+            endif
+         
+            ! k-kp factors (BEM specific)
+         CASE ( BldNd_BEM_k )         
+            if (p_AD%WakeMod /= WakeMod_FVW) then
+               DO IdxBlade=1,p%BldNd_BladesOut
+                  DO IdxNode=1,p%NumBlNds
+                     y%WriteOutput( OutIdx )  = m%BEMT_y%k(IdxNode,IdxBlade)
+                     OutIdx = OutIdx + 1
+                  END DO
+               END DO
+            else
+               DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
+                  DO IdxNode=1,p%NumBlNds
+                     y%WriteOutput( OutIdx )  = 0.0_ReKi ! TODO
+                     OutIdx = OutIdx + 1
+                  END DO
+               END DO
+            endif
+
+         CASE ( BldNd_BEM_kp )         
+            if (p_AD%WakeMod /= WakeMod_FVW) then
+               DO IdxBlade=1,p%BldNd_BladesOut
+                  DO IdxNode=1,p%NumBlNds
+                     y%WriteOutput( OutIdx )  = m%BEMT_y%k_p(IdxNode,IdxBlade)
+                     OutIdx = OutIdx + 1
+                  END DO
+               END DO
+            else
+               DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
+                  DO IdxNode=1,p%NumBlNds
+                     y%WriteOutput( OutIdx )  = 0.0_ReKi ! TODO
+                     OutIdx = OutIdx + 1
+                  END DO
+               END DO
+            endif
+
+            ! CT  (BEM specific for now)
+         CASE ( BldNd_BEM_CT_qs )         
+            if (p_AD%WakeMod /= WakeMod_FVW) then
+               DO IdxBlade=1,p%BldNd_BladesOut
+                  DO IdxNode=1,p%NumBlNds
+                     y%WriteOutput( OutIdx )  = 4*m%BEMT_y%F(IdxNode,IdxBlade)*m%BEMT_y%k(IdxNode,IdxBlade)*(1._ReKi-m%BEMT_y%axInduction_qs(IdxNode,IdxBlade))**2
+                     OutIdx = OutIdx + 1
+                  END DO
+               END DO
+            else
+               DO IdxBlade=1,p%BldNd_BladesOut
+                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
+                  DO IdxNode=1,p%NumBlNds
+                     y%WriteOutput( OutIdx )  = 0.0_ReKi ! TODO
+                     OutIdx = OutIdx + 1
+                  END DO
+               END DO
+            endif
                   
             ! AoA, pitch+twist angle, inflow angle, and curvature angle
          CASE ( BldNd_Alpha )
@@ -1158,69 +1444,84 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
  
 
             !================================================
+            ! Inductions in global coordinates
+         CASE ( BldNd_Vindxi )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
+                  y%WriteOutput( OutIdx ) = m%Vind_i(1, IdxNode, IdxBlade )
+                  OutIdx = OutIdx + 1
+               ENDDO
+            ENDDO
+         CASE ( BldNd_Vindyi )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
+                  y%WriteOutput( OutIdx ) = m%Vind_i(2, IdxNode, IdxBlade )
+                  OutIdx = OutIdx + 1
+               ENDDO
+            ENDDO
+         CASE ( BldNd_Vindzi )
+            DO IdxBlade=1,p%BldNd_BladesOut
+               DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
+                  y%WriteOutput( OutIdx ) = m%Vind_i(3, IdxNode, IdxBlade )
+                  OutIdx = OutIdx + 1
+               ENDDO
+            ENDDO
+
+            !================================================
             ! Inductions in polar rotating hub coordinates
             ! Axial induction, polar rotating hub coordinates
-         CASE ( BldNd_Uin )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+         CASE ( BldNd_Vindxh )
                DO IdxBlade=1,p%BldNd_BladesOut
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     Vind_s = (/ -m%BEMT_u(Indx)%Vx(IdxNode,IdxBlade)*m%BEMT_y%axInduction(IdxNode,IdxBlade), m%BEMT_u(Indx)%Vy(IdxNode,IdxBlade)*m%BEMT_y%tanInduction(IdxNode,IdxBlade), 0.0_ReKi /)
-                     Vind_g = matmul(Vind_s, m%orientationAnnulus(:,:,IdxNode,IdxBlade))
-                     y%WriteOutput( OutIdx ) = dot_product(M_pg(1,1:3,IdxBlade), Vind_g(1:3) ) ! Uihn, hub normal
+                  y%WriteOutput( OutIdx ) = dot_product(R_hi(1,1:3,IdxBlade), m%Vind_i(1:3, IdxNode, IdxBlade )) ! Uihn, hub normal
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
-            else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = dot_product(M_pg(1,1:3,IdxBlade), m_AD%FVW_y%W(iW)%Vind(1:3,IdxNode) ) ! Uihn, hub normal
-                     OutIdx = OutIdx + 1
-                  ENDDO
-               ENDDO
-            endif
 
             ! Tangential induction, polar rotating hub coordinates
-         CASE ( BldNd_Uit )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+         CASE ( BldNd_Vindyh )
                DO IdxBlade=1,p%BldNd_BladesOut
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     Vind_s = (/ -m%BEMT_u(Indx)%Vx(IdxNode,IdxBlade)*m%BEMT_y%axInduction(IdxNode,IdxBlade), m%BEMT_u(Indx)%Vy(IdxNode,IdxBlade)*m%BEMT_y%tanInduction(IdxNode,IdxBlade), 0.0_ReKi /)
-                     Vind_g = matmul(Vind_s, m%orientationAnnulus(:,:,IdxNode,IdxBlade))
-                     y%WriteOutput( OutIdx ) = dot_product(M_pg(2,1:3,IdxBlade), Vind_g(1:3) ) ! Uiht, hub tangential
+                  y%WriteOutput( OutIdx ) = dot_product(R_hi(2,1:3,IdxBlade), m%Vind_i(1:3, IdxNode, IdxBlade )) ! Uiht, hub tangential
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
-            else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = dot_product(M_pg(2,1:3,IdxBlade), m_AD%FVW_y%W(iW)%Vind(1:3,IdxNode) ) ! Uiht, hub tangential
-                     OutIdx = OutIdx + 1
-                  ENDDO
-               ENDDO
-            endif
- 
+
             ! Radial induction, polar rotating hub coordinates
-         CASE ( BldNd_Uir )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
+         CASE ( BldNd_Vindzh )
                DO IdxBlade=1,p%BldNd_BladesOut
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     Vind_s = (/ -m%BEMT_u(Indx)%Vx(IdxNode,IdxBlade)*m%BEMT_y%axInduction(IdxNode,IdxBlade), m%BEMT_u(Indx)%Vy(IdxNode,IdxBlade)*m%BEMT_y%tanInduction(IdxNode,IdxBlade), 0.0_ReKi /)
-                     Vind_g = matmul(Vind_s, m%orientationAnnulus(:,:,IdxNode,IdxBlade))
-                     y%WriteOutput( OutIdx ) = dot_product(M_pg(3,1:3,IdxBlade), Vind_g(1:3) ) ! Uihr, hub radial
+                  y%WriteOutput( OutIdx ) = dot_product(R_hi(3,1:3,IdxBlade), m%Vind_i(1:3, IdxNode, IdxBlade )) ! Uihr, hub radial
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
-            else
+
+            !================================================
+            ! Inductions in staggered polar coordinates
+         CASE ( BldNd_Vindxp )
                DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
                   DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = dot_product(M_pg(3,1:3,IdxBlade), m_AD%FVW_y%W(iW)%Vind(1:3,IdxNode) ) ! Uihr, hub radial
+                  y%WriteOutput( OutIdx ) = dot_product(m%R_pi(1,1:3,IdxNode, IdxBlade), m%Vind_i(1:3, IdxNode, IdxBlade ))
                      OutIdx = OutIdx + 1
                   ENDDO
                ENDDO
-            endif
+ 
+         CASE ( BldNd_Vindyp )
+               DO IdxBlade=1,p%BldNd_BladesOut
+                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
+                  y%WriteOutput( OutIdx ) = dot_product(m%R_pi(2,1:3,IdxNode, IdxBlade), m%Vind_i(1:3, IdxNode, IdxBlade ))
+                     OutIdx = OutIdx + 1
+                  ENDDO
+               ENDDO
+ 
+         CASE ( BldNd_Vindzp )
+               DO IdxBlade=1,p%BldNd_BladesOut
+                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
+                  y%WriteOutput( OutIdx ) = dot_product(m%R_pi(3,1:3,IdxNode, IdxBlade), m%Vind_i(1:3, IdxNode, IdxBlade ))
+                     OutIdx = OutIdx + 1
+                  ENDDO
+               ENDDO
+
 
             ! Normal buoyant force (to chord), tangential buoyant force (to chord), spanwise buoyant force
          CASE ( BldNd_Fbn )
@@ -1373,7 +1674,7 @@ END SUBROUTINE AllBldNdOuts_SetParameters
 !! the sign is set to 0 if the channel is invalid.
 !! It sets assumes the value p%NumOuts has been set before this routine has been called, and it sets the values of p%OutParam here.
 !! 
-!! This routine was generated by Write_ChckOutLst.m using the parameters listed in OutListParameters.xlsx at 07-Sep-2022 16:16:13.
+!! This routine was generated by Write_ChckOutLst.m using the parameters listed in OutListParameters.xlsx.
 SUBROUTINE BldNdOuts_SetOutParam(BldNd_OutList, p, p_AD, ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -1397,36 +1698,48 @@ SUBROUTINE BldNdOuts_SetOutParam(BldNd_OutList, p, p_AD, ErrStat, ErrMsg )
    LOGICAL                      :: InvalidOutput(1:BldNd_MaxOutPts)                      ! This array determines if the output channel is valid for this configuration
    CHARACTER(*), PARAMETER      :: RoutineName = "BldNdOuts_SetOutParam"
 
-   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(68) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
-                               "ALPHA    ","AXIND    ","CD       ","CD_STATIC","CHI      ","CL       ","CLRNC    ","CL_STATIC", &
-                               "CM       ","CM_STATIC","CN       ","CPMIN    ","CT       ","CURVE    ","CX       ","CY       ", &
-                               "DEBUG1   ","DEBUG2   ","DEBUG3   ","DYNP     ","FBN      ","FBS      ","FBT      ","FD       ", &
-                               "FL       ","FN       ","FT       ","FX       ","FY       ","GAM      ","GEOMPHI  ","M        ", &
-                               "MBN      ","MBS      ","MBT      ","MM       ","PHI      ","RE       ","SGCAV    ","SIGCR    ", &
-                               "STVX     ","STVY     ","STVZ     ","THETA    ","TNIND    ","UA_FLAG  ","UA_X1    ","UA_X2    ", &
-                               "UA_X3    ","UA_X4    ","UA_X5    ","UIN      ","UIR      ","UIT      ","VDISX    ","VDISY    ", &
-                               "VDISZ    ","VINDX    ","VINDY    ","VREL     ","VUNDX    ","VUNDXI   ","VUNDY    ","VUNDYI   ", &
-                               "VUNDZ    ","VUNDZI   ","VX       ","VY       "/)
-   INTEGER(IntKi), PARAMETER :: ParamIndxAry(68) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
-                                    BldNd_Alpha ,     BldNd_AxInd ,        BldNd_Cd , BldNd_Cd_Static ,       BldNd_Chi ,        BldNd_Cl ,     BldNd_Clrnc , BldNd_Cl_Static , &
-                                       BldNd_Cm , BldNd_Cm_Static ,        BldNd_Cn ,     BldNd_CpMin ,        BldNd_Ct ,     BldNd_Curve ,        BldNd_Cx ,        BldNd_Cy , &
-                                   BldNd_Debug1 ,    BldNd_Debug2 ,    BldNd_Debug3 ,      BldNd_DynP ,       BldNd_Fbn ,       BldNd_Fbs ,       BldNd_Fbt ,        BldNd_Fd , &
-                                       BldNd_Fl ,        BldNd_Fn ,        BldNd_Ft ,        BldNd_Fx ,        BldNd_Fy ,       BldNd_Gam ,   BldNd_GeomPhi ,         BldNd_M , &
-                                      BldNd_Mbn ,       BldNd_Mbs ,       BldNd_Mbt ,        BldNd_Mm ,       BldNd_Phi ,        BldNd_Re ,     BldNd_SgCav ,     BldNd_SigCr , &
-                                     BldNd_STVx ,      BldNd_STVy ,      BldNd_STVz ,     BldNd_Theta ,     BldNd_TnInd ,   BldNd_UA_Flag ,     BldNd_UA_x1 ,     BldNd_UA_x2 , &
-                                    BldNd_UA_x3 ,     BldNd_UA_x4 ,     BldNd_UA_x5 ,       BldNd_Uin ,       BldNd_Uir ,       BldNd_Uit ,     BldNd_VDisx ,     BldNd_VDisy , &
-                                    BldNd_VDisz ,     BldNd_Vindx ,     BldNd_Vindy ,      BldNd_VRel ,     BldNd_VUndx ,    BldNd_Vundxi ,     BldNd_VUndy ,    BldNd_Vundyi , &
-                                    BldNd_VUndz ,    BldNd_Vundzi ,        BldNd_Vx ,        BldNd_Vy /)
-   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(68) =  (/  &  ! This lists the units corresponding to the allowed parameters
-                               "(deg)  ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(m)    ","(-)    ", &
-                               "(-)    ","(-)    ","(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ", &
-                               "(-)    ","(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(m^2/s)","(1/0)  ","(-)    ", &
-                               "(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(-)    ","(-)    ","(rad)  ","(rad)  ", &
-                               "(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(101) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
+                               "ALPHA    ","AXIND    ","AXIND_QS ","BEM_CT_QS","BEM_F    ","BEM_K    ","BEM_KP   ","CD       ", &
+                               "CD_STATIC","CHI      ","CL       ","CLRNC    ","CL_STATIC","CM       ","CM_STATIC","CN       ", &
+                               "CPMIN    ","CT       ","CURVE    ","CX       ","CY       ","DEBUG1   ","DEBUG2   ","DEBUG3   ", &
+                               "DYNP     ","FBN      ","FBS      ","FBT      ","FD       ","FL       ","FN       ","FT       ", &
+                               "FX       ","FY       ","GAM      ","GEOMPHI  ","M        ","MBN      ","MBS      ","MBT      ", &
+                               "MM       ","PHI      ","RE       ","SGCAV    ","SIGCR    ","STVX     ","STVXH    ","STVXI    ", &
+                               "STVXP    ","STVY     ","STVYH    ","STVYI    ","STVYP    ","STVZ     ","STVZH    ","STVZI    ", &
+                               "STVZP    ","THETA    ","TNIND    ","TNIND_QS ","UA_FLAG  ","UA_X1    ","UA_X2    ","UA_X3    ", &
+                               "UA_X4    ","UA_X5    ","UIN      ","UIR      ","UIT      ","VDISX    ","VDISXH   ","VDISXI   ", &
+                               "VDISXP   ","VDISY    ","VDISYH   ","VDISYI   ","VDISYP   ","VDISZ    ","VDISZH   ","VDISZI   ", &
+                               "VDISZP   ","VINDX    ","VINDXH   ","VINDXI   ","VINDXP   ","VINDY    ","VINDYH   ","VINDYI   ", &
+                               "VINDYP   ","VINDZH   ","VINDZI   ","VINDZP   ","VREL     ","VUNDX    ","VUNDXI   ","VUNDY    ", &
+                               "VUNDYI   ","VUNDZ    ","VUNDZI   ","VX       ","VY       "/)
+   INTEGER(IntKi), PARAMETER :: ParamIndxAry(101) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
+                                    BldNd_Alpha ,     BldNd_AxInd ,  BldNd_AxInd_qs , BldNd_BEM_CT_qs ,     BldNd_BEM_F ,     BldNd_BEM_k ,    BldNd_BEM_kp ,        BldNd_Cd , &
+                                BldNd_Cd_Static ,       BldNd_Chi ,        BldNd_Cl ,     BldNd_Clrnc , BldNd_Cl_Static ,        BldNd_Cm , BldNd_Cm_Static ,        BldNd_Cn , &
+                                    BldNd_CpMin ,        BldNd_Ct ,     BldNd_Curve ,        BldNd_Cx ,        BldNd_Cy ,    BldNd_Debug1 ,    BldNd_Debug2 ,    BldNd_Debug3 , &
+                                     BldNd_DynP ,       BldNd_Fbn ,       BldNd_Fbs ,       BldNd_Fbt ,        BldNd_Fd ,        BldNd_Fl ,        BldNd_Fn ,        BldNd_Ft , &
+                                       BldNd_Fx ,        BldNd_Fy ,       BldNd_Gam ,   BldNd_GeomPhi ,         BldNd_M ,       BldNd_Mbn ,       BldNd_Mbs ,       BldNd_Mbt , &
+                                       BldNd_Mm ,       BldNd_Phi ,        BldNd_Re ,     BldNd_SgCav ,     BldNd_SigCr ,      BldNd_STVx ,     BldNd_STVxh ,     BldNd_STVxi , &
+                                    BldNd_STVxp ,      BldNd_STVy ,     BldNd_STVyh ,     BldNd_STVyi ,     BldNd_STVyp ,      BldNd_STVz ,     BldNd_STVzh ,     BldNd_STVzi , &
+                                    BldNd_STVzp ,     BldNd_Theta ,     BldNd_TnInd ,  BldNd_TnInd_qs ,   BldNd_UA_Flag ,     BldNd_UA_x1 ,     BldNd_UA_x2 ,     BldNd_UA_x3 , &
+                                    BldNd_UA_x4 ,     BldNd_UA_x5 ,    BldNd_Vindxh ,    BldNd_Vindzh ,    BldNd_Vindyh ,     BldNd_VDisx ,    BldNd_Vdisxh ,    BldNd_Vdisxi , &
+                                   BldNd_Vdisxp ,     BldNd_VDisy ,    BldNd_Vdisyh ,    BldNd_Vdisyi ,    BldNd_Vdisyp ,     BldNd_VDisz ,    BldNd_Vdiszh ,    BldNd_Vdiszi , &
+                                   BldNd_Vdiszp ,     BldNd_Vindx ,    BldNd_Vindxh ,    BldNd_Vindxi ,    BldNd_Vindxp ,     BldNd_Vindy ,    BldNd_Vindyh ,    BldNd_Vindyi , &
+                                   BldNd_Vindyp ,    BldNd_Vindzh ,    BldNd_Vindzi ,    BldNd_Vindzp ,      BldNd_VRel ,     BldNd_VUndx ,    BldNd_Vundxi ,     BldNd_VUndy , &
+                                   BldNd_Vundyi ,     BldNd_VUndz ,    BldNd_Vundzi ,        BldNd_Vx ,        BldNd_Vy /)
+   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(101) =  (/ character(ChanLen) :: &  ! This lists the units corresponding to the allowed parameters
+                               "(deg)  ","(-)    ","(-)    ","(-)    ","(-)    ","(-)    ","(-)    ","(-)    ", &
+                               "(-)    ","(deg)  ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ", &
+                               "(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ","(-)    ","(-)    ","(-)    ", &
+                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(m^2/s)","(1/0)  ","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)", &
+                               "(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  "/)
+                               "(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ","(rad)  ","(rad)  ","(-)    ", &
+                               "(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  "/)
 
 
       ! Initialize values
