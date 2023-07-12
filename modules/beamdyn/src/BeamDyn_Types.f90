@@ -63,6 +63,7 @@ IMPLICIT NONE
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: kp_coordinate      !< Key point coordinates array [-]
     INTEGER(IntKi)  :: kp_total      !< Total number of key points [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QPtN      !< Quadrature (QuadPt) point locations in natural frame [-1, 1] [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_x      !< Names of the continuous states used in linearization [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
@@ -685,6 +686,18 @@ IF (ALLOCATED(SrcInitOutputData%kp_coordinate)) THEN
     DstInitOutputData%kp_coordinate = SrcInitOutputData%kp_coordinate
 ENDIF
     DstInitOutputData%kp_total = SrcInitOutputData%kp_total
+IF (ALLOCATED(SrcInitOutputData%QPtN)) THEN
+  i1_l = LBOUND(SrcInitOutputData%QPtN,1)
+  i1_u = UBOUND(SrcInitOutputData%QPtN,1)
+  IF (.NOT. ALLOCATED(DstInitOutputData%QPtN)) THEN 
+    ALLOCATE(DstInitOutputData%QPtN(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%QPtN.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%QPtN = SrcInitOutputData%QPtN
+ENDIF
 IF (ALLOCATED(SrcInitOutputData%LinNames_y)) THEN
   i1_l = LBOUND(SrcInitOutputData%LinNames_y,1)
   i1_u = UBOUND(SrcInitOutputData%LinNames_y,1)
@@ -815,6 +828,9 @@ ENDIF
 IF (ALLOCATED(InitOutputData%kp_coordinate)) THEN
   DEALLOCATE(InitOutputData%kp_coordinate)
 ENDIF
+IF (ALLOCATED(InitOutputData%QPtN)) THEN
+  DEALLOCATE(InitOutputData%QPtN)
+ENDIF
 IF (ALLOCATED(InitOutputData%LinNames_y)) THEN
   DEALLOCATE(InitOutputData%LinNames_y)
 ENDIF
@@ -910,6 +926,11 @@ ENDIF
       Db_BufSz   = Db_BufSz   + SIZE(InData%kp_coordinate)  ! kp_coordinate
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! kp_total
+  Int_BufSz   = Int_BufSz   + 1     ! QPtN allocated yes/no
+  IF ( ALLOCATED(InData%QPtN) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! QPtN upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%QPtN)  ! QPtN
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! LinNames_y allocated yes/no
   IF ( ALLOCATED(InData%LinNames_y) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! LinNames_y upper/lower bounds for each dimension
@@ -1061,6 +1082,21 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = InData%kp_total
     Int_Xferred = Int_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%QPtN) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%QPtN,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%QPtN,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%QPtN,1), UBOUND(InData%QPtN,1)
+        DbKiBuf(Db_Xferred) = InData%QPtN(i1)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%LinNames_y) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -1322,6 +1358,24 @@ ENDIF
   END IF
     OutData%kp_total = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! QPtN not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%QPtN)) DEALLOCATE(OutData%QPtN)
+    ALLOCATE(OutData%QPtN(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%QPtN.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%QPtN,1), UBOUND(OutData%QPtN,1)
+        OutData%QPtN(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LinNames_y not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE

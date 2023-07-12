@@ -34,11 +34,12 @@ matlab_add_mex(
     $<TARGET_FILE:versioninfolib>
     $<TARGET_FILE:aerodyn14lib>
     $<TARGET_FILE:aerodynlib>
+    $<TARGET_FILE:extloadslib>
     $<TARGET_FILE:beamdynlib>
     $<TARGET_FILE:elastodynlib>
     $<TARGET_FILE:extptfm_mckflib>
     $<TARGET_FILE:feamlib>
-    $<TARGET_FILE:foamtypeslib>
+    $<TARGET_FILE:externalinflowtypeslib>
     $<TARGET_FILE:hydrodynlib>
     $<TARGET_FILE:icedynlib>
     $<TARGET_FILE:icefloelib>
@@ -50,7 +51,7 @@ matlab_add_mex(
     $<TARGET_FILE:servodynlib-matlab> # MATLAB Specific
     $<TARGET_FILE:subdynlib>
     $<TARGET_FILE:openfast_prelib>
-    $<TARGET_FILE:foamfastlib>
+    $<TARGET_FILE:externalinflowlib>
     $<TARGET_FILE:scfastlib>
     ${LAPACK_LIBRARIES} 
     ${CMAKE_DL_LIBS} 

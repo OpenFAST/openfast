@@ -120,6 +120,7 @@ MODULE NWTC_IO
       MODULE PROCEDURE AllIPAry1
       MODULE PROCEDURE AllIPAry2
       MODULE PROCEDURE AllFPAry1
+      MODULE PROCEDURE AllDPAry1  
       MODULE PROCEDURE AllRPAry2
       MODULE PROCEDURE AllR4PAry3
       MODULE PROCEDURE AllR8PAry3
@@ -665,6 +666,39 @@ CONTAINS
    Ary = 0
    RETURN
    END SUBROUTINE AllFPAry1
+!=======================================================================
+!> \copydoc nwtc_io::allipary1
+   SUBROUTINE AllDPAry1 (  Ary, AryDim1, Descr, ErrStat, ErrMsg )
+
+      ! This routine allocates a 1-D REAL array.
+      ! Argument declarations.
+
+   REAL(C_DOUBLE), POINTER           :: Ary    (:)                                 !  Array to be allocated
+   INTEGER,      INTENT(IN)          :: AryDim1                                    !  The size of the first dimension of the array.
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    !< Error status
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !  Error message corresponding to ErrStat
+   CHARACTER(*), INTENT(IN)          :: Descr                                      !  Brief array description.
+
+
+   IF ( ASSOCIATED(Ary) ) THEN
+      DEALLOCATE(Ary)
+      !ErrStat = ErrID_Warn
+      !ErrMsg = " AllRPAry2: Ary already allocated."
+   END IF
+
+   ALLOCATE ( Ary(AryDim1) , STAT=ErrStat )
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*BYTES_IN_REAL))//&
+                  ' bytes of memory for the '//TRIM( Descr )//' array.'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+   END IF
+   
+   Ary = 0
+   RETURN
+   END SUBROUTINE AllDPAry1
 !=======================================================================
 !> \copydoc nwtc_io::allipary1
    SUBROUTINE AllRPAry2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )

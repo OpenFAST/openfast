@@ -44,6 +44,7 @@ typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputUnt {:}  -   - 
 typedef   ^        InitOutputType ProgDesc            Ver             -   -   -   "This module's name, version, and date"  -
 typedef   ^        InitOutputType R8Ki                kp_coordinate  {:}{:} - -   "Key point coordinates array"            -
 typedef   ^        InitOutputType IntKi               kp_total        -   -   -   "Total number of key points" -
+typedef   ^        InitOutputType R8Ki                QPtN           {:}   -   -   "Quadrature (QuadPt) point locations in natural frame [-1, 1]" -
 typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_y   {:}  -   -   "Names of the outputs used in linearization" -
 #typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_z   {:}  -   -   "Names of the constraint states used in linearization" -
 typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_x   {:}  -   -   "Names of the continuous states used in linearization" -

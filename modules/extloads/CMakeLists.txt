@@ -15,24 +15,22 @@
 #
 
 if (GENERATE_TYPES)
-  generate_f90_types(src/ExternalInflow_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/ExternalInflow_Types.f90 -ccode)
+  generate_f90_types(src/ExtLoadsDX_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/ExtLoadsDX_Types.f90 -ccode)
+  generate_f90_types(src/ExtLoads_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/ExtLoads_Types.f90)
 endif()
 
-add_library(extinflowtypeslib STATIC
-  src/ExternalInflow_Types.f90
+add_library(extloadslib STATIC
+  src/ExtLoads.f90
+  src/ExtLoads_Types.f90
+  src/ExtLoadsDX_Types.f90
 )
-target_link_libraries(extinflowtypeslib nwtclibs)
-
-add_library(extinflowlib STATIC
-  src/ExternalInflow.f90
-)
-target_link_libraries(extinflowlib openfast_prelib)
-target_include_directories(extinflowlib PUBLIC 
+target_include_directories(extloadslib PUBLIC 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
 )
-set_target_properties(extinflowlib PROPERTIES PUBLIC_HEADER src/ExternalInflow_Types.h)
+target_link_libraries(extloadslib beamdynlib nwtclibs versioninfolib)
+set_target_properties(extloadslib PROPERTIES PUBLIC_HEADER "src/ExtLoadsDX_Types.h")
 
-install(TARGETS extinflowtypeslib extinflowlib
+install(TARGETS extloadslib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
