@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 
-# List of libraries to be linked into the MEX shared library. This list will be
-# linked twice to resolve undefined symbols due to linking order.
+# List of module libraries to be linked into the MEX shared library. 
+# This list will be linked twice to resolve undefined symbols due to linking order.
 set(MEX_LIBS
   $<TARGET_FILE:openfast_prelib>
   $<TARGET_FILE:aerodyn14lib>
@@ -58,7 +58,7 @@ matlab_add_mex(
     ${PROJECT_SOURCE_DIR}/modules/openfast-library/src/FAST_Library.f90
   LINK_TO 
     ${MEX_LIBS}
-    ${MEX_LIBS}
+    ${MEX_LIBS} # DO NOT REMOVE (needed to ensure no unresolved symbols)
     ${LAPACK_LIBRARIES} 
     ${CMAKE_DL_LIBS} 
     ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES}
