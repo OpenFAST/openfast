@@ -122,9 +122,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: Z0 = 0      !< Surface roughness length (used for LOG wind profile type only) [-]
     REAL(ReKi)  :: VLinShr = 0      !< Vertical linear wind shear coefficient (used for vertical linear wind profile type only) [-]
     REAL(ReKi)  :: HLinShr = 0      !< Horizontal linear wind shear coefficient (used for horizontal wind profile type only) [-]
-    LOGICAL  :: BoxExceedAllowF = .FALSE.      !< Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
-    INTEGER(IntKi)  :: BoxExceedAllowIdx = -1      !< Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
-    LOGICAL  :: BoxExceedWarned = .FALSE.      !< Has a warning been issued for points extrapolated beyond FFWind grid [-]
+    LOGICAL  :: BoxExceedAllow = .FALSE.      !< Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
+    LOGICAL  :: BoxExceedAllowDrv = .FALSE.      !< Flag to allow Extrapolation winds outside box set by driver [-]
   END TYPE Grid3DFieldType
 ! =======================
 ! =========  Grid4DFieldType  =======
@@ -1022,9 +1021,8 @@ subroutine IfW_FlowField_CopyGrid3DFieldType(SrcGrid3DFieldTypeData, DstGrid3DFi
    DstGrid3DFieldTypeData%Z0 = SrcGrid3DFieldTypeData%Z0
    DstGrid3DFieldTypeData%VLinShr = SrcGrid3DFieldTypeData%VLinShr
    DstGrid3DFieldTypeData%HLinShr = SrcGrid3DFieldTypeData%HLinShr
-   DstGrid3DFieldTypeData%BoxExceedAllowF = SrcGrid3DFieldTypeData%BoxExceedAllowF
-   DstGrid3DFieldTypeData%BoxExceedAllowIdx = SrcGrid3DFieldTypeData%BoxExceedAllowIdx
-   DstGrid3DFieldTypeData%BoxExceedWarned = SrcGrid3DFieldTypeData%BoxExceedWarned
+   DstGrid3DFieldTypeData%BoxExceedAllow = SrcGrid3DFieldTypeData%BoxExceedAllow
+   DstGrid3DFieldTypeData%BoxExceedAllowDrv = SrcGrid3DFieldTypeData%BoxExceedAllowDrv
 end subroutine
 
 subroutine IfW_FlowField_DestroyGrid3DFieldType(Grid3DFieldTypeData, ErrStat, ErrMsg)
@@ -1116,9 +1114,8 @@ subroutine IfW_FlowField_PackGrid3DFieldType(Buf, Indata)
    call RegPack(Buf, InData%Z0)
    call RegPack(Buf, InData%VLinShr)
    call RegPack(Buf, InData%HLinShr)
-   call RegPack(Buf, InData%BoxExceedAllowF)
-   call RegPack(Buf, InData%BoxExceedAllowIdx)
-   call RegPack(Buf, InData%BoxExceedWarned)
+   call RegPack(Buf, InData%BoxExceedAllow)
+   call RegPack(Buf, InData%BoxExceedAllowDrv)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1268,11 +1265,9 @@ subroutine IfW_FlowField_UnPackGrid3DFieldType(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%HLinShr)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%BoxExceedAllowF)
+   call RegUnpack(Buf, OutData%BoxExceedAllow)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%BoxExceedAllowIdx)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%BoxExceedWarned)
+   call RegUnpack(Buf, OutData%BoxExceedAllowDrv)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 

@@ -577,11 +577,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + NumBl * AD14%Input(1)%InputMarkers(1)%NNodes + AD14%Input(1)%Twr_InputMarkers%NNodes
       ELSEIF ( p_FAST%CompAero  == Module_AD ) THEN
          ! Number of Wind points from AeroDyn, see AeroDyn.f90
-         Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + AD_NumWindPoints(AD%Input(1), AD%OtherSt(STATE_CURR))
+         Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints
          ! Wake -- we allow the wake positions to exceed the wind box
          if (allocated(AD%OtherSt(STATE_CURR)%WakeLocationPoints)) then
-            Init%InData_IfW%BoxExceedAllowF = .true.
-            Init%InData_IfW%BoxExceedAllowIdx = min(Init%InData_IfW%BoxExceedAllowIdx, AD_BoxExceedPointsIdx(AD%Input(1), AD%OtherSt(STATE_CURR)))
+            Init%InData_IfW%BoxExceedAllow = .true.
          endif
       END IF
 
@@ -618,7 +617,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       ! Set pointers to flowfield
-      IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => IfW%p%FlowField
+      IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => Init%OutData_IfW%FlowField
 
       allocate( y_FAST%Lin%Modules(MODULE_IfW)%Instance(1), stat=ErrStat2)
       if (ErrStat2 /= 0 ) then
@@ -709,6 +708,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
       !bjj: fix me!!! to do
       Init%OutData_IfW%WindFileInfo%MWS = 0.0_ReKi
+
+      ! Set pointer to flowfield
+      IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => Init%OutData_OpFM%FlowField
 
    ELSE
       Init%OutData_IfW%WindFileInfo%MWS = 0.0_ReKi

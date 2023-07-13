@@ -118,8 +118,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type switch [-]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Mean sea level to still water level [m]
-    INTEGER(IntKi)  :: BoxExceedAllowIdx = -1      !< Extrapolate winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
-    LOGICAL  :: BoxExceedAllowF = .FALSE.      !< Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
+    LOGICAL  :: BoxExceedAllow = .FALSE.      !< Flag to allow Extrapolation winds outside box starting at this index (for OLAF wakes and LidarSim) [-]
   END TYPE InflowWind_InitInputType
 ! =======================
 ! =========  InflowWind_InitOutputType  =======
@@ -680,8 +679,7 @@ subroutine InflowWind_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode
    DstInitInputData%MHK = SrcInitInputData%MHK
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
    DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
-   DstInitInputData%BoxExceedAllowIdx = SrcInitInputData%BoxExceedAllowIdx
-   DstInitInputData%BoxExceedAllowF = SrcInitInputData%BoxExceedAllowF
+   DstInitInputData%BoxExceedAllow = SrcInitInputData%BoxExceedAllow
 end subroutine
 
 subroutine InflowWind_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -726,8 +724,7 @@ subroutine InflowWind_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%MHK)
    call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, InData%MSL2SWL)
-   call RegPack(Buf, InData%BoxExceedAllowIdx)
-   call RegPack(Buf, InData%BoxExceedAllowF)
+   call RegPack(Buf, InData%BoxExceedAllow)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -768,9 +765,7 @@ subroutine InflowWind_UnPackInitInput(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%MSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%BoxExceedAllowIdx)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%BoxExceedAllowF)
+   call RegUnpack(Buf, OutData%BoxExceedAllow)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 

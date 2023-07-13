@@ -413,6 +413,8 @@ typedef ^   ParameterType   FlowFieldType *FlowField -  -   -    "Pointer of Inf
 
 
 # ..... Inputs ....................................................................................................................
+typedef	^	BldInputType	ReKi	InflowOnBlade	{:}{:}	-	-	"U,V,W at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
+typedef	^	BldInputType	ReKi	AccelOnBlade	{:}{:}	-	-	"Wind acceleration at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
 # Define inputs that are contained on a mesh here:
 typedef	^	RotInputType	MeshType	NacelleMotion	-	-	-	"motion on the nacelle"	-
 typedef	^	RotInputType	MeshType	TowerMotion	-	-	-	"motion on the tower"	-
@@ -421,11 +423,12 @@ typedef	^	RotInputType	MeshType	BladeRootMotion	{:}	-	-	"motion on each blade ro
 typedef	^	RotInputType	MeshType	BladeMotion	{:}	-	-	"motion on each blade"	-
 typedef	^	RotInputType	MeshType	TFinMotion	- 	-	-	"motion of tail fin (at tail fin ref point)"	-
 # Define inputs that are not on a mesh here:
-typedef	^	RotInputType	ReKi	InflowOnBlade	{:}{:}{:}	-	-	"U,V,W at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
+typedef	^	RotInputType	BldInputType    Bld		{:}	-	-	"Blade Inputs"	-
 typedef	^	RotInputType	ReKi	InflowOnTower	{:}{:}	-	-	"U,V,W at nodes on the tower"	m/s
-typedef	^	RotInputType	ReKi	InflowOnHub 	{3}	-	-	"U,V,W at hub"	m/s
-typedef	^	RotInputType	ReKi	InflowOnNacelle	{3}	-	-	"U,V,W at nacelle"	m/s
-typedef	^	RotInputType	ReKi	InflowOnTailFin	{3}	-	-	"U,V,W at tailfin"	m/s
+typedef	^	RotInputType	ReKi	AccelOnTower	{:}{:}	-	-	"Wind acceleration at nodes on the tower"	m/s
+typedef	^	RotInputType	ReKi	InflowOnHub 	{3}{1}	-	-	"U,V,W at hub"	m/s
+typedef	^	RotInputType	ReKi	InflowOnNacelle	{3}{1}	-	-	"U,V,W at nacelle"	m/s
+typedef	^	RotInputType	ReKi	InflowOnTailFin	{3}{1}	-	-	"U,V,W at tailfin"	m/s
 typedef	^	RotInputType	ReKi	UserProp	{:}{:}	-	-	"Optional user property for interpolating airfoils (per element per blade)" -
 
 
