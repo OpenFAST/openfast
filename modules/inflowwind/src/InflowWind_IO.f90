@@ -1031,7 +1031,7 @@ subroutine IfW_Grid4D_Init(InitInp, G4D, ErrStat, ErrMsg)
 
    ! Initialize field from inputs
    G4D%n = InitInp%n
-   G4D%delta = InitInp%delta
+   G4D%delta = real(InitInp%delta, DbKi)
    G4D%pZero = InitInp%pZero
    G4D%TimeStart = 0.0_ReKi
    G4D%RefHeight = InitInp%pZero(3) + (InitInp%n(3)/2) * InitInp%delta(3)

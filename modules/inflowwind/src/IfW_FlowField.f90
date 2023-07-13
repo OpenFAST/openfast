@@ -1589,7 +1589,7 @@ subroutine Grid4DField_GetVel(G4D, Time, Position, Velocity, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    do i = 1, 3
-      tmp = (Position(i) - G4D%pZero(i))/G4D%delta(i)
+      tmp = (Position(i) - G4D%pZero(i))/real(G4D%delta(i),Reki)
       Indx_Lo(i) = INT(tmp) + 1                          ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
       xi(i) = 2.0_ReKi*(tmp - aint(tmp)) - 1.0_ReKi   ! convert to value between -1 and 1
    end do
