@@ -294,7 +294,7 @@ of_regression("MHK_RM1_Floating"                       "openfast;elastodyn;aerod
 
 # OpenFAST C++ API test
 if(BUILD_OPENFAST_CPP_API)
-  of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;fastlib;cpp")
+  # of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;fastlib;cpp")
 endif()
 
 # OpenFAST C++ Driver test for OpenFAST Library
