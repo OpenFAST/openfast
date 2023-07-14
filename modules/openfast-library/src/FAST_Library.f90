@@ -728,8 +728,15 @@ subroutine FAST_AL_CFD_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c,
       NumBlElem_c = Turbine(iTurb)%AD14%Input(1)%InputMarkers(1)%Nnodes
       NumTwrElem_c = 0 ! Don't care about Aerodyn14 anymore
    ELSEIF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD) THEN
-      NumBl_c     = SIZE(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)
-      NumBlElem_c = Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion(1)%Nnodes
+      IF (ALLOCATED(Turbine(iTurb)%AD%Input(1)%rotors)) THEN
+         IF (ALLOCATED(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)) THEN
+            NumBl_c     = SIZE(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)
+         END IF
+      END IF
+      IF (NumBl_c > 0) THEN
+         NumBlElem_c = Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion(1)%Nnodes
+      END IF
+!FIXME: need some checks on this.  If the Tower mesh is not initialized, this will be garbage
       NumTwrElem_c = Turbine(iTurb)%AD%y%rotors(1)%TowerLoad%Nnodes
    ELSE
       NumBl_c     = 0
@@ -1030,15 +1037,12 @@ subroutine SetExternalInflow_pointers(iTurb, ExtInfw_Input_from_FAST, ExtInfw_Ou
    ExtInfw_Input_from_FAST%pxVel_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pxVel_Len; ExtInfw_Input_from_FAST%pxVel = Turbine(iTurb)%ExtInfw%u%c_obj%pxVel
    ExtInfw_Input_from_FAST%pyVel_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pyVel_Len; ExtInfw_Input_from_FAST%pyVel = Turbine(iTurb)%ExtInfw%u%c_obj%pyVel
    ExtInfw_Input_from_FAST%pzVel_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pzVel_Len; ExtInfw_Input_from_FAST%pzVel = Turbine(iTurb)%ExtInfw%u%c_obj%pzVel
-   ExtInfw_Input_from_FAST%pxDotVel_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pxDotVel_Len; ExtInfw_Input_from_FAST%pxDotVel = Turbine(iTurb)%ExtInfw%u%c_obj%pxDotVel
-   ExtInfw_Input_from_FAST%pyDotVel_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pyDotVel_Len; ExtInfw_Input_from_FAST%pyDotVel = Turbine(iTurb)%ExtInfw%u%c_obj%pyDotVel
-   ExtInfw_Input_from_FAST%pzDotVel_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pzDotVel_Len; ExtInfw_Input_from_FAST%pzDotVel = Turbine(iTurb)%ExtInfw%u%c_obj%pzDotVel
    ExtInfw_Input_from_FAST%pxForce_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pxForce_Len; ExtInfw_Input_from_FAST%pxForce = Turbine(iTurb)%ExtInfw%u%c_obj%pxForce
    ExtInfw_Input_from_FAST%pyForce_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pyForce_Len; ExtInfw_Input_from_FAST%pyForce = Turbine(iTurb)%ExtInfw%u%c_obj%pyForce
    ExtInfw_Input_from_FAST%pzForce_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pzForce_Len; ExtInfw_Input_from_FAST%pzForce = Turbine(iTurb)%ExtInfw%u%c_obj%pzForce
-   ExtInfw_Input_from_FAST%pxDotForce_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pxDotForce_Len; ExtInfw_Input_from_FAST%pxDotForce = Turbine(iTurb)%ExtInfw%u%c_obj%pxDotForce
-   ExtInfw_Input_from_FAST%pyDotForce_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pyDotForce_Len; ExtInfw_Input_from_FAST%pyDotForce = Turbine(iTurb)%ExtInfw%u%c_obj%pyDotForce
-   ExtInfw_Input_from_FAST%pzDotForce_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pzDotForce_Len; ExtInfw_Input_from_FAST%pzDotForce = Turbine(iTurb)%ExtInfw%u%c_obj%pzDotForce
+   ExtInfw_Input_from_FAST%xdotForce_Len = Turbine(iTurb)%ExtInfw%u%c_obj%xdotForce_Len; ExtInfw_Input_from_FAST%xdotForce = Turbine(iTurb)%ExtInfw%u%c_obj%xdotForce
+   ExtInfw_Input_from_FAST%ydotForce_Len = Turbine(iTurb)%ExtInfw%u%c_obj%ydotForce_Len; ExtInfw_Input_from_FAST%ydotForce = Turbine(iTurb)%ExtInfw%u%c_obj%ydotForce
+   ExtInfw_Input_from_FAST%zdotForce_Len = Turbine(iTurb)%ExtInfw%u%c_obj%zdotForce_Len; ExtInfw_Input_from_FAST%zdotForce = Turbine(iTurb)%ExtInfw%u%c_obj%zdotForce
    ExtInfw_Input_from_FAST%pOrientation_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pOrientation_Len; ExtInfw_Input_from_FAST%pOrientation = Turbine(iTurb)%ExtInfw%u%c_obj%pOrientation
    ExtInfw_Input_from_FAST%fx_Len = Turbine(iTurb)%ExtInfw%u%c_obj%fx_Len; ExtInfw_Input_from_FAST%fx = Turbine(iTurb)%ExtInfw%u%c_obj%fx
    ExtInfw_Input_from_FAST%fy_Len = Turbine(iTurb)%ExtInfw%u%c_obj%fy_Len; ExtInfw_Input_from_FAST%fy = Turbine(iTurb)%ExtInfw%u%c_obj%fy
@@ -1047,7 +1051,6 @@ subroutine SetExternalInflow_pointers(iTurb, ExtInfw_Input_from_FAST, ExtInfw_Ou
    ExtInfw_Input_from_FAST%momenty_Len = Turbine(iTurb)%ExtInfw%u%c_obj%momenty_Len; ExtInfw_Input_from_FAST%momenty = Turbine(iTurb)%ExtInfw%u%c_obj%momenty
    ExtInfw_Input_from_FAST%momentz_Len = Turbine(iTurb)%ExtInfw%u%c_obj%momentz_Len; ExtInfw_Input_from_FAST%momentz = Turbine(iTurb)%ExtInfw%u%c_obj%momentz
    ExtInfw_Input_from_FAST%forceNodesChord_Len = Turbine(iTurb)%ExtInfw%u%c_obj%forceNodesChord_Len; ExtInfw_Input_from_FAST%forceNodesChord = Turbine(iTurb)%ExtInfw%u%c_obj%forceNodesChord
-   ExtInfw_Input_from_FAST%forceRHloc_Len = Turbine(iTurb)%ExtInfw%u%c_obj%forceRHloc_Len; ExtInfw_Input_from_FAST%forceRHloc = Turbine(iTurb)%ExtInfw%u%c_obj%forceRHloc
 
    if (Turbine(iTurb)%p_FAST%UseSC) then
       SC_DX_Input_from_FAST%toSC_Len = Turbine(iTurb)%SC_DX%u%c_obj%toSC_Len
