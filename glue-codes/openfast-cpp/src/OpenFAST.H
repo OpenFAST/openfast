@@ -9,7 +9,7 @@
 #include <set>
 #include <map>
 #include "dlfcn.h"
-//TODO: The skip MPICXX is put in place primarily to get around errors in OpenFOAM. This will cause problems if the driver program uses C++ API for MPI.
+//TODO: The skip MPICXX is put in place primarily to get around errors in ExternalInflow. This will cause problems if the driver program uses C++ API for MPI.
 #ifndef OMPI_SKIP_MPICXX
  #define OMPI_SKIP_MPICXX
 #endif
@@ -115,8 +115,8 @@ class OpenFAST {
   std::vector<std::vector<double> > velNodeData; // Position and velocity data at the velocity (aerodyn) nodes - (nTurbines, nTimesteps * nPoints * 6)
   hid_t velNodeDataFile; // HDF-5 tag of file containing velocity (aerodyn) node data file
 
-  std::vector<OpFM_InputType_t> cDriver_Input_from_FAST;
-  std::vector<OpFM_OutputType_t> cDriver_Output_to_FAST;
+  std::vector<ExtInfw_InputType_t> cDriver_Input_from_FAST;
+  std::vector<ExtInfw_OutputType_t> cDriver_Output_to_FAST;
 
   // Turbine Number is DIFFERENT from TurbID. Turbine Number simply runs from 0:n-1 locally and globally.
   std::map<int, int> turbineMapGlobToProc; // Mapping global turbine number to processor number
@@ -171,7 +171,7 @@ class OpenFAST {
 
   hid_t openVelocityDataFile(bool createFile);
   void readVelocityData(int nTimesteps);
-  void writeVelocityData(hid_t h5file, int iTurb, int iTimestep, OpFM_InputType_t iData, OpFM_OutputType_t oData);
+  void writeVelocityData(hid_t h5file, int iTurb, int iTimestep, ExtInfw_InputType_t iData, ExtInfw_OutputType_t oData);
   herr_t closeVelocityDataFile(int nt_global, hid_t velDataFile);
   void backupVelocityDataFile(int curTimeStep, hid_t & velDataFile);
 
@@ -286,8 +286,8 @@ class OpenFAST {
 
   void loadSuperController(const fastInputs & fi);
 
-  void setOutputsToFAST(OpFM_InputType_t cDriver_Input_from_FAST, OpFM_OutputType_t cDriver_Output_to_FAST) ; // An example to set velocities at the Aerodyn nodes
-  void applyVelocityData(int iPrestart, int iTurb, OpFM_OutputType_t cDriver_Output_to_FAST, std::vector<double> & velData) ;
+  void setOutputsToFAST(ExtInfw_InputType_t cDriver_Input_from_FAST, ExtInfw_OutputType_t cDriver_Output_to_FAST) ; // An example to set velocities at the Aerodyn nodes
+  void applyVelocityData(int iPrestart, int iTurb, ExtInfw_OutputType_t cDriver_Output_to_FAST, std::vector<double> & velData) ;
 
 };
 
