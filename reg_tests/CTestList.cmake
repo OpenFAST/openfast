@@ -387,6 +387,7 @@ ifw_regression("ifw_uniform"                                  "inflowwind")
 ifw_regression("ifw_nativeBladed"                             "inflowwind")
 ifw_regression("ifw_BoxExceed"                                "inflowwind")
 ifw_regression("ifw_BoxExceedTwr"                             "inflowwind")
+ifw_regression("ifw_HAWC"                                     "inflowwind")
 
 # Py-InflowWind regression tests
 py_ifw_regression("py_ifw_turbsimff"                          "inflowwind;python")

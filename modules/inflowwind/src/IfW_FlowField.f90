@@ -261,11 +261,11 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
             cycle
          end if
 
-         call Grid4DField_GetVel(FF%Grid4D, Time, Position(:, i), VelocityUVW(:, i), TmpErrStat, TmpErrMsg)
-         if (TmpErrStat >= AbortErrLev) then
-            call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
-            return
-         end if
+            call Grid4DField_GetVel(FF%Grid4D, Time, Position(:, i), VelocityUVW(:, i), TmpErrStat, TmpErrMsg)
+            if (TmpErrStat >= AbortErrLev) then
+               call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+               return
+            end if
       end do
 
    case (Point_FieldType)
@@ -1232,34 +1232,28 @@ contains
       ! In distance, X: InputInfo%PosX - p%InitXPosition - TIME*p%MeanWS
       TimeShifted = real(Time, ReKi) + (G3D%InitXPosition - PosX)*G3D%InvMWS
 
+      ! Get position on T grid
+      T_GRID = TimeShifted*G3D%Rate
+
       ! If field is periodic
       if (G3D%Periodic) then
-         TimeShifted = MODULO(TimeShifted, G3D%TotalTime)
-         ! If TimeShifted is a very small negative number,
-         ! modulo returns the incorrect value due to internal rounding errors.
-         ! See bug report #471
-         if (TimeShifted == G3D%TotalTime) TimeShifted = 0.0_ReKi
+         T_GRID = MODULO(T_GRID, real(G3D%NSteps, ReKi))
       end if
 
-      ! Get position on T grid
-      T_GRID = TimeShifted*G3D%Rate + 1
-
       ! Calculate bounding grid indices
-      IT_LO = floor(T_GRID, IntKi)
-      IT_HI = ceiling(T_GRID, IntKi)
+      IT_LO = floor(T_GRID, IntKi) + 1
+      IT_HI = IT_LO + 1
 
       ! Position location within interval [0,1]
-      DT = T_GRID - aint(T_GRID)
+      DT = 2.0_ReKi*(T_GRID - aint(T_GRID)) - 1.0_ReKi
 
       ! Adjust indices and interpolant
       if (IT_LO >= 1 .and. IT_HI <= G3D%NSteps) then
          ! Point is within grid
-         DT = 2.0_ReKi*DT - 1.0_ReKi
       else if (IT_LO == G3D%NSteps) then
          if (G3D%Periodic) then
             ! Time wraps back to beginning
             IT_HI = 1
-            DT = 2.0_ReKi*DT - 1.0_ReKi
          else if (DT <= GridTol) then
             ! Within tolerance of last time
             IT_HI = IT_LO
@@ -1268,7 +1262,6 @@ contains
             ! Extrapolate
             IT_LO = G3D%NSteps - 1
             IT_HI = G3D%NSteps
-            DT = DT + 1.0_ReKi
          end if
       else
          ! Time exceeds array bounds

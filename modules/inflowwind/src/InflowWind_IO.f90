@@ -2540,8 +2540,8 @@ subroutine Grid3D_ScaleTurbulence(InitInp, Vel, ScaleFactors, ErrStat, ErrMsg)
       iy = (ny + 1)/2 ! integer division
 
       ! compute the actual sigma at the point specified by (iy,iz). (This sigma should be close to 1.)
-      vSum = sum(Vel(:, iy, iz, :), dim=2)
-      vSum2 = sum(Vel(:, iy, iz, :)**2, dim=2)
+      vSum = sum(real(Vel(:, iy, iz, :),R8Ki), dim=2)
+      vSum2 = sum(real(Vel(:, iy, iz, :),R8Ki)**2, dim=2)
       vMean = vSum/nt
       ActualSigma = real(SQRT(ABS((vSum2/nt) - vMean**2)), ReKi)
 
