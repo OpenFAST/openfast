@@ -337,6 +337,7 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
    real(ReKi), optional,   intent(  out) :: k_out     ! k in the induction factors routine
    real(ReKi), optional,   intent(  out) :: kp_out    ! kp in the induction factors routine
    real(ReKi), optional,   intent(  out) :: F_out     ! Tip/hub loss factor
+   real(ReKi), optional,   intent(  out) :: Cx_out, Cy_out !< cn and ct
 
   
    ! Local variables
@@ -354,7 +355,6 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
    real(ReKi)                            :: Cx !< Projected airfoil coefficient used in BET, cn
    real(ReKi)                            :: Cy !< Projected airfoil coefficient used in BET, ct
    real(ReKi)                            :: Cz
-   real(ReKi), optional,   intent(  out) :: Cx_out, Cy_out
    real(ReKi)                            :: dumX,dumY,dumZ, k, kp
    TYPE(AFI_OutputType)                  :: AFI_interp
    
@@ -363,8 +363,12 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
    ResidualVal = 0.0_ReKi
    IsValidSolution = .true.
    
-   k = 0
-   kp = 0
+   ! Optional outputs
+   F  = 1._ReKi
+   k  = 0._ReKi
+   kp = 0._ReKi
+   Cx = 0._ReKi
+   Cy = 0._ReKi
    
    ! make these return values consistent with what is returned in inductionFactors routine:
       ! Set the local version of the induction factors
@@ -449,12 +453,12 @@ subroutine ApplySkewedWakeCorrection(BEM_Mod, SkewMod, yawCorrFactor, F, azimuth
    
    
    ! Skewed wake correction
-      if(BEM_Mod==BEMMod_2D) then
-         chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
-      else
-         chi = (0.6_ReKi*a + 1.0_ReKi)*abs(chi0)
-      endif
-      
+   if(BEM_Mod==BEMMod_2D) then
+      chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
+   else
+      chi = (0.6_ReKi*a + 1.0_ReKi)*abs(chi0)
+   endif
+         
    call MPi2Pi( chi ) ! make sure chi is in [-pi, pi] before testing if it's outside a valid range
       
    if (abs(chi) > piBy2) then
@@ -951,49 +955,48 @@ end subroutine axialInductionFromEmpiricalThrust
 !! At high loading, |k|>kc, a hight thrust correction (2nd order polynomial) is used for "MT"
 !!
 subroutine axialInductionFromGlauertMomentum(chi0, phi, k, F, axInd, H)
-  ! axialInductionFromGlauertMomentum calculates axial induction using Glauert Momentum Theory
-    implicit none
-    real(R8Ki), intent(in) :: chi0
-    real(R8Ki), intent(in) :: k 
-    real(ReKi), intent(in) :: F
-    real(ReKi), intent(in) :: phi
-    real(R8Ki), intent(out):: axInd
-    real(R8Ki), intent(out):: H
-    real(R8Ki)             :: c11, c12, coeffs(5)
-    complex(R8Ki)          :: roots(4)
-    real(R8Ki)             :: ac !< Critical value of the axial induction above which the high-thrust correction is applied
-    real(R8Ki)             :: kc !< Critical value of the k-factor above which the high-thrust correction is applied
-    real(R8Ki)             :: tan_chi0
-    
-    tan_chi0 = min(MaxTanChi0, max(-MaxTanChi0, tan(chi0)))
-    ac = ac_val(chi0)
-    kc = ac / (1.0-ac) *sqrt(1+(tan_chi0/(1-ac))**2)
-    if (abs(k) <= kc) then
-       ! Use Glauert Skew Momentum (Equation 1&2), and solve for equation (3) above
-        c11 = tan_chi0**2
-        c12 = k**2
-        coeffs(5) = 1.0_R8Ki-c12
-        coeffs(4) = 4.0_R8Ki*c12-2.0_R8Ki
-        coeffs(3) = 1.0_R8Ki+c11 -6.0_R8Ki*c12
-        coeffs(2) = 4.0_R8Ki*c12
-        coeffs(1) = -c12
-        
-        call QuarticRoots(coeffs,roots)
-        call sortRoots(roots)
-        if (phi >= 0.0) then
-           if (real(roots(1))<0.0_R8Ki) then
-              ! Will happen when k \in [0,1], we chose the solution of a in [0,1]
-               axInd = real(roots(2))
-           else
-               axInd = real(roots(1))!min(real(roots(1)),real(roots(2)))
-           endif
-        else           
-           axInd = min(real(roots(1)),real(roots(2)))
-        endif
-        H = 1.0_R8Ki
-    else !if (k > kc) then ! High induction/ empirical correction        
-        call axialInductionFromEmpiricalThrust( chi0, phi, k, F, axInd, H, skewConvention=.true., quarticVersion=.true. )           
-    endif  
+   implicit none
+   real(R8Ki), intent(in) :: chi0
+   real(R8Ki), intent(in) :: k 
+   real(ReKi), intent(in) :: F
+   real(ReKi), intent(in) :: phi
+   real(R8Ki), intent(out):: axInd
+   real(R8Ki), intent(out):: H
+   real(R8Ki)             :: c11, c12, coeffs(5)
+   complex(R8Ki)          :: roots(4)
+   real(R8Ki)             :: ac !< Critical value of the axial induction above which the high-thrust correction is applied
+   real(R8Ki)             :: kc !< Critical value of the k-factor above which the high-thrust correction is applied
+   real(R8Ki)             :: tan_chi0
+   
+   tan_chi0 = min(MaxTanChi0, max(-MaxTanChi0, tan(chi0)))
+   ac = ac_val(chi0)
+   kc = ac / (1.0-ac) *sqrt(1+(tan_chi0/(1-ac))**2)
+   if (abs(k) <= kc) then
+      ! Use Glauert Skew Momentum (Equation 1&2), and solve for equation (3) above
+      c11 = tan_chi0**2
+      c12 = k**2
+      coeffs(5) = 1.0_R8Ki-c12
+      coeffs(4) = 4.0_R8Ki*c12-2.0_R8Ki
+      coeffs(3) = 1.0_R8Ki+c11 -6.0_R8Ki*c12
+      coeffs(2) = 4.0_R8Ki*c12
+      coeffs(1) = -c12
+      
+      call QuarticRoots(coeffs,roots)
+      call sortRoots(roots)
+      if (phi >= 0.0) then
+         if (real(roots(1))<0.0_R8Ki) then
+            ! Will happen when k \in [0,1], we chose the solution of a in [0,1]
+            axInd = real(roots(2))
+         else
+            axInd = real(roots(1))!min(real(roots(1)),real(roots(2)))
+         endif
+      else           
+         axInd = min(real(roots(1)),real(roots(2)))
+      endif
+      H = 1.0_R8Ki
+   else !if (k > kc) then ! High induction/ empirical correction        
+      call axialInductionFromEmpiricalThrust( chi0, phi, k, F, axInd, H, skewConvention=.true., quarticVersion=.true. )           
+   endif  
 end subroutine axialInductionFromGlauertMomentum
 
 !> Compute the coefficients of a second order polynomial that extends the Momenutm relationship CT(a) 
@@ -1020,23 +1023,22 @@ subroutine getEmpiricalCoefficients( chi0, F, c0, c1, c2, skewConvention )
    ! Empirical CT = 4*a*(1-a)*F = c2*a^2 + c1*a + c0 for a > a0
    ac = ac_val(chi0) ! critical value above which we extent momentum theory with a 2nd order polynomial
    if (skewConvention) then
-       ! Continuation of Glauert Skew Momentum    CT= 4 a F sqrt( (1-a)^2 + tan(chi)^2 ) 
-       ! Using a second 
-       tanchi2 = (min(MaxTanChi0, max(-MaxTanChi0, tan(chi0))))**2
-       CT_c = 4._R8Ki*F*ac * sqrt( (1._R8Ki-ac)**2 + tanchi2 )                            ! CT(ac)
-       s_c  = 4._R8Ki*F*(1._R8Ki-3*ac+2._R8Ki*ac**2+tanchi2)/sqrt( (1-ac)**2 + tanchi2 )  ! dCT/da(ac) (slope)
-       ! Note: model below may change
-       CT_1 =  2.0_R8Ki + 2.113_R8Ki*tanchi2**0.7635  ! CT(1)
-       CT_1 =  max(CT_1, CT_c + s_c * (1._R8Ki-ac) + 0.001_R8Ki ) ! Make sure c2>0  
+      ! Continuation of Glauert Skew Momentum    CT= 4 a F sqrt( (1-a)^2 + tan(chi)^2 ) 
+      ! Using a second 
+      tanchi2 = (min(MaxTanChi0, max(-MaxTanChi0, tan(chi0))))**2
+      CT_c = 4._R8Ki*F*ac * sqrt( (1._R8Ki-ac)**2 + tanchi2 )                            ! CT(ac)
+      s_c  = 4._R8Ki*F*(1._R8Ki-3*ac+2._R8Ki*ac**2+tanchi2)/sqrt( (1-ac)**2 + tanchi2 )  ! dCT/da(ac) (slope)
+      ! Note: model below may change
+      CT_1 =  2.0_R8Ki + 2.113_R8Ki*tanchi2**0.7635  ! CT(1)
+      CT_1 =  max(CT_1, CT_c + s_c * (1._R8Ki-ac) + 0.001_R8Ki ) ! Make sure c2>0  
    else
-       ! Continuation of Glauert Momentum    CT= 4 a F (1-a)
-       CT_c = 4._R8Ki*F*ac * (1._R8Ki-ac)                                                     ! CT(ac)
-       s_c  = 4._R8Ki*F*(1._R8Ki-2._R8Ki*ac)                                                  ! dCT/da(ac) (slope)
-       ! Note: model below may change
-       CT_1 =  2.0_R8Ki   ! CT(1)
-   
+      ! Continuation of Glauert Momentum    CT= 4 a F (1-a)
+      CT_c = 4._R8Ki*F*ac * (1._R8Ki-ac)                                                     ! CT(ac)
+      s_c  = 4._R8Ki*F*(1._R8Ki-2._R8Ki*ac)                                                  ! dCT/da(ac) (slope)
+      ! Note: model below may change
+      CT_1 =  2.0_R8Ki   ! CT(1)
    endif
-    call secondOrderCoeffC1(ac, s_c, CT_c, CT_1, c0, c1, c2)
+   call secondOrderCoeffC1(ac, s_c, CT_c, CT_1, c0, c1, c2)
    
 end subroutine getEmpiricalCoefficients
 

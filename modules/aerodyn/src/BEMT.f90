@@ -2421,7 +2421,7 @@ subroutine WriteDEBUGValuesToFile(t, u, p, x, xd, z, OtherState, m, AFInfo)
                                              , z%phi(         DEBUG_BLADENODE,DEBUG_BLADE)*R2D & ! remember this does not have any corrections 
                                              , u%chi0, u%omega, u%Un_disk, u%TSR     &
                                              , u%theta(       DEBUG_BLADENODE,DEBUG_BLADE)     &
-                                             , u%psi(                         DEBUG_BLADE)     &
+                                             , u%psi_s(                       DEBUG_BLADE)     &
                                              , u%Vx(          DEBUG_BLADENODE,DEBUG_BLADE)     &
                                              , u%Vy(          DEBUG_BLADENODE,DEBUG_BLADE)     &
                                              , u%Vz(          DEBUG_BLADENODE,DEBUG_BLADE)     &

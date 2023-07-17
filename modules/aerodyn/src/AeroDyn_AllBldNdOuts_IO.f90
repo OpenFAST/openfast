@@ -285,11 +285,6 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
    R_wi => m%orientationAnnulus       ! inertial to without-sweep-pitch-twist or orientation annulus (TODO: deprecate me)
    W2B => p_AD%FVW%Bld2Wings(iRot, :) ! From Wing index to blade index
 
-   !u%BladeMotion(iB)%Orientation(1,:,iNd)
-
-
- 
-
          ! Initialize some things
       ErrMsg = ''
       ErrStat = ErrID_None
@@ -298,7 +293,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          return
       endif
 
-         ! Precalculate the M_ph matrix -- no reason to recalculate for each output
+      ! Precalculate the R_pi matrix -- no reason to recalculate for each output
       do iB=1,p%NumBlades
          psi_hub = TwoPi*(real(iB-1,ReKi))/real(p%NumBlades,ReKi)
          R_ph(1,1:3) = (/ 1.0_ReKi, 0.0_ReKi    , 0.0_ReKi     /)

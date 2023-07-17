@@ -2150,34 +2150,26 @@ subroutine calcCantAngle(f, xi,stencilSize,n,cantAngle)
         if (i.eq.1) then
             fIn = f(1:stencilSize)
             xiIn = xi(1:stencilSize)
-            call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
-            if (info /= 0) return ! use default cantAngle in this case
-            call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
-            if (info /= 0) return ! use default cantAngle in this case
         elseif (i.eq.size(xi)) then
             fIn = f(size(xi)-stencilSize +1:size(xi))
             xiIn = xi(size(xi)-stencilSize+1:size(xi))
-            call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
-            if (info /= 0) return ! use default cantAngle in this case
-            call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
-            if (info /= 0) return ! use default cantAngle in this case
         else
             fIn = f(i-1:i+1)
             xiIn = xi(i-1:i+1)
-            call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
-            if (info /= 0) return ! use default cantAngle in this case
-            call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
-            if (info /= 0) return ! use default cantAngle in this case
         endif
-    
-        cPrime(i) = 0.0
-        fPrime(i) = 0.0
-
-        do j = 1,size(cx)
-            cPrime(i) = cPrime(i) + cx(j)*xiIn(j)
-            fPrime(i) = fPrime(i) + cx(j)*fIn(j)            
-        end do
-        cantAngle(i) = atan2(fPrime(i),cPrime(i))*180_ReKi/pi
+        call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
+        !call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
+        if (info /= 0) then 
+           print*,'Cant Calc failed at i=',i
+        else
+           cPrime(i) = 0.0
+           fPrime(i) = 0.0
+           do j = 1,size(cx)
+               cPrime(i) = cPrime(i) + cx(j)*xiIn(j)
+               fPrime(i) = fPrime(i) + cx(j)*fIn(j)            
+           end do
+           cantAngle(i) = atan2(fPrime(i),cPrime(i))*180_ReKi/pi
+        endif
     end do
     
 end subroutine calcCantAngle

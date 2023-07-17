@@ -4017,6 +4017,8 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
    rMax = 0.0_ReKi
    do k=1,p%numBlades
       
+      ! --- Curvilinear coordinates 
+      ! TODO place this in a function
       InitInp%zHub(k) = TwoNorm( u_AD%BladeRootMotion(k)%Position(:,1) - u_AD%HubMotion%Position(:,1) )  
       !if (EqualRealNos(InitInp%zHub(k),0.0_ReKi) ) &
       !   call SetErrStat( ErrID_Fatal, "zHub for blade "//trim(num2lstr(k))//" is zero.", ErrStat, ErrMsg, RoutineName)
@@ -4029,6 +4031,8 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
       
       InitInp%zTip(k) = InitInp%zLocal(p%NumBlNds,k)
       
+      ! --- Projected radius onto plane normal to x_hat_disk
+      ! Note this is the same as local-polar radial position
       y_hat_disk = u_AD%HubMotion%Orientation(2,:,1)
       z_hat_disk = u_AD%HubMotion%Orientation(3,:,1)
       
