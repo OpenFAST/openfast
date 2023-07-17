@@ -99,8 +99,8 @@ subroutine FAST_Sizes(iTurb, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, dt
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen) 
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ChannelNames_c(ChanLen*MAXOUTPUTS+1)
-   REAL(C_DOUBLE), OPTIONAL, INTENT(IN   ) :: TMax      
-   REAL(C_DOUBLE), OPTIONAL, INTENT(IN   ) :: InitInpAry(MAXInitINPUTS) 
+   REAL(C_DOUBLE),OPTIONAL,INTENT(IN   ) :: TMax      
+   REAL(C_DOUBLE),OPTIONAL,INTENT(IN   ) :: InitInpAry(MAXInitINPUTS) 
    
    ! local
    CHARACTER(IntfStrLen)               :: InputFileName   
@@ -507,36 +507,36 @@ subroutine FAST_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, NumOuts_c, d
       
 end subroutine FAST_Restart 
 !==================================================================================================================================
-subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, NumSC2Ctrl, NumCtrl2SC, InitSCOutputsGlob, InitSCOutputsTurbine, NumActForcePtsBlade, NumActForcePtsTower, TurbPosn, AbortErrLev_c, dt_c, NumBl_c, NumBlElem_c, NodeClusterType_c, &
-                          OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Init')
+subroutine FAST_ExtInfw_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, NumSC2Ctrl, NumCtrl2SC, InitSCOutputsGlob, InitSCOutputsTurbine, NumActForcePtsBlade, NumActForcePtsTower, TurbPosn, AbortErrLev_c, dt_c, NumBl_c, NumBlElem_c, NodeClusterType_c, &
+                          ExtInfw_Input_from_FAST, ExtInfw_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_ExtInfw_Init')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Init
-!GCC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Init
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_ExtInfw_Init
+!GCC$ ATTRIBUTES DLLEXPORT :: FAST_ExtInfw_Init
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
-   REAL(C_DOUBLE),         INTENT(IN   ) :: TMax      
-   CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: InputFileName_c(IntfStrLen)      
-   INTEGER(C_INT),         INTENT(IN   ) :: TurbID           ! Need not be same as iTurb
-   INTEGER(C_INT),         INTENT(IN   ) :: NumSC2CtrlGlob   ! Supercontroller global outputs = controller global inputs   
-   INTEGER(C_INT),         INTENT(IN   ) :: NumSC2Ctrl       ! Supercontroller outputs = controller inputs
-   INTEGER(C_INT),         INTENT(IN   ) :: NumCtrl2SC       ! controller outputs = Supercontroller inputs
-   REAL(C_FLOAT),          INTENT(IN   ) :: InitScOutputsGlob (*) ! Initial Supercontroller global outputs = controller inputs
-   REAL(C_FLOAT),          INTENT(IN   ) :: InitScOutputsTurbine (*) ! Initial Supercontroller turbine specific outputs = controller inputs
-   INTEGER(C_INT),         INTENT(IN   ) :: NumActForcePtsBlade ! number of actuator line force points in blade
-   INTEGER(C_INT),         INTENT(IN   ) :: NumActForcePtsTower ! number of actuator line force points in tower
-   INTEGER(C_INT),         INTENT(IN    ):: NodeClusterType_c
-   REAL(C_FLOAT),          INTENT(IN   ) :: TurbPosn(3)      
-   INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c      
-   REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c      
-   INTEGER(C_INT),         INTENT(  OUT) :: NumBl_c      
-   INTEGER(C_INT),         INTENT(  OUT) :: NumBlElem_c      
-   TYPE(OpFM_InputType_C), INTENT(INOUT) :: OpFM_Input_from_FAST  !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
-   TYPE(OpFM_OutputType_C),INTENT(INOUT) :: OpFM_Output_to_FAST   !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
+   INTEGER(C_INT),            INTENT(IN   ) :: iTurb            ! Turbine number 
+   REAL(C_DOUBLE),            INTENT(IN   ) :: TMax      
+   CHARACTER(KIND=C_CHAR),    INTENT(IN   ) :: InputFileName_c(IntfStrLen)      
+   INTEGER(C_INT),            INTENT(IN   ) :: TurbID           ! Need not be same as iTurb
+   INTEGER(C_INT),            INTENT(IN   ) :: NumSC2CtrlGlob   ! Supercontroller global outputs = controller global inputs   
+   INTEGER(C_INT),            INTENT(IN   ) :: NumSC2Ctrl       ! Supercontroller outputs = controller inputs
+   INTEGER(C_INT),            INTENT(IN   ) :: NumCtrl2SC       ! controller outputs = Supercontroller inputs
+   REAL(C_FLOAT),             INTENT(IN   ) :: InitScOutputsGlob (*) ! Initial Supercontroller global outputs = controller inputs
+   REAL(C_FLOAT),             INTENT(IN   ) :: InitScOutputsTurbine (*) ! Initial Supercontroller turbine specific outputs = controller inputs
+   INTEGER(C_INT),            INTENT(IN   ) :: NumActForcePtsBlade ! number of actuator line force points in blade
+   INTEGER(C_INT),            INTENT(IN   ) :: NumActForcePtsTower ! number of actuator line force points in tower
+   INTEGER(C_INT),            INTENT(IN    ):: NodeClusterType_c
+   REAL(C_FLOAT),             INTENT(IN   ) :: TurbPosn(3)      
+   INTEGER(C_INT),            INTENT(  OUT) :: AbortErrLev_c      
+   REAL(C_DOUBLE),            INTENT(  OUT) :: dt_c      
+   INTEGER(C_INT),            INTENT(  OUT) :: NumBl_c      
+   INTEGER(C_INT),            INTENT(  OUT) :: NumBlElem_c      
+   TYPE(ExtInfw_InputType_C), INTENT(INOUT) :: ExtInfw_Input_from_FAST  !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
+   TYPE(ExtInfw_OutputType_C),INTENT(INOUT) :: ExtInfw_Output_to_FAST   !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
    TYPE(SC_DX_InputType_C),   INTENT(INOUT) :: SC_DX_Input_from_FAST
    TYPE(SC_DX_OutputType_C),  INTENT(INOUT) :: SC_DX_Output_to_FAST
-   INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
-   CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen) 
+   INTEGER(C_INT),            INTENT(  OUT) :: ErrStat_c      
+   CHARACTER(KIND=C_CHAR),    INTENT(  OUT) :: ErrMsg_c(IntfStrLen) 
       
    ! local
    CHARACTER(IntfStrLen)                 :: InputFileName   
@@ -589,7 +589,7 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
 
    CALL FAST_InitializeAll_T( t_initial, iTurb, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
 
-      ! set values for return to OpenFOAM
+      ! set values for return to ExternalInflow
    AbortErrLev_c = AbortErrLev   
    dt_c          = Turbine(iTurb)%p_FAST%dt
    ErrStat_c     = ErrStat
@@ -597,14 +597,14 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
       
    IF ( ErrStat >= AbortErrLev ) THEN
-      CALL WrScr( "Error in FAST_OpFM_Init:FAST_InitializeAll_T" // TRIM(ErrMsg) )
+      CALL WrScr( "Error in FAST_ExtInfw_Init:FAST_InitializeAll_T" // TRIM(ErrMsg) )
       RETURN
    END IF
    
-   call SetOpenFOAM_pointers(iTurb, OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST)
+   call SetExternalInflow_pointers(iTurb, ExtInfw_Input_from_FAST, ExtInfw_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST)
                         
-   ! 7-Sep-2015: Sang wants these integers for the OpenFOAM mapping, which is tied to the AeroDyn nodes. FAST doesn't restrict the number of nodes on each 
-   ! blade mesh to be the same, so if this DOES ever change, we'll need to make OpenFOAM less tied to the AeroDyn mapping.
+   ! 7-Sep-2015: Sang wants these integers for the ExternalInflow mapping, which is tied to the AeroDyn nodes. FAST doesn't restrict the number of nodes on each 
+   ! blade mesh to be the same, so if this DOES ever change, we'll need to make ExternalInflow less tied to the AeroDyn mapping.
    IF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD14) THEN   
       NumBl_c     = SIZE(Turbine(iTurb)%AD14%Input(1)%InputMarkers)
       NumBlElem_c = Turbine(iTurb)%AD14%Input(1)%InputMarkers(1)%Nnodes
@@ -625,7 +625,7 @@ contains
       FAILED = ErrStat >= AbortErrLev
       
       IF (ErrStat > 0) THEN
-         CALL WrScr( "Error in FAST_OpFM_Init:FAST_InitializeAll_T" // TRIM(ErrMsg) )
+         CALL WrScr( "Error in FAST_ExtInfw_Init:FAST_InitializeAll_T" // TRIM(ErrMsg) )
          
          IF ( FAILED ) THEN
                
@@ -643,11 +643,11 @@ contains
    END FUNCTION FAILED
 end subroutine   
 !==================================================================================================================================
-subroutine FAST_OpFM_Solution0(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Solution0')
+subroutine FAST_ExtInfw_Solution0(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_ExtInfw_Solution0')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Solution0
-!GCC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Solution0
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_ExtInfw_Solution0
+!GCC$ ATTRIBUTES DLLEXPORT :: FAST_ExtInfw_Solution0
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
@@ -659,34 +659,34 @@ subroutine FAST_OpFM_Solution0(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_O
 !      CALL SC_SetInputs(Turbine(iTurb)%p_FAST, Turbine(iTurb)%SrvD%y, Turbine(iTurb)%SC_DX, ErrStat, ErrMsg)
 !   end if
    
-      ! set values for return to OpenFOAM
+      ! set values for return to ExternalInflow
    ErrStat_c     = ErrStat
    ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
    ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
    
                         
-end subroutine FAST_OpFM_Solution0
+end subroutine FAST_ExtInfw_Solution0
 !==================================================================================================================================
-subroutine FAST_OpFM_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, numblades_c, numElementsPerBlade_c, n_t_global_c, &
-                      OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Restart')
+subroutine FAST_ExtInfw_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, numblades_c, numElementsPerBlade_c, n_t_global_c, &
+                      ExtInfw_Input_from_FAST, ExtInfw_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_ExtInfw_Restart')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Restart
-!GCC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Restart
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_ExtInfw_Restart
+!GCC$ ATTRIBUTES DLLEXPORT :: FAST_ExtInfw_Restart
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
-   CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: CheckpointRootName_c(IntfStrLen)      
-   INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c      
-   INTEGER(C_INT),         INTENT(  OUT) :: numblades_c
-   INTEGER(C_INT),         INTENT(  OUT) :: numElementsPerBlade_c
-   REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c      
-   INTEGER(C_INT),         INTENT(  OUT) :: n_t_global_c      
-   TYPE(OpFM_InputType_C), INTENT(INOUT) :: OpFM_Input_from_FAST  !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
-   TYPE(OpFM_OutputType_C),INTENT(INOUT) :: OpFM_Output_to_FAST   !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
+   INTEGER(C_INT),            INTENT(IN   ) :: iTurb            ! Turbine number 
+   CHARACTER(KIND=C_CHAR),    INTENT(IN   ) :: CheckpointRootName_c(IntfStrLen)      
+   INTEGER(C_INT),            INTENT(  OUT) :: AbortErrLev_c      
+   INTEGER(C_INT),            INTENT(  OUT) :: numblades_c
+   INTEGER(C_INT),            INTENT(  OUT) :: numElementsPerBlade_c
+   REAL(C_DOUBLE),            INTENT(  OUT) :: dt_c      
+   INTEGER(C_INT),            INTENT(  OUT) :: n_t_global_c      
+   TYPE(ExtInfw_InputType_C), INTENT(INOUT) :: ExtInfw_Input_from_FAST  !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
+   TYPE(ExtInfw_OutputType_C),INTENT(INOUT) :: ExtInfw_Output_to_FAST   !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
    TYPE(SC_DX_InputType_C),   INTENT(INOUT) :: SC_DX_Input_from_FAST
    TYPE(SC_DX_OutputType_C),  INTENT(INOUT) :: SC_DX_Output_to_FAST
-   INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
-   CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen) 
+   INTEGER(C_INT),            INTENT(  OUT) :: ErrStat_c      
+   CHARACTER(KIND=C_CHAR),    INTENT(  OUT) :: ErrMsg_c(IntfStrLen) 
    
    ! local variables
    INTEGER(C_INT)                        :: NumOuts_c      
@@ -734,58 +734,58 @@ subroutine FAST_OpFM_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, n
 
    if (ErrStat >= AbortErrLev) return
    
-   call SetOpenFOAM_pointers(iTurb, OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST)
+   call SetExternalInflow_pointers(iTurb, ExtInfw_Input_from_FAST, ExtInfw_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST)
 
-end subroutine FAST_OpFM_Restart
+end subroutine FAST_ExtInfw_Restart
 !==================================================================================================================================
-subroutine SetOpenFOAM_pointers(iTurb, OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST)
+subroutine SetExternalInflow_pointers(iTurb, ExtInfw_Input_from_FAST, ExtInfw_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST)
 
    IMPLICIT NONE
    INTEGER(C_INT),            INTENT(IN   ) :: iTurb            ! Turbine number 
-   TYPE(OpFM_InputType_C),    INTENT(INOUT) :: OpFM_Input_from_FAST
-   TYPE(OpFM_OutputType_C),   INTENT(INOUT) :: OpFM_Output_to_FAST
+   TYPE(ExtInfw_InputType_C), INTENT(INOUT) :: ExtInfw_Input_from_FAST
+   TYPE(ExtInfw_OutputType_C),INTENT(INOUT) :: ExtInfw_Output_to_FAST
    TYPE(SC_DX_InputType_C),   INTENT(INOUT) :: SC_DX_Input_from_FAST
    TYPE(SC_DX_OutputType_C),  INTENT(INOUT) :: SC_DX_Output_to_FAST
 
-   OpFM_Input_from_FAST%pxVel_Len = Turbine(iTurb)%OpFM%u%c_obj%pxVel_Len; OpFM_Input_from_FAST%pxVel = Turbine(iTurb)%OpFM%u%c_obj%pxVel
-   OpFM_Input_from_FAST%pyVel_Len = Turbine(iTurb)%OpFM%u%c_obj%pyVel_Len; OpFM_Input_from_FAST%pyVel = Turbine(iTurb)%OpFM%u%c_obj%pyVel
-   OpFM_Input_from_FAST%pzVel_Len = Turbine(iTurb)%OpFM%u%c_obj%pzVel_Len; OpFM_Input_from_FAST%pzVel = Turbine(iTurb)%OpFM%u%c_obj%pzVel
-   OpFM_Input_from_FAST%pxForce_Len = Turbine(iTurb)%OpFM%u%c_obj%pxForce_Len; OpFM_Input_from_FAST%pxForce = Turbine(iTurb)%OpFM%u%c_obj%pxForce
-   OpFM_Input_from_FAST%pyForce_Len = Turbine(iTurb)%OpFM%u%c_obj%pyForce_Len; OpFM_Input_from_FAST%pyForce = Turbine(iTurb)%OpFM%u%c_obj%pyForce
-   OpFM_Input_from_FAST%pzForce_Len = Turbine(iTurb)%OpFM%u%c_obj%pzForce_Len; OpFM_Input_from_FAST%pzForce = Turbine(iTurb)%OpFM%u%c_obj%pzForce
-   OpFM_Input_from_FAST%xdotForce_Len = Turbine(iTurb)%OpFM%u%c_obj%xdotForce_Len; OpFM_Input_from_FAST%xdotForce = Turbine(iTurb)%OpFM%u%c_obj%xdotForce
-   OpFM_Input_from_FAST%ydotForce_Len = Turbine(iTurb)%OpFM%u%c_obj%ydotForce_Len; OpFM_Input_from_FAST%ydotForce = Turbine(iTurb)%OpFM%u%c_obj%ydotForce
-   OpFM_Input_from_FAST%zdotForce_Len = Turbine(iTurb)%OpFM%u%c_obj%zdotForce_Len; OpFM_Input_from_FAST%zdotForce = Turbine(iTurb)%OpFM%u%c_obj%zdotForce
-   OpFM_Input_from_FAST%pOrientation_Len = Turbine(iTurb)%OpFM%u%c_obj%pOrientation_Len; OpFM_Input_from_FAST%pOrientation = Turbine(iTurb)%OpFM%u%c_obj%pOrientation
-   OpFM_Input_from_FAST%fx_Len = Turbine(iTurb)%OpFM%u%c_obj%fx_Len; OpFM_Input_from_FAST%fx = Turbine(iTurb)%OpFM%u%c_obj%fx
-   OpFM_Input_from_FAST%fy_Len = Turbine(iTurb)%OpFM%u%c_obj%fy_Len; OpFM_Input_from_FAST%fy = Turbine(iTurb)%OpFM%u%c_obj%fy
-   OpFM_Input_from_FAST%fz_Len = Turbine(iTurb)%OpFM%u%c_obj%fz_Len; OpFM_Input_from_FAST%fz = Turbine(iTurb)%OpFM%u%c_obj%fz
-   OpFM_Input_from_FAST%momentx_Len = Turbine(iTurb)%OpFM%u%c_obj%momentx_Len; OpFM_Input_from_FAST%momentx = Turbine(iTurb)%OpFM%u%c_obj%momentx
-   OpFM_Input_from_FAST%momenty_Len = Turbine(iTurb)%OpFM%u%c_obj%momenty_Len; OpFM_Input_from_FAST%momenty = Turbine(iTurb)%OpFM%u%c_obj%momenty
-   OpFM_Input_from_FAST%momentz_Len = Turbine(iTurb)%OpFM%u%c_obj%momentz_Len; OpFM_Input_from_FAST%momentz = Turbine(iTurb)%OpFM%u%c_obj%momentz
-   OpFM_Input_from_FAST%forceNodesChord_Len = Turbine(iTurb)%OpFM%u%c_obj%forceNodesChord_Len; OpFM_Input_from_FAST%forceNodesChord = Turbine(iTurb)%OpFM%u%c_obj%forceNodesChord
+   ExtInfw_Input_from_FAST%pxVel_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pxVel_Len; ExtInfw_Input_from_FAST%pxVel = Turbine(iTurb)%ExtInfw%u%c_obj%pxVel
+   ExtInfw_Input_from_FAST%pyVel_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pyVel_Len; ExtInfw_Input_from_FAST%pyVel = Turbine(iTurb)%ExtInfw%u%c_obj%pyVel
+   ExtInfw_Input_from_FAST%pzVel_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pzVel_Len; ExtInfw_Input_from_FAST%pzVel = Turbine(iTurb)%ExtInfw%u%c_obj%pzVel
+   ExtInfw_Input_from_FAST%pxForce_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pxForce_Len; ExtInfw_Input_from_FAST%pxForce = Turbine(iTurb)%ExtInfw%u%c_obj%pxForce
+   ExtInfw_Input_from_FAST%pyForce_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pyForce_Len; ExtInfw_Input_from_FAST%pyForce = Turbine(iTurb)%ExtInfw%u%c_obj%pyForce
+   ExtInfw_Input_from_FAST%pzForce_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pzForce_Len; ExtInfw_Input_from_FAST%pzForce = Turbine(iTurb)%ExtInfw%u%c_obj%pzForce
+   ExtInfw_Input_from_FAST%xdotForce_Len = Turbine(iTurb)%ExtInfw%u%c_obj%xdotForce_Len; ExtInfw_Input_from_FAST%xdotForce = Turbine(iTurb)%ExtInfw%u%c_obj%xdotForce
+   ExtInfw_Input_from_FAST%ydotForce_Len = Turbine(iTurb)%ExtInfw%u%c_obj%ydotForce_Len; ExtInfw_Input_from_FAST%ydotForce = Turbine(iTurb)%ExtInfw%u%c_obj%ydotForce
+   ExtInfw_Input_from_FAST%zdotForce_Len = Turbine(iTurb)%ExtInfw%u%c_obj%zdotForce_Len; ExtInfw_Input_from_FAST%zdotForce = Turbine(iTurb)%ExtInfw%u%c_obj%zdotForce
+   ExtInfw_Input_from_FAST%pOrientation_Len = Turbine(iTurb)%ExtInfw%u%c_obj%pOrientation_Len; ExtInfw_Input_from_FAST%pOrientation = Turbine(iTurb)%ExtInfw%u%c_obj%pOrientation
+   ExtInfw_Input_from_FAST%fx_Len = Turbine(iTurb)%ExtInfw%u%c_obj%fx_Len; ExtInfw_Input_from_FAST%fx = Turbine(iTurb)%ExtInfw%u%c_obj%fx
+   ExtInfw_Input_from_FAST%fy_Len = Turbine(iTurb)%ExtInfw%u%c_obj%fy_Len; ExtInfw_Input_from_FAST%fy = Turbine(iTurb)%ExtInfw%u%c_obj%fy
+   ExtInfw_Input_from_FAST%fz_Len = Turbine(iTurb)%ExtInfw%u%c_obj%fz_Len; ExtInfw_Input_from_FAST%fz = Turbine(iTurb)%ExtInfw%u%c_obj%fz
+   ExtInfw_Input_from_FAST%momentx_Len = Turbine(iTurb)%ExtInfw%u%c_obj%momentx_Len; ExtInfw_Input_from_FAST%momentx = Turbine(iTurb)%ExtInfw%u%c_obj%momentx
+   ExtInfw_Input_from_FAST%momenty_Len = Turbine(iTurb)%ExtInfw%u%c_obj%momenty_Len; ExtInfw_Input_from_FAST%momenty = Turbine(iTurb)%ExtInfw%u%c_obj%momenty
+   ExtInfw_Input_from_FAST%momentz_Len = Turbine(iTurb)%ExtInfw%u%c_obj%momentz_Len; ExtInfw_Input_from_FAST%momentz = Turbine(iTurb)%ExtInfw%u%c_obj%momentz
+   ExtInfw_Input_from_FAST%forceNodesChord_Len = Turbine(iTurb)%ExtInfw%u%c_obj%forceNodesChord_Len; ExtInfw_Input_from_FAST%forceNodesChord = Turbine(iTurb)%ExtInfw%u%c_obj%forceNodesChord
 
    if (Turbine(iTurb)%p_FAST%UseSC) then
       SC_DX_Input_from_FAST%toSC_Len = Turbine(iTurb)%SC_DX%u%c_obj%toSC_Len
       SC_DX_Input_from_FAST%toSC     = Turbine(iTurb)%SC_DX%u%c_obj%toSC
    end if
 
-   OpFM_Output_to_FAST%u_Len   = Turbine(iTurb)%OpFM%y%c_obj%u_Len;  OpFM_Output_to_FAST%u = Turbine(iTurb)%OpFM%y%c_obj%u
-   OpFM_Output_to_FAST%v_Len   = Turbine(iTurb)%OpFM%y%c_obj%v_Len;  OpFM_Output_to_FAST%v = Turbine(iTurb)%OpFM%y%c_obj%v
-   OpFM_Output_to_FAST%w_Len   = Turbine(iTurb)%OpFM%y%c_obj%w_Len;  OpFM_Output_to_FAST%w = Turbine(iTurb)%OpFM%y%c_obj%w
+   ExtInfw_Output_to_FAST%u_Len   = Turbine(iTurb)%ExtInfw%y%c_obj%u_Len;  ExtInfw_Output_to_FAST%u = Turbine(iTurb)%ExtInfw%y%c_obj%u
+   ExtInfw_Output_to_FAST%v_Len   = Turbine(iTurb)%ExtInfw%y%c_obj%v_Len;  ExtInfw_Output_to_FAST%v = Turbine(iTurb)%ExtInfw%y%c_obj%v
+   ExtInfw_Output_to_FAST%w_Len   = Turbine(iTurb)%ExtInfw%y%c_obj%w_Len;  ExtInfw_Output_to_FAST%w = Turbine(iTurb)%ExtInfw%y%c_obj%w
 
    if (Turbine(iTurb)%p_FAST%UseSC) then
       SC_DX_Output_to_FAST%fromSC_Len = Turbine(iTurb)%SC_DX%y%c_obj%fromSC_Len
       SC_DX_Output_to_FAST%fromSC     = Turbine(iTurb)%SC_DX%y%c_obj%fromSC
    end if
 
-end subroutine SetOpenFOAM_pointers
+end subroutine SetExternalInflow_pointers
 !==================================================================================================================================
-subroutine FAST_OpFM_Step(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Step')
+subroutine FAST_ExtInfw_Step(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_ExtInfw_Step')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Step
-!GCC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Step
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_ExtInfw_Step
+!GCC$ ATTRIBUTES DLLEXPORT :: FAST_ExtInfw_Step
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
@@ -822,6 +822,6 @@ subroutine FAST_OpFM_Step(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_S
    END IF
    
       
-end subroutine FAST_OpFM_Step 
+end subroutine FAST_ExtInfw_Step 
 !==================================================================================================================================   
 END MODULE FAST_Data

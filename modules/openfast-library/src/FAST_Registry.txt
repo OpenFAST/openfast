@@ -17,11 +17,11 @@ usefrom	ServoDyn_Registry.txt
 usefrom	Registry-AD14.txt
 usefrom	AeroDyn_Registry.txt
 usefrom	SubDyn_Registry.txt
-usefrom SeaState.txt
+usefrom	SeaState.txt
 usefrom	HydroDyn.txt
 usefrom	IceFloe_FASTRegistry.inp
 usefrom	InflowWind.txt
-usefrom	OpenFOAM_Registry.txt
+usefrom	ExternalInflow_Registry.txt
 usefrom	SC_DataEx_Registry.txt
 usefrom	Registry_IceDyn.txt
 usefrom	FEAM_Registry.txt
@@ -39,7 +39,7 @@ param	FAST	-	INTEGER	Module_Unknown	-	-1	-	"Unknown"	-
 param	^	-	INTEGER	Module_None	-	0	-	"No module selected"	-
 param	^	-	INTEGER	Module_Glue	-	1	-	"Glue code"	-
 param	^	-	INTEGER	Module_IfW	-	2	-	"InflowWind"	-
-param	^	-	INTEGER	Module_OpFM	-	3	-	"OpenFOAM"	-
+param	^	-	INTEGER	Module_ExtInfw	-	3		"ExternalInflow"	-
 param	^	-	INTEGER	Module_ED	-	4	-	"ElastoDyn"	-
 param	^	-	INTEGER	Module_BD	-	5	-	"BeamDyn"	-
 param	^	-	INTEGER	Module_AD14	-	6	-	"AeroDyn14"	-
@@ -110,7 +110,7 @@ typedef	^	FAST_ParameterType	IntKi	SizeJac_Opt1	{9}	-	-	"(1)=size of matrix; (2)
 typedef	^	FAST_ParameterType	IntKi	SolveOption	-	-	-	"Switch to determine which solve option we are going to use (see Solve_FullOpt1, etc)"	-
 # Feature switches and flags:
 typedef	^	FAST_ParameterType	IntKi	CompElast	-	-	-	"Compute blade loads (switch) {Module_ED; Module_BD}"	-
-typedef	^	FAST_ParameterType	IntKi	CompInflow	-	-	-	"Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_OpFM}"	-
+typedef	^	FAST_ParameterType	IntKi	CompInflow	-	-	-	"Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_ExtInfw}"	-
 typedef	^	FAST_ParameterType	IntKi	CompAero	-	-	-	"Compute aerodynamic loads (switch) {Module_None; Module_AD14; Module_AD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompServo	-	-	-	"Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompSeaSt   -	-	-	"Compute sea states; wave kinematics (switch) {Module_None; Module_SeaSt}"	-
@@ -235,7 +235,7 @@ typedef   ^      ^                   InflowWind_DiscreteStateType          xd_If
 typedef   ^      ^                   InflowWind_ConstraintStateType         z_IfW     {:}    -   -   "Constraint states"
 typedef   ^      ^                   InflowWind_OtherStateType        OtherSt_IfW     {:}    -   -   "Other states"
 typedef   ^      ^                   InflowWind_InputType                   u_IfW     {:}    -   -   "System inputs"
-# ..... No OpenFOAM integration data .......................................................................................................
+# ..... No ExternalInflow integration data .......................................................................................................
 # ..... SubDyn OP data .......................................................................................................
 typedef   FAST   FAST_LinStateSave   SD_ContinuousStateType                 x_SD      {:}    -   -   "Continuous states"
 typedef   ^      ^                   SD_DiscreteStateType                  xd_SD      {:}    -   -   "Discrete states"
@@ -464,11 +464,11 @@ typedef	^	^	InflowWind_OutputType	y_interp	-	-	-	"interpolated system outputs fo
 typedef	^	^	InflowWind_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
-# ..... OpenFOAM integration data .......................................................................................................
-typedef	FAST	OpenFOAM_Data	OpFM_InputType	u	-	-	-	"System inputs"
-typedef	^	^	OpFM_OutputType	y	-	-	-	"System outputs"
-typedef	^	^	OpFM_ParameterType	p	-	-	-	"Parameters"
-typedef	^	^	OpFM_MiscVarType	m	-	-	-	"Parameters"
+# ..... ExternalInflow integration data .......................................................................................................
+typedef	FAST	ExternalInflow_Data	ExtInfw_InputType	u	-	-	-	"System inputs"
+typedef	^	^	ExtInfw_OutputType	y	-	-	-	"System outputs"
+typedef	^	^	ExtInfw_ParameterType	p	-	-	-	"Parameters"
+typedef	^	^	ExtInfw_MiscVarType	m	-	-	-	"Parameters"
 
 # ..... SuperController integration data .......................................................................................................
 typedef	FAST	SCDataEx_Data	SC_DX_InputType	u	-	-	-	"System inputs"
@@ -711,8 +711,8 @@ typedef   ^   FAST_InitData    AD_InitInputType             InData_AD       -  -
 typedef   ^   FAST_InitData    AD_InitOutputType           OutData_AD       -  -  -  "AD Initialization output data"
 typedef   ^   FAST_InitData    InflowWind_InitInputType     InData_IfW      -  -  -  "IfW Initialization input data"
 typedef   ^   FAST_InitData    InflowWind_InitOutputType   OutData_IfW      -  -  -  "IfW Initialization output data"
-typedef   ^   FAST_InitData    OpFM_InitInputType           InData_OpFM     -  -  -  "OpFM Initialization input data"
-typedef   ^   FAST_InitData    OpFM_InitOutputType         OutData_OpFM     -  -  -  "OpFM Initialization output data"
+typedef   ^   FAST_InitData    ExtInfw_InitInputType        InData_ExtInfw     -  -  -  "ExtInfw Initialization input data"
+typedef   ^   FAST_InitData    ExtInfw_InitOutputType      OutData_ExtInfw     -  -  -  "ExtInfw Initialization output data"
 typedef   ^   FAST_InitData    SeaSt_InitInputType          InData_SeaSt    -  -  -  "SeaSt Initialization input data"
 typedef   ^   FAST_InitData    SeaSt_InitOutputType        OutData_SeaSt    -  -  -  "SeaSt Initialization output data"
 typedef   ^   FAST_InitData    HydroDyn_InitInputType       InData_HD       -  -  -  "HD Initialization input data"
@@ -754,7 +754,7 @@ typedef	^	FAST_ExternInitType	ReKi	windGrid_pZero	3	-	-	"fixed position of the X
 typedef	^	FAST_ExternInitType	CHARACTER(1024)	RootName	-	-	-	"Root name of FAST output files (overrides normal operation)"	-
 typedef	^	FAST_ExternInitType	IntKi	NumActForcePtsBlade	-	-	-	"number of actuator line force points in blade"	-
 typedef	^	FAST_ExternInitType	IntKi	NumActForcePtsTower	-	-	-	"number of actuator line force points in tower"	-
-typedef ^       FAST_ExternInitType     IntKi NodeClusterType -       -       -       "Node clustering for actuator line (0 - Uniform, 1 - Non-uniform clustered towards tip)"   -
+typedef	^	FAST_ExternInitType	IntKi	NodeClusterType -       -       -       "Node clustering for actuator line (0 - Uniform, 1 - Non-uniform clustered towards tip)"   -
 
 # ..... FAST Turbine Data (one realization) .......................................................................................................
 typedef	^	FAST_TurbineType	IntKi	TurbID	-	1	-	"Turbine ID Number"	-
@@ -768,7 +768,7 @@ typedef	^	FAST_TurbineType	ServoDyn_Data	SrvD	-	-	-	"Data for the ServoDyn modul
 typedef	^	FAST_TurbineType	AeroDyn_Data	AD	-	-	-	"Data for the AeroDyn module"	-
 typedef	^	FAST_TurbineType	AeroDyn14_Data	AD14	-	-	-	"Data for the AeroDyn14 module"	-
 typedef	^	FAST_TurbineType	InflowWind_Data	IfW	-	-	-	"Data for InflowWind module"	-
-typedef	^	FAST_TurbineType	OpenFOAM_Data	OpFM	-	-	-	"Data for OpenFOAM integration module"	-
+typedef	^	FAST_TurbineType	ExternalInflow_Data	ExtInfw	-	-	-	"Data for ExternalInflow integration module"	-
 typedef	^	FAST_TurbineType	SCDataEx_Data	SC_DX	-	-	-	"Data for SuperController integration module"	-
 typedef	^	FAST_TurbineType	SeaState_Data	SeaSt	-	-	-	"Data for the SeaState module"	-
 typedef	^	FAST_TurbineType	HydroDyn_Data	HD	-	-	-	"Data for the HydroDyn module"	-

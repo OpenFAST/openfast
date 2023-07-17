@@ -192,7 +192,7 @@ set(OPENFAST_MODULES
   map
   turbsim
   supercontroller
-  openfoam
+  externalinflow
   openfast-library
 )
 
