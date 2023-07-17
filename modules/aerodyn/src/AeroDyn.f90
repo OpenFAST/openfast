@@ -4646,13 +4646,16 @@ FUNCTION CalculateTowerInfluence(p, xbar_in, ybar, zbar, W_tower, TwrCd, TwrTI) 
          v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom
 
       elseif (p%TwrPotent == TwrPotent_Bak) then
-         xbar = xbar + 0.1
+         ! Reference: Bak, Madsen, Johansen (2001): Influence from Blade-Tower Interaction on Fatigue Loads and Dynamics (poster);
+         !            Proceedings: EWEC'01; Copenhagen (DK)
+         xbar = xbar + 0.1 ! offset added as part of the original model of Bak et al.
          denom = (xbar**2 + ybar**2)**2
          u_TwrPotent = ( -1.0*xbar**2 + ybar**2 ) / denom
          v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom
          denom = TwoPi*(xbar**2 + ybar**2)
          u_TwrPotent = u_TwrPotent + TwrCd*xbar / denom
          v_TwrPotent = v_TwrPotent + TwrCd*ybar / denom
+         xbar = xbar - 0.1 ! removing offset
                
       end if
    end if
