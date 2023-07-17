@@ -35,108 +35,145 @@ MODULE AeroDyn_AllBldNdOuts_IO
 
      ! Blade:
 
-   INTEGER(IntKi), PARAMETER      :: BldNd_VUndx     =  1
-   INTEGER(IntKi), PARAMETER      :: BldNd_VUndy     =  2
-   INTEGER(IntKi), PARAMETER      :: BldNd_VUndz     =  3
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vundxi    =  4
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vundyi    =  5
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vundzi    =  6
-   INTEGER(IntKi), PARAMETER      :: BldNd_VDisx     =  7
-   INTEGER(IntKi), PARAMETER      :: BldNd_VDisy     =  8
-   INTEGER(IntKi), PARAMETER      :: BldNd_VDisz     =  9
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vdisxi    = 10
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vdisyi    = 11
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vdiszi    = 12
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vdisxh    = 13
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vdisyh    = 14
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vdiszh    = 15
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vdisxp    = 16
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vdisyp    = 17
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vdiszp    = 18
-   INTEGER(IntKi), PARAMETER      :: BldNd_STVx      = 19
-   INTEGER(IntKi), PARAMETER      :: BldNd_STVy      = 20
-   INTEGER(IntKi), PARAMETER      :: BldNd_STVz      = 21
-   INTEGER(IntKi), PARAMETER      :: BldNd_STVxi     = 22
-   INTEGER(IntKi), PARAMETER      :: BldNd_STVyi     = 23
-   INTEGER(IntKi), PARAMETER      :: BldNd_STVzi     = 24
-   INTEGER(IntKi), PARAMETER      :: BldNd_STVxh     = 25
-   INTEGER(IntKi), PARAMETER      :: BldNd_STVyh     = 26
-   INTEGER(IntKi), PARAMETER      :: BldNd_STVzh     = 27
-   INTEGER(IntKi), PARAMETER      :: BldNd_STVxp     = 28
-   INTEGER(IntKi), PARAMETER      :: BldNd_STVyp     = 29
-   INTEGER(IntKi), PARAMETER      :: BldNd_STVzp     = 30
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vindx     = 31
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vindy     = 32
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vindxi    = 33
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vindyi    = 34
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vindzi    = 35
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vindxh    = 36
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vindyh    = 37
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vindzh    = 38
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vindxp    = 39
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vindyp    = 40
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vindzp    = 41
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vx        = 42
-   INTEGER(IntKi), PARAMETER      :: BldNd_Vy        = 43
-   INTEGER(IntKi), PARAMETER      :: BldNd_VRel      = 44
-   INTEGER(IntKi), PARAMETER      :: BldNd_DynP      = 45
-   INTEGER(IntKi), PARAMETER      :: BldNd_Re        = 46
-   INTEGER(IntKi), PARAMETER      :: BldNd_M         = 47
-   INTEGER(IntKi), PARAMETER      :: BldNd_AxInd     = 48
-   INTEGER(IntKi), PARAMETER      :: BldNd_TnInd     = 49
-   INTEGER(IntKi), PARAMETER      :: BldNd_AxInd_qs  = 50
-   INTEGER(IntKi), PARAMETER      :: BldNd_TnInd_qs  = 51
-   INTEGER(IntKi), PARAMETER      :: BldNd_Alpha     = 52
-   INTEGER(IntKi), PARAMETER      :: BldNd_Theta     = 53
-   INTEGER(IntKi), PARAMETER      :: BldNd_Phi       = 54
-   INTEGER(IntKi), PARAMETER      :: BldNd_Curve     = 55
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cl        = 56
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cd        = 57
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cm        = 58
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cx        = 59
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cy        = 60
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cn        = 61
-   INTEGER(IntKi), PARAMETER      :: BldNd_Ct        = 62
-   INTEGER(IntKi), PARAMETER      :: BldNd_Fl        = 63
-   INTEGER(IntKi), PARAMETER      :: BldNd_Fd        = 64
-   INTEGER(IntKi), PARAMETER      :: BldNd_Mm        = 65
-   INTEGER(IntKi), PARAMETER      :: BldNd_Fx        = 66
-   INTEGER(IntKi), PARAMETER      :: BldNd_Fy        = 67
-   INTEGER(IntKi), PARAMETER      :: BldNd_Fn        = 68
-   INTEGER(IntKi), PARAMETER      :: BldNd_Ft        = 69
-   INTEGER(IntKi), PARAMETER      :: BldNd_Gam       = 70
-   INTEGER(IntKi), PARAMETER      :: BldNd_Clrnc     = 71
-   INTEGER(IntKi), PARAMETER      :: BldNd_GeomPhi   = 72
-   INTEGER(IntKi), PARAMETER      :: BldNd_Chi       = 73
-   INTEGER(IntKi), PARAMETER      :: BldNd_UA_Flag   = 74
-   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x1     = 75
-   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x2     = 76
-   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x3     = 77
-   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x4     = 78
-   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x5     = 79
-   INTEGER(IntKi), PARAMETER      :: BldNd_Debug1    = 80
-   INTEGER(IntKi), PARAMETER      :: BldNd_Debug2    = 81
-   INTEGER(IntKi), PARAMETER      :: BldNd_Debug3    = 82
-   INTEGER(IntKi), PARAMETER      :: BldNd_CpMin     = 83
-   INTEGER(IntKi), PARAMETER      :: BldNd_SgCav     = 84
-   INTEGER(IntKi), PARAMETER      :: BldNd_SigCr     = 85
-   INTEGER(IntKi), PARAMETER      :: BldNd_BEM_F     = 86
-   INTEGER(IntKi), PARAMETER      :: BldNd_BEM_k     = 87
-   INTEGER(IntKi), PARAMETER      :: BldNd_BEM_kp    = 88
-   INTEGER(IntKi), PARAMETER      :: BldNd_BEM_CT_qs = 89
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cl_Static = 90
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cd_Static = 91
-   INTEGER(IntKi), PARAMETER      :: BldNd_Cm_Static = 92
-   INTEGER(IntKi), PARAMETER      :: BldNd_Fbn       = 93
-   INTEGER(IntKi), PARAMETER      :: BldNd_Fbt       = 94
-   INTEGER(IntKi), PARAMETER      :: BldNd_Fbs       = 95
-   INTEGER(IntKi), PARAMETER      :: BldNd_Mbn       = 96
-   INTEGER(IntKi), PARAMETER      :: BldNd_Mbt       = 97
-   INTEGER(IntKi), PARAMETER      :: BldNd_Mbs       = 98
+   INTEGER(IntKi), PARAMETER      :: BldNd_VUndx     =   1
+   INTEGER(IntKi), PARAMETER      :: BldNd_VUndy     =   2
+   INTEGER(IntKi), PARAMETER      :: BldNd_VUndz     =   3
+   INTEGER(IntKi), PARAMETER      :: BldNd_VUndxi    =   4
+   INTEGER(IntKi), PARAMETER      :: BldNd_VUndyi    =   5
+   INTEGER(IntKi), PARAMETER      :: BldNd_VUndzi    =   6
+   INTEGER(IntKi), PARAMETER      :: BldNd_VUndxp    =   7
+   INTEGER(IntKi), PARAMETER      :: BldNd_VUndyp    =   8
+   INTEGER(IntKi), PARAMETER      :: BldNd_VUndzp    =   9
+   INTEGER(IntKi), PARAMETER      :: BldNd_VUndxl    =  10
+   INTEGER(IntKi), PARAMETER      :: BldNd_VUndyl    =  11
+   INTEGER(IntKi), PARAMETER      :: BldNd_VUndzl    =  12
+   INTEGER(IntKi), PARAMETER      :: BldNd_VUndxa    =  13
+   INTEGER(IntKi), PARAMETER      :: BldNd_VUndya    =  14
+   INTEGER(IntKi), PARAMETER      :: BldNd_VUndza    =  15
+   INTEGER(IntKi), PARAMETER      :: BldNd_VDisx     =  16
+   INTEGER(IntKi), PARAMETER      :: BldNd_VDisy     =  17
+   INTEGER(IntKi), PARAMETER      :: BldNd_VDisz     =  18
+   INTEGER(IntKi), PARAMETER      :: BldNd_VDisxi    =  19
+   INTEGER(IntKi), PARAMETER      :: BldNd_VDisyi    =  20
+   INTEGER(IntKi), PARAMETER      :: BldNd_VDiszi    =  21
+   INTEGER(IntKi), PARAMETER      :: BldNd_VDisxp    =  22
+   INTEGER(IntKi), PARAMETER      :: BldNd_VDisyp    =  23
+   INTEGER(IntKi), PARAMETER      :: BldNd_VDiszp    =  24
+   INTEGER(IntKi), PARAMETER      :: BldNd_VDisxl    =  25
+   INTEGER(IntKi), PARAMETER      :: BldNd_VDisyl    =  26
+   INTEGER(IntKi), PARAMETER      :: BldNd_VDiszl    =  27
+   INTEGER(IntKi), PARAMETER      :: BldNd_VDisxa    =  28
+   INTEGER(IntKi), PARAMETER      :: BldNd_VDisya    =  29
+   INTEGER(IntKi), PARAMETER      :: BldNd_VDisza    =  30
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVx      =  31
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVy      =  32
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVz      =  33
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVxi     =  34
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVyi     =  35
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVzi     =  36
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVxp     =  37
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVyp     =  38
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVzp     =  39
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVxl     =  40
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVyl     =  41
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVzl     =  42
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVxa     =  43
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVya     =  44
+   INTEGER(IntKi), PARAMETER      :: BldNd_STVza     =  45
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindx     =  46
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindy     =  47
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindxi    =  48
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindyi    =  49
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindzi    =  50
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindxp    =  51
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindyp    =  52
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindzp    =  53
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindxl    =  54
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindyl    =  55
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindzl    =  56
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindxa    =  57
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindya    =  58
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vindza    =  59
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vx        =  60
+   INTEGER(IntKi), PARAMETER      :: BldNd_Vy        =  61
+   INTEGER(IntKi), PARAMETER      :: BldNd_VRel      =  62
+   INTEGER(IntKi), PARAMETER      :: BldNd_DynP      =  63
+   INTEGER(IntKi), PARAMETER      :: BldNd_Re        =  64
+   INTEGER(IntKi), PARAMETER      :: BldNd_M         =  65
+   INTEGER(IntKi), PARAMETER      :: BldNd_AxInd     =  66
+   INTEGER(IntKi), PARAMETER      :: BldNd_TnInd     =  67
+   INTEGER(IntKi), PARAMETER      :: BldNd_AxInd_qs  =  68
+   INTEGER(IntKi), PARAMETER      :: BldNd_TnInd_qs  =  69
+   INTEGER(IntKi), PARAMETER      :: BldNd_Alpha     =  70
+   INTEGER(IntKi), PARAMETER      :: BldNd_Phi       =  71
+   INTEGER(IntKi), PARAMETER      :: BldNd_Theta     =  72
+   INTEGER(IntKi), PARAMETER      :: BldNd_Curve     =  73
+   INTEGER(IntKi), PARAMETER      :: BldNd_Toe       =  74
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cl        =  75
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cd        =  76
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cm        =  77
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cx        =  78
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cy        =  79
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cn        =  80
+   INTEGER(IntKi), PARAMETER      :: BldNd_Ct        =  81
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fxi       =  82
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fyi       =  83
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fzi       =  84
+   INTEGER(IntKi), PARAMETER      :: BldNd_Mxi       =  85
+   INTEGER(IntKi), PARAMETER      :: BldNd_Myi       =  86
+   INTEGER(IntKi), PARAMETER      :: BldNd_Mzi       =  87
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fxp       =  88
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fyp       =  89
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fzp       =  90
+   INTEGER(IntKi), PARAMETER      :: BldNd_Mxp       =  91
+   INTEGER(IntKi), PARAMETER      :: BldNd_Myp       =  92
+   INTEGER(IntKi), PARAMETER      :: BldNd_Mzp       =  93
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fxl       =  94
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fyl       =  95
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fzl       =  96
+   INTEGER(IntKi), PARAMETER      :: BldNd_Mxl       =  97
+   INTEGER(IntKi), PARAMETER      :: BldNd_Myl       =  98
+   INTEGER(IntKi), PARAMETER      :: BldNd_Mzl       =  99
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fl        = 100
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fd        = 101
+   INTEGER(IntKi), PARAMETER      :: BldNd_Mm        = 102
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fx        = 103
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fy        = 104
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fn        = 105
+   INTEGER(IntKi), PARAMETER      :: BldNd_Ft        = 106
+   INTEGER(IntKi), PARAMETER      :: BldNd_Gam       = 107
+   INTEGER(IntKi), PARAMETER      :: BldNd_Clrnc     = 108
+   INTEGER(IntKi), PARAMETER      :: BldNd_GeomPhi   = 109
+   INTEGER(IntKi), PARAMETER      :: BldNd_Chi       = 110
+   INTEGER(IntKi), PARAMETER      :: BldNd_UA_Flag   = 111
+   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x1     = 112
+   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x2     = 113
+   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x3     = 114
+   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x4     = 115
+   INTEGER(IntKi), PARAMETER      :: BldNd_UA_x5     = 116
+   INTEGER(IntKi), PARAMETER      :: BldNd_Debug1    = 117
+   INTEGER(IntKi), PARAMETER      :: BldNd_Debug2    = 118
+   INTEGER(IntKi), PARAMETER      :: BldNd_Debug3    = 119
+   INTEGER(IntKi), PARAMETER      :: BldNd_CpMin     = 120
+   INTEGER(IntKi), PARAMETER      :: BldNd_SgCav     = 121
+   INTEGER(IntKi), PARAMETER      :: BldNd_SigCr     = 122
+   INTEGER(IntKi), PARAMETER      :: BldNd_BEM_F_qs  = 123
+   INTEGER(IntKi), PARAMETER      :: BldNd_BEM_k_qs  = 124
+   INTEGER(IntKi), PARAMETER      :: BldNd_BEM_kp_qs = 125
+   INTEGER(IntKi), PARAMETER      :: BldNd_BEM_CT_qs = 126
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cl_qs     = 127
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cd_qs     = 128
+   INTEGER(IntKi), PARAMETER      :: BldNd_Cm_qs     = 129
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fbxa      = 130
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fbya      = 131
+   INTEGER(IntKi), PARAMETER      :: BldNd_Fbza      = 132
+   INTEGER(IntKi), PARAMETER      :: BldNd_Mbxa      = 133
+   INTEGER(IntKi), PARAMETER      :: BldNd_Mbya      = 134
+   INTEGER(IntKi), PARAMETER      :: BldNd_Mbza      = 135
 
 
      ! The maximum number of output channels which can be output by the code.
-   INTEGER(IntKi), PARAMETER, PUBLIC  :: BldNd_MaxOutPts       = 98
+   INTEGER(IntKi), PARAMETER, PUBLIC  :: BldNd_MaxOutPts       = 135
 
 !End of code generated by Matlab script Write_ChckOutLst
 ! ===================================================================================================
@@ -211,9 +248,9 @@ END SUBROUTINE AllBldNdOuts_InitOut
 
 SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx, iRot, ErrStat, ErrMsg )
    TYPE(RotParameterType),       INTENT(IN   )  :: p                                 ! The rotor parameters
-   TYPE(AD_ParameterType),       INTENT(IN   )  :: p_AD                              ! The module parameters
-   TYPE(RotInputType),           INTENT(IN   )  :: u                                 ! inputs
-   TYPE(RotMiscVarType),         INTENT(IN   )  :: m                                 ! misc variables
+   TYPE(AD_ParameterType),target,INTENT(IN   )  :: p_AD                              ! The module parameters
+   TYPE(RotInputType), target,   INTENT(IN   )  :: u                                 ! inputs
+   TYPE(RotMiscVarType), target, INTENT(IN   )  :: m                                 ! misc variables
    TYPE(AD_MiscVarType),         INTENT(IN   )  :: m_AD                              ! misc variables ! NOTE: temporary
    TYPE(RotContinuousStateType), INTENT(IN   )  :: x                                 ! rotor Continuous states
    TYPE(RotOutputType),          INTENT(INOUT)  :: y                                 ! outputs (updates y%WriteOutput)
@@ -225,17 +262,32 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
 
       ! local variables
  
-   INTEGER(IntKi)                               :: OutIdx                             ! Index count within WriteOutput
-   INTEGER(IntKi)                               :: IdxBlade, iW                     ! Counter to which blade we are on, and Wing
-   INTEGER(IntKi)                               :: IdxNode                          ! Counter to the blade node we ae on
+   INTEGER(IntKi)                               :: iOut                             ! Index count within WriteOutput
+   INTEGER(IntKi)                               :: iB, iW                           ! Counter to which blade we are on, and Wing
+   INTEGER(IntKi)                               :: iNd                              ! Counter to the blade node we ae on
    INTEGER(IntKi)                               :: IdxChan                          ! Counter to the channel we are outputting.
+   INTEGER(IntKi)                               :: nB, nNd                          ! number of blades, number of nodes
    INTEGER(IntKi)                               :: compIndx                         ! index for array component (x,y,z)
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Calc_WriteAllBldNdOutput'
    REAL(ReKi)                                   :: ct, st                  ! cosine, sine of theta
    REAL(ReKi)                                   :: cp, sp                  ! cosine, sine of phi
-   real(ReKi)                                   :: R_hH(3,3)               ! Transformation from Hub to rotating-hub "h" ("blade-rotor-plane"): n,t,r (not the same as AeroDyn)
-   real(ReKi)                                   :: R_hi(3,3,p%NumBlades)   ! Transformation from inertial to rotating-hub "h" ("blade-rotor-plane") (n,t,r), with same x at hub coordinate system
+   real(ReKi)                                   :: R_ph(3,3)               ! Transformation from polar to hub (azimuth rotation along x hub)
+   real(ReKi)                                   :: R_pi(3,3,p%NumBlades)   ! Transformation from inertial to polar (same x at hub coordinate system, blade-azimuth rotated)
    real(ReKi)                                   :: psi_hub                 ! Azimuth wrt hub
+   real(R8Ki), dimension(:,:,:,:), pointer      :: R_li                    ! Alias. Transformation from inertial to local-polar to airfoil (3x3xnNodesxnBlades)
+   real(R8Ki), dimension(:,:,:,:), pointer      :: R_wi                    ! Alias. Transformation from inertial to "WithoutSweepPitchTwist" or "orientationAnnulus". TODO: deprecate me.
+   integer(Intki), dimension(:)  , pointer      :: W2B                     ! Alias. Index from Wing index to Blade
+
+   ! Alias to shorten notations
+   nB = p%BldNd_BladesOut
+   nNd = p%NumBlNds
+   R_li => m%R_li                     ! inertial to local-polar
+   R_wi => m%orientationAnnulus       ! inertial to without-sweep-pitch-twist or orientation annulus (TODO: deprecate me)
+   W2B => p_AD%FVW%Bld2Wings(iRot, :) ! From Wing index to blade index
+
+   !u%BladeMotion(iB)%Orientation(1,:,iNd)
+
+
  
 
          ! Initialize some things
@@ -246,20 +298,18 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          return
       endif
 
-
          ! Precalculate the M_ph matrix -- no reason to recalculate for each output
-      DO IdxBlade=1,p%NumBlades
-         psi_hub = TwoPi*(real(IdxBlade-1,ReKi))/real(p%NumBlades,ReKi)
-         R_hH(1,1:3) = (/ 1.0_ReKi, 0.0_ReKi    , 0.0_ReKi     /)
-         R_hH(2,1:3) = (/ 0.0_ReKi, cos(psi_hub), sin(psi_hub) /)
-         R_hH(3,1:3) = (/ 0.0_ReKi,-sin(psi_hub), cos(psi_hub) /)
-         R_hi(1:3,1:3,IdxBlade) = matmul(R_hH, u%HubMotion%Orientation(1:3,1:3,1) ) 
-      ENDDO
-
+      do iB=1,p%NumBlades
+         psi_hub = TwoPi*(real(iB-1,ReKi))/real(p%NumBlades,ReKi)
+         R_ph(1,1:3) = (/ 1.0_ReKi, 0.0_ReKi    , 0.0_ReKi     /)
+         R_ph(2,1:3) = (/ 0.0_ReKi, cos(psi_hub), sin(psi_hub) /)
+         R_ph(3,1:3) = (/ 0.0_ReKi,-sin(psi_hub), cos(psi_hub) /)
+         R_pi(1:3,1:3,iB) = matmul(R_ph, u%HubMotion%Orientation(1:3,1:3,1) ) 
+      enddo
 
          ! Populate the header an unit lines for all blades and nodes
          ! First set a counter so we know where in the output array we are in
-      OutIdx = p%NumOuts + 1       ! p%NumOuts is the number of outputs from the normal AeroDyn output.  The WriteOutput array is sized to p%NumOuts + num(AllBldNdOuts)
+      iOut = p%NumOuts + 1       ! p%NumOuts is the number of outputs from the normal AeroDyn output.  The WriteOutput array is sized to p%NumOuts + num(AllBldNdOuts)
 
       
          ! Case to assign output to this channel and populate based on Indx value (this indicates what the channel is)
@@ -267,285 +317,150 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
       DO IdxChan=1,p%BldNd_NumOuts
 
          SELECT CASE( p%BldNd_OutParam(IdxChan)%Indx )      ! Indx contains the information on what channel should be output
-         CASE (0) ! Invalid channel
-            ! We still have headers for invalid channels.  Need to account for that
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx ) = 0.0_ReKi
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
 
-            ! ***** Undisturbed wind velocity in local blade coord system *****
-         CASE ( BldNd_VUndx )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(1,:,IdxNode,IdxBlade), u%InflowOnBlade(:,IdxNode,IdxBlade) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-                  
-                  
-         CASE ( BldNd_VUndy )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(2,:,IdxNode,IdxBlade), u%InflowOnBlade(:,IdxNode,IdxBlade) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-                  
-         CASE ( BldNd_VUndz )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(3,:,IdxNode,IdxBlade), u%InflowOnBlade(:,IdxNode,IdxBlade) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-      
-      
+         ! Invalid channel, we still have headers for invalid channels.  Need to account for that
+         CASE (0            ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = 0.0_ReKi; iOut = iOut + 1; enddo;enddo
 
-            ! ***** Undisturbed wind velocity in inertial/global coord system *****
-         CASE ( BldNd_VUndxi )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = u%InflowOnBlade(1,IdxNode,IdxBlade)
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-                  
-                  
-         CASE ( BldNd_VUndyi )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = u%InflowOnBlade(2,IdxNode,IdxBlade)
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-                  
-         CASE ( BldNd_VUndzi )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = u%InflowOnBlade(3,IdxNode,IdxBlade)
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-      
-                  ! ***** Disturbed wind velocity in the global blade coordinate system *****
-         CASE ( BldNd_VDisxi )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  =  m%DisturbedInflow(1,IdxNode,IdxBlade)
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-      
-         CASE ( BldNd_VDisyi )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  =  m%DisturbedInflow(2,IdxNode,IdxBlade)
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-         
-         CASE ( BldNd_VDiszi )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  =  m%DisturbedInflow(3,IdxNode,IdxBlade)
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
+         ! ***** Undisturbed wind velocity in inertial, polar, local and airfoil systems*****
+         CASE( BldNd_VUndxi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = u%InflowOnBlade(1,iNd,iB); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndyi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = u%InflowOnBlade(2,iNd,iB); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndzi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = u%InflowOnBlade(3,iNd,iB); iOut = iOut + 1; enddo;enddo
 
-                  ! ***** Disturbed wind velocity in the local blade coordinate system *****
-         CASE ( BldNd_VDisx )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(1,:,IdxNode,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
+         CASE( BldNd_VUndxp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_pi(1,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndyp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_pi(2,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndzp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_pi(3,:,iB) ); iOut = iOut + 1; enddo;enddo
+         
+         CASE( BldNd_VUndxl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_li(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndyl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_li(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndzl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_li(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
 
-         CASE ( BldNd_VDisy )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(2,:,IdxNode,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-         
-         CASE ( BldNd_VDisz )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(3,:,IdxNode,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
+         CASE( BldNd_VUndxa ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), u%BladeMotion(iB)%Orientation(1,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndya ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), u%BladeMotion(iB)%Orientation(2,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndza ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), u%BladeMotion(iB)%Orientation(3,:,iNd) ); iOut = iOut + 1; enddo;enddo
 
-                  ! ***** Disturbed wind velocity in the rotating hub blade coordinate system *****
-         CASE ( BldNd_VDisxh )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product(  R_hi(1,1:3,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
+         ! TODO: deprecate this
+         CASE( BldNd_VUndx  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_wi(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndy  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_wi(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VUndz  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%InflowOnBlade(:,iNd,iB), R_wi(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
 
-         CASE ( BldNd_VDisyh )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product(  R_hi(2,1:3,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
 
-         CASE ( BldNd_VDiszh )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product(  R_hi(3,1:3,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
+         ! ***** Disturbed wind velocity in inertial, polar, local and airfoil systems*****
+         CASE( BldNd_VDisxi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%DisturbedInflow(1,iNd,iB); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VDisyi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%DisturbedInflow(2,iNd,iB); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VDiszi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%DisturbedInflow(3,iNd,iB); iOut = iOut + 1; enddo;enddo
 
-                  ! ***** Disturbed wind velocity in the staggered-polar coordinate system *****
-         CASE ( BldNd_VDisxp )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%R_pi(1,:,IdxNode,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
+         CASE( BldNd_VDisxp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%DisturbedInflow(:,iNd,iB), R_pi(1,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VDisyp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%DisturbedInflow(:,iNd,iB), R_pi(2,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VDiszp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%DisturbedInflow(:,iNd,iB), R_pi(3,:,iB) ); iOut = iOut + 1; enddo;enddo
 
-         CASE ( BldNd_VDisyp )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%R_pi(2,:,IdxNode,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-         
-         CASE ( BldNd_VDiszp )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%R_pi(3,:,IdxNode,IdxBlade), m%DisturbedInflow(:,IdxNode,IdxBlade) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
+         CASE( BldNd_VDisxl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%DisturbedInflow(:,iNd,iB), R_li(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VDisyl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%DisturbedInflow(:,iNd,iB), R_li(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VDiszl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%DisturbedInflow(:,iNd,iB), R_li(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
 
-               ! ***** Structural translational velocity in global coordinate system ***** 
-         CASE ( BldNd_STVxi )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = u%BladeMotion(IdxBlade)%TranslationVel(1,IdxNode)
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-         
-         CASE ( BldNd_STVyi )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = u%BladeMotion(IdxBlade)%TranslationVel(2,IdxNode)
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-         
-         CASE ( BldNd_STVzi )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = u%BladeMotion(IdxBlade)%TranslationVel(3,IdxNode)
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-         
-               ! ***** Structural translational velocity in the local blade coordinate system ***** 
-         CASE ( BldNd_STVx )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(1,:,IdxNode,IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-         
-         CASE ( BldNd_STVy )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(2,:,IdxNode,IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-         
-         CASE ( BldNd_STVz )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(3,:,IdxNode,IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
+         CASE( BldNd_VDisxa ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%DisturbedInflow(:,iNd,iB), u%BladeMotion(iB)%Orientation(1,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VDisya ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%DisturbedInflow(:,iNd,iB), u%BladeMotion(iB)%Orientation(2,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VDisza ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%DisturbedInflow(:,iNd,iB), u%BladeMotion(iB)%Orientation(3,:,iNd) ); iOut = iOut + 1; enddo;enddo
 
-               ! ***** Structural translational velocity in the local hub coordinate system ***** 
-         CASE ( BldNd_STVxh )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( R_hi(1,1:3,IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-         
-         CASE ( BldNd_STVyh )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( R_hi(2,1:3,IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-         
-         CASE ( BldNd_STVzh )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( R_hi(3,1:3,IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
+         ! TODO: deprecate this
+         CASE( BldNd_VDisx  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%DisturbedInflow(:,iNd,iB), R_wi(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VDisy  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%DisturbedInflow(:,iNd,iB), R_wi(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_VDisz  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%DisturbedInflow(:,iNd,iB), R_wi(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
 
-               ! ***** Structural translational velocity in the staggered polar coordinate system ***** 
-         CASE ( BldNd_STVxp )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%R_pi(1,1:3,IdxNode, IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-         
-         CASE ( BldNd_STVyp )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%R_pi(2,1:3,IdxNode, IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-         
-         CASE ( BldNd_STVzp )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%R_pi(3,1:3,IdxNode, IdxBlade), u%BladeMotion(IdxBlade)%TranslationVel(:,IdxNode) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
 
-         
-            ! Relative wind speed
-         CASE ( BldNd_VRel )
+         ! ***** Structural translational velocity inertial, polar, local and airfoil systems*****
+         CASE( BldNd_STVxi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = u%BladeMotion(iB)%TranslationVel(1,iNd); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_STVyi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = u%BladeMotion(iB)%TranslationVel(2,iNd); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_STVzi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = u%BladeMotion(iB)%TranslationVel(3,iNd); iOut = iOut + 1; enddo;enddo
+
+         CASE( BldNd_STVxp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%BladeMotion(iB)%TranslationVel(:,iNd), R_pi(1,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_STVyp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%BladeMotion(iB)%TranslationVel(:,iNd), R_pi(2,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_STVzp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%BladeMotion(iB)%TranslationVel(:,iNd), R_pi(3,:,iB) ); iOut = iOut + 1; enddo;enddo
+
+         CASE( BldNd_STVxl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%BladeMotion(iB)%TranslationVel(:,iNd), R_li(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_STVyl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%BladeMotion(iB)%TranslationVel(:,iNd), R_li(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_STVzl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%BladeMotion(iB)%TranslationVel(:,iNd), R_li(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+
+         CASE( BldNd_STVxa ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%BladeMotion(iB)%TranslationVel(:,iNd), u%BladeMotion(iB)%Orientation(1,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_STVya ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%BladeMotion(iB)%TranslationVel(:,iNd), u%BladeMotion(iB)%Orientation(2,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_STVza ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%BladeMotion(iB)%TranslationVel(:,iNd), u%BladeMotion(iB)%Orientation(3,:,iNd) ); iOut = iOut + 1; enddo;enddo
+
+         ! TODO: deprecate this
+         CASE( BldNd_STVx  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%BladeMotion(iB)%TranslationVel(:,iNd), R_wi(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_STVy  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%BladeMotion(iB)%TranslationVel(:,iNd), R_wi(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_STVz  ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( u%BladeMotion(iB)%TranslationVel(:,iNd), R_wi(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+
+         ! ***** Induced velocities in inertial, polar, local and airfoil systems*****
+         ! Axial and tangential induced wind velocity
+         ! TODO use m%Vind_i and R_wi
+         CASE ( BldNd_Vindx ) 
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%Vrel(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               do iB=1,nB
+                  do iNd=1,nNd
+                     y%WriteOutput(iOut)  = - m%BEMT_u(Indx)%Vx(iNd,iB) * m%BEMT_y%axInduction( iNd,iB)
+                     iOut = iOut + 1
+                  enddo
+               enddo
+            else
+               do iB=1,nB 
+                  iW = W2B(iB)
+                  do iNd=1,nNd;
+                     y%WriteOutput(iOut)  = -m_AD%FVW%W(iW)%BN_UrelWind_s(1,iNd) * m_AD%FVW%W(iW)%BN_AxInd(iNd)
+                     iOut = iOut + 1 
+                  enddo
+               enddo
+            endif
+                     
+         CASE ( BldNd_Vindy )
+            if (p_AD%WakeMod /= WakeMod_FVW) then
+               DO iB=1,nB
+                  DO iNd=1,nNd 
+                     y%WriteOutput(iOut)  = m%BEMT_u(Indx)%Vy(iNd,iB) * m%BEMT_y%tanInduction(iNd,iB)
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Vrel(IdxNode)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd 
+                     y%WriteOutput(iOut)  =  m_AD%FVW%W(iW)%BN_UrelWind_s(2,iNd) * m_AD%FVW%W(iW)%BN_TanInd(iNd)
+                     iOut = iOut + 1
+                  END DO
+               END DO
+            endif
+
+         CASE( BldNd_Vindxi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%Vind_i(1, iNd, iB); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Vindyi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%Vind_i(2, iNd, iB); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Vindzi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%Vind_i(3, iNd, iB); iOut = iOut + 1; enddo;enddo
+
+         CASE( BldNd_Vindxp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%Vind_i(:, iNd, iB), R_pi(1,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Vindyp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%Vind_i(:, iNd, iB), R_pi(2,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Vindzp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%Vind_i(:, iNd, iB), R_pi(3,:,iB) ); iOut = iOut + 1; enddo;enddo
+
+         CASE( BldNd_Vindxl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%Vind_i(:, iNd, iB), R_li(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Vindyl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%Vind_i(:, iNd, iB), R_li(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Vindzl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%Vind_i(:, iNd, iB), R_li(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+
+         CASE( BldNd_Vindxa ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%Vind_i(:, iNd, iB), u%BladeMotion(iB)%Orientation(1,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Vindya ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%Vind_i(:, iNd, iB), u%BladeMotion(iB)%Orientation(2,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Vindza ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%Vind_i(:, iNd, iB), u%BladeMotion(iB)%Orientation(3,:,iNd) ); iOut = iOut + 1; enddo;enddo
+
+         
+         ! TODO: Vrel, DynP, Re, Ma - should be unified across lifting-line implementations. Vrel should be computed based on velocities in (a)-system
+            ! Relative wind speed
+         CASE ( BldNd_VRel )
+            if (p_AD%WakeMod /= WakeMod_FVW) then
+               DO iB=1,nB
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m%BEMT_y%Vrel(iNd,iB)
+                     iOut = iOut + 1
+                  END DO
+               END DO
+            else
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_Vrel(iNd)
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
@@ -553,18 +468,18 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             ! Dynamic pressure
          CASE ( BldNd_DynP )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-                DO IdxBlade=1,p%BldNd_BladesOut
-                   DO IdxNode=1,p%NumBlNds
-                      y%WriteOutput( OutIdx )  = 0.5 * p%airDens * m%BEMT_y%Vrel(IdxNode,IdxBlade)**2
-                      OutIdx = OutIdx + 1
+                DO iB=1,nB
+                   DO iNd=1,nNd
+                      y%WriteOutput(iOut)  = 0.5 * p%airDens * m%BEMT_y%Vrel(iNd,iB)**2
+                      iOut = iOut + 1
                    END DO
                 END DO
             else
-                DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                   DO IdxNode=1,p%NumBlNds
-                      y%WriteOutput( OutIdx )  = 0.5 * p%airDens *  m_AD%FVW%W(iW)%BN_Vrel(IdxNode)**2
-                      OutIdx = OutIdx + 1
+                DO iB=1,nB
+                  iW = W2B(iB)
+                   DO iNd=1,nNd
+                      y%WriteOutput(iOut)  = 0.5 * p%airDens *  m_AD%FVW%W(iW)%BN_Vrel(iNd)**2
+                      iOut = iOut + 1
                    END DO
                 END DO
             endif
@@ -572,18 +487,18 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             ! Reynolds number (in millions)
          CASE ( BldNd_Re )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = p%BEMT%chord(IdxNode,IdxBlade) * m%BEMT_y%Vrel(IdxNode,IdxBlade) / p%KinVisc / 1.0E6
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = p%BEMT%chord(iNd,iB) * m%BEMT_y%Vrel(iNd,iB) / p%KinVisc / 1.0E6
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Re(IdxNode) / 1.0E6
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_Re(iNd) / 1.0E6
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
@@ -591,95 +506,56 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             ! Mach number
          CASE ( BldNd_M )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%Vrel(IdxNode,IdxBlade) / p%SpdSound
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m%BEMT_y%Vrel(iNd,iB) / p%SpdSound
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Vrel(IdxNode) / p%SpdSound
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_Vrel(iNd) / p%SpdSound
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
  
-         
-         
-            ! Axial and tangential induced wind velocity
-         CASE ( BldNd_Vindx )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds 
-                     y%WriteOutput( OutIdx )  = - m%BEMT_u(Indx)%Vx(IdxNode,IdxBlade) * m%BEMT_y%axInduction( IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
-                  END DO
-               END DO
-            else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds 
-                     y%WriteOutput( OutIdx )  = -m_AD%FVW%W(iW)%BN_UrelWind_s(1,IdxNode) * m_AD%FVW%W(iW)%BN_AxInd(IdxNode)
-                     OutIdx = OutIdx + 1
-                  END DO
-               END DO
-            endif
-                     
-         CASE ( BldNd_Vindy )
-            if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds 
-                     y%WriteOutput( OutIdx )  = m%BEMT_u(Indx)%Vy(IdxNode,IdxBlade) * m%BEMT_y%tanInduction(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
-                  END DO
-               END DO
-            else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds 
-                     y%WriteOutput( OutIdx )  =  m_AD%FVW%W(iW)%BN_UrelWind_s(2,IdxNode) * m_AD%FVW%W(iW)%BN_TanInd(IdxNode)
-                     OutIdx = OutIdx + 1
-                  END DO
-               END DO
-            endif
-         
 
             ! Axial and tangential induction factors
          CASE ( BldNd_AxInd )         
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%axInduction(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m%BEMT_y%axInduction(iNd,iB)
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_AxInd(IdxNode)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_AxInd(iNd)
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
 
          CASE ( BldNd_TnInd )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%tanInduction(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m%BEMT_y%tanInduction(iNd,iB)
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_TanInd(IdxNode)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_TanInd(iNd)
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
@@ -687,92 +563,92 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             ! Quasi-steady Axial and tangential induction factors
          CASE ( BldNd_AxInd_qs )         
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%axInduction_qs(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m%BEMT_y%axInduction_qs(iNd,iB)
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_AxInd(IdxNode) ! TODO
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_AxInd(iNd) ! TODO
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
 
          CASE ( BldNd_TnInd_qs )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%tanInduction_qs(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m%BEMT_y%tanInduction_qs(iNd,iB)
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_TanInd(IdxNode) ! TODO
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_TanInd(iNd) ! TODO
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
 
             ! Hub/Tip-loss factor (BEM specific)
-         CASE ( BldNd_BEM_F )         
+         CASE ( BldNd_BEM_F_qs )         
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%F(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m%BEMT_y%F(iNd,iB)
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = 0.0_ReKi ! TODO
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = 0.0_ReKi ! TODO
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
          
             ! k-kp factors (BEM specific)
-         CASE ( BldNd_BEM_k )         
+         CASE ( BldNd_BEM_k_qs )         
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%k(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m%BEMT_y%k(iNd,iB)
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = 0.0_ReKi ! TODO
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = 0.0_ReKi ! TODO
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
 
-         CASE ( BldNd_BEM_kp )         
+         CASE ( BldNd_BEM_kp_qs )         
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%k_p(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m%BEMT_y%k_p(iNd,iB)
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = 0.0_ReKi ! TODO
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = 0.0_ReKi ! TODO
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
@@ -780,18 +656,18 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             ! CT  (BEM specific for now)
          CASE ( BldNd_BEM_CT_qs )         
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = 4*m%BEMT_y%F(IdxNode,IdxBlade)*m%BEMT_y%k(IdxNode,IdxBlade)*(1._ReKi-m%BEMT_y%axInduction_qs(IdxNode,IdxBlade))**2
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = 4*m%BEMT_y%F(iNd,iB)*m%BEMT_y%k(iNd,iB)*(1._ReKi-m%BEMT_y%axInduction_qs(iNd,iB))**2
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = 0.0_ReKi ! TODO
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = 0.0_ReKi ! TODO
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
@@ -799,129 +675,149 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             ! AoA, pitch+twist angle, inflow angle, and curvature angle
          CASE ( BldNd_Alpha )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = Rad2M180to180Deg( m%BEMT_y%phi(IdxNode,IdxBlade) - m%BEMT_u(Indx)%theta(IdxNode,IdxBlade) )
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd                   
+                     ! TODO Change this
+                     y%WriteOutput(iOut)  = Rad2M180to180Deg( m%BEMT_y%phi(iNd,iB) - m%BEMT_u(Indx)%theta(iNd,iB) )
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_alpha(IdxNode)*R2D
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_alpha(iNd)*R2D
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
 
          CASE ( BldNd_Theta )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m%BEMT_u(Indx)%theta(IdxNode,IdxBlade)*R2D
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m%BEMT_u(Indx)%theta(iNd,iB)*R2D
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%PitchAndTwist(IdxNode)*R2D
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%PitchAndTwist(iNd)*R2D
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
          
          CASE ( BldNd_Phi )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%phi(IdxNode,IdxBlade)*R2D                                            
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m%BEMT_y%phi(iNd,iB)*R2D                                            
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  =m_AD%FVW%W(iW)%BN_phi(IdxNode)*R2D
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  =m_AD%FVW%W(iW)%BN_phi(iNd)*R2D
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
          
          CASE ( BldNd_Curve )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m%Curve(IdxNode,IdxBlade)*R2D                                            
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m%Curve(iNd,iB)*R2D                                            
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds                   
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd                   
 !NOT available in FVW yet
-                     y%WriteOutput( OutIdx ) = 0.0_ReKi 
-                     OutIdx = OutIdx + 1
+                     y%WriteOutput(iOut) = 0.0_ReKi 
+                     iOut = iOut + 1
+                  END DO
+               END DO
+            endif
+
+         CASE ( BldNd_Toe )
+            if (p_AD%WakeMod /= WakeMod_FVW) then
+               DO iB=1,nB
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m%BEMT_u(Indx)%toeAngle(iNd,iB)*R2D
+                     iOut = iOut + 1
+                  END DO
+               END DO
+            else
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = 0.0_ReKi
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
          
          
-                        ! Lift force, drag force, pitching moment coefficients
+         ! Unsteady lift force, drag force, pitching moment coefficients
+         ! TODO this should be somehow unified across lifting-line implementations 
          CASE ( BldNd_Cl )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%Cl(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m%BEMT_y%Cl(iNd,iB)
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Cl(IdxNode)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_Cl(iNd)
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
          
          CASE ( BldNd_Cd )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%Cd(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m%BEMT_y%Cd(iNd,iB)
+                     iOut = iOut + 1
                   END DO
                END DO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Cd(IdxNode)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_Cd(iNd)
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
 
          CASE ( BldNd_Cm )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%Cm(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m%BEMT_y%Cm(iNd,iB)
+                     iOut = iOut + 1
                   END DO
                END DO 
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Cm(IdxNode)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_Cm(iNd)
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
@@ -929,36 +825,36 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             ! Normal force (to plane), tangential force (to plane) coefficients
          CASE ( BldNd_Cx )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%Cx(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m%BEMT_y%Cx(iNd,iB)
+                     iOut = iOut + 1
                   END DO
                END DO 
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Cx(IdxNode)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_Cx(iNd)
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
 
          CASE ( BldNd_Cy )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%Cy(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m%BEMT_y%Cy(iNd,iB)
+                     iOut = iOut + 1
                   END DO
                END DO 
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds                   
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Cy(IdxNode)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd                   
+                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_Cy(iNd)
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
@@ -966,44 +862,44 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             ! Normal force (to chord), and tangential force (to chord) coefficients
          CASE ( BldNd_Cn )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds   
-                     ct=cos(m%BEMT_u(Indx)%theta(IdxNode,IdxBlade))
-                     st=sin(m%BEMT_u(Indx)%theta(IdxNode,IdxBlade))               
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%Cx(IdxNode,IdxBlade)*ct + m%BEMT_y%Cy(IdxNode,IdxBlade)*st
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd   
+                     ct=cos(m%BEMT_u(Indx)%theta(iNd,iB))
+                     st=sin(m%BEMT_u(Indx)%theta(iNd,iB))               
+                     y%WriteOutput(iOut)  = m%BEMT_y%Cx(iNd,iB)*ct + m%BEMT_y%Cy(iNd,iB)*st
+                     iOut = iOut + 1
                   END DO
                END DO 
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds                   
-                     ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(IdxNode))    ! cos(theta)
-                     st=sin(m_AD%FVW%W(iW)%PitchAndTwist(IdxNode))    ! sin(theta)
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_Cx(IdxNode)*ct + m_AD%FVW%W(iW)%BN_Cy(IdxNode)*st
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd                   
+                     ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! cos(theta)
+                     st=sin(m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! sin(theta)
+                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_Cx(iNd)*ct + m_AD%FVW%W(iW)%BN_Cy(iNd)*st
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
 
          CASE ( BldNd_Ct )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds   
-                     ct=cos(m%BEMT_u(Indx)%theta(IdxNode,IdxBlade))
-                     st=sin(m%BEMT_u(Indx)%theta(IdxNode,IdxBlade))               
-                     y%WriteOutput( OutIdx )  = -m%BEMT_y%Cx(IdxNode,IdxBlade)*st + m%BEMT_y%Cy(IdxNode,IdxBlade)*ct
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd   
+                     ct=cos(m%BEMT_u(Indx)%theta(iNd,iB))
+                     st=sin(m%BEMT_u(Indx)%theta(iNd,iB))               
+                     y%WriteOutput(iOut)  = -m%BEMT_y%Cx(iNd,iB)*st + m%BEMT_y%Cy(iNd,iB)*ct
+                     iOut = iOut + 1
                   END DO
                END DO 
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds                   
-                     ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(IdxNode))    ! cos(theta)
-                     st=sin(m_AD%FVW%W(iW)%PitchAndTwist(IdxNode))    ! sin(theta)
-                     y%WriteOutput( OutIdx )  = -m_AD%FVW%W(iW)%BN_Cx(IdxNode)*st + m_AD%FVW%W(iW)%BN_Cy(IdxNode)*ct
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd                   
+                     ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! cos(theta)
+                     st=sin(m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! sin(theta)
+                     y%WriteOutput(iOut)  = -m_AD%FVW%W(iW)%BN_Cx(iNd)*st + m_AD%FVW%W(iW)%BN_Cy(iNd)*ct
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
@@ -1012,169 +908,181 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
                ! Lift force, drag force, pitching moment
          CASE ( BldNd_Fl )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds   
-                     cp=cos(m%BEMT_y%phi(IdxNode,IdxBlade))
-                     sp=sin(m%BEMT_y%phi(IdxNode,IdxBlade))
-                     y%WriteOutput( OutIdx )  = m%X(IdxNode,IdxBlade)*cp - m%Y(IdxNode,IdxBlade)*sp
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd   
+                     cp=cos(m%BEMT_y%phi(iNd,iB))
+                     sp=sin(m%BEMT_y%phi(iNd,iB))
+                     y%WriteOutput(iOut)  = m%X(iNd,iB)*cp - m%Y(iNd,iB)*sp
+                     iOut = iOut + 1
                   END DO
                END DO 
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds                   
-                     cp=cos(m_AD%FVW%W(iW)%BN_phi(IdxNode))
-                     sp=sin(m_AD%FVW%W(iW)%BN_phi(IdxNode))
-                     y%WriteOutput( OutIdx )  = m%X(IdxNode,IdxBlade)*cp - m%Y(IdxNode,IdxBlade)*sp
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd                   
+                     cp=cos(m_AD%FVW%W(iW)%BN_phi(iNd))
+                     sp=sin(m_AD%FVW%W(iW)%BN_phi(iNd))
+                     y%WriteOutput(iOut)  = m%X(iNd,iB)*cp - m%Y(iNd,iB)*sp
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
 
          CASE ( BldNd_Fd )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds   
-                     cp=cos(m%BEMT_y%phi(IdxNode,IdxBlade))
-                     sp=sin(m%BEMT_y%phi(IdxNode,IdxBlade))
-                     y%WriteOutput( OutIdx )  = m%X(IdxNode,IdxBlade)*sp + m%Y(IdxNode,IdxBlade)*cp
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd   
+                     cp=cos(m%BEMT_y%phi(iNd,iB))
+                     sp=sin(m%BEMT_y%phi(iNd,iB))
+                     y%WriteOutput(iOut)  = m%X(iNd,iB)*sp + m%Y(iNd,iB)*cp
+                     iOut = iOut + 1
                   END DO
                END DO 
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds                   
-                     cp=cos(m_AD%FVW%W(iW)%BN_phi(IdxNode))
-                     sp=sin(m_AD%FVW%W(iW)%BN_phi(IdxNode))
-                     y%WriteOutput( OutIdx )  = m%X(IdxNode,IdxBlade)*sp + m%Y(IdxNode,IdxBlade)*cp
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd                   
+                     cp=cos(m_AD%FVW%W(iW)%BN_phi(iNd))
+                     sp=sin(m_AD%FVW%W(iW)%BN_phi(iNd))
+                     y%WriteOutput(iOut)  = m%X(iNd,iB)*sp + m%Y(iNd,iB)*cp
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
 
-         CASE ( BldNd_Mm )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds   
-                  y%WriteOutput( OutIdx )  = m%M(IdxNode,IdxBlade)
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO 
+         CASE ( BldNd_Mm ); do iB=1,nB; do iNd=1,nNd;  y%WriteOutput(iOut) = m%M(iNd,iB); iOut = iOut + 1; enddo;enddo 
 
-            ! Normal force (to plane), tangential force (to plane)
-         CASE ( BldNd_Fx )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds   
-                  y%WriteOutput( OutIdx )  = m%X(IdxNode,IdxBlade)
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO 
-
-         CASE ( BldNd_Fy )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds   
-                  y%WriteOutput( OutIdx )  = -m%Y(IdxNode,IdxBlade)
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO 
+         ! Normal force (to plane), tangential force (to plane)
+         ! TODO deprecate
+         CASE ( BldNd_Fx ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) =  m%X(iNd,iB); iOut = iOut + 1; enddo;enddo 
+         CASE ( BldNd_Fy ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = -m%Y(iNd,iB); iOut = iOut + 1; enddo;enddo 
 
             ! Normal force (to chord), and tangential force (to chord) per unit length
+         !CASE( BldNd_Fn ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Force (:, iNd), u%BladeMotion(iB)%Orientation(1,:,iNd)); iOut = iOut + 1; enddo;enddo 
          CASE ( BldNd_Fn )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds   
-                     ct=cos(m%BEMT_u(Indx)%theta(IdxNode,IdxBlade))
-                     st=sin(m%BEMT_u(Indx)%theta(IdxNode,IdxBlade))
-                     y%WriteOutput( OutIdx )  = m%X(IdxNode,IdxBlade)*ct - m%Y(IdxNode,IdxBlade)*st
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd   
+                     ct=cos(m%BEMT_u(Indx)%theta(iNd,iB))
+                     st=sin(m%BEMT_u(Indx)%theta(iNd,iB))
+                     y%WriteOutput(iOut)  = m%X(iNd,iB)*ct - m%Y(iNd,iB)*st
+                     iOut = iOut + 1
                   END DO
                END DO 
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds   
-                     ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(IdxNode))    ! cos(theta)
-                     st=sin(m_AD%FVW%W(iW)%PitchAndTwist(IdxNode))    ! sin(theta)
-                     y%WriteOutput( OutIdx )  = m%X(IdxNode,IdxBlade)*ct - m%Y(IdxNode,IdxBlade)*st
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd   
+                     ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! cos(theta)
+                     st=sin(m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! sin(theta)
+                     y%WriteOutput(iOut)  = m%X(iNd,iB)*ct - m%Y(iNd,iB)*st
+                     iOut = iOut + 1
                   END DO
                END DO 
             endif
          
+         !CASE( BldNd_Ft ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = -dot_product( y%BladeLoad(iB)%Force (:, iNd), u%BladeMotion(iB)%Orientation(2,:,iNd)); iOut = iOut + 1; enddo;enddo 
          CASE ( BldNd_Ft )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds   
-                     ct=cos(m%BEMT_u(Indx)%theta(IdxNode,IdxBlade))
-                     st=sin(m%BEMT_u(Indx)%theta(IdxNode,IdxBlade))
-                     y%WriteOutput( OutIdx )  = -m%X(IdxNode,IdxBlade)*st - m%Y(IdxNode,IdxBlade)*ct
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd   
+                     ct=cos(m%BEMT_u(Indx)%theta(iNd,iB))
+                     st=sin(m%BEMT_u(Indx)%theta(iNd,iB))
+                     y%WriteOutput(iOut)  = -m%X(iNd,iB)*st - m%Y(iNd,iB)*ct
+                     iOut = iOut + 1
                   END DO
                END DO 
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds   
-                     ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(IdxNode))    ! cos(theta)
-                     st=sin(m_AD%FVW%W(iW)%PitchAndTwist(IdxNode))    ! sin(theta)
-                     y%WriteOutput( OutIdx )  = -m%X(IdxNode,IdxBlade)*st - m%Y(IdxNode,IdxBlade)*ct
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd   
+                     ct=cos(m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! cos(theta)
+                     st=sin(m_AD%FVW%W(iW)%PitchAndTwist(iNd))    ! sin(theta)
+                     y%WriteOutput(iOut)  = -m%X(iNd,iB)*st - m%Y(iNd,iB)*ct
+                     iOut = iOut + 1
                   END DO
                END DO 
             endif
 
-                        ! Tower clearance (requires tower influence calculation):
+         ! Force/Moment in: global, polar, local-polar and airfoil system 
+         CASE( BldNd_Fxi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = y%BladeLoad(iB)%Force (1, iNd); iOut = iOut + 1; enddo;enddo 
+         CASE( BldNd_Fyi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = y%BladeLoad(iB)%Force (2, iNd); iOut = iOut + 1; enddo;enddo 
+         CASE( BldNd_Fzi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = y%BladeLoad(iB)%Force (3, iNd); iOut = iOut + 1; enddo;enddo 
+         CASE( BldNd_Mxi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = y%BladeLoad(iB)%Moment(1, iNd); iOut = iOut + 1; enddo;enddo 
+         CASE( BldNd_Myi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = y%BladeLoad(iB)%Moment(2, iNd); iOut = iOut + 1; enddo;enddo 
+         CASE( BldNd_Mzi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = y%BladeLoad(iB)%Moment(3, iNd); iOut = iOut + 1; enddo;enddo 
+
+         CASE( BldNd_Fxp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Force (:, iNd), R_pi(1,:,iB)); iOut = iOut + 1; enddo;enddo 
+         CASE( BldNd_Fyp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Force (:, iNd), R_pi(2,:,iB)); iOut = iOut + 1; enddo;enddo 
+         CASE( BldNd_Fzp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Force (:, iNd), R_pi(3,:,iB)); iOut = iOut + 1; enddo;enddo 
+         CASE( BldNd_Mxp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Moment(:, iNd), R_pi(1,:,iB)); iOut = iOut + 1; enddo;enddo 
+         CASE( BldNd_Myp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Moment(:, iNd), R_pi(2,:,iB)); iOut = iOut + 1; enddo;enddo 
+         CASE( BldNd_Mzp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Moment(:, iNd), R_pi(3,:,iB)); iOut = iOut + 1; enddo;enddo 
+
+         CASE( BldNd_Fxl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Force (:, iNd), R_li(1,:,iNd,iB)); iOut = iOut + 1; enddo;enddo 
+         CASE( BldNd_Fyl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Force (:, iNd), R_li(2,:,iNd,iB)); iOut = iOut + 1; enddo;enddo 
+         CASE( BldNd_Fzl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Force (:, iNd), R_li(3,:,iNd,iB)); iOut = iOut + 1; enddo;enddo 
+         CASE( BldNd_Mxl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Moment(:, iNd), R_li(1,:,iNd,iB)); iOut = iOut + 1; enddo;enddo 
+         CASE( BldNd_Myl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Moment(:, iNd), R_li(2,:,iNd,iB)); iOut = iOut + 1; enddo;enddo 
+         CASE( BldNd_Mzl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Moment(:, iNd), R_li(3,:,iNd,iB)); iOut = iOut + 1; enddo;enddo 
+
+         ! NOTE: BldNd_Fn=BldNd_Fxa, BldNd_Ft=-BldNd_Fya (minus sign!),  BldNd_Mm=BldNd_Mza  BldNdMxa=0
+         !CASE( BldNd_Fxa ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Force (:, iNd), u%BladeMotion(iB)%Orientation(1,:,iNd)); iOut = iOut + 1; enddo;enddo 
+         !CASE( BldNd_Fya ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Force (:, iNd), u%BladeMotion(iB)%Orientation(2,:,iNd)); iOut = iOut + 1; enddo;enddo 
+         !CASE( BldNd_Mza ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( y%BladeLoad(iB)%Moment(:, iNd), u%BladeMotion(iB)%Orientation(3,:,iNd)); iOut = iOut + 1; enddo;enddo 
+
+         ! Tower clearance (requires tower influence calculation):
          CASE ( BldNd_Clrnc )
             if (.not. allocated(m%TwrClrnc)) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds   
-                     y%WriteOutput( OutIdx )  = 0.0_ReKi
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd   
+                     y%WriteOutput(iOut)  = 0.0_ReKi
+                     iOut = iOut + 1
                   END DO
                END DO 
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m%TwrClrnc(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m%TwrClrnc(iNd,iB)
+                     iOut = iOut + 1
                   END DO
                END DO 
             end if
          
          
+         ! TODO: remove me, Vx, Vy can be computed from other outputs
          CASE ( BldNd_Vx )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m%BEMT_u(Indx)%Vx(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m%BEMT_u(Indx)%Vx(iNd,iB)
+                     iOut = iOut + 1
                   END DO
                END DO
             else 
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m_AD%FVW%W(iW)%BN_UrelWind_s(1,IdxNode)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m_AD%FVW%W(iW)%BN_UrelWind_s(1,iNd)
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
 
          CASE ( BldNd_Vy )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m%BEMT_u(Indx)%Vy(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m%BEMT_u(Indx)%Vy(iNd,iB)
+                     iOut = iOut + 1
                   END DO
                END DO
             else 
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  =  m_AD%FVW%W(iW)%BN_UrelWind_s(2,IdxNode)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  =  m_AD%FVW%W(iW)%BN_UrelWind_s(2,iNd)
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
@@ -1182,48 +1090,48 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_GeomPhi )
             if (p_AD%WakeMod /= WakeMod_FVW) then
                if (allocated(OtherState%BEMT%ValidPhi)) then
-                  DO IdxBlade=1,p%BldNd_BladesOut
-                     DO IdxNode=1,p%NumBlNds 
-                        if (OtherState%BEMT%ValidPhi(IdxNode,IdxBlade)) then
-                           y%WriteOutput( OutIdx ) = 1.0_ReKi - m%BEMT%BEM_weight
+                  DO iB=1,nB
+                     DO iNd=1,nNd 
+                        if (OtherState%BEMT%ValidPhi(iNd,iB)) then
+                           y%WriteOutput(iOut) = 1.0_ReKi - m%BEMT%BEM_weight
                         else
-                           y%WriteOutput( OutIdx ) = 1.0_ReKi
+                           y%WriteOutput(iOut) = 1.0_ReKi
                         end if
-                        OutIdx = OutIdx + 1
+                        iOut = iOut + 1
                      END DO
                   END DO 
                else
-                  DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                     DO IdxNode=1,p%NumBlNds   
-                        y%WriteOutput( OutIdx )  = 1.0_ReKi
-                        OutIdx = OutIdx + 1
+                  DO iB=1,nB
+                  iW = W2B(iB)
+                     DO iNd=1,nNd   
+                        y%WriteOutput(iOut)  = 1.0_ReKi
+                        iOut = iOut + 1
                      END DO
                   END DO 
                end if
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds   
-                     y%WriteOutput( OutIdx )  = 0.0_ReKi ! Not valid for FVW
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd   
+                     y%WriteOutput(iOut)  = 0.0_ReKi ! Not valid for FVW
+                     iOut = iOut + 1
                   END DO
                END DO 
             endif
 
          CASE ( BldNd_chi )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds
-                     y%WriteOutput( OutIdx )  = m%BEMT_y%chi(IdxNode,IdxBlade)*R2D
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,nNd
+                     y%WriteOutput(iOut)  = m%BEMT_y%chi(iNd,iB)*R2D
+                     iOut = iOut + 1
                   END DO
                END DO
             else 
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,p%NumBlNds
+               DO iB=1,nB
+                  DO iNd=1,nNd
 !NOT available in FVW yet
-                     y%WriteOutput( OutIdx ) = 0.0_ReKi
-                     OutIdx = OutIdx + 1
+                     y%WriteOutput(iOut) = 0.0_ReKi
+                     iOut = iOut + 1
                   END DO
                END DO
             endif
@@ -1231,26 +1139,26 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_UA_Flag )
             IF (p_AD%UA_Flag) THEN
                if (p_AD%WakeMod /= WakeMod_FVW) then
-                  DO IdxBlade=1,p%BldNd_BladesOut
-                     DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                        y%WriteOutput( OutIdx ) = m%BEMT%UA%weight(IdxNode, IdxBlade)
-                        OutIdx = OutIdx + 1
+                  DO iB=1,nB
+                     DO iNd=1,u%BladeMotion(iB)%NNodes
+                        y%WriteOutput(iOut) = m%BEMT%UA%weight(iNd, iB)
+                        iOut = iOut + 1
                      ENDDO
                   ENDDO
                else
-                  DO IdxBlade=1,p%BldNd_BladesOut
-                     iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                     DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                        y%WriteOutput( OutIdx ) = m_AD%FVW%W(iW)%m_UA%weight(IdxNode, 1)
-                        OutIdx = OutIdx + 1
+                  DO iB=1,nB
+                     iW = W2B(iB)
+                     DO iNd=1,u%BladeMotion(iB)%NNodes
+                        y%WriteOutput(iOut) = m_AD%FVW%W(iW)%m_UA%weight(iNd, 1)
+                        iOut = iOut + 1
                      ENDDO
                   ENDDO
                end if
             ELSE
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = 0.0_ReKi
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,u%BladeMotion(iB)%NNodes
+                     y%WriteOutput(iOut) = 0.0_ReKi
+                     iOut = iOut + 1
                   ENDDO
                ENDDO
             END IF
@@ -1272,53 +1180,53 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
                      END SELECT
             
                      !if (p_AD%WakeMod /= WakeMod_FVW) then
-                        DO IdxBlade=1,p%BldNd_BladesOut
-                           DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                              y%WriteOutput( OutIdx ) = x%BEMT%UA%element(IdxNode, IdxBlade)%x(compIndx)
-                              OutIdx = OutIdx + 1
+                        DO iB=1,nB
+                           DO iNd=1,u%BladeMotion(iB)%NNodes
+                              y%WriteOutput(iOut) = x%BEMT%UA%element(iNd, iB)%x(compIndx)
+                              iOut = iOut + 1
                            ENDDO
                         ENDDO
                      !else
-                     !   DO IdxBlade=1,p%BldNd_BladesOut
-                     !      iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                     !      DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     !         y%WriteOutput( OutIdx ) = x_AD%FVW%UA(iW)%element(IdxNode, IdxBlade)%x(compIndx)
-                     !         OutIdx = OutIdx + 1
+                     !   DO iB=1,nB
+                     !      iW = W2B(iB)
+                     !      DO iNd=1,u%BladeMotion(iB)%NNodes
+                     !         y%WriteOutput(iOut) = x_AD%FVW%UA(iW)%element(iNd, iB)%x(compIndx)
+                     !         iOut = iOut + 1
                      !      ENDDO
                      !   ENDDO
                      !end if
                         
                ELSE
-                  DO IdxBlade=1,p%BldNd_BladesOut
-                     DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                        y%WriteOutput( OutIdx ) = 0.0_ReKi
-                        OutIdx = OutIdx + 1
+                  DO iB=1,nB
+                     DO iNd=1,u%BladeMotion(iB)%NNodes
+                        y%WriteOutput(iOut) = 0.0_ReKi
+                        iOut = iOut + 1
                      ENDDO
                   ENDDO
                END IF
 
 
          CASE ( BldNd_Debug1 )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                  y%WriteOutput( OutIdx )  = 0.0_ReKi ! something here
-                  OutIdx = OutIdx + 1
+            DO iB=1,nB
+               DO iNd=1,u%BladeMotion(iB)%NNodes
+                  y%WriteOutput(iOut)  = 0.0_ReKi ! something here
+                  iOut = iOut + 1
                END DO
             END DO 
 
          CASE ( BldNd_Debug2 )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                  y%WriteOutput( OutIdx )  = 0.0_ReKi ! something here
-                  OutIdx = OutIdx + 1
+            DO iB=1,nB
+               DO iNd=1,u%BladeMotion(iB)%NNodes
+                  y%WriteOutput(iOut)  = 0.0_ReKi ! something here
+                  iOut = iOut + 1
                END DO
             END DO 
 
          CASE ( BldNd_Debug3 )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                  y%WriteOutput( OutIdx )  = 0.0_ReKi ! something here
-                  OutIdx = OutIdx + 1
+            DO iB=1,nB
+               DO iNd=1,u%BladeMotion(iB)%NNodes
+                  y%WriteOutput(iOut)  = 0.0_ReKi ! something here
+                  iOut = iOut + 1
                END DO
             END DO 
             
@@ -1326,54 +1234,54 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             ! CpMin
          CASE ( BldNd_CpMin )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = m%BEMT_y%Cpmin(IdxNode,IdxBlade)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,u%BladeMotion(iB)%NNodes
+                     y%WriteOutput(iOut) = m%BEMT_y%Cpmin(iNd,iB)
+                     iOut = iOut + 1
                   ENDDO
                ENDDO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = m_AD%FVW%W(iW)%BN_Cpmin(IdxNode)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,u%BladeMotion(iB)%NNodes
+                     y%WriteOutput(iOut) = m_AD%FVW%W(iW)%BN_Cpmin(iNd)
+                     iOut = iOut + 1
                   ENDDO
                ENDDO
             endif
 
             ! Cavitation
          CASE ( BldNd_SgCav )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                  y%WriteOutput( OutIdx ) = m%SigmaCavit(IdxNode,IdxBlade)
-                  OutIdx = OutIdx + 1
+            DO iB=1,nB
+               DO iNd=1,u%BladeMotion(iB)%NNodes
+                  y%WriteOutput(iOut) = m%SigmaCavit(iNd,iB)
+                  iOut = iOut + 1
                ENDDO
             ENDDO
 
          CASE ( BldNd_SigCr )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                  y%WriteOutput( OutIdx ) = m%SigmaCavitCrit(IdxNode,IdxBlade)
-                  OutIdx = OutIdx + 1
+            DO iB=1,nB
+               DO iNd=1,u%BladeMotion(iB)%NNodes
+                  y%WriteOutput(iOut) = m%SigmaCavitCrit(iNd,iB)
+                  iOut = iOut + 1
                ENDDO
             ENDDO
 
             ! circulation on blade
          CASE ( BldNd_Gam )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = 0.5_ReKi * p%BEMT%chord(IdxNode,IdxBlade) * m%BEMT_y%Vrel(IdxNode,IdxBlade) * m%BEMT_y%Cl(IdxNode,IdxBlade) ! "Gam" [m^2/s]
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  DO iNd=1,u%BladeMotion(iB)%NNodes
+                     y%WriteOutput(iOut) = 0.5_ReKi * p%BEMT%chord(iNd,iB) * m%BEMT_y%Vrel(iNd,iB) * m%BEMT_y%Cl(iNd,iB) ! "Gam" [m^2/s]
+                     iOut = iOut + 1
                   ENDDO
                ENDDO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = 0.5_ReKi * p_AD%FVW%W(iW)%chord_LL(IdxNode) * m_AD%FVW%W(iW)%BN_Vrel(IdxNode) * m_AD%FVW%W(iW)%BN_Cl(IdxNode) ! "Gam" [m^2/s]
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,u%BladeMotion(iB)%NNodes
+                     y%WriteOutput(iOut) = 0.5_ReKi * p_AD%FVW%W(iW)%chord_LL(iNd) * m_AD%FVW%W(iW)%BN_Vrel(iNd) * m_AD%FVW%W(iW)%BN_Cl(iNd) ! "Gam" [m^2/s]
+                     iOut = iOut + 1
                   ENDDO
                ENDDO
             endif
@@ -1382,196 +1290,78 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
             !================================================
             ! Static portion of Cl, Cd, Cm (ignoring unsteady effects)
             ! Cl_Static
-         CASE ( BldNd_Cl_Static )
+         CASE ( BldNd_Cl_qs )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
+               DO iB=1,nB
+                  DO iNd=1,u%BladeMotion(iB)%NNodes
 !NOT available in BEMT/DBEMT yet
-                     y%WriteOutput( OutIdx ) = 0.0_ReKi
-                     OutIdx = OutIdx + 1
+                     y%WriteOutput(iOut) = 0.0_ReKi
+                     iOut = iOut + 1
                   ENDDO
                ENDDO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = m_AD%FVW%W(iW)%BN_Cl_Static(IdxNode)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,u%BladeMotion(iB)%NNodes
+                     y%WriteOutput(iOut) = m_AD%FVW%W(iW)%BN_Cl_Static(iNd)
+                     iOut = iOut + 1
                   ENDDO
                ENDDO
             endif
 
             ! Cd_Static
-         CASE ( BldNd_Cd_Static )
+         CASE ( BldNd_Cd_qs )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
+               DO iB=1,nB
+                  DO iNd=1,u%BladeMotion(iB)%NNodes
 !NOT available in BEMT/DBEMT yet
-                     y%WriteOutput( OutIdx ) = 0.0_ReKi
-                     OutIdx = OutIdx + 1
+                     y%WriteOutput(iOut) = 0.0_ReKi
+                     iOut = iOut + 1
                   ENDDO
                ENDDO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = m_AD%FVW%W(iW)%BN_Cd_Static(IdxNode)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,u%BladeMotion(iB)%NNodes
+                     y%WriteOutput(iOut) = m_AD%FVW%W(iW)%BN_Cd_Static(iNd)
+                     iOut = iOut + 1
                   ENDDO
                ENDDO
             endif
 
             ! Cm_Static
-         CASE ( BldNd_Cm_Static )
+         CASE ( BldNd_Cm_qs )
             if (p_AD%WakeMod /= WakeMod_FVW) then
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
+               DO iB=1,nB
+                  DO iNd=1,u%BladeMotion(iB)%NNodes
 !NOT available in BEMT/DBEMT yet
-                     y%WriteOutput( OutIdx ) = 0.0_ReKi
-                     OutIdx = OutIdx + 1
+                     y%WriteOutput(iOut) = 0.0_ReKi
+                     iOut = iOut + 1
                   ENDDO
                ENDDO
             else
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  iW = p_AD%FVW%Bld2Wings(iRot, IdxBlade)
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                     y%WriteOutput( OutIdx ) = m_AD%FVW%W(iW)%BN_Cm_Static(IdxNode)
-                     OutIdx = OutIdx + 1
+               DO iB=1,nB
+                  iW = W2B(iB)
+                  DO iNd=1,u%BladeMotion(iB)%NNodes
+                     y%WriteOutput(iOut) = m_AD%FVW%W(iW)%BN_Cm_Static(iNd)
+                     iOut = iOut + 1
                   ENDDO
                ENDDO
             endif
-
  
 
-            !================================================
-            ! Inductions in global coordinates
-         CASE ( BldNd_Vindxi )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                  y%WriteOutput( OutIdx ) = m%Vind_i(1, IdxNode, IdxBlade )
-                  OutIdx = OutIdx + 1
-               ENDDO
-            ENDDO
-         CASE ( BldNd_Vindyi )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                  y%WriteOutput( OutIdx ) = m%Vind_i(2, IdxNode, IdxBlade )
-                  OutIdx = OutIdx + 1
-               ENDDO
-            ENDDO
-         CASE ( BldNd_Vindzi )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                  y%WriteOutput( OutIdx ) = m%Vind_i(3, IdxNode, IdxBlade )
-                  OutIdx = OutIdx + 1
-               ENDDO
-            ENDDO
+         ! Buoyant force in airfoil coordinate system
+         ! TODO: Change memory storage order 
+         CASE ( BldNd_Fbxa ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlFB(iNd,iB,:), u%BladeMotion(iB)%Orientation(1,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE ( BldNd_Fbya ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlFB(iNd,iB,:), u%BladeMotion(iB)%Orientation(2,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE ( BldNd_Fbza ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlFB(iNd,iB,:), u%BladeMotion(iB)%Orientation(3,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE ( BldNd_Mbxa ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlMB(iNd,iB,:), u%BladeMotion(iB)%Orientation(1,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE ( BldNd_Mbya ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlMB(iNd,iB,:), u%BladeMotion(iB)%Orientation(2,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE ( BldNd_Mbza ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlMB(iNd,iB,:), u%BladeMotion(iB)%Orientation(3,:,iNd) ); iOut = iOut + 1; enddo;enddo
 
-            !================================================
-            ! Inductions in polar rotating hub coordinates
-            ! Axial induction, polar rotating hub coordinates
-         CASE ( BldNd_Vindxh )
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                  y%WriteOutput( OutIdx ) = dot_product(R_hi(1,1:3,IdxBlade), m%Vind_i(1:3, IdxNode, IdxBlade )) ! Uihn, hub normal
-                     OutIdx = OutIdx + 1
-                  ENDDO
-               ENDDO
-
-            ! Tangential induction, polar rotating hub coordinates
-         CASE ( BldNd_Vindyh )
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                  y%WriteOutput( OutIdx ) = dot_product(R_hi(2,1:3,IdxBlade), m%Vind_i(1:3, IdxNode, IdxBlade )) ! Uiht, hub tangential
-                     OutIdx = OutIdx + 1
-                  ENDDO
-               ENDDO
-
-            ! Radial induction, polar rotating hub coordinates
-         CASE ( BldNd_Vindzh )
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                  y%WriteOutput( OutIdx ) = dot_product(R_hi(3,1:3,IdxBlade), m%Vind_i(1:3, IdxNode, IdxBlade )) ! Uihr, hub radial
-                     OutIdx = OutIdx + 1
-                  ENDDO
-               ENDDO
-
-            !================================================
-            ! Inductions in staggered polar coordinates
-         CASE ( BldNd_Vindxp )
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                  y%WriteOutput( OutIdx ) = dot_product(m%R_pi(1,1:3,IdxNode, IdxBlade), m%Vind_i(1:3, IdxNode, IdxBlade ))
-                     OutIdx = OutIdx + 1
-                  ENDDO
-               ENDDO
- 
-         CASE ( BldNd_Vindyp )
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                  y%WriteOutput( OutIdx ) = dot_product(m%R_pi(2,1:3,IdxNode, IdxBlade), m%Vind_i(1:3, IdxNode, IdxBlade ))
-                     OutIdx = OutIdx + 1
-                  ENDDO
-               ENDDO
- 
-         CASE ( BldNd_Vindzp )
-               DO IdxBlade=1,p%BldNd_BladesOut
-                  DO IdxNode=1,u%BladeMotion(IdxBlade)%NNodes
-                  y%WriteOutput( OutIdx ) = dot_product(m%R_pi(3,1:3,IdxNode, IdxBlade), m%Vind_i(1:3, IdxNode, IdxBlade ))
-                     OutIdx = OutIdx + 1
-                  ENDDO
-               ENDDO
-
-
-            ! Normal buoyant force (to chord), tangential buoyant force (to chord), spanwise buoyant force
-         CASE ( BldNd_Fbn )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds   
-                  y%WriteOutput( OutIdx ) = dot_product( u%BladeMotion(IdxBlade)%Orientation(1,:,IdxNode), m%BlFB(IdxNode,IdxBlade,:) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-            
-         CASE ( BldNd_Fbt )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds   
-                  y%WriteOutput( OutIdx ) = dot_product( u%BladeMotion(IdxBlade)%Orientation(2,:,IdxNode), m%BlFB(IdxNode,IdxBlade,:) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-
-         CASE ( BldNd_Fbs )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds   
-                  y%WriteOutput( OutIdx ) = dot_product( u%BladeMotion(IdxBlade)%Orientation(3,:,IdxNode), m%BlFB(IdxNode,IdxBlade,:) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-
-            ! Normal buoyant moment (to chord), tangential buoyant moment (to chord), spanwise buoyant moment
-         CASE ( BldNd_Mbn )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds   
-                  y%WriteOutput( OutIdx ) = dot_product( u%BladeMotion(IdxBlade)%Orientation(1,:,IdxNode), m%BlMB(IdxNode,IdxBlade,:) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-            
-         CASE ( BldNd_Mbt )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds   
-                  y%WriteOutput( OutIdx ) = dot_product( u%BladeMotion(IdxBlade)%Orientation(2,:,IdxNode), m%BlMB(IdxNode,IdxBlade,:) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO
-
-         CASE ( BldNd_Mbs )
-            DO IdxBlade=1,p%BldNd_BladesOut
-               DO IdxNode=1,p%NumBlNds   
-                  y%WriteOutput( OutIdx ) = dot_product( u%BladeMotion(IdxBlade)%Orientation(3,:,IdxNode), m%BlMB(IdxNode,IdxBlade,:) )
-                  OutIdx = OutIdx + 1
-               END DO
-            END DO 
+         CASE DEFAULT
+            print*,'>>>> UNKNOWN CHANNEL',p%BldNd_OutParam(IdxChan)%Indx
+            STOP
 
          END SELECT
          
@@ -1697,49 +1487,67 @@ SUBROUTINE BldNdOuts_SetOutParam(BldNd_OutList, p, p_AD, ErrStat, ErrMsg )
 
    LOGICAL                      :: InvalidOutput(1:BldNd_MaxOutPts)                      ! This array determines if the output channel is valid for this configuration
    CHARACTER(*), PARAMETER      :: RoutineName = "BldNdOuts_SetOutParam"
-
-   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(101) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
-                               "ALPHA    ","AXIND    ","AXIND_QS ","BEM_CT_QS","BEM_F    ","BEM_K    ","BEM_KP   ","CD       ", &
-                               "CD_STATIC","CHI      ","CL       ","CLRNC    ","CL_STATIC","CM       ","CM_STATIC","CN       ", &
-                               "CPMIN    ","CT       ","CURVE    ","CX       ","CY       ","DEBUG1   ","DEBUG2   ","DEBUG3   ", &
-                               "DYNP     ","FBN      ","FBS      ","FBT      ","FD       ","FL       ","FN       ","FT       ", &
-                               "FX       ","FY       ","GAM      ","GEOMPHI  ","M        ","MBN      ","MBS      ","MBT      ", &
-                               "MM       ","PHI      ","RE       ","SGCAV    ","SIGCR    ","STVX     ","STVXH    ","STVXI    ", &
-                               "STVXP    ","STVY     ","STVYH    ","STVYI    ","STVYP    ","STVZ     ","STVZH    ","STVZI    ", &
-                               "STVZP    ","THETA    ","TNIND    ","TNIND_QS ","UA_FLAG  ","UA_X1    ","UA_X2    ","UA_X3    ", &
-                               "UA_X4    ","UA_X5    ","UIN      ","UIR      ","UIT      ","VDISX    ","VDISXH   ","VDISXI   ", &
-                               "VDISXP   ","VDISY    ","VDISYH   ","VDISYI   ","VDISYP   ","VDISZ    ","VDISZH   ","VDISZI   ", &
-                               "VDISZP   ","VINDX    ","VINDXH   ","VINDXI   ","VINDXP   ","VINDY    ","VINDYH   ","VINDYI   ", &
-                               "VINDYP   ","VINDZH   ","VINDZI   ","VINDZP   ","VREL     ","VUNDX    ","VUNDXI   ","VUNDY    ", &
-                               "VUNDYI   ","VUNDZ    ","VUNDZI   ","VX       ","VY       "/)
-   INTEGER(IntKi), PARAMETER :: ParamIndxAry(101) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
-                                    BldNd_Alpha ,     BldNd_AxInd ,  BldNd_AxInd_qs , BldNd_BEM_CT_qs ,     BldNd_BEM_F ,     BldNd_BEM_k ,    BldNd_BEM_kp ,        BldNd_Cd , &
-                                BldNd_Cd_Static ,       BldNd_Chi ,        BldNd_Cl ,     BldNd_Clrnc , BldNd_Cl_Static ,        BldNd_Cm , BldNd_Cm_Static ,        BldNd_Cn , &
-                                    BldNd_CpMin ,        BldNd_Ct ,     BldNd_Curve ,        BldNd_Cx ,        BldNd_Cy ,    BldNd_Debug1 ,    BldNd_Debug2 ,    BldNd_Debug3 , &
-                                     BldNd_DynP ,       BldNd_Fbn ,       BldNd_Fbs ,       BldNd_Fbt ,        BldNd_Fd ,        BldNd_Fl ,        BldNd_Fn ,        BldNd_Ft , &
-                                       BldNd_Fx ,        BldNd_Fy ,       BldNd_Gam ,   BldNd_GeomPhi ,         BldNd_M ,       BldNd_Mbn ,       BldNd_Mbs ,       BldNd_Mbt , &
-                                       BldNd_Mm ,       BldNd_Phi ,        BldNd_Re ,     BldNd_SgCav ,     BldNd_SigCr ,      BldNd_STVx ,     BldNd_STVxh ,     BldNd_STVxi , &
-                                    BldNd_STVxp ,      BldNd_STVy ,     BldNd_STVyh ,     BldNd_STVyi ,     BldNd_STVyp ,      BldNd_STVz ,     BldNd_STVzh ,     BldNd_STVzi , &
-                                    BldNd_STVzp ,     BldNd_Theta ,     BldNd_TnInd ,  BldNd_TnInd_qs ,   BldNd_UA_Flag ,     BldNd_UA_x1 ,     BldNd_UA_x2 ,     BldNd_UA_x3 , &
-                                    BldNd_UA_x4 ,     BldNd_UA_x5 ,    BldNd_Vindxh ,    BldNd_Vindzh ,    BldNd_Vindyh ,     BldNd_VDisx ,    BldNd_Vdisxh ,    BldNd_Vdisxi , &
-                                   BldNd_Vdisxp ,     BldNd_VDisy ,    BldNd_Vdisyh ,    BldNd_Vdisyi ,    BldNd_Vdisyp ,     BldNd_VDisz ,    BldNd_Vdiszh ,    BldNd_Vdiszi , &
-                                   BldNd_Vdiszp ,     BldNd_Vindx ,    BldNd_Vindxh ,    BldNd_Vindxi ,    BldNd_Vindxp ,     BldNd_Vindy ,    BldNd_Vindyh ,    BldNd_Vindyi , &
-                                   BldNd_Vindyp ,    BldNd_Vindzh ,    BldNd_Vindzi ,    BldNd_Vindzp ,      BldNd_VRel ,     BldNd_VUndx ,    BldNd_Vundxi ,     BldNd_VUndy , &
-                                   BldNd_Vundyi ,     BldNd_VUndz ,    BldNd_Vundzi ,        BldNd_Vx ,        BldNd_Vy /)
-   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(101) =  (/ character(ChanLen) :: &  ! This lists the units corresponding to the allowed parameters
+   
+   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(148) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
+                               "ALPHA    ","AXIND    ","AXIND_QS ","BEM_CT_QS","BEM_F_QS ","BEM_KP_QS","BEM_K_QS ","CD       ", &
+                               "CD_QS    ","CHI      ","CL       ","CLRNC    ","CL_QS    ","CM       ","CMA      ","CM_QS    ", &
+                               "CN       ","CPMIN    ","CT       ","CURVE    ","CX       ","CXA      ","CY       ","DEBUG1   ", &
+                               "DEBUG2   ","DEBUG3   ","DYNP     ","FBN      ","FBS      ","FBT      ","FBXA     ","FBYA     ", &
+                               "FBZA     ","FD       ","FL       ","FN       ","FT       ","FX       ","FXA      ","FXI      ", &
+                               "FXL      ","FXP      ","FY       ","FYI      ","FYL      ","FYP      ","FZI      ","FZL      ", &
+                               "FZP      ","GAM      ","GEOMPHI  ","M        ","MBN      ","MBN      ","MBS      ","MBXA     ", &
+                               "MBYA     ","MBZA     ","MM       ","MXI      ","MXL      ","MXP      ","MYI      ","MYL      ", &
+                               "MYP      ","MZA      ","MZI      ","MZL      ","MZP      ","PHI      ","RE       ","SGCAV    ", &
+                               "SIGCR    ","STVX     ","STVXA    ","STVXI    ","STVXL    ","STVXP    ","STVY     ","STVYA    ", &
+                               "STVYI    ","STVYL    ","STVYP    ","STVZ     ","STVZA    ","STVZI    ","STVZL    ","STVZP    ", &
+                               "THETA    ","TNIND    ","TNIND_QS ","TOE      ","UA_FLAG  ","UA_X1    ","UA_X2    ","UA_X3    ", &
+                               "UA_X4    ","UA_X5    ","UIN      ","UIR      ","UIT      ","VDISX    ","VDISXA   ","VDISXI   ", &
+                               "VDISXL   ","VDISXP   ","VDISY    ","VDISYA   ","VDISYI   ","VDISYL   ","VDISYP   ","VDISZ    ", &
+                               "VDISZA   ","VDISZI   ","VDISZL   ","VDISZP   ","VINDX    ","VINDXA   ","VINDXI   ","VINDXL   ", &
+                               "VINDXP   ","VINDY    ","VINDYA   ","VINDYI   ","VINDYL   ","VINDYP   ","VINDZA   ","VINDZI   ", &
+                               "VINDZL   ","VINDZP   ","VREL     ","VUNDX    ","VUNDXA   ","VUNDXI   ","VUNDXL   ","VUNDXP   ", &
+                               "VUNDY    ","VUNDYA   ","VUNDYI   ","VUNDYL   ","VUNDYP   ","VUNDZ    ","VUNDZA   ","VUNDZI   ", &
+                               "VUNDZL   ","VUNDZP   ","VX       ","VY       "/)
+   INTEGER(IntKi), PARAMETER :: ParamIndxAry(148) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
+                                    BldNd_Alpha ,     BldNd_AxInd ,  BldNd_AxInd_qs , BldNd_BEM_CT_qs ,  BldNd_BEM_F_qs , BldNd_BEM_kp_qs ,  BldNd_BEM_k_qs ,        BldNd_Cd , &
+                                    BldNd_Cd_qs ,       BldNd_Chi ,        BldNd_Cl ,     BldNd_Clrnc ,     BldNd_Cl_qs ,        BldNd_Cm ,        BldNd_Cm ,     BldNd_Cm_qs , &
+                                       BldNd_Cn ,     BldNd_CpMin ,        BldNd_Ct ,     BldNd_Curve ,        BldNd_Cx ,        BldNd_Cn ,        BldNd_Cy ,    BldNd_Debug1 , &
+                                   BldNd_Debug2 ,    BldNd_Debug3 ,      BldNd_DynP ,      BldNd_Fbxa ,      BldNd_Fbza ,      BldNd_Fbya ,      BldNd_Fbxa ,      BldNd_Fbya , &
+                                     BldNd_Fbza ,        BldNd_Fd ,        BldNd_Fl ,        BldNd_Fn ,        BldNd_Ft ,        BldNd_Fx ,        BldNd_Fn ,       BldNd_Fxi , &
+                                      BldNd_Fxl ,       BldNd_Fxp ,        BldNd_Fy ,       BldNd_Fyi ,       BldNd_Fyl ,       BldNd_Fyp ,       BldNd_Fzi ,       BldNd_Fzl , &
+                                      BldNd_Fzp ,       BldNd_Gam ,   BldNd_GeomPhi ,         BldNd_M ,      BldNd_Mbxa ,      BldNd_Mbya ,      BldNd_Mbza ,      BldNd_Mbxa , &
+                                     BldNd_Mbya ,      BldNd_Mbza ,        BldNd_Mm ,       BldNd_Mxi ,       BldNd_Mxl ,       BldNd_Mxp ,       BldNd_Myi ,       BldNd_Myl , &
+                                      BldNd_Myp ,        BldNd_Mm ,       BldNd_Mzi ,       BldNd_Mzl ,       BldNd_Mzp ,       BldNd_Phi ,        BldNd_Re ,     BldNd_SgCav , &
+                                    BldNd_SigCr ,      BldNd_STVx ,     BldNd_STVxa ,     BldNd_STVxi ,     BldNd_STVxl ,     BldNd_STVxp ,      BldNd_STVy ,     BldNd_STVya , &
+                                    BldNd_STVyi ,     BldNd_STVyl ,     BldNd_STVyp ,      BldNd_STVz ,     BldNd_STVza ,     BldNd_STVzi ,     BldNd_STVzl ,     BldNd_STVzp , &
+                                    BldNd_Theta ,     BldNd_TnInd ,  BldNd_TnInd_qs ,       BldNd_Toe ,   BldNd_UA_Flag ,     BldNd_UA_x1 ,     BldNd_UA_x2 ,     BldNd_UA_x3 , &
+                                    BldNd_UA_x4 ,     BldNd_UA_x5 ,    BldNd_Vindxp ,    BldNd_Vindzp ,    BldNd_Vindyp ,     BldNd_VDisx ,    BldNd_VDisxa ,    BldNd_VDisxi , &
+                                   BldNd_VDisxl ,    BldNd_VDisxp ,     BldNd_VDisy ,    BldNd_VDisya ,    BldNd_VDisyi ,    BldNd_VDisyl ,    BldNd_VDisyp ,     BldNd_VDisz , &
+                                   BldNd_VDisza ,    BldNd_VDiszi ,    BldNd_VDiszl ,    BldNd_VDiszp ,     BldNd_Vindx ,    BldNd_Vindxa ,    BldNd_Vindxi ,    BldNd_Vindxl , &
+                                   BldNd_Vindxp ,     BldNd_Vindy ,    BldNd_Vindya ,    BldNd_Vindyi ,    BldNd_Vindyl ,    BldNd_Vindyp ,    BldNd_Vindza ,    BldNd_Vindzi , &
+                                   BldNd_Vindzl ,    BldNd_Vindzp ,      BldNd_VRel ,     BldNd_VUndx ,    BldNd_VUndxa ,    BldNd_VUndxi ,    BldNd_VUndxl ,    BldNd_VUndxp , &
+                                    BldNd_VUndy ,    BldNd_VUndya ,    BldNd_VUndyi ,    BldNd_VUndyl ,    BldNd_VUndyp ,     BldNd_VUndz ,    BldNd_VUndza ,    BldNd_VUndzi , &
+                                   BldNd_VUndzl ,    BldNd_VUndzp ,        BldNd_Vx ,        BldNd_Vy /)
+   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(148) =  (/ character(ChanLen) :: &  ! This lists the units corresponding to the allowed parameters
                                "(deg)  ","(-)    ","(-)    ","(-)    ","(-)    ","(-)    ","(-)    ","(-)    ", &
                                "(-)    ","(deg)  ","(-)    ","(m)    ","(-)    ","(-)    ","(-)    ","(-)    ", &
-                               "(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ","(-)    ","(-)    ","(-)    ", &
-                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(N/m)  ","(N/m)  ","(m^2/s)","(1/0)  ","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)", &
-                               "(N-m/m)","(deg)  ","(-)    ","(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(-)    ","(-)    ","(-)    ","(deg)  ","(-)    ","(-)    ","(-)    ","(-)    ", &
+                               "(-)    ","(-)    ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(m^2/s)","(1/0)  ","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)", &
+                               "(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)", &
+                               "(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(N-m/m)","(deg)  ","(-)    ","(-)    ", &
+                               "(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(deg)  ","(-)    ","(-)    ","(-)    ","(rad)  ","(rad)  ","(-)    ", &
+                               "(deg)  ","(-)    ","(-)    ","(deg)  ","(-)    ","(rad)  ","(rad)  ","(-)    ", &
                                "(-)    ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  "/)
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  "/)
 
 
       ! Initialize values
@@ -1751,19 +1559,19 @@ SUBROUTINE BldNdOuts_SetOutParam(BldNd_OutList, p, p_AD, ErrStat, ErrMsg )
 !   ..... Developer must add checking for invalid inputs here: .....
 
    if (.not. p%Buoyancy) then
-      InvalidOutput( BldNd_Fbn ) = .true.
-      InvalidOutput( BldNd_Fbt ) = .true.
-      InvalidOutput( BldNd_Fbs ) = .true.
-      InvalidOutput( BldNd_Mbn ) = .true.
-      InvalidOutput( BldNd_Mbt ) = .true.
-      InvalidOutput( BldNd_Mbs ) = .true.
+      InvalidOutput( BldNd_Fbxa ) = .true.
+      InvalidOutput( BldNd_Fbya ) = .true.
+      InvalidOutput( BldNd_Fbza ) = .true.
+      InvalidOutput( BldNd_Mbxa ) = .true.
+      InvalidOutput( BldNd_Mbya ) = .true.
+      InvalidOutput( BldNd_Mbza ) = .true.
    end if
 
       ! The following are valid only for BEMT/DBEMT
    if (p_AD%WakeMod /= WakeMod_FVW) then
-      InvalidOutput( BldNd_Cl_Static ) = .true.
-      InvalidOutput( BldNd_Cd_Static ) = .true.
-      InvalidOutput( BldNd_Cm_Static ) = .true.
+      InvalidOutput( BldNd_Cl_qs ) = .true.
+      InvalidOutput( BldNd_Cd_qs ) = .true.
+      InvalidOutput( BldNd_Cm_qs ) = .true.
    else
          ! The following are invalid for free vortex wake
       InvalidOutput( BldNd_Chi       ) = .true.

@@ -608,7 +608,7 @@ subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    call AllocAry( m%orientationAnnulus, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'm%orientationAnnulus', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-call AllocAry( m%R_pi, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'm%R_pi', ErrStat2, ErrMsg2 )
+   call AllocAry( m%R_li, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'm%R_li', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
      
    call allocAry( m%SigmaCavit, p%NumBlNds, p%numBlades, 'm%SigmaCavit', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -1869,12 +1869,13 @@ subroutine RotWriteOutputs( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRo
 
       ! Now we need to populate the blade node outputs here
       if (p%NumBlades > 0) then
-         ! For all methods (BEM/FVW), computes R_pi: from inertial system to staggered-polar system
+         ! For all methods (BEM/FVW), computes R_li: from inertial system to local-polar system
          ! NOTE: this could be placed either in AeroDyn_IO* or in SetInputs
          !       The issue right now is the Calculate_MeshOrientation_Rel2Hub is in AeroDyn.f90
          x_hat_disk = u%HubMotion%Orientation(1,:,1)
          do k=1,p%NumBlades
-            call Calculate_MeshOrientation_Rel2Hub(u%BladeMotion(k), u%HubMotion, x_hat_disk, m%R_pi(:,:,:,k))
+            ! Compute R_li for all nodes
+            call Calculate_MeshOrientation_Rel2Hub(u%BladeMotion(k), u%HubMotion, x_hat_disk, m%R_li(:,:,:,k))
          enddo
          call Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, indx, iRot, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2114,16 +2115,16 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
          BlmomentBplus(3) = BlmomentBplus(3) + BlglobCBplus(1) * BlforceBplus(2) - BlglobCBplus(2) * BlforceBplus(1)
 
             ! Sum loads at each node
-         BlFBtmp(j,k,:) = BlFBtmp(j,k,:) + BlforceB
+         BlFBtmp(j,k,:)   = BlFBtmp(j  ,k,:) + BlforceB
          BlFBtmp(j+1,k,:) = BlFBtmp(j+1,k,:) + BlforceBplus
-         BlMBtmp(j,k,:) = BlMBtmp(j,k,:) + BlmomentB
+         BlMBtmp(j,k,:)   = BlMBtmp(j  ,k,:) + BlmomentB
          BlMBtmp(j+1,k,:) = BlMBtmp(j+1,k,:) + BlmomentBplus
 
       end do ! j = nodes
 
          ! Assign loads to point mesh
       do j = 1,p%NumBlNds
-         m%BladeBuoyLoadPoint(k)%Force(:,j) = BlFBtmp(j,k,:)
+         m%BladeBuoyLoadPoint(k)%Force(:,j)  = BlFBtmp(j,k,:)
          m%BladeBuoyLoadPoint(k)%Moment(:,j) = BlMBtmp(j,k,:)
       end do ! j = nodes
 

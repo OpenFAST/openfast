@@ -303,7 +303,7 @@ IMPLICIT NONE
     TYPE(AA_InputType)  :: AA_u      !< Inputs to the AA module [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: DisturbedInflow      !< InflowOnBlade values modified by tower influence [m/s]
     REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: orientationAnnulus      !< Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles [-]
-    REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: R_pi      !< Transformation matrix from inertial system to the staggered polar coordinate system of a given section [-]
+    REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: R_li      !< Transformation matrix from inertial system to the staggered polar coordinate system of a given section [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: W_Twr      !< relative wind speed normal to the tower at node j [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: X_Twr      !< local x-component of force per unit length of the jth node in the tower [m/s]
@@ -8894,23 +8894,23 @@ IF (ALLOCATED(SrcRotMiscVarTypeData%orientationAnnulus)) THEN
   END IF
     DstRotMiscVarTypeData%orientationAnnulus = SrcRotMiscVarTypeData%orientationAnnulus
 ENDIF
-IF (ALLOCATED(SrcRotMiscVarTypeData%R_pi)) THEN
-  i1_l = LBOUND(SrcRotMiscVarTypeData%R_pi,1)
-  i1_u = UBOUND(SrcRotMiscVarTypeData%R_pi,1)
-  i2_l = LBOUND(SrcRotMiscVarTypeData%R_pi,2)
-  i2_u = UBOUND(SrcRotMiscVarTypeData%R_pi,2)
-  i3_l = LBOUND(SrcRotMiscVarTypeData%R_pi,3)
-  i3_u = UBOUND(SrcRotMiscVarTypeData%R_pi,3)
-  i4_l = LBOUND(SrcRotMiscVarTypeData%R_pi,4)
-  i4_u = UBOUND(SrcRotMiscVarTypeData%R_pi,4)
-  IF (.NOT. ALLOCATED(DstRotMiscVarTypeData%R_pi)) THEN 
-    ALLOCATE(DstRotMiscVarTypeData%R_pi(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcRotMiscVarTypeData%R_li)) THEN
+  i1_l = LBOUND(SrcRotMiscVarTypeData%R_li,1)
+  i1_u = UBOUND(SrcRotMiscVarTypeData%R_li,1)
+  i2_l = LBOUND(SrcRotMiscVarTypeData%R_li,2)
+  i2_u = UBOUND(SrcRotMiscVarTypeData%R_li,2)
+  i3_l = LBOUND(SrcRotMiscVarTypeData%R_li,3)
+  i3_u = UBOUND(SrcRotMiscVarTypeData%R_li,3)
+  i4_l = LBOUND(SrcRotMiscVarTypeData%R_li,4)
+  i4_u = UBOUND(SrcRotMiscVarTypeData%R_li,4)
+  IF (.NOT. ALLOCATED(DstRotMiscVarTypeData%R_li)) THEN 
+    ALLOCATE(DstRotMiscVarTypeData%R_li(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%R_pi.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%R_li.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstRotMiscVarTypeData%R_pi = SrcRotMiscVarTypeData%R_pi
+    DstRotMiscVarTypeData%R_li = SrcRotMiscVarTypeData%R_li
 ENDIF
 IF (ALLOCATED(SrcRotMiscVarTypeData%AllOuts)) THEN
   i1_l = LBOUND(SrcRotMiscVarTypeData%AllOuts,1)
@@ -9431,8 +9431,8 @@ ENDIF
 IF (ALLOCATED(RotMiscVarTypeData%orientationAnnulus)) THEN
   DEALLOCATE(RotMiscVarTypeData%orientationAnnulus)
 ENDIF
-IF (ALLOCATED(RotMiscVarTypeData%R_pi)) THEN
-  DEALLOCATE(RotMiscVarTypeData%R_pi)
+IF (ALLOCATED(RotMiscVarTypeData%R_li)) THEN
+  DEALLOCATE(RotMiscVarTypeData%R_li)
 ENDIF
 IF (ALLOCATED(RotMiscVarTypeData%AllOuts)) THEN
   DEALLOCATE(RotMiscVarTypeData%AllOuts)
@@ -9714,10 +9714,10 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*4  ! orientationAnnulus upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%orientationAnnulus)  ! orientationAnnulus
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! R_pi allocated yes/no
-  IF ( ALLOCATED(InData%R_pi) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*4  ! R_pi upper/lower bounds for each dimension
-      Db_BufSz   = Db_BufSz   + SIZE(InData%R_pi)  ! R_pi
+  Int_BufSz   = Int_BufSz   + 1     ! R_li allocated yes/no
+  IF ( ALLOCATED(InData%R_li) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*4  ! R_li upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%R_li)  ! R_li
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! AllOuts allocated yes/no
   IF ( ALLOCATED(InData%AllOuts) ) THEN
@@ -10323,30 +10323,30 @@ ENDIF
         END DO
       END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%R_pi) ) THEN
+  IF ( .NOT. ALLOCATED(InData%R_li) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%R_pi,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%R_pi,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%R_li,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%R_li,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%R_pi,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%R_pi,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%R_li,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%R_li,2)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%R_pi,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%R_pi,3)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%R_li,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%R_li,3)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%R_pi,4)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%R_pi,4)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%R_li,4)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%R_li,4)
     Int_Xferred = Int_Xferred + 2
 
-      DO i4 = LBOUND(InData%R_pi,4), UBOUND(InData%R_pi,4)
-        DO i3 = LBOUND(InData%R_pi,3), UBOUND(InData%R_pi,3)
-          DO i2 = LBOUND(InData%R_pi,2), UBOUND(InData%R_pi,2)
-            DO i1 = LBOUND(InData%R_pi,1), UBOUND(InData%R_pi,1)
-              DbKiBuf(Db_Xferred) = InData%R_pi(i1,i2,i3,i4)
+      DO i4 = LBOUND(InData%R_li,4), UBOUND(InData%R_li,4)
+        DO i3 = LBOUND(InData%R_li,3), UBOUND(InData%R_li,3)
+          DO i2 = LBOUND(InData%R_li,2), UBOUND(InData%R_li,2)
+            DO i1 = LBOUND(InData%R_li,1), UBOUND(InData%R_li,1)
+              DbKiBuf(Db_Xferred) = InData%R_li(i1,i2,i3,i4)
               Db_Xferred = Db_Xferred + 1
             END DO
           END DO
@@ -11588,7 +11588,7 @@ ENDIF
         END DO
       END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! R_pi not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! R_li not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -11604,17 +11604,17 @@ ENDIF
     i4_l = IntKiBuf( Int_Xferred    )
     i4_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%R_pi)) DEALLOCATE(OutData%R_pi)
-    ALLOCATE(OutData%R_pi(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%R_li)) DEALLOCATE(OutData%R_li)
+    ALLOCATE(OutData%R_li(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u,i4_l:i4_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%R_pi.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%R_li.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i4 = LBOUND(OutData%R_pi,4), UBOUND(OutData%R_pi,4)
-        DO i3 = LBOUND(OutData%R_pi,3), UBOUND(OutData%R_pi,3)
-          DO i2 = LBOUND(OutData%R_pi,2), UBOUND(OutData%R_pi,2)
-            DO i1 = LBOUND(OutData%R_pi,1), UBOUND(OutData%R_pi,1)
-              OutData%R_pi(i1,i2,i3,i4) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      DO i4 = LBOUND(OutData%R_li,4), UBOUND(OutData%R_li,4)
+        DO i3 = LBOUND(OutData%R_li,3), UBOUND(OutData%R_li,3)
+          DO i2 = LBOUND(OutData%R_li,2), UBOUND(OutData%R_li,2)
+            DO i1 = LBOUND(OutData%R_li,1), UBOUND(OutData%R_li,1)
+              OutData%R_li(i1,i2,i3,i4) = REAL(DbKiBuf(Db_Xferred), R8Ki)
               Db_Xferred = Db_Xferred + 1
             END DO
           END DO
