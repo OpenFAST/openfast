@@ -32,23 +32,11 @@ Hub system (h)
 The hub system  :math:`(h)` rotates along the :math:`x_h` axis based on the shaft azimuthal position :math:`\psi` (see ElastoDyn documentation).
 
 
-Cone system (c)
----------------
-
-The cone system  :math:`(c)` is not directly used by AeroDyn (see ElastoDyn documentation).
-
-
-Blade system (b)
-----------------
-
-The blade system  :math:`(c)` is not directly used by AeroDyn (see ElastoDyn documentation).
-
-
 Polar system (p)
 ----------------
 
 The polar system :math:`(p_k)` is constructed from the hub coordinate system :math:`(h)` 
-by a rotation about the :math:`x_h` axis, which corresponds to the fixed azimuthal offset :math:`psi_{0,k}` of each blade :math:`k` (the blades are distributed evenly across the azimuth).
+by rotating the :math:`x_h` axis by the azimuthal offset of each blade :math:`\psi_{0,k}` (the blades are distributed evenly across the azimuth).
 For conciseness we refer to this system as the :math:`(p)` system.
 If the number of blade is written :math:`n_B`, the azimuthal offset for blade :math:`k` is:
 
@@ -58,16 +46,37 @@ If the number of blade is written :math:`n_B`, the azimuthal offset for blade :m
       \psi_{0,k} = 2 \pi \frac{k-1}{n_B}
    \end{aligned}
 
-For blade 1, :math:`\psi_{0,1}=0`.
+For blade 1, :math:`\psi_{0,1}=0`, therefore :math:`y_{p,1}=y_h` and :math:`z_{p,1}=z_h`.
 
 The :math:`x_{p,k}` axis is along the hub x-axis.
-The :math:`z_{p,k}` axis would correspond to the :math:`z` axis of the blade if no coning was present.
+
+
+In the absence of coning, the :math:`z_{p,k}` axis corresponds to the :math:`z_{b,k}` axis of the blade.
+
+
+Cone system (c)
+---------------
+
+The cone system  :math:`(c)` is obtained from the polar system by a rotation about the :math:`y_{p,k}` axis of each blade :math:`k`.
+See ElastoDyn/FAST8 documentation for more details.
+AeroDyn uses this system to estimate the blade pitch angle (by comparing the :math:`(c)` and :math:`(b)` systems).
+
+
+
+Blade system (b)
+----------------
+
+The blade system  :math:`(b)` is otbained from the cone system by a rotation (pitching) about the :math:`z_c` axis. 
+It is used to define the location of the aerodynamic center, the local twist of the blade along the span of the blade. 
+See :numref:`blade_data_input_file` and :numref:`ad_blade_geom`. 
 
 
 
 
 Airfoil system (a)
 ------------------
+
+**Currently the user specifies the prebend orientation in the input file and it is used to orient the airfoil** (i.e. the axis :math:`z_a`). In the future, this orientation may be computed automatically from the AC-line. 
 
 
 The airfoil section system :math:`(a_{_{kj}})`, or :math:`(a)` for short, is the coordinate system where Blade Element Theory is applied, and where the airfoil shape and polar data are given. 
@@ -76,6 +85,7 @@ The :math:`y_a` axis is along the airfoil chord (tangential to chord), towards t
 edge.
 The :math:`x_a` axis is normal to chord, towards the suction side (for an asymmetric airfoil).
 See :numref:`ad_cs_airfoil`.
+
 
 
 .. _ad_cs_airfoil:
@@ -124,6 +134,7 @@ Legacy (n-t) system
 In legacy AeroDyn code and documentation, the :math:`(n-t)` system is sometimes used.
 The :math:`n`-axis corresponds to the :math:`x_a` axis (normal to chord).
 The :math:`t`-axis corresponds to the :math:`-y_a` axis (opposite direction).
+
 
 
 

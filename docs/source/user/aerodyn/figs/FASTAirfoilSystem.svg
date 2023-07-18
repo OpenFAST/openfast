@@ -2,8 +2,8 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="897.14282"
-   height="408.27921"
+   width="926.96002"
+   height="412.8959"
    id="svg4376"
    version="1.1"
    inkscape:version="1.2.1 (9c6d41e410, 2022-07-14)"
@@ -26,8 +26,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.7"
-     inkscape:cx="354.28572"
-     inkscape:cy="162.14286"
+     inkscape:cx="292.85714"
+     inkscape:cy="166.42857"
      inkscape:document-units="pt"
      inkscape:current-layer="layer1"
      showgrid="true"
@@ -61,8 +61,8 @@
        empspacing="5"
        id="grid4901"
        type="xygrid"
-       originx="27.142887"
-       originy="54.347682" />
+       originx="56.960193"
+       originy="57.780307" />
   </sodipodi:namedview>
   <defs
      id="defs4378">
@@ -454,7 +454,7 @@
     </rdf:RDF>
   </metadata>
   <g
-     transform="translate(-664.66767,-449.81546)"
+     transform="translate(-634.85036,-446.38283)"
      id="layer1"
      inkscape:groupmode="layer"
      inkscape:label="Layer 1">
@@ -562,7 +562,7 @@
        transform="translate(-117.4793,38.49584)" />
     <text
        xml:space="preserve"
-       style="display:inline;font-size:26.6667px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px"
+       style="font-size:26.6667px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;display:inline"
        x="1486.5332"
        y="737.24286"
        id="text5323"
