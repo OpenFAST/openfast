@@ -51,27 +51,34 @@ The blade data input file contains the nodal discretization, geometry, twist, ch
 AeroDyn List of Output Channels
 -------------------------------
 
-This is a list of output parameters for the AeroDyn module.  The names are grouped by meaning, but can be ordered in the OUTPUTS section of the AeroDyn input file as you see fit.  :math:`B \alpha N \beta`, refers to output node :math:`\beta` of blade :math:`\alpha`, where :math:`\alpha` is a number in the range [1,3] and :math:`\beta` is a number in the range [1,9], corresponding to entry :math:`\beta` in the :math:`\textit{BlOutNd}` list.  :math:`\textit{TwN}\beta` refers to output node :math:`\beta` of the tower and is in the range [1,9], corresponding to entry :math:`\beta` in the :math:`\textit{TwOutNd}` list. A comprehensive, up-to-date list of all possible output parameters is given in the Excel file :download:`OutListParameters.xlsx <../../../OtherSupporting/OutListParameters.xlsx>`.
 
-The local tower coordinate system is shown in :numref:`ad_tower_geom` and the local blade coordinate system is shown in :numref:`ad_blade_local_cs` below.  Figure :numref:`ad_blade_local_cs` also shows the direction of the local angles and force components.
+AeroDyn has regular outputs (see :numref:`AD-Nodal-Outputs`) and nodal outputs (see :numref:`AD-Outputs`).
 
-.. _ad_blade_local_cs:
+The coordinate systems used for the outputs (labeled, i, h, p, l, a) are described in :numref:`ad_coordsys`.
 
-.. figure:: figs/aerodyn_blade_local_cs.png
-   :width: 80%
-   :align: center
-   :alt: aerodyn_blade_local_cs.png
 
-   AeroDyn Local Blade Coordinate System (Looking Toward the Tip, 
-   from the Root) – l: Lift, d: Drag, m: Pitching, x: Normal (to Plane), 
-   y: Tangential (to Plane), n: Normal (to Chord), 
-   and t: Tangential (to Chord)
+A comprehensive, up-to-date list of all possible output parameters is given in the Excel file :download:`OutListParameters.xlsx <../../../OtherSupporting/OutListParameters.xlsx>`, in the tab `AeroDyn` and `AeroDyn_Nodes` for the regular and nodal outputs, respectively.
+The names in the Excel file are grouped by meaning, but can be ordered in the OUTPUTS section of the AeroDyn input file as you see fit. 
 
-.. _ad-output-channel:
 
-.. figure:: figs/aerodyn_output_channel.pdf
-   :width: 500px
-   :align: center
-   :alt: aerodyn_output_channel.pdf
 
-   AeroDyn Output Channel List
+**Regular outputs** 
+Some examples of regular outputs are given below (see :download:`OutListParameters.xlsx <../../../OtherSupporting/OutListParameters.xlsx>` for an exhaustive list):
+
+
+   -  `RtAeroCp` : aerodynamic power coefficient. 
+
+
+   - :math:`B \alpha N \beta`, refers to output node :math:`\beta` of blade :math:`\alpha`, where :math:`\alpha` is a number in the range [1,3] and :math:`\beta` is a number in the range [1,9], corresponding to entry :math:`\beta` in the :math:`\textit{BlOutNd}` list.
+
+   - :math:`\textit{TwN}\beta` refers to output node :math:`\beta` of the tower and is in the range [1,9], corresponding to entry :math:`\beta` in the :math:`\textit{TwOutNd}` list. 
+
+
+**Nodal outputs** 
+
+An example of nodal outputs is described below (see :download:`OutListParameters.xlsx <../../../OtherSupporting/OutListParameters.xlsx>` for an exhaustive list).
+
+The x-component of the undisturbed flow velocity (`VUnd`) at all blade nodes in the inertial frame (:math:`i`) is requested by placing  :math:`VUndxi` in the AeroDyn nodal output list. 
+This will result in output channels of the form `AB`:math:`\alpha N\beta` `Vundxi`, for node :math:`\beta` of blade :math:`\alpha`, where :math:`\alpha` is a number in the range [1,3] and :math:`\beta` is a number in the range [1,999] corresponding to the index of the AeroDyn blade node.
+
+
