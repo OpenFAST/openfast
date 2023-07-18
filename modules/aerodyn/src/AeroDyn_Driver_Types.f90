@@ -171,7 +171,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: Pvap      !< Vapour pressure of working fluid [Pa]
     REAL(ReKi)  :: WtrDpth      !< Water depth [m]
     REAL(ReKi)  :: MSL2SWL      !< Offset between still-water level and mean sea level [m]
-    INTEGER(IntKi)  :: numTurbines      !< number of blades on turbine [-]
+    INTEGER(IntKi)  :: numTurbines      !< number of turbine rotors [-]
     TYPE(WTData) , DIMENSION(:), ALLOCATABLE  :: WT      !< Wind turbine data for driver [-]
     REAL(DbKi)  :: dT      !< time increment [s]
     REAL(DbKi)  :: tMax      !< time increment [s]

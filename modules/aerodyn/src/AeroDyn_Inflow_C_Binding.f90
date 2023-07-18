@@ -35,6 +35,11 @@ MODULE AeroDyn_Inflow_C_BINDING
    PUBLIC :: AeroDyn_Inflow_C_CalcOutput
    PUBLIC :: AeroDyn_Inflow_C_UpdateStates
    PUBLIC :: AeroDyn_Inflow_C_End
+!FIXME:
+!   PUBLIC :: AeroDyn_Inflow_C_PreInit     ! Initial call to setup number of turbines
+!   PUBLIC :: AeroDyn_C_SetupRotor         ! Initial node positions etc for a rotor
+!   PUBLIC :: AeroDyn_C_SetRotorMotion     ! Set motions for a given rotor
+!   PUBLIC :: AeroDyn_C_GetRotorLoads      ! Retrieve loads for a given rotor
 
    !------------------------------------------------------------------------------------
    !  Version info for display
@@ -48,7 +53,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    !     2  - above + all position/orientation info
    !     3  - above + input files (if direct passed)
    !     4  - above + meshes
-   integer(IntKi),   parameter            :: debugverbose = 0
+   integer(IntKi),   parameter            :: debugverbose = 3
 
    !------------------------------------------------------------------------------------
    !  Error handling
@@ -187,8 +192,83 @@ subroutine SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
    else
       ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
    endif
+   if (ErrStat /= ErrID_None) call WrScr(NewLine//'AeroDyn_Inflow_C_Binding: '//trim(ErrMsg)//NewLine)
 end subroutine SetErr
 
+
+!===============================================================================================================
+!--------------------------------------------- AeroDyn PreInit -------------------------------------------------
+!===============================================================================================================
+!> Allocate all the arrays for data storage for all turbine rotors
+subroutine AeroDyn_Inflow_C_PreInit(NumTurbines_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_PreInit')
+   implicit none
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_PreInit
+!GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_PreInit
+#endif
+   integer(c_int),          intent(in   ) :: NumTurbines_C
+   integer(c_int),          intent(  out) :: ErrStat_C
+   character(kind=c_char),  intent(  out) :: ErrMsg_C(ErrMsgLen_C)
+
+   ! Local variables
+   integer                    :: ErrStat                          !< aggregated error status
+   character(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
+   integer                    :: ErrStat2                         !< temporary error status  from a call
+   character(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
+   character(*), parameter    :: RoutineName = 'AeroDyn_Inflow_C_PreInit'   !< for error handling
+
+   ! Initialize error handling
+   ErrStat  =  ErrID_None
+   ErrMsg   =  ""
+
+   CALL NWTC_Init( ProgNameIn=version%Name )
+   CALL DispCopyrightLicense( version%Name )
+   CALL DispCompileRuntimeInfo( version%Name )
+
+   Sim%NumTurbines = int(NumTurbines_C,IntKi)
+
+   if (Sim%NumTurbines < 1_IntKi .or. Sim%NumTurbines > 9_IntKi) then
+      ErrStat2 =  ErrID_Fatal
+      ErrMsg2  =  'AeroDyn_Inflow simulates between 1 and 9 turbines, but '//trim(Num2LStr(Sim%NumTurbines))//' was specified'
+      if (Failed()) return;
+   endif
+
+   ! Allocate arrays and meshes for the number of turbines
+
+   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed) then
+         call FailCleanup()
+         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+      endif
+   end function Failed
+
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate "//trim(txt)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      endif
+      Failed0 = ErrStat >= AbortErrLev
+      if(Failed0) call FailCleanup()
+   end function Failed0
+
+   subroutine FailCleanup()
+      if (allocated(tmpBldPtMeshPos))  deallocate(tmpBldPtMeshPos)
+      if (allocated(tmpBldPtMeshOri))  deallocate(tmpBldPtMeshOri)
+      if (allocated(tmpBldPtMeshVel))  deallocate(tmpBldPtMeshVel)
+      if (allocated(tmpBldPtMeshAcc))  deallocate(tmpBldPtMeshAcc)
+      if (allocated(tmpBldPtMeshFrc))  deallocate(tmpBldPtMeshFrc)
+   end subroutine FailCleanup
+
+
+end subroutine AeroDyn_Inflow_C_PreInit    
 
 !===============================================================================================================
 !--------------------------------------------- AeroDyn Init----------------------------------------------------
@@ -204,6 +284,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
                wrOuts_C, DT_Outs_C,                                       &
                HubPos_C, HubOri_C,                                        &
                NacPos_C, NacOri_C,                                        &
+               NumTurbines_C,                                             &
                NumBlades_C, BldRootPos_C, BldRootOri_C,                   &
                NumMeshPts_C,  InitMeshPos_C,  InitMeshOri_C,              &
                NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, &
@@ -240,6 +321,8 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    real(c_double),            intent(in   )  :: HubOri_C( 9 )                          !< Hub orientation
    real(c_float),             intent(in   )  :: NacPos_C( 3 )                          !< Nacelle position
    real(c_double),            intent(in   )  :: NacOri_C( 9 )                          !< Nacelle orientation
+!FIXME: remove this when pre-init works
+   integer(c_int),            intent(in   )  :: NumTurbines_C                          !< Number of turbines
    integer(c_int),            intent(in   )  :: NumBlades_C                            !< Number of blades
    real(c_float),             intent(in   )  :: BldRootPos_C( 3*NumBlades_C )          !< Blade root positions
    real(c_double),            intent(in   )  :: BldRootOri_C( 9*NumBlades_C )          !< Blade root orientations
@@ -288,16 +371,23 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    NumChannels_C = 0_c_int
    OutputChannelNames_C(:) = ''
    OutputChannelUnits_C(:) = ''
+print*,'ADI_Init'
 
+!FIXME: move to pre-init
+print*,'NWTC_Init'
    CALL NWTC_Init( ProgNameIn=version%Name )
+print*,'CopyrightLicense'
    CALL DispCopyrightLicense( version%Name )
+print*,'CompileRunTimeInfo'
    CALL DispCompileRuntimeInfo( version%Name )
 
+!FIXME: add check to see if we actually called PreInit before calling this routine (check on a mesh or something we set like Sim%NumTurbines
 
    !--------------------------
    ! Input files
    !--------------------------
    ! RootName -- for output of echo or other files
+print*,'OutRootName'
    OutRootName = TRANSFER( OutRootName_C, OutRootName )
    i = INDEX(OutRootName,C_NULL_CHAR) - 1             ! if this has a c null character at the end...
    if ( i > 0 ) OutRootName = OutRootName(1:I)        ! remove it
@@ -305,15 +395,18 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
 
    ! For debugging the interface:
    if (debugverbose > 0) then
+print*,'ShowPassedData'
       call ShowPassedData()
    endif
 
 
    ! Get fortran pointer to C_NULL_CHAR deliniated input files as a string
+print*,'C_F_pointer'
    call C_F_pointer(ADinputFileString_C,  ADinputFileString)
    call C_F_pointer(IfWinputFileString_C, IfWinputFileString)
 
    ! Format AD input file contents
+print*,'AD File stuff'
    InitInp%AD%RootName                 = OutRootName
    if (ADinputFilePassed) then
       InitInp%AD%UsePrimaryInputFile   = .FALSE.            ! Don't try to read an input -- use passed data instead (blades and AF tables not passed)
@@ -329,6 +422,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
       InitInp%AD%InputFile             = TmpFileName
    endif
 
+print*,'IfW File stuff'
    ! Format IfW input file contents
    !     RootName is set in ADI_Init using InitInp%RootName
    InitInp%RootName                     = OutRootName
@@ -355,11 +449,13 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
       if (IfWinputFilePassed)    call Print_FileInfo_Struct( CU, InitInp%IW_InitInp%PassedFileData )
    endif
 
+print*,'Store some stuff'
    ! Store data about the simulation (NOTE: we are not fully populating the Sim data structure)
    allocate (Sim%WT(1),stat=errStat2); if (Failed0('wind turbines')) return
    Sim%dT                  = REAL(DT_C,          DbKi)
    Sim%TMax                = REAL(TMax_C,        DbKi)
    Sim%numSteps            = ceiling(Sim%tMax/Sim%dt)
+!FIXME: move to PreInit
    Sim%NumTurbines         = 1_IntKi                     ! only one turbine for now
    Sim%WT(1)%NumBlades     = int(NumBlades_C,   IntKi)
    Sim%root                = trim(OutRootName)
@@ -395,6 +491,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    !InitInp%IW_InitInp%Linearize  = .FALSE.
 
 
+print*,'AD init stuff'
    !----------------------------------------------------
    ! Set AeroDyn initialization data
    !----------------------------------------------------
@@ -478,6 +575,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    !
    !     NOTE: Pass u(1) only (this is empty and will be set inside Init).  We will copy
    !           this to u(2) and u(3) afterwards
+print*,'ADI_Init call'
    call ADI_Init( InitInp, ADI%u(1), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, Sim%dT, InitOutData, ErrStat2, ErrMsg2 )
       if (Failed())  return
 
@@ -1405,6 +1503,33 @@ CONTAINS
    end subroutine ClearMesh
 END SUBROUTINE AeroDyn_Inflow_C_End
 
+
+!===============================================================================================================
+!--------------------------------------------- AeroDyn SetupRotor ----------------------------------------------
+!===============================================================================================================
+!> Setup the initial rotor root positions etc before initializing
+!subroutine AeroDyn_C_SetupRotor()
+!end subroutine AeroDyn_C_SetupRotor    
+
+!===============================================================================================================
+!--------------------------------------------- AeroDyn SetRotorMotion ------------------------------------------
+!===============================================================================================================
+!> Set the motions for a single rotor.  This must be called before AeroDyn_Inflow_C_CalcOutput
+!subroutine AeroDyn_C_SetRotorMotion()
+!end subroutine AeroDyn_C_SetRotorMotion
+
+!===============================================================================================================
+!--------------------------------------------- AeroDyn GetRotorLoads -------------------------------------------
+!===============================================================================================================
+!> Get the loads from a single rotor.  This must be called after AeroDyn_Inflow_C_CalcOutput
+!subroutine AeroDyn_C_GetRotorLoads 
+!end subroutine AeroDyn_C_GetRotorLoads 
+
+
+
+!===================================================================================================================================
+! Internal routines for setting meshes etc.
+!===================================================================================================================================
 
 !> This routine is operating on module level data.  Error handling here in case checks added
 subroutine Set_MotionMesh(ErrStat3, ErrMsg3)

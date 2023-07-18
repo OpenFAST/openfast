@@ -132,6 +132,10 @@ class AeroDynInflowLib(CDLL):
         #     APM_LiftingLine           - 3 -  "Use the blade lifting line (i.e. the structural) orientation (currently for OLAF with VAWT)"
         self.AeroProjMod = 1
 
+        # Number of turbines
+        self.numTurbines = 1
+
+#FIXME: make sure this still works and doesn't need to be expanded to multiple turbines
         # Initial position of hub and blades
         #   used for setup of AD, not used after init.
         self.initHubPos         = np.zeros(shape=(3),dtype=c_float)
@@ -167,6 +171,7 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_char_p),                  # IfW input file as string
             POINTER(c_int),                     # IfW input file string length
             POINTER(c_char),                    # OutRootName 
+#FIXME:     POINTER(c_int),                     # numTurbines
             POINTER(c_float),                   # gravity
             POINTER(c_float),                   # defFldDens
             POINTER(c_float),                   # defKinVisc
@@ -187,6 +192,7 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_float),                   # VTKHubRad
             POINTER(c_int),                     # wrOuts -- file format for writing outputs
             POINTER(c_double),                  # DT_Outs -- timestep for outputs to file
+#FIXME: move next 10 to AeroDyn_C_SetupRotor
             POINTER(c_float),                   # initHubPos
             POINTER(c_double),                  # initHubOrient_flat
             POINTER(c_float),                   # initNacellePos
@@ -216,6 +222,7 @@ class AeroDynInflowLib(CDLL):
 
         self.AeroDyn_Inflow_C_CalcOutput.argtypes = [
             POINTER(c_double),                  # Time_C
+#FIXME: move all motion stuff to the AeroDyn_C_SetRotorMotion
             POINTER(c_float),                   # HubPos
             POINTER(c_double),                  # HubOrient_flat
             POINTER(c_float),                   # HubVel
@@ -243,6 +250,7 @@ class AeroDynInflowLib(CDLL):
         self.AeroDyn_Inflow_C_UpdateStates.argtypes = [
             POINTER(c_double),                  # Time_C
             POINTER(c_double),                  # TimeNext_C
+#FIXME: move all motion stuff to the AeroDyn_C_SetRotorMotion
             POINTER(c_float),                   # HubPos
             POINTER(c_double),                  # HubOrient_flat
             POINTER(c_float),                   # HubVel
@@ -272,6 +280,7 @@ class AeroDynInflowLib(CDLL):
         self.AeroDyn_Inflow_C_End.restype = c_int
 
     # aerodyn_inflow_init ------------------------------------------------------------------------------------------------------------
+#FIXME: split this into AeroDyn_C_SetupRotor
     def aerodyn_inflow_init(self, AD_input_string_array, IfW_input_string_array):
         # some bookkeeping initialization
         self._numChannels_c = c_int(0)
@@ -321,6 +330,7 @@ class AeroDynInflowLib(CDLL):
             c_char_p(IfW_input_string),             # IN: IfW input file as string (or filename if IfWinputPass is false)
             byref(c_int(IfW_input_string_length)),  # IN: IfW input file string length
             _outRootName_c,                         # IN: rootname for ADI file writing
+#FIXME:     byref(c_int(self.numTurbines)),         # IN: numTurbines
             byref(c_float(self.gravity)),           # IN: gravity
             byref(c_float(self.defFldDens)),        # IN: defFldDens
             byref(c_float(self.defKinVisc)),        # IN: defKinVisc
@@ -341,6 +351,7 @@ class AeroDynInflowLib(CDLL):
             byref(c_float(self.VTKHubRad)),         # IN: VTKHubRad
             byref(c_int(self.wrOuts)),              # IN: wrOuts -- file format for writing outputs
             byref(c_double(self.DT_Outs)),          # IN: DT_Outs -- timestep for outputs to file
+#FIXME: move next 10 to self.AeroDyn_C_SetupRotor
             initHubPos_c,                           # IN: initHubPos -- initial hub position
             initHubOrient_c,                        # IN: initHubOrient -- initial hub orientation DCM in flat array of 9 elements
             initNacellePos_c,                       # IN: initNacellePos -- initial hub position
@@ -423,6 +434,7 @@ class AeroDynInflowLib(CDLL):
         # Run AeroDyn_Inflow_C_CalcOutput
         self.AeroDyn_Inflow_C_CalcOutput(
             byref(c_double(time)),                  # IN: time at which to calculate output forces 
+#FIXME: move all motion stuff to the AeroDyn_C_SetRotorMotion
             _hubPos_c,                              # IN: hub positions
             _hubOrient_c,                           # IN: hub orientations
             _hubVel_c,                              # IN: hub velocity [TVx,TVy,TVz,RVx,RVy,RVz]
@@ -504,6 +516,7 @@ class AeroDynInflowLib(CDLL):
         self.AeroDyn_Inflow_C_UpdateStates(
             byref(c_double(time)),                  # IN: time at which to calculate output forces 
             byref(c_double(timeNext)),              # IN: time T+dt we are stepping to
+#FIXME: move all motion stuff to the AeroDyn_C_SetRotorMotion
             _hubPos_c,                              # IN: hub positions
             _hubOrient_c,                           # IN: hub orientations
             _hubVel_c,                              # IN: hub velocity [TVx,TVy,TVz,RVx,RVy,RVz]
