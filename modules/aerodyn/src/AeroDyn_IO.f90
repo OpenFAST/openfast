@@ -482,6 +482,7 @@ CONTAINS
          enddo
       enddo
 
+      ! TODO TODO TODO ALL THIS SHOULD BE COMPUTED IN THE SAME MEMORY FORMAT AS AERODYN
 
          ! blade outputs
       do k=1,min(p%numBlades,3)
