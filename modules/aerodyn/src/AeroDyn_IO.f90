@@ -389,7 +389,7 @@ CONTAINS
          do j=1,u%BladeMotion(k)%NNodes
             !if(p%BEM_Mod==BEMMod_2D) then
             ! NOTE: if BEMMod_2D:   x & y are in "w" system (WithoutSweepPitchTwist)
-            !       if BEMMod_3D:   x & y are in "p" system (element polar system)
+            !       if BEMMod_3D:   x & y are in "l" system (local-polar system)
             Vind_s = (/ -m%BEMT_u(indx)%Vx(j,k)*m%BEMT_y%axInduction(j,k), m%BEMT_u(indx)%Vy(j,k)*m%BEMT_y%tanInduction(j,k), 0.0_ReKi /)
             m%Vind_i(:,j,k) = matmul(Vind_s, m%orientationAnnulus(:,:,j,k)) ! TODO rename orientationAnnulus
          enddo

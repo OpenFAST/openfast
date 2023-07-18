@@ -129,7 +129,7 @@ contains
 
    end subroutine GetRelativeVelocity
 !..................................................................................................................................
-!> getAirfoilOrientation = R_ap = transformation from from polar coordinate system of the section to the airfoil coordinate system
+!> getAirfoilOrientation = R_al = transformation from from local-polar coordinate system of the section to the airfoil coordinate system
    subroutine getAirfoilOrientation( theta, cantAngle, toeAngle, afAxialVec, afNormalVec, afRadialVec )
       ! Routine for creating the airfoil orientation vectors
       
@@ -147,7 +147,7 @@ contains
       orientation(1) = toeAngle
       orientation(2) = cantAngle
       orientation(3) = -theta
-      rotMat = EulerConstruct( orientation ) ! = R_ap: from polar to airfoil
+      rotMat = EulerConstruct( orientation ) ! = R_al: from local-polar to airfoil
       
       ! unit vector normal to the chord line in the airfoil plane
       afNormalVec = rotMat(1,:)
@@ -161,7 +161,7 @@ contains
       
    end subroutine getAirfoilOrientation
 !..................................................................................................................................
-!> getAirfoilOrientation = R_ap = transformation from from polar coordinate system of the section to the airfoil coordinate system
+!> getAirfoilOrientation = R_al = transformation from from local-polar coordinate system of the section to the airfoil coordinate system
    subroutine getAirfoilOrientationMatrix( theta, cantAngle, toeAngle, rotMat)
       ! Routine for creating the airfoil orientation vectors
       
@@ -176,7 +176,7 @@ contains
       orientation(1) = toeAngle
       orientation(2) = cantAngle
       orientation(3) = -theta
-      rotMat = EulerConstruct( orientation ) ! = R_ap: from polar to airfoil
+      rotMat = EulerConstruct( orientation ) ! = R_al: from local-polar to airfoil
    end subroutine getAirfoilOrientationMatrix
 !..................................................................................................................................
    subroutine computeAirfoilOperatingAOA( BEM_Mod, phi, theta, cantAngle, toeAngle, AoA )
@@ -263,8 +263,8 @@ subroutine Transform_ClCd_to_CxCy( phi, useAIDrag, useTIDrag, Cl, Cd, Cx, Cy )
 end subroutine Transform_ClCd_to_CxCy
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Transform the aerodynamic coefficients (Cl,Cd,Cm) (directed based on Vrel_xy_a )
-!! from the airfoil coordinate system (a) to the polar coordinate system (p)
-!! NOTE: "Cy" is currently "-Cyp"
+!! from the airfoil coordinate system (a) to the local-polar coordinate system (l)
+!! NOTE: "Cy" is currently "-Cyl"
 subroutine Transform_ClCdCm_to_CxCyCzCmxCmyCmz( phi, theta, cant,toeAngle ,useAIDrag, useTIDrag, AOA, Cl, Cd, Cm, Cx, Cy, Cz, Cmx, Cmy, Cmz )
 
    implicit none
@@ -281,9 +281,9 @@ subroutine Transform_ClCdCm_to_CxCyCzCmxCmyCmz( phi, theta, cant,toeAngle ,useAI
    real(ReKi), intent(in   ) :: Cm
    real(ReKi), intent(  out) :: Cx, Cy, Cz
    real(ReKi), intent(  out) :: Cmx, Cmy, Cmz
-   real(ReKi)                :: afAxialVec(3)  !xhat_a_in_p
-   real(ReKi)                :: afNormalVec(3) !yhat_a_in_p
-   real(ReKi)                :: afRadialVec(3) !zhat_a_in_p
+   real(ReKi)                :: afAxialVec(3)  !xhat_a_in_l
+   real(ReKi)                :: afNormalVec(3) !yhat_a_in_l
+   real(ReKi)                :: afRadialVec(3) !zhat_a_in_l
    real(ReKi)                :: coeffVec(3)
    real(ReKi)                :: Cn
    real(ReKi)                :: Ct
@@ -307,9 +307,9 @@ subroutine Transform_ClCdCm_to_CxCyCzCmxCmyCmz( phi, theta, cant,toeAngle ,useAI
    
    ! Put force coefficients back into rotor plane reference frame
    coeffVec = Cn*afNormalVec + Ct*afAxialVec
-   Cx = coeffVec(1)   ! Cxp  and  cn
-   Cy = -coeffVec(2)  ! -Cyp      ct
-   Cz = coeffVec(3)   ! Czp
+   Cx = coeffVec(1)   !  Cxl  and  cn
+   Cy = -coeffVec(2)  ! -Cyl       ct
+   Cz = coeffVec(3)   !  Czl
    
    ! Put moment coefficients into the rotor reference frame
    coeffVec = Cm * afRadialVec
