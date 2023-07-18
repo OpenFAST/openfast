@@ -1422,9 +1422,9 @@ subroutine BEMT_CalcOutput_Inductions( InputIndex, t, CalculateDBEMTInputs, Appl
    REAL(ReKi),                     intent(inout)  :: chi(:,:)    ! value used in skewed wake correction
    integer(IntKi),                 intent(  out)  :: errStat     ! Error status of the operation
    character(*),                   intent(  out)  :: errMsg      ! Error message if ErrStat /= ErrID_None
-   REAL(ReKi), optional,           intent(  out)  :: axInduction_qs_out(:,:) !Quasi steady axial induction
+   REAL(ReKi), optional,           intent(  out)  :: axInduction_qs_out(:,:) !Quasi steady axial induction.
    REAL(ReKi), optional,           intent(  out)  :: tanInduction_qs_out(:,:)
-   REAL(ReKi), optional,           intent(  out)  :: k_out(:,:)
+   REAL(ReKi), optional,           intent(  out)  :: k_out(:,:) ! NOTE: if provided, kp_out and F_out should be provided
    REAL(ReKi), optional,           intent(  out)  :: kp_out(:,:)
    REAL(ReKi), optional,           intent(  out)  :: F_out(:,:)
 
@@ -1475,9 +1475,14 @@ subroutine BEMT_CalcOutput_Inductions( InputIndex, t, CalculateDBEMTInputs, Appl
          !............................................
          ! get BEMT inductions (axInduction and tanInduction):
          !............................................
-         call calculate_Inductions_from_BEMT(p, phi, u, OtherState, AFInfo, axInduction, tanInduction, ErrStat2, ErrMsg2, k_out, kp_out, F_out)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-               if (errStat >= AbortErrLev) return
+         ! NOTE: we assume that all optional arguments (k/kp/F) are provided or none at all.
+         if (present(k_out)) then
+            call calculate_Inductions_from_BEMT(p, phi, u, OtherState, AFInfo, axInduction, tanInduction, ErrStat2, ErrMsg2, k_out, kp_out, F_out)
+         else
+            call calculate_Inductions_from_BEMT(p, phi, u, OtherState, AFInfo, axInduction, tanInduction, ErrStat2, ErrMsg2)
+         endif
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (errStat >= AbortErrLev) return
          ! Backup optional variables
          if (present(axInduction_qs_out))  axInduction_qs_out = axInduction
          if (present(tanInduction_qs_out)) tanInduction_qs_out = tanInduction
