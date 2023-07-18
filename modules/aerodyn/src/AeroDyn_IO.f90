@@ -288,28 +288,28 @@ CONTAINS
          force  = force  + m%HubLoad%force( :,1)
          moment = moment + m%HubLoad%moment(:,1)
          
-         if (k<=size(BAeroFxg)) then
+         if (k<=size(BAeroFxi)) then
             ! Power contribution of blade wrt hub
             tmp = matmul( u%HubMotion%Orientation(:,:,1), m%HubLoad%moment(:,1) )
             m%AllOuts( BAeroPwr(k) ) = omega * tmp(1)
             
             ! In global, wrt hub! 
-            m%AllOuts( BAeroFxg(k) ) = m%HubLoad%force(1,1)
-            m%AllOuts( BAeroFyg(k) ) = m%HubLoad%force(2,1)
-            m%AllOuts( BAeroFzg(k) ) = m%HubLoad%force(3,1)
-            m%AllOuts( BAeroMxg(k) ) = m%HubLoad%moment(1,1)
-            m%AllOuts( BAeroMyg(k) ) = m%HubLoad%moment(2,1)
-            m%AllOuts( BAeroMzg(k) ) = m%HubLoad%moment(3,1)
+            m%AllOuts( BAeroFxi(k) ) = m%HubLoad%force(1,1)
+            m%AllOuts( BAeroFyi(k) ) = m%HubLoad%force(2,1)
+            m%AllOuts( BAeroFzi(k) ) = m%HubLoad%force(3,1)
+            m%AllOuts( BAeroMxi(k) ) = m%HubLoad%moment(1,1)
+            m%AllOuts( BAeroMyi(k) ) = m%HubLoad%moment(2,1)
+            m%AllOuts( BAeroMzi(k) ) = m%HubLoad%moment(3,1)
          end if
       end do
 
         ! In global
-      m%AllOuts( RtAeroFxg ) = force(1)
-      m%AllOuts( RtAeroFyg ) = force(2)
-      m%AllOuts( RtAeroFzg ) = force(3)
-      m%AllOuts( RtAeroMxg ) = moment(1)
-      m%AllOuts( RtAeroMyg ) = moment(2)
-      m%AllOuts( RtAeroMzg ) = moment(3)
+      m%AllOuts( RtAeroFxi ) = force(1)
+      m%AllOuts( RtAeroFyi ) = force(2)
+      m%AllOuts( RtAeroFzi ) = force(3)
+      m%AllOuts( RtAeroMxi ) = moment(1)
+      m%AllOuts( RtAeroMyi ) = moment(2)
+      m%AllOuts( RtAeroMzi ) = moment(3)
       tmp = matmul( u%HubMotion%Orientation(:,:,1), force )
       m%AllOuts( RtAeroFxh ) = tmp(1)
       m%AllOuts( RtAeroFyh ) = tmp(2)
