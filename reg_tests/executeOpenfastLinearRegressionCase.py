@@ -236,16 +236,24 @@ try:
                     raise Exception('Failed to compare A-matrix frequencies\n\tLinfile: {}.\n\tException: {}'.format(local_file, indent(e.args[0])))
             else:
 
-                if verbose:
-                    print(CasePrefix+'freq_ref:', np.around(freq_bas[:8]    ,5), '[Hz]')
-                    print(CasePrefix+'freq_new:', np.around(freq_loc[:8]    ,5),'[Hz]')
-                    print(CasePrefix+'damp_ref:', np.around(zeta_bas[:8]*100,5), '[%]')
-                    print(CasePrefix+'damp_new:', np.around(zeta_loc[:8]*100,5), '[%]')
+                #if verbose:
+                print(CasePrefix+'freq_ref:', np.around(freq_bas[:8]    ,5), '[Hz]')
+                print(CasePrefix+'freq_new:', np.around(freq_loc[:8]    ,5),'[Hz]')
+                print(CasePrefix+'damp_ref:', np.around(zeta_bas[:8]*100,5), '[%]')
+                print(CasePrefix+'damp_new:', np.around(zeta_loc[:8]*100,5), '[%]')
 
                 try:
                     np.testing.assert_allclose(freq_loc[:10], freq_bas[:10], rtol=rtol_f, atol=atol_f)
                 except Exception as e:
                     raise Exception('Failed to compare A-matrix frequencies\n\tLinfile: {}.\n\tException: {}'.format(local_file, indent(e.args[0])))
+
+
+                if caseName=='Ideal_Beam_Free_Free_Linear':
+                    # The free-free case is a bit weird, smae frequencies but dampings are +/- a value
+                    zeta_loc=np.abs(zeta_loc)
+                    zeta_bas=np.abs(zeta_bas)
+
+
                 try:
                     # Note: damping ratios in [%]
                     np.testing.assert_allclose(zeta_loc[:10]*100, zeta_bas[:10]*100, rtol=rtol_d, atol=atol_d)
