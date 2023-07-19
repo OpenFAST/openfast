@@ -52,7 +52,7 @@ AeroDyn List of Output Channels
 -------------------------------
 
 
-AeroDyn has regular outputs (see :numref:`AD-Nodal-Outputs`) and nodal outputs (see :numref:`AD-Outputs`).
+AeroDyn has regular outputs (see :numref:`AD-Outputs`) and nodal outputs (see :numref:`AD-Nodal-Outputs`).
 
 The coordinate systems used for the outputs (labeled, i, h, p, l, a) are described in :numref:`ad_coordsys`.
 
