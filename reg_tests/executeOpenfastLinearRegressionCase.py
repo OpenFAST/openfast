@@ -30,6 +30,7 @@ import argparse
 import numpy as np
 import shutil
 import subprocess
+from eva import eigA, eig
 import rtestlib as rtl
 import openfastDrivers
 import pass_fail
@@ -79,16 +80,30 @@ plotError = args.plot
 noExec = args.noExec
 verbose = args.verbose
 
-# Tolerance have not been tuned for linearization case outputs.
-# This is using 1e-5 since that seemed like a decent value prior to 
-# switching to relative and absolute tolerance.
-rtol = 1e-5
+# --- Tolerances for matrix comparison
+# Outputs of lin matrices have 3 decimal digits leading to minimum error of 0.001  
+# Therefore the relative error to detect a change in the third decimal place
+# is between 1e-3 and 1e-4. We allow a bit of margin and use rtol=2e-3
+# Lin matrices have a lot of small values, so atol is quite important
+rtol = 2e-3
 atol = 1e-5
+
+# --- Tolerances for frequencies 
+# Low frequencies are hard to match, so we use a high atol
+rtol_f=1e-2
+atol_f=1e-2 
+
+# --- Tolerances for damping
+# damping ratio is in [%] so we relax the atol
+rtol_d=1e-2
+atol_d=1e-1  
 
 
 CasePrefix=' Case: {}: '.format(caseName)
 def exitWithError(msg):
     rtl.exitWithError(CasePrefix+msg)
+def indent(msg, sindent='\t'):
+    return '\n'.join([sindent+s for s in msg.split('\n')])
 
 
 # validate inputs
@@ -196,6 +211,49 @@ try:
             Err+= '\tin linfile: {}.\n'.format(local_file)
             raise Exception(Err)
 
+        # --- Compare 10 first frequencies and damping ratios in 'A' matrix
+        if 'A' in fbas.keys(): 
+            Abas = fbas['A']
+            Aloc = floc['A']
+            # Note: we could potentially reorder states like MBC does, but no need for freq/damping
+            _, zeta_bas, _, freq_bas = eigA(Abas, nq=None, nq1=None, sort=True)
+            _, zeta_loc, _, freq_loc = eigA(Aloc, nq=None, nq1=None, sort=True)
+
+            if len(freq_bas)==0:
+                # We use complex eigenvalues instead of frequencies/damping
+                # If this fails often, we should discard this test.
+                _, Lambda = eig(Abas, sort=False)
+                v_bas = np.diag(Lambda)
+                _, Lambda = eig(Aloc, sort=False)
+                v_loc = np.diag(Lambda)
+
+                if verbose:
+                    print(CasePrefix+'val_ref:', v_bas[:7])
+                    print(CasePrefix+'val_new:', v_loc[:7])
+                try:
+                    np.testing.assert_allclose(v_bas[:10], v_loc[:10], rtol=rtol_f, atol=atol_f)
+                except Exception as e:
+                    raise Exception('Failed to compare A-matrix frequencies\n\tLinfile: {}.\n\tException: {}'.format(local_file, indent(e.args[0])))
+            else:
+
+                if verbose:
+                    print(CasePrefix+'freq_ref:', np.around(freq_bas[:8]    ,5), '[Hz]')
+                    print(CasePrefix+'freq_new:', np.around(freq_loc[:8]    ,5),'[Hz]')
+                    print(CasePrefix+'damp_ref:', np.around(zeta_bas[:8]*100,5), '[%]')
+                    print(CasePrefix+'damp_new:', np.around(zeta_loc[:8]*100,5), '[%]')
+
+                try:
+                    np.testing.assert_allclose(freq_loc[:10], freq_bas[:10], rtol=rtol_f, atol=atol_f)
+                except Exception as e:
+                    raise Exception('Failed to compare A-matrix frequencies\n\tLinfile: {}.\n\tException: {}'.format(local_file, indent(e.args[0])))
+                try:
+                    # Note: damping ratios in [%]
+                    np.testing.assert_allclose(zeta_loc[:10]*100, zeta_bas[:10]*100, rtol=rtol_d, atol=atol_d)
+                except Exception as e:
+                    raise Exception('Failed to compare A-matrix damping ratios\n\tLinfile: {}.\n\tException: {}'.format(local_file, indent(e.args[0])))
+
+
+
         # --- Compare individual matrices/vectors
         KEYS= ['A','B','C','D','dUdu','dUdy']
         KEYS+=['x','y','u','xdot']
@@ -230,7 +288,7 @@ try:
                             np.testing.assert_allclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol)
                         except Exception as e:
                             sElem = 'Element [{},{}], new : {}, baseline: {}'.format(i+1,j+1,Mloc[i,j], Mbas[i,j])
-                            raise Exception('Failed to compare variable `{}`, {} \n\tLinfile: {}.\n\tException: {}'.format(k, sElem, local_file, e.args[0]))
+                            raise Exception('Failed to compare variable `{}`, {} \n\tLinfile: {}.\n\tException: {}'.format(k, sElem, local_file, indent(e.args[0])))
 
 except Exception as e:
     exitWithError(e.args[0])
