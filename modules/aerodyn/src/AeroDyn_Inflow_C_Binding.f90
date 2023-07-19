@@ -35,9 +35,9 @@ MODULE AeroDyn_Inflow_C_BINDING
    PUBLIC :: AeroDyn_Inflow_C_CalcOutput
    PUBLIC :: AeroDyn_Inflow_C_UpdateStates
    PUBLIC :: AeroDyn_Inflow_C_End
+   PUBLIC :: AeroDyn_Inflow_C_PreInit     ! Initial call to setup number of turbines
+   PUBLIC :: AeroDyn_C_SetupRotor         ! Initial node positions etc for a rotor
 !FIXME:
-!   PUBLIC :: AeroDyn_Inflow_C_PreInit     ! Initial call to setup number of turbines
-!   PUBLIC :: AeroDyn_C_SetupRotor         ! Initial node positions etc for a rotor
 !   PUBLIC :: AeroDyn_C_SetRotorMotion     ! Set motions for a given rotor
 !   PUBLIC :: AeroDyn_C_GetRotorLoads      ! Retrieve loads for a given rotor
 
@@ -211,6 +211,7 @@ subroutine AeroDyn_Inflow_C_PreInit(NumTurbines_C,ErrStat_C,ErrMsg_C) BIND (C, N
    character(kind=c_char),  intent(  out) :: ErrMsg_C(ErrMsgLen_C)
 
    ! Local variables
+   integer(IntKi)             :: iWT                              !< current turbine
    integer                    :: ErrStat                          !< aggregated error status
    character(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
    integer                    :: ErrStat2                         !< temporary error status  from a call
@@ -234,6 +235,14 @@ subroutine AeroDyn_Inflow_C_PreInit(NumTurbines_C,ErrStat_C,ErrMsg_C) BIND (C, N
    endif
 
    ! Allocate arrays and meshes for the number of turbines
+   allocate (InitInp%AD%rotors(Sim%NumTurbines),stat=errStat2); if (Failed0('rotors')) return
+
+   ! Allocate data storage for turbine info
+   allocate (Sim%WT(Sim%NumTurbines),stat=errStat2); if (Failed0('wind turbines')) return
+   do iWT=1,Sim%NumTurbines
+      Sim%WT(iWT)%NumBlades = -999
+   enddo
+
 
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
@@ -282,11 +291,6 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
                storeHHVel, TransposeDCM_in,                               &
                WrVTK_in, WrVTK_inType, VTKNacDim_in, VTKHubRad_in,        &
                wrOuts_C, DT_Outs_C,                                       &
-               HubPos_C, HubOri_C,                                        &
-               NacPos_C, NacOri_C,                                        &
-               NumTurbines_C,                                             &
-               NumBlades_C, BldRootPos_C, BldRootOri_C,                   &
-               NumMeshPts_C,  InitMeshPos_C,  InitMeshOri_C,              &
                NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, &
                ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_Init')
    implicit none
@@ -316,26 +320,13 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    !     APM_BEM_Polar             - 2 -  "Use staggered polar grid for momentum balance in each annulus"
    !     APM_LiftingLine           - 3 -  "Use the blade lifting line (i.e. the structural) orientation (currently for OLAF with VAWT)"
    integer(c_int),            intent(in   )  :: AeroProjMod_C                          !< Type of aerodynamic projection
-   ! Initial hub and blade root positions/orientations
-   real(c_float),             intent(in   )  :: HubPos_C( 3 )                          !< Hub position
-   real(c_double),            intent(in   )  :: HubOri_C( 9 )                          !< Hub orientation
-   real(c_float),             intent(in   )  :: NacPos_C( 3 )                          !< Nacelle position
-   real(c_double),            intent(in   )  :: NacOri_C( 9 )                          !< Nacelle orientation
-!FIXME: remove this when pre-init works
-   integer(c_int),            intent(in   )  :: NumTurbines_C                          !< Number of turbines
-   integer(c_int),            intent(in   )  :: NumBlades_C                            !< Number of blades
-   real(c_float),             intent(in   )  :: BldRootPos_C( 3*NumBlades_C )          !< Blade root positions
-   real(c_double),            intent(in   )  :: BldRootOri_C( 9*NumBlades_C )          !< Blade root orientations
-   ! Initial nodes
-   integer(c_int),            intent(in   )  :: NumMeshPts_C                           !< Number of mesh points we are transfering motions to and output loads to
-   real(c_float),             intent(in   )  :: InitMeshPos_C( 3*NumMeshPts_C )        !< A 3xNumMeshPts_C array [x,y,z]
-   real(c_double),            intent(in   )  :: InitMeshOri_C( 9*NumMeshPts_C )        !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
    ! Interpolation
    integer(c_int),            intent(in   )  :: InterpOrder_C                          !< Interpolation order to use (must be 1 or 2)
    ! Time
    real(c_double),            intent(in   )  :: DT_C                                   !< Timestep used with AD for stepping forward from t to t+dt.  Must be constant.
    real(c_double),            intent(in   )  :: TMax_C                                 !< Maximum time for simulation
    ! Flags
+!FIXME: use integers here!!!!
    logical(c_bool),           intent(in   )  :: storeHHVel                             !< Store hub height time series from IfW
    logical(c_bool),           intent(in   )  :: TransposeDCM_in                        !< Transpose DCMs as they are passed in
    ! VTK
@@ -363,6 +354,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    integer(IntKi)                                                 :: ErrStat2          !< temporary error status  from a call
    character(ErrMsgLen)                                           :: ErrMsg2           !< temporary error message from a call
    integer(IntKi)                                                 :: i,j,k             !< generic counters
+   integer(IntKi)                                                 :: iWT               !< current turbine number (iterate through during setup for ADI_Init call)
    character(*), parameter                                        :: RoutineName = 'AeroDyn_Inflow_C_Init'  !< for error handling
 
    ! Initialize error handling
@@ -371,23 +363,27 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    NumChannels_C = 0_c_int
    OutputChannelNames_C(:) = ''
    OutputChannelUnits_C(:) = ''
-print*,'ADI_Init'
 
-!FIXME: move to pre-init
-print*,'NWTC_Init'
-   CALL NWTC_Init( ProgNameIn=version%Name )
-print*,'CopyrightLicense'
-   CALL DispCopyrightLicense( version%Name )
-print*,'CompileRunTimeInfo'
-   CALL DispCompileRuntimeInfo( version%Name )
 
-!FIXME: add check to see if we actually called PreInit before calling this routine (check on a mesh or something we set like Sim%NumTurbines
+   ! check if initialized
+   if (Sim%NumTurbines < 0_IntKi) then
+      ErrStat2 = ErrID_Fatal
+      ErrMsg2  = "Call AeroDyn_Inflow_C_PreInit and AeroDyn_C_SetupRotor prior to calling AeroDyn_Inflow_C_Init"
+      if (Failed()) return
+   endif
+
+   do iWT=1,Sim%NumTurbines
+      if (Sim%WT(iWT)%NumBlades < 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Rotor "//trim(Num2LStr(iWT))//" not initialized. Call AeroDyn_C_SetupRotor prior to calling AeroDyn_Inflow_C_Init"
+         if (Failed()) return
+      endif
+   enddo
 
    !--------------------------
    ! Input files
    !--------------------------
    ! RootName -- for output of echo or other files
-print*,'OutRootName'
    OutRootName = TRANSFER( OutRootName_C, OutRootName )
    i = INDEX(OutRootName,C_NULL_CHAR) - 1             ! if this has a c null character at the end...
    if ( i > 0 ) OutRootName = OutRootName(1:I)        ! remove it
@@ -395,18 +391,15 @@ print*,'OutRootName'
 
    ! For debugging the interface:
    if (debugverbose > 0) then
-print*,'ShowPassedData'
       call ShowPassedData()
    endif
 
 
    ! Get fortran pointer to C_NULL_CHAR deliniated input files as a string
-print*,'C_F_pointer'
    call C_F_pointer(ADinputFileString_C,  ADinputFileString)
    call C_F_pointer(IfWinputFileString_C, IfWinputFileString)
 
    ! Format AD input file contents
-print*,'AD File stuff'
    InitInp%AD%RootName                 = OutRootName
    if (ADinputFilePassed) then
       InitInp%AD%UsePrimaryInputFile   = .FALSE.            ! Don't try to read an input -- use passed data instead (blades and AF tables not passed)
@@ -422,7 +415,6 @@ print*,'AD File stuff'
       InitInp%AD%InputFile             = TmpFileName
    endif
 
-print*,'IfW File stuff'
    ! Format IfW input file contents
    !     RootName is set in ADI_Init using InitInp%RootName
    InitInp%RootName                     = OutRootName
@@ -449,22 +441,16 @@ print*,'IfW File stuff'
       if (IfWinputFilePassed)    call Print_FileInfo_Struct( CU, InitInp%IW_InitInp%PassedFileData )
    endif
 
-print*,'Store some stuff'
    ! Store data about the simulation (NOTE: we are not fully populating the Sim data structure)
-   allocate (Sim%WT(1),stat=errStat2); if (Failed0('wind turbines')) return
    Sim%dT                  = REAL(DT_C,          DbKi)
    Sim%TMax                = REAL(TMax_C,        DbKi)
    Sim%numSteps            = ceiling(Sim%tMax/Sim%dt)
-!FIXME: move to PreInit
-   Sim%NumTurbines         = 1_IntKi                     ! only one turbine for now
-   Sim%WT(1)%NumBlades     = int(NumBlades_C,   IntKi)
    Sim%root                = trim(OutRootName)
-   Sim%WT(1)%OriginInit    = (/ 0.0_SiKi, 0.0_SiKi, 0.0_SiKi /)    !TODO: should this be an input?
    ! Timekeeping
    n_Global                = 0_IntKi                     ! Assume we are on timestep 0 at start
    n_VTK                   = -1_IntKi                    ! Set VTK output to T=0 at first call
    ! Interpolation order
-   InterpOrder            = int(InterpOrder_C, IntKi)
+   InterpOrder             = int(InterpOrder_C, IntKi)
 
    ! VTK outputs
    WrOutputsData%WrVTK        = int(WrVTK_in,     IntKi)
@@ -491,7 +477,6 @@ print*,'Store some stuff'
    !InitInp%IW_InitInp%Linearize  = .FALSE.
 
 
-print*,'AD init stuff'
    !----------------------------------------------------
    ! Set AeroDyn initialization data
    !----------------------------------------------------
@@ -509,49 +494,22 @@ print*,'AD init stuff'
    InitInp%IW_InitInp%CompInflow = 1    ! Use InflowWind
 
    ! setup rotors for AD -- interface only supports one rotor at present
-   allocate (InitInp%AD%rotors(1),stat=errStat2); if (Failed0('rotors')) return
-   InitInp%AD%rotors(1)%AeroProjMod = int(AeroProjMod_C, IntKi)
-   InitInp%AD%rotors(1)%numBlades   = Sim%WT(1)%NumBlades
-   call AllocAry(InitInp%AD%rotors(1)%BladeRootPosition,       3, Sim%WT(1)%NumBlades, 'BldRootPos', errStat2, errMsg2 ); if (Failed()) return
-   call AllocAry(InitInp%AD%rotors(1)%BladeRootOrientation, 3, 3, Sim%WT(1)%NumBlades, 'BldRootOri', errStat2, errMsg2 ); if (Failed()) return
-   InitInp%AD%rotors(1)%HubPosition          = real(HubPos_C(1:3),ReKi)
-   InitInp%AD%rotors(1)%HubOrientation       = reshape( real(HubOri_C(1:9),R8Ki), (/3,3/) )
-   InitInp%AD%rotors(1)%NacellePosition      = real(NacPos_C(1:3),ReKi)
-   InitInp%AD%rotors(1)%NacelleOrientation   = reshape( real(NacOri_C(1:9),R8Ki), (/3,3/) )
-   InitInp%AD%rotors(1)%BladeRootPosition    = reshape( real(BldRootPos_C(1:3*Sim%WT(1)%NumBlades),ReKi), (/  3,Sim%WT(1)%NumBlades/) )
-   InitInp%AD%rotors(1)%BladeRootOrientation = reshape( real(BldRootOri_C(1:9*Sim%WT(1)%NumBlades),R8Ki), (/3,3,Sim%WT(1)%NumBlades/) )
-   if (TransposeDCM) then
-      InitInp%AD%rotors(1)%HubOrientation       = transpose(InitInp%AD%rotors(1)%HubOrientation)
-      InitInp%AD%rotors(1)%NacelleOrientation   = transpose(InitInp%AD%rotors(1)%NacelleOrientation)
-      do i=1,Sim%WT(1)%NumBlades
-         InitInp%AD%rotors(1)%BladeRootOrientation(1:3,1:3,i) = transpose(InitInp%AD%rotors(1)%BladeRootOrientation(1:3,1:3,i))
-      enddo
-   endif
-
-   ! Remap the orientation DCM just in case there is some issue with passed 
-   call OrientRemap(InitInp%AD%rotors(1)%HubOrientation)
-   call OrientRemap(InitInp%AD%rotors(1)%NacelleOrientation)
-   do i=1,Sim%WT(1)%NumBlades
-      call OrientRemap(InitInp%AD%rotors(1)%BladeRootOrientation(1:3,1:3,i))
+   do iWT=1,Sim%NumTurbines
+      InitInp%AD%rotors(iWT)%AeroProjMod = int(AeroProjMod_C, IntKi)
+      InitInp%AD%rotors(iWT)%numBlades   = Sim%WT(iWT)%NumBlades
    enddo
-
-   ! Number of blades and initial positions
-   !  -  NumMeshPts is the number of interface Mesh points we are expecting on the python
-   !     side.  Will validate this against what AD reads from the initialization info.
-   NumMeshPts                    = int(NumMeshPts_C, IntKi)
-   if (NumMeshPts < 1) then
-      ErrStat2 =  ErrID_Fatal
-      ErrMsg2  =  "At least one node point must be specified"
-      if (Failed())  return
-   endif
-   ! Allocate temporary arrays to simplify data conversions
-   call AllocAry( tmpBldPtMeshPos,    3, NumMeshPts, "tmpBldPtMeshPos", ErrStat2, ErrMsg2 );    if (Failed())  return
-   call AllocAry( tmpBldPtMeshOri, 3, 3, NumMeshPts, "tmpBldPtMeshOri", ErrStat2, ErrMsg2 );    if (Failed())  return
-   call AllocAry( tmpBldPtMeshVel,    6, NumMeshPts, "tmpBldPtMeshVel", ErrStat2, ErrMsg2 );    if (Failed())  return
-   call AllocAry( tmpBldPtMeshAcc,    6, NumMeshPts, "tmpBldPtMeshAcc", ErrStat2, ErrMsg2 );    if (Failed())  return
-   call AllocAry( tmpBldPtMeshFrc,    6, NumMeshPts, "tmpBldPtMeshFrc", ErrStat2, ErrMsg2 );    if (Failed())  return
-   tmpBldPtMeshPos(    1:3,1:NumMeshPts) = reshape( real(InitMeshPos_C(1:3*NumMeshPts),ReKi), (/  3,NumMeshPts/) )
-   tmpBldPtMeshOri(1:3,1:3,1:NumMeshPts) = reshape( real(InitMeshOri_C(1:9*NumMeshPts),ReKi), (/3,3,NumMeshPts/) )
+!   ! Allocate temporary arrays to simplify data conversions
+!   maxMeshPts=0_IntKi
+!   do i=1,Sim%NumTurbines
+!      maxMeshPts=max(maxMeshPts,NumMeshPts(iWT)
+!   enddo
+!   call AllocAry( tmpBldPtMeshPos,    3, maxMeshPts, "tmpBldPtMeshPos", ErrStat2, ErrMsg2 );    if (Failed())  return
+!   call AllocAry( tmpBldPtMeshOri, 3, 3, maxMeshPts, "tmpBldPtMeshOri", ErrStat2, ErrMsg2 );    if (Failed())  return
+!   call AllocAry( tmpBldPtMeshVel,    6, maxMeshPts, "tmpBldPtMeshVel", ErrStat2, ErrMsg2 );    if (Failed())  return
+!   call AllocAry( tmpBldPtMeshAcc,    6, maxMeshPts, "tmpBldPtMeshAcc", ErrStat2, ErrMsg2 );    if (Failed())  return
+!   call AllocAry( tmpBldPtMeshFrc,    6, maxMeshPts, "tmpBldPtMeshFrc", ErrStat2, ErrMsg2 );    if (Failed())  return
+!   tmpBldPtMeshPos(    1:3,1:NumMeshPts) = reshape( real(InitMeshPos_C(1:3*NumMeshPts),ReKi), (/  3,NumMeshPts/) )
+!   tmpBldPtMeshOri(1:3,1:3,1:NumMeshPts) = reshape( real(InitMeshOri_C(1:9*NumMeshPts),ReKi), (/3,3,NumMeshPts/) )
 
 
    !----------------------------------------------------
@@ -575,7 +533,6 @@ print*,'AD init stuff'
    !
    !     NOTE: Pass u(1) only (this is empty and will be set inside Init).  We will copy
    !           this to u(2) and u(3) afterwards
-print*,'ADI_Init call'
    call ADI_Init( InitInp, ADI%u(1), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, Sim%dT, InitOutData, ErrStat2, ErrMsg2 )
       if (Failed())  return
 
@@ -589,6 +546,7 @@ print*,'ADI_Init call'
    !-------------------------------------------------------------
    ! Set the interface  meshes for motion inputs and loads output
    !-------------------------------------------------------------
+print*,'SetMotionLoadsInterfaceMeshes'
    call SetMotionLoadsInterfaceMeshes(ErrStat2,ErrMsg2);    if (Failed())  return
    if (WrOutputsData%WrVTK > 0_IntKi) then
       call setVTKParameters(WrOutputsData, Sim, ADI, errStat, errMsg, 'vtk-ADI')
@@ -660,6 +618,11 @@ print*,'ADI_Init call'
       call SetupFileOutputs()
    endif
 
+
+   ! destroy the InitInp and InitOutput
+   call ADI_DestroyInitInput( InitInp,     Errstat2, ErrMsg2);    if (Failed())  return
+   call ADI_DestroyInitOutput(InitOutData, Errstat2, ErrMsg2);    if (Failed())  return
+
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
 
@@ -698,6 +661,10 @@ CONTAINS
    subroutine ValidateSetInputs(ErrStat3,ErrMsg3)
       integer(IntKi),         intent(  out)  :: ErrStat3    !< temporary error status
       character(ErrMsgLen),   intent(  out)  :: ErrMsg3     !< temporary error message
+
+      ErrStat3 = ErrID_None
+      ErrMsg3  = ""
+
       ! Interporder
       if ( InterpOrder < 1_IntKi .or. InterpOrder > 2_IntKi ) then
          call SetErrStat(ErrID_Fatal,"InterpOrder passed into AeroDyn_Inflow_C_Init must be 1 (linear) or 2 (quadratic)",ErrStat3,ErrMsg3,RoutineName)
@@ -719,6 +686,7 @@ CONTAINS
             WrOutputsData%VTKHubRad = 0.0_SiKi
          endif
       endif
+
 
       ! check fileFmt
       if ( WrOutputsData%fileFmt /= idFmtNone .and. WrOutputsData%fileFmt /= idFmtAscii .and. &
@@ -772,6 +740,7 @@ CONTAINS
       character(1) :: TmpFlag
       integer      :: i,j
       call WrScr("Interface debugging:  Variables passed in through interface")
+      call WrScr("   AeroDyn_Inflow_C_Init")
       call WrScr("-----------------------------------------------------------")
       call WrScr("   FileInfo")
       TmpFlag="F";   if (ADinputFilePassed) TmpFlag="T"
@@ -807,41 +776,6 @@ CONTAINS
       call WrScr("       WrVTK_inType                   "//trim(Num2LStr( WrVTK_inType  )) )
       TmpFlag="F";   if (TransposeDCM_in) TmpFlag="T"
       call WrScr("       TransposeDCM_in                "//TmpFlag )
-      call WrScr("   Init Data")
-      call WrNR("       Hub Position         ")
-      call WrMatrix(HubPos_C,CU,'(3(ES15.7e2))')
-      call WrNR("       Hub Orientation      ")
-      call WrMatrix(HubOri_C,CU,'(9(ES23.15e2))')
-      call WrNR("       Nacelle Position     ")
-      call WrMatrix(NacPos_C,CU,'(3(ES15.7e2))')
-      call WrNR("       Nacelle Orientation  ")
-      call WrMatrix(NacOri_C,CU,'(9(ES23.15e2))')
-      call WrScr("       NumBlades_C                    "//trim(Num2LStr( NumBlades_C   )) )
-      if (debugverbose > 1) then
-         call WrScr("          Root Positions")
-         do i=1,NumBlades_C
-            j=3*(i-1)
-            call WrMatrix(BldRootPos_C(j+1:j+3),CU,'(3(ES15.7e2))')
-         enddo
-         call WrScr("          Root Orientations")
-         do i=1,NumBlades_C
-            j=9*(i-1)
-            call WrMatrix(BldRootOri_C(j+1:j+9),CU,'(9(ES23.15e2))')
-         enddo
-      endif
-      call WrScr("       NumMeshPts_C                   "//trim(Num2LStr( NumMeshPts_C  )) )
-      if (debugverbose > 1) then
-         call WrScr("          Mesh Positions")
-         do i=1,NumMeshPts_C
-            j=3*(i-1)
-            call WrMatrix(InitMeshPos_C(j+1:j+3),CU,'(3(ES15.7e2))')
-         enddo
-         call WrScr("          Mesh Orientations")
-         do i=1,NumMeshPts_C
-            j=9*(i-1)
-            call WrMatrix(InitMeshOri_C(j+1:j+9),CU,'(9(ES23.15e2))')
-         enddo
-      endif
       call WrScr("-----------------------------------------------------------")
    end subroutine ShowPassedData
 
@@ -1131,6 +1065,7 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
    endif
 
 
+print*,'---------------------------AeroDyn_Inflow_C_CalcOutput---------------------------'
    ! Convert the inputs from C to Fortrn
    Time = REAL(Time_C,DbKi)
 
@@ -1396,6 +1331,7 @@ SUBROUTINE AeroDyn_Inflow_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflo
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
 
+print*,'Ending ADI'
    ! Finalize output file
    if (WrOutputsData%fileFmt > idFmtNone .and. allocated(WrOutputsData%unOutFile)) then
       ! Close the output file
@@ -1508,8 +1444,170 @@ END SUBROUTINE AeroDyn_Inflow_C_End
 !--------------------------------------------- AeroDyn SetupRotor ----------------------------------------------
 !===============================================================================================================
 !> Setup the initial rotor root positions etc before initializing
-!subroutine AeroDyn_C_SetupRotor()
-!end subroutine AeroDyn_C_SetupRotor    
+subroutine AeroDyn_C_SetupRotor(iWT_c,TurbOrigin_C,                  &
+               HubPos_C, HubOri_C,                                   &
+               NacPos_C, NacOri_C,                                   &
+               NumBlades_C, BldRootPos_C, BldRootOri_C,              &
+               NumMeshPts_C,  InitMeshPos_C,  InitMeshOri_C,         &
+               ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_C_SetupRotor')
+   implicit none
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_C_SetupRotor
+!GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_C_SetupRotor
+#endif
+   integer(IntKi),            intent(in   ) :: iWT_c     !< Wind turbine / rotor number
+   real(c_float),             intent(in   ) :: TurbOrigin_C(3)
+   ! Initial hub and blade root positions/orientations
+   real(c_float),             intent(in   )  :: HubPos_C( 3 )                          !< Hub position
+   real(c_double),            intent(in   )  :: HubOri_C( 9 )                          !< Hub orientation
+   real(c_float),             intent(in   )  :: NacPos_C( 3 )                          !< Nacelle position
+   real(c_double),            intent(in   )  :: NacOri_C( 9 )                          !< Nacelle orientation
+   integer(c_int),            intent(in   )  :: NumBlades_C                            !< Number of blades
+   real(c_float),             intent(in   )  :: BldRootPos_C( 3*NumBlades_C )          !< Blade root positions
+   real(c_double),            intent(in   )  :: BldRootOri_C( 9*NumBlades_C )          !< Blade root orientations
+   ! Initial nodes            
+   integer(c_int),            intent(in   )  :: NumMeshPts_C                           !< Number of mesh points we are transfering motions to and output loads to
+   real(c_float),             intent(in   )  :: InitMeshPos_C( 3*NumMeshPts_C )        !< A 3xNumMeshPts_C array [x,y,z]
+   real(c_double),            intent(in   )  :: InitMeshOri_C( 9*NumMeshPts_C )        !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
+   integer(c_int),            intent(  out)  :: ErrStat_C                              !< Error status
+   character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)                  !< Error message (C_NULL_CHAR terminated)
+
+   ! local vars
+   integer(IntKi)    :: iWT      !< current turbine
+   integer(IntKi)                                                 :: ErrStat           !< aggregated error messagNumBlades_ee
+   character(ErrMsgLen)                                           :: ErrMsg            !< aggregated error message
+   integer(IntKi)                                                 :: ErrStat2          !< temporary error status  from a call
+   character(ErrMsgLen)                                           :: ErrMsg2           !< temporary error message from a call
+   integer(IntKi)                                                 :: i,j,k             !< generic counters
+   character(*), parameter                                        :: RoutineName = 'AeroDyn_Inflow_C_Init'  !< for error handling
+
+   ! Initialize error handling
+   ErrStat  =  ErrID_None
+   ErrMsg   =  ""
+
+
+   ! For debugging the interface:
+   if (debugverbose > 0) then
+      call ShowPassedData()
+   endif
+
+   ! turbine geometry
+   iWT = int(iWT_c, IntKi)
+   Sim%WT(iWT)%NumBlades         = int(NumBlades_C,   IntKi)
+   Sim%WT(iWT)%OriginInit(1:3)   = real(TurbOrigin_C(1:3), ReKi)
+
+
+   call AllocAry(InitInp%AD%rotors(iWT)%BladeRootPosition,       3, Sim%WT(iWT)%NumBlades, 'BldRootPos', errStat2, errMsg2 ); if (Failed()) return
+   call AllocAry(InitInp%AD%rotors(iWT)%BladeRootOrientation, 3, 3, Sim%WT(iWT)%NumBlades, 'BldRootOri', errStat2, errMsg2 ); if (Failed()) return
+   InitInp%AD%rotors(iWT)%HubPosition          = real(HubPos_C(1:3),ReKi)
+   InitInp%AD%rotors(iWT)%HubOrientation       = reshape( real(HubOri_C(1:9),R8Ki), (/3,3/) )
+   InitInp%AD%rotors(iWT)%NacellePosition      = real(NacPos_C(1:3),ReKi)
+   InitInp%AD%rotors(iWT)%NacelleOrientation   = reshape( real(NacOri_C(1:9),R8Ki), (/3,3/) )
+   InitInp%AD%rotors(iWT)%BladeRootPosition    = reshape( real(BldRootPos_C(1:3*Sim%WT(iWT)%NumBlades),ReKi), (/  3,Sim%WT(iWT)%NumBlades/) )
+   InitInp%AD%rotors(iWT)%BladeRootOrientation = reshape( real(BldRootOri_C(1:9*Sim%WT(iWT)%NumBlades),R8Ki), (/3,3,Sim%WT(iWT)%NumBlades/) )
+   if (TransposeDCM) then
+      InitInp%AD%rotors(iWT)%HubOrientation       = transpose(InitInp%AD%rotors(iWT)%HubOrientation)
+      InitInp%AD%rotors(iWT)%NacelleOrientation   = transpose(InitInp%AD%rotors(iWT)%NacelleOrientation)
+      do i=1,Sim%WT(iWT)%NumBlades
+         InitInp%AD%rotors(iWT)%BladeRootOrientation(1:3,1:3,i) = transpose(InitInp%AD%rotors(iWT)%BladeRootOrientation(1:3,1:3,i))
+      enddo
+   endif
+
+   ! Remap the orientation DCM just in case there is some issue with passed 
+   call OrientRemap(InitInp%AD%rotors(iWT)%HubOrientation)
+   call OrientRemap(InitInp%AD%rotors(iWT)%NacelleOrientation)
+   do i=1,Sim%WT(iWT)%NumBlades
+      call OrientRemap(InitInp%AD%rotors(iWT)%BladeRootOrientation(1:3,1:3,i))
+   enddo
+
+   ! Number of blades and initial positions
+   !  -  NumMeshPts is the number of interface Mesh points we are expecting on the python
+   !     side.  Will validate this against what AD reads from the initialization info.
+   NumMeshPts                    = int(NumMeshPts_C, IntKi)
+   if (NumMeshPts < 1) then
+      ErrStat2 =  ErrID_Fatal
+      ErrMsg2  =  "At least one node point must be specified"
+      if (Failed())  return
+   endif
+
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed) then
+         call FailCleanup()
+         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+      endif
+   end function Failed
+
+   ! check for failed where /= 0 is fatal
+   logical function Failed0(txt)
+      character(*), intent(in) :: txt
+      if (errStat /= 0) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Could not allocate "//trim(txt)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      endif
+      Failed0 = ErrStat >= AbortErrLev
+      if(Failed0) call FailCleanup()
+   end function Failed0
+
+   subroutine FailCleanup()
+!      if (allocated(tmpBldPtMeshPos))  deallocate(tmpBldPtMeshPos)
+!      if (allocated(tmpBldPtMeshOri))  deallocate(tmpBldPtMeshOri)
+!      if (allocated(tmpBldPtMeshVel))  deallocate(tmpBldPtMeshVel)
+!      if (allocated(tmpBldPtMeshAcc))  deallocate(tmpBldPtMeshAcc)
+!      if (allocated(tmpBldPtMeshFrc))  deallocate(tmpBldPtMeshFrc)
+   end subroutine FailCleanup
+
+   !> This subroutine prints out all the variables that are passed in.  Use this only
+   !! for debugging the interface on the Fortran side.
+   subroutine ShowPassedData()
+      character(1) :: TmpFlag
+      integer      :: i,j
+      call WrScr("Interface debugging:  Variables passed in through interface")
+      call WrScr("   AeroDyn_C_SetupRotor -- rotor "//trim(Num2LStr(iWT_c)))
+      call WrScr("-----------------------------------------------------------")
+      call WrScr("   Turbine origin")
+      call WrMatrix(TurbOrigin_C,CU,'(3(ES15.7e2))')
+      call WrScr("   Init rotor positions/orientations")
+      call WrNR("       Hub Position         ")
+      call WrMatrix(HubPos_C,CU,'(3(ES15.7e2))')
+      call WrNR("       Hub Orientation      ")
+      call WrMatrix(HubOri_C,CU,'(9(ES23.15e2))')
+      call WrNR("       Nacelle Position     ")
+      call WrMatrix(NacPos_C,CU,'(3(ES15.7e2))')
+      call WrNR("       Nacelle Orientation  ")
+      call WrMatrix(NacOri_C,CU,'(9(ES23.15e2))')
+      call WrScr("       NumBlades_C                    "//trim(Num2LStr(NumBlades_C)) )
+      if (debugverbose > 1) then
+         call WrScr("          Root Positions")
+         do i=1,NumBlades_C
+            j=3*(i-1)
+            call WrMatrix(BldRootPos_C(j+1:j+3),CU,'(3(ES15.7e2))')
+         enddo
+         call WrScr("          Root Orientations")
+         do i=1,NumBlades_C
+            j=9*(i-1)
+            call WrMatrix(BldRootOri_C(j+1:j+9),CU,'(9(ES23.15e2))')
+         enddo
+      endif
+      call WrScr("       NumMeshPts_C                   "//trim(Num2LStr( NumMeshPts_C  )) )
+      if (debugverbose > 1) then
+         call WrScr("          Mesh Positions")
+         do i=1,NumMeshPts_C
+            j=3*(i-1)
+            call WrMatrix(InitMeshPos_C(j+1:j+3),CU,'(3(ES15.7e2))')
+         enddo
+         call WrScr("          Mesh Orientations")
+         do i=1,NumMeshPts_C
+            j=9*(i-1)
+            call WrMatrix(InitMeshOri_C(j+1:j+9),CU,'(9(ES23.15e2))')
+         enddo
+      endif
+      call WrScr("-----------------------------------------------------------")
+   end subroutine ShowPassedData
+end subroutine AeroDyn_C_SetupRotor    
 
 !===============================================================================================================
 !--------------------------------------------- AeroDyn SetRotorMotion ------------------------------------------
