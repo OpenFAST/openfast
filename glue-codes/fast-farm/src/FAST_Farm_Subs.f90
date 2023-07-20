@@ -493,6 +493,7 @@ contains
    !> If it is a filename of a library, expect following format: FFDB_512x512x64.u where:
    !!     512x512x64  -- Number of grid points in X,Y,Z -- Nx, Ny, Nz
    !! TODO: this is a clumsy looking routine. There are more elegant ways to do this.
+   !!       Looked at this again 2 months after writing it -- no idea how it works.  It seems to work, but wtf?
    subroutine MannLibDims(BoxFileRoot,RotorDiamRef,Nxyz,Dxyz,ErrStat3,ErrMsg3)
       character(1024),  intent(in   ) :: BoxFileroot
       real(ReKi),       intent(in   ) :: RotorDiamRef    ! reference rotordiam
@@ -550,7 +551,7 @@ contains
          return
       endif
       ! Parse the first number (grab all contiguous digits before first "X")
-      nDig=0   ! start counter at zero
+      nDig=1   ! start counter at zero
       do i=idxX(1)-1,1,-1
          ! is this a digit? (recount one we already know is one)
          if (index(CharNums,BoxFileRoot(i:i))>0) then
