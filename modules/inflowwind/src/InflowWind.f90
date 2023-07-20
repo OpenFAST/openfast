@@ -208,10 +208,10 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
 
       
    ! initialize sensor data:
+   p%lidar%SensorType         = InputFileData%SensorType
    IF (InputFileData%SensorType /= SensorType_None) THEN
       p%lidar%NumBeam            = InputFileData%NumBeam
       p%lidar%RotorApexOffsetPos = InputFileData%RotorApexOffsetPos
-      p%lidar%SensorType         = InputFileData%SensorType
       p%lidar%LidRadialVel       = InputFileData%LidRadialVel
       p%lidar%NumPulseGate       = InputFileData%NumPulseGate
       p%lidar%FocalDistanceX     = InputFileData%FocalDistanceX  ! these are allocatable.  Should allocate then copy

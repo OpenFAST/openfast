@@ -1296,15 +1296,17 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       InvalidOutput(WindAccZ) = .TRUE.
    end if
 
-   IF (p%lidar%SensorType == SensorType_SinglePoint) THEN
-      DO I=p%lidar%NumBeam+1,5
-         InvalidOutput( WindMeas(I) ) = .TRUE.
-      END DO
-   ELSE
-      DO I=p%lidar%NumPulseGate+1,5
-         InvalidOutput( WindMeas(I) ) = .TRUE.
-      END DO
-   END IF
+   if (p%lidar%SensorType /= SensorType_None) then
+      IF (p%lidar%SensorType == SensorType_SinglePoint) THEN
+         DO I=p%lidar%NumBeam+1,5
+            InvalidOutput( WindMeas(I) ) = .TRUE.
+         END DO
+      ELSE
+         DO I=p%lidar%NumPulseGate+1,5
+            InvalidOutput( WindMeas(I) ) = .TRUE.
+         END DO
+      END IF
+   endif
 
 !   ................. End of validity checking .................
 
@@ -1527,16 +1529,17 @@ SUBROUTINE SetAllOuts( p, y, m, ErrStat, ErrMsg )
    
    
       !FIXME:  Add in Wind1Dir etc.  -- although those can be derived outside of FAST.
-
-IF ( p%lidar%SensorType == SensorType_SinglePoint) THEN
-     DO I = 1,MIN(5, p%lidar%NumBeam )
-         m%AllOuts( WindMeas(I) ) = y%lidar%LidSpeed(I)
-      END DO 
-   ELSE 
-      DO I = 1,MIN(5, p%lidar%NumPulseGate )
-        m%AllOuts( WindMeas(I) ) = y%lidar%LidSpeed(I)
-     END DO  
-   END IF  
+   if (p%lidar%SensorType /= SensorType_None) then
+      IF ( p%lidar%SensorType == SensorType_SinglePoint) THEN
+         DO I = 1,MIN(5, p%lidar%NumBeam )
+            m%AllOuts( WindMeas(I) ) = y%lidar%LidSpeed(I)
+         END DO
+      ELSE
+         DO I = 1,MIN(5, p%lidar%NumPulseGate )
+           m%AllOuts( WindMeas(I) ) = y%lidar%LidSpeed(I)
+        END DO
+      END IF
+   endif
 
 END SUBROUTINE SetAllOuts
 

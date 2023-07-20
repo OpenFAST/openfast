@@ -1002,6 +1002,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          IfW_InitInp%MHK                   = 0                              ! not an MHK turbine setup
       
          call InflowWind_Init( IfW_InitInp, m%u_IfW_Low, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_Low, m%IfW(0), Interval, IfW_InitOut, ErrStat2, ErrMsg2 ); if(Failed()) return;
+         p%IfW(0)%NumOuts = 0    ! override outputs that might be in the input file
 
       else if ( p%Mod_AmbWind == 3 ) then ! multiple InflowWind modules
 
@@ -1019,12 +1020,14 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          IfW_InitInp%MHK                   = 0                              ! not an MHK turbine setup
       
          call InflowWind_Init( IfW_InitInp, m%u_IfW_Low, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_Low, m%IfW(0), Interval, IfW_InitOut, ErrStat2, ErrMsg2 ); if(Failed()) return;
+         p%IfW(0)%NumOuts = 0    ! override outputs that might be in the input file
 
          ! Initialize InflowWind for each high-resolution domain
          IfW_InitInp%NumWindPoints         = p%nX_high*p%nY_high*p%nZ_high
          do nt = 1,p%NumTurbines
             IfW_InitInp%TurbineID          = nt
             call InflowWind_Init( IfW_InitInp, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), Interval, IfW_InitOut, ErrStat2, ErrMsg2 ); if(Failed()) return;
+            p%IfW(nt)%NumOuts = 0    ! override outputs that might be in the input file
          end do
 
       end if
