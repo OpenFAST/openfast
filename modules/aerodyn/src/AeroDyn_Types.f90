@@ -328,8 +328,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SigmaCavitCrit      !< critical cavitation number-  inception value (above which cavit will occur) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SigmaCavit      !< cavitation number at node  [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: CavitWarnSet      !< cavitation warning issued  [-]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: BlFB      !< buoyant force per unit length at blade node [N/m]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: BlMB      !< buoyant moment per unit length at blade node [Nm/m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TwrFB      !< buoyant force per unit length at tower node [N/m]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TwrMB      !< buoyant moment per unit length at tower node [Nm/m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: HubFB      !< buoyant force at hub node [N]
@@ -9179,38 +9177,6 @@ IF (ALLOCATED(SrcRotMiscVarTypeData%CavitWarnSet)) THEN
   END IF
     DstRotMiscVarTypeData%CavitWarnSet = SrcRotMiscVarTypeData%CavitWarnSet
 ENDIF
-IF (ALLOCATED(SrcRotMiscVarTypeData%BlFB)) THEN
-  i1_l = LBOUND(SrcRotMiscVarTypeData%BlFB,1)
-  i1_u = UBOUND(SrcRotMiscVarTypeData%BlFB,1)
-  i2_l = LBOUND(SrcRotMiscVarTypeData%BlFB,2)
-  i2_u = UBOUND(SrcRotMiscVarTypeData%BlFB,2)
-  i3_l = LBOUND(SrcRotMiscVarTypeData%BlFB,3)
-  i3_u = UBOUND(SrcRotMiscVarTypeData%BlFB,3)
-  IF (.NOT. ALLOCATED(DstRotMiscVarTypeData%BlFB)) THEN 
-    ALLOCATE(DstRotMiscVarTypeData%BlFB(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%BlFB.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRotMiscVarTypeData%BlFB = SrcRotMiscVarTypeData%BlFB
-ENDIF
-IF (ALLOCATED(SrcRotMiscVarTypeData%BlMB)) THEN
-  i1_l = LBOUND(SrcRotMiscVarTypeData%BlMB,1)
-  i1_u = UBOUND(SrcRotMiscVarTypeData%BlMB,1)
-  i2_l = LBOUND(SrcRotMiscVarTypeData%BlMB,2)
-  i2_u = UBOUND(SrcRotMiscVarTypeData%BlMB,2)
-  i3_l = LBOUND(SrcRotMiscVarTypeData%BlMB,3)
-  i3_u = UBOUND(SrcRotMiscVarTypeData%BlMB,3)
-  IF (.NOT. ALLOCATED(DstRotMiscVarTypeData%BlMB)) THEN 
-    ALLOCATE(DstRotMiscVarTypeData%BlMB(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%BlMB.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstRotMiscVarTypeData%BlMB = SrcRotMiscVarTypeData%BlMB
-ENDIF
 IF (ALLOCATED(SrcRotMiscVarTypeData%TwrFB)) THEN
   i1_l = LBOUND(SrcRotMiscVarTypeData%TwrFB,1)
   i1_u = UBOUND(SrcRotMiscVarTypeData%TwrFB,1)
@@ -9496,12 +9462,6 @@ IF (ALLOCATED(RotMiscVarTypeData%SigmaCavit)) THEN
 ENDIF
 IF (ALLOCATED(RotMiscVarTypeData%CavitWarnSet)) THEN
   DEALLOCATE(RotMiscVarTypeData%CavitWarnSet)
-ENDIF
-IF (ALLOCATED(RotMiscVarTypeData%BlFB)) THEN
-  DEALLOCATE(RotMiscVarTypeData%BlFB)
-ENDIF
-IF (ALLOCATED(RotMiscVarTypeData%BlMB)) THEN
-  DEALLOCATE(RotMiscVarTypeData%BlMB)
 ENDIF
 IF (ALLOCATED(RotMiscVarTypeData%TwrFB)) THEN
   DEALLOCATE(RotMiscVarTypeData%TwrFB)
@@ -9852,16 +9812,6 @@ ENDIF
   IF ( ALLOCATED(InData%CavitWarnSet) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! CavitWarnSet upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%CavitWarnSet)  ! CavitWarnSet
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! BlFB allocated yes/no
-  IF ( ALLOCATED(InData%BlFB) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! BlFB upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%BlFB)  ! BlFB
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! BlMB allocated yes/no
-  IF ( ALLOCATED(InData%BlMB) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! BlMB upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%BlMB)  ! BlMB
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! TwrFB allocated yes/no
   IF ( ALLOCATED(InData%TwrFB) ) THEN
@@ -10769,56 +10719,6 @@ ENDIF
         DO i1 = LBOUND(InData%CavitWarnSet,1), UBOUND(InData%CavitWarnSet,1)
           IntKiBuf(Int_Xferred) = TRANSFER(InData%CavitWarnSet(i1,i2), IntKiBuf(1))
           Int_Xferred = Int_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%BlFB) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BlFB,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BlFB,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BlFB,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BlFB,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BlFB,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BlFB,3)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i3 = LBOUND(InData%BlFB,3), UBOUND(InData%BlFB,3)
-        DO i2 = LBOUND(InData%BlFB,2), UBOUND(InData%BlFB,2)
-          DO i1 = LBOUND(InData%BlFB,1), UBOUND(InData%BlFB,1)
-            ReKiBuf(Re_Xferred) = InData%BlFB(i1,i2,i3)
-            Re_Xferred = Re_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%BlMB) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BlMB,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BlMB,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BlMB,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BlMB,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BlMB,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BlMB,3)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i3 = LBOUND(InData%BlMB,3), UBOUND(InData%BlMB,3)
-        DO i2 = LBOUND(InData%BlMB,2), UBOUND(InData%BlMB,2)
-          DO i1 = LBOUND(InData%BlMB,1), UBOUND(InData%BlMB,1)
-            ReKiBuf(Re_Xferred) = InData%BlMB(i1,i2,i3)
-            Re_Xferred = Re_Xferred + 1
-          END DO
         END DO
       END DO
   END IF
@@ -12120,62 +12020,6 @@ ENDIF
         DO i1 = LBOUND(OutData%CavitWarnSet,1), UBOUND(OutData%CavitWarnSet,1)
           OutData%CavitWarnSet(i1,i2) = TRANSFER(IntKiBuf(Int_Xferred), OutData%CavitWarnSet(i1,i2))
           Int_Xferred = Int_Xferred + 1
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BlFB not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%BlFB)) DEALLOCATE(OutData%BlFB)
-    ALLOCATE(OutData%BlFB(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BlFB.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i3 = LBOUND(OutData%BlFB,3), UBOUND(OutData%BlFB,3)
-        DO i2 = LBOUND(OutData%BlFB,2), UBOUND(OutData%BlFB,2)
-          DO i1 = LBOUND(OutData%BlFB,1), UBOUND(OutData%BlFB,1)
-            OutData%BlFB(i1,i2,i3) = ReKiBuf(Re_Xferred)
-            Re_Xferred = Re_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BlMB not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%BlMB)) DEALLOCATE(OutData%BlMB)
-    ALLOCATE(OutData%BlMB(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BlMB.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i3 = LBOUND(OutData%BlMB,3), UBOUND(OutData%BlMB,3)
-        DO i2 = LBOUND(OutData%BlMB,2), UBOUND(OutData%BlMB,2)
-          DO i1 = LBOUND(OutData%BlMB,1), UBOUND(OutData%BlMB,1)
-            OutData%BlMB(i1,i2,i3) = ReKiBuf(Re_Xferred)
-            Re_Xferred = Re_Xferred + 1
-          END DO
         END DO
       END DO
   END IF

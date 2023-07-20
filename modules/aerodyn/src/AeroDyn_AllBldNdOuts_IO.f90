@@ -1262,35 +1262,34 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
 
          !================================================ MHK only
 
-         ! *****  Buoyant force in inertial, polar, local and airfoil systems*****
-         ! TODO: Change memory storage order 
-         CASE( BldNd_Fbxi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%BlFB(iNd,iB,1); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Fbyi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%BlFB(iNd,iB,2); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Fbzi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%BlFB(iNd,iB,3); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Mbxi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%BlMB(iNd,iB,1); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Mbyi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%BlMB(iNd,iB,2); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Mbzi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%BlMB(iNd,iB,3); iOut = iOut + 1; enddo;enddo
+         ! Buoyant force in inertial, polar, local and airfoil systems
+         CASE( BldNd_Fbxi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%BladeBuoyLoad(iB)%Force (1,iNd); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Fbyi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%BladeBuoyLoad(iB)%Force (2,iNd); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Fbzi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%BladeBuoyLoad(iB)%Force (3,iNd); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Mbxi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%BladeBuoyLoad(iB)%Moment(1,iNd); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Mbyi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%BladeBuoyLoad(iB)%Moment(2,iNd); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Mbzi ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = m%BladeBuoyLoad(iB)%Moment(3,iNd); iOut = iOut + 1; enddo;enddo
 
-         CASE( BldNd_Fbxp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlFB(iNd,iB,:), R_pi(1,:,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Fbyp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlFB(iNd,iB,:), R_pi(2,:,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Fbzp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlFB(iNd,iB,:), R_pi(3,:,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Mbxp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlMB(iNd,iB,:), R_pi(1,:,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Mbyp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlMB(iNd,iB,:), R_pi(2,:,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Mbzp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlMB(iNd,iB,:), R_pi(3,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Fbxp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Force (:,iNd), R_pi(1,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Fbyp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Force (:,iNd), R_pi(2,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Fbzp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Force (:,iNd), R_pi(3,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Mbxp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Moment(:,iNd), R_pi(1,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Mbyp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Moment(:,iNd), R_pi(2,:,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Mbzp ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Moment(:,iNd), R_pi(3,:,iB) ); iOut = iOut + 1; enddo;enddo
 
-         CASE( BldNd_Fbxl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlFB(iNd,iB,:), R_li(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Fbyl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlFB(iNd,iB,:), R_li(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Fbzl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlFB(iNd,iB,:), R_li(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Mbxl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlMB(iNd,iB,:), R_li(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Mbyl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlMB(iNd,iB,:), R_li(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Mbzl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlMB(iNd,iB,:), R_li(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Fbxl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Force (:,iNd), R_li(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Fbyl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Force (:,iNd), R_li(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Fbzl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Force (:,iNd), R_li(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Mbxl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Moment(:,iNd), R_li(1,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Mbyl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Moment(:,iNd), R_li(2,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Mbzl ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Moment(:,iNd), R_li(3,:,iNd,iB) ); iOut = iOut + 1; enddo;enddo
 
-         CASE( BldNd_Fbxa ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlFB(iNd,iB,:), u%BladeMotion(iB)%Orientation(1,:,iNd) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Fbya ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlFB(iNd,iB,:), u%BladeMotion(iB)%Orientation(2,:,iNd) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Fbza ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlFB(iNd,iB,:), u%BladeMotion(iB)%Orientation(3,:,iNd) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Mbxa ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlMB(iNd,iB,:), u%BladeMotion(iB)%Orientation(1,:,iNd) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Mbya ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlMB(iNd,iB,:), u%BladeMotion(iB)%Orientation(2,:,iNd) ); iOut = iOut + 1; enddo;enddo
-         CASE( BldNd_Mbza ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BlMB(iNd,iB,:), u%BladeMotion(iB)%Orientation(3,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Fbxa ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Force (:,iNd), u%BladeMotion(iB)%Orientation(1,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Fbya ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Force (:,iNd), u%BladeMotion(iB)%Orientation(2,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Fbza ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Force (:,iNd), u%BladeMotion(iB)%Orientation(3,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Mbxa ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Moment(:,iNd), u%BladeMotion(iB)%Orientation(1,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Mbya ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Moment(:,iNd), u%BladeMotion(iB)%Orientation(2,:,iNd) ); iOut = iOut + 1; enddo;enddo
+         CASE( BldNd_Mbza ); do iB=1,nB; do iNd=1,nNd; y%WriteOutput(iOut) = dot_product( m%BladeBuoyLoad(iB)%Moment(:,iNd), u%BladeMotion(iB)%Orientation(3,:,iNd) ); iOut = iOut + 1; enddo;enddo
 
          !================================================ DEBUG ONLY 
 
@@ -1545,7 +1544,7 @@ SUBROUTINE BldNdOuts_SetOutParam(BldNd_OutList, p, p_AD, ErrStat, ErrMsg )
    endif
 
    ! The following are valid only for BEMT/DBEMT
-   if (p_AD%WakeMod == WakeMod_BEMT) then
+   if (p_AD%WakeMod /= WakeMod_BEMT) then
       InvalidOutput( BldNd_BEM_F_qs  ) = .true.
       InvalidOutput( BldNd_BEM_k_qs  ) = .true.
       InvalidOutput( BldNd_BEM_kp_qs ) = .true.
