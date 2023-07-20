@@ -338,17 +338,17 @@ END SUBROUTINE Farm_Initialize
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine initializes all instances of WakeDynamics.
-!! This also sets the WAT InflowWind data storage -- this will be changed later when IfW uses pointers
+!> This routine sets the WAT InflowWind data storage.  Rather than initialize all of InflowWind, we just call the HAWC wind init.
 SUBROUTINE WAT_init( p, WAT_IfW, AWAE_InitInput, ErrStat, ErrMsg )
+   USE   InflowWind_IO, only: IfW_HAWC_Init
    type(farm_ParameterType),  intent(inout) :: p                     !< farm parameters data
    type(WAT_IfW_data),        intent(inout) :: WAT_IfW               !< InflowWind data
    type(AWAE_InitInputType),  intent(inout) :: AWAE_InitInput        !< for error checking, and temporary to pass IfW
    integer(IntKi),            intent(  out) :: ErrStat               !< Error status of the operation
    character(*),              intent(  out) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
 
-   type(InflowWind_InitInputType)           :: IfW_InitInp
-   type(InflowWind_InitOutputType)          :: IfW_InitOut
+   type(HAWC_InitInputType)                 :: HAWC_InitInput
+   type(WindFileDat)                        :: FileDat
    character(1024)                          :: BoxFileRoot, BoxFile_u, BoxFile_v, BoxFile_w
    character(6)                             :: FileEnding(3)
    integer(IntKi)                           :: i
@@ -362,56 +362,26 @@ SUBROUTINE WAT_init( p, WAT_IfW, AWAE_InitInput, ErrStat, ErrMsg )
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
-   ! Initialize InflowWind
-   IfW_InitInp%FixedWindFileRootName = .false.
-   IfW_InitInp%NumWindPoints         = 1        ! just some random number for the moment
-   IfW_InitInp%RadAvg                = 0.25 * p%nZ_low * p%dX_low     ! arbitrary garbage, just must be bigger than zero, but not bigger than grid (IfW will complain if this isn't set when it tries to calculate disk average vel)
-   IfW_InitInp%MHK                   = 0        ! Not an MHK turbine
+   ! If flowfield is allocated, deallocate and allocate again to clear old data
+   if (associated(WAT_IfW%p%FlowField))   deallocate(WAT_IfW%p%FlowField)
+   allocate(WAT_IfW%p%FlowField)
 
-   ! Set InputFile data
-   IfW_InitInp%FilePassingMethod                =  2_IntKi  ! passing the IfW%InputFile structure
-   IfW_InitInp%PassedFileData%EchoFlag          =  .false.  ! don't echo anything
-   IfW_InitInp%PassedFileData%WindType          =  5        ! HAWC wind type
-   IfW_InitInp%PassedFileData%PropagationDir    =  0.0      ! set to straight from left
-   IfW_InitInp%PassedFileData%VFlowAngle        =  0.0      ! no upflow
-   IfW_InitInp%PassedFileData%NWindVel          =  0        ! no output points
-
-   ! Input file
+   ! HAWC file names
    call SplitFileName (p%WAT_BoxFile, BoxFileRoot, FileEnding, ErrStat2, ErrMsg2);  if (Failed()) return
-   IfW_InitInp%PassedFileData%HAWC_FileName_u   =  trim(BoxFileRoot)//trim(FileEnding(1))
-   IfW_InitInp%PassedFileData%HAWC_FileName_v   =  trim(BoxFileRoot)//trim(FileEnding(2))
-   IfW_InitInp%PassedFileData%HAWC_FileName_w   =  trim(BoxFileRoot)//trim(FileEnding(3))
+   HAWC_InitInput%WindFileName(1) = trim(BoxFileRoot)//trim(FileEnding(1))
+   HAWC_InitInput%WindFileName(2) = trim(BoxFileRoot)//trim(FileEnding(2))
+   HAWC_InitInput%WindFileName(3) = trim(BoxFileRoot)//trim(FileEnding(3))
 
-   ! --- HAWC wind ---
-   ! Note: there are other variables form the input file that we simply don't set as they don't apply to this type of HAWC file
-   ! HAWC grid
+   ! HAWC spatial grid
    if (p%WAT == Mod_WAT_PreDef) then       ! from libary of WAT files, set the NxNyNz and DxDyDz terms
       call MannLibDims(BoxFileRoot, p%RotorDiamRef, p%WAT_NxNyNz, p%WAT_DxDyDz, ErrStat2, ErrMsg2);  if (Failed()) return
    endif
-   IfW_InitInp%PassedFileData%HAWC_nx           =  p%WAT_NxNyNz(1)
-   IfW_InitInp%PassedFileData%HAWC_ny           =  p%WAT_NxNyNz(2)
-   IfW_InitInp%PassedFileData%HAWC_nz           =  p%WAT_NxNyNz(3)
-   IfW_InitInp%PassedFileData%HAWC_dx           =  p%WAT_DxDyDz(1)
-   IfW_InitInp%PassedFileData%HAWC_dy           =  p%WAT_DxDyDz(2)
-   IfW_InitInp%PassedFileData%HAWC_dz           =  p%WAT_DxDyDz(3)
-
-   IfW_InitInp%PassedFileData%FF%RefHt          =  0.5_ReKi * p%WAT_NxNyNz(3)*p%WAT_DxDyDz(3)          ! reference height; the height (in meters) of the vertical center of the grid (m)
-
-   ! HAWC turbulence scaling
-   IfW_InitInp%PassedFileData%FF%SF(1:3)        =  1.0_ReKi    ! Turbulence scaling factor for the x direction (-)   [ScaleMethod=1]
-
-   ! HAWC wind profile
-   IfW_InitInp%PassedFileData%FF%URef           =  1.0_ReKi    ! Set to 1.0 so that dX = DTime (this affects data storage)
-   IfW_InitInp%PassedFileData%FF%URef           =  1.0_ReKi    ! Set to 1.0 so that dX = DTime (this affects data storage)
-   IfW_InitInp%PassedFileData%FF%WindProfileType=  0           ! Wind profile type (0=constant;1=logarithmic,2=power law)
-   IfW_InitInp%PassedFileData%FF%XOffset        =  0.0_ReKi    ! Initial offset in +x direction (shift of wind box)
-
-   IfW_InitInp%PassedFileData%SumPrint          =  .false.
-   IfW_InitInp%PassedFileData%NumOuts           =  0
-
-   ! turn off lidar
-   IfW_InitInp%PassedFileData%SensorType        = 0            ! no lidar
-
+   HAWC_InitInput%nx = p%WAT_NxNyNz(1)
+   HAWC_InitInput%ny = p%WAT_NxNyNz(2)
+   HAWC_InitInput%nz = p%WAT_NxNyNz(3)
+   HAWC_InitInput%dx = p%WAT_DxDyDz(1)
+   HAWC_InitInput%dy = p%WAT_DxDyDz(2)
+   HAWC_InitInput%dz = p%WAT_DxDyDz(3)
 
    ! check spatial resolution against turbine high res domains -- this would be checked in the ValidateData routine, except we don't have resolution for Mod_WAT_PreDef at that point
    TmpMsg='Ratio of high res domain resolution to wake added turblence resolution should be between '//trim(Num2LStr(1.0_ReKi/fstretch))//' and '//trim(Num2LStr(fstretch))//', but is '
@@ -430,18 +400,26 @@ SUBROUTINE WAT_init( p, WAT_IfW, AWAE_InitInput, ErrStat, ErrMsg )
                                        ' = '//trim(Num2LStr(TmpRe3(3)))//' for turbine '//trim(Num2LStr(i))//' in Z.',ErrStat,ErrMsg,RoutineName)
    enddo
 
-   call WrScr("Reading Wake added turbulence files: "//trim(p%WAT_BoxFile))
-   call InflowWind_Init( IfW_InitInp,  &
-            WAT_IfW%u,                 &
-            WAT_IfW%p,                 &
-            WAT_IfW%x,                 &
-            WAT_IfW%xd,                &
-            WAT_IfW%z,                 &
-            WAT_IfW%OtherSt,           &
-            WAT_IfW%y,                 &
-            WAT_IfW%m,                 &
-            p%dt_low, IfW_InitOut, ErrStat2, ErrMsg2 )
-      if (Failed()) return;
+   HAWC_InitInput%G3D%RefHt            = 0.5_ReKi * p%WAT_NxNyNz(3)*p%WAT_DxDyDz(3)          ! reference height; the height (in meters) of the vertical center of the grid (m)
+   HAWC_InitInput%G3D%URef             = 1.0_ReKi    ! Set to 1.0 so that dX = DTime (this affects data storage)
+   HAWC_InitInput%G3D%WindProfileType  = 0           ! Wind profile type (0=constant;1=logarithmic,2=power law)
+   HAWC_InitInput%G3D%PLExp            = 0.0_ReKi
+   HAWC_InitInput%G3D%ScaleMethod      = 0
+   HAWC_InitInput%G3D%SF               = 1.0_ReKi    ! Turbulence scaling factor for the x direction (-)   [ScaleMethod=1]
+   HAWC_InitInput%G3D%SigmaF           = 1.0_ReKi    ! Turbulence standard deviation to calculate scaling from in x direction (m/s)    [ScaleMethod=2] 
+   HAWC_InitInput%G3D%Z0               = 0.3_ReKi    ! Surface roughness (not used)
+   HAWC_InitInput%G3D%XOffset          = 0.0_ReKi    ! Initial offset in +x direction (shift of wind box)
+
+   WAT_IfW%p%FlowField%PropagationDir  = 0.0_ReKi
+   WAT_IfW%p%FlowField%VFlowAngle      = 0.0_ReKi
+   WAT_IfW%p%FlowField%RotateWindBox   = .false.
+
+   WAT_IfW%p%FlowField%FieldType = Grid3D_FieldType
+   call IfW_HAWC_Init(HAWC_InitInput, -1, WAT_IfW%p%FlowField%Grid3D, FileDat, ErrStat2, ErrMsg2);  if (Failed()) return   ! summary file unit set to -1
+
+   ! Reference position for wind rotation (not used here, but should be set)
+   WAT_IfW%p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, WAT_IfW%p%FlowField%Grid3D%RefHeight]
+
    WAT_IfW%IsInitialized = .true.
 
    call Cleanup()
@@ -454,8 +432,7 @@ contains
       if (Failed) call Cleanup()
    end function Failed
    subroutine Cleanup()
-      call InflowWind_DestroyInitInput(IfW_InitInp, ErrStat2, ErrMsg2)
-      call InflowWind_DestroyInitOutput(IfW_InitOut, ErrStat2, ErrMsg2)
+      ! nothing to clean up
    end subroutine Cleanup
 
    !  Split out the ending of .u or u.bin from the filename.
