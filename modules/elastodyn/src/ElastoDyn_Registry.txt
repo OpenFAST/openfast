@@ -55,6 +55,8 @@ typedef	^	InitOutputType	LOGICAL	RotFrame_x	{:}	-	-	"Flag that tells FAST/MBC3 i
 typedef	^	InitOutputType	IntKi	DerivOrder_x {:}	-	-	"Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization"	-
 typedef	^	InitOutputType	LOGICAL	RotFrame_u	{:}	-	-	"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
 typedef	^	InitOutputType	LOGICAL	IsLoad_u	{:}	-	-	"Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+typedef	^	InitOutputType	ModVarsType	*Vars	-	-	-	"Module Variables"
+typedef	^	InitOutputType	ModValsType	*Vals	-	-	-	"Module Values"
 
 # ..... Blade Input file data ...........................................................................................................
 typedef	ElastoDyn/ED	BladeInputData	IntKi	NBlInpSt	-	-	-	"Number of blade input stations"	-
@@ -521,10 +523,12 @@ typedef	^	MiscVarType	IntKi	AugMat_pivot	{:}	-	-	"Pivot column for AugMat in LAP
 typedef	^	MiscVarType	ReKi	OgnlGeAzRo	{:}	-	-	"Original DOF_GeAz row in AugMat"	-
 typedef	^	MiscVarType	R8Ki	QD2T	{:}	-	-	"Solution (acceleration) vector; the first time derivative of QDT"
 typedef	^	MiscVarType	Logical	IgnoreMod	-	-	-	"whether to ignore the modulo in ED outputs (necessary for linearization perturbations)"	-
+typedef	^	MiscVarType	ModValsType	&Vals	-	-	"Values corresponding to module variables"
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef	^	ParameterType	ModVarsType	&Vars	-	-	-	"Module Variables"
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
 typedef	^	ParameterType	DbKi	DT24	-	-	-	"=DT/24 (used in loose coupling)"	seconds
 typedef	^	ParameterType	IntKi	BldNodes	-	-	-	"Number of blade nodes used in the analysis"	-
@@ -744,10 +748,8 @@ typedef  ^  ParameterType  OutParmType BldNd_OutParam  {:} -  -  "Names and unit
 #typedef  ^  ParameterType  IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (ED_AllBldNdOuts)" -
 typedef  ^  ParameterType  IntKi BldNd_BladesOut - - - "The blades to output (ED_AllBldNdOuts)" -
 
-typedef	^	ParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
-typedef	^	ParameterType	R8Ki	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
-typedef	^	ParameterType	R8Ki	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
-typedef	^	ParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
+typedef	^	ParameterType	IntKi	iBlPitchCoModVarType	-	-	-	"Index of blade pitch command variable"	-
+typedef	^	ParameterType	IntKi	iBlPitchComCVar	-	-	-	"Index of blade pitch command C variable"	-
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:

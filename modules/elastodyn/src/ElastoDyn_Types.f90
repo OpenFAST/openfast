@@ -75,6 +75,8 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
+    TYPE(ModValsType) , POINTER :: Vals => NULL()      !< Module Values [-]
   END TYPE ED_InitOutputType
 ! =======================
 ! =========  BladeInputData  =======
@@ -530,10 +532,12 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OgnlGeAzRo      !< Original DOF_GeAz row in AugMat [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QD2T      !< Solution (acceleration) vector; the first time derivative of QDT [-]
     LOGICAL  :: IgnoreMod = .false.      !< whether to ignore the modulo in ED outputs (necessary for linearization perturbations) [-]
+    TYPE(ModValsType) , POINTER :: Vals => NULL() 
   END TYPE ED_MiscVarType
 ! =======================
 ! =========  ED_ParameterType  =======
   TYPE, PUBLIC :: ED_ParameterType
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
     REAL(DbKi)  :: DT24 = 0.0_R8Ki      !< =DT/24 (used in loose coupling) [seconds]
     INTEGER(IntKi)  :: BldNodes = 0_IntKi      !< Number of blade nodes used in the analysis [-]
@@ -748,10 +752,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: BldNd_TotNumOuts = 0_IntKi      !< Total number of requested output channels of blade node information (BldNd_NumOuts * BldNd_BlOutNd * BldNd_BladesOut -- ED_AllBldNdOuts) [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: BldNd_OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     INTEGER(IntKi)  :: BldNd_BladesOut = 0_IntKi      !< The blades to output (ED_AllBldNdOuts) [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
-    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
-    INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
+    INTEGER(IntKi)  :: iBlPitchCoModVarType = 0_IntKi      !< Index of blade pitch command variable [-]
+    INTEGER(IntKi)  :: iBlPitchComCVar = 0_IntKi      !< Index of blade pitch command C variable [-]
   END TYPE ED_ParameterType
 ! =======================
 ! =========  ED_InputType  =======
@@ -1066,6 +1068,8 @@ subroutine ED_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       end if
       DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
    end if
+   DstInitOutputData%Vars => SrcInitOutputData%Vars
+   DstInitOutputData%Vals => SrcInitOutputData%Vals
 end subroutine
 
 subroutine ED_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -1118,12 +1122,15 @@ subroutine ED_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%IsLoad_u)) then
       deallocate(InitOutputData%IsLoad_u)
    end if
+   nullify(InitOutputData%Vars)
+   nullify(InitOutputData%Vals)
 end subroutine
 
 subroutine ED_PackInitOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(ED_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ED_PackInitOutput'
+   logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
@@ -1204,6 +1211,20 @@ subroutine ED_PackInitOutput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%IsLoad_u), ubound(InData%IsLoad_u))
       call RegPack(Buf, InData%IsLoad_u)
    end if
+   call RegPack(Buf, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(Buf, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(Buf, InData%Vars) 
+      end if
+   end if
+   call RegPack(Buf, associated(InData%Vals))
+   if (associated(InData%Vals)) then
+      call RegPackPointer(Buf, c_loc(InData%Vals), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModValsType(Buf, InData%Vals) 
+      end if
+   end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1214,6 +1235,8 @@ subroutine ED_UnPackInitOutput(Buf, OutData)
    integer(IntKi)  :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(IntKi)  :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    if (allocated(OutData%WriteOutputHdr)) deallocate(OutData%WriteOutputHdr)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -1423,6 +1446,46 @@ subroutine ED_UnPackInitOutput(Buf, OutData)
       end if
       call RegUnpack(Buf, OutData%IsLoad_u)
       if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(Buf, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
+   if (associated(OutData%Vals)) deallocate(OutData%Vals)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vals)
+      else
+         allocate(OutData%Vals,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vals.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%Vals)
+         call NWTC_Library_UnpackModValsType(Buf, OutData%Vals) ! Vals 
+      end if
+   else
+      OutData%Vals => null()
    end if
 end subroutine
 
@@ -7550,6 +7613,18 @@ subroutine ED_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%QD2T = SrcMiscData%QD2T
    end if
    DstMiscData%IgnoreMod = SrcMiscData%IgnoreMod
+   if (associated(SrcMiscData%Vals)) then
+      if (.not. associated(DstMiscData%Vals)) then
+         allocate(DstMiscData%Vals, stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Vals.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      call NWTC_Library_CopyModValsType(SrcMiscData%Vals, DstMiscData%Vals, CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
 end subroutine
 
 subroutine ED_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -7586,12 +7661,19 @@ subroutine ED_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%QD2T)) then
       deallocate(MiscData%QD2T)
    end if
+   if (associated(MiscData%Vals)) then
+      call NWTC_Library_DestroyModValsType(MiscData%Vals, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      deallocate(MiscData%Vals)
+      MiscData%Vals => null()
+   end if
 end subroutine
 
 subroutine ED_PackMisc(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(ED_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'ED_PackMisc'
+   logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call ED_PackCoordSys(Buf, InData%CoordSys) 
    call ED_PackRtHndSide(Buf, InData%RtHS) 
@@ -7631,6 +7713,13 @@ subroutine ED_PackMisc(Buf, Indata)
       call RegPack(Buf, InData%QD2T)
    end if
    call RegPack(Buf, InData%IgnoreMod)
+   call RegPack(Buf, associated(InData%Vals))
+   if (associated(InData%Vals)) then
+      call RegPackPointer(Buf, c_loc(InData%Vals), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModValsType(Buf, InData%Vals) 
+      end if
+   end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -7641,6 +7730,8 @@ subroutine ED_UnPackMisc(Buf, OutData)
    integer(IntKi)  :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(IntKi)  :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    call ED_UnpackCoordSys(Buf, OutData%CoordSys) ! CoordSys 
    call ED_UnpackRtHndSide(Buf, OutData%RtHS) ! RtHS 
@@ -7744,6 +7835,26 @@ subroutine ED_UnPackMisc(Buf, OutData)
    end if
    call RegUnpack(Buf, OutData%IgnoreMod)
    if (RegCheckErr(Buf, RoutineName)) return
+   if (associated(OutData%Vals)) deallocate(OutData%Vals)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vals)
+      else
+         allocate(OutData%Vals,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vals.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%Vals)
+         call NWTC_Library_UnpackModValsType(Buf, OutData%Vals) ! Vals 
+      end if
+   else
+      OutData%Vals => null()
+   end if
 end subroutine
 
 subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -7759,6 +7870,18 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ED_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(SrcParamData%Vars)) then
+      if (.not. associated(DstParamData%Vars)) then
+         allocate(DstParamData%Vars, stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
    DstParamData%DT = SrcParamData%DT
    DstParamData%DT24 = SrcParamData%DT24
    DstParamData%BldNodes = SrcParamData%BldNodes
@@ -8588,43 +8711,8 @@ subroutine ED_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    DstParamData%BldNd_BladesOut = SrcParamData%BldNd_BladesOut
-   if (allocated(SrcParamData%Jac_u_indx)) then
-      LB(1:2) = lbound(SrcParamData%Jac_u_indx)
-      UB(1:2) = ubound(SrcParamData%Jac_u_indx)
-      if (.not. allocated(DstParamData%Jac_u_indx)) then
-         allocate(DstParamData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Jac_u_indx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%Jac_u_indx = SrcParamData%Jac_u_indx
-   end if
-   if (allocated(SrcParamData%du)) then
-      LB(1:1) = lbound(SrcParamData%du)
-      UB(1:1) = ubound(SrcParamData%du)
-      if (.not. allocated(DstParamData%du)) then
-         allocate(DstParamData%du(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%du.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%du = SrcParamData%du
-   end if
-   if (allocated(SrcParamData%dx)) then
-      LB(1:1) = lbound(SrcParamData%dx)
-      UB(1:1) = ubound(SrcParamData%dx)
-      if (.not. allocated(DstParamData%dx)) then
-         allocate(DstParamData%dx(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%dx.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstParamData%dx = SrcParamData%dx
-   end if
-   DstParamData%Jac_ny = SrcParamData%Jac_ny
+   DstParamData%iBlPitchCoModVarType = SrcParamData%iBlPitchCoModVarType
+   DstParamData%iBlPitchComCVar = SrcParamData%iBlPitchComCVar
 end subroutine
 
 subroutine ED_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -8638,6 +8726,12 @@ subroutine ED_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ED_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(ParamData%Vars)) then
+      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      deallocate(ParamData%Vars)
+      ParamData%Vars => null()
+   end if
    if (allocated(ParamData%PH)) then
       deallocate(ParamData%PH)
    end if
@@ -8817,15 +8911,6 @@ subroutine ED_DestroyParam(ParamData, ErrStat, ErrMsg)
       end do
       deallocate(ParamData%BldNd_OutParam)
    end if
-   if (allocated(ParamData%Jac_u_indx)) then
-      deallocate(ParamData%Jac_u_indx)
-   end if
-   if (allocated(ParamData%du)) then
-      deallocate(ParamData%du)
-   end if
-   if (allocated(ParamData%dx)) then
-      deallocate(ParamData%dx)
-   end if
 end subroutine
 
 subroutine ED_PackParam(Buf, Indata)
@@ -8834,7 +8919,15 @@ subroutine ED_PackParam(Buf, Indata)
    character(*), parameter         :: RoutineName = 'ED_PackParam'
    integer(IntKi)  :: i1, i2, i3, i4, i5
    integer(IntKi)  :: LB(5), UB(5)
+   logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
+   call RegPack(Buf, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(Buf, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(Buf, InData%Vars) 
+      end if
+   end if
    call RegPack(Buf, InData%DT)
    call RegPack(Buf, InData%DT24)
    call RegPack(Buf, InData%BldNodes)
@@ -9277,22 +9370,8 @@ subroutine ED_PackParam(Buf, Indata)
       end do
    end if
    call RegPack(Buf, InData%BldNd_BladesOut)
-   call RegPack(Buf, allocated(InData%Jac_u_indx))
-   if (allocated(InData%Jac_u_indx)) then
-      call RegPackBounds(Buf, 2, lbound(InData%Jac_u_indx), ubound(InData%Jac_u_indx))
-      call RegPack(Buf, InData%Jac_u_indx)
-   end if
-   call RegPack(Buf, allocated(InData%du))
-   if (allocated(InData%du)) then
-      call RegPackBounds(Buf, 1, lbound(InData%du), ubound(InData%du))
-      call RegPack(Buf, InData%du)
-   end if
-   call RegPack(Buf, allocated(InData%dx))
-   if (allocated(InData%dx)) then
-      call RegPackBounds(Buf, 1, lbound(InData%dx), ubound(InData%dx))
-      call RegPack(Buf, InData%dx)
-   end if
-   call RegPack(Buf, InData%Jac_ny)
+   call RegPack(Buf, InData%iBlPitchCoModVarType)
+   call RegPack(Buf, InData%iBlPitchComCVar)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -9304,7 +9383,29 @@ subroutine ED_UnPackParam(Buf, OutData)
    integer(IntKi)  :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(IntKi)  :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(Buf, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
    call RegUnpack(Buf, OutData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%DT24)
@@ -10394,49 +10495,9 @@ subroutine ED_UnPackParam(Buf, OutData)
    end if
    call RegUnpack(Buf, OutData%BldNd_BladesOut)
    if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%Jac_u_indx)) deallocate(OutData%Jac_u_indx)
-   call RegUnpack(Buf, IsAllocAssoc)
+   call RegUnpack(Buf, OutData%iBlPitchCoModVarType)
    if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%Jac_u_indx(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Jac_u_indx.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%Jac_u_indx)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%du)) deallocate(OutData%du)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%du(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%du.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%du)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%dx)) deallocate(OutData%dx)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%dx(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%dx.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%dx)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   call RegUnpack(Buf, OutData%Jac_ny)
+   call RegUnpack(Buf, OutData%iBlPitchComCVar)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
