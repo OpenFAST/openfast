@@ -39,6 +39,7 @@ option(VARIABLE_TRACKING "Enables variable tracking for better runtime debugging
 option(GENERATE_TYPES "Use the openfast-regsitry to autogenerate types modules" off)
 option(BUILD_SHARED_LIBS "Enable building shared libraries" off)
 option(DOUBLE_PRECISION "Treat REAL as double precision" on)
+option(TIGHT_COUPLING "Enable tight couping solver" on)
 option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
 option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
 option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" on)
