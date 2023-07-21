@@ -1063,7 +1063,7 @@ subroutine NWTC_Library_CopyModVarsType(SrcModVarsTypeData, DstModVarsTypeData, 
       if (.not. allocated(DstModVarsTypeData%ixg)) then
          allocate(DstModVarsTypeData%ixg(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModVarsTypeData%ix.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModVarsTypeData%ixg.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
@@ -1075,7 +1075,7 @@ subroutine NWTC_Library_CopyModVarsType(SrcModVarsTypeData, DstModVarsTypeData, 
       if (.not. allocated(DstModVarsTypeData%iug)) then
          allocate(DstModVarsTypeData%iug(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModVarsTypeData%iu.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModVarsTypeData%iug.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
@@ -1087,7 +1087,7 @@ subroutine NWTC_Library_CopyModVarsType(SrcModVarsTypeData, DstModVarsTypeData, 
       if (.not. allocated(DstModVarsTypeData%iyg)) then
          allocate(DstModVarsTypeData%iyg(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstModVarsTypeData%iy.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModVarsTypeData%iyg.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
@@ -1293,7 +1293,7 @@ subroutine NWTC_Library_UnPackModVarsType(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
       allocate(OutData%ixg(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ix.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%ixg.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
          return
       end if
       call RegUnpack(Buf, OutData%ixg)
@@ -1307,7 +1307,7 @@ subroutine NWTC_Library_UnPackModVarsType(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
       allocate(OutData%iug(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%iu.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%iug.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
          return
       end if
       call RegUnpack(Buf, OutData%iug)
@@ -1321,7 +1321,7 @@ subroutine NWTC_Library_UnPackModVarsType(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
       allocate(OutData%iyg(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%iy.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%iyg.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
          return
       end if
       call RegUnpack(Buf, OutData%iyg)

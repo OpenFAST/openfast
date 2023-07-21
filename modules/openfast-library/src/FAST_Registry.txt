@@ -88,6 +88,66 @@ typedef   ^   FAST_VTK_ModeShapeType   R8Ki     DampedFreq_Hz   {:}        -  - 
 typedef   ^   FAST_VTK_ModeShapeType   R8Ki     x_eig_magnitude {:}{:}{:}  -  -  "magnitude of eigenvector (dimension 1=state, dim 2= azimuth, dim 3 = mode)" -
 typedef   ^   FAST_VTK_ModeShapeType   R8Ki     x_eig_phase     {:}{:}{:}  -  -  "phase of eigenvector (dimension 1=state, dim 2= azimuth, dim 3 = mode)" -
 
+# ..... Tight Coupling Generalized Alpha Solver Data .............
+
+# Parameters 
+typedef ^ TC_ParameterType  R8Ki            DT                     -  -  -      "solution time step" -
+typedef ^ ^                 R8Ki            ConvTol                -  -  -      "Solution convergence tolerance" -
+typedef ^ ^                 IntKi           NumCrctn               -  -  -      "" -
+typedef ^ ^                 IntKi           MaxConvIter            -  -  -      "" -
+typedef ^ ^                 IntKi           NIter_UJac             -  -  -      "Number of solution iterations between updating the Jacobian" -
+typedef ^ ^                 IntKi           NStep_UJac             -  -  -      "Number of global time steps between updating the Jacobian" -
+typedef ^ ^                 R8Ki            Scale_UJac             -  -  -      "" -
+typedef ^ ^                 R8Ki            AccBlend               -  1  -      "" -
+typedef ^ ^                 R8Ki            RhoInf                 -  -  -      "Rho infinity used for calculating Generalized-alpha coefficients" -
+typedef ^ ^                 R8Ki            AlphaM                 -  -  -      "Generalized-alpha alpha_m coefficient" -
+typedef ^ ^                 R8Ki            AlphaF                 -  -  -      "Generalized-alpha alpha_f coefficient" -
+typedef ^ ^                 R8Ki            Beta                   -  -  -      "Generalized-alpha beta coefficient" -
+typedef ^ ^                 R8Ki            Gamma                  -  -  -      "Generalized-alpha gamma coefficient" -
+typedef ^ ^                 R8Ki            C                      3  -  -      "Generalized-alpha coefficient array" -
+typedef ^ ^                 IntKi           iX1Tight               :  -  -      "" -
+typedef ^ ^                 IntKi           iX2Tight               :  -  -      "" -
+typedef ^ ^                 IntKi           iUTight                :  -  -      "" -
+typedef ^ ^                 IntKi           iUOpt1                 :  -  -      "" -
+typedef ^ ^                 IntKi           iyTight                :  -  -      "" -
+typedef ^ ^                 IntKi           iyOpt1                 :  -  -      "" -
+typedef ^ ^                 IntKi           ixqd                    :: -  -      "" -
+typedef ^ ^                 IntKi           iJX2                   :  -  -      "Indices of Jacobian q variables" -
+typedef ^ ^                 IntKi           iJT                    :  -  -      "Indices of Jacobian tight coupling variables" -
+typedef ^ ^                 IntKi           iJ1                    :  -  -      "Indices of Jacobian option 1 variables" -
+typedef ^ ^                 IntKi           iJL                    :  -  -      "Indices of Jacobian load variables" -
+typedef ^ ^                 IntKi           iModAll                :  -  -      "ModData index order for all modules" -
+typedef ^ ^                 IntKi           iModTC                 :  -  -      "ModData index order for tight coupling modules" -
+typedef ^ ^                 IntKi           iModOpt1               :  -  -      "ModData index order for option 1 modules" -
+typedef ^ ^                 IntKi           iModOpt1US             :  -  -      "ModData index order for option 1 modules to update states" -
+typedef ^ ^                 IntKi           iModOpt2               :  -  -      "ModData index order for option 2 modules" -
+
+# Misc/Optimization variables 
+typedef ^ TC_MiscVarType    R8Ki            q                      :: -  -      "" -
+typedef ^ ^                 R8Ki            qn                     :: -  -      "" -
+typedef ^ ^                 R8Ki            x                      :  -  -      "" -
+typedef ^ ^                 R8Ki            xn                     :  -  -      "" -
+typedef ^ ^                 R8Ki            dxdt                   :  -  -      "" -
+typedef ^ ^                 R8Ki            u                      :  -  -      "" -
+typedef ^ ^                 R8Ki            un                     :  -  -      "" -
+typedef ^ ^                 R8Ki            u_tmp                  :  -  -      "" -
+typedef ^ ^                 R8Ki            y                      :  -  -      "" -
+typedef ^ ^                 R8Ki            dYdx                   :: -  -      "" -
+typedef ^ ^                 R8Ki            dYdu                   :: -  -      "" -
+typedef ^ ^                 R8Ki            dXdx                   :: -  -      "" -
+typedef ^ ^                 R8Ki            dXdu                   :: -  -      "" -
+typedef ^ ^                 R8Ki            dUdu                   :: -  -      "" -
+typedef ^ ^                 R8Ki            dUdy                   :: -  -      "" -
+typedef ^ ^                 R8Ki            XB                     :: -  -      "" -
+typedef ^ ^                 R8Ki            Jac                    :: -  -      "" -
+typedef ^ ^                 IntKi           IPIV                   :  -  -      "" -
+typedef ^ ^                 IntKi           IterTotal              -  0  -      "" -
+typedef ^ ^                 IntKi           IterUntilUJac             -  0  -      "Number of convergence iterations until Jacobian update" -
+typedef ^ ^                 IntKi           StepsUntilUJac             -  0  -      "Number of time steps until Jacobian update" -
+typedef ^ ^                 R8Ki            dq                     :: -  -      "Change in q" -
+typedef ^ ^                 R8Ki            dx                     :  -  -      "Change in x" -
+typedef ^ ^                 R8Ki            du                     :  -  -      "" -
+
 
 # ..... FAST_ParameterType data .......................................................................................................
 # Misc data for coupling:
@@ -196,6 +256,7 @@ typedef	^	FAST_ParameterType	IntKi	Lin_NumMods	-	-	-	"number of modules in the l
 typedef	^	FAST_ParameterType	IntKi	Lin_ModOrder	{NumModules}	-	-	"indices that determine which order the modules are in the glue-code linearization matrix"
 typedef  ^  FAST_ParameterType  IntKi    LinInterpOrder     -  -  -  "Interpolation order for CalcSteady solution" -
 #typedef	^	FAST_ParameterType	LOGICAL	CheckHSSBrTrqC	-	-	-	"Flag to determine if we should check HSSBrTrqC extrapolation to ElastoDyn"	-
+typedef ^       FAST_ParameterType      TC_ParameterType	Solver -  -  -  "Tight Coupling Solver Parameters" -
 
 
 # SAVED OPERATING POINT DATA FOR VTKLIN (visualization of mode shapes from linearization analysis)
@@ -384,6 +445,7 @@ typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Arr
 # [ the last dimension of each allocatable array is for the instance of BeamDyn being used ]
 # note that I'm making the allocatable-for-instance-used part INSIDE the data type (as opposed to an array of IceDyn_Data types) because I want to pass arrays of x, xd, z, x_pred, etc)
 typedef	FAST	BeamDyn_Data	BD_ContinuousStateType	x	{:}{:}	-	-	"Continuous states"
+typedef	^	^	BD_ContinuousStateType	dxdt	{:}	-	-	"Continuous state derivatives"
 typedef	^	^	BD_DiscreteStateType	xd	{:}{:}	-	-	"Discrete states"
 typedef	^	^	BD_ConstraintStateType	z	{:}{:}	-	-	"Constraint states"
 typedef	^	^	BD_OtherStateType	OtherSt	{:}{:}	-	-	"Other states"
@@ -398,6 +460,7 @@ typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Arr
 
 # ..... ElastoDyn data .......................................................................................................
 typedef	FAST	ElastoDyn_Data	ED_ContinuousStateType	x	{2}	-	-	"Continuous states"
+typedef	^	^	ED_ContinuousStateType	dxdt	-	-	-	"Continuous state derivatives"
 typedef	^	^	ED_DiscreteStateType	xd	{2}	-	-	"Discrete states"
 typedef	^	^	ED_ConstraintStateType	z	{2}	-	-	"Constraint states"
 typedef	^	^	ED_OtherStateType	OtherSt	{2}	-	-	"Other states"
@@ -478,6 +541,7 @@ typedef	^	^	SC_DX_ParameterType	p	-	-	-	"System parameters"
 
 # ..... SubDyn data .......................................................................................................
 typedef	FAST	SubDyn_Data	SD_ContinuousStateType	x	{2}	-	-	"Continuous states"
+typedef	^	^	SD_ContinuousStateType	dxdt	-	-	-	"Continuous state derivatives"
 typedef	^	^	SD_DiscreteStateType	xd	{2}	-	-	"Discrete states"
 typedef	^	^	SD_ConstraintStateType	z	{2}	-	-	"Constraint states"
 typedef	^	^	SD_OtherStateType	OtherSt	{2}	-	-	"Other states"
@@ -697,6 +761,8 @@ typedef	^	FAST_MiscVarType	INTEGER	SimStrtTime	{8}	-	-	"Start time of simulation
 typedef	^	FAST_MiscVarType	Logical	calcJacobian	-	-	-	"Should we calculate Jacobians in Option 1?"	(flag)
 typedef	^	FAST_MiscVarType	FAST_ExternInputType	ExternInput	-	-	-	"external input values"	-
 typedef	^	FAST_MiscVarType	FAST_MiscLinType	Lin	-	-	-	"misc data for linearization analysis"	-
+typedef	^	FAST_MiscVarType	ModDataType	Modules	{:}	-	-	"module variable and value data"	-
+typedef	^	FAST_MiscVarType	TC_MiscVarType	Solver	-	-	-	"Tight coupling solver Miscellaneous variables"	-
 
 
 # ..... FAST_InitData data .......................................................................................................

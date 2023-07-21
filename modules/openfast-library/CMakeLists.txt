@@ -61,12 +61,27 @@ target_link_libraries(openfast_prelib
   subdynlib
 )
 
-add_library(openfast_postlib
-  src/FAST_Lin.f90
+set(POSTLIB_SOURCES 
   src/FAST_Mods.f90
   src/FAST_Subs.f90
   src/FAST_Solver.f90
 )
+
+if (TIGHT_COUPLING)
+  list(APPEND POSTLIB_SOURCES
+    src/FAST_Lin_TC.f90
+    src/FAST_Subs_TC.f90
+    src/FAST_Eval.f90
+    src/Solver.f90
+  )
+else()
+  list(APPEND POSTLIB_SOURCES
+    src/FAST_Lin.f90
+    src/FAST_Subs.f90
+  )
+endif()
+
+add_library(openfast_postlib ${POSTLIB_SOURCES})
 target_link_libraries(openfast_postlib openfast_prelib foamfastlib scfastlib)
 target_include_directories(openfast_postlib PUBLIC 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
