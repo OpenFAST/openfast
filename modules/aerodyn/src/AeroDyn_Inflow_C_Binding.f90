@@ -147,22 +147,22 @@ MODULE AeroDyn_Inflow_C_BINDING
    !        - 1 point   -- rigid floating body assumption
    !        - N points  -- flexible structure (either floating or fixed bottom)
    logical                                :: TransposeDCM            !< Transpose DCMs as passed in -- test the vtk outputs to see if needed
-   integer(IntKi)                         :: NumMeshPts              ! Number of mesh points we are interfacing motions/loads to/from AD
-   type(MeshType)                         :: BldPtMotionMesh         ! mesh for motions of external nodes
-   type(MeshType)                         :: BldPtLoadMesh           ! mesh for loads  for external nodes
-   type(MeshType)                         :: BldPtLoadMesh_tmp       ! mesh for loads  for external nodes -- temporary
-!   type(MeshType)                         :: NacMotionMesh           ! mesh for motion  of nacelle -- TODO: add this mesh for nacelle load transfers
-!   type(MeshType)                         :: NacLoadMesh             ! mesh for loads  for nacelle loads -- TODO: add this mesh for nacelle load transfers
+   integer(IntKi), allocatable            :: NumMeshPts(:)           ! Number of mesh points we are interfacing motions/loads to/from AD for each rotor
+   type(MeshType), allocatable            :: BldPtMotionMesh(:)      ! mesh for motions of external nodes
+   type(MeshType), allocatable            :: BldPtLoadMesh(:)        ! mesh for loads  for external nodes
+   type(MeshType), allocatable            :: BldPtLoadMesh_tmp(:)    ! mesh for loads  for external nodes -- temporary
+!   type(MeshType), allocatable            :: NacMotionMesh(:)        ! mesh for motion  of nacelle -- TODO: add this mesh for nacelle load transfers
+!   type(MeshType), allocatable            :: NacLoadMesh(:)          ! mesh for loads  for nacelle loads -- TODO: add this mesh for nacelle load transfers
    !------------------------------
    !  Mesh mapping: motions
    !     The mapping of motions from the nodes passed in to the corresponding AD meshes
-   type(MeshMapType),   allocatable       :: Map_BldPtMotion_2_AD_Blade(:)    ! Mesh mapping between input motion mesh for blade
-!   type(MeshMapType)                      :: Map_AD_Nac_2_NacPtLoad           ! Mesh mapping between input motion mesh for nacelle 
+   type(MeshMapType), allocatable         :: Map_BldPtMotion_2_AD_Blade(:,:)  ! Mesh mapping between input motion mesh for blade
+!   type(MeshMapType), allocatable         :: Map_AD_Nac_2_NacPtLoad(:)       ! Mesh mapping between input motion mesh for nacelle 
    !------------------------------
    !  Mesh mapping: loads
    !     The mapping of loads from the AD meshes to the corresponding external nodes
-   type(MeshMapType),   allocatable       :: Map_AD_BldLoad_P_2_BldPtLoad(:)  ! Mesh mapping between AD output blade line2 load to BldPtLoad for return
-!   type(MeshMapType)                      :: Map_NacPtMotion_2_AD_Nac         ! Mesh mapping between AD output nacelle pt  load to NacLoad   for return
+   type(MeshMapType), allocatable         :: Map_AD_BldLoad_P_2_BldPtLoad(:,:)  ! Mesh mapping between AD output blade line2 load to BldPtLoad for return
+!   type(MeshMapType)                      :: Map_NacPtMotion_2_AD_Nac(:)       ! Mesh mapping between AD output nacelle pt  load to NacLoad   for return
    !  Motions input (so we don't have to reallocate all the time
    real(ReKi), allocatable                :: tmpBldPtMeshPos(:,:)       ! temp array.  Probably don't need this, but makes conversion from C clearer.
    real(ReKi), allocatable                :: tmpBldPtMeshOri(:,:,:)     ! temp array.  Probably don't need this, but makes conversion from C clearer.
@@ -235,14 +235,20 @@ subroutine AeroDyn_Inflow_C_PreInit(NumTurbines_C,ErrStat_C,ErrMsg_C) BIND (C, N
    endif
 
    ! Allocate arrays and meshes for the number of turbines
-   allocate (InitInp%AD%rotors(Sim%NumTurbines),stat=errStat2); if (Failed0('rotors')) return
+   if (allocated(InitInp%AD%rotors))   deallocate(InitInp%AD%rotors)
+   allocate(InitInp%AD%rotors(Sim%NumTurbines),stat=errStat2); if (Failed0('rotors')) return
 
    ! Allocate data storage for turbine info
-   allocate (Sim%WT(Sim%NumTurbines),stat=errStat2); if (Failed0('wind turbines')) return
+   if (allocated(Sim%WT))  deallocate(Sim%WT)
+   allocate(Sim%WT(Sim%NumTurbines),stat=errStat2); if (Failed0('wind turbines')) return
    do iWT=1,Sim%NumTurbines
       Sim%WT(iWT)%NumBlades = -999
    enddo
 
+   ! storage for numnber of meshpoints
+   if (allocated(NumMeshPts)) deallocate(NumMeshPts)
+   allocate(NumMeshPts(Sim%NumTurbines),stat=errStat2); if (Failed0('NumMeshPts')) return
+   NumMeshPts = -999
 
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
@@ -251,7 +257,7 @@ contains
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
       if (Failed) then
-         call FailCleanup()
+         call ClearTmpStorage()
          call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
       endif
    end function Failed
@@ -265,17 +271,8 @@ contains
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       endif
       Failed0 = ErrStat >= AbortErrLev
-      if(Failed0) call FailCleanup()
+      if(Failed0) call ClearTmpStorage()
    end function Failed0
-
-   subroutine FailCleanup()
-      if (allocated(tmpBldPtMeshPos))  deallocate(tmpBldPtMeshPos)
-      if (allocated(tmpBldPtMeshOri))  deallocate(tmpBldPtMeshOri)
-      if (allocated(tmpBldPtMeshVel))  deallocate(tmpBldPtMeshVel)
-      if (allocated(tmpBldPtMeshAcc))  deallocate(tmpBldPtMeshAcc)
-      if (allocated(tmpBldPtMeshFrc))  deallocate(tmpBldPtMeshFrc)
-   end subroutine FailCleanup
-
 
 end subroutine AeroDyn_Inflow_C_PreInit    
 
@@ -360,12 +357,14 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    ! Initialize error handling
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
+   ErrStat2 =  ErrID_None
+   ErrMsg2  =  ""
    NumChannels_C = 0_c_int
    OutputChannelNames_C(:) = ''
    OutputChannelUnits_C(:) = ''
 
 
-   ! check if initialized
+   ! check if Pre-Init was called
    if (Sim%NumTurbines < 0_IntKi) then
       ErrStat2 = ErrID_Fatal
       ErrMsg2  = "Call AeroDyn_Inflow_C_PreInit and AeroDyn_C_SetupRotor prior to calling AeroDyn_Inflow_C_Init"
@@ -373,12 +372,13 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    endif
 
    do iWT=1,Sim%NumTurbines
-      if (Sim%WT(iWT)%NumBlades < 0) then
-         ErrStat2 = ErrID_Fatal
-         ErrMsg2  = "Rotor "//trim(Num2LStr(iWT))//" not initialized. Call AeroDyn_C_SetupRotor prior to calling AeroDyn_Inflow_C_Init"
-         if (Failed()) return
-      endif
+      if (Sim%WT(iWT)%NumBlades < 0)   call SetErrStat(ErrID_Fatal,"Rotor "//trim(Num2LStr(iWT))//" not initialized. Call AeroDyn_C_SetupRotor prior to calling AeroDyn_Inflow_C_Init",ErrStat,ErrMsg,RoutineName)
    enddo
+   if (Failed()) return
+
+   ! Setup temporary storage arrays for simpler transfers
+   call SetTempStorage(ErrStat2,ErrMsg2); if (Failed()) return
+
 
    !--------------------------
    ! Input files
@@ -498,18 +498,6 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
       InitInp%AD%rotors(iWT)%AeroProjMod = int(AeroProjMod_C, IntKi)
       InitInp%AD%rotors(iWT)%numBlades   = Sim%WT(iWT)%NumBlades
    enddo
-!   ! Allocate temporary arrays to simplify data conversions
-!   maxMeshPts=0_IntKi
-!   do i=1,Sim%NumTurbines
-!      maxMeshPts=max(maxMeshPts,NumMeshPts(iWT)
-!   enddo
-!   call AllocAry( tmpBldPtMeshPos,    3, maxMeshPts, "tmpBldPtMeshPos", ErrStat2, ErrMsg2 );    if (Failed())  return
-!   call AllocAry( tmpBldPtMeshOri, 3, 3, maxMeshPts, "tmpBldPtMeshOri", ErrStat2, ErrMsg2 );    if (Failed())  return
-!   call AllocAry( tmpBldPtMeshVel,    6, maxMeshPts, "tmpBldPtMeshVel", ErrStat2, ErrMsg2 );    if (Failed())  return
-!   call AllocAry( tmpBldPtMeshAcc,    6, maxMeshPts, "tmpBldPtMeshAcc", ErrStat2, ErrMsg2 );    if (Failed())  return
-!   call AllocAry( tmpBldPtMeshFrc,    6, maxMeshPts, "tmpBldPtMeshFrc", ErrStat2, ErrMsg2 );    if (Failed())  return
-!   tmpBldPtMeshPos(    1:3,1:NumMeshPts) = reshape( real(InitMeshPos_C(1:3*NumMeshPts),ReKi), (/  3,NumMeshPts/) )
-!   tmpBldPtMeshOri(1:3,1:3,1:NumMeshPts) = reshape( real(InitMeshOri_C(1:9*NumMeshPts),ReKi), (/3,3,NumMeshPts/) )
 
 
    !----------------------------------------------------
@@ -540,18 +528,25 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    !-------------------------------------------------------------
    ! Sanity checks
    !-------------------------------------------------------------
-   call CheckNodes(ErrStat2,ErrMsg2);     if (Failed())  return
+   do iWT=1,Sim%NumTurbines
+      call CheckNodes(iWT);     if (Failed())  return
+   enddo
 
 
    !-------------------------------------------------------------
    ! Set the interface  meshes for motion inputs and loads output
    !-------------------------------------------------------------
-print*,'SetMotionLoadsInterfaceMeshes'
-   call SetMotionLoadsInterfaceMeshes(ErrStat2,ErrMsg2);    if (Failed())  return
+   call SetupMotionLoadsInterfaceMeshes();    if (Failed())  return
+   ! setup meshes
    if (WrOutputsData%WrVTK > 0_IntKi) then
-      call setVTKParameters(WrOutputsData, Sim, ADI, errStat, errMsg, 'vtk-ADI')
+      call setVTKParameters(WrOutputsData, Sim, ADI, ErrStat2, ErrMsg2, 'vtk-ADI')
       if (Failed())  return
-      call WrVTK_refMeshes(ADI%u(1)%AD%rotors(:),WrOutputsData%VTKRefPoint,ErrStat2,ErrMsg2)
+   endif
+   ! write meshes for this rotor
+   if (WrOutputsData%WrVTK > 0_IntKi) then
+      do iWT=1,Sim%NumTurbines
+         call WrVTK_refMeshes(ADI%u(iWT)%AD%rotors(:),WrOutputsData%VTKRefPoint,ErrStat2,ErrMsg2)
+      enddo
       if (Failed())  return
    endif
 
@@ -623,6 +618,7 @@ print*,'SetMotionLoadsInterfaceMeshes'
    call ADI_DestroyInitInput( InitInp,     Errstat2, ErrMsg2);    if (Failed())  return
    call ADI_DestroyInitOutput(InitOutData, Errstat2, ErrMsg2);    if (Failed())  return
 
+ErrStat2=ErrID_Fatal; ErrMsg2='Ending early';  if (Failed())  return
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
 
@@ -631,7 +627,7 @@ CONTAINS
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
       if (Failed) then
-         call FailCleanup()
+         call ClearTmpStorage()
          call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
       endif
    end function Failed
@@ -639,22 +635,17 @@ CONTAINS
    ! check for failed where /= 0 is fatal
    logical function Failed0(txt)
       character(*), intent(in) :: txt
-      if (errStat /= 0) then
+      if (errStat2 /= 0) then
          ErrStat2 = ErrID_Fatal
          ErrMsg2  = "Could not allocate "//trim(txt)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       endif
       Failed0 = ErrStat >= AbortErrLev
-      if(Failed0) call FailCleanup()
+      if(Failed0) then
+         call ClearTmpStorage()
+         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+      endif
    end function Failed0
-
-   subroutine FailCleanup()
-      if (allocated(tmpBldPtMeshPos))  deallocate(tmpBldPtMeshPos)
-      if (allocated(tmpBldPtMeshOri))  deallocate(tmpBldPtMeshOri)
-      if (allocated(tmpBldPtMeshVel))  deallocate(tmpBldPtMeshVel)
-      if (allocated(tmpBldPtMeshAcc))  deallocate(tmpBldPtMeshAcc)
-      if (allocated(tmpBldPtMeshFrc))  deallocate(tmpBldPtMeshFrc)
-   end subroutine FailCleanup
 
 
    !> Validate and set some of the outputs (values must be stored before here as some might be changed)
@@ -781,162 +772,176 @@ CONTAINS
 
    !> This subroutine sets the interface meshes to map to the input motions to the AD
    !! meshes
-   subroutine SetMotionLoadsInterfaceMeshes(ErrStat3,ErrMsg3)
-      integer(IntKi),         intent(  out)  :: ErrStat3    !< temporary error status
-      character(ErrMsgLen),   intent(  out)  :: ErrMsg3     !< temporary error message
-      integer(IntKi)          :: iNode
-      real(ReKi)              :: InitPos(3)
-      real(R8Ki)              :: Orient(3,3)
-      !-------------------------------------------------------------
-      ! Set the interface  meshes for motion inputs and loads output
-      !-------------------------------------------------------------
-      ! Motion mesh for blades
-      call MeshCreate(  BldPtMotionMesh                     ,  &
-                        IOS              = COMPONENT_INPUT  ,  &
-                        Nnodes           = NumMeshPts       ,  &
-                        ErrStat          = ErrStat3         ,  &
-                        ErrMess          = ErrMsg3          ,  &
-                        TranslationDisp  = .TRUE.,    Orientation = .TRUE., &
-                        TranslationVel   = .TRUE.,    RotationVel = .TRUE., &
-                        TranslationAcc   = .TRUE.,    RotationAcc = .FALSE. )
-         if (ErrStat3 >= AbortErrLev) return
+   subroutine SetupMotionLoadsInterfaceMeshes()
+      integer(IntKi) :: iWT            !< current rotor/turbine
+      integer(IntKi) :: iNode
+      integer(IntKi) :: maxBlades      !< find out maximum number of blades on all turbine rotors
+      real(ReKi)     :: InitPos(3)
+      real(R8Ki)     :: Orient(3,3)
 
-      do iNode=1,NumMeshPts
-         ! initial position and orientation of node
-         InitPos  = tmpBldPtMeshPos(1:3,iNode)
-         if (TransposeDCM) then
-            Orient   = transpose(tmpBldPtMeshOri(1:3,1:3,iNode))
-         else
-            Orient   = tmpBldPtMeshOri(1:3,1:3,iNode)
-         endif
-         call OrientRemap(Orient)
-         call MeshPositionNode(  BldPtMotionMesh          , &
-                                 iNode                    , &
-                                 InitPos                  , &  ! position
-                                 ErrStat3, ErrMsg3        , &
-                                 Orient                     )  ! orientation
-            if (ErrStat3 >= AbortErrLev) return
-!FIXME: if we need to switch to line2 instead of point, do that here.
-         call MeshConstructElement ( BldPtMotionMesh, ELEMENT_POINT, ErrStat3, ErrMsg3, iNode )
-            if (ErrStat3 >= AbortErrLev) return
+      maxBlades = 0_IntKi
+      do iWT=1,Sim%NumTurbines
+         maxBlades = max(maxBlades,Sim%WT(iWT)%NumBlades)
       enddo
 
-      call MeshCommit ( BldPtMotionMesh, ErrStat3, ErrMsg3 )
-         if (ErrStat3 >= AbortErrLev) return
-      BldPtMotionMesh%RemapFlag  = .TRUE.
+      ! allocate meshes and meshmappings
+      if (allocated(BldPtMotionMesh  )) deallocate(BldPtMotionMesh  )
+      if (allocated(BldPtLoadMesh    )) deallocate(BldPtLoadMesh    )
+      if (allocated(BldPtLoadMesh_tmp)) deallocate(BldPtLoadMesh_tmp)
+      !if (allocated(NacMotionMesh    )) deallocate(NacMotionMesh    )
+      !if (allocated(NacLoadMesh      )) deallocate(NacLoadMesh      )
+      if (allocated(Map_BldPtMotion_2_AD_Blade  )) deallocate(Map_BldPtMotion_2_AD_Blade  )
+      if (allocated(Map_AD_BldLoad_P_2_BldPtLoad)) deallocate(Map_AD_BldLoad_P_2_BldPtLoad)
 
-      ! For checking the mesh, uncomment this.
-      !     note: CU is is output unit (platform dependent).
-      if (debugverbose >= 4)  call MeshPrintInfo( CU, BldPtMotionMesh, MeshName='BldPtMotionMesh' )
+      allocate(BldPtMotionMesh(  Sim%NumTurbines), STAT=ErrStat2); if (Failed0('BldPtMotionMesh'  )) return
+      allocate(BldPtLoadMesh(    Sim%NumTurbines), STAT=ErrStat2); if (Failed0('BldPtLoadMesh'    )) return
+      allocate(BldPtLoadMesh_tmp(Sim%NumTurbines), STAT=ErrStat2); if (Failed0('BldPtLoadMesh_tmp')) return
+      !allocate(NacMotionMesh(    Sim%NumTurbines), STAT=ErrStat2); if (Failed0('NacMotionMesh'    )) return
+      !allocate(NacLoadMesh(      Sim%NumTurbines), STAT=ErrStat2); if (Failed0('NacLoadMesh'      )) return
+      allocate(Map_BldPtMotion_2_AD_Blade(  maxBlades,Sim%NumTurbines),STAT=ErrStat2); if (Failed0('Map_BldPtMotion_2_AD_Blade'  )) return
+      allocate(Map_AD_BldLoad_P_2_BldPtLoad(maxBlades,Sim%NumTurbines),STAT=ErrStat2); if (Failed0('Map_AD_BldLoad_P_2_BldPtLoad')) return
 
 
-!      !-------------------------------------------------------------
-!      ! Motion mesh for nacelle -- TODO: add this mesh for nacelle load transfers
-!      call MeshCreate(  NacMotionMesh                       ,  &
-!                        IOS              = COMPONENT_INPUT  ,  &
-!                        Nnodes           = 1                ,  &
-!                        ErrStat          = ErrStat3         ,  &
-!                        ErrMess          = ErrMsg3          ,  &
-!                        TranslationDisp  = .TRUE.,    Orientation = .TRUE., &
-!                        TranslationVel   = .TRUE.,    RotationVel = .TRUE., &
-!                        TranslationAcc   = .TRUE.,    RotationAcc = .FALSE. )
-!         if (ErrStat3 >= AbortErrLev) return
-!
-!      InitPos = real(NacPos_C(   1:3),ReKi)
-!      Orient  = reshape( real(NacOri_C(1:9),ReKi), (/3,3/) )
-!      call OrientRemap(Orient)
-!      call MeshPositionNode(  NacMotionMesh           , &
-!                              1                       , &
-!                              InitPos                 , &  ! position
-!                              ErrStat3, ErrMsg3       , &
-!                              Orient                    )  ! orientation
-!         if (ErrStat3 >= AbortErrLev) return
-!
-!      call MeshConstructElement ( NacMotionMesh, ELEMENT_POINT, ErrStat3, ErrMsg3, p1=1 )
-!         if (ErrStat3 >= AbortErrLev) return
-!
-!      call MeshCommit ( NacMotionMesh, ErrStat3, ErrMsg3 )
-!         if (ErrStat3 >= AbortErrLev) return
-!      NacMotionMesh%RemapFlag    = .TRUE.
-!
-!      ! For checking the mesh, uncomment this.
-!      !     note: CU is is output unit (platform dependent).
-!      if (debugverbose >= 4)  call MeshPrintInfo( CU, NacMotionMesh, MeshName='NacMotionMesh' )
-!
-!
+      ! step through all turbine rotors
+      do iWT=1,Sim%NumTurbines
+
+         !-------------------------------------------------------------
+         ! Set the interface  meshes for motion inputs and loads output
+         !-------------------------------------------------------------
+         ! Motion mesh for blades
+         call MeshCreate(  BldPtMotionMesh(iWT)                ,  &
+                           IOS              = COMPONENT_INPUT  ,  &
+                           Nnodes           = NumMeshPts(iWT)  ,  &
+                           ErrStat          = ErrStat2         ,  &
+                           ErrMess          = ErrMsg2          ,  &
+                           TranslationDisp  = .TRUE.,    Orientation = .TRUE., &
+                           TranslationVel   = .TRUE.,    RotationVel = .TRUE., &
+                           TranslationAcc   = .TRUE.,    RotationAcc = .FALSE. )
+            if(Failed()) return
+
+         do iNode=1,NumMeshPts(iWT)
+            ! initial position and orientation of node
+            InitPos  = tmpBldPtMeshPos(1:3,iNode)
+            if (TransposeDCM) then
+               Orient   = transpose(tmpBldPtMeshOri(1:3,1:3,iNode))
+            else
+               Orient   = tmpBldPtMeshOri(1:3,1:3,iNode)
+            endif
+            call OrientRemap(Orient)
+            call MeshPositionNode(  BldPtMotionMesh(iWT)     , &
+                                    iNode                    , &
+                                    InitPos                  , &  ! position
+                                    ErrStat2, ErrMsg2        , &
+                                    Orient                     )  ! orientation
+               if(Failed()) return
+            call MeshConstructElement ( BldPtMotionMesh(iWT), ELEMENT_POINT, ErrStat2, ErrMsg2, iNode ); if(Failed()) return
+         enddo
+ 
+         call MeshCommit ( BldPtMotionMesh(iWT), ErrStat2, ErrMsg2 ); if(Failed()) return
+         BldPtMotionMesh(iWT)%RemapFlag  = .TRUE.
+ 
+         ! For checking the mesh, uncomment this.
+         !     note: CU is is output unit (platform dependent).
+         if (debugverbose >= 4)  call MeshPrintInfo( CU, BldPtMotionMesh(iWT), MeshName='BldPtMotionMesh'//trim(Num2LStr(iWT)) )
+
+
+!         !-------------------------------------------------------------
+!         ! Motion mesh for nacelle -- TODO: add this mesh for nacelle load transfers
+!         call MeshCreate(  NacMotionMesh(iWT)                  ,  &
+!                           IOS              = COMPONENT_INPUT  ,  &
+!                           Nnodes           = 1                ,  &
+!                           ErrStat          = ErrStat2         ,  &
+!                           ErrMess          = ErrMsg2          ,  &
+!                           TranslationDisp  = .TRUE.,    Orientation = .TRUE., &
+!                           TranslationVel   = .TRUE.,    RotationVel = .TRUE., &
+!                           TranslationAcc   = .TRUE.,    RotationAcc = .FALSE. )
+!            if(Failed()) return
+!   
+!         InitPos = real(NacPos_C(   1:3),ReKi)
+!         Orient  = reshape( real(NacOri_C(1:9),ReKi), (/3,3/) )
+!         call OrientRemap(Orient)
+!         call MeshPositionNode(  NacMotionMesh           , &
+!                                 1                       , &
+!                                 InitPos                 , &  ! position
+!                                 ErrStat2, ErrMsg2       , &
+!                                 Orient                    )  ! orientation
+!            if(Failed()) return
+!   
+!         call MeshConstructElement ( NacMotionMesh(iWT), ELEMENT_POINT, ErrStat2, ErrMsg2, p1=1 ); if(Failed()) return
+!   
+!         call MeshCommit ( NacMotionMesh(iWT), ErrStat2, ErrMsg2 ); if(Failed()) return
+!         NacMotionMesh(iWT)%RemapFlag    = .TRUE.
+!   
+!         ! For checking the mesh, uncomment this.
+!         !     note: CU is is output unit (platform dependent).
+!         if (debugverbose >= 4)  call MeshPrintInfo( CU, NacMotionMesh(iWT), MeshName='NacMotionMesh'//trim(Num2LStr(iWT)) )
+!   
+!   
       !-------------------------------------------------------------
       ! Load mesh for blades
-      CALL MeshCopy( SrcMesh  = BldPtMotionMesh    ,&
-                     DestMesh = BldPtLoadMesh      ,&
-                     CtrlCode = MESH_SIBLING       ,&
-                     IOS      = COMPONENT_OUTPUT   ,&
-                     ErrStat  = ErrStat3           ,&
-                     ErrMess  = ErrMsg3            ,&
-                     Force    = .TRUE.             ,&
-                     Moment   = .TRUE.             )
-         if (ErrStat3 >= AbortErrLev) return
-      BldPtLoadMesh%RemapFlag  = .TRUE.
+      CALL MeshCopy( SrcMesh  = BldPtMotionMesh(iWT)  ,&
+                     DestMesh = BldPtLoadMesh(iWT)    ,&
+                     CtrlCode = MESH_SIBLING          ,&
+                     IOS      = COMPONENT_OUTPUT      ,&
+                     ErrStat  = ErrStat2              ,&
+                     ErrMess  = ErrMsg2               ,&
+                     Force    = .TRUE.                ,&
+                     Moment   = .TRUE.                )
+         if(Failed()) return
+      BldPtLoadMesh(iWT)%RemapFlag  = .TRUE.
 
       ! Temp mesh for load transfer
-      CALL MeshCopy( SrcMesh  = BldPtLoadMesh      ,&
-                     DestMesh = BldPtLoadMesh_tmp  ,&
-                     CtrlCode = MESH_COUSIN        ,&
-                     IOS      = COMPONENT_OUTPUT   ,&
-                     ErrStat  = ErrStat3           ,&
-                     ErrMess  = ErrMsg3            ,&
-                     Force    = .TRUE.             ,&
-                     Moment   = .TRUE.             )
-         if (ErrStat3 >= AbortErrLev) return
-      BldPtLoadMesh_tmp%RemapFlag  = .TRUE.
+      CALL MeshCopy( SrcMesh  = BldPtLoadMesh(iWT)    ,&
+                     DestMesh = BldPtLoadMesh_tmp(iWT),&
+                     CtrlCode = MESH_COUSIN           ,&
+                     IOS      = COMPONENT_OUTPUT      ,&
+                     ErrStat  = ErrStat2              ,&
+                     ErrMess  = ErrMsg2               ,&
+                     Force    = .TRUE.                ,&
+                     Moment   = .TRUE.                )
+         if(Failed()) return
+      BldPtLoadMesh_tmp(iWT)%RemapFlag  = .TRUE.
 
 
       ! For checking the mesh
       !     note: CU is is output unit (platform dependent).
-      if (debugverbose >= 4)  call MeshPrintInfo( CU, BldPtLoadMesh, MeshName='BldPtLoadMesh' )
+      if (debugverbose >= 4)  call MeshPrintInfo( CU, BldPtLoadMesh(iWT), MeshName='BldPtLoadMesh'//trim(Num2LStr(iWT)) )
 
 
-!      !-------------------------------------------------------------
-!      ! Load mesh for nacelle  -- TODO: add this mesh for nacelle load transfers
-!      CALL MeshCopy( SrcMesh  = NacMotionMesh      ,&
-!                     DestMesh = NacLoadMesh        ,&
-!                     CtrlCode = MESH_SIBLING       ,&
-!                     IOS      = COMPONENT_OUTPUT   ,&
-!                     ErrStat  = ErrStat3           ,&
-!                     ErrMess  = ErrMsg3            ,&
-!                     Force    = .TRUE.             ,&
-!                     Moment   = .TRUE.             )
-!         if (ErrStat3 >= AbortErrLev) return
-!      NacLoadMesh%RemapFlag  = .TRUE.
-!
-!      ! For checking the mesh, uncomment this.
-!      !     note: CU is is output unit (platform dependent).
-!      if (debugverbose >= 4)  call MeshPrintInfo( CU, NacLoadMesh, MeshName='NacLoadMesh' )
+!         !-------------------------------------------------------------
+!         ! Load mesh for nacelle  -- TODO: add this mesh for nacelle load transfers
+!         CALL MeshCopy( SrcMesh  = NacMotionMesh(iWT) ,&
+!                        DestMesh = NacLoadMesh(iWT)   ,&
+!                        CtrlCode = MESH_SIBLING       ,&
+!                        IOS      = COMPONENT_OUTPUT   ,&
+!                        ErrStat  = ErrStat2           ,&
+!                        ErrMess  = ErrMsg2            ,&
+!                        Force    = .TRUE.             ,&
+!                        Moment   = .TRUE.             )
+!            if(Failed()) return
+!         NacLoadMesh(iWT)%RemapFlag  = .TRUE.
+! 
+!         ! For checking the mesh, uncomment this.
+!         !     note: CU is is output unit (platform dependent).
+!         if (debugverbose >= 4)  call MeshPrintInfo( CU, NacLoadMesh(iWT), MeshName='NacLoadMesh'//trim(Num2LStr(iWT)) )
 
 
-      !-------------------------------------------------------------
-      ! Set the mapping meshes
-      ! blades
-      allocate(Map_BldPtMotion_2_AD_Blade(Sim%WT(1)%NumBlades),Map_AD_BldLoad_P_2_BldPtLoad(Sim%WT(1)%NumBlades),STAT=ErrStat3)
-         if (ErrStat3 /= 0) then
-            ErrStat3 = ErrID_Fatal
-            ErrMsg3  = "Could not allocate Map_BldPtMotion_2_AD_Blade"
-            return
-         endif
-      do i=1,Sim%WT(1)%NumBlades
-         call MeshMapCreate( BldPtMotionMesh, ADI%u(1)%AD%rotors(1)%BladeMotion(i), Map_BldPtMotion_2_AD_Blade(i), ErrStat3, ErrMsg3 )
-            if (ErrStat3 >= AbortErrLev) return
-         call MeshMapCreate( ADI%y%AD%rotors(1)%BladeLoad(i), BldPtLoadMesh, Map_AD_BldLoad_P_2_BldPtLoad(i), ErrStat3, ErrMsg3 )
-            if (ErrStat3 >= AbortErrLev) return
-      enddo
-      ! nacelle -- TODO: add this mesh for nacelle load transfers
-!      if ( y%AD%rotors(1)%NacelleLoad%Committed ) then
-!         call MeshMapCreate( NacMotionMesh, ADI%u(1)%AD%rotors(1)%NacelleMotion, Map_NacPtMotion_2_AD_Nac, ErrStat3, ErrMsg3 )
-!            if (ErrStat3 >= AbortErrLev) return
-!         call MeshMapCreate( ADI%y%AD%rotors(1)%NacelleLoad, NacLoadMesh, Map_AD_Nac_2_NacPtLoad, ErrStat3, ErrMsg3 )
-!            if (ErrStat3 >= AbortErrLev) return
-!      endif
+         !-------------------------------------------------------------
+         ! Set the mapping meshes
+         ! blades
+         do i=1,Sim%WT(iWT)%NumBlades
+            call MeshMapCreate( BldPtMotionMesh(iWT), ADI%u(1)%AD%rotors(iWT)%BladeMotion(i), Map_BldPtMotion_2_AD_Blade(i,iWT), ErrStat2, ErrMsg2 ); if(Failed()) return
+            call MeshMapCreate( ADI%y%AD%rotors(iWT)%BladeLoad(i), BldPtLoadMesh(iWT), Map_AD_BldLoad_P_2_BldPtLoad(i,iWT), ErrStat2, ErrMsg2 ); if(Failed()) return
+         enddo
+         ! nacelle -- TODO: add this mesh for nacelle load transfers
+!         if ( y%AD%rotors(iWT)%NacelleLoad%Committed ) then
+!            call MeshMapCreate( NacMotionMesh(iWT), ADI%u(1)%AD%rotors(iWT)%NacelleMotion, Map_NacPtMotion_2_AD_Nac(iWT), ErrStat2, ErrMsg2 ); if(Failed()) return
+!            call MeshMapCreate( ADI%y%AD%rotors(iWT)%NacelleLoad, NacLoadMesh(iWT), Map_AD_Nac_2_NacPtLoad(iWT), ErrStat2, ErrMsg2 ); if(Failed()) return
+!         endif
 
-   end subroutine SetMotionLoadsInterfaceMeshes
+      enddo ! iWT
+
+   end subroutine SetupMotionLoadsInterfaceMeshes
 
 
    !-------------------------------------------------------------
@@ -944,11 +949,8 @@ CONTAINS
    !!    If more than one input node was passed in, but only a single AD node
    !!    exists, then give error that too many
    !!    nodes passed.
-   subroutine CheckNodes(ErrStat3,ErrMsg3)
-      integer(IntKi),         intent(  out)  :: ErrStat3    !< temporary error status
-      character(ErrMsgLen),   intent(  out)  :: ErrMsg3     !< temporary error message
-      ErrStat3 = ErrID_None
-      ErrMsg3  = ""
+   subroutine CheckNodes(iWT)
+      integer(IntKi),         intent(in   )  :: iWT      !< current rotor/turbine
       ! FIXME: this is a placeholder in case we think of some sanity checks to perform.
       !     - some check that nodes make some sense -- might be caught in meshmapping
       !     - some checks on hub/nacelle being near middle of the rotor?  Not sure if that matters
@@ -1047,6 +1049,7 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
    ! Local variables
    real(DbKi)                                :: Time
    integer(IntKi)                            :: iNode
+   integer(IntKi)                            :: iWT                           !< current wind turbine / rotor
    integer(IntKi)                            :: ErrStat                       !< aggregated error status
    character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
    integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
@@ -1058,7 +1061,7 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
    ErrMsg   =  ""
 
    ! Sanity check -- number of node points cannot change
-   if ( NumMeshPts /= int(NumMeshPts_C, IntKi) ) then
+   if ( NumMeshPts(iWT) /= int(NumMeshPts_C, IntKi) ) then
       ErrStat2 =  ErrID_Fatal
       ErrMsg2  =  "Number of node points passed in changed.  This must be constant throughout simulation"
       if (Failed())  return
@@ -1070,20 +1073,22 @@ print*,'---------------------------AeroDyn_Inflow_C_CalcOutput------------------
    Time = REAL(Time_C,DbKi)
 
    ! Reshape mesh position, orientation, velocity, acceleration
-   tmpBldPtMeshPos(1:3,1:NumMeshPts)      = reshape( real(MeshPos_C(1:3*NumMeshPts),ReKi), (/3,  NumMeshPts/) )
-   tmpBldPtMeshOri(1:3,1:3,1:NumMeshPts)  = reshape( real(MeshOri_C(1:9*NumMeshPts),R8Ki), (/3,3,NumMeshPts/) )
-   tmpBldPtMeshVel(1:6,1:NumMeshPts)      = reshape( real(MeshVel_C(1:6*NumMeshPts),ReKi), (/6,  NumMeshPts/) )
-   tmpBldPtMeshAcc(1:6,1:NumMeshPts)      = reshape( real(MeshAcc_C(1:6*NumMeshPts),ReKi), (/6,  NumMeshPts/) )
+   tmpBldPtMeshPos(1:3,1:NumMeshPts(iWT))      = reshape( real(MeshPos_C(1:3*NumMeshPts(iWT)),ReKi), (/3,  NumMeshPts(iWT)/) )
+   tmpBldPtMeshOri(1:3,1:3,1:NumMeshPts(iWT))  = reshape( real(MeshOri_C(1:9*NumMeshPts(iWT)),R8Ki), (/3,3,NumMeshPts(iWT)/) )
+   tmpBldPtMeshVel(1:6,1:NumMeshPts(iWT))      = reshape( real(MeshVel_C(1:6*NumMeshPts(iWT)),ReKi), (/6,  NumMeshPts(iWT)/) )
+   tmpBldPtMeshAcc(1:6,1:NumMeshPts(iWT))      = reshape( real(MeshAcc_C(1:6*NumMeshPts(iWT)),ReKi), (/6,  NumMeshPts(iWT)/) )
 
 
    ! Transfer motions to input meshes
-   call Set_MotionMesh( ErrStat2, ErrMsg2 );    if (Failed())  return
-   call AD_SetInputMotion( ADI%u(1), &
-            HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,      &
-            NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,      &
-            BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
-            ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
-      if (Failed())  return
+   do iWT=1,Sim%NumTurbines
+      call Set_MotionMesh(iWT, ErrStat2, ErrMsg2);    if (Failed())  return
+      call AD_SetInputMotion( iWT, ADI%u(1), &
+               HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,      &
+               NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,      &
+               BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
+               ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
+         if (Failed())  return
+   enddo
 
    ! call IfW and set inputs for AD
    call ADI_ADIW_Solve(Time, ADI%p, ADI%u(1)%AD, ADI%OtherState(STATE_CURR)%AD, ADI%m%IW%u, ADI%m%IW, .false., ErrStat2, ErrMsg2)
@@ -1094,12 +1099,14 @@ print*,'---------------------------AeroDyn_Inflow_C_CalcOutput------------------
       if (Failed())  return
 
    ! Transfer resulting load meshes to intermediate mesh
-   call AD_TransferLoads( ADI%u(1), ADI%y, ErrStat2, ErrMsg2 )
-      if (Failed())  return
+   do iWT=1,Sim%NumTurbines
+      call AD_TransferLoads( iWT, ADI%u(1), ADI%y, ErrStat2, ErrMsg2 )
+         if (Failed())  return
+   enddo
 
    ! Set output force/moment array
-   call Set_OutputLoadArray( )
-   MeshFrc_C(1:6*NumMeshPts) = reshape( real(tmpBldPtMeshFrc(1:6,1:NumMeshPts), c_float), (/6*NumMeshPts/) )
+   call Set_OutputLoadArray(iWT)
+   MeshFrc_C(1:6*NumMeshPts(iWT)) = reshape( real(tmpBldPtMeshFrc(1:6,1:NumMeshPts(iWT)), c_float), (/6*NumMeshPts(iWT)/) )
 
    ! Get the output channel info out of y
    OutputChannelValues_C = REAL(ADI%y%WriteOutput, C_FLOAT)
@@ -1172,6 +1179,7 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
    ! Local variables
    logical                                   :: CorrectionStep                ! if we are repeating a timestep in UpdateStates, don't update the inputs array
    integer(IntKi)                            :: iNode
+   integer(IntKi)                            :: iWT                           !< current rotor/turbine
    integer(IntKi)                            :: ErrStat                       !< aggregated error status
    character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
    integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
@@ -1184,7 +1192,7 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
    CorrectionStep = .false.
 
    ! Sanity check -- number of node points cannot change
-   if ( NumMeshPts /= int(NumMeshPts_C, IntKi) ) then
+   if ( NumMeshPts(iWT) /= int(NumMeshPts_C, IntKi) ) then
       ErrStat2 =  ErrID_Fatal
       ErrMsg2  =  "Number of node points passed in changed.  This must be constant throughout simulation"
       if (Failed())  return
@@ -1246,19 +1254,21 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
    ! Set inputs for time T+dt -- u(INPUT_PRED)
    !-------------------------------------------------------
    ! Reshape mesh position, orientation, velocity, acceleration
-   tmpBldPtMeshPos(1:3,1:NumMeshPts)      = reshape( real(MeshPos_C(1:3*NumMeshPts),ReKi), (/3,  NumMeshPts/) )
-   tmpBldPtMeshOri(1:3,1:3,1:NumMeshPts)  = reshape( real(MeshOri_C(1:9*NumMeshPts),R8Ki), (/3,3,NumMeshPts/) )
-   tmpBldPtMeshVel(1:6,1:NumMeshPts)      = reshape( real(MeshVel_C(1:6*NumMeshPts),ReKi), (/6,  NumMeshPts/) )
-   tmpBldPtMeshAcc(1:6,1:NumMeshPts)      = reshape( real(MeshAcc_C(1:6*NumMeshPts),ReKi), (/6,  NumMeshPts/) )
+   tmpBldPtMeshPos(1:3,1:NumMeshPts(iWT))      = reshape( real(MeshPos_C(1:3*NumMeshPts(iWT)),ReKi), (/3,  NumMeshPts(iWT)/) )
+   tmpBldPtMeshOri(1:3,1:3,1:NumMeshPts(iWT))  = reshape( real(MeshOri_C(1:9*NumMeshPts(iWT)),R8Ki), (/3,3,NumMeshPts(iWT)/) )
+   tmpBldPtMeshVel(1:6,1:NumMeshPts(iWT))      = reshape( real(MeshVel_C(1:6*NumMeshPts(iWT)),ReKi), (/6,  NumMeshPts(iWT)/) )
+   tmpBldPtMeshAcc(1:6,1:NumMeshPts(iWT))      = reshape( real(MeshAcc_C(1:6*NumMeshPts(iWT)),ReKi), (/6,  NumMeshPts(iWT)/) )
 
    ! Transfer motions to input meshes
-   call Set_MotionMesh( ErrStat2, ErrMsg2 );    if (Failed())  return
-   call AD_SetInputMotion( ADI%u(INPUT_PRED), &
-            HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,      &
-            NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,      &
-            BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
-            ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
-      if (Failed())  return
+   do iWT=1,Sim%NumTurbines
+      call Set_MotionMesh(iWT, ErrStat2, ErrMsg2 );    if (Failed())  return
+      call AD_SetInputMotion( iWT, ADI%u(INPUT_PRED), &
+               HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,      &
+               NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,      &
+               BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
+               ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
+         if (Failed())  return
+   enddo
 
 
    ! Set copy the current state over to the predicted state for sending to UpdateStates
@@ -1353,13 +1363,6 @@ print*,'Ending ADI'
       endif
    end if
 
-   ! clear out any globably allocated helper arrays
-   if (allocated(tmpBldPtMeshPos))  deallocate(tmpBldPtMeshPos)
-   if (allocated(tmpBldPtMeshOri))  deallocate(tmpBldPtMeshOri)
-   if (allocated(tmpBldPtMeshVel))  deallocate(tmpBldPtMeshVel)
-   if (allocated(tmpBldPtMeshAcc))  deallocate(tmpBldPtMeshAcc)
-   if (allocated(tmpBldPtMeshFrc))  deallocate(tmpBldPtMeshFrc)
-
 
    ! Call the main subroutine ADI_End
    !     If u is not allocated, then we didn't get far at all in initialization,
@@ -1400,43 +1403,9 @@ print*,'Ending ADI'
    !if (allocated(InputTimes))    deallocate(InputTimes)
 
    ! Clear out mesh related data storage
-   call ClearMesh()
+   call ClearTmpStorage()
 
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
-CONTAINS
-   !> Don't leave junk in memory.  So destroy meshes and mappings.
-   subroutine ClearMesh()
-      ! Blade
-      call MeshDestroy( BldPtMotionMesh, ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      call MeshDestroy( BldPtLoadMesh, ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      ! Destroy mesh mappings
-      if (allocated(Map_BldPtMotion_2_AD_Blade)) then
-         do i=1,Sim%WT(1)%NumBlades
-            call NWTC_Library_Destroymeshmaptype( Map_BldPtMotion_2_AD_Blade(i), ErrStat2, ErrMsg2 )
-            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         enddo
-         deallocate(Map_BldPtMotion_2_AD_Blade)
-      endif
-      if (allocated(Map_AD_BldLoad_P_2_BldPtLoad)) then
-         do i=1,Sim%WT(1)%NumBlades
-            call NWTC_Library_Destroymeshmaptype( Map_AD_BldLoad_P_2_BldPtLoad(i), ErrStat2, ErrMsg2 )
-            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         enddo
-         deallocate(Map_AD_BldLoad_P_2_BldPtLoad)
-      endif
-      ! Nacelle -- TODO: add this mesh for nacelle load transfers
-!      call MeshDestroy( NacMotionMesh, ErrStat2, ErrMsg2 )
-!      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!      call MeshDestroy( NacLoadMesh, ErrStat2, ErrMsg2 )
-!      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!      call NWTC_Library_Destroymeshmaptype( Map_AD_Nac_2_NacPtLoad   , ErrStat2, ErrMsg2 )
-!      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!      call NWTC_Library_Destroymeshmaptype( Map_NacPtMotion_2_AD_Nac   , ErrStat2, ErrMsg2 )
-!      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   end subroutine ClearMesh
 END SUBROUTINE AeroDyn_Inflow_C_End
 
 
@@ -1523,8 +1492,8 @@ subroutine AeroDyn_C_SetupRotor(iWT_c,TurbOrigin_C,                  &
    ! Number of blades and initial positions
    !  -  NumMeshPts is the number of interface Mesh points we are expecting on the python
    !     side.  Will validate this against what AD reads from the initialization info.
-   NumMeshPts                    = int(NumMeshPts_C, IntKi)
-   if (NumMeshPts < 1) then
+   NumMeshPts(iWT) = int(NumMeshPts_C, IntKi)
+   if (NumMeshPts(iWT) < 1) then
       ErrStat2 =  ErrID_Fatal
       ErrMsg2  =  "At least one node point must be specified"
       if (Failed())  return
@@ -1535,7 +1504,7 @@ contains
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       Failed = ErrStat >= AbortErrLev
       if (Failed) then
-         call FailCleanup()
+         call ClearTmpStorage()
          call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
       endif
    end function Failed
@@ -1549,16 +1518,8 @@ contains
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       endif
       Failed0 = ErrStat >= AbortErrLev
-      if(Failed0) call FailCleanup()
+      if(Failed0) call ClearTmpStorage()
    end function Failed0
-
-   subroutine FailCleanup()
-!      if (allocated(tmpBldPtMeshPos))  deallocate(tmpBldPtMeshPos)
-!      if (allocated(tmpBldPtMeshOri))  deallocate(tmpBldPtMeshOri)
-!      if (allocated(tmpBldPtMeshVel))  deallocate(tmpBldPtMeshVel)
-!      if (allocated(tmpBldPtMeshAcc))  deallocate(tmpBldPtMeshAcc)
-!      if (allocated(tmpBldPtMeshFrc))  deallocate(tmpBldPtMeshFrc)
-   end subroutine FailCleanup
 
    !> This subroutine prints out all the variables that are passed in.  Use this only
    !! for debugging the interface on the Fortran side.
@@ -1630,34 +1591,36 @@ end subroutine AeroDyn_C_SetupRotor
 !===================================================================================================================================
 
 !> This routine is operating on module level data.  Error handling here in case checks added
-subroutine Set_MotionMesh(ErrStat3, ErrMsg3)
+subroutine Set_MotionMesh(iWT, ErrStat3, ErrMsg3)
+   integer(IntKi),            intent(in   )  :: iWT      !< current rotor/turbine
    integer(IntKi),            intent(  out)  :: ErrStat3
    character(ErrMsgLen),      intent(  out)  :: ErrMsg3
    integer(IntKi)                            :: iNode
    ErrStat3 =  0_IntKi
    ErrMsg3  =  ''
    ! Set mesh corresponding to input motions
-   do iNode=1,NumMeshPts
-      BldPtMotionMesh%TranslationDisp(1:3,iNode) = tmpBldPtMeshPos(1:3,iNode) - real(BldPtMotionMesh%Position(1:3,iNode), R8Ki)
-      BldPtMotionMesh%Orientation(1:3,1:3,iNode) = tmpBldPtMeshOri(1:3,1:3,iNode)
-      BldPtMotionMesh%TranslationVel( 1:3,iNode) = tmpBldPtMeshVel(1:3,iNode)
-      BldPtMotionMesh%RotationVel(    1:3,iNode) = tmpBldPtMeshVel(4:6,iNode)
-      BldPtMotionMesh%TranslationAcc( 1:3,iNode) = tmpBldPtMeshAcc(1:3,iNode)
-      !BldPtMotionMesh%RotationAcc(    1:3,iNode) = tmpBldPtMeshAcc(4:6,iNode)   ! Rotational acc not included
-      call OrientRemap(BldPtMotionMesh%Orientation(1:3,1:3,iNode))
+   do iNode=1,NumMeshPts(iWT)
+      BldPtMotionMesh(iWT)%TranslationDisp(1:3,iNode) = tmpBldPtMeshPos(1:3,iNode) - real(BldPtMotionMesh(iWT)%Position(1:3,iNode), R8Ki)
+      BldPtMotionMesh(iWT)%Orientation(1:3,1:3,iNode) = tmpBldPtMeshOri(1:3,1:3,iNode)
+      BldPtMotionMesh(iWT)%TranslationVel( 1:3,iNode) = tmpBldPtMeshVel(1:3,iNode)
+      BldPtMotionMesh(iWT)%RotationVel(    1:3,iNode) = tmpBldPtMeshVel(4:6,iNode)
+      BldPtMotionMesh(iWT)%TranslationAcc( 1:3,iNode) = tmpBldPtMeshAcc(1:3,iNode)
+      !BldPtMotionMesh(iWT)%RotationAcc(    1:3,iNode) = tmpBldPtMeshAcc(4:6,iNode)   ! Rotational acc not included
+      call OrientRemap(BldPtMotionMesh(iWT)%Orientation(1:3,1:3,iNode))
       if (TransposeDCM) then
-         BldPtMotionMesh%Orientation(1:3,1:3,iNode) = transpose(BldPtMotionMesh%Orientation(1:3,1:3,iNode))
+         BldPtMotionMesh(iWT)%Orientation(1:3,1:3,iNode) = transpose(BldPtMotionMesh(iWT)%Orientation(1:3,1:3,iNode))
       endif
    enddo
 end subroutine Set_MotionMesh
 
 !> Map the motion of the intermediate input mesh over to the input meshes
 !! This routine is operating on module level data, hence few inputs
-subroutine AD_SetInputMotion( u_local,             &
+subroutine AD_SetInputMotion( iWT, u_local,        &
          HubPos_C, HubOri_C, HubVel_C, HubAcc_C,   &
          NacPos_C, NacOri_C, NacVel_C, NacAcc_C,   &
          BldRootPos_C, BldRootOri_C, BldRootVel_C, BldRootAcc_C,  &
          ErrStat, ErrMsg )
+   integer(IntKi),         intent(in   )  :: iWT         !< this turbine
    type(ADI_InputType),       intent(inout)  :: u_local                       ! Only one input (probably at T)
    real(c_float),             intent(in   )  :: HubPos_C( 3 )                 !< Hub position
    real(c_double),            intent(in   )  :: HubOri_C( 9 )                 !< Hub orientation
@@ -1667,58 +1630,58 @@ subroutine AD_SetInputMotion( u_local,             &
    real(c_double),            intent(in   )  :: NacOri_C( 9 )                 !< Nacelle orientation
    real(c_float),             intent(in   )  :: NacVel_C( 6 )                 !< Nacelle velocity
    real(c_float),             intent(in   )  :: NacAcc_C( 6 )                 !< Nacelle acceleration
-   real(c_float),             intent(in   )  :: BldRootPos_C( 3*Sim%WT(1)%NumBlades )   !< Blade root positions
-   real(c_double),            intent(in   )  :: BldRootOri_C( 9*Sim%WT(1)%NumBlades )   !< Blade root orientations
-   real(c_float),             intent(in   )  :: BldRootVel_C( 6*Sim%WT(1)%NumBlades )   !< Blade root velocities
-   real(c_float),             intent(in   )  :: BldRootAcc_C( 6*Sim%WT(1)%NumBlades )   !< Blade root accelerations
+   real(c_float),             intent(in   )  :: BldRootPos_C( 3*Sim%WT(iWT)%NumBlades )   !< Blade root positions
+   real(c_double),            intent(in   )  :: BldRootOri_C( 9*Sim%WT(iWT)%NumBlades )   !< Blade root orientations
+   real(c_float),             intent(in   )  :: BldRootVel_C( 6*Sim%WT(iWT)%NumBlades )   !< Blade root velocities
+   real(c_float),             intent(in   )  :: BldRootAcc_C( 6*Sim%WT(iWT)%NumBlades )   !< Blade root accelerations
    integer(IntKi),            intent(  out)  :: ErrStat
    character(ErrMsgLen),      intent(  out)  :: ErrMsg
    integer(IntKi)                            :: i
    ErrStat =  0_IntKi
    ErrMsg  =  ''
    ! Hub -- NOTE: RotationalAcc not present in the mesh
-   if ( u_local%AD%rotors(1)%HubMotion%Committed ) then
-      u_local%AD%rotors(1)%HubMotion%TranslationDisp(1:3,1) = real(HubPos_C(1:3),R8Ki) - real(u_local%AD%rotors(1)%HubMotion%Position(1:3,1), R8Ki)
-      u_local%AD%rotors(1)%HubMotion%Orientation(1:3,1:3,1) = reshape( real(HubOri_C(1:9),R8Ki), (/3,3/) )
-      u_local%AD%rotors(1)%HubMotion%TranslationVel(1:3,1)  = real(HubVel_C(1:3), ReKi)
-      u_local%AD%rotors(1)%HubMotion%RotationVel(1:3,1)     = real(HubVel_C(4:6), ReKi)
-      u_local%AD%rotors(1)%HubMotion%TranslationAcc(1:3,1)  = real(HubAcc_C(1:3), ReKi)
-      call OrientRemap(u_local%AD%rotors(1)%HubMotion%Orientation(1:3,1:3,1))
+   if ( u_local%AD%rotors(iWT)%HubMotion%Committed ) then
+      u_local%AD%rotors(iWT)%HubMotion%TranslationDisp(1:3,1) = real(HubPos_C(1:3),R8Ki) - real(u_local%AD%rotors(iWT)%HubMotion%Position(1:3,1), R8Ki)
+      u_local%AD%rotors(iWT)%HubMotion%Orientation(1:3,1:3,1) = reshape( real(HubOri_C(1:9),R8Ki), (/3,3/) )
+      u_local%AD%rotors(iWT)%HubMotion%TranslationVel(1:3,1)  = real(HubVel_C(1:3), ReKi)
+      u_local%AD%rotors(iWT)%HubMotion%RotationVel(1:3,1)     = real(HubVel_C(4:6), ReKi)
+      u_local%AD%rotors(iWT)%HubMotion%TranslationAcc(1:3,1)  = real(HubAcc_C(1:3), ReKi)
+      call OrientRemap(u_local%AD%rotors(iWT)%HubMotion%Orientation(1:3,1:3,1))
       if (TransposeDCM) then
-         u_local%AD%rotors(1)%HubMotion%Orientation(1:3,1:3,1) = transpose(u_local%AD%rotors(1)%HubMotion%Orientation(1:3,1:3,1))
+         u_local%AD%rotors(iWT)%HubMotion%Orientation(1:3,1:3,1) = transpose(u_local%AD%rotors(iWT)%HubMotion%Orientation(1:3,1:3,1))
       endif
    endif
    ! Nacelle -- NOTE: RotationalVel and RotationalAcc not present in the mesh
-   if ( u_local%AD%rotors(1)%NacelleMotion%Committed ) then
-      u_local%AD%rotors(1)%NacelleMotion%TranslationDisp(1:3,1) = real(NacPos_C(1:3),R8Ki) - real(u_local%AD%rotors(1)%NacelleMotion%Position(1:3,1), R8Ki)
-      u_local%AD%rotors(1)%NacelleMotion%Orientation(1:3,1:3,1) = reshape( real(NacOri_C(1:9),R8Ki), (/3,3/) )
-      u_local%AD%rotors(1)%NacelleMotion%TranslationVel(1:3,1)  = real(NacVel_C(1:3), ReKi)
-      u_local%AD%rotors(1)%NacelleMotion%TranslationAcc(1:3,1)  = real(NacAcc_C(1:3), ReKi)
-      call OrientRemap(u_local%AD%rotors(1)%NacelleMotion%Orientation(1:3,1:3,1))
+   if ( u_local%AD%rotors(iWT)%NacelleMotion%Committed ) then
+      u_local%AD%rotors(iWT)%NacelleMotion%TranslationDisp(1:3,1) = real(NacPos_C(1:3),R8Ki) - real(u_local%AD%rotors(iWT)%NacelleMotion%Position(1:3,1), R8Ki)
+      u_local%AD%rotors(iWT)%NacelleMotion%Orientation(1:3,1:3,1) = reshape( real(NacOri_C(1:9),R8Ki), (/3,3/) )
+      u_local%AD%rotors(iWT)%NacelleMotion%TranslationVel(1:3,1)  = real(NacVel_C(1:3), ReKi)
+      u_local%AD%rotors(iWT)%NacelleMotion%TranslationAcc(1:3,1)  = real(NacAcc_C(1:3), ReKi)
+      call OrientRemap(u_local%AD%rotors(iWT)%NacelleMotion%Orientation(1:3,1:3,1))
       if (TransposeDCM) then
-         u_local%AD%rotors(1)%NacelleMotion%Orientation(1:3,1:3,1) = transpose(u_local%AD%rotors(1)%NacelleMotion%Orientation(1:3,1:3,1))
+         u_local%AD%rotors(iWT)%NacelleMotion%Orientation(1:3,1:3,1) = transpose(u_local%AD%rotors(iWT)%NacelleMotion%Orientation(1:3,1:3,1))
       endif
    endif
    ! Blade root
-   do i=0,Sim%WT(1)%numBlades-1
-      if ( u_local%AD%rotors(1)%BladeRootMotion(i+1)%Committed ) then
-         u_local%AD%rotors(1)%BladeRootMotion(i+1)%TranslationDisp(1:3,1) = real(BldRootPos_C(3*i+1:3*i+3),R8Ki) - real(u_local%AD%rotors(1)%BladeRootMotion(i+1)%Position(1:3,1), R8Ki)
-         u_local%AD%rotors(1)%BladeRootMotion(i+1)%Orientation(1:3,1:3,1) = reshape( real(BldRootOri_C(9*i+1:9*i+9),R8Ki), (/3,3/) )
-         u_local%AD%rotors(1)%BladeRootMotion(i+1)%TranslationVel(1:3,1)  = real(BldRootVel_C(6*i+1:6*i+3), ReKi)
-         u_local%AD%rotors(1)%BladeRootMotion(i+1)%RotationVel(1:3,1)     = real(BldRootVel_C(6*i+4:6*i+6), ReKi)
-         u_local%AD%rotors(1)%BladeRootMotion(i+1)%TranslationAcc(1:3,1)  = real(BldRootAcc_C(6*i+1:6*i+3), ReKi)
-         u_local%AD%rotors(1)%BladeRootMotion(i+1)%RotationAcc(1:3,1)     = real(BldRootAcc_C(6*i+4:6*i+6), ReKi)
-         call OrientRemap(u_local%AD%rotors(1)%BladeRootMotion(i+1)%Orientation(1:3,1:3,1))
+   do i=0,Sim%WT(iWT)%numBlades-1
+      if ( u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%Committed ) then
+         u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%TranslationDisp(1:3,1) = real(BldRootPos_C(3*i+1:3*i+3),R8Ki) - real(u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%Position(1:3,1), R8Ki)
+         u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%Orientation(1:3,1:3,1) = reshape( real(BldRootOri_C(9*i+1:9*i+9),R8Ki), (/3,3/) )
+         u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%TranslationVel(1:3,1)  = real(BldRootVel_C(6*i+1:6*i+3), ReKi)
+         u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%RotationVel(1:3,1)     = real(BldRootVel_C(6*i+4:6*i+6), ReKi)
+         u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%TranslationAcc(1:3,1)  = real(BldRootAcc_C(6*i+1:6*i+3), ReKi)
+         u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%RotationAcc(1:3,1)     = real(BldRootAcc_C(6*i+4:6*i+6), ReKi)
+         call OrientRemap(u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%Orientation(1:3,1:3,1))
          if (TransposeDCM) then
-            u_local%AD%rotors(1)%BladeRootMotion(i+1)%Orientation(1:3,1:3,1) = transpose(u_local%AD%rotors(1)%BladeRootMotion(i+1)%Orientation(1:3,1:3,1))
+            u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%Orientation(1:3,1:3,1) = transpose(u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%Orientation(1:3,1:3,1))
          endif
       endif
    enddo
 
    ! Blade mesh
-   do i=1,Sim%WT(1)%numBlades
-      if ( u_local%AD%rotors(1)%BladeMotion(i)%Committed ) then
-         call Transfer_Point_to_Line2( BldPtMotionMesh, u_local%AD%rotors(1)%BladeMotion(i), Map_BldPtMotion_2_AD_Blade(i), ErrStat, ErrMsg )
+   do i=1,Sim%WT(iWT)%numBlades
+      if ( u_local%AD%rotors(iWT)%BladeMotion(i)%Committed ) then
+         call Transfer_Point_to_Line2( BldPtMotionMesh(iWT), u_local%AD%rotors(iWT)%BladeMotion(i), Map_BldPtMotion_2_AD_Blade(i,iWT), ErrStat, ErrMsg )
          if (ErrStat >= AbortErrLev)  return
       endif
    enddo
@@ -1726,35 +1689,37 @@ end subroutine AD_SetInputMotion
 
 !> Map the loads of the output mesh to the intermediate output mesh.
 !! This routine is operating on module level data, hence few inputs
-subroutine AD_TransferLoads( u_local, y_local, ErrStat3, ErrMsg3 )
-   type(ADI_InputType),    intent(in   )  :: u_local           ! Only one input (probably at T)
+subroutine AD_TransferLoads( iWT, u_local, y_local, ErrStat3, ErrMsg3 )
+   integer(IntKi),         intent(in   )  :: iWT         !< this turbine
+   type(ADI_InputType),    intent(in   )  :: u_local     ! Only one input (probably at T)
    type(ADI_OutputType),   intent(in   )  :: y_local     ! Only one input (probably at T)
    integer(IntKi),         intent(  out)  :: ErrStat3
    character(ErrMsgLen),   intent(  out)  :: ErrMsg3
    integer(IntKi)                         :: i
-   BldPtLoadMesh%Force     = 0.0_ReKi
-   BldPtLoadMesh%Moment    = 0.0_ReKi
-   do i=1,Sim%WT(1)%NumBlades
-      if ( y_local%AD%rotors(1)%BladeLoad(i)%Committed ) then
-         if (debugverbose > 4)  call MeshPrintInfo( CU, y_local%AD%rotors(1)%BladeLoad(i), MeshName='AD%rotors('//trim(Num2LStr(1))//')%BladeLoad('//trim(Num2LStr(i))//')' )
-         call Transfer_Line2_to_Point( ADI%y%AD%rotors(1)%BladeLoad(i), BldPtLoadMesh_tmp, Map_AD_BldLoad_P_2_BldPtLoad(i), &
-                  ErrStat3, ErrMsg3, u_local%AD%rotors(1)%BladeMotion(i), BldPtMotionMesh )
+   BldPtLoadMesh(iWT)%Force     = 0.0_ReKi
+   BldPtLoadMesh(iWT)%Moment    = 0.0_ReKi
+   do i=1,Sim%WT(iWT)%NumBlades
+      if ( y_local%AD%rotors(iWT)%BladeLoad(i)%Committed ) then
+         if (debugverbose > 4)  call MeshPrintInfo( CU, y_local%AD%rotors(iWT)%BladeLoad(i), MeshName='AD%rotors('//trim(Num2LStr(1))//')%BladeLoad('//trim(Num2LStr(i))//')' )
+         call Transfer_Line2_to_Point( ADI%y%AD%rotors(iWT)%BladeLoad(i), BldPtLoadMesh_tmp(iWT), Map_AD_BldLoad_P_2_BldPtLoad(i,iWT), &
+                  ErrStat3, ErrMsg3, u_local%AD%rotors(iWT)%BladeMotion(i), BldPtMotionMesh(iWT) )
          if (ErrStat3 >= AbortErrLev)  return
-         BldPtLoadMesh%Force  = BldPtLoadMesh%Force  + BldPtLoadMesh_tmp%Force
-         BldPtLoadMesh%Moment = BldPtLoadMesh%Moment + BldPtLoadMesh_tmp%Moment
+         BldPtLoadMesh(iWT)%Force  = BldPtLoadMesh(iWT)%Force  + BldPtLoadMesh_tmp(iWT)%Force
+         BldPtLoadMesh(iWT)%Moment = BldPtLoadMesh(iWT)%Moment + BldPtLoadMesh_tmp(iWT)%Moment
       endif
    enddo
-   if (debugverbose > 4)  call MeshPrintInfo( CU, BldPtLoadMesh, MeshName='BldPtLoadMesh' )
+   if (debugverbose > 4)  call MeshPrintInfo( CU, BldPtLoadMesh(iWT), MeshName='BldPtLoadMesh'//trim(Num2LStr(iWT)) )
 end subroutine AD_TransferLoads
 
 !> Transfer the loads from the load mesh to the temporary array for output
 !! This routine is operating on module level data, hence few inputs
-subroutine Set_OutputLoadArray()
+subroutine Set_OutputLoadArray(iWT)
+   integer(IntKi),            intent(in   )  :: iWT      !< current rotor/turbine
    integer(IntKi)                            :: iNode
    ! Set mesh corresponding to input motions
-   do iNode=1,NumMeshPts
-      tmpBldPtMeshFrc(1:3,iNode)   = BldPtLoadMesh%Force (1:3,iNode)
-      tmpBldPtMeshFrc(4:6,iNode)   = BldPtLoadMesh%Moment(1:3,iNode)
+   do iNode=1,NumMeshPts(iWT)
+      tmpBldPtMeshFrc(1:3,iNode)   = BldPtLoadMesh(iWT)%Force (1:3,iNode)
+      tmpBldPtMeshFrc(4:6,iNode)   = BldPtLoadMesh(iWT)%Moment(1:3,iNode)
    enddo
 end subroutine Set_OutputLoadArray
 
@@ -1825,12 +1790,12 @@ contains
       ErrMsg3  =  ''
 
       ! Blade point motion (structural mesh from driver)
-      call MeshWrVTKreference(RefPoint, BldPtMotionMesh, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BldPtMotionMesh', ErrStat3, ErrMsg3)
+      call MeshWrVTKreference(RefPoint, BldPtMotionMesh(iWT), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BldPtMotionMesh', ErrStat3, ErrMsg3)
       if (ErrStat3 >= AbortErrLev) return
 
       ! Blade root motion (point only)
       if (allocated(rot_u(iWT)%BladeRootMotion)) then
-         do k=1,Sim%WT(1)%NumBlades
+         do k=1,Sim%WT(iWT)%NumBlades
             if (rot_u(iWT)%BladeRootMotion(k)%Committed) then
                call MeshWrVTKreference(RefPoint, rot_u(iWT)%BladeRootMotion(k), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BladeRootMotion'//trim(num2lstr(k)), ErrStat3, ErrMsg3 )
                   if (ErrStat3 >= AbortErrLev) return
@@ -1864,7 +1829,7 @@ contains
 
       ! Blades
       if (allocated(rot_u(iWT)%BladeMotion)) then
-         do k=1,Sim%WT(1)%NumBlades
+         do k=1,Sim%WT(iWT)%NumBlades
             if (rot_u(iWT)%BladeMotion(k)%Committed) then
                call MeshWrVTKreference(RefPoint, rot_u(iWT)%BladeMotion(k), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k)), ErrStat3, ErrMsg3 )
                   if (ErrStat3 >= AbortErrLev) return
@@ -1930,12 +1895,12 @@ contains
       ErrMsg3  =  ''
 
       ! Blade point motion (structural mesh from driver)
-      call MeshWrVTK(RefPoint, BldPtMotionMesh, trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BldPtMotionMesh', n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
+      call MeshWrVTK(RefPoint, BldPtMotionMesh(iWT), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BldPtMotionMesh', n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
       if (ErrStat3 >= AbortErrLev) return
 
       ! Blade root motion (point only)
       if (allocated(rot_u(iWT)%BladeRootMotion)) then
-         do k=1,Sim%WT(1)%NumBlades
+         do k=1,Sim%WT(iWT)%NumBlades
             if (rot_u(iWT)%BladeRootMotion(k)%Committed) then
                call MeshWrVTK(RefPoint, rot_u(iWT)%BladeRootMotion(k), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.BladeRootMotion'//trim(num2lstr(k)), n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
                   if (ErrStat3 >= AbortErrLev) return
@@ -1992,7 +1957,7 @@ contains
 
       ! Blades
       if (allocated(rot_u(iWT)%BladeMotion)) then
-         do k=1,Sim%WT(1)%NumBlades
+         do k=1,Sim%WT(iWT)%NumBlades
             if (rot_u(iWT)%BladeMotion(k)%Committed) then
                call MeshWrVTK_Ln2Surface (RefPoint, rot_u(iWT)%BladeMotion(k), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k))//'Surface', &
                                           n_Global, OutputFields, errStat3, errMsg3, WrOutputsData%VTK_tWidth , verts=ADI%m%VTK_Surfaces(iWT)%BladeShape(k)%AirfoilCoords, &
@@ -2024,7 +1989,7 @@ contains
 
       ! Blades
       if (allocated(rot_u(iWT)%BladeMotion)) then
-         do k=1,Sim%WT(1)%NumBlades
+         do k=1,Sim%WT(iWT)%NumBlades
             if (rot_u(iWT)%BladeMotion(k)%Committed) then
                call MeshWrVTK(RefPoint, rot_u(iWT)%BladeMotion(k), trim(WrOutputsData%VTK_OutFileRoot)//trim(sWT)//'.Blade'//trim(num2lstr(k)), n_Global, .true., ErrStat3, ErrMsg3, WrOutputsData%VTK_tWidth)
                   if (ErrStat3 >= AbortErrLev) return
@@ -2078,6 +2043,93 @@ subroutine WrVTK_Ground (RefPoint, HalfLengths, FileRootName, errStat, errMsg)
    call WrVTK_footer( Un )       
 end subroutine WrVTK_Ground
 
+
+!--------------------------------------------------------------------
+!> Set some temporary data storage arrays to simplify data conversion
+subroutine SetTempStorage(ErrStat,ErrMsg)
+   INTEGER(IntKi),  intent(out)  :: errStat         !< Indicates whether an error occurred (see NWTC_Library)
+   character(*),    intent(out)  :: errMsg          !< Error message associated with the errStat
+   integer(IntKi)                :: maxMeshPts, iWT
+   INTEGER(IntKi)                :: errStat2
+   CHARACTER(ErrMsgLen)          :: errMsg2
+   character(*), parameter       :: RoutineName = 'SetTempStorage'  !< for error handling
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   if (.not. allocated(NumMeshPts)) then
+      ErrStat = ErrID_Fatal
+      ErrMSg  = "Pre-Init has not been called yet"
+      return
+   endif 
+   if (minval(NumMeshPts) < 0) then
+      ErrStat = ErrID_Fatal
+      ErrMSg  = "AeroDyn_C_SetupRotor haven't been called for all rotors"
+      return
+   endif 
+
+   ! Allocate temporary arrays to simplify data conversions
+   maxMeshPts=0_IntKi
+   do iWT=1,Sim%NumTurbines
+      maxMeshPts=max(maxMeshPts,NumMeshPts(iWT))
+   enddo
+   if ( allocated(tmpBldPtMeshPos) )   deallocate(tmpBldPtMeshPos)
+   if ( allocated(tmpBldPtMeshOri) )   deallocate(tmpBldPtMeshOri)
+   if ( allocated(tmpBldPtMeshVel) )   deallocate(tmpBldPtMeshVel)
+   if ( allocated(tmpBldPtMeshAcc) )   deallocate(tmpBldPtMeshAcc)
+   if ( allocated(tmpBldPtMeshFrc) )   deallocate(tmpBldPtMeshFrc)
+   call AllocAry( tmpBldPtMeshPos,    3, maxMeshPts, "tmpBldPtMeshPos", ErrStat2, ErrMsg2 );    if (Failed())  return
+   call AllocAry( tmpBldPtMeshOri, 3, 3, maxMeshPts, "tmpBldPtMeshOri", ErrStat2, ErrMsg2 );    if (Failed())  return
+   call AllocAry( tmpBldPtMeshVel,    6, maxMeshPts, "tmpBldPtMeshVel", ErrStat2, ErrMsg2 );    if (Failed())  return
+   call AllocAry( tmpBldPtMeshAcc,    6, maxMeshPts, "tmpBldPtMeshAcc", ErrStat2, ErrMsg2 );    if (Failed())  return
+   call AllocAry( tmpBldPtMeshFrc,    6, maxMeshPts, "tmpBldPtMeshFrc", ErrStat2, ErrMsg2 );    if (Failed())  return
+
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+end subroutine SetTempStorage
+
+
+subroutine ClearTmpStorage()
+   INTEGER(IntKi)                :: errStat2
+   CHARACTER(ErrMsgLen)          :: errMsg2
+   ! Arrays
+   if (allocated(tmpBldPtMeshPos))  deallocate(tmpBldPtMeshPos)
+   if (allocated(tmpBldPtMeshOri))  deallocate(tmpBldPtMeshOri)
+   if (allocated(tmpBldPtMeshVel))  deallocate(tmpBldPtMeshVel)
+   if (allocated(tmpBldPtMeshAcc))  deallocate(tmpBldPtMeshAcc)
+   if (allocated(tmpBldPtMeshFrc))  deallocate(tmpBldPtMeshFrc)
+   ! Meshes
+   if (allocated(BldPtMotionMesh  ))   call ClearMeshArr1(BldPtMotionMesh  )
+   if (allocated(BldPtLoadMesh    ))   call ClearMeshArr1(BldPtLoadMesh    )
+   if (allocated(BldPtLoadMesh_tmp))   call ClearMeshArr1(BldPtLoadMesh_tmp)
+   !if (allocated(NacMotionMesh    ))   call ClearMeshArr1(NacMotionMesh    )
+   !if (allocated(NacLoadMesh      ))   call ClearMeshArr1(NacLoadMesh      )
+   if (allocated(Map_BldPtMotion_2_AD_Blade  ))   call ClearMeshMapArr2(Map_BldPtMotion_2_AD_Blade  )
+   if (allocated(Map_AD_BldLoad_P_2_BldPtLoad))   call ClearMeshMapArr2(Map_AD_BldLoad_P_2_BldPtLoad)
+contains
+   !> Don't leave junk in memory.  So destroy meshes and mappings.
+   subroutine ClearMeshArr1(MeshName)
+      type(MeshType), allocatable :: MeshName(:)
+      integer :: i
+      do i=1,size(MeshName)
+         call MeshDestroy( MeshName(i), ErrStat2, ErrMsg2 )    ! ignore errors
+      enddo
+      deallocate(MeshName)
+   end subroutine ClearMeshArr1
+
+   subroutine ClearMeshMapArr2(MapName)
+      type(MeshMapType), allocatable :: MapName(:,:)
+      integer :: i,j
+      do j=1,size(MapName,2)
+         do i=1,size(MapName,1)
+            call NWTC_Library_Destroymeshmaptype( MapName(i,j), ErrStat2, ErrMsg2 )
+         enddo
+      enddo
+      deallocate(MapName)
+   end subroutine ClearMeshMapArr2
+
+end subroutine ClearTmpStorage
 
 
 END MODULE AeroDyn_Inflow_C_BINDING
