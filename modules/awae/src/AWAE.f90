@@ -383,7 +383,8 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
             Pos_global(2) = real(ny_low,ReKi) * p%dY_low + p%Y0_low
             Pos_global(3) = real(nz_low,ReKi) * p%dZ_low + p%Z0_low
             ! The FlowField stores data in Y,Z,T -- Mean wind speed was set to 1.0, so Rate is 1/DT = 1/DX
-            WAT_iT = modulo( nint( (Pos_global(1) + xd%WAT_B_Box(1)) * p%WAT_FlowField%Grid3D%Rate  ), p%WAT_FlowField%Grid3D%NSteps ) + 1   ! eq 23
+            ! NOTE: the field moves with the average wind field.  So the +X is -T in the Mann box 
+            WAT_iT = modulo( nint( (Pos_global(1) - xd%WAT_B_Box(1)) * p%WAT_FlowField%Grid3D%Rate  ), p%WAT_FlowField%Grid3D%NSteps ) + 1   ! eq 23
             WAT_iY = modulo( nint( (Pos_global(2) + xd%WAT_B_Box(2)) * p%WAT_FlowField%Grid3D%InvDY ), p%WAT_FlowField%Grid3D%NYGrids) + 1   ! eq 24
             WAT_iZ = modulo( nint( (Pos_global(3) + xd%WAT_B_Box(3)) * p%WAT_FlowField%Grid3D%InvDZ ), p%WAT_FlowField%Grid3D%NZGrids) + 1   ! eq 25
             WAT_V(1:3) = p%WAT_FlowField%Grid3D%Vel(1:3,WAT_iY,WAT_iZ,WAT_iT) * WAT_k
