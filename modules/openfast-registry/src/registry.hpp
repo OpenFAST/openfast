@@ -188,6 +188,14 @@ struct Field
         else if (init_value.compare("-") != 0)
         {
             this->init_value = init_value;
+            if (tolower(init_value).compare("f") == 0)
+            {
+                this->init_value = ".false.";
+            }
+            else if (tolower(init_value).compare("t") == 0)
+            {
+                this->init_value = ".true.";
+            }
         }
     }
 
