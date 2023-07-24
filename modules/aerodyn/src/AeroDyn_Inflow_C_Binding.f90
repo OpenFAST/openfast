@@ -37,8 +37,8 @@ MODULE AeroDyn_Inflow_C_BINDING
    PUBLIC :: AeroDyn_Inflow_C_End
    PUBLIC :: AeroDyn_Inflow_C_PreInit     ! Initial call to setup number of turbines
    PUBLIC :: AeroDyn_C_SetupRotor         ! Initial node positions etc for a rotor
+   PUBLIC :: AeroDyn_C_SetRotorMotion     ! Set motions for a given rotor
 !FIXME:
-!   PUBLIC :: AeroDyn_C_SetRotorMotion     ! Set motions for a given rotor
 !   PUBLIC :: AeroDyn_C_GetRotorLoads      ! Retrieve loads for a given rotor
 
    !------------------------------------------------------------------------------------
@@ -618,7 +618,6 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    call ADI_DestroyInitInput( InitInp,     Errstat2, ErrMsg2);    if (Failed())  return
    call ADI_DestroyInitOutput(InitOutData, Errstat2, ErrMsg2);    if (Failed())  return
 
-ErrStat2=ErrID_Fatal; ErrMsg2='Ending early';  if (Failed())  return
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
 
@@ -1009,39 +1008,14 @@ END SUBROUTINE AeroDyn_Inflow_C_Init
 !===============================================================================================================
 !--------------------------------------------- AeroDyn CalcOutput ---------------------------------------------
 !===============================================================================================================
-
 SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
-               HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,     &
-               NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,     &
-               BldRootPos_C, BldRootOri_C, BldRootVel_C, BldRootAcc_C, &
-               NumMeshPts_C,  &
-               MeshPos_C,  MeshOri_C,  MeshVel_C,  MeshAcc_C,  &
-               MeshFrc_C, OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_CalcOutput')
+               OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_CalcOutput')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_CalcOutput
 !GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_CalcOutput
 #endif
    real(c_double),            intent(in   )  :: Time_C
-   real(c_float),             intent(in   )  :: HubPos_C( 3 )                 !< Hub position
-   real(c_double),            intent(in   )  :: HubOri_C( 9 )                 !< Hub orientation
-   real(c_float),             intent(in   )  :: HubVel_C( 6 )                 !< Hub velocity
-   real(c_float),             intent(in   )  :: HubAcc_C( 6 )                 !< Hub acceleration
-   real(c_float),             intent(in   )  :: NacPos_C( 3 )                 !< Nacelle position
-   real(c_double),            intent(in   )  :: NacOri_C( 9 )                 !< Nacelle orientation
-   real(c_float),             intent(in   )  :: NacVel_C( 6 )                 !< Nacelle velocity
-   real(c_float),             intent(in   )  :: NacAcc_C( 6 )                 !< Nacelle acceleration
-   real(c_float),             intent(in   )  :: BldRootPos_C( 3*Sim%WT(1)%NumBlades )   !< Blade root positions
-   real(c_double),            intent(in   )  :: BldRootOri_C( 9*Sim%WT(1)%NumBlades )   !< Blade root orientations
-   real(c_float),             intent(in   )  :: BldRootVel_C( 6*Sim%WT(1)%NumBlades )   !< Blade root velocities
-   real(c_float),             intent(in   )  :: BldRootAcc_C( 6*Sim%WT(1)%NumBlades )   !< Blade root accelerations
-   ! Blade mesh nodes
-   integer(c_int),            intent(in   )  :: NumMeshPts_C                  !< Number of mesh points we are transfering motions to and output loads to
-   real(c_float),             intent(in   )  :: MeshPos_C( 3*NumMeshPts_C )   !< A 3xNumMeshPts_C array [x,y,z]
-   real(c_double),            intent(in   )  :: MeshOri_C( 9*NumMeshPts_C )   !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
-   real(c_float),             intent(in   )  :: MeshVel_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
-   real(c_float),             intent(in   )  :: MeshAcc_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
-   real(c_float),             intent(  out)  :: MeshFrc_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [Fx,Fy,Fz,Mx,My,Mz]       -- forces and moments (global)
    real(c_float),             intent(  out)  :: OutputChannelValues_C(ADI%p%NumOuts)
    integer(c_int),            intent(  out)  :: ErrStat_C
    character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
@@ -1060,49 +1034,13 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
 
-   ! Sanity check -- number of node points cannot change
-   if ( NumMeshPts(iWT) /= int(NumMeshPts_C, IntKi) ) then
-      ErrStat2 =  ErrID_Fatal
-      ErrMsg2  =  "Number of node points passed in changed.  This must be constant throughout simulation"
-      if (Failed())  return
-   endif
-
-
 print*,'---------------------------AeroDyn_Inflow_C_CalcOutput---------------------------'
    ! Convert the inputs from C to Fortrn
    Time = REAL(Time_C,DbKi)
 
-   ! Reshape mesh position, orientation, velocity, acceleration
-   tmpBldPtMeshPos(1:3,1:NumMeshPts(iWT))      = reshape( real(MeshPos_C(1:3*NumMeshPts(iWT)),ReKi), (/3,  NumMeshPts(iWT)/) )
-   tmpBldPtMeshOri(1:3,1:3,1:NumMeshPts(iWT))  = reshape( real(MeshOri_C(1:9*NumMeshPts(iWT)),R8Ki), (/3,3,NumMeshPts(iWT)/) )
-   tmpBldPtMeshVel(1:6,1:NumMeshPts(iWT))      = reshape( real(MeshVel_C(1:6*NumMeshPts(iWT)),ReKi), (/6,  NumMeshPts(iWT)/) )
-   tmpBldPtMeshAcc(1:6,1:NumMeshPts(iWT))      = reshape( real(MeshAcc_C(1:6*NumMeshPts(iWT)),ReKi), (/6,  NumMeshPts(iWT)/) )
-
-
-   ! Transfer motions to input meshes
-   do iWT=1,Sim%NumTurbines
-      call Set_MotionMesh(iWT, ErrStat2, ErrMsg2);    if (Failed())  return
-      call AD_SetInputMotion( iWT, ADI%u(1), &
-               HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,      &
-               NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,      &
-               BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
-               ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
-         if (Failed())  return
-   enddo
-
    ! Call the main subroutine ADI_CalcOutput to get the resulting forces and moments at time T
    CALL ADI_CalcOutput( Time, ADI%u(1), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, ErrStat2, ErrMsg2 )
       if (Failed())  return
-
-   ! Transfer resulting load meshes to intermediate mesh
-   do iWT=1,Sim%NumTurbines
-      call AD_TransferLoads( iWT, ADI%u(1), ADI%y, ErrStat2, ErrMsg2 )
-         if (Failed())  return
-   enddo
-
-   ! Set output force/moment array
-   call Set_OutputLoadArray(iWT)
-   MeshFrc_C(1:6*NumMeshPts(iWT)) = reshape( real(tmpBldPtMeshFrc(1:6,1:NumMeshPts(iWT)), c_float), (/6*NumMeshPts(iWT)/) )
 
    ! Get the output channel info out of y
    OutputChannelValues_C = REAL(ADI%y%WriteOutput, C_FLOAT)
@@ -1118,6 +1056,7 @@ print*,'---------------------------AeroDyn_Inflow_C_CalcOutput------------------
       call Dvr_WriteOutputs(n_Global+1, ADI%InputTimes(INPUT_CURR), Sim, WrOutputsData, ADI%y, errStat2, errMsg2); if(Failed()) return
    endif
 
+ErrStat2=ErrID_Fatal; ErrMsg2='Ending early';  if (Failed())  return
    ! Set error status
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
@@ -1409,7 +1348,7 @@ END SUBROUTINE AeroDyn_Inflow_C_End
 !--------------------------------------------- AeroDyn SetupRotor ----------------------------------------------
 !===============================================================================================================
 !> Setup the initial rotor root positions etc before initializing
-subroutine AeroDyn_C_SetupRotor(iWT_c,TurbOrigin_C,                  &
+subroutine AeroDyn_C_SetupRotor(iWT_c, TurbOrigin_C,                 &
                HubPos_C, HubOri_C,                                   &
                NacPos_C, NacOri_C,                                   &
                NumBlades_C, BldRootPos_C, BldRootOri_C,              &
@@ -1420,7 +1359,7 @@ subroutine AeroDyn_C_SetupRotor(iWT_c,TurbOrigin_C,                  &
 !DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_C_SetupRotor
 !GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_C_SetupRotor
 #endif
-   integer(IntKi),            intent(in   ) :: iWT_c     !< Wind turbine / rotor number
+   integer(c_int),            intent(in   ) :: iWT_c     !< Wind turbine / rotor number
    real(c_float),             intent(in   ) :: TurbOrigin_C(3)
    ! Initial hub and blade root positions/orientations
    real(c_float),             intent(in   )  :: HubPos_C( 3 )                          !< Hub position
@@ -1570,14 +1509,193 @@ end subroutine AeroDyn_C_SetupRotor
 !--------------------------------------------- AeroDyn SetRotorMotion ------------------------------------------
 !===============================================================================================================
 !> Set the motions for a single rotor.  This must be called before AeroDyn_Inflow_C_CalcOutput
-!subroutine AeroDyn_C_SetRotorMotion()
-!end subroutine AeroDyn_C_SetRotorMotion
+subroutine AeroDyn_C_SetRotorMotion( iWT_c,                             &
+               HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,            &
+               NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,            &
+               BldRootPos_C, BldRootOri_C, BldRootVel_C, BldRootAcc_C,  &
+               NumMeshPts_C,                                            &
+               MeshPos_C,  MeshOri_C,  MeshVel_C,  MeshAcc_C,           &
+               ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_C_SetRotorMotion')
+   implicit none
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_C_SetRotorMotion
+!GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_C_SetRotorMotion
+#endif
+   integer(c_int),            intent(in   ) :: iWT_c                          !< Wind turbine / rotor number
+   real(c_float),             intent(in   )  :: HubPos_C( 3 )                 !< Hub position
+   real(c_double),            intent(in   )  :: HubOri_C( 9 )                 !< Hub orientation
+   real(c_float),             intent(in   )  :: HubVel_C( 6 )                 !< Hub velocity
+   real(c_float),             intent(in   )  :: HubAcc_C( 6 )                 !< Hub acceleration
+   real(c_float),             intent(in   )  :: NacPos_C( 3 )                 !< Nacelle position
+   real(c_double),            intent(in   )  :: NacOri_C( 9 )                 !< Nacelle orientation
+   real(c_float),             intent(in   )  :: NacVel_C( 6 )                 !< Nacelle velocity
+   real(c_float),             intent(in   )  :: NacAcc_C( 6 )                 !< Nacelle acceleration
+   real(c_float),             intent(in   )  :: BldRootPos_C( 3*Sim%WT(iWT_c)%NumBlades )   !< Blade root positions
+   real(c_double),            intent(in   )  :: BldRootOri_C( 9*Sim%WT(iWT_c)%NumBlades )   !< Blade root orientations
+   real(c_float),             intent(in   )  :: BldRootVel_C( 6*Sim%WT(iWT_c)%NumBlades )   !< Blade root velocities
+   real(c_float),             intent(in   )  :: BldRootAcc_C( 6*Sim%WT(iWT_c)%NumBlades )   !< Blade root accelerations
+   ! Blade mesh nodes
+   integer(c_int),            intent(in   )  :: NumMeshPts_C                  !< Number of mesh points we are transfering motions to and output loads to
+   real(c_float),             intent(in   )  :: MeshPos_C( 3*NumMeshPts_C )   !< A 3xNumMeshPts_C array [x,y,z]
+   real(c_double),            intent(in   )  :: MeshOri_C( 9*NumMeshPts_C )   !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
+   real(c_float),             intent(in   )  :: MeshVel_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
+   real(c_float),             intent(in   )  :: MeshAcc_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
+   integer(c_int),            intent(  out)  :: ErrStat_C
+   character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
+
+   ! Local variables
+   real(DbKi)                                :: Time
+   integer(IntKi)                            :: iNode
+   integer(IntKi)                            :: iWT                           !< current wind turbine / rotor
+   integer(IntKi)                            :: ErrStat                       !< aggregated error status
+   character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
+   integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
+   character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
+   character(*), parameter                   :: RoutineName = 'AeroDyn_C_SetRotorMotion' !< for error handling
+
+   ! Initialize error handling
+   ErrStat  =  ErrID_None
+   ErrMsg   =  ""
+
+   ! For debugging the interface:
+   if (debugverbose > 0) then
+      call ShowPassedData()
+   endif
+
+   ! current turbine number
+   iWT = int(iWT_c, IntKi)
+
+   ! Sanity check -- number of node points cannot change
+   if ( NumMeshPts(iWT) /= int(NumMeshPts_C, IntKi) ) then
+      ErrStat2 =  ErrID_Fatal
+      ErrMsg2  =  "Number of node points passed in changed.  This must be constant throughout simulation"
+      if (Failed())  return
+   endif
+
+   ! Reshape mesh position, orientation, velocity, acceleration
+   tmpBldPtMeshPos(1:3,1:NumMeshPts(iWT))      = reshape( real(MeshPos_C(1:3*NumMeshPts(iWT)),ReKi), (/3,  NumMeshPts(iWT)/) )
+   tmpBldPtMeshOri(1:3,1:3,1:NumMeshPts(iWT))  = reshape( real(MeshOri_C(1:9*NumMeshPts(iWT)),R8Ki), (/3,3,NumMeshPts(iWT)/) )
+   tmpBldPtMeshVel(1:6,1:NumMeshPts(iWT))      = reshape( real(MeshVel_C(1:6*NumMeshPts(iWT)),ReKi), (/6,  NumMeshPts(iWT)/) )
+   tmpBldPtMeshAcc(1:6,1:NumMeshPts(iWT))      = reshape( real(MeshAcc_C(1:6*NumMeshPts(iWT)),ReKi), (/6,  NumMeshPts(iWT)/) )
+
+
+   ! Transfer motions to input meshes
+   do iWT=1,Sim%NumTurbines
+      call Set_MotionMesh(iWT, ErrStat2, ErrMsg2);    if (Failed())  return
+      call AD_SetInputMotion( iWT, ADI%u(1), &
+               HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,      &
+               NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,      &
+               BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
+               ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
+         if (Failed())  return
+   enddo
+
+   ! Set error status
+   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+
+CONTAINS
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   end function Failed
+   !> This subroutine prints out all the variables that are passed in.  Use this only
+   !! for debugging the interface on the Fortran side.
+   subroutine ShowPassedData()
+      character(1) :: TmpFlag
+      integer      :: i,j
+      call WrScr("-----------------------------------------------------------")
+      call WrScr("Interface debugging:  Variables passed in through interface")
+      call WrScr("   AeroDyn_C_SetRotorMotion -- rotor "//trim(Num2LStr(iWT_c)))
+      call WrScr("      ("//trim(Num2LStr(Sim%WT(iWT_C)%numBlades))//" blades, "//trim(Num2LStr(NumMeshPts(iWT_C)))//" mesh nodes)")
+      call WrScr("-----------------------------------------------------------")
+      call WrScr("   rotor positions/orientations")
+      call WrNR("       Hub Position         ")
+      call WrMatrix(HubPos_C,CU,'(3(ES15.7e2))')
+      call WrNR("       Hub Orientation      ")
+      call WrMatrix(HubOri_C,CU,'(9(ES23.15e2))')
+      call WrNR("       Hub Velocity         ")
+      call WrMatrix(HubVel_C,CU,'(6(ES15.7e2))')
+      call WrNR("       Hub Acceleration     ")
+      call WrMatrix(HubAcc_C,CU,'(6(ES15.7e2))')
+
+      call WrNR("       Nacelle Position     ")
+      call WrMatrix(NacPos_C,CU,'(3(ES15.7e2))')
+      call WrNR("       Nacelle Orientation  ")
+      call WrMatrix(NacOri_C,CU,'(9(ES23.15e2))')
+      call WrNR("       Nacelle Velocity     ")
+      call WrMatrix(NacVel_C,CU,'(6(ES15.7e2))')
+      call WrNR("       Nacelle Acceleration ")
+      call WrMatrix(NacAcc_C,CU,'(6(ES15.7e2))')
+
+      if (debugverbose > 1) then
+         call WrScr("          Root Positions")
+         do i=1,Sim%WT(iWT_c)%NumBlades
+            j=3*(i-1)
+            call WrMatrix(BldRootPos_C(j+1:j+3),CU,'(3(ES15.7e2))')
+         enddo
+         call WrScr("          Root Orientations")
+         do i=1,Sim%WT(iWT_c)%NumBlades
+            j=9*(i-1)
+            call WrMatrix(BldRootOri_C(j+1:j+9),CU,'(9(ES23.15e2))')
+         enddo
+         call WrScr("          Root Velocities")
+         do i=1,Sim%WT(iWT_c)%NumBlades
+            j=3*(i-1)
+            call WrMatrix(BldRootPos_C(j+1:j+3),CU,'(6(ES15.7e2))')
+         enddo
+         call WrScr("          Root Accelerations")
+         do i=1,Sim%WT(iWT_c)%NumBlades
+            j=3*(i-1)
+            call WrMatrix(BldRootAcc_C(j+1:j+3),CU,'(6(ES15.7e2))')
+         enddo
+      endif
+      call WrScr("       NumMeshPts_C                   "//trim(Num2LStr( NumMeshPts_C  )) )
+      if (debugverbose > 1) then
+         call WrScr("          Mesh Positions")
+         do i=1,NumMeshPts_C
+            j=3*(i-1)
+            call WrMatrix(MeshPos_C(j+1:j+3),CU,'(3(ES15.7e2))')
+         enddo
+         call WrScr("          Mesh Orientations")
+         do i=1,NumMeshPts_C
+            j=9*(i-1)
+            call WrMatrix(MeshOri_C(j+1:j+9),CU,'(9(ES23.15e2))')
+         enddo
+         call WrScr("          Mesh Velocities")
+         do i=1,NumMeshPts_C
+            j=3*(i-1)
+            call WrMatrix(MeshVel_C(j+1:j+3),CU,'(6(ES15.7e2))')
+         enddo
+         call WrScr("          Mesh Accelerations")
+         do i=1,NumMeshPts_C
+            j=3*(i-1)
+            call WrMatrix(MeshAcc_C(j+1:j+3),CU,'(6(ES15.7e2))')
+         enddo
+      endif
+      call WrScr("-----------------------------------------------------------")
+   end subroutine ShowPassedData
+
+end subroutine AeroDyn_C_SetRotorMotion
 
 !===============================================================================================================
 !--------------------------------------------- AeroDyn GetRotorLoads -------------------------------------------
 !===============================================================================================================
 !> Get the loads from a single rotor.  This must be called after AeroDyn_Inflow_C_CalcOutput
 !subroutine AeroDyn_C_GetRotorLoads 
+
+!               MeshFrc_C
+!   real(c_float),             intent(  out)  :: MeshFrc_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [Fx,Fy,Fz,Mx,My,Mz]       -- forces and moments (global)
+!   ! Transfer resulting load meshes to intermediate mesh
+!   do iWT=1,Sim%NumTurbines
+!      call AD_TransferLoads( iWT, ADI%u(1), ADI%y, ErrStat2, ErrMsg2 )
+!         if (Failed())  return
+!   enddo
+
+!   ! Set output force/moment array
+!   call Set_OutputLoadArray(iWT)
+!   MeshFrc_C(1:6*NumMeshPts(iWT)) = reshape( real(tmpBldPtMeshFrc(1:6,1:NumMeshPts(iWT)), c_float), (/6*NumMeshPts(iWT)/) )
+
 !end subroutine AeroDyn_C_GetRotorLoads 
 
 
