@@ -747,7 +747,7 @@ subroutine IfW_TurbSim_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
             TRIM(Num2LStr(G3D%RefHeight - G3D%ZHWid))//' : '//TRIM(Num2LStr(G3D%RefHeight + G3D%ZHWid))//' ]'
       end if
 
-      if (G3D%BoxExceedAllowF) then
+      if (G3D%BoxExceedAllow) then
          write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  '// &
             'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
          write (SumFileUnit, '(A)') '                                    '// &
@@ -970,7 +970,7 @@ subroutine IfW_HAWC_Init(InitInp, SumFileUnit, G3D, FileDat, ErrStat, ErrMsg)
       write (SumFileUnit, '(A)') '     Z range (m):                 [ '// &
          TRIM(Num2LStr(G3D%GridBase))//' : '//TRIM(Num2LStr(G3D%GridBase + G3D%ZHWid*2.0))//' ]'
 
-      if (G3D%BoxExceedAllowF) then
+      if (G3D%BoxExceedAllow) then
          write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  '// &
             'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
          write (SumFileUnit, '(A)') '                                    '// &
@@ -1023,8 +1023,6 @@ subroutine IfW_Grid4D_Init(InitInp, G4D, ErrStat, ErrMsg)
    character(*), intent(out)              :: ErrMsg
 
    character(*), parameter                :: RoutineName = "IfW_Grid4D_Init"
-   integer(IntKi)                         :: TmpErrStat
-   character(ErrMsgLen)                   :: TmpErrMsg
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -1035,15 +1033,7 @@ subroutine IfW_Grid4D_Init(InitInp, G4D, ErrStat, ErrMsg)
    G4D%pZero = InitInp%pZero
    G4D%TimeStart = 0.0_ReKi
    G4D%RefHeight = InitInp%pZero(3) + (InitInp%n(3)/2) * InitInp%delta(3)
-
-   ! uvw velocity components at x,y,z,t coordinates
-   call AllocAry(G4D%Vel, 3, G4D%n(1), G4D%n(2), G4D%n(3), G4D%n(4), &
-                 'External Grid Velocity', TmpErrStat, TmpErrMsg)
-   call SetErrStat(ErrStat, ErrMsg, TmpErrStat, TmpErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-
-   ! Initialize velocities to zero
-   G4D%Vel = 0.0_SiKi
+   G4D%Vel => InitInp%Vel
 
 end subroutine
 
@@ -1399,7 +1389,7 @@ subroutine IfW_Bladed_Init(InitInp, SumFileUnit, InitOut, G3D, FileDat, ErrStat,
             TRIM(Num2LStr(G3D%RefHeight - G3D%ZHWid))//' : '//TRIM(Num2LStr(G3D%RefHeight + G3D%ZHWid))//' ]'
       end if
 
-      if (G3D%BoxExceedAllowF) then
+      if (G3D%BoxExceedAllow) then
          write (SumFileUnit, '(A)') '     Wind grid exceedence allowed:  '// &
             'True      -- Only for points requested by OLAF free vortex wake, or LidarSim module'
          write (SumFileUnit, '(A)') '                                    '// &

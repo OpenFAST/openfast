@@ -14,6 +14,10 @@
 # limitations under the License.
 #
 
+if (GENERATE_TYPES)
+  generate_f90_types(src/Registry_NWTC_Library_typedef_nomesh.txt ${CMAKE_CURRENT_LIST_DIR}/src/NWTC_Library_Types.f90 -noextrap)
+endif()
+
 #-------------------------------------------------------------------------------
 # NWTC System File
 #-------------------------------------------------------------------------------
@@ -55,6 +59,7 @@ set(NWTCLIBS_SOURCES
 
   src/NWTC_Base.f90
   src/SingPrec.f90
+  src/ModReg.f90
 
   src/ModMesh.f90
   src/ModMesh_Mapping.f90

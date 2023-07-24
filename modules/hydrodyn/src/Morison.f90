@@ -23,7 +23,8 @@ MODULE Morison
    USE Waves
    USE Morison_Types  
    USE Morison_Output
-   use SeaState_Interp
+   USE SeaState_Interp
+   USE SeaSt_WaveField
   ! USE HydroDyn_Output_Types
    USE NWTC_Library
 
@@ -1907,24 +1908,21 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    
    character(*), parameter                           :: RoutineName = 'Morison_Init'
 
-   TYPE(Morison_MemberType) :: member    ! the current member
+   TYPE(Morison_MemberType) :: member      ! the current member
    INTEGER                  :: i, j, k
    REAL(ReKi)               :: v2D(3,1), pos(3)
    real(ReKi)               :: An(3), An_drag(3), Vn(3), I_n(3), sgn, Amag, Amag_drag, Vmag, Imag, Ir_MG_end, Il_MG_end, R_I(3,3), IRl_mat(3,3), tMG, MGdens
    integer(IntKi)           :: MemberEndIndx
-   INTEGER, ALLOCATABLE       :: commonNodeLst(:)
-   LOGICAL, ALLOCATABLE       :: usedJointList(:)
-   integer(IntKi)           :: errStat2              ! returns a non-zero value when an error occurs            
+   INTEGER, ALLOCATABLE     :: commonNodeLst(:)
+   LOGICAL, ALLOCATABLE     :: usedJointList(:)
+   integer(IntKi)           :: errStat2    ! returns a non-zero value when an error occurs            
    CHARACTER(errMsgLen)     :: errMsg2     ! Error message if errStat2 /= ErrID_None
-
-      
-      ! Initialize errStat        
+   
+   ! Initialize errStat        
    errStat = ErrID_None         
    errMsg  = ""               
-      
-  
-
-      ! Define parameters here:  
+   
+   ! Define parameters here:  
    p%DT         = Interval
    p%WtrDens    = InitInp%WtrDens
    p%WtrDpth    = InitInp%WtrDpth
@@ -1945,10 +1943,8 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
        p%AMMod = 0_IntKi
    END IF
 
-   p%WaveElev1  => InitInp%WaveElev1
-   IF (associated(InitInp%WaveElev2)) THEN
-      p%WaveElev2 => InitInp%WaveElev2
-   END IF
+   ! Pointer to SeaState WaveField
+   p%WaveField => InitInp%WaveField
 
    ALLOCATE ( p%MOutLst(p%NMOutputs), STAT = errStat2 )
    IF ( errStat2 /= 0 ) THEN
@@ -2243,50 +2239,6 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
          ! Define system output initializations (set up mesh) here:  
          ! Define initialization-routine output here:
          
-   
-   ! Setup the 4D grid information for the Interpolatin Module
-   p%seast_interp_p = InitInp%seast_interp_p
-
-   ! Setup 3D SWL grids needed for wave stretching
-   
-   IF (p%WaveStMod > 0_IntKi) THEN ! Wave stretching enabled
-      
-      ! Allocate variables for the wave dynamics at the SWL - Needed for wave stretching
-      ALLOCATE ( p%WaveDynP0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3)), STAT=errStat2 )
-         IF ( errStat2 /= 0 ) call SetErrStat(ErrID_Fatal,'Error allocating space for p%WaveDynP0.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE ( p%WaveVel0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errStat2 )
-         IF ( errStat2 /= 0 ) call SetErrStat(ErrID_Fatal,'Error allocating space for p%WaveVel0.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE ( p%WaveAcc0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errStat2 )
-         IF ( errStat2 /= 0 ) call SetErrStat(ErrID_Fatal,'Error allocating space for p%WaveAcc0.', ErrStat, ErrMsg, RoutineName)
-      ALLOCATE ( p%WaveAccMCF0 (0:p%NStepWave,p%seast_interp_p%n(2),p%seast_interp_p%n(3),3), STAT=errstat2 )
-         IF ( errStat2 /= 0 ) call SetErrStat(ErrID_Fatal,'Error allocating space for p%WaveAccMCF0.', ErrStat, ErrMsg, RoutineName)
-         
-      if (ErrStat >= AbortErrLev) RETURN
-   
-      ! Copy the wave data at the SWL
-      DO i = 1,p%seast_interp_p%n(2)
-        DO j = 1,p%seast_interp_p%n(3)
-          p%WaveDynP0(:,i,j) = p%WaveDynP(:,i,j,p%seast_interp_p%n(4))
-          DO k = 1,3
-            p%WaveVel0(:,i,j,k) = p%WaveVel(:,i,j,p%seast_interp_p%n(4),k)
-            p%WaveAcc0(:,i,j,k) = p%WaveAcc(:,i,j,p%seast_interp_p%n(4),k)
-          END DO
-        END DO
-      END DO
-   
-      ! Also copy the MacCamy-Fuchs scaled wave acceleration at the SWL if available
-      IF (ASSOCIATED(p%WaveAccMCF)) THEN
-        DO i = 1,p%seast_interp_p%n(2)
-          DO j = 1,p%seast_interp_p%n(3)
-            DO k = 1,3
-              p%WaveAccMCF0(:,i,j,k) = p%WaveAccMCF(:,i,j,p%seast_interp_p%n(4),k)
-            END DO
-          END DO
-        END DO
-      END IF
-   
-   END IF
-   
    ! Initialize the outputs      
    CALL MrsnOUT_Init( InitInp, y, p, InitOut, errStat2, errMsg2 )
    call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
@@ -2360,7 +2312,7 @@ FUNCTION GetAlpha(R1,R2)
    REAL(ReKi),                     INTENT    ( IN    )  :: R1  ! interior radius of element at node point
    REAL(ReKi),                     INTENT    ( IN    )  :: R2  ! interior radius of other end of part-element
    
-   IF ( EqualRealNos(R1, R2) ) THEN ! To cover the case where R1=R2=0
+   IF ( EqualRealNos(R1, R2) ) THEN ! Also cover the case where R1=R2=0
       GetAlpha = 0.5
    ELSE
       GetAlpha = (R1*R1 + 2.0*R1*R2 + 3.0*R2*R2)/4.0/(R1*R1 + R1*R2 + R2*R2)
@@ -2376,178 +2328,147 @@ SUBROUTINE AllocateNodeLoadVariables(InitInp, p, m, NNodes, errStat, errMsg )
    INTEGER(IntKi),                    INTENT(IN   )  :: NNodes      ! number of nodes in node list
    INTEGER(IntKi),                    INTENT(  OUT)  :: errStat     ! Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: errMsg      ! Error message if errStat /= ErrID_None
-   integer(IntKi)           :: errStat2              ! returns a non-zero value when an error occurs            
-   CHARACTER(errMsgLen)     :: errMsg2     ! Error message if errStat2 /= ErrID_None
-   character(*), parameter :: routineName = 'AllocateNodeLoadVariables'
+   integer(IntKi)                                    :: errStat2    ! Returns a non-zero value when an error occurs            
+   CHARACTER(errMsgLen)                              :: errMsg2     ! Error message if errStat2 /= ErrID_None
+   character(*), parameter                           :: routineName = 'AllocateNodeLoadVariables'
    
-      ! Initialize errStat
-         
+   ! Initialize errStat        
    errStat = ErrID_None         
    errMsg  = ""               
-      
-   call AllocAry( m%nodeInWater        , NNodes   , 'm%nodeInWater'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%vrel         ,    3, NNodes   , 'm%vrel'         , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   !call AllocAry( m%F_D          ,    6, NNodes   , 'm%F_D'          , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   !call AllocAry( m%F_A          ,    6, NNodes   , 'm%F_A'          , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   !call AllocAry( m%F_B          ,    6, NNodes   , 'm%F_B'          , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   !call AllocAry( m%F_BF         ,    6, NNodes   , 'm%F_BF'         , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   !call AllocAry( m%F_I          ,    6, NNodes   , 'm%F_I'          , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   !call AllocAry( m%F_If         ,    6, NNodes   , 'm%F_If'         , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   !call AllocAry( m%F_WMG        ,    6, NNodes   , 'm%F_WMG'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   !call AllocAry( m%F_IMG        ,    6, NNodes   , 'm%F_IMG'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%FV           ,    3, NNodes   , 'm%FV'           , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%FA           ,    3, NNodes   , 'm%FA'           , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%FAMCF        ,    3, NNodes   , 'm%FAMCF'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%FDynP        ,       NNodes   , 'm%FDynP'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%WaveElev     ,       NNodes   , 'm%WaveElev'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%WaveElev1    ,       NNodes   , 'm%WaveElev1'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%WaveElev2    ,       NNodes   , 'm%WaveElev2'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( p%An_End       ,    3, p%NJoints, 'p%An_End'       , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( p%DragConst_End,       p%NJoints, 'p%DragConst_End', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%F_I_End      ,    3, p%NJoints, 'm%F_I_End'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%F_BF_End     ,    6, p%NJoints, 'm%F_BF_End'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%F_A_End      ,    3, p%NJoints, 'm%F_A_End'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%F_D_End      ,    3, p%NJoints, 'm%F_D_End'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%F_B_End      ,    6, p%NJoints, 'm%F_B_End'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%F_IMG_End    ,    6, p%NJoints, 'm%F_IMG_End'    , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( p%I_MG_End     , 3, 3, p%NJoints, 'p%I_MG_End'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( p%F_WMG_End    ,    3, p%NJoints, 'p%F_WMG_End'    , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( p%Mass_MG_End  ,       p%NJoints, 'p%Mass_MG_End'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( p%AM_End       , 3, 3, p%NJoints, 'p%AM_End'       , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( p%DP_Const_End ,    3, p%NJoints, 'p%DP_Const_End' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-
-   call AllocAry( m%V_rel_n        ,     p%NJoints, 'm%V_rel_n'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( m%V_rel_n_HiPass ,     p%NJoints, 'm%V_rel_n_HiPass' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-
-   call AllocAry( p%DragMod_End ,     p%NJoints, 'p%DragMod_End' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( p%DragLoFSc_End ,     p%NJoints, 'p%DragLoFSc_End' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
-   call AllocAry( p%VRelNFiltConst ,     p%NJoints, 'p%VRelNFiltConst' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   
+   call AllocAry( m%DispNodePosHdn,   3, NNodes   , 'm%DispNodePosHdn', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName) 
+   call AllocAry( m%DispNodePosHst,   3, NNodes   , 'm%DispNodePosHst', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName) 
+   call AllocAry( m%nodeInWater  ,       NNodes   , 'm%nodeInWater'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%vrel         ,    3, NNodes   , 'm%vrel'          , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%FV           ,    3, NNodes   , 'm%FV'            , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%FA           ,    3, NNodes   , 'm%FA'            , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%FAMCF        ,    3, NNodes   , 'm%FAMCF'         , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%FDynP        ,       NNodes   , 'm%FDynP'         , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%WaveElev     ,       NNodes   , 'm%WaveElev'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%WaveElev1    ,       NNodes   , 'm%WaveElev1'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%WaveElev2    ,       NNodes   , 'm%WaveElev2'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( p%An_End       ,    3, p%NJoints, 'p%An_End'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( p%DragConst_End,       p%NJoints, 'p%DragConst_End' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%F_I_End      ,    3, p%NJoints, 'm%F_I_End'       , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%F_BF_End     ,    6, p%NJoints, 'm%F_BF_End'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%F_A_End      ,    3, p%NJoints, 'm%F_A_End'       , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%F_D_End      ,    3, p%NJoints, 'm%F_D_End'       , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%F_B_End      ,    6, p%NJoints, 'm%F_B_End'       , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%F_IMG_End    ,    6, p%NJoints, 'm%F_IMG_End'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( p%I_MG_End     , 3, 3, p%NJoints, 'p%I_MG_End'      , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( p%F_WMG_End    ,    3, p%NJoints, 'p%F_WMG_End'     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( p%Mass_MG_End  ,       p%NJoints, 'p%Mass_MG_End'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( p%AM_End       , 3, 3, p%NJoints, 'p%AM_End'        , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( p%DP_Const_End ,    3, p%NJoints, 'p%DP_Const_End'  , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%V_rel_n        ,     p%NJoints, 'm%V_rel_n'       , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( m%V_rel_n_HiPass ,     p%NJoints, 'm%V_rel_n_HiPass', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( p%DragMod_End    ,     p%NJoints, 'p%DragMod_End'   , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( p%DragLoFSc_End  ,     p%NJoints, 'p%DragLoFSc_End' , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
+   call AllocAry( p%VRelNFiltConst ,     p%NJoints, 'p%VRelNFiltConst', errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, routineName)
 
    if (errStat >= AbortErrLev) return
    
-   m%nodeInWater   = 0
-   m%vrel          = 0.0_ReKi
-   !m%F_D           = 0.0_ReKi
-   !m%F_A           = 0.0_ReKi 
-   !m%F_B           = 0.0
-   !m%F_BF          = 0.0
-   !m%F_I           = 0.0
-   !m%F_If          = 0.0
-   !m%F_WMG         = 0.0
-   !m%F_IMG         = 0.0
-   m%FV            = 0.0_ReKi
-   m%FA            = 0.0_ReKi
-   m%FDynP         = 0.0_ReKi
-   p%An_End        = 0.0
-   p%DragConst_End = 0.0
-   m%F_I_End       = 0.0
-   m%F_BF_End      = 0.0
-   m%F_A_End       = 0.0
-   m%F_D_End       = 0.0
-   m%F_B_End       = 0.0
-   m%F_IMG_End     = 0.0
-   p%DP_Const_End  = 0.0
-   p%I_MG_End      = 0.0
-   p%Mass_MG_End   = 0.0
-   p%F_WMG_End     = 0.0
-   p%AM_End        = 0.0
-   
+   m%DispNodePosHdn = 0.0_ReKi
+   m%DispNodePosHst = 0.0_ReKi
+   m%nodeInWater    = 0
+   m%vrel           = 0.0_ReKi
+   m%FV             = 0.0_ReKi
+   m%FA             = 0.0_ReKi
+   m%FDynP          = 0.0_ReKi
+   p%An_End         = 0.0
+   p%DragConst_End  = 0.0
+   m%F_I_End        = 0.0
+   m%F_BF_End       = 0.0
+   m%F_A_End        = 0.0
+   m%F_D_End        = 0.0
+   m%F_B_End        = 0.0
+   m%F_IMG_End      = 0.0
+   p%DP_Const_End   = 0.0
+   p%I_MG_End       = 0.0
+   p%Mass_MG_End    = 0.0
+   p%F_WMG_End      = 0.0
+   p%AM_End         = 0.0
    m%V_rel_n        = 0.0_ReKi
    m%V_rel_n_HiPass = 0.0_ReKi
-
-   p%WaveVel    => InitInp%WaveVel      
-   p%WaveAcc    => InitInp%WaveAcc
-   p%WaveDynP   => InitInp%WaveDynP    
-   p%WaveTime   => InitInp%WaveTime   
-   p%PWaveVel0  => InitInp%PWaveVel0      
-   p%PWaveAcc0  => InitInp%PWaveAcc0
-   p%PWaveDynP0 => InitInp%PWaveDynP0
    
-   p%WaveAccMCF => InitInp%WaveAccMCF
-   p%PWaveAccMCF0 => InitInp%PWaveAccMCF0
-   
-
-   
-
-
 END SUBROUTINE AllocateNodeLoadVariables
 
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is similar to InterpWrappedStpReal, except it returns only the slope for the interpolation.
-!! By returning the slope based on Time, we don't have to calculate this for every variable (Yary) we want to interpolate.
-!! NOTE: p%WaveTime (and most arrays here) start with index of 0 instead of 1, so we will subtract 1 from "normal" interpolation
-!! schemes.
-FUNCTION GetInterpolationSlope(Time, p, m, IntWrapIndx) RESULT( InterpSlope )
-      REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds
-      TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-      TYPE(Morison_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
-      INTEGER, OPTIONAL,                 INTENT(  OUT)  :: IntWrapIndx
-
-      REAL(SiKi)                                        :: Time_SiKi
-      REAL(SiKi)                                        :: TimeMod
-      REAL(ReKi)                                        :: InterpSlope
-
-      Time_SiKi = REAL(Time, SiKi)
-      TimeMod = MOD(Time_SiKi, p%WaveTime(p%NStepWave)) !p%WaveTime starts at index 0, so it has p%NStepWave+1 elements
-      IF ( TimeMod <= p%WaveTime(1) )  THEN !second element
-         m%LastIndWave = 0
-      END IF
-      
-      IF ( TimeMod <= p%WaveTime(0) )  THEN
-         m%LastIndWave = 0
-         InterpSlope = 0.0_ReKi  ! returns values at m%LastIndWave
-         IF(PRESENT(IntWrapIndx)) IntWrapIndx = 0
-      ELSE IF ( TimeMod >= p%WaveTime(p%NStepWave) )  THEN
-         m%LastIndWave = p%NStepWave-1
-         InterpSlope = 1.0_ReKi  ! returns values at p%NStepWave
-         IF(PRESENT(IntWrapIndx)) IntWrapIndx = p%NStepWave
-      ELSE
-         m%LastIndWave = MAX( MIN( m%LastIndWave, p%NStepWave-1 ), 0 )
-
-         DO
-
-            IF ( TimeMod < p%WaveTime(m%LastIndWave) )  THEN
-
-               m%LastIndWave = m%LastIndWave - 1
-
-            ELSE IF ( TimeMod >= p%WaveTime(m%LastIndWave+1) )  THEN
-
-               m%LastIndWave = m%LastIndWave + 1
-
-            ELSE
-               IF(PRESENT(IntWrapIndx)) IntWrapIndx = m%LastIndWave
-               
-               InterpSlope = ( TimeMod - p%WaveTime(m%LastIndWave) )/( p%WaveTime(m%LastIndWave+1) - p%WaveTime(m%LastIndWave) )
-               RETURN ! stop checking DO loop
-            END IF
-
-         END DO
-   
-      END IF
-      
-END FUNCTION GetInterpolationSlope
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Use in conjunction with GetInterpolationSlope, to replace InterpWrappedStpReal here.
-FUNCTION InterpolateWithSlope(InterpSlope, Ind, YAry)
-      REAL(ReKi), INTENT(IN)                            :: InterpSlope
-      INTEGER(IntKi), INTENT(IN )                       :: Ind           !< Misc/optimization variables
-      REAL(SiKi), INTENT(IN)                            :: YAry(0:)
-      REAL(ReKi)                                        :: InterpolateWithSlope
-
-      InterpolateWithSlope = ( YAry(Ind+1) - YAry(Ind) )*InterpSlope + YAry(Ind)
-
-END FUNCTION InterpolateWithSlope
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Use in conjunction with GetInterpolationSlope, to replace InterpWrappedStpReal here.
-FUNCTION InterpolateWithSlopeR(InterpSlope, Ind, YAry)
-      REAL(ReKi), INTENT(IN)                            :: InterpSlope
-      INTEGER(IntKi), INTENT(IN )                       :: Ind           !< Misc/optimization variables
-      REAL(ReKi), INTENT(IN)                            :: YAry(0:)
-      REAL(ReKi)                                        :: InterpolateWithSlopeR
-
-      InterpolateWithSlopeR = ( YAry(Ind+1) - YAry(Ind) )*InterpSlope + YAry(Ind)
-
-END FUNCTION InterpolateWithSlopeR
+! !----------------------------------------------------------------------------------------------------------------------------------
+! !> This routine is similar to InterpWrappedStpReal, except it returns only the slope for the interpolation.
+! !! By returning the slope based on Time, we don't have to calculate this for every variable (Yary) we want to interpolate.
+! !! NOTE: p%WaveTime (and most arrays here) start with index of 0 instead of 1, so we will subtract 1 from "normal" interpolation
+! !! schemes.
+! FUNCTION GetInterpolationSlope(Time, p, m, IntWrapIndx) RESULT( InterpSlope )
+!       REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds
+!       TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+!       TYPE(Morison_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
+!       INTEGER, OPTIONAL,                 INTENT(  OUT)  :: IntWrapIndx
+! 
+!      REAL(SiKi)                                        :: Time_SiKi
+!       REAL(SiKi)                                        :: TimeMod
+!       REAL(ReKi)                                        :: InterpSlope
+! 
+!       Time_SiKi = REAL(Time, SiKi)
+!       TimeMod = MOD(Time_SiKi, p%WaveTime(p%NStepWave)) !p%WaveTime starts at index 0, so it has p%NStepWave+1 elements
+!       IF ( TimeMod <= p%WaveTime(1) )  THEN !second element
+!          m%LastIndWave = 0
+!       END IF
+!       
+!       IF ( TimeMod <= p%WaveTime(0) )  THEN
+!          m%LastIndWave = 0
+!          InterpSlope = 0.0_ReKi  ! returns values at m%LastIndWave
+!          IF(PRESENT(IntWrapIndx)) IntWrapIndx = 0
+!       ELSE IF ( TimeMod >= p%WaveTime(p%NStepWave) )  THEN
+!          m%LastIndWave = p%NStepWave-1
+!          InterpSlope = 1.0_ReKi  ! returns values at p%NStepWave
+!          IF(PRESENT(IntWrapIndx)) IntWrapIndx = p%NStepWave
+!       ELSE
+!          m%LastIndWave = MAX( MIN( m%LastIndWave, p%NStepWave-1 ), 0 )
+! 
+!          DO
+! 
+!             IF ( TimeMod < p%WaveTime(m%LastIndWave) )  THEN
+! 
+!                m%LastIndWave = m%LastIndWave - 1
+! 
+!             ELSE IF ( TimeMod >= p%WaveTime(m%LastIndWave+1) )  THEN
+! 
+!                m%LastIndWave = m%LastIndWave + 1
+! 
+!             ELSE
+!                IF(PRESENT(IntWrapIndx)) IntWrapIndx = m%LastIndWave
+!                
+!                InterpSlope = ( TimeMod - p%WaveTime(m%LastIndWave) )/( p%WaveTime(m%LastIndWave+1) - p%WaveTime(m%LastIndWave) )
+!                RETURN ! stop checking DO loop
+!             END IF
+! 
+!          END DO
+!    
+!       END IF
+!       
+! END FUNCTION GetInterpolationSlope
+! !----------------------------------------------------------------------------------------------------------------------------------
+! !> Use in conjunction with GetInterpolationSlope, to replace InterpWrappedStpReal here.
+! FUNCTION InterpolateWithSlope(InterpSlope, Ind, YAry)
+!       REAL(ReKi), INTENT(IN)                            :: InterpSlope
+!       INTEGER(IntKi), INTENT(IN )                       :: Ind           !< Misc/optimization variables
+!       REAL(SiKi), INTENT(IN)                            :: YAry(0:)
+!       REAL(ReKi)                                        :: InterpolateWithSlope
+! 
+!       InterpolateWithSlope = ( YAry(Ind+1) - YAry(Ind) )*InterpSlope + YAry(Ind)
+! 
+! END FUNCTION InterpolateWithSlope
+! !----------------------------------------------------------------------------------------------------------------------------------
+! !> Use in conjunction with GetInterpolationSlope, to replace InterpWrappedStpReal here.
+! FUNCTION InterpolateWithSlopeR(InterpSlope, Ind, YAry)
+!       REAL(ReKi), INTENT(IN)                            :: InterpSlope
+!       INTEGER(IntKi), INTENT(IN )                       :: Ind           !< Misc/optimization variables
+!       REAL(ReKi), INTENT(IN)                            :: YAry(0:)
+!       REAL(ReKi)                                        :: InterpolateWithSlopeR
+! 
+!       InterpolateWithSlopeR = ( YAry(Ind+1) - YAry(Ind) )*InterpSlope + YAry(Ind)
+! 
+! END FUNCTION InterpolateWithSlopeR
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
 SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )   
@@ -2645,7 +2566,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(DbKi)               :: theta1, theta2
    REAL(ReKi)               :: y_hat(3), z_hat(3), posMid(3), zetaMid, FSPt(3)
    INTEGER(IntKi)           :: secStat
-
+   INTEGER(IntKi)           :: nodeInWater
+   REAL(SiKi)               :: WaveElev1, WaveElev2, WaveElev, FDynP, FV(3), FA(3), FAMCF(3)
    LOGICAL                  :: Is1stElement
 
    ! Initialize errStat
@@ -2653,231 +2575,21 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    errMsg  = ""               
    Imat    = 0.0_ReKi   
    g       = p%Gravity
-   WtrDpth = p%WtrDpth + p%MSL2SWL ! Water depth measured from the free surface
+   WtrDpth = p%WtrDpth + p%MSL2SWL ! Water depth measured from the still water level
    
-   !InterpolationSlope = GetInterpolationSlope(Time, p, m, IntWrapIndx)
-
+   !===============================================================================================
+   ! Get displaced positions of the hydrodynamic nodes   
+   CALL GetDisplacedNodePosition( .FALSE., m%DispNodePosHdn ) ! For hydrodynamic loads; depends on WaveDisp and WaveStMod
+   CALL GetDisplacedNodePosition( .TRUE. , m%DispNodePosHst ) ! For hydrostatic loads;  always use actual displaced position
+   
    !===============================================================================================
    ! Calculate the fluid kinematics at all mesh nodes and store for use in the equations below
-
+   CALL WaveField_GetWaveKin( p%WaveField, Time, m%DispNodePosHdn, .FALSE., m%nodeInWater, m%WaveElev1, m%WaveElev2, m%WaveElev, m%FDynP, m%FV, m%FA, m%FAMCF, ErrStat2, ErrMsg2 )
+     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ! Compute fluid velocity relative to the structure
    DO j = 1, p%NNodes
-      IF (p%WaveDisp == 0 ) THEN
-         ! use the initial X,Y location
-         pos1(1) = u%Mesh%Position(1,j)
-         pos1(2) = u%Mesh%Position(2,j)
-      ELSE
-         ! Use current X,Y location
-         pos1(1) = u%Mesh%TranslationDisp(1,j) + u%Mesh%Position(1,j)
-         pos1(2) = u%Mesh%TranslationDisp(2,j) + u%Mesh%Position(2,j)
-      END IF
-      
-      IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Wave stretching enabled
-        pos1(3) = u%Mesh%Position(3,j) + u%Mesh%TranslationDisp(3,j) - p%MSL2SWL  ! Use the current Z location.
-      ELSE ! Wave stretching disabled
-        pos1(3) = u%Mesh%Position(3,j) - p%MSL2SWL  ! We are intentionally using the undisplaced Z position of the node.
-      END IF
-            
-      ! Compute the free surface elevation at the x/y position of all nodes
-      positionXY = (/pos1(1),pos1(2)/)      
-      m%WaveElev1(j) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (associated(p%WaveElev2)) THEN
-        m%WaveElev2(j) = SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-        m%WaveElev(j) =  m%WaveElev1(j) + m%WaveElev2(j)
-      ELSE
-        m%WaveElev(j) =  m%WaveElev1(j) 
-      END IF      
-      
-      IF (p%WaveStMod == 0) THEN ! No wave stretching
-    
-          IF ( pos1(3) <= 0.0_ReKi) THEN ! Node is at or below the SWL
-              ! Use location to obtain interpolated values of kinematics         
-              call SeaSt_Interp_Setup( Time, pos1, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              m%FV(:,j)  = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              m%FA(:,j) = SeaSt_Interp_4D_Vec( p%WaveAcc, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              m%FDynP(j)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              m%vrel(:,j) = m%FV(:,j) - u%Mesh%TranslationVel(:,j)
-              m%nodeInWater(j) = 1_IntKi
-          ELSE ! Node is above the SWL
-              m%FV(:,j)  = 0.0
-              m%FA(:,j)  = 0.0
-              m%FDynP(j) = 0.0
-              m%vrel(:,j) = 0.0  
-              m%nodeInWater(j) = 0_IntKi
-          END IF
-      
-      ELSE ! Wave stretching enabled
-      
-          IF ( pos1(3) <= m%WaveElev(j)) THEN ! Node is submerged
-          
-              m%nodeInWater(j) = 1_IntKi
- 
-              IF (p%WaveStMod <3) THEN ! Vertical or extrapolated wave stretching
-          
-                  IF ( pos1(3) <= 0.0_SiKi) THEN ! Node is below the SWL - evaluate wave dynamics as usual
-          
-                      ! Use location to obtain interpolated values of kinematics         
-                      call SeaSt_Interp_Setup( Time, pos1, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                      m%FV(:,j)  = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                      m%FA(:,j) = SeaSt_Interp_4D_Vec( p%WaveAcc, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                      m%FDynP(j)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-          
-                  ELSE ! Node is above SWL - need wave stretching
-          
-                      ! Vertical wave stretching
-                      m%FV(:,j)  = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveVel0, p%seast_interp_p,  m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                      m%FA(:,j)  = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveAcc0, p%seast_interp_p,  m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                      m%FDynP(j) = SeaSt_Interp_3D    ( Time, positionXY, p%WaveDynP0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                      
-                      ! Extrapoled wave stretching
-                      IF (p%WaveStMod == 2) THEN 
-                        m%FV(:,j)  = m%FV(:,j)  + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveVel0,  p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos1(3)
-                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                        m%FA(:,j)  = m%FA(:,j)  + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveAcc0,  p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos1(3)
-                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                        m%FDynP(j) = m%FDynP(j) + SeaSt_Interp_3D    ( Time, positionXY, p%PWaveDynP0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos1(3)
-                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                      END IF
-          
-                  END IF ! Node is submerged
- 
-              ELSE ! Wheeler stretching - no need to check whether the node is above or below SWL
-                  
-                  ! Map the node z-position linearly from [-WtrDpth,m%WaveElev(j)] to [-WtrDpth,0] 
-                  pos1Prime = pos1
-                  pos1Prime(3) = WtrDpth*(WtrDpth+pos1(3))/(WtrDpth+m%WaveElev(j))-WtrDpth
-                  
-                  ! Obtain the wave-field variables by interpolation with the mapped position.
-                  call SeaSt_Interp_Setup( Time, pos1Prime, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  m%FV(:,j)  = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  m%FA(:,j) = SeaSt_Interp_4D_Vec( p%WaveAcc, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  m%FDynP(j)  = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              
-              END IF
-          
-              m%vrel(:,j) = m%FV(:,j) - u%Mesh%TranslationVel(:,j)
-        
-          ELSE ! Node is out of water - zero-out all wave dynamics
-          
-              m%nodeInWater(j) = 0_IntKi  
-              m%FV(:,j)  = 0.0
-              m%FA(:,j)  = 0.0
-              m%FDynP(j) = 0.0
-              m%vrel(:,j) = 0.0 
-          
-          END IF ! If node is in or out of water
-      
-      END IF ! If wave stretching is on or off
-
-   END DO ! j = 1, p%NNodes
-   
-   ! Scaled fluid acceleration for the MacCamy-Fuchs model
-   IF ( ASSOCIATED(p%WaveAccMCF) ) THEN
-      DO im = 1,p%NMembers
-         IF ( p%Members(im)%PropMCF .AND. ( .NOT. p%Members(im)%PropPot ) ) THEN
-            DO i = 1,p%Members(im)%NElements+1
-               j = p%Members(im)%NodeIndx(i)
-               
-               IF (p%WaveDisp == 0 ) THEN
-                  ! use the initial X,Y location
-                  pos1(1) = u%Mesh%Position(1,j)
-                  pos1(2) = u%Mesh%Position(2,j)
-               ELSE
-                  ! Use current X,Y location
-                  pos1(1) = u%Mesh%TranslationDisp(1,j) + u%Mesh%Position(1,j)
-                  pos1(2) = u%Mesh%TranslationDisp(2,j) + u%Mesh%Position(2,j)
-               END IF
-      
-               IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Wave stretching enabled
-                  pos1(3) = u%Mesh%Position(3,j) + u%Mesh%TranslationDisp(3,j) - p%MSL2SWL  ! Use the current Z location.
-               ELSE ! Wave stretching disabled
-                  pos1(3) = u%Mesh%Position(3,j) - p%MSL2SWL  ! We are intentionally using the undisplaced Z position of the node.
-               END IF
-            
-               ! Compute the free surface elevation at the x/y position of all nodes
-               positionXY = (/pos1(1),pos1(2)/)
-               
-               IF (p%WaveStMod == 0) THEN ! No wave stretching
-    
-                  IF ( pos1(3) <= 0.0_ReKi) THEN ! Node is at or below the SWL
-                     ! Use location to obtain interpolated values of kinematics         
-                     call SeaSt_Interp_Setup( Time, pos1, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                     m%FAMCF(:,j) = SeaSt_Interp_4D_Vec( p%WaveAccMCF, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  ELSE ! Node is above the SWL
-                     m%FAMCF(:,j)  = 0.0
-                  END IF
-      
-               ELSE ! Wave stretching enabled
-      
-                  IF ( pos1(3) <= m%WaveElev(j)) THEN ! Node is submerged
-      
-                     IF (p%WaveStMod <3) THEN ! Vertical or extrapolated wave stretching
-
-                        IF ( pos1(3) <= 0.0_SiKi) THEN ! Node is below the SWL - evaluate wave dynamics as usual
-                           ! Use location to obtain interpolated values of kinematics         
-                           call SeaSt_Interp_Setup( Time, pos1, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                              call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                           m%FAMCF(:,j) = SeaSt_Interp_4D_Vec( p%WaveAccMCF, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                              call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                        ELSE ! Node is above SWL - need wave stretching
-                           
-                           
-                           ! Vertical wave stretching
-                           m%FAMCF(:,j)  = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveAccMCF0, p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-                              call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                           
-                           ! Extrapoled wave stretching
-                           IF (p%WaveStMod == 2) THEN 
-                              m%FAMCF(:,j)  = m%FAMCF(:,j)  + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveAccMCF0,  p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos1(3)
-                                 call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                           END IF
-          
-                        END IF ! Node is submerged
- 
-                     ELSE ! Wheeler stretching - no need to check whether the node is above or below SWL
-                  
-                        ! Map the node z-position linearly from [-WtrDpth,m%WaveElev(j)] to [-WtrDpth,0] 
-                        pos1Prime = pos1
-                        pos1Prime(3) = WtrDpth*(WtrDpth+pos1(3))/(WtrDpth+m%WaveElev(j))-WtrDpth
-                  
-                        ! Obtain the wave-field variables by interpolation with the mapped position.
-                        call SeaSt_Interp_Setup( Time, pos1Prime, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                        m%FAMCF(:,j) = SeaSt_Interp_4D_Vec( p%WaveAccMCF, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                           call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              
-                    END IF
-        
-                  ELSE ! Node is out of water - zero-out all wave dynamics
-          
-                     m%FAMCF(:,j)  = 0.0
-          
-                  END IF ! If node is in or out of water
-      
-               END IF ! If wave stretching is on or off
-
-            END DO
-         END IF
-      END DO
-   END IF
+      m%vrel(:,j)  = ( m%FV(:,j) - u%Mesh%TranslationVel(:,j) ) * m%nodeInWater(j)
+   END DO
 
    ! ==============================================================================================
    ! Calculate instantaneous loads on each member except for the hydrodynamic loads on member ends.
@@ -2939,12 +2651,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          DO i = max(mem%i_floor,1), N    ! loop through member elements that are not completely buried in the seabed
          
             ! calculate instantaneous incline angle and heading, and related trig values
-            ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
-
-            pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i)) 
-            pos1(3) = pos1(3) - p%MSL2SWL
-            pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1)) 
-            pos2(3) = pos2(3) - p%MSL2SWL
+            ! the first and last NodeIndx values point to the corresponding Joint nodes indices which are at the start of the Mesh
+            pos1    = m%DispNodePosHst(:, mem%NodeIndx(i  ))
+            pos2    = m%DispNodePosHst(:, mem%NodeIndx(i+1))
 
             call GetOrientationAngles( pos1, pos2, phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat, errStat2, errMsg2 )
               call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3073,12 +2782,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       DO i = max(mem%i_floor,1), N    ! loop through member elements that are not completely buried in the seabed
          
          ! calculate instantaneous incline angle and heading, and related trig values
-         ! the first and last NodeIndx values point to the corresponding Joint nodes idices which are at the start of the Mesh
-
-         pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i)) 
-         pos1(3) = pos1(3) - p%MSL2SWL
-         pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1)) 
-         pos2(3) = pos2(3) - p%MSL2SWL
+         ! the first and last NodeIndx values point to the corresponding Joint nodes indices which are at the start of the Mesh
+         pos1 = m%DispNodePosHst(:,mem%NodeIndx(i  ))
+         pos2 = m%DispNodePosHst(:,mem%NodeIndx(i+1))
 
          call GetOrientationAngles( pos1, pos2, phi, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta, k_hat, errStat2, errMsg2 )
            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3200,16 +2906,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         DO i = mem%i_floor+1,N ! loop through member nodes starting from the first node above seabed, but skip the last node which should not be submerged anyways
            
            ! Get positions of node i and i+1
-           IF (p%WaveDisp /= 0) THEN ! Use current position
-              pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i))   + u%Mesh%Position(:, mem%NodeIndx(i))  
-              pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(i+1)) + u%Mesh%Position(:, mem%NodeIndx(i+1))
-           ELSE ! Use initial position
-              pos1    = u%Mesh%Position(:, mem%NodeIndx(i))  
-              pos2    = u%Mesh%Position(:, mem%NodeIndx(i+1))
-           END if
-           ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
-           pos1(3) = pos1(3) - p%MSL2SWL
-           pos2(3) = pos2(3) - p%MSL2SWL 
+           pos1 = m%DispNodePosHdn(:,mem%NodeIndx(i  ))
+           pos2 = m%DispNodePosHdn(:,mem%NodeIndx(i+1))
            
            ! Free surface elevation above or below node i and i+1
            Zeta1 = m%WaveElev(mem%NodeIndx(i))
@@ -3319,89 +3017,14 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
         !----------------------------------------------------------------------------------------------------!
         ! Compute the distributed loads at the point of intersection between the member and the free surface !
         !----------------------------------------------------------------------------------------------------!   
-        ! Get wave dynamics at the free surface intersection
-        IF (p%WaveStMod <3) THEN ! Vertical or extrapolated stretching
-           
-           IF ( FSInt(3) <= 0.0_ReKi) THEN ! Intersection is below SWL - evaluate wave dynamics as usual
-              
-              ! Use location to obtain interpolated values of kinematics
-              CALL SeaSt_Interp_Setup( Time, FSInt, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              FVFSInt = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              FAFSInt = SeaSt_Interp_4D_Vec( p%WaveAcc, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              FDynPFSInt = SeaSt_Interp_4D    ( p%WaveDynP, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           
-           ELSE ! Intersection is above SWL - need wave stretching
-              
-              ! Vertical wave stretching
-              FVFSInt    = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveVel0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              FAFSInt    = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAcc0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              FDynPFSInt = SeaSt_Interp_3D    ( Time, FSInt(1:2), p%WaveDynP0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              
-              ! Extrapolated wave stretching
-              IF (p%WaveStMod == 2) THEN 
-                FVFSInt    = FVFSInt    + SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveVel0,  p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * FSInt(3)
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                FAFSInt    = FAFSInt    + SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveAcc0,  p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * FSInt(3)
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                FDynPFSInt = FDynPFSInt + SeaSt_Interp_3D    ( Time, FSInt(1:2), p%PWaveDynP0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * FSInt(3)
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              END IF
-              
-           END IF
-           
-        ELSE ! Wheeler stretching
-           
-           ! Points on the free surface is always mapped back to z=0 of the unstretched wave field
-           ! Can evaluate the wave-field variables in the same way as vertical stretching
-           FVFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveVel0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           FAFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAcc0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           FDynPFSInt = SeaSt_Interp_3D( Time, FSInt(1:2), p%WaveDynP0, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           
-        END IF
-
-
+        ! Get wave kinematics at the free-surface intersection. Set forceNodeInWater=.TRUE. to guarantee the free-surface intersection is in water.
+        CALL WaveField_GetNodeWaveKin( p%WaveField, Time, FSInt, .TRUE., nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat2, ErrMsg2 )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+        FDynPFSInt = REAL(FDynP,ReKi)
+        FVFSInt    = REAL(FV,   ReKi)
+        FAFSInt    = REAL(FA,   ReKi)
         IF ( mem%PropMCF .AND. ( .NOT. mem%PropPot ) ) THEN
-           IF (p%WaveStMod <3) THEN ! Vertical or extrapolated stretching
-           
-              IF ( FSInt(3) <= 0.0_ReKi) THEN ! Intersection is below SWL - evaluate wave dynamics as usual
-              
-              ! Use location to obtain interpolated values of kinematics
-              CALL SeaSt_Interp_Setup( Time, FSInt, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              FAMCFFSInt = SeaSt_Interp_4D_Vec( p%WaveAccMCF, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-              ELSE ! Intersection is above SWL - need wave stretching
-              
-                 ! Vertical wave stretching
-                 FAMCFFSInt    = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAccMCF0, p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-                 ! Extrapolated wave stretching
-                 IF (p%WaveStMod == 2) THEN 
-                    FAMCFFSInt    = FAMCFFSInt    + SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%PWaveAccMCF0,  p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * FSInt(3)
-                      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                 END IF
-              
-              END IF
-           
-           ELSE ! Wheeler stretching
-           
-              ! Points on the free surface is always mapped back to z=0 of the unstretched wave field
-              ! Can evaluate the wave-field variables in the same way as vertical stretching
-              FAMCFFSInt = SeaSt_Interp_3D_vec( Time, FSInt(1:2), p%WaveAccMCF0, p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           END IF
+           FAMCFFSInt = REAL(FAMCF,ReKi)
         END IF
 
         ! Viscous drag:
@@ -3539,15 +3162,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       ELSE IF ( MemSubStat .NE. 3_IntKi) THEN ! Skip members with centerline completely out of water
         !----------------------------No load smoothing----------------------------!
         DO i = mem%i_floor+1,N+1    ! loop through member nodes starting from the first node above seabed
-           ! We need to subtract the MSL2SWL offset to place this in the SWL reference system
-           ! Using the initial z-position to be consistent with the evaluation of wave kinematics
-           IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN
-              ! Use current z-position
-              z1 = u%Mesh%Position(3, mem%NodeIndx(i)) + u%Mesh%TranslationDisp(3, mem%NodeIndx(i)) - p%MSL2SWL
-           ELSE
-              ! Use initial z-position
-              z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL 
-           END IF         
+           z1 = m%DispNodePosHdn(3, mem%NodeIndx(i))
            !---------------------------------------------Compute deltal and h_c------------------------------------------!
            ! Cannot make any assumption about WaveStMod and member orientation 
            IF ( m%NodeInWater(mem%NodeIndx(i)) .EQ. 0_IntKi ) THEN ! Node is out of water
@@ -3565,11 +3180,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                  IF ( m%NodeInWater(mem%NodeIndx(i-1)) .EQ. 1_IntKi ) THEN ! Node to the left is submerged
                     deltalLeft = 0.5_ReKi * mem%dl
                  ELSE ! Element i-1 crosses the free surface
-                    IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Use current z-position
-                       z2 = u%Mesh%Position(3, mem%NodeIndx(i-1)) + u%Mesh%TranslationDisp(3, mem%NodeIndx(i-1)) - p%MSL2SWL
-                    ELSE ! Use initial z-position
-                       z2 = u%Mesh%Position(3, mem%NodeIndx(i-1)) - p%MSL2SWL 
-                    END IF
+                    z2 = m%DispNodePosHdn(3, mem%NodeIndx(i-1))
                     IF ( p%WaveStMod > 0_IntKi ) THEN ! Wave stretching enabled
                        zeta1 = m%WaveElev(mem%NodeIndx(i  ))
                        zeta2 = m%WaveElev(mem%NodeIndx(i-1))
@@ -3588,11 +3199,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                  IF ( m%NodeInWater(mem%NodeIndx(i+1)) .EQ. 1_IntKi ) THEN ! Node to the right is submerged
                     deltalRight = 0.5_ReKi * mem%dl
                  ELSE ! Element i crosses the free surface
-                    IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Use current z-position
-                       z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) + u%Mesh%TranslationDisp(3, mem%NodeIndx(i+1)) - p%MSL2SWL
-                    ELSE ! Use initial z-position
-                       z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL 
-                    END IF
+                    z2 = m%DispNodePosHdn(3, mem%NodeIndx(i+1))
                     IF ( p%WaveStMod > 0_IntKi ) THEN ! Wave stretching enabled
                        zeta1 = m%WaveElev(mem%NodeIndx(i  ))
                        zeta2 = m%WaveElev(mem%NodeIndx(i+1))
@@ -3694,12 +3301,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       !-----------------------------------------------------------------------------------------------------!
       ! reassign convenience variables to correspond to member ends
       ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
-      pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(1)) + u%Mesh%Position(:, mem%NodeIndx(1)) 
-      pos1(3) = pos1(3) - p%MSL2SWL
-      pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(2)) + u%Mesh%Position(:, mem%NodeIndx(2)) 
-      pos2(3) = pos2(3) - p%MSL2SWL
-      z1 = pos1(3)
-      
+      pos1 = m%DispNodePosHst(:,mem%NodeIndx(1))
+      pos2 = m%DispNodePosHst(:,mem%NodeIndx(2))
       call GetOrientationAngles( pos1, pos2, phi1, sinPhi1, cosPhi1, tanPhi, sinBeta1, cosBeta1, k_hat1, errStat2, errMsg2 )
         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if ( N == 1 ) then       ! Only one element in member
@@ -3710,18 +3313,14 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          k_hat2   = k_hat1
       else
          !  We need to subtract the MSL2SWL offset to place this  in the SWL reference system
-         pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N))   + u%Mesh%Position(:, mem%NodeIndx(N))
-         pos1(3) = pos1(3) - p%MSL2SWL
-         pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
-         pos2(3) = pos2(3) - p%MSL2SWL
+         pos1 = m%DispNodePosHst(:, mem%NodeIndx(N  ))
+         pos2 = m%DispNodePosHst(:, mem%NodeIndx(N+1))
          call GetOrientationAngles( pos1, pos2, phi2, sinPhi2, cosPhi2, tanPhi, sinBeta2, cosBeta2, k_hat2, errStat2, errMsg2 )
            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       end if
-      
-      ! We need to subtract the MSL2SWL offset to place this  in the SWL reference system
-      pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
-      pos2(3) = pos2(3) - p%MSL2SWL
-      z2 = pos2(3)
+      ! z-coordinates of the two ends of the member
+      z1 = m%DispNodePosHst(3,mem%NodeIndx(  1))
+      z2 = m%DispNodePosHst(3,mem%NodeIndx(N+1))
       
       !----------------------------------- filled buoyancy loads: starts -----------------------------------!
       !TODO: Do the equations below still work if z1 > z2 ?
@@ -3766,13 +3365,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
       !---------------------------------- external buoyancy loads: starts ----------------------------------!
       if ( (.not. mem%PropPot) .AND. (mem%MHstLMod /= 0) ) then
-
-         ! Get positions of member end nodes
-         pos1    = u%Mesh%TranslationDisp(:, mem%NodeIndx(1  )) + u%Mesh%Position(:, mem%NodeIndx(1  )) 
-         pos1(3) = pos1(3) - p%MSL2SWL
-         r1      = mem%RMGB(1  )
-         pos2    = u%Mesh%TranslationDisp(:, mem%NodeIndx(N+1)) + u%Mesh%Position(:, mem%NodeIndx(N+1))
-         pos2(3) = pos2(3) - p%MSL2SWL
+         ! Get positions and scaled radii of member end nodes
+         pos1 = m%DispNodePosHst(:,mem%NodeIndx(  1))
+         pos2 = m%DispNodePosHst(:,mem%NodeIndx(N+1))
+         r1      = mem%RMGB(  1)
          r2      = mem%RMGB(N+1)
          if (mem%i_floor == 0) then  ! both ends above or at seabed
             ! Compute loads on the end plate of node 1
@@ -3922,10 +3518,28 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    !---------------------------------------------------------------------------------------------------------------!    
    ! Map calculated results into the y%WriteOutput Array
    CALL MrsnOut_MapOutputs(y, p, u, m)
-        
-
 
    CONTAINS
+
+   SUBROUTINE GetDisplacedNodePosition( forceDisplaced, pos )
+      LOGICAL,         INTENT( IN    ) :: forceDisplaced ! Set to true to return the exact displaced position no matter WaveDisp or WaveStMod
+      REAL(ReKi),      INTENT(   OUT ) :: pos(:,:) ! Displaced node positions
+
+      ! Undisplaced node position
+      pos      = u%Mesh%Position
+      pos(3,:) = pos(3,:) - p%MSL2SWL ! Z position measured from the SWL
+      IF ( (p%WaveDisp /= 0) .OR. forceDisplaced ) THEN 
+         ! Use displaced X and Y position
+         pos(1,:) = pos(1,:) + u%Mesh%TranslationDisp(1,:)
+         pos(2,:) = pos(2,:) + u%Mesh%TranslationDisp(2,:)
+         IF ( (p%WaveStMod > 0) .OR. forceDisplaced ) THEN
+            ! Use displaced Z position only when wave stretching is enabled
+            pos(3,:) = pos(3,:) + u%Mesh%TranslationDisp(3,:)
+         END IF
+      END IF
+
+   END SUBROUTINE GetDisplacedNodePosition
+
    SUBROUTINE GetTotalWaveElev( Time, pos, Zeta, ErrStat, ErrMsg )
       REAL(DbKi),      INTENT( IN    ) :: Time
       REAL(ReKi),      INTENT( IN    ) :: pos(*)  ! Position at which free-surface elevation is to be calculated. Third entry ignored if present.
@@ -3937,13 +3551,10 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       CHARACTER(ErrMsgLen)             :: errMsg2
       ErrStat   = ErrID_None
       ErrMsg    = ""
-      Zeta = SeaSt_Interp_3D( Time, pos(1:2), p%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+
+      Zeta = WaveField_GetNodeTotalWaveElev( p%WaveField, Time, pos, ErrStat2, ErrMsg2 )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (associated(p%WaveElev2)) THEN
-         Zeta = Zeta + SeaSt_Interp_3D( Time, pos(1:2), p%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      END IF
-      
+
    END SUBROUTINE GetTotalWaveElev
 
    SUBROUTINE GetFreeSurfaceNormal( Time, pos, r, n, ErrStat, ErrMsg)
@@ -3953,29 +3564,14 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       REAL(ReKi),      INTENT(   OUT ) :: n(3)    ! Free-surface normal vector
       INTEGER(IntKi),  INTENT(   OUT ) :: ErrStat ! Error status of the operation
       CHARACTER(*),    INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
-      REAL(ReKi)                       :: r1,ZetaP,ZetaM,dZetadx,dZetady
       CHARACTER(*),    PARAMETER       :: RoutineName = 'GetFreeSurfaceNormal'
       INTEGER(IntKi)                   :: errStat2
       CHARACTER(ErrMsgLen)             :: errMsg2
       ErrStat   = ErrID_None
       ErrMsg    = ""
 
-      r1 = MAX(r,1.0e-6) ! In case r is zero
-
-      CALL GetTotalWaveElev( Time, (/pos(1)+r1,pos(2)/), ZetaP, ErrStat2, ErrMsg2 )
+      CALL WaveField_GetNodeWaveNormal( p%WaveField, Time, pos, r, n, ErrStat2, ErrMsg2 )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL GetTotalWaveElev( Time, (/pos(1)-r1,pos(2)/), ZetaM, ErrStat2, ErrMsg2 )
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      dZetadx = (ZetaP-ZetaM)/(2.0_ReKi*r1)
-      
-      CALL GetTotalWaveElev( Time, (/pos(1),pos(2)+r1/), ZetaP, ErrStat2, ErrMsg2 )
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL GetTotalWaveElev( Time, (/pos(1),pos(2)-r1/), ZetaM, ErrStat2, ErrMsg2 )
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      dZetady = (ZetaP-ZetaM)/(2.0_ReKi*r1)
-      
-      n = (/-dZetadx,-dZetady,1.0_ReKi/)
-      n = n / SQRT(Dot_Product(n,n))
 
    END SUBROUTINE GetFreeSurfaceNormal
 
@@ -4558,10 +4154,10 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
    INTEGER(IntKi),                    INTENT(  OUT)  :: errStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
    INTEGER(IntKi)                                    :: J
+   INTEGER(IntKi)                                    :: nodeInWater
    REAL(ReKi)                                        :: WtrDpth
-   REAL(ReKi)                                        :: pos(3), posPrime(3), positionXY(2)
-   REAL(SiKi)                                        :: WaveElev, WaveElev1, WaveElev2
-   REAL(ReKi)                                        :: vrel(3), FV(3), vmag, vmagf
+   REAL(ReKi)                                        :: pos(3), vrel(3), FV(3), vmag, vmagf
+   REAL(SiKi)                                        :: FVTmp(3)
    INTEGER(IntKi)                                    :: errStat2
    CHARACTER(ErrMsgLen)                              :: errMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'Morison_UpdateDiscState'
@@ -4574,86 +4170,39 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
    WtrDpth = p%WtrDpth + p%MSL2SWL
 
    ! Update state of the relative normal velocity high-pass filter at each joint
-   DO j = 1, p%NJoints 
+   DO J = 1, p%NJoints
+
       ! Get joint position
       IF (p%WaveDisp == 0 ) THEN
          ! use the initial X,Y location
-         pos(1) = u%Mesh%Position(1,j)
-         pos(2) = u%Mesh%Position(2,j)
+         pos(1) = u%Mesh%Position(1,J)
+         pos(2) = u%Mesh%Position(2,J)
       ELSE
          ! Use current X,Y location
-         pos(1) = u%Mesh%TranslationDisp(1,j) + u%Mesh%Position(1,j)
-         pos(2) = u%Mesh%TranslationDisp(2,j) + u%Mesh%Position(2,j)
+         pos(1) = u%Mesh%TranslationDisp(1,J) + u%Mesh%Position(1,J)
+         pos(2) = u%Mesh%TranslationDisp(2,J) + u%Mesh%Position(2,J)
       END IF
       IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Wave stretching enabled
-        pos(3) = u%Mesh%Position(3,j) + u%Mesh%TranslationDisp(3,j) - p%MSL2SWL  ! Use the current Z location.
+         pos(3) = u%Mesh%Position(3,J) + u%Mesh%TranslationDisp(3,J) - p%MSL2SWL  ! Use the current Z location.
       ELSE ! Wave stretching disabled
-        pos(3) = u%Mesh%Position(3,j) - p%MSL2SWL  ! We are intentionally using the undisplaced Z position of the node.
-      END IF      
-      ! Compute the free surface elevation at the x/y position of the joint
-      positionXY = (/pos(1),pos(2)/)      
-      WaveElev1 = SeaSt_Interp_3D( Time, positionXY, p%WaveElev1, p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (associated(p%WaveElev2)) THEN
-        WaveElev2 = SeaSt_Interp_3D( Time, positionXY, p%WaveElev2, p%seast_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-        WaveElev  = WaveElev1 + WaveElev2
-      ELSE
-        WaveElev  = WaveElev1 
+         pos(3) = u%Mesh%Position(3,J) - p%MSL2SWL  ! We are intentionally using the undisplaced Z position of the node.
       END IF
-      ! Compute fluid and relative velocity at the joint
-      IF (p%WaveStMod == 0) THEN ! No wave stretching
-          IF ( pos(3) <= 0.0_ReKi) THEN ! Node is at or below the SWL
-              ! Use location to obtain interpolated values of kinematics         
-              call SeaSt_Interp_Setup( Time, pos, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              FV   = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              vrel = FV - u%Mesh%TranslationVel(:,j)
-          ELSE ! Node is above the SWL
-              vrel = 0.0_ReKi
-          END IF
-      ELSE ! Wave stretching enabled
-          IF ( pos(3) <= WaveElev ) THEN ! Node is submerged
-              IF ( p%WaveStMod < 3 ) THEN ! Vertical or extrapolated wave stretching
-                  IF ( pos(3) <= 0.0_ReKi) THEN ! Node is below the SWL - evaluate wave dynamics as usual
-                      ! Use location to obtain interpolated values of kinematics         
-                      call SeaSt_Interp_Setup( Time, pos, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                      FV = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  ELSE ! Node is above SWL - need wave stretching
-                      ! Vertical wave stretching
-                      FV = SeaSt_Interp_3D_vec( Time, positionXY, p%WaveVel0, p%seast_interp_p,  m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
-                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                      ! Extrapoled wave stretching
-                      IF (p%WaveStMod == 2) THEN 
-                        FV = FV + SeaSt_Interp_3D_vec( Time, positionXY, p%PWaveVel0,  p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 ) * pos(3)
-                          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                      END IF
-                  END IF ! Node is submerged
-              ELSE ! Wheeler stretching - no need to check whether the node is above or below SWL
-                  ! Map the node z-position linearly from [-WtrDpth,WaveElev] to [-WtrDpth,0] 
-                  posPrime = pos
-                  posPrime(3) = WtrDpth*(WtrDpth+pos(3))/(WtrDpth+WaveElev)-WtrDpth
-                  ! Obtain the wave-field variables by interpolation with the mapped position.
-                  call SeaSt_Interp_Setup( Time, posPrime, p%seast_interp_p, m%seast_interp_m, ErrStat2, ErrMsg2 ) 
-                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  FV = SeaSt_Interp_4D_Vec( p%WaveVel, m%seast_interp_m, ErrStat2, ErrMsg2 )
-                    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-              END IF
-              vrel = FV - u%Mesh%TranslationVel(:,j)
-          ELSE ! Node is out of water - zero-out all wave dynamics
-              vrel = 0.0_ReKi
-          END IF ! If node is in or out of water
-      END IF ! If wave stretching is on or off
+
+      ! Get fluid velocity at the joint
+      CALL WaveField_GetNodeWaveVel( p%WaveField, Time, pos, .FALSE., nodeInWater, FVTmp, ErrStat2, ErrMsg2 )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      FV   = REAL(FVTmp, ReKi)
+      vrel = ( FV - u%Mesh%TranslationVel(:,J) ) * nodeInWater
+
       ! Compute the dot product of the relative velocity vector with the directional Area of the Joint
       vmag  = vrel(1)*p%An_End(1,J) + vrel(2)*p%An_End(2,J) + vrel(3)*p%An_End(3,J)
       ! High-pass filtering
       vmagf = p%VRelNFiltConst(J) * (vmag + xd%V_rel_n_FiltStat(J))
       ! Update relative normal velocity filter state for joint J 
       xd%V_rel_n_FiltStat(J) = vmagf-vmag
-   END DO ! j = 1, p%NJoints
+
+   END DO ! J = 1, p%NJoints
+
 END SUBROUTINE Morison_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE Morison

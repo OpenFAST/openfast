@@ -172,12 +172,6 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    EchoFileName  = TRIM(p%RootFileName)//".ech"
    SumFileName   = TRIM(p%RootFileName)//".sum"
 
-
-
-
-
-
-
    ! Parse all the InflowWind related input files and populate the *_InitDataType derived types
    CALL GetPath( InitInp%InputFileName, PriPath )
 
@@ -290,8 +284,17 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    ! Set flow field input data based on wind type
    !----------------------------------------------------------------------------
 
+   ! If flowfield is allocated, deallocate and allocate again to clear old data
+   if (associated(p%FlowField)) deallocate(p%FlowField)
+   allocate(p%FlowField)
+
+   ! Associate initialization output to flow field
+   InitOutData%FlowField => p%FlowField
+
+   ! Initialize mean wind speed to a very large number
    InitOutData%WindFileInfo%MWS = HUGE(InitOutData%WindFileInfo%MWS)
 
+   ! Switch based on the wind type specified in the input file
    select case(InputFileData%WindType)
 
    case (Steady_WindNumber)
@@ -488,13 +491,6 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       p%FlowField%VelInterpCubic = .false.
    end if
 
-   ! Set box exceed flag and index
-   p%FlowField%Grid3D%BoxExceedAllowF = InitInp%BoxExceedAllowF
-   p%FlowField%Grid3D%BoxExceedAllowIdx = huge(1_IntKi)
-   if (InitInp%BoxExceedAllowF .and. (InitInp%BoxExceedAllowIdx <= InitInp%NumWindPoints)) then
-      p%FlowField%Grid3D%BoxExceedAllowIdx = InitInp%BoxExceedAllowIdx
-   end if
-
    ! Select based on field type
    select case (p%FlowField%FieldType)
 
@@ -517,8 +513,13 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
          p%FlowField%AccFieldValid = .true.
       end if
 
+      ! If input requested points to exceed box or if lidar is enabled,
+      ! set flag to allow box to be exceeded
+      p%FlowField%Grid3D%BoxExceedAllow = &
+         InitInp%BoxExceedAllow .or. (p%lidar%SensorType /= SensorType_None)
+
       ! Calculate field average if box is allowed to be exceeded
-      if (p%FlowField%Grid3D%BoxExceedAllowF .and. p%FlowField%Grid3D%BoxExceedAllowIdx > 0) then
+      if (p%FlowField%Grid3D%BoxExceedAllow) then
          call IfW_Grid3DField_CalcVelAvgProfile(p%FlowField%Grid3D, p%FlowField%AccFieldValid, TmpErrStat, TmpErrMsg)
          call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
@@ -739,7 +740,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, p, &
    !-----------------------------
    ! Output: OutputData%DiskVel
    !-----------------------------
-   CALL InflowWind_GetSpatialAverage( Time, InputData, p, ContStates, DiscStates, ConstrStates, &
+   CALL InflowWind_GetRotorSpatialAverage( Time, InputData, p, ContStates, DiscStates, ConstrStates, &
                      OtherStates, m, OutputData%DiskVel, TmpErrStat, TmpErrMsg )
       CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
       
@@ -804,12 +805,9 @@ SUBROUTINE InflowWind_End( InputData, p, ContStates, DiscStates, ConstrStateGues
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   ! Reset the wind type so that the initialization routine must be called
-   p%WindType      = Undef_WindNumber
-
    ! Destroy all inflow wind derived types
    CALL InflowWind_DestroyInput( InputData, ErrStat, ErrMsg )         
-   CALL InflowWind_DestroyParam( p, ErrStat, ErrMsg, DeallocatePointers=.true. )         
+   CALL InflowWind_DestroyParam( p, ErrStat, ErrMsg )         
    CALL InflowWind_DestroyContState( ContStates, ErrStat, ErrMsg )         
    CALL InflowWind_DestroyDiscState( DiscStates, ErrStat, ErrMsg )         
    CALL InflowWind_DestroyConstrState( ConstrStateGuess, ErrStat, ErrMsg )         
@@ -1020,8 +1018,8 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
       end if
          
          
-      SELECT CASE ( p%WindType )
-      CASE (Steady_WindNumber, Uniform_WindNumber)
+      SELECT CASE ( p%FlowField%FieldType )
+      CASE (Uniform_FieldType)
 
             ! note that we are including the propagation direction in the analytical derivative calculated
             ! inside IfW_UniformWind_JacobianPInput, so no need to transform input position vectors first
@@ -1046,7 +1044,7 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
          end do
          
          
-         ! see InflowWind_GetSpatialAverage():
+         ! see InflowWind_GetRotorSpatialAverage():
          
          ! location of y%DiskAvg
          i_start = 3*n + 1

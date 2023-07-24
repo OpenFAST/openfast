@@ -220,7 +220,7 @@ CONTAINS
          do beta=1,p%NBlOuts
             j=p%BlOutNd(beta)
 
-            tmp = matmul( m%orientationAnnulus(:,:,j,k), u%InflowOnBlade(:,j,k) )
+            tmp = matmul( m%orientationAnnulus(:,:,j,k), u%Bld(k)%InflowOnBlade(:,j) )
             m%AllOuts( BNVUndx(beta,k) ) = tmp(1)
             m%AllOuts( BNVUndy(beta,k) ) = tmp(2)
             m%AllOuts( BNVUndz(beta,k) ) = tmp(3)
@@ -2405,7 +2405,7 @@ end subroutine r8vm_sl
   implicit none  
   !-input/output variables
   integer(IntKi), intent(in)    :: n  
-  real, intent(in)        :: eps
+  real(ReKi), intent(in)        :: eps
   integer(IntKi)                :: ind (n)  
   real(ReKi)                    :: ra (n)
   !-local variables

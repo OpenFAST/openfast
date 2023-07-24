@@ -30,7 +30,7 @@ MODULE HydroDyn
    use Morison
    USE WAMIT
    USE WAMIT2
-   use SeaState
+   USE SeaState
    USE HydroDyn_Input
    USE HydroDyn_Output
 
@@ -271,7 +271,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       !p%NWaveElev    = InputFileData%Waves%NWaveElev  
       p%NStepWave    = InitInp%NStepWave
       
-      p%WaveTime =>  InitInp%WaveTime
+      p%WaveTime =>  InitInp%WaveField%WaveTime
 
       m%LastIndWave = 1
 
@@ -286,7 +286,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             InputFileData%WAMIT%WtrDpth  = InputFileData%Morison%WtrDpth ! The data in InputFileData%Morison%WtrDpth was directly placed there when we parsed the HydroDyn input file
             p%NBody                  = InputFileData%NBody
             p%NBodyMod               = InputFileData%NBodyMod
-            InputFileData%WAMIT%WaveElev1 => InitInp%WaveElev1
+            InputFileData%WAMIT%WaveElev1 => InitInp%WaveField%WaveElev1
             call AllocAry( m%F_PtfmAdd, 6*InputFileData%NBody, "m%F_PtfmAdd", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             call AllocAry( m%F_Waves  , 6*InputFileData%NBody, "m%F_Waves"  , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             
@@ -363,14 +363,19 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
                ! Init inputs for the SS_Excitation model (set this just in case it will be used)
             InputFileData%WAMIT%WaveDir   =  InitInp%WaveDir
-            CALL MOVE_ALLOC(  InitInp%WaveElev0, InputFileData%WAMIT%WaveElev0 )  
+            ! CALL MOVE_ALLOC(  InitInp%WaveElev0, InputFileData%WAMIT%WaveElev0 )
+            ! CALL MOVE_ALLOC( InitInp%WaveElevC, InputFileData%WAMIT%WaveElevC )
                 ! Temporarily move arrays to init input for WAMIT (save some space)
             
-            InputFileData%WAMIT%WaveTime   => InitInp%WaveTime
-            InputFileData%WAMIT%WaveElevC0 => InitInp%WaveElevC0
-            CALL MOVE_ALLOC( InitInp%WaveElevC, InputFileData%WAMIT%WaveElevC ) 
-            InputFileData%WAMIT%seast_interp_p = InitInp%seast_interp_p
-            InputFileData%WAMIT%WaveDirArr => InitInp%WaveDirArr
+            InputFileData%WAMIT%WaveTime   => InitInp%WaveField%WaveTime
+            InputFileData%WAMIT%WaveElev0  => InitInp%WaveField%WaveElev0
+            InputFileData%WAMIT%WaveElevC  => InitInp%WaveField%WaveElevC
+            InputFileData%WAMIT%WaveElevC0 => InitInp%WaveField%WaveElevC0            
+            InputFileData%WAMIT%WaveDirArr => InitInp%WaveField%WaveDirArr
+            
+            ! InputFileData%WAMIT%seast_interp_p = InitInp%WaveField%seast_interp_p
+            CALL SeaSt_Interp_CopyParam(InitInp%WaveField%seast_interp_p, InputFileData%WAMIT%seast_interp_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+              CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                
             CALL WAMIT_Init(InputFileData%WAMIT, m%u_WAMIT(1), p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1), z%WAMIT, OtherState%WAMIT(1), &
                                     y%WAMIT(1), m%WAMIT(1), Interval, ErrStat2, ErrMsg2 )
@@ -435,8 +440,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
                   ! init input for WAMIT2 pointers to save space
                !InputFileData%WAMIT2%WaveTime   => InitInp%WaveTime     ! This isn't actually used within WAMIT2  GJH 9/30/2021
-               InputFileData%WAMIT2%WaveElevC0 => InitInp%WaveElevC0
-               InputFileData%WAMIT2%WaveDirArr => InitInp%WaveDirArr
+               InputFileData%WAMIT2%WaveElevC0 => InitInp%WaveField%WaveElevC0
+               InputFileData%WAMIT2%WaveDirArr => InitInp%WaveField%WaveDirArr
 
                   ! Copy Waves initialization output into the initialization input type for the WAMIT module
                InputFileData%WAMIT2%RhoXg       = InitInp%RhoXg
@@ -557,12 +562,12 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   RETURN
                END IF
                
-               ! Populate wave arrays
+               ! Populate wave arrays (Need to double chech this part. It doesn't look right!)
             Np = 2*(InitInp%WaveDOmega + 1)
             DO I = 1 , InitInp%NStepWave2
                
-               dftreal        = InitInp%WaveElevC0( 1,ABS(I ) )
-               dftimag        = InitInp%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
+               dftreal        = InitInp%WaveField%WaveElevC0( 1, ABS(I ) )
+               dftimag        = InitInp%WaveField%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
                FITInitData%Wave_amp   (I) = sqrt( dftreal**2 + dftimag**2 )  * 2.0 / Np
                FITInitData%Wave_omega (I) = I*InitInp%WaveDOmega
                FITInitData%Wave_number(I) = I*InitInp%WaveDOmega**2. / InputFileData%Gravity
@@ -581,42 +586,16 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
 
          END IF
    
-
-
-         ! Are there Morison elements?
-       
+      ! Are there Morison elements?
       IF ( InputFileData%Morison%NMembers > 0 ) THEN
-
-         
-                ! Copy SeaState initialization output into the initialization input type for the Morison module
-         
+     
+         ! Copy SeaState initialization output into the initialization input type for the Morison module
          InputFileData%Morison%NStepWave =  InitInp%NStepWave
-         InputFileData%Morison%WaveTime  => InitInp%WaveTime
-         
-         InputFileData%Morison%WaveAcc    => InitInp%WaveAcc         
-         InputFileData%Morison%WaveDynP   => InitInp%WaveDynP        
-         InputFileData%Morison%WaveVel    => InitInp%WaveVel  
-         InputFileData%Morison%PWaveAcc0  => InitInp%PWaveAcc0       
-         InputFileData%Morison%PWaveDynP0 => InitInp%PWaveDynP0        
-         InputFileData%Morison%PWaveVel0  => InitInp%PWaveVel0  
-         InputFileData%Morison%WaveElev1  => InitInp%WaveElev1
-         InputFileData%Morison%WaveElev2  => InitInp%WaveElev2
-         
-         InputFileData%Morison%MCFD          =  InitInp%MCFD
-         InputFileData%Morison%WaveAccMCF    => InitInp%WaveAccMCF
-         InputFileData%Morison%PWaveAccMCF0  => InitInp%PWaveAccMCF0
-         
-         InputFileData%Morison%WaveStMod = InitInp%WaveStMod
-
-               ! If we did some second order wave kinematics corrections to the acceleration, velocity or
-               ! dynamic pressure using the Waves2 module, then we need to add these to the values that we
-               ! will be passing into the Morrison module.
-
-        
-         InputFileData%Morison%seast_interp_p = InitInp%seast_interp_p
-        
-            ! Initialize the Morison Element Calculations 
-      
+         InputFileData%Morison%MCFD      =  InitInp%MCFD
+         InputFileData%Morison%WaveStMod =  InitInp%WaveStMod
+         InputFileData%Morison%WaveField => InitInp%WaveField
+     
+         ! Initialize the Morison Element Calculations      
          CALL Morison_Init(InputFileData%Morison, u%Morison, p%Morison, x%Morison, xd%Morison, z%Morison, OtherState%Morison, &
                                y%Morison, m%Morison, Interval, InitOut%Morison, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -625,7 +604,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             RETURN
          END IF
          
-      END IF  ! ( InputFileData%Morison%NMembers > 0 )
+      END IF  ! Has Morison elements
     
 !===============================================
       p%PotMod = InputFileData%Potmod      
@@ -913,8 +892,8 @@ CONTAINS
       ! NOTE: All of the pointer data originated in SeaState, and SeaState is responsible for deallocating the data
       !        all other modules are responsible for nullifying their versions of the pointers when they are done with the data
 
-      CALL HydroDyn_DestroyInputFile( InputFileData,   ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      CALL NWTC_Library_DestroyFileInfoType(InFileInfo,ErrStat2, ErrMsg2 );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)  
+      CALL HydroDyn_DestroyInputFile( InputFileData,   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      CALL NWTC_Library_DestroyFileInfoType(InFileInfo,ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)  
 
    END SUBROUTINE CleanUp
 !................................
@@ -962,27 +941,27 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
           
 
          ! Destroy the input data: (ignore errors)
-      CALL HydroDyn_DestroyInput( u, ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyInput( u, ErrStat2, ErrMsg2 )
 
 
          ! Destroy the parameter data: (ignore errors)
       ! Need to nullify pointers so that SeaState module data is not deallocated by HD (i.e., use DEALLOCATEpointers=.false. when it points to SeaState data)
       ! on restart, the data is a separate copy of the SeaState module data, hence the PointsToSeaState parameter
-      CALL HydroDyn_DestroyParam( p, ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyParam( p, ErrStat2, ErrMsg2 )
 
 
          ! Destroy the state data: (ignore errors)
          
-      CALL HydroDyn_DestroyContState(   x,           ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
-      CALL HydroDyn_DestroyDiscState(   xd,          ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
-      CALL HydroDyn_DestroyConstrState( z,           ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
-      CALL HydroDyn_DestroyOtherState(  OtherState,  ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyContState(   x,           ErrStat2, ErrMsg2 )
+      CALL HydroDyn_DestroyDiscState(   xd,          ErrStat2, ErrMsg2 )
+      CALL HydroDyn_DestroyConstrState( z,           ErrStat2, ErrMsg2 )
+      CALL HydroDyn_DestroyOtherState(  OtherState,  ErrStat2, ErrMsg2 )
 
          ! Destroy misc variables: (ignore errors)
-      CALL HydroDyn_DestroyMisc( m, ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyMisc( m, ErrStat2, ErrMsg2 )
 
          ! Destroy the output data: (ignore errors)
-      CALL HydroDyn_DestroyOutput( y, ErrStat2, ErrMsg2, DEALLOCATEpointers=.not. p%PointsToSeaState )
+      CALL HydroDyn_DestroyOutput( y, ErrStat2, ErrMsg2 )
       
 
 END SUBROUTINE HydroDyn_End

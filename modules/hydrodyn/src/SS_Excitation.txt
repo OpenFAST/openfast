@@ -22,7 +22,7 @@ typedef ^                      ^                   IntKi                        
 typedef ^                      ^                   ReKi                         WaveDir          -  - -   "Wave direction" rad
 typedef ^                      ^                   INTEGER                      NStepWave        -  - -   "Number of timesteps in the WaveTime array" -
 typedef ^                      ^                   R8Ki                         PtfmRefztRot    {:} - -   "The rotation about zt of the body reference frame(s) from xt/yt" radians 
-typedef ^                      ^                   SiKi                         WaveElev0       {:} - -   "Wave elevation time history at origin" m
+typedef ^                      ^                   SiKi                         WaveElev0       {*} - -   "Wave elevation time history at origin" m
 typedef ^                      ^                   SiKi                         WaveElev1 {*}{*}{*} - -   "First order wave elevation (points to SeaState module data)"        -
 typedef ^                      ^                   SiKi                         WaveTime        {*} - -   "Times where wave elevation is known (points to SeaState module data)" s
 typedef ^                      ^            SeaSt_Interp_ParameterType       SeaSt_Interp_p     -  - -   "parameter information from the SeaState Interpolation module"   -
@@ -63,7 +63,7 @@ typedef ^                      ^                   ReKi                         
 typedef ^                      ^                   ReKi                         C               {:}{:} - -   "C matrix" -
 typedef ^                      ^                   INTEGER                      numStates        -     0 -   "Number of states" -
 typedef ^                      ^                   DbKi                         Tc               -     - -   "Time shift" s
-typedef ^                      ^                   SiKi                         WaveElev0       {:}    - -   "Wave elevation time history at origin" m
+typedef ^                      ^                   SiKi                         WaveElev0       {*}    - -   "Wave elevation time history at origin" m
 typedef ^                      ^                   SiKi                         WaveElev1 {*}{*}{*}    - -   "First order wave elevation (points to SeaState module data)"        -
 typedef ^                      ^                   SiKi                         WaveTime        {*}    - -   "Times where wave elevation is known (points to SeaState module data)" s
 typedef     ^                 ^                 SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -

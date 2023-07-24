@@ -425,27 +425,8 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C,                                      
    HD%InitInp%WaveMultiDir   =  SeaSt%InitOutData%WaveMultiDir
    HD%InitInp%WaveDOmega     =  SeaSt%InitOutData%WaveDOmega  
    HD%InitInp%MCFD           =  SeaSt%InitOutData%MCFD
-   
-   CALL MOVE_ALLOC(  SeaSt%InitOutData%WaveElev0,  HD%InitInp%WaveElev0 )  
-   if(associated(SeaSt%InitOutData%WaveTime  ))    HD%InitInp%WaveTime       => SeaSt%InitOutData%WaveTime  
-   if(associated(SeaSt%InitOutData%WaveDynP  ))    HD%InitInp%WaveDynP       => SeaSt%InitOutData%WaveDynP  
-   if(associated(SeaSt%InitOutData%WaveAcc   ))    HD%InitInp%WaveAcc        => SeaSt%InitOutData%WaveAcc   
-   if(associated(SeaSt%InitOutData%WaveVel   ))    HD%InitInp%WaveVel        => SeaSt%InitOutData%WaveVel 
-   if(associated(SeaSt%InitOutData%PWaveDynP0))    HD%InitInp%PWaveDynP0     => SeaSt%InitOutData%PWaveDynP0  
-   if(associated(SeaSt%InitOutData%PWaveAcc0 ))    HD%InitInp%PWaveAcc0      => SeaSt%InitOutData%PWaveAcc0   
-   if(associated(SeaSt%InitOutData%PWaveVel0 ))    HD%InitInp%PWaveVel0      => SeaSt%InitOutData%PWaveVel0   
-   if(associated(SeaSt%InitOutData%WaveElevC0))    HD%InitInp%WaveElevC0     => SeaSt%InitOutData%WaveElevC0
-   CALL MOVE_ALLOC( SeaSt%InitOutData%WaveElevC,   HD%InitInp%WaveElevC )
-   if(associated(SeaSt%InitOutData%WaveDirArr))    HD%InitInp%WaveDirArr     => SeaSt%InitOutData%WaveDirArr
-   if(associated(SeaSt%InitOutData%WaveElev1 ))    HD%InitInp%WaveElev1      => SeaSt%InitOutData%WaveElev1
-   if(associated(SeaSt%InitOutData%WaveElev2 ))    HD%InitInp%WaveElev2      => SeaSt%InitOutData%WaveElev2
-   
-   HD%InitInp%WaveAccMCF     => SeaSt%InitOutData%WaveAccMCF
-   HD%InitInp%PWaveAccMCF0   => SeaSt%InitOutData%PWaveAccMCF0
-   
-   call SeaSt_Interp_CopyParam(SeaSt%InitOutData%SeaSt_Interp_p, HD%InitInp%SeaSt_Interp_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
- 
+
+   if(associated(SeaSt%InitOutData%WaveField ))    HD%InitInp%WaveField      => SeaSt%InitOutData%WaveField
 
    ! Platform reference position
    !     The HD model uses this for building the moddel.  This is only specified as an (X,Y)

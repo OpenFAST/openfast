@@ -18,6 +18,7 @@ usefrom   Current.txt
 usefrom   Waves.txt
 usefrom   Waves2.txt
 usefrom   SeaState_Interp.txt
+usefrom   SeaSt_WaveField.txt
 #
 #
 typedef   SeaState/SeaSt     SeaSt_InputFile        LOGICAL                  EchoFlag          -       -      -  "Echo the input file"   
@@ -74,8 +75,8 @@ typedef   ^                  ^                      ProgDesc                 Ver
 typedef   ^                  ^                      ReKi                     WtrDens           -       -      -  "Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default)"    (kg/m^3)
 typedef   ^                  ^                      ReKi                     WtrDpth           -       -      -  "Water depth, this is necessary to inform glue-code what the module is using for WtrDpth (may not be the glue-code's default)"    (m)
 typedef   ^                  ^                      ReKi                     MSL2SWL           -       -      -  "Offset between still-water level and mean sea level, this is necessary to inform glue-code what the module is using for MSL2SWL (may not be the glue-code's default)"    (m)
-typedef   ^                  ^    SiKi                 WaveElevC0        {*}{*}   -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part"   (meters)
-typedef   ^                  ^    SiKi                 WaveElevC         {:}{:}{:}   -        -     "Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part"   (meters)
+typedef   ^                  ^                      SiKi                     WaveElevC0        {*}{*}   -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part"   (meters)
+typedef   ^                  ^                      SiKi                     WaveElevC         {*}{*}{*}   -        -     "Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part"   (meters)
 typedef   ^                  ^                 SiKi                 WaveDirArr        {*}      -        -        "Wave direction array.  Each frequency has a unique direction of WaveNDir > 1" (degrees)
 typedef   ^                  ^                 SiKi                 WaveDirMin        -        -        -        "Minimum wave direction."  (degrees)
 typedef   ^                  ^                 SiKi                 WaveDirMax        -        -        -        "Maximum wave direction."  (degrees)
@@ -92,7 +93,7 @@ typedef   ^                  ^                 SiKi                 PWaveAccMCF0
 typedef   ^                  ^                 SiKi                 PWaveVel0         {*}{*}{*}{*} -       -        "Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.)" (m/s)
 typedef   ^                  ^                      SiKi                     WaveElev1         {*}{*}{*}  -      -  "First order wave elevation"        -
 typedef   ^                  ^                      SiKi                     WaveElev2         {*}{*}{*}  -      -  "Second order wave elevation"        -
-typedef   ^                  ^                 SiKi                 WaveElev0         {:}      -        -        "Instantaneous elevation time-series of incident waves at the platform reference point" (meters)
+typedef   ^                  ^                 SiKi                 WaveElev0         {*}      -        -        "Instantaneous elevation time-series of incident waves at the platform reference point" (meters)
 typedef     ^                 ^                 SiKi                 WaveTime          {*}      -        -        "Simulation times at which the instantaneous elevation of, velocity of, acceleration of, and loads associated with the incident waves are determined" (sec)
 typedef     ^                 ^                 SiKi                 RhoXg             -        -        -        "= WtrDens*Gravity" -
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
@@ -110,6 +111,7 @@ typedef     ^                 ^                 LOGICAL              InvalidWith
 typedef   ^                  ^      SeaSt_Interp_ParameterType       SeaSt_Interp_p     -       -        -        "parameter information from the SeaState Interpolation module"   -
 typedef   ^                  ^                  SiKi                 MCFD               -       -        -        "Diameter of MacCamy-Fuchs member" (meters)
 typedef   ^                  ^                  SiKi                 WaveElevSeries     {:}{:}  -        -        "Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second dimension is XY point number corresponding to second dimension of WaveElevXY." (m)
+typedef   ^                  ^             SeaSt_WaveFieldType      *WaveField          -       -        -        "Pointer to wave field"
 #                            
 #                            
 # ..... States ....................................................................................................................
@@ -149,9 +151,6 @@ typedef   ^                  ^                      ReKi                     del
 typedef   ^                  ^                      ReKi                     X_HalfWidth       -       -      -  "Half-width of the domain in the X direction" m
 typedef   ^                  ^                      ReKi                     Y_HalfWidth       -       -      -  "Half-width of the domain in the Y direction" m
 typedef   ^                  ^                      ReKi                     Z_Depth           -       -      -  "Depth of the domain the Z direction" m
-#typedef   ^                  ^                      ReKi                     gridDX            -       -      -  "distance between kinematics grid points along the xi direction"  m
-#typedef   ^                  ^                      ReKi                     gridDY            -       -      -  "distance between kinematics grid points along the yi direction"  m
-#typedef   ^                  ^                      ReKi                     gridDTheta        -       -      -  "delta angle used for cosine-spaced zi direction kinematic grid points"  rad
 typedef   ^                  ^                      INTEGER                  NStepWave         -       -      -  "Number of user-requested data points in the wave kinematics arrays"        -
 typedef   ^                  ^                      INTEGER                  NWaveElev         -       -      -  "Number of wave elevation outputs"        -
 typedef   ^                  ^                      SiKi                     WaveElevxi        {:}     -      -  "xi-coordinates for points where the incident wave elevations can be output"  (meters)
@@ -187,6 +186,7 @@ typedef   ^                  ^                      CHARACTER(1)             Del
 typedef   ^                  ^                      INTEGER                  UnOutFile         -       -      -  "File unit for the SeaState outputs"        -
 typedef   ^                  ^                      INTEGER                  OutDec            -       -      -  "Write every OutDec time steps"  -
 typedef   ^                  ^                      SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
+typedef   ^                  ^                      SeaSt_WaveFieldType     &WaveField         -       -      -  "Wave field"
 #
 #
 # ..... Inputs ....................................................................................................................

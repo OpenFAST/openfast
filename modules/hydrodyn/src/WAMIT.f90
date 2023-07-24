@@ -927,9 +927,8 @@ end if
                SS_Exctn_InitInp%ExctnDisp    = InitInp%ExctnDisp
                
                   ! No other modules need this WaveElev0 array so we will simply move the allocation over to the SS_Exctn module
-               IF (ALLOCATED(InitInp%WaveElev0)) CALL MOVE_ALLOC(InitInp%WaveElev0, SS_Exctn_InitInp%WaveElev0) 
-               !SS_Exctn_InitInp%WaveElev0 => InitInp%WaveElev0
-               SS_Exctn_InitInp%WaveElev1 => InitInp%WaveElev1
+               IF (ASSOCIATED(InitInp%WaveElev0)) SS_Exctn_InitInp%WaveElev0 => InitInp%WaveElev0
+               IF (ASSOCIATED(InitInp%WaveElev1)) SS_Exctn_InitInp%WaveElev1 => InitInp%WaveElev1
 !TODO: Verify what happens within SS_Exctn when we have no waves. 
                
                   ! We need the WaveTime array to stay intact for use in other modules, so we will make a copy instead of moving the allocation
@@ -1235,11 +1234,11 @@ end if
                ! however, if we are using the special case, then WaveElev0 will be modified.  This is okay, because no one else
                ! is using WaveElev0 data
                if (p%ExctnDisp == 0 ) then
-                  if (allocated(InitInp%WaveElev0)) then
+                  if (associated(InitInp%WaveElev0)) then
                   
                      ! No other modules need this WaveElev0 array so we will simply move the allocation over to the SS_Exctn module
-                     call MOVE_ALLOC(InitInp%WaveElev0, SS_Exctn_InitInp%WaveElev0) 
-                    ! SS_Exctn_InitInp%WaveElev0 => InitInp%WaveElev0
+                    ! call MOVE_ALLOC(InitInp%WaveElev0, SS_Exctn_InitInp%WaveElev0) 
+                     SS_Exctn_InitInp%WaveElev0 => InitInp%WaveElev0
                
                      ! Handle special case when NBodyMod=2 and (PtfmRefxt /= 0 or PtfmRefyt /= 0)  : Need to phase shift the wave elevation data for the offset body
                      if ( p%NBodyMod==2 .and. (InitInp%PtfmRefxt(1) /= 0 .or. InitInp%PtfmRefyt(1) /= 0) ) then
@@ -1533,13 +1532,13 @@ CONTAINS
    
       ! destroy local variables that are types in the framework:
       
-      CALL Conv_Rdtn_DestroyInitInput(  Conv_Rdtn_InitInp,  ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
-      CALL Conv_Rdtn_DestroyInitOutput( Conv_Rdtn_InitOut,  ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
+      CALL Conv_Rdtn_DestroyInitInput(  Conv_Rdtn_InitInp,  ErrStat2, ErrMsg2 )
+      CALL Conv_Rdtn_DestroyInitOutput( Conv_Rdtn_InitOut,  ErrStat2, ErrMsg2 )
 
-      CALL SS_Rad_DestroyInitInput(     SS_Rdtn_InitInp,    ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
-      CALL SS_Rad_DestroyInitOutput(    SS_Rdtn_InitOut,    ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
-      CALL SS_Exc_DestroyInitInput(     SS_Exctn_InitInp,   ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
-      CALL SS_Exc_DestroyInitOutput(    SS_Exctn_InitOut,   ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. )
+      CALL SS_Rad_DestroyInitInput(     SS_Rdtn_InitInp,    ErrStat2, ErrMsg2 )
+      CALL SS_Rad_DestroyInitOutput(    SS_Rdtn_InitOut,    ErrStat2, ErrMsg2 )
+      CALL SS_Exc_DestroyInitInput(     SS_Exctn_InitInp,   ErrStat2, ErrMsg2 )
+      CALL SS_Exc_DestroyInitOutput(    SS_Exctn_InitOut,   ErrStat2, ErrMsg2 )
       
       
       ! destroy local variables that are allocatable arrays:
@@ -1599,7 +1598,7 @@ SUBROUTINE WAMIT_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
 
          ! Destroy the parameter data:
-      CALL WAMIT_DestroyParam( p, ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
+      CALL WAMIT_DestroyParam( p, ErrStat, ErrMsg )
 
 
          ! Destroy the state data:

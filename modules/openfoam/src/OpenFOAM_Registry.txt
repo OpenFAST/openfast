@@ -7,6 +7,7 @@
 ###################################################################################################################################
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include	Registry_NWTC_Library.txt
+include IfW_FlowField.txt
 
 
 
@@ -27,12 +28,14 @@ typedef ^       ^       IntKi   NodeClusterType -       -       -       "Node cl
 typedef	OpenFOAM/OpFM	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
+typedef ^       InitOutputType  FlowFieldType	*FlowField	-	-	-	"Pointer of flow field data type"	- 
 
 # ..... MiscVars ................................................................................................................
 typedef	OpenFOAM/OpFM	OpFM_MiscVarType	MeshType	ActForceMotionsPoints	{:}	-	-	"point mesh for transferring AeroDyn motions to OpenFOAM  (includes hub+blades+nacelle+tower+tailfin)"	-
 typedef	OpenFOAM/OpFM	OpFM_MiscVarType	MeshType	ActForceLoadsPoints	{:}	-	-	"point mesh for transferring AeroDyn distributed loads to OpenFOAM (includes hub+blades+nacelle+tower+tailfin)"	-
 typedef	OpenFOAM/OpFM	OpFM_MiscVarType	MeshMapType	Line2_to_Point_Loads	{:}	-	-	"mapping data structure to convert line2 loads to point loads"	-
 typedef	OpenFOAM/OpFM	OpFM_MiscVarType	MeshMapType	Line2_to_Point_Motions	{:}	-	-	"mapping data structure to convert line2 loads to point motions"	-
+typedef	OpenFOAM/OpFM	OpFM_MiscVarType	FlowFieldType	&FlowField	-	-	-	"Flow field data type"	- 
 
 
 # ..... Parameters ................................................................................................................

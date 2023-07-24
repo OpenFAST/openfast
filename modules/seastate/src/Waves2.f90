@@ -36,6 +36,7 @@ MODULE Waves2
    USE NWTC_Library
    USE NWTC_FFTPACK
    USE Waves,  ONLY : WaveNumber, ImagNmbr
+   USE SeaSt_WaveField_Types
 
    IMPLICIT NONE
 
@@ -58,12 +59,13 @@ CONTAINS
 !> @brief
 !!    This routine is called at the start of the simulation to perform initialization steps.
 !!    The parameters that are set here are not changed during the simulation.
-SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
+SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       TYPE(Waves2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
       TYPE(Waves2_ParameterType),         INTENT(  OUT)  :: p                    !< Parameters
       TYPE(Waves2_InitOutputType),        INTENT(  OUT)  :: InitOut              !< Output for initialization routine
+      TYPE(SeaSt_WaveFieldType),          INTENT(INOUT)  :: WaveField            !< WaveFieldType
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None
 
@@ -245,11 +247,11 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
 
          ! Check that WaveElevC0 is a 2x(NStepWave2+1) sized array (0 index start)
 
-      IF ( SIZE( InitInp%WaveElevC0, DIM=2 ) /= (InitInp%NStepWave2 + 1) ) THEN    ! Expect a 2x(0:NStepWave2) array
+      IF ( SIZE( WaveField%WaveElevC0, DIM=2 ) /= (InitInp%NStepWave2 + 1) ) THEN    ! Expect a 2x(0:NStepWave2) array
          CALL SetErrStat( ErrID_Fatal, ' Programming error in call to Waves2_Init:'//NewLine// &
                '        --> Expected array for WaveElevC0 to be of size 2x'//TRIM(Num2LStr(InitInp%NStepWave2 + 1))// &
                ' (2x(NStepWave2+1)), but instead received array of size '// &
-               TRIM(Num2LStr(SIZE(InitInp%WaveElevC0,1)))//'x'//TRIM(Num2LStr(SIZE(InitInp%WaveElevC0,2)))//'.', &
+               TRIM(Num2LStr(SIZE(WaveField%WaveElevC0,1)))//'x'//TRIM(Num2LStr(SIZE(WaveField%WaveElevC0,2)))//'.', &
                ErrStat, ErrMsg, RoutineName)
          CALL CleanUp
          RETURN
@@ -258,11 +260,11 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
 
          ! Check that WaveTime is of size (NStepWave+1)
 
-      IF ( SIZE( InitInp%WaveTime ) /= (InitInp%NStepWave + 1) ) THEN    ! Expect a 2x(0:NStepWave2) array
+      IF ( SIZE( WaveField%WaveTime ) /= (InitInp%NStepWave + 1) ) THEN    ! Expect a 2x(0:NStepWave2) array
          CALL SetErrStat( ErrID_Fatal, ' Programming error in call to Waves2_Init:'//NewLine// &
                '        --> Expected array for WaveTime to be of size '//TRIM(Num2LStr(InitInp%NStepWave + 1))// &
                ' (NStepWave+1), but instead received array of size '// &
-               TRIM(Num2LStr(SIZE(InitInp%WaveTime)))//'.', &
+               TRIM(Num2LStr(SIZE(WaveField%WaveTime)))//'.', &
                ErrStat, ErrMsg, RoutineName)
          CALL CleanUp
          RETURN
@@ -289,7 +291,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
       END IF
 
       DO I=0,InitInp%NStepWave2
-         WaveElevC0Norm(I) = CMPLX( InitInp%WaveElevC0(1,I), InitInp%WaveElevC0(2,I), SiKi ) / REAL(InitInp%NStepWave2,SiKi)
+         WaveElevC0Norm(I) = CMPLX( WaveField%WaveElevC0(1,I), WaveField%WaveElevC0(2,I), SiKi ) / REAL(InitInp%NStepWave2,SiKi)
       ENDDO
 
       !--------------------------------------------------------------------------------
@@ -382,9 +384,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
       !--------------------------------------------------------------------------------
       ! Setup the output arrays
       !--------------------------------------------------------------------------------
-
-      ALLOCATE ( InitOut%WaveElev2 (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)  ) , STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev2.', ErrStat,ErrMsg,RoutineName)
+      ALLOCATE ( WaveField%WaveElev2 (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)  ) , STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveField%WaveElev2.', ErrStat,ErrMsg,RoutineName)
 
       ALLOCATE ( InitOut%WaveVel2D  (0:InitInp%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel2D.',  ErrStat,ErrMsg,RoutineName)
@@ -410,9 +411,10 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
          RETURN
       END IF
 
+      !InitOut%WaveElev2 => WaveField%WaveElev2
 
          !Initialize the output arrays to zero.  We will only fill it in for the points we calculate.
-      InitOut%WaveElev2    =  0.0_SiKi
+      WaveField%WaveElev2    =  0.0_SiKi
       InitOut%WaveVel2D    =  0.0_SiKi
       InitOut%WaveAcc2D    =  0.0_SiKi
       InitOut%WaveDynP2D   =  0.0_SiKi
@@ -545,12 +547,12 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
             i = mod(k-1, InitInp%NGrid(1)) + 1
             j = (k-1) / InitInp%NGrid(1) + 1
             CALL WaveElevTimeSeriesAtXY_Diff(InitInp%WaveKinGridxi(k), InitInp%WaveKinGridyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev2.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveField%WaveElev2.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
                RETURN
             END IF
-            InitOut%WaveElev2(:,I,J) = TmpTimeSeries(:)
+            WaveField%WaveElev2(:,I,J) = TmpTimeSeries(:)
          ENDDO    ! Wave elevation points requested
 
 
@@ -606,8 +608,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                         !!             +  \left( |\vec{k_n}| \sin \theta_n - |\vec{k_m}| sin \theta_m \right) ~ y \right] \right) \f$
 
                      WaveElevxyPrime0  = exp( - ImagNmbr &
-                              *  (  ( k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) - k_m * COS( D2R_S*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinGridxi(masterCount)  &
-                                 +  ( k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) - k_m * SIN( D2R_S*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinGridyi(masterCount)  ))
+                              *  (  ( k_n * COS( D2R_S*WaveField%WaveDirArr(n) ) - k_m * COS( D2R_S*WaveField%WaveDirArr(m) ) ) * InitInp%WaveKinGridxi(masterCount)  &
+                                 +  ( k_n * SIN( D2R_S*WaveField%WaveDirArr(n) ) - k_m * SIN( D2R_S*WaveField%WaveDirArr(m) ) ) * InitInp%WaveKinGridyi(masterCount)  ))
 
 
                         ! Get value for \f$ B^- \f$ for the n,m index pair
@@ -617,10 +619,10 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                         !> Calculate \f$ U^- \f$ terms for the velocity calculations (\f$B^-\f$ provided by waves2::transfuncb_minus)
                         ! NOTE: InitInp%WtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
                         !> * \f$ _x{U}_{nm}^- = B_{nm}^- \left(k_n \cos \theta_n - k_m \cos \theta_m \right) \f$
-                     Ux_nm_minus = B_minus * ( k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) - k_m * COS( D2R_S*InitInp%WaveDirArr(m) ) )
+                     Ux_nm_minus = B_minus * ( k_n * COS( D2R_S*WaveField%WaveDirArr(n) ) - k_m * COS( D2R_S*WaveField%WaveDirArr(m) ) )
 
                         !> * \f$ _y{U}_{nm}^- = B_{nm}^- \left(k_n \sin \theta_n - k_m \sin \theta_m \right) \f$
-                     Uy_nm_minus = B_minus * ( k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) - k_m * SIN( D2R_S*InitInp%WaveDirArr(m) ) )
+                     Uy_nm_minus = B_minus * ( k_n * SIN( D2R_S*WaveField%WaveDirArr(n) ) - k_m * SIN( D2R_S*WaveField%WaveDirArr(m) ) )
 
                         !> * \f$ _z{U}_{nm}^- = \imath B_{nm}^- k_{nm} \tanh \left( k_{nm} ( h + z ) \right) \f$
                      Uz_nm_minus = ImagNmbr * B_minus * k_nm * tanh( k_nm * ( InitInp%WtrDpth + WaveKinzi0Prime(I) ) )
@@ -908,13 +910,13 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
             i = mod(k-1, InitInp%NGrid(1)) + 1
             j = (k-1) / InitInp%NGrid(1) + 1
             CALL WaveElevTimeSeriesAtXY_Sum(InitInp%WaveKinGridxi(k), InitInp%WaveKinGridyi(k), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to InitOut%WaveElev2.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveField%WaveElev2.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
                RETURN
             END IF
                ! Add to the series since the difference is already included
-            InitOut%WaveElev2(:,I,J) = InitOut%WaveElev2(:,I,J) + TmpTimeSeries(:)
+            WaveField%WaveElev2(:,I,J) = WaveField%WaveElev2(:,I,J) + TmpTimeSeries(:)
          ENDDO    ! Wave elevation points requested
 
          !--------------------------------------------------------------------------------
@@ -981,8 +983,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                      !!             +  |\vec{k_n}| \sin \theta_n ~ y \right] \right) \f$
 
                   WaveElevxyPrime0  = exp( - ImagNmbr &
-                           *  (  2.0_SiKi * k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) * InitInp%WaveKinGridxi(masterCount)  &
-                              +  2.0_SiKi * k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) * InitInp%WaveKinGridyi(masterCount)  ))
+                           *  (  2.0_SiKi * k_n * COS( D2R_S*WaveField%WaveDirArr(n) ) * InitInp%WaveKinGridxi(masterCount)  &
+                              +  2.0_SiKi * k_n * SIN( D2R_S*WaveField%WaveDirArr(n) ) * InitInp%WaveKinGridyi(masterCount)  ))
 
 
                      ! Get value for \f$ B+ \f$ for the n,m index pair
@@ -992,10 +994,10 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                      !> Calculate \f$ U^+ \f$ terms for the velocity calculations (\f$B^+\f$ provided by waves2::transfuncb_plus)
                      ! NOTE: InitInp%WtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
                      !> * \f$ _x{U}_{nn}^+ = B_{nn}^+ 2 k_n \cos \theta_n \f$
-                  Ux_nm_plus = B_plus * 2.0_SiKi * k_n * COS( D2R_S*InitInp%WaveDirArr(n) )
+                  Ux_nm_plus = B_plus * 2.0_SiKi * k_n * COS( D2R_S*WaveField%WaveDirArr(n) )
 
                      !> * \f$ _y{U}_{nn}^+ = B_{nn}^+ 2 k_n \sin \theta_n \f$
-                  Uy_nm_plus = B_plus * 2.0_SiKi * k_n * SIN( D2R_S*InitInp%WaveDirArr(n) )
+                  Uy_nm_plus = B_plus * 2.0_SiKi * k_n * SIN( D2R_S*WaveField%WaveDirArr(n) )
 
                      !> * \f$ _z{U}_{nn}^+ = \imath B_{nn}^+ k_{nn} \tanh \left( k_{nn} ( h + z ) \right) \f$
                   Uz_nm_plus = ImagNmbr * B_plus * k_nm * tanh( k_nm * ( InitInp%WtrDpth + WaveKinzi0Prime(I) ) )
@@ -1083,8 +1085,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                         !!             +  \left( |\vec{k_n}| \sin \theta_n + |\vec{k_m}| sin \theta_m \right) ~ y \right] \right) \f$
 
                      WaveElevxyPrime0  = exp( - ImagNmbr &
-                              *  (  ( k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) + k_m * COS( D2R_S*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinGridxi(masterCount)  &
-                                 +  ( k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) + k_m * SIN( D2R_S*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinGridyi(masterCount)  ))
+                              *  (  ( k_n * COS( D2R_S*WaveField%WaveDirArr(n) ) + k_m * COS( D2R_S*WaveField%WaveDirArr(m) ) ) * InitInp%WaveKinGridxi(masterCount)  &
+                                 +  ( k_n * SIN( D2R_S*WaveField%WaveDirArr(n) ) + k_m * SIN( D2R_S*WaveField%WaveDirArr(m) ) ) * InitInp%WaveKinGridyi(masterCount)  ))
 
 
                         ! Get value for \f$ B+ \f$ for the n,m index pair
@@ -1094,10 +1096,10 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                         !> Calculate \f$ U^+ \f$ terms for the velocity calculations (\f$B^+\f$ provided by waves2::transfuncb_plus)
                         ! NOTE: InitInp%WtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
                         !> * \f$ _x{U}_{nm}^+ = B_{nm}^+ \left(k_n \cos \theta_n + k_m \cos \theta_m \right) \f$
-                     Ux_nm_plus = B_plus * ( k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) + k_m * COS( D2R_S*InitInp%WaveDirArr(m) ) )
+                     Ux_nm_plus = B_plus * ( k_n * COS( D2R_S*WaveField%WaveDirArr(n) ) + k_m * COS( D2R_S*WaveField%WaveDirArr(m) ) )
 
                         !> * \f$ _y{U}_{nm}^+ = B_{nm}^+ \left(k_n \sin \theta_n + k_m \sin \theta_m \right) \f$
-                     Uy_nm_plus = B_plus * ( k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) + k_m * SIN( D2R_S*InitInp%WaveDirArr(m) ) )
+                     Uy_nm_plus = B_plus * ( k_n * SIN( D2R_S*WaveField%WaveDirArr(n) ) + k_m * SIN( D2R_S*WaveField%WaveDirArr(m) ) )
 
                         !> * \f$ _z{U}_{nm}^+ = \imath B_{nm}^+ k_{nm} \tanh \left( k_{nm} ( h + z ) \right) \f$
                      Uz_nm_plus = ImagNmbr * B_plus * k_nm * tanh( k_nm * ( InitInp%WtrDpth + WaveKinzi0Prime(I) ) )
@@ -1379,7 +1381,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                      !!
                      !!    The value of \f$ D^-_{nm} \f$ is found from by the ::TransFuncD_minus routine.
 
-                  L_minus  =  (( D_minus - k_n * k_m * COS(D2R_S*InitInp%WaveDirArr(n) - D2R_S*InitInp%WaveDirArr(m)) - R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 4.0_SiKi !4.0_SiKi
+                  L_minus  =  (( D_minus - k_n * k_m * COS(D2R_S*WaveField%WaveDirArr(n) - D2R_S*WaveField%WaveDirArr(m)) - R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 4.0_SiKi !4.0_SiKi
 
 
                      ! Calculate the terms \f$ n,m \f$ necessary for calculations
@@ -1393,8 +1395,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                      !!             +  \left( |\vec{k_n}| \sin \theta_n - |\vec{k_m}| sin \theta_m \right) ~ y \right] \right) \f$
 
                   WaveElevxyPrime0  = exp( - ImagNmbr &
-                           *  ( ( k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) - k_m * COS( D2R_S*InitInp%WaveDirArr(m) ) ) * XCoord  &
-                              + ( k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) - k_m * SIN( D2R_S*InitInp%WaveDirArr(m) ) ) * YCoord  ))
+                           *  ( ( k_n * COS( D2R_S*WaveField%WaveDirArr(n) ) - k_m * COS( D2R_S*WaveField%WaveDirArr(m) ) ) * XCoord  &
+                              + ( k_n * SIN( D2R_S*WaveField%WaveDirArr(n) ) - k_m * SIN( D2R_S*WaveField%WaveDirArr(m) ) ) * YCoord  ))
 
 
                      !> ### Calculate the inner summation \f$ H^-(\omega_{\mu^-}) \f$ terms for the velocity, acceleration, and pressure. ###
@@ -1515,8 +1517,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                   !!             +  |\vec{k_n}| \sin \theta_n ~ y \right] \right) \f$
 
                WaveElevxyPrime0  = exp( - ImagNmbr &
-                        *  (  2.0_SiKi * k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) * XCoord  &
-                           +  2.0_SiKi * k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) * YCoord  ))
+                        *  (  2.0_SiKi * k_n * COS( D2R_S*WaveField%WaveDirArr(n) ) * XCoord  &
+                           +  2.0_SiKi * k_n * SIN( D2R_S*WaveField%WaveDirArr(n) ) * YCoord  ))
 
                   ! First get the wave amplitude -- must be reconstructed from the WaveElevC0 array.  First index is the real (1) or
                   ! imaginary (2) part.  Divide by NStepWave2 to remove the built in normalization in WaveElevC0.  Note that the phase
@@ -1571,7 +1573,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                      !!          +  (R_n+R_m) \right] \f$
                      !!
                      !!    The value of \f$ D^-_{nm} \f$ is found from by the ::TransFuncD_plus routine.
-                  L_plus  =  (( D_plus - k_n * k_m * COS(D2R_S*InitInp%WaveDirArr(n) - D2R_S*InitInp%WaveDirArr(m)) + R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 4.0_SiKi
+                  L_plus  =  (( D_plus - k_n * k_m * COS(D2R_S*WaveField%WaveDirArr(n) - D2R_S*WaveField%WaveDirArr(m)) + R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 4.0_SiKi
 
                      !> Calculate the dot product of the wavenumbers with the (x,y) location
                      !! This is given by:
@@ -1582,8 +1584,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                      !!             +  \left( |\vec{k_n}| \sin \theta_n + |\vec{k_m}| sin \theta_m \right) ~ y \right] \right) \f$
 
                   WaveElevxyPrime0  = exp( - ImagNmbr &
-                           *  (  ( k_n * COS( D2R_S*InitInp%WaveDirArr(n) ) + k_m * COS( D2R_S*InitInp%WaveDirArr(m) ) ) * XCoord  &
-                              +  ( k_n * SIN( D2R_S*InitInp%WaveDirArr(n) ) + k_m * SIN( D2R_S*InitInp%WaveDirArr(m) ) ) * YCoord  ))
+                           *  (  ( k_n * COS( D2R_S*WaveField%WaveDirArr(n) ) + k_m * COS( D2R_S*WaveField%WaveDirArr(m) ) ) * XCoord  &
+                              +  ( k_n * SIN( D2R_S*WaveField%WaveDirArr(n) ) + k_m * SIN( D2R_S*WaveField%WaveDirArr(m) ) ) * YCoord  ))
 
 
 
@@ -1863,7 +1865,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
                ! Calculate the two pieces of the numerator
             Num1  = SqrtRnMinusRm * ( SQRT(R_m) * ( k_n*k_n - R_n*R_n ) - SQRT(R_n) * ( k_m*k_m - R_m*R_m ) )
 
-            Num2  = 2*SqrtRnMinusRm*SqrtRnMinusRm*( k_n * k_m * COS( D2R_S*InitInp%WaveDirArr(n) - D2R_S*InitInp%WaveDirArr(m) ) + R_n*R_m )
+            Num2  = 2*SqrtRnMinusRm*SqrtRnMinusRm*( k_n * k_m * COS( D2R_S*WaveField%WaveDirArr(n) - D2R_S*WaveField%WaveDirArr(m) ) + R_n*R_m )
 
                ! Calculate the denominator
             Den   = SqrtRnMinusRm*SqrtRnMinusRm - k_nm * tanh( k_nm * InitInp%WtrDpth )
@@ -1927,7 +1929,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
             ! Calculate the two pieces of the numerator
          Num1  = SqrtRnPlusRm * ( SQRT(R_m) * ( k_n*k_n - R_n*R_n ) + SQRT(R_n) * ( k_m*k_m - R_m*R_m ) )
 
-         Num2  = 2*SqrtRnPlusRm*SqrtRnPlusRm*( k_n * k_m * COS( D2R_S*InitInp%WaveDirArr(n) - D2R_S*InitInp%WaveDirArr(m) ) - R_n*R_m )
+         Num2  = 2*SqrtRnPlusRm*SqrtRnPlusRm*( k_n * k_m * COS( D2R_S*WaveField%WaveDirArr(n) - D2R_S*WaveField%WaveDirArr(m) ) - R_n*R_m )
 
             ! Calculate the denominator
          Den   = SqrtRnPlusRm*SqrtRnPlusRm - k_nm * tanh( k_nm * InitInp%WtrDpth )
@@ -1961,7 +1963,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
             k_nm_minus = 0.0_SiKi            ! This is just to eliminate any numerical error
          ELSE
                !bjj: added abs() because we were getting very small negative numbers here (which should be 0). 
-            k_nm_minus = sqrt( abs( k_n * k_n + k_m * k_m - 2 * k_n * k_m * cos( D2R_S*InitInp%WaveDirArr(n) - D2R_S*InitINp%WaveDirArr(m) )  ) )
+            k_nm_minus = sqrt( abs( k_n * k_n + k_m * k_m - 2 * k_n * k_m * cos( D2R_S*WaveField%WaveDirArr(n) - D2R_S*WaveField%WaveDirArr(m) )  ) )
          ENDIF
 
       END FUNCTION k_nm_minus
@@ -1986,7 +1988,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, ErrStat, ErrMsg )
          IF (n == m ) THEN
             k_nm_plus = 2.0_SiKi * k_n       ! This is just to eliminate any numerical error.
          ELSE
-            k_nm_plus = sqrt( k_n * k_n + k_m * k_m + 2_SiKi * k_n * k_m * cos( D2R_S*InitInp%WaveDirArr(n) - D2R_S*InitINp%WaveDirArr(m) )  )
+            k_nm_plus = sqrt( k_n * k_n + k_m * k_m + 2_SiKi * k_n * k_m * cos( D2R_S*WaveField%WaveDirArr(n) - D2R_S*WaveField%WaveDirArr(m) )  )
          ENDIF
 
       END FUNCTION k_nm_plus

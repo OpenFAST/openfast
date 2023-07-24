@@ -1090,10 +1090,6 @@ print*,'---------------------------AeroDyn_Inflow_C_CalcOutput------------------
          if (Failed())  return
    enddo
 
-   ! call IfW and set inputs for AD
-   call ADI_ADIW_Solve(Time, ADI%p, ADI%u(1)%AD, ADI%OtherState(STATE_CURR)%AD, ADI%m%IW%u, ADI%m%IW, .false., ErrStat2, ErrMsg2)
-      if (Failed())  return
-
    ! Call the main subroutine ADI_CalcOutput to get the resulting forces and moments at time T
    CALL ADI_CalcOutput( Time, ADI%u(1), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, ErrStat2, ErrMsg2 )
       if (Failed())  return

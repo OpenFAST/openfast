@@ -456,8 +456,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       end if
    
       Init%InData_AD%rotors(1)%NumBlades  = NumBl
-      
-      
+
          ! set initialization data for AD
       CALL AllocAry( Init%InData_AD%rotors(1)%BladeRootPosition,      3, Init%InData_AD%rotors(1)%NumBlades, 'Init%InData_AD%BladeRootPosition', errStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -556,16 +555,19 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_IfW%WtrDpth          = p_FAST%WtrDpth
 
       Init%InData_IfW%NumWindPoints = 0
-      IF ( p_FAST%CompServo == Module_SrvD ) Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + 1
+      
+      IF ( p_FAST%CompServo == Module_SrvD ) THEN
+         Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + 1
+      END IF
+
       IF ( p_FAST%CompAero  == Module_AD14 ) THEN
          Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + NumBl * AD14%Input(1)%InputMarkers(1)%NNodes + AD14%Input(1)%Twr_InputMarkers%NNodes
       ELSEIF ( p_FAST%CompAero  == Module_AD ) THEN
          ! Number of Wind points from AeroDyn, see AeroDyn.f90
-         Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints + AD_NumWindPoints(AD%Input(1), AD%OtherSt(STATE_CURR))
+         Init%InData_IfW%NumWindPoints = Init%InData_IfW%NumWindPoints
          ! Wake -- we allow the wake positions to exceed the wind box
          if (allocated(AD%OtherSt(STATE_CURR)%WakeLocationPoints)) then
-            Init%InData_IfW%BoxExceedAllowF = .true.
-            Init%InData_IfW%BoxExceedAllowIdx = min(Init%InData_IfW%BoxExceedAllowIdx, AD_BoxExceedPointsIdx(AD%Input(1), AD%OtherSt(STATE_CURR)))
+            Init%InData_IfW%BoxExceedAllow = .true.
          endif
       END IF
 
@@ -587,6 +589,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
             Init%InData_IfW%FDext%n      = ExternInitData%windGrid_n
             Init%InData_IfW%FDext%delta  = ExternInitData%windGrid_delta
             Init%InData_IfW%FDext%pZero  = ExternInitData%windGrid_pZero
+            Init%InData_IfW%FDext%Vel   => ExternInitData%windGrid_data
          end if
       ELSE
          Init%InData_IfW%Use4Dext                  = .false.
@@ -599,6 +602,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       p_FAST%ModuleInitialized(Module_IfW) = .TRUE.
       CALL SetModuleSubstepTime(Module_IfW, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      ! Set pointers to flowfield
+      IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => Init%OutData_IfW%FlowField
 
       allocate( y_FAST%Lin%Modules(MODULE_IfW)%Instance(1), stat=ErrStat2)
       if (ErrStat2 /= 0 ) then
@@ -689,6 +695,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
       !bjj: fix me!!! to do
       Init%OutData_IfW%WindFileInfo%MWS = 0.0_ReKi
+
+      ! Set pointer to flowfield
+      IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => Init%OutData_OpFM%FlowField
 
    ELSE
       Init%OutData_IfW%WindFileInfo%MWS = 0.0_ReKi
@@ -811,27 +820,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_HD%WaveMultiDir   =  Init%OutData_SeaSt%WaveMultiDir
          Init%InData_HD%WaveDOmega     =  Init%OutData_SeaSt%WaveDOmega  
          Init%InData_HD%MCFD           =  Init%OutData_SeaSt%MCFD
-         
-         CALL MOVE_ALLOC(  Init%OutData_SeaSt%WaveElev0, Init%InData_HD%WaveElev0 )  
-         Init%InData_HD%WaveTime       => Init%OutData_SeaSt%WaveTime  
-         Init%InData_HD%WaveDynP       => Init%OutData_SeaSt%WaveDynP  
-         Init%InData_HD%WaveAcc        => Init%OutData_SeaSt%WaveAcc   
-         Init%InData_HD%WaveVel        => Init%OutData_SeaSt%WaveVel 
-         Init%InData_HD%PWaveDynP0     => Init%OutData_SeaSt%PWaveDynP0  
-         Init%InData_HD%PWaveAcc0      => Init%OutData_SeaSt%PWaveAcc0   
-         Init%InData_HD%PWaveVel0      => Init%OutData_SeaSt%PWaveVel0   
-         Init%InData_HD%WaveElevC0     => Init%OutData_SeaSt%WaveElevC0
-         CALL MOVE_ALLOC( Init%OutData_SeaSt%WaveElevC, Init%InData_HD%WaveElevC )
-         Init%InData_HD%WaveDirArr     => Init%OutData_SeaSt%WaveDirArr
-         Init%InData_HD%WaveElev1      => Init%OutData_SeaSt%WaveElev1
-         Init%InData_HD%WaveElev2      => Init%OutData_SeaSt%WaveElev2
-         
-         Init%InData_HD%WaveAccMCF     => Init%OutData_SeaSt%WaveAccMCF
-         Init%InData_HD%PWaveAccMCF0   => Init%OutData_SeaSt%PWaveAccMCF0
-         
-         call SeaSt_Interp_CopyParam(Init%OutData_SeaSt%SeaSt_Interp_p, Init%InData_HD%SeaSt_Interp_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         
+
+         Init%InData_HD%WaveField => Init%OutData_SeaSt%WaveField
+                  
       end if
       
    end if
@@ -1560,7 +1551,7 @@ CONTAINS
    !...............................................................................................................................
       ! We assume that all initializion data points to parameter data, so we just nullify the pointers instead of deallocate
       ! data that they point to:
-      CALL FAST_DestroyInitData( Init, ErrStat2, ErrMsg2, DEALLOCATEpointers=.false. ) 
+      CALL FAST_DestroyInitData( Init, ErrStat2, ErrMsg2 ) 
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    END SUBROUTINE Cleanup
@@ -7006,11 +6997,7 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
    INTEGER(IntKi), OPTIONAL, INTENT(INOUT) :: Unit                !< unit number for output file
 
       ! local variables:
-   REAL(ReKi),               ALLOCATABLE   :: ReKiBuf(:)
-   REAL(DbKi),               ALLOCATABLE   :: DbKiBuf(:)
-   INTEGER(IntKi),           ALLOCATABLE   :: IntKiBuf(:)
-
-   INTEGER(B4Ki)                           :: ArraySizes(3)
+   type(PackBuffer)                        :: Buf
 
    INTEGER(IntKi)                          :: unOut               ! unit number for output file
    INTEGER(IntKi)                          :: old_avrSwap1        ! previous value of avrSwap(1) !hack for Bladed DLL checkpoint/restore
@@ -7025,19 +7012,15 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+      ! Initialize the pack buffer
+   call InitPackBuffer(Buf, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) return
+
       ! Get the arrays of data to be stored in the output file
-   CALL FAST_PackTurbineType( ReKiBuf, DbKiBuf, IntKiBuf, Turbine, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN
-      end if
-
-
-   ArraySizes = 0
-   IF ( ALLOCATED(ReKiBuf)  ) ArraySizes(1) = SIZE(ReKiBuf)
-   IF ( ALLOCATED(DbKiBuf)  ) ArraySizes(2) = SIZE(DbKiBuf)
-   IF ( ALLOCATED(IntKiBuf) ) ArraySizes(3) = SIZE(IntKiBuf)
+   call FAST_PackTurbineType(Buf, Turbine)
+      call SetErrStat(Buf%ErrStat, Buf%ErrMsg, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) return
 
    FileName    = TRIM(CheckpointRoot)//'.chkp'
    DLLFileName = TRIM(CheckpointRoot)//'.dll.chkp'
@@ -7051,37 +7034,24 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
       CALL OpenBOutFile ( unOut, FileName, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          if (ErrStat >= AbortErrLev ) then
-            call cleanup()
+
             IF (.NOT. PRESENT(Unit)) THEN
                CLOSE(unOut)
                unOut = -1
-            END IF
-
-            RETURN
+            end if
+            return
          end if
 
-         ! checkpoint file header:
-      WRITE (unOut, IOSTAT=ErrStat2)   INT(ReKi              ,B4Ki)     ! let's make sure we've got the correct number of bytes for reals on restart.
-      WRITE (unOut, IOSTAT=ErrStat2)   INT(DbKi              ,B4Ki)     ! let's make sure we've got the correct number of bytes for doubles on restart.
-      WRITE (unOut, IOSTAT=ErrStat2)   INT(IntKi             ,B4Ki)     ! let's make sure we've got the correct number of bytes for integers on restart.
-      WRITE (unOut, IOSTAT=ErrStat2)   AbortErrLev
-      WRITE (unOut, IOSTAT=ErrStat2)   NumTurbines                      ! Number of turbines
-      WRITE (unOut, IOSTAT=ErrStat2)   t_initial                        ! initial time
-      WRITE (unOut, IOSTAT=ErrStat2)   n_t_global                       ! current time step
+      ! Checkpoint file header:
+      WRITE (unOut, IOSTAT=ErrStat2) AbortErrLev   ! Abort error level
+      WRITE (unOut, IOSTAT=ErrStat2) NumTurbines   ! Number of turbines
+      WRITE (unOut, IOSTAT=ErrStat2) t_initial     ! initial time
+      WRITE (unOut, IOSTAT=ErrStat2) n_t_global    ! current time step
 
    END IF
 
-
-      ! data from current turbine at time step:
-   WRITE (unOut, IOSTAT=ErrStat2)   ArraySizes                       ! Number of reals, doubles, and integers written to file
-   WRITE (unOut, IOSTAT=ErrStat2)   ReKiBuf                          ! Packed reals
-   WRITE (unOut, IOSTAT=ErrStat2)   DbKiBuf                          ! Packed doubles
-   WRITE (unOut, IOSTAT=ErrStat2)   IntKiBuf                         ! Packed integers
-
-
-   IF ( ALLOCATED(ReKiBuf)  ) DEALLOCATE(ReKiBuf)
-   IF ( ALLOCATED(DbKiBuf)  ) DEALLOCATE(DbKiBuf)
-   IF ( ALLOCATED(IntKiBuf) ) DEALLOCATE(IntKiBuf)
+   ! data from current turbine at time step:
+   call WritePackBuffer(Buf, unOut, ErrStat2, ErrMsg2)
 
       !CALL FAST_CreateCheckpoint(t_initial, n_t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
       !            Turbine%ED, Turbine%SrvD, Turbine%AD, Turbine%IfW, &
@@ -7089,6 +7059,7 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
       !            Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )
 
 
+   ! If last turbine or no unit, close output unit
    IF (Turbine%TurbID == NumTurbines .OR. .NOT. PRESENT(Unit)) THEN
       CLOSE(unOut)
       unOut = -1
@@ -7117,16 +7088,7 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
          Turbine%SrvD%m%dll_data%SimStatus = Turbine%SrvD%m%dll_data%avrSWAP( 1)
       end if
    END IF
-   
-   
-   call cleanup()
 
-contains
-   subroutine cleanup()
-      IF ( ALLOCATED(ReKiBuf)  ) DEALLOCATE(ReKiBuf)
-      IF ( ALLOCATED(DbKiBuf)  ) DEALLOCATE(DbKiBuf)
-      IF ( ALLOCATED(IntKiBuf) ) DEALLOCATE(IntKiBuf)
-   end subroutine cleanup
 END SUBROUTINE FAST_CreateCheckpoint_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that calls FAST_RestoreFromCheckpoint_T for an array of Turbine data structures.
@@ -7189,11 +7151,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
    INTEGER(IntKi), OPTIONAL, INTENT(INOUT) :: Unit                !< unit number for output file
 
       ! local variables:
-   REAL(ReKi),               ALLOCATABLE   :: ReKiBuf(:)
-   REAL(DbKi),               ALLOCATABLE   :: DbKiBuf(:)
-   INTEGER(IntKi),           ALLOCATABLE   :: IntKiBuf(:)
-
-   INTEGER(B4Ki)                           :: ArraySizes(3)
+   type(PackBuffer)                        :: Buf
 
    INTEGER(IntKi)                          :: unIn                ! unit number for input file
    INTEGER(IntKi)                          :: old_avrSwap1        ! previous value of avrSwap(1) !hack for Bladed DLL checkpoint/restore
@@ -7218,61 +7176,31 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
 
       CALL GetNewUnit( unIn, ErrStat2, ErrMsg2 )
 
-      CALL OpenBInpFile ( unIn, FileName, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev ) RETURN
+      CALL OpenBInpFile(unIn, FileName, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev ) return
 
-         ! checkpoint file header:
-      READ (unIn, IOSTAT=ErrStat2)   ArraySizes     ! let's make sure we've got the correct number of bytes for reals, doubles, and integers on restart.
-
-      IF ( ArraySizes(1) /= ReKi  ) CALL SetErrStat(ErrID_Fatal,"ReKi on restart is different than when checkpoint file was created.",ErrStat,ErrMsg,RoutineName)
-      IF ( ArraySizes(2) /= DbKi  ) CALL SetErrStat(ErrID_Fatal,"DbKi on restart is different than when checkpoint file was created.",ErrStat,ErrMsg,RoutineName)
-      IF ( ArraySizes(3) /= IntKi ) CALL SetErrStat(ErrID_Fatal,"IntKi on restart is different than when checkpoint file was created.",ErrStat,ErrMsg,RoutineName)
-      IF (ErrStat >= AbortErrLev) THEN
-         CLOSE(unIn)
-         unIn = -1
-         IF (PRESENT(Unit)) Unit = unIn
-         RETURN
-      END IF
-
-      READ (unIn, IOSTAT=ErrStat2)   AbortErrLev
-      READ (unIn, IOSTAT=ErrStat2)   NumTurbines                      ! Number of turbines
-      READ (unIn, IOSTAT=ErrStat2)   t_initial                        ! initial time
-      READ (unIn, IOSTAT=ErrStat2)   n_t_global                       ! current time step
+      READ (unIn, IOSTAT=ErrStat2)   AbortErrLev   ! Abort error level
+      READ (unIn, IOSTAT=ErrStat2)   NumTurbines   ! Number of turbines
+      READ (unIn, IOSTAT=ErrStat2)   t_initial     ! initial time
+      READ (unIn, IOSTAT=ErrStat2)   n_t_global    ! current time step
 
    END IF
 
       ! in case the Turbine data structure isn't empty on entry of this routine:
    call FAST_DestroyTurbineType( Turbine, ErrStat2, ErrMsg2 )
-
-      ! data from current time step:
-   READ (unIn, IOSTAT=ErrStat2)   ArraySizes                       ! Number of reals, doubles, and integers written to file
-
-   ALLOCATE(ReKiBuf( ArraySizes(1)), STAT=ErrStat2)
-      IF (ErrStat2 /=0) CALL SetErrStat(ErrID_Fatal, "Could not allocate ReKiBuf", ErrStat, ErrMsg, RoutineName )
-   ALLOCATE(DbKiBuf( ArraySizes(2)), STAT=ErrStat2)
-      IF (ErrStat2 /=0) CALL SetErrStat(ErrID_Fatal, "Could not allocate DbKiBuf", ErrStat, ErrMsg, RoutineName )
-   ALLOCATE(IntKiBuf(ArraySizes(3)), STAT=ErrStat2)
-      IF (ErrStat2 /=0) CALL SetErrStat(ErrID_Fatal, "Could not allocate IntKiBuf", ErrStat, ErrMsg, RoutineName )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF (ErrStat >= AbortErrLev) return
 
       ! Read the packed arrays
-   IF (ErrStat < AbortErrLev) THEN
-
-      READ (unIn, IOSTAT=ErrStat2)   ReKiBuf    ! Packed reals
-         IF (ErrStat2 /=0) CALL SetErrStat(ErrID_Fatal, "Could not read ReKiBuf", ErrStat, ErrMsg, RoutineName )
-      READ (unIn, IOSTAT=ErrStat2)   DbKiBuf    ! Packed doubles
-         IF (ErrStat2 /=0) CALL SetErrStat(ErrID_Fatal, "Could not read DbKiBuf", ErrStat, ErrMsg, RoutineName )
-      READ (unIn, IOSTAT=ErrStat2)   IntKiBuf   ! Packed integers
-         IF (ErrStat2 /=0) CALL SetErrStat(ErrID_Fatal, "Could not read IntKiBuf", ErrStat, ErrMsg, RoutineName )
-
-   END IF
+   call ReadPackBuffer(Buf, unIn, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
 
       ! Put the arrays back in the data types
-   IF (ErrStat < AbortErrLev) THEN
-      CALL FAST_UnpackTurbineType( ReKiBuf, DbKiBuf, IntKiBuf, Turbine, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   END IF
-
+   call FAST_UnpackTurbineType(Buf, Turbine)
+      call SetErrStat(Buf%ErrStat, Buf%ErrMsg, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) return
 
       ! close file if necessary (do this after unpacking turbine data, so that TurbID is set)
    IF (Turbine%TurbID == NumTurbines .OR. .NOT. PRESENT(Unit)) THEN
@@ -7282,15 +7210,9 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
 
    IF (PRESENT(Unit)) Unit = unIn
 
-
-   IF ( ALLOCATED(ReKiBuf)  ) DEALLOCATE(ReKiBuf)
-   IF ( ALLOCATED(DbKiBuf)  ) DEALLOCATE(DbKiBuf)
-   IF ( ALLOCATED(IntKiBuf) ) DEALLOCATE(IntKiBuf)
-
-
       ! A sort-of hack to restore MAP DLL data (in particular Turbine%MAP%OtherSt%C_Obj%object)
-    ! these must be the same variables that are used in MAP_Init because they get allocated in the DLL and
-    ! destroyed in MAP_End (also, inside the DLL)
+      ! these must be the same variables that are used in MAP_Init because they get allocated in the DLL and
+      ! destroyed in MAP_End (also, inside the DLL)
    IF (Turbine%p_FAST%CompMooring == Module_MAP) THEN
       CALL MAP_Restart( Turbine%MAP%Input(1), Turbine%MAP%p, Turbine%MAP%x(STATE_CURR), Turbine%MAP%xd(STATE_CURR), &
                         Turbine%MAP%z(STATE_CURR), Turbine%MAP%OtherSt, Turbine%MAP%y, ErrStat2, ErrMsg2 )
@@ -7324,7 +7246,6 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
    
    Turbine%HD%p%PointsToSeaState = .false.  ! since the pointers aren't pointing to the same data as SeaState after restart, set this to avoid memory leaks and deallocation problems
 
-   
    ! deal with files that were open:
    IF (Turbine%p_FAST%WrTxtOutFile) THEN
       CALL OpenFunkFileAppend ( Turbine%y_FAST%UnOu, TRIM(Turbine%p_FAST%OutFileRoot)//'.out', ErrStat2, ErrMsg2)
@@ -7333,8 +7254,8 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
       CALL WrFileNR ( Turbine%y_FAST%UnOu, '#Restarting here')
       WRITE(Turbine%y_FAST%UnOu, '()')
    END IF
-   ! (ignoring for now; will have fort.x files if any were open [though I printed a warning about not outputting binary files earlier])
 
+   ! (ignoring for now; will have fort.x files if any were open [though I printed a warning about not outputting binary files earlier])
 
 END SUBROUTINE FAST_RestoreFromCheckpoint_T
 !----------------------------------------------------------------------------------------------------------------------------------
