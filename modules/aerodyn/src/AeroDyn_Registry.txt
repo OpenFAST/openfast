@@ -288,8 +288,6 @@ typedef	^	RotMiscVarType	MeshMapType	B_L_2_H_P	{:}	-	-	"mapping data structure t
 typedef	^	RotMiscVarType	ReKi	SigmaCavitCrit	{:}{:}	-	-	 "critical cavitation number-  inception value (above which cavit will occur)"   -
 typedef	^	RotMiscVarType	ReKi	SigmaCavit	{:}{:}	-	-	  "cavitation number at node "   -
 typedef	^	RotMiscVarType	Logical	CavitWarnSet {:}{:}	-	-	  "cavitation warning issued "   -
-typedef	^	RotMiscVarType	ReKi	BlFB	{:}{:}{:}	-	-	  "buoyant force per unit length at blade node"   N/m
-typedef	^	RotMiscVarType	ReKi	BlMB	{:}{:}{:}	-	-	  "buoyant moment per unit length at blade node"   Nm/m
 typedef	^	RotMiscVarType	ReKi	TwrFB	{:}{:}	    -	-	  "buoyant force per unit length at tower node"   N/m
 typedef	^	RotMiscVarType	ReKi	TwrMB	{:}{:}	    -	-	  "buoyant moment per unit length at tower node"   Nm/m
 typedef	^	RotMiscVarType	ReKi	HubFB	{:}	        -	-	  "buoyant force at hub node"   N
