@@ -38,8 +38,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    PUBLIC :: AeroDyn_Inflow_C_PreInit     ! Initial call to setup number of turbines
    PUBLIC :: AeroDyn_C_SetupRotor         ! Initial node positions etc for a rotor
    PUBLIC :: AeroDyn_C_SetRotorMotion     ! Set motions for a given rotor
-!FIXME:
-!   PUBLIC :: AeroDyn_C_GetRotorLoads      ! Retrieve loads for a given rotor
+   PUBLIC :: AeroDyn_C_GetRotorLoads      ! Retrieve loads for a given rotor
 
    !------------------------------------------------------------------------------------
    !  Version info for display
@@ -1008,6 +1007,8 @@ END SUBROUTINE AeroDyn_Inflow_C_Init
 !===============================================================================================================
 !--------------------------------------------- AeroDyn CalcOutput ---------------------------------------------
 !===============================================================================================================
+!> This routine calculates the outputs at Time_C using the states and inputs provided.
+!! NOTE: make sure to call AeroDyn_C_SetRotorMotion before calling CalcOutput
 SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
                OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_CalcOutput')
    implicit none
@@ -1022,8 +1023,6 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
 
    ! Local variables
    real(DbKi)                                :: Time
-   integer(IntKi)                            :: iNode
-   integer(IntKi)                            :: iWT                           !< current wind turbine / rotor
    integer(IntKi)                            :: ErrStat                       !< aggregated error status
    character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
    integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
@@ -1034,7 +1033,6 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
 
-print*,'---------------------------AeroDyn_Inflow_C_CalcOutput---------------------------'
    ! Convert the inputs from C to Fortrn
    Time = REAL(Time_C,DbKi)
 
@@ -1056,7 +1054,6 @@ print*,'---------------------------AeroDyn_Inflow_C_CalcOutput------------------
       call Dvr_WriteOutputs(n_Global+1, ADI%InputTimes(INPUT_CURR), Sim, WrOutputsData, ADI%y, errStat2, errMsg2); if(Failed()) return
    endif
 
-ErrStat2=ErrID_Fatal; ErrMsg2='Ending early';  if (Failed())  return
    ! Set error status
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 
@@ -1076,12 +1073,8 @@ END SUBROUTINE AeroDyn_Inflow_C_CalcOutput
 !! Since we don't really know if we are doing correction steps or not, we will track the previous state and
 !! reset to those if we are repeating a timestep (normally this would be handled by the OF glue code, but since
 !! the states are not passed across the interface, we must handle them here).
+!! NOTE: make sure to call AeroDyn_C_SetRotorMotion before calling UpdateStates
 SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
-               HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,     &
-               NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,     &
-               BldRootPos_C, BldRootOri_C, BldRootVel_C, BldRootAcc_C, &
-               NumMeshPts_C,  &
-               MeshPos_C,  MeshOri_C,  MeshVel_C,  MeshAcc_C,  &
                ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_UpdateStates')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
@@ -1090,31 +1083,11 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
 #endif
    real(c_double),            intent(in   )  :: Time_C
    real(c_double),            intent(in   )  :: TimeNext_C
-   real(c_float),             intent(in   )  :: HubPos_C( 3 )                 !< Hub position
-   real(c_double),            intent(in   )  :: HubOri_C( 9 )                 !< Hub orientation
-   real(c_float),             intent(in   )  :: HubVel_C( 6 )                 !< Hub velocity
-   real(c_float),             intent(in   )  :: HubAcc_C( 6 )                 !< Hub acceleration
-   real(c_float),             intent(in   )  :: NacPos_C( 3 )                 !< Nacelle position
-   real(c_double),            intent(in   )  :: NacOri_C( 9 )                 !< Nacelle orientation
-   real(c_float),             intent(in   )  :: NacVel_C( 6 )                 !< Nacelle velocity
-   real(c_float),             intent(in   )  :: NacAcc_C( 6 )                 !< Nacelle acceleration
-   real(c_float),             intent(in   )  :: BldRootPos_C( 3*Sim%WT(1)%NumBlades )   !< Blade root positions
-   real(c_double),            intent(in   )  :: BldRootOri_C( 9*Sim%WT(1)%NumBlades )   !< Blade root orientations
-   real(c_float),             intent(in   )  :: BldRootVel_C( 6*Sim%WT(1)%NumBlades )   !< Blade root velocities
-   real(c_float),             intent(in   )  :: BldRootAcc_C( 6*Sim%WT(1)%NumBlades )   !< Blade root accelerations
-   ! Blade mesh nodes
-   integer(c_int),            intent(in   )  :: NumMeshPts_C                  !< Number of mesh points we are transfering motions to and output loads to
-   real(c_float),             intent(in   )  :: MeshPos_C( 3*NumMeshPts_C )   !< A 3xNumMeshPts_C array [x,y,z]
-   real(c_double),            intent(in   )  :: MeshOri_C( 9*NumMeshPts_C )   !< A 9xNumMeshPts_C array [r11,r12,r13,r21,r22,r23,r31,r32,r33]
-   real(c_float),             intent(in   )  :: MeshVel_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
-   real(c_float),             intent(in   )  :: MeshAcc_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [x,y,z]
    integer(c_int),            intent(  out)  :: ErrStat_C
    character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
 
    ! Local variables
    logical                                   :: CorrectionStep                ! if we are repeating a timestep in UpdateStates, don't update the inputs array
-   integer(IntKi)                            :: iNode
-   integer(IntKi)                            :: iWT                           !< current rotor/turbine
    integer(IntKi)                            :: ErrStat                       !< aggregated error status
    character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
    integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
@@ -1125,13 +1098,6 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
    CorrectionStep = .false.
-
-   ! Sanity check -- number of node points cannot change
-   if ( NumMeshPts(iWT) /= int(NumMeshPts_C, IntKi) ) then
-      ErrStat2 =  ErrID_Fatal
-      ErrMsg2  =  "Number of node points passed in changed.  This must be constant throughout simulation"
-      if (Failed())  return
-   endif
 
 
    !-------------------------------------------------------
@@ -1184,26 +1150,6 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
       ! Move inputs from previous t+dt (now t) to t
       call ADI_CopyInput( ADI%u(INPUT_PRED), ADI%u(INPUT_CURR), MESH_UPDATECOPY, ErrStat2, ErrMsg2);           if (Failed())  return
    endif
-
-   !-------------------------------------------------------
-   ! Set inputs for time T+dt -- u(INPUT_PRED)
-   !-------------------------------------------------------
-   ! Reshape mesh position, orientation, velocity, acceleration
-   tmpBldPtMeshPos(1:3,1:NumMeshPts(iWT))      = reshape( real(MeshPos_C(1:3*NumMeshPts(iWT)),ReKi), (/3,  NumMeshPts(iWT)/) )
-   tmpBldPtMeshOri(1:3,1:3,1:NumMeshPts(iWT))  = reshape( real(MeshOri_C(1:9*NumMeshPts(iWT)),R8Ki), (/3,3,NumMeshPts(iWT)/) )
-   tmpBldPtMeshVel(1:6,1:NumMeshPts(iWT))      = reshape( real(MeshVel_C(1:6*NumMeshPts(iWT)),ReKi), (/6,  NumMeshPts(iWT)/) )
-   tmpBldPtMeshAcc(1:6,1:NumMeshPts(iWT))      = reshape( real(MeshAcc_C(1:6*NumMeshPts(iWT)),ReKi), (/6,  NumMeshPts(iWT)/) )
-
-   ! Transfer motions to input meshes
-   do iWT=1,Sim%NumTurbines
-      call Set_MotionMesh(iWT, ErrStat2, ErrMsg2 );    if (Failed())  return
-      call AD_SetInputMotion( iWT, ADI%u(INPUT_PRED), &
-               HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,      &
-               NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,      &
-               BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
-               ErrStat2, ErrMsg2 )  ! transfer input motion mesh to u(1) meshes
-         if (Failed())  return
-   enddo
 
 
    ! Set copy the current state over to the predicted state for sending to UpdateStates
@@ -1276,7 +1222,6 @@ SUBROUTINE AeroDyn_Inflow_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflo
    ErrStat  =  ErrID_None
    ErrMsg   =  ""
 
-print*,'Ending ADI'
    ! Finalize output file
    if (WrOutputsData%fileFmt > idFmtNone .and. allocated(WrOutputsData%unOutFile)) then
       ! Close the output file
@@ -1682,21 +1627,77 @@ end subroutine AeroDyn_C_SetRotorMotion
 !--------------------------------------------- AeroDyn GetRotorLoads -------------------------------------------
 !===============================================================================================================
 !> Get the loads from a single rotor.  This must be called after AeroDyn_Inflow_C_CalcOutput
-!subroutine AeroDyn_C_GetRotorLoads 
+subroutine AeroDyn_C_GetRotorLoads(iWT_C, & 
+               NumMeshPts_C, MeshFrc_C,   &
+               ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_C_GetRotorLoads')
+   implicit none
+#ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_C_GetRotorLoads
+!GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_C_GetRotorLoads
+#endif
+   integer(c_int),            intent(in   ) :: iWT_C                          !< Wind turbine / rotor number
+   integer(c_int),            intent(in   )  :: NumMeshPts_C                  !< Number of mesh points we are transfering motions to and output loads to
+   real(c_float),             intent(  out)  :: MeshFrc_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [Fx,Fy,Fz,Mx,My,Mz]       -- forces and moments (global)
+   integer(c_int),            intent(  out)  :: ErrStat_C
+   character(kind=c_char),    intent(  out)  :: ErrMsg_C(ErrMsgLen_C)
 
-!               MeshFrc_C
-!   real(c_float),             intent(  out)  :: MeshFrc_C( 6*NumMeshPts_C )   !< A 6xNumMeshPts_C array [Fx,Fy,Fz,Mx,My,Mz]       -- forces and moments (global)
-!   ! Transfer resulting load meshes to intermediate mesh
-!   do iWT=1,Sim%NumTurbines
-!      call AD_TransferLoads( iWT, ADI%u(1), ADI%y, ErrStat2, ErrMsg2 )
-!         if (Failed())  return
-!   enddo
+   ! Local variables
+   integer(IntKi)                            :: iWT                           !< current wind turbine / rotor
+   integer(IntKi)                            :: ErrStat                       !< aggregated error status
+   character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
+   integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
+   character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
+   character(*), parameter                   :: RoutineName = 'AeroDyn_C_SetRotorMotion' !< for error handling
 
-!   ! Set output force/moment array
-!   call Set_OutputLoadArray(iWT)
-!   MeshFrc_C(1:6*NumMeshPts(iWT)) = reshape( real(tmpBldPtMeshFrc(1:6,1:NumMeshPts(iWT)), c_float), (/6*NumMeshPts(iWT)/) )
+   ! Initialize error handling
+   ErrStat  =  ErrID_None
+   ErrMsg   =  ""
 
-!end subroutine AeroDyn_C_GetRotorLoads 
+   ! For debugging the interface:
+   if (debugverbose > 0) then
+      call ShowPassedData()
+   endif
+
+   ! current turbine number
+   iWT = int(iWT_c, IntKi)
+
+   ! Sanity check -- number of node points cannot change
+   if ( NumMeshPts(iWT) /= int(NumMeshPts_C, IntKi) ) then
+      ErrStat2 =  ErrID_Fatal
+      ErrMsg2  =  "Number of node points passed in changed.  This must be constant throughout simulation"
+      if (Failed())  return
+   endif
+
+   ! Transfer resulting load meshes to intermediate mesh
+   call AD_TransferLoads( iWT, ADI%u(1), ADI%y, ErrStat2, ErrMsg2 )
+      if (Failed())  return
+
+   ! Set output force/moment array
+   call Set_OutputLoadArray(iWT)
+   MeshFrc_C(1:6*NumMeshPts(iWT)) = reshape( real(tmpBldPtMeshFrc(1:6,1:NumMeshPts(iWT)), c_float), (/6*NumMeshPts(iWT)/) )
+
+   ! Set error status
+   call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+
+CONTAINS
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
+   end function Failed
+   !> This subroutine prints out all the variables that are passed in.  Use this only
+   !! for debugging the interface on the Fortran side.
+   subroutine ShowPassedData()
+      character(1) :: TmpFlag
+      integer      :: i,j
+      call WrScr("-----------------------------------------------------------")
+      call WrScr("Interface debugging:  Variables passed in through interface")
+      call WrScr("   AeroDyn_C_GetRotorLoads -- rotor "//trim(Num2LStr(iWT_c)))
+      call WrScr("-----------------------------------------------------------")
+      call WrScr("       NumMeshPts_C                   "//trim(Num2LStr( NumMeshPts_C  )) )
+      call WrScr("-----------------------------------------------------------")
+   end subroutine ShowPassedData
+end subroutine AeroDyn_C_GetRotorLoads 
 
 
 
