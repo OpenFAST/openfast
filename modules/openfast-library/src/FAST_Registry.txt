@@ -338,6 +338,7 @@ typedef  ^  FAST_MiscLinType  DbKi     Psi            {:} -  -  "Azimuth angle a
 typedef  ^  FAST_MiscLinType  ReKi     y_interp       {:} -  -  "Interpolated outputs packed into an array" -
 typedef  ^  FAST_MiscLinType  ReKi     y_ref          {:} -  -  "Reference output range for CalcSteady error calculation" -
 typedef  ^  FAST_MiscLinType  ReKi     Y_prevRot   {:}{:} -  -  "Linearization outputs from previous rotor revolution at each target azimuth " -
+#typedef  ^  FAST_MiscLinType  ReKi     eps_squared    {:} -  -  "For debugging, quantity of each component that contributes to eps_squared" -
 
 
 # ..... FAST_OutputFileType data .......................................................................................................

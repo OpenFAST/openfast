@@ -332,10 +332,14 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, AD, ED, NumBl, NumBlNodes, ErrStat, 
          call AllocAry( m_FAST%Lin%y_ref, y_FAST%Lin%Glue%SizeLin(LIN_OUTPUT_COL), 'y_ref', ErrStat2, ErrMsg2)
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
+         !call AllocAry( m_FAST%Lin%eps_squared, y_FAST%Lin%Glue%SizeLin(LIN_OUTPUT_COL), 'eps_squared', ErrStat2, ErrMsg2) ! for debugging
+         !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            
          if (ErrStat < AbortErrLev) then
             m_FAST%Lin%y_interp = 0.0_R8Ki
             m_FAST%Lin%Y_prevRot = 0.0_R8Ki
             m_FAST%Lin%y_ref = 1.0_R8Ki
+            !m_FAST%Lin%eps_squared = 0.0_ReKi
          end if
          
       end if
@@ -6623,8 +6627,8 @@ SUBROUTINE FAST_DiffInterpOutputs( psi_target, p_FAST, y_FAST, m_FAST, ED, BD, S
       
       call pack_in_array(p_FAST, y_FAST, m_FAST)
       
-      if (m_FAST%Lin%IsConverged) then
-         ! check that error equation is less than TrimTol !!!call 
+      if (m_FAST%Lin%IsConverged) then ! if Forced Linearization, the error may be large due to a different azimuth, so printing it here isn't very helpful
+         ! check that error equation is less than TrimTol
          call calc_error(p_FAST, y_FAST, m_FAST, SrvD%y, eps_squared)
          m_FAST%Lin%IsConverged = eps_squared < p_FAST%TrimTol
       end if
@@ -6700,6 +6704,7 @@ SUBROUTINE calc_error(p_FAST, y_FAST, m_FAST, y_SrvD, eps_squared)
 
    ! compute the error:
    eps_squared = 0.0_ReKi
+   !m_FAST%Lin%eps_squared = 0.0_ReKi
    
    do i = 1,p_FAST%Lin_NumMods
       ThisModule = p_FAST%Lin_ModOrder( i )
@@ -6716,6 +6721,7 @@ SUBROUTINE calc_error(p_FAST, y_FAST, m_FAST, y_SrvD, eps_squared)
             else
                diff = m_FAST%Lin%y_interp( indx ) - m_FAST%Lin%Y_prevRot( indx, m_FAST%Lin%AzimIndx )
             end if
+            !m_FAST%Lin%eps_squared(indx) = ( diff / m_FAST%Lin%y_ref( indx ) ) ** 2
             
             eps_squared = eps_squared + ( diff / m_FAST%Lin%y_ref( indx ) ) ** 2
          end do
@@ -6747,7 +6753,6 @@ SUBROUTINE ComputeOutputRanges(p_FAST, y_FAST, m_FAST, y_SrvD)
    do indx = 1,y_FAST%Lin%Glue%SizeLin(LIN_OUTPUT_COL)
       m_FAST%Lin%y_ref(indx) = maxval( m_FAST%Lin%Y_prevRot( indx, : ) ) - minval( m_FAST%Lin%Y_prevRot( indx, : ) )
       m_FAST%Lin%y_ref(indx) = max( m_FAST%Lin%y_ref(indx), 0.01_ReKi )
-!      if (m_FAST%Lin%y_ref(indx) < 1.0e-4) m_FAST%Lin%y_ref(indx) = 1.0_ReKi ! not sure why we wouldn't just do m_FAST%Lin%y_ref(indx) = max(1.0_ReKi, m_FAST%Lin%y_ref(indx)) or max(1e-4, y_ref(indx))
    end do
    
    ! special case for angles:
