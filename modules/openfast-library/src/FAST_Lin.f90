@@ -663,37 +663,8 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
       
       
          ! write the module matrices:
-      if (p_FAST%LinOutMod) then
-            
-         OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(Module_ED))      
-         call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(Module_ED)%Instance(1), OutFileName, Un, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat >=AbortErrLev) then
-               call cleanup()
-               return
-            end if
-         
-         if (p_FAST%LinOutJac) then
-            ! Jacobians
-            !dXdx:
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_ED)%Instance(1)%A, Un, p_FAST%OutFmt, 'dXdx' )
-         
-            !dXdu:
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_ED)%Instance(1)%B, Un, p_FAST%OutFmt, 'dXdu', UseCol=y_FAST%Lin%Modules(Module_ED)%Instance(1)%use_u )
-         
-            ! dYdx:
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_ED)%Instance(1)%C, Un, p_FAST%OutFmt, 'dYdx', UseRow=y_FAST%Lin%Modules(Module_ED)%Instance(1)%use_y )
-         
-            !dYdu:
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_ED)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', UseRow=y_FAST%Lin%Modules(Module_ED)%Instance(1)%use_y, &
-                                                                                                          UseCol=y_FAST%Lin%Modules(Module_ED)%Instance(1)%use_u )
-         
-         end if
-      
-            ! finish writing the file
-         call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Modules(Module_ED)%Instance(1) )
-               
-      end if
+      call WriteModuleLinearMatrices(Module_ED, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
+      if(Failed()) return;
    
       !.....................
       ! BeamDyn
@@ -726,35 +697,8 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
       
       
                ! write the module matrices:
-            if (p_FAST%LinOutMod) then
-            
-               OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(Module_BD))//TRIM(num2lstr(k))
-               call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(Module_BD)%Instance(k), OutFileName, Un, ErrStat2, ErrMsg2 )
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-                  if (ErrStat >=AbortErrLev) then
-                     call cleanup()
-                     return
-                  end if
-         
-               if (p_FAST%LinOutJac) then
-                  ! Jacobians
-                  !dXdx:
-                  call WrPartialMatrix( y_FAST%Lin%Modules(Module_BD)%Instance(k)%A, Un, p_FAST%OutFmt, 'dXdx' )
-         
-                  !dXdu:
-                  call WrPartialMatrix( y_FAST%Lin%Modules(Module_BD)%Instance(k)%B, Un, p_FAST%OutFmt, 'dXdu', UseCol=y_FAST%Lin%Modules(Module_BD)%Instance(k)%use_u )
-         
-                  !dYdx:
-                  call WrPartialMatrix( y_FAST%Lin%Modules(Module_BD)%Instance(k)%C, Un, p_FAST%OutFmt, 'dYdx', UseRow=y_FAST%Lin%Modules(Module_BD)%Instance(k)%use_y )
-         
-                  !dYdu:
-                  call WrPartialMatrix( y_FAST%Lin%Modules(Module_BD)%Instance(k)%D, Un, p_FAST%OutFmt, 'dYdu', UseRow=y_FAST%Lin%Modules(Module_BD)%Instance(k)%use_y, &
-                                                                                                                UseCol=y_FAST%Lin%Modules(Module_BD)%Instance(k)%use_u )
-               end if
-      
-                  ! finish writing the file
-               call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Modules(Module_BD)%Instance(k) )
-            end if
+            call WriteModuleLinearMatrices(Module_BD, k, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
+            if(Failed()) return;
 
          end do
       end if !BeamDyn
@@ -782,27 +726,8 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
                       
       
          ! write the module matrices:
-      if (p_FAST%LinOutMod) then
-               
-         OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(Module_IfW))      
-         call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(Module_IfW)%Instance(1), OutFileName, Un, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat >=AbortErrLev) then
-               call cleanup()
-               return
-            end if
-         
-         if (p_FAST%LinOutJac) then
-            ! Jacobians
-            !dYdu:
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_IfW)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', &
-               UseRow=y_FAST%Lin%Modules(Module_IfW)%Instance(1)%use_y, UseCol=y_FAST%Lin%Modules(Module_IfW)%Instance(1)%use_u )
-         end if
-      
-            ! finish writing the file
-         call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Modules(Module_IfW)%Instance(1) )
-               
-      end if      
+      call WriteModuleLinearMatrices(Module_IfW, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
+      if(Failed()) return;
             
    end if
    
@@ -836,31 +761,8 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
             return
          end if
             
-         ! write the module matrices:
-      if (p_FAST%LinOutMod) then
-      
-         OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(Module_SrvD))      
-         call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(Module_SrvD)%Instance(1), OutFileName, Un, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat >=AbortErrLev) then
-               call cleanup()
-               return
-            end if
-         
-            ! Jacobians
-         if (p_FAST%LinOutJac) then
-            ! Jacobians
-            call WrPartialMatrix(y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%A, Un, p_FAST%OutFmt, 'dXdx')
-            call WrPartialMatrix(y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%B, Un, p_FAST%OutFmt, 'dXdu', UseCol=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%use_u)
-            call WrPartialMatrix(y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%C, Un, p_FAST%OutFmt, 'dYdx', UseRow=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%use_y)
-            call WrPartialMatrix(y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', UseRow=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%use_y, &
-                                                                                                           UseCol=y_FAST%Lin%Modules(Module_SrvD)%Instance(1)%use_u)
-         end if
-      
-            ! finish writing the file
-         call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Modules(Module_SrvD)%Instance(1) )
-               
-      end if      
+      call WriteModuleLinearMatrices(Module_SrvD, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
+      if(Failed()) return;
    end if
 
    !.....................
@@ -894,37 +796,10 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
          end if
       
          ! write the module matrices:
-      if (p_FAST%LinOutMod) then
-      
-         OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(Module_AD))
-         call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(Module_AD)%Instance(1), OutFileName, Un, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat >=AbortErrLev) then
-               call cleanup()
-               return
-            end if
-         
-         if (p_FAST%LinOutJac) then
-            ! Jacobians
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_AD)%Instance(1)%A, Un, p_FAST%OutFmt, 'dXdx' )
-                           
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_AD)%Instance(1)%B, Un, p_FAST%OutFmt, 'dXdu', &
-                           UseCol=y_FAST%Lin%Modules(Module_AD)%Instance(1)%use_u )
-                           
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_AD)%Instance(1)%C, Un, p_FAST%OutFmt, 'dYdx', &
-                           UseRow=y_FAST%Lin%Modules(Module_AD)%Instance(1)%use_y )
-                           
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_AD)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', &
-                           UseRow=y_FAST%Lin%Modules(Module_AD)%Instance(1)%use_y, &
-                           UseCol=y_FAST%Lin%Modules(Module_AD)%Instance(1)%use_u )
-         end if
-
-            ! finish writing the file
-         call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Modules(Module_AD)%Instance(1) )
-      end if
+      call WriteModuleLinearMatrices(Module_AD, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
+      if(Failed()) return;
 
    end if
-   
    
    !.....................
    ! HydroDyn
@@ -952,39 +827,9 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
       
       
          ! write the module matrices:
-      if (p_FAST%LinOutMod) then
-            
-         OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(Module_HD))      
-         call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(Module_HD)%Instance(1), OutFileName, Un, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat >=AbortErrLev) then
-               call cleanup()
-               return
-            end if
-         
-         if (p_FAST%LinOutJac) then
-            ! Jacobians
-            !dXdx:
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_HD)%Instance(1)%A, Un, p_FAST%OutFmt, 'dXdx' )
-         
-            !dXdu:
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_HD)%Instance(1)%B, Un, p_FAST%OutFmt, 'dXdu', UseCol=y_FAST%Lin%Modules(Module_HD)%Instance(1)%use_u )
-         
-            !dYdx:
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_HD)%Instance(1)%C, Un, p_FAST%OutFmt, 'dYdx', UseRow=y_FAST%Lin%Modules(Module_HD)%Instance(1)%use_y )
-         
-            !dYdu:
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_HD)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', UseRow=y_FAST%Lin%Modules(Module_HD)%Instance(1)%use_y, &
-                                                                                                          UseCol=y_FAST%Lin%Modules(Module_HD)%Instance(1)%use_u )
-         
-         end if 
-      
-             ! finish writing the file
-         call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Modules(Module_HD)%Instance(1) )
-               
-      end if  
+      call WriteModuleLinearMatrices(Module_HD, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
+      if(Failed()) return;
    end if
-   
    !.....................
    ! SubDyn / ExtPtfm
    !.....................
@@ -1009,22 +854,9 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
       if(Failed()) return;
 
       ! write the module matrices:
-      if (p_FAST%LinOutMod) then
-         OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(Module_SD))      
-         call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(Module_SD)%Instance(1), OutFileName, Un, ErrStat2, ErrMsg2)
-         if(Failed()) return;
-            
-         if (p_FAST%LinOutJac) then
-            ! Jacobians
-            call WrPartialMatrix(y_FAST%Lin%Modules(Module_SD)%Instance(1)%A, Un, p_FAST%OutFmt, 'dXdx')
-            call WrPartialMatrix(y_FAST%Lin%Modules(Module_SD)%Instance(1)%B, Un, p_FAST%OutFmt, 'dXdu', UseCol=y_FAST%Lin%Modules(Module_SD)%Instance(1)%use_u)
-            call WrPartialMatrix(y_FAST%Lin%Modules(Module_SD)%Instance(1)%C, Un, p_FAST%OutFmt, 'dYdx', UseRow=y_FAST%Lin%Modules(Module_SD)%Instance(1)%use_y)
-            call WrPartialMatrix(y_FAST%Lin%Modules(Module_SD)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', UseRow=y_FAST%Lin%Modules(Module_SD)%Instance(1)%use_y, &
-                                                                                                               UseCol=y_FAST%Lin%Modules(Module_SD)%Instance(1)%use_u)
-         end if
-         ! finish writing the file
-         call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Modules(Module_SD)%Instance(1) )
-      end if
+      call WriteModuleLinearMatrices(Module_SD, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
+      if(Failed()) return;
+
    elseif ( p_FAST%CompSub == Module_ExtPtfm ) then 
       ! get the jacobians
       call ExtPtfm_JacobianPInput( t_global, ExtPtfm%Input(1), ExtPtfm%p, ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), &
@@ -1045,22 +877,9 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
       if(Failed()) return;
 
       ! write the module matrices:
-      if (p_FAST%LinOutMod) then
-         OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(Module_ExtPtfm))      
-         call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1), OutFileName, Un, ErrStat2, ErrMsg2)
-         if(Failed()) return;
-            
-         if (p_FAST%LinOutJac) then
-            ! Jacobians
-            call WrPartialMatrix(y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%A, Un, p_FAST%OutFmt, 'dXdx')
-            call WrPartialMatrix(y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%B, Un, p_FAST%OutFmt, 'dXdu', UseCol=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%use_u)
-            call WrPartialMatrix(y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%C, Un, p_FAST%OutFmt, 'dYdx', UseRow=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%use_y)
-            call WrPartialMatrix(y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', UseRow=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%use_y, &
-                                                                                                               UseCol=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%use_u)
-         end if
-         ! finish writing the file
-         call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1) )
-     end if
+      call WriteModuleLinearMatrices(Module_ExtPtfm, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
+      if(Failed()) return;
+
    end if ! SubDyn/ExtPtfm
    
    
@@ -1086,28 +905,8 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
       end if
       
       ! write the module matrices:
-      if (p_FAST%LinOutMod) then
-            
-         OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(Module_MAP))      
-         call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(Module_MAP)%Instance(1), OutFileName, Un, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat >=AbortErrLev) then
-               call cleanup()
-               return
-            end if
-         
-         if (p_FAST%LinOutJac) then
-            ! Jacobians
-            !dYdu:
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_MAP)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', &
-                                         UseRow=y_FAST%Lin%Modules(Module_MAP)%Instance(1)%use_y, &
-                                         UseCol=y_FAST%Lin%Modules(Module_MAP)%Instance(1)%use_u )         
-         end if 
-      
-             ! finish writing the file
-         call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Modules(Module_MAP)%Instance(1) )
-               
-      end if  ! if ( p_FAST%LinOutMod )
+      call WriteModuleLinearMatrices(Module_MAP, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
+         if(Failed()) return;
    end if     ! if ( p_FAST%CompMooring  == Module_MAP )
    
    
@@ -1141,31 +940,8 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
       end if
       
       ! write the module matrices:
-      if (p_FAST%LinOutMod) then
-            
-         OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(Module_MD))      
-         call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(Module_MD)%Instance(1), OutFileName, Un, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat >=AbortErrLev) then
-               call cleanup()
-               return
-            end if
-         
-         if (p_FAST%LinOutJac) then
-            ! Jacobians
-            ! dXdx, dXdu, dYdx, dYdu:
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_MD)%Instance(1)%A, Un, p_FAST%OutFmt, 'dXdx' )
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_MD)%Instance(1)%B, Un, p_FAST%OutFmt, 'dXdu', UseCol=y_FAST%Lin%Modules(Module_MD)%Instance(1)%use_u )
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_MD)%Instance(1)%C, Un, p_FAST%OutFmt, 'dYdx', UseRow=y_FAST%Lin%Modules(Module_MD)%Instance(1)%use_y )
-            call WrPartialMatrix( y_FAST%Lin%Modules(Module_MD)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', UseRow=y_FAST%Lin%Modules(Module_MD)%Instance(1)%use_y, &
-                                                                                                          UseCol=y_FAST%Lin%Modules(Module_MD)%Instance(1)%use_u )         
-         end if 
-      
-             ! finish writing the file
-         call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Modules(Module_MD)%Instance(1) )
-               
-      end if  ! if ( p_FAST%LinOutMod )
-   end if     ! if ( p_FAST%CompMooring  == Module_MD )
+      call WriteModuleLinearMatrices(Module_MD, 1, t_global, p_FAST, y_FAST, LinRootName, ErrStat2, ErrMsg2)
+         if(Failed()) return;   end if     ! if ( p_FAST%CompMooring  == Module_MD )
    
    !.....................
    ! Linearization of glue code Input/Output solve:
@@ -1509,7 +1285,68 @@ SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, rotFrame, deriv, d
    
 END SUBROUTINE WrLinFile_txt_Table   
 !----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE WriteModuleLinearMatrices(ThisModule, ThisInstance, t_global, p_FAST, y_FAST, LinRootName, ErrStat, ErrMsg)
+   INTEGER(IntKi),           INTENT(IN   ) :: ThisModule          !< Module index
+   INTEGER(IntKi),           INTENT(IN   ) :: ThisInstance        !< Module instance index
+   
+   REAL(DbKi),               INTENT(IN   ) :: t_global            !< current time step (written in file)
+   TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
+   TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
+!   TYPE(FAST_MiscVarType),   INTENT(INOUT) :: m_FAST              !< Miscellaneous variables
+     
+   CHARACTER(*),             INTENT(IN   ) :: LinRootName         !< root name for linearization output files
+      
+   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
+   CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
+   CHARACTER(1024)                         :: OutFileName
+   INTEGER(IntKi)                          :: Un                  ! unit number for linearization file
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+      ! write the module matrices:
+   if (p_FAST%LinOutMod) then
+            
+      OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(ThisModule))
+      if (size(y_FAST%Lin%Modules(ThisModule)%Instance) > 1) OutFileName = trim(OutFileName)//TRIM(num2lstr(ThisModule))
+      
+      call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance), OutFileName, Un, ErrStat, ErrMsg )
+         if (ErrStat >=AbortErrLev) then
+            if (Un > 0) close(Un)
+            return
+         end if
+         
+      if (p_FAST%LinOutJac) then
+            ! Jacobians
+            !dXdx:
+         if (allocated(y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance)%A)) &
+            call WrPartialMatrix( y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance)%A, Un, p_FAST%OutFmt, 'dXdx' )
+         
+            !dXdu:
+         if (allocated(y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance)%B)) &
+            call WrPartialMatrix( y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance)%B, Un, p_FAST%OutFmt, 'dXdu', &
+                                                  UseCol=y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance)%use_u )
+         
+            ! dYdx:
+         if (allocated(y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance)%C)) &
+            call WrPartialMatrix( y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance)%C, Un, p_FAST%OutFmt, 'dYdx', &
+                                                  UseRow=y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance)%use_y )
+         
+            !dYdu:
+         if (allocated(y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance)%D)) &
+            call WrPartialMatrix( y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance)%D, Un, p_FAST%OutFmt, 'dYdu', &
+                                                  UseRow=y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance)%use_y, &
+                                                  UseCol=y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance)%use_u )
+         
+      end if
+      
+         ! finish writing the file
+      call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance) )
+               
+   end if
+END SUBROUTINE WriteModuleLinearMatrices
+!----------------------------------------------------------------------------------------------------------------------------------
 
 !> This routine returns the operating points for the entire glue code.
 SUBROUTINE Glue_GetOP(p_FAST, y_FAST, ErrStat, ErrMsg)
