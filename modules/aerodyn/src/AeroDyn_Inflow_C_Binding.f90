@@ -30,15 +30,15 @@ MODULE AeroDyn_Inflow_C_BINDING
  
    IMPLICIT NONE
 
-   PUBLIC :: AeroDyn_Inflow_C_Init
-   !PUBLIC :: AeroDyn_Inflow_C_ReInit
-   PUBLIC :: AeroDyn_Inflow_C_CalcOutput
-   PUBLIC :: AeroDyn_Inflow_C_UpdateStates
-   PUBLIC :: AeroDyn_Inflow_C_End
-   PUBLIC :: AeroDyn_Inflow_C_PreInit     ! Initial call to setup number of turbines
-   PUBLIC :: AeroDyn_C_SetupRotor         ! Initial node positions etc for a rotor
-   PUBLIC :: AeroDyn_C_SetRotorMotion     ! Set motions for a given rotor
-   PUBLIC :: AeroDyn_C_GetRotorLoads      ! Retrieve loads for a given rotor
+   PUBLIC :: ADI_C_Init
+   !PUBLIC :: ADI_C_ReInit
+   PUBLIC :: ADI_C_CalcOutput
+   PUBLIC :: ADI_C_UpdateStates
+   PUBLIC :: ADI_C_End
+   PUBLIC :: ADI_C_PreInit     ! Initial call to setup number of turbines
+   PUBLIC :: ADI_C_SetupRotor         ! Initial node positions etc for a rotor
+   PUBLIC :: ADI_C_SetRotorMotion     ! Set motions for a given rotor
+   PUBLIC :: ADI_C_GetRotorLoads      ! Retrieve loads for a given rotor
 
    !------------------------------------------------------------------------------------
    !  Version info for display
@@ -191,7 +191,7 @@ subroutine SetErr(ErrStat, ErrMsg, ErrStat_C, ErrMsg_C)
    else
       ErrMsg_C = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_C )
    endif
-   if (ErrStat /= ErrID_None) call WrScr(NewLine//'AeroDyn_Inflow_C_Binding: '//trim(ErrMsg)//NewLine)
+   if (ErrStat /= ErrID_None) call WrScr(NewLine//'ADI_C_Binding: '//trim(ErrMsg)//NewLine)
 end subroutine SetErr
 
 
@@ -199,11 +199,11 @@ end subroutine SetErr
 !--------------------------------------------- AeroDyn PreInit -------------------------------------------------
 !===============================================================================================================
 !> Allocate all the arrays for data storage for all turbine rotors
-subroutine AeroDyn_Inflow_C_PreInit(NumTurbines_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_PreInit')
+subroutine ADI_C_PreInit(NumTurbines_C,ErrStat_C,ErrMsg_C) BIND (C, NAME='ADI_C_PreInit')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_PreInit
-!GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_PreInit
+!DEC$ ATTRIBUTES DLLEXPORT :: ADI_C_PreInit
+!GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_PreInit
 #endif
    integer(c_int),          intent(in   ) :: NumTurbines_C
    integer(c_int),          intent(  out) :: ErrStat_C
@@ -215,7 +215,7 @@ subroutine AeroDyn_Inflow_C_PreInit(NumTurbines_C,ErrStat_C,ErrMsg_C) BIND (C, N
    character(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
    integer                    :: ErrStat2                         !< temporary error status  from a call
    character(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
-   character(*), parameter    :: RoutineName = 'AeroDyn_Inflow_C_PreInit'   !< for error handling
+   character(*), parameter    :: RoutineName = 'ADI_C_PreInit'   !< for error handling
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
@@ -273,12 +273,12 @@ contains
       if(Failed0) call ClearTmpStorage()
    end function Failed0
 
-end subroutine AeroDyn_Inflow_C_PreInit    
+end subroutine ADI_C_PreInit    
 
 !===============================================================================================================
 !--------------------------------------------- AeroDyn Init----------------------------------------------------
 !===============================================================================================================
-SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileStringLength_C, &
+SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileStringLength_C, &
                IfWinputFilePassed, IfWinputFileString_C, IfWinputFileStringLength_C, OutRootName_C,  &
                gravity_C, defFldDens_C, defKinVisc_C, defSpdSound_C,      &
                defPatm_C, defPvap_C, WtrDpth_C, MSL2SWL_C,                &
@@ -288,11 +288,11 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
                WrVTK_in, WrVTK_inType, VTKNacDim_in, VTKHubRad_in,        &
                wrOuts_C, DT_Outs_C,                                       &
                NumChannels_C, OutputChannelNames_C, OutputChannelUnits_C, &
-               ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_Init')
+               ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_Init')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_Init
-!GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_Init
+!DEC$ ATTRIBUTES DLLEXPORT :: ADI_C_Init
+!GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_Init
 #endif
    ! Input file info
    logical(c_bool),           intent(in   )  :: ADinputFilePassed                      !< Write VTK outputs [0: none, 1: init only, 2: animation]
@@ -351,7 +351,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    character(ErrMsgLen)                                           :: ErrMsg2           !< temporary error message from a call
    integer(IntKi)                                                 :: i,j,k             !< generic counters
    integer(IntKi)                                                 :: iWT               !< current turbine number (iterate through during setup for ADI_Init call)
-   character(*), parameter                                        :: RoutineName = 'AeroDyn_Inflow_C_Init'  !< for error handling
+   character(*), parameter                                        :: RoutineName = 'ADI_C_Init'  !< for error handling
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
@@ -366,12 +366,12 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    ! check if Pre-Init was called
    if (Sim%NumTurbines < 0_IntKi) then
       ErrStat2 = ErrID_Fatal
-      ErrMsg2  = "Call AeroDyn_Inflow_C_PreInit and AeroDyn_C_SetupRotor prior to calling AeroDyn_Inflow_C_Init"
+      ErrMsg2  = "Call ADI_C_PreInit and ADI_C_SetupRotor prior to calling ADI_C_Init"
       if (Failed()) return
    endif
 
    do iWT=1,Sim%NumTurbines
-      if (Sim%WT(iWT)%NumBlades < 0)   call SetErrStat(ErrID_Fatal,"Rotor "//trim(Num2LStr(iWT))//" not initialized. Call AeroDyn_C_SetupRotor prior to calling AeroDyn_Inflow_C_Init",ErrStat,ErrMsg,RoutineName)
+      if (Sim%WT(iWT)%NumBlades < 0)   call SetErrStat(ErrID_Fatal,"Rotor "//trim(Num2LStr(iWT))//" not initialized. Call ADI_C_SetupRotor prior to calling ADI_C_Init",ErrStat,ErrMsg,RoutineName)
    enddo
    if (Failed()) return
 
@@ -656,7 +656,7 @@ CONTAINS
 
       ! Interporder
       if ( InterpOrder < 1_IntKi .or. InterpOrder > 2_IntKi ) then
-         call SetErrStat(ErrID_Fatal,"InterpOrder passed into AeroDyn_Inflow_C_Init must be 1 (linear) or 2 (quadratic)",ErrStat3,ErrMsg3,RoutineName)
+         call SetErrStat(ErrID_Fatal,"InterpOrder passed into ADI_C_Init must be 1 (linear) or 2 (quadratic)",ErrStat3,ErrMsg3,RoutineName)
          return
       endif
 
@@ -729,7 +729,7 @@ CONTAINS
       character(1) :: TmpFlag
       integer      :: i,j
       call WrScr("Interface debugging:  Variables passed in through interface")
-      call WrScr("   AeroDyn_Inflow_C_Init")
+      call WrScr("   ADI_C_Init")
       call WrScr("-----------------------------------------------------------")
       call WrScr("   FileInfo")
       TmpFlag="F";   if (ADinputFilePassed) TmpFlag="T"
@@ -954,19 +954,19 @@ CONTAINS
       !     - some checks on hub/nacelle being near middle of the rotor?  Not sure if that matters
    end subroutine CheckNodes
 
-END SUBROUTINE AeroDyn_Inflow_C_Init
+END SUBROUTINE ADI_C_Init
 
 
 !!===============================================================================================================
 !!--------------------------------------------- AeroDyn ReInit---------------------------------------------------
 !!===============================================================================================================
 !!TODO: finish this routine so it is usable if we need re-init capability for coupling
-!SUBROUTINE AeroDyn_Inflow_C_ReInit( DT_C, TMax_C,                     &
-!               ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_ReInit')
+!SUBROUTINE ADI_C_ReInit( DT_C, TMax_C,                     &
+!               ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_ReInit')
 !   implicit none
 !#ifndef IMPLICIT_DLLEXPORT
-!!DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_ReInit
-!!GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_ReInit
+!!DEC$ ATTRIBUTES DLLEXPORT :: ADI_C_ReInit
+!!GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_ReInit
 !#endif
 !
 !   real(c_double),            intent(in   )  :: DT_C              !< Timestep used with AD for stepping forward from t to t+dt.  Must be constant.
@@ -978,7 +978,7 @@ END SUBROUTINE AeroDyn_Inflow_C_Init
 !   character(ErrMsgLen)                      :: ErrMsg            !< aggregated error message
 !   integer(IntKi)                            :: ErrStat2          !< temporary error status  from a call
 !   character(ErrMsgLen)                      :: ErrMsg2           !< temporary error message from a call
-!   character(*), parameter                   :: RoutineName = 'AeroDyn_Inflow_C_ReInit'  !< for error handling
+!   character(*), parameter                   :: RoutineName = 'ADI_C_ReInit'  !< for error handling
 !
 !   ! Initialize error handling
 !   ErrStat  =  ErrID_None
@@ -1001,20 +1001,20 @@ END SUBROUTINE AeroDyn_Inflow_C_Init
 !         call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
 !      endif
 !   end function Failed
-!END SUBROUTINE AeroDyn_Inflow_C_ReInit
+!END SUBROUTINE ADI_C_ReInit
 
 
 !===============================================================================================================
 !--------------------------------------------- AeroDyn CalcOutput ---------------------------------------------
 !===============================================================================================================
 !> This routine calculates the outputs at Time_C using the states and inputs provided.
-!! NOTE: make sure to call AeroDyn_C_SetRotorMotion before calling CalcOutput
-SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
-               OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_CalcOutput')
+!! NOTE: make sure to call ADI_C_SetRotorMotion before calling CalcOutput
+SUBROUTINE ADI_C_CalcOutput(Time_C, &
+               OutputChannelValues_C, ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_CalcOutput')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_CalcOutput
-!GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_CalcOutput
+!DEC$ ATTRIBUTES DLLEXPORT :: ADI_C_CalcOutput
+!GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_CalcOutput
 #endif
    real(c_double),            intent(in   )  :: Time_C
    real(c_float),             intent(  out)  :: OutputChannelValues_C(ADI%p%NumOuts)
@@ -1027,7 +1027,7 @@ SUBROUTINE AeroDyn_Inflow_C_CalcOutput(Time_C, &
    character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
    integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
    character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
-   character(*), parameter                   :: RoutineName = 'AeroDyn_Inflow_C_CalcOutput' !< for error handling
+   character(*), parameter                   :: RoutineName = 'ADI_C_CalcOutput' !< for error handling
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
@@ -1063,7 +1063,7 @@ CONTAINS
       Failed = ErrStat >= AbortErrLev
       if (Failed)    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
    end function Failed
-END SUBROUTINE AeroDyn_Inflow_C_CalcOutput
+END SUBROUTINE ADI_C_CalcOutput
 
 !===============================================================================================================
 !--------------------------------------------- AeroDyn UpdateStates -------------------------------------------
@@ -1073,13 +1073,13 @@ END SUBROUTINE AeroDyn_Inflow_C_CalcOutput
 !! Since we don't really know if we are doing correction steps or not, we will track the previous state and
 !! reset to those if we are repeating a timestep (normally this would be handled by the OF glue code, but since
 !! the states are not passed across the interface, we must handle them here).
-!! NOTE: make sure to call AeroDyn_C_SetRotorMotion before calling UpdateStates
-SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
-               ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_UpdateStates')
+!! NOTE: make sure to call ADI_C_SetRotorMotion before calling UpdateStates
+SUBROUTINE ADI_C_UpdateStates( Time_C, TimeNext_C, &
+               ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_UpdateStates')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_UpdateStates
-!GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_UpdateStates
+!DEC$ ATTRIBUTES DLLEXPORT :: ADI_C_UpdateStates
+!GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_UpdateStates
 #endif
    real(c_double),            intent(in   )  :: Time_C
    real(c_double),            intent(in   )  :: TimeNext_C
@@ -1092,7 +1092,7 @@ SUBROUTINE AeroDyn_Inflow_C_UpdateStates( Time_C, TimeNext_C, &
    character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
    integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
    character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
-   character(*), parameter                   :: RoutineName = 'AeroDyn_Inflow_C_UpdateStates' !< for error handling
+   character(*), parameter                   :: RoutineName = 'ADI_C_UpdateStates' !< for error handling
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
@@ -1192,18 +1192,18 @@ contains
       Failed = ErrStat >= AbortErrLev
       if (Failed)    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
    end function Failed
-END SUBROUTINE AeroDyn_Inflow_C_UpdateStates
+END SUBROUTINE ADI_C_UpdateStates
 
 !===============================================================================================================
 !--------------------------------------------------- AeroDyn End-----------------------------------------------
 !===============================================================================================================
 !  NOTE: the error handling in this routine is slightly different than the other routines
 
-SUBROUTINE AeroDyn_Inflow_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflow_C_End')
+SUBROUTINE ADI_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='ADI_C_End')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_End
-!GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_Inflow_C_End
+!DEC$ ATTRIBUTES DLLEXPORT :: ADI_C_End
+!GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_End
 #endif
    integer(c_int),          intent(  out) :: ErrStat_C
    character(kind=c_char),  intent(  out) :: ErrMsg_C(ErrMsgLen_C)
@@ -1216,7 +1216,7 @@ SUBROUTINE AeroDyn_Inflow_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflo
    character(ErrMsgLen)       :: ErrMsg                           !< aggregated error message
    integer                    :: ErrStat2                         !< temporary error status  from a call
    character(ErrMsgLen)       :: ErrMsg2                          !< temporary error message from a call
-   character(*), parameter    :: RoutineName = 'AeroDyn_Inflow_C_End'   !< for error handling
+   character(*), parameter    :: RoutineName = 'ADI_C_End'   !< for error handling
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
@@ -1237,7 +1237,7 @@ SUBROUTINE AeroDyn_Inflow_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflo
             else
               sWT = ''
             endif
-            call WrBinFAST(trim(WrOutputsData%Root)//trim(sWT)//'.outb', FileFmtID_ChanLen_In, 'AeroDyn_Inflow_C_Library', WrOutputsData%WriteOutputHdr, WrOutputsData%WriteOutputUnt, (/0.0_DbKi, Sim%dT/), WrOutputsData%storage(:,:,iWT), errStat2, errMsg2)
+            call WrBinFAST(trim(WrOutputsData%Root)//trim(sWT)//'.outb', FileFmtID_ChanLen_In, 'ADI_C_Library', WrOutputsData%WriteOutputHdr, WrOutputsData%WriteOutputUnt, (/0.0_DbKi, Sim%dT/), WrOutputsData%storage(:,:,iWT), errStat2, errMsg2)
             call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
          enddo
       endif
@@ -1286,23 +1286,23 @@ SUBROUTINE AeroDyn_Inflow_C_End(ErrStat_C,ErrMsg_C) BIND (C, NAME='AeroDyn_Inflo
    call ClearTmpStorage()
 
    call SetErr(ErrStat,ErrMsg,ErrStat_C,ErrMsg_C)
-END SUBROUTINE AeroDyn_Inflow_C_End
+END SUBROUTINE ADI_C_End
 
 
 !===============================================================================================================
 !--------------------------------------------- AeroDyn SetupRotor ----------------------------------------------
 !===============================================================================================================
 !> Setup the initial rotor root positions etc before initializing
-subroutine AeroDyn_C_SetupRotor(iWT_c, TurbOrigin_C,                 &
+subroutine ADI_C_SetupRotor(iWT_c, TurbOrigin_C,                 &
                HubPos_C, HubOri_C,                                   &
                NacPos_C, NacOri_C,                                   &
                NumBlades_C, BldRootPos_C, BldRootOri_C,              &
                NumMeshPts_C,  InitMeshPos_C,  InitMeshOri_C,         &
-               ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_C_SetupRotor')
+               ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_SetupRotor')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_C_SetupRotor
-!GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_C_SetupRotor
+!DEC$ ATTRIBUTES DLLEXPORT :: ADI_C_SetupRotor
+!GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_SetupRotor
 #endif
    integer(c_int),            intent(in   ) :: iWT_c     !< Wind turbine / rotor number
    real(c_float),             intent(in   ) :: TurbOrigin_C(3)
@@ -1328,7 +1328,7 @@ subroutine AeroDyn_C_SetupRotor(iWT_c, TurbOrigin_C,                 &
    integer(IntKi)                                                 :: ErrStat2          !< temporary error status  from a call
    character(ErrMsgLen)                                           :: ErrMsg2           !< temporary error message from a call
    integer(IntKi)                                                 :: i,j,k             !< generic counters
-   character(*), parameter                                        :: RoutineName = 'AeroDyn_Inflow_C_Init'  !< for error handling
+   character(*), parameter                                        :: RoutineName = 'ADI_C_Init'  !< for error handling
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
@@ -1407,7 +1407,7 @@ contains
       character(1) :: TmpFlag
       integer      :: i,j
       call WrScr("Interface debugging:  Variables passed in through interface")
-      call WrScr("   AeroDyn_C_SetupRotor -- rotor "//trim(Num2LStr(iWT_c)))
+      call WrScr("   ADI_C_SetupRotor -- rotor "//trim(Num2LStr(iWT_c)))
       call WrScr("-----------------------------------------------------------")
       call WrScr("   Turbine origin")
       call WrMatrix(TurbOrigin_C,CU,'(3(ES15.7e2))')
@@ -1448,23 +1448,23 @@ contains
       endif
       call WrScr("-----------------------------------------------------------")
    end subroutine ShowPassedData
-end subroutine AeroDyn_C_SetupRotor    
+end subroutine ADI_C_SetupRotor    
 
 !===============================================================================================================
 !--------------------------------------------- AeroDyn SetRotorMotion ------------------------------------------
 !===============================================================================================================
-!> Set the motions for a single rotor.  This must be called before AeroDyn_Inflow_C_CalcOutput
-subroutine AeroDyn_C_SetRotorMotion( iWT_c,                             &
+!> Set the motions for a single rotor.  This must be called before ADI_C_CalcOutput
+subroutine ADI_C_SetRotorMotion( iWT_c,                             &
                HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,            &
                NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,            &
                BldRootPos_C, BldRootOri_C, BldRootVel_C, BldRootAcc_C,  &
                NumMeshPts_C,                                            &
                MeshPos_C,  MeshOri_C,  MeshVel_C,  MeshAcc_C,           &
-               ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_C_SetRotorMotion')
+               ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_SetRotorMotion')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_C_SetRotorMotion
-!GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_C_SetRotorMotion
+!DEC$ ATTRIBUTES DLLEXPORT :: ADI_C_SetRotorMotion
+!GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_SetRotorMotion
 #endif
    integer(c_int),            intent(in   ) :: iWT_c                          !< Wind turbine / rotor number
    real(c_float),             intent(in   )  :: HubPos_C( 3 )                 !< Hub position
@@ -1496,7 +1496,7 @@ subroutine AeroDyn_C_SetRotorMotion( iWT_c,                             &
    character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
    integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
    character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
-   character(*), parameter                   :: RoutineName = 'AeroDyn_C_SetRotorMotion' !< for error handling
+   character(*), parameter                   :: RoutineName = 'ADI_C_SetRotorMotion' !< for error handling
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
@@ -1551,7 +1551,7 @@ CONTAINS
       integer      :: i,j
       call WrScr("-----------------------------------------------------------")
       call WrScr("Interface debugging:  Variables passed in through interface")
-      call WrScr("   AeroDyn_C_SetRotorMotion -- rotor "//trim(Num2LStr(iWT_c)))
+      call WrScr("   ADI_C_SetRotorMotion -- rotor "//trim(Num2LStr(iWT_c)))
       call WrScr("      ("//trim(Num2LStr(Sim%WT(iWT_C)%numBlades))//" blades, "//trim(Num2LStr(NumMeshPts(iWT_C)))//" mesh nodes)")
       call WrScr("-----------------------------------------------------------")
       call WrScr("   rotor positions/orientations")
@@ -1621,19 +1621,19 @@ CONTAINS
       call WrScr("-----------------------------------------------------------")
    end subroutine ShowPassedData
 
-end subroutine AeroDyn_C_SetRotorMotion
+end subroutine ADI_C_SetRotorMotion
 
 !===============================================================================================================
 !--------------------------------------------- AeroDyn GetRotorLoads -------------------------------------------
 !===============================================================================================================
-!> Get the loads from a single rotor.  This must be called after AeroDyn_Inflow_C_CalcOutput
-subroutine AeroDyn_C_GetRotorLoads(iWT_C, & 
+!> Get the loads from a single rotor.  This must be called after ADI_C_CalcOutput
+subroutine ADI_C_GetRotorLoads(iWT_C, & 
                NumMeshPts_C, MeshFrc_C,   &
-               ErrStat_C, ErrMsg_C) BIND (C, NAME='AeroDyn_C_GetRotorLoads')
+               ErrStat_C, ErrMsg_C) BIND (C, NAME='ADI_C_GetRotorLoads')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: AeroDyn_C_GetRotorLoads
-!GCC$ ATTRIBUTES DLLEXPORT :: AeroDyn_C_GetRotorLoads
+!DEC$ ATTRIBUTES DLLEXPORT :: ADI_C_GetRotorLoads
+!GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_GetRotorLoads
 #endif
    integer(c_int),            intent(in   ) :: iWT_C                          !< Wind turbine / rotor number
    integer(c_int),            intent(in   )  :: NumMeshPts_C                  !< Number of mesh points we are transfering motions to and output loads to
@@ -1647,7 +1647,7 @@ subroutine AeroDyn_C_GetRotorLoads(iWT_C, &
    character(ErrMsgLen)                      :: ErrMsg                        !< aggregated error message
    integer(IntKi)                            :: ErrStat2                      !< temporary error status  from a call
    character(ErrMsgLen)                      :: ErrMsg2                       !< temporary error message from a call
-   character(*), parameter                   :: RoutineName = 'AeroDyn_C_SetRotorMotion' !< for error handling
+   character(*), parameter                   :: RoutineName = 'ADI_C_SetRotorMotion' !< for error handling
 
    ! Initialize error handling
    ErrStat  =  ErrID_None
@@ -1692,12 +1692,12 @@ CONTAINS
       integer      :: i,j
       call WrScr("-----------------------------------------------------------")
       call WrScr("Interface debugging:  Variables passed in through interface")
-      call WrScr("   AeroDyn_C_GetRotorLoads -- rotor "//trim(Num2LStr(iWT_c)))
+      call WrScr("   ADI_C_GetRotorLoads -- rotor "//trim(Num2LStr(iWT_c)))
       call WrScr("-----------------------------------------------------------")
       call WrScr("       NumMeshPts_C                   "//trim(Num2LStr( NumMeshPts_C  )) )
       call WrScr("-----------------------------------------------------------")
    end subroutine ShowPassedData
-end subroutine AeroDyn_C_GetRotorLoads 
+end subroutine ADI_C_GetRotorLoads 
 
 
 
@@ -2177,7 +2177,7 @@ subroutine SetTempStorage(ErrStat,ErrMsg)
    endif 
    if (minval(NumMeshPts) < 0) then
       ErrStat = ErrID_Fatal
-      ErrMSg  = "AeroDyn_C_SetupRotor haven't been called for all rotors"
+      ErrMSg  = "ADI_C_SetupRotor haven't been called for all rotors"
       return
    endif 
 
