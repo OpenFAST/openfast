@@ -12,7 +12,7 @@
 #include <memory>
 #include "netcdf.h"
 #include "dlfcn.h"
-//TODO: The skip MPICXX is put in place primarily to get around errors in OpenFOAM. This will cause problems if the driver program uses C++ API for MPI.
+//TODO: The skip MPICXX is put in place primarily to get around errors in ExternalInflow. This will cause problems if the driver program uses C++ API for MPI.
 #ifndef OMPI_SKIP_MPICXX
  #define OMPI_SKIP_MPICXX
 #endif
@@ -324,10 +324,15 @@ class OpenFAST {
   //! Array containing forces and deflections data for blade-resolved FSI simulations.
   std::vector<std::vector<turbBRfsiDataType>> brFSIData;
 
+<<<<<<< HEAD
   //! Data structure to get forces and deflections from ExternalInflow module in OpenFAST
   std::vector<ExtInfw_InputType_t> extinfw_i_f_FAST; // Input from OpenFAST
   //! Data structure to send velocity information to ExternalInflow module in OpenFAST
   std::vector<ExtInfw_OutputType_t> extinfw_o_t_FAST; // Output to OpenFAST
+=======
+  std::vector<ExtInfw_InputType_t> cDriver_Input_from_FAST;
+  std::vector<ExtInfw_OutputType_t> cDriver_Output_to_FAST;
+>>>>>>> OpenFAST/dev
 
   //! Data structure to get deflections from ExternalLoads module in OpenFAST
   std::vector<ExtLdDX_InputType_t> extld_i_f_FAST; // Input from OpenFAST
@@ -436,7 +441,16 @@ class OpenFAST {
                           float & fy,
                           float & fz);
 
+<<<<<<< HEAD
   //! Allocate turbine number 'iTurbGlob' to the processor with global MPI rank 'procNo'. MUST be called from every MPI rank.
+=======
+  hid_t openVelocityDataFile(bool createFile);
+  void readVelocityData(int nTimesteps);
+  void writeVelocityData(hid_t h5file, int iTurb, int iTimestep, ExtInfw_InputType_t iData, ExtInfw_OutputType_t oData);
+  herr_t closeVelocityDataFile(int nt_global, hid_t velDataFile);
+  void backupVelocityDataFile(int curTimeStep, hid_t & velDataFile);
+
+>>>>>>> OpenFAST/dev
   void setTurbineProcNo(int iTurbGlob, int procNo) { turbineMapGlobToProc[iTurbGlob] = procNo; }
   //! Allocate all turbines to processors in a round-robin fashion. MUST be called from every MPI rank.
   void allocateTurbinesToProcsSimple();
@@ -755,6 +769,7 @@ private:
 
   void loadSuperController(const fastInputs & fi);
 
+<<<<<<< HEAD
   //! Apply the velocity data at the Aerodyn nodes in 'velData' to turbine number 'iTurb' at time step 'iPrestart' through the data structure 'cDriver_Output_to_FAST'
   void applyVelocityData(int iPrestart, int iTurb, ExtInfw_OutputType_t o_t_FAST, std::vector<double> & velData) ;
 
@@ -764,6 +779,10 @@ private:
   void applyWMrotation(double * wm, double * r, double *rRot, double transpose = 1.0);
   //! Apply a Direction Cosine Matrix rotation 'dcm' to a vector 'r' into 'rRot'. To optionally transpose the rotation, set 'tranpose=-1.0'.
   void applyDCMrotation(double * dcm, double * r, double *rRot, double transpose = 1.0);
+=======
+  void setOutputsToFAST(ExtInfw_InputType_t cDriver_Input_from_FAST, ExtInfw_OutputType_t cDriver_Output_to_FAST) ; // An example to set velocities at the Aerodyn nodes
+  void applyVelocityData(int iPrestart, int iTurb, ExtInfw_OutputType_t cDriver_Output_to_FAST, std::vector<double> & velData) ;
+>>>>>>> OpenFAST/dev
 
 };
 
