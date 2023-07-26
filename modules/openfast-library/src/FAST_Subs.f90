@@ -3400,7 +3400,7 @@ SUBROUTINE SetVTKParameters_B4SeaSt(p_FAST, InitOutData_ED, InitInData_SeaSt, BD
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
 
 
-   REAL(SiKi)                              :: BladeLength, Width, WidthBy2
+   REAL(SiKi)                              :: BladeLength, HubRad, Width, WidthBy2
    REAL(SiKi)                              :: dx, dy
    INTEGER(IntKi)                          :: i, j, n
    INTEGER(IntKi)                          :: ErrStat2
@@ -3414,11 +3414,13 @@ SUBROUTINE SetVTKParameters_B4SeaSt(p_FAST, InitOutData_ED, InitInData_SeaSt, BD
       ! Get radius for ground (blade length + hub radius):
    if ( p_FAST%CompElast == Module_BD ) then
       BladeLength = TwoNorm(BD%y(1)%BldMotion%Position(:,1) - BD%y(1)%BldMotion%Position(:,BD%y(1)%BldMotion%Nnodes))
+      HubRad = InitOutData_ED%HubRad
    else
       BladeLength = InitOutData_ED%BladeLength
+      HubRad = InitOutData_ED%HubRad
    end if
-   p_FAST%VTK_Surface%HubRad    = InitOutData_ED%HubRad
-   p_FAST%VTK_Surface%GroundRad = BladeLength + p_FAST%VTK_Surface%HubRad
+   p_FAST%VTK_Surface%HubRad    = HubRad
+   p_FAST%VTK_Surface%GroundRad = BladeLength + HubRad
 
    !........................................................................................................
    ! We don't use the rest of this routine for stick-figure output
@@ -4815,11 +4817,9 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_Solution'
 
 
-   ErrStat  = ErrID_None
-   ErrMsg   = ""
-   ErrStat2 = ErrID_None
-   ErrMsg2  = ""
-
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
    n_t_global_next = n_t_global+1
    t_global_next = t_initial + n_t_global_next*p_FAST%DT  ! = m_FAST%t_global + p_FAST%dt
 
