@@ -6720,11 +6720,8 @@ SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD
 
    ErrStat = ErrID_None
    ErrMsg  = ""
-
-
-   CALL FAST_EndOutput( p_FAST, y_FAST, m_FAST, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
+            
+      
    IF ( p_FAST%ModuleInitialized(Module_ED) ) THEN
       CALL ED_End(   ED%Input(1),   ED%p,   ED%x(STATE_CURR),   ED%xd(STATE_CURR),   ED%z(STATE_CURR),   ED%OtherSt(STATE_CURR),   &
                      ED%y,          ED%m,  ErrStat2, ErrMsg2 )
@@ -6812,6 +6809,13 @@ SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD
 
    END IF
 
+   
+      ! Write output to file (do this after ending modules so that we have more memory to use if needed)
+   CALL FAST_EndOutput( p_FAST, y_FAST, m_FAST, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   
+   
 END SUBROUTINE FAST_EndMods
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calls the destroy routines for each module. (It is basically a duplicate of FAST_DestroyTurbineType().)
