@@ -1,5 +1,5 @@
 %% Test OpenFAST Simulink Interface
-classdef OpenFASTSimulinkTest < matlab.unittest.TestCase
+classdef test_openfast_simulink < matlab.unittest.TestCase
     
     %% Test Method Block
     methods (Test)
