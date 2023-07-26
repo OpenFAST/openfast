@@ -562,6 +562,10 @@ jobs:
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v1
       - name: Build FAST_SFunc
