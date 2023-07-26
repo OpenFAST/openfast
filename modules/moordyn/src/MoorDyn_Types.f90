@@ -108,7 +108,7 @@ IMPLICIT NONE
 ! =========  MD_Body  =======
   TYPE, PUBLIC :: MD_Body
     INTEGER(IntKi)  :: IdNum      !< integer identifier of this point [-]
-    INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=fixed, 1=vessel, 2=point [-]
+    INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=free, 1=fixed, -1=vessel [-]
     INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedC      !< list of IdNums of points attached to this body [-]
     INTEGER(IntKi) , DIMENSION(1:30)  :: AttachedR      !< list of IdNums of rods attached to this body [-]
     INTEGER(IntKi)  :: nAttachedC = 0      !< number of attached points [-]

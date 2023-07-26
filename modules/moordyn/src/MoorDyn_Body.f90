@@ -81,7 +81,7 @@ CONTAINS
       CALL TranslateMass6to6DOF(Body%rCG, Mtemp, Body%M0)  ! account for potential CG offset <<< is the direction right? <<<
         
       DO J=1,3
-         Body%M0(J,J) = Body%M0(J,J) + Body%BodyV*Body%BodyCa(J) ! add added mass in each direction about ref point (so only diagonals) <<< eventually expand to multi D
+         Body%M0(J,J) = Body%M0(J,J) + Body%BodyV*Body%BodyCa(J)* p%rhow ! add added mass in each direction about ref point (so only diagonals) <<< eventually expand to multi D
       END DO
    
       ! --------------- if this is an independent body (not coupled) ----------
