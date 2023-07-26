@@ -1225,6 +1225,8 @@ SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, rotFrame, deriv, d
    CHARACTER(100)                          :: Fmt
    CHARACTER(100)                          :: Fmt_Str
    CHARACTER(100)                          :: FmtOrient
+   CHARACTER(25)                           :: DerivStr
+   CHARACTER(25)                           :: DerivUnitStr
    
 
    
@@ -1251,12 +1253,25 @@ SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, rotFrame, deriv, d
       i_print = 1
    end if
    
+   if (UseDerivNames) then
+      if (p_FAST%CompAeroMaps .and. p_FAST%CompElast /= MODULE_BD) then ! this might not work if we are using some other (not BD, ED) module with states
+         DerivStr = 'Second time derivative of'
+         DerivUnitStr = '/s^2'
+      else
+         DerivStr = 'First time derivative of'
+         DerivUnitStr = '/s'
+      end if
+   else
+      DerivStr = ''
+      DerivUnitStr = ''
+   end if
+   
    do i=1,size(names)
       
       UseThisCol = .true.
       if (present(UseCol)) then
          UseThisCol = useCol(i)
-      end if  
+      end if
       
       DerivOrdCol = 0
       if (present(derivOrder)) DerivOrdCol = derivOrder(i)
@@ -1274,7 +1289,7 @@ SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, rotFrame, deriv, d
       else
          if (UseThisCol) then
             if (UseDerivNames) then
-               WRITE(Un, Fmt) i_print, op(i_op), RotatingCol, DerivOrdCol, 'First time derivative of '//trim(names(i))//'/s'
+               WRITE(Un, Fmt) i_print, op(i_op), RotatingCol, DerivOrdCol, trim(DerivStr)//' '//trim(names(i))//trim(DerivUnitStr)
             else
                WRITE(Un, Fmt) i_print, op(i_op), RotatingCol, DerivOrdCol, trim(names(i))
             end if
@@ -3597,8 +3612,8 @@ SUBROUTINE Linear_HD_InputSolve_du( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
    TYPE(FAST_ParameterType),    INTENT(IN   )   :: p_FAST      !< FAST parameter data    
    TYPE(FAST_OutputFileType),   INTENT(IN   )   :: y_FAST      !< FAST output file data (for linearization)
    TYPE(HydroDyn_InputType),    INTENT(INOUT)   :: u_HD        !< The inputs to HydroDyn
-   TYPE(ED_OutputType),TARGET,  INTENT(IN)      :: y_ED        !< The outputs from the ElastoDyn structural dynamics module
-   TYPE(SD_OutputType),TARGET,  INTENT(IN)      :: y_SD        !< The outputs from the SubDyn structural dynamics module
+   TYPE(ED_OutputType), TARGET, INTENT(IN)      :: y_ED        !< The outputs from the ElastoDyn structural dynamics module
+   TYPE(SD_OutputType), TARGET, INTENT(IN)      :: y_SD        !< The outputs from the SubDyn structural dynamics module
    TYPE(FAST_ModuleMapType),    INTENT(INOUT)   :: MeshMapData !< Data for mapping between modules
    REAL(R8Ki),                  INTENT(INOUT)   :: dUdu(:,:)   !< Jacobian matrix of which we are computing the dU^{HD}/du^{HD} block
    
