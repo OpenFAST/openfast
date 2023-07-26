@@ -148,8 +148,8 @@ and depth. The orientation is defined by heading and inclination angles, which
 are calculated for each element at every time step. Total water depth is defined
 by the user, relative to the still water level (or relative to the mean sea 
 level when running AeroDyn in standalone mode with the AeroDyn driver). The
-instantaneous depth of each element is based on the total water depth and 
-element position and is calculated at each time step.
+instantaneous depth of each element is based on its position in global coordinates
+at each time step.
 
 .. _AD_buoy_bladestower:
 
@@ -163,7 +163,13 @@ pressure over the wetted area of each element. For the blades, loads are applied
 at a user-specified center of buoyancy. For the tower, loads are applied at the
 centerline. When applicable, end effects are accounted for by calculating the
 fluid pressure on the exposed axial face of the element. The tower is assumed to
-be embedded into the seabed, such that no end effects at the tower base are needed.
+be either embedded into the seabed or attached to another support structure member,
+such that no end effects at the tower base are needed. For MHK turbines with a support
+structure (i.e., any structure other than a simple tower embedded in the seabed), it
+is currently recommended to model the entire support structure, including the tower, in HydroDyn.
+Future releases will include the ability to neglect fluid loads at the interface between a tower
+modeled in AeroDyn and a platform modeled in HydroDyn.
+
 
 The buoyancy calculation for the blades and tower is completed according to the following steps:
 
@@ -176,6 +182,18 @@ The buoyancy calculation for the blades and tower is completed according to the 
 7.	Move buoyant loads from the center of buoyancy to the aerodynamic center
 8.	Express buoyant loads in the form expected by OpenFAST
 9.	Add buoyant loads to aerodynamic loads
+
+Although the blade and tower buoyant loads are not based on volume, the volumes of these components are
+written to the AeroDyn summary file for reference. The blade and tower volumes are calculated by summing
+the volume of each element, assumed to be a tapered cylinder. The volume of a single element :math:`(V_{elem})`
+is given by:
+
+.. math::
+   V_{elem} = \frac{\pi}{3} (r_i^2 + r_i r_{i+1} + r_{i+1}^2) dl
+
+where :math:`r_i` is the element radius at node :math:`i`, :math:`r_{i+1}` is the element radius at node 
+:math:`i+1`, and :math:`dl` is the element length.
+
 
 .. _AD_buoy_hubnacelle:
 

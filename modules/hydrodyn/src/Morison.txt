@@ -13,16 +13,16 @@
 # ...... Include files (definitions from NWTC Library) ............................................................................
 # make sure that the file name does not have any trailing white spaces!
 include   Registry_NWTC_Library.txt
+usefrom   SeaState_Interp.txt
 #
 #
-param     Morison/Morison              unused                        INTEGER          MaxMrsnOutputs           -       4599        -         "Total number of possible Morison module output channels"    -
-typedef   ^                            Morison_JointType             INTEGER          JointID                  -          -        -         "User-specified integer ID for the given joint"    -
+typedef   Morison/Morison              Morison_JointType             INTEGER          JointID                  -          -        -         "User-specified integer ID for the given joint"    -
 typedef   ^                            ^                             ReKi             Position                {3}         -        -         "Undisplaced location of the joint in the platform coordinate system"    m
 typedef   ^                            ^                             INTEGER          JointAxID                -          -        -         "Axial ID (found in the user-supplied Axial Coefficients Table) for this joint: used to determine axial coefs"    -
 typedef   ^                            ^                             INTEGER          JointAxIDIndx            -          -        -         "The index into the Axial Coefs arrays corresponding to the above Axial ID"    -
 typedef   ^                            ^                             INTEGER          JointOvrlp               -          -        -         "Joint overlap code [Unused"    -
 typedef   ^                            ^                             INTEGER          NConnections             -          -        -         "Number of members connecting to this joint"    -
-typedef   ^                            ^                             INTEGER          ConnectionList           {10}       -        -         "List of Members connected to this joint.  The member index is what is stored, not the Member ID"    -
+typedef   ^                            ^                             INTEGER          ConnectionList           {50}       -        -         "List of Members connected to this joint.  The member index is what is stored, not the Member ID"    -
 typedef   ^                            Morison_MemberPropType        INTEGER          PropSetID                -          -        -         "User-specified integer ID for this group of properties"    -
 typedef   ^                            ^                             ReKi             PropD                    -          -        -         "Diameter"    m
 typedef   ^                            ^                             ReKi             PropThck                 -          -        -         "Wall thickness"    m
@@ -44,10 +44,16 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi             DpthAxCaMG               -          -        -         "Depth-based Axial Ca for marine growth"    -
 typedef   ^                            ^                             ReKi             DpthAxCp                 -          -        -         "Depth-based Axial Cp"    -
 typedef   ^                            ^                             ReKi             DpthAxCpMG               -          -        -         "Depth-based Axial Cp for marine growth"    -
+typedef   ^                            ^                             ReKi             DpthCb                   -          -        -         "Simple model hydrostatic/buoyancy load coefficient" - 
+typedef   ^                            ^                             ReKi             DpthCbMg                 -          -        -         "Simple model hydrostatic/buoyancy load coefficient for marine growth" - 
+typedef   ^                            ^                             LOGICAL          DpthMCF                  -          -        -         "Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model"  -
 typedef   ^                            Morison_AxialCoefType         INTEGER          AxCoefID                 -          -        -         "User-supplied integer ID for this set of Axial coefs"    -
 typedef   ^                            ^                             ReKi             AxCd                     -          -        -         "Axial Cd"    -
 typedef   ^                            ^                             ReKi             AxCa                     -          -        -         "Axial Ca"    -
 typedef   ^                            ^                             ReKi             AxCp                     -          -        -         "Axial Cp"    -
+typedef   ^                            ^                             ReKi             AxVnCOff                 -          -        -         "High-pass cut-off frequency for normal velocity when computing axial drag force" -
+typedef   ^                            ^                             ReKi             AxFDLoFSc                -          -        -         "Scaling factor for low frequency axial drag force" -
+typedef   ^                            ^                             IntKi            AxFDMod                  -          -        -         "Switch for the axial drag formulation {0: original formulation, 1: Away from member only}" -
 #
 typedef   ^                            Morison_MemberInputType       INTEGER          MemberID                 -          -        -         "User-supplied integer ID for this member"    -
 typedef   ^                            ^                             INTEGER          NodeIndx                 {:}        -        -         "Index of each of the member's nodes in the master node list"    -
@@ -61,9 +67,11 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER          MPropSetID2Indx          -          -        -         "Index into the Property table for the end of this member"    -
 typedef   ^                            ^                             ReKi             MDivSize                 -          -        -         "User-specified desired member discretization size for the final element"    m
 typedef   ^                            ^                             INTEGER          MCoefMod                 -          -        -         "Which coef. model is being used for this member [1=simple, 2=depth-based, 3=member-based]"    -
+typedef   ^                            ^                             INTEGER          MHstLMod                 -          -        -         "Which hydrostatic model is being used for this member [1=column-type, 2=ship-type]"    -
 typedef   ^                            ^                             INTEGER          MmbrCoefIDIndx           -          -        -         "Index into the appropriate coefs table for this member's properties"    -
 typedef   ^                            ^                             INTEGER          MmbrFilledIDIndx         -          -        -         "Index into the filled group table if this is a filled member"    -
 typedef   ^                            ^                             LOGICAL          PropPot                  -          -        -         "Flag T/F for whether the member is modeled with potential flow theory"    -
+typedef   ^                            ^                             LOGICAL          PropMCF                  -          -        -         "Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model"    -
 typedef   ^                            ^                             INTEGER          NElements                -          -        -         "number of elements in this member"    -
 typedef   ^                            ^                             ReKi             RefLength                -          -        -         "the reference total length for this member"    m
 typedef   ^                            ^                             ReKi             dl                       -          -        -         "the reference element length for this member (may be less than MDivSize to achieve uniform element lengths)"    m
@@ -73,10 +81,13 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             INTEGER          JointOvrlp               -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          JointAxIDIndx            -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          NConnections             -          -        -         "Number of elements connecting to this node"    -
-typedef   ^                            ^                             INTEGER          ConnectionList           {10}       -        -         "Indices of all the members connected to this node (positive if end 1, negative if end 2)"    -
+typedef   ^                            ^                             INTEGER          ConnectionList           {50}       -        -         "Indices of all the members connected to this node (positive if end 1, negative if end 2)"    -
 typedef   ^                            ^                             ReKi             JAxCd                    -          -        -         "Nodal lumped (joint) axial Cd"    -
 typedef   ^                            ^                             ReKi             JAxCa                    -          -        -         "Nodal lumped (joint) axial Cp"    -
 typedef   ^                            ^                             ReKi             JAxCp                    -          -        -         "Nodal lumped (joint) axial Ca"    -
+typedef   ^                            ^                             ReKi             JAxVnCOff                -          -        -         "High-pass cut-off frequency for normal velocity when computing axial drag force" -
+typedef   ^                            ^                             ReKi             JAxFDLoFSc               -          -        -         "Scaling factor for low frequency axial drag force" -
+typedef   ^                            ^                             IntKi            JAxFDMod                 -          -        -         "Switch for the axial drag formulation {0: original formulation, 1: Away from member only}" -
 typedef   ^                            ^                             ReKi             FillDensity              -          -        -         "Fill fluid density"   kg/m^3
 typedef   ^                            ^                             ReKi             tMG                      -          -        -         "Nodal thickness with marine growth "    m
 typedef   ^                            ^                             ReKi             MGdensity                -          -        -         "Nodal density of marine growth"    kg/m^3
@@ -92,10 +103,12 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi           Ak                       {3}{3}     -        -         "matrix of I - kkt"   -
 typedef   ^                            ^                             ReKi           R                        {:}        -        -         "outer member radius at each node"    m
 typedef   ^                            ^                             ReKi           RMG                      {:}        -        -         "radius at each node including marine growth"   m
+typedef   ^                            ^                             ReKi           RMGB                     {:}        -        -         "radius at each node including marine growth scaled by sqrt(Cb)"   m
 typedef   ^                            ^                             ReKi           Rin                      {:}        -        -         "inner member radius at node, equivalent to radius of water ballast at this node if filled"    m
 typedef   ^                            ^                             ReKi           tMG                      {:}        -        -         "Nodal thickness with marine growth (of member at node location)"    m
 typedef   ^                            ^                             ReKi           MGdensity                {:}        -        -         "Nodal density of marine growth"    kg/m^3
 typedef   ^                            ^                             ReKi           dRdl_mg                  {:}        -        -         "taper dr/dl of outer surface including marine growth of each element"    -
+typedef   ^                            ^                             ReKi           dRdl_mg_b                {:}        -        -         "taper dr/dl of outer surface including marine growth of each element with scaling of sqrt(Cb)"    -
 typedef   ^                            ^                             ReKi           dRdl_in                  {:}        -        -         "taper dr/dl of interior surface of each element"    -
 typedef   ^                            ^                             ReKi           Vinner                   -          -        -         "Member volume without marine growth"   m^3
 typedef   ^                            ^                             ReKi           Vouter                   -          -        -         "Member volume including marine growth"   m^3
@@ -118,6 +131,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi           AxCd                     {:}        -        -         "Member axial Cd at each node"    -
 typedef   ^                            ^                             ReKi           AxCa                     {:}        -        -         "Member axial Ca at each node"    -
 typedef   ^                            ^                             ReKi           AxCp                     {:}        -        -         "Member axial Cp at each node"    -
+typedef   ^                            ^                             ReKi           Cb                       {:}        -        -         "Member Cb at each node"    -
 typedef   ^                            ^                             ReKi           m_fb_l                   {:}        -        -         "mass of flooded ballast in lower portion of each element"    kg
 typedef   ^                            ^                             ReKi           m_fb_u                   {:}        -        -         "mass of flooded ballast in upper portion of each element"    kg
 typedef   ^                            ^                             ReKi           h_cfb_l                  {:}        -        -         "distance to flooded ballast centroid from node point in lower portion of each element"    m
@@ -142,9 +156,11 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             INTEGER          MCoefMod                 -          -        -         "Coefs model for member: 1 = simple, 2 =depth, 3 = member-based "    -
 typedef   ^                            ^                             INTEGER          MmbrCoefIDIndx           -          -        -         "If MCoefMod=3, then this is the index for the member's coefs in the master Member Coefs Table"    -
 typedef   ^                            ^                             INTEGER          MmbrFilledIDIndx         -          -        -         "If this member is part of a fill group, this is the index into the master fill group table, if not = -1"    -
+typedef   ^                            ^                             INTEGER          MHstLMod                 -          -        -         "Hydrostatic model for member [1=column-type, 2=ship-type]"    -
 typedef   ^                            ^                             ReKi             FillFSLoc                -          -        -         "Z-location of the filled free-surface"    m
 typedef   ^                            ^                             ReKi             FillDens                 -          -        -         "Filled fluid density"    kg/m^3
 typedef   ^                            ^                             LOGICAL          PropPot                  -          -        -         "Is this element/member modeled with potential flow theory T/F"    -
+typedef   ^                            ^                             LOGICAL          PropMCF                  -          -        -         "Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model"    -
 typedef   ^                            ^                             LOGICAL        Flipped                    -          -        -         "Was the member flipped in a reordering event?  Need to know this to get the correct normal vector to the ends" -
 #
 typedef   ^                            Morison_MemberLoads           ReKi                     F_D                           {:}{:}         -         -         "Member-based (side-effects) Nodal viscous drag loads at time t"   -
@@ -184,18 +200,23 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi             MemberAxCp2              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberAxCpMG1            -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
 typedef   ^                            ^                             ReKi             MemberAxCpMG2            -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCb1                -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCb2                -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCbMG1              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             ReKi             MemberCbMG2              -          -        -         "Member-based coefs, see above descriptions for meanings (1 = start, 2=end)"    -
+typedef   ^                            ^                             LOGICAL          MemberMCF                -          -        -         "Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model"  -
 typedef   ^                            Morison_MGDepthsType          ReKi             MGDpth                   -          -        -         "Marine growth depth location for these properties" m
 typedef   ^                            ^                             ReKi             MGThck                   -          -        -         "Marine growth thickness"    m
 typedef   ^                            ^                             ReKi             MGDens                   -          -        -         "Marine growth density"    kg/m^3
 typedef   ^                            Morison_MOutput               INTEGER          MemberID                 -          -        -         "Member ID for requested output"    -
-typedef   ^                            ^                             INTEGER          NOutLoc                  -          -        -         "The number of requested output locations"    -
-typedef   ^                            ^                             ReKi             NodeLocs                 {:}        -        -         "Normalized locations along user-specified member for the outputs"    -
-typedef   ^                            ^                             INTEGER          MemberIDIndx             -          -        -         "Index for member in the master list"    -
-typedef   ^                            ^                             INTEGER          MeshIndx1                  {:}        -        -         "Index of node in Mesh for the start of the member element"    -
-typedef   ^                            ^                             INTEGER          MeshIndx2                  {:}        -        -         "Index of node in Mesh for the end of the member element"    -
-typedef   ^                            ^                             INTEGER          MemberIndx1                  {:}        -        -         "Index of Member nodes for the start of the member element"    -
-typedef   ^                            ^                             INTEGER          MemberIndx2                  {:}        -        -         "Index of Member nodes for the end of the member element"    -
-typedef   ^                            ^                             ReKi             s                        {:}        -        -         "Linear interpolation factor between node1 and node2 for the output location"    -
+typedef   ^                            Morison_MOutput               INTEGER          NOutLoc                  -          -        -         "The number of requested output locations"    -
+typedef   ^                            Morison_MOutput               ReKi             NodeLocs                 {:}        -        -         "Normalized locations along user-specified member for the outputs"    -
+typedef   ^                            Morison_MOutput               INTEGER          MemberIDIndx             -          -        -         "Index for member in the master list"    -
+typedef   ^                            Morison_MOutput               INTEGER          MeshIndx1                  {:}        -        -         "Index of node in Mesh for the start of the member element"    -
+typedef   ^                            Morison_MOutput               INTEGER          MeshIndx2                  {:}        -        -         "Index of node in Mesh for the end of the member element"    -
+typedef   ^                            Morison_MOutput               INTEGER          MemberIndx1                  {:}        -        -         "Index of Member nodes for the start of the member element"    -
+typedef   ^                            Morison_MOutput               INTEGER          MemberIndx2                  {:}        -        -         "Index of Member nodes for the end of the member element"    -
+typedef   ^                            Morison_MOutput               ReKi             s                        {:}        -        -         "Linear interpolation factor between node1 and node2 for the output location"    -
 typedef   ^                            Morison_JOutput               INTEGER          JointID                  -          -        -         "Joint ID for the requested output"    -
 typedef   ^                            ^                             INTEGER          JointIDIndx              -          -        -         "Joint index in the master list"    -
 # ..... Initialization data .......................................................................................................
@@ -206,6 +227,8 @@ typedef   ^                            InitInputType                 ReKi       
 typedef   ^                            ^                             ReKi                     WtrDens                          -          -        -         "Water density"    kg/m^3
 typedef   ^                            ^                             ReKi                     WtrDpth                          -          -        -         "Water depth (positive-valued)"    m
 typedef   ^                            ^                             ReKi                     MSL2SWL                          -          -        -         "Mean Sea Level to Still Water Level offset"    m
+typedef   ^                            ^                             INTEGER                  WaveDisp                         -          -        -         "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
+typedef   ^                            ^                             INTEGER                  AMMod                            -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]" -
 typedef   ^                            ^                             INTEGER                  NJoints                          -          -        -         "Number of user-specified joints"    -
 typedef   ^                            ^                             INTEGER                  NNodes                           -          -        -         "Total number of nodes in the final software model"    -
 typedef   ^                            ^                             Morison_JointType        InpJoints                        {:}        -        -         "Array of user-specified joints"    -
@@ -226,11 +249,14 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     SimplAxCaMG                      -          -        -         "Simple model Axial Ca for marine growth"    -
 typedef   ^                            ^                             ReKi                     SimplAxCp                        -          -        -         "Simple model Axial Cp"    -
 typedef   ^                            ^                             ReKi                     SimplAxCpMG                      -          -        -         "Simple model Axial Cp for marine growth"    -
-typedef   ^                            ^                             INTEGER                  NCoefDpth                        -          -        -         "" -
+typedef   ^                            ^                             ReKi                     SimplCb                          -          -        -         "Simple model hydrostatic/buoyancy load coefficient" - 
+typedef   ^                            ^                             ReKi                     SimplCbMg                        -          -        -         "Simple model hydrostatic/buoyancy load coefficient for marine growth" - 
+typedef   ^                            ^                             LOGICAL                  SimplMCF                         -          -        -         "Flag T/F for whether the member is modeled with the MacCamy-Fuchs diffraction model"  -
+typedef   ^                            ^                             INTEGER                  NCoefDpth                        -          -        -         ""    -
 typedef   ^                            ^                             Morison_CoefDpths        CoefDpths                        {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NCoefMembers                     -          -        -         ""    -
 typedef   ^                            ^                             Morison_CoefMembers      CoefMembers                      {:}        -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NMembers                       -          -        -         "Number of user-specified members in the input file"    -
+typedef   ^                            ^                             INTEGER                  NMembers                         -          -        -         "Number of user-specified members in the input file"    -
 typedef   ^                            ^                             Morison_MemberInputType  InpMembers                       {:}        -        -         "Array of user-specified members"    -
 typedef   ^                            ^                             INTEGER                  NFillGroups                      -          -        -         ""    -
 typedef   ^                            ^                             Morison_FilledGroupType  FilledGroups                     {:}        -        -         ""    -
@@ -242,26 +268,28 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             Morison_MOutput          MOutLst                          {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NJOutputs                        -          -        -         ""    -
 typedef   ^                            ^                             Morison_JOutput          JOutLst                          {:}        -        -         ""    -
-typedef   ^                            ^                             CHARACTER(ChanLen)       OutList                          {4032}     -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry()"    -
-typedef   ^                            ^                             LOGICAL                  ValidOutList                     {:}        -        -         ""    -
+typedef   ^                            ^                             CHARACTER(ChanLen)       OutList                          {:}        -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry(). Use MaxMrsnOutputs"    -
 typedef   ^                            ^                             INTEGER                  NumOuts                          -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  OutSwtch                         -          -        -         ""    -
-typedef   ^                            ^                             LOGICAL                  OutAll                           -          -        -         ""    -
-typedef   ^                            ^                             CHARACTER(1024)          OutRootName                      -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  UnOutFile                        -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  UnSum                            -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave                        -          -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveAcc                          {:}{:}{:}  -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveTime                         {:}        -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveDynP                         {:}{:}     -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveVel                          {:}{:}{:}  -        -         ""    -
-typedef   ^                            ^                             INTEGER                  nodeInWater                      {:}{:}     -        -         "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
+typedef   ^                            ^                             SiKi                     WaveElev1                        {*}{*}{*}  -        -         "First order wave elevation (points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     WaveElev2                        {*}{*}{*}  -        -         "Second order wave elevation (points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     WaveAcc                    {*}{*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                             SiKi                     WaveAccMCF                 {*}{*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                             SiKi                     WaveTime                         {*}        -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                             SiKi                     WaveDynP                      {*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                             SiKi                     WaveVel                    {*}{*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                             SiKi                     PWaveAcc0                     {*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                             SiKi                     PWaveAccMCF0                  {*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                             SiKi                     PWaveDynP0                    {*}{*}{*}     -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                             SiKi                     PWaveVel0                     {*}{*}{*}{*}  -        -         "(points to SeaState module data)"    -
+typedef   ^                            ^                      SeaSt_Interp_ParameterType      SeaSt_Interp_p                   -          -        -  "parameter information from the SeaState Interpolation module"   -
+typedef   ^                            ^                             INTEGER                  WaveStMod                        -          -        -         ""    -  
+typedef   ^                            ^                             SiKi                     MCFD                             -          -        -         "Diameter of the MacCamy-Fuchs member."    -
 #
 #
 # Define outputs from the initialization routine here:
 #
-#typedef   ^                            InitOutputType                MeshType                 Mesh                              -          -        -         "Unused?"    -
-#typedef   ^                            ^                             SiKi                     Morison_Rad                      {:}         -        -         "radius of node (for FAST visualization)" (m)
 typedef   ^                            InitOutputType                CHARACTER(ChanLen)        WriteOutputHdr                   {:}        -        -         "User-requested Output channel names"    -
 typedef   ^                            ^                             CHARACTER(ChanLen)        WriteOutputUnt                   {:}        -        -         ""    -
 #
@@ -274,7 +302,7 @@ typedef   ^                            ContinuousStateType           SiKi       
 #
 # Define discrete (nondifferentiable) states here:
 #
-typedef   ^                            DiscreteStateType             SiKi                     DummyDiscState           -          -         -         "Remove this variable if you have discrete states"        -
+typedef   ^                            DiscreteStateType             ReKi                     V_rel_n_FiltStat               {:}      -         -         "State of the high-pass filter for the joint relative normal velocity" m/s
 #
 #
 # Define constraint states here:
@@ -299,7 +327,11 @@ typedef   ^                            OtherStateType                IntKi      
 #typedef   ^                            ^                             ReKi                     F_DP                          {:}{:}         -         -         "Lumped dynamic pressure loads at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            MiscVarType                   ReKi                     FV                            {:}{:}         -         -         "Fluid velocity at line element node at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     FA                            {:}{:}         -         -         "Fluid acceleration at line element node at time t, which may not correspond to the WaveTime array of times"   -
+typedef   ^                            ^                             ReKi                     FAMCF                         {:}{:}         -         -         "Fluid acceleration at line element node at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     FDynP                         {:}            -         -         "Fluid dynamic pressure at line element node at time t, which may not correspond to the WaveTime array of times"   -
+typedef   ^                            ^                             SiKi                     WaveElev                      {:}            -         -         "Total wave elevation"   m
+typedef   ^                            ^                             SiKi                     WaveElev1                      {:}            -         -         "First order wave elevation"        m
+typedef   ^                            ^                             SiKi                     WaveElev2                      {:}            -         -         "Second order wave elevation"        m
 typedef   ^                            ^                             ReKi                     vrel                          {:}{:}         -         -         "velocity of structural node relative to the water" m/s^2
 typedef   ^                            ^                             INTEGER                  nodeInWater                    {:}           -         -          "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
 typedef   ^                            ^                             Morison_MemberLoads      memberLoads                    {:}           -         -          "Array (NMembers long) of member-based side-effects load contributions" -
@@ -309,7 +341,10 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     F_IMG_End                     {:}{:}         -         -         "Joint marine growth intertia loads at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     F_A_End                      {:}{:}         -         -         "Lumped added mass loads at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     F_BF_End                      {:}{:}     -         -         ""        -
+typedef   ^                            ^                             ReKi                     V_rel_n                        {:}      -         -         "Normal relative flow velocity at joints"        m/s
+typedef   ^                            ^                             ReKi                     V_rel_n_HiPass                 {:}      -         -         "High-pass filtered normal relative flow velocity at joints"   m/s
 typedef   ^                            ^                             INTEGER                  LastIndWave                     -              -         -         "Last time index used in the wave kinematics arrays"   -
+typedef   ^                            ^                      SeaSt_Interp_MiscVarType       SeaSt_Interp_m            -       -      -  "misc var information from the SeaState Interpolation module"   -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -320,6 +355,8 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     WtrDens                          -          -        -         "Water density"    kg/m^3
 typedef   ^                            ^                             ReKi                     WtrDpth                          -          -        -         "Water depth (positive-valued)"    m
 typedef   ^                            ^                             ReKi                     MSL2SWL                          -          -        -         "Mean Sea Level to Still Water Level offset"    m
+typedef   ^                            ^                             INTEGER                  WaveDisp                -          -        -                  "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
+typedef   ^                            ^                             INTEGER                  AMMod                            -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]" -
 typedef   ^                            ^                             INTEGER                  NMembers                        -          -         -         "number of members"        -
 typedef   ^                            ^                             Morison_MemberType       Members                         {:}             -        -         "Array of Morison members used during simulation"    -
 typedef   ^                            ^                             INTEGER                  NNodes                          -          -         -         ""        -
@@ -327,15 +364,28 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             ReKi                     I_MG_End                      {:}{:}{:}  -         -         "Inertial matrix associated with marine growth mass at joint"        -
 typedef   ^                            ^                             ReKi                     An_End                            {:}{:}     -         -         "directional area vector of each joint"        m^2
 typedef   ^                            ^                             ReKi                     DragConst_End                     {:}        -         -         ""        -
+typedef   ^                            ^                             ReKi                     VRelNFiltConst                       {:}        -         -         ""        -
+typedef   ^                            ^                             IntKi                    DragMod_End                          {:}        -         -         ""        -
+typedef   ^                            ^                             ReKi                     DragLoFSc_End                        {:}        -         -         ""        -
 typedef   ^                            ^                             ReKi                     F_WMG_End                      {:}{:}         -         -         "Joint marine growth weight loads, constant for all t"   N
 typedef   ^                            ^                             ReKi                     DP_Const_End                   {:}{:}         -         -         "Constant part of Joint dynamic pressure term"   N
 typedef   ^                            ^                             ReKi                     Mass_MG_End                    {:}         -         -         "Joint marine growth mass"   kg
 typedef   ^                            ^                             ReKi                     AM_End                         {:}{:}{:}         -         -         "3x3 Joint added mass matrix, constant for all t"   N
-typedef   ^                            ^                             SiKi                     WaveVel                         {:}{:}{:}  -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveAcc                         {:}{:}{:}  -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveDynP                        {:}{:}     -         -         ""        -
-typedef   ^                            ^                             SiKi                     WaveTime                        {:}        -         -         "Times for which the wave kinematics are pre-computed"  s
-typedef   ^                            ^                             INTEGER                  nodeInWater                     {:}{:}     -        -          "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
+typedef   ^                            ^                             SiKi                     WaveElev1                   {*}{*}{*}      -          -         "First order wave elevation (points to SeaState module data)"        m
+typedef   ^                            ^                             SiKi                     WaveElev2                   {*}{*}{*}      -          -         "Second order wave elevation (points to SeaState module data)"        m
+typedef   ^                            ^                             SiKi                     WaveVel                       {*}{*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     WaveAcc                       {*}{*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     WaveAccMCF                    {*}{*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     WaveDynP                      {*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     WaveVel0                      {:}{:}{:}{:} -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveAcc0                      {:}{:}{:}{:} -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveAccMCF0                   {:}{:}{:}{:} -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveDynP0                     {:}{:}{:} -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveTime                      {*}        -         -         "Times for which the wave kinematics are pre-computed (points to SeaState module data)"  s
+typedef   ^                            ^                             SiKi                     PWaveVel0                     {*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     PWaveAcc0                     {*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     PWaveAccMCF0                  {*}{*}{*}{*} -         -         "(points to SeaState module data)"        -
+typedef   ^                            ^                             SiKi                     PWaveDynP0                    {*}{*}{*} -         -         "(points to SeaState module data)"        -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NMOutputs                       -          -         -         ""        -
 typedef   ^                            ^                             Morison_MOutput          MOutLst                         {:}        -         -         ""        -
@@ -343,12 +393,8 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             Morison_JOutput          JOutLst                         {:}        -         -         ""        -
 typedef   ^                            ^                             OutParmType              OutParam                        {:}        -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NumOuts                         -          -         -         ""        -
-typedef   ^                            ^                             INTEGER                  NumOutAll                       -          -         -         ""    -
-typedef   ^                            ^                             INTEGER                  OutSwtch                        -          -         -         ""        -
-typedef   ^                            ^                             INTEGER                  UnOutFile                       -          -         -         ""        -
-typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -          -         -        ""        -
-typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -          -         -         ""        -
-typedef   ^                            ^                             CHARACTER(ChanLen)       Delim                           -          -         -         ""        -
+typedef   ^                            ^                      SeaSt_Interp_ParameterType   SeaSt_Interp_p                    -          -         -       "parameter information from the SeaState Interpolation module"   -
+typedef   ^                            ^                             INTEGER                  WaveStMod                        -          -        -         ""    -  
 #
 #
 # ..... Inputs ....................................................................................................................

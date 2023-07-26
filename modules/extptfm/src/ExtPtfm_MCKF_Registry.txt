@@ -19,7 +19,7 @@ include Registry_NWTC_Library.txt
 #   e.g., the name of the input file, the file root name, etc.
 typedef ExtPtfm_MCKF/ExtPtfm InitInputType CHARACTER(1024) InputFile  - - -        "Name of the input file; remove if there is no file" -
 typedef   ^                ^             LOGICAL           Linearize  - .FALSE. -  "Flag that tells this module if the glue code wants to linearize." -
-typedef   ^                ^             ReKi              PtfmRefzt  - - -        "Vertical distance from the ground [onshore], MSL [offshore], or seabed [MHK] to the platform reference point" meters
+typedef   ^                ^             ReKi              PtfmRefzt  - - -        "Vertical distance from the ground level [onshore], MSL [offshore wind or floating MHK], or seabed [fixed MHK] to the platform reference point" meters
 typedef   ^                ^             CHARACTER(1024)   RootName   - - -        "RootName for writing output files"
 
 # ..... Input file data ...........................................................................................................

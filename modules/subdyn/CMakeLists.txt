@@ -18,7 +18,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/SubDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SubDyn_Types.f90)
 endif()
 
-set(SUBDYN_SOURCES
+add_library(subdynlib STATIC
   src/SubDyn.f90
   src/FEM.f90
   src/SD_FEM.f90
@@ -28,15 +28,12 @@ set(SUBDYN_SOURCES
   src/IntegerList.f90
   src/SubDyn_Types.f90
 )
-
-add_library(subdynlib ${SUBDYN_SOURCES})
 target_link_libraries(subdynlib nwtclibs)
 
-set(SUBDYN_DRIVER_SOURCES
-  src/SubDyn_Driver.f90)
-
-add_executable(subdyn_driver ${SUBDYN_DRIVER_SOURCES})
-target_link_libraries(subdyn_driver subdynlib nwtclibs versioninfolib)
+add_executable(subdyn_driver 
+  src/SubDyn_Driver.f90
+)
+target_link_libraries(subdyn_driver subdynlib versioninfolib)
 
 install(TARGETS subdynlib subdyn_driver
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

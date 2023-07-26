@@ -41,8 +41,8 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    !------------------------ CIRCULATION SPECIFICATIONS  -------------------------------------------
    CALL ReadCom(UnIn,FileName,                               '--- Circulation specification header'  , ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvMethod    ,'CircSolvMethod'    ,'', idCircPolarData, ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvConvCrit  ,'CircSolvConvCrit ' ,'', 0.001          , ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvRelaxation,'CircSolvRelaxation','', 0.1            , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvConvCrit  ,'CircSolvConvCrit ' ,'', 0.001_ReKi     , ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvRelaxation,'CircSolvRelaxation','', 0.1_ReKi       , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%CircSolvMaxIter   ,'CircSolvMaxIter'   ,'', 30             , ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,Inp%CirculationFile   ,'CirculationFile'   ,''                 , ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ WAKE OPTIONS -------------------------------------------
@@ -85,7 +85,11 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, m, Inp, ErrStat, ErrMsg )
    CALL ReadVarWDefault(UnIn,FileName,Inp%VTKBlades   , 'VTKBlades'          ,'',     0      ,ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVarWDefault(UnIn,FileName,Inp%VTKCoord    , 'VTKCoord'           ,'',     1      ,ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar        (UnIn,FileName,sDummy          , 'VTK_fps'            ,''             ,ErrStat2,ErrMsg2); if(Failed())return
-   Inp%DTvtk = Get_DTvtk( sDummy, p%DTaero, Inp%DTfvw )
+   if (Inp%WrVTK==2 .or. Inp%WrVTK==0) then
+      Inp%DTvtk = HUGE(1.0_DbKi)
+   else
+      Inp%DTvtk = Get_DTvtk( sDummy, p%DTaero, Inp%DTfvw )
+   endif
 
    CALL ReadVarWDefault(UnIn,FileName,p%nGridOut      , 'nGridOut'           ,'',     0      ,ErrStat2,ErrMsg2);
    if (ErrStat2/=ErrID_None) then

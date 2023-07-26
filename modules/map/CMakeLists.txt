@@ -19,7 +19,7 @@ if(WIN32 OR CYGWIN OR MINGW)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAP_DLL_EXPORTS -DCMINPACK_NO_DLL -DNDEBUG -D_WINDOWS -D_USRDLL")
 endif()
 
-if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU" AND NOT WIN32)
+if (NOT WIN32)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 endif()
@@ -33,29 +33,26 @@ endif()
 file(GLOB MAP_CLIB_SOURCES src/*.c src/*.cc src/*/*.c src/*/*.cc)
 file(GLOB MAP_C_HEADERS src/*.h src/*/*.h)
 
-add_library(mapcpplib ${MAP_CLIB_SOURCES} src/MAP_Types.f90 src/MAP_Fortran_Types.f90)
-
-target_include_directories(mapcpplib PUBLIC
+add_library(maplib STATIC
+  src/map.f90
+  src/MAP_Types.f90
+  src/MAP_Fortran_Types.f90
+  ${MAP_CLIB_SOURCES}
+)
+target_link_libraries(maplib nwtclibs)
+target_include_directories(maplib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/bstring>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/cminpack>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/lapack>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/simclist>
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
-target_link_libraries(mapcpplib nwtclibs)
-
-add_library(maplib
-  src/map.f90
-  src/MAP_Types.f90
-  src/MAP_Fortran_Types.f90
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
-target_link_libraries(maplib mapcpplib)
+set_target_properties(maplib PROPERTIES PUBLIC_HEADER src/MAP_Types.h)
 
-install(TARGETS maplib mapcpplib
+install(TARGETS maplib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
-  RUNTIME DESTINATION lib
+  RUNTIME DESTINATION bin
   ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib)
-
-install(FILES
-  src/MAP_Types.h
-  DESTINATION include)
+  LIBRARY DESTINATION lib
+  PUBLIC_HEADER DESTINATION include
+)

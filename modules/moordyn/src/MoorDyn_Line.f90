@@ -56,7 +56,7 @@ CONTAINS
       INTEGER,       INTENT(   INOUT )   :: ErrStat       ! returns a non-zero value when an error occurs
       CHARACTER(*),  INTENT(   INOUT )   :: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
-      INTEGER(4)                         :: I, J, K       ! Generic index
+      INTEGER(4)                         :: I, J          ! Generic index
       INTEGER(IntKi)                     :: N
       REAL(DbKi)                         :: temp
 
@@ -1511,7 +1511,7 @@ CONTAINS
       Real(DbKi),       INTENT(IN   )  :: t              ! instantaneous time
       INTEGER(IntKi),   INTENT(IN   )  :: topOfLine      ! 0 for end A (Node 0), 1 for end B (node N)
 
-      Integer(IntKi)                   :: I,J      
+      Integer(IntKi)                   :: J      
       INTEGER(IntKi)                   :: inode
       
       IF (topOfLine==1) THEN
@@ -1551,8 +1551,8 @@ CONTAINS
       REAL(DbKi),       INTENT(  OUT)  :: M_out(3,3)     ! mass matrix of end node
       INTEGER(IntKi),   INTENT(IN   )  :: topOfLine      ! 0 for end A (Node 0), 1 for end B (node N)
       
-      Integer(IntKi)                   :: I,J
-      INTEGER(IntKi)                   :: inode
+      Integer(IntKi)                   :: J
+!      INTEGER(IntKi)                   :: inode
       
       IF (topOfLine==1) THEN           ! end B of line
          Fnet_out   = Line%Fnet(:, Line%N)

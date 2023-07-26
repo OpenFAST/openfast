@@ -59,7 +59,7 @@ CONTAINS
       CHARACTER(*),  INTENT(   INOUT )   :: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
       INTEGER(4)                         :: i             ! Generic index
-      INTEGER(4)                         :: K             ! Generic index
+!      INTEGER(4)                         :: K             ! Generic index
       INTEGER(IntKi)                     :: N
       
       Real(DbKi)                         :: phi, beta, sinPhi, cosPhi, tanPhi, sinBeta, cosBeta   ! various orientation things
@@ -197,9 +197,9 @@ CONTAINS
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m          ! passing along all mooring objects
       
 
-      INTEGER(IntKi)                        :: l           ! index of segments or nodes along line
-      REAL(DbKi)                            :: rRef(3)     ! reference position of mesh node
-      REAL(DbKi)                            :: OrMat(3,3)  ! DCM for body orientation based on r6_in
+!      INTEGER(IntKi)                        :: l           ! index of segments or nodes along line
+!      REAL(DbKi)                            :: rRef(3)     ! reference position of mesh node
+!      REAL(DbKi)                            :: OrMat(3,3)  ! DCM for body orientation based on r6_in
    
       IF (wordy > 0) print *, "initializing Rod ", Rod%idNum
 
@@ -248,7 +248,7 @@ CONTAINS
       Real(DbKi),       INTENT(IN   )  :: t              ! instantaneous time
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m         ! passing along all mooring objects
 
-      INTEGER(IntKi)                   :: l
+!      INTEGER(IntKi)                   :: l
 
       Rod%time = t    ! store current time
 
@@ -296,7 +296,7 @@ CONTAINS
       Real(DbKi),            INTENT(IN   )  :: t          ! instantaneous time
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m          ! passing along all mooring objects
 
-      INTEGER(IntKi)                        :: J          ! index
+!      INTEGER(IntKi)                        :: J          ! index
    
 
       ! for a free Rod, there are 12 states:
@@ -361,13 +361,13 @@ CONTAINS
       LOGICAL,               INTENT(IN   )  :: initial        ! true if this is the call during initialization (in which case avoid calling any Lines yet)
 
       INTEGER(IntKi)                        :: l              ! index of segments or nodes along line
-      INTEGER(IntKi)                        :: J              ! index
+!      INTEGER(IntKi)                        :: J              ! index
       INTEGER(IntKi)                        :: N              ! number of segments
    
-      REAL(DbKi)                            :: qEnd(3)        ! unit vector of attached line end segment, following same direction convention as Rod's q vector
+!      REAL(DbKi)                            :: qEnd(3)        ! unit vector of attached line end segment, following same direction convention as Rod's q vector
       REAL(DbKi)                            :: q_EI_dl(3)        ! <<<< add description
-      REAL(DbKi)                            :: EIend          ! bending stiffness of attached line end segment
-      REAL(DbKi)                            :: dlEnd          ! stretched length of attached line end segment
+!      REAL(DbKi)                            :: EIend          ! bending stiffness of attached line end segment
+!      REAL(DbKi)                            :: dlEnd          ! stretched length of attached line end segment
       REAL(DbKi)                            :: qMomentSum(3)  ! summation of qEnd*EI/dl_stretched (with correct sign) for each attached line
          
 
@@ -452,7 +452,7 @@ CONTAINS
       
       Real(DbKi)                            :: acc(6)           ! 6DOF acceleration vector about reference point
       
-      Real(DbKi)                            :: Mcpl(3)          ! moment in response to end A acceleration due to inertial coupling
+!      Real(DbKi)                            :: Mcpl(3)          ! moment in response to end A acceleration due to inertial coupling
       
       Real(DbKi)                            :: y_temp (6)       ! temporary vector for LU decomposition
       Real(DbKi)                            :: LU_temp(6,6)     ! temporary matrix for LU decomposition
@@ -563,7 +563,7 @@ CONTAINS
       Real(DbKi)                 :: m_i, v_i     ! 
       Real(DbKi)                 :: zeta         ! wave elevation above/below a given node
       !Real(DbKi)                 :: h0           ! distance along rod centerline from end A to the waterplane     
-      Real(DbKi)                 :: deltaL       ! submerged length of a given segment
+!      Real(DbKi)                 :: deltaL       ! submerged length of a given segment
       Real(DbKi)                 :: Lsum         ! cumulative length along rod axis from bottom
       Real(DbKi)                 :: dL           ! length attributed to node
       Real(DbKi)                 :: VOF          ! fraction of volume associated with node that is submerged

@@ -26,8 +26,9 @@ MODULE FEM
   INTEGER, PARAMETER  :: LaKi = R8Ki  ! Define the kind to be used for LaPack
 
   INTERFACE FINDLOCI ! In the future, use FINDLOC from intrinsic
-     MODULE PROCEDURE FINDLOCI_ReKi
+     MODULE PROCEDURE FINDLOCI_R8Ki
      MODULE PROCEDURE FINDLOCI_IntKi
+     MODULE PROCEDURE FINDLOCI_SiKi
   END INTERFACE
 
  
@@ -836,8 +837,8 @@ END SUBROUTINE InsertDOFrows
 !------------------------------------------------------------------------------------------------------
 !> Returns index of val in Array (val is an integer!)
 ! NOTE: in the future use intrinsinc function findloc
-FUNCTION FINDLOCI_ReKi(Array, Val) result(i)
-   real(ReKi)    , dimension(:), intent(in) :: Array !< Array to search in
+FUNCTION FINDLOCI_R8Ki(Array, Val) result(i)
+   real(R8Ki)    , dimension(:), intent(in) :: Array !< Array to search in
    integer(IntKi), intent(in)               :: val   !< Val
    integer(IntKi)                           :: i     !< Index of joint in joint table
    i = 1
@@ -854,6 +855,21 @@ END FUNCTION
 ! NOTE: in the future use intrinsinc function findloc
 FUNCTION FINDLOCI_IntKi(Array, Val) result(i)
    integer(IntKi), dimension(:), intent(in) :: Array !< Array to search in
+   integer(IntKi), intent(in)               :: val   !< Val
+   integer(IntKi)                           :: i     !< Index of joint in joint table
+   i = 1
+   do while ( i <= size(Array) )
+      if ( Val == Array(i) ) THEN
+         return ! Exit when found
+      else
+         i = i + 1
+      endif
+   enddo
+   i=-1
+END FUNCTION
+
+FUNCTION FINDLOCI_SiKi(Array, Val) result(i)
+   real(SiKi), dimension(:), intent(in) :: Array !< Array to search in
    integer(IntKi), intent(in)               :: val   !< Val
    integer(IntKi)                           :: i     !< Index of joint in joint table
    i = 1
@@ -1022,8 +1038,8 @@ END SUBROUTINE GetOrthVectors
 !> Element stiffness matrix for classical beam elements
 !! shear is true  -- non-tapered Timoshenko beam 
 !! shear is false -- non-tapered Euler-Bernoulli beam 
-SUBROUTINE ElemK_Beam(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, K)
-   REAL(ReKi), INTENT( IN) :: A, L, Ixx, Iyy, Jzz, E, G, kappa
+SUBROUTINE ElemK_Beam(A, L, Ixx, Iyy, Jzz, Shear, kappa_x, kappa_y, E, G, DirCos, K)
+   REAL(ReKi), INTENT( IN) :: A, L, Ixx, Iyy, Jzz, E, G, kappa_x, kappa_y
    REAL(FEKi), INTENT( IN) :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
    LOGICAL   , INTENT( IN) :: Shear
    REAL(FEKi), INTENT(OUT) :: K(12, 12) 
@@ -1031,8 +1047,8 @@ SUBROUTINE ElemK_Beam(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, K)
    REAL(FEKi)                            :: Ax, Ay, Kx, Ky
    REAL(FEKi)                            :: DC(12, 12)
    
-   Ax = kappa*A
-   Ay = kappa*A
+   Ax = kappa_x*A
+   Ay = kappa_y*A
    
    K(1:12,1:12) = 0.0_FEKi
    

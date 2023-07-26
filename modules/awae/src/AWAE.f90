@@ -870,6 +870,9 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%Mod_Meander      = InitInp%InputFileData%Mod_Meander
    p%C_Meander        = InitInp%InputFileData%C_Meander
    p%Mod_Projection   = InitInp%InputFileData%Mod_Projection
+   ! Wake Added Turbulence (WAT) Parameters
+   !p%WAT             = InitInp%InputFileData%WAT  
+   !p%WAT_Basename    = InitInp%InputFileData%WAT_Basename
 
    select case ( p%Mod_Meander )
    case (MeanderMod_Uniform)
@@ -992,6 +995,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          ! Initialize InflowWind
          IfW_InitInp%FixedWindFileRootName = .false.
          IfW_InitInp%NumWindPoints         = p%NumGrid_low
+         IfW_InitInp%RadAvg                = 0.25 * p%nZ_low * p%dX_low     ! arbitrary garbage, just must be bigger than zero, but not bigger than grid (IfW will complain if this isn't set when it tries to calculate disk average vel)
       
          call InflowWind_Init( IfW_InitInp, m%u_IfW_Low, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_Low, m%IfW(0), Interval, IfW_InitOut, ErrStat2, ErrMsg2 )
             call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
@@ -1062,6 +1066,9 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
          ! Set the position inputs once for the low-resolution grid
       m%u_IfW_Low%PositionXYZ = p%Grid_low
+         ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
+      m%u_IfW_Low%HubPosition =  (/ p%X0_low + 0.5*p%nX_low*p%dX_low, p%Y0_low + 0.5*p%nY_low*p%dY_low, p%Z0_low + 0.5*p%nZ_low*p%dZ_low /)
+      call Eye(m%u_IfW_Low%HubOrientation,ErrStat2,ErrMsg2)
 
          ! Initialize the high-resolution grid inputs and outputs
        IF ( .NOT. ALLOCATED( m%u_IfW_High%PositionXYZ ) ) THEN
@@ -1071,6 +1078,25 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
             call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
          call AllocAry(m%y_IfW_High%WriteOutput, size(m%y_IfW_Low%WriteOutput), 'm%y_IfW_High%WriteOutput', ErrStat2, ErrMsg2)
             call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         if (allocated(m%y_IfW_Low%lidar%LidSpeed)) then
+            call AllocAry(m%y_IfW_High%lidar%LidSpeed,      size(m%y_IfW_Low%lidar%LidSpeed      ), 'm%y_IfW_High%lidar%LidSpeed',      ErrStat2, ErrMsg2)
+               call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         endif
+         if (allocated(m%y_IfW_High%lidar%MsrPositionsX)) then
+            call AllocAry(m%y_IfW_High%lidar%MsrPositionsX, size(m%y_IfW_High%lidar%MsrPositionsX), 'm%y_IfW_High%lidar%MsrPositionsX', ErrStat2, ErrMsg2)
+               call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         endif
+         if (allocated(m%y_IfW_High%lidar%MsrPositionsY)) then
+            call AllocAry(m%y_IfW_High%lidar%MsrPositionsY, size(m%y_IfW_High%lidar%MsrPositionsY), 'm%y_IfW_High%lidar%MsrPositionsY', ErrStat2, ErrMsg2)
+               call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         endif
+         if (allocated(m%y_IfW_High%lidar%MsrPositionsZ)) then
+            call AllocAry(m%y_IfW_High%lidar%MsrPositionsZ, size(m%y_IfW_High%lidar%MsrPositionsZ), 'm%y_IfW_High%lidar%MsrPositionsZ', ErrStat2, ErrMsg2)
+               call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         endif
+
+
+
       END IF
       if (errStat2 >= AbortErrLev) then
             return
@@ -1120,7 +1146,8 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate ( u%Vy_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vy_wake.', errStat, errMsg, RoutineName )
    allocate ( u%Vz_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vz_wake.', errStat, errMsg, RoutineName )
    allocate ( u%D_wake    (0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%D_wake.', errStat, errMsg, RoutineName )
-   if (errStat /= ErrID_None) return
+   allocate ( u%WAT_k_mt  (0:p%NumRadii-1, 0:p%NumPlanes-1, 1:p%NumTurbines), STAT=ErrStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%k_mt.', errStat, errMsg, RoutineName )
+   if (errStat >= AbortErrLev) return
 
    u%Vx_wake=0.0_ReKi
    u%Vy_wake=0.0_ReKi
@@ -1376,6 +1403,9 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
 
    else ! p%Mod_AmbWind == 2 .or. 3
 
+         ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
+      m%u_IfW_Low%HubPosition =  (/ p%X0_low + 0.5*p%nX_low*p%dX_low, p%Y0_low + 0.5*p%nY_low*p%dY_low, p%Z0_low + 0.5*p%nZ_low*p%dZ_low /)
+      call Eye(m%u_IfW_Low%HubOrientation,ErrStat2,ErrMsg2)
       ! Set low-resolution inflow wind velocities
       call InflowWind_CalcOutput(t+p%dt_low, m%u_IfW_Low, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_Low, m%IfW(0), errStat2, errMsg2)
          call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
@@ -1393,6 +1423,9 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
       if (  p%Mod_AmbWind == 2 ) then
          do nt = 1,p%NumTurbines
             m%u_IfW_High%PositionXYZ = p%Grid_high(:,:,nt)
+               ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
+            m%u_IfW_High%HubPosition =  (/ p%X0_high(nt) + 0.5*p%nX_high*p%dX_high(nt), p%Y0_high(nt) + 0.5*p%nY_high*p%dY_high(nt), p%Z0_high(nt) + 0.5*p%nZ_high*p%dZ_high(nt) /)
+            call Eye(m%u_IfW_High%HubOrientation,ErrStat2,ErrMsg2)
             do n_hl=0, n_high_low
                call InflowWind_CalcOutput(t+p%dt_low+n_hl*p%DT_high, m%u_IfW_High, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_High, m%IfW(0), errStat2, errMsg2)
                   call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
@@ -1421,6 +1454,9 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
                end do
             end do
             do n_hl=0, n_high_low
+                  ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
+               m%u_IfW_High%HubPosition =  (/ p%X0_high(nt) + 0.5*p%nX_high*p%dX_high(nt), p%Y0_high(nt) + 0.5*p%nY_high*p%dY_high(nt), p%Z0_high(nt) + 0.5*p%nZ_high*p%dZ_high(nt) /)
+               call Eye(m%u_IfW_High%HubOrientation,ErrStat2,ErrMsg2)
                call InflowWind_CalcOutput(t+p%dt_low+n_hl*p%DT_high, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), errStat2, errMsg2)
                   call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
                   if (errStat >= AbortErrLev) return 
@@ -1480,6 +1516,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    character(ErrMsgLen)                         :: errMsg2
    character(*), parameter                      :: RoutineName = 'AWAE_CalcOutput'
    integer(intKi)                               :: n, n_high
+   character(2)                                 :: PlaneNumStr          ! 2 digit number of the output plane
    CHARACTER(1024)                              :: FileName
    INTEGER(IntKi)                               :: Un                   ! unit number of opened file
 
@@ -1517,10 +1554,10 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
 
          ! XY plane slices
       do k = 1,p%NOutDisWindXY
-
+         write(PlaneNumStr, '(i2.2)') k
          call ExtractSlice( XYSlice, p%OutDisWindZ(k), p%Z0_low, p%nZ_low, p%nX_low, p%nY_low, p%dZ_low, m%Vdist_low_full, m%outVizXYPlane(:,:,:,1))
             ! Create the output vtk file with naming <WindFilePath>/Low/DisXY<k>.t<n/p%WrDisSkp1>.vtk
-         FileName = trim(p%OutFileVTKRoot)//".Low.DisXY"//trim(num2lstr(k))//"."//trim(Tstr)//".vtk"
+         FileName = trim(p%OutFileVTKRoot)//".Low.DisXY"//PlaneNumStr//"."//trim(Tstr)//".vtk"
          call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XY Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             if (ErrStat >= AbortErrLev) return
@@ -1529,12 +1566,12 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
             if (ErrStat >= AbortErrLev) return
       end do
 
-
          ! YZ plane slices
       do k = 1,p%NOutDisWindYZ
+         write(PlaneNumStr, '(i2.2)') k
          call ExtractSlice( YZSlice, p%OutDisWindX(k), p%X0_low, p%nX_low, p%nY_low, p%nZ_low, p%dX_low, m%Vdist_low_full, m%outVizYZPlane(:,:,:,1))
             ! Create the output vtk file with naming <WindFilePath>/Low/DisYZ<k>.t<n/p%WrDisSkp1>.vtk
-         FileName = trim(p%OutFileVTKRoot)//".Low.DisYZ"//trim(num2lstr(k))//"."//trim(Tstr)//".vtk"
+         FileName = trim(p%OutFileVTKRoot)//".Low.DisYZ"//PlaneNumStr//"."//trim(Tstr)//".vtk"
          call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of YZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             if (ErrStat >= AbortErrLev) return
@@ -1545,9 +1582,10 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
 
          ! XZ plane slices
       do k = 1,p%NOutDisWindXZ
+         write(PlaneNumStr, '(i2.2)') k
          call ExtractSlice( XZSlice, p%OutDisWindY(k), p%Y0_low, p%nY_low, p%nX_low, p%nZ_low, p%dY_low, m%Vdist_low_full, m%outVizXZPlane(:,:,:,1))
             ! Create the output vtk file with naming <WindFilePath>/Low/DisXZ<k>.t<n/p%WrDisSkp1>.vtk
-         FileName = trim(p%OutFileVTKRoot)//".Low.DisXZ"//trim(num2lstr(k))//"."//trim(Tstr)//".vtk"
+         FileName = trim(p%OutFileVTKRoot)//".Low.DisXZ"//PlaneNumStr//"."//trim(Tstr)//".vtk"
          call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XZ Slice at time = "//trim(num2lstr(t))//" seconds.", Un, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             if (ErrStat >= AbortErrLev) return
@@ -1853,6 +1891,40 @@ subroutine AWAE_TEST_CalcOutput(errStat, errMsg)
 
 
 end subroutine AWAE_TEST_CalcOutput
+
+! WAT TODO
+!> Compute non-scaled turbulence at a given plane based on a Mann Box, current time, and convection velocity of the box
+subroutine TurbPlane(Uconv, t, nr, u_p, v_p, w_p)
+   integer(IntKi),                               intent(in)  :: nr    !< Number of radius in wake plane
+   !real(ReKi), dimension(0:,0:,0:), pointer,    intent(in)  :: u_b   !< TODO turbulence box
+   real(ReKi),                                   intent(in)  :: Uconv !< Convection velocity of the box
+   real(DbKi),                                   intent(in)  :: t     !< Current time
+   real(ReKi), dimension(-nr+1:nr+1,-nr+1:nr+1), intent(out) :: u_p   !< Plane to be filled with turbulence values, shape
+   real(ReKi), dimension(-nr+1:nr+1,-nr+1:nr+1), intent(out) :: v_p   !< Plane to be filled with turbulence values, shape
+   real(ReKi), dimension(-nr+1:nr+1,-nr+1:nr+1), intent(out) :: w_p   !< Plane to be filled with turbulence values, shape
+   integer(IntKi) :: iz, iy ! indices in plane coordinates
+   integer(IntKi) :: ix_b, iy_b, iz_b, ib0, nb  ! Indices in box coordinates
+
+   !nb = size(u_b, 1)
+   nb=2 ! TODO
+   ib0 = int(nb/2)-1 ! NOTE: nb is multiple of 2
+
+   ! Interpolate time
+   ! TODO use Uconv/t to find ix_b
+
+   ! Loop through all plane points
+   do iz = -nr+1, nr-1
+      iz_b = modulo(ib0 + iz, nb) ! NOTE: assumes that turbulene box has indexing starting from 0
+      do iy = -nr+1, nr-1
+         iy_b = modulo(ib0 + iz, nb)
+         u_p(iy,iz) = 0.0_ReKi
+         v_p(iy,iz) = 0.0_ReKi
+         w_p(iy,iz) = 0.0_ReKi
+         !u_b = u_b(iy_b, iz_b, ix_b) ! TODO
+      enddo
+   enddo
+   
+end subroutine 
 
 FUNCTION INTERP3D(p,p0,del,V,within,nX,nY,nZ,Vbox)
       !  I/O variables

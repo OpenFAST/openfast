@@ -6,7 +6,7 @@ False           Echo         - Echo input parameters to "<rootname>.ech"?
         3       AnalysisType - {1: multiple turbines, one simulation, 2: one turbine, one time-dependent simulation, 3: one turbine, combined cases}
        11.0     TMax         - Total run time [used only when AnalysisType/=3] (s)
         0.5     DT           - Simulation time step [used only when AnalysisType/=3] (s)
-"./AD.dat"      AeroFile - Name of the primary AeroDyn input file
+"ad_primary_example.dat"      AeroFile - Name of the primary AeroDyn input file
 ----- Environmental Conditions ----------------------------------------------------------
        1025     FldDens      - Density of working fluid (kg/m^3)
  1.4639E-05     KinVisc      - Kinematic viscosity of working fluid (m^2/s)
@@ -19,7 +19,7 @@ False           Echo         - Echo input parameters to "<rootname>.ech"?
 "unused"         InflowFile  - Name of the InflowWind input file [used only when CompInflow=1]
         9.0      HWindSpeed  - Horizontal wind speed   [used only when CompInflow=0 and AnalysisType=1] (m/s)
         140      RefHt       - Reference height for horizontal wind speed [used only when CompInflow=0]  (m)
-       0.10      PLExp       - Power law exponent   [used only when CompInflow=0 and AnalysisType=1]                        (-)
+       0.10      PLExp       - Power law exponent   [used only when CompInflow=0 and AnalysisType=1] (-)
 ----- Turbine Data ----------------------------------------------------------------------
 1               NumTurbines  - Number of turbines
 ----- Turbine(1) Geometry ---------------------------------------------------------------

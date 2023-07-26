@@ -90,13 +90,13 @@ contains
 
             ! Results
         @assertEqual(0, TmpErrStat, message='Error message: '//trim(TmpErrMsg)//NewLine//'ErrStat: ')
-        @assertEqual(0.0, p%UniformWind%TData(1))
-        @assertEqual(0.1, p%UniformWind%TData(2))
-        @assertEqual(999.9, p%UniformWind%TData(3))
+        @assertEqual(0.0, p%FlowField%Uniform%Time(1))
+        @assertEqual(0.1, p%FlowField%Uniform%Time(2))
+        @assertEqual(999.9, p%FlowField%Uniform%Time(3))
 
-        @assertEqual(12.0, p%UniformWind%V(1))
-        @assertEqual(12.0, p%UniformWind%V(2))
-        @assertEqual(12.0, p%UniformWind%V(3))
+        @assertEqual(12.0, p%FlowField%Uniform%VelH(1))
+        @assertEqual(12.0, p%FlowField%Uniform%VelH(2))
+        @assertEqual(12.0, p%FlowField%Uniform%VelH(3))
 
     end subroutine
 

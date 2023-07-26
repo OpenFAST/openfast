@@ -98,7 +98,6 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    TYPE(ED_InputFile)                           :: InputFileData           ! Data stored in the module's input file
    INTEGER(IntKi)                               :: ErrStat2                ! temporary Error status of the operation
    INTEGER(IntKi)                               :: i, K                    ! loop counters
-   LOGICAL, PARAMETER                           :: GetAdamsVals = .FALSE.  ! Determines if we should read Adams values and create (update) an Adams model
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                 ! temporary Error message if ErrStat /= ErrID_None
    REAL(R8Ki)                                   :: TransMat(3,3)            ! Initial rotation matrix at Platform Refz
 
@@ -124,10 +123,10 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%UseAD14   = LEN_TRIM(InitInp%ADInputFile) > 0 ! if we're using AD14, we need to use the AD14 input files
 
    p%RootName = InitInp%RootName ! FAST already adds '.ED' to the root name
-
+   p%CompAeroMaps = InitInp%CompAeroMaps
    p%Gravity = InitInp%Gravity
    
-   CALL ED_ReadInput( InitInp%InputFile, InitInp%ADInputFile, InputFileData, GetAdamsVals, p%BD4Blades, Interval, p%RootName, ErrStat2, ErrMsg2 )
+   CALL ED_ReadInput( InitInp%InputFile, InitInp%ADInputFile, InputFileData, p%BD4Blades, Interval, p%RootName, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -149,15 +148,63 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
        
    END IF
 
+   IF (p%CompAeroMaps) THEN
+      InputFileData%DT = Interval
+      p%Gravity        = 0.0_ReKi
+      
+      ! DEGREES OF FREEDOM
+      InputFileData%TeetDOF  = .false.
+      InputFileData%DrTrDOF  = .false.
+      InputFileData%GenDOF   = .false.
+      InputFileData%YawDOF   = .false.
+      InputFileData%TwFADOF1 = .false.
+      InputFileData%TwFADOF2 = .false.
+      InputFileData%TwSSDOF1 = .false.
+      InputFileData%TwSSDOF2 = .false.
+      InputFileData%PtfmSgDOF= .false.
+      InputFileData%PtfmSwDOF= .false.
+      InputFileData%PtfmHvDOF= .false.
+      InputFileData%PtfmRDOF = .false.
+      InputFileData%PtfmPDOF = .false.
+      InputFileData%PtfmYDOF = .false.
+      
+      ! INITIAL CONDITIONS
+      InputFileData%RotSpeed = InitInp%RotSpeed
+      InputFileData%OoPDefl     = 0.0_ReKi
+      InputFileData%IPDefl      = 0.0_ReKi
+      InputFileData%BlPitch(1)  = 0.0_ReKi
+      InputFileData%BlPitch(2)  = 0.0_ReKi
+      InputFileData%BlPitch(3)  = 0.0_ReKi
+      InputFileData%TeetDefl    = 0.0_ReKi
+      InputFileData%Azimuth     = 0.0_ReKi
+      InputFileData%NacYaw      = 0.0_ReKi
+      InputFileData%TTDspFA     = 0.0_ReKi
+      InputFileData%TTDspSS     = 0.0_ReKi
+      InputFileData%PtfmSurge   = 0.0_ReKi
+      InputFileData%PtfmSway    = 0.0_ReKi
+      InputFileData%PtfmHeave   = 0.0_ReKi
+      InputFileData%PtfmRoll    = 0.0_ReKi
+      InputFileData%PtfmPitch   = 0.0_ReKi
+      InputFileData%PtfmYaw     = 0.0_ReKi
+      
+      ! TURBINE CONFIGURATION
+   ! CHECK THAT precone is same for all blades???
+      InputFileData%ShftTilt = 0.0_ReKi
+      
+   ! CHECK THAT BldFile is same for all blades???
 
-   CALL ED_ValidateInput( InputFileData, p%BD4Blades, InitInp%Linearize, ErrStat2, ErrMsg2 )
+      InputFileData%TeetMod = 0
+
+   END IF
+
+   CALL ED_ValidateInput( InputFileData, p%BD4Blades, InitInp%Linearize, InitInp%MHK, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
       !............................................................................................
       ! Define parameters here:
       !............................................................................................
-   CALL ED_SetParameters( InputFileData, p, ErrStat2, ErrMsg2 )
+   CALL ED_SetParameters( InitInp, InputFileData, p, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -258,6 +305,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    InitOut%HubRad      = p%HubRad
    InitOut%RotSpeed    = p%RotSpeed
    InitOut%isFixed_GenDOF = .not. InputFileData%GenDOF
+   InitOut%GearBox_index = DOF_GeAz ! for steady-state solver changing rotor speed
    
 
    if (.not. p%BD4Blades) then
@@ -287,7 +335,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! set up data needed for linearization analysis
       !............................................................................................
    
-   if (InitInp%Linearize) then
+   if (InitInp%Linearize .or. p%CompAeroMaps) then
       call ED_Init_Jacobian(p, u, y, InitOut, ErrStat2, ErrMsg2)
          call CheckError( ErrStat2, ErrMsg2 )
          if (ErrStat >= AbortErrLev) return
@@ -304,7 +352,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
        ! Print the summary file if requested:
    IF (InputFileData%SumPrint) THEN
-      CALL ED_PrintSum( p, OtherState, GetAdamsVals, ErrStat2, ErrMsg2 )
+      CALL ED_PrintSum( p, OtherState, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
    END IF
@@ -761,10 +809,18 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          m%AllOuts( TipRDxb(K) ) = DOT_PRODUCT( m%RtHS%AngPosHM(:,K,p%TipNode), m%CoordSys%j1(K,         :) )*R2D
          m%AllOuts( TipRDyb(K) ) = DOT_PRODUCT( m%RtHS%AngPosHM(:,K,p%TipNode), m%CoordSys%j2(K,         :) )*R2D
          ! There is no sense computing AllOuts( TipRDzc(K) ) here since it is always zero for FAST simulation results.
-         IF ( rOSTipzn > 0.0 )  THEN   ! Tip of blade K is above the yaw bearing.
-            m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn + rOSTipzn*rOSTipzn ) ! Absolute distance from the tower top / yaw bearing to the tip of blade 1.
-         ELSE                          ! Tip of blade K is below the yaw bearing.
-            m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn                     ) ! Perpendicular distance from the yaw axis / tower centerline to the tip of blade 1.
+         IF ( p%MHK == MHK_Floating ) THEN
+            IF ( rOSTipzn < 0.0 )  THEN   ! Tip of blade K is above the yaw bearing.
+               m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn + rOSTipzn*rOSTipzn ) ! Absolute distance from the tower top / yaw bearing to the tip of blade 1.
+            ELSE                          ! Tip of blade K is below the yaw bearing.
+               m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn                     ) ! Perpendicular distance from the yaw axis / tower centerline to the tip of blade 1.
+            ENDIF
+         ELSE
+            IF ( rOSTipzn > 0.0 )  THEN   ! Tip of blade K is above the yaw bearing.
+               m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn + rOSTipzn*rOSTipzn ) ! Absolute distance from the tower top / yaw bearing to the tip of blade 1.
+            ELSE                          ! Tip of blade K is below the yaw bearing.
+               m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn                     ) ! Perpendicular distance from the yaw axis / tower centerline to the tip of blade 1.
+            ENDIF
          ENDIF
       END IF      
 
@@ -1169,10 +1225,10 @@ END IF
       ! Integrate to find FrcFGagT and MomFGagT using all of the nodes / elements above the current strain gage location:
       DO J = ( p%TwrGagNd(I) + 1 ),p%TwrNodes ! Loop through tower nodes / elements above strain gage node
          TmpVec2  = FTTower(:,J) - p%MassT(J)*( p%Gravity*m%CoordSys%z2 + LinAccET(:,J) )           ! Portion of FrcFGagT associated with element J
-         FrcFGagT = FrcFGagT + TmpVec2*p%DHNodes(J)
+         FrcFGagT = FrcFGagT + TmpVec2*abs(p%DHNodes(J))
 
          TmpVec = CROSS_PRODUCT( m%RtHS%rZT(:,J) - m%RtHS%rZT(:,p%TwrGagNd(I)), TmpVec2 )                          ! Portion of MomFGagT associated with element J
-         MomFGagT = MomFGagT + ( TmpVec + MFHydro(:,J) )*p%DHNodes(J)
+         MomFGagT = MomFGagT + ( TmpVec + MFHydro(:,J) )*abs(p%DHNodes(J))
       ENDDO ! J -Tower nodes / elements above strain gage node
 
       ! Add the effects of 1/2 the strain gage element:
@@ -1182,12 +1238,12 @@ END IF
 
       TmpVec2  = FTTower(:,p%TwrGagNd(I)) - p%MassT(p%TwrGagNd(I))*( p%Gravity*m%CoordSys%z2 + LinAccET(:,p%TwrGagNd(I)))
 
-      FrcFGagT = FrcFGagT + TmpVec2 * 0.5 * p%DHNodes(p%TwrGagNd(I))
+      FrcFGagT = FrcFGagT + TmpVec2 * 0.5 * abs(p%DHNodes(p%TwrGagNd(I)))
       FrcFGagT = 0.001*FrcFGagT  ! Convert the local force to kN
 
       TmpVec = CROSS_PRODUCT( ( 0.25_R8Ki*p%DHNodes( p%TwrGagNd(I)) )*m%CoordSys%a2, TmpVec2 )              ! Portion of MomFGagT associated with 1/2 of the strain gage element
       TmpVec   = TmpVec   + MFHydro(:,p%TwrGagNd(I))
-      MomFGagT = MomFGagT + TmpVec * 0.5 * p%DHNodes(p%TwrGagNd(I))
+      MomFGagT = MomFGagT + TmpVec * 0.5 * abs(p%DHNodes(p%TwrGagNd(I)))
       MomFGagT = 0.001*MomFGagT  ! Convert the local moment to kN-m
 
       m%AllOuts( TwHtFLxt(I) ) =     DOT_PRODUCT( FrcFGagT, m%CoordSys%t1(p%TwrGagNd(I),:) )
@@ -2038,9 +2094,10 @@ END SUBROUTINE ED_CalcConstrStateResidual
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the parameters, based on the data stored in InputFileData
-SUBROUTINE ED_SetParameters( InputFileData, p, ErrStat, ErrMsg )
+SUBROUTINE ED_SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
 !..................................................................................................................................
 
+   TYPE(ED_InitInputType),   INTENT(IN   )    :: InitInp        !< Input data for initialization routine
    TYPE(ED_InputFile),       INTENT(IN)       :: InputFileData  !< Data stored in the module's input file
    TYPE(ED_ParameterType),   INTENT(INOUT)    :: p              !< The module's parameter data
    INTEGER(IntKi),           INTENT(OUT)      :: ErrStat        !< The error status code
@@ -2059,7 +2116,7 @@ SUBROUTINE ED_SetParameters( InputFileData, p, ErrStat, ErrMsg )
 
 
       ! Set parameters from primary input file
-   CALL SetPrimaryParameters( p, InputFileData, ErrStat2, ErrMsg2  )
+   CALL SetPrimaryParameters( InitInp, p, InputFileData, ErrStat2, ErrMsg2  )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -2505,17 +2562,10 @@ SUBROUTINE SetBladeParameters( p, BladeInData, BladeMeshData, ErrStat, ErrMsg )
    INTEGER(IntKi )                                             :: K                 ! Blade number
    INTEGER(IntKi )                                             :: J                 ! Index for the node arrays
    INTEGER(IntKi)                                              :: InterpInd         ! Index for the interpolation routine
-   LOGICAL                                                     :: SetAdmVals        ! Logical to determine if Adams inputs should be set
 
       ! initialize variables
    ErrStat = ErrID_None
    ErrMsg  = ''
-
-   IF (p%BD4Blades) THEN
-      SetAdmVals = .FALSE.
-   ELSE
-      SetAdmVals = ALLOCATED( BladeInData(1)%GJStff )
-   END IF
    
 
    ! ..............................................................................................................................
@@ -2536,7 +2586,7 @@ SUBROUTINE SetBladeParameters( p, BladeInData, BladeMeshData, ErrStat, ErrMsg )
 
       ! .......... Allocate arrays for the blade parameters being set in this routine ..........:
 
-   CALL Alloc_BladeParameters( p, SetAdmVals, ErrStat, ErrMsg )
+   CALL Alloc_BladeParameters( p, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) RETURN
 
    
@@ -2597,17 +2647,6 @@ SUBROUTINE SetBladeParameters( p, BladeInData, BladeMeshData, ErrStat, ErrMsg )
       !    BMassDen   MassB      Lineal mass density
       !    FlpStff    StiffBF    Flapwise stiffness
       !    EdgStff    StiffBE    Edgewise stiffness
-      !    GJStff     StiffBGJ   Blade torsional stiffness
-      !    EAStff     StiffBEA   Blade extensional stiffness
-      !    Alpha      BAlpha     Blade flap/twist coupling coefficient
-      !    FlpIner    InerBFlp   Blade flap (about local structural yb-axis) mass inertia per unit length
-      !    EdgIner    InerBEdg   Blade edge (about local structural xb-axis) mass inertia per unit length
-      !    PrecrvRef  RefAxisxb  Blade offset for defining the reference axis from the pitch axis for precurved blades (along xb-axis)
-      !    PreswpRef  RefAxisyb  Blade offset for defining the reference axis from the pitch axis for preswept  blades (along yb-axis)
-      !    FlpcgOf    cgOffBFlp  Blade flap mass cg offset
-      !    EdgcgOf    cgOffBEdg  Blade edge mass cg offset
-      !    FlpEAOf    EAOffBFlp  Blade flap elastic axis offset
-      !    EdgEAOf    EAOffBEdg  Blade edge elastic axis offset
 
 
          ! Define RNodesNorm() which is common to all the blades:
@@ -2649,29 +2688,7 @@ SUBROUTINE SetBladeParameters( p, BladeInData, BladeMeshData, ErrStat, ErrMsg )
             p%StiffBF (K,J) = InterpAry( x, BladeInData(K)%FlpStff , InterpInd )
             p%StiffBE (K,J) = InterpAry( x, BladeInData(K)%EdgStff , InterpInd )
 
-            IF ( SetAdmVals ) THEN
-               p%StiffBGJ (K,J) = InterpAry( x, BladeInData(K)%GJStff   , InterpInd )
-               p%StiffBEA (K,J) = InterpAry( x, BladeInData(K)%EAStff   , InterpInd )
-               p%BAlpha   (K,J) = InterpAry( x, BladeInData(K)%Alpha    , InterpInd )
-               p%InerBFlp (K,J) = InterpAry( x, BladeInData(K)%FlpIner  , InterpInd )
-               p%InerBEdg (K,J) = InterpAry( x, BladeInData(K)%EdgIner  , InterpInd )
-               p%RefAxisxb(K,J) = InterpAry( x, BladeInData(K)%PrecrvRef, InterpInd )
-               p%RefAxisyb(K,J) = InterpAry( x, BladeInData(K)%PreswpRef, InterpInd )
-               p%cgOffBFlp(K,J) = InterpAry( x, BladeInData(K)%FlpcgOf  , InterpInd )
-               p%cgOffBEdg(K,J) = InterpAry( x, BladeInData(K)%EdgcgOf  , InterpInd )
-               p%EAOffBFlp(K,J) = InterpAry( x, BladeInData(K)%FlpEAOf  , InterpInd )
-               p%EAOffBEdg(K,J) = InterpAry( x, BladeInData(K)%EdgEAOf  , InterpInd )
-            END IF
-
-
-
          END DO ! J (Blade nodes)
-
-         IF ( SetAdmVals ) THEN
-               ! Set the valus for the tip node
-            p%RefAxisxb(K,p%TipNode) = BladeInData(K)%PrecrvRef( BladeInData(K)%NBlInpSt )
-            p%RefAxisyb(K,p%TipNode) = BladeInData(K)%PreswpRef( BladeInData(K)%NBlInpSt )
-         END IF
 
 
             ! Set the blade damping and stiffness tuner
@@ -2738,11 +2755,10 @@ CONTAINS
 END SUBROUTINE SetBladeParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine allocates arrays for the blade parameters.
-SUBROUTINE Alloc_BladeParameters( p, AllocAdams, ErrStat, ErrMsg )
+SUBROUTINE Alloc_BladeParameters( p, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                                   !< The parameters of the structural dynamics module
-   LOGICAL,                  INTENT(IN)     :: AllocAdams                          !< Logical to determine if Adams inputs should be allocated
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             !< Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              !< Err msg
 
@@ -2774,31 +2790,6 @@ SUBROUTINE Alloc_BladeParameters( p, AllocAdams, ErrStat, ErrMsg )
    CALL AllocAry  ( p%StiffBE,     p%NumBl,    p%BldNodes, 'StiffBE'    , ErrStat, ErrMsg ); IF ( ErrStat /= ErrID_None ) RETURN
 
 
-   IF ( AllocAdams ) THEN
-      CALL AllocAry  ( p%StiffBGJ,    p%NumBl,    p%BldNodes, 'StiffBGJ'   , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%StiffBEA,    p%NumBl,    p%BldNodes, 'StiffBEA'   , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%BAlpha,      p%NumBl,    p%BldNodes, 'BAlpha'     , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%InerBFlp,    p%NumBl,    p%BldNodes, 'InerBFlp'   , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%InerBEdg,    p%NumBl,    p%BldNodes, 'InerBEdg'   , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%RefAxisxb,   p%NumBl,    p%TipNode,  'RefAxisxb'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%RefAxisyb,   p%NumBl,    p%TipNode,  'RefAxisyb'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%cgOffBFlp,   p%NumBl,    p%BldNodes, 'cgOffBFlp'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%cgOffBEdg,   p%NumBl,    p%BldNodes, 'cgOffBEdg'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%EAOffBFlp,   p%NumBl,    p%BldNodes, 'EAOffBFlp'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%EAOffBEdg,   p%NumBl,    p%BldNodes, 'EAOffBEdg'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-   END IF
-
    CALL AllocAry  ( p%BldEDamp,    p%NumBl,    NumBE,      'BldEDamp'   , ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) RETURN
    CALL AllocAry  ( p%BldFDamp,    p%NumBl,    NumBF,      'BldFDamp'   , ErrStat, ErrMsg )
@@ -2820,11 +2811,10 @@ SUBROUTINE Alloc_BladeParameters( p, AllocAdams, ErrStat, ErrMsg )
 END SUBROUTINE Alloc_BladeParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine allocates arrays for the tower parameters.
-SUBROUTINE Alloc_TowerParameters( p, AllocAdams, ErrStat, ErrMsg )
+SUBROUTINE Alloc_TowerParameters( p, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                                   !< The parameters of the structural dynamics module
-   LOGICAL,                  INTENT(IN)     :: AllocAdams                          !< Logical to determine if Adams inputs should be allocated
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             !< Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              !< Err msg
 
@@ -2845,20 +2835,6 @@ SUBROUTINE Alloc_TowerParameters( p, AllocAdams, ErrStat, ErrMsg )
    CALL AllocAry  ( p%StiffTSS,      p%TwrNodes, 'StiffTSS'  , ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) RETURN
 
-   IF ( AllocAdams ) THEN
-      CALL AllocAry  ( p%StiffTGJ,      p%TwrNodes, 'StiffTGJ'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%StiffTEA,      p%TwrNodes, 'StiffTEA'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%InerTFA,       p%TwrNodes, 'InerTFA'   , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%InerTSS,       p%TwrNodes, 'InerTSS'   , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%cgOffTFA,      p%TwrNodes, 'cgOffTFA'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%cgOffTSS,      p%TwrNodes, 'cgOffTSS'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-   END IF
 
    !   ! these are for HydroDyn?
    !CALL AllocAry  ( p%DiamT,         p%TwrNodes, 'DiamT'     , ErrStat, ErrMsg )
@@ -3238,15 +3214,13 @@ SUBROUTINE SetTowerParameters( p, InputFileData, ErrStat, ErrMsg  )
    REAL(ReKi)                               :: x                            ! Fractional location between two points in linear interpolation
    INTEGER(IntKi )                          :: J                            ! Index for the node arrays
    INTEGER(IntKi)                           :: InterpInd                    ! Index for the interpolation routine
-   LOGICAL                                  :: SetAdmVals                   ! Logical to determine if Adams inputs should be set
 
 
       ! Initialize data
    ErrStat   = ErrID_None
    ErrMsg    = ''
-   SetAdmVals = ALLOCATED( InputFileData%TwGJStif )
 
-   CALL Alloc_TowerParameters( p, SetAdmVals, ErrStat, ErrMsg )
+   CALL Alloc_TowerParameters( p, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) RETURN
 
 
@@ -3279,12 +3253,6 @@ SUBROUTINE SetTowerParameters( p, InputFileData, ErrStat, ErrMsg  )
    !    TMassDen   MassT      Lineal mass density
    !    TwFAStif   StiffTFA   Tower fore-aft stiffness
    !    TwSSStif   StiffTSS   Tower side-to-side stiffness
-   !    TwGJStif   StiffTGJ   Tower torsional stiffness
-   !    TwEAStif   StiffTEA   Tower extensional stiffness
-   !    TwFAIner   InerTFA    Tower fore-aft (about yt-axis) mass inertia per unit length
-   !    TwSSIner   InerTSS    Tower side-to-side (about xt-axis) mass inertia per unit length
-   !    TwFAcgOf   cgOffTFA   Tower fore-aft mass cg offset
-   !    TwSScgOf   cgOffTSS   Tower side-to-side mass cg offset
 
    InterpInd = 1
 
@@ -3296,18 +3264,9 @@ SUBROUTINE SetTowerParameters( p, InputFileData, ErrStat, ErrMsg  )
       p%StiffTFA  (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwFAStif, InterpInd, InputFileData%NTwInpSt )
       p%StiffTSS  (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwSSStif, InterpInd, InputFileData%NTwInpSt )
    END DO ! J
-
-
-   IF ( SetAdmVals )  THEN          ! An ADAMS model will be created; thus, read in all the cols.
-      DO J=1,p%TwrNodes
-         p%StiffTGJ  (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwGJStif, InterpInd, InputFileData%NTwInpSt )
-         p%StiffTEA  (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwEAStif, InterpInd, InputFileData%NTwInpSt )
-         p%InerTFA   (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwFAIner, InterpInd, InputFileData%NTwInpSt )
-         p%InerTSS   (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwSSIner, InterpInd, InputFileData%NTwInpSt )
-         p%cgOffTFA  (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwFAcgOf, InterpInd, InputFileData%NTwInpSt )
-         p%cgOffTSS  (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwSScgOf, InterpInd, InputFileData%NTwInpSt )
-      END DO ! J
-   END IF
+   p%MassT = abs(p%MassT)
+   p%StiffTFA = abs(p%StiffTFA)
+   p%StiffTSS = abs(p%StiffTSS)
 
 
    !...............................................................................................................................
@@ -3465,11 +3424,12 @@ SUBROUTINE SetFurlParameters( p, InputFileData, ErrStat, ErrMsg  )
 END SUBROUTINE SetFurlParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This takes the primary input file data and sets the corresponding parameters.
-SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
+SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
 !..................................................................................................................................
 
       ! Passed variables
 
+   TYPE(ED_InitInputType),   INTENT(IN   )  :: InitInp                      !< Input data for initialization routine
    TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                            !< Parameters of the structural dynamics module
    TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                !< Data stored in the module's input file
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      !< Error status
@@ -3494,6 +3454,7 @@ SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%HubRad    = InputFileData%HubRad
    p%method    = InputFileData%method
    p%TwrNodes  = InputFileData%TwrNodes
+   p%MHK       = InitInp%MHK
 
    p%PtfmCMxt = InputFileData%PtfmCMxt
    p%PtfmCMyt = InputFileData%PtfmCMyt   
@@ -3501,9 +3462,15 @@ SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%DT        = InputFileData%DT
    p%OverHang  = InputFileData%OverHang
    p%ShftGagL  = InputFileData%ShftGagL
-   p%TowerHt   = InputFileData%TowerHt
-   p%TowerBsHt = InputFileData%TowerBsHt
-   p%PtfmRefzt = InputFileData%PtfmRefzt
+   IF ( InitInp%MHK == MHK_FixedBottom ) THEN
+      p%TowerHt   = InputFileData%TowerHt - InitInp%WtrDpth
+      p%TowerBsHt = InputFileData%TowerBsHt - InitInp%WtrDpth
+      p%PtfmRefzt = InputFileData%PtfmRefzt - InitInp%WtrDpth
+   ELSE
+      p%TowerHt   = InputFileData%TowerHt
+      p%TowerBsHt = InputFileData%TowerBsHt
+      p%PtfmRefzt = InputFileData%PtfmRefzt
+   END IF
    
    p%HubMass   = InputFileData%HubMass
    p%GenIner   = InputFileData%GenIner
@@ -3584,7 +3551,11 @@ SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%BldFlexL  = p%TipRad    - p%HubRad                                            ! Length of the flexible portion of the blade.
    if (p%BD4Blades) p%BldFlexL = 0.0_ReKi
    
-   p%rZYzt     = InputFileData%PtfmCMzt - p%PtfmRefzt
+   IF ( InitInp%MHK == MHK_FixedBottom ) THEN
+      p%rZYzt     = InputFileData%PtfmCMzt - InitInp%WtrDpth - p%PtfmRefzt
+   ELSE
+      p%rZYzt     = InputFileData%PtfmCMzt - p%PtfmRefzt
+   END IF
 
    !...............................................................................................................................
    ! set cosine and sine of Precone and Delta3 angles:
@@ -3947,7 +3918,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    INTEGER                      :: I                                               ! Generic loop-counting index
    INTEGER                      :: J                                               ! Generic loop-counting index
    INTEGER                      :: INDX                                            ! Index for valid arrays
-   INTEGER                      :: startIndx                                       ! Index for BeamDyn
+   INTEGER                      :: startIndx                                       ! Index for using BeamDyn for Blades
 
    LOGICAL                      :: CheckOutListAgain                               ! Flag used to determine if output parameter starting with "M" is valid (or the negative of another parameter)
    LOGICAL                      :: InvalidOutput(0:MaxOutPts)                      ! This array determines if the output channel is valid for this configuration
@@ -4568,50 +4539,20 @@ end if
    DO I = 1,p%NumOuts
 
       p%OutParam(I)%Name  = OutList(I)
-      OutListTmp          = OutList(I)
 
-      ! Reverse the sign (+/-) of the output channel if the user prefixed the
-      !   channel name with a "-", "_", "m", or "M" character indicating "minus".
-
-
-      CheckOutListAgain = .FALSE.
-
-      IF      ( INDEX( "-_", OutListTmp(1:1) ) > 0 ) THEN
-         p%OutParam(I)%SignM = -1                         ! ex, "-TipDxc1" causes the sign of TipDxc1 to be switched.
-         OutListTmp          = OutListTmp(2:)
-      ELSE IF ( INDEX( "mM", OutListTmp(1:1) ) > 0 ) THEN ! We'll assume this is a variable name for now, (if not, we will check later if OutListTmp(2:) is also a variable name)
-         CheckOutListAgain   = .TRUE.
-         p%OutParam(I)%SignM = 1
-      ELSE
-         p%OutParam(I)%SignM = 1
-      END IF
-
-      CALL Conv2UC( OutListTmp )    ! Convert OutListTmp to upper case
-
-
-      Indx = IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
-
-
-         ! If it started with an "M" (CheckOutListAgain) we didn't find the value in our list (Indx < 1)
-
-      IF ( CheckOutListAgain .AND. Indx < 1 ) THEN    ! Let's assume that "M" really meant "minus" and then test again
-         p%OutParam(I)%SignM = -1                     ! ex, "MTipDxc1" causes the sign of TipDxc1 to be switched.
-         OutListTmp          = OutListTmp(2:)
-
-         Indx = IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
-      END IF
-
+      Indx = FindValidChannelIndx(OutList(I), ValidParamAry, p%OutParam(I)%SignM)
 
       IF ( Indx > 0 ) THEN ! we found the channel name
-         p%OutParam(I)%Indx     = ParamIndxAry(Indx)
          IF ( InvalidOutput( ParamIndxAry(Indx) ) ) THEN  ! but, it isn't valid for these settings
+            p%OutParam(I)%Indx  = 0                 ! pick any valid channel (I just picked "Time=0" here because it's universal)
             p%OutParam(I)%Units = "INVALID"
             p%OutParam(I)%SignM = 0
          ELSE
+            p%OutParam(I)%Indx  = ParamIndxAry(Indx)
             p%OutParam(I)%Units = ParamUnitsAry(Indx) ! it's a valid output
          END IF
       ELSE ! this channel isn't valid
-         p%OutParam(I)%Indx  = Time                 ! pick any valid channel (I just picked "Time" here because it's universal)
+         p%OutParam(I)%Indx  = 0                    ! pick any valid channel (I just picked "Time=0" here because it's universal)
          p%OutParam(I)%Units = "INVALID"
          p%OutParam(I)%SignM = 0                    ! multiply all results by zero
 
@@ -5111,7 +5052,7 @@ SUBROUTINE Coeff(p,InputFileData, ErrStat, ErrMsg)
 
       ! Calculate the mass of the current element
 
-      p%TElmntMass(J)    = p%MassT(J)*p%DHNodes(J)     ! Mass of tower element J
+      p%TElmntMass(J)    = p%MassT(J)*abs(p%DHNodes(J))     ! Mass of tower element J
 
 
       ! Integrate to find the tower mass which will be output in .fsm
@@ -5185,8 +5126,8 @@ SUBROUTINE Coeff(p,InputFileData, ErrStat, ErrMsg)
       ! Integrate to find the generalized stiffness of the tower (not including gravitational
       !    effects).
 
-      ElStffFA       = p%StiffTFA(J)*p%DHNodes(J)                        ! Fore-aft stiffness of tower element J
-      ElStffSS       = p%StiffTSS(J)*p%DHNodes(J)                        ! Side-to-side stiffness of tower element J
+      ElStffFA       = p%StiffTFA(J)*abs(p%DHNodes(J))                        ! Fore-aft stiffness of tower element J
+      ElStffSS       = p%StiffTSS(J)*abs(p%DHNodes(J))                        ! Side-to-side stiffness of tower element J
 
       DO I = 1,2     ! Loop through all tower DOFs in one direction
          DO L = 1,2  ! Loop through all tower DOFs in one direction
@@ -5200,7 +5141,7 @@ SUBROUTINE Coeff(p,InputFileData, ErrStat, ErrMsg)
       !   Ignore the cross-correlation terms of KTFAGrav (i.e. KTFAGrav(i,j) where i /= j)
       !   and KTSSGrav since these terms will never be used.
 
-      ElmntStff      = -TMssAbvNd(J)*p%DHNodes(J)*p%Gravity              ! Gravitational stiffness of tower element J
+      ElmntStff      = -TMssAbvNd(J)*abs(p%DHNodes(J))*p%Gravity              ! Gravitational stiffness of tower element J
 
       DO I = 1,2     ! Loop through all tower DOFs in one direction
          KTFAGrav(I,I) = KTFAGrav(I,I) + ElmntStff*p%TwrFASF(I,J,1)**2
@@ -7852,42 +7793,42 @@ DO K = 1,p%NumBl ! Loop through all blades
 !.....................................
    
    DO J=1,p%TwrNodes
-      RtHSdat%FTHydrot(:,J) = CoordSys%z1*( u%TowerPtLoads%Force(DOF_Sg,J)/p%DHNodes(J) &
+      RtHSdat%FTHydrot(:,J) = CoordSys%z1*( u%TowerPtLoads%Force(DOF_Sg,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_Sg,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_Sg,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_Sg,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_Sg,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_Sg,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_Sg,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   ) &
-                            - CoordSys%z3*( u%TowerPtLoads%Force(DOF_Sw,J)/p%DHNodes(J) &
+                            - CoordSys%z3*( u%TowerPtLoads%Force(DOF_Sw,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_Sw,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_Sw,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_Sw,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_Sw,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_Sw,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_Sw,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   ) &
-                             + CoordSys%z2*( u%TowerPtLoads%Force(DOF_Hv,J)/p%DHNodes(J) &
+                             + CoordSys%z2*( u%TowerPtLoads%Force(DOF_Hv,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_Hv,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_Hv,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_Hv,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_Hv,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_Hv,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_Hv,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   )
-      RtHSdat%MFHydrot(:,J) = CoordSys%z1*( u%TowerPtLoads%Moment(DOF_R-3,J)/p%DHNodes(J) &
+      RtHSdat%MFHydrot(:,J) = CoordSys%z1*( u%TowerPtLoads%Moment(DOF_R-3,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_R ,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_R ,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_R ,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_R ,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_R ,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_R ,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   ) &
-                            - CoordSys%z3*( u%TowerPtLoads%Moment(DOF_P-3 ,J)/p%DHNodes(J) &
+                            - CoordSys%z3*( u%TowerPtLoads%Moment(DOF_P-3 ,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_P ,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_P ,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_P ,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_P ,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_P ,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_P ,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   ) &
-                            + CoordSys%z2*( u%TowerPtLoads%Moment(DOF_Y-3 ,J)/p%DHNodes(J) &
+                            + CoordSys%z2*( u%TowerPtLoads%Moment(DOF_Y-3 ,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_Y ,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_Y ,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_Y ,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
@@ -7937,19 +7878,19 @@ DO K = 1,p%NumBl ! Loop through all blades
 
       DO I = 1,p%DOFs%NPTE  ! Loop through all active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the tower
 
-         TmpVec1 = RtHSdat%PFTHydro(:,J,p%DOFs%PTE(I))*p%DHNodes(J) - p%TElmntMass(J)*RtHSdat%PLinVelET(J,p%DOFs%PTE(I),0,:)           ! The portion of PFrcT0Trb associated with tower element J
+         TmpVec1 = RtHSdat%PFTHydro(:,J,p%DOFs%PTE(I))*abs(p%DHNodes(J)) - p%TElmntMass(J)*RtHSdat%PLinVelET(J,p%DOFs%PTE(I),0,:)           ! The portion of PFrcT0Trb associated with tower element J
          TmpVec2 = CROSS_PRODUCT( RtHSdat%rT0T(:,J), TmpVec1 )                 ! The portion of PMomX0Trb associated with tower element J
-         TmpVec3 = RtHSdat%PMFHydro(:,J,p%DOFs%PTE(I))*p%DHNodes(J)             ! The added moment applied at tower element J
+         TmpVec3 = RtHSdat%PMFHydro(:,J,p%DOFs%PTE(I))*abs(p%DHNodes(J))             ! The added moment applied at tower element J
 
          RtHSdat%PFrcT0Trb(:,p%DOFs%PTE(I)) = RtHSdat%PFrcT0Trb(:,p%DOFs%PTE(I)) + TmpVec1
          RtHSdat%PMomX0Trb(:,p%DOFs%PTE(I)) = RtHSdat%PMomX0Trb(:,p%DOFs%PTE(I)) + TmpVec2 + TmpVec3
 
       ENDDO          ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the tower
 
-      TmpVec1 = ( RtHSdat%FTHydrot(:,J) )*p%DHNodes(J) &
+      TmpVec1 = ( RtHSdat%FTHydrot(:,J) )*abs(p%DHNodes(J)) &
               - p%TElmntMass(J)*( p%Gravity*CoordSys%z2 + RtHSdat%LinAccETt(:,J) )          ! The portion of FrcT0Trbt associated with tower element J
       TmpVec2 = CROSS_PRODUCT( RtHSdat%rT0T(:,J), TmpVec1 )                                 ! The portion of MomX0Trbt associated with tower element J
-      TmpVec3 = ( RtHSdat%MFHydrot(:,J) )*p%DHNodes(J)                                      ! The external moment applied to tower element J
+      TmpVec3 = ( RtHSdat%MFHydrot(:,J) )*abs(p%DHNodes(J))                                      ! The external moment applied to tower element J
 
       RtHSdat%FrcT0Trbt = RtHSdat%FrcT0Trbt + TmpVec1
 
@@ -8217,16 +8158,16 @@ SUBROUTINE FillAugMat( p, x, CoordSys, u, HSSBrTrq, RtHSdat, AugMat )
             AugMat(p%DOFs%PTTE(I),p%DOFs%PTTE(L)) = AugMat(p%DOFs%PTTE(I),p%DOFs%PTTE(L))  &
                                                   + p%TElmntMass(J)   *DOT_PRODUCT( RtHSdat%PLinVelET(J,p%DOFs%PTTE(I),0,:),  &
                                                                               RtHSdat%PLinVelET(J,p%DOFs%PTTE(L),0,:) ) &   ! [C(q,t)]T + [C(q,t)]HydroT
-                                                  - p%DHNodes(J)*DOT_PRODUCT( RtHSdat%PLinVelET(J,p%DOFs%PTTE(I),0,:),  &
+                                                  - abs(p%DHNodes(J))*DOT_PRODUCT( RtHSdat%PLinVelET(J,p%DOFs%PTTE(I),0,:),  &
                                                                               RtHSdat%PFTHydro (:,J,p%DOFs%PTTE(L)  ) ) &
-                                                  - p%DHNodes(J)*DOT_PRODUCT( RtHSdat%PAngVelEF(J,p%DOFs%PTTE(I),0,:),  &
+                                                  - abs(p%DHNodes(J))*DOT_PRODUCT( RtHSdat%PAngVelEF(J,p%DOFs%PTTE(I),0,:),  &
                                                                               RtHSdat%PMFHydro (:,J,p%DOFs%PTTE(L)  ) )
          ENDDO                 ! I - All active (enabled) tower DOFs greater than or equal to L
       ENDDO                    ! L - All active (enabled) tower DOFs that contribute to the QD2T-related linear accelerations of the tower
 
-      TmpVec1 = ( RtHSdat%FTHydrot(:,J) )*p%DHNodes(J) &
+      TmpVec1 = ( RtHSdat%FTHydrot(:,J) )*abs(p%DHNodes(J)) &
               - p%TElmntMass(J)*( p%Gravity*CoordSys%z2 + RtHSdat%LinAccETt(:,J) )          ! The portion of FrcT0Trbt associated with tower element J
-      TmpVec3 = ( RtHSdat%MFHydrot(:,J) )*p%DHNodes(J)             ! The external moment applied to tower element J
+      TmpVec3 = ( RtHSdat%MFHydrot(:,J) )*abs(p%DHNodes(J))             ! The external moment applied to tower element J
       DO I = 1,p%DOFs%NPTTE    ! Loop through all active (enabled) tower DOFs that contribute to the QD2T-related linear accelerations of the tower
             AugMat(p%DOFs%PTTE(I),        p%NAug) = AugMat(p%DOFs%PTTE(I),   p%NAug)                         &                 ! {-f(qd,q,t)}T + {-f(qd,q,t)}GravT + {-f(qd,q,t)}AeroT + {-f(qd,q,t)}HydroT
                                                   +  DOT_PRODUCT( RtHSdat%PLinVelET(J,p%DOFs%PTTE(I),0,:), TmpVec1        ) &  ! NOTE: TmpVec1 is still the portion of FrcT0Trbt associated with tower element J
@@ -9827,12 +9768,11 @@ CONTAINS
 END SUBROUTINE ED_ABM4
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine generates the summary file, which contains a regurgitation of  the input data and interpolated flexible body data.
-SUBROUTINE ED_PrintSum( p, OtherState, GenerateAdamsModel, ErrStat, ErrMsg )
+SUBROUTINE ED_PrintSum( p, OtherState, ErrStat, ErrMsg )
 
       ! passed variables
    TYPE(ED_ParameterType),    INTENT(IN   )  :: p                       !< Parameters of the structural dynamics module
    TYPE(ED_OtherStateType),   INTENT(IN   )  :: OtherState              !< Other states of the structural dynamics module 
-   LOGICAL,                   INTENT(IN   )  :: GenerateAdamsModel      !< Logical to determine if Adams inputs were read/should be summarized
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                 !< Error status of the operation
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                  !< Error message if ErrStat /= ErrID_None
 
@@ -9972,30 +9912,14 @@ END IF
       ! Interpolated tower properties.
 
    WRITE (UnSu,"(//,'Interpolated tower properties:',/)")
-   IF ( GenerateAdamsModel )  THEN  ! An ADAMS model will be created; thus, print out all the cols.
 
-      WRITE (UnSu,'(A)')  'Node  TwFract   HNodes  DHNodes  TMassDen    FAStiff    SSStiff'// &
-                           '    GJStiff    EAStiff    FAIner    SSIner  FAcgOff  SScgOff'
-      WRITE (UnSu,'(A)')  ' (-)      (-)      (m)      (m)    (kg/m)     (Nm^2)     (Nm^2)'// &
-                           '     (Nm^2)        (N)    (kg m)    (kg m)      (m)      (m)'
+   WRITE (UnSu,'(A)')  'Node  TwFract   HNodes  DHNodes  TMassDen    FAStiff    SSStiff'
+   WRITE (UnSu,'(A)')  ' (-)      (-)      (m)      (m)    (kg/m)     (Nm^2)     (Nm^2)'
 
-      DO I=1,p%TwrNodes
-         WRITE(UnSu,'(I4,3F9.3,F10.3,4ES11.3,2F10.3,2F9.3)')  I, p%HNodesNorm(I), p%HNodes(I), p%DHNodes(I), p%MassT(I), &
-                                                                 p%StiffTFA(I), p%StiffTSS(I), p%StiffTGJ(I), p%StiffTEA(I),       &
-                                                                 p%InerTFA(I), p%InerTSS(I), p%cgOffTFA(I), p%cgOffTSS(I)
-      ENDDO ! I
-
-   ELSE                                                     ! Only FAST will be run; thus, only print out the necessary cols.
-
-      WRITE (UnSu,'(A)')  'Node  TwFract   HNodes  DHNodes  TMassDen    FAStiff    SSStiff'
-      WRITE (UnSu,'(A)')  ' (-)      (-)      (m)      (m)    (kg/m)     (Nm^2)     (Nm^2)'
-
-      DO I=1,p%TwrNodes
-         WRITE(UnSu,'(I4,3F9.3,F10.3,2ES11.3)')  I, p%HNodesNorm(I), p%HNodes(I), p%DHNodes(I), p%MassT(I), &
-                                                    p%StiffTFA(I),  p%StiffTSS(I)
-      ENDDO ! I
-
-   ENDIF
+   DO I=1,p%TwrNodes
+      WRITE(UnSu,'(I4,3F9.3,F10.3,2ES11.3)')  I, p%HNodesNorm(I), p%HNodes(I), p%DHNodes(I), p%MassT(I), &
+                                                   p%StiffTFA(I),  p%StiffTSS(I)
+   ENDDO ! I
 
 
       ! Interpolated blade properties.
@@ -10004,39 +9928,15 @@ IF (.NOT. p%BD4Blades) THEN
    DO K=1,p%NumBl
 
       WRITE (UnSu,'(//,A,I1,A,/)')  'Interpolated blade ', K, ' properties:'
-      IF ( GenerateAdamsModel )  THEN  ! An ADAMS model will be created; thus, print out all the cols.
 
-         WRITE (UnSu,'(A)')  'Node  BlFract   RNodes  DRNodes  PitchAxis  StrcTwst  BMassDen    FlpStff    EdgStff'//       &
-                              '     GJStff     EAStff    Alpha   FlpIner   EdgIner PrecrvRef PreswpRef  FlpcgOf  EdgcgOf'// &
-                              '  FlpEAOf  EdgEAOf'
-         WRITE (UnSu,'(A)')  ' (-)      (-)      (m)      (m)     (-)       (deg)    (kg/m)     (Nm^2)     (Nm^2)'//       &
-                              '     (Nm^2)     (Nm^2)      (-)    (kg m)    (kg m)       (m)       (m)      (m)      (m)'// &
-                              '      (m)      (m)'
+      WRITE (UnSu,'(A)')  'Node  BlFract   RNodes  DRNodes PitchAxis  StrcTwst  BMassDen    FlpStff    EdgStff'
+      WRITE (UnSu,'(A)')  ' (-)      (-)      (m)      (m)       (-)     (deg)    (kg/m)     (Nm^2)     (Nm^2)'
 
-         DO I=1,p%BldNodes
-
-            WRITE(UnSu,'(I4,3F9.3,3F10.3,4ES11.3,F9.3,4F10.3,4F9.3)')  I, p%RNodesNorm(I),  p%RNodes(I) + p%HubRad, p%DRNodes(I), &
-                                                                          p%PitchAxis(K,I), p%ThetaS(K,I)*R2D,      p%MassB(K,I), &
-                                                                          p%StiffBF(K,I),   p%StiffBE(K,I),                       &
-                                                                          p%StiffBGJ(K,I),  p%StiffBEA(K,I),                      &
-                                                                          p%BAlpha(K,I),    p%InerBFlp(K,I), p%InerBEdg(K,I),     &
-                                                                          p%RefAxisxb(K,I), p%RefAxisyb(K,I),                     &
-                                                                          p%cgOffBFlp(K,I), p%cgOffBEdg(K,I),                     &
-                                                                          p%EAOffBFlp(K,I), p%EAOffBEdg(K,I)
-         ENDDO ! I
-
-      ELSE                                                     ! Only FAST will be run; thus, only print out the necessary cols.
-
-         WRITE (UnSu,'(A)')  'Node  BlFract   RNodes  DRNodes PitchAxis  StrcTwst  BMassDen    FlpStff    EdgStff'
-         WRITE (UnSu,'(A)')  ' (-)      (-)      (m)      (m)       (-)     (deg)    (kg/m)     (Nm^2)     (Nm^2)'
-
-         DO I=1,p%BldNodes
-            WRITE(UnSu,'(I4,3F9.3,3F10.3,2ES11.3)')  I, p%RNodesNorm(I), p%RNodes(I) + p%HubRad, p%DRNodes(I), &
-                                                        p%PitchAxis(K,I),p%ThetaS(K,I)*R2D, p%MassB(K,I), &
-                                                        p%StiffBF(K,I), p%StiffBE(K,I)
-         ENDDO ! I
-
-      ENDIF
+      DO I=1,p%BldNodes
+         WRITE(UnSu,'(I4,3F9.3,3F10.3,2ES11.3)')  I, p%RNodesNorm(I), p%RNodes(I) + p%HubRad, p%DRNodes(I), &
+                                                      p%PitchAxis(K,I),p%ThetaS(K,I)*R2D, p%MassB(K,I), &
+                                                      p%StiffBF(K,I), p%StiffBE(K,I)
+      ENDDO ! I
 
    ENDDO ! K
    
@@ -10352,7 +10252,7 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
       ! allocate dYdu if necessary
       if (.not. allocated(dYdu)) then
-         call AllocAry(dYdu, p%Jac_ny, size(p%Jac_u_indx,1)+1, 'dYdu', ErrStat2, ErrMsg2)
+         call AllocAry(dYdu, p%Jac_ny, size(p%Jac_u_indx,1)+p%NumExtendedInputs, 'dYdu', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -10360,57 +10260,62 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          end if
       end if
       
-         ! make a copy of outputs because we will need two for the central difference computations (with orientations)
-      call ED_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call ED_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
+      if (p%CompAeroMaps) then
+         dYdu = 0.0_R8Ki
+      else
+            ! make a copy of outputs because we will need two for the central difference computations (with orientations)
+         call ED_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call ED_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            if (ErrStat>=AbortErrLev) then
+               call cleanup()
+               return
+            end if
          
-      do i=1,size(p%Jac_u_indx,1)
+         do i=1,size(p%Jac_u_indx,1)
          
-            ! get u_op + delta u
-         call ED_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         call ED_Perturb_u( p, i, 1, u_perturb, delta )
+               ! get u_op + delta u
+            call ED_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
+            call ED_Perturb_u( p, i, 1, u_perturb, delta )
 
-            ! compute y at u_op + delta u
-         call ED_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
+               ! compute y at u_op + delta u
+            call ED_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ) 
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
          
             
-            ! get u_op - delta u
-         call ED_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         call ED_Perturb_u( p, i, -1, u_perturb, delta )
+               ! get u_op - delta u
+            call ED_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
+            call ED_Perturb_u( p, i, -1, u_perturb, delta )
          
-            ! compute y at u_op - delta u
-         call ED_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
+               ! compute y at u_op - delta u
+            call ED_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ) 
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
          
             
-            ! get central difference:            
-         call Compute_dY( p, y_p, y_m, delta, dYdu(:,i) )
+               ! get central difference:            
+            call Compute_dY( p, y_p, y_m, delta, dYdu(:,i) )
          
-      end do
+         end do
       
-      ! now do the extended input: sum the p%NumBl blade pitch columns
-      dYdu(:,size(p%Jac_u_indx,1)+1) = dYdu(:,size(p%Jac_u_indx,1)-p%NumBl-1) ! last NumBl+2 columns are: GenTrq, YawMom, and BlPitchCom   
-      do i=2,p%NumBl
-         dYdu(:,size(p%Jac_u_indx,1)+1) = dYdu(:,size(p%Jac_u_indx,1)+1) + dYdu(:,size(p%Jac_u_indx,1)-p%NumBl-2+i) 
-      end do
+         ! now do the extended input: sum the p%NumBl blade pitch columns
+         if (p%NumExtendedInputs > 0) then
+            dYdu(:,size(p%Jac_u_indx,1)+1) = dYdu(:,size(p%Jac_u_indx,1)-p%NumBl-1) ! last NumBl+2 columns are: GenTrq, YawMom, and BlPitchCom   
+            do i=2,p%NumBl
+               dYdu(:,size(p%Jac_u_indx,1)+1) = dYdu(:,size(p%Jac_u_indx,1)+1) + dYdu(:,size(p%Jac_u_indx,1)-p%NumBl-2+i) 
+            end do
+         end if
       
       
-      if (ErrStat>=AbortErrLev) then
-         call cleanup()
-         return
-      end if
-      call ED_DestroyOutput( y_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      call ED_DestroyOutput( y_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      
+         if (ErrStat>=AbortErrLev) then
+            call cleanup()
+            return
+         end if
+         call ED_DestroyOutput( y_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
+         call ED_DestroyOutput( y_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
+      end if !CompAeroMaps
 
    END IF
    
@@ -10421,7 +10326,7 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
       ! allocate dXdu if necessary
       if (.not. allocated(dXdu)) then
-         call AllocAry(dXdu, p%DOFs%NActvDOF * 2, size(p%Jac_u_indx,1)+1, 'dXdu', ErrStat2, ErrMsg2)
+         call AllocAry(dXdu, p%NActvDOF_Lin  + p%NActvVelDOF_Lin, size(p%Jac_u_indx,1)+p%NumExtendedInputs, 'dXdu', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -10453,31 +10358,25 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
             
             
-            ! get central difference:            
-            
             ! we may have had an error allocating memory, so we'll check
          if (ErrStat>=AbortErrLev) then 
             call cleanup()
             return
-         end if         
+         end if
          
-         do j=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-            dXdu(j, i) = x_p%QT( p%DOFs%PS(j) ) - x_m%QT( p%DOFs%PS(j) )
-         end do
-         do j=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-            dXdu(j+p%DOFs%NActvDOF, i) = x_p%QDT( p%DOFs%PS(j) ) - x_m%QDT( p%DOFs%PS(j) )
-         end do              
-         dXdu(:,i) = dXdu(:,i) / (2*delta) 
-         
+            ! get central difference:
+         call Compute_dX( p, x_p, x_m, delta, dXdu(:,i) )
+
       end do
       
       
       ! now do the extended input: sum the p%NumBl blade pitch columns
-      dXdu(:,size(p%Jac_u_indx,1)+1) = dXdu(:,size(p%Jac_u_indx,1)-p%NumBl-1) ! last NumBl+2 columns are: GenTrq, YawMom, and BlPitchCom   
-      do i=2,p%NumBl
-         dXdu(:,size(p%Jac_u_indx,1)+1) = dXdu(:,size(p%Jac_u_indx,1)+1) + dXdu(:,size(p%Jac_u_indx,1)-p%NumBl-2+i) 
-      end do
-      
+      if (p%NumExtendedInputs > 0) then
+         dXdu(:,size(p%Jac_u_indx,1)+1) = dXdu(:,size(p%Jac_u_indx,1)-p%NumBl-1) ! last NumBl+2 columns are: GenTrq, YawMom, and BlPitchCom   
+         do i=2,p%NumBl
+            dXdu(:,size(p%Jac_u_indx,1)+1) = dXdu(:,size(p%Jac_u_indx,1)+1) + dXdu(:,size(p%Jac_u_indx,1)-p%NumBl-2+i) 
+         end do
+      end if
       
       call ED_DestroyContState( x_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
       call ED_DestroyContState( x_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
@@ -10572,7 +10471,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
       ! allocate dYdx if necessary
       if (.not. allocated(dYdx)) then
-         call AllocAry(dYdx, p%Jac_ny, p%DOFs%NActvDOF*2, 'dYdx', ErrStat2, ErrMsg2)
+         call AllocAry(dYdx, p%Jac_ny, p%NActvDOF_Lin + p%NActvVelDOF_Lin, 'dYdx', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -10591,7 +10490,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          end if
          
          
-      do i=1,p%DOFs%NActvDOF*2
+      do i=1,p%NActvDOF_Lin + p%NActvVelDOF_Lin
          
             ! get x_op + delta x
          call ED_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
@@ -10633,7 +10532,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
       ! allocate dXdx if necessary
       if (.not. allocated(dXdx)) then
-         call AllocAry(dXdx, p%DOFs%NActvDOF * 2, p%DOFs%NActvDOF * 2, 'dXdx', ErrStat2, ErrMsg2)
+         call AllocAry(dXdx, p%NActvDOF_Lin + p%NActvVelDOF_Lin, p%NActvDOF_Lin + p%NActvVelDOF_Lin, 'dXdx', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -10641,7 +10540,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          end if
       end if
       
-      do i=1,p%DOFs%NActvDOF * 2
+      do i=1,p%NActvDOF_Lin  + p%NActvVelDOF_Lin
          
             ! get x_op + delta x
          call ED_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
@@ -10663,22 +10562,17 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
                                          
             
-            ! get central difference:            
-            
             ! we may have had an error allocating memory, so we'll check
          if (ErrStat>=AbortErrLev) then 
             call cleanup()
             return
-         end if         
+         end if
          
-         do j=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-            dXdx(j, i) = x_p%QT( p%DOFs%PS(j) ) - x_m%QT( p%DOFs%PS(j) )
-         end do
-         do j=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-            dXdx(j+p%DOFs%NActvDOF, i) = x_p%QDT( p%DOFs%PS(j) ) - x_m%QDT( p%DOFs%PS(j) )
-         end do              
-         dXdx(:,i) = dXdx(:,i) / (2*delta) 
+            ! get central difference:            
+            
+         call Compute_dX( p, x_p, x_m, delta, dXdx(:,i) )
          
+
       end do
       
       call ED_DestroyContState( x_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
@@ -10868,6 +10762,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_Init_Jacobian_y'
    LOGICAL                                           :: Mask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
+   LOGICAL                                           :: BladeMask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
    logical, allocatable                              :: AllOut(:)
    
    
@@ -10877,25 +10772,37 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    
    
       ! determine how many outputs there are in the Jacobians      
-   p%Jac_ny = 0         
-   if (allocated(y%BladeLn2Mesh)) then
-      do i=1,p%NumBl
-         p%Jac_ny = p%Jac_ny + y%BladeLn2Mesh(i)%NNodes * 18  ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node on each blade
-      end do      
-   end if
+   p%Jac_ny = 0
+   BladeMask = .true. ! default is all the fields
+   if (p%CompAeroMaps) then
+      if (allocated(y%BladeLn2Mesh)) then
+         do i=1,p%NumBl_Lin
+            p%Jac_ny = p%Jac_ny + y%BladeLn2Mesh(i)%NNodes * 12  ! 3 TranslationDisp, Orientation, TranslationVel, and RotationVel at each node on each blade (skip accelerations)
+         end do
+      end if
+      BladeMask(MASKID_TRANSLATIONACC) = .false.
+      BladeMask(MASKID_ROTATIONACC)    = .false.
+   else
    
-   p%Jac_ny = p%Jac_ny &
-      + y%PlatformPtMesh%NNodes  * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
-      + y%TowerLn2Mesh%NNodes    * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
-      + y%HubPtMotion%NNodes     * 9            & ! 3 TranslationDisp, Orientation, and RotationVel at each node
-      + y%NacelleMotion%NNodes   * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
-      + 3                                       & ! Yaw, YawRate, and HSS_Spd
-      + p%NumOuts  + p%BldNd_TotNumOuts           ! WriteOutput values 
+      if (allocated(y%BladeLn2Mesh)) then
+         do i=1,p%NumBl_Lin
+            p%Jac_ny = p%Jac_ny + y%BladeLn2Mesh(i)%NNodes * 18  ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node on each blade
+         end do      
+      end if
+   
+      p%Jac_ny = p%Jac_ny &
+         + y%PlatformPtMesh%NNodes  * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
+         + y%TowerLn2Mesh%NNodes    * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
+         + y%HubPtMotion%NNodes     * 9            & ! 3 TranslationDisp, Orientation, and RotationVel at each node
+         + y%NacelleMotion%NNodes   * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
+         + 3                                       & ! Yaw, YawRate, and HSS_Spd
+         + p%NumOuts  + p%BldNd_TotNumOuts           ! WriteOutput values 
       
-   do i=1,p%NumBl
-      p%Jac_ny = p%Jac_ny + y%BladeRootMotion(i)%NNodes * 18  ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each (1) node on each blade
-   end do
+      do i=1,p%NumBl_Lin
+         p%Jac_ny = p%Jac_ny + y%BladeRootMotion(i)%NNodes * 18  ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each (1) node on each blade
+      end do
 
+   end if
    
       !.................   
       ! set linearization output names:
@@ -10906,101 +10813,103 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    
    InitOut%RotFrame_y = .false. ! note that meshes are in the global, not rotating frame
    
-   ! note that this Mask is for the y%HubPtMotion mesh ONLY. The others pack *all* of the motion fields
-   Mask  = .false.
-   Mask(MASKID_TRANSLATIONDISP) = .true.
-   Mask(MASKID_ORIENTATION) = .true.
-   Mask(MASKID_ROTATIONVEL) = .true.
    
    index_next = 1
    if (allocated(y%BladeLn2Mesh)) then
       index_last = index_next
-      do i=1,p%NumBl
-         call PackMotionMesh_Names(y%BladeLn2Mesh(i), 'Blade '//trim(num2lstr(i)), InitOut%LinNames_y, index_next)
+      do i=1,p%NumBl_Lin
+         call PackMotionMesh_Names(y%BladeLn2Mesh(i), 'Blade '//trim(num2lstr(i)), InitOut%LinNames_y, index_next, FieldMask=BladeMask)
       end do      
-      !InitOut%RotFrame_y(index_last:index_next-1) = .true. ! values on the mesh are in global, not rotating frame
-   end if
-   call PackMotionMesh_Names(y%PlatformPtMesh, 'Platform', InitOut%LinNames_y, index_next)
-   call PackMotionMesh_Names(y%TowerLn2Mesh, 'Tower', InitOut%LinNames_y, index_next)
-   call PackMotionMesh_Names(y%HubPtMotion, 'Hub', InitOut%LinNames_y, index_next, FieldMask=Mask)
-   index_last = index_next
-   do i=1,p%NumBl
-      call PackMotionMesh_Names(y%BladeRootMotion(i), 'Blade root '//trim(num2lstr(i)), InitOut%LinNames_y, index_next)
-   end do   
-   !InitOut%RotFrame_y(index_last:index_next-1) = .true. ! values on the mesh are in global, not rotating frame
-
-   call PackMotionMesh_Names(y%NacelleMotion, 'Nacelle', InitOut%LinNames_y, index_next)
-   InitOut%LinNames_y(index_next) = 'Yaw, rad'; index_next = index_next+1
-   InitOut%LinNames_y(index_next) = 'YawRate, rad/s'; index_next = index_next+1
-   InitOut%LinNames_y(index_next) = 'HSS_Spd, rad/s'
-         
-   do i=1,p%NumOuts + p%BldNd_TotNumOuts
-      InitOut%LinNames_y(i+index_next) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i)) !trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
-   end do   
-   
-   
-   !! check for AllOuts in rotating frame
-   allocate( AllOut(0:MaxOutPts), STAT=ErrStat2 ) ! allocate starting at zero to account for invalid output channels
-   if (ErrStat2 /=0 ) then
-      call SetErrStat(ErrID_Info, 'error allocating temporary space for AllOut',ErrStat,ErrMsg,RoutineName)
-      return;
    end if
    
-   AllOut = .false.
-   do k=1,3
-      AllOut(TipDxc(  k)) = .true.
-      AllOut(TipDyc(  k)) = .true.
-      AllOut(TipDzc(  k)) = .true.
-      AllOut(TipDxb(  k)) = .true.
-      AllOut(TipDyb(  k)) = .true.
-      AllOut(TipALxb( k)) = .true.
-      AllOut(TipALyb( k)) = .true.
-      AllOut(TipALzb( k)) = .true.
-      AllOut(TipRDxb( k)) = .true.
-      AllOut(TipRDyb( k)) = .true.
-      AllOut(TipRDzc( k)) = .true.
-      AllOut(TipClrnc(k)) = .true.
-      AllOut(PtchPMzc(k)) = .true.
-      AllOut(RootFxc( k)) = .true.
-      AllOut(RootFyc( k)) = .true.
-      AllOut(RootFzc( k)) = .true.
-      AllOut(RootFxb( k)) = .true.
-      AllOut(RootFyb( k)) = .true.
-      AllOut(RootMxc( k)) = .true.
-      AllOut(RootMyc( k)) = .true.
-      AllOut(RootMzc( k)) = .true.
-      AllOut(RootMxb( k)) = .true.
-      AllOut(RootMyb( k)) = .true.
+   if (.not. p%CompAeroMaps) then
+      call PackMotionMesh_Names(y%PlatformPtMesh, 'Platform', InitOut%LinNames_y, index_next)
+      call PackMotionMesh_Names(y%TowerLn2Mesh, 'Tower', InitOut%LinNames_y, index_next)
       
-      do j=1,9            
-         AllOut(SpnALxb( j,k)) = .true.         
-         AllOut(SpnALyb( j,k)) = .true.
-         AllOut(SpnALzb( j,k)) = .true.
-         AllOut(SpnFLxb( j,k)) = .true.
-         AllOut(SpnFLyb( j,k)) = .true.
-         AllOut(SpnFLzb( j,k)) = .true.
-         AllOut(SpnMLxb( j,k)) = .true.
-         AllOut(SpnMLyb( j,k)) = .true.
-         AllOut(SpnMLzb( j,k)) = .true.
-         AllOut(SpnTDxb( j,k)) = .true.
-         AllOut(SpnTDyb( j,k)) = .true.
-         AllOut(SpnTDzb( j,k)) = .true.
-         AllOut(SpnRDxb( j,k)) = .true.
-         AllOut(SpnRDyb( j,k)) = .true.
-         AllOut(SpnRDzb( j,k)) = .true.
+      ! note that this Mask is for the y%HubPtMotion mesh ONLY. The others pack *all* of the motion fields
+      Mask  = .false.
+      Mask(MASKID_TRANSLATIONDISP) = .true.
+      Mask(MASKID_ORIENTATION) = .true.
+      Mask(MASKID_ROTATIONVEL) = .true.
+      
+      call PackMotionMesh_Names(y%HubPtMotion, 'Hub', InitOut%LinNames_y, index_next, FieldMask=Mask)
+      index_last = index_next
+      do i=1,p%NumBl_Lin
+         call PackMotionMesh_Names(y%BladeRootMotion(i), 'Blade root '//trim(num2lstr(i)), InitOut%LinNames_y, index_next)
+      end do   
+
+      call PackMotionMesh_Names(y%NacelleMotion, 'Nacelle', InitOut%LinNames_y, index_next)
+      InitOut%LinNames_y(index_next) = 'Yaw, rad'; index_next = index_next+1
+      InitOut%LinNames_y(index_next) = 'YawRate, rad/s'; index_next = index_next+1
+      InitOut%LinNames_y(index_next) = 'HSS_Spd, rad/s'
+         
+      do i=1,p%NumOuts + p%BldNd_TotNumOuts
+         InitOut%LinNames_y(i+index_next) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i)) !trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
+      end do   
+   
+   
+      !! check for AllOuts in rotating frame
+      allocate( AllOut(0:MaxOutPts), STAT=ErrStat2 ) ! allocate starting at zero to account for invalid output channels
+      if (ErrStat2 /=0 ) then
+         call SetErrStat(ErrID_Info, 'error allocating temporary space for AllOut',ErrStat,ErrMsg,RoutineName)
+         return;
+      end if
+   
+      AllOut = .false.
+      do k=1,3
+         AllOut(TipDxc(  k)) = .true.
+         AllOut(TipDyc(  k)) = .true.
+         AllOut(TipDzc(  k)) = .true.
+         AllOut(TipDxb(  k)) = .true.
+         AllOut(TipDyb(  k)) = .true.
+         AllOut(TipALxb( k)) = .true.
+         AllOut(TipALyb( k)) = .true.
+         AllOut(TipALzb( k)) = .true.
+         AllOut(TipRDxb( k)) = .true.
+         AllOut(TipRDyb( k)) = .true.
+         AllOut(TipRDzc( k)) = .true.
+         AllOut(TipClrnc(k)) = .true.
+         AllOut(PtchPMzc(k)) = .true.
+         AllOut(RootFxc( k)) = .true.
+         AllOut(RootFyc( k)) = .true.
+         AllOut(RootFzc( k)) = .true.
+         AllOut(RootFxb( k)) = .true.
+         AllOut(RootFyb( k)) = .true.
+         AllOut(RootMxc( k)) = .true.
+         AllOut(RootMyc( k)) = .true.
+         AllOut(RootMzc( k)) = .true.
+         AllOut(RootMxb( k)) = .true.
+         AllOut(RootMyb( k)) = .true.
+      
+         do j=1,9            
+            AllOut(SpnALxb( j,k)) = .true.         
+            AllOut(SpnALyb( j,k)) = .true.
+            AllOut(SpnALzb( j,k)) = .true.
+            AllOut(SpnFLxb( j,k)) = .true.
+            AllOut(SpnFLyb( j,k)) = .true.
+            AllOut(SpnFLzb( j,k)) = .true.
+            AllOut(SpnMLxb( j,k)) = .true.
+            AllOut(SpnMLyb( j,k)) = .true.
+            AllOut(SpnMLzb( j,k)) = .true.
+            AllOut(SpnTDxb( j,k)) = .true.
+            AllOut(SpnTDyb( j,k)) = .true.
+            AllOut(SpnTDzb( j,k)) = .true.
+            AllOut(SpnRDxb( j,k)) = .true.
+            AllOut(SpnRDyb( j,k)) = .true.
+            AllOut(SpnRDzb( j,k)) = .true.
+         end do
       end do
-   end do
    
-   do i=1,p%NumOuts
-      InitOut%RotFrame_y(i+index_next) = AllOut( p%OutParam(i)%Indx )      
-   end do    
+      do i=1,p%NumOuts
+         InitOut%RotFrame_y(i+index_next) = AllOut( p%OutParam(i)%Indx )      
+      end do    
    
-   do i=1, p%BldNd_TotNumOuts
-      InitOut%RotFrame_y(i+p%NumOuts+index_next) = .true.     
-   end do
+      do i=1, p%BldNd_TotNumOuts
+         InitOut%RotFrame_y(i+p%NumOuts+index_next) = .true.     
+      end do
    
-   deallocate(AllOut)         
-   
+      deallocate(AllOut)         
+   end if !.not. p%CompAeroMaps
    
 END SUBROUTINE ED_Init_Jacobian_y
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -11018,17 +10927,26 @@ SUBROUTINE ED_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_Init_Jacobian_x'
    
       ! local variables:
-   INTEGER(IntKi)                :: i
+   INTEGER(IntKi)                :: i, indx
    
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+   if (p%CompAeroMaps) then
+      p%NActvDOF_Lin = p%DOFs%NActvDOF / p%NumBl ! we have only blade DOFs, and we are going to use only 1 of the blades
+      p%NActvDOF_Stride = p%NumBl
+      p%NActvVelDOF_Lin = 0 ! we do NOT have velocity states
+   else
+      p%NActvDOF_Lin = p%DOFs%NActvDOF
+      p%NActvDOF_Stride = 1
+      p%NActvVelDOF_Lin = p%NActvDOF_Lin ! we have velocity states
+   end if
    
       ! allocate space for the row/column names and for perturbation sizes
-   call allocAry(p%dx,               p%NDof,            'p%dx',       ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   CALL AllocAry(InitOut%LinNames_x, p%DOFs%NActvDOF*2, 'LinNames_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   CALL AllocAry(InitOut%RotFrame_x, p%DOFs%NActvDOF*2, 'RotFrame_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   CALL AllocAry(InitOut%DerivOrder_x, p%DOFs%NActvDOF*2, 'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call allocAry(p%dx,                 p%NDof,                            'p%dx',         ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%LinNames_x,   p%NActvDOF_Lin + p%NActvVelDOF_Lin,'LinNames_x',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%RotFrame_x,   p%NActvDOF_Lin + p%NActvVelDOF_Lin,'RotFrame_x',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%DerivOrder_x, p%NActvDOF_Lin + p%NActvVelDOF_Lin,'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    
       ! All Elastodyn continuous states are max order = 2
@@ -11058,26 +10976,33 @@ SUBROUTINE ED_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
       p%dx(i) = max(p%dx(i), MinPerturb)
    end do
       
-   InitOut%RotFrame_x   = .false.
-   do i=1,p%DOFs%NActvDOF
-      if (  p%DOFs%PS(i) >=  DOF_BF(1,1) ) then
-         if ( p%NumBl == 2 ) then
-            InitOut%RotFrame_x(i) = p%DOFs%PS(i) < DOF_Teet
-         else
-            InitOut%RotFrame_x(i) = .true. ! = p%DOFs%PS(i) <= DOF_BF (MaxBl,NumBF)
+   if (p%CompAeroMaps) then
+      InitOut%RotFrame_x = .true.
+   else
+      InitOut%RotFrame_x   = .false.
+      do i=1,p%DOFs%NActvDOF
+         if (  p%DOFs%PS(i) >=  DOF_BF(1,1) ) then
+            if ( p%NumBl == 2 ) then
+               InitOut%RotFrame_x(i) = p%DOFs%PS(i) < DOF_Teet
+            else
+               InitOut%RotFrame_x(i) = .true. ! = p%DOFs%PS(i) <= DOF_BF (MaxBl,NumBF)
+            end if
          end if
-      end if      
-   end do
+      end do
+   end if
    
       ! set linearization output names:
-   do i=1,p%DOFs%NActvDOF
-      InitOut%LinNames_x(i) = p%DOF_Desc( p%DOFs%PS(i) )
+   indx = 0
+   do i=1,p%DOFs%NActvDOF,p%NActvDOF_Stride
+      indx = indx + 1
+      InitOut%LinNames_x(indx) = p%DOF_Desc( p%DOFs%PS(i) )
    end do
    
-   do i=1,p%DOFs%NActvDOF
-      InitOut%LinNames_x(i+p%DOFs%NActvDOF) = 'First time derivative of '//trim(InitOut%LinNames_x(i))//'/s'
-      InitOut%RotFrame_x(i+p%DOFs%NActvDOF) = InitOut%RotFrame_x(i)
-   end do      
+
+   do i=1,p%NActvVelDOF_Lin
+      InitOut%LinNames_x(i+p%NActvDOF_Lin) = 'First time derivative of '//trim(InitOut%LinNames_x(i))//'/s'
+      InitOut%RotFrame_x(i+p%NActvDOF_Lin) = InitOut%RotFrame_x(i)
+   end do
    
 END SUBROUTINE ED_Init_Jacobian_x
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -11102,10 +11027,15 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    REAL(R8Ki)                    :: ScaleLength
    
    
-   
    ErrStat = ErrID_None
    ErrMsg  = ""
-         
+   
+   if (p%CompAeroMaps) then
+      p%NumBl_Lin = 1
+   else
+      p%NumBl_Lin = p%NumBl
+   end if
+   
    
    call ED_Init_Jacobian_y( p, y, InitOut, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -11118,18 +11048,23 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       ! determine how many inputs there are in the Jacobians
    nu = 0;
    if (allocated(u%BladePtLoads)) then
-      do i=1,p%NumBl
+      do i=1,p%NumBl_Lin
          nu = nu + u%BladePtLoads(i)%NNodes * 6  ! 3 forces + 3 moments at each node on each blade
       end do      
    end if
-   nu = nu &
-      + u%PlatformPtMesh%NNodes * 6            & ! 3 forces + 3 moments at each node
-      + u%TowerPtLoads%NNodes   * 6            & ! 3 forces + 3 moments at each node
-      + u%HubPtLoad%NNodes      * 6            & ! 3 forces + 3 moments at each node
-      + u%NacelleLoads%NNodes   * 6            & ! 3 forces + 3 moments at each node
-      + p%NumBl                                & ! blade pitch command (BlPitchCom)    
-      + 2                                        ! YawMom and GenTrq
-         
+   
+   if (p%CompAeroMaps) then
+      p%NumExtendedInputs = 0
+   else
+      nu = nu &
+         + u%PlatformPtMesh%NNodes * 6            & ! 3 forces + 3 moments at each node
+         + u%TowerPtLoads%NNodes   * 6            & ! 3 forces + 3 moments at each node
+         + u%HubPtLoad%NNodes      * 6            & ! 3 forces + 3 moments at each node
+         + u%NacelleLoads%NNodes   * 6            & ! 3 forces + 3 moments at each node
+         + p%NumBl                                & ! blade pitch command (BlPitchCom)    
+         + 2                                        ! YawMom and GenTrq
+      p%NumExtendedInputs = 1
+   end if
    ! note: all other inputs are ignored
       
    !....................                        
@@ -11156,7 +11091,7 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       !Module/Mesh/Field: u%BladePtLoads(2)%Moment = 4;
       !Module/Mesh/Field: u%BladePtLoads(3)%Force  = 5;
       !Module/Mesh/Field: u%BladePtLoads(3)%Moment = 6;      
-      do k=1,p%NumBl
+      do k=1,p%NumBl_Lin
          
          do i_meshField = 1,2
             do i=1,u%BladePtLoads(k)%NNodes
@@ -11173,64 +11108,66 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
                         
    end if
    
-   !if MaxBl ever changes (i.e., MaxBl /=3), we need to modify this accordingly:
-   do i_meshField = 7,8
-      do i=1,u%PlatformPtMesh%NNodes
-         do j=1,3
-            p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%PlatformPtMesh%Force = 7; u%PlatformPtMesh%Moment = 8;
-            p%Jac_u_indx(index,2) =  j !index:  j
-            p%Jac_u_indx(index,3) =  i !Node:   i
-            index = index + 1
-         end do !j      
-      end do !i
-   end do
+   if (.not. p%CompAeroMaps) then
+      !if MaxBl ever changes (i.e., MaxBl /=3), we need to modify this accordingly:
+      do i_meshField = 7,8
+         do i=1,u%PlatformPtMesh%NNodes
+            do j=1,3
+               p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%PlatformPtMesh%Force = 7; u%PlatformPtMesh%Moment = 8;
+               p%Jac_u_indx(index,2) =  j !index:  j
+               p%Jac_u_indx(index,3) =  i !Node:   i
+               index = index + 1
+            end do !j      
+         end do !i
+      end do
   
-   do i_meshField = 9,10
-      do i=1,u%TowerPtLoads%NNodes
-         do j=1,3
-            p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%TowerPtLoads%Force = 9; u%TowerPtLoads%Moment = 10;
-            p%Jac_u_indx(index,2) =  j !index:  j
-            p%Jac_u_indx(index,3) =  i !Node:   i
-            index = index + 1
-         end do !j      
-      end do !i
-   end do
+      do i_meshField = 9,10
+         do i=1,u%TowerPtLoads%NNodes
+            do j=1,3
+               p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%TowerPtLoads%Force = 9; u%TowerPtLoads%Moment = 10;
+               p%Jac_u_indx(index,2) =  j !index:  j
+               p%Jac_u_indx(index,3) =  i !Node:   i
+               index = index + 1
+            end do !j      
+         end do !i
+      end do
          
-   do i_meshField = 11,12
-      do i=1,u%HubPtLoad%NNodes
-         do j=1,3
-            p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%HubPtLoad%Force = 11; u%HubPtLoad%Moment = 12;
-            p%Jac_u_indx(index,2) =  j !index:  j
-            p%Jac_u_indx(index,3) =  i !Node:   i
-            index = index + 1
-         end do !j      
-      end do !i
-   end do   
+      do i_meshField = 11,12
+         do i=1,u%HubPtLoad%NNodes
+            do j=1,3
+               p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%HubPtLoad%Force = 11; u%HubPtLoad%Moment = 12;
+               p%Jac_u_indx(index,2) =  j !index:  j
+               p%Jac_u_indx(index,3) =  i !Node:   i
+               index = index + 1
+            end do !j      
+         end do !i
+      end do   
    
-   do i_meshField = 13,14
-      do i=1,u%NacelleLoads%NNodes
-         do j=1,3
-            p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%NacelleLoads%Force = 13; u%NacelleLoads%Moment = 14;
-            p%Jac_u_indx(index,2) =  j !index:  j
-            p%Jac_u_indx(index,3) =  i !Node:   i
-            index = index + 1
-         end do !j      
-      end do !i
-   end do
+      do i_meshField = 13,14
+         do i=1,u%NacelleLoads%NNodes
+            do j=1,3
+               p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%NacelleLoads%Force = 13; u%NacelleLoads%Moment = 14;
+               p%Jac_u_indx(index,2) =  j !index:  j
+               p%Jac_u_indx(index,3) =  i !Node:   i
+               index = index + 1
+            end do !j      
+         end do !i
+      end do
    
-   do i_meshField = 1,p%NumBl ! scalars   
-      p%Jac_u_indx(index,1) =  15 !Module/Mesh/Field: u%BlPitchCom = 15;
-      p%Jac_u_indx(index,2) =  1 !index:  n/a
-      p%Jac_u_indx(index,3) =  i_meshField !Node:   blade
-      index = index + 1      
-   end do
+      do i_meshField = 1,p%NumBl ! scalars   
+         p%Jac_u_indx(index,1) =  15 !Module/Mesh/Field: u%BlPitchCom = 15;
+         p%Jac_u_indx(index,2) =  1 !index:  n/a
+         p%Jac_u_indx(index,3) =  i_meshField !Node:   blade
+         index = index + 1      
+      end do
    
-   do i_meshField = 16,17 ! scalars   
-      p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%YawMom = 16; u%GenTrq = 17;
-      p%Jac_u_indx(index,2) =  1 !index:  j
-      p%Jac_u_indx(index,3) =  1 !Node:   i
-      index = index + 1
-   end do
+      do i_meshField = 16,17 ! scalars   
+         p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%YawMom = 16; u%GenTrq = 17;
+         p%Jac_u_indx(index,2) =  1 !index:  j
+         p%Jac_u_indx(index,3) =  1 !Node:   i
+         index = index + 1
+      end do
+   end if ! .not. p%CompAeroMaps
    
    !................
    ! input perturbations, du:
@@ -11273,9 +11210,9 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    !................
    ! names of the columns, InitOut%LinNames_u:
    !................
-   call AllocAry(InitOut%LinNames_u, nu+1, 'LinNames_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AllocAry(InitOut%RotFrame_u, nu+1, 'RotFrame_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AllocAry(InitOut%IsLoad_u,   nu+1, 'IsLoad_u',   ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%LinNames_u, nu+p%NumExtendedInputs, 'LinNames_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%RotFrame_u, nu+p%NumExtendedInputs, 'RotFrame_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%IsLoad_u,   nu+p%NumExtendedInputs, 'IsLoad_u',   ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
       
    InitOut%IsLoad_u   = .true.  ! most of ED's inputs are loads; we will override the non-load inputs below.
@@ -11283,27 +11220,29 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    index = 1
    if (allocated(u%BladePtLoads)) then
       index_last = index
-      do k=1,p%NumBl
+      do k=1,p%NumBl_Lin
          call PackLoadMesh_Names(u%BladePtLoads(k), 'Blade '//trim(num2lstr(k)), InitOut%LinNames_u, index)   
       end do
       !InitOut%RotFrame_u(index_last:index-1) = .true. ! values on the mesh are in global, not rotating frame
    end if
-   call PackLoadMesh_Names(u%PlatformPtMesh, 'Platform', InitOut%LinNames_u, index)   
-   call PackLoadMesh_Names(u%TowerPtLoads, 'Tower', InitOut%LinNames_u, index)   
-   call PackLoadMesh_Names(u%HubPtLoad, 'Hub', InitOut%LinNames_u, index)   
-   call PackLoadMesh_Names(u%NacelleLoads, 'Nacelle', InitOut%LinNames_u, index)   
+   if (.not. p%CompAeroMaps) then
+      call PackLoadMesh_Names(u%PlatformPtMesh, 'Platform', InitOut%LinNames_u, index)   
+      call PackLoadMesh_Names(u%TowerPtLoads, 'Tower', InitOut%LinNames_u, index)   
+      call PackLoadMesh_Names(u%HubPtLoad, 'Hub', InitOut%LinNames_u, index)   
+      call PackLoadMesh_Names(u%NacelleLoads, 'Nacelle', InitOut%LinNames_u, index)   
       
-   do k = 1,p%NumBl ! scalars
-      InitOut%LinNames_u(index) = 'Blade '//trim(num2lstr(k))//' pitch command, rad'
-      InitOut%IsLoad_u(  index) = .false.
-      InitOut%RotFrame_u(index) = .true.
-      index = index + 1
-   end do
+      do k = 1,p%NumBl ! scalars
+         InitOut%LinNames_u(index) = 'Blade '//trim(num2lstr(k))//' pitch command, rad'
+         InitOut%IsLoad_u(  index) = .false.
+         InitOut%RotFrame_u(index) = .true.
+         index = index + 1
+      end do
 
-   InitOut%LinNames_u(index) = 'Yaw moment, Nm' ; index = index + 1
-   InitOut%LinNames_u(index) = 'Generator torque, Nm' ; index = index + 1
-   InitOut%LinNames_u(index) = 'Extended input: collective blade-pitch command, rad'
-   InitOut%IsLoad_u(  index) = .false.
+      InitOut%LinNames_u(index) = 'Yaw moment, Nm' ; index = index + 1
+      InitOut%LinNames_u(index) = 'Generator torque, Nm' ; index = index + 1
+      InitOut%LinNames_u(index) = 'Extended input: collective blade-pitch command, rad'
+      InitOut%IsLoad_u(  index) = .false.
+   end if
    
 END SUBROUTINE ED_Init_Jacobian
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -11377,10 +11316,10 @@ END SUBROUTINE ED_Perturb_u
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine perturbs the nth element of the continuous state array.
 !! Do not change this without making sure subroutine elastodyn::ed_init_jacobian is consistant with this routine!
-SUBROUTINE ED_Perturb_x( p, n, perturb_sign, x, dx )
+SUBROUTINE ED_Perturb_x( p, n_in, perturb_sign, x, dx )
 
    TYPE(ED_ParameterType)              , INTENT(IN   ) :: p                      !< parameters
-   INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use 
+   INTEGER( IntKi )                    , INTENT(IN   ) :: n_in                   !< number of array element to use 
    INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
    TYPE(ED_ContinuousStateType)        , INTENT(INOUT) :: x                      !< perturbed ED states
    REAL( R8Ki )                        , INTENT(  OUT) :: dx                     !< amount that specific state was perturbed
@@ -11388,14 +11327,19 @@ SUBROUTINE ED_Perturb_x( p, n, perturb_sign, x, dx )
 
    ! local variables
    integer(intKi)                                      :: indx
+   integer(intKi)                                      :: n
    
+   n = (n_in - 1) * p%NActvDOF_Stride + 1
    
    if (n > p%DOFs%NActvDOF) then
+   
       indx = p%DOFs%PS(n-p%DOFs%NActvDOF)
       dx   = p%dx( indx )
 
-      x%QDT( indx ) = x%QDT( indx ) + dx * perturb_sign 
+      x%QDT( indx ) = x%QDT( indx ) + dx * perturb_sign
+      
    else
+   
       indx = p%DOFs%PS(n)
       dx   = p%dx( indx )
       
@@ -11420,39 +11364,80 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    LOGICAL                                           :: Mask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
 
    
-   Mask  = .false.
-   Mask(MASKID_TRANSLATIONDISP) = .true.
-   Mask(MASKID_ORIENTATION) = .true.
-   Mask(MASKID_ROTATIONVEL) = .true.   
-   
-   
-   indx_first = 1            
+   indx_first = 1
    if (allocated(y_p%BladeLn2Mesh)) then
-      do k=1,p%NumBl
-         call PackMotionMesh_dY(y_p%BladeLn2Mesh(k), y_m%BladeLn2Mesh(k), dY, indx_first)                  
-      end do      
+      Mask  = .true.
+      if (p%CompAeroMaps) then
+         Mask(MASKID_TRANSLATIONACC) = .false.
+         Mask(MASKID_ROTATIONACC) = .false.
+      end if
+      
+      do k=1,p%NumBl_Lin
+         call PackMotionMesh_dY(y_p%BladeLn2Mesh(k), y_m%BladeLn2Mesh(k), dY, indx_first, FieldMask=Mask)
+      end do
    end if
    
-   call PackMotionMesh_dY(y_p%PlatformPtMesh, y_m%PlatformPtMesh, dY, indx_first, UseSmlAngle=.true.)
-   call PackMotionMesh_dY(y_p%TowerLn2Mesh,   y_m%TowerLn2Mesh,   dY, indx_first, UseSmlAngle=.true.)
-   call PackMotionMesh_dY(y_p%HubPtMotion,    y_m%HubPtMotion,    dY, indx_first, FieldMask=Mask)
-   do k=1,p%NumBl
-      call PackMotionMesh_dY(y_p%BladeRootMotion(k),   y_m%BladeRootMotion(k),   dY, indx_first)                  
-   end do
-   call PackMotionMesh_dY(y_p%NacelleMotion,  y_m%NacelleMotion,  dY, indx_first)                  
+   if (.not. p%CompAeroMaps) then
+      call PackMotionMesh_dY(y_p%PlatformPtMesh, y_m%PlatformPtMesh, dY, indx_first, UseSmlAngle=.true.)
+      call PackMotionMesh_dY(y_p%TowerLn2Mesh,   y_m%TowerLn2Mesh,   dY, indx_first, UseSmlAngle=.true.)
+      
+      Mask  = .false.
+      Mask(MASKID_TRANSLATIONDISP) = .true.
+      Mask(MASKID_ORIENTATION) = .true.
+      Mask(MASKID_ROTATIONVEL) = .true.   
+      call PackMotionMesh_dY(y_p%HubPtMotion,    y_m%HubPtMotion,    dY, indx_first, FieldMask=Mask)
+      
+      do k=1,p%NumBl_Lin
+         call PackMotionMesh_dY(y_p%BladeRootMotion(k),   y_m%BladeRootMotion(k),   dY, indx_first)
+      end do
+      call PackMotionMesh_dY(y_p%NacelleMotion,  y_m%NacelleMotion,  dY, indx_first)
                      
-   dY(indx_first) = y_p%Yaw     - y_m%Yaw;       indx_first = indx_first + 1    
-   dY(indx_first) = y_p%YawRate - y_m%YawRate;   indx_first = indx_first + 1    
-   dY(indx_first) = y_p%HSS_Spd - y_m%HSS_Spd;   indx_first = indx_first + 1
+      dY(indx_first) = y_p%Yaw     - y_m%Yaw;       indx_first = indx_first + 1
+      dY(indx_first) = y_p%YawRate - y_m%YawRate;   indx_first = indx_first + 1
+      dY(indx_first) = y_p%HSS_Spd - y_m%HSS_Spd;   indx_first = indx_first + 1
    
-   !indx_last = indx_first + p%NumOuts - 1
-   do k=1,p%NumOuts + p%BldNd_TotNumOuts
-      dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
-   end do   
+      !indx_last = indx_first + p%NumOuts - 1
+      do k=1,p%NumOuts + p%BldNd_TotNumOuts
+         dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
+      end do
+   end if
    
    dY = dY / (2.0_R8Ki*delta)
    
 END SUBROUTINE Compute_dY
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine uses values of two continuous state types to compute an array of differences.
+!! Do not change this packing without making sure subroutine elastodyn::init_jacobian is consistant with this routine!
+SUBROUTINE Compute_dX(p, x_p, x_m, delta, dX)
+   
+   TYPE(ED_ParameterType)            , INTENT(IN   ) :: p         !< parameters
+   TYPE(ED_ContinuousStateType)      , INTENT(IN   ) :: x_p       !< ED continuous states at \f$ u + \Delta_p u \f$ or \f$ x + \Delta_p x \f$ (p=plus)
+   TYPE(ED_ContinuousStateType)      , INTENT(IN   ) :: x_m       !< ED continuous states at \f$ u - \Delta_m u \f$ or \f$ x - \Delta_m x \f$ (m=minus)
+   REAL(R8Ki)                        , INTENT(IN   ) :: delta     !< difference in inputs or states \f$ delta = \Delta u \f$ or \f$ delta = \Delta_p x \f$
+   REAL(R8Ki)                        , INTENT(INOUT) :: dX(:)     !< column of dXdu or dXdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial x_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
+   
+      ! local variables:
+   INTEGER(IntKi)    :: i              ! loop over blade nodes
+   INTEGER(IntKi)    :: j              ! loop over blades
+   INTEGER(IntKi)    :: indx_first     ! index indicating next value of dY to be filled 
+   
+   indx_first = 0
+   
+   if (p%NActvVelDOF_Lin > 0) then
+      do j=1,p%DOFs%NActvDOF, p%NActvDOF_Stride ! Loop through all active (enabled) DOFs for linearization
+         indx_first = indx_first + 1
+         dX(indx_first) = x_p%QT( p%DOFs%PS(j) ) - x_m%QT( p%DOFs%PS(j) )
+      end do
+   end if
+   
+   do j=1,p%DOFs%NActvDOF, p%NActvDOF_Stride ! Loop through all active (enabled) DOFs for linearization
+      indx_first = indx_first + 1
+      dX(indx_first) = x_p%QDT( p%DOFs%PS(j) ) - x_m%QDT( p%DOFs%PS(j) )
+   end do
+   
+   dX = dX / (2*delta) ! whole array operation
+
+END SUBROUTINE Compute_dX
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
 SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedTrimOP )
@@ -11492,43 +11477,45 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
    ErrStat = ErrID_None
    ErrMsg  = ''
-
+   
    !..................................
    IF ( PRESENT( u_op ) ) THEN
       if (.not. allocated(u_op)) then         
-         call AllocAry(u_op, size(p%Jac_u_indx,1)+1,'u_op',ErrStat2,ErrMsg2) ! +1 for extended input here
+         call AllocAry(u_op, size(p%Jac_u_indx,1)+p%NumExtendedInputs,'u_op',ErrStat2,ErrMsg2) ! +1 for extended input here
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) return
       end if
             
       index = 1
       if (allocated(u%BladePtLoads)) then
-         do k=1,p%NumBl
+         do k=1,p%NumBl_Lin
             call PackLoadMesh(u%BladePtLoads(k), u_op, index)   
          end do
       end if
-      call PackLoadMesh(u%PlatformPtMesh, u_op, index)   
-      call PackLoadMesh(u%TowerPtLoads, u_op, index)   
-      call PackLoadMesh(u%HubPtLoad, u_op, index)   
-      call PackLoadMesh(u%NacelleLoads, u_op, index)   
+      if (.not. p%CompAeroMaps) then
+         call PackLoadMesh(u%PlatformPtMesh, u_op, index)   
+         call PackLoadMesh(u%TowerPtLoads, u_op, index)   
+         call PackLoadMesh(u%HubPtLoad, u_op, index)   
+         call PackLoadMesh(u%NacelleLoads, u_op, index)   
       
-      do k = 1,p%NumBl ! scalars
-         u_op(index) = u%BlPitchCom(k)
-         index = index + 1
-      end do
-      u_op(index) = u%YawMom ; index = index + 1
-      u_op(index) = u%GenTrq ; index = index + 1
+         do k = 1,p%NumBl_Lin ! scalars
+            u_op(index) = u%BlPitchCom(k)
+            index = index + 1
+         end do
+         u_op(index) = u%YawMom ; index = index + 1
+         u_op(index) = u%GenTrq ; index = index + 1
       
-         ! extended input:
-      u_op(index) = u%BlPitchCom(1)
+            ! extended input: ! note this happens only if .not. p%CompAeroMaps, so p%NumExtendedInputs > 0
+         u_op(index) = u%BlPitchCom(1)
       
-      do k = 2,p%NumBl
-         if (.not. EqualRealNos( u%BlPitchCom(1), u%BlPitchCom(k) ) ) then
-            call SetErrStat(ErrID_Info,"Operating point of collective pitch extended input is invalid because "// &
-                     "the commanded blade pitch angles are not the same for each blade.", ErrStat, ErrMsg, RoutineName)
-            exit
-         end if      
-      end do      
+         do k = 2,p%NumBl_Lin
+            if (.not. EqualRealNos( u%BlPitchCom(1), u%BlPitchCom(k) ) ) then
+               call SetErrStat(ErrID_Info,"Operating point of collective pitch extended input is invalid because "// &
+                        "the commanded blade pitch angles are not the same for each blade.", ErrStat, ErrMsg, RoutineName)
+               exit
+            end if      
+         end do
+      end if
       
    END IF
 
@@ -11542,20 +11529,26 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       
       if (.not. allocated(y_op)) then 
             ! our operating point includes DCM (orientation) matrices, not just small angles like the perturbation matrices do
-         ny = p%Jac_ny + y%PlatformPtMesh%NNodes * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node
+         if (p%CompAeroMaps) then
+            ny = p%Jac_ny
+         else
+            ny = p%Jac_ny + y%PlatformPtMesh%NNodes * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node
                        + y%TowerLn2Mesh%NNodes   * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node 
                        + y%HubPtMotion%NNodes    * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node
                        + y%NacelleMotion%NNodes  * 6   ! Jac_ny has 3 for Orientation, but we need 9 at each node
-            
+                       
+            do k=1,p%NumBl_Lin
+               ny = ny + y%BladeRootMotion(k)%NNodes * 6  ! Jac_ny has 3 for Orientation, but we need 9 at each node on each blade
+            end do
+                                    
+         end if
+         
          if (allocated(y%BladeLn2Mesh)) then
-            do k=1,p%NumBl
+            do k=1,p%NumBl_Lin
                ny = ny + y%BladeLn2Mesh(k)%NNodes * 6  ! Jac_ny has 3 for Orientation, but we need 9 (at each node on each blade)
             end do      
          end if
-         do k=1,p%NumBl
-            ny = ny + y%BladeRootMotion(k)%NNodes * 6  ! Jac_ny has 3 for Orientation, but we need 9 at each node on each blade
-         end do
-                                    
+         
          call AllocAry(y_op, ny,'y_op',ErrStat2,ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) return
@@ -11564,33 +11557,44 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       if (ReturnTrimOP) y_op = 0.0_ReKi ! initialize in case we are returning packed orientations and don't fill the entire array
 
       
-      Mask  = .false.
-      Mask(MASKID_TRANSLATIONDISP) = .true.
-      Mask(MASKID_ORIENTATION) = .true.
-      Mask(MASKID_ROTATIONVEL) = .true.
-   
+      if ( p%CompAeroMaps ) then
+         Mask  = .false.
+         Mask(MASKID_TRANSLATIONDISP) = .true.
+         Mask(MASKID_ORIENTATION) = .true.
+         Mask(MASKID_TRANSLATIONVEL) = .true.
+         Mask(MASKID_ROTATIONVEL) = .true.
+      else
+         Mask =  .true.
+      end if
+
       index = 1
       if (allocated(y%BladeLn2Mesh)) then
-         do k=1,p%NumBl
-            call PackMotionMesh(y%BladeLn2Mesh(k), y_op, index, TrimOP=ReturnTrimOP)
+         do k=1,p%NumBl_Lin
+            call PackMotionMesh(y%BladeLn2Mesh(k), y_op, index, FieldMask=Mask, TrimOP=ReturnTrimOP)
          end do      
       end if
-      call PackMotionMesh(y%PlatformPtMesh, y_op, index, TrimOP=ReturnTrimOP)
-      call PackMotionMesh(y%TowerLn2Mesh, y_op, index, TrimOP=ReturnTrimOP)
-      call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask, TrimOP=ReturnTrimOP)
+      if (.not. p%CompAeroMaps) then
+         Mask  = .false.
+         Mask(MASKID_TRANSLATIONDISP) = .true.
+         Mask(MASKID_ORIENTATION) = .true.
+         Mask(MASKID_ROTATIONVEL) = .true.
       
-      do k=1,p%NumBl
-         call PackMotionMesh(y%BladeRootMotion(k), y_op, index, TrimOP=ReturnTrimOP)
-      end do
-      call PackMotionMesh(y%NacelleMotion, y_op, index, TrimOP=ReturnTrimOP)
+         call PackMotionMesh(y%PlatformPtMesh, y_op, index, TrimOP=ReturnTrimOP)
+         call PackMotionMesh(y%TowerLn2Mesh, y_op, index, TrimOP=ReturnTrimOP)
+         call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask, TrimOP=ReturnTrimOP)
+         do k=1,p%NumBl_Lin
+            call PackMotionMesh(y%BladeRootMotion(k), y_op, index, TrimOP=ReturnTrimOP)
+         end do   
+         call PackMotionMesh(y%NacelleMotion, y_op, index, TrimOP=ReturnTrimOP)
       
-      y_op(index) = y%Yaw     ; index = index + 1    
-      y_op(index) = y%YawRate ; index = index + 1    
-      y_op(index) = y%HSS_Spd 
+         y_op(index) = y%Yaw     ; index = index + 1    
+         y_op(index) = y%YawRate ; index = index + 1    
+         y_op(index) = y%HSS_Spd 
    
-      do i=1,p%NumOuts + p%BldNd_TotNumOuts
-         y_op(i+index) = y%WriteOutput(i)
-      end do
+         do i=1,p%NumOuts + p%BldNd_TotNumOuts
+            y_op(i+index) = y%WriteOutput(i)
+         end do
+      end if
                         
    END IF
 
@@ -11598,17 +11602,23 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    IF ( PRESENT( x_op ) ) THEN
 
       if (.not. allocated(x_op)) then                           
-         call AllocAry(x_op, p%DOFs%NActvDOF * 2,'x_op',ErrStat2,ErrMsg2)
+         call AllocAry(x_op, p%NActvDOF_Lin  + p%NActvVelDOF_Lin,'x_op',ErrStat2,ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) return
       end if
       
-      do i=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-         x_op(i) = x%QT( p%DOFs%PS(i) )
+      index = 0
+      do i=1,p%DOFs%NActvDOF,p%NActvDOF_Stride ! Loop through all active (enabled) DOFs in the Jacobian
+         index = index + 1
+         x_op(index) = x%QT( p%DOFs%PS(i) )
       end do
-      do i=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-         x_op(i+p%DOFs%NActvDOF) = x%QDT( p%DOFs%PS(i) )
-      end do                                
+      
+      if (p%NActvVelDOF_Lin > 0) then ! .not. p%CompAeroMaps
+         do i=1,p%DOFs%NActvDOF,p%NActvDOF_Stride ! Loop through all active (enabled) DOFs in the Jacobian
+            index = index + 1
+            x_op(index) = x%QDT( p%DOFs%PS(i) )
+         end do
+      end if
       
    END IF
 
@@ -11616,7 +11626,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    IF ( PRESENT( dx_op ) ) THEN
 
       if (.not. allocated(dx_op)) then                           
-         call AllocAry(dx_op, p%DOFs%NActvDOF * 2,'dx_op',ErrStat2,ErrMsg2)
+         call AllocAry(dx_op, p%NActvDOF_Lin  + p%NActvVelDOF_Lin,'dx_op',ErrStat2,ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) return
       end if
@@ -11628,12 +11638,18 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
             return
          end if
                      
-      do i=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-         dx_op(i) = dx%QT( p%DOFs%PS(i) )
+      index = 0
+      if (p%NActvVelDOF_Lin > 0) then ! p%CompAeroMaps
+         do i=1,p%DOFs%NActvDOF,p%NActvDOF_Stride ! Loop through all active (enabled) DOFs in the Jacobian
+            index = index + 1
+            dx_op(index) = dx%QT( p%DOFs%PS(i) )
+         end do
+      end if
+      
+      do i=1,p%DOFs%NActvDOF,p%NActvDOF_Stride ! Loop through all active (enabled) DOFs in the Jacobian
+         index = index + 1
+         dx_op(index) = dx%QDT( p%DOFs%PS(i) )
       end do
-      do i=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-         dx_op(i+p%DOFs%NActvDOF) = dx%QDT( p%DOFs%PS(i) )
-      end do                                
       
       call ED_DestroyContState( dx, ErrStat2, ErrMsg2)
             

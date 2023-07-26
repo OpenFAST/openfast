@@ -40,12 +40,6 @@ typedef   ^           ^                Logical            Linearize      -   .FA
 #typedef   ^       ^                    DbKi         zetaGrid               {:}{:}    -  -   "water surface elevations time series at each grid point"            -
 #typedef   ^       ^                    DbKi         PDynGrid               {:}{:}    -  -   "water dynamic pressure time series at each grid point"            -
 
-typedef   ^       ^                    ReKi         WaveVel                          {:}{:}{:}  -        -         ""    -
-typedef   ^       ^                    ReKi         WaveAcc                          {:}{:}{:}  -        -         ""    -
-typedef   ^       ^                    ReKi         WavePDyn                         {:}{:}     -        -         ""    -
-typedef   ^       ^                    ReKi         WaveElev                         {:}{:}     -        -         ""    -
-typedef   ^       ^                    DbKi         WaveTime                         {:}        -        -         "Should this be double precision?"    -
-
 # nvm # Farm-level simulation inputs - these are passed by FAST.Farm - the arrays are populated from the individual turbine-level MoorDyn instances
 # nvm typedef   ^       ^                    MeshType     FarmCoupledKinematics  {:}    -    -   "array of input kinematics meshes from each of the turbine-level MoorDyn instances"  "[m, m/s]"
 # nvm typedef   ^       ^                    IntKi        FarmNCpldBodies        {:}    -    -   ""             ""

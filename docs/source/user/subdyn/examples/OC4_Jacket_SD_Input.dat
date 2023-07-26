@@ -1,19 +1,19 @@
------------ SubDyn MultiMember Support Structure Input File ------------
+----------- SubDyn MultiMember Support Structure Input File ---------------------------
 OC4 'Jacket' SubStructure Input File. The grouted connection is simulated with an equivalent tubular beam of enhanced properties. RRD 10/15/2013
--------------------------- SIMULATION CONTROL ---------------------------------
+-------------------------- SIMULATION CONTROL -----------------------------------------
 False            Echo        - Echo input data to "<rootname>.SD.ech" (flag)
 "DEFAULT"        SDdeltaT    - Local Integration Step. If "default", the glue-code integration step will be used.
              3   IntMethod   - Integration Method [1/2/3/4 = RK4/AB4/ABM4/AM2].
 True             SttcSolve   - Solve dynamics about static equilibrium point
 True             GuyanLoadCorrection - Include extra moment from lever arm at interface and rotate FEM for floating.
--------------------- FEA and CRAIG-BAMPTON PARAMETERS---------------------------
+-------------------- FEA and CRAIG-BAMPTON PARAMETERS ---------------------------------
              3   FEMMod      - FEM switch: element model in the FEM. [1= Euler-Bernoulli(E-B);  2=Tapered E-B (unavailable);  3= 2-node Timoshenko;  4= 2-node tapered Timoshenko (unavailable)]
              2   NDiv        - Number of sub-elements per member
 True             CBMod       - [T/F] If True perform C-B reduction, else full FEM dofs will be retained. If True, select Nmodes to retain in C-B reduced system.
              8   Nmodes      - Number of internal modes to retain (ignored if CBMod=False). If Nmodes=0 --> Guyan Reduction.
              1   JDampings   - Damping Ratios for each retained mode (% of critical) If Nmodes>0, list Nmodes structural damping ratios for each retained mode (% of critical), or a single damping ratio to be applied to all retained modes. (last entered value will be used for all remaining modes).
              0   GuyanDampMod - Guyan damping {0=none, 1=Rayleigh Damping, 2=user specified 6x6 matrix}
-  0.000, 0.000   RayleighDamp - Mass and stiffness proportional damping  coefficients (Rayleigh Damping) [only if GuyanDampMod=1]
+  0.000, 0.000   RayleighDamp - Mass and stiffness proportional damping coefficients (Rayleigh Damping) [only if GuyanDampMod=1]
              6   GuyanDampSize - Guyan damping matrix (6x6) [only if GuyanDampMod=2]
    0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00
    0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00
@@ -21,9 +21,9 @@ True             CBMod       - [T/F] If True perform C-B reduction, else full FE
    0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00
    0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00
    0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00   0.0000e+00
----- STRUCTURE JOINTS: joints connect structure members (~Hydrodyn Input File)---
+---- STRUCTURE JOINTS: joints connect structure members (~Hydrodyn Input File) --------
             64   NJoints     - Number of joints (-)
-JointID          JointXss               JointYss               JointZss     JointType JointDirX  JointDirY JointDirZ JointStiff 
+JointID          JointXss               JointYss               JointZss     JointType JointDirX  JointDirY JointDirZ JointStiff    ![Coordinates of Member joints in SS-Coordinate System][JointType={1:cantilever, 2:universal joint, 3:revolute joint, 4:spherical joint}]
   (-)               (m)                    (m)                    (m)         (-)        (-)        (-)       (-)     (Nm/rad) 
    1              6.00000                6.00000              -45.50000        1         0.0        0.0       0.0       0.0    
    2              6.00000                6.00000              -45.00000        1         0.0        0.0       0.0       0.0    
@@ -91,15 +91,15 @@ JointID          JointXss               JointYss               JointZss     Join
   64             -6.00000                6.00000              -50.00100        1         0.0        0.0       0.0       0.0    
 ------------------- BASE REACTION JOINTS: 1/0 for Locked/Free DOF @ each Reaction Node ---------------------
              4   NReact      - Number of Joints with reaction forces; be sure to remove all rigid motion DOFs of the structure  (else det([K])=[0])
-RJointID   RctTDXss    RctTDYss    RctTDZss    RctRDXss    RctRDYss    RctRDZss     SSIfile [Global Coordinate System]
-  (-)       (flag)      (flag)      (flag)      (flag)      (flag)      (flag)      (string)
+RJointID   RctTDXss    RctTDYss    RctTDZss    RctRDXss    RctRDYss    RctRDZss   SSIfile      ![Global Coordinate System]
+  (-)       (flag)      (flag)      (flag)      (flag)      (flag)      (flag)    (string)
   61           1           1           1           1           1           1	"OC4_Jacket_SD_SSI.txt"
   62           1           1           1           1           1           1	"OC4_Jacket_SD_SSI.txt"
   63           1           1           1           1           1           1	"OC4_Jacket_SD_SSI.txt"
   64           1           1           1           1           1           1	"OC4_Jacket_SD_SSI.txt"
 ------- INTERFACE JOINTS: 1/0 for Locked (to the TP)/Free DOF @each Interface Joint (only Locked-to-TP implemented thus far (=rigid TP)) ---------
              8   NInterf     - Number of interface joints locked to the Transition Piece (TP):  be sure to remove all rigid motion dofs
-IJointID   ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss     [Global Coordinate System]
+IJointID   ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss     ![Global Coordinate System]
   (-)       (flag)      (flag)      (flag)      (flag)      (flag)      (flag)
   24           1           1           1           1           1           1
   28           1           1           1           1           1           1
@@ -109,124 +109,124 @@ IJointID   ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss 
   54           1           1           1           1           1           1
   55           1           1           1           1           1           1
   56           1           1           1           1           1           1
------------------------------------ MEMBERS --------------------------------------
-           112   NMembers    - Number of frame members
-MemberID   MJointID1   MJointID2   MPropSetID1   MPropSetID2  MType   COSMID
+----------------------------------- MEMBERS -------------------------------------------
+           112   NMembers    - Number of members (-)
+MemberID   MJointID1   MJointID2   MPropSetID1   MPropSetID2  MType   COSMID   ![MType={1:beam circ., 2:cable, 3:rigid, 4:beam arb.}. COMSID={-1:none}]
   (-)         (-)         (-)          (-)           (-)        (-)      (-)
-   1           1           2            2             2          1
-   2           2           3            2             2          1
-   3           3           4            2             2          1
-   4           4           5            2             2          1
-   5           6           7            2             2          1
-   6           7           8            2             2          1
-   7           8           9            2             2          1
-   8           9          10            2             2          1
-   9          11          12            2             2          1
-  10          12          13            2             2          1
-  11          13          14            2             2          1
-  12          14          15            2             2          1
-  13          16          17            2             2          1
-  14          17          18            2             2          1
-  15          18          19            2             2          1
-  16          19          20            2             2          1
-  17           5          21            3             3          1
-  18          21          22            3             3          1
-  19          22          23            3             3          1
-  20          23          24            3             3          1
-  21          10          25            3             3          1
-  22          25          26            3             3          1
-  23          26          27            3             3          1
-  24          27          28            3             3          1
-  25          15          29            3             3          1
-  26          29          30            3             3          1
-  27          30          31            3             3          1
-  28          31          32            3             3          1
-  29          20          33            3             3          1
-  30          33          34            3             3          1
-  31          34          35            3             3          1
-  32          35          36            3             3          1
-  33           8           3            1             1          1
-  34          13           8            1             1          1
-  35          13          18            1             1          1
-  36          18           3            1             1          1
-  37           4          37            1             1          1
-  38          37          20            1             1          1
-  39          19          37            1             1          1
-  40          37           5            1             1          1
-  41           9          38            1             1          1
-  42          38          15            1             1          1
-  43          14          38            1             1          1
-  44          38          10            1             1          1
-  45           4          39            1             1          1
-  46          39          10            1             1          1
-  47           9          39            1             1          1
-  48          39           5            1             1          1
-  49          19          40            1             1          1
-  50          40          15            1             1          1
-  51          14          40            1             1          1
-  52          40          20            1             1          1
-  53           5          41            1             1          1
-  54          41          33            1             1          1
-  55          20          41            1             1          1
-  56          41          21            1             1          1
-  57          10          42            1             1          1
-  58          42          29            1             1          1
-  59          15          42            1             1          1
-  60          42          25            1             1          1
-  61           5          43            1             1          1
-  62          43          25            1             1          1
-  63          10          43            1             1          1
-  64          43          21            1             1          1
-  65          20          44            1             1          1
-  66          44          29            1             1          1
-  67          15          44            1             1          1
-  68          44          33            1             1          1
-  69          21          45            1             1          1
-  70          45          34            1             1          1
-  71          33          45            1             1          1
-  72          45          22            1             1          1
-  73          25          46            1             1          1
-  74          46          30            1             1          1
-  75          29          46            1             1          1
-  76          46          26            1             1          1
-  77          21          47            1             1          1
-  78          47          26            1             1          1
-  79          25          47            1             1          1
-  80          47          22            1             1          1
-  81          33          48            1             1          1
-  82          48          30            1             1          1
-  83          29          48            1             1          1
-  84          48          34            1             1          1
-  85          22          49            1             1          1
-  86          49          35            1             1          1
-  87          34          49            1             1          1
-  88          49          23            1             1          1
-  89          26          50            1             1          1
-  90          50          31            1             1          1
-  91          30          50            1             1          1
-  92          50          27            1             1          1
-  93          22          51            1             1          1
-  94          51          27            1             1          1
-  95          26          51            1             1          1
-  96          51          23            1             1          1
-  97          34          52            1             1          1
-  98          52          31            1             1          1
-  99          30          52            1             1          1
- 100          52          35            1             1          1
- 101          24          53            4             4          1
- 102          28          54            4             4          1
- 103          32          56            4             4          1
- 104          36          55            4             4          1
- 105          58           1            5             5          1
- 106          57          16            5             5          1
- 107          60           6            5             5          1
- 108          59          11            5             5          1
- 109          62          58            6             6          1
- 110          61          57            6             6          1
- 111          64          60            6             6          1
- 112          63          59            6             6          1
------------------- MEMBER X-SECTION PROPERTY data 1/2 [isotropic material for now: use this table for circular-tubular elements] ------------------------
-             6   NPropSets   - Number of structurally unique x-sections (i.e. how many groups of X-sectional properties are utilized throughout all of the members)
+   1           1           2            2             2          1       -1
+   2           2           3            2             2          1       -1
+   3           3           4            2             2          1       -1
+   4           4           5            2             2          1       -1
+   5           6           7            2             2          1       -1
+   6           7           8            2             2          1       -1
+   7           8           9            2             2          1       -1
+   8           9          10            2             2          1       -1
+   9          11          12            2             2          1       -1
+  10          12          13            2             2          1       -1
+  11          13          14            2             2          1       -1
+  12          14          15            2             2          1       -1
+  13          16          17            2             2          1       -1
+  14          17          18            2             2          1       -1
+  15          18          19            2             2          1       -1
+  16          19          20            2             2          1       -1
+  17           5          21            3             3          1       -1
+  18          21          22            3             3          1       -1
+  19          22          23            3             3          1       -1
+  20          23          24            3             3          1       -1
+  21          10          25            3             3          1       -1
+  22          25          26            3             3          1       -1
+  23          26          27            3             3          1       -1
+  24          27          28            3             3          1       -1
+  25          15          29            3             3          1       -1
+  26          29          30            3             3          1       -1
+  27          30          31            3             3          1       -1
+  28          31          32            3             3          1       -1
+  29          20          33            3             3          1       -1
+  30          33          34            3             3          1       -1
+  31          34          35            3             3          1       -1
+  32          35          36            3             3          1       -1
+  33           8           3            1             1          1       -1
+  34          13           8            1             1          1       -1
+  35          13          18            1             1          1       -1
+  36          18           3            1             1          1       -1
+  37           4          37            1             1          1       -1
+  38          37          20            1             1          1       -1
+  39          19          37            1             1          1       -1
+  40          37           5            1             1          1       -1
+  41           9          38            1             1          1       -1
+  42          38          15            1             1          1       -1
+  43          14          38            1             1          1       -1
+  44          38          10            1             1          1       -1
+  45           4          39            1             1          1       -1
+  46          39          10            1             1          1       -1
+  47           9          39            1             1          1       -1
+  48          39           5            1             1          1       -1
+  49          19          40            1             1          1       -1
+  50          40          15            1             1          1       -1
+  51          14          40            1             1          1       -1
+  52          40          20            1             1          1       -1
+  53           5          41            1             1          1       -1
+  54          41          33            1             1          1       -1
+  55          20          41            1             1          1       -1
+  56          41          21            1             1          1       -1
+  57          10          42            1             1          1       -1
+  58          42          29            1             1          1       -1
+  59          15          42            1             1          1       -1
+  60          42          25            1             1          1       -1
+  61           5          43            1             1          1       -1
+  62          43          25            1             1          1       -1
+  63          10          43            1             1          1       -1
+  64          43          21            1             1          1       -1
+  65          20          44            1             1          1       -1
+  66          44          29            1             1          1       -1
+  67          15          44            1             1          1       -1
+  68          44          33            1             1          1       -1
+  69          21          45            1             1          1       -1
+  70          45          34            1             1          1       -1
+  71          33          45            1             1          1       -1
+  72          45          22            1             1          1       -1
+  73          25          46            1             1          1       -1
+  74          46          30            1             1          1       -1
+  75          29          46            1             1          1       -1
+  76          46          26            1             1          1       -1
+  77          21          47            1             1          1       -1
+  78          47          26            1             1          1       -1
+  79          25          47            1             1          1       -1
+  80          47          22            1             1          1       -1
+  81          33          48            1             1          1       -1
+  82          48          30            1             1          1       -1
+  83          29          48            1             1          1       -1
+  84          48          34            1             1          1       -1
+  85          22          49            1             1          1       -1
+  86          49          35            1             1          1       -1
+  87          34          49            1             1          1       -1
+  88          49          23            1             1          1       -1
+  89          26          50            1             1          1       -1
+  90          50          31            1             1          1       -1
+  91          30          50            1             1          1       -1
+  92          50          27            1             1          1       -1
+  93          22          51            1             1          1       -1
+  94          51          27            1             1          1       -1
+  95          26          51            1             1          1       -1
+  96          51          23            1             1          1       -1
+  97          34          52            1             1          1       -1
+  98          52          31            1             1          1       -1
+  99          30          52            1             1          1       -1
+ 100          52          35            1             1          1       -1
+ 101          24          53            4             4          1       -1
+ 102          28          54            4             4          1       -1
+ 103          32          56            4             4          1       -1
+ 104          36          55            4             4          1       -1
+ 105          58           1            5             5          1       -1
+ 106          57          16            5             5          1       -1
+ 107          60           6            5             5          1       -1
+ 108          59          11            5             5          1       -1
+ 109          62          58            6             6          1       -1
+ 110          61          57            6             6          1       -1
+ 111          64          60            6             6          1       -1
+ 112          63          59            6             6          1       -1
+------------------ CIRCULAR BEAM CROSS-SECTION PROPERTIES -----------------------------
+             6   NPropSets   - Number of structurally unique circular cross-sections
 PropSetID     YoungE          ShearG          MatDens          XsecD           XsecT
   (-)         (N/m2)          (N/m2)          (kg/m3)           (m)             (m)
    1        2.10000e+11     8.07690e+10       7850.00         0.800000        0.020000
@@ -235,32 +235,32 @@ PropSetID     YoungE          ShearG          MatDens          XsecD           X
    4        2.10000e+11     8.07690e+10       7850.00         1.200000        0.040000
    5        2.10000e+11     8.07690e+10       3339.12         2.082000        0.491000
    6        2.10000e+11     8.07690e+10       7850.00         2.082000        0.060000
------------------- MEMBER X-SECTION PROPERTY data 2/2 [isotropic material for now: use this table if any section other than circular, however provide COSM(i,j) below] ------------------------
-             0   NXPropSets  - Number of structurally unique non-circular x-sections (if 0 the following table is ignored)
+----------------- ARBITRARY BEAM CROSS-SECTION PROPERTIES -----------------------------
+             0   NXPropSets  - Number of structurally unique non-circular cross-sections (if 0 the following table is ignored)
 PropSetID     YoungE          ShearG          MatDens          XsecA          XsecAsx       XsecAsy       XsecJxx       XsecJyy        XsecJ0
   (-)         (N/m2)          (N/m2)          (kg/m3)          (m2)            (m2)          (m2)          (m4)          (m4)          (m4)
--------------------------- CABLE PROPERTIES  -------------------------------------
+-------------------------- CABLE PROPERTIES -------------------------------------------
              0   NCablePropSets   - Number of cable cable properties
-PropSetID     EA          MatDens        T0 
-  (-)        (N)      (kg/m)        (N) 
------------------------ RIGID LINK PROPERTIES ------------------------------------
+PropSetID     EA          MatDens        T0         CtrlChannel
+  (-)         (N)         (kg/m)        (N)             (-)
+----------------------- RIGID LINK PROPERTIES -----------------------------------------
              0   NRigidPropSets - Number of rigid link properties
 PropSetID   MatDens   
-  (-)       (kg/m)    
----------------------- MEMBER COSINE MATRICES COSM(i,j) ------------------------
+  (-)       (kg/m)
+---------------------- MEMBER COSINE MATRICES COSM(i,j) -------------------------------
              0   NCOSMs      - Number of unique cosine matrices (i.e., of unique member alignments including principal axis rotations); ignored if NXPropSets=0   or 9999 in any element below
 COSMID    COSM11    COSM12    COSM13    COSM21    COSM22    COSM23    COSM31    COSM32    COSM33
  (-)       (-)       (-)       (-)       (-)       (-)       (-)       (-)       (-)       (-)
 ------------------------ JOINT ADDITIONAL CONCENTRATED MASSES--------------------------
              0   NCmass      - Number of joints with concentrated masses; Global Coordinate System
-CMJointID       JMass            JMXX             JMYY             JMZZ          JMXY        JMXZ         JMYZ        MCGX      MCGY        MCGZ   
+CMJointID       JMass            JMXX             JMYY             JMZZ          JMXY        JMXZ         JMYZ        MCGX      MCGY        MCGZ
   (-)            (kg)          (kg*m^2)         (kg*m^2)         (kg*m^2)      (kg*m^2)    (kg*m^2)     (kg*m^2)       (m)      (m)          (m)
----------------------------- OUTPUT: SUMMARY & OUTFILE ------------------------------
-True             SumPrint    - Output a Summary File (flag).It contains: matrices K,M  and C-B reduced M_BB, M-BM, K_BB, K_MM(OMG^2), PHI_R, PHI_L. It can also contain COSMs if requested.
+---------------------------- OUTPUT: SUMMARY & OUTFILE --------------------------------
+True             SumPrint    - Output a Summary File (flag)
 0                OutCBModes  - Output Guyan and Craig-Bampton modes {0: No output, 1: JSON output}, (flag) 
 0                OutFEMModes - Output first 30 FEM modes {0: No output, 1: JSON output} (flag)
 False            OutCOSM     - Output cosine matrices with the selected output member forces (flag)
-False            OutAll      - [T/F] Output all members' end forces 
+False            OutAll      - [T/F] Output all members' end forces
              1   OutSwtch    - [1/2/3] Output requested channels to: 1=<rootname>.SD.out;  2=<rootname>.out (generated by FAST);  3=both files.
 True             TabDelim    - Generate a tab-delimited output in the <rootname>.SD.out file
              1   OutDec      - Decimation of output in the <rootname>.SD.out file
@@ -268,7 +268,7 @@ True             TabDelim    - Generate a tab-delimited output in the <rootname>
 "A11"            OutSFmt     - Output format for header strings in the <rootname>.SD.out file
 ------------------------- MEMBER OUTPUT LIST ------------------------------------------
              8   NMOutputs   - Number of members whose forces/displacements/velocities/accelerations will be output (-) [Must be <= 9].
-MemberID   NOutCnt    NodeCnt [NOutCnt=how many nodes to get output for [< 10]; NodeCnt are local ordinal numbers from the start of the member, and must be >=1 and <= NDiv+1] If NMOutputs=0 leave blank as well.
+MemberID   NOutCnt    NodeCnt ![NOutCnt=how many nodes to get output for [< 10]; NodeCnt are local ordinal numbers from the start of the member, and must be >=1 and <= NDiv+1] If NMOutputs=0 leave blank as well.
   (-)        (-)        (-)
   22          1        3
   30          1        3

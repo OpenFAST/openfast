@@ -6,9 +6,10 @@ The following solution files are available for code development on Windows using
 - [FAST.Farm](FAST-farm/FAST-Farm.sln)
   This contains the build configurations for FAST.Farm.
 - Module-level drivers:
-   - AeroDynamics:
+   - AeroDynamics and HydroDynamics:
      - [AeroDyn driver](AeroDyn/AeroDyn_Driver.sln)
      - [UnsteadyAero driver](UnsteadyAero/UnsteadyAero.sln)
+     - [HydroDyn driver](HydroDyn/HydroDynDriver.sln)
    - Structural: 
      - [BeamDyn driver](BeamDyn/BeamDyn-w-registry.sln)
      - [SubDyn driver](SubDyn/SubDyn.sln)
@@ -16,7 +17,7 @@ The following solution files are available for code development on Windows using
       - [TurbSim](TurbSim/TurbSim.sln) Generates wind files
       - [InflowWind driver](InflowWind/InflowWind_driver.sln) Reads and interpolates existing wind files
       - [InflowWind c binding](InflowWind/InflowWind_c_binding.sln) Creates a library (DLL/so) of the InflowWind routines that can be called from a C interface. **TO DO: Combine this with InflowWind driver for easier maintenance**
-      - [HydroDyn driver](HydroDyn/HydroDynDriver.sln)
+      - [SeaState driver](SeaState/SeaStateDriver.sln) Waves and currents
 - Other:
   - [Discon](Discon/Discon.sln) 
     This solution file contains all 3 controllers used in the OpenFAST r-test (with the NREL 5MW model).

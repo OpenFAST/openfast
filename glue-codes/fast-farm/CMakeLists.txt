@@ -19,18 +19,6 @@ if (GENERATE_TYPES)
   generate_f90_types(src/FAST_Farm_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FAST_Farm_Types.f90 -noextrap)
 endif()
 
-FIND_PACKAGE( OpenMP )
-if (NOT ${OPENMP_Fortran_FOUND} )
-  message(FATAL_ERROR "CMake could not find the OpenMP Fortran libraries.")
-endif()
-
-if(OPENMP_FOUND)
-  set(CMAKE_FORTRAN_FLAGS "${CMAKE_FORTRAN_FLAGS} ${OpenMP_FORTRAN_FLAGS}")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-endif()
-
 add_executable(FAST.Farm
   src/FAST_Farm_IO.f90
   src/FAST_Farm_IO_Params.f90
@@ -38,9 +26,9 @@ add_executable(FAST.Farm
   src/FASTWrapper.f90
   src/FAST_Farm.f90
   src/FAST_Farm_Types.f90
-  src/FASTWrapper_Types.f90)
-  
-target_link_libraries(FAST.Farm openfast_postlib openfast_prelib nwtclibs scfastlib sctypeslib awaelib wdlib)
+  src/FASTWrapper_Types.f90
+) 
+target_link_libraries(FAST.Farm openfastlib_static wdlib awaelib)
 set_property(TARGET FAST.Farm PROPERTY LINKER_LANGUAGE Fortran)
 
 string(TOUPPER ${CMAKE_Fortran_COMPILER_ID} _compiler_id)
@@ -55,11 +43,11 @@ if (${_compiler_id} STREQUAL "GNU" AND NOT ${VARIABLE_TRACKING})
   set_source_files_properties(src/FAST_Farm_IO.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
   set_source_files_properties(src/FAST_Farm_Subs.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
   set_source_files_properties(src/FAST_Farm.f90 PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
-endif()
-if (${_compiler_id} MATCHES "^INTEL" AND ${_build_type} STREQUAL "RELEASE" AND NOT WIN32)
+elseif (${_compiler_id} MATCHES "^INTEL" AND ${_build_type} STREQUAL "RELEASE" AND NOT WIN32)
   # Compilation hangs on FAST_Farm_Types.f90 with -O3 on linux (on some hardware)
   set_source_files_properties(src/FAST_Farm_Types.f90 PROPERTIES COMPILE_FLAGS "-O2")
 endif()
 
 install(TARGETS FAST.Farm
-  RUNTIME DESTINATION bin)
+  RUNTIME DESTINATION bin
+)

@@ -15,7 +15,7 @@ can be downladed from the list below.
 - :download:`Predicting Cavitation on Marine and Hydrokinetic Turbine Blades with AeroDyn V15.04 <https://www.nrel.gov/docs/fy17osti/68398.pdf>`
 - :download:`Development Plan for the Aerodynamic Linearization of OpenFAST <../../../OtherSupporting/AeroDyn/AeroLin_2019-12.pdf>`
 - :download:`AeroDyn Meshes and Related Calculations <../../../OtherSupporting/AeroDyn/AeroDynMesh_Rev4.docx>`
-- :download:`Calculation of Buoyancy on a Marine Hydrokinetic Turbine in AeroDyn <../../../OtherSupporting/AeroDyn/Buoyancy_Implementation_Plan_Rev3.docx>`
+- :download:`Calculation of Buoyancy on a Marine Hydrokinetic Turbine in AeroDyn <../../../OtherSupporting/AeroDyn/Buoyancy_Implementation_Plan_Rev11.docx>`
 
 .. - :download:` <AeroDyn_Plan_TCF_AddedMass_Force.docx*>`
 

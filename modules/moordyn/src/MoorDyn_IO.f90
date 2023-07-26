@@ -139,7 +139,7 @@ CONTAINS
       IF (LEN_TRIM(inputString) == 0) THEN
          ! If the input is empty (not provided), make the 1x1 bathymetry grid using the default depth
          ALLOCATE(BathGrid(1,1), STAT=ErrStat4)
-         BathGrid(1,1) = DBLE(defaultDepth)
+         BathGrid(1,1) = REAL(defaultDepth,R8Ki)
          
          ALLOCATE(BathGrid_Xs(1), STAT=ErrStat4)
          BathGrid_Xs(1) = 0.0_DbKi
@@ -215,7 +215,7 @@ CONTAINS
       INTEGER(IntKi),   INTENT( OUT)   :: ErrStat3 ! Error status of the operation
       CHARACTER(*),     INTENT( OUT)   :: ErrMsg3  ! Error message if ErrStat /= ErrID_None
 
-      INTEGER(IntKi)                   :: nC, I
+      INTEGER(IntKi)                   :: I
       INTEGER(IntKi)                   :: UnCoef   ! unit number for coefficient input file
            
            
@@ -283,7 +283,7 @@ CONTAINS
       INTEGER(IntKi),        INTENT(  OUT)  :: n
       CHARACTER(40),         INTENT(INOUT)  :: outstrings(6)  ! array of output strings. Up to 6 strings can be read
       
-      INTEGER :: pos1, pos2, i
+      INTEGER :: pos1, pos2
  
       n = 0
       pos1=1
@@ -318,13 +318,13 @@ CONTAINS
 !      INTEGER(IntKi),        INTENT(  OUT)  :: num2
       CHARACTER(25),         INTENT(  OUT)  :: let3
    
-      INTEGER(IntKi)               :: I                                        ! Generic loop-counting index
+!      INTEGER(IntKi)               :: I                                        ! Generic loop-counting index
       
-      CHARACTER(ChanLen)           :: OutListTmp                               ! A string to temporarily hold OutList(I), the name of each output channel
-      CHARACTER(ChanLen)           :: qVal                                     ! quantity type string to match to list of valid options
+!      CHARACTER(ChanLen)           :: OutListTmp                               ! A string to temporarily hold OutList(I), the name of each output channel
+!      CHARACTER(ChanLen)           :: qVal                                     ! quantity type string to match to list of valid options
       
-      INTEGER                      :: oID                                      ! ID number of connect or line object
-      INTEGER                      :: nID                                      ! ID number of node object
+!      INTEGER                      :: oID                                      ! ID number of connect or line object
+!      INTEGER                      :: nID                                      ! ID number of node object
       INTEGER                      :: i1 = 0                                   ! indices of start of numbers or letters in OutListTmp string, for parsing
       INTEGER                      :: i2 = 0
       INTEGER                      :: i3 = 0
@@ -417,7 +417,7 @@ CONTAINS
 
     INTEGER                      :: oID                                      ! ID number of connect or line object
     INTEGER                      :: nID                                      ! ID number of node object
-    INTEGER                      :: i1,i2,i3,i4                              ! indices of start of numbers or letters in OutListTmp string, for parsing
+!    INTEGER                      :: i1,i2,i3,i4                              ! indices of start of numbers or letters in OutListTmp string, for parsing
     
       CHARACTER(25)                 :: let1                ! strings used for splitting and parsing identifiers
       CHARACTER(25)                 :: num1
@@ -785,7 +785,7 @@ CONTAINS
       INTEGER                                        :: I                    ! Generic loop counter
       INTEGER                                        :: J                    ! Generic loop counter
       CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
-      INTEGER                                        :: L                    ! counter for index in LineWrOutput
+!      INTEGER                                        :: L                    ! counter for index in LineWrOutput
       INTEGER                                        :: LineNumOuts          ! number of entries in LineWrOutput for each line
       INTEGER                                        :: RodNumOuts           ! for Rods ... redundant <<<
       CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement

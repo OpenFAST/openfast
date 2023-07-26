@@ -324,6 +324,28 @@ rotors. The file names should be in quotations and can contain an absolute path
 or a relative path. The data in each file need not be identical, which
 permits modeling of aerodynamic imbalances.
 
+Hub Properties
+~~~~~~~~~~~~~~
+The input parameters in this section pertain to the calculation of buoyant loads
+on the hub and are only used when ``Buoyancy = TRUE``.
+
+``VolHub`` is the volume of the hub and ``HubCenBx`` is the x offset of the hub
+center of buoyancy from the hub center in local hub coordinates;
+offsets in the y and z directions are assumed to be zero. To neglect buoyant 
+loads on the hub, set ``VolHub`` to 0.
+
+Since the hub and blades are joined elements, hub buoyancy should be turned on if blade buoyancy is on, and vice versa.
+
+Nacelle Properties
+~~~~~~~~~~~~~~~~~~
+The input parameters in this section pertain to the calculation of buoyant loads
+on the nacelle and are only used when ``Buoyancy = TRUE``.
+
+``VolNac`` is the volume of the nacelle and ``NacCenB``` is the 
+position (x,y,z vector) of the nacelle center of buoyancy from
+the yaw bearing in local nacelle coordinates. To neglect buoyant 
+loads on the nacelle, set ``VolNac`` to 0.
+
 Tail fin AeroDynamics
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -358,16 +380,18 @@ header lines). ``NumTwrNds`` must be greater than or equal to two; the
 higher the number, the finer the resolution and longer the computational
 time; we recommend that ``NumTwrNds`` be between 10 and 20 to balance
 accuracy with computational expense. For each node, ``TwrElev``
-specifies the local elevation of the tower node above ground (or above
-MSL for offshore wind turbines or above the seabed for MHK turbines),
+specifies the local elevation of the tower node above ground (or relative
+to MSL for offshore wind and floating MHK turbines or relative to the seabed for fixed MHK turbines),
 ``TwrDiam`` specifies the local tower diameter, ``TwrCd`` specifies the
 local tower drag-force coefficient, ``TwrTI`` specifies the
 turbulence intensity used in the Eames tower shadow model
 (``TwrShadow`` = 2) as a fraction (rather than a percentage) of the
 wind fluctuation, and ``TwrCb`` specifies the tower buoyancy coefficient.
 ``TwrElev`` must be entered in monotonically increasing order—from the lowest
-(tower-base) to the highest (tower-top) elevation. Values of ``TwrTI`` between
-0.05 and 0.4 are recommended.  Values larger than 0.4 up to 1 will trigger a 
+(tower-base) to the highest (tower-top) elevation. For floating MHK turbines with 
+the tower below MSL, tower nodes should be entered as increasingly negative values,
+from the tower-base (closest to the platform) to the tower-top (closest to the nacelle).
+Values of ``TwrTI`` between 0.05 and 0.4 are recommended. Values larger than 0.4 up to 1 will trigger a 
 warning that the results will need to be interpreted carefully, but the code
 will allow such values for scientific investigation purposes. ``TwrCb`` is
 defined at each node as the cross-sectional area of the tower divided by the 
@@ -375,26 +399,6 @@ area of a circle with diameter equal to the characteristic length of the tower
 cross section (i.e., ``TwrDiam``). For towers with circular cross-sections,
 ``TwrCb`` will likely be 1.0 at each node. To neglect buoyant loads on the 
 tower, set ``TwrCb`` to 0. See :numref:`ad_tower_geom`.
-
-Hub Properties
-~~~~~~~~~~~~~~
-The input parameters in this section pertain to the calculation of buoyant loads
-on the hub and are only used when ``Buoyancy = TRUE``.
-
-``VolHub`` is the volume of the hub and ``HubCenBx`` is the x offset of the hub
-center of buoyancy from the hub center in local hub coordinates;
-offsets in the y and z directions are assumed to be zero. To neglect buoyant 
-loads on the hub, set ``VolHub`` to 0.
-
-Nacelle Properties
-~~~~~~~~~~~~~~~~~~
-The input parameters in this section pertain to the calculation of buoyant loads
-on the nacelle and are only used when ``Buoyancy = TRUE``.
-
-``VolNac`` is the volume of the nacelle and ``NacCenB``` is the 
-position (x,y,z vector) of the nacelle center of buoyancy from
-the yaw bearing in local nacelle coordinates. To neglect buoyant 
-loads on the nacelle, set ``VolNac`` to 0.
 
 .. _AD-Outputs:
 
@@ -836,7 +840,7 @@ nodes. For each node:
 -  ``BlCb`` specifies the blade buoyancy coefficient, defined as the local
    cross-sectional area of the blade divided by the area of a circle with 
    diameter equal to ``BlChord``; to neglect buoyant loads on the blade,
-   set ``BlCb`` to 0;
+   set ``BlCb`` to 0; since the blades and hub are joined elements, blade buoyancy should be turned on if hub buoyancy is on, and vice versa;
 
 -  ``BlCenBn`` specifies the offset of the blade center of buoyancy from the
    aerodynamic center in the direction normal to the chord (positive pointing

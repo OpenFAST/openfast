@@ -18,27 +18,19 @@
 # -- OpenFAST Unit Testing
 # -----------------------------------------------------------
 
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.12)
 project(OpenFAST_UnitTest Fortran)
 
 include(CTest)
 
-# Set the python executable configuration option and default
-if(NOT EXISTS ${PYTHON_EXECUTABLE})
-  find_program(PYTHON_EXECUTABLE NAMES python3 python py)
-  if(NOT EXISTS ${PYTHON_EXECUTABLE})
-    message(FATAL_ERROR "CMake cannot find a Python interpreter in your path. Python is required to run OpenFAST tests." )
-  endif()
-endif()
-
 ### pfunit
 include(ExternalProject)
-set(ExternalProjectCMakeArgs
-  -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/pfunit
-  -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
-  -DROBUST=OFF
-)
+
 set(PFUNIT_INSTALL ${PROJECT_BINARY_DIR}/pfunit)
+set(PFUNIT_LIB_PATH ${PROJECT_BINARY_DIR}/pfunit/lib/${CMAKE_STATIC_LIBRARY_PREFIX}pfunit${CMAKE_STATIC_LIBRARY_SUFFIX})
+set(build_testdirectory ${PROJECT_BINARY_DIR}/tests)
+set(source_modulesdirectory ${PROJECT_SOURCE_DIR}/../modules)
+set(pfunit_directory ${PFUNIT_INSTALL})
 
 ExternalProject_Add(pfunit
   SOURCE_DIR ${PROJECT_SOURCE_DIR}/pfunit
@@ -46,27 +38,23 @@ ExternalProject_Add(pfunit
   STAMP_DIR ${PROJECT_BINARY_DIR}/pfunit-stamp
   TMP_DIR ${PROJECT_BINARY_DIR}/pfunit-tmp
   INSTALL_DIR ${PFUNIT_INSTALL}
-  CMAKE_ARGS ${ExternalProjectCMakeArgs}
+  CMAKE_ARGS 
+    -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/pfunit
+    -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
+    -DROBUST=OFF
+  BUILD_BYPRODUCTS 
+    ${PFUNIT_LIB_PATH}
+    ${PFUNIT_INSTALL}/include/driver.F90
 )
-
-include_directories(${PROJECT_BINARY_DIR}/pfunit/mod)
-
-set(pfunit_directory ${PFUNIT_INSTALL})
-set(source_modulesdirectory ${PROJECT_SOURCE_DIR}/../modules)
-set(build_testdirectory ${PROJECT_BINARY_DIR}/tests)
+add_library(pfunit_lib STATIC IMPORTED)
+set_target_properties(pfunit_lib PROPERTIES IMPORTED_LOCATION ${PFUNIT_LIB_PATH})
 
 include_directories(
   ${PROJECT_SOURCE_DIR}
-  ${build_testdirectory}
-  ${pfunit_directory}/mod
+  ${PROJECT_BINARY_DIR}/pfunit/mod
+  ${PROJECT_BINARY_DIR}/tests
+  ${PFUNIT_INSTALL}/mod
 )
-
-set_source_files_properties(${pfunit_directory}/include/driver.F90 PROPERTIES GENERATED 1)
-if(APPLE OR UNIX OR CYGWIN OR MINGW)
-  set(pfunit_lib "/lib/libpfunit.a")
-else() # Windows
-  set(pfunit_lib "/lib/pfunit.lib")
-endif()
 
 ### Add the unit tests here
 add_subdirectory("beamdyn")

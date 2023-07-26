@@ -36,6 +36,7 @@ typedef    ^        ^                  IntKi                            CompInfl
 typedef    ^        ^                  ReKi                             HWindSpeed       -      -     -   "RefHeight Wind speed"
 typedef    ^        ^                  ReKi                             RefHt            -      -     -   "RefHeight"
 typedef    ^        ^                  ReKi                             PLExp            -      -     -   "PLExp"
+typedef    ^        ^                  IntKi                            MHK              -      -     -   "MHK turbine type switch"   -
 typedef    ^        ^                  LOGICAL                          UseInputFile     -    .TRUE.  -   "Should we read everthing from an input file, or is it passed in?"  -
 typedef    ^        ^                  FileInfoType                     PassedFileData   -      -     -   "If we don't use the input file, pass everything through this"      -
 typedef    ^        ^                  LOGICAL                          Linearize        -    .FALSE. -   "Flag that tells this module if the glue code wants to linearize." -
@@ -48,6 +49,7 @@ typedef    ^        ^                  Character(1024)                  RootName
 typedef    ^        ^                  Logical                          storeHHVel       -  .false.   -   "If True, hub height velocity will be computed by infow wind"	-
 typedef    ^        ^                  IntKi                            WrVTK            -     0      -   "0= no vtk, 1=init only, 2=animation" "-"
 typedef    ^        ^                  IntKi                            WrVTK_Type       -     1      -   "Flag for VTK output type (1=surface, 2=line, 3=both)"    -
+typedef    ^        ^                  ReKi                             WtrDpth          -      -     -   "Water depth" m
 
 # ..... InitOut ...................................................................................................................
 typedef    ^    InitOutputType         ProgDesc                         Ver              -      -     -   "This module's name, version, and date"    -
@@ -77,6 +79,8 @@ typedef    ^        ^                  Logical                          storeHHV
 typedef    ^        ^                  IntKi                            wrVTK            -      -     -   "0= no vtk, 1=init only, 2=animation" "-"
 typedef    ^        ^                  IntKi                            WrVTK_Type       -      -     -   "Flag for VTK output type (1=surface, 2=line, 3=both)"    -
 typedef    ^        ^                  IntKi                            NumOuts          -      0     -   "Total number of WriteOutput outputs"	-
+typedef    ^        ^                  IntKi                            MHK              -      -     -   "MHK turbine type switch"   -
+typedef    ^        ^                  ReKi                             WtrDpth          -      -     -   "Water depth" m
 
 # ..... Inputs ....................................................................................................................
 typedef    ^    InputType              AD_InputType                     AD               -      -     -   "Array of system inputs"
@@ -93,15 +97,15 @@ typedef    ^    OutputType             ReKi                             WriteOut
 
 # ..... AeroDyn_Inflow data ...................................................................................................
 # NOTE: useful for driver/wrapper of this module
-typedef   ^      ADI_Data              ADI_ContinuousStateType          x        -     -    -    "Continuous states"
-typedef   ^          ^                 ADI_DiscreteStateType            xd       -     -    -    "Discrete states"
-typedef   ^          ^                 ADI_ConstraintStateType          z        -     -    -    "Constraint states"
-typedef   ^          ^                 ADI_OtherStateType               OtherState   - -    -    "Other states"
+typedef   ^      ADI_Data              ADI_ContinuousStateType          x        :     -    -    "Continuous states"
+typedef   ^          ^                 ADI_DiscreteStateType            xd       :     -    -    "Discrete states"
+typedef   ^          ^                 ADI_ConstraintStateType          z        :     -    -    "Constraint states"
+typedef   ^          ^                 ADI_OtherStateType               OtherState   : -    -    "Other states"
 typedef   ^          ^                 ADI_ParameterType                p        -     -    -    "Parameters"
 typedef   ^          ^                 ADI_MiscVarType                  m        -     -    -    "Misc/optimization variables"
-typedef   ^          ^                 ADI_InputType                    u        {2}   -    -    "Array of inputs associated with InputTimes"
+typedef   ^          ^                 ADI_InputType                    u        {:}   -    -    "Array of inputs associated with InputTimes"
 typedef   ^          ^                 ADI_OutputType                   y        -     -    -    "System outputs"
-typedef   ^          ^                 DbKi                             inputTimes {2} -    -    "Array of times associated with u array"
+typedef   ^          ^                 DbKi                             inputTimes {:} -    -    "Array of times associated with u array"
 
 # ..... Rotor elastic data ..................................................................................................
 # NOTE: useful for driver/wrapper of this module

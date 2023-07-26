@@ -81,6 +81,8 @@ IMPLICIT NONE
     REAL(SiKi)  :: VTKHubRad      !< Hub radius for visualization [m]
     REAL(ReKi) , DIMENSION(1:6)  :: VTKNacDim      !< Nacelle dimensions for visualization [m]
     REAL(SiKi) , DIMENSION(1:3)  :: VTKRefPoint      !< RefPoint for VTK outputs [-]
+    REAL(DbKi)  :: DT_Outs      !< Output time resolution [s]
+    INTEGER(IntKi)  :: n_DT_Out      !< Number of time steps between writing a line in the time-marching output files [-]
   END TYPE Dvr_Outputs
 ! =======================
 ! =========  BladeData  =======
@@ -144,6 +146,7 @@ IMPLICIT NONE
     LOGICAL  :: basicHAWTFormat      !< If true simply input HubRad/Pitch/Overhang/Cone, otherwise all turbine inputs [-]
     LOGICAL  :: hasTower      !<  [-]
     INTEGER(IntKi)  :: projMod      !< If true simply input HubRad/Pitch/Overhang/Cone, otherwise all turbine inputs [-]
+    INTEGER(IntKi)  :: BEM_Mod      !< Switch for different BEM implementations [-]
     LOGICAL  :: HAWTprojection      !<  [-]
     INTEGER(IntKi)  :: motionType      !<  [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: motion      !<  [-]
@@ -690,6 +693,8 @@ ENDIF
     DstDvr_OutputsData%VTKHubRad = SrcDvr_OutputsData%VTKHubRad
     DstDvr_OutputsData%VTKNacDim = SrcDvr_OutputsData%VTKNacDim
     DstDvr_OutputsData%VTKRefPoint = SrcDvr_OutputsData%VTKRefPoint
+    DstDvr_OutputsData%DT_Outs = SrcDvr_OutputsData%DT_Outs
+    DstDvr_OutputsData%n_DT_Out = SrcDvr_OutputsData%n_DT_Out
  END SUBROUTINE AD_Dvr_CopyDvr_Outputs
 
  SUBROUTINE AD_Dvr_DestroyDvr_Outputs( Dvr_OutputsData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -856,6 +861,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! VTKHubRad
       Re_BufSz   = Re_BufSz   + SIZE(InData%VTKNacDim)  ! VTKNacDim
       Re_BufSz   = Re_BufSz   + SIZE(InData%VTKRefPoint)  ! VTKRefPoint
+      Db_BufSz   = Db_BufSz   + 1  ! DT_Outs
+      Int_BufSz  = Int_BufSz  + 1  ! n_DT_Out
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1089,6 +1096,10 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%VTKRefPoint(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
+    DbKiBuf(Db_Xferred) = InData%DT_Outs
+    Db_Xferred = Db_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%n_DT_Out
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AD_Dvr_PackDvr_Outputs
 
  SUBROUTINE AD_Dvr_UnPackDvr_Outputs( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1372,6 +1383,10 @@ ENDIF
       OutData%VTKRefPoint(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
       Re_Xferred = Re_Xferred + 1
     END DO
+    OutData%DT_Outs = DbKiBuf(Db_Xferred)
+    Db_Xferred = Db_Xferred + 1
+    OutData%n_DT_Out = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AD_Dvr_UnPackDvr_Outputs
 
  SUBROUTINE AD_Dvr_CopyBladeData( SrcBladeDataData, DstBladeDataData, CtrlCode, ErrStat, ErrMsg )
@@ -2395,6 +2410,7 @@ ENDIF
     DstWTDataData%basicHAWTFormat = SrcWTDataData%basicHAWTFormat
     DstWTDataData%hasTower = SrcWTDataData%hasTower
     DstWTDataData%projMod = SrcWTDataData%projMod
+    DstWTDataData%BEM_Mod = SrcWTDataData%BEM_Mod
     DstWTDataData%HAWTprojection = SrcWTDataData%HAWTprojection
     DstWTDataData%motionType = SrcWTDataData%motionType
 IF (ALLOCATED(SrcWTDataData%motion)) THEN
@@ -2690,6 +2706,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! basicHAWTFormat
       Int_BufSz  = Int_BufSz  + 1  ! hasTower
       Int_BufSz  = Int_BufSz  + 1  ! projMod
+      Int_BufSz  = Int_BufSz  + 1  ! BEM_Mod
       Int_BufSz  = Int_BufSz  + 1  ! HAWTprojection
       Int_BufSz  = Int_BufSz  + 1  ! motionType
   Int_BufSz   = Int_BufSz   + 1     ! motion allocated yes/no
@@ -3004,6 +3021,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%hasTower, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%projMod
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%BEM_Mod
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%HAWTprojection, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -3472,6 +3491,8 @@ ENDIF
     OutData%hasTower = TRANSFER(IntKiBuf(Int_Xferred), OutData%hasTower)
     Int_Xferred = Int_Xferred + 1
     OutData%projMod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%BEM_Mod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%HAWTprojection = TRANSFER(IntKiBuf(Int_Xferred), OutData%HAWTprojection)
     Int_Xferred = Int_Xferred + 1

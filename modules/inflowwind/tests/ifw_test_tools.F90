@@ -13,7 +13,7 @@ contains
         INTEGER                             :: ErrStat
         CHARACTER(ErrMsgLen)                :: ErrMsg
         TYPE(FileInfoType)                  :: getInputFileData
-        CHARACTER(1024), DIMENSION(55)      :: data = (/ &
+        CHARACTER(1024), DIMENSION(69)      :: data = (/ &
             '------- InflowWind v3.01.* INPUT FILE -------------------------------------------------------------------------                                                                    ', &
             'Steady 8 m/s winds with no shear for FAST CertTests #20 and #25                                                                                                                    ', &
             '---------------------------------------------------------------------------------------------------------------                                                                    ', &
@@ -21,6 +21,7 @@ contains
             '          1   WindType       - switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined; 7=native Bladed FF)   ', &
             '          0   PropagationDir - Direction of wind propagation (meteoroligical rotation from aligned with X (positive rotates towards -Y) -- degrees)                                ', &
             '          0   VFlowAng       - Upflow angle (degrees) (not used for native Bladed format WindType=7)                                                                               ', &
+            '      false   VelInterpCubic - Use cubic interpolation for velocity in time (false=linear, true=cubic) [Used with WindType=2,3,4,5,7]                                              ', &
             '          1   NWindVel       - Number of points to output the wind velocity    (0 to 9)                                                                                            ', &
             '          0   WindVxiList    - List of coordinates in the inertial X direction (m)                                                                                                 ', &
             '          0   WindVyiList    - List of coordinates in the inertial Y direction (m)                                                                                                 ', &
@@ -63,6 +64,19 @@ contains
             '          0   PLExp_HAWC     - Power law exponent (-) (used for PL wind profile type only)                                                                                         ', &
             '       0.03   Z0             - Surface roughness length (m) (used for LG wind profile type only)                                                                                   ', &
             '          0   XOffset        - Initial offset in +x direction (shift of wind box)                                                                                                  ', &
+            '  ---------------- LIDAR Parameters ---------------------------------------------------------------------------                                                                    ', &
+            '          0 SensorType          - Switch for lidar configuration (0 = None, 1 = Single Point Beam(s), 2 = Continuous, 3 = Pulsed)                                                  ', &
+            '          0 NumPulseGate        - Number of lidar measurement gates (used when SensorType = 3)                                                                                     ', &
+            '         30 PulseSpacing        - Distance between range gates (m) (used when SensorType = 3)                                                                                      ', &
+            '          0 NumBeam             - Number of lidar measurement beams (0-5)(used when SensorType = 1)                                                                                ', &
+            '       -200 FocalDistanceX      - Focal distance co-ordinates of the lidar beam in the x direction (relative to hub height) (only first coordinate used for SensorType 2 and 3) (m)', &
+            '          0 FocalDistanceY      - Focal distance co-ordinates of the lidar beam in the y direction (relative to hub height) (only first coordinate used for SensorType 2 and 3) (m)', &
+            '          0 FocalDistanceZ      - Focal distance co-ordinates of the lidar beam in the z direction (relative to hub height) (only first coordinate used for SensorType 2 and 3) (m)', &
+            '0.0 0.0 0.0 RotorApexOffsetPos  - Offset of the lidar from hub height (m)                                                                                                          ', &
+            '         17 URefLid             - Reference average wind speed for the lidar[m/s]                                                                                                  ', &
+            '       0.25 MeasurementInterval - Time between each measurement [s]                                                                                                                ', &
+            '      False LidRadialVel        - TRUE => return radial component, FALSE => return "x" direction estimate                                                                          ', &
+            '          1 ConsiderHubMotion   - Flag whether to consider the hub motion impact on Lidar measurements                                                                             ', &
             '====================== OUTPUT ==================================================                                                                                                   ', &
             'False         SumPrint     - Print summary data to <RootName>.IfW.sum (flag)                                                                                                       ', &
             '              OutList      - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)                    ', &
@@ -80,7 +94,7 @@ contains
         INTEGER                             :: ErrStat
         CHARACTER(ErrMsgLen)                :: ErrMsg
         TYPE(FileInfoType)                  :: getInputFileDataWindType2
-        CHARACTER(1024), DIMENSION(55)      :: data = (/ &
+        CHARACTER(1024), DIMENSION(69)      :: data = (/ &
             '------- InflowWind v3.01.* INPUT FILE -------------------------------------------------------------------------                                                                    ', &
             'Steady 8 m/s winds with no shear for FAST CertTests #20 and #25                                                                                                                    ', &
             '---------------------------------------------------------------------------------------------------------------                                                                    ', &
@@ -88,6 +102,7 @@ contains
             '          2   WindType       - switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined; 7=native Bladed FF)   ', &
             '          0   PropagationDir - Direction of wind propagation (meteoroligical rotation from aligned with X (positive rotates towards -Y) -- degrees)                                ', &
             '          0   VFlowAng       - Upflow angle (degrees) (not used for native Bladed format WindType=7)                                                                               ', &
+            '      false   VelInterpCubic - Use cubic interpolation for velocity in time (false=linear, true=cubic) [Used with WindType=2,3,4,5,7]                                              ', &
             '          1   NWindVel       - Number of points to output the wind velocity    (0 to 9)                                                                                            ', &
             '          0   WindVxiList    - List of coordinates in the inertial X direction (m)                                                                                                 ', &
             '          0   WindVyiList    - List of coordinates in the inertial Y direction (m)                                                                                                 ', &
@@ -130,6 +145,19 @@ contains
             '          0   PLExp_HAWC     - Power law exponent (-) (used for PL wind profile type only)                                                                                         ', &
             '       0.03   Z0             - Surface roughness length (m) (used for LG wind profile type only)                                                                                   ', &
             '          0   XOffset        - Initial offset in +x direction (shift of wind box)                                                                                                  ', &
+            '  ---------------- LIDAR Parameters ---------------------------------------------------------------------------                                                                    ', &
+            '          0 SensorType          - Switch for lidar configuration (0 = None, 1 = Single Point Beam(s), 2 = Continuous, 3 = Pulsed)                                                  ', &
+            '          0 NumPulseGate        - Number of lidar measurement gates (used when SensorType = 3)                                                                                     ', &
+            '         30 PulseSpacing        - Distance between range gates (m) (used when SensorType = 3)                                                                                      ', &
+            '          0 NumBeam             - Number of lidar measurement beams (0-5)(used when SensorType = 1)                                                                                ', &
+            '       -200 FocalDistanceX      - Focal distance co-ordinates of the lidar beam in the x direction (relative to hub height) (only first coordinate used for SensorType 2 and 3) (m)', &
+            '          0 FocalDistanceY      - Focal distance co-ordinates of the lidar beam in the y direction (relative to hub height) (only first coordinate used for SensorType 2 and 3) (m)', &
+            '          0 FocalDistanceZ      - Focal distance co-ordinates of the lidar beam in the z direction (relative to hub height) (only first coordinate used for SensorType 2 and 3) (m)', &
+            '0.0 0.0 0.0 RotorApexOffsetPos  - Offset of the lidar from hub height (m)                                                                                                          ', &
+            '         17 URefLid             - Reference average wind speed for the lidar[m/s]                                                                                                  ', &
+            '       0.25 MeasurementInterval - Time between each measurement [s]                                                                                                                ', &
+            '      False LidRadialVel        - TRUE => return radial component, FALSE => return "x" direction estimate                                                                          ', &
+            '          1 ConsiderHubMotion   - Flag whether to consider the hub motion impact on Lidar measurements                                                                             ', &
             '====================== OUTPUT ==================================================                                                                                                   ', &
             'False         SumPrint     - Print summary data to <RootName>.IfW.sum (flag)                                                                                                       ', &
             '              OutList      - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)                    ', &

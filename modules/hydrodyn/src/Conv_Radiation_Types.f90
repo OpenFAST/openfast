@@ -45,7 +45,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: HdroDmpng      !<  [-]
     INTEGER(IntKi)  :: NInpFreq      !<  [-]
     REAL(DbKi)  :: RdtnTMax      !<  [-]
-    INTEGER(IntKi)  :: UnSum      !<  [-]
   END TYPE Conv_Rdtn_InitInputType
 ! =======================
 ! =========  Conv_Rdtn_InitOutputType  =======
@@ -168,7 +167,6 @@ IF (ALLOCATED(SrcInitInputData%HdroDmpng)) THEN
 ENDIF
     DstInitInputData%NInpFreq = SrcInitInputData%NInpFreq
     DstInitInputData%RdtnTMax = SrcInitInputData%RdtnTMax
-    DstInitInputData%UnSum = SrcInitInputData%UnSum
  END SUBROUTINE Conv_Rdtn_CopyInitInput
 
  SUBROUTINE Conv_Rdtn_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -260,7 +258,6 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NInpFreq
       Db_BufSz   = Db_BufSz   + 1  ! RdtnTMax
-      Int_BufSz  = Int_BufSz  + 1  ! UnSum
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -371,8 +368,6 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     DbKiBuf(Db_Xferred) = InData%RdtnTMax
     Db_Xferred = Db_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%UnSum
-    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE Conv_Rdtn_PackInitInput
 
  SUBROUTINE Conv_Rdtn_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -496,8 +491,6 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%RdtnTMax = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
-    OutData%UnSum = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE Conv_Rdtn_UnPackInitInput
 
  SUBROUTINE Conv_Rdtn_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )

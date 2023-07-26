@@ -427,8 +427,9 @@ A member is one of the three following types (see :numref:`SD_FEM`):
 
 - Rigid link (*MType=3*)
 
-**COSMID** refers to the IDs of the members’ cosine matrices for
-noncircular members; the current release ignores this column.
+**COSMID** refers to the IDs of the members' cosine matrices for noncircular
+members; the current release uses SubDyn's default direction cosine convention
+if it's not present or when COSMID values are -1.
 
 
 An example of member table is given below
@@ -543,17 +544,13 @@ An example of rigid link properties table is given below
 
 Member Cosine Matrices COSM (i,j)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-This table is not currently used by SubDyn, but in future releases it
-will need to be populated if members with cross-sections other than
-circular will be employed.
-
 **NCOSMs** rows, one for each unique member orientation set, will need
 to be provided. Each row of the table will list the nine entries of the
-direction cosine matrices (COSM11, COSM12,…COSM33) for matrix elements
-(1,1), (1,2),…(3,3) that establish the orientation of the local member
-axes (*x*,\ *y* principal axes in the cross-sectional plane, *z* along
-the member longitudinal axis) with respect to the SS coordinate system
-(local-to-global transformation matrices).
+direction cosine matrices (COSM11, COSM12,…COSM33) for matrix elements.
+Each row is a vector in the global coordinate system for principal axes 
+in the x, y and z directions respectively. These vectors need to be 
+specified with an extremely high level of precision for results to be
+equivalent to an internal calculation.
 
 Joint Additional Concentrated Masses
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -602,7 +599,7 @@ Output: Summary and Outfile
 In this section of the input file, the user sets flags and switches for
 the desired output behavior.
 
-Specifying **SDSum** = TRUE causes SubDyn to generate a summary file
+Specifying **SumPrint** = TRUE causes SubDyn to generate a summary file
 with name **OutRootName**.SD.sum*. **OutRootName** is either
 specified in the SUBDYN section of the driver input file when running
 SubDyn in stand-alone mode, or in the FAST input file when running a

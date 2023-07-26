@@ -1,4 +1,8 @@
 %% INSTRUCTIONS
+% This script is used to manually build a Simulink mex file which uses the openfastlib shared library (.dll, .so, .dylib).
+% If you are building OpenFAST with CMake on linux or macOS or windows, you can automatically generate the mex file
+% by specifying -DBUILD_OPENFAST_SIMULINK_API=ON when running cmake, you do not need to use this script.
+%
 % Before running this script, you must have compiled OpenFAST for Simulink to create a DLL (i.e., a shared library like .so, .dylib, .lib, etc.).
 % - If cmake was used, make sure the install directory is specified properly in the `installDir` variable below,
 %   and if using Windows, set `built_with_visualStudio` to false.
@@ -14,7 +18,7 @@
 
 mexname = 'FAST_SFunc'; % base name of the resulting mex file
 
-built_with_visualStudio = true; %if the libraries were built with cmake, set to false
+built_with_visualStudio = false; %if the libraries were built with cmake, set to false
 
 
 if (ispc && built_with_visualStudio)   
@@ -47,12 +51,12 @@ else
         % If there are shared libraries does it work for outDir to be the local directory?
     else
         installDir = '../../../install';
-        outDir = fullfile(installDir, 'lib');
+        outDir = '.';
     end
 
     libDir = fullfile(installDir, 'lib');
     includeDir = fullfile(installDir, 'include');
-    libName = 'openfastlib';
+    libName = 'openfastlib_mex';
 end
 
 %% BUILD COMMAND
@@ -76,9 +80,14 @@ if ispc () % Windows PC
 else % mac/unix
 
     mex('-largeArrayDims', ...
-        '-v', ... %add this line for "verbose" output (for debugging)
+        ... '-v', ... %add this line for "verbose" output (for debugging)
         ['-L', libDir], ...
         ['-l', libName], ...
+        '-lgfortran', ...
+        '-lquadmath', ...
+        '-llapack', ...
+        '-lblas', ...
+        '-ldl', ...
         ['-I', includeDir], ...
         '-outdir', outDir, ...
         ['CFLAGS=$CFLAGS -DS_FUNCTION_NAME=' mexname], ...

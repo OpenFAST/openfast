@@ -462,6 +462,7 @@ logical function have_nan(p, m, x, z, u, label)
    character(len=*),                intent(in) :: label !< label for print
    integer :: iW
    have_nan=.False.
+!bjj: If we used Is_NaN (or a version of it for this data type) instead of isnan, I'd get fewer compiler warnings that "Fortran 2003 does not allow this intrinsic procedure."
    do iW = 1,size(p%W)
       if (any(isnan(x%W(iW)%r_NW))) then
          print*,trim(label),'NaN in W(iW)%r_NW'//trim(num2lstr(iW))
@@ -480,11 +481,11 @@ logical function have_nan(p, m, x, z, u, label)
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Eps_NW))) then
-         print*,trim(label),'NaN in G_FW'//trim(num2lstr(iW))
+         print*,trim(label),'NaN in E_NW'
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Eps_FW))) then
-         print*,trim(label),'NaN in G_FW'//trim(num2lstr(iW))
+         print*,trim(label),'NaN in E_FW'
          have_nan=.True.
       endif
       if (any(isnan(z%W(iW)%Gamma_LL))) then
@@ -1047,8 +1048,8 @@ subroutine FVW_InitRegularization(x, p, m, ErrStat, ErrMsg)
       if (p%RegDeterMethod==idRegDeterConstant) then
          ! Constant reg param throughout the wake
          if (p%WakeRegMethod==idRegAge) then ! NOTE: age method implies a division by rc
-            p%WingRegParam=max(0.01, p%WingRegParam)
-            p%WakeRegParam=max(0.01, p%WakeRegParam)
+            p%WingRegParam=max(0.01_ReKi, p%WingRegParam)
+            p%WakeRegParam=max(0.01_ReKi, p%WakeRegParam)
          endif
 
          ! Set reg param on wing and first NW
@@ -1620,10 +1621,18 @@ subroutine FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    integer(IntKi) :: iAge, iW, iSpan
    integer(IntKi) :: nBelow
-   real(ReKi), parameter:: GROUND         = 1.e-4_ReKi
-   real(ReKi), parameter:: ABOVE_GROUND   = 0.1_ReKi
+   real(ReKi) :: GROUND
+   real(ReKi) :: ABOVE_GROUND
    ErrStat = ErrID_None
    ErrMsg  = ""
+
+   if ( p%MHK /= MHK_None ) then
+      GROUND         = 1.e-4_ReKi - p%WtrDpth
+      ABOVE_GROUND   = 0.1_ReKi - p%WtrDpth
+   else
+      GROUND         = 1.e-4_ReKi
+      ABOVE_GROUND   = 0.1_ReKi
+   endif
 
    nBelow=0
    do iW = 1,p%nWings

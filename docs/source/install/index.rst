@@ -243,7 +243,7 @@ combination of the packages listed in the table below.
 ============================================== ==================== ================= =======
  Package                                        Applicable systems   Minimum version   Link
 ============================================== ==================== ================= =======
- CMake                                          All                  3.0               https://cmake.org
+ CMake                                          All                  3.12              https://cmake.org
  GNU Make                                       macOS, Linux         1.8               https://www.gnu.org/software/make/
  Visual Studio                                  Windows              2015              https://visualstudio.microsoft.com>
 ============================================== ==================== ================= =======
@@ -600,7 +600,7 @@ on Windows systems is given below.
     # and build architecture. For a list of available CMake generators, run
     # ``cmake .. -G``.
     # This step creates the Visual Studio solution.
-    cmake .. -G "Visual Studio 14 2015 Win64"
+    cmake .. -G "Visual Studio 16 2019"
 
     # Open the generated Visual Studio solution
     start OpenFAST.sln
