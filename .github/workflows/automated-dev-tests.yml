@@ -553,7 +553,7 @@ jobs:
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
 
-  rtest-simulink:
+  rtest-OF-simulink:
     runs-on: ubuntu-22.04
     needs: build-openfast-release
     steps:
@@ -562,6 +562,8 @@ jobs:
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v1
       - name: Run MATLAB tests and generate artifacts
         uses: matlab-actions/run-tests@v1
         with:
