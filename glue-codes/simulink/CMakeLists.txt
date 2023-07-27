@@ -62,7 +62,7 @@ set_target_properties(FAST_SFunc PROPERTIES
   Fortran_MODULE_DIRECTORY ${CMAKE_Fortran_MODULE_DIRECTORY}/matlab)
 target_include_directories(FAST_SFunc PUBLIC 
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/modules/openfast-library/src>
-  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/modules/openfoam/src>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/modules/externalinflow/src>
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/modules/supercontroller/src>
 )
 if(APPLE OR UNIX)
