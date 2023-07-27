@@ -288,28 +288,28 @@ CONTAINS
          force  = force  + m%HubLoad%force( :,1)
          moment = moment + m%HubLoad%moment(:,1)
          
-         if (k<=size(BAeroFxg)) then
+         if (k<=size(BAeroFxi)) then
             ! Power contribution of blade wrt hub
             tmp = matmul( u%HubMotion%Orientation(:,:,1), m%HubLoad%moment(:,1) )
             m%AllOuts( BAeroPwr(k) ) = omega * tmp(1)
             
             ! In global, wrt hub! 
-            m%AllOuts( BAeroFxg(k) ) = m%HubLoad%force(1,1)
-            m%AllOuts( BAeroFyg(k) ) = m%HubLoad%force(2,1)
-            m%AllOuts( BAeroFzg(k) ) = m%HubLoad%force(3,1)
-            m%AllOuts( BAeroMxg(k) ) = m%HubLoad%moment(1,1)
-            m%AllOuts( BAeroMyg(k) ) = m%HubLoad%moment(2,1)
-            m%AllOuts( BAeroMzg(k) ) = m%HubLoad%moment(3,1)
+            m%AllOuts( BAeroFxi(k) ) = m%HubLoad%force(1,1)
+            m%AllOuts( BAeroFyi(k) ) = m%HubLoad%force(2,1)
+            m%AllOuts( BAeroFzi(k) ) = m%HubLoad%force(3,1)
+            m%AllOuts( BAeroMxi(k) ) = m%HubLoad%moment(1,1)
+            m%AllOuts( BAeroMyi(k) ) = m%HubLoad%moment(2,1)
+            m%AllOuts( BAeroMzi(k) ) = m%HubLoad%moment(3,1)
          end if
       end do
 
         ! In global
-      m%AllOuts( RtAeroFxg ) = force(1)
-      m%AllOuts( RtAeroFyg ) = force(2)
-      m%AllOuts( RtAeroFzg ) = force(3)
-      m%AllOuts( RtAeroMxg ) = moment(1)
-      m%AllOuts( RtAeroMyg ) = moment(2)
-      m%AllOuts( RtAeroMzg ) = moment(3)
+      m%AllOuts( RtAeroFxi ) = force(1)
+      m%AllOuts( RtAeroFyi ) = force(2)
+      m%AllOuts( RtAeroFzi ) = force(3)
+      m%AllOuts( RtAeroMxi ) = moment(1)
+      m%AllOuts( RtAeroMyi ) = moment(2)
+      m%AllOuts( RtAeroMzi ) = moment(3)
       tmp = matmul( u%HubMotion%Orientation(:,:,1), force )
       m%AllOuts( RtAeroFxh ) = tmp(1)
       m%AllOuts( RtAeroFyh ) = tmp(2)
@@ -378,17 +378,28 @@ CONTAINS
    subroutine Calc_WriteOutput_BEMT()
       REAL(R8Ki)                                   :: orient(3,3)
       REAL(R8Ki)                                   :: theta(3)
+      REAL(ReKi)                                   :: Vind_s(3)  ! Induced velocity in "w" or "p" system
       REAL(ReKi)                                   :: denom !, rmax
       REAL(ReKi)                                   :: ct, st ! cosine, sine of theta
       REAL(ReKi)                                   :: cp, sp ! cosine, sine of phi
  
 
+      ! Induced velocity in Global
+      do k=1,min(p%numBlades,3)
+         do j=1,u%BladeMotion(k)%NNodes
+            !if(p%BEM_Mod==BEMMod_2D) then
+            ! NOTE: if BEMMod_2D:   x & y are in "w" system (WithoutSweepPitchTwist)
+            !       if BEMMod_3D:   x & y are in "l" system (local-polar system)
+            Vind_s = (/ -m%BEMT_u(indx)%Vx(j,k)*m%BEMT_y%axInduction(j,k), m%BEMT_u(indx)%Vy(j,k)*m%BEMT_y%tanInduction(j,k), 0.0_ReKi /)
+            m%Vind_i(:,j,k) = matmul(Vind_s, m%orientationAnnulus(:,:,j,k)) ! TODO rename orientationAnnulus
+         enddo
+      enddo
 
 
    
          ! blade outputs
       do k=1,min(p%numBlades,AD_MaxBl_Out)    ! limit this
-         m%AllOuts( BAzimuth(k) ) = MODULO( m%BEMT_u(indx)%psi(k)*R2D, 360.0_ReKi )
+         m%AllOuts( BAzimuth(k) ) = MODULO( m%BEMT_u(indx)%psi_s(k)*R2D, 360.0_ReKi )
        ! m%AllOuts( BPitch(  k) ) = calculated in SetInputsForBEMT
       
          do beta=1,p%NBlOuts
@@ -461,6 +472,17 @@ CONTAINS
    !!       Make sure these are set!
    subroutine Calc_WriteOutput_FVW
       integer    :: iW
+
+      ! Induced velocity in global
+      ! FVW already return this, we do a simple copy from Wings to Blades
+      do k=1,min(p%numBlades,3)
+         iW = p_AD%FVW%Bld2Wings(iRot, k)
+         do j=1,u%BladeMotion(k)%NNodes
+            m%Vind_i(:,j,k) = m_AD%FVW_y%W(iW)%Vind(1:3,j)
+         enddo
+      enddo
+
+      ! TODO TODO TODO ALL THIS SHOULD BE COMPUTED IN THE SAME MEMORY FORMAT AS AERODYN
 
          ! blade outputs
       do k=1,min(p%numBlades,3)
@@ -992,6 +1014,10 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
 
    call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%BldNd_OutList, InputFileData%BldNd_NumOuts, ErrStat2, ErrMsg2, UnEc )
          if (FailedNodal()) return;
+
+!FIXME: improve logic on the node outputs
+   ! Prevent segfault when no blades specified.  All logic tests on BldNd_NumOuts at present.
+   if (InputFileData%BldNd_BladesOut <= 0)   InputFileData%BldNd_NumOuts = 0
 
    RETURN
 CONTAINS
@@ -2114,11 +2140,10 @@ subroutine calcCantAngle(f, xi,stencilSize,n,cantAngle)
     implicit none
     integer(IntKi), intent(in)  :: stencilSize, n 
     integer(IntKi)              :: i, j
-    integer(IntKi)              :: sortInd(n)
     integer(IntKi)              :: info
     real(ReKi),  intent(in)     :: f(n), xi(n)
     real(ReKi)                  :: cx(stencilSize), cf(stencilSize), xiIn(stencilSize)
-    real(ReKi)                  :: fIn(stencilSize), cPrime(n), fPrime(n), xiAbs(n)
+    real(ReKi)                  :: fIn(stencilSize), cPrime(n), fPrime(n)
     real(ReKi), intent(inout)   :: cantAngle(n)
     real(ReKi), parameter       :: ThisTol = 1e-6
     
@@ -2130,34 +2155,26 @@ subroutine calcCantAngle(f, xi,stencilSize,n,cantAngle)
         if (i.eq.1) then
             fIn = f(1:stencilSize)
             xiIn = xi(1:stencilSize)
-            call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
-            if (info /= 0) return ! use default cantAngle in this case
-            call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
-            if (info /= 0) return ! use default cantAngle in this case
         elseif (i.eq.size(xi)) then
             fIn = f(size(xi)-stencilSize +1:size(xi))
             xiIn = xi(size(xi)-stencilSize+1:size(xi))
-            call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
-            if (info /= 0) return ! use default cantAngle in this case
-            call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
-            if (info /= 0) return ! use default cantAngle in this case
         else
             fIn = f(i-1:i+1)
             xiIn = xi(i-1:i+1)
-            call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
-            if (info /= 0) return ! use default cantAngle in this case
-            call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
-            if (info /= 0) return ! use default cantAngle in this case
         endif
-    
-        cPrime(i) = 0.0
-        fPrime(i) = 0.0
-
-        do j = 1,size(cx)
-            cPrime(i) = cPrime(i) + cx(j)*xiIn(j)
-            fPrime(i) = fPrime(i) + cx(j)*fIn(j)            
-        end do
-        cantAngle(i) = atan2(fPrime(i),cPrime(i))*180_ReKi/pi
+        call differ_stencil ( xi(i), 1, 2, xiIn, cx, info )
+        !call differ_stencil ( xi(i), 1, 2, fIn, cf, info )
+        if (info /= 0) then 
+           print*,'Cant Calc failed at i=',i
+        else
+           cPrime(i) = 0.0
+           fPrime(i) = 0.0
+           do j = 1,size(cx)
+               cPrime(i) = cPrime(i) + cx(j)*xiIn(j)
+               fPrime(i) = fPrime(i) + cx(j)*fIn(j)            
+           end do
+           cantAngle(i) = atan2(fPrime(i),cPrime(i))*180_ReKi/pi
+        endif
     end do
     
 end subroutine calcCantAngle

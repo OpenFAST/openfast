@@ -228,30 +228,30 @@ module AeroDyn_IO_Params
    INTEGER(IntKi), PARAMETER      :: B4AeroMy  =  194
    INTEGER(IntKi), PARAMETER      :: B4AeroMz  =  195
    INTEGER(IntKi), PARAMETER      :: B4AeroPwr =  196
-   INTEGER(IntKi), PARAMETER      :: B1AeroFxg =  197
-   INTEGER(IntKi), PARAMETER      :: B1AeroFyg =  198
-   INTEGER(IntKi), PARAMETER      :: B1AeroFzg =  199
-   INTEGER(IntKi), PARAMETER      :: B1AeroMxg =  200
-   INTEGER(IntKi), PARAMETER      :: B1AeroMyg =  201
-   INTEGER(IntKi), PARAMETER      :: B1AeroMzg =  202
-   INTEGER(IntKi), PARAMETER      :: B2AeroFxg =  203
-   INTEGER(IntKi), PARAMETER      :: B2AeroFyg =  204
-   INTEGER(IntKi), PARAMETER      :: B2AeroFzg =  205
-   INTEGER(IntKi), PARAMETER      :: B2AeroMxg =  206
-   INTEGER(IntKi), PARAMETER      :: B2AeroMyg =  207
-   INTEGER(IntKi), PARAMETER      :: B2AeroMzg =  208
-   INTEGER(IntKi), PARAMETER      :: B3AeroFxg =  209
-   INTEGER(IntKi), PARAMETER      :: B3AeroFyg =  210
-   INTEGER(IntKi), PARAMETER      :: B3AeroFzg =  211
-   INTEGER(IntKi), PARAMETER      :: B3AeroMxg =  212
-   INTEGER(IntKi), PARAMETER      :: B3AeroMyg =  213
-   INTEGER(IntKi), PARAMETER      :: B3AeroMzg =  214
-   INTEGER(IntKi), PARAMETER      :: B4AeroFxg =  215
-   INTEGER(IntKi), PARAMETER      :: B4AeroFyg =  216
-   INTEGER(IntKi), PARAMETER      :: B4AeroFzg =  217
-   INTEGER(IntKi), PARAMETER      :: B4AeroMxg =  218
-   INTEGER(IntKi), PARAMETER      :: B4AeroMyg =  219
-   INTEGER(IntKi), PARAMETER      :: B4AeroMzg =  220
+   INTEGER(IntKi), PARAMETER      :: B1AeroFxi =  197
+   INTEGER(IntKi), PARAMETER      :: B1AeroFyi =  198
+   INTEGER(IntKi), PARAMETER      :: B1AeroFzi =  199
+   INTEGER(IntKi), PARAMETER      :: B1AeroMxi =  200
+   INTEGER(IntKi), PARAMETER      :: B1AeroMyi =  201
+   INTEGER(IntKi), PARAMETER      :: B1AeroMzi =  202
+   INTEGER(IntKi), PARAMETER      :: B2AeroFxi =  203
+   INTEGER(IntKi), PARAMETER      :: B2AeroFyi =  204
+   INTEGER(IntKi), PARAMETER      :: B2AeroFzi =  205
+   INTEGER(IntKi), PARAMETER      :: B2AeroMxi =  206
+   INTEGER(IntKi), PARAMETER      :: B2AeroMyi =  207
+   INTEGER(IntKi), PARAMETER      :: B2AeroMzi =  208
+   INTEGER(IntKi), PARAMETER      :: B3AeroFxi =  209
+   INTEGER(IntKi), PARAMETER      :: B3AeroFyi =  210
+   INTEGER(IntKi), PARAMETER      :: B3AeroFzi =  211
+   INTEGER(IntKi), PARAMETER      :: B3AeroMxi =  212
+   INTEGER(IntKi), PARAMETER      :: B3AeroMyi =  213
+   INTEGER(IntKi), PARAMETER      :: B3AeroMzi =  214
+   INTEGER(IntKi), PARAMETER      :: B4AeroFxi =  215
+   INTEGER(IntKi), PARAMETER      :: B4AeroFyi =  216
+   INTEGER(IntKi), PARAMETER      :: B4AeroFzi =  217
+   INTEGER(IntKi), PARAMETER      :: B4AeroMxi =  218
+   INTEGER(IntKi), PARAMETER      :: B4AeroMyi =  219
+   INTEGER(IntKi), PARAMETER      :: B4AeroMzi =  220
 
 
      ! Blade Nodal outputs:
@@ -1520,12 +1520,12 @@ module AeroDyn_IO_Params
    INTEGER(IntKi), PARAMETER      :: RtAeroCq  = 1478
    INTEGER(IntKi), PARAMETER      :: RtAeroCt  = 1479
    INTEGER(IntKi), PARAMETER      :: DBEMTau1  = 1480
-   INTEGER(IntKi), PARAMETER      :: RtAeroFxg = 1481
-   INTEGER(IntKi), PARAMETER      :: RtAeroFyg = 1482
-   INTEGER(IntKi), PARAMETER      :: RtAeroFzg = 1483
-   INTEGER(IntKi), PARAMETER      :: RtAeroMxg = 1484
-   INTEGER(IntKi), PARAMETER      :: RtAeroMyg = 1485
-   INTEGER(IntKi), PARAMETER      :: RtAeroMzg = 1486
+   INTEGER(IntKi), PARAMETER      :: RtAeroFxi = 1481
+   INTEGER(IntKi), PARAMETER      :: RtAeroFyi = 1482
+   INTEGER(IntKi), PARAMETER      :: RtAeroFzi = 1483
+   INTEGER(IntKi), PARAMETER      :: RtAeroMxi = 1484
+   INTEGER(IntKi), PARAMETER      :: RtAeroMyi = 1485
+   INTEGER(IntKi), PARAMETER      :: RtAeroMzi = 1486
 
 
      ! Hub:
@@ -1626,12 +1626,12 @@ module AeroDyn_IO_Params
    INTEGER,  PARAMETER          :: BAeroMy(4)  = (/B1AeroMy,  B2AeroMy,  B3AeroMy,  B4AeroMy/)                                         ! total blade aero/hydro load (moment in y-direction)
    INTEGER,  PARAMETER          :: BAeroMz(4)  = (/B1AeroMz,  B2AeroMz,  B3AeroMz,  B4AeroMz/)                                         ! total blade aero/hydro load (moment in z-direction) 
    INTEGER,  PARAMETER          :: BAeroPwr(4) = (/B1AeroPwr, B2AeroPwr, B3AeroPwr, B4AeroPwr/)                                        ! total blade aero/hydro power 
-   INTEGER,  PARAMETER          :: BAeroFxg(4) = (/B1AeroFxg, B2AeroFxg, B3AeroFxg, B4AeroFxg/)                                        ! total blade aero/hydro load (force in x-direction) in global
-   INTEGER,  PARAMETER          :: BAeroFyg(4) = (/B1AeroFyg, B2AeroFyg, B3AeroFyg, B4AeroFyg/)                                        ! total blade aero/hydro load (force in y-direction) in global
-   INTEGER,  PARAMETER          :: BAeroFzg(4) = (/B1AeroFzg, B2AeroFzg, B3AeroFzg, B4AeroFzg/)                                        ! total blade aero/hydro load (force in z-direction) in global
-   INTEGER,  PARAMETER          :: BAeroMxg(4) = (/B1AeroMxg, B2AeroMxg, B3AeroMxg, B4AeroMxg/)                                        ! total blade aero/hydro load (moment in x-direction) in global
-   INTEGER,  PARAMETER          :: BAeroMyg(4) = (/B1AeroMyg, B2AeroMyg, B3AeroMyg, B4AeroMyg/)                                        ! total blade aero/hydro load (moment in y-direction) in global
-   INTEGER,  PARAMETER          :: BAeroMzg(4) = (/B1AeroMzg, B2AeroMzg, B3AeroMzg, B4AeroMzg/)                                        ! total blade aero/hydro load (moment in z-direction) in global
+   INTEGER,  PARAMETER          :: BAeroFxi(4) = (/B1AeroFxi, B2AeroFxi, B3AeroFxi, B4AeroFxi/)                                        ! total blade aero/hydro load (force in x-direction) in global
+   INTEGER,  PARAMETER          :: BAeroFyi(4) = (/B1AeroFyi, B2AeroFyi, B3AeroFyi, B4AeroFyi/)                                        ! total blade aero/hydro load (force in y-direction) in global
+   INTEGER,  PARAMETER          :: BAeroFzi(4) = (/B1AeroFzi, B2AeroFzi, B3AeroFzi, B4AeroFzi/)                                        ! total blade aero/hydro load (force in z-direction) in global
+   INTEGER,  PARAMETER          :: BAeroMxi(4) = (/B1AeroMxi, B2AeroMxi, B3AeroMxi, B4AeroMxi/)                                        ! total blade aero/hydro load (moment in x-direction) in global
+   INTEGER,  PARAMETER          :: BAeroMyi(4) = (/B1AeroMyi, B2AeroMyi, B3AeroMyi, B4AeroMyi/)                                        ! total blade aero/hydro load (moment in y-direction) in global
+   INTEGER,  PARAMETER          :: BAeroMzi(4) = (/B1AeroMzi, B2AeroMzi, B3AeroMzi, B4AeroMzi/)                                        ! total blade aero/hydro load (moment in z-direction) in global
 
    INTEGER,  PARAMETER          :: BNVUndx(9, 3) = RESHAPE( (/ &      ! undisturbed wind velocity (x component)
                                      B1N1VUndx,B1N2VUndx,B1N3VUndx,B1N4VUndx,B1N5VUndx,B1N6VUndx,B1N7VUndx,B1N8VUndx,B1N9VUndx, &
@@ -1874,11 +1874,11 @@ module AeroDyn_IO_Params
  
 
 
-   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(1588) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
-                               "B1AEROFX ","B1AEROFXG","B1AEROFY ","B1AEROFYG","B1AEROFZ ","B1AEROFZG","B1AEROMX ","B1AEROMXG", &
-                               "B1AEROMY ","B1AEROMYG","B1AEROMZ ","B1AEROMZG","B1AEROPWR","B1AZIMUTH","B1FLDFX  ","B1FLDFXG ", &
-                               "B1FLDFY  ","B1FLDFYG ","B1FLDFZ  ","B1FLDFZG ","B1FLDMX  ","B1FLDMXG ","B1FLDMY  ","B1FLDMYG ", &
-                               "B1FLDMZ  ","B1FLDMZG ","B1FLDPWR ","B1N1ALPHA","B1N1AXIND","B1N1CD   ","B1N1CL   ","B1N1CLRNC", &
+   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(1594) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
+                               "B1AEROFX ","B1AEROFXI","B1AEROFY ","B1AEROFYI","B1AEROFZ ","B1AEROFZI","B1AEROMX ","B1AEROMXI", &
+                               "B1AEROMY ","B1AEROMYI","B1AEROMZ ","B1AEROMZI","B1AEROPWR","B1AZIMUTH","B1FLDFX  ","B1FLDFXI ", &
+                               "B1FLDFY  ","B1FLDFYI ","B1FLDFZ  ","B1FLDFZI ","B1FLDMX  ","B1FLDMXI ","B1FLDMY  ","B1FLDMYI ", &
+                               "B1FLDMZ  ","B1FLDMZI ","B1FLDPWR ","B1N1ALPHA","B1N1AXIND","B1N1CD   ","B1N1CL   ","B1N1CLRNC", &
                                "B1N1CM   ","B1N1CN   ","B1N1CPMIN","B1N1CT   ","B1N1CURVE","B1N1CX   ","B1N1CY   ","B1N1DYNP ", &
                                "B1N1FBN  ","B1N1FBS  ","B1N1FBT  ","B1N1FD   ","B1N1FL   ","B1N1FN   ","B1N1FT   ","B1N1FX   ", &
                                "B1N1FY   ","B1N1GAM  ","B1N1M    ","B1N1MBN  ","B1N1MBS  ","B1N1MBT  ","B1N1MM   ","B1N1PHI  ", &
@@ -1930,10 +1930,10 @@ module AeroDyn_IO_Params
                                "B1N9FY   ","B1N9GAM  ","B1N9M    ","B1N9MBN  ","B1N9MBS  ","B1N9MBT  ","B1N9MM   ","B1N9PHI  ", &
                                "B1N9RE   ","B1N9SGCAV","B1N9SIGCR","B1N9STVX ","B1N9STVY ","B1N9STVZ ","B1N9THETA","B1N9TNIND", &
                                "B1N9VDISX","B1N9VDISY","B1N9VDISZ","B1N9VINDX","B1N9VINDY","B1N9VREL ","B1N9VUNDX","B1N9VUNDY", &
-                               "B1N9VUNDZ","B1PITCH  ","B2AEROFX ","B2AEROFXG","B2AEROFY ","B2AEROFYG","B2AEROFZ ","B2AEROFZG", &
-                               "B2AEROMX ","B2AEROMXG","B2AEROMY ","B2AEROMYG","B2AEROMZ ","B2AEROMZG","B2AEROPWR","B2AZIMUTH", &
-                               "B2FLDFX  ","B2FLDFXG ","B2FLDFY  ","B2FLDFYG ","B2FLDFZ  ","B2FLDFZG ","B2FLDMX  ","B2FLDMXG ", &
-                               "B2FLDMY  ","B2FLDMYG ","B2FLDMZ  ","B2FLDMZG ","B2FLDPWR ","B2N1ALPHA","B2N1AXIND","B2N1CD   ", &
+                               "B1N9VUNDZ","B1PITCH  ","B2AEROFX ","B2AEROFXI","B2AEROFY ","B2AEROFYI","B2AEROFZ ","B2AEROFZI", &
+                               "B2AEROMX ","B2AEROMXI","B2AEROMY ","B2AEROMYI","B2AEROMZ ","B2AEROMZI","B2AEROPWR","B2AZIMUTH", &
+                               "B2FLDFX  ","B2FLDFXI ","B2FLDFY  ","B2FLDFYI ","B2FLDFZ  ","B2FLDFZI ","B2FLDMX  ","B2FLDMXI ", &
+                               "B2FLDMY  ","B2FLDMYI ","B2FLDMZ  ","B2FLDMZI ","B2FLDPWR ","B2N1ALPHA","B2N1AXIND","B2N1CD   ", &
                                "B2N1CL   ","B2N1CLRNC","B2N1CM   ","B2N1CN   ","B2N1CPMIN","B2N1CT   ","B2N1CURVE","B2N1CX   ", &
                                "B2N1CY   ","B2N1DYNP ","B2N1FBN  ","B2N1FBS  ","B2N1FBT  ","B2N1FD   ","B2N1FL   ","B2N1FN   ", &
                                "B2N1FT   ","B2N1FX   ","B2N1FY   ","B2N1GAM  ","B2N1M    ","B2N1MBN  ","B2N1MBS  ","B2N1MBT  ", &
@@ -1985,10 +1985,10 @@ module AeroDyn_IO_Params
                                "B2N9FT   ","B2N9FX   ","B2N9FY   ","B2N9GAM  ","B2N9M    ","B2N9MBN  ","B2N9MBS  ","B2N9MBT  ", &
                                "B2N9MM   ","B2N9PHI  ","B2N9RE   ","B2N9SGCAV","B2N9SIGCR","B2N9STVX ","B2N9STVY ","B2N9STVZ ", &
                                "B2N9THETA","B2N9TNIND","B2N9VDISX","B2N9VDISY","B2N9VDISZ","B2N9VINDX","B2N9VINDY","B2N9VREL ", &
-                               "B2N9VUNDX","B2N9VUNDY","B2N9VUNDZ","B2PITCH  ","B3AEROFX ","B3AEROFXG","B3AEROFY ","B3AEROFYG", &
-                               "B3AEROFZ ","B3AEROFZG","B3AEROMX ","B3AEROMXG","B3AEROMY ","B3AEROMYG","B3AEROMZ ","B3AEROMZG", &
-                               "B3AEROPWR","B3AZIMUTH","B3FLDFX  ","B3FLDFXG ","B3FLDFY  ","B3FLDFYG ","B3FLDFZ  ","B3FLDFZG ", &
-                               "B3FLDMX  ","B3FLDMXG ","B3FLDMY  ","B3FLDMYG ","B3FLDMZ  ","B3FLDMZG ","B3FLDPWR ","B3N1ALPHA", &
+                               "B2N9VUNDX","B2N9VUNDY","B2N9VUNDZ","B2PITCH  ","B3AEROFX ","B3AEROFXI","B3AEROFY ","B3AEROFYI", &
+                               "B3AEROFZ ","B3AEROFZI","B3AEROMX ","B3AEROMXI","B3AEROMY ","B3AEROMYI","B3AEROMZ ","B3AEROMZI", &
+                               "B3AEROPWR","B3AZIMUTH","B3FLDFX  ","B3FLDFXI ","B3FLDFY  ","B3FLDFYI ","B3FLDFZ  ","B3FLDFZI ", &
+                               "B3FLDMX  ","B3FLDMXI ","B3FLDMY  ","B3FLDMYI ","B3FLDMZ  ","B3FLDMZI ","B3FLDPWR ","B3N1ALPHA", &
                                "B3N1AXIND","B3N1CD   ","B3N1CL   ","B3N1CLRNC","B3N1CM   ","B3N1CN   ","B3N1CPMIN","B3N1CT   ", &
                                "B3N1CURVE","B3N1CX   ","B3N1CY   ","B3N1DYNP ","B3N1FBN  ","B3N1FBS  ","B3N1FBT  ","B3N1FD   ", &
                                "B3N1FL   ","B3N1FN   ","B3N1FT   ","B3N1FX   ","B3N1FY   ","B3N1GAM  ","B3N1M    ","B3N1MBN  ", &
@@ -2040,45 +2040,46 @@ module AeroDyn_IO_Params
                                "B3N9FL   ","B3N9FN   ","B3N9FT   ","B3N9FX   ","B3N9FY   ","B3N9GAM  ","B3N9M    ","B3N9MBN  ", &
                                "B3N9MBS  ","B3N9MBT  ","B3N9MM   ","B3N9PHI  ","B3N9RE   ","B3N9SGCAV","B3N9SIGCR","B3N9STVX ", &
                                "B3N9STVY ","B3N9STVZ ","B3N9THETA","B3N9TNIND","B3N9VDISX","B3N9VDISY","B3N9VDISZ","B3N9VINDX", &
-                               "B3N9VINDY","B3N9VREL ","B3N9VUNDX","B3N9VUNDY","B3N9VUNDZ","B3PITCH  ","B4AEROFX ","B4AEROFXG", &
-                               "B4AEROFY ","B4AEROFYG","B4AEROFZ ","B4AEROFZG","B4AEROMX ","B4AEROMXG","B4AEROMY ","B4AEROMYG", &
-                               "B4AEROMZ ","B4AEROMZG","B4AEROPWR","B4FLDFX  ","B4FLDFXG ","B4FLDFY  ","B4FLDFYG ","B4FLDFZ  ", &
-                               "B4FLDFZG ","B4FLDMX  ","B4FLDMXG ","B4FLDMY  ","B4FLDMYG ","B4FLDMZ  ","B4FLDMZG ","B4FLDPWR ", &
+                               "B3N9VINDY","B3N9VREL ","B3N9VUNDX","B3N9VUNDY","B3N9VUNDZ","B3PITCH  ","B4AEROFX ","B4AEROFXI", &
+                               "B4AEROFY ","B4AEROFYI","B4AEROFZ ","B4AEROFZI","B4AEROMX ","B4AEROMXI","B4AEROMY ","B4AEROMYI", &
+                               "B4AEROMZ ","B4AEROMZI","B4AEROPWR","B4FLDFX  ","B4FLDFXI ","B4FLDFY  ","B4FLDFYI ","B4FLDFZ  ", &
+                               "B4FLDFZI ","B4FLDMX  ","B4FLDMXI ","B4FLDMY  ","B4FLDMYI ","B4FLDMZ  ","B4FLDMZI ","B4FLDPWR ", &
                                "DBEMTAU1 ","HBFBX    ","HBFBY    ","HBFBZ    ","HBMBX    ","HBMBY    ","HBMBZ    ","NCFBX    ", &
                                "NCFBY    ","NCFBZ    ","NCMBX    ","NCMBY    ","NCMBZ    ","RTAEROCP ","RTAEROCQ ","RTAEROCT ", &
-                               "RTAEROFXG","RTAEROFXH","RTAEROFYG","RTAEROFYH","RTAEROFZG","RTAEROFZH","RTAEROMXG","RTAEROMXH", &
-                               "RTAEROMYG","RTAEROMYH","RTAEROMZG","RTAEROMZH","RTAEROPWR","RTAREA   ","RTFLDCP  ","RTFLDCQ  ", &
-                               "RTFLDCT  ","RTFLDFXG ","RTFLDFXH ","RTFLDFYG ","RTFLDFYH ","RTFLDFZG ","RTFLDFZH ","RTFLDMXG ", &
-                               "RTFLDMXH ","RTFLDMYG ","RTFLDMYH ","RTFLDMZG ","RTFLDMZH ","RTFLDPWR ","RTSKEW   ","RTSPEED  ", &
-                               "RTTSR    ","RTVAVGXH ","RTVAVGYH ","RTVAVGZH ","TFALPHA  ","TFFXI    ","TFFYI    ","TFFZI    ", &
-                               "TFMACH   ","TFMXI    ","TFMYI    ","TFMZI    ","TFRE     ","TFSTVXI  ","TFSTVYI  ","TFSTVZI  ", &
-                               "TFVINDXI ","TFVINDYI ","TFVINDZI ","TFVREL   ","TFVRELXI ","TFVRELYI ","TFVRELZI ","TFVUNDXI ", &
-                               "TFVUNDYI ","TFVUNDZI ","TWN1DYNP ","TWN1FBX  ","TWN1FBY  ","TWN1FBZ  ","TWN1FDX  ","TWN1FDY  ", &
-                               "TWN1M    ","TWN1MBX  ","TWN1MBY  ","TWN1MBZ  ","TWN1RE   ","TWN1STVX ","TWN1STVY ","TWN1STVZ ", &
-                               "TWN1VREL ","TWN1VUNDX","TWN1VUNDY","TWN1VUNDZ","TWN2DYNP ","TWN2FBX  ","TWN2FBY  ","TWN2FBZ  ", &
-                               "TWN2FDX  ","TWN2FDY  ","TWN2M    ","TWN2MBX  ","TWN2MBY  ","TWN2MBZ  ","TWN2RE   ","TWN2STVX ", &
-                               "TWN2STVY ","TWN2STVZ ","TWN2VREL ","TWN2VUNDX","TWN2VUNDY","TWN2VUNDZ","TWN3DYNP ","TWN3FBX  ", &
-                               "TWN3FBY  ","TWN3FBZ  ","TWN3FDX  ","TWN3FDY  ","TWN3M    ","TWN3MBX  ","TWN3MBY  ","TWN3MBZ  ", &
-                               "TWN3RE   ","TWN3STVX ","TWN3STVY ","TWN3STVZ ","TWN3VREL ","TWN3VUNDX","TWN3VUNDY","TWN3VUNDZ", &
-                               "TWN4DYNP ","TWN4FBX  ","TWN4FBY  ","TWN4FBZ  ","TWN4FDX  ","TWN4FDY  ","TWN4M    ","TWN4MBX  ", &
-                               "TWN4MBY  ","TWN4MBZ  ","TWN4RE   ","TWN4STVX ","TWN4STVY ","TWN4STVZ ","TWN4VREL ","TWN4VUNDX", &
-                               "TWN4VUNDY","TWN4VUNDZ","TWN5DYNP ","TWN5FBX  ","TWN5FBY  ","TWN5FBZ  ","TWN5FDX  ","TWN5FDY  ", &
-                               "TWN5M    ","TWN5MBX  ","TWN5MBY  ","TWN5MBZ  ","TWN5RE   ","TWN5STVX ","TWN5STVY ","TWN5STVZ ", &
-                               "TWN5VREL ","TWN5VUNDX","TWN5VUNDY","TWN5VUNDZ","TWN6DYNP ","TWN6FBX  ","TWN6FBY  ","TWN6FBZ  ", &
-                               "TWN6FDX  ","TWN6FDY  ","TWN6M    ","TWN6MBX  ","TWN6MBY  ","TWN6MBZ  ","TWN6RE   ","TWN6STVX ", &
-                               "TWN6STVY ","TWN6STVZ ","TWN6VREL ","TWN6VUNDX","TWN6VUNDY","TWN6VUNDZ","TWN7DYNP ","TWN7FBX  ", &
-                               "TWN7FBY  ","TWN7FBZ  ","TWN7FDX  ","TWN7FDY  ","TWN7M    ","TWN7MBX  ","TWN7MBY  ","TWN7MBZ  ", &
-                               "TWN7RE   ","TWN7STVX ","TWN7STVY ","TWN7STVZ ","TWN7VREL ","TWN7VUNDX","TWN7VUNDY","TWN7VUNDZ", &
-                               "TWN8DYNP ","TWN8FBX  ","TWN8FBY  ","TWN8FBZ  ","TWN8FDX  ","TWN8FDY  ","TWN8M    ","TWN8MBX  ", &
-                               "TWN8MBY  ","TWN8MBZ  ","TWN8RE   ","TWN8STVX ","TWN8STVY ","TWN8STVZ ","TWN8VREL ","TWN8VUNDX", &
-                               "TWN8VUNDY","TWN8VUNDZ","TWN9DYNP ","TWN9FBX  ","TWN9FBY  ","TWN9FBZ  ","TWN9FDX  ","TWN9FDY  ", &
-                               "TWN9M    ","TWN9MBX  ","TWN9MBY  ","TWN9MBZ  ","TWN9RE   ","TWN9STVX ","TWN9STVY ","TWN9STVZ ", &
-                               "TWN9VREL ","TWN9VUNDX","TWN9VUNDY","TWN9VUNDZ"/)
-   INTEGER(IntKi), PARAMETER :: ParamIndxAry(1588) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
-                                 B1AeroFx , B1AeroFxg ,  B1AeroFy , B1AeroFyg ,  B1AeroFz , B1AeroFzg ,  B1AeroMx , B1AeroMxg , &
-                                 B1AeroMy , B1AeroMyg ,  B1AeroMz , B1AeroMzg , B1AeroPwr , B1Azimuth ,  B1AeroFx , B1AeroFxg , &
-                                 B1AeroFy , B1AeroFyg ,  B1AeroFz , B1AeroFzg ,  B1AeroMx , B1AeroMxg ,  B1AeroMy , B1AeroMyg , &
-                                 B1AeroMz , B1AeroMzg , B1AeroPwr , B1N1Alpha , B1N1AxInd ,    B1N1Cd ,    B1N1Cl , B1N1Clrnc , &
+                               "RTAEROFXH","RTAEROFXI","RTAEROFYH","RTAEROFYI","RTAEROFZH","RTAEROFZI","RTAEROMXH","RTAEROMXI", &
+                               "RTAEROMYH","RTAEROMYI","RTAEROMZH","RTAEROMZI","RTAEROPWR","RTAREA   ","RTFLDCP  ","RTFLDCQ  ", &
+                               "RTFLDCT  ","RTFLDFXG ","RTFLDFXH ","RTFLDFXI ","RTFLDFYG ","RTFLDFYH ","RTFLDFYI ","RTFLDFZG ", &
+                               "RTFLDFZH ","RTFLDFZI ","RTFLDMXG ","RTFLDMXH ","RTFLDMXI ","RTFLDMYG ","RTFLDMYH ","RTFLDMYI ", &
+                               "RTFLDMZG ","RTFLDMZH ","RTFLDMZI ","RTFLDPWR ","RTSKEW   ","RTSPEED  ","RTTSR    ","RTVAVGXH ", &
+                               "RTVAVGYH ","RTVAVGZH ","TFALPHA  ","TFFXI    ","TFFYI    ","TFFZI    ","TFMACH   ","TFMXI    ", &
+                               "TFMYI    ","TFMZI    ","TFRE     ","TFSTVXI  ","TFSTVYI  ","TFSTVZI  ","TFVINDXI ","TFVINDYI ", &
+                               "TFVINDZI ","TFVREL   ","TFVRELXI ","TFVRELYI ","TFVRELZI ","TFVUNDXI ","TFVUNDYI ","TFVUNDZI ", &
+                               "TWN1DYNP ","TWN1FBX  ","TWN1FBY  ","TWN1FBZ  ","TWN1FDX  ","TWN1FDY  ","TWN1M    ","TWN1MBX  ", &
+                               "TWN1MBY  ","TWN1MBZ  ","TWN1RE   ","TWN1STVX ","TWN1STVY ","TWN1STVZ ","TWN1VREL ","TWN1VUNDX", &
+                               "TWN1VUNDY","TWN1VUNDZ","TWN2DYNP ","TWN2FBX  ","TWN2FBY  ","TWN2FBZ  ","TWN2FDX  ","TWN2FDY  ", &
+                               "TWN2M    ","TWN2MBX  ","TWN2MBY  ","TWN2MBZ  ","TWN2RE   ","TWN2STVX ","TWN2STVY ","TWN2STVZ ", &
+                               "TWN2VREL ","TWN2VUNDX","TWN2VUNDY","TWN2VUNDZ","TWN3DYNP ","TWN3FBX  ","TWN3FBY  ","TWN3FBZ  ", &
+                               "TWN3FDX  ","TWN3FDY  ","TWN3M    ","TWN3MBX  ","TWN3MBY  ","TWN3MBZ  ","TWN3RE   ","TWN3STVX ", &
+                               "TWN3STVY ","TWN3STVZ ","TWN3VREL ","TWN3VUNDX","TWN3VUNDY","TWN3VUNDZ","TWN4DYNP ","TWN4FBX  ", &
+                               "TWN4FBY  ","TWN4FBZ  ","TWN4FDX  ","TWN4FDY  ","TWN4M    ","TWN4MBX  ","TWN4MBY  ","TWN4MBZ  ", &
+                               "TWN4RE   ","TWN4STVX ","TWN4STVY ","TWN4STVZ ","TWN4VREL ","TWN4VUNDX","TWN4VUNDY","TWN4VUNDZ", &
+                               "TWN5DYNP ","TWN5FBX  ","TWN5FBY  ","TWN5FBZ  ","TWN5FDX  ","TWN5FDY  ","TWN5M    ","TWN5MBX  ", &
+                               "TWN5MBY  ","TWN5MBZ  ","TWN5RE   ","TWN5STVX ","TWN5STVY ","TWN5STVZ ","TWN5VREL ","TWN5VUNDX", &
+                               "TWN5VUNDY","TWN5VUNDZ","TWN6DYNP ","TWN6FBX  ","TWN6FBY  ","TWN6FBZ  ","TWN6FDX  ","TWN6FDY  ", &
+                               "TWN6M    ","TWN6MBX  ","TWN6MBY  ","TWN6MBZ  ","TWN6RE   ","TWN6STVX ","TWN6STVY ","TWN6STVZ ", &
+                               "TWN6VREL ","TWN6VUNDX","TWN6VUNDY","TWN6VUNDZ","TWN7DYNP ","TWN7FBX  ","TWN7FBY  ","TWN7FBZ  ", &
+                               "TWN7FDX  ","TWN7FDY  ","TWN7M    ","TWN7MBX  ","TWN7MBY  ","TWN7MBZ  ","TWN7RE   ","TWN7STVX ", &
+                               "TWN7STVY ","TWN7STVZ ","TWN7VREL ","TWN7VUNDX","TWN7VUNDY","TWN7VUNDZ","TWN8DYNP ","TWN8FBX  ", &
+                               "TWN8FBY  ","TWN8FBZ  ","TWN8FDX  ","TWN8FDY  ","TWN8M    ","TWN8MBX  ","TWN8MBY  ","TWN8MBZ  ", &
+                               "TWN8RE   ","TWN8STVX ","TWN8STVY ","TWN8STVZ ","TWN8VREL ","TWN8VUNDX","TWN8VUNDY","TWN8VUNDZ", &
+                               "TWN9DYNP ","TWN9FBX  ","TWN9FBY  ","TWN9FBZ  ","TWN9FDX  ","TWN9FDY  ","TWN9M    ","TWN9MBX  ", &
+                               "TWN9MBY  ","TWN9MBZ  ","TWN9RE   ","TWN9STVX ","TWN9STVY ","TWN9STVZ ","TWN9VREL ","TWN9VUNDX", &
+                               "TWN9VUNDY","TWN9VUNDZ"/)
+   INTEGER(IntKi), PARAMETER :: ParamIndxAry(1594) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
+                                 B1AeroFx , B1AeroFxi ,  B1AeroFy , B1AeroFyi ,  B1AeroFz , B1AeroFzi ,  B1AeroMx , B1AeroMxi , &
+                                 B1AeroMy , B1AeroMyi ,  B1AeroMz , B1AeroMzi , B1AeroPwr , B1Azimuth ,  B1AeroFx , B1AeroFxi , &
+                                 B1AeroFy , B1AeroFyi ,  B1AeroFz , B1AeroFzi ,  B1AeroMx , B1AeroMxi ,  B1AeroMy , B1AeroMyi , &
+                                 B1AeroMz , B1AeroMzi , B1AeroPwr , B1N1Alpha , B1N1AxInd ,    B1N1Cd ,    B1N1Cl , B1N1Clrnc , &
                                    B1N1Cm ,    B1N1Cn , B1N1Cpmin ,    B1N1Ct , B1N1Curve ,    B1N1Cx ,    B1N1Cy ,  B1N1DynP , &
                                   B1N1Fbn ,   B1N1Fbs ,   B1N1Fbt ,    B1N1Fd ,    B1N1Fl ,    B1N1Fn ,    B1N1Ft ,    B1N1Fx , &
                                    B1N1Fy ,   B1N1Gam ,     B1N1M ,   B1N1Mbn ,   B1N1Mbs ,   B1N1Mbt ,    B1N1Mm ,   B1N1Phi , &
@@ -2130,10 +2131,10 @@ module AeroDyn_IO_Params
                                    B1N9Fy ,   B1N9Gam ,     B1N9M ,   B1N9Mbn ,   B1N9Mbs ,   B1N9Mbt ,    B1N9Mm ,   B1N9Phi , &
                                    B1N9Re , B1N9SgCav , B1N9SigCr ,  B1N9STVx ,  B1N9STVy ,  B1N9STVz , B1N9Theta , B1N9TnInd , &
                                 B1N9VDisx , B1N9VDisy , B1N9VDisz , B1N9Vindx , B1N9Vindy ,  B1N9VRel , B1N9VUndx , B1N9VUndy , &
-                                B1N9VUndz ,   B1Pitch ,  B2AeroFx , B2AeroFxg ,  B2AeroFy , B2AeroFyg ,  B2AeroFz , B2AeroFzg , &
-                                 B2AeroMx , B2AeroMxg ,  B2AeroMy , B2AeroMyg ,  B2AeroMz , B2AeroMzg , B2AeroPwr , B2Azimuth , &
-                                 B2AeroFx , B2AeroFxg ,  B2AeroFy , B2AeroFyg ,  B2AeroFz , B2AeroFzg ,  B2AeroMx , B2AeroMxg , &
-                                 B2AeroMy , B2AeroMyg ,  B2AeroMz , B2AeroMzg , B2AeroPwr , B2N1Alpha , B2N1AxInd ,    B2N1Cd , &
+                                B1N9VUndz ,   B1Pitch ,  B2AeroFx , B2AeroFxi ,  B2AeroFy , B2AeroFyi ,  B2AeroFz , B2AeroFzi , &
+                                 B2AeroMx , B2AeroMxi ,  B2AeroMy , B2AeroMyi ,  B2AeroMz , B2AeroMzi , B2AeroPwr , B2Azimuth , &
+                                 B2AeroFx , B2AeroFxi ,  B2AeroFy , B2AeroFyi ,  B2AeroFz , B2AeroFzi ,  B2AeroMx , B2AeroMxi , &
+                                 B2AeroMy , B2AeroMyi ,  B2AeroMz , B2AeroMzi , B2AeroPwr , B2N1Alpha , B2N1AxInd ,    B2N1Cd , &
                                    B2N1Cl , B2N1Clrnc ,    B2N1Cm ,    B2N1Cn , B2N1Cpmin ,    B2N1Ct , B2N1Curve ,    B2N1Cx , &
                                    B2N1Cy ,  B2N1DynP ,   B2N1Fbn ,   B2N1Fbs ,   B2N1Fbt ,    B2N1Fd ,    B2N1Fl ,    B2N1Fn , &
                                    B2N1Ft ,    B2N1Fx ,    B2N1Fy ,   B2N1Gam ,     B2N1M ,   B2N1Mbn ,   B2N1Mbs ,   B2N1Mbt , &
@@ -2185,10 +2186,10 @@ module AeroDyn_IO_Params
                                    B2N9Ft ,    B2N9Fx ,    B2N9Fy ,   B2N9Gam ,     B2N9M ,   B2N9Mbn ,   B2N9Mbs ,   B2N9Mbt , &
                                    B2N9Mm ,   B2N9Phi ,    B2N9Re , B2N9SgCav , B2N9SigCr ,  B2N9STVx ,  B2N9STVy ,  B2N9STVz , &
                                 B2N9Theta , B2N9TnInd , B2N9VDisx , B2N9VDisy , B2N9VDisz , B2N9Vindx , B2N9Vindy ,  B2N9VRel , &
-                                B2N9VUndx , B2N9VUndy , B2N9VUndz ,   B2Pitch ,  B3AeroFx , B3AeroFxg ,  B3AeroFy , B3AeroFyg , &
-                                 B3AeroFz , B3AeroFzg ,  B3AeroMx , B3AeroMxg ,  B3AeroMy , B3AeroMyg ,  B3AeroMz , B3AeroMzg , &
-                                B3AeroPwr , B3Azimuth ,  B3AeroFx , B3AeroFxg ,  B3AeroFy , B3AeroFyg ,  B3AeroFz , B3AeroFzg , &
-                                 B3AeroMx , B3AeroMxg ,  B3AeroMy , B3AeroMyg ,  B3AeroMz , B3AeroMzg , B3AeroPwr , B3N1Alpha , &
+                                B2N9VUndx , B2N9VUndy , B2N9VUndz ,   B2Pitch ,  B3AeroFx , B3AeroFxi ,  B3AeroFy , B3AeroFyi , &
+                                 B3AeroFz , B3AeroFzi ,  B3AeroMx , B3AeroMxi ,  B3AeroMy , B3AeroMyi ,  B3AeroMz , B3AeroMzi , &
+                                B3AeroPwr , B3Azimuth ,  B3AeroFx , B3AeroFxi ,  B3AeroFy , B3AeroFyi ,  B3AeroFz , B3AeroFzi , &
+                                 B3AeroMx , B3AeroMxi ,  B3AeroMy , B3AeroMyi ,  B3AeroMz , B3AeroMzi , B3AeroPwr , B3N1Alpha , &
                                 B3N1AxInd ,    B3N1Cd ,    B3N1Cl , B3N1Clrnc ,    B3N1Cm ,    B3N1Cn , B3N1Cpmin ,    B3N1Ct , &
                                 B3N1Curve ,    B3N1Cx ,    B3N1Cy ,  B3N1DynP ,   B3N1Fbn ,   B3N1Fbs ,   B3N1Fbt ,    B3N1Fd , &
                                    B3N1Fl ,    B3N1Fn ,    B3N1Ft ,    B3N1Fx ,    B3N1Fy ,   B3N1Gam ,     B3N1M ,   B3N1Mbn , &
@@ -2240,41 +2241,42 @@ module AeroDyn_IO_Params
                                    B3N9Fl ,    B3N9Fn ,    B3N9Ft ,    B3N9Fx ,    B3N9Fy ,   B3N9Gam ,     B3N9M ,   B3N9Mbn , &
                                   B3N9Mbs ,   B3N9Mbt ,    B3N9Mm ,   B3N9Phi ,    B3N9Re , B3N9SgCav , B3N9SigCr ,  B3N9STVx , &
                                  B3N9STVy ,  B3N9STVz , B3N9Theta , B3N9TnInd , B3N9VDisx , B3N9VDisy , B3N9VDisz , B3N9Vindx , &
-                                B3N9Vindy ,  B3N9VRel , B3N9VUndx , B3N9VUndy , B3N9VUndz ,   B3Pitch ,  B4AeroFx , B4AeroFxg , &
-                                 B4AeroFy , B4AeroFyg ,  B4AeroFz , B4AeroFzg ,  B4AeroMx , B4AeroMxg ,  B4AeroMy , B4AeroMyg , &
-                                 B4AeroMz , B4AeroMzg , B4AeroPwr ,  B4AeroFx , B4AeroFxg ,  B4AeroFy , B4AeroFyg ,  B4AeroFz , &
-                                B4AeroFzg ,  B4AeroMx , B4AeroMxg ,  B4AeroMy , B4AeroMyg ,  B4AeroMz , B4AeroMzg , B4AeroPwr , &
+                                B3N9Vindy ,  B3N9VRel , B3N9VUndx , B3N9VUndy , B3N9VUndz ,   B3Pitch ,  B4AeroFx , B4AeroFxi , &
+                                 B4AeroFy , B4AeroFyi ,  B4AeroFz , B4AeroFzi ,  B4AeroMx , B4AeroMxi ,  B4AeroMy , B4AeroMyi , &
+                                 B4AeroMz , B4AeroMzi , B4AeroPwr ,  B4AeroFx , B4AeroFxi ,  B4AeroFy , B4AeroFyi ,  B4AeroFz , &
+                                B4AeroFzi ,  B4AeroMx , B4AeroMxi ,  B4AeroMy , B4AeroMyi ,  B4AeroMz , B4AeroMzi , B4AeroPwr , &
                                  DBEMTau1 ,     HbFbx ,     HbFby ,     HbFbz ,     HbMbx ,     HbMby ,     HbMbz ,     NcFbx , &
                                     NcFby ,     NcFbz ,     NcMbx ,     NcMby ,     NcMbz ,  RtAeroCp ,  RtAeroCq ,  RtAeroCt , &
-                                RtAeroFxg , RtAeroFxh , RtAeroFyg , RtAeroFyh , RtAeroFzg , RtAeroFzh , RtAeroMxg , RtAeroMxh , &
-                                RtAeroMyg , RtAeroMyh , RtAeroMzg , RtAeroMzh , RtAeroPwr ,    RtArea ,  RtAeroCp ,  RtAeroCq , &
-                                 RtAeroCt , RtAeroFxg , RtAeroFxh , RtAeroFyg , RtAeroFyh , RtAeroFzg , RtAeroFzh , RtAeroMxg , &
-                                RtAeroMxh , RtAeroMyg , RtAeroMyh , RtAeroMzg , RtAeroMzh , RtAeroPwr ,    RtSkew ,   RtSpeed , &
-                                    RtTSR ,  RtVAvgxh ,  RtVAvgyh ,  RtVAvgzh ,   TFAlpha ,     TFFxi ,     TFFyi ,     TFFzi , &
-                                TFMach    ,     TFMxi ,     TFMyi ,     TFMzi ,   TFRe    ,   TFSTVxi ,   TFSTVyi ,   TFSTVzi , &
-                                 TFVindxi ,  TFVindyi ,  TFVindzi ,   TFVrel  ,  TFVrelxi ,  TFVrelyi ,  TFVrelzi ,  TFVundxi , &
-                                 TFVundyi ,  TFVundzi ,  TwN1DynP ,   TwN1Fbx ,   TwN1Fby ,   TwN1Fbz ,   TwN1Fdx ,   TwN1Fdy , &
-                                    TwN1M ,   TwN1Mbx ,   TwN1Mby ,   TwN1Mbz ,    TwN1Re ,  TwN1STVx ,  TwN1STVy ,  TwN1STVz , &
-                                 TwN1Vrel , TwN1VUndx , TwN1VUndy , TwN1VUndz ,  TwN2DynP ,   TwN2Fbx ,   TwN2Fby ,   TwN2Fbz , &
-                                  TwN2Fdx ,   TwN2Fdy ,     TwN2M ,   TwN2Mbx ,   TwN2Mby ,   TwN2Mbz ,    TwN2Re ,  TwN2STVx , &
-                                 TwN2STVy ,  TwN2STVz ,  TwN2Vrel , TwN2VUndx , TwN2VUndy , TwN2VUndz ,  TwN3DynP ,   TwN3Fbx , &
-                                  TwN3Fby ,   TwN3Fbz ,   TwN3Fdx ,   TwN3Fdy ,     TwN3M ,   TwN3Mbx ,   TwN3Mby ,   TwN3Mbz , &
-                                   TwN3Re ,  TwN3STVx ,  TwN3STVy ,  TwN3STVz ,  TwN3Vrel , TwN3VUndx , TwN3VUndy , TwN3VUndz , &
-                                 TwN4DynP ,   TwN4Fbx ,   TwN4Fby ,   TwN4Fbz ,   TwN4Fdx ,   TwN4Fdy ,     TwN4M ,   TwN4Mbx , &
-                                  TwN4Mby ,   TwN4Mbz ,    TwN4Re ,  TwN4STVx ,  TwN4STVy ,  TwN4STVz ,  TwN4Vrel , TwN4VUndx , &
-                                TwN4VUndy , TwN4VUndz ,  TwN5DynP ,   TwN5Fbx ,   TwN5Fby ,   TwN5Fbz ,   TwN5Fdx ,   TwN5Fdy , &
-                                    TwN5M ,   TwN5Mbx ,   TwN5Mby ,   TwN5Mbz ,    TwN5Re ,  TwN5STVx ,  TwN5STVy ,  TwN5STVz , &
-                                 TwN5Vrel , TwN5VUndx , TwN5VUndy , TwN5VUndz ,  TwN6DynP ,   TwN6Fbx ,   TwN6Fby ,   TwN6Fbz , &
-                                  TwN6Fdx ,   TwN6Fdy ,     TwN6M ,   TwN6Mbx ,   TwN6Mby ,   TwN6Mbz ,    TwN6Re ,  TwN6STVx , &
-                                 TwN6STVy ,  TwN6STVz ,  TwN6Vrel , TwN6VUndx , TwN6VUndy , TwN6VUndz ,  TwN7DynP ,   TwN7Fbx , &
-                                  TwN7Fby ,   TwN7Fbz ,   TwN7Fdx ,   TwN7Fdy ,     TwN7M ,   TwN7Mbx ,   TwN7Mby ,   TwN7Mbz , &
-                                   TwN7Re ,  TwN7STVx ,  TwN7STVy ,  TwN7STVz ,  TwN7Vrel , TwN7VUndx , TwN7VUndy , TwN7VUndz , &
-                                 TwN8DynP ,   TwN8Fbx ,   TwN8Fby ,   TwN8Fbz ,   TwN8Fdx ,   TwN8Fdy ,     TwN8M ,   TwN8Mbx , &
-                                  TwN8Mby ,   TwN8Mbz ,    TwN8Re ,  TwN8STVx ,  TwN8STVy ,  TwN8STVz ,  TwN8Vrel , TwN8VUndx , &
-                                TwN8VUndy , TwN8VUndz ,  TwN9DynP ,   TwN9Fbx ,   TwN9Fby ,   TwN9Fbz ,   TwN9Fdx ,   TwN9Fdy , &
-                                    TwN9M ,   TwN9Mbx ,   TwN9Mby ,   TwN9Mbz ,    TwN9Re ,  TwN9STVx ,  TwN9STVy ,  TwN9STVz , &
-                                 TwN9Vrel , TwN9VUndx , TwN9VUndy , TwN9VUndz /)
-   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(1588) =  (/  &  ! This lists the units corresponding to the allowed parameters
+                                RtAeroFxh , RtAeroFxi , RtAeroFyh , RtAeroFyi , RtAeroFzh , RtAeroFzi , RtAeroMxh , RtAeroMxi , &
+                                RtAeroMyh , RtAeroMyi , RtAeroMzh , RtAeroMzi , RtAeroPwr ,    RtArea ,  RtAeroCp ,  RtAeroCq , &
+                                 RtAeroCt , RtAeroFxi , RtAeroFxh , RtAeroFxi , RtAeroFyi , RtAeroFyh , RtAeroFyi , RtAeroFzi , &
+                                RtAeroFzh , RtAeroFzi , RtAeroMxi , RtAeroMxh , RtAeroMxi , RtAeroMyi , RtAeroMyh , RtAeroMyi , &
+                                RtAeroMzi , RtAeroMzh , RtAeroMzi , RtAeroPwr ,    RtSkew ,   RtSpeed ,     RtTSR ,  RtVAvgxh , &
+                                 RtVAvgyh ,  RtVAvgzh ,   TFAlpha ,     TFFxi ,     TFFyi ,     TFFzi , TFMach    ,     TFMxi , &
+                                    TFMyi ,     TFMzi ,   TFRe    ,   TFSTVxi ,   TFSTVyi ,   TFSTVzi ,  TFVindxi ,  TFVindyi , &
+                                 TFVindzi ,   TFVrel  ,  TFVrelxi ,  TFVrelyi ,  TFVrelzi ,  TFVundxi ,  TFVundyi ,  TFVundzi , &
+                                 TwN1DynP ,   TwN1Fbx ,   TwN1Fby ,   TwN1Fbz ,   TwN1Fdx ,   TwN1Fdy ,     TwN1M ,   TwN1Mbx , &
+                                  TwN1Mby ,   TwN1Mbz ,    TwN1Re ,  TwN1STVx ,  TwN1STVy ,  TwN1STVz ,  TwN1Vrel , TwN1VUndx , &
+                                TwN1VUndy , TwN1VUndz ,  TwN2DynP ,   TwN2Fbx ,   TwN2Fby ,   TwN2Fbz ,   TwN2Fdx ,   TwN2Fdy , &
+                                    TwN2M ,   TwN2Mbx ,   TwN2Mby ,   TwN2Mbz ,    TwN2Re ,  TwN2STVx ,  TwN2STVy ,  TwN2STVz , &
+                                 TwN2Vrel , TwN2VUndx , TwN2VUndy , TwN2VUndz ,  TwN3DynP ,   TwN3Fbx ,   TwN3Fby ,   TwN3Fbz , &
+                                  TwN3Fdx ,   TwN3Fdy ,     TwN3M ,   TwN3Mbx ,   TwN3Mby ,   TwN3Mbz ,    TwN3Re ,  TwN3STVx , &
+                                 TwN3STVy ,  TwN3STVz ,  TwN3Vrel , TwN3VUndx , TwN3VUndy , TwN3VUndz ,  TwN4DynP ,   TwN4Fbx , &
+                                  TwN4Fby ,   TwN4Fbz ,   TwN4Fdx ,   TwN4Fdy ,     TwN4M ,   TwN4Mbx ,   TwN4Mby ,   TwN4Mbz , &
+                                   TwN4Re ,  TwN4STVx ,  TwN4STVy ,  TwN4STVz ,  TwN4Vrel , TwN4VUndx , TwN4VUndy , TwN4VUndz , &
+                                 TwN5DynP ,   TwN5Fbx ,   TwN5Fby ,   TwN5Fbz ,   TwN5Fdx ,   TwN5Fdy ,     TwN5M ,   TwN5Mbx , &
+                                  TwN5Mby ,   TwN5Mbz ,    TwN5Re ,  TwN5STVx ,  TwN5STVy ,  TwN5STVz ,  TwN5Vrel , TwN5VUndx , &
+                                TwN5VUndy , TwN5VUndz ,  TwN6DynP ,   TwN6Fbx ,   TwN6Fby ,   TwN6Fbz ,   TwN6Fdx ,   TwN6Fdy , &
+                                    TwN6M ,   TwN6Mbx ,   TwN6Mby ,   TwN6Mbz ,    TwN6Re ,  TwN6STVx ,  TwN6STVy ,  TwN6STVz , &
+                                 TwN6Vrel , TwN6VUndx , TwN6VUndy , TwN6VUndz ,  TwN7DynP ,   TwN7Fbx ,   TwN7Fby ,   TwN7Fbz , &
+                                  TwN7Fdx ,   TwN7Fdy ,     TwN7M ,   TwN7Mbx ,   TwN7Mby ,   TwN7Mbz ,    TwN7Re ,  TwN7STVx , &
+                                 TwN7STVy ,  TwN7STVz ,  TwN7Vrel , TwN7VUndx , TwN7VUndy , TwN7VUndz ,  TwN8DynP ,   TwN8Fbx , &
+                                  TwN8Fby ,   TwN8Fbz ,   TwN8Fdx ,   TwN8Fdy ,     TwN8M ,   TwN8Mbx ,   TwN8Mby ,   TwN8Mbz , &
+                                   TwN8Re ,  TwN8STVx ,  TwN8STVy ,  TwN8STVz ,  TwN8Vrel , TwN8VUndx , TwN8VUndy , TwN8VUndz , &
+                                 TwN9DynP ,   TwN9Fbx ,   TwN9Fby ,   TwN9Fbz ,   TwN9Fdx ,   TwN9Fdy ,     TwN9M ,   TwN9Mbx , &
+                                  TwN9Mby ,   TwN9Mbz ,    TwN9Re ,  TwN9STVx ,  TwN9STVy ,  TwN9STVz ,  TwN9Vrel , TwN9VUndx , &
+                                TwN9VUndy , TwN9VUndz /)
+   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(1594) =  (/ character(ChanLen) :: &  ! This lists the units corresponding to the allowed parameters
                                "(N)    ","(N)    ","(N)    ","(N)    ","(N)    ","(N)    ","(N-m)  ","(N-m)  ", &
                                "(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ","(W)    ","(deg)  ","(N)    ","(N)    ", &
                                "(N)    ","(N)    ","(N)    ","(N)    ","(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ", &
@@ -2448,18 +2450,12 @@ module AeroDyn_IO_Params
                                "(N)    ","(N)    ","(N-m)  ","(N-m)  ","(N-m)  ","(-)    ","(-)    ","(-)    ", &
                                "(N)    ","(N)    ","(N)    ","(N)    ","(N)    ","(N)    ","(N-m)  ","(N-m)  ", &
                                "(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ","(W)    ","(m^2)  ","(-)    ","(-)    ", &
-                               "(-)    ","(N)    ","(N)    ","(N)    ","(N)    ","(N)    ","(N)    ","(N-m)  ", &
-                               "(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ","(W)    ","(deg)  ","(rpm)  ", &
-                               "(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(deg)  ","(N)    ","(N)    ","(N)    ", &
-                               "(-)    ","(N-m)  ","(N-m)  ","(N-m)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(-)    ","(N)    ","(N)    ","(N)    ","(N)    ","(N)    ","(N)    ","(N)    ", &
+                               "(N)    ","(N)    ","(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ","(N-m)  ", &
+                               "(N-m)  ","(N-m)  ","(N-m)  ","(W)    ","(deg)  ","(rpm)  ","(-)    ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(deg)  ","(N)    ","(N)    ","(N)    ","(-)    ","(N-m)  ", &
+                               "(N-m)  ","(N-m)  ","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ", &
-                               "(N/m)  ","(N/m)  ","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(-)    ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ", &
-                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)", &
-                               "(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(-)    ","(N-m/m)", &
                                "(N-m/m)","(N-m/m)","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
@@ -2473,7 +2469,14 @@ module AeroDyn_IO_Params
                                "(N-m/m)","(N-m/m)","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
                                "(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ", &
                                "(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ", &
-                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  "/)
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)","(-)    ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(Pa)   ","(N/m)  ", &
+                               "(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(-)    ","(N-m/m)","(N-m/m)","(N-m/m)", &
+                               "(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(Pa)   ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(N/m)  ","(-)    ","(N-m/m)", &
+                               "(N-m/m)","(N-m/m)","(-)    ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ","(m/s)  ", &
+                               "(m/s)  ","(m/s)  "/)
 
 
 end module AeroDyn_IO_Params
