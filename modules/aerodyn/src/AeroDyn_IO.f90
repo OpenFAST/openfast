@@ -2140,10 +2140,11 @@ subroutine calcCantAngle(f, xi,stencilSize,n,cantAngle)
     implicit none
     integer(IntKi), intent(in)  :: stencilSize, n 
     integer(IntKi)              :: i, j
+    integer(IntKi)              :: sortInd(n)
     integer(IntKi)              :: info
     real(ReKi),  intent(in)     :: f(n), xi(n)
     real(ReKi)                  :: cx(stencilSize), cf(stencilSize), xiIn(stencilSize)
-    real(ReKi)                  :: fIn(stencilSize), cPrime(n), fPrime(n)
+    real(ReKi)                  :: fIn(stencilSize), cPrime(n), fPrime(n), xiAbs(n)
     real(ReKi), intent(inout)   :: cantAngle(n)
     real(ReKi), parameter       :: ThisTol = 1e-6
     
