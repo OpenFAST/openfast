@@ -38,6 +38,7 @@ matlab_add_mex(
     $<TARGET_FILE:elastodynlib>
     $<TARGET_FILE:extptfm_mckflib>
     $<TARGET_FILE:feamlib>
+    $<TARGET_FILE:extinflowtypeslib>
     $<TARGET_FILE:hydrodynlib>
     $<TARGET_FILE:icedynlib>
     $<TARGET_FILE:icefloelib>
@@ -49,6 +50,7 @@ matlab_add_mex(
     $<TARGET_FILE:servodynlib-matlab> # MATLAB Specific
     $<TARGET_FILE:subdynlib>
     $<TARGET_FILE:openfast_prelib>
+    $<TARGET_FILE:extinflowlib>
     $<TARGET_FILE:scfastlib>
     ${LAPACK_LIBRARIES} 
     ${CMAKE_DL_LIBS} 
