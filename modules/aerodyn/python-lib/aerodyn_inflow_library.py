@@ -38,7 +38,6 @@ from ctypes import (
     c_char_p,
     c_wchar,
     c_wchar_p,
-    c_bool
 )
 import numpy as np
 import datetime
@@ -100,8 +99,8 @@ class AeroDynInflowLib(CDLL):
         self.MSL2SWL     =       0.0  # Offset between still-water level and mean sea level (m) [positive upward]
 
         # flags 
-        self.storeHHVel  = False
-        self.transposeDCM= False
+        self.storeHHVel  = 1          # 0=false, 1=true
+        self.transposeDCM= 1          # 0=false, 1=true
 
         # VTK
         self.WrVTK       = 0          # default of no vtk output
@@ -166,6 +165,7 @@ class AeroDynInflowLib(CDLL):
         # initialize data storage in library for multiple turbines
         self.ADI_C_PreInit.argtypes = [
             POINTER(c_int),                     # numTurbines
+            POINTER(c_int),                     # transposeDCM
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
         ]
@@ -191,10 +191,10 @@ class AeroDynInflowLib(CDLL):
 
         # initialize ADI with data set by PreInit and SetupRotor
         self.ADI_C_Init.argtypes = [
-            POINTER(c_bool),                    # AD input file passed as string
+            POINTER(c_int),                     # AD input file passed as string
             POINTER(c_char_p),                  # AD input file as string
             POINTER(c_int),                     # AD input file string length
-            POINTER(c_bool),                    # IfW input file passed as string
+            POINTER(c_int),                     # IfW input file passed as string
             POINTER(c_char_p),                  # IfW input file as string
             POINTER(c_int),                     # IfW input file string length
             POINTER(c_char),                    # OutRootName 
@@ -210,8 +210,7 @@ class AeroDynInflowLib(CDLL):
             POINTER(c_int),                     # InterpOrder 
             POINTER(c_double),                  # dt
             POINTER(c_double),                  # tmax 
-            POINTER(c_bool),                    # storeHHVel
-            POINTER(c_bool),                    # transposeDCM
+            POINTER(c_int),                     # storeHHVel
             POINTER(c_int),                     # WrVTK
             POINTER(c_int),                     # WrVTK_Type
             POINTER(c_float),                   # VTKNacDim
@@ -297,6 +296,7 @@ class AeroDynInflowLib(CDLL):
         # call ADI_C_PreInit
         self.ADI_C_PreInit(
             byref(c_int(self.numTurbines)),         # IN: numTurbines
+            byref(c_int(self.transposeDCM)),        # IN: transposeDCM
             byref(self.error_status_c),             # OUT: ErrStat_C
             self.error_message_c                    # OUT: ErrMsg_C
          )
@@ -373,10 +373,10 @@ class AeroDynInflowLib(CDLL):
 
         # call ADI_C_Init
         self.ADI_C_Init(
-            byref(c_bool(self.ADinputPass)),        # IN: AD input file is passed
+            byref(c_int(self.ADinputPass)),         # IN: AD input file is passed
             c_char_p(AD_input_string),              # IN: AD input file as string (or filename if ADinputPass is false)
             byref(c_int(AD_input_string_length)),   # IN: AD input file string length
-            byref(c_bool(self.IfWinputPass)),       # IN: IfW input file is passed
+            byref(c_int(self.IfWinputPass)),        # IN: IfW input file is passed
             c_char_p(IfW_input_string),             # IN: IfW input file as string (or filename if IfWinputPass is false)
             byref(c_int(IfW_input_string_length)),  # IN: IfW input file string length
             _outRootName_c,                         # IN: rootname for ADI file writing
@@ -392,8 +392,7 @@ class AeroDynInflowLib(CDLL):
             byref(c_int(self.InterpOrder)),         # IN: InterpOrder (1: linear, 2: quadratic)
             byref(c_double(self.dt)),               # IN: time step (dt)
             byref(c_double(self.tmax)),             # IN: tmax
-            byref(c_bool(self.storeHHVel)),         # IN: storeHHVel
-            byref(c_bool(self.transposeDCM)),       # IN: transposeDCM
+            byref(c_int(self.storeHHVel)),          # IN: storeHHVel
             byref(c_int(self.WrVTK)),               # IN: WrVTK
             byref(c_int(self.WrVTK_Type)),          # IN: WrVTK_Type
             VTKNacDim_c,                            # IN: VTKNacDim
