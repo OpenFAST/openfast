@@ -89,6 +89,10 @@ jobs:
         uses: actions/checkout@main
         with:
           submodules: recursive
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev
       - name: Setup workspace
         run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure build
