@@ -39,6 +39,7 @@ set(MEX_LIBS
   $<TARGET_FILE:extinflowtypeslib>
   $<TARGET_FILE:versioninfolib>
   $<TARGET_FILE:nwtclibs-matlab>    # MATLAB Specific
+  $<TARGET_FILE:seastatelib>
 )
 
 # Build the matlab shared library (mex) using the current toolchain.
