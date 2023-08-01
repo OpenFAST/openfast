@@ -33,10 +33,10 @@ set(MEX_LIBS
   $<TARGET_FILE:sctypeslib>
   $<TARGET_FILE:servodynlib-matlab> # MATLAB Specific
   $<TARGET_FILE:subdynlib>
-  $<TARGET_FILE:foamfastlib>
+  $<TARGET_FILE:extinflowlib>
   $<TARGET_FILE:ifwlib>
   $<TARGET_FILE:scfastlib>
-  $<TARGET_FILE:foamtypeslib>
+  $<TARGET_FILE:extinflowtypeslib>
   $<TARGET_FILE:versioninfolib>
   $<TARGET_FILE:nwtclibs-matlab>    # MATLAB Specific
 )
