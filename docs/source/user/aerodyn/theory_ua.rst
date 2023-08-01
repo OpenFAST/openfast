@@ -45,8 +45,8 @@ the inputs present in the profile input file (including some of the ones repeate
 
 The airfoil section coordinate system and main variables are presented in :numref:`fig:UAAirfoilSystem` and further described below:
 
-.. figure:: figs/UAAirfoilSystem.png
-   :width: 60%
+.. figure:: figs/UAAirfoilSystem.svg
+   :width: 70%
    :name: fig:UAAirfoilSystem
            
    Definition of aifoil section coordinate system used in the unsteady aerodynamics module
