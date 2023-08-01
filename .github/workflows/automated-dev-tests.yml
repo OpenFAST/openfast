@@ -617,6 +617,7 @@ jobs:
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
             !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
 
+
   rtest-OF-simulink:
     runs-on: ubuntu-22.04
     needs: build-openfast-release
@@ -629,7 +630,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev libopenblas-dev libopenblas-openmp-dev
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v1
       - name: Build FAST_SFunc
@@ -642,7 +643,8 @@ jobs:
           source-folder: ${{runner.workspace}}/openfast/build/glue-codes/simulink; ${{runner.workspace}}/openfast/glue-codes/simulink/examples
           test-results-junit: test-results/results.xml
           code-coverage-cobertura: code-coverage/coverage.xml
-          
+
+
   rtest-OF-5MW_OC4Semi_WSt_WavesWN:
     runs-on: ubuntu-22.04
     needs: build-openfast-release
