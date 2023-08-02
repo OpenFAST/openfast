@@ -2964,6 +2964,8 @@ void fast::OpenFAST::get_ref_positions_from_openfast(int iTurb) {
         for (int i=0; i < 3; i++) {
             brFSIData[iTurb][fast::STATE_NP1].hub_ref_pos[i] = extld_i_f_FAST[iTurb].hubRefPos[i] + turbineData[iTurb].TurbineBasePos[i];
             brFSIData[iTurb][fast::STATE_NP1].nac_ref_pos[i] = extld_i_f_FAST[iTurb].nacRefPos[i] + turbineData[iTurb].TurbineBasePos[i];
+            brFSIData[iTurb][fast::STATE_NP1].hub_ref_pos[i+3] = extld_i_f_FAST[iTurb].hubRefPos[i+3];
+            brFSIData[iTurb][fast::STATE_NP1].nac_ref_pos[i+3] = extld_i_f_FAST[iTurb].nacRefPos[i+3];
         }
 
         int nBlades = turbineData[iTurb].numBlades;
