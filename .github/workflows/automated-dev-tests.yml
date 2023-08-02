@@ -636,6 +636,9 @@ jobs:
       - name: Build FAST_SFunc
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
+          cmake \
+            -DBLA_STATIC:BOOL=ON \
+            ${GITHUB_WORKSPACE}
           cmake --build . --target FAST_SFunc
       - name: Run MATLAB tests and generate artifacts
         uses: matlab-actions/run-tests@v1
