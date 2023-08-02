@@ -101,6 +101,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: NacelleOrientation      !< DCM reference orientation of nacelle [-]
     INTEGER(IntKi)  :: AeroProjMod = 1      !< Flag to switch between different projection models [-]
     INTEGER(IntKi)  :: AeroBEM_Mod = -1      !< Flag to switch between different BEM Model [-]
+    REAL(ReKi)  :: RotSpeed      !< Rotor speed used when AeroDyn is computing aero maps [rad/s]
   END TYPE RotInitInputType
 ! =======================
 ! =========  AD_InitInputType  =======
@@ -111,6 +112,7 @@ IMPLICIT NONE
     LOGICAL  :: UsePrimaryInputFile = .TRUE.      !< Read input file instead of passed data [-]
     TYPE(FileInfoType)  :: PassedPrimaryInputData      !< Primary input file as FileInfoType (set by driver/glue code) [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
+    LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false) [-]
     REAL(ReKi)  :: Gravity      !< Gravity force [Nm/s^2]
     INTEGER(IntKi)  :: MHK      !< MHK turbine type switch [-]
     REAL(ReKi)  :: defFldDens      !< Default fluid density from the driver; may be overwritten [kg/m^3]
@@ -457,6 +459,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: InflowOnHub      !< U,V,W at hub [m/s]
     REAL(ReKi) , DIMENSION(1:3)  :: InflowOnNacelle      !< U,V,W at nacelle [m/s]
     REAL(ReKi) , DIMENSION(1:3)  :: InflowOnTailFin      !< U,V,W at tailfin [m/s]
+    REAL(ReKi) , DIMENSION(1:3)  :: AvgDiskVel      !< disk-averaged U,V,W [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: UserProp      !< Optional user property for interpolating airfoils (per element per blade) [-]
   END TYPE RotInputType
 ! =======================
@@ -1436,6 +1439,7 @@ ENDIF
     DstRotInitInputTypeData%NacelleOrientation = SrcRotInitInputTypeData%NacelleOrientation
     DstRotInitInputTypeData%AeroProjMod = SrcRotInitInputTypeData%AeroProjMod
     DstRotInitInputTypeData%AeroBEM_Mod = SrcRotInitInputTypeData%AeroBEM_Mod
+    DstRotInitInputTypeData%RotSpeed = SrcRotInitInputTypeData%RotSpeed
  END SUBROUTINE AD_CopyRotInitInputType
 
  SUBROUTINE AD_DestroyRotInitInputType( RotInitInputTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -1519,6 +1523,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + SIZE(InData%NacelleOrientation)  ! NacelleOrientation
       Int_BufSz  = Int_BufSz  + 1  ! AeroProjMod
       Int_BufSz  = Int_BufSz  + 1  ! AeroBEM_Mod
+      Re_BufSz   = Re_BufSz   + 1  ! RotSpeed
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1617,6 +1622,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%AeroBEM_Mod
     Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%RotSpeed
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE AD_PackRotInitInputType
 
  SUBROUTINE AD_UnPackRotInitInputType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1737,6 +1744,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%AeroBEM_Mod = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%RotSpeed = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE AD_UnPackRotInitInputType
 
  SUBROUTINE AD_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
@@ -1777,6 +1786,7 @@ ENDIF
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     DstInitInputData%Linearize = SrcInitInputData%Linearize
+    DstInitInputData%CompAeroMaps = SrcInitInputData%CompAeroMaps
     DstInitInputData%Gravity = SrcInitInputData%Gravity
     DstInitInputData%MHK = SrcInitInputData%MHK
     DstInitInputData%defFldDens = SrcInitInputData%defFldDens
@@ -1900,6 +1910,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
+      Int_BufSz  = Int_BufSz  + 1  ! CompAeroMaps
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
       Int_BufSz  = Int_BufSz  + 1  ! MHK
       Re_BufSz   = Re_BufSz   + 1  ! defFldDens
@@ -2016,6 +2027,8 @@ ENDIF
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Linearize, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%CompAeroMaps, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%Gravity
     Re_Xferred = Re_Xferred + 1
@@ -2171,6 +2184,8 @@ ENDIF
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     OutData%Linearize = TRANSFER(IntKiBuf(Int_Xferred), OutData%Linearize)
+    Int_Xferred = Int_Xferred + 1
+    OutData%CompAeroMaps = TRANSFER(IntKiBuf(Int_Xferred), OutData%CompAeroMaps)
     Int_Xferred = Int_Xferred + 1
     OutData%Gravity = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
@@ -15894,6 +15909,7 @@ ENDIF
     DstRotInputTypeData%InflowOnHub = SrcRotInputTypeData%InflowOnHub
     DstRotInputTypeData%InflowOnNacelle = SrcRotInputTypeData%InflowOnNacelle
     DstRotInputTypeData%InflowOnTailFin = SrcRotInputTypeData%InflowOnTailFin
+    DstRotInputTypeData%AvgDiskVel = SrcRotInputTypeData%AvgDiskVel
 IF (ALLOCATED(SrcRotInputTypeData%UserProp)) THEN
   i1_l = LBOUND(SrcRotInputTypeData%UserProp,1)
   i1_u = UBOUND(SrcRotInputTypeData%UserProp,1)
@@ -16127,6 +16143,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%InflowOnHub)  ! InflowOnHub
       Re_BufSz   = Re_BufSz   + SIZE(InData%InflowOnNacelle)  ! InflowOnNacelle
       Re_BufSz   = Re_BufSz   + SIZE(InData%InflowOnTailFin)  ! InflowOnTailFin
+      Re_BufSz   = Re_BufSz   + SIZE(InData%AvgDiskVel)  ! AvgDiskVel
   Int_BufSz   = Int_BufSz   + 1     ! UserProp allocated yes/no
   IF ( ALLOCATED(InData%UserProp) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! UserProp upper/lower bounds for each dimension
@@ -16408,6 +16425,10 @@ ENDIF
     END DO
     DO i1 = LBOUND(InData%InflowOnTailFin,1), UBOUND(InData%InflowOnTailFin,1)
       ReKiBuf(Re_Xferred) = InData%InflowOnTailFin(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%AvgDiskVel,1), UBOUND(InData%AvgDiskVel,1)
+      ReKiBuf(Re_Xferred) = InData%AvgDiskVel(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
   IF ( .NOT. ALLOCATED(InData%UserProp) ) THEN
@@ -16800,6 +16821,12 @@ ENDIF
     i1_u = UBOUND(OutData%InflowOnTailFin,1)
     DO i1 = LBOUND(OutData%InflowOnTailFin,1), UBOUND(OutData%InflowOnTailFin,1)
       OutData%InflowOnTailFin(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%AvgDiskVel,1)
+    i1_u = UBOUND(OutData%AvgDiskVel,1)
+    DO i1 = LBOUND(OutData%AvgDiskVel,1), UBOUND(OutData%AvgDiskVel,1)
+      OutData%AvgDiskVel(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! UserProp not allocated
@@ -18311,6 +18338,12 @@ END IF ! check if allocated
   END DO
   ENDDO
   DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+  DO i1 = LBOUND(u_out%rotors(i01)%AvgDiskVel,1),UBOUND(u_out%rotors(i01)%AvgDiskVel,1)
+    b = -(u1%rotors(i01)%AvgDiskVel(i1) - u2%rotors(i01)%AvgDiskVel(i1))
+    u_out%rotors(i01)%AvgDiskVel(i1) = u1%rotors(i01)%AvgDiskVel(i1) + b * ScaleFactor
+  END DO
+  ENDDO
+  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
 IF (ALLOCATED(u_out%rotors(i01)%UserProp) .AND. ALLOCATED(u1%rotors(i01)%UserProp)) THEN
   DO i2 = LBOUND(u_out%rotors(i01)%UserProp,2),UBOUND(u_out%rotors(i01)%UserProp,2)
     DO i1 = LBOUND(u_out%rotors(i01)%UserProp,1),UBOUND(u_out%rotors(i01)%UserProp,1)
@@ -18466,6 +18499,13 @@ END IF ! check if allocated
     b = (t(3)**2*(u1%rotors(i01)%InflowOnTailFin(i1) - u2%rotors(i01)%InflowOnTailFin(i1)) + t(2)**2*(-u1%rotors(i01)%InflowOnTailFin(i1) + u3%rotors(i01)%InflowOnTailFin(i1)))* scaleFactor
     c = ( (t(2)-t(3))*u1%rotors(i01)%InflowOnTailFin(i1) + t(3)*u2%rotors(i01)%InflowOnTailFin(i1) - t(2)*u3%rotors(i01)%InflowOnTailFin(i1) ) * scaleFactor
     u_out%rotors(i01)%InflowOnTailFin(i1) = u1%rotors(i01)%InflowOnTailFin(i1) + b  + c * t_out
+  END DO
+  ENDDO
+  DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)
+  DO i1 = LBOUND(u_out%rotors(i01)%AvgDiskVel,1),UBOUND(u_out%rotors(i01)%AvgDiskVel,1)
+    b = (t(3)**2*(u1%rotors(i01)%AvgDiskVel(i1) - u2%rotors(i01)%AvgDiskVel(i1)) + t(2)**2*(-u1%rotors(i01)%AvgDiskVel(i1) + u3%rotors(i01)%AvgDiskVel(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%rotors(i01)%AvgDiskVel(i1) + t(3)*u2%rotors(i01)%AvgDiskVel(i1) - t(2)*u3%rotors(i01)%AvgDiskVel(i1) ) * scaleFactor
+    u_out%rotors(i01)%AvgDiskVel(i1) = u1%rotors(i01)%AvgDiskVel(i1) + b  + c * t_out
   END DO
   ENDDO
   DO i01 = LBOUND(u_out%rotors,1),UBOUND(u_out%rotors,1)

@@ -462,7 +462,6 @@ logical function have_nan(p, m, x, z, u, label)
    character(len=*),                intent(in) :: label !< label for print
    integer :: iW
    have_nan=.False.
-!bjj: If we used Is_NaN (or a version of it for this data type) instead of isnan, I'd get fewer compiler warnings that "Fortran 2003 does not allow this intrinsic procedure."
    do iW = 1,size(p%W)
       if (any(isnan(x%W(iW)%r_NW))) then
          print*,trim(label),'NaN in W(iW)%r_NW'//trim(num2lstr(iW))
@@ -481,11 +480,11 @@ logical function have_nan(p, m, x, z, u, label)
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Eps_NW))) then
-         print*,trim(label),'NaN in E_NW'
+         print*,trim(label),'NaN in E_NW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Eps_FW))) then
-         print*,trim(label),'NaN in E_FW'
+         print*,trim(label),'NaN in E_FW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(z%W(iW)%Gamma_LL))) then

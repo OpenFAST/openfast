@@ -341,7 +341,26 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 !FIXME: add handling for passing of blade files and other types of files.
    call ReadInputFiles( InitInp%InputFile, InputFileData, interval, p%RootName, NumBlades, AeroProjMod, UnEcho, ErrStat2, ErrMsg2 )
       if (Failed()) return;
-
+         
+      ! override some parameters to simplify for aero maps
+      ! bjj: do we put a warning here if any of these values aren't currently set this way?
+   if (InitInp%CompAeroMaps) then
+      InputFileData%DTAero     = interval ! we're not using this, so set it to something "safe"
+      do iR = 1, nRotors
+         InputFileData%AFAeroMod  = AFAeroMod_Steady
+         InputFileData%TwrPotent  = TwrPotent_none
+         InputFileData%TwrShadow  = TwrShadow_none
+         InputFileData%TwrAero    = .false.
+         InputFileData%FrozenWake = .false.
+        !InputFileData%CavitCheck = .false.
+      end do
+      
+      if (InputFileData%WakeMod == WakeMod_DBEMT) then
+         ! these models (DBEMT and BEMT) should be the same at the first time step, so we'll simplify here
+         InputFileData%WakeMod = WakeMod_BEMT
+      end if
+   end if
+      
       ! Validate the inputs
    call ValidateInputData( InitInp, InputFileData, NumBlades, ErrStat2, ErrMsg2 )
    if (Failed()) return;
@@ -487,7 +506,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !............................................................................................
       ! Initialize Jacobian:
       !............................................................................................
-   if (InitInp%Linearize) then      
+   if (InitInp%Linearize .or. InitInp%CompAeroMaps) then
       do iR = 1, nRotors
          call Init_Jacobian(InputFileData%rotors(iR), p%rotors(iR), p, u%rotors(iR), y%rotors(iR), m%rotors(iR), InitOut%rotors(iR), errStat2, errMsg2)
          if (Failed()) return;
@@ -1061,6 +1080,7 @@ subroutine Init_u( u, p, p_AD, InputFileData, MHK, WtrDpth, InitInp, errStat, er
    u%InflowOnHub   = 0.0_ReKi
    u%InflowOnNacelle = 0.0_ReKi
    u%InflowOnTailFin = 0.0_ReKi
+   u%AvgDiskVel      = 0.0_ReKi
    
       ! Meshes for motion inputs (ElastoDyn and/or BeamDyn)
          !................
@@ -1224,6 +1244,11 @@ subroutine Init_u( u, p, p_AD, InputFileData, MHK, WtrDpth, InitInp, errStat, er
       u%BladeMotion(k)%RotationVel     = 0.0_ReKi
       u%BladeMotion(k)%TranslationAcc  = 0.0_ReKi
          
+      if (p_AD%CompAeroMaps) then
+         do j=1,InputFileData%BladeProps(k)%NumBlNds
+            u%BladeMotion(k)%TranslationVel(:,j) = cross_product(u%HubMotion%RefOrientation(1,:,1)*InitInp%RotSpeed, u%BladeMotion(k)%Position(:,j)-u%HubMotion%Position(:,1))
+         end do
+      end if
                
    
    end do !k=numBlades
@@ -4137,6 +4162,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
       call SetErrStat( ErrID_Fatal, "DTAero was changed in Init_BEMTmodule(); this is not allowed.", ErrStat2, ErrMsg2, RoutineName)
    
    !m%UseFrozenWake = .FALSE. !BJJ: set this in BEMT
+   if (p_AD%CompAeroMaps) p%BEMT%lin_nx = 0 ! we are going to ignore this
    
    call Cleanup()
    return
@@ -6069,7 +6095,7 @@ SUBROUTINE RotGetOP( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
 
-   INTEGER(IntKi)                                                :: index, i, j, k
+   INTEGER(IntKi)                                                :: index, i, j, k, n
    INTEGER(IntKi)                                                :: nu
    INTEGER(IntKi)                                                :: ErrStat2
    CHARACTER(ErrMsgLen)                                          :: ErrMsg2
@@ -6331,9 +6357,10 @@ SUBROUTINE RotGetOP( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
 
 END SUBROUTINE RotGetOP
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++   
-SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
+SUBROUTINE Init_Jacobian_y( p, p_AD, y, InitOut, ErrStat, ErrMsg)
 
    TYPE(RotParameterType)            , INTENT(INOUT) :: p                     !< parameters
+   TYPE(AD_ParameterType)            , INTENT(INOUT) :: p_AD                  !< parameters
    TYPE(RotOutputType)               , INTENT(IN   ) :: y                     !< outputs
    TYPE(RotInitOutputType)           , INTENT(INOUT) :: InitOut               !< Initialization output data (for Jacobian row/column names)
    
@@ -6456,10 +6483,11 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
           
 END SUBROUTINE Init_Jacobian_y
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
+SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
 
    TYPE(RotInputFile)                , INTENT(IN   ) :: InputFileData         !< input file data (for default blade perturbation)
    TYPE(RotParameterType)            , INTENT(INOUT) :: p                     !< parameters
+   TYPE(AD_ParameterType)            , INTENT(INOUT) :: p_AD                  !< parameters
    TYPE(RotInputType)                , INTENT(IN   ) :: u                     !< inputs
    TYPE(RotInitOutputType)           , INTENT(INOUT) :: InitOut               !< Initialization output data (for Jacobian row/column names)
    
@@ -6468,6 +6496,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
    
       ! local variables:
    INTEGER(IntKi)                :: i, j, k, index, index_last, nu, i_meshField
+   INTEGER(IntKi)                :: NumFieldsForLinearization
    REAL(ReKi)                    :: perturb, perturb_t, perturb_b(MaxBl)
    LOGICAL                       :: FieldMask(FIELDMASK_SIZE)
    CHARACTER(1), PARAMETER       :: UVW(3) = (/'U','V','W'/)
@@ -6508,7 +6537,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
             
    !...............
    ! AD input mappings stored in p%Jac_u_indx:   
-   !...............            
+   !...............
    index = 1
    !Module/Mesh/Field: u%TowerMotion%TranslationDisp  = 1;
    !Module/Mesh/Field: u%TowerMotion%Orientation      = 2;
@@ -6744,7 +6773,7 @@ SUBROUTINE Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    CHARACTER(*), PARAMETER                           :: RoutineName = 'Init_Jacobian_x'
    
       ! local variables:
-   INTEGER(IntKi)                :: i, j, k
+   INTEGER(IntKi)                :: i, j, k, n, state
    INTEGER(IntKi)                :: nx
    INTEGER(IntKi)                :: nx1
    CHARACTER(25)                 :: NodeTxt
@@ -6753,7 +6782,7 @@ SUBROUTINE Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    ErrMsg  = ""
    
    
-   nx = p%BEMT%DBEMT%lin_nx + p%BEMT%UA%lin_nx
+   nx = p%BEMT%DBEMT%lin_nx + p%BEMT%UA%lin_nx + p%BEMT%lin_nx
    
       ! allocate space for the row/column names and for perturbation sizes
    ! always allocate this in case it is size zero ... (we use size(p%dx) for many calculations)
@@ -6848,7 +6877,7 @@ SUBROUTINE Init_Jacobian( InputFileData, p, p_AD, u, y, m, InitOut, ErrStat, Err
    ErrMsg  = ""
   
 !FIXME: add logic to check that p%NumBlades is not greater than MaxBl.  Cannot linearize if that is true. 
-   call Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
+   call Init_Jacobian_y( p, p_AD, y, InitOut, ErrStat, ErrMsg)
    
       ! these matrices will be needed for linearization with frozen wake feature
    if (p%FrozenWake) then
@@ -6856,7 +6885,7 @@ SUBROUTINE Init_Jacobian( InputFileData, p, p_AD, u, y, m, InitOut, ErrStat, Err
       call AllocAry(m%BEMT%TnInd_op,p%NumBlNds,p%numBlades,'m%BEMT%TnInd_op', ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
    
-   call Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    call Init_Jacobian_x( p, InitOut, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -7076,6 +7105,8 @@ SUBROUTINE Compute_dX(p, x_p, x_m, delta_p, delta_m, dX)
       ! local variables:
    INTEGER(IntKi)    :: i              ! loop over blade nodes
    INTEGER(IntKi)    :: j              ! loop over blades
+   INTEGER(IntKi)    :: k              ! loop over states
+   INTEGER(IntKi)    :: n              ! loop over active UA states
    INTEGER(IntKi)    :: indx_first     ! index indicating next value of dY to be filled 
 
    
