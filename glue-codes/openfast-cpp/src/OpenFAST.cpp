@@ -603,6 +603,17 @@ void fast::OpenFAST::prepareOutputFile(int iTurbLoc) {
                                           param_count_dim.data(), tmpArray.data());
             }
         }
+
+        ierr = nc_put_var_double(ncid, ncOutVarIDs_["nac_ref_pos"],
+                                 &brFSIData[iTurbLoc][3].nac_ref_pos[0]);
+        ierr = nc_put_var_double(ncid, ncOutVarIDs_["nac_ref_orient"],
+                                 &brFSIData[iTurbLoc][3].nac_ref_pos[3]);
+
+        ierr = nc_put_var_double(ncid, ncOutVarIDs_["hub_ref_pos"],
+                                 &brFSIData[iTurbLoc][3].hub_ref_pos[0]);
+        ierr = nc_put_var_double(ncid, ncOutVarIDs_["hub_ref_orient"],
+                                 &brFSIData[iTurbLoc][3].hub_ref_pos[3]);
+
     }
 
     ierr = nc_close(ncid);
