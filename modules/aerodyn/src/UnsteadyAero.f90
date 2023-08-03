@@ -2297,8 +2297,20 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
          call HGM_Steady( i, j, u_interp, p, x%element(i,j), AFInfo, ErrStat2, ErrMsg2 )
       end if
 
-      call UA_ABM4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
+      ! get inputs at t+dt
+      CALL UA_Input_ExtrapInterp( u, utimes, u_interp_raw, t+p%dt, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         IF ( ErrStat >= AbortErrLev ) RETURN
+
+         ! make sure that u%u is not zero (this previously turned off UA for the entire simulation. 
+         ! Now, we keep it on, but we don't want the math to blow up when we divide by u%u)
+      call UA_fixInputs(u_interp_raw, u_interp, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+      ! update states to value at t+dt:
+      call UA_ABM4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
+      !call UA_BDF2( i, j, t, n, u_interp, p, x, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
+      !   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       if (.not. p%ShedEffect) then
          ! Safety
