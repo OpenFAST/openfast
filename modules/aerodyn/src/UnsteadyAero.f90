@@ -2266,7 +2266,7 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
    type(UA_InputType)                           :: u_interp_raw    ! Input at current timestep, t and t+dt
    type(UA_InputType)                           :: u_interp        ! Input at current timestep, t and t+dt
    type(AFI_UA_BL_Type)                         :: BL_p  ! airfoil UA parameters retrieved in Kelvin Chain
-   real(ReKi)                                   :: Tu
+   real(R8Ki)                                   :: Tu
 
       ! Initialize variables
 
@@ -2474,7 +2474,7 @@ SUBROUTINE HGM_Steady( i, j, u, p, x, AFInfo, ErrStat, ErrMsg )
    integer(IntKi)                               :: errStat2
    character(*), parameter                      :: RoutineName = 'HGM_Steady'
    
-   real(ReKi)                                   :: Tu
+   real(R8Ki)                                   :: Tu
    real(ReKi)                                   :: alphaE
    real(ReKi)                                   :: alphaF
    real(ReKi)                                   :: alpha_34
@@ -2576,14 +2576,14 @@ subroutine UA_CalcContStateDeriv( i, j, t, u_in, p, x, OtherState, AFInfo, m, dx
    integer(IntKi)                               :: errStat2
    character(*), parameter                      :: RoutineName = 'UA_CalcContStateDeriv'
    
-   real(ReKi)                                   :: Tu
+   real(R8Ki)                                   :: Tu
    real(ReKi)                                   :: alphaE
    real(ReKi)                                   :: alphaF
-   real(ReKi)                                   :: Clp
+   real(R8Ki)                                   :: Clp
    real(ReKi)                                   :: cRate ! slope of the piecewise linear region of fully attached polar
    real(R8Ki)                                   :: x4
    real(ReKi)                                   :: alpha_34
-   real(ReKi), parameter                        :: U_dot = 0.0_ReKi ! at some point we may add this term
+   real(R8Ki), parameter                        :: U_dot = 0.0_R8Ki ! at some point we may add this term
    TYPE(UA_InputType)                           :: u        ! Inputs at t
    real(R8Ki)                                   :: CnC_dot, One_Plus_Sqrt_x4, cv_dot, CnC
 
@@ -2724,7 +2724,7 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
    TYPE(UA_ElementContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
    TYPE(AFI_UA_BL_Type),                INTENT(IN   )  :: BL_p        ! potentially interpolated UA parameters
    
-   REAL(ReKi),                          INTENT(  OUT)  :: Tu
+   REAL(R8Ki),                          INTENT(  OUT)  :: Tu
    REAL(ReKi), optional,                INTENT(  OUT)  :: alpha_34
    REAL(ReKi), optional,                INTENT(  OUT)  :: alphaE
 
@@ -2847,7 +2847,7 @@ SUBROUTINE UA_RK4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat, 
 
       k1%x     = p%dt * k1%x
   
-      x_tmp%x  = x%element(i,j)%x + 0.5 * k1%x
+      x_tmp%x  = x%element(i,j)%x + 0.5_R8Ki * k1%x
 
       ! interpolate u to find u_interp = u(t + dt/2)
       TPlusHalfDt = t + 0.5_DbKi*p%dt
@@ -2860,7 +2860,7 @@ SUBROUTINE UA_RK4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat, 
 
       k2%x     = p%dt * k2%x
 
-      x_tmp%x  = x%element(i,j)%x + 0.5 * k2%x
+      x_tmp%x  = x%element(i,j)%x + 0.5_R8Ki * k2%x
 
       ! find xdot at t + dt/2 (note x_tmp has changed)
       CALL UA_CalcContStateDeriv( i, j, TPlusHalfDt, u_interp, p, x_tmp, OtherState, AFInfo, m, k3, ErrStat2, ErrMsg2 )
@@ -2880,7 +2880,7 @@ SUBROUTINE UA_RK4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat, 
 
       k4%x     = p%dt * k4%x
 
-      x%element(i,j)%x = x%element(i,j)%x + ( k1%x + 2. * k2%x + 2. * k3%x + k4%x ) / 6.
+      x%element(i,j)%x = x%element(i,j)%x + ( k1%x + 2.0_R8Ki * k2%x + 2.0_R8Ki * k3%x + k4%x ) / 6.0_R8Ki
 
 END SUBROUTINE UA_RK4
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2967,9 +2967,8 @@ SUBROUTINE UA_AB4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat, 
             IF ( ErrStat >= AbortErrLev ) RETURN
 
       else
-         x%element(i,j)%x =  x%element(i,j)%x + p%DT/24. * ( 55.*OtherState%xdot(1)%element(i,j)%x - 59.*OtherState%xdot(2)%element(i,j)%x   &
-                                                           + 37.*OtherState%xdot(3)%element(i,j)%x -  9.*OtherState%xdot(4)%element(i,j)%x )
-
+         x%element(i,j)%x =  x%element(i,j)%x + p%DT/24.0_R8Ki * ( 55.0_R8Ki*OtherState%xdot(1)%element(i,j)%x - 59.0_R8Ki*OtherState%xdot(2)%element(i,j)%x   &
+                                                                 + 37.0_R8Ki*OtherState%xdot(3)%element(i,j)%x -  9.0_R8Ki*OtherState%xdot(4)%element(i,j)%x )
 
       endif
 
@@ -3047,9 +3046,9 @@ SUBROUTINE UA_ABM4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat,
             IF ( ErrStat >= AbortErrLev ) RETURN
 
          
-         x%element(i,j)%x = x_in%x     + p%DT/24. * ( 9. * xdot_pred%x     + 19. * OtherState%xdot(1)%element(i,j)%x &
-                                                                           -  5. * OtherState%xdot(2)%element(i,j)%x &
-                                                                           +  1. * OtherState%xdot(3)%element(i,j)%x )
+         x%element(i,j)%x = x_in%x     + p%DT/24.0_R8Ki * ( 9.0_R8Ki * xdot_pred%x     + 19.0_R8Ki * OtherState%xdot(1)%element(i,j)%x &
+                                                                                       -  5.0_R8Ki * OtherState%xdot(2)%element(i,j)%x &
+                                                                                       +  1.0_R8Ki * OtherState%xdot(3)%element(i,j)%x )
 
       endif
       
@@ -3294,7 +3293,7 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
    
    ! for UA_HGM
    real(ReKi)                                   :: alphaE
-   real(ReKi)                                   :: Tu
+   real(R8Ki)                                   :: Tu
    real(ReKi)                                   :: alpha_34
    real(ReKi)                                   :: fs_aE
    real(ReKi)                                   :: cl_fs
