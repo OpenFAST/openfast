@@ -761,15 +761,9 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
    end if
    
    ! Compute derivative step size
-   ! ---  ADENV
-   !p%dx    = 0.5_R8Ki * D2R_D
-   !p%dx(4) = 0.0001_R8Ki
-   ! --- ADLEG
-   p%dx = 2.0_R8Ki * D2R_D 
-   p%dx(4) = 0.001 ! x4 is a number between 0 and 1, so we need this to be small
-
-
-   
+   p%dx    = 0.5_R8Ki * D2R_D
+   p%dx(4) = 0.0001_R8Ki
+  
    p%UA_off_forGood = .false. ! flag that determines if UA should be turned off for the whole simulation
    if (allocated(InitInp%UAOff_innerNode)) then
       do j=1,min(size(p%UA_off_forGood,2), size(InitInp%UAOff_innerNode)) !blade
