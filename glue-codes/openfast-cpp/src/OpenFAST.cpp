@@ -282,7 +282,7 @@ void fast::OpenFAST::prepareOutputFile(int iTurbLoc) {
     //Create the file - this will destory any file
     std::stringstream defloads_fstream;
     defloads_fstream << "turb_" ;
-    defloads_fstream << std::setfill('0') << std::setw(2) << iTurbLoc;
+    defloads_fstream << std::setfill('0') << std::setw(2) << turbineMapProcToGlob[iTurbLoc];
     defloads_fstream << "_output.nc";
     std::string defloads_filename = defloads_fstream.str();
     int ierr = nc_create(defloads_filename.c_str(), NC_CLOBBER, &ncid);
