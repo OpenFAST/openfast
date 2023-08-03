@@ -6711,7 +6711,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
       !......................................
       ! default perturbations, p%du:
       !......................................
-   call allocAry( p%du, 32, 'p%du', ErrStat2, ErrMsg2) ! 32 = number of unique values in p%Jac_u_indx(:,1)
+   call allocAry( p%du, 31, 'p%du', ErrStat2, ErrMsg2) ! 31 = number of unique values in p%Jac_u_indx(:,1)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    perturb = 2*D2R
