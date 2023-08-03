@@ -178,128 +178,164 @@ if len(localOutFiles) != len(baselineOutFiles):
     exitWithError("An expected local solution file does not exist:")
 
 ### test for regression (compare lin files only)
-try:
-    for i, f in enumerate(localOutFiles):
-        local_file = os.path.join(testBuildDirectory, f)
-        baseline_file = os.path.join(targetOutputDirectory, f)
+
+def compareLin(f):
+    Errors     = []
+    ElemErrors = []
+
+    local_file = os.path.join(testBuildDirectory, f)
+    baseline_file = os.path.join(targetOutputDirectory, f)
+    local_file2 = local_file # Ellude the long filename
+
+    # Set a prefix for all errors to identify where it comes from
+    basename = os.path.splitext(os.path.basename(local_file))[0]
+    ext2 = os.path.splitext(basename)[1][1:] +'.lin' # '.1' or '.AD' '.BD'
+    errPrefix = CasePrefix[:-1]+ext2+': '
+
+    if verbose:
+        print(errPrefix+'file_ref:', baseline_file)
+        print(errPrefix+'file_new:', local_file)
+
+    def newError(msg):
+        msg=errPrefix+msg
         if verbose:
-            print(CasePrefix+'ref:', baseline_file)
-            print(CasePrefix+'new:', local_file)
-
-        # verify both files have the same number of lines
-        local_file_line_count = file_line_count(local_file)
-        baseline_file_line_count = file_line_count(baseline_file)
-        if local_file_line_count != baseline_file_line_count:
-            Err="Local and baseline solutions have different line counts in"
-            Err+="\n\tFile1:{}".format(local_file)
-            Err+="\n\tFile2:{}\n\n".format(baseline_file)
-            raise Exception(Err)
-
-        # open both files
-        floc = FASTLinearizationFile(local_file)
-        fbas = FASTLinearizationFile(baseline_file)
-
-        # --- Test that they have the same variables
-        kloc = floc.keys()
-        kbas = fbas.keys()
-        try:
-            np.testing.assert_equal(kloc, kbas)
-        except Exception as e:
-            Err = 'Different keys in local linfile.\n'
-            Err+= '\tNew:{}\n'.format(kloc)
-            Err+= '\tRef:{}\n'.format(kbas)
-            Err+= '\tin linfile: {}.\n'.format(local_file)
-            raise Exception(Err)
-
-        # --- Compare 10 first frequencies and damping ratios in 'A' matrix
-        if 'A' in fbas.keys(): 
-            Abas = fbas['A']
-            Aloc = floc['A']
-            # Note: we could potentially reorder states like MBC does, but no need for freq/damping
-            _, zeta_bas, _, freq_bas = eigA(Abas, nq=None, nq1=None, sort=True)
-            _, zeta_loc, _, freq_loc = eigA(Aloc, nq=None, nq1=None, sort=True)
-
-            if len(freq_bas)==0:
-                # We use complex eigenvalues instead of frequencies/damping
-                # If this fails often, we should discard this test.
-                _, Lambda = eig(Abas, sort=False)
-                v_bas = np.diag(Lambda)
-                _, Lambda = eig(Aloc, sort=False)
-                v_loc = np.diag(Lambda)
-
-                if verbose:
-                    print(CasePrefix+'val_ref:', v_bas[:7])
-                    print(CasePrefix+'val_new:', v_loc[:7])
-                try:
-                    np.testing.assert_allclose(v_bas[:10], v_loc[:10], rtol=rtol_f, atol=atol_f)
-                except Exception as e:
-                    raise Exception('Failed to compare A-matrix frequencies\n\tLinfile: {}.\n\tException: {}'.format(local_file, indent(e.args[0])))
-            else:
-
-                #if verbose:
-                print(CasePrefix+'freq_ref:', np.around(freq_bas[:8]    ,5), '[Hz]')
-                print(CasePrefix+'freq_new:', np.around(freq_loc[:8]    ,5),'[Hz]')
-                print(CasePrefix+'damp_ref:', np.around(zeta_bas[:8]*100,5), '[%]')
-                print(CasePrefix+'damp_new:', np.around(zeta_loc[:8]*100,5), '[%]')
-
-                try:
-                    np.testing.assert_allclose(freq_loc[:10], freq_bas[:10], rtol=rtol_f, atol=atol_f)
-                except Exception as e:
-                    raise Exception('Failed to compare A-matrix frequencies\n\tLinfile: {}.\n\tException: {}'.format(local_file, indent(e.args[0])))
-
-
-                if caseName=='Ideal_Beam_Free_Free_Linear':
-                    # The free-free case is a bit weird, smae frequencies but dampings are +/- a value
-                    zeta_loc=np.abs(zeta_loc)
-                    zeta_bas=np.abs(zeta_bas)
-
-
-                try:
-                    # Note: damping ratios in [%]
-                    np.testing.assert_allclose(zeta_loc[:10]*100, zeta_bas[:10]*100, rtol=rtol_d, atol=atol_d)
-                except Exception as e:
-                    raise Exception('Failed to compare A-matrix damping ratios\n\tLinfile: {}.\n\tException: {}'.format(local_file, indent(e.args[0])))
+            print(msg)
+        Errors.append(msg)
 
 
 
-        # --- Compare individual matrices/vectors
-        KEYS= ['A','B','C','D','dUdu','dUdy']
-        KEYS+=['x','y','u','xdot']
-        for k,v in fbas.items():
-            if k in KEYS and v is not None:
-                if verbose:
-                    print(CasePrefix+'key:', k)
-                # Arrays
-                Mloc=np.atleast_2d(floc[k])
-                Mbas=np.atleast_2d(fbas[k])
 
-                # --- Compare dimensions
-                try:
-                    np.testing.assert_equal(Mloc.shape, Mbas.shape)
-                except Exception as e:
-                    Err = 'Different dimensions for variable `{}`.\n'.format(k)
-                    Err+= '\tNew:{}\n'.format(Mloc.shape)
-                    Err+= '\tRef:{}\n'.format(Mbas.shape)
-                    Err+= '\tLinfile: {}.\n'.format(local_file)
-                    raise Exception(Err)
+    # verify both files have the same number of lines
+    local_file_line_count = file_line_count(local_file)
+    baseline_file_line_count = file_line_count(baseline_file)
+    if local_file_line_count != baseline_file_line_count:
+        Err="Local and baseline solutions have different line counts in"
+        Err+="\n\tFile1:{}".format(local_file)
+        Err+="\n\tFile2:{}\n\n".format(baseline_file)
+        newError(Err)
+        #raise Exception(Err)
+
+    # open both files
+    floc = FASTLinearizationFile(local_file)
+    fbas = FASTLinearizationFile(baseline_file)
+
+    # --- Test that they have the same variables
+    kloc = floc.keys()
+    kbas = fbas.keys()
+    try:
+        np.testing.assert_equal(kloc, kbas)
+    except Exception as e:
+        Err = 'Different keys in local linfile.\n'
+        Err+= '\tNew:{}\n'.format(kloc)
+        Err+= '\tRef:{}\n'.format(kbas)
+        Err+= '\tin linfile: {}.\n'.format(local_file2)
+        newError(Err)
+        #raise Exception(Err)
+
+    # --- Compare 10 first frequencies and damping ratios in 'A' matrix
+    if 'A' in fbas.keys(): 
+        Abas = fbas['A']
+        Aloc = floc['A']
+        # Note: we could potentially reorder states like MBC does, but no need for freq/damping
+        _, zeta_bas, _, freq_bas = eigA(Abas, nq=None, nq1=None, sort=True, fullEV=True)
+        _, zeta_loc, _, freq_loc = eigA(Aloc, nq=None, nq1=None, sort=True, fullEV=True)
+
+        if len(freq_bas)==0:
+            # We use complex eigenvalues instead of frequencies/damping
+            # If this fails often, we should discard this test.
+            _, Lambda = eig(Abas, sort=False)
+            v_bas = np.diag(Lambda)
+            _, Lambda = eig(Aloc, sort=False)
+            v_loc = np.diag(Lambda)
+
+            if verbose:
+                print(errPrefix+'val_ref:', v_bas[:7])
+                print(errPrefix+'val_new:', v_loc[:7])
+            try:
+                np.testing.assert_allclose(v_bas[:10], v_loc[:10], rtol=rtol_f, atol=atol_f)
+            except Exception as e:
+                Err='Failed to compare A-matrix frequencies\n\tLinfile: {}.\n\tException: {}'.format(local_file2, indent(e.args[0]))
+                newError(Err)
+        else:
+
+            #if verbose:
+            print(errPrefix+'freq_ref:', np.around(freq_bas[:8]    ,5), '[Hz]')
+            print(errPrefix+'freq_new:', np.around(freq_loc[:8]    ,5),'[Hz]')
+            print(errPrefix+'damp_ref:', np.around(zeta_bas[:8]*100,5), '[%]')
+            print(errPrefix+'damp_new:', np.around(zeta_loc[:8]*100,5), '[%]')
+
+            try:
+                np.testing.assert_allclose(freq_loc[:10], freq_bas[:10], rtol=rtol_f, atol=atol_f)
+            except Exception as e:
+                Err = 'Failed to compare A-matrix frequencies\n\tLinfile: {}.\n\tException: {}'.format(local_file2, indent(e.args[0]))
+                newError(Err)
 
 
-                # We for loop below to get the first element that mismatch
-                # Otherwise, do: np.testing.assert_allclose(floc[k], fbas[k], rtol=rtol, atol=atol)
-                for i in range(Mbas.shape[0]):
-                    for j in range(Mbas.shape[1]):
-                        # Old method:
-                        #if not isclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol):
-                        #    sElem = 'Element [{},{}], new : {}, baseline: {}'.format(i+1,j+1,Mloc[i,j], Mbas[i,j])
-                        #    raise Exception('Failed to compare variable `{}`, {} \n\tLinfile: {}.'.format(k, sElem, local_file)) #, e.args[0]))
-                        try:
-                            np.testing.assert_allclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol)
-                        except Exception as e:
-                            sElem = 'Element [{},{}], new : {}, baseline: {}'.format(i+1,j+1,Mloc[i,j], Mbas[i,j])
-                            raise Exception('Failed to compare variable `{}`, {} \n\tLinfile: {}.\n\tException: {}'.format(k, sElem, local_file, indent(e.args[0])))
+            if caseName=='Ideal_Beam_Free_Free_Linear':
+                # The free-free case is a bit weird, smae frequencies but dampings are +/- a value
+                zeta_loc=np.abs(zeta_loc)
+                zeta_bas=np.abs(zeta_bas)
 
-except Exception as e:
-    exitWithError(e.args[0])
+
+            try:
+                # Note: damping ratios in [%]
+                np.testing.assert_allclose(zeta_loc[:10]*100, zeta_bas[:10]*100, rtol=rtol_d, atol=atol_d)
+            except Exception as e:
+                Err = 'Failed to compare A-matrix damping ratios\n\tLinfile: {}.\n\tException: {}'.format(local_file2, indent(e.args[0]))
+                newError(Err)
+
+    # --- Compare individual matrices/vectors
+    KEYS= ['A','B','C','D','dUdu','dUdy']
+    KEYS+=['x','y','u','xdot']
+    for k,v in fbas.items():
+        if k in KEYS and v is not None:
+            if verbose:
+                print(errPrefix+'key:', k)
+            # Arrays
+            Mloc=np.atleast_2d(floc[k])
+            Mbas=np.atleast_2d(fbas[k])
+
+            # --- Compare dimensions
+            try:
+                np.testing.assert_equal(Mloc.shape, Mbas.shape)
+                dimEqual=True
+            except Exception as e:
+                Err = 'Different dimensions for variable `{}`.\n'.format(k)
+                Err+= '\tNew:{}\n'.format(Mloc.shape)
+                Err+= '\tRef:{}\n'.format(Mbas.shape)
+                Err+= '\tLinfile: {}.\n'.format(local_file2)
+                newError(Err)
+                dimEqual=False
+
+            if not dimEqual:
+                # We don't compare elements if shapes are different
+                continue
+
+            # We for loop below to get the first element that mismatch
+            # Otherwise, do: np.testing.assert_allclose(floc[k], fbas[k], rtol=rtol, atol=atol)
+            for i in range(Mbas.shape[0]):
+                for j in range(Mbas.shape[1]):
+                    # Old method:
+                    #if not isclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol):
+                    #    sElem = 'Element [{},{}], new : {}, baseline: {}'.format(i+1,j+1,Mloc[i,j], Mbas[i,j])
+                    #    raise Exception('Failed to compare variable `{}`, {} \n\tLinfile: {}.'.format(k, sElem, local_file)) #, e.args[0]))
+                    try:
+                        np.testing.assert_allclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol)
+                    except Exception as e:
+                        sElem = 'Element [{},{}], new : {}, baseline: {}'.format(i+1,j+1,Mloc[i,j], Mbas[i,j])
+                        Err=errPrefix+'Failed to compare variable `{}`, {} \n\tLinfile: {}.\n\tException: {}'.format(k, sElem, local_file2, indent(e.args[0]))
+                        ElemErrors.append(Err)
+    return Errors, ElemErrors
+
+Errors=[]
+for i, f in enumerate(localOutFiles):
+    ErrorsLoc, ElemErrorsLoc = compareLin(f)
+    Errors += ErrorsLoc
+    if len(ElemErrorsLoc)>0:
+        Errors += ElemErrorsLoc[:3] # Just a couple of them
+
+if len(Errors)>0:
+    exitWithError('See errors below: \n'+'\n'.join(Errors))
 
 # passing case
 sys.exit(0)
