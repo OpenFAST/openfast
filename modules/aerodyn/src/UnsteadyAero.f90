@@ -757,6 +757,7 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
       p%lin_nx = p%numBlades*p%nNodesPerBlade*UA_NumLinStates ! continuous state per node per blade, but stored at position 4
    else
       p%lin_nx = 0
+      UA_NumLinStates = 0
    end if
    
    ! Compute derivative step size
