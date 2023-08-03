@@ -770,7 +770,7 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
          do i=1,min(InitInp%UAOff_innerNode(j),size(p%UA_off_forGood,1)) !node
 !            call WrScr( 'Warning: Turning off Unsteady Aerodynamics on inner node (node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')' )
             p%UA_off_forGood(i,j) = .true.
-            !p%lin_nx = p%lin_nx - UA_NumLinStates
+            p%lin_nx = p%lin_nx - UA_NumLinStates
          end do
       end do
    end if
@@ -781,7 +781,7 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
 !            call WrScr( 'Warning: Turning off Unsteady Aerodynamics on outer node (node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')' )
             if (.not. p%UA_off_forGood(i,j)) then
                p%UA_off_forGood(i,j) = .true.
-               !p%lin_nx = p%lin_nx - UA_NumLinStates
+               p%lin_nx = p%lin_nx - UA_NumLinStates
             end if
          end do
       end do
@@ -795,7 +795,7 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
             if (ErrStat2 > ErrID_None) then
                call WrScr( 'Warning: Turning off Unsteady Aerodynamics because '//trim(ErrMsg2)//' (node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')' )
                p%UA_off_forGood(i,j) = .true.
-               !p%lin_nx = p%lin_nx - UA_NumLinStates
+               p%lin_nx = p%lin_nx - UA_NumLinStates
             end if
          end if
          
@@ -812,7 +812,7 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
       n = 1
       do j=1,size(p%UA_off_forGood,2) !blade
          do i=1,size(p%UA_off_forGood,1) !node
-            !if (.not. p%UA_off_forGood(i,j)) then
+            if (.not. p%UA_off_forGood(i,j)) then
                do k=1,UA_NumLinStates
                   p%lin_xIndx(n,1) = i ! node
                   p%lin_xIndx(n,2) = j ! blade
@@ -824,7 +824,7 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
                   endif
                   n = n + 1
                end do
-            !end if
+            end if
          end do
       end do
    end if
