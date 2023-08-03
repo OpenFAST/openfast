@@ -637,7 +637,7 @@ jobs:
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake \
-            -DBLA_STATIC:BOOL=ON \
+            -DUSE_LOCAL_STATIC_LAPACK:BOOL=ON \
             ${GITHUB_WORKSPACE}
           cmake --build . --target FAST_SFunc
       - name: Run MATLAB tests and generate artifacts
