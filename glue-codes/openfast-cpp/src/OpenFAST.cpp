@@ -58,7 +58,7 @@ void fast::OpenFAST::findRestartFile(int iTurbLoc) {
     //Find the file and open it in read only mode
     std::stringstream rstfile_ss;
     rstfile_ss << "turb_" ;
-    rstfile_ss << std::setfill('0') << std::setw(2) << turbineMapProcToGlob[iTurbLoc];
+    rstfile_ss << std::setfill('0') << std::setw(2) << turbineData[iTurbLoc].TurbID;
     rstfile_ss << "_rst.nc";
     std::string rst_filename = rstfile_ss.str();
     int ierr = nc_open(rst_filename.c_str(), NC_NOWRITE, &ncid);
@@ -120,7 +120,7 @@ void fast::OpenFAST::prepareRestartFile(int iTurbLoc) {
     //This will destroy any existing file
     std::stringstream rstfile_ss;
     rstfile_ss << "turb_" ;
-    rstfile_ss << std::setfill('0') << std::setw(2) << turbineMapProcToGlob[iTurbLoc];
+    rstfile_ss << std::setfill('0') << std::setw(2) << turbineData[iTurbLoc].TurbID;
     rstfile_ss << "_rst.nc";
     std::string rst_filename = rstfile_ss.str();
     int ierr = nc_create(rst_filename.c_str(), NC_CLOBBER, &ncid);
@@ -246,7 +246,7 @@ void fast::OpenFAST::findOutputFile(int iTurbLoc) {
     //Find the file and open it in read only mode
     std::stringstream outfile_ss;
     outfile_ss << "turb_" ;
-    outfile_ss << std::setfill('0') << std::setw(2) << turbineMapProcToGlob[iTurbLoc];
+    outfile_ss << std::setfill('0') << std::setw(2) << turbineData[iTurbLoc].TurbID;
     outfile_ss << "_output.nc";
     std::string out_filename = outfile_ss.str();
     int ierr = nc_open(out_filename.c_str(), NC_NOWRITE, &ncid);
@@ -282,7 +282,7 @@ void fast::OpenFAST::prepareOutputFile(int iTurbLoc) {
     //Create the file - this will destory any file
     std::stringstream defloads_fstream;
     defloads_fstream << "turb_" ;
-    defloads_fstream << std::setfill('0') << std::setw(2) << turbineMapProcToGlob[iTurbLoc];
+    defloads_fstream << std::setfill('0') << std::setw(2) << turbineData[iTurbLoc].TurbID;
     defloads_fstream << "_output.nc";
     std::string defloads_filename = defloads_fstream.str();
     int ierr = nc_create(defloads_filename.c_str(), NC_CLOBBER, &ncid);
@@ -2232,7 +2232,7 @@ int fast::OpenFAST::openVelocityDataFile(int iTurb) {
     int ncid;
     std::stringstream velfile_fstream;
     velfile_fstream << "turb_" ;
-    velfile_fstream << std::setfill('0') << std::setw(2) << turbineMapProcToGlob[iTurb];
+    velfile_fstream << std::setfill('0') << std::setw(2) << turbineData[iTurb].TurbID;
     velfile_fstream << "_veldata.nc";
     std::string velfile_filename = velfile_fstream.str();
     int ierr = nc_open(velfile_filename.c_str(), NC_WRITE, &ncid);
@@ -2247,7 +2247,7 @@ void fast::OpenFAST::prepareVelocityDataFile(int iTurb) {
     int ncid;
     std::stringstream velfile_fstream;
     velfile_fstream << "turb_" ;
-    velfile_fstream << std::setfill('0') << std::setw(2) << turbineMapProcToGlob[iTurb];
+    velfile_fstream << std::setfill('0') << std::setw(2) << turbineData[iTurb].TurbID;
     velfile_fstream << "_veldata.nc";
     std::string velfile_filename = velfile_fstream.str();
     int ierr = nc_create(velfile_filename.c_str(), NC_CLOBBER, &ncid);
@@ -2280,7 +2280,7 @@ void fast::OpenFAST::writeVelocityData(int iTurb, int n_t_global, int nlinIter) 
     //Find the file and open it in append mode
     std::stringstream velfile_ss;
     velfile_ss << "turb_" ;
-    velfile_ss << std::setfill('0') << std::setw(2) << turbineMapProcToGlob[iTurb];
+    velfile_ss << std::setfill('0') << std::setw(2) << turbineData[iTurb].TurbID;
     velfile_ss << "_veldata.nc";
     std::string vel_filename = velfile_ss.str();
     int ierr = nc_open(vel_filename.c_str(), NC_WRITE, &ncid);
@@ -2597,7 +2597,7 @@ void fast::OpenFAST::writeOutputFile(int iTurbLoc, int n_t_global) {
     //Open the file in append mode
     std::stringstream outfile_ss;
     outfile_ss << "turb_" ;
-    outfile_ss << std::setfill('0') << std::setw(2) << iTurbLoc;
+    outfile_ss << std::setfill('0') << std::setw(2) << turbineData[iTurbLoc].TurbID;
     outfile_ss << "_output.nc";
     std::string defloads_filename = outfile_ss.str();
     int ierr = nc_open(defloads_filename.c_str(), NC_WRITE, &ncid);
