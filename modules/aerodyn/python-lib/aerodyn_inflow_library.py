@@ -101,6 +101,7 @@ class AeroDynInflowLib(CDLL):
         # flags 
         self.storeHHVel  = 1          # 0=false, 1=true
         self.transposeDCM= 1          # 0=false, 1=true
+        self.debuglevel  = 0          # 0-4 levels
 
         # VTK
         self.WrVTK       = 0          # default of no vtk output
@@ -166,6 +167,7 @@ class AeroDynInflowLib(CDLL):
         self.ADI_C_PreInit.argtypes = [
             POINTER(c_int),                     # numTurbines
             POINTER(c_int),                     # transposeDCM
+            POINTER(c_int),                     # debuglevel 
             POINTER(c_int),                     # ErrStat_C
             POINTER(c_char)                     # ErrMsg_C
         ]
@@ -297,6 +299,7 @@ class AeroDynInflowLib(CDLL):
         self.ADI_C_PreInit(
             byref(c_int(self.numTurbines)),         # IN: numTurbines
             byref(c_int(self.transposeDCM)),        # IN: transposeDCM
+            byref(c_int(self.debuglevel)),          # IN: debuglevel
             byref(self.error_status_c),             # OUT: ErrStat_C
             self.error_message_c                    # OUT: ErrMsg_C
          )

@@ -46,13 +46,13 @@ MODULE AeroDyn_Inflow_C_BINDING
 
 
    !------------------------------------------------------------------------------------
-   !  Debugging: debugverbose
+   !  Debugging: debugverbose -- passed at PreInit
    !     0  - none
    !     1  - some summary info
    !     2  - above + all position/orientation info
    !     3  - above + input files (if direct passed)
    !     4  - above + meshes
-   integer(IntKi),   parameter            :: debugverbose = 0
+   integer(IntKi)                         :: debugverbose = 0
 
    !------------------------------------------------------------------------------------
    !  Error handling
@@ -199,14 +199,15 @@ end subroutine SetErr
 !--------------------------------------------- AeroDyn PreInit -------------------------------------------------
 !===============================================================================================================
 !> Allocate all the arrays for data storage for all turbine rotors
-subroutine ADI_C_PreInit(NumTurbines_C,TransposeDCM_in,ErrStat_C,ErrMsg_C) BIND (C, NAME='ADI_C_PreInit')
+subroutine ADI_C_PreInit(NumTurbines_C,TransposeDCM_in,debuglevel,ErrStat_C,ErrMsg_C) BIND (C, NAME='ADI_C_PreInit')
    implicit none
 #ifndef IMPLICIT_DLLEXPORT
 !DEC$ ATTRIBUTES DLLEXPORT :: ADI_C_PreInit
 !GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_PreInit
 #endif
    integer(c_int),          intent(in   ) :: NumTurbines_C
-   integer(c_int),          intent(in   ) :: TransposeDCM_in        !< Transpose DCMs as they are passed in
+   integer(c_int),          intent(in   ) :: TransposeDCM_in        !< Transpose DCMs as they are passed i
+   integer(c_int),          intent(in   ) :: debuglevel
    integer(c_int),          intent(  out) :: ErrStat_C
    character(kind=c_char),  intent(  out) :: ErrMsg_C(ErrMsgLen_C)
 
@@ -226,10 +227,26 @@ subroutine ADI_C_PreInit(NumTurbines_C,TransposeDCM_in,ErrStat_C,ErrMsg_C) BIND 
    CALL DispCopyrightLicense( version%Name )
    CALL DispCompileRuntimeInfo( version%Name )
 
-   ! For debugging the interface:
-   if (debugverbose > 0) then
+   ! interface debugging
+   debugverbose = int(debuglevel,IntKi)
+   ! if non-zero, show all passed data here.  Then check valid values
+   if (debugverbose /= 0_IntKi) then
+      call WrScr("   Interface debugging level "//trim(Num2Lstr(debugverbose))//" requested.")
       call ShowPassedData()
    endif
+
+   ! check valid debug level
+   if (debugverbose < 0_IntKi .or. debugverbose > 4_IntKi) then
+      ErrStat2 = ErrID_Fatal
+      ErrMsg2  = "Interface debug level must be between 0 and 4"//NewLine// &
+         "  0  - none"//NewLine// &
+         "  1  - some summary info and variables passed through interface"//NewLine// &
+         "  2  - above + all position/orientation info"//NewLine// &
+         "  3  - above + input files (if direct passed)"//NewLine// &
+         "  4  - above + meshes"
+      if (Failed()) return;
+   endif
+
 
    ! Set number of turbines
    Sim%NumTurbines = int(NumTurbines_C,IntKi)
@@ -312,6 +329,7 @@ contains
       call WrScr("       NumTurbines_C                  "//trim(Num2LStr( NumTurbines_C )) )
       TmpFlag="F";   if (TransposeDCM_in==1_c_int) TmpFlag="T"
       call WrScr("       TransposeDCM_in                "//TmpFlag )
+      call WrScr("       debuglevel                     "//trim(Num2LStr( debuglevel )) )
       call WrScr("-----------------------------------------------------------")
    end subroutine ShowPassedData
 
@@ -581,7 +599,7 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    ! write meshes for this rotor
    if (WrOutputsData%WrVTK > 0_IntKi) then
       do iWT=1,Sim%NumTurbines
-         call WrVTK_refMeshes(ADI%u(iWT)%AD%rotors(:),WrOutputsData%VTKRefPoint,ErrStat2,ErrMsg2)
+         call WrVTK_refMeshes(ADI%u(1)%AD%rotors(:),WrOutputsData%VTKRefPoint,ErrStat2,ErrMsg2)
       enddo
       if (Failed())  return
    endif
@@ -1296,12 +1314,15 @@ subroutine ADI_C_SetupRotor(iWT_c, TurbOrigin_C,                 &
 
    call AllocAry(InitInp%AD%rotors(iWT)%BladeRootPosition,       3, Sim%WT(iWT)%NumBlades, 'BldRootPos', errStat2, errMsg2 ); if (Failed()) return
    call AllocAry(InitInp%AD%rotors(iWT)%BladeRootOrientation, 3, 3, Sim%WT(iWT)%NumBlades, 'BldRootOri', errStat2, errMsg2 ); if (Failed()) return
-   InitInp%AD%rotors(iWT)%HubPosition          = real(HubPos_C(1:3),ReKi)
+   InitInp%AD%rotors(iWT)%HubPosition          = real(HubPos_C(1:3),ReKi) + Sim%WT(iWT)%OriginInit(1:3)
    InitInp%AD%rotors(iWT)%HubOrientation       = reshape( real(HubOri_C(1:9),R8Ki), (/3,3/) )
-   InitInp%AD%rotors(iWT)%NacellePosition      = real(NacPos_C(1:3),ReKi)
+   InitInp%AD%rotors(iWT)%NacellePosition      = real(NacPos_C(1:3),ReKi) + Sim%WT(iWT)%OriginInit(1:3)
    InitInp%AD%rotors(iWT)%NacelleOrientation   = reshape( real(NacOri_C(1:9),R8Ki), (/3,3/) )
    InitInp%AD%rotors(iWT)%BladeRootPosition    = reshape( real(BldRootPos_C(1:3*Sim%WT(iWT)%NumBlades),ReKi), (/  3,Sim%WT(iWT)%NumBlades/) )
    InitInp%AD%rotors(iWT)%BladeRootOrientation = reshape( real(BldRootOri_C(1:9*Sim%WT(iWT)%NumBlades),R8Ki), (/3,3,Sim%WT(iWT)%NumBlades/) )
+   do i=1,Sim%WT(iWT)%NumBlades
+      InitInp%AD%rotors(iWT)%BladeRootPosition(1:3,i) = InitInp%AD%rotors(iWT)%BladeRootPosition(1:3,i) + Sim%WT(iWT)%OriginInit(1:3)
+   enddo
    if (TransposeDCM) then
       InitInp%AD%rotors(iWT)%HubOrientation       = transpose(InitInp%AD%rotors(iWT)%HubOrientation)
       InitInp%AD%rotors(iWT)%NacelleOrientation   = transpose(InitInp%AD%rotors(iWT)%NacelleOrientation)
@@ -1555,6 +1576,7 @@ subroutine ADI_C_SetRotorMotion( iWT_c,                             &
    ! current turbine number
    iWT = int(iWT_c, IntKi)
 
+print*,'SetRotorMotion turbine ',iWT
    ! Sanity check -- number of node points cannot change
    if ( NumMeshPts(iWT) /= int(NumMeshPts_C, IntKi) ) then
       ErrStat2 =  ErrID_Fatal
@@ -1762,7 +1784,7 @@ subroutine Set_MotionMesh(iWT, ErrStat3, ErrMsg3)
    ErrMsg3  =  ''
    ! Set mesh corresponding to input motions
    do iNode=1,NumMeshPts(iWT)
-      BldPtMotionMesh(iWT)%TranslationDisp(1:3,iNode) = tmpBldPtMeshPos(1:3,iNode) - real(BldPtMotionMesh(iWT)%Position(1:3,iNode), R8Ki)
+      BldPtMotionMesh(iWT)%TranslationDisp(1:3,iNode) = tmpBldPtMeshPos(1:3,iNode) - real(BldPtMotionMesh(iWT)%Position(1:3,iNode), R8Ki) + Sim%WT(iWT)%OriginInit(1:3)
       BldPtMotionMesh(iWT)%Orientation(1:3,1:3,iNode) = tmpBldPtMeshOri(1:3,1:3,iNode)
       BldPtMotionMesh(iWT)%TranslationVel( 1:3,iNode) = tmpBldPtMeshVel(1:3,iNode)
       BldPtMotionMesh(iWT)%RotationVel(    1:3,iNode) = tmpBldPtMeshVel(4:6,iNode)
@@ -1803,7 +1825,7 @@ subroutine AD_SetInputMotion( iWT, u_local,        &
    ErrMsg  =  ''
    ! Hub -- NOTE: RotationalAcc not present in the mesh
    if ( u_local%AD%rotors(iWT)%HubMotion%Committed ) then
-      u_local%AD%rotors(iWT)%HubMotion%TranslationDisp(1:3,1) = real(HubPos_C(1:3),R8Ki) - real(u_local%AD%rotors(iWT)%HubMotion%Position(1:3,1), R8Ki)
+      u_local%AD%rotors(iWT)%HubMotion%TranslationDisp(1:3,1) = real(HubPos_C(1:3),R8Ki) - real(u_local%AD%rotors(iWT)%HubMotion%Position(1:3,1), R8Ki) + Sim%WT(iWT)%OriginInit(1:3)
       u_local%AD%rotors(iWT)%HubMotion%Orientation(1:3,1:3,1) = reshape( real(HubOri_C(1:9),R8Ki), (/3,3/) )
       u_local%AD%rotors(iWT)%HubMotion%TranslationVel(1:3,1)  = real(HubVel_C(1:3), ReKi)
       u_local%AD%rotors(iWT)%HubMotion%RotationVel(1:3,1)     = real(HubVel_C(4:6), ReKi)
@@ -1815,7 +1837,7 @@ subroutine AD_SetInputMotion( iWT, u_local,        &
    endif
    ! Nacelle -- NOTE: RotationalVel and RotationalAcc not present in the mesh
    if ( u_local%AD%rotors(iWT)%NacelleMotion%Committed ) then
-      u_local%AD%rotors(iWT)%NacelleMotion%TranslationDisp(1:3,1) = real(NacPos_C(1:3),R8Ki) - real(u_local%AD%rotors(iWT)%NacelleMotion%Position(1:3,1), R8Ki)
+      u_local%AD%rotors(iWT)%NacelleMotion%TranslationDisp(1:3,1) = real(NacPos_C(1:3),R8Ki) - real(u_local%AD%rotors(iWT)%NacelleMotion%Position(1:3,1), R8Ki) + Sim%WT(iWT)%OriginInit(1:3)
       u_local%AD%rotors(iWT)%NacelleMotion%Orientation(1:3,1:3,1) = reshape( real(NacOri_C(1:9),R8Ki), (/3,3/) )
       u_local%AD%rotors(iWT)%NacelleMotion%TranslationVel(1:3,1)  = real(NacVel_C(1:3), ReKi)
       u_local%AD%rotors(iWT)%NacelleMotion%TranslationAcc(1:3,1)  = real(NacAcc_C(1:3), ReKi)
@@ -1827,7 +1849,7 @@ subroutine AD_SetInputMotion( iWT, u_local,        &
    ! Blade root
    do i=0,Sim%WT(iWT)%numBlades-1
       if ( u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%Committed ) then
-         u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%TranslationDisp(1:3,1) = real(BldRootPos_C(3*i+1:3*i+3),R8Ki) - real(u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%Position(1:3,1), R8Ki)
+         u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%TranslationDisp(1:3,1) = real(BldRootPos_C(3*i+1:3*i+3),R8Ki) - real(u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%Position(1:3,1), R8Ki) + Sim%WT(iWT)%OriginInit(1:3)
          u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%Orientation(1:3,1:3,1) = reshape( real(BldRootOri_C(9*i+1:9*i+9),R8Ki), (/3,3/) )
          u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%TranslationVel(1:3,1)  = real(BldRootVel_C(6*i+1:6*i+3), ReKi)
          u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%RotationVel(1:3,1)     = real(BldRootVel_C(6*i+4:6*i+6), ReKi)
