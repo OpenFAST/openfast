@@ -3634,7 +3634,7 @@ SUBROUTINE Linear_HD_InputSolve_du( p_FAST, y_FAST, u_HD, y_ED, y_SD, MeshMapDat
    ErrStat = ErrID_None
    ErrMsg  = ""
                
-   
+   ! note that we assume this block matrix has been initialized to the identity matrix before calling this routine
 
       PlatformMotion => y_ED%PlatformPtMesh
 
@@ -5470,6 +5470,7 @@ SUBROUTINE PerturbOP(t, iLinTime, iMode, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, 
    INTEGER(IntKi)                          :: i, iStart           ! generic loop counters
    INTEGER(IntKi)                          :: iBody               ! WAMIT body loop counter
    INTEGER(IntKi)                          :: j                   ! generic loop counters
+   INTEGER(IntKi)                          :: n                   ! generic loop counters
    INTEGER(IntKi)                          :: indx                ! generic loop counters
    INTEGER(IntKi)                          :: indx_last           ! generic loop counters
    INTEGER(IntKi)                          :: i_x                 ! index into packed array
@@ -5573,16 +5574,26 @@ SUBROUTINE PerturbOP(t, iLinTime, iMode, p_FAST, y_FAST, ED, BD, SrvD, AD, IfW, 
          end if
    
          if (AD%p%rotors(1)%BEMT%UA%lin_nx>0) then
-            do j=1,size(AD%x(STATE_CURR)%rotors(1)%BEMT%UA%element,2)
-               do i=1,size(AD%x(STATE_CURR)%rotors(1)%BEMT%UA%element,1)
-                  indx_last = indx + size(AD%x(STATE_CURR)%rotors(1)%BEMT%UA%element(i,j)%x) - 1
-                  call GetStateAry(p_FAST, iMode, t, AD%x(STATE_CURR)%rotors(1)%BEMT%UA%element(i,j)%x,  y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(  indx : indx_last), &
-                                                                                                         y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(indx : indx_last) )
-                  indx = indx_last + 1
-               end do
+            do n=1,AD%p%rotors(1)%BEMT%UA%lin_nx
+               i = AD%p%rotors(1)%BEMT%UA%lin_xIndx(n,1)
+               j = AD%p%rotors(1)%BEMT%UA%lin_xIndx(n,2)
+               k = AD%p%rotors(1)%BEMT%UA%lin_xIndx(n,3)
+
+               indx_last = indx
+               call GetStateAry(p_FAST, iMode, t, AD%x(STATE_CURR)%rotors(1)%BEMT%UA%element(i,j)%x(k:k),  y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(  indx : indx_last), &
+                                                                                                           y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(indx : indx_last) )
+               indx = indx_last + 1
             end do
+
          end if
       
+!         if (AD%p%rotors(1)%BEMT%lin_nx>0) then
+!            indx_last = indx + size(AD%x(STATE_CURR)%rotors(1)%BEMT%v_w) - 1
+!            call GetStateAry(p_FAST, iMode, t, AD%x(STATE_CURR)%rotors(1)%BEMT%v_w,  y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_mag(  indx : indx_last), &
+!                                                                                     y_FAST%Lin%Modules(ThisModule)%Instance(1)%op_x_eig_phase(indx : indx_last) )
+!            indx = indx_last + 1
+!         end if
+!         
       end if
    END IF
    !!!      
