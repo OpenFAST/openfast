@@ -54,7 +54,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_None = 0      ! No module selected [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_Glue = 1      ! Glue code [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_IfW = 2      ! InflowWind [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ExtInfw = 3 
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ExtInfw = 3      ! ExternalInflow [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ED = 4      ! ElastoDyn [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_BD = 5      ! BeamDyn [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_AD14 = 6      ! AeroDyn14 [-]
@@ -794,7 +794,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: RootName      !< Root name of FAST output files (overrides normal operation) [-]
     INTEGER(IntKi)  :: NumActForcePtsBlade      !< number of actuator line force points in blade [-]
     INTEGER(IntKi)  :: NumActForcePtsTower      !< number of actuator line force points in tower [-]
-    LOGICAL  :: NodeClusterType      !< Node clustering for actuator line (0 - Uniform, 1 - Non-uniform clustered towards tip) [-]
+    INTEGER(IntKi)  :: NodeClusterType      !< Node clustering for actuator line (0 - Uniform, 1 - Non-uniform clustered towards tip) [-]
   END TYPE FAST_ExternInitType
 ! =======================
 ! =========  FAST_TurbineType  =======

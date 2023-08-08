@@ -39,7 +39,7 @@ param	FAST	-	INTEGER	Module_Unknown	-	-1	-	"Unknown"	-
 param	^	-	INTEGER	Module_None	-	0	-	"No module selected"	-
 param	^	-	INTEGER	Module_Glue	-	1	-	"Glue code"	-
 param	^	-	INTEGER	Module_IfW	-	2	-	"InflowWind"	-
-param	^	-	INTEGER	Module_ExtInfw	-	3		"ExternalInflow"	-
+param	^	-	INTEGER	Module_ExtInfw	-	3 -	"ExternalInflow"	-
 param	^	-	INTEGER	Module_ED	-	4	-	"ElastoDyn"	-
 param	^	-	INTEGER	Module_BD	-	5	-	"BeamDyn"	-
 param	^	-	INTEGER	Module_AD14	-	6	-	"AeroDyn14"	-
