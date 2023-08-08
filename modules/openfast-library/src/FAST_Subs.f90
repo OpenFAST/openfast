@@ -3657,7 +3657,7 @@ SUBROUTINE FAST_ReadSteadyStateFile( InputFile, p, m_FAST, ErrStat, ErrMsg )
 
 !>>>>>>>>>>>>>>>>>>>> 
    ! -------------------------------------------------------------
-   ! READ FROM THE PRIMARY ENFAST (TIME-DOMAIN) INPUT FILE
+   ! READ FROM THE PRIMARY OPENFAST (TIME-DOMAIN) INPUT FILE
    ! do this before reading the rest of the variables in this
    ! steady-state input file so that we don't accidentally 
    ! overwrite them.
@@ -3685,11 +3685,18 @@ SUBROUTINE FAST_ReadSteadyStateFile( InputFile, p, m_FAST, ErrStat, ErrMsg )
    p%CompInflow = Module_NONE
    p%CompServo = Module_NONE
    p%CompHydro = Module_NONE
+   p%CompSeaSt = Module_NONE
    p%CompSub = Module_NONE
    p%CompMooring = Module_NONE
    p%CompIce = Module_NONE
-   p%CompAero = Module_AD
-
+   if ( p%CompAero /= Module_AD) then
+      p%CompAero = Module_AD
+      call WrScr('Warning: AeroDyn must be used for generating AeroMaps. Check that variable "AeroFile" is set properly in the OpenFAST input file.')
+   end if
+   if (p%CompElast == Module_BD) then
+      CALL SetErrStat( ErrID_Warn, "AeroMaps with BeamDyn have not been verified.", ErrStat, ErrMsg, RoutineName)
+   end if
+   
    p%DT_Out = p%DT
    p%n_DT_Out = 1 ! output every step (i.e., every case)
    p%TStart = 0.0_DbKi

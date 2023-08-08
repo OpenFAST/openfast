@@ -165,7 +165,7 @@ SUBROUTINE FAST_SteadyState(p_FAST, y_FAST, m_FAST, ED, BD, AD, MeshMapData, Err
 
    DO n_case = 1, p_FAST%NumSSCases
    
-      if (mod(n_case,NStatus) == 1 .or. n_case==p_FAST%NumSSCases) then
+      if (mod(n_case,NStatus) == 0 .or. n_case==p_FAST%NumSSCases .or. n_case==1) then
          call WrOver( ' Case '//trim(num2lstr(n_case))//' of '//trim(num2lstr(p_FAST%NumSSCases)) )
       end if
       
