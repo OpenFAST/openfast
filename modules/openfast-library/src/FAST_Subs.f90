@@ -508,8 +508,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
       Init%InData_AD%Gravity            = p_FAST%Gravity      
       Init%InData_AD%Linearize          = p_FAST%Linearize
-!      Init%InData_AD%CompAeroMaps       = p_FAST%CompAeroMaps
-!      Init%InData_AD%rotors(1)%RotSpeed = p_FAST%RotSpeedInit ! used only for aeromaps
+      Init%InData_AD%CompAeroMaps       = p_FAST%CompAeroMaps
+      Init%InData_AD%rotors(1)%RotSpeed = p_FAST%RotSpeedInit ! used only for aeromaps
       Init%InData_AD%InputFile          = p_FAST%AeroFile
       Init%InData_AD%RootName           = p_FAST%OutFileRoot
       Init%InData_AD%MHK                = p_FAST%MHK
