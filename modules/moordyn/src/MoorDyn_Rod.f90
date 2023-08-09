@@ -958,7 +958,7 @@ CONTAINS
       Imat_l = 0.0_DbKi
       if (Rod%N > 0) then
          I_l = 0.125*Rod%mass * Rod%d*Rod%d     ! axial moment of inertia
-         I_r = (Rod%mass / Rod%N) / 12 * (0.75*Rod%d*Rod%d + (Rod%UnstrLen/Rod%N)**2 ) * Rod%N     ! summed radial moment of inertia for each segment individually
+         I_r = Rod%mass * ((Rod%d**2) / 16 - (Rod%UnstrLen**2) / (6 * Rod%N**2)); ! moment of inertia correction term for lumped mass approach
          
          Imat_l(1,1) = I_r   ! inertia about CG in local orientations (as if Rod is vertical)
          Imat_l(2,2) = I_r
