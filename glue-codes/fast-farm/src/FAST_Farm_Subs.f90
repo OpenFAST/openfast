@@ -2006,7 +2006,7 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
    ! ----- map MD load outputs to each turbine's substructure -----   (taken from U FullOpt1...)
    do nt = 1,farm%p%NumTurbines
    
-      if (farm%MD%p%nCpldCons(nt) > 0 ) then   ! only map loads if MoorDyn has connections to this turbine (currently considering only Point connections <<< )
+      if (farm%MD%p%nCpldPoints(nt) > 0 ) then   ! only map loads if MoorDyn has connections to this turbine (currently considering only Point connections <<< )
          
          ! copy the MD output mesh for this turbine into a copy mesh within the FAST instance
          !CALL MeshCopy ( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_FarmMD_CoupledLoads, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
