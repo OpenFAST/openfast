@@ -392,6 +392,12 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       p%rotors(iR)%TFin%TFinArea    = InputFileData%rotors(iR)%TFin%TFinArea
       p%rotors(iR)%TFin%TFinIndMod  = InputFileData%rotors(iR)%TFin%TFinIndMod
       p%rotors(iR)%TFin%TFinAFID    = InputFileData%rotors(iR)%TFin%TFinAFID
+      p%rotors(iR)%TFin%TFinKp      = InputFileData%rotors(iR)%TFin%TFinKp
+      p%rotors(iR)%TFin%TFinCp      = InputFileData%rotors(iR)%TFin%TFinCp
+      p%rotors(iR)%TFin%TFinSigma      = InputFileData%rotors(iR)%TFin%TFinSigma
+      p%rotors(iR)%TFin%TFinAStar      = InputFileData%rotors(iR)%TFin%TFinAStar
+      p%rotors(iR)%TFin%TFinKv      = InputFileData%rotors(iR)%TFin%TFinKv
+      p%rotors(iR)%TFin%TFinCDc     = InputFileData%rotors(iR)%TFin%TFinCDc
    enddo
   
       !............................................................................................
@@ -4358,7 +4364,10 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
    real(ReKi)              :: V_str(3)          ! structural velocity
    real(ReKi)              :: force_tf(3)       ! force in tf system
    real(ReKi)              :: moment_tf(3)      ! moment in tf system
-   real(ReKi)              :: alpha, Re, Cx, Cy, q ! Cl, Cd, Cm, 
+   real(ReKi)              :: alpha, Re, Cx, Cy, q, tfingamma ! Cl, Cd, Cm, 
+   ! USB variables
+   real(ReKi)              :: x1, x2, x3    ! scaling functions for different contributions on CN
+
    type(AFI_OutputType)    :: AFI_interp  ! Resulting values from lookup table
    integer(intKi)          :: ErrStat2
    character(ErrMsgLen)    :: ErrMsg2
@@ -4382,13 +4391,18 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
       STOP ! Will never happen
    endif
    V_rel       = V_wnd - V_str + V_ind
+   print *,'V_wnd'
+   print *,V_wnd
    V_rel_tf    = matmul(u%TFinMotion%Orientation(:,:,1), V_rel) ! from inertial to tf system
    alpha       = atan2( V_rel_tf(2), V_rel_tf(1))               ! angle of attack
    V_rel_orth2 = V_rel_tf(1)**2 + V_rel_tf(2)**2                ! square norm of Vrel in tf system
 
+
+   force_tf(:)    = 0.0_ReKi
+   moment_tf(:)    = 0.0_ReKi
+
    if (p%TFin%TFinMod==TFinAero_none) then
-      y%TFinLoad%Force(1:3,1)  = 0.0_ReKi
-      y%TFinLoad%Moment(1:3,1) = 0.0_ReKi
+      ! Do nothing
 
    elseif (p%TFin%TFinMod==TFinAero_polar) then
       ! Airfoil coefficients
@@ -4399,21 +4413,35 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
       Cy =  AFI_interp%Cl * cos(alpha) + AFI_interp%Cd * sin(alpha)
       ! Forces in tailfin system
       q = 0.5 * p%airDens * V_rel_orth2 * p%TFin%TFinArea
-      force_tf(:)    = 0.0_ReKi
-      moment_tf(:)    = 0.0_ReKi
+      
       force_tf(1)    = Cx * q
       force_tf(2)    = Cy * q
-      force_tf(3)    = 0.0_ReKi
-      moment_tf(1:2) = 0.0_ReKi
       moment_tf(3)   = AFI_interp%Cm * q * p%TFin%TFinChord
-      ! Transfer to global
-      y%TFinLoad%Force(1:3,1)  = matmul(transpose(u%TFinMotion%Orientation(:,:,1)), force_tf)
-      y%TFinLoad%Moment(1:3,1) = matmul(transpose(u%TFinMotion%Orientation(:,:,1)), moment_tf)
 
    elseif (p%TFin%TFinMod==TFinAero_USB) then
-      call SetErrStat(ErrID_Fatal, 'Tail fin USB model not yet available', ErrStat, ErrMsg, RoutineName )
-      return
+      !Calculate separation functions
+      !x1 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(1)*((ABS(alpha)*180.0_ReKi/pi)-p%TFin%TFinAStar(1)))) 
+      !x2 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(2)*((ABS(alpha)*180.0_ReKi/pi)-p%TFin%TFinAStar(2)))) 
+      !x3 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(3)*((ABS(alpha)*180.0_ReKi/pi)-p%TFin%TFinAStar(3))))
+
+      tfingamma = atan2(u%TFinMotion%orientation(2,1,1),u%TFinMotion%orientation(1,1,1))
+      x1 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(1)*((ABS(tfingamma)*180.0_ReKi/pi)-p%TFin%TFinAStar(1)))) 
+      x2 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(2)*((ABS(tfingamma)*180.0_ReKi/pi)-p%TFin%TFinAStar(2)))) 
+      x3 = 1.0_Reki/(1.0_Reki+exp(p%TFin%TFinSigma(3)*((ABS(tfingamma)*180.0_ReKi/pi)-p%TFin%TFinAStar(3))))
+      
+      ! print *,alpha*180.0_ReKi/pi
+      ! print *,alpha
+   
+      force_tf(2) = 0.5_ReKi * p%AirDens * p%TFin%TFinArea * &
+         (p%TFin%TFinKp * x1 * V_rel_tf(1) * V_rel_tf(2) + &
+         (x2 * p%TFin%TFinKv + (1-x3)*p%TFin%TFinCDc) * V_rel_tf(2) * ABS(V_rel_tf(2)))
+      ! moment_tf(3) =  force_tf(2) * p%Tfin%TFinCp * p%TFin%TFinChord
+
    endif
+   
+   ! Transfer to global
+   y%TFinLoad%Force(1:3,1)  = matmul(transpose(u%TFinMotion%Orientation(:,:,1)), force_tf)
+   y%TFinLoad%Moment(1:3,1) = matmul(transpose(u%TFinMotion%Orientation(:,:,1)), moment_tf)
 
    ! --- Store
    m%TFinAlpha  = alpha
@@ -4427,6 +4455,7 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
    m%TFinM_i    = y%TFinLoad%Moment(1:3,1)
 
 END SUBROUTINE TFin_CalcOutput
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the tower loads for the AeroDyn TowerLoad output mesh.
 SUBROUTINE ADTwr_CalcOutput(p, u, m, y, ErrStat, ErrMsg )
