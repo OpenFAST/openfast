@@ -77,6 +77,7 @@ typedef    ^          ^                  SiKi                    TowerRad       
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 typedef	AeroDyn/AD	RotInitInputType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine" -
+typedef	^	RotInitInputType	ReKi	originInit	{3}	-	0	"X-Y-Z reference position for the turbine"	m
 typedef	^	RotInitInputType	ReKi	HubPosition	{3}	-	-	"X-Y-Z reference position of hub"	m
 typedef	^	RotInitInputType	R8Ki	HubOrientation	{3}{3}	-	-	"DCM reference orientation of hub"	-
 typedef	^	RotInitInputType	ReKi	BladeRootPosition	{:}{:}	-	-	"X-Y-Z reference position of each blade root (3 x NumBlades)"	m

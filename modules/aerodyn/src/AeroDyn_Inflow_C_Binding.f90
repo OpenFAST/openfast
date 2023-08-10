@@ -1320,6 +1320,7 @@ subroutine ADI_C_SetupRotor(iWT_c, TurbOrigin_C,                 &
 
    call AllocAry(InitInp%AD%rotors(iWT)%BladeRootPosition,       3, Sim%WT(iWT)%NumBlades, 'BldRootPos', errStat2, errMsg2 ); if (Failed()) return
    call AllocAry(InitInp%AD%rotors(iWT)%BladeRootOrientation, 3, 3, Sim%WT(iWT)%NumBlades, 'BldRootOri', errStat2, errMsg2 ); if (Failed()) return
+   InitInp%AD%rotors(iWT)%originInit           = Sim%WT(iWT)%OriginInit(1:3)
    InitInp%AD%rotors(iWT)%HubPosition          = real(HubPos_C(1:3),ReKi) + Sim%WT(iWT)%OriginInit(1:3)
    InitInp%AD%rotors(iWT)%HubOrientation       = reshape( real(HubOri_C(1:9),R8Ki), (/3,3/) )
    InitInp%AD%rotors(iWT)%NacellePosition      = real(NacPos_C(1:3),ReKi) + Sim%WT(iWT)%OriginInit(1:3)
