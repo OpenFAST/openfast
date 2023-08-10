@@ -1634,6 +1634,7 @@ subroutine WD_WritePlaneOutputs( t, u, p, x, xd, z, OtherState, y, m, errStat, e
    character(1024) :: Filename
    type(VTK_Misc)   :: mvtk
    real(ReKi), dimension(3) :: dx
+   real(ReKi), dimension(3) :: x0
    errStat = ErrID_None
    errMsg  = ""
    
@@ -1666,7 +1667,10 @@ subroutine WD_WritePlaneOutputs( t, u, p, x, xd, z, OtherState, y, m, errStat, e
              dx(1) = 0.0
              dx(2) = p%dr
              dx(3) = p%dr
-             call vtk_dataset_structured_points((/xd%p_plane(1,i),-p%dr*p%NumRadii,-p%dr*p%NumRadii/),dx,(/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
+             x0(1) = xd%p_plane(1,i)
+             x0(2) = xd%p_plane(2,i) - p%dr*p%NumRadii
+             x0(3) = xd%p_plane(3,i) - p%dr*p%NumRadii
+             call vtk_dataset_structured_points(x0, dx, (/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
              call vtk_point_data_init(mvtk)
              call vtk_point_data_scalar(y%Vx_wake2(:,:,i),'Vx',mvtk) 
              call vtk_point_data_scalar(y%Vy_wake2(:,:,i),'Vy',mvtk) 
