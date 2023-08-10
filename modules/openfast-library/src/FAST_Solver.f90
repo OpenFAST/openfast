@@ -476,99 +476,6 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_A
 END SUBROUTINE IfW_InputSolve
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine sets the AeroDyn wind inflow inputs.
-SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
-
-      ! Passed variables
-   TYPE(FAST_ParameterType),    INTENT(IN   )   :: p_FAST      !< FAST parameter data    
-   TYPE(AD_InputType),          INTENT(INOUT)   :: u_AD        !< The inputs to AeroDyn
-   TYPE(InflowWind_OutputType), INTENT(IN)      :: y_IfW       !< The outputs from InflowWind
-   TYPE(OpFM_OutputType),       INTENT(IN)      :: y_OpFM      !< outputs from the OpenFOAM integration module
-   
-   INTEGER(IntKi)                               :: ErrStat     !< Error status of the operation
-   CHARACTER(*)                                 :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-      ! Local variables:
-
-   INTEGER(IntKi)                               :: J           ! Loops through nodes / elements.
-   INTEGER(IntKi)                               :: K           ! Loops through blades.
-   INTEGER(IntKi)                               :: NumBl
-   INTEGER(IntKi)                               :: NNodes
-   INTEGER(IntKi)                               :: node
-
-   
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-               
-   !-------------------------------------------------------------------------------------------------
-   ! Set the inputs from inflow wind:
-   !-------------------------------------------------------------------------------------------------
-   IF (p_FAST%CompInflow == MODULE_IfW) THEN
-
-
-   ELSEIF ( p_FAST%CompInflow == MODULE_OpFM ) THEN
-      node = 2 !start of inputs to AD15
-
-      NumBl  = size(u_AD%rotors(1)%InflowOnBlade,3)
-      Nnodes = size(u_AD%rotors(1)%InflowOnBlade,2)
-
-      ! Hub -- first point
-      if (u_AD%rotors(1)%HubMotion%NNodes > 0) then
-         u_AD%rotors(1)%InflowOnHub(1) = y_OpFM%u(1)
-         u_AD%rotors(1)%InflowOnHub(2) = y_OpFM%v(1)
-         u_AD%rotors(1)%InflowOnHub(3) = y_OpFM%w(1)
-      else
-         u_AD%rotors(1)%InflowOnHub = 0.0_ReKi
-      end if
-
-      do k=1,NumBl
-         do j=1,Nnodes
-            u_AD%rotors(1)%InflowOnBlade(1,j,k) = y_OpFM%u(node)
-            u_AD%rotors(1)%InflowOnBlade(2,j,k) = y_OpFM%v(node)
-            u_AD%rotors(1)%InflowOnBlade(3,j,k) = y_OpFM%w(node)
-            node = node + 1
-         end do
-      end do
-                  
-      if ( allocated(u_AD%rotors(1)%InflowOnTower) ) then
-         Nnodes = size(u_AD%rotors(1)%InflowOnTower,2)
-         do j=1,Nnodes
-            u_AD%rotors(1)%InflowOnTower(1,j) = y_OpFM%u(node)
-            u_AD%rotors(1)%InflowOnTower(2,j) = y_OpFM%v(node)
-            u_AD%rotors(1)%InflowOnTower(3,j) = y_OpFM%w(node)
-            node = node + 1
-         end do      
-      end if
-      
-      ! Nacelle
-      if (u_AD%rotors(1)%NacelleMotion%NNodes > 0) then
-         u_AD%rotors(1)%InflowOnNacelle(1) = y_OpFM%u(node)
-         u_AD%rotors(1)%InflowOnNacelle(2) = y_OpFM%v(node)
-         u_AD%rotors(1)%InflowOnNacelle(3) = y_OpFM%w(node)
-         node = node + 1
-      else
-         u_AD%rotors(1)%InflowOnNacelle = 0.0_ReKi
-      end if
-      
-      ! TailFin
-      if (u_AD%rotors(1)%TFinMotion%NNodes > 0) then
-         u_AD%rotors(1)%InflowOnTailFin(1) = y_OpFM%u(node)
-         u_AD%rotors(1)%InflowOnTailFin(2) = y_OpFM%v(node)
-         u_AD%rotors(1)%InflowOnTailFin(3) = y_OpFM%w(node)
-         node = node + 1
-      else
-         u_AD%rotors(1)%InflowOnTailFin = 0.0_ReKi
-      end if
-      
-   ELSE
-      
-      u_AD%rotors(1)%InflowOnBlade = 0.0_ReKi ! whole array
-      
-   END IF
-   
-   
-END SUBROUTINE AD_InputSolve_IfW
-!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets all the AeroDyn inputs, except for the wind inflow values.
 SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_SrvD, y_ED, BD, MeshMapData, ErrStat, ErrMsg )
 
@@ -4879,13 +4786,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    ELSEIF ( p_FAST%CompAero == Module_AD ) THEN
       
       CALL AD_InputSolve_NoIfW( p_FAST, AD%Input(1), SrvD%y, ED%y, BD, MeshMapData, ErrStat2, ErrMsg2 )   
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )        
-
-         ! because we're not calling InflowWind_CalcOutput or getting new values from OpenFOAM, 
-         ! this probably can be skipped; 
-         ! @todo: alternatively, we could call InflowWind_CalcOutput, too.
-      CALL AD_InputSolve_IfW( p_FAST, AD%Input(1), IfW%y, OpFM%y, ErrStat2, ErrMsg2 )   
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                       
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                        
 
    END IF
 
@@ -5284,25 +5185,24 @@ SUBROUTINE SolveOption2c_Inp2AD_SrvD(this_time, this_state, p_FAST, m_FAST, ED, 
 
       CALL InflowWind_CalcOutput( this_time, IfW%Input(1), IfW%p, IfW%x(this_state), IfW%xd(this_state), IfW%z(this_state), &
                                   IfW%OtherSt(this_state), IfW%y, IfW%m, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
-   !ELSE IF ( p_FAST%CompInflow == Module_OpFM ) THEN
-   ! ! OpenFOAM is the driver and it computes outputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
-   ! !   in this scenario until OpenFOAM takes another step  **this is a source of error, but it is the way the OpenFOAM-FAST7 coupling
-   ! !   works, so I'm not going to spend time that I don't have now to fix it**
-   !   CALL OpFM_SetInputs( p_FAST, AD%Input(1), AD%y, ED%y, SrvD%y, OpFM, ErrStat2, ErrMsg2 )
-   !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-   !   CALL OpFM_SetWriteOutput(OpFM)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )    
+
+   ELSE IF ( p_FAST%CompInflow == Module_OpFM ) THEN
+      ! OpenFOAM is the driver and it computes outputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
+      !   in this scenario until OpenFOAM takes another step  **this is a source of error, but it is the way the OpenFOAM-FAST7 coupling
+      !   works, so I'm not going to spend time that I don't have now to fix it**
+      ! The outputs from OpenFOAM need to be transfered to the FlowField for use by AeroDyn, this seems like the right place
+      call OpFM_UpdateFlowField(p_FAST, OpFM, ErrStat2, ErrMsg2)
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+      !   CALL OpFM_SetInputs( p_FAST, AD%Input(1), AD%y, ED%y, SrvD%y, OpFM, ErrStat2, ErrMsg2 )
+      !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+      !   CALL OpFM_SetWriteOutput(OpFM)
       
    END IF
    
    IF ( p_FAST%CompAero == Module_AD14 ) THEN 
                         
       CALL AD14_InputSolve_IfW( p_FAST, AD14%Input(1), IfW%y, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         
-   ELSE IF ( p_FAST%CompAero == Module_AD ) THEN 
-                        
-      CALL AD_InputSolve_IfW( p_FAST, AD%Input(1), IfW%y, OpFM%y, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
    END IF

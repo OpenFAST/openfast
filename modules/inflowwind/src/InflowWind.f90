@@ -419,13 +419,6 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
       p%FlowField%VelInterpCubic = .false.
    end if
 
-   ! Set box exceed flag and index
-   p%FlowField%Grid3D%BoxExceedAllowF = InitInp%BoxExceedAllowF
-   p%FlowField%Grid3D%BoxExceedAllowIdx = huge(1_IntKi)
-   if (InitInp%BoxExceedAllowF .and. (InitInp%BoxExceedAllowIdx <= InitInp%NumWindPoints)) then
-      p%FlowField%Grid3D%BoxExceedAllowIdx = InitInp%BoxExceedAllowIdx
-   end if
-
    ! Select based on field type
    select case (p%FlowField%FieldType)
 
@@ -444,8 +437,13 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
          p%FlowField%AccFieldValid = .true.
       end if
 
+      ! If input requested points to exceed box or if lidar is enabled,
+      ! set flag to allow box to be exceeded
+      p%FlowField%Grid3D%BoxExceedAllow = &
+         InitInp%BoxExceedAllow .or. (p%lidar%SensorType /= SensorType_None)
+
       ! Calculate field average if box is allowed to be exceeded
-      if (p%FlowField%Grid3D%BoxExceedAllowF .and. p%FlowField%Grid3D%BoxExceedAllowIdx > 0) then
+      if (p%FlowField%Grid3D%BoxExceedAllow) then
          call IfW_Grid3DField_CalcVelAvgProfile(p%FlowField%Grid3D, p%FlowField%AccFieldValid, TmpErrStat, TmpErrMsg); if (Failed()) return
       end if
 
