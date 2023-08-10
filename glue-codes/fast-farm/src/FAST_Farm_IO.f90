@@ -876,9 +876,6 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Def,  "WAT_k_Def",    "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=1.44]", 1.44_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Grad, "WAT_k_Grad",   "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.84]",  0.84_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    IF ( PathIsRelative( p%WAT_BoxFile ) )p%WAT_BoxFile = TRIM(PriPath)//TRIM(p%WAT_BoxFile)
-   !FIXME: these probably should be set elsewhere
-   WD_InitInp%WAT_k_Def  =1.0_ReKi
-   WD_InitInp%WAT_k_Grad =1.0_ReKi
    if (p%WAT > 0_IntKi) WD_InitInp%WAT = .true.
 
 
