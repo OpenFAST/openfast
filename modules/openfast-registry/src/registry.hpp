@@ -54,7 +54,7 @@ struct InterfaceData
 
 struct DimSpec
 {
-    size_t i;
+    size_t i = 0;
     bool is_deferred = false;
     bool is_pointer = false;
     std::string lower_bound = "1";
@@ -161,7 +161,7 @@ struct Field
             }
 
             // Get field rank (number of dimensions)
-            this->rank = this->dims.size();
+            this->rank = static_cast<int>(this->dims.size());
 
             // Field is a pointer if any dim is a pointer
             this->is_pointer |= std::any_of(this->dims.begin(), this->dims.end(),

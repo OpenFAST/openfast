@@ -5,7 +5,6 @@ module AeroDyn_Inflow
    use AeroDyn_Inflow_Types
    use AeroDyn_Types
    use AeroDyn, only: AD_Init, AD_ReInit, AD_CalcOutput, AD_UpdateStates, AD_End
-   use AeroDyn, only: AD_CalcWind
    use AeroDyn_IO, only: AD_SetVTKSurface
    use InflowWind, only: InflowWind_Init, InflowWind_CalcOutput, InflowWind_End
 
@@ -281,29 +280,6 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
    end if
 
    !----------------------------------------------------------------------------
-   ! Calculate hub height wind velocity if requested
-   !----------------------------------------------------------------------------
-
-   if (p%storeHHVel) then
-
-      ! Set hub positions
-      node = 0
-      do iWT = 1, size(u%AD%rotors)
-         node = node + 1
-         m%AD%WindPos(:,node) = u%AD%rotors(iWT)%hubMotion%Position(:,1) + &
-                                 u%AD%rotors(iWT)%hubMotion%TranslationDisp(:,1)
-         if (p%AD%rotors(iWT)%MHK == 1 .or. p%AD%rotors(iWT)%MHK == 2) then
-            m%AD%WindPos(3,node) = m%AD%WindPos(3,node) + p%AD%rotors(iWT)%WtrDpth
-         end if
-      enddo
-
-      ! Calculate wind velocity at positions
-      call IfW_FlowField_GetVelAcc(p%AD%FlowField, 1, t, m%AD%WindPos(:,:node), &
-                                   y%HHVel, m%AD%WindAcc, errStat2, errMsg2)
-      if(Failed()) return
-   endif
-
-   !----------------------------------------------------------------------------
    ! Calculate aerodyn output
    !----------------------------------------------------------------------------
 
@@ -320,6 +296,16 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
       y%WriteOutput(1:AD_NumOuts) = y%AD%rotors(1)%WriteOutput(1:AD_NumOuts)
       y%WriteOutput(AD_NumOuts+1:p%NumOuts) = y%IW_WriteOutput(1:m%IW%p%NumOuts)
    end associate
+
+   !----------------------------------------------------------------------------
+   ! Store hub height velocity calculated in CalcOutput
+   !----------------------------------------------------------------------------
+
+   if (p%storeHHVel) then
+      do iWT = 1, size(u%AD%rotors)
+         y%HHVel(:,iWT) = u%AD%rotors(iWT)%InflowOnHub(:,1)
+      end do
+   endif
 
 contains
 

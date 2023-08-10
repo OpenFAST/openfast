@@ -42,9 +42,9 @@ IMPLICIT NONE
   END TYPE SC_DX_InitInputType_C
   TYPE, PUBLIC :: SC_DX_InitInputType
     TYPE( SC_DX_InitInputType_C ) :: C_obj
-    INTEGER(IntKi)  :: NumSC2Ctrl      !< number of turbine specific controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumSC2CtrlGlob      !< number of global controller inputs [from supercontroller] [-]
-    INTEGER(IntKi)  :: NumCtrl2SC      !< number of controller outputs [to supercontroller] [-]
+    INTEGER(IntKi)  :: NumSC2Ctrl = 0_IntKi      !< number of turbine specific controller inputs [from supercontroller] [-]
+    INTEGER(IntKi)  :: NumSC2CtrlGlob = 0_IntKi      !< number of global controller inputs [from supercontroller] [-]
+    INTEGER(IntKi)  :: NumCtrl2SC = 0_IntKi      !< number of controller outputs [to supercontroller] [-]
   END TYPE SC_DX_InitInputType
 ! =======================
 ! =========  SC_DX_InitOutputType_C  =======
@@ -92,1184 +92,657 @@ IMPLICIT NONE
   END TYPE SC_DX_OutputType
 ! =======================
 CONTAINS
- SUBROUTINE SC_DX_CopyInitInput( SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SC_DX_InitInputType), INTENT(IN) :: SrcInitInputData
-   TYPE(SC_DX_InitInputType), INTENT(INOUT) :: DstInitInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+
+subroutine SC_DX_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
+   type(SC_DX_InitInputType), intent(in) :: SrcInitInputData
+   type(SC_DX_InitInputType), intent(inout) :: DstInitInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SC_DX_CopyInitInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstInitInputData%NumSC2Ctrl = SrcInitInputData%NumSC2Ctrl
+   DstInitInputData%C_obj%NumSC2Ctrl = SrcInitInputData%C_obj%NumSC2Ctrl
+   DstInitInputData%NumSC2CtrlGlob = SrcInitInputData%NumSC2CtrlGlob
+   DstInitInputData%C_obj%NumSC2CtrlGlob = SrcInitInputData%C_obj%NumSC2CtrlGlob
+   DstInitInputData%NumCtrl2SC = SrcInitInputData%NumCtrl2SC
+   DstInitInputData%C_obj%NumCtrl2SC = SrcInitInputData%C_obj%NumCtrl2SC
+end subroutine
+
+subroutine SC_DX_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
+   type(SC_DX_InitInputType), intent(inout) :: InitInputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SC_DX_DestroyInitInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
+
+subroutine SC_DX_PackInitInput(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(SC_DX_InitInputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'SC_DX_PackInitInput'
+   if (Buf%ErrStat >= AbortErrLev) return
+   if (c_associated(InData%C_obj%object)) then
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      return
+   end if
+   call RegPack(Buf, InData%NumSC2Ctrl)
+   call RegPack(Buf, InData%NumSC2CtrlGlob)
+   call RegPack(Buf, InData%NumCtrl2SC)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
+
+subroutine SC_DX_UnPackInitInput(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(SC_DX_InitInputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'SC_DX_UnPackInitInput'
+   if (Buf%ErrStat /= ErrID_None) return
+   call RegUnpack(Buf, OutData%NumSC2Ctrl)
+   if (RegCheckErr(Buf, RoutineName)) return
+   OutData%C_obj%NumSC2Ctrl = OutData%NumSC2Ctrl
+   call RegUnpack(Buf, OutData%NumSC2CtrlGlob)
+   if (RegCheckErr(Buf, RoutineName)) return
+   OutData%C_obj%NumSC2CtrlGlob = OutData%NumSC2CtrlGlob
+   call RegUnpack(Buf, OutData%NumCtrl2SC)
+   if (RegCheckErr(Buf, RoutineName)) return
+   OutData%C_obj%NumCtrl2SC = OutData%NumCtrl2SC
+end subroutine
+
+SUBROUTINE SC_DX_C2Fary_CopyInitInput(InitInputData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_DX_InitInputType), INTENT(INOUT) :: InitInputData
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_CopyInitInput'
-! 
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstInitInputData%NumSC2Ctrl = SrcInitInputData%NumSC2Ctrl
-    DstInitInputData%C_obj%NumSC2Ctrl = SrcInitInputData%C_obj%NumSC2Ctrl
-    DstInitInputData%NumSC2CtrlGlob = SrcInitInputData%NumSC2CtrlGlob
-    DstInitInputData%C_obj%NumSC2CtrlGlob = SrcInitInputData%C_obj%NumSC2CtrlGlob
-    DstInitInputData%NumCtrl2SC = SrcInitInputData%NumCtrl2SC
-    DstInitInputData%C_obj%NumCtrl2SC = SrcInitInputData%C_obj%NumCtrl2SC
- END SUBROUTINE SC_DX_CopyInitInput
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   InitInputData%NumSC2Ctrl = InitInputData%C_obj%NumSC2Ctrl
+   InitInputData%NumSC2CtrlGlob = InitInputData%C_obj%NumSC2CtrlGlob
+   InitInputData%NumCtrl2SC = InitInputData%C_obj%NumCtrl2SC
+END SUBROUTINE
 
- SUBROUTINE SC_DX_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
-  TYPE(SC_DX_InitInputType), INTENT(INOUT) :: InitInputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SC_DX_DestroyInitInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE SC_DX_DestroyInitInput
-
- SUBROUTINE SC_DX_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SC_DX_InitInputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_PackInitInput'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! NumSC2Ctrl
-      Int_BufSz  = Int_BufSz  + 1  ! NumSC2CtrlGlob
-      Int_BufSz  = Int_BufSz  + 1  ! NumCtrl2SC
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  IF (C_ASSOCIATED(InData%C_obj%object)) CALL SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.',ErrStat,ErrMsg,RoutineName)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    IntKiBuf(Int_Xferred) = InData%NumSC2Ctrl
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NumSC2CtrlGlob
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = InData%NumCtrl2SC
-    Int_Xferred = Int_Xferred + 1
- END SUBROUTINE SC_DX_PackInitInput
-
- SUBROUTINE SC_DX_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SC_DX_InitInputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_UnPackInitInput'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%NumSC2Ctrl = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-      OutData%C_obj%NumSC2Ctrl = OutData%NumSC2Ctrl
-    OutData%NumSC2CtrlGlob = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-      OutData%C_obj%NumSC2CtrlGlob = OutData%NumSC2CtrlGlob
-    OutData%NumCtrl2SC = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1
-      OutData%C_obj%NumCtrl2SC = OutData%NumCtrl2SC
- END SUBROUTINE SC_DX_UnPackInitInput
-
- SUBROUTINE SC_DX_C2Fary_CopyInitInput( InitInputData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_DX_InitInputType), INTENT(INOUT) :: InitInputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    InitInputData%NumSC2Ctrl = InitInputData%C_obj%NumSC2Ctrl
-    InitInputData%NumSC2CtrlGlob = InitInputData%C_obj%NumSC2CtrlGlob
-    InitInputData%NumCtrl2SC = InitInputData%C_obj%NumCtrl2SC
- END SUBROUTINE SC_DX_C2Fary_CopyInitInput
-
- SUBROUTINE SC_DX_F2C_CopyInitInput( InitInputData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_DX_InitInputType), INTENT(INOUT) :: InitInputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    InitInputData%C_obj%NumSC2Ctrl = InitInputData%NumSC2Ctrl
-    InitInputData%C_obj%NumSC2CtrlGlob = InitInputData%NumSC2CtrlGlob
-    InitInputData%C_obj%NumCtrl2SC = InitInputData%NumCtrl2SC
- END SUBROUTINE SC_DX_F2C_CopyInitInput
-
- SUBROUTINE SC_DX_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SC_DX_InitOutputType), INTENT(IN) :: SrcInitOutputData
-   TYPE(SC_DX_InitOutputType), INTENT(INOUT) :: DstInitOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+SUBROUTINE SC_DX_F2C_CopyInitInput( InitInputData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_DX_InitInputType), INTENT(INOUT) :: InitInputData
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_CopyInitOutput'
-! 
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   InitInputData%C_obj%NumSC2Ctrl = InitInputData%NumSC2Ctrl
+   InitInputData%C_obj%NumSC2CtrlGlob = InitInputData%NumSC2CtrlGlob
+   InitInputData%C_obj%NumCtrl2SC = InitInputData%NumCtrl2SC
+END SUBROUTINE
+
+subroutine SC_DX_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(SC_DX_InitOutputType), intent(in) :: SrcInitOutputData
+   type(SC_DX_InitOutputType), intent(inout) :: DstInitOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SC_DX_CopyInitOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+end subroutine
+
+subroutine SC_DX_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
+   type(SC_DX_InitOutputType), intent(inout) :: InitOutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'SC_DX_DestroyInitOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
+
+subroutine SC_DX_PackInitOutput(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(SC_DX_InitOutputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'SC_DX_PackInitOutput'
+   if (Buf%ErrStat >= AbortErrLev) return
+   if (c_associated(InData%C_obj%object)) then
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      return
+   end if
+   call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
+
+subroutine SC_DX_UnPackInitOutput(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(SC_DX_InitOutputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'SC_DX_UnPackInitOutput'
+   if (Buf%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
+end subroutine
+
+SUBROUTINE SC_DX_C2Fary_CopyInitOutput(InitOutputData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_DX_InitOutputType), INTENT(INOUT) :: InitOutputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
    ErrStat = ErrID_None
    ErrMsg  = ""
-      CALL NWTC_Library_Copyprogdesc( SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- END SUBROUTINE SC_DX_CopyInitOutput
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+END SUBROUTINE
 
- SUBROUTINE SC_DX_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
-  TYPE(SC_DX_InitOutputType), INTENT(INOUT) :: InitOutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SC_DX_DestroyInitOutput'
+SUBROUTINE SC_DX_F2C_CopyInitOutput( InitOutputData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_DX_InitOutputType), INTENT(INOUT) :: InitOutputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+END SUBROUTINE
 
-  ErrStat = ErrID_None
-  ErrMsg  = ""
+subroutine SC_DX_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
+   type(SC_DX_ParameterType), intent(in) :: SrcParamData
+   type(SC_DX_ParameterType), intent(inout) :: DstParamData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SC_DX_CopyParam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstParamData%useSC = SrcParamData%useSC
+   DstParamData%C_obj%useSC = SrcParamData%C_obj%useSC
+end subroutine
 
-  CALL NWTC_Library_DestroyProgDesc( InitOutputData%Ver, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
- END SUBROUTINE SC_DX_DestroyInitOutput
+subroutine SC_DX_DestroyParam(ParamData, ErrStat, ErrMsg)
+   type(SC_DX_ParameterType), intent(inout) :: ParamData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SC_DX_DestroyParam'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
 
- SUBROUTINE SC_DX_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SC_DX_InitOutputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_PackInitOutput'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+subroutine SC_DX_PackParam(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(SC_DX_ParameterType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'SC_DX_PackParam'
+   if (Buf%ErrStat >= AbortErrLev) return
+   if (c_associated(InData%C_obj%object)) then
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      return
+   end if
+   call RegPack(Buf, InData%useSC)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
 
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-   ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
-      Int_BufSz   = Int_BufSz + 3  ! Ver: size of buffers for each call to pack subtype
-      CALL NWTC_Library_PackProgDesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, .TRUE. ) ! Ver 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine SC_DX_UnPackParam(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(SC_DX_ParameterType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'SC_DX_UnPackParam'
+   if (Buf%ErrStat /= ErrID_None) return
+   call RegUnpack(Buf, OutData%useSC)
+   if (RegCheckErr(Buf, RoutineName)) return
+   OutData%C_obj%useSC = OutData%useSC
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN ! Ver
-         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
-         DEALLOCATE(Re_Buf)
-      END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! Ver
-         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
-         DEALLOCATE(Db_Buf)
-      END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! Ver
-         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
-         DEALLOCATE(Int_Buf)
-      END IF
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+SUBROUTINE SC_DX_C2Fary_CopyParam(ParamData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_DX_ParameterType), INTENT(INOUT) :: ParamData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   ParamData%useSC = ParamData%C_obj%useSC
+END SUBROUTINE
 
-  IF (C_ASSOCIATED(InData%C_obj%object)) CALL SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.',ErrStat,ErrMsg,RoutineName)
+SUBROUTINE SC_DX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_DX_ParameterType), INTENT(INOUT) :: ParamData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   ParamData%C_obj%useSC = ParamData%useSC
+END SUBROUTINE
 
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
+subroutine SC_DX_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
+   type(SC_DX_InputType), intent(in) :: SrcInputData
+   type(SC_DX_InputType), intent(inout) :: DstInputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'SC_DX_CopyInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (associated(SrcInputData%toSC)) then
+      LB(1:1) = lbound(SrcInputData%toSC)
+      UB(1:1) = ubound(SrcInputData%toSC)
+      if (.not. associated(DstInputData%toSC)) then
+         allocate(DstInputData%toSC(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%toSC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+         DstInputData%C_obj%toSC_Len = size(DstInputData%toSC)
+         if (DstInputData%C_obj%toSC_Len > 0) &
+            DstInputData%C_obj%toSC = c_loc(DstInputData%toSC(LB(1)))
+      end if
+      DstInputData%toSC = SrcInputData%toSC
+   end if
+end subroutine
 
-      CALL NWTC_Library_PackProgDesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, OnlySize ) ! Ver 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+subroutine SC_DX_DestroyInput(InputData, ErrStat, ErrMsg)
+   type(SC_DX_InputType), intent(inout) :: InputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SC_DX_DestroyInput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (associated(InputData%toSC)) then
+      deallocate(InputData%toSC)
+      InputData%toSC => null()
+      InputData%C_obj%toSC = c_null_ptr
+      InputData%C_obj%toSC_Len = 0
+   end if
+end subroutine
 
-      IF(ALLOCATED(Re_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
-        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
-        DEALLOCATE(Re_Buf)
+subroutine SC_DX_PackInput(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(SC_DX_InputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'SC_DX_PackInput'
+   logical         :: PtrInIndex
+   if (Buf%ErrStat >= AbortErrLev) return
+   if (c_associated(InData%C_obj%object)) then
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      return
+   end if
+   call RegPack(Buf, associated(InData%toSC))
+   if (associated(InData%toSC)) then
+      call RegPackBounds(Buf, 1, lbound(InData%toSC), ubound(InData%toSC))
+      call RegPackPointer(Buf, c_loc(InData%toSC), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call RegPack(Buf, InData%toSC)
+      end if
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
+
+subroutine SC_DX_UnPackInput(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(SC_DX_InputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'SC_DX_UnPackInput'
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   integer(IntKi)  :: PtrIdx
+   type(c_ptr)     :: Ptr
+   if (Buf%ErrStat /= ErrID_None) return
+   if (associated(OutData%toSC)) deallocate(OutData%toSC)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%toSC, UB(1:1)-LB(1:1))
+         OutData%toSC(LB(1):) => OutData%toSC
+      else
+         allocate(OutData%toSC(LB(1):UB(1)),stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%toSC.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%toSC)
+         OutData%C_obj%toSC_Len = size(OutData%toSC)
+         if (OutData%C_obj%toSC_Len > 0) OutData%C_obj%toSC = c_loc(OutData%toSC(LB(1)))
+         call RegUnpack(Buf, OutData%toSC)
+         if (RegCheckErr(Buf, RoutineName)) return
+      end if
+   else
+      OutData%toSC => null()
+   end if
+end subroutine
+
+SUBROUTINE SC_DX_C2Fary_CopyInput(InputData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_DX_InputType), INTENT(INOUT) :: InputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   
+   ! -- toSC Input Data fields
+   IF ( .NOT. SkipPointers_local ) THEN
+      IF ( .NOT. C_ASSOCIATED( InputData%C_obj%toSC ) ) THEN
+         NULLIFY( InputData%toSC )
       ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Db_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
-        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
-        DEALLOCATE(Db_Buf)
+         CALL C_F_POINTER(InputData%C_obj%toSC, InputData%toSC, [InputData%C_obj%toSC_Len])
+      END IF
+   END IF
+END SUBROUTINE
+
+SUBROUTINE SC_DX_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_DX_InputType), INTENT(INOUT) :: InputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   
+   ! -- toSC Input Data fields
+   IF (.NOT. SkipPointers_local ) THEN
+      IF (.NOT. ASSOCIATED(InputData%toSC)) THEN 
+         InputData%C_obj%toSC_Len = 0
+         InputData%C_obj%toSC = C_NULL_PTR
       ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
-      IF(ALLOCATED(Int_Buf)) THEN
-        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
-        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
-        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
-        DEALLOCATE(Int_Buf)
+         InputData%C_obj%toSC_Len = SIZE(InputData%toSC)
+         IF (InputData%C_obj%toSC_Len > 0) &
+            InputData%C_obj%toSC = C_LOC(InputData%toSC(LBOUND(InputData%toSC,1)))
+      END IF
+   END IF
+END SUBROUTINE
+
+subroutine SC_DX_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
+   type(SC_DX_OutputType), intent(in) :: SrcOutputData
+   type(SC_DX_OutputType), intent(inout) :: DstOutputData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(*), parameter        :: RoutineName = 'SC_DX_CopyOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (associated(SrcOutputData%fromSC)) then
+      LB(1:1) = lbound(SrcOutputData%fromSC)
+      UB(1:1) = ubound(SrcOutputData%fromSC)
+      if (.not. associated(DstOutputData%fromSC)) then
+         allocate(DstOutputData%fromSC(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%fromSC.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+         DstOutputData%C_obj%fromSC_Len = size(DstOutputData%fromSC)
+         if (DstOutputData%C_obj%fromSC_Len > 0) &
+            DstOutputData%C_obj%fromSC = c_loc(DstOutputData%fromSC(LB(1)))
+      end if
+      DstOutputData%fromSC = SrcOutputData%fromSC
+   end if
+   if (associated(SrcOutputData%fromSCglob)) then
+      LB(1:1) = lbound(SrcOutputData%fromSCglob)
+      UB(1:1) = ubound(SrcOutputData%fromSCglob)
+      if (.not. associated(DstOutputData%fromSCglob)) then
+         allocate(DstOutputData%fromSCglob(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%fromSCglob.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+         DstOutputData%C_obj%fromSCglob_Len = size(DstOutputData%fromSCglob)
+         if (DstOutputData%C_obj%fromSCglob_Len > 0) &
+            DstOutputData%C_obj%fromSCglob = c_loc(DstOutputData%fromSCglob(LB(1)))
+      end if
+      DstOutputData%fromSCglob = SrcOutputData%fromSCglob
+   end if
+end subroutine
+
+subroutine SC_DX_DestroyOutput(OutputData, ErrStat, ErrMsg)
+   type(SC_DX_OutputType), intent(inout) :: OutputData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'SC_DX_DestroyOutput'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (associated(OutputData%fromSC)) then
+      deallocate(OutputData%fromSC)
+      OutputData%fromSC => null()
+      OutputData%C_obj%fromSC = c_null_ptr
+      OutputData%C_obj%fromSC_Len = 0
+   end if
+   if (associated(OutputData%fromSCglob)) then
+      deallocate(OutputData%fromSCglob)
+      OutputData%fromSCglob => null()
+      OutputData%C_obj%fromSCglob = c_null_ptr
+      OutputData%C_obj%fromSCglob_Len = 0
+   end if
+end subroutine
+
+subroutine SC_DX_PackOutput(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(SC_DX_OutputType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'SC_DX_PackOutput'
+   logical         :: PtrInIndex
+   if (Buf%ErrStat >= AbortErrLev) return
+   if (c_associated(InData%C_obj%object)) then
+      call SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+      return
+   end if
+   call RegPack(Buf, associated(InData%fromSC))
+   if (associated(InData%fromSC)) then
+      call RegPackBounds(Buf, 1, lbound(InData%fromSC), ubound(InData%fromSC))
+      call RegPackPointer(Buf, c_loc(InData%fromSC), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call RegPack(Buf, InData%fromSC)
+      end if
+   end if
+   call RegPack(Buf, associated(InData%fromSCglob))
+   if (associated(InData%fromSCglob)) then
+      call RegPackBounds(Buf, 1, lbound(InData%fromSCglob), ubound(InData%fromSCglob))
+      call RegPackPointer(Buf, c_loc(InData%fromSCglob), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call RegPack(Buf, InData%fromSCglob)
+      end if
+   end if
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
+
+subroutine SC_DX_UnPackOutput(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(SC_DX_OutputType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'SC_DX_UnPackOutput'
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   integer(IntKi)  :: PtrIdx
+   type(c_ptr)     :: Ptr
+   if (Buf%ErrStat /= ErrID_None) return
+   if (associated(OutData%fromSC)) deallocate(OutData%fromSC)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%fromSC, UB(1:1)-LB(1:1))
+         OutData%fromSC(LB(1):) => OutData%fromSC
+      else
+         allocate(OutData%fromSC(LB(1):UB(1)),stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%fromSC.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%fromSC)
+         OutData%C_obj%fromSC_Len = size(OutData%fromSC)
+         if (OutData%C_obj%fromSC_Len > 0) OutData%C_obj%fromSC = c_loc(OutData%fromSC(LB(1)))
+         call RegUnpack(Buf, OutData%fromSC)
+         if (RegCheckErr(Buf, RoutineName)) return
+      end if
+   else
+      OutData%fromSC => null()
+   end if
+   if (associated(OutData%fromSCglob)) deallocate(OutData%fromSCglob)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%fromSCglob, UB(1:1)-LB(1:1))
+         OutData%fromSCglob(LB(1):) => OutData%fromSCglob
+      else
+         allocate(OutData%fromSCglob(LB(1):UB(1)),stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%fromSCglob.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%fromSCglob)
+         OutData%C_obj%fromSCglob_Len = size(OutData%fromSCglob)
+         if (OutData%C_obj%fromSCglob_Len > 0) OutData%C_obj%fromSCglob = c_loc(OutData%fromSCglob(LB(1)))
+         call RegUnpack(Buf, OutData%fromSCglob)
+         if (RegCheckErr(Buf, RoutineName)) return
+      end if
+   else
+      OutData%fromSCglob => null()
+   end if
+end subroutine
+
+SUBROUTINE SC_DX_C2Fary_CopyOutput(OutputData, ErrStat, ErrMsg, SkipPointers)
+   TYPE(SC_DX_OutputType), INTENT(INOUT) :: OutputData
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   
+   ! -- fromSC Output Data fields
+   IF ( .NOT. SkipPointers_local ) THEN
+      IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%fromSC ) ) THEN
+         NULLIFY( OutputData%fromSC )
       ELSE
-        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
-      ENDIF
- END SUBROUTINE SC_DX_PackInitOutput
-
- SUBROUTINE SC_DX_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SC_DX_InitOutputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_UnPackInitOutput'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
-        Re_Xferred = Re_Xferred + Buf_size
+         CALL C_F_POINTER(OutputData%C_obj%fromSC, OutputData%fromSC, [OutputData%C_obj%fromSC_Len])
       END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
-        Db_Xferred = Db_Xferred + Buf_size
+   END IF
+   
+   ! -- fromSCglob Output Data fields
+   IF ( .NOT. SkipPointers_local ) THEN
+      IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%fromSCglob ) ) THEN
+         NULLIFY( OutputData%fromSCglob )
+      ELSE
+         CALL C_F_POINTER(OutputData%C_obj%fromSCglob, OutputData%fromSCglob, [OutputData%C_obj%fromSCglob_Len])
       END IF
-      Buf_size=IntKiBuf( Int_Xferred )
-      Int_Xferred = Int_Xferred + 1
-      IF(Buf_size > 0) THEN
-        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
-        IF (ErrStat2 /= 0) THEN 
-           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
-           RETURN
-        END IF
-        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
-        Int_Xferred = Int_Xferred + Buf_size
-      END IF
-      CALL NWTC_Library_UnpackProgDesc( Re_Buf, Db_Buf, Int_Buf, OutData%Ver, ErrStat2, ErrMsg2 ) ! Ver 
-        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-        IF (ErrStat >= AbortErrLev) RETURN
+   END IF
+END SUBROUTINE
 
-      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
-      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
-      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
- END SUBROUTINE SC_DX_UnPackInitOutput
-
- SUBROUTINE SC_DX_C2Fary_CopyInitOutput( InitOutputData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_DX_InitOutputType), INTENT(INOUT) :: InitOutputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
- END SUBROUTINE SC_DX_C2Fary_CopyInitOutput
-
- SUBROUTINE SC_DX_F2C_CopyInitOutput( InitOutputData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_DX_InitOutputType), INTENT(INOUT) :: InitOutputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
- END SUBROUTINE SC_DX_F2C_CopyInitOutput
-
- SUBROUTINE SC_DX_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SC_DX_ParameterType), INTENT(IN) :: SrcParamData
-   TYPE(SC_DX_ParameterType), INTENT(INOUT) :: DstParamData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+SUBROUTINE SC_DX_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
+   TYPE(SC_DX_OutputType), INTENT(INOUT) :: OutputData
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_CopyParam'
-! 
+   LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+   ! 
+   LOGICAL                        :: SkipPointers_local
    ErrStat = ErrID_None
-   ErrMsg  = ""
-    DstParamData%useSC = SrcParamData%useSC
-    DstParamData%C_obj%useSC = SrcParamData%C_obj%useSC
- END SUBROUTINE SC_DX_CopyParam
-
- SUBROUTINE SC_DX_DestroyParam( ParamData, ErrStat, ErrMsg )
-  TYPE(SC_DX_ParameterType), INTENT(INOUT) :: ParamData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SC_DX_DestroyParam'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
- END SUBROUTINE SC_DX_DestroyParam
-
- SUBROUTINE SC_DX_PackParam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SC_DX_ParameterType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_PackParam'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! useSC
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  IF (C_ASSOCIATED(InData%C_obj%object)) CALL SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.',ErrStat,ErrMsg,RoutineName)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%useSC, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
- END SUBROUTINE SC_DX_PackParam
-
- SUBROUTINE SC_DX_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SC_DX_ParameterType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_UnPackParam'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-    OutData%useSC = TRANSFER(IntKiBuf(Int_Xferred), OutData%useSC)
-    Int_Xferred = Int_Xferred + 1
-      OutData%C_obj%useSC = OutData%useSC
- END SUBROUTINE SC_DX_UnPackParam
-
- SUBROUTINE SC_DX_C2Fary_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_DX_ParameterType), INTENT(INOUT) :: ParamData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    ParamData%useSC = ParamData%C_obj%useSC
- END SUBROUTINE SC_DX_C2Fary_CopyParam
-
- SUBROUTINE SC_DX_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_DX_ParameterType), INTENT(INOUT) :: ParamData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-    ParamData%C_obj%useSC = ParamData%useSC
- END SUBROUTINE SC_DX_F2C_CopyParam
-
- SUBROUTINE SC_DX_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SC_DX_InputType), INTENT(IN) :: SrcInputData
-   TYPE(SC_DX_InputType), INTENT(INOUT) :: DstInputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_CopyInput'
-! 
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ASSOCIATED(SrcInputData%toSC)) THEN
-  i1_l = LBOUND(SrcInputData%toSC,1)
-  i1_u = UBOUND(SrcInputData%toSC,1)
-  IF (.NOT. ASSOCIATED(DstInputData%toSC)) THEN 
-    ALLOCATE(DstInputData%toSC(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%toSC.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-    DstInputData%C_obj%toSC_Len = SIZE(DstInputData%toSC)
-    IF (DstInputData%C_obj%toSC_Len > 0) &
-          DstInputData%C_obj%toSC = C_LOC( DstInputData%toSC( i1_l ) )
-  END IF
-    DstInputData%toSC = SrcInputData%toSC
-ENDIF
- END SUBROUTINE SC_DX_CopyInput
-
- SUBROUTINE SC_DX_DestroyInput( InputData, ErrStat, ErrMsg )
-  TYPE(SC_DX_InputType), INTENT(INOUT) :: InputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SC_DX_DestroyInput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ASSOCIATED(InputData%toSC)) THEN
-  DEALLOCATE(InputData%toSC)
-  InputData%toSC => NULL()
-  InputData%C_obj%toSC = C_NULL_PTR
-  InputData%C_obj%toSC_Len = 0
-ENDIF
- END SUBROUTINE SC_DX_DestroyInput
-
- SUBROUTINE SC_DX_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SC_DX_InputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_PackInput'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-  Int_BufSz   = Int_BufSz   + 1     ! toSC allocated yes/no
-  IF ( ASSOCIATED(InData%toSC) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! toSC upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%toSC)  ! toSC
-  END IF
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  IF (C_ASSOCIATED(InData%C_obj%object)) CALL SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.',ErrStat,ErrMsg,RoutineName)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-  IF ( .NOT. ASSOCIATED(InData%toSC) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%toSC,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%toSC,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%toSC,1), UBOUND(InData%toSC,1)
-        ReKiBuf(Re_Xferred) = InData%toSC(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
- END SUBROUTINE SC_DX_PackInput
-
- SUBROUTINE SC_DX_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SC_DX_InputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_UnPackInput'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! toSC not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ASSOCIATED(OutData%toSC)) DEALLOCATE(OutData%toSC)
-    ALLOCATE(OutData%toSC(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%toSC.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    OutData%C_obj%toSC_Len = SIZE(OutData%toSC)
-    IF (OutData%C_obj%toSC_Len > 0) &
-       OutData%C_obj%toSC = C_LOC( OutData%toSC( i1_l ) )
-      DO i1 = LBOUND(OutData%toSC,1), UBOUND(OutData%toSC,1)
-        OutData%toSC(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
- END SUBROUTINE SC_DX_UnPackInput
-
- SUBROUTINE SC_DX_C2Fary_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_DX_InputType), INTENT(INOUT) :: InputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-
-    ! -- toSC Input Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%toSC ) ) THEN
-          NULLIFY( InputData%toSC )
-       ELSE
-          CALL C_F_POINTER(InputData%C_obj%toSC, InputData%toSC, (/InputData%C_obj%toSC_Len/))
-       END IF
-    END IF
- END SUBROUTINE SC_DX_C2Fary_CopyInput
-
- SUBROUTINE SC_DX_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_DX_InputType), INTENT(INOUT) :: InputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-
-    ! -- toSC Input Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(InputData%toSC)) THEN 
-          InputData%C_obj%toSC_Len = 0
-          InputData%C_obj%toSC = C_NULL_PTR
-       ELSE
-          InputData%C_obj%toSC_Len = SIZE(InputData%toSC)
-          IF (InputData%C_obj%toSC_Len > 0) &
-             InputData%C_obj%toSC = C_LOC( InputData%toSC( LBOUND(InputData%toSC,1) ) )
-       END IF
-    END IF
- END SUBROUTINE SC_DX_F2C_CopyInput
-
- SUBROUTINE SC_DX_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(SC_DX_OutputType), INTENT(IN) :: SrcOutputData
-   TYPE(SC_DX_OutputType), INTENT(INOUT) :: DstOutputData
-   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
-   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-! Local 
-   INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(ErrMsgLen)           :: ErrMsg2
-   CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_CopyOutput'
-! 
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-IF (ASSOCIATED(SrcOutputData%fromSC)) THEN
-  i1_l = LBOUND(SrcOutputData%fromSC,1)
-  i1_u = UBOUND(SrcOutputData%fromSC,1)
-  IF (.NOT. ASSOCIATED(DstOutputData%fromSC)) THEN 
-    ALLOCATE(DstOutputData%fromSC(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%fromSC.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-    DstOutputData%C_obj%fromSC_Len = SIZE(DstOutputData%fromSC)
-    IF (DstOutputData%C_obj%fromSC_Len > 0) &
-          DstOutputData%C_obj%fromSC = C_LOC( DstOutputData%fromSC( i1_l ) )
-  END IF
-    DstOutputData%fromSC = SrcOutputData%fromSC
-ENDIF
-IF (ASSOCIATED(SrcOutputData%fromSCglob)) THEN
-  i1_l = LBOUND(SrcOutputData%fromSCglob,1)
-  i1_u = UBOUND(SrcOutputData%fromSCglob,1)
-  IF (.NOT. ASSOCIATED(DstOutputData%fromSCglob)) THEN 
-    ALLOCATE(DstOutputData%fromSCglob(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%fromSCglob.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-    DstOutputData%C_obj%fromSCglob_Len = SIZE(DstOutputData%fromSCglob)
-    IF (DstOutputData%C_obj%fromSCglob_Len > 0) &
-          DstOutputData%C_obj%fromSCglob = C_LOC( DstOutputData%fromSCglob( i1_l ) )
-  END IF
-    DstOutputData%fromSCglob = SrcOutputData%fromSCglob
-ENDIF
- END SUBROUTINE SC_DX_CopyOutput
-
- SUBROUTINE SC_DX_DestroyOutput( OutputData, ErrStat, ErrMsg )
-  TYPE(SC_DX_OutputType), INTENT(INOUT) :: OutputData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  
-  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*),    PARAMETER :: RoutineName = 'SC_DX_DestroyOutput'
-
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-
-IF (ASSOCIATED(OutputData%fromSC)) THEN
-  DEALLOCATE(OutputData%fromSC)
-  OutputData%fromSC => NULL()
-  OutputData%C_obj%fromSC = C_NULL_PTR
-  OutputData%C_obj%fromSC_Len = 0
-ENDIF
-IF (ASSOCIATED(OutputData%fromSCglob)) THEN
-  DEALLOCATE(OutputData%fromSCglob)
-  OutputData%fromSCglob => NULL()
-  OutputData%C_obj%fromSCglob = C_NULL_PTR
-  OutputData%C_obj%fromSCglob_Len = 0
-ENDIF
- END SUBROUTINE SC_DX_DestroyOutput
-
- SUBROUTINE SC_DX_PackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
-  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(SC_DX_OutputType),  INTENT(IN) :: InData
-  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
-  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
-  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
-    ! Local variables
-  INTEGER(IntKi)                 :: Re_BufSz
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_BufSz
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_BufSz
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
-  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_PackOutput'
- ! buffers to store subtypes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-
-  OnlySize = .FALSE.
-  IF ( PRESENT(SizeOnly) ) THEN
-    OnlySize = SizeOnly
-  ENDIF
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_BufSz  = 0
-  Db_BufSz  = 0
-  Int_BufSz  = 0
-  Int_BufSz   = Int_BufSz   + 1     ! fromSC allocated yes/no
-  IF ( ASSOCIATED(InData%fromSC) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! fromSC upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%fromSC)  ! fromSC
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! fromSCglob allocated yes/no
-  IF ( ASSOCIATED(InData%fromSCglob) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! fromSCglob upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%fromSCglob)  ! fromSCglob
-  END IF
-  IF ( Re_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Db_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF ( Int_BufSz  .GT. 0 ) THEN 
-     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
-     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-     END IF
-  END IF
-  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
-
-  IF (C_ASSOCIATED(InData%C_obj%object)) CALL SetErrStat(ErrID_Severe,'C_obj%object cannot be packed.',ErrStat,ErrMsg,RoutineName)
-
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred = 1
-
-  IF ( .NOT. ASSOCIATED(InData%fromSC) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%fromSC,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%fromSC,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%fromSC,1), UBOUND(InData%fromSC,1)
-        ReKiBuf(Re_Xferred) = InData%fromSC(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( .NOT. ASSOCIATED(InData%fromSCglob) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%fromSCglob,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%fromSCglob,1)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i1 = LBOUND(InData%fromSCglob,1), UBOUND(InData%fromSCglob,1)
-        ReKiBuf(Re_Xferred) = InData%fromSCglob(i1)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
- END SUBROUTINE SC_DX_PackOutput
-
- SUBROUTINE SC_DX_UnPackOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
-  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(SC_DX_OutputType), INTENT(INOUT) :: OutData
-  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    ! Local variables
-  INTEGER(IntKi)                 :: Buf_size
-  INTEGER(IntKi)                 :: Re_Xferred
-  INTEGER(IntKi)                 :: Db_Xferred
-  INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'SC_DX_UnPackOutput'
- ! buffers to store meshes, if any
-  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
-  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
-  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
-    !
-  ErrStat = ErrID_None
-  ErrMsg  = ""
-  Re_Xferred  = 1
-  Db_Xferred  = 1
-  Int_Xferred  = 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! fromSC not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ASSOCIATED(OutData%fromSC)) DEALLOCATE(OutData%fromSC)
-    ALLOCATE(OutData%fromSC(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%fromSC.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    OutData%C_obj%fromSC_Len = SIZE(OutData%fromSC)
-    IF (OutData%C_obj%fromSC_Len > 0) &
-       OutData%C_obj%fromSC = C_LOC( OutData%fromSC( i1_l ) )
-      DO i1 = LBOUND(OutData%fromSC,1), UBOUND(OutData%fromSC,1)
-        OutData%fromSC(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! fromSCglob not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ASSOCIATED(OutData%fromSCglob)) DEALLOCATE(OutData%fromSCglob)
-    ALLOCATE(OutData%fromSCglob(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%fromSCglob.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    OutData%C_obj%fromSCglob_Len = SIZE(OutData%fromSCglob)
-    IF (OutData%C_obj%fromSCglob_Len > 0) &
-       OutData%C_obj%fromSCglob = C_LOC( OutData%fromSCglob( i1_l ) )
-      DO i1 = LBOUND(OutData%fromSCglob,1), UBOUND(OutData%fromSCglob,1)
-        OutData%fromSCglob(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
-        Re_Xferred = Re_Xferred + 1
-      END DO
-  END IF
- END SUBROUTINE SC_DX_UnPackOutput
-
- SUBROUTINE SC_DX_C2Fary_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers )
-    TYPE(SC_DX_OutputType), INTENT(INOUT) :: OutputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-
-    ! -- fromSC Output Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%fromSC ) ) THEN
-          NULLIFY( OutputData%fromSC )
-       ELSE
-          CALL C_F_POINTER(OutputData%C_obj%fromSC, OutputData%fromSC, (/OutputData%C_obj%fromSC_Len/))
-       END IF
-    END IF
-
-    ! -- fromSCglob Output Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%fromSCglob ) ) THEN
-          NULLIFY( OutputData%fromSCglob )
-       ELSE
-          CALL C_F_POINTER(OutputData%C_obj%fromSCglob, OutputData%fromSCglob, (/OutputData%C_obj%fromSCglob_Len/))
-       END IF
-    END IF
- END SUBROUTINE SC_DX_C2Fary_CopyOutput
-
- SUBROUTINE SC_DX_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
-    TYPE(SC_DX_OutputType), INTENT(INOUT) :: OutputData
-    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
-    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
-    ! 
-    LOGICAL                        :: SkipPointers_local
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-    IF (PRESENT(SkipPointers)) THEN
-       SkipPointers_local = SkipPointers
-    ELSE
-       SkipPointers_local = .false.
-    END IF
-
-    ! -- fromSC Output Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(OutputData%fromSC)) THEN 
-          OutputData%C_obj%fromSC_Len = 0
-          OutputData%C_obj%fromSC = C_NULL_PTR
-       ELSE
-          OutputData%C_obj%fromSC_Len = SIZE(OutputData%fromSC)
-          IF (OutputData%C_obj%fromSC_Len > 0) &
-             OutputData%C_obj%fromSC = C_LOC( OutputData%fromSC( LBOUND(OutputData%fromSC,1) ) )
-       END IF
-    END IF
-
-    ! -- fromSCglob Output Data fields
-    IF ( .NOT. SkipPointers_local ) THEN
-       IF ( .NOT. ASSOCIATED(OutputData%fromSCglob)) THEN 
-          OutputData%C_obj%fromSCglob_Len = 0
-          OutputData%C_obj%fromSCglob = C_NULL_PTR
-       ELSE
-          OutputData%C_obj%fromSCglob_Len = SIZE(OutputData%fromSCglob)
-          IF (OutputData%C_obj%fromSCglob_Len > 0) &
-             OutputData%C_obj%fromSCglob = C_LOC( OutputData%fromSCglob( LBOUND(OutputData%fromSCglob,1) ) )
-       END IF
-    END IF
- END SUBROUTINE SC_DX_F2C_CopyOutput
-
+   ErrMsg  = ''
+   
+   IF (PRESENT(SkipPointers)) THEN
+      SkipPointers_local = SkipPointers
+   ELSE
+      SkipPointers_local = .false.
+   END IF
+   
+   ! -- fromSC Output Data fields
+   IF (.NOT. SkipPointers_local ) THEN
+      IF (.NOT. ASSOCIATED(OutputData%fromSC)) THEN 
+         OutputData%C_obj%fromSC_Len = 0
+         OutputData%C_obj%fromSC = C_NULL_PTR
+      ELSE
+         OutputData%C_obj%fromSC_Len = SIZE(OutputData%fromSC)
+         IF (OutputData%C_obj%fromSC_Len > 0) &
+            OutputData%C_obj%fromSC = C_LOC(OutputData%fromSC(LBOUND(OutputData%fromSC,1)))
+      END IF
+   END IF
+   
+   ! -- fromSCglob Output Data fields
+   IF (.NOT. SkipPointers_local ) THEN
+      IF (.NOT. ASSOCIATED(OutputData%fromSCglob)) THEN 
+         OutputData%C_obj%fromSCglob_Len = 0
+         OutputData%C_obj%fromSCglob = C_NULL_PTR
+      ELSE
+         OutputData%C_obj%fromSCglob_Len = SIZE(OutputData%fromSCglob)
+         IF (OutputData%C_obj%fromSCglob_Len > 0) &
+            OutputData%C_obj%fromSCglob = C_LOC(OutputData%fromSCglob(LBOUND(OutputData%fromSCglob,1)))
+      END IF
+   END IF
+END SUBROUTINE
 END MODULE SCDataEx_Types
 !ENDOFREGISTRYGENERATEDFILE

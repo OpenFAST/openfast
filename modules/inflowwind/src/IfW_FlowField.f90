@@ -40,7 +40,7 @@ contains
 
 !> IfW_FlowField_GetVelAcc gets the velocities (and accelerations) at the given point positions.
 !! Accelerations are only calculated if the AccelUVW array is allocated.
-subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, AccelUVW, ErrStat, ErrMsg)
+subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, AccelUVW, ErrStat, ErrMsg, BoxExceedAllow, PosOffset)
 
    type(FlowFieldType), intent(in)           :: FF                !< FlowField data structure
    integer(IntKi), intent(in)                :: IStart            !< Start index for returning velocities for external field
@@ -50,22 +50,25 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
    real(ReKi), allocatable, intent(inout)    :: AccelUVW(:, :)    !< Array of acceleration outputs
    integer(IntKi), intent(out)               :: ErrStat           !< Error status
    character(*), intent(out)                 :: ErrMsg            !< Error message
+   logical, optional, intent(in)             :: BoxExceedAllow    !< Flag to allow wind box to be exceeded (Lidar & OLAF)
+   real(ReKi), optional, intent(in)          :: PosOffset(3)      !< XYZ offset to position array
 
    character(*), parameter                   :: RoutineName = "IfW_FlowField_GetVelAcc"
-   integer(IntKi)                            :: i
-   integer(IntKi)                            :: NumPoints
-   logical                                   :: OutputAccel, AddMeanAfterInterp
-   real(ReKi), allocatable                   :: Position(:, :)
-   integer(IntKi)                            :: Grid3D_AccelInterp
    integer(IntKi)                            :: TmpErrStat
    character(ErrMsgLen)                      :: TmpErrMsg
 
+   ! All Wind Types
+   real(ReKi), allocatable                   :: Position(:, :)
+   real(ReKi)                                :: PosOffset_Local(3)
+   logical                                   :: OutputAccel, AddMeanAfterInterp
+   integer(IntKi)                            :: i, NumPoints, IEnd
+   
    ! Uniform Field
    type(UniformField_Interp)                 :: UFopVel, UFopAcc
-
+   
    ! Grid3D Field
-   real(ReKi)                                :: Xi(3)
-   real(ReKi)                                :: VelCell(8, 3), AccCell(8, 3)
+   real(ReKi)                                :: Xi(3), VelCell(8, 3), AccCell(8, 3)
+   integer(IntKi)                            :: Grid3D_AccelInterp
    logical                                   :: Is3D
    logical                                   :: GridExceedAllow   ! is this point allowed to exceed bounds of wind grid
 
@@ -107,10 +110,18 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
 
    ! Copy positions or transform based on wind box rotation
    if (FF%RotateWindBox) then
-      do i = 1, NumPoints
-         Position(:, i) = GetPrimePosition(PositionXYZ(:, i))
-      end do
-   else
+      if (present(PosOffset)) then
+         do i = 1, NumPoints
+            Position(:, i) = GetPrimePosition(PositionXYZ(:, i) + PosOffset)
+         end do
+      else
+         do i = 1, NumPoints
+            Position(:, i) = GetPrimePosition(PositionXYZ(:, i))
+         end do
+      end if
+   else if (present(PosOffset)) then
+      Position = PositionXYZ + spread(PosOffset, 2, NumPoints)
+   else 
       Position = PositionXYZ
    end if
 
@@ -146,7 +157,6 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
          end if
 
          ! Loop throuh points and calcualate velocity and acceleration
-         !$OMP PARALLEL DO SCHEDULE(RUNTIME)
          do i = 1, NumPoints
             if (Position(3, i) > 0.0_ReKi) then
                VelocityUVW(:, i) = UniformField_GetVel(FF%Uniform, UFopVel, Position(:, i))
@@ -160,7 +170,6 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       else  ! Otherwise, only velocity requested
 
          ! Loop throuh points and calcualate velocity
-         !$OMP PARALLEL DO SCHEDULE(RUNTIME)
          do i = 1, NumPoints
             if (Position(3, i) > 0.0_ReKi) then
                VelocityUVW(:, i) = UniformField_GetVel(FF%Uniform, UFopVel, Position(:, i))
@@ -196,8 +205,16 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       ! Store flag value since it doesn't change during loop
       AddMeanAfterInterp = FF%Grid3D%AddMeanAfterInterp
 
+      ! Points can exceed grid limits
+      if (present(BoxExceedAllow)) then
+         GridExceedAllow = FF%Grid3D%BoxExceedAllow .and. BoxExceedAllow
+      else if (FF%Grid3D%BoxExceedAllowDrv) then
+         GridExceedAllow = .true.
+      else
+         GridExceedAllow = .false.
+      end if
+
       ! Loop through points
-      !$OMP PARALLEL DO SCHEDULE(RUNTIME)
       do i = 1, NumPoints
 
          ! If height < zero, set velocity/acceleration to zero, continue
@@ -206,9 +223,6 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
             if (OutputAccel) AccelUVW(:, i) = 0.0_ReKi
             cycle
          end if
-
-         ! Is this point allowed beyond the bounds of the wind box?
-         GridExceedAllow = FF%Grid3D%BoxExceedAllowF .and. (i >= FF%Grid3D%BoxExceedAllowIdx)
 
          ! Calculate grid cells for interpolation, returns velocity and acceleration
          ! components at corners of grid cell containing time and position. Also
@@ -257,7 +271,6 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
       end if
 
       ! Loop through points
-      !$OMP PARALLEL DO SCHEDULE(RUNTIME)
       do i = 1, NumPoints
 
          ! If height greater than zero, calculate velocity, otherwise zero
@@ -284,8 +297,15 @@ subroutine IfW_FlowField_GetVelAcc(FF, IStart, Time, PositionXYZ, VelocityUVW, A
          return
       end if
 
-      ! Set velocities directly from velocity array
-      VelocityUVW = FF%Points%Vel(:, IStart:IStart + NumPoints - 1)
+      ! Calculate end index
+      IEnd = IStart + NumPoints - 1
+
+      ! If start and end indices are valid, copy velocities, otherwise zero
+      if (IStart >= 1 .and. IEnd < size(FF%Points%Vel)) then
+         VelocityUVW = FF%Points%Vel(:, IStart:IEnd)
+      else
+         VelocityUVW = 0.0_ReKi
+      end if
 
    case (User_FieldType)
 
