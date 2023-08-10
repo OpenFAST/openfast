@@ -171,6 +171,12 @@ MODULE AeroDyn_Inflow_C_BINDING
    !------------------------------------------------------------------------------------
 
 
+   ! NOTE on turbine origin
+   ! The turbine origin is set by TurbOrigin_C during the ADI_C_SetupRotor routine.  This is the tower base location. All
+   ! blade, tower, nacelle, and hub coordinates are relative to this location.  Since AD15 and IfW use absolute positioning,
+   ! the reference positions for the blades, tower, nacelle, and hub are set by the values passed into ADI_C_SetupRotor +
+   ! TurbOrigin_C (stored as Sim%WT(iWT)%OriginInit).  When the mesh and other points are passed in, they are relative to
+   ! their respective rotor origin.
 
 
 CONTAINS
@@ -325,7 +331,7 @@ contains
       call WrScr("-----------------------------------------------------------")
       call WrScr("Interface debugging:  Variables passed in through interface")
       call WrScr("   ADI_C_PreInit")
-      call WrScr("--------------------------------------")
+      call WrScr("   --------------------------------------")
       call WrScr("       NumTurbines_C                  "//trim(Num2LStr( NumTurbines_C )) )
       TmpFlag="F";   if (TransposeDCM_in==1_c_int) TmpFlag="T"
       call WrScr("       TransposeDCM_in                "//TmpFlag )
@@ -787,7 +793,7 @@ CONTAINS
       call WrScr("-----------------------------------------------------------")
       call WrScr("Interface debugging:  Variables passed in through interface")
       call WrScr("   ADI_C_Init")
-      call WrScr("-----------------------------------------------------------")
+      call WrScr("   --------------------------------------------------------")
       call WrScr("   FileInfo")
       TmpFlag="F";   if (ADinputFilePassed==1_c_int) TmpFlag="T"
       call WrScr("       ADinputFilePassed_C            "//TmpFlag )
@@ -1271,7 +1277,7 @@ subroutine ADI_C_SetupRotor(iWT_c, TurbOrigin_C,                 &
 !GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_SetupRotor
 #endif
    integer(c_int),            intent(in   ) :: iWT_c     !< Wind turbine / rotor number
-   real(c_float),             intent(in   ) :: TurbOrigin_C(3)
+   real(c_float),             intent(in   ) :: TurbOrigin_C(3)                         !< turbine origin (tower base). Gets added to all meshes to shift turbine position.
    ! Initial hub and blade root positions/orientations
    real(c_float),             intent(in   )  :: HubPos_C( 3 )                          !< Hub position
    real(c_double),            intent(in   )  :: HubOri_C( 9 )                          !< Hub orientation
@@ -1384,10 +1390,10 @@ contains
       call WrScr("-----------------------------------------------------------")
       call WrScr("Interface debugging:  Variables passed in through interface")
       call WrScr("   ADI_C_SetupRotor -- rotor "//trim(Num2LStr(iWT_c)))
-      call WrScr("-----------------------------------------------------------")
+      call WrScr("   --------------------------------------------------------")
       call WrScr("   Turbine origin")
       call WrMatrix(TurbOrigin_C,CU,'(3(ES15.7e2))')
-      call WrScr("   Init rotor positions/orientations")
+      call WrScr("   Init rotor positions/orientations         (positions do not include Turbine origin offset)")
       call WrNR("       Hub Position         ")
       call WrMatrix(HubPos_C,CU,'(3(ES15.7e2))')
       call WrNR("       Hub Orientation      ")
@@ -1455,7 +1461,7 @@ contains
 
       do iNode=1,NumMeshPts(iWT)
          ! initial position and orientation of node
-         InitPos  = tmpBldPtMeshPos(1:3,iNode)
+         InitPos  = tmpBldPtMeshPos(1:3,iNode) + Sim%WT(iWT)%OriginInit(1:3)
          if (TransposeDCM) then
             Orient   = transpose(tmpBldPtMeshOri(1:3,1:3,iNode))
          else
@@ -1491,7 +1497,7 @@ contains
 !                       TranslationAcc   = .TRUE.,    RotationAcc = .FALSE. )
 !        if(Failed()) return
 !
-!     InitPos = real(NacPos_C(   1:3),ReKi)
+!     InitPos = real(NacPos_C(   1:3),ReKi) + Sim%WT(iWT)%OriginInit(1:3)
 !     Orient  = reshape( real(NacOri_C(1:9),ReKi), (/3,3/) )
 !     call OrientRemap(Orient)
 !     call MeshPositionNode(  NacMotionMesh(iWT)      , &
@@ -1576,7 +1582,6 @@ subroutine ADI_C_SetRotorMotion( iWT_c,                             &
    ! current turbine number
    iWT = int(iWT_c, IntKi)
 
-print*,'SetRotorMotion turbine ',iWT
    ! Sanity check -- number of node points cannot change
    if ( NumMeshPts(iWT) /= int(NumMeshPts_C, IntKi) ) then
       ErrStat2 =  ErrID_Fatal
@@ -1621,8 +1626,8 @@ CONTAINS
       call WrScr("Interface debugging:  Variables passed in through interface")
       call WrScr("   ADI_C_SetRotorMotion -- rotor "//trim(Num2LStr(iWT_c)))
       call WrScr("      ("//trim(Num2LStr(Sim%WT(iWT_C)%numBlades))//" blades, "//trim(Num2LStr(NumMeshPts(iWT_C)))//" mesh nodes)")
-      call WrScr("-----------------------------------------------------------")
-      call WrScr("   rotor positions/orientations")
+      call WrScr("   --------------------------------------------------------")
+      call WrScr("   rotor positions/orientations         (positions do not include Turbine origin offset)")
       call WrNR("       Hub Position         ")
       call WrMatrix(HubPos_C,CU,'(3(ES15.7e2))')
       call WrNR("       Hub Orientation      ")
@@ -1642,7 +1647,7 @@ CONTAINS
       call WrMatrix(NacAcc_C,CU,'(6(ES15.7e2))')
 
       if (debugverbose > 1) then
-         call WrScr("          Root Positions")
+         call WrScr("          Root Positions         (positions do not include Turbine origin offset)")
          do i=1,Sim%WT(iWT_c)%NumBlades
             j=3*(i-1)
             call WrMatrix(BldRootPos_C(j+1:j+3),CU,'(3(ES15.7e2))')
@@ -1665,7 +1670,7 @@ CONTAINS
       endif
       call WrScr("       NumMeshPts_C                   "//trim(Num2LStr( NumMeshPts_C  )) )
       if (debugverbose > 1) then
-         call WrScr("          Mesh Positions")
+         call WrScr("          Mesh Positions         (positions do not include Turbine origin offset)")
          do i=1,NumMeshPts_C
             j=3*(i-1)
             call WrMatrix(MeshPos_C(j+1:j+3),CU,'(3(ES15.7e2))')
@@ -1762,7 +1767,7 @@ CONTAINS
       call WrScr("-----------------------------------------------------------")
       call WrScr("Interface debugging:  Variables passed in through interface")
       call WrScr("   ADI_C_GetRotorLoads -- rotor "//trim(Num2LStr(iWT_c)))
-      call WrScr("-----------------------------------------------------------")
+      call WrScr("   --------------------------------------------------------")
       call WrScr("       NumMeshPts_C                   "//trim(Num2LStr( NumMeshPts_C  )) )
       call WrScr("-----------------------------------------------------------")
    end subroutine ShowPassedData
@@ -1775,6 +1780,7 @@ end subroutine ADI_C_GetRotorLoads
 !===================================================================================================================================
 
 !> This routine is operating on module level data.  Error handling here in case checks added
+!! NOTE: the OriginInit is not included in the data passed in and must be added to the the position info here
 subroutine Set_MotionMesh(iWT, ErrStat3, ErrMsg3)
    integer(IntKi),            intent(in   )  :: iWT      !< current rotor/turbine
    integer(IntKi),            intent(  out)  :: ErrStat3
@@ -1784,7 +1790,7 @@ subroutine Set_MotionMesh(iWT, ErrStat3, ErrMsg3)
    ErrMsg3  =  ''
    ! Set mesh corresponding to input motions
    do iNode=1,NumMeshPts(iWT)
-      BldPtMotionMesh(iWT)%TranslationDisp(1:3,iNode) = tmpBldPtMeshPos(1:3,iNode) - real(BldPtMotionMesh(iWT)%Position(1:3,iNode), R8Ki) + Sim%WT(iWT)%OriginInit(1:3)
+      BldPtMotionMesh(iWT)%TranslationDisp(1:3,iNode) = tmpBldPtMeshPos(1:3,iNode) + Sim%WT(iWT)%OriginInit(1:3) - real(BldPtMotionMesh(iWT)%Position(1:3,iNode), R8Ki)
       BldPtMotionMesh(iWT)%Orientation(1:3,1:3,iNode) = tmpBldPtMeshOri(1:3,1:3,iNode)
       BldPtMotionMesh(iWT)%TranslationVel( 1:3,iNode) = tmpBldPtMeshVel(1:3,iNode)
       BldPtMotionMesh(iWT)%RotationVel(    1:3,iNode) = tmpBldPtMeshVel(4:6,iNode)
@@ -1799,6 +1805,7 @@ end subroutine Set_MotionMesh
 
 !> Map the motion of the intermediate input mesh over to the input meshes
 !! This routine is operating on module level data, hence few inputs
+!! NOTE: the OriginInit is not included in the data passed in and must be added to the the position info here
 subroutine AD_SetInputMotion( iWT, u_local,        &
          HubPos_C, HubOri_C, HubVel_C, HubAcc_C,   &
          NacPos_C, NacOri_C, NacVel_C, NacAcc_C,   &
@@ -1825,7 +1832,7 @@ subroutine AD_SetInputMotion( iWT, u_local,        &
    ErrMsg  =  ''
    ! Hub -- NOTE: RotationalAcc not present in the mesh
    if ( u_local%AD%rotors(iWT)%HubMotion%Committed ) then
-      u_local%AD%rotors(iWT)%HubMotion%TranslationDisp(1:3,1) = real(HubPos_C(1:3),R8Ki) - real(u_local%AD%rotors(iWT)%HubMotion%Position(1:3,1), R8Ki) + Sim%WT(iWT)%OriginInit(1:3)
+      u_local%AD%rotors(iWT)%HubMotion%TranslationDisp(1:3,1) = real(HubPos_C(1:3),R8Ki) + Sim%WT(iWT)%OriginInit(1:3) - real(u_local%AD%rotors(iWT)%HubMotion%Position(1:3,1), R8Ki)
       u_local%AD%rotors(iWT)%HubMotion%Orientation(1:3,1:3,1) = reshape( real(HubOri_C(1:9),R8Ki), (/3,3/) )
       u_local%AD%rotors(iWT)%HubMotion%TranslationVel(1:3,1)  = real(HubVel_C(1:3), ReKi)
       u_local%AD%rotors(iWT)%HubMotion%RotationVel(1:3,1)     = real(HubVel_C(4:6), ReKi)
@@ -1837,7 +1844,7 @@ subroutine AD_SetInputMotion( iWT, u_local,        &
    endif
    ! Nacelle -- NOTE: RotationalVel and RotationalAcc not present in the mesh
    if ( u_local%AD%rotors(iWT)%NacelleMotion%Committed ) then
-      u_local%AD%rotors(iWT)%NacelleMotion%TranslationDisp(1:3,1) = real(NacPos_C(1:3),R8Ki) - real(u_local%AD%rotors(iWT)%NacelleMotion%Position(1:3,1), R8Ki) + Sim%WT(iWT)%OriginInit(1:3)
+      u_local%AD%rotors(iWT)%NacelleMotion%TranslationDisp(1:3,1) = real(NacPos_C(1:3),R8Ki) + Sim%WT(iWT)%OriginInit(1:3) - real(u_local%AD%rotors(iWT)%NacelleMotion%Position(1:3,1), R8Ki)
       u_local%AD%rotors(iWT)%NacelleMotion%Orientation(1:3,1:3,1) = reshape( real(NacOri_C(1:9),R8Ki), (/3,3/) )
       u_local%AD%rotors(iWT)%NacelleMotion%TranslationVel(1:3,1)  = real(NacVel_C(1:3), ReKi)
       u_local%AD%rotors(iWT)%NacelleMotion%TranslationAcc(1:3,1)  = real(NacAcc_C(1:3), ReKi)
@@ -1849,7 +1856,7 @@ subroutine AD_SetInputMotion( iWT, u_local,        &
    ! Blade root
    do i=0,Sim%WT(iWT)%numBlades-1
       if ( u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%Committed ) then
-         u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%TranslationDisp(1:3,1) = real(BldRootPos_C(3*i+1:3*i+3),R8Ki) - real(u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%Position(1:3,1), R8Ki) + Sim%WT(iWT)%OriginInit(1:3)
+         u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%TranslationDisp(1:3,1) = real(BldRootPos_C(3*i+1:3*i+3),R8Ki) + Sim%WT(iWT)%OriginInit(1:3) - real(u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%Position(1:3,1), R8Ki)
          u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%Orientation(1:3,1:3,1) = reshape( real(BldRootOri_C(9*i+1:9*i+9),R8Ki), (/3,3/) )
          u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%TranslationVel(1:3,1)  = real(BldRootVel_C(6*i+1:6*i+3), ReKi)
          u_local%AD%rotors(iWT)%BladeRootMotion(i+1)%RotationVel(1:3,1)     = real(BldRootVel_C(6*i+4:6*i+6), ReKi)
