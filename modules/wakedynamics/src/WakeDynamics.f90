@@ -42,6 +42,7 @@ module WakeDynamics
    public :: WD_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating
                                                !   continuous states, and updating discrete states
    public :: WD_CalcOutput                     ! Routine for computing outputs
+   public :: WD_WritePlaneOutputs              ! Routine for IO Operation
    public :: WD_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
 
    public :: WD_TEST_Axi2Cart
@@ -423,7 +424,6 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    ! Define parameters
    !............................................................................................
    p%TurbNum     = InitInp%TurbNum
-   p%OutFileRoot = InitInp%OutFileRoot
    p%DT_low      = interval
    ! Parameters from input file
    p%Mod_Wake      = InitInp%InputFileData%Mod_Wake
@@ -474,10 +474,9 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    end do
 
    ! Path for VTK outputs
-   call GetPath( p%OutFileRoot, rootDir, baseName ) 
+   call GetPath( InitInp%OutFileRoot, rootDir, baseName ) 
+   p%OutFileRoot = baseName
    p%OutFileVTKDir = trim(rootDir) // 'vtk_ff_planes'
-
-
    
    p%filtParam         = exp(-2.0_ReKi*pi*p%dt_low*InitInp%InputFileData%f_c)
    p%oneMinusFiltParam = 1.0_ReKi - p%filtParam
@@ -1179,7 +1178,6 @@ subroutine AddSwirl(r, Vt_wake, y, z, Vy_curl, Vz_curl)
    real(ReKi), dimension(:,:), intent(inout)   :: Vy_curl           !< Curl velocity in the y direction (m/s)
    real(ReKi), dimension(:,:), intent(inout)   :: Vz_curl           !< Curl velocity in the z direction (m/s)
 
-   real(ReKi) :: alpha
    integer(IntKi) :: iz, iy, iLow, nr
    real(ReKi) :: r_tmp, r_max
    real(ReKi) :: Vt, S, C ! Sine and cosine
@@ -1212,9 +1210,7 @@ end subroutine AddSwirl
 subroutine WD_TEST_AddVelocityCurl()
   
    real(ReKi) :: Vy_curl(2,2)=0.0_ReKi
-   real(ReKi) :: Vy_curl_ref(2,2)
    real(ReKi) :: Vz_curl(2,2)=0.0_ReKi
-   real(ReKi) :: Vz_curl_ref(2,2)
    real(ReKi) :: y(2)=(/ 0., 2./)
    real(ReKi) :: z(2)=(/-1.,1./)
    real(ReKi) :: Gamma0
@@ -1242,7 +1238,6 @@ subroutine filter_angles2(psi_filt, chi_filt, psi, chi, alpha, alpha_bar)
    real(ReKi), intent(in) :: chi !< skew angle
    real(ReKi), intent(in) :: alpha     !< filter weight
    real(ReKi), intent(in) :: alpha_bar !< 1-alpha
-   real(ReKi) :: t_filt !< output
    real(ReKi) :: x,y
    real(ReKi) :: lambda(3,2)  
    real(ReKi) :: theta_out(3)  
@@ -1346,7 +1341,6 @@ subroutine Axisymmetric2CartesianVx(Vx_axi, r, y, z, Vx)
    real(ReKi), dimension(:,:), intent(inout) :: Vx     !< Axial velocity, distributed across the plane (m/s)
    integer(IntKi) :: iz, iy, nr, iLow
    real(ReKi) :: r_tmp, r_max
-   real(ReKi) :: Vr, S, C ! Sine and cosine
    nr = size(r)
    r_max = r(nr)
    do iz = 1,size(z)
@@ -1453,16 +1447,12 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    CHARACTER(*),                 INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
 
 
-   integer, parameter                           :: indx = 1  
    integer(intKi)                               :: n, i, iy, iz, maxPln
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'WD_CalcOutput'
    real(ReKi)                                   :: correction(3)
    real(ReKi)                                   :: C, S, dvdr, dvdtheta_r, R, r_tmp
-   character(1024) :: Filename
-   type(VTK_Misc)   :: mvtk
-   real(ReKi), dimension(3) :: dx
    errStat = ErrID_None
    errMsg  = ""
    
@@ -1505,7 +1495,10 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       ! Misc approx
       m%Ct_avg    = get_Ctavg(p%r, u%Ct_azavg, u%D_rotor)
       m%GammaCurl = u%D_Rotor/2. * u%Vx_wind_disk * m%Ct_avg * sin(u%chi_skew) * cos(u%chi_skew)
- 
+
+      if ( p%OutAllPlanes ) then
+         call mkdir(p%OutFileVTKDir)
+      endif
       
    else
       y%x_plane    = xd%x_plane
@@ -1575,13 +1568,39 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
 
    end if
    
+end subroutine WD_CalcOutput
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> 
+subroutine WD_WritePlaneOutputs( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
+   use VTK ! 
+   REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
+   TYPE(WD_InputType),           INTENT(IN   )  :: u           !< Inputs at Time t
+   TYPE(WD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(WD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
+   TYPE(WD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
+   TYPE(WD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
+   TYPE(WD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
+   TYPE(WD_OutputType),          INTENT(IN   )  :: y           !< Outputs computed at t (Input only so that mesh con-
+   type(WD_MiscVarType),         intent(IN   )  :: m           !< Misc/optimization variables
+   INTEGER(IntKi),               INTENT(  OUT)  :: errStat     !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
+   integer(intKi)                               :: n, i
+   integer(intKi)                               :: ErrStat2
+   character(ErrMsgLen)                         :: ErrMsg2
+   character(*), parameter                      :: RoutineName = 'WD_WritePlaneOutputs'
+   real(ReKi)                                   :: correction(3)
+   character(1024) :: Filename
+   type(VTK_Misc)   :: mvtk
+   real(ReKi), dimension(3) :: dx
+   errStat = ErrID_None
+   errMsg  = ""
+   
+   n = nint(t/p%DT_low)
    ! --- VTK outputs per plane
    if (p%OutAllPlanes) then 
       call vtk_misc_init(mvtk)
       call set_vtk_binary_format(.false., mvtk)
-      if ( OtherState%firstPass ) then
-         call MKDIR(p%OutFileVTKDir)
-      endif
       do i = 0, min(n-1,p%NumPlanes-1), 1
 !             if (EqualRealNos(t,0.0_DbKi) ) then
 !                write(Filename,'(A,I4.4,A)') trim(p%OutFileVTKDir)//'/PlaneOutputsAtPlane_',i,'_Init.vtk'
@@ -1606,11 +1625,11 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
             dx(1) = 0.0
             dx(2) = p%dr
             dx(3) = p%dr
-            call vtk_dataset_structured_points((/xd%p_plane(1,i),-dx*p%NumRadii,-dx*p%NumRadii/),dx,(/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
+            call vtk_dataset_structured_points((/xd%p_plane(1,i),-p%dr*p%NumRadii,-p%dr*p%NumRadii/),dx,(/1,p%NumRadii*2-1,p%NumRadii*2-1/),mvtk)
             call vtk_point_data_init(mvtk)
-            call vtk_point_data_scalar(xd%Vx_wake2(:,:,i),'Vx',mvtk) 
-            call vtk_point_data_scalar(xd%Vy_wake2(:,:,i),'Vy',mvtk) 
-            call vtk_point_data_scalar(xd%Vz_wake2(:,:,i),'Vz',mvtk) 
+            call vtk_point_data_scalar(y%Vx_wake2(:,:,i),'Vx',mvtk) 
+            call vtk_point_data_scalar(y%Vy_wake2(:,:,i),'Vy',mvtk) 
+            call vtk_point_data_scalar(y%Vz_wake2(:,:,i),'Vz',mvtk) 
             call vtk_point_data_scalar(m%vt_amb2(:,:,i),'vt_amb2', mvtk) 
             call vtk_point_data_scalar(m%vt_shr2(:,:,i),'vt_shr2', mvtk) 
             call vtk_point_data_scalar(m%vt_tot2(:,:,i),'vt_tot2', mvtk) 
@@ -1624,10 +1643,14 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
             endif             
             call vtk_close_file(mvtk)
          endif
+         else
+            call SetErrStat(ErrID_Fatal, '[INFO] Failed to write: '//trim(filename), errStat, errMsg, RoutineName)
+         endif
       enddo ! loop on planes
    endif
    
-end subroutine WD_CalcOutput
+end subroutine WD_WritePlaneOutputs
+
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations
@@ -1645,10 +1668,11 @@ subroutine WD_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_re
    INTEGER(IntKi),               INTENT(  OUT)   :: errStat     !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)   :: errMsg      !< Error message if errStat /= ErrID_None
 
-   integer, parameter                            :: indx = 1  
-   integer(intKi)                                :: ErrStat2
-   character(ErrMsgLen)                          :: ErrMsg2
-   character(*), parameter                       :: RoutineName = 'WD_CalcConstrStateResidual'
+      ! Local variables   
+   !integer, parameter                            :: indx = 1  
+   !integer(intKi)                                :: ErrStat2
+   !character(ErrMsgLen)                          :: ErrMsg2
+   !character(*), parameter                       :: RoutineName = 'WD_CalcConstrStateResidual'
    
    errStat = ErrID_None
    errMsg  = ""
@@ -1720,9 +1744,8 @@ SUBROUTINE ValidateInitInputData( DT_low, InitInp, InputFileData, errStat, errMs
    type(WD_InputFileType),   intent(in)     :: InputFileData                     !< All the data in the WakeDynamics input file
    integer(IntKi),           intent(out)    :: errStat                           !< Error status
    character(*),             intent(out)    :: errMsg                            !< Error message
-
-   integer(IntKi)                           :: k                                 ! Blade number
-   integer(IntKi)                           :: j                                 ! node number
+   
+      ! local variables
    character(*), parameter                  :: RoutineName = 'ValidateInitInputData'
    
    errStat = ErrID_None
