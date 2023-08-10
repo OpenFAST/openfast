@@ -1237,9 +1237,13 @@ contains
 
       ! If field is periodic
       if (G3D%Periodic) then
+         ! Take modulus of negative grid to get positive value between 0 and NSteps
+         T_GRID = MODULO(T_GRID, real(G3D%NSteps, ReKi))
+         ! For very small negative numbers, the above modulus will return exactly NSteps
+         ! so take modulus again to ensure that T_GRID is less than NSteps
          T_GRID = MODULO(T_GRID, real(G3D%NSteps, ReKi))
       end if
-
+      
       ! Calculate bounding grid indices
       IT_LO = floor(T_GRID, IntKi) + 1
       IT_HI = IT_LO + 1
@@ -1267,7 +1271,8 @@ contains
          ! Time exceeds array bounds
          call SetErrStat(ErrID_Fatal, ' Error: GF wind array was exhausted at '// &
                          TRIM(Num2LStr(TIME))//' seconds (trying to access data at '// &
-                         TRIM(Num2LStr(TimeShifted))//' seconds).', &
+                         TRIM(Num2LStr(TimeShifted))//' seconds). IT_Lo='//TRIM(Num2LStr(IT_Lo))// &
+                         ', IT_HI='//TRIM(Num2LStr(IT_Hi)), &
                          ErrStat, ErrMsg, RoutineName)
       end if
 
