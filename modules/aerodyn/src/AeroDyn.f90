@@ -353,6 +353,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          InputFileData%TwrAero    = .false.
          InputFileData%FrozenWake = .false.
         !InputFileData%CavitCheck = .false.
+        !InputFileData%TFinAero   = .false. ! not sure if this needs to be set or not
       end do
       
       if (InputFileData%WakeMod == WakeMod_DBEMT) then

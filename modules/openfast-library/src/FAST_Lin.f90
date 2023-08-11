@@ -1330,7 +1330,7 @@ SUBROUTINE WriteModuleLinearMatrices(ThisModule, ThisInstance, t_global, p_FAST,
    if (p_FAST%LinOutMod) then
             
       OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(ThisModule))
-      if (size(y_FAST%Lin%Modules(ThisModule)%Instance) > 1 .or. ThisModule==Module_BD) OutFileName = trim(OutFileName)//TRIM(num2lstr(ThisModule))
+      if (size(y_FAST%Lin%Modules(ThisModule)%Instance) > 1 .or. ThisModule==Module_BD) OutFileName = trim(OutFileName)//TRIM(num2lstr(ThisInstance))
       
       call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(ThisModule)%Instance(ThisInstance), OutFileName, Un, ErrStat, ErrMsg )
          if (ErrStat >=AbortErrLev) then

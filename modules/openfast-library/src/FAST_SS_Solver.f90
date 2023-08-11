@@ -1154,11 +1154,17 @@ SUBROUTINE SteadyStatePrescribedInputs( caseData, p_FAST, y_FAST, m_FAST, ED, BD
       AD%Input(1)%rotors(1)%BladeMotion(k)%TranslationAcc = 0.0_ReKi
    END DO
    
-   AD%Input(1)%rotors(1)%InflowOnBlade(1,  :,:) = caseData%WindSpeed
-   AD%Input(1)%rotors(1)%InflowOnBlade(2:3,:,:) = 0.0_ReKi
+   AD%Input(1)%rotors(1)%InflowOnBlade(  1,  :,:) = caseData%WindSpeed
+   AD%Input(1)%rotors(1)%InflowOnBlade(  2:3,:,:) = 0.0_ReKi
+   AD%Input(1)%rotors(1)%InflowOnHub(    1  ) = caseData%WindSpeed
+   AD%Input(1)%rotors(1)%InflowOnHub(    2:3) = 0.0_ReKi
+   AD%Input(1)%rotors(1)%InflowOnNacelle(1  ) = caseData%WindSpeed
+   AD%Input(1)%rotors(1)%InflowOnNacelle(2:3) = 0.0_ReKi
+   AD%Input(1)%rotors(1)%InflowOnTailFin(1  ) = caseData%WindSpeed
+   AD%Input(1)%rotors(1)%InflowOnTailFin(2:3) = 0.0_ReKi
    AD%Input(1)%rotors(1)%InflowOnTower = 0.0_ReKi
    AD%Input(1)%rotors(1)%UserProp      = 0.0_ReKi
-!   AD%Input(1)%rotors(1)%AvgDiskVel    = AD%Input(1)%rotors(1)%InflowOnBlade(:,1,1)
+   AD%Input(1)%rotors(1)%AvgDiskVel    = AD%Input(1)%rotors(1)%InflowOnBlade(:,1,1)
    
    
 END SUBROUTINE SteadyStatePrescribedInputs
