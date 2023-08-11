@@ -669,7 +669,15 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
-      - name: Run 5MW tests
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Run 5MW aero map tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
           ctest -VV -L aeromap -LE "cpp|linear|python" -R 5MW_Land_AeroMap
@@ -968,7 +976,6 @@ jobs:
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
-          cmake --build . --target regression_test_controllers
       - name: Run OpenFAST linearization tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |

@@ -251,7 +251,7 @@ try:
 
 
                 if caseName=='Ideal_Beam_Free_Free_Linear':
-                    # The free-free case is a bit weird, smae frequencies but dampings are +/- a value
+                    # The free-free case is a bit weird, same frequencies but dampings are +/- a value
                     zeta_loc=np.abs(zeta_loc)
                     zeta_bas=np.abs(zeta_bas)
 
