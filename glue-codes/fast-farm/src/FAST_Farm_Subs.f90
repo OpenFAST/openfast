@@ -2710,6 +2710,17 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    !$OMP END PARALLEL DO  
    if (ErrStat >= AbortErrLev) return
 
+   ! IO operation, not done using OpenMP
+   DO nt = 1,farm%p%NumTurbines
+      call WD_WritePlaneOutputs( t, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
+                     farm%WD(nt)%OtherSt, farm%WD(nt)%y, farm%WD(nt)%m, ErrStat2, ErrMsg2 )         
+      if (ErrStat2 >= AbortErrLev) then
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)       
+      endif
+   END DO
+   if (ErrStat >= AbortErrLev) return
+
+
    call Transfer_WD_to_AWAE(farm)
    
    if ( farm%p%UseSC ) then
