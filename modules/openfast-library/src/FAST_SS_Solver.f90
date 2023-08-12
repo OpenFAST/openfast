@@ -1150,7 +1150,7 @@ SUBROUTINE SteadyStatePrescribedInputs( caseData, p_FAST, y_FAST, m_FAST, ED, BD
       AD%Input(1)%rotors(1)%BladeRootMotion(k)%Orientation(:,:,1) = EulerConstruct(theta) !AD%Input(1)%BladeRootMotion(k)%RefOrientation
       
       AD%Input(1)%rotors(1)%BladeMotion(k)%RotationVel = 0.0_ReKi
-      AD%Input(1)%rotors(1)%BladeMotion(k)%RotationAcc = 0.0_ReKi
+      !AD%Input(1)%rotors(1)%BladeMotion(k)%RotationAcc = 0.0_ReKi
       AD%Input(1)%rotors(1)%BladeMotion(k)%TranslationAcc = 0.0_ReKi
    END DO
    
