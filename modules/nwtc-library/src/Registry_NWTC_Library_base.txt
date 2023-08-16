@@ -57,6 +57,8 @@ param       ^       -           IntKi           VF_Line             -   2   -   
 param       ^       -           IntKi           VF_RotFrame         -   4   -   "Variable in rotating frame"  -
 param       ^       -           IntKi           VF_NoLin            -   8   -   "Variable to be linearized"  -
 param       ^       -           IntKi           VF_Ext              -  16   -   "Variable for extended linearization"  -
+param       ^       -           IntKi           VF_Solve            -  32   -   "Variable used for input residual calculation"  -
+param       ^       -           IntKi           VF_Any              - 4095  -   "Enable all flags (used for filtering)"  -
 
 param       ^       -           IntKi           VC_None             -   0   -   ""  -
 param       ^       -           IntKi           VC_Tight            -   1   -   ""  -
@@ -73,7 +75,8 @@ typedef     ^       ^           IntKi           DerivOrder          -   0   -   
 typedef     ^       ^           IntKi           NumLin              -   0   -   ""  -
 typedef     ^       ^           IntKi           iUsr                :   -   -   "user defined indices for variable"  -
 typedef     ^       ^           IntKi           iLoc                :   -   -   "indices in local arrays"  -
-typedef     ^       ^           IntKi           iGbl                :   -   -   "indices in global arrays"  -
+typedef     ^       ^           IntKi           iGblSol             :   -   -   "indices in global arrays"  -
+typedef     ^       ^           IntKi           iGblLin             :   -   -   "indices in global arrays"  -
 typedef     ^       ^           IntKi           iy                  ::  -   -   "indices of output to sum for input"  -
 typedef     ^       ^           R8Ki            Perturb             -   0   -   "perturbation"  -
 typedef     ^       ^           character(LinChanLen)   LinNames    :   -   -   ""  -
@@ -86,10 +89,6 @@ typedef     ^       ^           ModVarType      y                   :   -   -   
 typedef     ^       ^           IntKi           Nx                  -   -   -   ""  -
 typedef     ^       ^           IntKi           Nu                  -   -   -   ""  -
 typedef     ^       ^           IntKi           Ny                  -   -   -   ""  -
-typedef     ^       ^           IntKi           ixg                 :   -   -   "index array mapping local x vector to global x vector" -
-typedef     ^       ^           IntKi           iug                 :   -   -   "index array mapping local u vector to global u vector" -
-typedef     ^       ^           IntKi           iyg                 :   -   -   "index array mapping local y vector to global y vector" -
-typedef     ^       ^           IntKi           iyu                 ::  -   -   "index array mapping local y vector to global y vector" -
 
 typedef     ^       ModValsType R8Ki            x                   :   -   -   ""  -
 typedef     ^       ^           R8Ki            dxdt                :   -   -   ""  -
@@ -108,9 +107,14 @@ typedef     ^       ^           R8Ki            dXdu                ::  -   -   
 
 typedef     ^       ModDataType IntKi           ID                  -   0   -   ""  -
 typedef     ^       ^           character(ChanLen) Abbr             -   -   -   ""  -
-typedef     ^       ^           IntKi           Instance            -   0   -   ""  -
+typedef     ^       ^           IntKi           Ins                 -   0   -   ""  -
 typedef     ^       ^           R8Ki            DT                  -   0   -   ""  -
 typedef     ^       ^           IntKi           SubSteps            -   0   -   ""  -
 typedef     ^       ^           IntKi           SolveOption         -   0   -   ""  -
-typedef     ^       ^           ModVarsType    *Vars                -   -   -   ""  -
-typedef     ^       ^           ModValsType    *Vals                -   -   -   ""  -
+typedef     ^       ^           IntKi           ixs                 ::  -   -   "index array mapping local x vector to global x vector" -
+typedef     ^       ^           IntKi           ius                 ::  -   -   "index array mapping local u vector to global u vector" -
+typedef     ^       ^           IntKi           iys                 ::  -   -   "index array mapping local y vector to global y vector" -
+typedef     ^       ^           IntKi           iMapsOpt1           :   -   -   "array of mapping indices where this module is the input" -
+typedef     ^       ^           IntKi           iMapsOpt2           :   -   -   "array of mapping indices where this module is the input" -
+typedef     ^       ^           IntKi           iMapsAll            :   -   -   "array of mapping indices where this module is the input" -
+typedef     ^       ^           ModVarsType    *Vars                -   -   -   "Pointer to module variables type"  -
