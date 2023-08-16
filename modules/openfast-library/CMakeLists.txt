@@ -63,7 +63,6 @@ target_link_libraries(openfast_prelib
 
 set(POSTLIB_SOURCES 
   src/FAST_Mods.f90
-  src/FAST_Subs.f90
   src/FAST_Solver.f90
 )
 

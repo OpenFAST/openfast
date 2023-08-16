@@ -285,16 +285,17 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       if (allocated(Init%OutData_ED%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%NumOutputs = size(Init%OutData_ED%WriteOutputHdr)
    end if
 
+   ! Add module to array of modules
+   call MV_AddModule(m_FAST%Modules, Module_ED, 'ED', 1, p_FAST%dt_module(Module_ED), p_FAST%DT, &
+                     Init%OutData_ED%Vars, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
       RETURN
    END IF
       
    NumBl = Init%OutData_ED%NumBl
-
-   ! Add module to array of modules
-   call MV_AddModule(m_FAST%Modules, Module_ED, 'ED', 1, p_FAST%dt_module(Module_ED), &
-                     Init%OutData_ED%Vars, Init%OutData_ED%Vals)
    
    if (p_FAST%CalcSteady) then
       if ( EqualRealNos(Init%OutData_ED%RotSpeed, 0.0_ReKi) ) then
@@ -327,6 +328,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
              BD%xd(          p_FAST%nBeams,2), &
              BD%z(           p_FAST%nBeams,2), &
              BD%OtherSt(     p_FAST%nBeams,2), &
+             BD%dxdt(        p_FAST%nBeams  ), &
              BD%p(           p_FAST%nBeams  ), &
              BD%u(           p_FAST%nBeams  ), &
              BD%y(           p_FAST%nBeams  ), &
@@ -407,6 +409,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          
             if (allocated(Init%OutData_BD(k)%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%NumOutputs = size(Init%OutData_BD(k)%WriteOutputHdr)
          end if
+
+            ! Add module instance to array of modules
+         call MV_AddModule(m_FAST%Modules, Module_BD, 'BD', k, p_FAST%dt_module(Module_BD), p_FAST%DT, Init%OutData_BD(k)%Vars, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
       END DO
       

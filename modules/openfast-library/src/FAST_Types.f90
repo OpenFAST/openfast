@@ -109,6 +109,28 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: x_eig_phase      !< phase of eigenvector (dimension 1=state, dim 2= azimuth, dim 3 = mode) [-]
   END TYPE FAST_VTK_ModeShapeType
 ! =======================
+! =========  TC_MeshMapType  =======
+  TYPE, PUBLIC :: TC_MeshMapType
+    character(VarNameLen)  :: Key      !< Mapping Key [-]
+    character(VarNameLen)  :: SrcMeshName      !< source mesh name [-]
+    character(VarNameLen)  :: DstMeshName      !< destination mesh name [-]
+    character(VarNameLen)  :: SrcDispMeshName = ''      !< source displacement mesh name [if IsLoad=true] [-]
+    character(VarNameLen)  :: DstDispMeshName = ''      !< destination displacement mesh name [if IsLoad=true] [-]
+    INTEGER(IntKi)  :: SrcModID = 0_IntKi      !< Output module ID [-]
+    INTEGER(IntKi)  :: DstModID = 0_IntKi      !< Input module ID [-]
+    INTEGER(IntKi)  :: SrcModIdx = 0_IntKi      !< Output module index in ModData array [-]
+    INTEGER(IntKi)  :: DstModIdx = 0_IntKi      !< Input module index in ModData array [-]
+    INTEGER(IntKi)  :: SrcModInst = 0_IntKi      !< Output module Instance [-]
+    INTEGER(IntKi)  :: DstModInst = 0_IntKi      !< Input module Instance [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: SrcVarIdx      !< motion variable index [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DstVarIdx      !< motion variable index [-]
+    INTEGER(IntKi)  :: SrcDispVarIdx = 0_IntKi      !< source displacement var index [if IsLoad=true] [-]
+    INTEGER(IntKi)  :: DstDispVarIdx = 0_IntKi      !< destination displacement var index [if IsLoad=true] [-]
+    TYPE(MeshType)  :: MeshTmp      !< Temporary mesh for intermediate transfers [-]
+    TYPE(MeshMapType)  :: MeshMap      !< Mesh mapping from output variable to input variable [-]
+    LOGICAL  :: IsLoad = .false.      !< Flag indicating if this is a load or motion mapping [-]
+  END TYPE TC_MeshMapType
+! =======================
 ! =========  TC_ParameterType  =======
   TYPE, PUBLIC :: TC_ParameterType
     REAL(R8Ki)  :: DT = 0.0_R8Ki      !< solution time step [-]
@@ -132,6 +154,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iyTight      !<  [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iyOpt1      !<  [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ixqd      !<  [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iuLoad      !< Indices of u load variables [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iJX2      !< Indices of Jacobian q variables [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iJT      !< Indices of Jacobian tight coupling variables [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iJ1      !< Indices of Jacobian option 1 variables [-]
@@ -160,15 +183,22 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dXdu      !<  [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dUdu      !<  [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dUdy      !<  [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: GinvdUdu      !<  [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dUdyHat      !<  [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: XB      !<  [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: G      !< Used to merge state matrices [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jac      !<  [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IPIV      !<  [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IPIV2      !<  [-]
     INTEGER(IntKi)  :: IterTotal = 0      !<  [-]
     INTEGER(IntKi)  :: IterUntilUJac = 0      !< Number of convergence iterations until Jacobian update [-]
     INTEGER(IntKi)  :: StepsUntilUJac = 0      !< Number of time steps until Jacobian update [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: dq      !< Change in q [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< Change in x [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !<  [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: UDiff      !<  [-]
+    TYPE(TC_MeshMapType) , DIMENSION(:), ALLOCATABLE  :: Mappings      !< Array of mesh mappings in solver [-]
+    INTEGER(IntKi)  :: DebugUnit = 0_IntKi      !< Unit number to write debug info [-]
   END TYPE TC_MiscVarType
 ! =======================
 ! =========  FAST_ParameterType  =======
@@ -1476,6 +1506,187 @@ subroutine FAST_UnPackVTK_ModeShapeType(Buf, OutData)
    end if
 end subroutine
 
+subroutine FAST_CopyTC_MeshMapType(SrcTC_MeshMapTypeData, DstTC_MeshMapTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(TC_MeshMapType), intent(inout) :: SrcTC_MeshMapTypeData
+   type(TC_MeshMapType), intent(inout) :: DstTC_MeshMapTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'FAST_CopyTC_MeshMapType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstTC_MeshMapTypeData%Key = SrcTC_MeshMapTypeData%Key
+   DstTC_MeshMapTypeData%SrcMeshName = SrcTC_MeshMapTypeData%SrcMeshName
+   DstTC_MeshMapTypeData%DstMeshName = SrcTC_MeshMapTypeData%DstMeshName
+   DstTC_MeshMapTypeData%SrcDispMeshName = SrcTC_MeshMapTypeData%SrcDispMeshName
+   DstTC_MeshMapTypeData%DstDispMeshName = SrcTC_MeshMapTypeData%DstDispMeshName
+   DstTC_MeshMapTypeData%SrcModID = SrcTC_MeshMapTypeData%SrcModID
+   DstTC_MeshMapTypeData%DstModID = SrcTC_MeshMapTypeData%DstModID
+   DstTC_MeshMapTypeData%SrcModIdx = SrcTC_MeshMapTypeData%SrcModIdx
+   DstTC_MeshMapTypeData%DstModIdx = SrcTC_MeshMapTypeData%DstModIdx
+   DstTC_MeshMapTypeData%SrcModInst = SrcTC_MeshMapTypeData%SrcModInst
+   DstTC_MeshMapTypeData%DstModInst = SrcTC_MeshMapTypeData%DstModInst
+   if (allocated(SrcTC_MeshMapTypeData%SrcVarIdx)) then
+      LB(1:1) = lbound(SrcTC_MeshMapTypeData%SrcVarIdx)
+      UB(1:1) = ubound(SrcTC_MeshMapTypeData%SrcVarIdx)
+      if (.not. allocated(DstTC_MeshMapTypeData%SrcVarIdx)) then
+         allocate(DstTC_MeshMapTypeData%SrcVarIdx(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_MeshMapTypeData%SrcVarIdx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTC_MeshMapTypeData%SrcVarIdx = SrcTC_MeshMapTypeData%SrcVarIdx
+   end if
+   if (allocated(SrcTC_MeshMapTypeData%DstVarIdx)) then
+      LB(1:1) = lbound(SrcTC_MeshMapTypeData%DstVarIdx)
+      UB(1:1) = ubound(SrcTC_MeshMapTypeData%DstVarIdx)
+      if (.not. allocated(DstTC_MeshMapTypeData%DstVarIdx)) then
+         allocate(DstTC_MeshMapTypeData%DstVarIdx(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_MeshMapTypeData%DstVarIdx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTC_MeshMapTypeData%DstVarIdx = SrcTC_MeshMapTypeData%DstVarIdx
+   end if
+   DstTC_MeshMapTypeData%SrcDispVarIdx = SrcTC_MeshMapTypeData%SrcDispVarIdx
+   DstTC_MeshMapTypeData%DstDispVarIdx = SrcTC_MeshMapTypeData%DstDispVarIdx
+   call MeshCopy(SrcTC_MeshMapTypeData%MeshTmp, DstTC_MeshMapTypeData%MeshTmp, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call NWTC_Library_CopyMeshMapType(SrcTC_MeshMapTypeData%MeshMap, DstTC_MeshMapTypeData%MeshMap, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstTC_MeshMapTypeData%IsLoad = SrcTC_MeshMapTypeData%IsLoad
+end subroutine
+
+subroutine FAST_DestroyTC_MeshMapType(TC_MeshMapTypeData, ErrStat, ErrMsg)
+   type(TC_MeshMapType), intent(inout) :: TC_MeshMapTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'FAST_DestroyTC_MeshMapType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   if (allocated(TC_MeshMapTypeData%SrcVarIdx)) then
+      deallocate(TC_MeshMapTypeData%SrcVarIdx)
+   end if
+   if (allocated(TC_MeshMapTypeData%DstVarIdx)) then
+      deallocate(TC_MeshMapTypeData%DstVarIdx)
+   end if
+   call MeshDestroy( TC_MeshMapTypeData%MeshTmp, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyMeshMapType(TC_MeshMapTypeData%MeshMap, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
+
+subroutine FAST_PackTC_MeshMapType(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(TC_MeshMapType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'FAST_PackTC_MeshMapType'
+   if (Buf%ErrStat >= AbortErrLev) return
+   call RegPack(Buf, InData%Key)
+   call RegPack(Buf, InData%SrcMeshName)
+   call RegPack(Buf, InData%DstMeshName)
+   call RegPack(Buf, InData%SrcDispMeshName)
+   call RegPack(Buf, InData%DstDispMeshName)
+   call RegPack(Buf, InData%SrcModID)
+   call RegPack(Buf, InData%DstModID)
+   call RegPack(Buf, InData%SrcModIdx)
+   call RegPack(Buf, InData%DstModIdx)
+   call RegPack(Buf, InData%SrcModInst)
+   call RegPack(Buf, InData%DstModInst)
+   call RegPack(Buf, allocated(InData%SrcVarIdx))
+   if (allocated(InData%SrcVarIdx)) then
+      call RegPackBounds(Buf, 1, lbound(InData%SrcVarIdx), ubound(InData%SrcVarIdx))
+      call RegPack(Buf, InData%SrcVarIdx)
+   end if
+   call RegPack(Buf, allocated(InData%DstVarIdx))
+   if (allocated(InData%DstVarIdx)) then
+      call RegPackBounds(Buf, 1, lbound(InData%DstVarIdx), ubound(InData%DstVarIdx))
+      call RegPack(Buf, InData%DstVarIdx)
+   end if
+   call RegPack(Buf, InData%SrcDispVarIdx)
+   call RegPack(Buf, InData%DstDispVarIdx)
+   call MeshPack(Buf, InData%MeshTmp) 
+   call NWTC_Library_PackMeshMapType(Buf, InData%MeshMap) 
+   call RegPack(Buf, InData%IsLoad)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
+
+subroutine FAST_UnPackTC_MeshMapType(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(TC_MeshMapType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'FAST_UnPackTC_MeshMapType'
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   if (Buf%ErrStat /= ErrID_None) return
+   call RegUnpack(Buf, OutData%Key)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%SrcMeshName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%DstMeshName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%SrcDispMeshName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%DstDispMeshName)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%SrcModID)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%DstModID)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%SrcModIdx)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%DstModIdx)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%SrcModInst)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%DstModInst)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (allocated(OutData%SrcVarIdx)) deallocate(OutData%SrcVarIdx)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%SrcVarIdx(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%SrcVarIdx.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%SrcVarIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%DstVarIdx)) deallocate(OutData%DstVarIdx)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%DstVarIdx(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%DstVarIdx.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%DstVarIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   call RegUnpack(Buf, OutData%SrcDispVarIdx)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%DstDispVarIdx)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call MeshUnpack(Buf, OutData%MeshTmp) ! MeshTmp 
+   call NWTC_Library_UnpackMeshMapType(Buf, OutData%MeshMap) ! MeshMap 
+   call RegUnpack(Buf, OutData%IsLoad)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
+
 subroutine FAST_CopyTC_ParameterType(SrcTC_ParameterTypeData, DstTC_ParameterTypeData, CtrlCode, ErrStat, ErrMsg)
    type(TC_ParameterType), intent(in) :: SrcTC_ParameterTypeData
    type(TC_ParameterType), intent(inout) :: DstTC_ParameterTypeData
@@ -1584,6 +1795,18 @@ subroutine FAST_CopyTC_ParameterType(SrcTC_ParameterTypeData, DstTC_ParameterTyp
          end if
       end if
       DstTC_ParameterTypeData%ixqd = SrcTC_ParameterTypeData%ixqd
+   end if
+   if (allocated(SrcTC_ParameterTypeData%iuLoad)) then
+      LB(1:1) = lbound(SrcTC_ParameterTypeData%iuLoad)
+      UB(1:1) = ubound(SrcTC_ParameterTypeData%iuLoad)
+      if (.not. allocated(DstTC_ParameterTypeData%iuLoad)) then
+         allocate(DstTC_ParameterTypeData%iuLoad(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_ParameterTypeData%iuLoad.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTC_ParameterTypeData%iuLoad = SrcTC_ParameterTypeData%iuLoad
    end if
    if (allocated(SrcTC_ParameterTypeData%iJX2)) then
       LB(1:1) = lbound(SrcTC_ParameterTypeData%iJX2)
@@ -1723,6 +1946,9 @@ subroutine FAST_DestroyTC_ParameterType(TC_ParameterTypeData, ErrStat, ErrMsg)
    if (allocated(TC_ParameterTypeData%ixqd)) then
       deallocate(TC_ParameterTypeData%ixqd)
    end if
+   if (allocated(TC_ParameterTypeData%iuLoad)) then
+      deallocate(TC_ParameterTypeData%iuLoad)
+   end if
    if (allocated(TC_ParameterTypeData%iJX2)) then
       deallocate(TC_ParameterTypeData%iJX2)
    end if
@@ -1805,6 +2031,11 @@ subroutine FAST_PackTC_ParameterType(Buf, Indata)
    if (allocated(InData%ixqd)) then
       call RegPackBounds(Buf, 2, lbound(InData%ixqd), ubound(InData%ixqd))
       call RegPack(Buf, InData%ixqd)
+   end if
+   call RegPack(Buf, allocated(InData%iuLoad))
+   if (allocated(InData%iuLoad)) then
+      call RegPackBounds(Buf, 1, lbound(InData%iuLoad), ubound(InData%iuLoad))
+      call RegPack(Buf, InData%iuLoad)
    end if
    call RegPack(Buf, allocated(InData%iJX2))
    if (allocated(InData%iJX2)) then
@@ -1988,6 +2219,20 @@ subroutine FAST_UnPackTC_ParameterType(Buf, OutData)
       call RegUnpack(Buf, OutData%ixqd)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
+   if (allocated(OutData%iuLoad)) deallocate(OutData%iuLoad)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%iuLoad(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%iuLoad.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%iuLoad)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
    if (allocated(OutData%iJX2)) deallocate(OutData%iJX2)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2117,13 +2362,15 @@ subroutine FAST_UnPackTC_ParameterType(Buf, OutData)
 end subroutine
 
 subroutine FAST_CopyTC_MiscVarType(SrcTC_MiscVarTypeData, DstTC_MiscVarTypeData, CtrlCode, ErrStat, ErrMsg)
-   type(TC_MiscVarType), intent(in) :: SrcTC_MiscVarTypeData
+   type(TC_MiscVarType), intent(inout) :: SrcTC_MiscVarTypeData
    type(TC_MiscVarType), intent(inout) :: DstTC_MiscVarTypeData
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1, i2
    integer(IntKi)                 :: LB(2), UB(2)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_CopyTC_MiscVarType'
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -2307,6 +2554,30 @@ subroutine FAST_CopyTC_MiscVarType(SrcTC_MiscVarTypeData, DstTC_MiscVarTypeData,
       end if
       DstTC_MiscVarTypeData%dUdy = SrcTC_MiscVarTypeData%dUdy
    end if
+   if (allocated(SrcTC_MiscVarTypeData%GinvdUdu)) then
+      LB(1:2) = lbound(SrcTC_MiscVarTypeData%GinvdUdu)
+      UB(1:2) = ubound(SrcTC_MiscVarTypeData%GinvdUdu)
+      if (.not. allocated(DstTC_MiscVarTypeData%GinvdUdu)) then
+         allocate(DstTC_MiscVarTypeData%GinvdUdu(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_MiscVarTypeData%GinvdUdu.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTC_MiscVarTypeData%GinvdUdu = SrcTC_MiscVarTypeData%GinvdUdu
+   end if
+   if (allocated(SrcTC_MiscVarTypeData%dUdyHat)) then
+      LB(1:2) = lbound(SrcTC_MiscVarTypeData%dUdyHat)
+      UB(1:2) = ubound(SrcTC_MiscVarTypeData%dUdyHat)
+      if (.not. allocated(DstTC_MiscVarTypeData%dUdyHat)) then
+         allocate(DstTC_MiscVarTypeData%dUdyHat(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_MiscVarTypeData%dUdyHat.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTC_MiscVarTypeData%dUdyHat = SrcTC_MiscVarTypeData%dUdyHat
+   end if
    if (allocated(SrcTC_MiscVarTypeData%XB)) then
       LB(1:2) = lbound(SrcTC_MiscVarTypeData%XB)
       UB(1:2) = ubound(SrcTC_MiscVarTypeData%XB)
@@ -2318,6 +2589,18 @@ subroutine FAST_CopyTC_MiscVarType(SrcTC_MiscVarTypeData, DstTC_MiscVarTypeData,
          end if
       end if
       DstTC_MiscVarTypeData%XB = SrcTC_MiscVarTypeData%XB
+   end if
+   if (allocated(SrcTC_MiscVarTypeData%G)) then
+      LB(1:2) = lbound(SrcTC_MiscVarTypeData%G)
+      UB(1:2) = ubound(SrcTC_MiscVarTypeData%G)
+      if (.not. allocated(DstTC_MiscVarTypeData%G)) then
+         allocate(DstTC_MiscVarTypeData%G(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_MiscVarTypeData%G.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTC_MiscVarTypeData%G = SrcTC_MiscVarTypeData%G
    end if
    if (allocated(SrcTC_MiscVarTypeData%Jac)) then
       LB(1:2) = lbound(SrcTC_MiscVarTypeData%Jac)
@@ -2342,6 +2625,18 @@ subroutine FAST_CopyTC_MiscVarType(SrcTC_MiscVarTypeData, DstTC_MiscVarTypeData,
          end if
       end if
       DstTC_MiscVarTypeData%IPIV = SrcTC_MiscVarTypeData%IPIV
+   end if
+   if (allocated(SrcTC_MiscVarTypeData%IPIV2)) then
+      LB(1:1) = lbound(SrcTC_MiscVarTypeData%IPIV2)
+      UB(1:1) = ubound(SrcTC_MiscVarTypeData%IPIV2)
+      if (.not. allocated(DstTC_MiscVarTypeData%IPIV2)) then
+         allocate(DstTC_MiscVarTypeData%IPIV2(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_MiscVarTypeData%IPIV2.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTC_MiscVarTypeData%IPIV2 = SrcTC_MiscVarTypeData%IPIV2
    end if
    DstTC_MiscVarTypeData%IterTotal = SrcTC_MiscVarTypeData%IterTotal
    DstTC_MiscVarTypeData%IterUntilUJac = SrcTC_MiscVarTypeData%IterUntilUJac
@@ -2382,12 +2677,45 @@ subroutine FAST_CopyTC_MiscVarType(SrcTC_MiscVarTypeData, DstTC_MiscVarTypeData,
       end if
       DstTC_MiscVarTypeData%du = SrcTC_MiscVarTypeData%du
    end if
+   if (allocated(SrcTC_MiscVarTypeData%UDiff)) then
+      LB(1:1) = lbound(SrcTC_MiscVarTypeData%UDiff)
+      UB(1:1) = ubound(SrcTC_MiscVarTypeData%UDiff)
+      if (.not. allocated(DstTC_MiscVarTypeData%UDiff)) then
+         allocate(DstTC_MiscVarTypeData%UDiff(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_MiscVarTypeData%UDiff.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTC_MiscVarTypeData%UDiff = SrcTC_MiscVarTypeData%UDiff
+   end if
+   if (allocated(SrcTC_MiscVarTypeData%Mappings)) then
+      LB(1:1) = lbound(SrcTC_MiscVarTypeData%Mappings)
+      UB(1:1) = ubound(SrcTC_MiscVarTypeData%Mappings)
+      if (.not. allocated(DstTC_MiscVarTypeData%Mappings)) then
+         allocate(DstTC_MiscVarTypeData%Mappings(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_MiscVarTypeData%Mappings.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      do i1 = LB(1), UB(1)
+         call FAST_CopyTC_MeshMapType(SrcTC_MiscVarTypeData%Mappings(i1), DstTC_MiscVarTypeData%Mappings(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end do
+   end if
+   DstTC_MiscVarTypeData%DebugUnit = SrcTC_MiscVarTypeData%DebugUnit
 end subroutine
 
 subroutine FAST_DestroyTC_MiscVarType(TC_MiscVarTypeData, ErrStat, ErrMsg)
    type(TC_MiscVarType), intent(inout) :: TC_MiscVarTypeData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)  :: i1, i2
+   integer(IntKi)  :: LB(2), UB(2)
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_DestroyTC_MiscVarType'
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -2436,14 +2764,26 @@ subroutine FAST_DestroyTC_MiscVarType(TC_MiscVarTypeData, ErrStat, ErrMsg)
    if (allocated(TC_MiscVarTypeData%dUdy)) then
       deallocate(TC_MiscVarTypeData%dUdy)
    end if
+   if (allocated(TC_MiscVarTypeData%GinvdUdu)) then
+      deallocate(TC_MiscVarTypeData%GinvdUdu)
+   end if
+   if (allocated(TC_MiscVarTypeData%dUdyHat)) then
+      deallocate(TC_MiscVarTypeData%dUdyHat)
+   end if
    if (allocated(TC_MiscVarTypeData%XB)) then
       deallocate(TC_MiscVarTypeData%XB)
+   end if
+   if (allocated(TC_MiscVarTypeData%G)) then
+      deallocate(TC_MiscVarTypeData%G)
    end if
    if (allocated(TC_MiscVarTypeData%Jac)) then
       deallocate(TC_MiscVarTypeData%Jac)
    end if
    if (allocated(TC_MiscVarTypeData%IPIV)) then
       deallocate(TC_MiscVarTypeData%IPIV)
+   end if
+   if (allocated(TC_MiscVarTypeData%IPIV2)) then
+      deallocate(TC_MiscVarTypeData%IPIV2)
    end if
    if (allocated(TC_MiscVarTypeData%dq)) then
       deallocate(TC_MiscVarTypeData%dq)
@@ -2454,12 +2794,26 @@ subroutine FAST_DestroyTC_MiscVarType(TC_MiscVarTypeData, ErrStat, ErrMsg)
    if (allocated(TC_MiscVarTypeData%du)) then
       deallocate(TC_MiscVarTypeData%du)
    end if
+   if (allocated(TC_MiscVarTypeData%UDiff)) then
+      deallocate(TC_MiscVarTypeData%UDiff)
+   end if
+   if (allocated(TC_MiscVarTypeData%Mappings)) then
+      LB(1:1) = lbound(TC_MiscVarTypeData%Mappings)
+      UB(1:1) = ubound(TC_MiscVarTypeData%Mappings)
+      do i1 = LB(1), UB(1)
+         call FAST_DestroyTC_MeshMapType(TC_MiscVarTypeData%Mappings(i1), ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+      deallocate(TC_MiscVarTypeData%Mappings)
+   end if
 end subroutine
 
 subroutine FAST_PackTC_MiscVarType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(TC_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FAST_PackTC_MiscVarType'
+   integer(IntKi)  :: i1, i2
+   integer(IntKi)  :: LB(2), UB(2)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%q))
    if (allocated(InData%q)) then
@@ -2536,10 +2890,25 @@ subroutine FAST_PackTC_MiscVarType(Buf, Indata)
       call RegPackBounds(Buf, 2, lbound(InData%dUdy), ubound(InData%dUdy))
       call RegPack(Buf, InData%dUdy)
    end if
+   call RegPack(Buf, allocated(InData%GinvdUdu))
+   if (allocated(InData%GinvdUdu)) then
+      call RegPackBounds(Buf, 2, lbound(InData%GinvdUdu), ubound(InData%GinvdUdu))
+      call RegPack(Buf, InData%GinvdUdu)
+   end if
+   call RegPack(Buf, allocated(InData%dUdyHat))
+   if (allocated(InData%dUdyHat)) then
+      call RegPackBounds(Buf, 2, lbound(InData%dUdyHat), ubound(InData%dUdyHat))
+      call RegPack(Buf, InData%dUdyHat)
+   end if
    call RegPack(Buf, allocated(InData%XB))
    if (allocated(InData%XB)) then
       call RegPackBounds(Buf, 2, lbound(InData%XB), ubound(InData%XB))
       call RegPack(Buf, InData%XB)
+   end if
+   call RegPack(Buf, allocated(InData%G))
+   if (allocated(InData%G)) then
+      call RegPackBounds(Buf, 2, lbound(InData%G), ubound(InData%G))
+      call RegPack(Buf, InData%G)
    end if
    call RegPack(Buf, allocated(InData%Jac))
    if (allocated(InData%Jac)) then
@@ -2550,6 +2919,11 @@ subroutine FAST_PackTC_MiscVarType(Buf, Indata)
    if (allocated(InData%IPIV)) then
       call RegPackBounds(Buf, 1, lbound(InData%IPIV), ubound(InData%IPIV))
       call RegPack(Buf, InData%IPIV)
+   end if
+   call RegPack(Buf, allocated(InData%IPIV2))
+   if (allocated(InData%IPIV2)) then
+      call RegPackBounds(Buf, 1, lbound(InData%IPIV2), ubound(InData%IPIV2))
+      call RegPack(Buf, InData%IPIV2)
    end if
    call RegPack(Buf, InData%IterTotal)
    call RegPack(Buf, InData%IterUntilUJac)
@@ -2569,6 +2943,21 @@ subroutine FAST_PackTC_MiscVarType(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%du), ubound(InData%du))
       call RegPack(Buf, InData%du)
    end if
+   call RegPack(Buf, allocated(InData%UDiff))
+   if (allocated(InData%UDiff)) then
+      call RegPackBounds(Buf, 1, lbound(InData%UDiff), ubound(InData%UDiff))
+      call RegPack(Buf, InData%UDiff)
+   end if
+   call RegPack(Buf, allocated(InData%Mappings))
+   if (allocated(InData%Mappings)) then
+      call RegPackBounds(Buf, 1, lbound(InData%Mappings), ubound(InData%Mappings))
+      LB(1:1) = lbound(InData%Mappings)
+      UB(1:1) = ubound(InData%Mappings)
+      do i1 = LB(1), UB(1)
+         call FAST_PackTC_MeshMapType(Buf, InData%Mappings(i1)) 
+      end do
+   end if
+   call RegPack(Buf, InData%DebugUnit)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -2576,6 +2965,7 @@ subroutine FAST_UnPackTC_MiscVarType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(TC_MiscVarType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FAST_UnPackTC_MiscVarType'
+   integer(IntKi)  :: i1, i2
    integer(IntKi)  :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
@@ -2790,6 +3180,34 @@ subroutine FAST_UnPackTC_MiscVarType(Buf, OutData)
       call RegUnpack(Buf, OutData%dUdy)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
+   if (allocated(OutData%GinvdUdu)) deallocate(OutData%GinvdUdu)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 2, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%GinvdUdu(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%GinvdUdu.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%GinvdUdu)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%dUdyHat)) deallocate(OutData%dUdyHat)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 2, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%dUdyHat(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%dUdyHat.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%dUdyHat)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
    if (allocated(OutData%XB)) deallocate(OutData%XB)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2802,6 +3220,20 @@ subroutine FAST_UnPackTC_MiscVarType(Buf, OutData)
          return
       end if
       call RegUnpack(Buf, OutData%XB)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%G)) deallocate(OutData%G)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 2, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%G(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%G.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%G)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    if (allocated(OutData%Jac)) deallocate(OutData%Jac)
@@ -2830,6 +3262,20 @@ subroutine FAST_UnPackTC_MiscVarType(Buf, OutData)
          return
       end if
       call RegUnpack(Buf, OutData%IPIV)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%IPIV2)) deallocate(OutData%IPIV2)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%IPIV2(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%IPIV2.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%IPIV2)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    call RegUnpack(Buf, OutData%IterTotal)
@@ -2880,6 +3326,37 @@ subroutine FAST_UnPackTC_MiscVarType(Buf, OutData)
       call RegUnpack(Buf, OutData%du)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
+   if (allocated(OutData%UDiff)) deallocate(OutData%UDiff)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%UDiff(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%UDiff.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%UDiff)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%Mappings)) deallocate(OutData%Mappings)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%Mappings(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Mappings.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      do i1 = LB(1), UB(1)
+         call FAST_UnpackTC_MeshMapType(Buf, OutData%Mappings(i1)) ! Mappings 
+      end do
+   end if
+   call RegUnpack(Buf, OutData%DebugUnit)
+   if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
 subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -15376,7 +15853,7 @@ subroutine FAST_UnPackExternInputType(Buf, OutData)
 end subroutine
 
 subroutine FAST_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
-   type(FAST_MiscVarType), intent(in) :: SrcMiscData
+   type(FAST_MiscVarType), intent(inout) :: SrcMiscData
    type(FAST_MiscVarType), intent(inout) :: DstMiscData
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat

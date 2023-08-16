@@ -719,9 +719,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD,
             ! get the jacobians
             call BD_JacobianPInput( t_global, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), BD%OtherSt(k,STATE_CURR), &
                                        BD%y(k), BD%m(k), ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_BD)%Instance(k)%D, &
-                                       dXdu=y_FAST%Lin%Modules(Module_BD)%Instance(k)%B, &
-                                       StateRel_x   =y_FAST%Lin%Modules(Module_BD)%Instance(k)%StateRel_x, &
-                                       StateRel_xdot=y_FAST%Lin%Modules(Module_BD)%Instance(k)%StateRel_xdot )
+                                       dXdu=y_FAST%Lin%Modules(Module_BD)%Instance(k)%B)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
             call BD_JacobianPContState( t_global, BD%Input(1,k), BD%p(k), BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), BD%OtherSt(k,STATE_CURR), &
@@ -1423,10 +1421,6 @@ SUBROUTINE WrLinFile_txt_End(Un, p_FAST, LinData)
    ! StateRotation matrix
    if (allocated(LinData%StateRotation)) call WrPartialMatrix( LinData%StateRotation, Un, p_FAST%OutFmt, 'StateRotation' )
 
-   ! RelState matrices
-   if (allocated(LinData%StateRel_x))    call WrPartialMatrix( LinData%StateRel_x,    Un, p_FAST%OutFmt, 'State_Rel_x' )
-   if (allocated(LinData%StateRel_xdot)) call WrPartialMatrix( LinData%StateRel_xdot, Un, p_FAST%OutFmt, 'State_Rel_xdot' )
-
    close(Un)
    Un = -1
    
@@ -1499,28 +1493,21 @@ SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, rotFrame, deriv, d
       if (present(rotFrame)) RotatingCol = rotFrame(i)
                   
       if (index(names(i), ' orientation angle, node ') > 0 ) then  ! make sure this matches what is written in PackMotionMesh_Names()
-         if (names(i)(1:2) == "ED") then
-            if (UseThisCol) then
-               if (index(names(i), 'X orientation') > 0) then
-                  j = 1
-               else if (index(names(i), 'Y orientation') > 0) then
-                  j = 2
-               else if (index(names(i), 'Z orientation') > 0) then
-                  j = 3
-               end if
-               DCM = wm_to_dcm(op(i_op-j+1:i_op-j+3))
-               WRITE(Un, FmtOrient) i_print, DCM(j,1), DCM(j,2), DCM(j,3), RotatingCol, DerivOrdCol, trim(names(i))  !//' [OP is a row of the DCM]
-               i_print = i_print + 1
+
+         if (UseThisCol) then
+            if (index(names(i), 'X orientation') > 0) then
+               j = 1
+            else if (index(names(i), 'Y orientation') > 0) then
+               j = 2
+            else if (index(names(i), 'Z orientation') > 0) then
+               j = 3
             end if
-            i_op = i_op + 1
-         else
-            if (UseThisCol) then
-               WRITE(Un, FmtOrient) i_print, op(i_op), op(i_op+1), op(i_op+2), RotatingCol, DerivOrdCol, trim(names(i))  !//' [OP is a row of the DCM]
-               i_print = i_print + 1
-            end if
-            i_op = i_op + 3
+            DCM = wm_to_dcm(op(i_op-j+1:i_op-j+3))
+            WRITE(Un, FmtOrient) i_print, DCM(j,1), DCM(j,2), DCM(j,3), RotatingCol, DerivOrdCol, trim(names(i))  !//' [OP is a row of the DCM]
+            i_print = i_print + 1
          end if
-         
+         i_op = i_op + 1
+
       else
          if (UseThisCol) then
             if (UseDerivNames) then

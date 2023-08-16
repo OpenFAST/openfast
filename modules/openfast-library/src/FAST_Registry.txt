@@ -90,6 +90,26 @@ typedef   ^   FAST_VTK_ModeShapeType   R8Ki     x_eig_phase     {:}{:}{:}  -  - 
 
 # ..... Tight Coupling Generalized Alpha Solver Data .............
 
+# Mapping Type
+typedef ^ TC_MeshMapType    character(VarNameLen)   Key             -  -  -     "Mapping Key" -
+typedef ^ ^                 character(VarNameLen)   SrcMeshName     -  -  -     "source mesh name" -
+typedef ^ ^                 character(VarNameLen)   DstMeshName     -  -  -     "destination mesh name" -
+typedef ^ ^                 character(VarNameLen)   SrcDispMeshName - ''  -     "source displacement mesh name [if IsLoad=true]" -
+typedef ^ ^                 character(VarNameLen)   DstDispMeshName - ''  -     "destination displacement mesh name [if IsLoad=true]" -
+typedef ^ ^                 IntKi                   SrcModID        -  -  -     "Output module ID" -
+typedef ^ ^                 IntKi                   DstModID        -  -  -     "Input module ID" -
+typedef ^ ^                 IntKi                   SrcModIdx       -  -  -     "Output module index in ModData array" -
+typedef ^ ^                 IntKi                   DstModIdx       -  -  -     "Input module index in ModData array" -
+typedef ^ ^                 IntKi                   SrcModInst      -  -  -     "Output module Instance" -
+typedef ^ ^                 IntKi                   DstModInst      -  -  -     "Input module Instance" -
+typedef ^ ^                 IntKi                   SrcVarIdx       :  -  -     "motion variable index" -
+typedef ^ ^                 IntKi                   DstVarIdx       :  -  -     "motion variable index" -
+typedef ^ ^                 IntKi                   SrcDispVarIdx   -  -  -     "source displacement var index [if IsLoad=true]" -
+typedef ^ ^                 IntKi                   DstDispVarIdx   -  -  -     "destination displacement var index [if IsLoad=true]" -
+typedef ^ ^                 MeshType                MeshTmp         -  -  -     "Temporary mesh for intermediate transfers" -
+typedef ^ ^                 MeshMapType             MeshMap         -  -  -     "Mesh mapping from output variable to input variable" -
+typedef ^ ^                 logical                 IsLoad          -  -  -     "Flag indicating if this is a load or motion mapping" -
+
 # Parameters 
 typedef ^ TC_ParameterType  R8Ki            DT                     -  -  -      "solution time step" -
 typedef ^ ^                 R8Ki            ConvTol                -  -  -      "Solution convergence tolerance" -
@@ -111,7 +131,8 @@ typedef ^ ^                 IntKi           iUTight                :  -  -      
 typedef ^ ^                 IntKi           iUOpt1                 :  -  -      "" -
 typedef ^ ^                 IntKi           iyTight                :  -  -      "" -
 typedef ^ ^                 IntKi           iyOpt1                 :  -  -      "" -
-typedef ^ ^                 IntKi           ixqd                    :: -  -      "" -
+typedef ^ ^                 IntKi           ixqd                   :: -  -      "" -
+typedef ^ ^                 IntKi           iuLoad                 :  -  -      "Indices of u load variables" -
 typedef ^ ^                 IntKi           iJX2                   :  -  -      "Indices of Jacobian q variables" -
 typedef ^ ^                 IntKi           iJT                    :  -  -      "Indices of Jacobian tight coupling variables" -
 typedef ^ ^                 IntKi           iJ1                    :  -  -      "Indices of Jacobian option 1 variables" -
@@ -138,15 +159,22 @@ typedef ^ ^                 R8Ki            dXdx                   :: -  -      
 typedef ^ ^                 R8Ki            dXdu                   :: -  -      "" -
 typedef ^ ^                 R8Ki            dUdu                   :: -  -      "" -
 typedef ^ ^                 R8Ki            dUdy                   :: -  -      "" -
+typedef ^ ^                 R8Ki            GinvdUdu                :: -  -      "" -
+typedef ^ ^                 R8Ki            dUdyHat                :: -  -      "" -
 typedef ^ ^                 R8Ki            XB                     :: -  -      "" -
+typedef ^ ^                 R8Ki            G                      :: -  -      "Used to merge state matrices" -
 typedef ^ ^                 R8Ki            Jac                    :: -  -      "" -
 typedef ^ ^                 IntKi           IPIV                   :  -  -      "" -
+typedef ^ ^                 IntKi           IPIV2                  :  -  -      "" -
 typedef ^ ^                 IntKi           IterTotal              -  0  -      "" -
-typedef ^ ^                 IntKi           IterUntilUJac             -  0  -      "Number of convergence iterations until Jacobian update" -
-typedef ^ ^                 IntKi           StepsUntilUJac             -  0  -      "Number of time steps until Jacobian update" -
+typedef ^ ^                 IntKi           IterUntilUJac          -  0  -      "Number of convergence iterations until Jacobian update" -
+typedef ^ ^                 IntKi           StepsUntilUJac         -  0  -      "Number of time steps until Jacobian update" -
 typedef ^ ^                 R8Ki            dq                     :: -  -      "Change in q" -
 typedef ^ ^                 R8Ki            dx                     :  -  -      "Change in x" -
 typedef ^ ^                 R8Ki            du                     :  -  -      "" -
+typedef ^ ^                 R8Ki            UDiff                  :  -  -      "" -
+typedef ^ ^                 TC_MeshMapType  Mappings               :  -  -      "Array of mesh mappings in solver" -
+typedef ^ ^                 IntKi           DebugUnit              -  -  -      "Unit number to write debug info" -
 
 
 # ..... FAST_ParameterType data .......................................................................................................
