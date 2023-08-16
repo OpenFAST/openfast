@@ -756,10 +756,6 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END IF
    if (InputFileData%tngt_stf_fd) CALL WrScr( 'Using finite difference to compute tangent stiffness matrix'//NewLine )
-   !   ! RelStates - Define states relative to root motion during linearization? (flag) [used only when linearizing]
-   !CALL ReadVar(UnIn,InputFile,InputFileData%RelStates,"RelStates", "Define states relative to root motion during linearization? (flag) [used only when linearizing]",ErrStat2,ErrMsg2,UnEc)
-   !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   InputFileData%RelStates = .false.  ! this doesn't seem to be needed anymore (and I think there is a problem with using it in MBC3)
 
    Line = ""
    CALL ReadVar(UnIn, InputFile, Line, 'tngt_stf_comp','compare tangent stiffness using finite difference flag', ErrStat2, ErrMsg2, UnEc)

@@ -53,6 +53,7 @@ typedef   ^        InitOutputType LOGICAL               RotFrame_x   {:}  -   - 
 typedef   ^        InitOutputType LOGICAL               RotFrame_u   {:}  -   -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
 typedef   ^        InitOutputType LOGICAL               IsLoad_u     {:}  -   -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 typedef   ^        InitOutputType IntKi                 DerivOrder_x {:}  -   -   "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
+typedef	  ^	       InitOutputType ModVarsType          *Vars          -   -   -   "Module Variables"
 
 # ..... Blade Input file data........................................................................
 typedef   ^        BladeInputData    IntKi    station_total    -     -     -    "Number of blade input stations"
@@ -99,7 +100,6 @@ typedef   ^        BD_InputFile     ^       pitchC - - -     "Pitch actuator dam
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 typedef   ^        BD_InputFile    Logical             Echo        -  - - "Echo" -
 typedef   ^        BD_InputFile    Logical             RotStates -  .TRUE. - "Orient states in rotating frame during linearization? (flag)" -
-typedef   ^        BD_InputFile    Logical             RelStates -  .FALSE. - "Define states relative to root motion during linearization? (flag)" -
 typedef   ^        BD_InputFile    Logical             tngt_stf_fd -  - - "Flag to compute tangent stifness matrix via finite difference" - 
 typedef   ^        BD_InputFile    Logical             tngt_stf_comp -  - - "Flag to compare finite differenced and analytical tangent stifness" -
 typedef   ^        BD_InputFile    IntKi               NNodeOuts   -  - - "Number of node outputs [0 - 9]"	-
@@ -162,6 +162,7 @@ typedef   ^        ^             ^           mEta       :::    - - "Center of ma
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 
+typedef   ^        ParameterType ModVarsType   &Vars             -         - -  "Module Variables"
 typedef   ^        ParameterType DbKi           dt               -         - -  "module dt" s
 typedef   ^        ParameterType DbKi           coef             {9}       - -  "GA2 Coefficient" -
 typedef   ^        ParameterType DbKi           rhoinf           -         - -  "Numerical Damping Coefficient for GA2"
@@ -248,7 +249,6 @@ typedef   ^        ParameterType    R8Ki        dx                     {6}      
 typedef   ^        ParameterType    Integer     Jac_ny                  -            - - "number of outputs in jacobian matrix" -
 typedef   ^        ParameterType    Integer     Jac_nx                  -            - - "half the number of continuous states in jacobian matrix" -
 typedef   ^        ParameterType    logical     RotStates               -            - - "Orient states in rotating frame during linearization? (flag)" -
-typedef   ^        ParameterType    Logical     RelStates               -            - - "Define states relative to root motion during linearization? (flag)" -
 
 
 # ..... Inputs
@@ -373,4 +373,5 @@ typedef   ^        MiscVarType    ^            LP_RHS_LU    {:}           - - "R
 typedef   ^        MiscVarType    IntKi        LP_indx      {:}           - - "Index vector for LU" -
 typedef   ^        MiscVarType    BD_InputType u             -            - - "Inputs converted to the internal BD coordinate system" -
 typedef   ^        MiscVarType    BD_InputType u2            -            - - "Inputs in the FAST coordinate system, possibly modified by pitch actuator" -
+typedef   ^        MiscVarType    ModValsType  Vals          -            - - "Values corresponding to module variables"
 
