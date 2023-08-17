@@ -109,8 +109,8 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: x_eig_phase      !< phase of eigenvector (dimension 1=state, dim 2= azimuth, dim 3 = mode) [-]
   END TYPE FAST_VTK_ModeShapeType
 ! =======================
-! =========  TC_MeshMapType  =======
-  TYPE, PUBLIC :: TC_MeshMapType
+! =========  TC_MappingType  =======
+  TYPE, PUBLIC :: TC_MappingType
     character(VarNameLen)  :: Key      !< Mapping Key [-]
     character(VarNameLen)  :: SrcMeshName      !< source mesh name [-]
     character(VarNameLen)  :: DstMeshName      !< destination mesh name [-]
@@ -120,8 +120,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: DstModID = 0_IntKi      !< Input module ID [-]
     INTEGER(IntKi)  :: SrcModIdx = 0_IntKi      !< Output module index in ModData array [-]
     INTEGER(IntKi)  :: DstModIdx = 0_IntKi      !< Input module index in ModData array [-]
-    INTEGER(IntKi)  :: SrcModInst = 0_IntKi      !< Output module Instance [-]
-    INTEGER(IntKi)  :: DstModInst = 0_IntKi      !< Input module Instance [-]
+    INTEGER(IntKi)  :: SrcIns = 0_IntKi      !< Output module Instance [-]
+    INTEGER(IntKi)  :: DstIns = 0_IntKi      !< Input module Instance [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: SrcVarIdx      !< motion variable index [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DstVarIdx      !< motion variable index [-]
     INTEGER(IntKi)  :: SrcDispVarIdx = 0_IntKi      !< source displacement var index [if IsLoad=true] [-]
@@ -129,7 +129,8 @@ IMPLICIT NONE
     TYPE(MeshType)  :: MeshTmp      !< Temporary mesh for intermediate transfers [-]
     TYPE(MeshMapType)  :: MeshMap      !< Mesh mapping from output variable to input variable [-]
     LOGICAL  :: IsLoad = .false.      !< Flag indicating if this is a load or motion mapping [-]
-  END TYPE TC_MeshMapType
+    LOGICAL  :: Updated = .false.      !< Flag indicating if this mesh has been updated [-]
+  END TYPE TC_MappingType
 ! =======================
 ! =========  TC_ParameterType  =======
   TYPE, PUBLIC :: TC_ParameterType
@@ -197,7 +198,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< Change in x [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !<  [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: UDiff      !<  [-]
-    TYPE(TC_MeshMapType) , DIMENSION(:), ALLOCATABLE  :: Mappings      !< Array of mesh mappings in solver [-]
+    TYPE(TC_MappingType) , DIMENSION(:), ALLOCATABLE  :: Mappings      !< Array of mesh mappings in solver [-]
     INTEGER(IntKi)  :: DebugUnit = 0_IntKi      !< Unit number to write debug info [-]
   END TYPE TC_MiscVarType
 ! =======================
@@ -1506,89 +1507,90 @@ subroutine FAST_UnPackVTK_ModeShapeType(Buf, OutData)
    end if
 end subroutine
 
-subroutine FAST_CopyTC_MeshMapType(SrcTC_MeshMapTypeData, DstTC_MeshMapTypeData, CtrlCode, ErrStat, ErrMsg)
-   type(TC_MeshMapType), intent(inout) :: SrcTC_MeshMapTypeData
-   type(TC_MeshMapType), intent(inout) :: DstTC_MeshMapTypeData
+subroutine FAST_CopyTC_MappingType(SrcTC_MappingTypeData, DstTC_MappingTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(TC_MappingType), intent(inout) :: SrcTC_MappingTypeData
+   type(TC_MappingType), intent(inout) :: DstTC_MappingTypeData
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
    integer(IntKi)                 :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'FAST_CopyTC_MeshMapType'
+   character(*), parameter        :: RoutineName = 'FAST_CopyTC_MappingType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   DstTC_MeshMapTypeData%Key = SrcTC_MeshMapTypeData%Key
-   DstTC_MeshMapTypeData%SrcMeshName = SrcTC_MeshMapTypeData%SrcMeshName
-   DstTC_MeshMapTypeData%DstMeshName = SrcTC_MeshMapTypeData%DstMeshName
-   DstTC_MeshMapTypeData%SrcDispMeshName = SrcTC_MeshMapTypeData%SrcDispMeshName
-   DstTC_MeshMapTypeData%DstDispMeshName = SrcTC_MeshMapTypeData%DstDispMeshName
-   DstTC_MeshMapTypeData%SrcModID = SrcTC_MeshMapTypeData%SrcModID
-   DstTC_MeshMapTypeData%DstModID = SrcTC_MeshMapTypeData%DstModID
-   DstTC_MeshMapTypeData%SrcModIdx = SrcTC_MeshMapTypeData%SrcModIdx
-   DstTC_MeshMapTypeData%DstModIdx = SrcTC_MeshMapTypeData%DstModIdx
-   DstTC_MeshMapTypeData%SrcModInst = SrcTC_MeshMapTypeData%SrcModInst
-   DstTC_MeshMapTypeData%DstModInst = SrcTC_MeshMapTypeData%DstModInst
-   if (allocated(SrcTC_MeshMapTypeData%SrcVarIdx)) then
-      LB(1:1) = lbound(SrcTC_MeshMapTypeData%SrcVarIdx)
-      UB(1:1) = ubound(SrcTC_MeshMapTypeData%SrcVarIdx)
-      if (.not. allocated(DstTC_MeshMapTypeData%SrcVarIdx)) then
-         allocate(DstTC_MeshMapTypeData%SrcVarIdx(LB(1):UB(1)), stat=ErrStat2)
+   DstTC_MappingTypeData%Key = SrcTC_MappingTypeData%Key
+   DstTC_MappingTypeData%SrcMeshName = SrcTC_MappingTypeData%SrcMeshName
+   DstTC_MappingTypeData%DstMeshName = SrcTC_MappingTypeData%DstMeshName
+   DstTC_MappingTypeData%SrcDispMeshName = SrcTC_MappingTypeData%SrcDispMeshName
+   DstTC_MappingTypeData%DstDispMeshName = SrcTC_MappingTypeData%DstDispMeshName
+   DstTC_MappingTypeData%SrcModID = SrcTC_MappingTypeData%SrcModID
+   DstTC_MappingTypeData%DstModID = SrcTC_MappingTypeData%DstModID
+   DstTC_MappingTypeData%SrcModIdx = SrcTC_MappingTypeData%SrcModIdx
+   DstTC_MappingTypeData%DstModIdx = SrcTC_MappingTypeData%DstModIdx
+   DstTC_MappingTypeData%SrcIns = SrcTC_MappingTypeData%SrcIns
+   DstTC_MappingTypeData%DstIns = SrcTC_MappingTypeData%DstIns
+   if (allocated(SrcTC_MappingTypeData%SrcVarIdx)) then
+      LB(1:1) = lbound(SrcTC_MappingTypeData%SrcVarIdx)
+      UB(1:1) = ubound(SrcTC_MappingTypeData%SrcVarIdx)
+      if (.not. allocated(DstTC_MappingTypeData%SrcVarIdx)) then
+         allocate(DstTC_MappingTypeData%SrcVarIdx(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_MeshMapTypeData%SrcVarIdx.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_MappingTypeData%SrcVarIdx.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstTC_MeshMapTypeData%SrcVarIdx = SrcTC_MeshMapTypeData%SrcVarIdx
+      DstTC_MappingTypeData%SrcVarIdx = SrcTC_MappingTypeData%SrcVarIdx
    end if
-   if (allocated(SrcTC_MeshMapTypeData%DstVarIdx)) then
-      LB(1:1) = lbound(SrcTC_MeshMapTypeData%DstVarIdx)
-      UB(1:1) = ubound(SrcTC_MeshMapTypeData%DstVarIdx)
-      if (.not. allocated(DstTC_MeshMapTypeData%DstVarIdx)) then
-         allocate(DstTC_MeshMapTypeData%DstVarIdx(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcTC_MappingTypeData%DstVarIdx)) then
+      LB(1:1) = lbound(SrcTC_MappingTypeData%DstVarIdx)
+      UB(1:1) = ubound(SrcTC_MappingTypeData%DstVarIdx)
+      if (.not. allocated(DstTC_MappingTypeData%DstVarIdx)) then
+         allocate(DstTC_MappingTypeData%DstVarIdx(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_MeshMapTypeData%DstVarIdx.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_MappingTypeData%DstVarIdx.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstTC_MeshMapTypeData%DstVarIdx = SrcTC_MeshMapTypeData%DstVarIdx
+      DstTC_MappingTypeData%DstVarIdx = SrcTC_MappingTypeData%DstVarIdx
    end if
-   DstTC_MeshMapTypeData%SrcDispVarIdx = SrcTC_MeshMapTypeData%SrcDispVarIdx
-   DstTC_MeshMapTypeData%DstDispVarIdx = SrcTC_MeshMapTypeData%DstDispVarIdx
-   call MeshCopy(SrcTC_MeshMapTypeData%MeshTmp, DstTC_MeshMapTypeData%MeshTmp, CtrlCode, ErrStat2, ErrMsg2 )
+   DstTC_MappingTypeData%SrcDispVarIdx = SrcTC_MappingTypeData%SrcDispVarIdx
+   DstTC_MappingTypeData%DstDispVarIdx = SrcTC_MappingTypeData%DstDispVarIdx
+   call MeshCopy(SrcTC_MappingTypeData%MeshTmp, DstTC_MappingTypeData%MeshTmp, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call NWTC_Library_CopyMeshMapType(SrcTC_MeshMapTypeData%MeshMap, DstTC_MeshMapTypeData%MeshMap, CtrlCode, ErrStat2, ErrMsg2)
+   call NWTC_Library_CopyMeshMapType(SrcTC_MappingTypeData%MeshMap, DstTC_MappingTypeData%MeshMap, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstTC_MeshMapTypeData%IsLoad = SrcTC_MeshMapTypeData%IsLoad
+   DstTC_MappingTypeData%IsLoad = SrcTC_MappingTypeData%IsLoad
+   DstTC_MappingTypeData%Updated = SrcTC_MappingTypeData%Updated
 end subroutine
 
-subroutine FAST_DestroyTC_MeshMapType(TC_MeshMapTypeData, ErrStat, ErrMsg)
-   type(TC_MeshMapType), intent(inout) :: TC_MeshMapTypeData
+subroutine FAST_DestroyTC_MappingType(TC_MappingTypeData, ErrStat, ErrMsg)
+   type(TC_MappingType), intent(inout) :: TC_MappingTypeData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'FAST_DestroyTC_MeshMapType'
+   character(*), parameter        :: RoutineName = 'FAST_DestroyTC_MappingType'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(TC_MeshMapTypeData%SrcVarIdx)) then
-      deallocate(TC_MeshMapTypeData%SrcVarIdx)
+   if (allocated(TC_MappingTypeData%SrcVarIdx)) then
+      deallocate(TC_MappingTypeData%SrcVarIdx)
    end if
-   if (allocated(TC_MeshMapTypeData%DstVarIdx)) then
-      deallocate(TC_MeshMapTypeData%DstVarIdx)
+   if (allocated(TC_MappingTypeData%DstVarIdx)) then
+      deallocate(TC_MappingTypeData%DstVarIdx)
    end if
-   call MeshDestroy( TC_MeshMapTypeData%MeshTmp, ErrStat2, ErrMsg2)
+   call MeshDestroy( TC_MappingTypeData%MeshTmp, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call NWTC_Library_DestroyMeshMapType(TC_MeshMapTypeData%MeshMap, ErrStat2, ErrMsg2)
+   call NWTC_Library_DestroyMeshMapType(TC_MappingTypeData%MeshMap, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine FAST_PackTC_MeshMapType(Buf, Indata)
+subroutine FAST_PackTC_MappingType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
-   type(TC_MeshMapType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'FAST_PackTC_MeshMapType'
+   type(TC_MappingType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'FAST_PackTC_MappingType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%Key)
    call RegPack(Buf, InData%SrcMeshName)
@@ -1599,8 +1601,8 @@ subroutine FAST_PackTC_MeshMapType(Buf, Indata)
    call RegPack(Buf, InData%DstModID)
    call RegPack(Buf, InData%SrcModIdx)
    call RegPack(Buf, InData%DstModIdx)
-   call RegPack(Buf, InData%SrcModInst)
-   call RegPack(Buf, InData%DstModInst)
+   call RegPack(Buf, InData%SrcIns)
+   call RegPack(Buf, InData%DstIns)
    call RegPack(Buf, allocated(InData%SrcVarIdx))
    if (allocated(InData%SrcVarIdx)) then
       call RegPackBounds(Buf, 1, lbound(InData%SrcVarIdx), ubound(InData%SrcVarIdx))
@@ -1616,13 +1618,14 @@ subroutine FAST_PackTC_MeshMapType(Buf, Indata)
    call MeshPack(Buf, InData%MeshTmp) 
    call NWTC_Library_PackMeshMapType(Buf, InData%MeshMap) 
    call RegPack(Buf, InData%IsLoad)
+   call RegPack(Buf, InData%Updated)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
-subroutine FAST_UnPackTC_MeshMapType(Buf, OutData)
+subroutine FAST_UnPackTC_MappingType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
-   type(TC_MeshMapType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'FAST_UnPackTC_MeshMapType'
+   type(TC_MappingType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'FAST_UnPackTC_MappingType'
    integer(IntKi)  :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
@@ -1645,9 +1648,9 @@ subroutine FAST_UnPackTC_MeshMapType(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%DstModIdx)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%SrcModInst)
+   call RegUnpack(Buf, OutData%SrcIns)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%DstModInst)
+   call RegUnpack(Buf, OutData%DstIns)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%SrcVarIdx)) deallocate(OutData%SrcVarIdx)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -1684,6 +1687,8 @@ subroutine FAST_UnPackTC_MeshMapType(Buf, OutData)
    call MeshUnpack(Buf, OutData%MeshTmp) ! MeshTmp 
    call NWTC_Library_UnpackMeshMapType(Buf, OutData%MeshMap) ! MeshMap 
    call RegUnpack(Buf, OutData%IsLoad)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%Updated)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -2700,7 +2705,7 @@ subroutine FAST_CopyTC_MiscVarType(SrcTC_MiscVarTypeData, DstTC_MiscVarTypeData,
          end if
       end if
       do i1 = LB(1), UB(1)
-         call FAST_CopyTC_MeshMapType(SrcTC_MiscVarTypeData%Mappings(i1), DstTC_MiscVarTypeData%Mappings(i1), CtrlCode, ErrStat2, ErrMsg2)
+         call FAST_CopyTC_MappingType(SrcTC_MiscVarTypeData%Mappings(i1), DstTC_MiscVarTypeData%Mappings(i1), CtrlCode, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do
@@ -2801,7 +2806,7 @@ subroutine FAST_DestroyTC_MiscVarType(TC_MiscVarTypeData, ErrStat, ErrMsg)
       LB(1:1) = lbound(TC_MiscVarTypeData%Mappings)
       UB(1:1) = ubound(TC_MiscVarTypeData%Mappings)
       do i1 = LB(1), UB(1)
-         call FAST_DestroyTC_MeshMapType(TC_MiscVarTypeData%Mappings(i1), ErrStat2, ErrMsg2)
+         call FAST_DestroyTC_MappingType(TC_MiscVarTypeData%Mappings(i1), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
       deallocate(TC_MiscVarTypeData%Mappings)
@@ -2954,7 +2959,7 @@ subroutine FAST_PackTC_MiscVarType(Buf, Indata)
       LB(1:1) = lbound(InData%Mappings)
       UB(1:1) = ubound(InData%Mappings)
       do i1 = LB(1), UB(1)
-         call FAST_PackTC_MeshMapType(Buf, InData%Mappings(i1)) 
+         call FAST_PackTC_MappingType(Buf, InData%Mappings(i1)) 
       end do
    end if
    call RegPack(Buf, InData%DebugUnit)
@@ -3352,7 +3357,7 @@ subroutine FAST_UnPackTC_MiscVarType(Buf, OutData)
          return
       end if
       do i1 = LB(1), UB(1)
-         call FAST_UnpackTC_MeshMapType(Buf, OutData%Mappings(i1)) ! Mappings 
+         call FAST_UnpackTC_MappingType(Buf, OutData%Mappings(i1)) ! Mappings 
       end do
    end if
    call RegUnpack(Buf, OutData%DebugUnit)

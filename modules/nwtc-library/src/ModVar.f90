@@ -459,7 +459,7 @@ subroutine MV_ComputeDiff(VarAry, PosAry, NegAry, DiffAry)
    real(R8Ki), intent(inout)     :: DiffAry(:)     ! Array containing difference
    integer(IntKi)                :: i, j, ind(3)
    real(R8Ki)                    :: DeltaWM(3)
-   
+
    ! Loop through variables
    do i = 1, size(VarAry)
 
@@ -525,19 +525,12 @@ subroutine MV_AddModule(ModAry, ModID, ModAbbr, Instance, ModDT, SolverDT, Vars,
    ErrStat = ErrID_None
    ErrMsg = ''
 
-   ! Populate ModuleDataType derived type
-   ModData = ModDataType(ID=ModID, Abbr=ModAbbr, Ins=Instance, DT=ModDT, Vars=Vars)
+   ! If module array hasn't been allocated, allocate with zero size
+   if (.not. allocated(ModAry)) allocate (ModAry(0))
 
-   ! Allocate mapping index with zero length
-   call AllocAry(ModData%iMapsOpt1, 0, "ModData%iMapsOpt1", ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call AllocAry(ModData%iMapsOpt2, 0, "ModData%iMapsOpt2", ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   call AllocAry(ModData%iMapsAll, 0, "ModData%iMapsAll", ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+   ! Populate ModuleDataType derived type
+   ModData = ModDataType(Idx=size(ModAry) + 1, ID=ModID, Abbr=ModAbbr, &
+                         Ins=Instance, DT=ModDT, Vars=Vars)
 
    !----------------------------------------------------------------------------
    ! Calculate Module Substepping
@@ -573,11 +566,8 @@ subroutine MV_AddModule(ModAry, ModID, ModAbbr, Instance, ModDT, SolverDT, Vars,
    ! Add module data to array
    !----------------------------------------------------------------------------
 
-   if (allocated(ModAry)) then
-      ModAry = [ModAry, ModData]
-   else
-      ModAry = [ModData]
-   end if
+   ModAry = [ModAry, ModData]
+
 end subroutine
 
 subroutine MV_AddMeshVar(VarAry, Name, Fields, Nodes, Flags, Perturbs, Active)

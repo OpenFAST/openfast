@@ -200,10 +200,11 @@ contains
    end function
 end subroutine
 
-subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, T, ErrStat, ErrMsg)
+subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, T, ErrStat, ErrMsg, x_TC)
    type(ModDataType), intent(in)           :: Mod         !< Module data
    real(DbKi), intent(in)                  :: t_initial   !< Initial simulation time (almost always 0)
    integer(IntKi), intent(in)              :: n_t_global  !< Integer time step
+   real(R8Ki), optional, intent(in)        :: x_TC(:)     !< Tight coupling state array
    type(FAST_TurbineType), intent(inout)   :: T           !< Turbine type
    integer(IntKi), intent(out)             :: ErrStat
    character(*), intent(out)               :: ErrMsg
@@ -236,11 +237,19 @@ subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, T, ErrStat, ErrMsg)
 
    case (Module_BD)
 
-      ! No update states for tight coupling modules
+      if (present(x_TC)) then
+         call BD_PackStateValues(T%BD%p(Mod%Ins), T%BD%x(Mod%Ins, STATE_PRED), T%BD%m(Mod%Ins)%Vals%x)
+         call XferGblToLoc1D(Mod%ixs, x_TC, T%BD%m(Mod%Ins)%Vals%x)
+         call BD_UnpackStateValues(T%BD%p(Mod%Ins), T%BD%m(Mod%Ins)%Vals%x, T%BD%x(Mod%Ins, STATE_PRED))
+      end if
 
    case (Module_ED)
 
-      ! No update states for tight coupling modules
+      if (present(x_TC)) then
+         call ED_PackStateValues(T%ED%p, T%ED%x(STATE_PRED), T%ED%m%Vals%x)
+         call XferGblToLoc1D(Mod%ixs, x_TC, T%ED%m%Vals%x)
+         call ED_UnpackStateValues(T%ED%p, T%ED%m%Vals%x, T%ED%x(STATE_PRED))
+      end if
 
 !  case (Module_ExtPtfm)
 !  case (Module_FEAM)
@@ -284,8 +293,8 @@ contains
    end function
 end subroutine
 
-subroutine FAST_InitMappings(Mappings, T, ErrStat, ErrMsg)
-   type(TC_MeshMapType), intent(inout)             :: Mappings(:)
+subroutine FAST_InitMappings(Maps, T, ErrStat, ErrMsg)
+   type(TC_MappingType), intent(inout)             :: Maps(:)
    type(FAST_TurbineType), target, intent(inout)   :: T           !< Turbine type
    integer(IntKi), intent(out)                     :: ErrStat
    character(*), intent(out)                       :: ErrMsg
@@ -293,32 +302,35 @@ subroutine FAST_InitMappings(Mappings, T, ErrStat, ErrMsg)
    character(*), parameter       :: RoutineName = 'FAST_InputSolve'
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
-   integer(IntKi)                :: j
-   integer(IntKi)                :: iiu, iiy
+   integer(IntKi)                :: i
+   integer(IntKi)                :: DstIns, SrcIns
 
    ErrStat = ErrID_None
    ErrMsg = ''
 
    ! Loop through mappings
-   do j = 1, size(Mappings)
+   do i = 1, size(Maps)
 
       ! Get output and input module instance indices
-      iiy = Mappings(j)%SrcModInst
-      iiu = Mappings(j)%DstModInst
+      SrcIns = Maps(i)%SrcIns
+      DstIns = Maps(i)%DstIns
 
       ! Select by mapping key
-      select case (Mappings(j)%Key)
+      select case (Maps(i)%Key)
 
       case ('ED BladeRoot -> BD RootMotion')
-         call MeshMapCreate(T%ED%y%BladeRootMotion(iiu), T%BD%Input(1, iiu)%RootMotion, Mappings(j)%MeshMap, ErrStat2, ErrMsg2); if (Failed()) return
+
+         call MeshMapCreate(T%ED%y%BladeRootMotion(DstIns), T%BD%Input(1, DstIns)%RootMotion, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (Failed()) return
+         call MeshCopy(T%BD%Input(1, DstIns)%RootMotion, Maps(i)%MeshTmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
 
       case ('BD ReactionForce -> ED HubLoad')
-         call MeshMapCreate(T%BD%y(iiu)%ReactionForce, T%ED%Input(1)%HubPtLoad, Mappings(j)%MeshMap, ErrStat2, ErrMsg2); if (Failed()) return
+
+         call MeshMapCreate(T%BD%y(DstIns)%ReactionForce, T%ED%Input(1)%HubPtLoad, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (Failed()) return
          ! Copy temporary mesh to transfer reaction force because actual mesh is needed to sum multiple forces
-         call MeshCopy(T%ED%Input(1)%HubPtLoad, Mappings(j)%MeshTmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+         call MeshCopy(T%ED%Input(1)%HubPtLoad, Maps(i)%MeshTmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
 
       case default
-         call SetErrStat(ErrID_Fatal, 'Invalid Mapping Key: '//Mappings(j)%Key, ErrStat, ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Invalid Mapping Key: '//Maps(i)%Key, ErrStat, ErrMsg, RoutineName)
          return
       end select
 
@@ -331,9 +343,65 @@ contains
    end function
 end subroutine
 
-subroutine FAST_InputSolve(Mod, Mappings, Dst, T, ErrStat, ErrMsg)
+subroutine FAST_MapOutputs(Mod, Maps, T, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)                   :: Mod      !< Module data
+   type(TC_MappingType), intent(inout)             :: Maps(:)
+   type(FAST_TurbineType), target, intent(inout)   :: T        !< Turbine type
+   integer(IntKi), intent(out)                     :: ErrStat
+   character(*), intent(out)                       :: ErrMsg
+
+   character(*), parameter       :: RoutineName = 'FAST_TransferOutputs'
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+   integer(IntKi)                :: i
+   integer(IntKi)                :: DstIns, SrcIns
+
+   ! Loop through mappings that use this module's outputs
+   do i = 1, size(Maps)
+
+      ! If map doesn't apply to this module, cycle
+      if (Mod%Idx /= Maps(i)%SrcModIdx) cycle
+
+      ! Get source and destination module instances
+      SrcIns = Maps(i)%SrcIns
+      DstIns = Maps(i)%DstIns
+
+      ! Select based on mapping Key (must match Key in m%Mappings in Solver.f90)
+      select case (Maps(i)%Key)
+
+      case ('ED BladeRoot -> BD RootMotion')
+
+         call Transfer_Point_to_Point(T%ED%y%BladeRootMotion(DstIns), Maps(i)%MeshTmp, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (Failed()) return
+         !
+
+      case ('BD ReactionForce -> ED HubLoad')
+
+         ! u_BD_RootMotion and y_ED2%HubPtMotion contain the displaced positions for load calculations
+         call Transfer_Point_to_Point(T%BD%y(SrcIns)%ReactionForce, Maps(i)%MeshTmp, Maps(i)%MeshMap, ErrStat2, ErrMsg2, &
+                                      T%BD%Input(1, SrcIns)%RootMotion, T%ED%y%HubPtMotion); if (Failed()) return
+         ! u_ED%HubPtLoad%Force = u_ED%HubPtLoad%Force + Maps(i)%MeshTmp%Force
+         ! u_ED%HubPtLoad%Moment = u_ED%HubPtLoad%Moment + Maps(i)%MeshTmp%Moment
+
+      case default
+         call SetErrStat(ErrID_Fatal, 'Invalid Mapping Key: '//Maps(i)%Key, ErrStat, ErrMsg, RoutineName)
+         return
+      end select
+
+      ! Set flag indicating that mapping has been updated
+      Maps(i)%Updated = .true.
+
+   end do
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
+subroutine FAST_UpdateInputs(Mod, Maps, Dst, T, ErrStat, ErrMsg)
    type(ModDataType), intent(in)                   :: Mod     !< Module data
-   type(TC_MeshMapType), intent(inout)             :: Mappings(:)
+   type(TC_MappingType), intent(inout)             :: Maps(:)
    integer(IntKi), intent(in)                      :: Dst
    type(FAST_TurbineType), target, intent(inout)   :: T           !< Turbine type
    integer(IntKi), intent(out)                     :: ErrStat
@@ -342,10 +410,11 @@ subroutine FAST_InputSolve(Mod, Mappings, Dst, T, ErrStat, ErrMsg)
    character(*), parameter       :: RoutineName = 'FAST_InputSolve'
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
-   integer(IntKi)                :: j, k
-   integer(IntKi)                :: iiu, iiy
+   integer(IntKi)                :: i, j, k
+   integer(IntKi)                :: DstIns, SrcIns
    type(ED_InputType), pointer   :: u_ED
    type(BD_InputType), pointer   :: u_BD
+   logical                       :: ED_ResetHubPtLoad
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -356,7 +425,6 @@ subroutine FAST_InputSolve(Mod, Mappings, Dst, T, ErrStat, ErrMsg)
       return
    end if
 
-   ! Initialize module values before transfering
    select case (Mod%ID)
 
    case (Module_BD)
@@ -368,8 +436,11 @@ subroutine FAST_InputSolve(Mod, Mappings, Dst, T, ErrStat, ErrMsg)
          u_BD => T%BD%u(Mod%Ins)
       end select
 
-      u_BD%DistrLoad%Force = 0.0_ReKi
-      u_BD%DistrLoad%Moment = 0.0_ReKi
+      ! u_BD%DistrLoad%Force = 0.0_ReKi
+      ! u_BD%DistrLoad%Moment = 0.0_ReKi
+
+      ! u_BD%PointLoad%Force = 0.0_ReKi
+      ! u_BD%PointLoad%Moment = 0.0_ReKi
 
    case (Module_ED)
 
@@ -380,50 +451,54 @@ subroutine FAST_InputSolve(Mod, Mappings, Dst, T, ErrStat, ErrMsg)
          u_ED => T%ED%u
       end select
 
-      u_ED%TowerPtLoads%Force = 0.0_ReKi
-      u_ED%TowerPtLoads%Moment = 0.0_ReKi
+      ED_ResetHubPtLoad = .true.
 
-      u_ED%NacelleLoads%Force = 0.0_ReKi
-      u_ED%NacelleLoads%Moment = 0.0_ReKi
+      ! u_ED%NacelleLoads%Force = 0.0_ReKi
+      ! u_ED%NacelleLoads%Moment = 0.0_ReKi
 
-      u_ED%TwrAddedMass = 0.0_ReKi
-      u_ED%PtfmAddedMass = 0.0_ReKi
+      ! u_ED%TowerPtLoads%Force = 0.0_ReKi
+      ! u_ED%TowerPtLoads%Moment = 0.0_ReKi
 
-      u_ED%HubPtLoad%Force = 0.0_ReKi
-      u_ED%HubPtLoad%Moment = 0.0_ReKi
+      ! u_ED%TwrAddedMass = 0.0_ReKi
+      ! u_ED%PtfmAddedMass = 0.0_ReKi
 
    end select
 
-   ! Loop through mapping index array
-   do k = 1, size(Mod%iMapsOpt1)
+   ! Loop through mappings that set this module's inputs
+   do i = 1, size(Maps)
 
-      associate (Map => Mappings(Mod%iMapsOpt1(k)))
+      ! If mapping hasn't been updated, cycle
+      if (.not. Maps(i)%Updated) cycle
 
-         ! Get source and destination module instances
-         iiy = Map%SrcModInst
-         iiu = Map%DstModInst
+      ! If map doesn't apply to this module, cycle
+      if (Mod%Idx /= Maps(i)%DstModIdx) cycle
 
-         ! Select based on mapping Key (must match Key in m%Mappings in Solver.f90)
-         select case (Map%Key)
+      ! Get source and destination module instances
+      SrcIns = Maps(i)%SrcIns
+      DstIns = Maps(i)%DstIns
 
-         case ('ED BladeRoot -> BD RootMotion')
+      ! Select based on mapping Key (must match Key in m%Mappings in Solver.f90)
+      select case (Maps(i)%Key)
 
-            call Transfer_Point_to_Point(T%ED%y%BladeRootMotion(iiu), u_BD%RootMotion, Map%MeshMap, ErrStat2, ErrMsg2); if (Failed()) return
+      case ('ED BladeRoot -> BD RootMotion')
 
-         case ('BD ReactionForce -> ED HubLoad')
+         call MeshCopy(Maps(i)%MeshTmp, u_BD%RootMotion, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
 
-            ! u_BD_RootMotion and y_ED2%HubPtMotion contain the displaced positions for load calculations
-            call Transfer_Point_to_Point(T%BD%y(iiy)%ReactionForce, Map%MeshTmp, Map%MeshMap, &
-                                         ErrStat2, ErrMsg2, T%BD%Input(1, iiy)%RootMotion, T%ED%y%HubPtMotion); if (Failed()) return
-            u_ED%HubPtLoad%Force = u_ED%HubPtLoad%Force + Map%MeshTmp%Force
-            u_ED%HubPtLoad%Moment = u_ED%HubPtLoad%Moment + Map%MeshTmp%Moment
+      case ('BD ReactionForce -> ED HubLoad')
 
-         case default
-            call SetErrStat(ErrID_Fatal, 'Invalid Mapping Key: '//Map%Key, ErrStat, ErrMsg, RoutineName)
-            return
-         end select
+         if (ED_ResetHubPtLoad) then
+            u_ED%HubPtLoad%Force = 0.0_ReKi
+            u_ED%HubPtLoad%Moment = 0.0_ReKi
+            ED_ResetHubPtLoad = .false.
+         end if
 
-      end associate
+         u_ED%HubPtLoad%Force = u_ED%HubPtLoad%Force + Maps(i)%MeshTmp%Force
+         u_ED%HubPtLoad%Moment = u_ED%HubPtLoad%Moment + Maps(i)%MeshTmp%Moment
+
+      case default
+         call SetErrStat(ErrID_Fatal, 'Invalid Mapping Key: '//Maps(i)%Key, ErrStat, ErrMsg, RoutineName)
+         return
+      end select
    end do
 
 contains
@@ -436,7 +511,7 @@ end subroutine
 subroutine FAST_LinearizeMappings(ModData, ModOrder, Mappings, T, ErrStat, ErrMsg, dUdu, dUdy)
    type(ModDataType), intent(in)                   :: ModData(:)  !< Module data
    integer(IntKi), intent(in)                      :: ModOrder(:)
-   type(TC_MeshMapType), intent(inout)             :: Mappings(:)
+   type(TC_MappingType), intent(inout)             :: Mappings(:)
    type(FAST_TurbineType), target, intent(inout)   :: T           !< Turbine type
    integer(IntKi), intent(out)                     :: ErrStat
    character(*), intent(out)                       :: ErrMsg
@@ -458,8 +533,8 @@ subroutine FAST_LinearizeMappings(ModData, ModOrder, Mappings, T, ErrStat, ErrMs
       if (all(Mappings(j)%DstModIdx /= ModOrder) .and. all(Mappings(j)%SrcModIdx /= ModOrder)) cycle
 
       ! Get input/output module instances
-      iiu = Mappings(j)%DstModInst
-      iiy = Mappings(j)%SrcModInst
+      iiu = Mappings(j)%DstIns
+      iiy = Mappings(j)%SrcIns
 
       ! Select based on mapping Key (must match Key in m%Mappings in Solver.f90)
       select case (Mappings(j)%Key)
@@ -487,7 +562,7 @@ subroutine FAST_LinearizeMappings(ModData, ModOrder, Mappings, T, ErrStat, ErrMs
 
 contains
    subroutine dUduSetBlocks(M, SrcMod, DstMod, MML)
-      type(TC_MeshMapType), intent(inout)          :: M           !< Mapping
+      type(TC_MappingType), intent(inout)          :: M           !< Mapping
       type(ModDataType), intent(in)                :: SrcMod, DstMod  !< Module data
       type(MeshMapLinearizationType), intent(in)   :: MML         !< Mesh Map Linearization data
 
@@ -508,7 +583,7 @@ contains
    end subroutine
 
    subroutine dUdySetBlocks(M, SrcMod, DstMod, MML)
-      type(TC_MeshMapType), intent(inout)          :: M           !< Mapping
+      type(TC_MappingType), intent(inout)          :: M           !< Mapping
       type(ModDataType), intent(in)                :: SrcMod, DstMod  !< Module data
       type(MeshMapLinearizationType), intent(in)   :: MML         !< Mesh Map Linearization data
 

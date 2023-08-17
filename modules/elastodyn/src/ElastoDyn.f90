@@ -402,6 +402,8 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
    ! Continuous State Variables
    !----------------------------------------------------------------------------
 
+   allocate(p%Vars%x(0))
+
    ! Add continuous state variables (translation and rotation)
    call MV_AddVar(p%Vars%x, 'PlatformSurge', VF_TransDisp, &
                   iUsr=[DOF_Sg], &

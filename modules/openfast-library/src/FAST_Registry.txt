@@ -91,7 +91,7 @@ typedef   ^   FAST_VTK_ModeShapeType   R8Ki     x_eig_phase     {:}{:}{:}  -  - 
 # ..... Tight Coupling Generalized Alpha Solver Data .............
 
 # Mapping Type
-typedef ^ TC_MeshMapType    character(VarNameLen)   Key             -  -  -     "Mapping Key" -
+typedef ^ TC_MappingType    character(VarNameLen)   Key             -  -  -     "Mapping Key" -
 typedef ^ ^                 character(VarNameLen)   SrcMeshName     -  -  -     "source mesh name" -
 typedef ^ ^                 character(VarNameLen)   DstMeshName     -  -  -     "destination mesh name" -
 typedef ^ ^                 character(VarNameLen)   SrcDispMeshName - ''  -     "source displacement mesh name [if IsLoad=true]" -
@@ -100,8 +100,8 @@ typedef ^ ^                 IntKi                   SrcModID        -  -  -     
 typedef ^ ^                 IntKi                   DstModID        -  -  -     "Input module ID" -
 typedef ^ ^                 IntKi                   SrcModIdx       -  -  -     "Output module index in ModData array" -
 typedef ^ ^                 IntKi                   DstModIdx       -  -  -     "Input module index in ModData array" -
-typedef ^ ^                 IntKi                   SrcModInst      -  -  -     "Output module Instance" -
-typedef ^ ^                 IntKi                   DstModInst      -  -  -     "Input module Instance" -
+typedef ^ ^                 IntKi                   SrcIns          -  -  -     "Output module Instance" -
+typedef ^ ^                 IntKi                   DstIns          -  -  -     "Input module Instance" -
 typedef ^ ^                 IntKi                   SrcVarIdx       :  -  -     "motion variable index" -
 typedef ^ ^                 IntKi                   DstVarIdx       :  -  -     "motion variable index" -
 typedef ^ ^                 IntKi                   SrcDispVarIdx   -  -  -     "source displacement var index [if IsLoad=true]" -
@@ -109,6 +109,7 @@ typedef ^ ^                 IntKi                   DstDispVarIdx   -  -  -     
 typedef ^ ^                 MeshType                MeshTmp         -  -  -     "Temporary mesh for intermediate transfers" -
 typedef ^ ^                 MeshMapType             MeshMap         -  -  -     "Mesh mapping from output variable to input variable" -
 typedef ^ ^                 logical                 IsLoad          -  -  -     "Flag indicating if this is a load or motion mapping" -
+typedef ^ ^                 logical                 Updated         -  -  -     "Flag indicating if this mesh has been updated" -
 
 # Parameters 
 typedef ^ TC_ParameterType  R8Ki            DT                     -  -  -      "solution time step" -
@@ -173,7 +174,7 @@ typedef ^ ^                 R8Ki            dq                     :: -  -      
 typedef ^ ^                 R8Ki            dx                     :  -  -      "Change in x" -
 typedef ^ ^                 R8Ki            du                     :  -  -      "" -
 typedef ^ ^                 R8Ki            UDiff                  :  -  -      "" -
-typedef ^ ^                 TC_MeshMapType  Mappings               :  -  -      "Array of mesh mappings in solver" -
+typedef ^ ^                 TC_MappingType  Mappings               :  -  -      "Array of mesh mappings in solver" -
 typedef ^ ^                 IntKi           DebugUnit              -  -  -      "Unit number to write debug info" -
 
 

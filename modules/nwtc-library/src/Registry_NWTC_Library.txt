@@ -105,7 +105,8 @@ typedef     ^       ^           R8Ki            dXdx                ::  -   -   
 typedef     ^       ^           R8Ki            dYdu                ::  -   -   ""  -
 typedef     ^       ^           R8Ki            dXdu                ::  -   -   ""  -
 
-typedef     ^       ModDataType IntKi           ID                  -   0   -   ""  -
+typedef     ^       ModDataType IntKi           Idx                 -   0   -   "Module index in array of modules"  -
+typedef     ^       ^           IntKi           ID                  -   0   -   ""  -
 typedef     ^       ^           character(ChanLen) Abbr             -   -   -   ""  -
 typedef     ^       ^           IntKi           Ins                 -   0   -   ""  -
 typedef     ^       ^           R8Ki            DT                  -   0   -   ""  -
@@ -114,9 +115,6 @@ typedef     ^       ^           IntKi           SolveOption         -   0   -   
 typedef     ^       ^           IntKi           ixs                 ::  -   -   "index array mapping local x vector to global x vector" -
 typedef     ^       ^           IntKi           ius                 ::  -   -   "index array mapping local u vector to global u vector" -
 typedef     ^       ^           IntKi           iys                 ::  -   -   "index array mapping local y vector to global y vector" -
-typedef     ^       ^           IntKi           iMapsOpt1           :   -   -   "array of mapping indices where this module is the input" -
-typedef     ^       ^           IntKi           iMapsOpt2           :   -   -   "array of mapping indices where this module is the input" -
-typedef     ^       ^           IntKi           iMapsAll            :   -   -   "array of mapping indices where this module is the input" -
 typedef     ^       ^           ModVarsType    *Vars                -   -   -   "Pointer to module variables type"  -
 
 # This file defines types that may be  used from the NWTC_Library
