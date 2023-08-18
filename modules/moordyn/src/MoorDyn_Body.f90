@@ -86,7 +86,8 @@ CONTAINS
    
       ! --------------- if this is an independent body (not coupled) ----------
       ! set initial position and orientation of body from input file 
-      Body%r6 = tempArray
+      Body%r6(1:3) = tempArray(1:3)
+      Body%r6(4:6) = tempArray(4:6) * (pi/180)
 
       ! calculate orientation matrix based on latest angles
       !RotMat(r6[3], r6[4], r6[5], OrMat);
