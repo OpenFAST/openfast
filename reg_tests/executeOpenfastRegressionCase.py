@@ -124,7 +124,7 @@ if not os.path.isdir(testBuildDirectory):
 ### Run openfast on the test case
 if not noExec:
     if steadyState:
-        caseInputFile = os.path.join(testBuildDirectory, caseName + ".inp")
+        caseInputFile = os.path.join(testBuildDirectory, caseName + ".drv")
         returnCode = openfastDrivers.runAeromapCase(caseInputFile, executable)
     else:
         caseInputFile = os.path.join(testBuildDirectory, caseName + ".fst")

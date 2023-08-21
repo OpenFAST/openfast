@@ -28,14 +28,6 @@ MODULE FAST_Subs
 
    IMPLICIT NONE
    
-   ! index for driver-level write-output (for steady-state solve)
-   INTEGER,    PARAMETER    :: SS_Indx_Pitch = 1
-   INTEGER,    PARAMETER    :: SS_Indx_TSR   = 2
-   INTEGER,    PARAMETER    :: SS_Indx_WS    = 3
-   INTEGER,    PARAMETER    :: SS_Indx_RotSpeed = 4
-   INTEGER,    PARAMETER    :: SS_Indx_Err   = 5
-   INTEGER,    PARAMETER    :: SS_Indx_Iter  = 6
-
 CONTAINS
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! INITIALIZATION ROUTINES
@@ -3655,7 +3647,6 @@ SUBROUTINE FAST_ReadSteadyStateFile( InputFile, p, m_FAST, ErrStat, ErrMsg )
    CALL WrScr( '    '//TRIM( p%FTitle ) )
    CALL WrScr('')
 
-!>>>>>>>>>>>>>>>>>>>> 
    ! -------------------------------------------------------------
    ! READ FROM THE PRIMARY OPENFAST (TIME-DOMAIN) INPUT FILE
    ! do this before reading the rest of the variables in this
@@ -3716,7 +3707,6 @@ SUBROUTINE FAST_ReadSteadyStateFile( InputFile, p, m_FAST, ErrStat, ErrMsg )
    m_FAST%Lin%FoundSteady = .false.
    p%LinInterpOrder = p%InterpOrder ! 1 ! always use linear (or constant) interpolation on rotor 
    !--------------------------------------------
-!<<<<<<<<<<<<<<<<<<<<<<<<
    
    
       ! Toler - Convergence tolerance for nonlinear solve residual equation [>0] (-)

@@ -73,6 +73,12 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: NumModules = 18      ! The number of modules available in FAST [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxNBlades = 3      ! Maximum number of blades allowed on a turbine [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: IceD_MaxLegs = 4      ! because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Pitch = 1      ! pitch [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_TSR = 2      ! TSR [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_WS = 3      ! wind speed [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_RotSpeed = 4      ! rotor speed [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Err = 5      ! err in the ss solve [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Iter = 6      ! number of iterations [-]
 ! =========  FAST_VTK_BLSurfaceType  =======
   TYPE, PUBLIC :: FAST_VTK_BLSurfaceType
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AirfoilCoords      !< x,y coordinates for airfoil around each blade node on a blade (relative to reference) [-]

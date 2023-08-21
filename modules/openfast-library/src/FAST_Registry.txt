@@ -59,6 +59,14 @@ param	^	-	INTEGER	NumModules	-	18	-	"The number of modules available in FAST"	-
 # Other Constants
 param	^	-	INTEGER	MaxNBlades	-	3	-	"Maximum number of blades allowed on a turbine"	-
 param	^	-	INTEGER	IceD_MaxLegs	-	4	-	"because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number"	-
+# Constants for steady-state solve (indices for output channels)
+param	^	-	INTEGER	SS_Indx_Pitch	-	1	-	"pitch"	-
+param	^	-	INTEGER	SS_Indx_TSR	-	2	-	"TSR"	-
+param	^	-	INTEGER	SS_Indx_WS	-	3 -	"wind speed"	-
+param	^	-	INTEGER	SS_Indx_RotSpeed	-	4	-	"rotor speed"	-
+param	^	-	INTEGER	SS_Indx_Err	-	5	-	"err in the ss solve"	-
+param	^	-	INTEGER	SS_Indx_Iter	-	6	-	"number of iterations"	-
+
 # ...... Data for VTK surface visualization ............................................................................
 typedef	^	FAST_VTK_BLSurfaceType	SiKi	AirfoilCoords	{:}{:}{:}	-	-	"x,y coordinates for airfoil around each blade node on a blade (relative to reference)"	-
 # ...... Data for VTK surface visualization ............................................................................
