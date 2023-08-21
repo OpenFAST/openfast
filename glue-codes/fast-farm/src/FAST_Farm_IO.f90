@@ -729,9 +729,8 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    CALL ReadVar( UnIn, InputFile, WD_InitInp%NumRadii, "NumRadii",  "Number of radii in the radial finite-difference grid (-) [>=2]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVar( UnIn, InputFile, WD_InitInp%NumPlanes,"NumPlanes", "Number of wake planes (-) [>=2]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
 
-   ! f_c
-   ! Rotor radius based on reference rotor diameter.
-   DefaultReVal = p%RotorDiamRef / 2._ReKi
+   ! f_c - Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=0.0007]:
+   DefaultReVal = 12.5_ReKi/(p%RotorDiamRef/2._ReKi) ! Eq. (32) of https://doi.org/10.1002/we.2785, with U=10, a=1/3
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%f_c, "f_c", &
       "Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=0.0007]", &
       DefaultReVal, ErrStat2, ErrMsg2, UnEc); if (Failed()) return
