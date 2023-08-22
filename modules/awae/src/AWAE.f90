@@ -262,7 +262,7 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    !$OMP&        xhatBar_plane_norm, Vx_wake_tmp, Vr_wake_tmp, nw, Vr_term, Vx_term, &
    !$OMP&        C_rot, C_rot_norm, Pos_global,&
    !$OMP&        tmp_WAT_k, WAT_k, WAT_iT, WAT_iY, WAT_iZ, WAT_V)&
-   !$OMP SHARED(m, u, p, maxPln, errStat, errMsg) DEFAULT(NONE)
+   !$OMP SHARED(m, u, p, xd, maxPln, errStat, errMsg) DEFAULT(NONE)
    do i = 0 , p%NumGrid_low - 1
       ! From flat index iXYZ to grid indices nx, ny, nz
       nx_low = mod(     i                        ,p%nX_low)
@@ -376,6 +376,7 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
                WAT_k = WAT_k + tmp_WAT_k(nw)*tmp_WAT_k(nw)
             enddo
             WAT_k = sqrt(WAT_k)
+            if (abs(WAT_k)>1e-8) then
             ! find location of this grid point in the turbulent box
             ! NOTE: we take advantage of full knowledge of how the data is actually stored in IfW.  If that ever changes, this will be a problem.
             !     Equations taken from the WakeAddedTurbulence implementation plan
@@ -388,6 +389,7 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
             WAT_iY = modulo( nint( (Pos_global(2) + xd%WAT_B_Box(2)) * p%WAT_FlowField%Grid3D%InvDY ), p%WAT_FlowField%Grid3D%NYGrids) + 1   ! eq 24
             WAT_iZ = modulo( nint( (Pos_global(3) + xd%WAT_B_Box(3)) * p%WAT_FlowField%Grid3D%InvDZ ), p%WAT_FlowField%Grid3D%NZGrids) + 1   ! eq 25
             WAT_V(1:3) = p%WAT_FlowField%Grid3D%Vel(1:3,WAT_iY,WAT_iZ,WAT_iT) * WAT_k
+            endif
          endif
 
          ! Normalize xhatBar to unit vector
@@ -701,18 +703,13 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
       !$OMP&         xhatBar_plane_norm, Vx_wake_tmp, Vr_wake_tmp, nw, Vr_term, Vx_term,& 
       !$OMP&         n_hl, Pos_global,&
       !$OMP&         WAT_B_BoxHi, tmp_WAT_k, WAT_k, WAT_iT, WAT_iY, WAT_iZ, WAT_V)& 
-      !$OMP SHARED(NumGrid_High, m, u, p, y, nt, maxPln, n_high_low, errStat, errMsg)
+      !$OMP SHARED(NumGrid_High, m, u, p, y, xd, nt, maxPln, n_high_low, errStat, errMsg)
       ! Loop over all points of the high resolution ambient wind
       do iXYZ=0, NumGrid_high-1
          ! From flat index iXYZ to grid indices nx, ny, nz
          nx_high = mod(     iXYZ                          ,p%nX_high)
          ny_high = mod(int( iXYZ / (p%nX_high          ) ),p%nY_high)
          nz_high =     int( iXYZ / (p%nX_high*p%nY_high) )
-         ! interpolated tracer position for WAT
-         !     Equation 22 from the WakeAddedTurbulence implementation plan
-         if (p%WAT_Enabled) then
-            WAT_B_BoxHi = xd%WAT_B_Box(1:3) - (NumGrid_high-iXYZ) * xd%Ufarm(1:3) * real(p%DT_high,ReKi)
-         endif
 
          nXYZ_high = iXYZ + 1
          n_wake = 0
@@ -804,24 +801,25 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
          if (n_wake > 0) then
             ! Compute average contributions for WAT scaling factor
             WAT_V = 0.0_ReKi
-            if (p%WAT_Enabled) then
-               WAT_k = 0.0_ReKi
-               do nw = 1,n_wake
-                  WAT_k = WAT_k + tmp_WAT_k(nw)*tmp_WAT_k(nw)
-               enddo
-               WAT_k = sqrt(WAT_k)
-               ! find location of this grid point in the turbulent box
-               ! NOTE: we take advantage of full knowledge of how the data is actually stored in IfW.  If that ever changes, this will be a problem.
-               !     Equations taken from the WakeAddedTurbulence implementation plan
-               Pos_global(1) = real(nx_high,ReKi) * p%dX_high(nt) + p%X0_high(nt)
-               Pos_global(2) = real(ny_high,ReKi) * p%dY_high(nt) + p%Y0_high(nt)
-               Pos_global(3) = real(nz_high,ReKi) * p%dZ_high(nt) + p%Z0_high(nt)
-               ! The FlowField stores data in Y,Z,T -- Mean wind speed was set to 1.0, so Rate is 1/DT = 1/DX
-               WAT_iT = modulo( nint( (Pos_global(1) + WAT_B_BoxHi(1)) * p%WAT_FlowField%Grid3D%Rate  ), p%WAT_FlowField%Grid3D%NSteps ) + 1    ! eq 23
-               WAT_iY = modulo( nint( (Pos_global(2) + WAT_B_BoxHi(2)) * p%WAT_FlowField%Grid3D%InvDY ), p%WAT_FlowField%Grid3D%NYGrids) + 1    ! eq 24
-               WAT_iZ = modulo( nint( (Pos_global(3) + WAT_B_BoxHi(3)) * p%WAT_FlowField%Grid3D%InvDZ ), p%WAT_FlowField%Grid3D%NZGrids) + 1    ! eq 25
-               WAT_V(1:3) = p%WAT_FlowField%Grid3D%Vel(1:3,WAT_iY,WAT_iZ,WAT_iT) * WAT_k
-            endif
+            ! TODO TODO TODO
+            !if (p%WAT_Enabled) then
+            !   WAT_k = 0.0_ReKi
+            !   do nw = 1,n_wake
+            !      WAT_k = WAT_k + tmp_WAT_k(nw)*tmp_WAT_k(nw)
+            !   enddo
+            !   WAT_k = sqrt(WAT_k)
+            !   ! find location of this grid point in the turbulent box
+            !   ! NOTE: we take advantage of full knowledge of how the data is actually stored in IfW.  If that ever changes, this will be a problem.
+            !   !     Equations taken from the WakeAddedTurbulence implementation plan
+            !   Pos_global(1) = real(nx_high,ReKi) * p%dX_high(nt) + p%X0_high(nt)
+            !   Pos_global(2) = real(ny_high,ReKi) * p%dY_high(nt) + p%Y0_high(nt)
+            !   Pos_global(3) = real(nz_high,ReKi) * p%dZ_high(nt) + p%Z0_high(nt)
+            !   ! The FlowField stores data in Y,Z,T -- Mean wind speed was set to 1.0, so Rate is 1/DT = 1/DX
+            !   WAT_iT = modulo( nint( (Pos_global(1) - WAT_B_BoxHi(1)) * p%WAT_FlowField%Grid3D%Rate  ), p%WAT_FlowField%Grid3D%NSteps ) + 1    ! eq 23
+            !   WAT_iY = modulo( nint( (Pos_global(2) + WAT_B_BoxHi(2)) * p%WAT_FlowField%Grid3D%InvDY ), p%WAT_FlowField%Grid3D%NYGrids) + 1    ! eq 24
+            !   WAT_iZ = modulo( nint( (Pos_global(3) + WAT_B_BoxHi(3)) * p%WAT_FlowField%Grid3D%InvDZ ), p%WAT_FlowField%Grid3D%NZGrids) + 1    ! eq 25
+            !   WAT_V(1:3) = p%WAT_FlowField%Grid3D%Vel(1:3,WAT_iY,WAT_iZ,WAT_iT) * WAT_k
+            !endif
 
             ! Normalize xhatBar to unit vector
             xhatBar_plane_norm = TwoNorm(xhatBar_plane)
@@ -842,6 +840,15 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
                Vx_wake_tmp = Vx_wake_tmp + Vx_term*Vx_term
                Vr_wake_tmp = Vr_wake_tmp + Vr_term
             end do
+            ! TODO RENAME VARIABLES
+
+            ! interpolated tracer position for WAT
+            !     Equation 22 from the WakeAddedTurbulence implementation plan
+            !if (p%WAT_Enabled) then
+            !   ! TODO TODO TODO THIS IS WRONG
+            !   WAT_B_BoxHi = xd%WAT_B_Box(1:3) - (NumGrid_high-iXYZ) * xd%Ufarm(1:3) * real(p%DT_high,ReKi)
+            !endif
+
             ! [I - XX']V = V - (V dot X)X
             Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane
             do n_hl=0, n_high_low
@@ -1174,6 +1181,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    xd%WAT_B_Box(1:3) = 0.0_ReKi
    ! store array of disk average velocities for all turbines
    call AllocAry(m%V_amb_low_disk,3,p%NumTurbines,'m%V_amb_low_disk', ErrStat2, ErrMsg2); if(Failed()) return;
+   m%V_amb_low_disk=0.0_ReKi ! IMPORTANT ALLOCATION. This misc var is not set before a low res calcoutput
    if (p%WAT_Enabled) then
       if (associated(InitInp%WAT_FlowField)) p%WAT_FlowField => InitInp%WAT_FlowField
    endif
