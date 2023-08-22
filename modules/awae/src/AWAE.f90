@@ -411,14 +411,27 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
             Vr_wake_tmp = Vr_wake_tmp + Vr_term
          end do
          ! [I - XX']V = V - (V dot X)X
-         Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane + WAT_V
+         Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane
          ! Compute C matrix and update Vdist_low
-         if(p%Mod_Projection==1) then
+         if(p%Mod_Projection==3) then
+
+            ! We do not convect using WAT_T
+            m%Vdist_low     (:,nx_low,ny_low,nz_low) = m%Vdist_low     (:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
+            ! But we include it in outputs
+            Vr_wake_tmp = Vr_wake_tmp + WAT_V
+            m%Vdist_low_full(:,nx_low,ny_low,nz_low) = m%Vdist_low_full(:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
+
+         else if(p%Mod_Projection==1) then
+            Vr_wake_tmp = Vr_wake_tmp + WAT_V
             ! We keep the full field (including cross flow components), done for outputs and VTK outputs
             m%Vdist_low     (:,nx_low,ny_low,nz_low) = m%Vdist_low     (:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
+
+            !Vr_wake_tmp = Vr_wake_tmp + WAT_V
             m%Vdist_low_full(:,nx_low,ny_low,nz_low) = m%Vdist_low_full(:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
             
          else if (p%Mod_Projection==2) then
+            Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane 
+            Vr_wake_tmp = Vr_wake_tmp + WAT_V
             ! We project against the normal of the plane to remove the cross flow components
             C_rot(1,1) = m%Vamb_low(1,nx_low,ny_low,nz_low) * m%Vamb_low(1,nx_low,ny_low,nz_low)
             C_rot(1,2) = m%Vamb_low(1,nx_low,ny_low,nz_low) * m%Vamb_low(2,nx_low,ny_low,nz_low)

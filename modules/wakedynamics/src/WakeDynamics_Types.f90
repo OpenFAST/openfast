@@ -74,6 +74,8 @@ IMPLICIT NONE
     LOGICAL  :: WAT = .false.      !< Switch for turning on and off wake-added turbulence [-]
     REAL(ReKi)  :: WAT_k_Def = 0.0_ReKi      !< Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6] [-]
     REAL(ReKi)  :: WAT_k_Grad = 0.0_ReKi      !< Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35] [-]
+    REAL(ReKi)  :: WAT_k_Off = 0.0_ReKi      !< Constant Offset added to the wake-added turbulence k-factor [-]
+    REAL(ReKi)  :: WAT_D_BrkDwn = 0.0_ReKi      !< Downstream distance in rotor diameter after which WAT scaling has reched 99% capacity [-]
   END TYPE WD_InputFileType
 ! =======================
 ! =========  WD_InitInputType  =======
@@ -196,6 +198,8 @@ IMPLICIT NONE
     LOGICAL  :: WAT = .false.      !< Switch for turning on and off wake-added turbulence [-]
     REAL(ReKi)  :: WAT_k_Def = 0.0_ReKi      !< Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6] [-]
     REAL(ReKi)  :: WAT_k_Grad = 0.0_ReKi      !< Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35] [-]
+    REAL(ReKi)  :: WAT_k_Off = 0.0_ReKi      !< Constant Offset added to the wake-added turbulence k-factor [-]
+    REAL(ReKi)  :: WAT_k_BrkDwn = 0.0_ReKi      !< Constant for the breakdown of vortices in the wake and trigger the Wake-Added-Turbulence [-]
   END TYPE WD_ParameterType
 ! =======================
 ! =========  WD_InputType  =======
@@ -271,6 +275,8 @@ subroutine WD_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ctrl
    DstInputFileTypeData%WAT = SrcInputFileTypeData%WAT
    DstInputFileTypeData%WAT_k_Def = SrcInputFileTypeData%WAT_k_Def
    DstInputFileTypeData%WAT_k_Grad = SrcInputFileTypeData%WAT_k_Grad
+   DstInputFileTypeData%WAT_k_Off = SrcInputFileTypeData%WAT_k_Off
+   DstInputFileTypeData%WAT_D_BrkDwn = SrcInputFileTypeData%WAT_D_BrkDwn
 end subroutine
 
 subroutine WD_DestroyInputFileType(InputFileTypeData, ErrStat, ErrMsg)
@@ -319,6 +325,8 @@ subroutine WD_PackInputFileType(Buf, Indata)
    call RegPack(Buf, InData%WAT)
    call RegPack(Buf, InData%WAT_k_Def)
    call RegPack(Buf, InData%WAT_k_Grad)
+   call RegPack(Buf, InData%WAT_k_Off)
+   call RegPack(Buf, InData%WAT_D_BrkDwn)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -390,6 +398,10 @@ subroutine WD_UnPackInputFileType(Buf, OutData)
    call RegUnpack(Buf, OutData%WAT_k_Def)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WAT_k_Grad)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WAT_k_Off)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WAT_D_BrkDwn)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -2090,6 +2102,8 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%WAT = SrcParamData%WAT
    DstParamData%WAT_k_Def = SrcParamData%WAT_k_Def
    DstParamData%WAT_k_Grad = SrcParamData%WAT_k_Grad
+   DstParamData%WAT_k_Off = SrcParamData%WAT_k_Off
+   DstParamData%WAT_k_BrkDwn = SrcParamData%WAT_k_BrkDwn
 end subroutine
 
 subroutine WD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -2167,6 +2181,8 @@ subroutine WD_PackParam(Buf, Indata)
    call RegPack(Buf, InData%WAT)
    call RegPack(Buf, InData%WAT_k_Def)
    call RegPack(Buf, InData%WAT_k_Grad)
+   call RegPack(Buf, InData%WAT_k_Off)
+   call RegPack(Buf, InData%WAT_k_BrkDwn)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -2293,6 +2309,10 @@ subroutine WD_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%WAT_k_Def)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WAT_k_Grad)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WAT_k_Off)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WAT_k_BrkDwn)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 

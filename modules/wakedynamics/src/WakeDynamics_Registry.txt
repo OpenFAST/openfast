@@ -57,7 +57,8 @@ typedef  ^                 WD_InputFileType  Logical         OutAllPlanes   - - 
 typedef  ^                 WD_InputFileType  Logical         WAT            -  - - "Switch for turning on and off wake-added turbulence" -
 typedef  ^                 WD_InputFileType  ReKi            WAT_k_Def      -  - - "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6]" -
 typedef  ^                 WD_InputFileType  ReKi            WAT_k_Grad     -  - - "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35]" -
-#typdef   ^                 WD_InputFileType  IntKi           nh             -  - - "Number of high-resolution time step within a low resolution time step" -
+typedef  ^                 WD_InputFileType  ReKi            WAT_k_Off      -  - 0 "Constant Offset added to the wake-added turbulence k-factor" -
+typedef  ^                 WD_InputFileType  ReKi            WAT_D_BrkDwn   -  - - "Downstream distance in rotor diameter after which WAT scaling has reched 99% capacity" -
 
 
 # ..... Initialization data .......................................................................................................
@@ -177,6 +178,8 @@ typedef ^ ParameterType  IntKi            TurbNum        - 0 -    "Turbine ID nu
 typedef ^ ParameterType  Logical          WAT            -  - -   "Switch for turning on and off wake-added turbulence" -
 typedef ^ ParameterType  ReKi             WAT_k_Def      -  - -   "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6]" -
 typedef ^ ParameterType  ReKi             WAT_k_Grad     -  - -   "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35]" -
+typedef ^ ParameterType  ReKi             WAT_k_Off      -  - 0   "Constant Offset added to the wake-added turbulence k-factor" -
+typedef ^ ParameterType  ReKi             WAT_k_BrkDwn   -  - -   "Constant for the breakdown of vortices in the wake and trigger the Wake-Added-Turbulence" -
 #typdef  ^ ParameterType  IntKi            nh             -  - - "Number of high-resolution time step within a low resolution time step" -
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:

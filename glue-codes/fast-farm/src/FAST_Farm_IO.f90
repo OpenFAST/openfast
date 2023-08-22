@@ -555,6 +555,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
    LOGICAL                       :: TabDelim                                  ! Determines if text output should be delimited by tabs (true) or space (false)
    CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
+   character(1024)               :: sDummy ! Dummy string
 
    CHARACTER(10)                 :: AbortLevel                                ! String that indicates which error level should be used to abort the program: WARNING, SEVERE, or FATAL
    CHARACTER(30)                 :: Line                                      ! string for default entry in input file
@@ -872,8 +873,12 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    CALL ReadVar( UnIn, InputFile, p%WAT_BoxFile, 'WAT_BoxFile', "Filepath to the file containing the u-component of the turbulence box (either predefined or user-defined) (quoted string)", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
    call ReadAry( UnIn, InputFile, p%WAT_NxNyNz, 3, "WAT_NxNyNz", "Number of points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2] (m)", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
    call ReadAry( UnIn, InputFile, p%WAT_DxDyDz, 3, "WAT_DxDyDz", "Distance (in meters) between points in the x, y, and z directions of the WAT_BoxFile [used only if WAT=2] (m)", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
+   p%WAT_ScaleBox=.False.
+   !CALL ReadVarWDefault( UnIn, InputFile, p%WAT_ScaleBox, "WAT_ScaleBox",   "Flag to scale the input turbulence box to zero mean and unit standard deviation at every node",  .False., ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Def,  "WAT_k_Def",    "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=1.44]", 1.44_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Grad, "WAT_k_Grad",   "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.84]",  0.84_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   WD_InitInp%WAT_D_BrkDwn=0
+   !CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_D_BrkDwn, "WAT_D_BrkDwn",   "",  3.0_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    IF ( PathIsRelative( p%WAT_BoxFile ) )p%WAT_BoxFile = TRIM(PriPath)//TRIM(p%WAT_BoxFile)
    if (p%WAT > 0_IntKi) WD_InitInp%WAT = .true.
 
@@ -972,6 +977,22 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    CALL ReadCom( UnIn, InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
    CALL ReadOutputList ( UnIn, InputFile, OutList, p%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  ); if (Failed()) return     ! Routine in NWTC Subroutine Library
 
+
+   !---------------------- READ EXTRA INPUTS -----------------------------------
+   WD_InitInp%WAT_k_Off=0.0
+   do while(ErrStat2==ErrID_None)
+      read(UnIn, '(A)', iostat=ErrStat2) sDummy
+      if (ErrStat2/=ErrID_None) exit
+      call Conv2UC(sDummy)  ! to uppercase
+      if (index(sDummy, '!') == 1 .or. index(sDummy, '=') == 1 .or. index(sDummy, '#') == 1) then
+         ! pass comment lines
+      elseif (index(sDummy, 'WAT_K_OFF')>1) then
+         read(sDummy, *) WD_InitInp%WAT_k_Off
+         print*,'   >>> WAT_K_OFF:',WD_InitInp%WAT_k_Off
+      !else
+      !   print*,'[WARN] Line ignored: '//trim(sDummy)
+      endif
+   enddo
    !---------------------- END OF FILE -----------------------------------------
 
    call cleanup()
@@ -1085,13 +1106,16 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
    IF (AWAE_InitInp%Mod_Meander < MeanderMod_Uniform .or. AWAE_InitInp%Mod_Meander > MeanderMod_WndwdJinc) THEN
       call SetErrStat(ErrID_Fatal,'Spatial filter model for wake meandering, Mod_Meander, must be 1 (uniform), 2 (truncated jinc), 3 (windowed jinc) or DEFAULT.',ErrStat,ErrMsg,RoutineName)
    END IF
-   IF (.not.(ANY((/1,2/)==AWAE_InitInp%Mod_Projection))) CALL SetErrStat(ErrID_Fatal,'Mod_Projection needs to be 1 or 2',ErrStat,ErrMsg,RoutineName)
+   IF (.not.(ANY((/1,2,3/)==AWAE_InitInp%Mod_Projection))) CALL SetErrStat(ErrID_Fatal,'Mod_Projection needs to be 1, 2 or 3',ErrStat,ErrMsg,RoutineName)
 
    ! --- WAT
-   IF (p%WAT < 0_IntKi .or. p%WAT > 2_IntKi) CALL SetErrStat(ErrID_Fatal,'WAT option must be 0: no wake added turbulence, 1: predefined turbulence box, or 2: user defined turbulence box.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%WAT_k_Def  <= 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'WAT_k_Def  parameter must be positive.',ErrStat,ErrMsg,RoutineName)
-   IF (WD_InitInp%WAT_k_Grad <= 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'WAT_k_Grad parameter must be positive.',ErrStat,ErrMsg,RoutineName)
-   IF (p%WAT > 0_IntKi .and. WD_InitInp%Mod_Wake == Mod_Wake_Polar) CALL SetErrStat(ErrID_Fatal,'WAT cannot currently be used with Mod_Wake==Polar',ErrStat,ErrMsg,RoutineName)
+   if (p%WAT < 0_IntKi .or. p%WAT > 2_IntKi) CALL SetErrStat(ErrID_Fatal,'WAT option must be 0: no wake added turbulence, 1: predefined turbulence box, or 2: user defined turbulence box.',ErrStat,ErrMsg,RoutineName)
+   if (p%WAT>0) then
+      IF (WD_InitInp%WAT_k_Def  < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'WAT_k_Def  parameter must be positive.',ErrStat,ErrMsg,RoutineName)
+      IF (WD_InitInp%WAT_k_Grad < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'WAT_k_Grad parameter must be positive.',ErrStat,ErrMsg,RoutineName)
+      IF (WD_InitInp%WAT_D_BrkDwn < 0.0_Reki) CALL SetErrStat(ErrID_Fatal,'WAT_D_BrkDwn parameter must be positive.',ErrStat,ErrMsg,RoutineName)
+      call WrScr('  WAT: coefficients:  k_Grad='//trim(num2lstr(WD_InitInp%WAT_k_Def))//', k_Def='//trim(num2lstr(WD_InitInp%WAT_k_Def))//', 99% scaling at x/D='//trim(num2lstr(WD_InitInp%WAT_D_BrkDwn)))
+   endif
 
    !--- OUTPUT ---
    IF ( p%n_ChkptTime < 1_IntKi   ) CALL SetErrStat( ErrID_Fatal, 'ChkptTime must be greater than 0 seconds.', ErrStat, ErrMsg, RoutineName )
@@ -1140,7 +1164,7 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat,
   CALL ChkRealFmtStr( p%OutFmt, 'OutFmt', p%FmtWidth, ErrStat2, ErrMsg2 ) !this sets p%FmtWidth!
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-   IF ( p%FmtWidth /= ChanLen ) CALL SetErrStat( ErrID_Warn, 'OutFmt produces a column width of '// &
+   IF ( p%FmtWidth > ChanLen ) CALL SetErrStat( ErrID_Warn, 'OutFmt produces a column width of '// &
          TRIM(Num2LStr(p%FmtWidth))//' instead of '//TRIM(Num2LStr(ChanLen))//' characters.', ErrStat, ErrMsg, RoutineName )
 
 

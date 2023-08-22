@@ -433,6 +433,11 @@ SUBROUTINE WAT_init( p, WAT_IfW, AWAE_InitInput, ErrStat, ErrMsg )
    WAT_IfW%p%FlowField%FieldType = Grid3D_FieldType
    call IfW_HAWC_Init(HAWC_InitInput, -1, WAT_IfW%p%FlowField%Grid3D, FileDat, ErrStat2, ErrMsg2);  if (Failed()) return   ! summary file unit set to -1
 
+   if (p%WAT_ScaleBox) then
+      call WrScr('   WAT: Scaling Box for unit standard deviation and zero mean')
+      call Grid3D_ZeroMean_UnitStd(WAT_IfW%p%FlowField%Grid3D%Vel)
+   endif
+
    ! Reference position for wind rotation (not used here, but should be set)
    WAT_IfW%p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, WAT_IfW%p%FlowField%Grid3D%RefHeight]
 
@@ -564,6 +569,28 @@ contains
       ErrMsg3 =""
    end subroutine MannLibDims
 end subroutine WAT_init
+
+!> Remove mean from all grid nodes and set standard deviation to 1 at all nodes
+! See Grid3D_ScaleTurbulence and ScaleMethod in InflowWind as well
+subroutine Grid3D_ZeroMean_UnitStd(Vel)
+   real(SiKi),  dimension(:,:,:,:), intent(inout) :: Vel !< Array of field velocities 3 x ny x nz x nt
+   integer(IntKi) :: i,j,k
+   real(SiKi)     :: vmean, vstd
+   real(SiKi)     :: nt
+   nt = real(size(Vel, 4), SiKi)
+   do i=1,size(Vel, 2)
+      do j=1,size(Vel, 3)
+         do k=1,3
+            vmean = sum(Vel(k,i,j,:))/nt
+            vstd  = sqrt(sum((Vel(k,i,j,:) - vmean)**2)/nt)
+            if ( EqualRealNos( vstd, 0.0_SiKi) ) then
+               vstd = 1.0_SiKi
+            endif
+            Vel(k,i,j,:) = (Vel(k,i,j,:) - vmean)/vstd
+         enddo
+      enddo
+   enddo
+end subroutine Grid3D_ZeroMean_UnitStd
 
 
 !----------------------------------------------------------------------------------------------------------------------------------

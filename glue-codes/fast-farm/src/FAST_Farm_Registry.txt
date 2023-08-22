@@ -26,8 +26,8 @@ param        ^          -  INTEGER  ModuleFF_AWAE     - 4 -  "Ambient Wind and A
 param        ^          -  INTEGER  ModuleFF_MD       - 5 -  "Farm-level MoorDyn" -
                      
 param        ^          -  INTEGER  Mod_WAT_None      - 0 -  "WAT: off" -
-param        ^          -  INTEGER  Mod_WAT_PreDef    - 1 -  "WAT: predefined turubulence boxes" -
-param        ^          -  INTEGER  Mod_WAT_UserDef   - 2 -  "WAT: user defined turubulence boxes" -
+param        ^          -  INTEGER  Mod_WAT_PreDef    - 1 -  "WAT: predefined turbulence boxes" -
+param        ^          -  INTEGER  Mod_WAT_UserDef   - 2 -  "WAT: user defined turbulence boxes" -
 
 # ..... Parameters ................................................................................................................
 typedef  FAST_Farm/Farm  ParameterType         DbKi            DT_low          -    - - "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step" seconds
@@ -90,8 +90,7 @@ typedef  ^               ParameterType         IntKi           WAT             -
 typedef  ^               ParameterType         CHARACTER(1024) WAT_BoxFile     -    - - "Filepath to the file containing the u-component of the turbulence box (either predefined or user-defined)." -
 typedef  ^               ParameterType         IntKi           WAT_NxNyNz      {3}  - - "Number of points in the x, y, and z directions of the WAT_BoxFile -- derived (WAT=1) or read from input file (WAT=2)" (m)
 typedef  ^               ParameterType         ReKi            WAT_DxDyDz      {3}  - - "Distance (in meters) between points in the x, y, and z directions of the WAT_BoxFile -- derived (WAT=1) or read from input file (WAT=2)" (m)
-#typedef  ^               ParameterType         ReKi            WAT_k_Def       -    - - "Calibrated parameter for the influence of the wake deficit in the wake-added turbulence [>=0.0] or DEFAULT [DEFAULT=0.6]" -
-#typedef  ^               ParameterType         ReKi            WAT_k_Grad      -    - - "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35]" -
+typedef  ^               ParameterType         logical         WAT_ScaleBox    -    - - "Flag to scale the input turbulence box to zero mean and unit standard deviation at every node" -
 
 # ..... FARM MiscVar data .......................................................................................................
 typedef    ^    MiscVarType       ReKi          AllOuts        {:} - - "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"

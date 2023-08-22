@@ -45,8 +45,8 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_AWAE = 4      ! Ambient Wind and Array Effects [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_MD = 5      ! Farm-level MoorDyn [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_None = 0      ! WAT: off [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_PreDef = 1      ! WAT: predefined turubulence boxes [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_UserDef = 2      ! WAT: user defined turubulence boxes [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_PreDef = 1      ! WAT: predefined turbulence boxes [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_UserDef = 2      ! WAT: user defined turbulence boxes [-]
 ! =========  Farm_ParameterType  =======
   TYPE, PUBLIC :: Farm_ParameterType
     REAL(DbKi)  :: DT_low = 0.0_R8Ki      !< Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step [seconds]
@@ -106,6 +106,7 @@ IMPLICIT NONE
     CHARACTER(1024)  :: WAT_BoxFile      !< Filepath to the file containing the u-component of the turbulence box (either predefined or user-defined). [-]
     INTEGER(IntKi) , DIMENSION(1:3)  :: WAT_NxNyNz = 0_IntKi      !< Number of points in the x, y, and z directions of the WAT_BoxFile -- derived (WAT=1) or read from input file (WAT=2) [(m)]
     REAL(ReKi) , DIMENSION(1:3)  :: WAT_DxDyDz = 0.0_ReKi      !< Distance (in meters) between points in the x, y, and z directions of the WAT_BoxFile -- derived (WAT=1) or read from input file (WAT=2) [(m)]
+    LOGICAL  :: WAT_ScaleBox = .false.      !< Flag to scale the input turbulence box to zero mean and unit standard deviation at every node [-]
   END TYPE Farm_ParameterType
 ! =======================
 ! =========  Farm_MiscVarType  =======
@@ -381,6 +382,7 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%WAT_BoxFile = SrcParamData%WAT_BoxFile
    DstParamData%WAT_NxNyNz = SrcParamData%WAT_NxNyNz
    DstParamData%WAT_DxDyDz = SrcParamData%WAT_DxDyDz
+   DstParamData%WAT_ScaleBox = SrcParamData%WAT_ScaleBox
 end subroutine
 
 subroutine Farm_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -536,6 +538,7 @@ subroutine Farm_PackParam(Buf, Indata)
    call RegPack(Buf, InData%WAT_BoxFile)
    call RegPack(Buf, InData%WAT_NxNyNz)
    call RegPack(Buf, InData%WAT_DxDyDz)
+   call RegPack(Buf, InData%WAT_ScaleBox)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -761,6 +764,8 @@ subroutine Farm_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%WAT_NxNyNz)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WAT_DxDyDz)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WAT_ScaleBox)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
