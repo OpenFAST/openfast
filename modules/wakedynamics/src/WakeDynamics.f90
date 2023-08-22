@@ -549,24 +549,24 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    allocate (   m%vt_tot2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%vt_tot2.')) return;
    allocate (   m%vt_amb2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%vt_amb2.')) return;
    allocate (   m%vt_shr2(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%vt_shr2.')) return;
+   allocate (   m%dvx_dy (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%dvx_dy.')) return;
+   allocate (   m%dvx_dz (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%dvx_dz.')) return;
    m%vt_tot2   = 0.0_ReKi
    m%vt_amb2   = 0.0_ReKi
    m%vt_shr2   = 0.0_ReKi
+   m%dvx_dy    = 0.0_ReKi
+   m%dvx_dz    = 0.0_ReKi
    if (p%Mod_Wake == Mod_Wake_Polar) then
       allocate (   m%dvtdr  (0:p%NumRadii-1 ) , STAT=ErrStat2 );  if (Failed0('m%dvtdr.')) return;
       allocate (   m%vt_tot (0:p%NumRadii-1,0:p%NumPlanes-1 ) , STAT=ErrStat2 );  if (Failed0('m%vt_tot.')) return;
       allocate (   m%vt_amb (0:p%NumRadii-1,0:p%NumPlanes-1 ) , STAT=ErrStat2 );  if (Failed0('m%vt_amb.')) return;
       allocate (   m%vt_shr (0:p%NumRadii-1,0:p%NumPlanes-1 ) , STAT=ErrStat2 );  if (Failed0('m%vt_shr.')) return;
    else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
-      allocate (   m%dvx_dy   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%dvx_dy.')) return;
-      allocate (   m%dvx_dz   (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1,0:p%NumPlanes-1), STAT=ErrStat2 );  if (Failed0('m%dvx_dz.')) return;
       allocate (   m%nu_dvx_dy(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 );  if (Failed0('m%nu_dvx_dy.')) return;
       allocate (   m%nu_dvx_dz(-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 );  if (Failed0('m%nu_dvx_dz.')) return;
       allocate (   m%dnuvx_dy (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 );  if (Failed0('m%dnuvx_dy.' )) return;
       allocate (   m%dnuvx_dz (-p%NumRadii+1:p%NumRadii-1,-p%NumRadii+1:p%NumRadii-1), STAT=ErrStat2 );  if (Failed0('m%dnuvx_dz.' )) return;
       if (errStat /= ErrID_None) return
-      m%dvx_dy    = 0.0_ReKi
-      m%dvx_dz    = 0.0_ReKi
       m%nu_dvx_dy = 0.0_ReKi
       m%nu_dvx_dz = 0.0_ReKi
       m%dnuvx_dy  = 0.0_ReKi
@@ -1445,14 +1445,11 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    type(WD_MiscVarType),         intent(inout)  :: m           !< Misc/optimization variables
    INTEGER(IntKi),               INTENT(  OUT)  :: errStat     !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
-
-
-   integer(intKi)                               :: n, i, iy, iz, maxPln
+   integer(intKi)                               :: n, i, iy, iz, maxPln, j 
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'WD_CalcOutput'
    real(ReKi)                                   :: correction(3)
-   real(ReKi)                                   :: C, S, dvdr, dvdtheta_r, R, r_tmp
    errStat = ErrID_None
    errMsg  = ""
    
@@ -1513,11 +1510,19 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       end do
    end if
 
+   ! --- Velocity deficits on Cartesian grid
    if (p%Mod_Wake == Mod_Wake_Polar) then
       ! Convert to Cartesian
       do i = 0, maxPln
          call Axisymmetric2CartesianVel(y%Vx_wake(:,i), y%Vr_wake(:,i), p%r, p%y, p%z, y%Vx_wake2(:,:,i), y%Vy_wake2(:,:,i), y%Vz_wake2(:,:,i))
       enddo
+      if ( p%WAT ) then
+         ! Compute gradients of dVx/dy and dVx/dz on Cartesian grid
+         do i = 0, maxPln
+            call gradient_y(y%Vx_wake2(:,:,i), p%dr, m%dvx_dy(:,:,i))
+            call gradient_z(y%Vx_wake2(:,:,i), p%dr, m%dvx_dz(:,:,i))
+         end do
+      endif
       if (p%OutAllPlanes) then 
          do i = 0, maxPln
             call Axisymmetric2Cartesian(m%vt_amb(:,i), p%r, p%y, p%z, m%vt_amb2(:,:,i))
@@ -1535,38 +1540,57 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
 
    ! --- WAT - Compute k_mt and add turbulence
    if ( p%WAT ) then
-      if (p%Mod_Wake == Mod_Wake_Polar) then
-!FIXME: need equations for polar wake.
-      else if (p%Mod_Wake == Mod_Wake_Cartesian .or. p%Mod_Wake == Mod_Wake_Curl) then
-         R = u%D_Rotor /2
-         do i = 1,maxPln  
-            if ( EqualRealNos( xd%Vx_wind_disk_filt(i), 0.0_ReKi ) ) then
-               y%WAT_k(:,:,i) = 0.0_ReKi
-            else
-               do iz = -p%NumRadii+1, p%NumRadii-1
-                  do iy = -p%NumRadii+1, p%NumRadii-1
-                     ! Polar gradients
-                     r_tmp =  sqrt(p%y(iy)**2 + p%z(iz)**2) 
-                     if (EqualRealNos(r_tmp,0.0_ReKi) ) then
-                        S = 0.0_ReKi 
-                        C = 0.0_ReKi
-                        dvdtheta_r = 0.0_ReKi
-                     else
-                        S=p%z(iz)/r_tmp ! Sine
-                        C=p%y(iy)/r_tmp ! Cosine
-                        dvdtheta_r = (m%dvx_dy(iy,iz,i) * (-p%z(iz)) + m%dvx_dz(iy,iz,i) * p%y(iy)) / r_tmp
-                     endif
-                     dvdr = m%dvx_dy(iy,iz,i) * C  + m%dvx_dz(iy,iz,i) * S
-                     ! Calculate scaling factor k_mt for wake-added Turbulence (equation 16)
-                     y%WAT_k(iy,iz,i) = p%WAT_k_Def *  abs(1 - ((xd%Vx_wind_disk_filt(i)+y%Vx_wake2(iy,iz,i))/xd%Vx_wind_disk_filt(i)) ) & 
-                                         + p%WAT_k_Grad/xd%Vx_wind_disk_filt(i) * R * ( abs(dvdr) + abs(dvdtheta_r) )
-                  end do ! iy
-               end do ! iz
-            endif
-         end do ! i, plane
-      endif
-
+      call Calc_k_WAT()
    end if
+
+contains
+   subroutine Calc_k_WAT()
+      integer(intKi) :: i, iy, iz
+      real(ReKi)     :: C, S, dvdr, dvdtheta_r, R, r_tmp
+      real(ReKi)     :: x_over_D, k_Scale, U0
+      logical, parameter :: verbose =.False.
+
+      ! We use the same method for all Mod_Wake (everything on the Cartesian grid)
+      R = u%D_Rotor /2
+      do i = 0,maxPln  
+         U0 = xd%Vx_wind_disk_filt(i)
+         if ( EqualRealNos( U0, 0.0_ReKi ) ) then
+            y%WAT_k(:,:,i) = 0.0_ReKi
+            if(verbose) print'(A,I3,A)','Plane:',i,' Velocity zero'
+         else
+            ! Scaling factor, onset of vortex breakdown
+            x_over_D = xd%x_plane(i)/u%D_rotor 
+            k_Scale =  1.0_ReKi
+            !if ((p%WAT_k_BrkDwn<=0) .or. (p%WAT_k_BrkDwn*x_over_D>=1)) then
+            !  k_Scale =  1.0_ReKi
+            !else
+            !   k_Scale = exp_safe(nExpBrkDwn * log(p%WAT_k_BrkDwn*x_over_D))
+            !endif
+            do iz = -p%NumRadii+1, p%NumRadii-1
+               do iy = -p%NumRadii+1, p%NumRadii-1
+                  ! Polar gradients
+                  r_tmp =  sqrt(p%y(iy)**2 + p%z(iz)**2) 
+                  if (EqualRealNos(r_tmp,0.0_ReKi) ) then
+                     S = 0.0_ReKi 
+                     C = 0.0_ReKi
+                     dvdtheta_r = 0.0_ReKi
+                  else
+                     S = p%z(iz)/r_tmp ! Sine
+                     C = p%y(iy)/r_tmp ! Cosine
+                     dvdtheta_r = (m%dvx_dy(iy,iz,i) * (-p%z(iz)) + m%dvx_dz(iy,iz,i) * p%y(iy)) / r_tmp
+                  endif
+                  dvdr = m%dvx_dy(iy,iz,i) * C  + m%dvx_dz(iy,iz,i) * S
+                  ! Calculate scaling factor k_mt for wake-added Turbulence (equation 16)
+                  y%WAT_k(iy,iz,i) = k_Scale * (p%WAT_k_Def /U0 *       abs(y%Vx_wake2(iy,iz,i)) & 
+                                   &  +         p%WAT_k_Grad/U0 * R * ( abs(dvdr) + abs(dvdtheta_r) )) 
+               end do ! iy
+            end do ! iz
+            if(verbose) print'(A,I3,A,F6.2,A,F6.3,A,F6.3,A,F8.3)','Plane:',i,'  x/D:',xd%x_plane(i)/u%D_rotor,'  scale:', k_Scale, '  kmax:',maxval(y%WAT_k(:,:,i)), '  velmax:',maxval(abs(y%Vx_wake2(:,:,i))) 
+         endif
+      end do !i, planes
+!       print*,'kmax ', maxval(y%WAT_k(:,:,0)), maxval(y%WAT_k(:,:,1)) , maxval(y%WAT_k(:,:,maxPln-1)), maxval(y%WAT_k(:,:,maxPln))
+
+   end subroutine Calc_k_WAT
    
 end subroutine WD_CalcOutput
 
