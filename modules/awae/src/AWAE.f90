@@ -656,11 +656,11 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    real(ReKi)          :: Vtv_qs(3)          ! Transvere quasi-steady wake, after wake-intersection averaging (without WAT)
    real(ReKi)          :: p_tmp_plane(3)
    real(ReKi)          :: tmp_vec(3)
-   real(ReKi)          :: WAT_B_BoxHi(3)     ! position of WAT box (global)
    real(ReKi)          :: WAT_k              ! WAT scaling factor (averaged from overlapping wakes)
    real(SiKi)          :: WAT_V(3)           ! WAT velocity contribution
    real(ReKi)          :: Pos_global(3)      ! global position
    real(ReKi)          :: delta, deltad
+   real(ReKi), ALLOCATABLE :: WAT_B_BoxHi(:,:) ! position of WAT box (global) for each intermediate steps, shape: 3 x n_high_low
    real(ReKi), ALLOCATABLE :: tmp_xhat_plane(:,:), tmp_yhat_plane(:,:), tmp_zhat_plane(:,:)
    real(ReKi), ALLOCATABLE :: tmp_Vx_wake(:), tmp_Vz_wake(:), tmp_Vy_wake(:)
    real(ReKi), ALLOCATABLE :: tmp_WAT_k(:)   ! WAT scaling factors for all wakes (for overlap)
@@ -695,7 +695,20 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    allocate ( tmp_Vy_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vy_wake.', errStat, errMsg, RoutineName )
    allocate ( tmp_Vz_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vz_wake.', errStat, errMsg, RoutineName )
    allocate ( tmp_WAT_k      ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_WAT_k.', errStat, errMsg, RoutineName )
-   if (ErrStat >= AbortErrLev) return
+
+
+   ! Convect WAT Box tracer for each intermediate step
+   ! Note: we substract because the high-res points are "before" current low res point
+   if (p%WAT_Enabled) then
+      allocate ( WAT_B_BoxHi    ( 3, 0:n_high_low), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for WAT_B_BoxHi.', errStat, errMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) return
+      do i_hl=0, n_high_low
+         WAT_B_BoxHi(1:3, i_hl) = xd%WAT_B_Box(1:3) - (n_high_low-i_hl) * xd%Ufarm(1:3) * real(p%DT_high,ReKi)
+      enddo
+   endif
+
+
+
 
       ! Loop over the entire grid of high resolution ambient wind data to compute:
       !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
@@ -722,8 +735,8 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
       !$OMP&         xhatBar_plane_norm, nw, & 
       !$OMP&         V_wake, Vx_term, Vx_sum2, V_sum, Vax_qs, Vtv_qs, V_qs &
       !$OMP&         i_hl, Pos_global,&
-      !$OMP&         WAT_B_BoxHi, tmp_WAT_k, WAT_k, WAT_iT, WAT_iY, WAT_iZ, WAT_V)& 
-      !$OMP SHARED(NumGrid_High, m, u, p, y, xd, nt, maxPln, n_high_low, errStat, errMsg)
+      !$OMP&         tmp_WAT_k, WAT_k, WAT_iT, WAT_iY, WAT_iZ, WAT_V)& 
+      !$OMP SHARED(NumGrid_High, m, u, p, y, xd, nt, maxPln, n_high_low, WAT_B_BoxHi, errStat, errMsg)
       ! Loop over all points of the high resolution ambient wind
       do iXYZ=0, NumGrid_high-1
          ! From flat index iXYZ to grid indices nx, ny, nz
@@ -821,25 +834,17 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
          if (n_wake > 0) then
             ! Compute average contributions for WAT scaling factor
             WAT_V = 0.0_SiKi
-            ! TODO TODO TODO
-            !if (p%WAT_Enabled) then
-            !   WAT_k = 0.0_ReKi
-            !   do nw = 1,n_wake
-            !      WAT_k = WAT_k + tmp_WAT_k(nw)*tmp_WAT_k(nw)
-            !   enddo
-            !   WAT_k = sqrt(WAT_k)
-            !   ! find location of this grid point in the turbulent box
-            !   ! NOTE: we take advantage of full knowledge of how the data is actually stored in IfW.  If that ever changes, this will be a problem.
-            !   !     Equations taken from the WakeAddedTurbulence implementation plan
-            !   Pos_global(1) = real(nx_high,ReKi) * p%dX_high(nt) + p%X0_high(nt)
-            !   Pos_global(2) = real(ny_high,ReKi) * p%dY_high(nt) + p%Y0_high(nt)
-            !   Pos_global(3) = real(nz_high,ReKi) * p%dZ_high(nt) + p%Z0_high(nt)
-            !   ! The FlowField stores data in Y,Z,T -- Mean wind speed was set to 1.0, so Rate is 1/DT = 1/DX
-            !   WAT_iT = modulo( nint( (Pos_global(1) - WAT_B_BoxHi(1)) * p%WAT_FlowField%Grid3D%Rate  ), p%WAT_FlowField%Grid3D%NSteps ) + 1    ! eq 23
-            !   WAT_iY = modulo( nint( (Pos_global(2) + WAT_B_BoxHi(2)) * p%WAT_FlowField%Grid3D%InvDY ), p%WAT_FlowField%Grid3D%NYGrids) + 1    ! eq 24
-            !   WAT_iZ = modulo( nint( (Pos_global(3) + WAT_B_BoxHi(3)) * p%WAT_FlowField%Grid3D%InvDZ ), p%WAT_FlowField%Grid3D%NZGrids) + 1    ! eq 25
-            !   WAT_V(1:3) = p%WAT_FlowField%Grid3D%Vel(1:3,WAT_iY,WAT_iZ,WAT_iT) * WAT_k
-            !endif
+            if (p%WAT_Enabled) then
+               WAT_k = 0.0_ReKi
+               do nw = 1,n_wake
+                  WAT_k = WAT_k + tmp_WAT_k(nw)*tmp_WAT_k(nw)
+               enddo
+               WAT_k = sqrt(WAT_k)
+               ! Position of current point
+               Pos_global(1) = real(nx_high,ReKi) * p%dX_high(nt) + p%X0_high(nt)
+               Pos_global(2) = real(ny_high,ReKi) * p%dY_high(nt) + p%Y0_high(nt)
+               Pos_global(3) = real(nz_high,ReKi) * p%dZ_high(nt) + p%Z0_high(nt)
+            endif
 
             ! Normalize xhatBar to unit vector
             xhatBar_plane_norm = TwoNorm(xhatBar_plane)
@@ -860,16 +865,18 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
                Vx_sum2 = Vx_sum2 + Vx_term*Vx_term
                V_sum   = V_sum   + V_wake
             end do
-            ! interpolated tracer position for WAT
-            !     Equation 22 from the WakeAddedTurbulence implementation plan
-            !if (p%WAT_Enabled) then
-            !   ! TODO TODO TODO THIS IS WRONG
-            !   WAT_B_BoxHi = xd%WAT_B_Box(1:3) - (NumGrid_high-iXYZ) * xd%Ufarm(1:3) * real(p%DT_high,ReKi)
-            !endif
             Vtv_qs = V_sum - dot_product(V_sum, xhatBar_plane)*xhatBar_plane
             Vax_qs = - xhatBar_plane*sqrt(Vx_sum2)
             V_qs = real(Vax_qs + Vtv_qs, SiKi)
             do i_hl=0, n_high_low
+               ! Compute WAT velocity
+               if (p%WAT_Enabled) then
+                  ! find location of grid point in the turbulent box, accounting for the convection of the box in between high res and low res
+                  WAT_iT = modulo( nint( (Pos_global(1) - WAT_B_BoxHi(1, i_hl)) * p%WAT_FlowField%Grid3D%Rate  ), p%WAT_FlowField%Grid3D%NSteps ) + 1    ! eq 23
+                  WAT_iY = modulo( nint( (Pos_global(2) + WAT_B_BoxHi(2, i_hl)) * p%WAT_FlowField%Grid3D%InvDY ), p%WAT_FlowField%Grid3D%NYGrids) + 1    ! eq 24
+                  WAT_iZ = modulo( nint( (Pos_global(3) + WAT_B_BoxHi(3, i_hl)) * p%WAT_FlowField%Grid3D%InvDZ ), p%WAT_FlowField%Grid3D%NZGrids) + 1    ! eq 25
+                  WAT_V(1:3) = p%WAT_FlowField%Grid3D%Vel(1:3,WAT_iY,WAT_iZ,WAT_iT) * WAT_k
+               endif
                y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,i_hl) = y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,i_hl) + V_qs + WAT_V
             end do
          end if  ! (n_wake > 0)
@@ -883,6 +890,7 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    if (allocated(tmp_Vx_wake))    deallocate(tmp_Vx_wake)
    if (allocated(tmp_Vy_wake))    deallocate(tmp_Vy_wake)
    if (allocated(tmp_Vz_wake))    deallocate(tmp_Vz_wake)
+   if (allocated(WAT_B_BoxHi))    deallocate(WAT_B_BoxHi)
 
 end subroutine HighResGridCalcOutput
 
