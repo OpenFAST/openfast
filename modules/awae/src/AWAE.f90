@@ -325,7 +325,6 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    real(ReKi), ALLOCATABLE :: tmp_xhat_plane(:,:), tmp_yhat_plane(:,:), tmp_zhat_plane(:,:)
    real(ReKi), ALLOCATABLE :: tmp_Vx_wake(:), tmp_Vz_wake(:), tmp_Vy_wake(:)
    real(ReKi), ALLOCATABLE :: tmp_WAT_k(:)   ! WAT scaling factors for all wakes (for overlap)
-   integer(IntKi)      :: np1
    integer(IntKi)      :: iXYZ       !< Flat counter on X,Y,Z grid
    integer(IntKi)      :: i
    integer(IntKi)      :: maxPln
@@ -367,7 +366,7 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    !$OMP PRIVATE(iXYZ, ix, iy, iz, &
    !$OMP&        n_wake, xhatBar_plane, &
    !$OMP&        tmp_x,tmp_y,tmp_z,&
-   !$OMP&        nt, np, np1, &
+   !$OMP&        nt, np, &
    !$OMP&        tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane,&
    !$OMP&        tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake,  &
    !$OMP&        xhatBar_plane_norm, iw, &
@@ -398,7 +397,32 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
       end do      ! do nt = 1,p%NumTurbines
 
       if (n_wake > 0) then
-         ! Compute average contributions for WAT scaling factor
+
+         ! Normalize xhatBar to unit vector
+         xhatBar_plane_norm = TwoNorm(xhatBar_plane)
+         if ( EqualRealNos(xhatBar_plane_norm, 0.0_ReKi) ) then
+            xhatBar_plane = 0.0_ReKi
+         else
+            xhatBar_plane = xhatBar_plane / xhatBar_plane_norm
+         end if
+
+         ! --- Compute average contributions - Quasi steady wake
+         ! - sqrt[ sum (e_x. V)^2 ] e_x  ! Axial (sqrt-avg)
+         ! + sum [(I-e_x.e_x^T). V ]     ! Radial (sum)
+         Vx_sum2   = 0.0_ReKi
+         V_sum     = 0.0_ReKi
+         do iw = 1,n_wake
+            V_wake      = tmp_Vx_wake(iw)*tmp_xhat_plane(:,iw) + tmp_Vy_wake(iw)*tmp_yhat_plane(:,iw) + tmp_Vz_wake(iw)*tmp_zhat_plane(:,iw)
+            Vx_term     = dot_product( xhatBar_plane, V_wake )
+            Vx_sum2 = Vx_sum2 + Vx_term*Vx_term
+            V_sum   = V_sum   + V_wake
+         end do
+         ! [I - XX']V = V - (V dot X)X
+         Vtv_qs = V_sum - dot_product(V_sum, xhatBar_plane)*xhatBar_plane
+         Vax_qs = - xhatBar_plane*sqrt(Vx_sum2)
+         V_qs = real(Vax_qs + Vtv_qs, SiKi) 
+
+         ! --- Compute average WAT scaling factor and WAT velocity
          WAT_V = 0.0_SiKi
          if (p%WAT_Enabled) then
             WAT_k = 0.0_ReKi
@@ -422,32 +446,7 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
             endif
          endif
 
-         ! Normalize xhatBar to unit vector
-         xhatBar_plane_norm = TwoNorm(xhatBar_plane)
-         if ( EqualRealNos(xhatBar_plane_norm, 0.0_ReKi) ) then
-            xhatBar_plane = 0.0_ReKi
-         else
-            xhatBar_plane = xhatBar_plane / xhatBar_plane_norm
-         end if
-
-         ! Compute average contributions
-         ! - sqrt[ sum (e_x. V)^2 ] e_x  ! Axial (sqrt-avg)
-         ! + sum [(I-e_x.e_x^T). V ]     ! Radial (sum)
-         Vx_sum2   = 0.0_ReKi
-         V_sum     = 0.0_ReKi
-         do iw = 1,n_wake
-            V_wake      = tmp_Vx_wake(iw)*tmp_xhat_plane(:,iw) + tmp_Vy_wake(iw)*tmp_yhat_plane(:,iw) + tmp_Vz_wake(iw)*tmp_zhat_plane(:,iw)
-            Vx_term     = dot_product( xhatBar_plane, V_wake )
-            Vx_sum2 = Vx_sum2 + Vx_term*Vx_term
-            V_sum   = V_sum   + V_wake
-         end do
-         ! [I - XX']V = V - (V dot X)X
-         Vtv_qs = V_sum - dot_product(V_sum, xhatBar_plane)*xhatBar_plane
-         Vax_qs = - xhatBar_plane*sqrt(Vx_sum2)
-         V_qs = real(Vax_qs + Vtv_qs, SiKi) 
-         !Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane
-         !   + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
-         ! Compute C matrix and update Vdist_low
+         !--- Store full velocity (Ambient + Wake QS + WAT) in grid
          if(p%Mod_Projection==3) then
             ! We do not convect using WAT_T, but we include it in outputs
             m%Vdist_low     (:,ix,iy,iz) = m%Vdist_low     (:,ix,iy,iz) + V_qs
@@ -739,7 +738,7 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
       !$OMP PARALLEL DO DEFAULT(NONE) &
       !$OMP PRIVATE (iXYZ, ix, iy, iy,&
       !$OMP&         n_wake, xhatBar_plane,&
-      !$OMP&         nt2, np, np1,&
+      !$OMP&         nt2, np,&
       !$OMP&         tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane,&
       !$OMP&         tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake,&
       !$OMP&         xhatBar_plane_norm, iw, & 
@@ -768,7 +767,32 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
             end if    ! nt /= nt2
          end do        ! nt2 = 1,p%NumTurbines
          if (n_wake > 0) then
-            ! Compute average contributions for WAT scaling factor
+
+            ! Normalize xhatBar to unit vector
+            xhatBar_plane_norm = TwoNorm(xhatBar_plane)
+            if ( EqualRealNos(xhatBar_plane_norm, 0.0_ReKi) ) then
+               xhatBar_plane = 0.0_ReKi
+            else
+               xhatBar_plane = xhatBar_plane / xhatBar_plane_norm
+            end if
+
+            ! -- Compute average contributions - Quasi steady wake
+            ! - sqrt[ sum (e_x. V)^2 ] e_x  ! Axial (sqrt-avg)
+            ! + sum [(I-e_x.e_x^T). V ]     ! Radial (sum)
+            Vx_sum2   = 0.0_ReKi
+            V_sum     = 0.0_ReKi
+            do iw = 1,n_wake
+               V_wake      = tmp_Vx_wake(iw)*tmp_xhat_plane(:,iw) + tmp_Vy_wake(iw)*tmp_yhat_plane(:,iw) + tmp_Vz_wake(iw)*tmp_zhat_plane(:,iw)
+               Vx_term     = dot_product( xhatBar_plane, V_wake )
+               Vx_sum2 = Vx_sum2 + Vx_term*Vx_term
+               V_sum   = V_sum   + V_wake
+            end do
+            ! [I - XX']V = V - (V dot X)X
+            Vtv_qs = V_sum - dot_product(V_sum, xhatBar_plane)*xhatBar_plane
+            Vax_qs = - xhatBar_plane*sqrt(Vx_sum2)
+            V_qs = real(Vax_qs + Vtv_qs, SiKi)
+
+            ! --- Compute average WAT scaling factor and WAT velocity
             WAT_V = 0.0_SiKi
             if (p%WAT_Enabled) then
                WAT_k = 0.0_ReKi
@@ -782,28 +806,7 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
                Pos_global(3) = real(iz,ReKi) * p%dZ_high(nt) + p%Z0_high(nt)
             endif
 
-            ! Normalize xhatBar to unit vector
-            xhatBar_plane_norm = TwoNorm(xhatBar_plane)
-            if ( EqualRealNos(xhatBar_plane_norm, 0.0_ReKi) ) then
-               xhatBar_plane = 0.0_ReKi
-            else
-               xhatBar_plane = xhatBar_plane / xhatBar_plane_norm
-            end if
-
-            ! Compute average contributions
-            ! - sqrt[ sum (e_x. V)^2 ] e_x  ! Axial (sqrt-avg)
-            ! + sum [(I-e_x.e_x^T). V ]     ! Radial (sum)
-            Vx_sum2   = 0.0_ReKi
-            V_sum     = 0.0_ReKi
-            do iw = 1,n_wake
-               V_wake      = tmp_Vx_wake(iw)*tmp_xhat_plane(:,iw) + tmp_Vy_wake(iw)*tmp_yhat_plane(:,iw) + tmp_Vz_wake(iw)*tmp_zhat_plane(:,iw)
-               Vx_term     = dot_product( xhatBar_plane, V_wake )
-               Vx_sum2 = Vx_sum2 + Vx_term*Vx_term
-               V_sum   = V_sum   + V_wake
-            end do
-            Vtv_qs = V_sum - dot_product(V_sum, xhatBar_plane)*xhatBar_plane
-            Vax_qs = - xhatBar_plane*sqrt(Vx_sum2)
-            V_qs = real(Vax_qs + Vtv_qs, SiKi)
+            ! --- Store full velocity (Ambient + Wake QS + WAT) in grid
             do i_hl=0, n_high_low
                ! Compute WAT velocity
                if (p%WAT_Enabled) then
