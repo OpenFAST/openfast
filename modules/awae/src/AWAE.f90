@@ -183,8 +183,8 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    integer(IntKi),                 intent(  out)  :: errStat     !< Error status of the operation
    character(*),                   intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
 
-   integer(IntKi)      :: nx, ny, nz, nt, np, nw, nx_low, ny_low, nz_low, nr, npsi, wamb, iwsum !< loop counters
-   integer(IntKi)      :: nXYZ_low, n_wake, n_r_polar, n_psi_polar       !< accumulating counters
+   integer(IntKi)      :: nt, np, iw, ix, iy, iz, nr, npsi, wamb, iwsum !< loop counters
+   integer(IntKi)      :: n_wake, n_r_polar, n_psi_polar       !< accumulating counters
    real(ReKi)          :: xhatBar_plane(3)       !<
    real(ReKi)          :: xHat_plane(3), yHat_plane(3), zHat_plane(3)
    real(ReKi)          :: x_end_plane
@@ -254,8 +254,8 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
       ! Loop over the entire grid of low resolution ambient wind data to compute:
       !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
    !$OMP PARALLEL DO &
-   !$OMP PRIVATE(iXYZ, nx_low, ny_low, nz_low, &
-   !$OMP&        nXYZ_low, n_wake, xhatBar_plane, &
+   !$OMP PRIVATE(iXYZ, ix, iy, iz, &
+   !$OMP&        n_wake, xhatBar_plane, &
    !$OMP&        tmp_x,tmp_y,tmp_z,&
    !$OMP&        x_end_plane, nt, np, np1, &
    !$OMP&        x_start_plane, delta, deltad, p_tmp_plane, tmp_vec, r_vec_plane, &
@@ -263,33 +263,31 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    !$OMP&        y_tmp_plane, z_tmp_plane, &
    !$OMP&        tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane,&
    !$OMP&        tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake,  &
-   !$OMP&        xhatBar_plane_norm, nw, &
+   !$OMP&        xhatBar_plane_norm, iw, &
    !$OMP&        V_wake, Vx_term, Vx_sum2, V_sum, Vax_qs, Vtv_qs, V_qs &   
    !$OMP&        C_rot, C_rot_norm, Pos_global,&
    !$OMP&        tmp_WAT_k, WAT_k, WAT_iT, WAT_iY, WAT_iZ, WAT_V)&
    !$OMP SHARED(m, u, p, xd, maxPln, errStat, errMsg) DEFAULT(NONE)
-   do iXYZ = 0 , p%NumGrid_low - 1
-      ! From flat index iXYZ to grid indices nx, ny, nz
-      nx_low = mod(     iXYZ                        ,p%nX_low)
-      ny_low = mod(int( iXYZ / (p%nX_low         ) ),p%nY_low)
-      nz_low =     int( iXYZ / (p%nX_low*p%nY_low) )
+   do iXYZ = 1 , p%NumGrid_low
+      ! From flat index iXYZ to grid indices
+      ix = mod(     (iXYZ-1)                        ,p%nX_low)
+      iy = mod(int( (iXYZ-1) / (p%nX_low         ) ),p%nY_low)
+      iz =     int( (iXYZ-1) / (p%nX_low*p%nY_low) )
 
          ! set the disturbed flow equal to the ambient flow for this time step
-      m%Vdist_low     (:,nx_low,ny_low,nz_low) = m%Vamb_low(:,nx_low,ny_low,nz_low)
-      m%Vdist_low_full(:,nx_low,ny_low,nz_low) = m%Vamb_low(:,nx_low,ny_low,nz_low)
+      m%Vdist_low     (:,ix,iy,iz) = m%Vamb_low(:,ix,iy,iz)
+      m%Vdist_low_full(:,ix,iy,iz) = m%Vamb_low(:,ix,iy,iz)
 
-      !nXYZ_low = nXYZ_low + 1
-      nXYZ_low = iXYZ + 1
       n_wake = 0
       xhatBar_plane = 0.0_ReKi
 
       do nt = 1,p%NumTurbines
 
          ! H Long: replace intrinsic dot_product with explicit do product can save as much as 10% of total calculation time!
-         !x_end_plane = dot_product(u%xhat_plane(:,0,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,0,nt)) )
-         tmp_x = u%xhat_plane(1,0,nt) * (p%Grid_Low(1,nXYZ_low) - u%p_plane(1,0,nt))
-         tmp_y = u%xhat_plane(2,0,nt) * (p%Grid_Low(2,nXYZ_low) - u%p_plane(2,0,nt))
-         tmp_z = u%xhat_plane(3,0,nt) * (p%Grid_Low(3,nXYZ_low) - u%p_plane(3,0,nt))
+         !x_end_plane = dot_product(u%xhat_plane(:,0,nt), (p%Grid_Low(:,iXYZ) - u%p_plane(:,0,nt)) )
+         tmp_x = u%xhat_plane(1,0,nt) * (p%Grid_Low(1,iXYZ) - u%p_plane(1,0,nt))
+         tmp_y = u%xhat_plane(2,0,nt) * (p%Grid_Low(2,iXYZ) - u%p_plane(2,0,nt))
+         tmp_z = u%xhat_plane(3,0,nt) * (p%Grid_Low(3,iXYZ) - u%p_plane(3,0,nt))
          x_end_plane = tmp_x + tmp_y + tmp_z
 
          do np = 0, maxPln
@@ -297,10 +295,10 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
            ! Construct the endcaps of the current wake plane volume
            x_start_plane = x_end_plane
            ! H Long: again, replace intrinsic dot_product
-           !x_end_plane = dot_product(u%xhat_plane(:,np+1,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,np+1,nt)) )
-           tmp_x = u%xhat_plane(1,np1,nt) * (p%Grid_Low(1,nXYZ_low) - u%p_plane(1,np1,nt))
-           tmp_y = u%xhat_plane(2,np1,nt) * (p%Grid_Low(2,nXYZ_low) - u%p_plane(2,np1,nt))
-           tmp_z = u%xhat_plane(3,np1,nt) * (p%Grid_Low(3,nXYZ_low) - u%p_plane(3,np1,nt))
+           !x_end_plane = dot_product(u%xhat_plane(:,np+1,nt), (p%Grid_Low(:,iXYZ) - u%p_plane(:,np+1,nt)) )
+           tmp_x = u%xhat_plane(1,np1,nt) * (p%Grid_Low(1,iXYZ) - u%p_plane(1,np1,nt))
+           tmp_y = u%xhat_plane(2,np1,nt) * (p%Grid_Low(2,iXYZ) - u%p_plane(2,np1,nt))
+           tmp_z = u%xhat_plane(3,np1,nt) * (p%Grid_Low(3,iXYZ) - u%p_plane(3,np1,nt))
            x_end_plane = tmp_x + tmp_y + tmp_z
 
            ! test if the point is within the endcaps of the wake volume
@@ -324,7 +322,7 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
               end if
 
               ! Vector between current grid point and plane position
-              r_vec_plane = p%Grid_Low(:,nXYZ_low) - p_tmp_plane
+              r_vec_plane = p%Grid_Low(:,iXYZ) - p_tmp_plane
 
               ! Interpolate x_hat, plane normal at grid point 
               xHat_plane(1:3) = delta*u%xhat_plane(:,np1,nt) + deltad*u%xhat_plane(:,np,nt)
@@ -377,17 +375,17 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
          WAT_V = 0.0_SiKi
          if (p%WAT_Enabled) then
             WAT_k = 0.0_ReKi
-            do nw = 1,n_wake
-               WAT_k = WAT_k + tmp_WAT_k(nw)*tmp_WAT_k(nw)
+            do iw = 1,n_wake
+               WAT_k = WAT_k + tmp_WAT_k(iw)*tmp_WAT_k(iw)
             enddo
             WAT_k = sqrt(WAT_k)
             if (abs(WAT_k)>1e-8) then
             ! find location of this grid point in the turbulent box
             ! NOTE: we take advantage of full knowledge of how the data is actually stored in IfW.  If that ever changes, this will be a problem.
             !     Equations taken from the WakeAddedTurbulence implementation plan
-            Pos_global(1) = real(nx_low,ReKi) * p%dX_low + p%X0_low
-            Pos_global(2) = real(ny_low,ReKi) * p%dY_low + p%Y0_low
-            Pos_global(3) = real(nz_low,ReKi) * p%dZ_low + p%Z0_low
+            Pos_global(1) = real(ix,ReKi) * p%dX_low + p%X0_low
+            Pos_global(2) = real(iy,ReKi) * p%dY_low + p%Y0_low
+            Pos_global(3) = real(iz,ReKi) * p%dZ_low + p%Z0_low
             ! The FlowField stores data in Y,Z,T -- Mean wind speed was set to 1.0, so Rate is 1/DT = 1/DX
             ! NOTE: the field moves with the average wind field.  So the +X is -T in the Mann box 
             WAT_iT = modulo( nint( (Pos_global(1) - xd%WAT_B_Box(1)) * p%WAT_FlowField%Grid3D%Rate  ), p%WAT_FlowField%Grid3D%NSteps ) + 1   ! eq 23
@@ -410,8 +408,8 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
          ! + sum [(I-e_x.e_x^T). V ]     ! Radial (sum)
          Vx_sum2   = 0.0_ReKi
          V_sum     = 0.0_ReKi
-         do nw = 1,n_wake
-            V_wake      = tmp_Vx_wake(nw)*tmp_xhat_plane(:,nw) + tmp_Vy_wake(nw)*tmp_yhat_plane(:,nw) + tmp_Vz_wake(nw)*tmp_zhat_plane(:,nw)
+         do iw = 1,n_wake
+            V_wake      = tmp_Vx_wake(iw)*tmp_xhat_plane(:,iw) + tmp_Vy_wake(iw)*tmp_yhat_plane(:,iw) + tmp_Vz_wake(iw)*tmp_zhat_plane(:,iw)
             Vx_term     = dot_product( xhatBar_plane, V_wake )
             Vx_sum2 = Vx_sum2 + Vx_term*Vx_term
             V_sum   = V_sum   + V_wake
@@ -425,27 +423,27 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
          ! Compute C matrix and update Vdist_low
          if(p%Mod_Projection==3) then
             ! We do not convect using WAT_T, but we include it in outputs
-            m%Vdist_low     (:,nx_low,ny_low,nz_low) = m%Vdist_low     (:,nx_low,ny_low,nz_low) + V_qs
-            m%Vdist_low_full(:,nx_low,ny_low,nz_low) = m%Vdist_low_full(:,nx_low,ny_low,nz_low) + V_qs + WAT_V
+            m%Vdist_low     (:,ix,iy,iz) = m%Vdist_low     (:,ix,iy,iz) + V_qs
+            m%Vdist_low_full(:,ix,iy,iz) = m%Vdist_low_full(:,ix,iy,iz) + V_qs + WAT_V
 
          else if(p%Mod_Projection==1) then
             ! We keep the full field (including cross flow components), done for outputs and VTK outputs
-            m%Vdist_low     (:,nx_low,ny_low,nz_low) = m%Vdist_low     (:,nx_low,ny_low,nz_low) + V_qs + WAT_V
-            m%Vdist_low_full(:,nx_low,ny_low,nz_low) = m%Vdist_low_full(:,nx_low,ny_low,nz_low) + V_qs + WAT_V
+            m%Vdist_low     (:,ix,iy,iz) = m%Vdist_low     (:,ix,iy,iz) + V_qs + WAT_V
+            m%Vdist_low_full(:,ix,iy,iz) = m%Vdist_low_full(:,ix,iy,iz) + V_qs + WAT_V
             
          else if (p%Mod_Projection==2) then
             ! We project against the normal of the plane to remove the cross flow components
-            C_rot(1,1) = m%Vamb_low(1,nx_low,ny_low,nz_low) * m%Vamb_low(1,nx_low,ny_low,nz_low)
-            C_rot(1,2) = m%Vamb_low(1,nx_low,ny_low,nz_low) * m%Vamb_low(2,nx_low,ny_low,nz_low)
-            C_rot(1,3) = m%Vamb_low(1,nx_low,ny_low,nz_low) * m%Vamb_low(3,nx_low,ny_low,nz_low)
+            C_rot(1,1) = m%Vamb_low(1,ix,iy,iz) * m%Vamb_low(1,ix,iy,iz)
+            C_rot(1,2) = m%Vamb_low(1,ix,iy,iz) * m%Vamb_low(2,ix,iy,iz)
+            C_rot(1,3) = m%Vamb_low(1,ix,iy,iz) * m%Vamb_low(3,ix,iy,iz)
 
-            C_rot(2,1) = m%Vamb_low(2,nx_low,ny_low,nz_low) * m%Vamb_low(1,nx_low,ny_low,nz_low)
-            C_rot(2,2) = m%Vamb_low(2,nx_low,ny_low,nz_low) * m%Vamb_low(2,nx_low,ny_low,nz_low)
-            C_rot(2,3) = m%Vamb_low(2,nx_low,ny_low,nz_low) * m%Vamb_low(3,nx_low,ny_low,nz_low)
+            C_rot(2,1) = m%Vamb_low(2,ix,iy,iz) * m%Vamb_low(1,ix,iy,iz)
+            C_rot(2,2) = m%Vamb_low(2,ix,iy,iz) * m%Vamb_low(2,ix,iy,iz)
+            C_rot(2,3) = m%Vamb_low(2,ix,iy,iz) * m%Vamb_low(3,ix,iy,iz)
             
-            C_rot(3,1) = m%Vamb_low(3,nx_low,ny_low,nz_low) * m%Vamb_low(1,nx_low,ny_low,nz_low)
-            C_rot(3,2) = m%Vamb_low(3,nx_low,ny_low,nz_low) * m%Vamb_low(2,nx_low,ny_low,nz_low)
-            C_rot(3,3) = m%Vamb_low(3,nx_low,ny_low,nz_low) * m%Vamb_low(3,nx_low,ny_low,nz_low)
+            C_rot(3,1) = m%Vamb_low(3,ix,iy,iz) * m%Vamb_low(1,ix,iy,iz)
+            C_rot(3,2) = m%Vamb_low(3,ix,iy,iz) * m%Vamb_low(2,ix,iy,iz)
+            C_rot(3,3) = m%Vamb_low(3,ix,iy,iz) * m%Vamb_low(3,ix,iy,iz)
 
             C_rot_norm = C_rot(1,1) + C_rot(2,2) + C_rot(3,3) 
             if (EqualRealNos( C_rot_norm, 0.0_SiKi) ) then
@@ -453,16 +451,13 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
             else
                C_rot = C_rot / C_rot_norm
                ! Full field is for VTK outputs, contains the cross flow components
-               m%Vdist_low     (:,nx_low,ny_low,nz_low) = m%Vdist_low     (:,nx_low,ny_low,nz_low) + matmul(C_rot, V_qs + WAT_V)
-               m%Vdist_low_full(:,nx_low,ny_low,nz_low) = m%Vdist_low_full(:,nx_low,ny_low,nz_low)               + V_qs + WAT_V
+               m%Vdist_low     (:,ix,iy,iz) = m%Vdist_low     (:,ix,iy,iz) + matmul(C_rot, V_qs + WAT_V)
+               m%Vdist_low_full(:,ix,iy,iz) = m%Vdist_low_full(:,ix,iy,iz)               + V_qs + WAT_V
             endif
          endif
          
       end if  ! (n_wake > 0)
    end do ! iXYZ, loop NumGrid_low points
-   !      end do ! do nx_low=0, p%nX_low-1
-   !   end do    ! do ny_low=0, p%nY_low-1
-   !end do       ! do nz_low=0, p%nZ_low-1
    !$OMP END PARALLEL DO
 
    do nt = 1,p%NumTurbines
@@ -637,8 +632,8 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    integer(IntKi),                 intent(  out)  :: errStat     !< Error status of the operation
    character(*),                   intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
 
-   integer(IntKi)      :: nx, ny, nz, nt, nt2, np, nw, nx_high, ny_high, nz_high, i_hl !< loop counters
-   integer(IntKi)      :: nXYZ_high, n_wake       !< accumulating counters
+   integer(IntKi)      :: nt, nt2, np, iw, ix, iy, iz, i_hl !< loop counters
+   integer(IntKi)      :: n_wake       !< accumulating counters
    real(ReKi)          :: xhatBar_plane(3)       !<
    real(ReKi)          :: xHat_plane(3), yHat_plane(3), zHat_plane(3)
    real(ReKi)          :: xhatBar_plane_norm
@@ -724,40 +719,39 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
       y%Vdist_high(nt)%data = m%Vamb_high(nt)%data
 
       !$OMP PARALLEL DO DEFAULT(NONE) &
-      !$OMP PRIVATE (nx_high, ny_high, nz_high,&
-      !$OMP&         nXYZ_high, n_wake, xhatBar_plane,&
+      !$OMP PRIVATE (iXYZ, ix, iy, iy,&
+      !$OMP&         n_wake, xhatBar_plane,&
       !$OMP&         nt2, x_end_plane, np, np1,&
       !$OMP&         x_start_plane, delta, deltad, p_tmp_plane, tmp_vec, r_vec_plane,&
       !$OMP&         xHat_plane, yHat_plane, zHat_plane,&
       !$OMP&         y_tmp_plane, z_tmp_plane,&
       !$OMP&         tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane,&
       !$OMP&         tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake,&
-      !$OMP&         xhatBar_plane_norm, nw, & 
+      !$OMP&         xhatBar_plane_norm, iw, & 
       !$OMP&         V_wake, Vx_term, Vx_sum2, V_sum, Vax_qs, Vtv_qs, V_qs &
       !$OMP&         i_hl, Pos_global,&
       !$OMP&         tmp_WAT_k, WAT_k, WAT_iT, WAT_iY, WAT_iZ, WAT_V)& 
       !$OMP SHARED(NumGrid_High, m, u, p, y, xd, nt, maxPln, n_high_low, WAT_B_BoxHi, errStat, errMsg)
       ! Loop over all points of the high resolution ambient wind
-      do iXYZ=0, NumGrid_high-1
-         ! From flat index iXYZ to grid indices nx, ny, nz
-         nx_high = mod(     iXYZ                          ,p%nX_high)
-         ny_high = mod(int( iXYZ / (p%nX_high          ) ),p%nY_high)
-         nz_high =     int( iXYZ / (p%nX_high*p%nY_high) )
+      do iXYZ=1, NumGrid_high
+         ! From flat index iXYZ to grid indices
+         ix = mod(     (iXYZ-1)                          ,p%nX_high)
+         iy = mod(int( (iXYZ-1) / (p%nX_high          ) ),p%nY_high)
+         iz =     int( (iXYZ-1) / (p%nX_high*p%nY_high) )
 
-         nXYZ_high = iXYZ + 1
          n_wake = 0
          xhatBar_plane = 0.0_ReKi
 
          do nt2 = 1,p%NumTurbines
             if (nt /= nt2) then
 
-               x_end_plane = dot_product(u%xhat_plane(:,0,nt2), (p%Grid_high(:,nXYZ_high,nt) - u%p_plane(:,0,nt2)) )
+               x_end_plane = dot_product(u%xhat_plane(:,0,nt2), (p%Grid_high(:,iXYZ,nt) - u%p_plane(:,0,nt2)) )
 
                do np = 0, maxPln !p%NumPlanes-2
                   np1 = np + 1
                   ! Construct the endcaps of the current wake plane volume
                   x_start_plane = x_end_plane
-                  x_end_plane = dot_product(u%xhat_plane(:,np+1,nt2), (p%Grid_high(:,nXYZ_high,nt) - u%p_plane(:,np+1,nt2)) )
+                  x_end_plane = dot_product(u%xhat_plane(:,np+1,nt2), (p%Grid_high(:,iXYZ,nt) - u%p_plane(:,np+1,nt2)) )
 
                   ! test if the point is within the endcaps of the wake volume
                   if ( ( ( x_start_plane >= 0.0_ReKi ) .and. ( x_end_plane < 0.0_ReKi ) ) .or. &
@@ -780,7 +774,7 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
                      end if
 
                      ! Vector between current grid and plane position
-                     r_vec_plane = p%Grid_high(:,nXYZ_high,nt) - p_tmp_plane
+                     r_vec_plane = p%Grid_high(:,iXYZ,nt) - p_tmp_plane
 
                      ! Interpolate x_hat
                      xHat_plane(1:3) = delta*u%xhat_plane(:,np1,nt2) + deltad*u%xhat_plane(:,np,nt2)
@@ -836,14 +830,14 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
             WAT_V = 0.0_SiKi
             if (p%WAT_Enabled) then
                WAT_k = 0.0_ReKi
-               do nw = 1,n_wake
-                  WAT_k = WAT_k + tmp_WAT_k(nw)*tmp_WAT_k(nw)
+               do iw = 1,n_wake
+                  WAT_k = WAT_k + tmp_WAT_k(iw)*tmp_WAT_k(iw)
                enddo
                WAT_k = sqrt(WAT_k)
                ! Position of current point
-               Pos_global(1) = real(nx_high,ReKi) * p%dX_high(nt) + p%X0_high(nt)
-               Pos_global(2) = real(ny_high,ReKi) * p%dY_high(nt) + p%Y0_high(nt)
-               Pos_global(3) = real(nz_high,ReKi) * p%dZ_high(nt) + p%Z0_high(nt)
+               Pos_global(1) = real(ix,ReKi) * p%dX_high(nt) + p%X0_high(nt)
+               Pos_global(2) = real(iy,ReKi) * p%dY_high(nt) + p%Y0_high(nt)
+               Pos_global(3) = real(iz,ReKi) * p%dZ_high(nt) + p%Z0_high(nt)
             endif
 
             ! Normalize xhatBar to unit vector
@@ -859,8 +853,8 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
             ! + sum [(I-e_x.e_x^T). V ]     ! Radial (sum)
             Vx_sum2   = 0.0_ReKi
             V_sum     = 0.0_ReKi
-            do nw = 1,n_wake
-               V_wake      = tmp_Vx_wake(nw)*tmp_xhat_plane(:,nw) + tmp_Vy_wake(nw)*tmp_yhat_plane(:,nw) + tmp_Vz_wake(nw)*tmp_zhat_plane(:,nw)
+            do iw = 1,n_wake
+               V_wake      = tmp_Vx_wake(iw)*tmp_xhat_plane(:,iw) + tmp_Vy_wake(iw)*tmp_yhat_plane(:,iw) + tmp_Vz_wake(iw)*tmp_zhat_plane(:,iw)
                Vx_term     = dot_product( xhatBar_plane, V_wake )
                Vx_sum2 = Vx_sum2 + Vx_term*Vx_term
                V_sum   = V_sum   + V_wake
@@ -877,7 +871,7 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
                   WAT_iZ = modulo( nint( (Pos_global(3) + WAT_B_BoxHi(3, i_hl)) * p%WAT_FlowField%Grid3D%InvDZ ), p%WAT_FlowField%Grid3D%NZGrids) + 1    ! eq 25
                   WAT_V(1:3) = p%WAT_FlowField%Grid3D%Vel(1:3,WAT_iY,WAT_iZ,WAT_iT) * WAT_k
                endif
-               y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,i_hl) = y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,i_hl) + V_qs + WAT_V
+               y%Vdist_high(nt)%data(:,ix,iy,iz,i_hl) = y%Vdist_high(nt)%data(:,ix,iy,iz,i_hl) + V_qs + WAT_V
             end do
          end if  ! (n_wake > 0)
       end do       ! iXYZ=0,NumGrid_high-1
@@ -1303,7 +1297,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    integer(intKi)                                  :: errStat2          ! temporary Error status
    character(ErrMsgLen)                            :: errMsg2           ! temporary Error message
    character(*), parameter                         :: RoutineName = 'AWAE_UpdateStates'
-   integer(IntKi)                                  :: n_high_low, nt, n_hl, i,j,k,c
+   integer(IntKi)                                  :: n_high_low, nt, i_hl, i,j,k,c
    
    errStat = ErrID_None
    errMsg  = ""
@@ -1327,11 +1321,11 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    !   write(*,*) '        AWAE_UpdateStates: Time spent reading Low Res data : '//trim(num2lstr(t2-t1))//' seconds'            
    !#endif   
       
-      !$OMP PARALLEL DO DEFAULT(Shared) PRIVATE(nt, n_hl, errStat2, errMsg2) !Private(nt,tm2,tm3)
+      !$OMP PARALLEL DO DEFAULT(Shared) PRIVATE(nt, i_hl, errStat2, errMsg2) !Private(nt,tm2,tm3)
       do nt = 1,p%NumTurbines
-         do n_hl=0, n_high_low
+         do i_hl=0, n_high_low
                ! read from file the ambient flow for the current time step
-            call ReadHighResWindFile(nt, (n+1)*p%n_high_low + n_hl, p, m%Vamb_high(nt)%data(:,:,:,:,n_hl), errStat2, errMsg2)
+            call ReadHighResWindFile(nt, (n+1)*p%n_high_low + i_hl, p, m%Vamb_high(nt)%data(:,:,:,:,i_hl), errStat2, errMsg2)
             if (ErrStat2 >= AbortErrLev) then
                !$OMP CRITICAL  ! Needed to avoid data race on ErrStat and ErrMsg
                 call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
@@ -1365,13 +1359,13 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
                ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
             m%u_IfW_High%HubPosition =  (/ p%X0_high(nt) + 0.5*p%nX_high*p%dX_high(nt), p%Y0_high(nt) + 0.5*p%nY_high*p%dY_high(nt), p%Z0_high(nt) + 0.5*p%nZ_high*p%dZ_high(nt) /)
             call Eye(m%u_IfW_High%HubOrientation,ErrStat2,ErrMsg2)
-            do n_hl=0, n_high_low
-               call InflowWind_CalcOutput(t+p%dt_low+n_hl*p%DT_high, m%u_IfW_High, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_High, m%IfW(0), errStat2, errMsg2);   if (Failed()) return;
+            do i_hl=0, n_high_low
+               call InflowWind_CalcOutput(t+p%dt_low+i_hl*p%DT_high, m%u_IfW_High, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_High, m%IfW(0), errStat2, errMsg2);   if (Failed()) return;
                c = 1
                do k = 0,p%nZ_high-1
                   do j = 0,p%nY_high-1
                      do i = 0,p%nX_high-1
-                        m%Vamb_high(nt)%data(:,i,j,k,n_hl) = m%y_IfW_High%VelocityUVW(:,c)
+                        m%Vamb_high(nt)%data(:,i,j,k,i_hl) = m%y_IfW_High%VelocityUVW(:,c)
                         c = c+1
                      end do
                   end do
@@ -1390,16 +1384,16 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
                   end do
                end do
             end do
-            do n_hl=0, n_high_low
+            do i_hl=0, n_high_low
                   ! Set the hub position and orientation to pass to IfW (IfW always calculates hub and disk avg vel)
                m%u_IfW_High%HubPosition =  (/ p%X0_high(nt) + 0.5*p%nX_high*p%dX_high(nt), p%Y0_high(nt) + 0.5*p%nY_high*p%dY_high(nt), p%Z0_high(nt) + 0.5*p%nZ_high*p%dZ_high(nt) /)
                call Eye(m%u_IfW_High%HubOrientation,ErrStat2,ErrMsg2)
-               call InflowWind_CalcOutput(t+p%dt_low+n_hl*p%DT_high, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), errStat2, errMsg2);   if (Failed()) return;
+               call InflowWind_CalcOutput(t+p%dt_low+i_hl*p%DT_high, m%u_IfW_High, p%IfW(nt), x%IfW(nt), xd%IfW(nt), z%IfW(nt), OtherState%IfW(nt), m%y_IfW_High, m%IfW(nt), errStat2, errMsg2);   if (Failed()) return;
                c = 1
                do k = 0,p%nZ_high-1
                   do j = 0,p%nY_high-1
                      do i = 0,p%nX_high-1
-                        m%Vamb_high(nt)%data(:,i,j,k,n_hl) = m%y_IfW_High%VelocityUVW(:,c)
+                        m%Vamb_high(nt)%data(:,i,j,k,i_hl) = m%y_IfW_High%VelocityUVW(:,c)
                         c = c+1
                      end do
                   end do
