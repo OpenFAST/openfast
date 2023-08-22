@@ -619,6 +619,7 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
 end subroutine LowResGridCalcOutput
 
 
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Loop over each point of the high resolution ambient wind to compute:
 !!    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
@@ -644,15 +645,18 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    real(ReKi)          :: r_vec_plane(3)
    real(ReKi)          :: y_tmp_plane
    real(ReKi)          :: z_tmp_plane
-   real(ReKi)          :: Vx_wake_tmp
-   real(ReKi)          :: Vr_wake_tmp(3)
-   real(ReKi)          :: Vr_term(3)
+   real(ReKi)          :: V_wake(3)          ! Wake velocity vector from a given plane
    real(ReKi)          :: Vx_term
+   real(SiKi)          :: Vx_sum2            ! Squared sum of all quasi-steady x-components of wakes, oriented along their respective normal
+   real(SiKi)          :: V_sum(3)           ! Sum of all wake deficit components 
+   real(SiKi)          :: V_qs(3)            ! Quasi-steady wake deficit  , after wake-intersection averaging (without WAT)
+   real(ReKi)          :: Vax_qs(3)          ! Axial     quasi-steady wake, after wake-intersection averaging (without WAT)
+   real(ReKi)          :: Vtv_qs(3)          ! Transvere quasi-steady wake, after wake-intersection averaging (without WAT)
    real(ReKi)          :: p_tmp_plane(3)
    real(ReKi)          :: tmp_vec(3)
    real(ReKi)          :: WAT_B_BoxHi(3)     ! position of WAT box (global)
    real(ReKi)          :: WAT_k              ! WAT scaling factor (averaged from overlapping wakes)
-   real(ReKi)          :: WAT_V(3)           ! WAT velocity contribution
+   real(SiKi)          :: WAT_V(3)           ! WAT velocity contribution
    real(ReKi)          :: Pos_global(3)      ! global position
    real(ReKi)          :: delta, deltad
    real(ReKi), ALLOCATABLE :: tmp_xhat_plane(:,:), tmp_yhat_plane(:,:), tmp_zhat_plane(:,:)
@@ -713,7 +717,8 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
       !$OMP&         y_tmp_plane, z_tmp_plane,&
       !$OMP&         tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane,&
       !$OMP&         tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake,&
-      !$OMP&         xhatBar_plane_norm, Vx_wake_tmp, Vr_wake_tmp, nw, Vr_term, Vx_term,& 
+      !$OMP&         xhatBar_plane_norm, nw, & 
+      !$OMP&         V_wake, Vx_term, Vx_sum2, V_sum, Vax_qs, Vtv_qs, V_qs &
       !$OMP&         n_hl, Pos_global,&
       !$OMP&         WAT_B_BoxHi, tmp_WAT_k, WAT_k, WAT_iT, WAT_iY, WAT_iZ, WAT_V)& 
       !$OMP SHARED(NumGrid_High, m, u, p, y, xd, nt, maxPln, n_high_low, errStat, errMsg)
@@ -813,7 +818,7 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
          end do        ! nt2 = 1,p%NumTurbines
          if (n_wake > 0) then
             ! Compute average contributions for WAT scaling factor
-            WAT_V = 0.0_ReKi
+            WAT_V = 0.0_SiKi
             ! TODO TODO TODO
             !if (p%WAT_Enabled) then
             !   WAT_k = 0.0_ReKi
@@ -845,27 +850,25 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
             ! Compute average contributions
             ! - sqrt[ sum (e_x. V)^2 ] e_x  ! Axial (sqrt-avg)
             ! + sum [(I-e_x.e_x^T). V ]     ! Radial (sum)
-            Vx_wake_tmp   = 0.0_ReKi
-            Vr_wake_tmp   = 0.0_ReKi
+            Vx_sum2   = 0.0_ReKi
+            V_sum     = 0.0_ReKi
             do nw = 1,n_wake
-               Vr_term     = tmp_Vx_wake(nw)*tmp_xhat_plane(:,nw) + tmp_Vy_wake(nw)*tmp_yhat_plane(:,nw) + tmp_Vz_wake(nw)*tmp_zhat_plane(:,nw)
-               Vx_term     = dot_product( xhatBar_plane, Vr_term )
-               Vx_wake_tmp = Vx_wake_tmp + Vx_term*Vx_term
-               Vr_wake_tmp = Vr_wake_tmp + Vr_term
+               V_wake      = tmp_Vx_wake(nw)*tmp_xhat_plane(:,nw) + tmp_Vy_wake(nw)*tmp_yhat_plane(:,nw) + tmp_Vz_wake(nw)*tmp_zhat_plane(:,nw)
+               Vx_term     = dot_product( xhatBar_plane, V_wake )
+               Vx_sum2 = Vx_sum2 + Vx_term*Vx_term
+               V_sum   = V_sum   + V_wake
             end do
-            ! TODO RENAME VARIABLES
-
             ! interpolated tracer position for WAT
             !     Equation 22 from the WakeAddedTurbulence implementation plan
             !if (p%WAT_Enabled) then
             !   ! TODO TODO TODO THIS IS WRONG
             !   WAT_B_BoxHi = xd%WAT_B_Box(1:3) - (NumGrid_high-iXYZ) * xd%Ufarm(1:3) * real(p%DT_high,ReKi)
             !endif
-
-            ! [I - XX']V = V - (V dot X)X
-            Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane
+            Vtv_qs = V_sum - dot_product(V_sum, xhatBar_plane)*xhatBar_plane
+            Vax_qs = - xhatBar_plane*sqrt(Vx_sum2)
+            V_qs = real(Vax_qs + Vtv_qs, SiKi)
             do n_hl=0, n_high_low
-               y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) = y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi) + WAT_V
+               y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) = y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) + V_qs + WAT_V
             end do
          end if  ! (n_wake > 0)
       end do       ! iXYZ=0,NumGrid_high-1
@@ -880,7 +883,6 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    if (allocated(tmp_Vz_wake))    deallocate(tmp_Vz_wake)
 
 end subroutine HighResGridCalcOutput
-
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
