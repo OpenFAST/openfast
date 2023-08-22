@@ -1645,7 +1645,7 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
          farm%m%AllOuts(WVAmbZ(iVelPt)) = vel(3)
          
             ! Disturbed wind velocity (including wakes) for point, pt,  in global coordinates (from the low-resolution domain), m/s
-         call TrilinearInterpRegGrid(farm%AWAE%m%Vdist_low, pt, (/farm%p%nX_low,farm%p%nY_low,farm%p%nZ_low/), vel)
+         call TrilinearInterpRegGrid(farm%AWAE%m%Vdist_low_full, pt, (/farm%p%nX_low,farm%p%nY_low,farm%p%nZ_low/), vel)
          farm%m%AllOuts(WVDisX(iVelPt)) = vel(1)
          farm%m%AllOuts(WVDisY(iVelPt)) = vel(2)
          farm%m%AllOuts(WVDisZ(iVelPt)) = vel(3)
