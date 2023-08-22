@@ -350,8 +350,10 @@ SUBROUTINE WAT_init( p, WAT_IfW, AWAE_InitInput, ErrStat, ErrMsg )
    type(HAWC_InitInputType)                 :: HAWC_InitInput
    type(WindFileDat)                        :: FileDat
    character(1024)                          :: BoxFileRoot, BoxFile_u, BoxFile_v, BoxFile_w
+   character(1024)                          :: sDummy
    character(6)                             :: FileEnding(3)
-   integer(IntKi)                           :: i
+   integer(IntKi)                           :: i,j,k,n
+   real(ReKi)                               :: vmean, vstd
    real(ReKi),     parameter                :: fstretch = 2.0_ReKi   ! stretching factor for checking WAT resolution
    real(ReKi)                               :: TmpRe3(3)             ! Temporary real for checking WAT resolution
    CHARACTER(ErrMsgLen)                     :: TmpMsg                ! Temporary Error message text for WAT resolution checks
@@ -375,7 +377,21 @@ SUBROUTINE WAT_init( p, WAT_IfW, AWAE_InitInput, ErrStat, ErrMsg )
    ! HAWC spatial grid
    if (p%WAT == Mod_WAT_PreDef) then       ! from libary of WAT files, set the NxNyNz and DxDyDz terms
       call MannLibDims(BoxFileRoot, p%RotorDiamRef, p%WAT_NxNyNz, p%WAT_DxDyDz, ErrStat2, ErrMsg2);  if (Failed()) return
+      write(sDummy, '(3(I8,1X))') p%WAT_NxNyNz
+      call WrScr('  WAT: NxNyNz set to: '//trim(sDummy)//' (inferred from filename)')
+      write(sDummy, '(3(F8.3,1X))') p%WAT_DxDyDz
+      call WrScr('  WAT: DxDyDz set to: '//trim(sDummy)//' (based on rotor diameter)')
    endif
+   ! Sanity check
+   if (any(p%WAT_NxNyNz<2)) then
+      call SetErrStat(ErrID_Fatal, "Values of WAT_NxNyNz should be above 2", ErrStat, ErrMsg, RoutineName)
+      return
+   endif
+   if (any(p%WAT_DxDyDz<=0)) then
+      call SetErrStat(ErrID_Fatal, "Values of WAT_DxDyDz should be strictly positive", ErrStat, ErrMsg, RoutineName)
+      return
+   endif
+
    HAWC_InitInput%nx = p%WAT_NxNyNz(1)
    HAWC_InitInput%ny = p%WAT_NxNyNz(2)
    HAWC_InitInput%nz = p%WAT_NxNyNz(3)
@@ -404,7 +420,7 @@ SUBROUTINE WAT_init( p, WAT_IfW, AWAE_InitInput, ErrStat, ErrMsg )
    HAWC_InitInput%G3D%URef             = 1.0_ReKi    ! Set to 1.0 so that dX = DTime (this affects data storage)
    HAWC_InitInput%G3D%WindProfileType  = 0           ! Wind profile type (0=constant;1=logarithmic,2=power law)
    HAWC_InitInput%G3D%PLExp            = 0.0_ReKi
-   HAWC_InitInput%G3D%ScaleMethod      = 0
+   HAWC_InitInput%G3D%ScaleMethod      = 0           ! NOTE: setting this to 2 doesn't do the same as what we do below with ScaleBox
    HAWC_InitInput%G3D%SF               = 1.0_ReKi    ! Turbulence scaling factor for the x direction (-)   [ScaleMethod=1]
    HAWC_InitInput%G3D%SigmaF           = 1.0_ReKi    ! Turbulence standard deviation to calculate scaling from in x direction (m/s)    [ScaleMethod=2] 
    HAWC_InitInput%G3D%Z0               = 0.3_ReKi    ! Surface roughness (not used)
@@ -492,8 +508,6 @@ contains
    end subroutine SplitFileName
    !> If it is a filename of a library, expect following format: FFDB_512x512x64.u where:
    !!     512x512x64  -- Number of grid points in X,Y,Z -- Nx, Ny, Nz
-   !! TODO: this is a clumsy looking routine. There are more elegant ways to do this.
-   !!       Looked at this again 2 months after writing it -- no idea how it works.  It seems to work, but wtf?
    subroutine MannLibDims(BoxFileRoot,RotorDiamRef,Nxyz,Dxyz,ErrStat3,ErrMsg3)
       character(1024),  intent(in   ) :: BoxFileroot
       real(ReKi),       intent(in   ) :: RotorDiamRef    ! reference rotordiam
@@ -501,73 +515,53 @@ contains
       real(ReKi),       intent(  out) :: Dxyz(3)         ! derived based on rotor diameter
       integer(IntKi),   intent(  out) :: ErrStat3
       character(*),     intent(  out) :: ErrMsg3
-      integer(IntKi)                  :: D               ! rotor diameter from file name
-      integer(IntKi)                  :: idxX(2)         ! indices for the "X" in the sizing string
-      integer(IntKi)                  :: i               ! generic indexing stuff
-      integer(IntKi)                  :: nDig            ! number of digits
-      character(1)                    :: C0, C1, C2      ! characters for testing
+      integer(IntKi)                  :: i,iLast, n      ! generic indexing stuff
+      character(1)                    :: C0              ! characters for testing
       real(ReKi), parameter           :: ScaleFact=0.03  ! scale ifactor for Dx,Dy,Dz based on rotor diameter
-      character(1024)                 :: NameUC          ! upper case of name
-      character(10)                   :: TmpStr          ! assume no more than 10 digits per dimension -- it would be silly to have more
-      integer(IntKi)                  :: ErrStat4
-      character(10)                   :: CharNums="1234567890"
-      character(1024)                 :: ErrMsgFail
+      character(1024)                 :: sDigitsX        ! String made of digits and "x"
+      character(11)                   :: CharNums="1234567890X"
+      character(1024), allocatable :: StrArray(:) ! Array of strings extracted from line
+      Nxyz(:)=-1
 
       ErrStat3 = ErrID_None
       ErrMsg3  = ""
-      ErrMsgFail = "Could not find information on number of grid points in filename "//trim(BoxFileRoot)// &
-                   ".  Expecting filename to include something like '512x512x64' for 512 by 512 by 64 points"
 
       ! Set Dxyz
       Dxyz=real(RotorDiamRef,ReKi)*ScaleFact
 
-      !----------------------------
-      ! Parse number of grid points
-      idxX(:)=0
-      ! scan for #x# pattern and store indices of the 'x'
-      do i=1+1,len_trim(BoxFileRoot)-1
-         C0=BoxFileRoot(i-1:i-1)
-         C1=BoxFileRoot(i:i);       call Conv2UC(C1)
-         C2=BoxFileRoot(i+1:i+1)
-         if ((index(CharNums,C0)>0) .and. (C1=="X") .and. (index(CharNums,C2)>0)) then
-            if (idxX(1)==0) then  ! found first x
-               idxX(1)=i
-            else
-               idxX(2)=i
-               exit     ! found both "X" positions, so exit loop
-            endif
-         elseif (idxX(1)>0) then
-            if (.not. ((index(CharNums,C0)>0) .or. (index(CharNums,C1)>0))) then   ! not seeing a number in the window before next "X" is encountered
-               ErrStat3 = ErrID_Fatal
-               ErrMsg3  = ErrMsgFail
-               return
-            endif
-         endif
-      enddo
-      ! Did we get both "X" positions?
-      if (idxX(2)==0) then
-         ErrStat3 = ErrID_Fatal
-         ErrMsg3  = ErrMsgFail
-         return
-      endif
-      ! Parse the first number (grab all contiguous digits before first "X")
-      nDig=1   ! start counter at zero
-      do i=idxX(1)-1,1,-1
-         ! is this a digit? (recount one we already know is one)
-         if (index(CharNums,BoxFileRoot(i:i))>0) then
-            nDig=nDig+1
-         else
+      ! --- Create a string made of digits and "x" only, starting from the end of the filename
+      n = len_trim(BoxFileRoot)
+      iLast = n
+      do i=n,1,-1
+         C0 = BoxFileRoot(i:i)
+         call Conv2UC(C0)
+         if ((index(CharNums,C0)==0)) then
             exit
          endif
+         iLast=i
       enddo
-      ! internal read this
-      TmpStr=BoxFileRoot(idxX(1)-nDig+1:idxX(1)-1)
-      read (TmpStr,*,IOSTAT=ErrStat4)  Nxyz(1)
-      if (ErrStat4 > 0) then
+      sDigitsX=BoxFileRoot(iLast:n)
+      call Conv2UC(sDigitsX)
+
+      ! --- Splitting string according to character "x"
+      call strsplit(sDigitsX, StrArray, 'X')
+      if (size(StrArray)/=3) then
          ErrStat3 = ErrID_Fatal
-         ErrMsg3  = ErrMsgFail
+         ErrMsg3  = "Could not find three substrings delimited by 'x' in filename "//trim(BoxFileRoot)// &
+                    ".  Expecting filename to include something like '512x512x64' for 512 by 512 by 64 points"
          return
       endif
+      do i=1,3
+         if (.not.(is_integer(StrArray(i), Nxyz(i)))) then
+            ! NOTE: should not happen, unless we have "xx"
+            ErrStat3 = ErrID_Fatal
+            ErrMsg3  = "Could not convert substring `"//trim(StrArray(i))//"` to an integer in filename "//trim(BoxFileRoot)// &
+                       ".  Expecting filename to include something like '512x512x64' for 512 by 512 by 64 points"
+            return
+         endif
+      enddo
+      ErrStat3=ErrID_None
+      ErrMsg3 =""
    end subroutine MannLibDims
 end subroutine WAT_init
 
