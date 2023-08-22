@@ -765,7 +765,7 @@ SUBROUTINE AD14_InputSolve_NoIfW( p_FAST, u_AD14, y_ED, MeshMapData, ErrStat, Er
    IF (p_FAST%CompElast == Module_ED) THEN
       DO K = 1,NumBl !p%NumBl ! Loop through all blades
       
-         !CALL Transfer_Line2_to_Line2( y_ED%BladeLn2Mesh(K), u_AD%InputMarkers(K), MeshMapData%BDED_L_2_AD_L_B(K), ErrStat, ErrMsg )
+         !CALL Transfer_Line2_to_Line2( y_ED%BladeLn2Mesh(K), u_AD%rotors(1)%InputMarkers(K), MeshMapData%BDED_L_2_AD_L_B(K), ErrStat, ErrMsg )
          !   IF (ErrStat >= AbortErrLev ) RETURN
          
          u_AD14%InputMarkers(K)%RotationVel = 0.0_ReKi ! bjj: we don't need this field
@@ -850,7 +850,7 @@ SUBROUTINE AD14_InputSolve_NoIfW( p_FAST, u_AD14, y_ED, MeshMapData, ErrStat, Er
    
    IF ( u_AD14%Twr_InputMarkers%Committed ) THEN
       
-      !CALL Transfer_Line2_to_Line2( y_ED%TowerLn2Mesh, u_AD%Twr_InputMarkers, MeshMapData%ED_L_2_AD_L_T, ErrStat, ErrMsg )
+      !CALL Transfer_Line2_to_Line2( y_ED%TowerLn2Mesh, u_AD%rotors(1)%Twr_InputMarkers, MeshMapData%ED_L_2_AD_L_T, ErrStat, ErrMsg )
       !   IF (ErrStat >= AbortErrLev ) RETURN   
       
       J = u_AD14%Twr_InputMarkers%NNodes
@@ -1485,7 +1485,7 @@ END FUNCTION GetPerturb
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine performs the Input-Output solve for ED and HD.
 !! Note that this has been customized for the physics in the problems and is not a general solution.
-!! This is only called is there is no substructure model (RIGID substructure)
+!! This is only called if there is no substructure model (RIGID substructure)
 SUBROUTINE ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                                   , u_ED, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED, m_ED &
                                   , u_HD, p_HD, x_HD, xd_HD, z_HD, OtherSt_HD, y_HD, m_HD & 
@@ -4639,14 +4639,16 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
    !............................................................................................................................
    ! Initialize the Jacobian structures:
    !............................................................................................................................
-   IF ( p_FAST%SolveOption == Solve_FullOpt1 ) THEN
-      CALL Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED%Input(1)%PlatformPtMesh, SD%Input(1)%TPMesh, SD%Input(1)%LMesh, &
-                                    HD%Input(1)%Morison%Mesh, HD%Input(1)%WAMITMesh, &
-                                    ED%Input(1)%HubPtLoad, BD%Input(1,:), Orca%Input(1)%PtfmMesh, ExtPtfm%Input(1)%PtfmMesh, ErrStat2, ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                 
-   ELSEIF ( p_FAST%SolveOption == Solve_SimplifiedOpt1 ) THEN
-      CALL AllocAry( MeshMapData%Jacobian_Opt1, SizeJac_ED_HD, SizeJac_ED_HD, 'Jacobian for Ptfm-HD coupling', ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                 
+   IF (.not. p_FAST%CompAeroMaps) THEN
+      IF ( p_FAST%SolveOption == Solve_FullOpt1 ) THEN
+         CALL Init_FullOpt1_Jacobian( p_FAST, MeshMapData, ED%Input(1)%PlatformPtMesh, SD%Input(1)%TPMesh, SD%Input(1)%LMesh, &
+                                       HD%Input(1)%Morison%Mesh, HD%Input(1)%WAMITMesh, &
+                                       ED%Input(1)%HubPtLoad, BD%Input(1,:), Orca%Input(1)%PtfmMesh, ExtPtfm%Input(1)%PtfmMesh, ErrStat2, ErrMsg2)
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                 
+      ELSEIF ( p_FAST%SolveOption == Solve_SimplifiedOpt1 ) THEN
+         CALL AllocAry( MeshMapData%Jacobian_Opt1, SizeJac_ED_HD, SizeJac_ED_HD, 'Jacobian for Ptfm-HD coupling', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ENDIF
    END IF
    
    IF ( ALLOCATED( MeshMapData%Jacobian_Opt1 ) ) THEN   
@@ -4665,7 +4667,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
    ! initialize the temporary input meshes (for input-output solves in Solve Option 1):
    ! (note that we do this after ResetRemapFlags() so that the copies have remap=false)
    !............................................................................................................................
-   IF ( p_FAST%SolveOption /= Solve_FullOpt2 ) THEN
+   IF ( p_FAST%SolveOption /= Solve_FullOpt2 .and. .not. p_FAST%CompAeroMaps) THEN
                   
          ! Temporary meshes for transfering inputs to ED, HD, BD, Orca, and SD
       CALL MeshCopy ( ED%Input(1)%HubPtLoad, MeshMapData%u_ED_HubPtLoad, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
