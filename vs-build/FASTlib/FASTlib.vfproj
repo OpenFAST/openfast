@@ -679,6 +679,9 @@
 		<File RelativePath="..\..\modules\extptfm\src\ExtPtfm_MCKF.f90"/>
 		<File RelativePath="..\..\modules\extptfm\src\ExtPtfm_MCKF_IO.f90"/></Filter>
 		<Filter Name="FAST">
+		<Filter Name="SteadyStateSolver">
+		<File RelativePath="..\..\modules\openfast-library\src\FAST_SS_Solver.f90"/>
+		<File RelativePath="..\..\modules\openfast-library\src\FAST_SS_Subs.f90"/></Filter>
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\openfast-library\src\FAST_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">

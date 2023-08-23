@@ -175,6 +175,10 @@ if len(baselineOutFiles)==0:
 localFiles = os.listdir(testBuildDirectory)
 localOutFiles = [f for f in localFiles if f in baselineOutFiles]
 if len(localOutFiles) != len(baselineOutFiles):
+    print("Number of local files: {}".format(len(localOutFiles)))
+    print ("   {}".format(localOutFiles))
+    print("Number of baseline files: {}".format(len(baselineOutFiles)))
+    print ("   {}".format(baselineOutFiles))
     exitWithError("An expected local solution file does not exist:")
 
 ### test for regression (compare lin files only)

@@ -353,6 +353,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          InputFileData%TwrAero    = .false.
          InputFileData%FrozenWake = .false.
         !InputFileData%CavitCheck = .false.
+        !InputFileData%TFinAero   = .false. ! not sure if this needs to be set or not
       end do
       
       if (InputFileData%WakeMod == WakeMod_DBEMT) then
@@ -1292,6 +1293,8 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    ErrMsg   = ""
 
    p_AD%UA_Flag       = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
+   p_AD%CompAeroMaps  = InitInp%CompAeroMaps
+
    p%MHK              = InitInp%MHK
    
    p_AD%DT            = InputFileData%DTAero
@@ -1596,10 +1599,10 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
    integer(intKi)                               :: iR          ! Counter on rotors
    integer                                       :: i
    real(DbKi)                                    :: BEMT_utimes(2)    !< Times associated with m%BEMT_u(:), in seconds
-   type(AD_InputType)                           :: uInterp     ! Interpolated/Extrapolated input
-   integer(intKi)                               :: ErrStat2          ! temporary Error status
-   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
-   character(*), parameter                      :: RoutineName = 'AD_UpdateStates'
+   type(AD_InputType)                            :: uInterp           ! Interpolated/Extrapolated input
+   integer(intKi)                                :: ErrStat2          ! temporary Error status
+   character(ErrMsgLen)                          :: ErrMsg2           ! temporary Error message
+   character(*), parameter                       :: RoutineName = 'AD_UpdateStates'
       
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -3131,7 +3134,7 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
    integer(intKi)                          :: ErrStat2
    character(ErrMsgLen)                    :: ErrMsg2
    character(*), parameter                 :: RoutineName = 'SetInputsForFVW'
-   integer :: iW
+   integer                                 :: iW
 
    ErrStat = ErrID_None
    ErrMsg = ""
