@@ -286,6 +286,59 @@ subroutine interp_planes_2_point(u, p, m, GridP, iWT, maxPln, &
 
 endsubroutine interp_planes_2_point
 
+subroutine mergeWakeVel(n_wake, tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake, tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane, xhatBar_plane_in, V_qs)
+   integer(IntKi), intent(in ) :: n_wake
+   real(ReKi)    , intent(in ) :: tmp_xhat_plane(:,:), tmp_yhat_plane(:,:), tmp_zhat_plane(:,:) !< shape: 3xnWake
+   real(ReKi)    , intent(in ) :: tmp_Vx_wake(:), tmp_Vz_wake(:), tmp_Vy_wake(:)  !< shape: nWake
+   real(ReKi)    , intent(in ) :: xhatBar_plane_in(3)       !< TODO TODO, can be computed outside of this
+   real(SiKi)    , intent(out) :: V_qs(3)            ! Quasi-steady wake deficit  , after wake-intersection averaging (without WAT)
+   ! Local
+   real(ReKi) :: V_wake(3)          ! Wake velocity vector from a given plane
+   real(ReKi) :: xhatBar_plane(3)   ! <
+   real(ReKi) :: xhatBar_plane_norm
+   real(ReKi) :: Vx_term
+   real(SiKi) :: Vx_sum2            ! Squared sum of all quasi-steady x-components of wakes, oriented along their respective normal
+   real(SiKi) :: V_sum(3)           ! Sum of all wake deficit components
+   real(ReKi) :: Vax_qs(3)          ! Axial     quasi-steady wake, after wake-intersection averaging (without WAT)
+   real(ReKi) :: Vtv_qs(3)          ! Transvere quasi-steady wake, after wake-intersection averaging (without WAT)
+   integer    :: iw
+
+   ! Average xhat over overlapping wakes
+   xhatBar_plane(:) = 0.0_ReKi
+   do iw=1,n_wake
+      xhatBar_plane = xhatBar_plane + abs(tmp_Vx_wake(iw))*tmp_xhat_plane(:,iw)
+   enddo
+   if (any(abs(xhatBar_plane-xhatBar_plane_in)>1e-8)) then
+      print*,'xhatBar_plane',xhatBar_plane, xhatBar_plane_in
+      print*,'>>>>>>> ERROR'
+      stop
+   endif
+
+   ! Normalize xhatBar to unit vector
+   xhatBar_plane_norm = TwoNorm(xhatBar_plane) ! TODO REPLACE
+   if ( EqualRealNos(xhatBar_plane_norm, 0.0_ReKi) ) then
+      xhatBar_plane = 0.0_ReKi
+   else
+      xhatBar_plane = xhatBar_plane / xhatBar_plane_norm
+   end if
+
+   ! -- Compute average contributions - Quasi steady wake
+   ! - sqrt[ sum (e_x. V)^2 ] e_x  ! Axial (sqrt-avg)
+   ! + sum [(I-e_x.e_x^T). V ]     ! Radial (sum)
+   Vx_sum2   = 0.0_ReKi
+   V_sum     = 0.0_ReKi
+   do iw = 1,n_wake
+      V_wake      = tmp_Vx_wake(iw)*tmp_xhat_plane(:,iw) + tmp_Vy_wake(iw)*tmp_yhat_plane(:,iw) + tmp_Vz_wake(iw)*tmp_zhat_plane(:,iw)
+      Vx_term     = dot_product( xhatBar_plane, V_wake )
+      Vx_sum2 = Vx_sum2 + Vx_term*Vx_term
+      V_sum   = V_sum   + V_wake
+   end do
+   ! [I - XX']V = V - (V dot X)X
+   Vtv_qs = V_sum - dot_product(V_sum, xhatBar_plane)*xhatBar_plane
+   Vax_qs = - xhatBar_plane*sqrt(Vx_sum2)
+   V_qs = real(Vax_qs + Vtv_qs, SiKi)
+end subroutine mergeWakeVel
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Loop over the entire grid of low resolution ambient wind data to compute:
 !!    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
@@ -398,29 +451,8 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
 
       if (n_wake > 0) then
 
-         ! Normalize xhatBar to unit vector
-         xhatBar_plane_norm = TwoNorm(xhatBar_plane)
-         if ( EqualRealNos(xhatBar_plane_norm, 0.0_ReKi) ) then
-            xhatBar_plane = 0.0_ReKi
-         else
-            xhatBar_plane = xhatBar_plane / xhatBar_plane_norm
-         end if
-
-         ! --- Compute average contributions - Quasi steady wake
-         ! - sqrt[ sum (e_x. V)^2 ] e_x  ! Axial (sqrt-avg)
-         ! + sum [(I-e_x.e_x^T). V ]     ! Radial (sum)
-         Vx_sum2   = 0.0_ReKi
-         V_sum     = 0.0_ReKi
-         do iw = 1,n_wake
-            V_wake      = tmp_Vx_wake(iw)*tmp_xhat_plane(:,iw) + tmp_Vy_wake(iw)*tmp_yhat_plane(:,iw) + tmp_Vz_wake(iw)*tmp_zhat_plane(:,iw)
-            Vx_term     = dot_product( xhatBar_plane, V_wake )
-            Vx_sum2 = Vx_sum2 + Vx_term*Vx_term
-            V_sum   = V_sum   + V_wake
-         end do
-         ! [I - XX']V = V - (V dot X)X
-         Vtv_qs = V_sum - dot_product(V_sum, xhatBar_plane)*xhatBar_plane
-         Vax_qs = - xhatBar_plane*sqrt(Vx_sum2)
-         V_qs = real(Vax_qs + Vtv_qs, SiKi) 
+         ! --- Compute merged wake velocity V_qs
+         call mergeWakeVel(n_wake, tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake, tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane, xhatBar_plane, V_qs)
 
          ! --- Compute average WAT scaling factor and WAT velocity
          WAT_V = 0.0_SiKi
@@ -767,30 +799,8 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
             end if    ! nt /= nt2
          end do        ! nt2 = 1,p%NumTurbines
          if (n_wake > 0) then
-
-            ! Normalize xhatBar to unit vector
-            xhatBar_plane_norm = TwoNorm(xhatBar_plane)
-            if ( EqualRealNos(xhatBar_plane_norm, 0.0_ReKi) ) then
-               xhatBar_plane = 0.0_ReKi
-            else
-               xhatBar_plane = xhatBar_plane / xhatBar_plane_norm
-            end if
-
-            ! -- Compute average contributions - Quasi steady wake
-            ! - sqrt[ sum (e_x. V)^2 ] e_x  ! Axial (sqrt-avg)
-            ! + sum [(I-e_x.e_x^T). V ]     ! Radial (sum)
-            Vx_sum2   = 0.0_ReKi
-            V_sum     = 0.0_ReKi
-            do iw = 1,n_wake
-               V_wake      = tmp_Vx_wake(iw)*tmp_xhat_plane(:,iw) + tmp_Vy_wake(iw)*tmp_yhat_plane(:,iw) + tmp_Vz_wake(iw)*tmp_zhat_plane(:,iw)
-               Vx_term     = dot_product( xhatBar_plane, V_wake )
-               Vx_sum2 = Vx_sum2 + Vx_term*Vx_term
-               V_sum   = V_sum   + V_wake
-            end do
-            ! [I - XX']V = V - (V dot X)X
-            Vtv_qs = V_sum - dot_product(V_sum, xhatBar_plane)*xhatBar_plane
-            Vax_qs = - xhatBar_plane*sqrt(Vx_sum2)
-            V_qs = real(Vax_qs + Vtv_qs, SiKi)
+            ! --- Compute merged wake velocity V_qs
+            call mergeWakeVel(n_wake, tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake, tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane, xhatBar_plane, V_qs)
 
             ! --- Compute average WAT scaling factor and WAT velocity
             WAT_V = 0.0_SiKi
