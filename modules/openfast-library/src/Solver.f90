@@ -391,20 +391,21 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
    ! Debug
    !----------------------------------------------------------------------------
 
+   munit = -1
+
    call GetNewUnit(m%DebugUnit, ErrStat2, ErrMsg2); if (Failed()) return
    call OpenFOutFile(m%DebugUnit, "solver.dbg", ErrStat2, ErrMsg2); if (Failed()) return
-
-   ! call GetNewUnit(munit, ErrStat2, ErrMsg2); if (Failed()) return
 
    write (m%DebugUnit, *) "NumX      = ", NumX
    write (m%DebugUnit, *) "NumU      = ", NumU
    write (m%DebugUnit, *) "NumY      = ", NumY
-   write (m%DebugUnit, *) "NumY      = ", NumY
-   write (m%DebugUnit, *) "NumJac    = ", NumY
+   write (m%DebugUnit, *) "NumJac    = ", NumJac
    write (m%DebugUnit, '(A,*(I4))') " p%iJX2    = ", p%iJX2
    write (m%DebugUnit, '(A,*(I4))') " p%iJT     = ", p%iJT
    write (m%DebugUnit, '(A,*(I4))') " p%iJ1     = ", p%iJ1
    write (m%DebugUnit, '(A,*(I4))') " p%iJL     = ", p%iJL
+   write (m%DebugUnit, '(A,*(I4))') " p%iX2Tight = ", p%iX2Tight
+   write (m%DebugUnit, '(A,*(I4))') " p%iX1Tight = ", p%iX1Tight
    write (m%DebugUnit, '(A,*(I4))') " p%iUTight = ", p%iUTight
    write (m%DebugUnit, '(A,*(I4))') " p%iUOpt1  = ", p%iUOpt1
    write (m%DebugUnit, '(A,*(I4))') " p%iyTight = ", p%iyTight
@@ -910,8 +911,10 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
                                 Turbine, ErrStat2, ErrMsg2, m%xn); if (Failed()) return
          call FAST_CalcOutput(Mods(p%iModOpt2(i)), t_global_next, STATE_PRED, &
                               Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-         call FAST_MapOutputs(Mods(p%iModOpt2(i)), m%Mappings, &
-                              Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+         if (i < 2) then
+            call FAST_MapOutputs(Mods(p%iModOpt2(i)), m%Mappings, &
+                                 Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+         end if
       end do
 
       ! Get inputs and update states for Option 1 modules not in Option 2
@@ -945,13 +948,29 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
             call FAST_CalcOutput(Mods(p%iModOpt1(i)), t_global_next, STATE_PRED, &
                                  Turbine, ErrStat2, ErrMsg2); if (Failed()) return
          end do
-         call PackModuleOutputs(Mods, p%iModOpt1, Turbine, m%y)
+         ! call PackModuleOutputs(Mods, p%iModOpt1, Turbine, m%y)
 
          !----------------------------------------------------------------------
          ! If iteration limit reached, exit loop
          !----------------------------------------------------------------------
 
          if (iterConv >= p%MaxConvIter) exit
+
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-eps  = ", pack(Turbine%BD%m(1)%qp%E1(1:3,:,1) - Turbine%BD%m(1)%qp%RR0(1:3,3,:,1), .true.)
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-eps  = ", pack(Turbine%BD%m(2)%qp%E1(1:3,:,1) - Turbine%BD%m(1)%qp%RR0(1:3,3,:,1), .true.)
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-kappa  = ", pack(Turbine%BD%m(1)%qp%kappa(1:3,:,1), .true.)
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-kappa  = ", pack(Turbine%BD%m(2)%qp%kappa(1:3,:,1), .true.)
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-Nrrr  = ", pack(Turbine%BD%m(1)%Nrrr(1:3,:,1), .true.)
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-Nrrr  = ", pack(Turbine%BD%m(2)%Nrrr(1:3,:,1), .true.)
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RR  = ", wm_compose(wm_inv(Turbine%BD%p(1)%Glb_crv), wm_from_dcm(Turbine%BD%Input(1,1)%RootMotion%Orientation(:,:,1)))
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RR  = ", wm_compose(wm_inv(Turbine%BD%p(2)%Glb_crv), wm_from_dcm(Turbine%BD%Input(1,2)%RootMotion%Orientation(:,:,1)))
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-Glb_crv  = ", Turbine%BD%p(1)%Glb_crv
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-Glb_crv  = ", Turbine%BD%p(2)%Glb_crv
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RRoot  = ", wm_from_dcm(Turbine%BD%Input(1,1)%RootMotion%Orientation(:,:,1))
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RRoot  = ", wm_from_dcm(Turbine%BD%Input(1,2)%RootMotion%Orientation(:,:,1))
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RRoot-dcm  = ", pack(Turbine%BD%Input(1,1)%RootMotion%Orientation(:,:,1), .true.)
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RRoot-dcm  = ", pack(Turbine%BD%Input(1,2)%RootMotion%Orientation(:,:,1), .true.)
+
 
          !----------------------------------------------------------------------
          ! Update Jacobian
@@ -963,7 +982,6 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          if ((m%IterUntilUJac <= 0) .or. (m%StepsUntilUJac <= 0)) then
             call Solver_BuildJacobian(p, m, Mods, t_global_next, &
                                       Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-            write (m%DebugUnit, *) "BuildJacobian = 1"
          end if
 
          !----------------------------------------------------------------------
@@ -972,7 +990,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
          ! Calculate continuous state derivatives for tight coupling modules
          do i = 1, size(p%iModTC)
-            call FAST_CalcContStateDeriv(Mods(p%iModTC(i)), t_initial, STATE_PRED, &
+            call FAST_CalcContStateDeriv(Mods(p%iModTC(i)), t_global_next, STATE_PRED, &
                                          Turbine, ErrStat2, ErrMsg2, dxdt=m%dxdt); if (Failed()) return
          end do
 
@@ -1001,26 +1019,28 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! Solve for state and input perturbations
          !----------------------------------------------------------------------
 
+         write (m%DebugUnit, '(A,*(ES16.7))') " XB = ", m%XB
+
          ! Solve Jacobian and RHS
          call LAPACK_getrs('N', size(m%Jac, 1), m%Jac, m%IPIV, m%XB, ErrStat2, ErrMsg2); if (Failed()) return
-
-         ! Remove conditioning
-         m%XB(p%iJL, 1) = m%XB(p%iJL, 1)*p%Scale_UJac
 
          !----------------------------------------------------------------------
          ! Check perturbations for convergence and exit if below tolerance
          !----------------------------------------------------------------------
 
-         delta_norm = TwoNorm(m%XB(:, 1))
+         delta_norm = TwoNorm(m%XB(:, 1))/size(m%XB)
 
-         write (m%DebugUnit, '(A,*(ES16.7))') " m%y     = ", m%y
-         write (m%DebugUnit, '(A,*(ES16.7))') " m%un-1  = ", m%un
-         write (m%DebugUnit, '(A,*(ES16.7))') " m%u_tmp = ", m%u_tmp
-         write (m%DebugUnit, '(A,*(ES16.7))') " m%UDiff = ", m%UDiff
-         write (m%DebugUnit, '(A,*(ES16.7))') " m%xn-1  = ", m%xn
+         write (m%DebugUnit, '(A,*(ES16.7))') " y  = ", m%y
+         write (m%DebugUnit, '(A,*(ES16.7))') " u  = ", m%un
+         write (m%DebugUnit, '(A,*(ES16.7))') " u_tmp = ", m%u_tmp
+         write (m%DebugUnit, '(A,*(ES16.7))') " U  = ", m%UDiff
+         write (m%DebugUnit, '(A,*(ES16.7))') " x  = ", m%xn
          write (m%DebugUnit, *) "delta_norm = ", delta_norm
 
          if (delta_norm < p%ConvTol) exit
+
+         ! Remove conditioning
+         m%XB(p%iJL, 1) = m%XB(p%iJL, 1)*p%Scale_UJac
 
          !----------------------------------------------------------------------
          ! Update State for Tight Coupling modules
@@ -1064,10 +1084,8 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! Transfer updated states and inputs to relevant modules
          !----------------------------------------------------------------------
 
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " m%du    = ", m%du
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " m%un-2  = ", m%un
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " m%dx    = ", m%dx
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " m%xn-2  = ", m%xn
+         write (m%DebugUnit, '(A,*(ES16.7))') " du = ", m%du
+         write (m%DebugUnit, '(A,*(ES16.7))') " dx = ", m%dx
 
       end do
 
@@ -1085,7 +1103,9 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    !----------------------------------------------------------------------------
 
    ! Copy the final predicted states from step t_global_next to actual states for that step
-   call FAST_SaveStates(Mods, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+   do i = 1, size(p%iModAll)
+      call FAST_SaveStates(Mods(p%iModAll(i)), Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+   end do
 
    ! Save new state
    m%x = m%xn
@@ -1143,7 +1163,8 @@ subroutine ComputeDiffU(Mods, ModOrder, PosAry, NegAry, DiffAry)
                   DeltaWM = wm_compose(wm_inv(NegAry(ind)), PosAry(ind))
 
                   ! Calculate change in rotation in XYZ in radians
-                  DiffAry(ind) = 4.0_R8Ki*atan(DeltaWM/4.0_R8Ki)
+                  ! DiffAry(ind) = 4.0_R8Ki*atan(DeltaWM/4.0_R8Ki)
+                  DiffAry(ind) = DeltaWM
                end do
 
             else
@@ -1220,18 +1241,6 @@ subroutine Solver_BuildJacobian(p, m, ModData, this_time, Turbine, ErrStat, ErrM
    ! m%G = m%dUdu + matmul(m%dUdy, m%dYdu)
    m%G = m%dUdu
    call LAPACK_GEMM('N', 'N', 1.0_R8Ki, m%dUdy, m%dYdu, 1.0_R8Ki, m%G, ErrStat2, ErrMsg2); if (Failed()) return
-
-   ! call DumpMatrix(munit, "dUdu.bin", m%dUdu, ErrStat2, ErrMsg2); if (Failed()) return
-   ! call DumpMatrix(munit, "dUdy.bin", m%dUdy, ErrStat2, ErrMsg2); if (Failed()) return
-   ! call DumpMatrix(munit, "ED-dXdu.bin", Turbine%ED%m%Vals%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
-   ! call DumpMatrix(munit, "ED-dXdx.bin", Turbine%ED%m%Vals%dXdx, ErrStat2, ErrMsg2); if (Failed()) return
-   ! call DumpMatrix(munit, "ED-dYdu.bin", Turbine%ED%m%Vals%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
-   ! call DumpMatrix(munit, "ED-dYdx.bin", Turbine%ED%m%Vals%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
-   ! call DumpMatrix(munit, "BD-dXdu.bin", Turbine%BD%m(1)%Vals%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
-   ! call DumpMatrix(munit, "BD-dXdx.bin", Turbine%BD%m(1)%Vals%dXdx, ErrStat2, ErrMsg2); if (Failed()) return
-   ! call DumpMatrix(munit, "BD-dYdu.bin", Turbine%BD%m(1)%Vals%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
-   ! call DumpMatrix(munit, "BD-dYdx.bin", Turbine%BD%m(1)%Vals%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
-
    !----------------------------------------------------------------------------
    ! Assemble Jacobian
    !----------------------------------------------------------------------------
@@ -1271,6 +1280,26 @@ subroutine Solver_BuildJacobian(p, m, ModData, this_time, Turbine, ErrStat, ErrM
    ! Condition jacobian matrix before factoring
    m%Jac(p%iJL, :) = m%Jac(p%iJL, :)/p%Scale_UJac
    m%Jac(:, p%iJL) = m%Jac(:, p%iJL)*p%Scale_UJac
+
+   ! if (munit == -1) then
+   !    call GetNewUnit(munit, ErrStat2, ErrMsg2); if (Failed()) return
+   !    call DumpMatrix(munit, "dUdu.bin", m%dUdu, ErrStat2, ErrMsg2); if (Failed()) return
+   !    call DumpMatrix(munit, "dUdy.bin", m%dUdy, ErrStat2, ErrMsg2); if (Failed()) return
+   !    call DumpMatrix(munit, "dXdu.bin", m%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
+   !    call DumpMatrix(munit, "dXdx.bin", m%dXdx, ErrStat2, ErrMsg2); if (Failed()) return
+   !    call DumpMatrix(munit, "dYdu.bin", m%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
+   !    call DumpMatrix(munit, "dYdx.bin", m%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
+   !    ! call DumpMatrix(munit, "ED-dXdu.bin", Turbine%ED%m%Vals%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
+   !    ! call DumpMatrix(munit, "ED-dXdx.bin", Turbine%ED%m%Vals%dXdx, ErrStat2, ErrMsg2); if (Failed()) return
+   !    ! call DumpMatrix(munit, "ED-dYdu.bin", Turbine%ED%m%Vals%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
+   !    ! call DumpMatrix(munit, "ED-dYdx.bin", Turbine%ED%m%Vals%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
+   !    ! call DumpMatrix(munit, "BD-dXdu.bin", Turbine%BD%m(1)%Vals%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
+   !    ! call DumpMatrix(munit, "BD-dXdx.bin", Turbine%BD%m(1)%Vals%dXdx, ErrStat2, ErrMsg2); if (Failed()) return
+   !    ! call DumpMatrix(munit, "BD-dYdu.bin", Turbine%BD%m(1)%Vals%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
+   !    ! call DumpMatrix(munit, "BD-dYdx.bin", Turbine%BD%m(1)%Vals%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
+   !    call DumpMatrix(munit, "J.bin", m%Jac, ErrStat2, ErrMsg2); if (Failed()) return
+   !    call DumpMatrix(munit, "G.bin", m%G, ErrStat2, ErrMsg2); if (Failed()) return
+   ! end if
 
    ! Factor jacobian matrix
    call LAPACK_getrf(size(m%Jac, 1), size(m%Jac, 1), m%Jac, m%IPIV, ErrStat2, ErrMsg2)
@@ -1334,7 +1363,8 @@ subroutine AddDeltaToStates(Mods, ModOrder, dx, x)
                ! Compose WM components (dx is in radians)
                do k = 1, size(Var%iGblSol), 3
                   ind = Var%iGblSol(k:k + 2)
-                  x(ind) = wm_compose(4.0_R8Ki*tan(dx(ind)/4.0_R8Ki), x(ind))
+                  ! x(ind) = wm_compose(4.0_R8Ki*tan(dx(ind)/4.0_R8Ki), x(ind))
+                  x(ind) = wm_compose(dx(ind), x(ind))
                end do
             end select
          end associate
@@ -1376,7 +1406,8 @@ subroutine AddDeltaToInputs(Mods, ModOrder, du, u)
                ! Compose WM components (du is in radians)
                do k = 1, size(Var%iGblSol), 3
                   ind = Var%iGblSol(k:k + 2)
-                  u(ind) = wm_compose(4.0_R8Ki*tan(du(ind)/4.0_R8Ki), u(ind))
+                  ! u(ind) = wm_compose(4.0_R8Ki*tan(du(ind)/4.0_R8Ki), u(ind))
+                  u(ind) = wm_compose(du(ind), u(ind))
                end do
             end select
 

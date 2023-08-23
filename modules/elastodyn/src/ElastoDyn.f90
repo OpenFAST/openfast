@@ -67,6 +67,8 @@ MODULE ElastoDyn
    PUBLIC :: ED_PackStateValues, ED_UnpackStateValues
    PUBLIC :: ED_PackInputValues, ED_UnpackInputValues
    PUBLIC :: ED_PackOutputValues
+
+   PUBLIC :: ED_UpdateAzimuth
    
 CONTAINS
 
@@ -248,8 +250,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
    ! Platform reference point wrt to global origin (0,0,0)
    InitOut%PlatformPos = x%QT(1:6)
-   ! CALL SmllRotTrans('initial platform rotation', x%QT(4), x%QT(5), x%QT(6), TransMat, '', ErrStat2, ErrMsg2)
-   TransMat = wm_to_dcm(wm_from_xyz([x%QT(DOF_R), x%QT(DOF_P), x%QT(DOF_Y)]))
+   CALL SmllRotTrans('initial platform rotation', x%QT(4), x%QT(5), x%QT(6), TransMat, '', ErrStat2, ErrMsg2)
    InitOut%PlatformPos(1) = InitOut%PlatformPos(1) - TransMat(3,1)*p%PtfmRefzt
    InitOut%PlatformPos(2) = InitOut%PlatformPos(2) - TransMat(3,2)*p%PtfmRefzt
    InitOut%PlatformPos(3) = InitOut%PlatformPos(3) - TransMat(3,3)*p%PtfmRefzt + p%PtfmRefzt
@@ -825,6 +826,20 @@ SUBROUTINE ED_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
             
       
 END SUBROUTINE ED_UpdateStates
+
+!> Limit azimuth to be between 0 and 2pi
+SUBROUTINE ED_UpdateAzimuth(p, x, DT)
+   TYPE(ED_ParameterType),       INTENT(IN   )  :: p          !< Parameters
+   TYPE(ED_ContinuousStateType), INTENT(INOUT)  :: x
+   real(DbKi),                   INTENT(IN   )  :: DT
+
+   ! If the generator degree of freedom is not active, update the azimuth angle
+   IF (.not. p%DOF_Flag(DOF_GeAz)) x%QT(DOF_GeAz) = x%QT(DOF_GeAz) + DT*x%QDT(DOF_GeAz)
+
+   ! If the azimuth is greater than 2pi, subtract 2pi
+   IF ((x%QT(DOF_GeAz) + x%QT(DOF_DrTr)) >= TwoPi_D) x%QT(DOF_GeAz) = x%QT(DOF_GeAz) - TwoPi_D
+END SUBROUTINE
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
 !! This SUBROUTINE is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.

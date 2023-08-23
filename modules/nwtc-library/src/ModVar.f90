@@ -51,7 +51,7 @@ public :: MV_InitVarsVals, MV_LinkOutputInput, MV_VarIndex, MV_PackMesh, MV_Unpa
 public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff
 public :: MV_AddVar, MV_AddMeshVar, MV_AddModule, SetFlags
 public :: LoadFields, MotionFields, TransFields, AngularFields, MeshFields
-public :: wm_to_dcm, wm_compose, wm_from_dcm, wm_from_xyz, wm_inv
+public :: wm_to_dcm, wm_compose, wm_from_dcm, wm_inv
 public :: MV_FieldString
 
 contains
@@ -442,8 +442,8 @@ subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry, iPerturb)
       i = iLin - j                                 ! index of start of WM parameters (3)
       iLoc = Var%iLoc(i:i + 2)                     ! array index vector
       WMp = 0.0_R8Ki                               ! Init WM perturbation to zero
-      WMp(j + 1) = 4.0_R8Ki*tan(Perturb/4.0_R8Ki)  ! WM perturbation around X,Y,Z axis
-      ! WMp(j + 1) = Perturb                       ! WM perturbation around X,Y,Z axis
+      ! WMp(j + 1) = 4.0_R8Ki*tan(Perturb/4.0_R8Ki)  ! WM perturbation around X,Y,Z axis
+      WMp(j + 1) = Perturb                       ! WM perturbation around X,Y,Z axis
       WM = PerturbAry(iLoc)                        ! Current WM parameters value
       PerturbAry(iLoc) = wm_compose(WM, WMp)       ! Compose value and perturbation
    else
@@ -476,7 +476,8 @@ subroutine MV_ComputeDiff(VarAry, PosAry, NegAry, DiffAry)
             DeltaWM = wm_compose(wm_inv(NegAry(ind)), PosAry(ind))
 
             ! Calculate change in rotation in XYZ in radians
-            DiffAry(ind) = 4.0_R8Ki*atan(DeltaWM/4.0_R8Ki)
+            ! DiffAry(ind) = 4.0_R8Ki*atan(DeltaWM/4.0_R8Ki)
+            DiffAry(ind) = DeltaWM
          end do
 
       else
@@ -744,7 +745,7 @@ end function
 ! Rotation Utilities
 !-------------------------------------------------------------------------------
 
-pure function dcm_to_quat(R) result(q)
+pure function quat_from_dcm(R) result(q)
    real(R8Ki), intent(in)  :: R(3, 3)
    real(R8Ki)              :: q(4), C
    integer(IntKi)          :: j
@@ -770,6 +771,7 @@ pure function dcm_to_quat(R) result(q)
       q = [(R(2, 3) - R(3, 2)), (R(3, 1) - R(1, 3)), (R(1, 2) - R(2, 1)), C]
    end select
    q = q/(2.0_R8Ki*sqrt(C))
+   if (q(4) < 0.0_R8Ki) q = -q
 end function
 
 pure function quat_to_dcm(q) result(R)
@@ -807,28 +809,84 @@ end function
 !    R = quat_to_dcm(wm_to_quat(c))
 ! end function
 
+! pure function wm_to_dcm(c) result(R)
+!    real(R8Ki), intent(in)  :: c(3)
+!    real(R8Ki)              :: R(3, 3), cct, F(3, 3)
+!    integer(IntKi)          :: i, j
+!    cct = dot_product(c, c)
+!    F = reshape([0.0_R8Ki, -c(3), c(2), c(3), 0.0_R8Ki, -c(1), -c(2), c(1), 0.0_R8Ki], [3, 3])/2.0_R8Ki
+!    do i = 1, 3
+!       F(i, i) = F(i, i) + 1.0_R8Ki - cct/16.0_R8Ki
+!       do j = 1, 3
+!          F(i, j) = F(i, j) + c(i)*c(j)/8.0_R8Ki
+!       end do
+!    end do
+!    F = F/(1.0_R8Ki + cct/16.0_R8Ki)
+!    R = matmul(F, F)
+! end function
+
 pure function wm_to_dcm(c) result(R)
    real(R8Ki), intent(in)  :: c(3)
-   real(R8Ki)              :: R(3, 3), cct, F(3, 3)
+   real(R8Ki)              :: R(3, 3), c0, vc, ct(3, 3)
    integer(IntKi)          :: i, j
-   cct = dot_product(c, c)
-   F = reshape([0.0_R8Ki, -c(3), c(2), c(3), 0.0_R8Ki, -c(1), -c(2), c(1), 0.0_R8Ki], [3, 3])/2.0_R8Ki
+   ct(1,:) = [0.0_R8Ki, -c(3), c(2)]
+   ct(2,:) = [c(3), 0.0_R8Ki, -c(1)]
+   ct(3,:) = [-c(2), c(1), 0.0_R8Ki]
+   c0 = 2.0_R8Ki - dot_product(c, c)/8.0_R8Ki
+   vc = 2.0_R8Ki/(4.0_R8Ki - c0)
+   R = vc*vc*(c0*ct + matmul(ct, ct))/2.0_R8Ki
    do i = 1, 3
-      F(i, i) = F(i, i) + 1.0_R8Ki - cct/16.0_R8Ki
-      do j = 1, 3
-         F(i, j) = F(i, j) + c(i)*c(j)/8.0_R8Ki
-      end do
+      R(i, i) = R(i, i) + 1.0_R8Ki
    end do
-   F = F/(1.0_R8Ki + cct/16.0_R8Ki)
-   R = matmul(F, F)
 end function
+
+! pure function wm_from_dcm(R) result(c)
+!    real(R8Ki), intent(in)  :: R(3, 3)
+!    real(R8Ki)              :: c(3), cct
+!    c = wm_from_quat(quat_from_dcm(R))
+! end function
 
 pure function wm_from_dcm(R) result(c)
    real(R8Ki), intent(in)  :: R(3, 3)
-   real(R8Ki)              :: c(3), cct
-   c = wm_from_quat(dcm_to_quat(R))
-   cct = dot_product(c, c)
-   if (cct > 16.0_R8Ki) c = 16.0_R8Ki*c/cct
+   real(R8Ki)              :: pivot(4) ! Trace of the rotation matrix and diagonal elements
+   real(R8Ki)              :: sm(0:3)
+   real(R8Ki)              :: em
+   real(R8Ki)              :: Rr(3, 3), c(3)
+   integer                 :: i        ! case indicator
+
+   Rr = R
+
+   ! mjs--find max value of T := Tr(Rr) and diagonal elements of Rr
+   ! This tells us which denominator is largest (and less likely to produce numerical noise)
+   pivot = (/Rr(1, 1) + Rr(2, 2) + Rr(3, 3), Rr(1, 1), Rr(2, 2), Rr(3, 3)/)
+   i = maxloc(pivot, 1) - 1 ! our sm array starts at 0, so we need to subtract 1 here to get the correct index
+
+   select case (i)
+   case (3)
+      sm(0) = Rr(2, 1) - Rr(1, 2)                           !  4 c_0 c_3 t_{r0}
+      sm(1) = Rr(1, 3) + Rr(3, 1)                           !  4 c_1 c_3 t_{r0}
+      sm(2) = Rr(2, 3) + Rr(3, 2)                           !  4 c_2 c_3 t_{r0}
+      sm(3) = 1.0_R8Ki - Rr(1, 1) - Rr(2, 2) + Rr(3, 3)      !  4 c_3 c_3 t_{r0}
+   case (2)
+      sm(0) = Rr(1, 3) - Rr(3, 1)                           !  4 c_0 c_2 t_{r0}
+      sm(1) = Rr(1, 2) + Rr(2, 1)                           !  4 c_1 c_2 t_{r0}
+      sm(2) = 1.0_R8Ki - Rr(1, 1) + Rr(2, 2) - Rr(3, 3)      !  4 c_2 c_2 t_{r0}
+      sm(3) = Rr(2, 3) + Rr(3, 2)                           !  4 c_3 c_2 t_{r0}
+   case (1)
+      sm(0) = Rr(3, 2) - Rr(2, 3)                           !  4 c_0 c_1 t_{r0}
+      sm(1) = 1.0_R8Ki + Rr(1, 1) - Rr(2, 2) - Rr(3, 3)      !  4 c_1 c_1 t_{r0}
+      sm(2) = Rr(1, 2) + Rr(2, 1)                           !  4 c_2 c_1 t_{r0}
+      sm(3) = Rr(1, 3) + Rr(3, 1)                           !  4 c_3 c_1 t_{r0}
+   case (0)
+      sm(0) = 1.0_R8Ki + Rr(1, 1) + Rr(2, 2) + Rr(3, 3)      !  4 c_0 c_0 t_{r0}
+      sm(1) = Rr(3, 2) - Rr(2, 3)                           !  4 c_1 c_0 t_{r0}
+      sm(2) = Rr(1, 3) - Rr(3, 1)                           !  4 c_2 c_0 t_{r0}
+      sm(3) = Rr(2, 1) - Rr(1, 2)                           !  4 c_3 c_0 t_{r0}
+   end select
+
+   em = sm(0) + SIGN(2.0_R8Ki*SQRT(sm(i)), sm(0))
+   em = 4.0_R8Ki/em                                        ! 1 / ( 4 t_{r0} c_{i} ), assuming 0 <= c_0 < 4 and c_{i} > 0
+   c = em*sm(1:3)
 end function
 
 ! pure function wm_from_dcm(R) result(c)
@@ -853,44 +911,16 @@ pure function wm_compose(p, q) result(r)
    D1 = (4.0_R8Ki - p0)*(4.0_R8Ki - q0)
    D2 = p0*q0 - dot_product(p, q)
    if (D2 >= 0.0_R8Ki) then
-      r = 4*(q0*p + p0*q + cross(p, q))/(D1 + D2)
+      r = 4.0_R8Ki*(q0*p + p0*q + cross(p, q))/(D1 + D2)
    else
-      r = -4*(q0*p + p0*q + cross(p, q))/(D1 - D2)
+      r = -4.0_R8Ki*(q0*p + p0*q + cross(p, q))/(D1 - D2)
    end if
-end function
-
-pure function wm_to_zyx(c) result(zyx)
-   real(R8Ki), intent(in)  :: c(3)
-   real(R8Ki)              :: zyx(3)
-   real(R8Ki)              :: q(4), qx, qy, qz, qw
-   q = wm_to_quat(c)
-   qx = q(1); qy = q(2); qz = q(3); qw = q(4)
-   zyx(1) = atan2(2*(qw*qx + qy*qz), 1.0_R8Ki - 2.0_R8Ki*(qx*qx + qy*qy))
-   zyx(2) = -PiBy2_D + 2.0_R8Ki*atan2(sqrt(1.0_R8Ki + 2.0_R8Ki*(qw*qy - qx*qz)), &
-                                      sqrt(1.0_R8Ki - 2.0_R8Ki*(qw*qy - qx*qz)))
-   zyx(3) = atan2(2.0_R8Ki*(qw*qz + qx*qy), 1.0_R8Ki - 2.0_R8Ki*(qy*qy + qz*qz))
-end function
-
-function wm_to_xyz(c) result(xyz)
-   real(R8Ki), intent(in)  :: c(3)
-   real(R8Ki)              :: xyz(3)
-   xyz = EulerExtract(wm_to_dcm(c))
 end function
 
 pure function wm_inv(c) result(cinv)
    real(R8Ki), intent(in)  :: c(3)
    real(R8Ki)              :: cinv(3)
    cinv = -c
-end function
-
-pure function wm_from_xyz(xyz) result(c)
-   real(R8Ki), intent(in)  :: xyz(3)
-   real(R8Ki)              :: c(3)
-   real(R8Ki)              :: n(3)
-   c = 0.0_R8Ki
-   c = wm_compose([4, 0, 0]*tan(xyz(1)/4.0_R8Ki), c)  ! X
-   c = wm_compose([0, 4, 0]*tan(xyz(2)/4.0_R8Ki), c)  ! Y
-   c = wm_compose([0, 0, 4]*tan(xyz(3)/4.0_R8Ki), c)  ! Z
 end function
 
 pure function cross(a, b) result(c)

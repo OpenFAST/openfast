@@ -237,6 +237,7 @@ subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, T, ErrStat, ErrMsg, x_T
 
    case (Module_BD)
 
+      ! If tight coupling states are supplied, transfer to module
       if (present(x_TC)) then
          call BD_PackStateValues(T%BD%p(Mod%Ins), T%BD%x(Mod%Ins, STATE_PRED), T%BD%m(Mod%Ins)%Vals%x)
          call XferGblToLoc1D(Mod%ixs, x_TC, T%BD%m(Mod%Ins)%Vals%x)
@@ -245,11 +246,15 @@ subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, T, ErrStat, ErrMsg, x_T
 
    case (Module_ED)
 
+      ! If tight coupling states are supplied, transfer to module
       if (present(x_TC)) then
          call ED_PackStateValues(T%ED%p, T%ED%x(STATE_PRED), T%ED%m%Vals%x)
          call XferGblToLoc1D(Mod%ixs, x_TC, T%ED%m%Vals%x)
          call ED_UnpackStateValues(T%ED%p, T%ED%m%Vals%x, T%ED%x(STATE_PRED))
       end if
+
+      ! Update the azimuth angle in ED
+      call ED_UpdateAzimuth(T%ED%p, T%ED%x(STATE_PRED), T%p_FAST%DT)
 
 !  case (Module_ExtPtfm)
 !  case (Module_FEAM)
@@ -873,18 +878,14 @@ contains
    end function
 end subroutine
 
-subroutine FAST_SaveStates(ModData, T, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)             :: ModData(:)  !< Module data
-   type(FAST_TurbineType), intent(inout)     :: T           !< Turbine type
+subroutine FAST_SaveStates(Mod, T, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)             :: Mod      !< Module data
+   type(FAST_TurbineType), intent(inout)     :: T        !< Turbine type
    integer(IntKi), intent(out)               :: ErrStat
    character(*), intent(out)                 :: ErrMsg
-   integer(IntKi)                            :: i
 
-   ! Loop through modules in ModData and copy state from predicted to current with MESH_UPDATECOPY
-   do i = 1, size(ModData)
-      call FAST_CopyStates(ModData(i), T, STATE_PRED, STATE_CURR, MESH_UPDATECOPY, ErrStat, ErrMsg)
-      if (ErrStat >= AbortErrLev) return
-   end do
+   ! Copy state from predicted to current with MESH_UPDATECOPY
+   call FAST_CopyStates(Mod, T, STATE_PRED, STATE_CURR, MESH_UPDATECOPY, ErrStat, ErrMsg)
 end subroutine
 
 subroutine XferLocToGbl1D(Inds, Loc, Gbl)
