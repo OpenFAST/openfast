@@ -2302,8 +2302,8 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! update states to value at t+dt:
-      !call UA_ABM4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
-      call UA_BDF2( i, j, t, n, u_interp, p, x, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
+      call UA_ABM4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
+      !call UA_BDF2( i, j, t, n, u_interp, p, x, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       if (.not. p%ShedEffect) then
