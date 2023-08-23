@@ -761,22 +761,16 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
    end if
    
    ! Compute derivative step size
-   ! ---  ADENV
-   !p%dx    = 0.5_R8Ki * D2R_D
-   !p%dx(4) = 0.0001_R8Ki
-   ! --- ADLEG
-   p%dx = 2.0_R8Ki * D2R_D 
-   p%dx(4) = 0.001 ! x4 is a number between 0 and 1, so we need this to be small
-
-
-   
+   p%dx    = 0.5_R8Ki * D2R_D
+   p%dx(4) = 0.0001_R8Ki
+  
    p%UA_off_forGood = .false. ! flag that determines if UA should be turned off for the whole simulation
    if (allocated(InitInp%UAOff_innerNode)) then
       do j=1,min(size(p%UA_off_forGood,2), size(InitInp%UAOff_innerNode)) !blade
          do i=1,min(InitInp%UAOff_innerNode(j),size(p%UA_off_forGood,1)) !node
 !            call WrScr( 'Warning: Turning off Unsteady Aerodynamics on inner node (node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')' )
             p%UA_off_forGood(i,j) = .true.
-            !p%lin_nx = p%lin_nx - UA_NumLinStates
+            p%lin_nx = p%lin_nx - UA_NumLinStates
          end do
       end do
    end if
@@ -787,7 +781,7 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
 !            call WrScr( 'Warning: Turning off Unsteady Aerodynamics on outer node (node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')' )
             if (.not. p%UA_off_forGood(i,j)) then
                p%UA_off_forGood(i,j) = .true.
-               !p%lin_nx = p%lin_nx - UA_NumLinStates
+               p%lin_nx = p%lin_nx - UA_NumLinStates
             end if
          end do
       end do
@@ -801,7 +795,7 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
             if (ErrStat2 > ErrID_None) then
                call WrScr( 'Warning: Turning off Unsteady Aerodynamics because '//trim(ErrMsg2)//' (node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')' )
                p%UA_off_forGood(i,j) = .true.
-               !p%lin_nx = p%lin_nx - UA_NumLinStates
+               p%lin_nx = p%lin_nx - UA_NumLinStates
             end if
          end if
          
@@ -818,7 +812,7 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
       n = 1
       do j=1,size(p%UA_off_forGood,2) !blade
          do i=1,size(p%UA_off_forGood,1) !node
-            !if (.not. p%UA_off_forGood(i,j)) then
+            if (.not. p%UA_off_forGood(i,j)) then
                do k=1,UA_NumLinStates
                   p%lin_xIndx(n,1) = i ! node
                   p%lin_xIndx(n,2) = j ! blade
@@ -830,7 +824,7 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
                   endif
                   n = n + 1
                end do
-            !end if
+            end if
          end do
       end do
    end if
@@ -2297,7 +2291,19 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
          call HGM_Steady( i, j, u_interp, p, x%element(i,j), AFInfo, ErrStat2, ErrMsg2 )
       end if
 
+      ! get inputs at t+dt
+      CALL UA_Input_ExtrapInterp( u, utimes, u_interp_raw, t+p%dt, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         IF ( ErrStat >= AbortErrLev ) RETURN
+
+         ! make sure that u%u is not zero (this previously turned off UA for the entire simulation. 
+         ! Now, we keep it on, but we don't want the math to blow up when we divide by u%u)
+      call UA_fixInputs(u_interp_raw, u_interp, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+      ! update states to value at t+dt:
       call UA_ABM4( i, j, t, n, u, utimes, p, x, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
+      !call UA_BDF2( i, j, t, n, u_interp, p, x, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       if (.not. p%ShedEffect) then
