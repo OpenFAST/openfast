@@ -170,23 +170,22 @@ real(ReKi) function jinc ( x )
 end function jinc
 
 
-!> Interpolate velocity, k_WAT for a given point
+!> Interpolate values at grid point based on surrounding planes (if surrounded by planes)
+!! Compute velocity, k_WAT, and store surrounding plane orientation
+!! Orientations from plane to inertial for each wake, shape: 3x3xnWake
+!!  R_p2i = [xphat|i^t  yphat|i^t  zphat|i^t]
 subroutine interp_planes_2_point(u, p, m, GridP, iWT, maxPln, & 
-   n_wake,  &
-   tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane,  &
-   tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake, &
-   tmp_WAT_k &
-   )
-   type(AWAE_InputType),           intent(in   ) :: u           !< Inputs at Time t
-   type(AWAE_ParameterType),       intent(in   ) :: p           !< Parameters
-   type(AWAE_MiscVarType),         intent(in   ) :: m           !< Misc/optimization variables
-   integer(IntKi),                 intent(in   ) :: iWT
-   integer(IntKi),                 intent(in   ) :: maxPln 
-   real(ReKi),                     intent(in   ) :: GridP(3) !< grid point, 3 x nFlat
-   integer(IntKi),                 intent(inout) :: n_wake
-   real(ReKi), intent(inout) :: tmp_xhat_plane(:,:), tmp_yhat_plane(:,:), tmp_zhat_plane(:,:) !< shape: 3xnWake
-   real(ReKi), intent(inout) :: tmp_Vx_wake(:), tmp_Vz_wake(:), tmp_Vy_wake(:)  !< shape: nWake
-   real(ReKi), intent(inout) :: tmp_WAT_k(:)   ! WAT scaling factors for all wakes (for overlap),  shape: nWake
+   iw, wk_R_p2i, wk_V, wk_WAT_k)
+   type(AWAE_InputType),     intent(in   ) :: u           !< Inputs at Time t
+   type(AWAE_ParameterType), intent(in   ) :: p           !< Parameters
+   type(AWAE_MiscVarType),   intent(in   ) :: m           !< Misc/optimization variables
+   integer(IntKi),           intent(in   ) :: iWT
+   integer(IntKi),           intent(in   ) :: maxPln 
+   real(ReKi),               intent(in   ) :: GridP(3)       !< grid point, 3 x nFlat
+   integer(IntKi),           intent(inout) :: iw             !< Cumulative index on numbre of wakes intersecting at that point
+   real(ReKi),               intent(inout) :: wk_R_p2i(:,:,:)!< Orientations from plane to inertial for each wake, shape: 3x3xnWake
+   real(ReKi),               intent(inout) :: wk_V(:,:)      !< Wake velocity from each overlapping wake,  shape: 3xnWake
+   real(ReKi),               intent(inout) :: wk_WAT_k(:)   !< WAT scaling factors for all wakes (for overlap),  shape: nWake
    ! Local
    real(ReKi)     :: x_end_plane
    real(ReKi)     :: x_start_plane
@@ -255,25 +254,25 @@ subroutine interp_planes_2_point(u, p, m, GridP, iWT, maxPln, &
          ! test if the point is within finite-difference grid
          if ( (abs(y_tmp_plane) <= p%y(p%numRadii-1)).and.(abs(z_tmp_plane) <= p%z(p%numRadii-1)) ) then 
             ! Increment number of wakes contributing to current grid point
-            n_wake = n_wake + 1
+            iw = iw + 1
 
             ! Store unit vectors for projection
-            tmp_xhat_plane(:,n_wake) = xHat_plane
-            tmp_yhat_plane(:,n_wake) = yHat_plane
-            tmp_zhat_plane(:,n_wake) = zHat_plane
+            wk_R_p2i(:,1,iw) = xHat_plane
+            wk_R_p2i(:,2,iw) = yHat_plane
+            wk_R_p2i(:,3,iw) = zHat_plane
 
             ! Velocity at point (y,z) by 2d interpolation in plane, and interpolations between planes (delta)
-            tmp_Vx_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vx_wake(:,:,np1,iWT)) &
-                                + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vx_wake(:,:,np, iWT))
-            tmp_Vy_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vy_wake(:,:,np1,iWT)) &
-                                + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vy_wake(:,:,np, iWT))
-            tmp_Vz_wake(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake(:,:,np1,iWT)) &
-                                + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake(:,:,np, iWT))
+            wk_V(1,iw) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vx_wake(:,:,np1,iWT)) &
+                           + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vx_wake(:,:,np, iWT))
+            wk_V(2,iw) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vy_wake(:,:,np1,iWT)) &
+                           + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vy_wake(:,:,np, iWT))
+            wk_V(3,iw) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake(:,:,np1,iWT)) &
+                           + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%Vz_wake(:,:,np, iWT))
 
             ! WAT scaling factor
             if (p%WAT_Enabled) then
-               tmp_WAT_k(n_wake) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%WAT_k(:,:,np1,iWT)) &
-                                 + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%WAT_k(:,:,np, iWT))
+               wk_WAT_k(iw) = delta *interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%WAT_k(:,:,np1,iWT)) &
+                                + deltad*interp2d((/y_tmp_plane, z_tmp_plane/), p%y, p%z, u%WAT_k(:,:,np, iWT))
             endif
 
          end if  ! if the point is within radial finite-difference grid
@@ -282,15 +281,16 @@ subroutine interp_planes_2_point(u, p, m, GridP, iWT, maxPln, &
 
 endsubroutine interp_planes_2_point
 
-subroutine mergeWakeVel(n_wake, tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake, tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane, V_qs)
-   integer(IntKi), intent(in ) :: n_wake
-   real(ReKi)    , intent(in ) :: tmp_xhat_plane(:,:), tmp_yhat_plane(:,:), tmp_zhat_plane(:,:) !< shape: 3xnWake
-   real(ReKi)    , intent(in ) :: tmp_Vx_wake(:), tmp_Vz_wake(:), tmp_Vy_wake(:)  !< shape: nWake
-   real(SiKi)    , intent(out) :: V_qs(3)            ! Quasi-steady wake deficit  , after wake-intersection averaging (without WAT)
+!> 
+subroutine mergeWakeVel(n_wake, wk_V, wk_R_p2i, V_qs)
+   integer(IntKi), intent(in ) :: n_wake          !< Total number of wakes crossing at a given point
+   real(ReKi)    , intent(in ) :: wk_V(:,:)       !< Velocity for each wake crossing at a given point,   shape: 3xnWake
+   real(ReKi)    , intent(in ) :: wk_R_p2i(:,:,:) !< Orientations from plane to inertial for each wake, shape: 3x3xnWake
+   real(SiKi)    , intent(out) :: V_qs(3)         !< Merged quasi-steady wake deficit, after wake-intersection averaging (without WAT)
    ! Local
    real(ReKi) :: V_wake(3)          ! Wake velocity vector from a given plane
-   real(ReKi) :: xhatBar_plane(3)   ! <
-   real(ReKi) :: xhatBar_plane_norm
+   real(ReKi) :: xhatBar(3)         !< plane x normal (in inertial coordinates) averaged over all wakes
+   real(ReKi) :: xhatBar_norm
    real(ReKi) :: Vx_term
    real(SiKi) :: Vx_sum2            ! Squared sum of all quasi-steady x-components of wakes, oriented along their respective normal
    real(SiKi) :: V_sum(3)           ! Sum of all wake deficit components
@@ -299,16 +299,17 @@ subroutine mergeWakeVel(n_wake, tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake, tmp_xhat_
    integer    :: iw
 
    ! --- Average xhat over overlapping wakes
-   xhatBar_plane(:) = 0.0_ReKi
+   xhatBar(:) = 0.0_ReKi
    do iw=1,n_wake
-      xhatBar_plane = xhatBar_plane + abs(tmp_Vx_wake(iw))*tmp_xhat_plane(:,iw)
+      !weighted xhat:        Vx|p         * xHat_plane|i
+      xhatBar = xhatBar + abs(wk_V(1,iw)) * wk_R_p2i(:,1,iw)
    enddo
    ! Normalize xhatBar to unit vector
-   xhatBar_plane_norm = TwoNorm(xhatBar_plane) ! TODO REPLACE
-   if ( EqualRealNos(xhatBar_plane_norm, 0.0_ReKi) ) then
-      xhatBar_plane = 0.0_ReKi
+   xhatBar_norm = sqrt(xhatBar(1)*xhatBar(1)+ xhatBar(2)*xhatBar(2)+ xhatBar(3)*xhatBar(3))
+   if ( EqualRealNos(xhatBar_norm, 0.0_ReKi) ) then
+      xhatBar = 0.0_ReKi
    else
-      xhatBar_plane = xhatBar_plane / xhatBar_plane_norm
+      xhatBar = xhatBar / xhatBar_norm
    end if
 
    ! -- Compute average contributions - Quasi steady wake
@@ -317,16 +318,30 @@ subroutine mergeWakeVel(n_wake, tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake, tmp_xhat_
    Vx_sum2   = 0.0_ReKi
    V_sum     = 0.0_ReKi
    do iw = 1,n_wake
-      V_wake      = tmp_Vx_wake(iw)*tmp_xhat_plane(:,iw) + tmp_Vy_wake(iw)*tmp_yhat_plane(:,iw) + tmp_Vz_wake(iw)*tmp_zhat_plane(:,iw)
-      Vx_term     = dot_product( xhatBar_plane, V_wake )
-      Vx_sum2 = Vx_sum2 + Vx_term*Vx_term
+      ! Transform V_wake from plane coordinate to inertial
+      V_wake  = wk_V(1,iw) * wk_R_p2i(:,1,iw) + wk_V(2,iw) * wk_R_p2i(:,2,iw) + wk_V(3,iw) * wk_R_p2i(:,3,iw) 
       V_sum   = V_sum   + V_wake
+      Vx_term = dot_product( xhatBar, V_wake )
+      Vx_sum2 = Vx_sum2 + Vx_term*Vx_term
    end do
    ! [I - XX']V = V - (V dot X)X
-   Vtv_qs = V_sum - dot_product(V_sum, xhatBar_plane)*xhatBar_plane
-   Vax_qs = - xhatBar_plane*sqrt(Vx_sum2)
+   Vtv_qs = V_sum - dot_product(V_sum, xhatBar)*xhatBar
+   Vax_qs = - xhatBar*sqrt(Vx_sum2)
    V_qs = real(Vax_qs + Vtv_qs, SiKi)
 end subroutine mergeWakeVel
+
+!> 
+subroutine mergeWakeWAT_k(n_wake, wk_WAT_k, WAT_k)
+   integer(IntKi), intent(in ) :: n_wake      !< Total number of wakes crossing at a given point
+   real(ReKi)    , intent(in ) :: wk_WAT_k(:) !< value of k for each wake crossing at a given point,   shape: 3xnWake
+   real(ReKi)    , intent(out) :: WAT_k       !< Merged WAT_k
+   integer :: iw
+   WAT_k = 0.0_ReKi
+   do iw = 1,n_wake
+      WAT_k = WAT_k + wk_WAT_k(iw)*wk_WAT_k(iw)
+   enddo
+   WAT_k = sqrt(WAT_k)
+end subroutine mergeWakeWAT_k
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Loop over the entire grid of low resolution ambient wind data to compute:
@@ -343,9 +358,8 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    integer(IntKi),                 intent(  out)  :: errStat     !< Error status of the operation
    character(*),                   intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
 
-   integer(IntKi)      :: nt, np, iw, ix, iy, iz, nr, npsi, wamb, iwsum !< loop counters
+   integer(IntKi)      :: nt, np, ix, iy, iz, nr, npsi, wamb, iwsum !< loop counters
    integer(IntKi)      :: n_wake, n_r_polar, n_psi_polar       !< accumulating counters
-   real(ReKi)          :: xhatBar_plane_norm
    real(SiKi)          :: V_qs(3)            ! Quasi-steady wake deficit  , after wake-intersection averaging (without WAT)
    real(ReKi)          :: Vave_amb_low_norm, Vamb_lowpol_tmp(3), Vdist_lowpol_tmp(3), Vamb_low_tmp(3,8)
    real(ReKi)          :: wsum_tmp, w
@@ -357,9 +371,9 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    real(ReKi)          :: WAT_V(3)           ! WAT velocity contribution
    real(ReKi)          :: Pos_global(3)      ! global position
    integer(IntKi)      :: tmpPln
-   real(ReKi), ALLOCATABLE :: tmp_xhat_plane(:,:), tmp_yhat_plane(:,:), tmp_zhat_plane(:,:)
-   real(ReKi), ALLOCATABLE :: tmp_Vx_wake(:), tmp_Vz_wake(:), tmp_Vy_wake(:)
-   real(ReKi), ALLOCATABLE :: tmp_WAT_k(:)   ! WAT scaling factors for all wakes (for overlap)
+   real(ReKi), allocatable :: wk_R_p2i(:,:,:)!< Orientations from plane to inertial for each wake, shape: 3x3xnWake
+   real(ReKi), allocatable :: wk_V(:,:)      !< Wake velocity from each overlapping wake,  shape: 3xnWake
+   real(ReKi), allocatable :: wk_WAT_k(:)    !< WAT scaling factors for all wakes (for overlap)
    integer(IntKi)      :: iXYZ       !< Flat counter on X,Y,Z grid
    integer(IntKi)      :: i
    integer(IntKi)      :: maxPln
@@ -378,35 +392,21 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    maxPln =  min(n,p%NumPlanes-2)
    tmpPln =  min(p%NumPlanes-1, n+1)
 
-   
-!#ifdef _OPENMP  
-!   tm1 =  omp_get_wtime() 
-!#endif 
-
    maxN_wake = p%NumTurbines*( p%NumPlanes-1 )
-   ! Temporary variables needed by OpenMP 
-   allocate ( tmp_xhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_xhat_plane.', errStat, errMsg, RoutineName )
-   allocate ( tmp_yhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_yhat_plane.', errStat, errMsg, RoutineName )
-   allocate ( tmp_zhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_zhat_plane.', errStat, errMsg, RoutineName )
-   allocate ( tmp_Vx_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vx_wake.', errStat, errMsg, RoutineName )
-   allocate ( tmp_Vy_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vy_wake.', errStat, errMsg, RoutineName )
-   allocate ( tmp_Vz_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vz_wake.', errStat, errMsg, RoutineName )
-   allocate ( tmp_WAT_k      ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_WAT_k.', errStat, errMsg, RoutineName )
+   ! Variables stored for each wake crossing at a given point
+   allocate ( wk_R_p2i    (3, 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for wk_R_p2i.', errStat, errMsg, RoutineName )
+   allocate ( wk_V        (   3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for wk_V.', errStat, errMsg, RoutineName )
+   allocate ( wk_WAT_k    (      1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for wk_WAT_k.', errStat, errMsg, RoutineName )
    if (ErrStat >= AbortErrLev) return
 
-
-      ! Loop over the entire grid of low resolution ambient wind data to compute:
-      !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
+   ! --- Loop over the entire grid of low resolution ambient wind data to compute:
+   !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
    !$OMP PARALLEL DO &
-   !$OMP PRIVATE(iXYZ, ix, iy, iz, &
-   !$OMP&        n_wake, &
-   !$OMP&        nt, np, &
-   !$OMP&        tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane,&
-   !$OMP&        tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake,  &
-   !$OMP&        xhatBar_plane_norm, iw, &
+   !$OMP PRIVATE(iXYZ, ix, iy, iz, n_wake,  nt, np, &
+   !$OMP&        wk_R_p2i, wk_V,&
    !$OMP&        V_qs, &   
    !$OMP&        C_rot, C_rot_norm, Pos_global,&
-   !$OMP&        tmp_WAT_k, WAT_k, WAT_iT, WAT_iY, WAT_iZ, WAT_V)&
+   !$OMP&        wk_WAT_k, WAT_k, WAT_iT, WAT_iY, WAT_iZ, WAT_V)&
    !$OMP SHARED(m, u, p, xd, maxPln, errStat, errMsg) DEFAULT(NONE)
    do iXYZ = 1 , p%NumGrid_low
       ! From flat index iXYZ to grid indices
@@ -414,38 +414,26 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
       iy = mod(int( (iXYZ-1) / (p%nX_low         ) ),p%nY_low)
       iz =     int( (iXYZ-1) / (p%nX_low*p%nY_low) )
 
-         ! set the disturbed flow equal to the ambient flow for this time step
+      ! set the disturbed flow equal to the ambient flow for this time step
       m%Vdist_low     (:,ix,iy,iz) = m%Vamb_low(:,ix,iy,iz)
       m%Vdist_low_full(:,ix,iy,iz) = m%Vamb_low(:,ix,iy,iz)
 
-      n_wake = 0
-
+      ! --- Compute variables wk_* (e.g. velocity) from each wakes reaching the current grid point 
+      n_wake = 0 ! cumulative index, increases if point is at intersection of multiple wakes
       do nt = 1,p%NumTurbines
-
-         call interp_planes_2_point(u, p, m, p%Grid_low(:,iXYZ), nt, maxPln, &        ! In
-            n_wake,   &                                                               ! InOut
-            tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane,  &                        ! InOut
-            tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake, tmp_WAT_k )                        ! InOut
-
+         call interp_planes_2_point(u, p, m, p%Grid_low(:,iXYZ), nt, maxPln, &  ! In
+            n_wake,  wk_R_p2i,  wk_V, wk_WAT_k )                                ! InOut
       end do      ! do nt = 1,p%NumTurbines
 
       if (n_wake > 0) then
 
          ! --- Compute merged wake velocity V_qs
-         call mergeWakeVel(n_wake, tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake, tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane, V_qs)
+         call mergeWakeVel(n_wake, wk_V, wk_R_p2i, V_qs)
 
          ! --- Compute average WAT scaling factor and WAT velocity
-         WAT_V = 0.0_SiKi
          if (p%WAT_Enabled) then
-            WAT_k = 0.0_ReKi
-            do iw = 1,n_wake
-               WAT_k = WAT_k + tmp_WAT_k(iw)*tmp_WAT_k(iw)
-            enddo
-            WAT_k = sqrt(WAT_k)
-            if (abs(WAT_k)>1e-8) then
-            ! find location of this grid point in the turbulent box
-            ! NOTE: we take advantage of full knowledge of how the data is actually stored in IfW.  If that ever changes, this will be a problem.
-            !     Equations taken from the WakeAddedTurbulence implementation plan
+            call mergeWakeWAT_k(n_wake, wk_WAT_k, WAT_k)
+            ! Position of current grid point
             Pos_global(1) = real(ix,ReKi) * p%dX_low + p%X0_low
             Pos_global(2) = real(iy,ReKi) * p%dY_low + p%Y0_low
             Pos_global(3) = real(iz,ReKi) * p%dZ_low + p%Z0_low
@@ -455,7 +443,8 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
             WAT_iY = modulo( nint( (Pos_global(2) + xd%WAT_B_Box(2)) * p%WAT_FlowField%Grid3D%InvDY ), p%WAT_FlowField%Grid3D%NYGrids) + 1   ! eq 24
             WAT_iZ = modulo( nint( (Pos_global(3) + xd%WAT_B_Box(3)) * p%WAT_FlowField%Grid3D%InvDZ ), p%WAT_FlowField%Grid3D%NZGrids) + 1   ! eq 25
             WAT_V(1:3) = real(p%WAT_FlowField%Grid3D%Vel(1:3,WAT_iY,WAT_iZ,WAT_iT) * WAT_k, SiKi)
-            endif
+         else
+            WAT_V = 0.0_SiKi
          endif
 
          !--- Store full velocity (Ambient + Wake QS + WAT) in grid
@@ -638,22 +627,11 @@ subroutine LowResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
       end do ! np, tmpPln
    end do ! nt, turbines
 
-!#ifdef _OPENMP  
-!   tm2 =  omp_get_wtime() 
-!   write(*,*)  'Total AWAE:LowResGridCalcOutput using '//trim(num2lstr(tm2-tm1))//' seconds'
-
-!#endif 
-
-   if (allocated(tmp_xhat_plane)) deallocate(tmp_xhat_plane)
-   if (allocated(tmp_yhat_plane)) deallocate(tmp_yhat_plane)
-   if (allocated(tmp_zhat_plane)) deallocate(tmp_zhat_plane)
-   if (allocated(tmp_Vx_wake))    deallocate(tmp_Vx_wake)
-   if (allocated(tmp_Vy_wake))    deallocate(tmp_Vy_wake)
-   if (allocated(tmp_Vz_wake))    deallocate(tmp_Vz_wake)
+   if (allocated(wk_R_p2i)) deallocate(wk_R_p2i)
+   if (allocated(wk_V))     deallocate(wk_V)
+   if (allocated(wk_WAT_k)) deallocate(wk_WAT_k)
 
 end subroutine LowResGridCalcOutput
-
-
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Loop over each point of the high resolution ambient wind to compute:
@@ -670,17 +648,16 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
    integer(IntKi),                 intent(  out)  :: errStat     !< Error status of the operation
    character(*),                   intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
 
-   integer(IntKi)      :: nt, nt2, np, iw, ix, iy, iz, i_hl !< loop counters
+   integer(IntKi)      :: nt, nt2, np, ix, iy, iz, i_hl !< loop counters
    integer(IntKi)      :: n_wake       !< accumulating counters
-   real(ReKi)          :: xhatBar_plane_norm
    real(SiKi)          :: V_qs(3)            ! Quasi-steady wake deficit  , after wake-intersection averaging (without WAT)
    real(ReKi)          :: WAT_k              ! WAT scaling factor (averaged from overlapping wakes)
    real(SiKi)          :: WAT_V(3)           ! WAT velocity contribution
    real(ReKi)          :: Pos_global(3)      ! global position
-   real(ReKi), ALLOCATABLE :: WAT_B_BoxHi(:,:) ! position of WAT box (global) for each intermediate steps, shape: 3 x n_high_low
-   real(ReKi), ALLOCATABLE :: tmp_xhat_plane(:,:), tmp_yhat_plane(:,:), tmp_zhat_plane(:,:)
-   real(ReKi), ALLOCATABLE :: tmp_Vx_wake(:), tmp_Vz_wake(:), tmp_Vy_wake(:)
-   real(ReKi), ALLOCATABLE :: tmp_WAT_k(:)   ! WAT scaling factors for all wakes (for overlap)
+   real(ReKi), allocatable :: WAT_B_BoxHi(:,:) ! position of WAT box (global) for each intermediate steps, shape: 3 x n_high_low
+   real(ReKi), allocatable :: wk_R_p2i(:,:,:)!< Orientations from plane to inertial for each wake, shape: 3x3xnWake
+   real(ReKi), allocatable :: wk_V(:,:)      !< Wake velocity from each overlapping wake,  shape: 3xnWake
+   real(ReKi), allocatable :: wk_WAT_k(:)    !< WAT scaling factors for all wakes (for overlap)
    integer(IntKi)      :: np1
    integer(IntKi)      :: iXYZ !< Flat counter on X,Y,Z high res grid
    integer(IntKi)      :: maxPln
@@ -702,17 +679,12 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
       n_high_low = p%n_high_low
    end if
 
-
    maxN_wake = p%NumTurbines*( p%NumPlanes-1 )
-   ! Temporary variables needed by OpenMP 
-   allocate ( tmp_xhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_xhat_plane.', errStat, errMsg, RoutineName )
-   allocate ( tmp_yhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_yhat_plane.', errStat, errMsg, RoutineName )
-   allocate ( tmp_zhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_zhat_plane.', errStat, errMsg, RoutineName )
-   allocate ( tmp_Vx_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vx_wake.', errStat, errMsg, RoutineName )
-   allocate ( tmp_Vy_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vy_wake.', errStat, errMsg, RoutineName )
-   allocate ( tmp_Vz_wake    ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vz_wake.', errStat, errMsg, RoutineName )
-   allocate ( tmp_WAT_k      ( 1:maxN_wake )   , STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_WAT_k.', errStat, errMsg, RoutineName )
-
+   ! Variables stored for each wake crossing at a given point
+   allocate ( wk_R_p2i    (3, 3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for wk_R_p2i.', errStat, errMsg, RoutineName )
+   allocate ( wk_V        (   3, 1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for wk_V.', errStat, errMsg, RoutineName )
+   allocate ( wk_WAT_k    (      1:maxN_wake ), STAT=errStat2 ); if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for wk_WAT_k.', errStat, errMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) return
 
    ! Convect WAT Box tracer for each intermediate step
    ! Note: we substract because the high-res points are "before" current low res point
@@ -724,32 +696,23 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
       enddo
    endif
 
-
-
-
-      ! Loop over the entire grid of high resolution ambient wind data to compute:
-      !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
-      ! NOTE: loop here is different from low res grid, doing: turbines > grid > turbines(nt/=nt2) > planes
-      ! instead of grid > turbines > planes
-      ! TODO explain 
-
+   ! --- Loop over the entire grid of high resolution ambient wind data to compute:
+   !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
+   ! NOTE: loop here is different from low res grid, doing: turbines > grid > turbines(nt/=nt2) > planes
+   ! instead of grid > turbines > planes
+   ! TODO explain 
    NumGrid_high  = p%nX_high*p%nY_high*p%nZ_high
 
    do nt = 1,p%NumTurbines
-
-            ! set the disturbed flow equal to the ambient flow for this time step
+      ! set the disturbed flow equal to the ambient flow for this time step
       y%Vdist_high(nt)%data = m%Vamb_high(nt)%data
 
       !$OMP PARALLEL DO DEFAULT(NONE) &
-      !$OMP PRIVATE (iXYZ, ix, iy, iz,&
-      !$OMP&         n_wake,&
-      !$OMP&         nt2, np,&
-      !$OMP&         tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane,&
-      !$OMP&         tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake,&
-      !$OMP&         xhatBar_plane_norm, iw, & 
+      !$OMP PRIVATE (iXYZ, ix, iy, iz, n_wake, nt2, np,&
+      !$OMP&         wk_R_p2i, wk_V, &
       !$OMP&         V_qs, &
       !$OMP&         i_hl, Pos_global,&
-      !$OMP&         tmp_WAT_k, WAT_k, WAT_iT, WAT_iY, WAT_iZ, WAT_V)& 
+      !$OMP&         wk_WAT_k, WAT_k, WAT_iT, WAT_iY, WAT_iZ, WAT_V)& 
       !$OMP SHARED(NumGrid_High, m, u, p, y, xd, nt, maxPln, n_high_low, WAT_B_BoxHi, errStat, errMsg)
       ! Loop over all points of the high resolution ambient wind
       do iXYZ=1, NumGrid_high
@@ -758,34 +721,27 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
          iy = mod(int( (iXYZ-1) / (p%nX_high          ) ),p%nY_high)
          iz =     int( (iXYZ-1) / (p%nX_high*p%nY_high) )
 
-         n_wake = 0
-
+         ! --- Compute variables wk_* (e.g. velocity) from each wakes reaching the current grid point 
+         n_wake = 0 ! cumulative index, increases if point is at intersection of multiple wakes
          do nt2 = 1,p%NumTurbines
             if (nt /= nt2) then
-
                call interp_planes_2_point(u, p, m, p%Grid_high(:,iXYZ,nt), nt2, maxPln, &  ! In
-                  n_wake,   &                                                               ! InOut
-                  tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane,  &                        ! InOut
-                  tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake, tmp_WAT_k )                        ! InOut
-
+                  n_wake, wk_R_p2i, wk_V, wk_WAT_k )                                       ! InOut
             end if    ! nt /= nt2
          end do        ! nt2 = 1,p%NumTurbines
          if (n_wake > 0) then
             ! --- Compute merged wake velocity V_qs
-            call mergeWakeVel(n_wake, tmp_Vx_wake, tmp_Vy_wake, tmp_Vz_wake, tmp_xhat_plane, tmp_yhat_plane, tmp_zhat_plane, V_qs)
+            call mergeWakeVel(n_wake, wk_V, wk_R_p2i, V_qs)
 
             ! --- Compute average WAT scaling factor and WAT velocity
-            WAT_V = 0.0_SiKi
             if (p%WAT_Enabled) then
-               WAT_k = 0.0_ReKi
-               do iw = 1,n_wake
-                  WAT_k = WAT_k + tmp_WAT_k(iw)*tmp_WAT_k(iw)
-               enddo
-               WAT_k = sqrt(WAT_k)
-               ! Position of current point
+               call mergeWakeWAT_k(n_wake, wk_WAT_k, WAT_k)
+               ! Position of current grid point
                Pos_global(1) = real(ix,ReKi) * p%dX_high(nt) + p%X0_high(nt)
                Pos_global(2) = real(iy,ReKi) * p%dY_high(nt) + p%Y0_high(nt)
                Pos_global(3) = real(iz,ReKi) * p%dZ_high(nt) + p%Z0_high(nt)
+            else
+               WAT_V = 0.0_SiKi
             endif
 
             ! --- Store full velocity (Ambient + Wake QS + WAT) in grid
@@ -805,12 +761,9 @@ subroutine HighResGridCalcOutput(n, u, p, xd, y, m, errStat, errMsg)
       !$OMP END PARALLEL DO
    end do          ! nt = 1,p%NumTurbines
 
-   if (allocated(tmp_xhat_plane)) deallocate(tmp_xhat_plane)
-   if (allocated(tmp_yhat_plane)) deallocate(tmp_yhat_plane)
-   if (allocated(tmp_zhat_plane)) deallocate(tmp_zhat_plane)
-   if (allocated(tmp_Vx_wake))    deallocate(tmp_Vx_wake)
-   if (allocated(tmp_Vy_wake))    deallocate(tmp_Vy_wake)
-   if (allocated(tmp_Vz_wake))    deallocate(tmp_Vz_wake)
+   if (allocated(wk_R_p2i)) deallocate(wk_R_p2i)
+   if (allocated(wk_V))     deallocate(wk_V)
+   if (allocated(wk_WAT_k)) deallocate(wk_WAT_k)
    if (allocated(WAT_B_BoxHi))    deallocate(WAT_B_BoxHi)
 
 end subroutine HighResGridCalcOutput
