@@ -131,10 +131,8 @@ subroutine WriteDisWindFiles( n, WrDisSkp1, p, y, m, errStat, errMsg )
 
 end subroutine WriteDisWindFiles
 
-
 !----------------------------------------------------------------------------------------------------------------------------------   
-!> This subroutine 
-!!
+!> This subroutine read the low res wind file (VTK) at a given time step `n`
 subroutine ReadLowResWindFile(n, p, Vamb_Low, errStat, errMsg)
    integer(IntKi),                 intent(in   )  :: n            !< Current simulation timestep increment (zero-based)
    type(AWAE_ParameterType),       intent(in   )  :: p            !< Parameters
@@ -158,16 +156,9 @@ subroutine ReadLowResWindFile(n, p, Vamb_Low, errStat, errMsg)
    call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
       if (ErrStat >= AbortErrLev) return
    call ReadVTK_SP_vectors( FileName, Un, dims, Vamb_Low, ErrStat, ErrMsg )
-      
-   
-!==============================================================================
-
-   
 end subroutine ReadLowResWindFile
-
 !----------------------------------------------------------------------------------------------------------------------------------   
-!> This subroutine 
-!!
+!> This subroutine read the high res wind file (VTK) at a given time step `n`
 subroutine ReadHighResWindFile(nt, n, p, Vamb_high, errStat, errMsg)
 
    integer(IntKi),                 intent(in   )  :: nt
@@ -195,11 +186,32 @@ subroutine ReadHighResWindFile(nt, n, p, Vamb_high, errStat, errMsg)
       if (ErrStat >= AbortErrLev) return
    call ReadVTK_SP_vectors( FileName, Un, dims, Vamb_high, ErrStat, ErrMsg ) 
       
-   
-!==============================================================================
-  
 end subroutine ReadHighResWindFile
-
+!----------------------------------------------------------------------------------------------------------------------------------   
+!> Flat array of Cartesian point coordinates
+!! Grid runs from (X0, Y0, Z0) to (X0 + (p%nX-1)*dX, Y0+ (p%nY-1)*dY, Z0+ (p%nZ-1)*dZ)
+subroutine flatCartGridCoordinates(Origin, n, d, GridP)
+   Real(ReKi)    , intent(in ) :: Origin(3)  !< 
+   integer(IntKi), intent(in ) :: n(3)       !< dimension    nx, ny, nz
+   Real(ReKi)    , intent(in ) :: d(3)       !< grid spacing dx, dy, dz
+   real(ReKi),     intent(out) :: GridP(:,:) !< Grid points, flatten 3 x nTot
+   integer(IntKi) :: iXYZ 
+   integer :: ix, iy, iz
+   iXYZ = 0
+   do iz=0, n(3)-1 
+      do iy=0, n(2)-1
+         do ix=0, n(1)-1
+            iXYZ = iXYZ + 1
+            GridP(1,iXYZ) = origin(1) + ix*d(1)
+            GridP(2,iXYZ) = origin(2) + iy*d(2)
+            GridP(3,iXYZ) = origin(3) + iz*d(3)            
+         end do
+      end do
+   end do
+end subroutine flatCartGridCoordinates
+!----------------------------------------------------------------------------------------------------------------------------------   
+!> Initialize low and high res grid from VTK or InflowWind 
+!! Set grid points, perform sanity checks
 subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
 
    type(AWAE_InitInputType),    intent(in   ) :: InitInp        !< Input data for initialization routine
@@ -212,10 +224,11 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    integer(IntKi)                             :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                       :: errMsg2       ! temporary error message 
    character(*), parameter                    :: RoutineName = 'AWAE_IO_InitGridInfo'
-   integer(IntKi)                             :: nXYZ_low, nx_low, ny_low, nz_low, nXYZ_high, nx_high, ny_high, nz_high
+   integer(IntKi)                             :: i, k, nXYZ_low, nx_low, ny_low, nz_low, nXYZ_high, nx_high, ny_high, nz_high
    integer(IntKi)                             :: dims(3)              ! dimension of the 3D grid (nX,nY,nZ)
    real(ReKi)                                 :: origin(3)            ! the lower-left corner of the 3D grid (X0,Y0,Z0)
    real(ReKi)                                 :: gridSpacing(3)       ! spacing between grid points in each of the 3 directions (dX,dY,dZ)
+   real(ReKi)                                 :: gridSpacingWAT(3)    ! 
    character(1024)                            :: FileName             ! Name of output file     
    character(1024)                            :: descr                ! Line describing the contents of the file
    character(1024)                            :: vecLabel             ! descriptor of the vector data
@@ -227,6 +240,9 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    errMsg  = ""
    
    
+   ! --------------------------------------------------------------------------------
+   ! --- LOW RES 
+   ! --------------------------------------------------------------------------------
    !---------------------------------------------------------------------------
    ! Parse time 0.0, low res wind input file to gather the grid 
    !    information and set data associated with the low res grid
@@ -256,6 +272,7 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
           
    end if
    
+   ! --- Checks for grid spacing
    if ( (gridSpacing(1) <= 0.0_ReKi) .or. (gridSpacing(2) <= 0.0_ReKi) .or. (gridSpacing(3) <= 0.0_ReKi) ) &
       call SetErrStat ( ErrID_Fatal, 'The low resolution spatial resolution for Turbine 1 must be greater than zero in each spatial direction. ', errStat, errMsg, RoutineName )
       if (ErrStat >= AbortErrLev) return
@@ -285,28 +302,155 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    p%dXYZ_Low = gridSpacing
    p%dpol = (gridSpacing(1)+gridSpacing(2)+gridSpacing(3))/3.0_ReKi
    p%n_rp_max = ceiling(pi*((p%C_Meander*((p%NumRadii-1)*InitInp%InputFileData%dr+p%dpol))/p%dpol)**2.0_ReKi)
-      ! Grid runs from (X0_low, Y0_low, Z0_low) to (X0_low + (p%nX_Low-1)*dX_low, Y0_low+ (p%nY_Low-1)*dY_low, Z0_low+ (p%nZ_Low-1)*dZ_low)
-      ! (0,0,0) to (180,180,180) 
-     
-  
-   allocate( p%Grid_low(3,p%NumGrid_low),stat=errStat2)
-      if (errStat2 /= 0) then
-         call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for Grid_low.', errStat, errMsg, RoutineName )
-         return
+
+   ! Set coordinates of points in a flat array (Grid_low) 
+   call AllocAry( p%Grid_low, 3, p%NumGrid_low, 'Grid_low', errStat2, errMsg2); if(Failed()) return
+   call flatCartGridCoordinates(origin, dims, gridSpacing, p%Grid_low)
+   
+   
+   ! --------------------------------------------------------------------------------
+   ! --- HIGH RES 
+   ! --------------------------------------------------------------------------------
+   call AllocAry(InitOut%X0_high,  p%NumTurbines, 'X0_high', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(InitOut%Y0_high,  p%NumTurbines, 'Y0_high', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(InitOut%Z0_high,  p%NumTurbines, 'Z0_high', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(InitOut%dX_high,  p%NumTurbines, 'dX_high', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(InitOut%dY_high,  p%NumTurbines, 'dY_high', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(InitOut%dZ_high,  p%NumTurbines, 'dZ_high', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(      p%X0_high,  p%NumTurbines, 'X0_high', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(      p%Y0_high,  p%NumTurbines, 'Y0_high', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(      p%Z0_high,  p%NumTurbines, 'Z0_high', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(      p%dX_high,  p%NumTurbines, 'dX_high', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(      p%dY_high,  p%NumTurbines, 'dY_high', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(      p%dZ_high,  p%NumTurbines, 'dZ_high', errStat2, errMsg2); if(Failed()) return
+
+   if (p%WAT_Enabled) then
+      gridSpacingWAT =  (/ 0.0_ReKi, 1/p%WAT_FlowField%Grid3D%InvDY, 1/p%WAT_FlowField%Grid3D%InvDZ /)
+   endif
+
+   
+   if ( p%Mod_AmbWind == 1 ) then
+   
+      FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT1"//trim(PathSep)//"Amb.t0.vtk"
+      Un = -1 ! Set to force closing of file on return
+      call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, errStat2, errMsg2 ) 
+         call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
+         if (errStat >= AbortErrLev) return 
+   else
+      
+      ! Using InflowWind, so data has been passed in via the InitInp data structure
+      origin(1) = InitInp%InputFileData%X0_high(1)
+      origin(2) = InitInp%InputFileData%Y0_high(1)
+      origin(3) = InitInp%InputFileData%Z0_high(1)
+      dims(1)   = InitInp%InputFileData%nX_high
+      dims(2)   = InitInp%InputFileData%nY_high
+      dims(3)   = InitInp%InputFileData%nZ_high
+      gridSpacing(1) = InitInp%InputFileData%dX_high(1)
+      gridSpacing(2) = InitInp%InputFileData%dY_high(1)
+      gridSpacing(3) = InitInp%InputFileData%dZ_high(1)
+      p%dt_high = InitInp%InputFileData%dt_high
+      
+   end if
+   
+   ! --- Checks for grid spacing
+   call checkHighResSpacing(iWT=1); if(Failed()) return
+
+   p%nX_high          = dims(1)
+   p%nY_high          = dims(2)
+   p%nZ_high          = dims(3)
+   NumGrid_high       = p%nX_high*p%nY_high*p%nZ_high
+   p%X0_high(1)       = origin(1)
+   p%Y0_high(1)       = origin(2)
+   p%Z0_high(1)       = origin(3)
+   p%dX_high(1)       = gridSpacing(1)
+   p%dY_high(1)       = gridSpacing(2)
+   p%dZ_high(1)       = gridSpacing(3)
+   
+   InitOut%X0_high(1) = origin(1)
+   InitOut%Y0_high(1) = origin(2)
+   InitOut%Z0_high(1) = origin(3)  
+   InitOut%dX_high(1) = gridSpacing(1)
+   InitOut%dY_high(1) = gridSpacing(2)
+   InitOut%dZ_high(1) = gridSpacing(3)
+      
+   if ( p%Mod_AmbWind == 1 ) then
+         ! Just using this to make sure dims are >=2 points in each direction
+      call HiResWindCheck(0, 1, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(1), p%dY_high(1), p%dZ_high(1), p%X0_high(1), p%Y0_high(1), p%Z0_high(1), dims, gridSpacing, origin, RoutineName, errMsg2, errStat2)
+         call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
+         if (errStat >= AbortErrLev) return 
+   end if
+   
+   call AllocAry( p%Grid_high, 3, NumGrid_high, p%NumTurbines, 'Grid_high', errStat2, errMsg2); if(Failed()) return
+      
+   ! Set coordinates of points in a flat array (Grid_low) 
+   call flatCartGridCoordinates(origin, dims, gridSpacing, p%Grid_high(:,:,1))
+ 
+   !---------------------------------------------------------------------------
+   ! Parse the remaining turbine's 1st timestep, high res wind input files to 
+   !    gather the grid information and set data associated with those turbines
+   !---------------------------------------------------------------------------
+   do nt = 2, p%NumTurbines 
+      
+      if ( p%Mod_AmbWind == 1 ) then
+         FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t0.vtk"
+         Un = -1 ! Set to force closing of file on return
+         call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat2, ErrMsg2 ) 
+            call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
+            if (ErrStat >= AbortErrLev) return 
+      else
+         ! Using InflowWind, so data has been passed in via the InitInp data structure
+         origin(1) = InitInp%InputFileData%X0_high(nt)
+         origin(2) = InitInp%InputFileData%Y0_high(nt)
+         origin(3) = InitInp%InputFileData%Z0_high(nt)
+         dims(1)   = InitInp%InputFileData%nX_high
+         dims(2)   = InitInp%InputFileData%nY_high
+         dims(3)   = InitInp%InputFileData%nZ_high
+         gridSpacing(1) = InitInp%InputFileData%dX_high(nt)
+         gridSpacing(2) = InitInp%InputFileData%dY_high(nt)
+         gridSpacing(3) = InitInp%InputFileData%dZ_high(nt)
+
       end if
       
-   nXYZ_low = 0
-   do nz_low=0, p%nZ_low-1 
-      do ny_low=0, p%nY_low-1
-         do nx_low=0, p%nX_low-1
-            nXYZ_low = nXYZ_low + 1
-            p%Grid_low(1,nXYZ_low) = origin(1) + nx_low*gridSpacing(1)
-            p%Grid_low(2,nXYZ_low) = origin(2) + ny_low*gridSpacing(2)
-            p%Grid_low(3,nXYZ_low) = origin(3) + nz_low*gridSpacing(3)            
-         end do
-      end do
+      ! --- Checks for grid spacing
+      call checkHighResSpacing(iWT=nt); if(Failed()) return
+
+
+      !p%nX_high          = dims(1)
+      !p%nY_high          = dims(2)
+      !p%nZ_high          = dims(3)
+      !NumGrid_high       = p%nX_high*p%nY_high*p%nZ_high
+      p%X0_high(nt) = origin(1)
+      p%Y0_high(nt) = origin(2)
+      p%Z0_high(nt) = origin(3)
+      p%dX_high(nt) = gridSpacing(1)
+      p%dY_high(nt) = gridSpacing(2)
+      p%dZ_high(nt) = gridSpacing(3)
+
+      InitOut%X0_high(nt) = origin(1)
+      InitOut%Y0_high(nt) = origin(2)
+      InitOut%Z0_high(nt) = origin(3)
+      InitOut%dX_high(nt) = gridSpacing(1)
+      InitOut%dY_high(nt) = gridSpacing(2)
+      InitOut%dZ_high(nt) = gridSpacing(3)
+      
+      if ( p%Mod_AmbWind == 1 ) then
+            ! Using this to make sure dims are >=2 points in each direction, and number of grid points in each direction matches turbine 1
+         call HiResWindCheck(0, nt, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(nt), p%dY_high(nt), p%dZ_high(nt), p%X0_high(nt), p%Y0_high(nt), p%Z0_high(nt), dims, gridSpacing, origin, RoutineName, errMsg2, errStat2)
+            call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
+            if (ErrStat >= AbortErrLev) return 
+      end if
+      
+      ! Set coordinates of points in a flat array (Grid_low) 
+      call flatCartGridCoordinates(origin, dims, gridSpacing, p%Grid_high(:,:,nt))
+   
    end do
    
+   InitOut%nx_high = p%nx_high
+   InitOut%ny_high = p%ny_high
+   InitOut%nz_high = p%nz_high
+   
+
+   ! --- Check low res for all time steps and turbines
    if ( (InitInp%InputFileData%ChkWndFiles) .and. (p%Mod_AmbWind == 1) ) then
       do n=1,p%NumDT-1  ! We have already checked the first low res time step
          
@@ -331,161 +475,8 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
          
       end do
    end if
-
  
-   
-   allocate( InitOut%X0_high(p%NumTurbines), InitOut%Y0_high(p%NumTurbines), InitOut%Z0_high(p%NumTurbines), stat=errStat2)   
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for InitOut origin arrays.', errStat, errMsg, RoutineName )
-   allocate( InitOut%dX_high(p%NumTurbines), InitOut%dY_high(p%NumTurbines), InitOut%dZ_high(p%NumTurbines), stat=errStat2)   
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for InitOut spatial increment arrays.', errStat, errMsg, RoutineName )
-   allocate( p%X0_high(p%NumTurbines), p%Y0_high(p%NumTurbines), p%Z0_high(p%NumTurbines), stat=errStat2)   
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p origin arrays.', errStat, errMsg, RoutineName )
-   allocate( p%dX_high(p%NumTurbines), p%dY_high(p%NumTurbines), p%dZ_high(p%NumTurbines), stat=errStat2)   
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p spatial increment arrays.', errStat, errMsg, RoutineName )
-   if (ErrStat >= AbortErrLev) return
-   
-   if ( p%Mod_AmbWind == 1 ) then
-
-      !---------------------------------------------------------------------------
-      ! Parse turbine 1, 1st timestep, high res wind input file to gather the grid 
-      !    information and set data associated with turbine 1
-      !---------------------------------------------------------------------------
-   
-      FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT1"//trim(PathSep)//"Amb.t0.vtk"
-      Un = -1 ! Set to force closing of file on return
-      call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, errStat2, errMsg2 ) 
-         call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
-         if (errStat >= AbortErrLev) return 
-   else
-      
-      ! Using InflowWind, so data has been passed in via the InitInp data structure
-      origin(1) = InitInp%InputFileData%X0_high(1)
-      origin(2) = InitInp%InputFileData%Y0_high(1)
-      origin(3) = InitInp%InputFileData%Z0_high(1)
-      dims(1)   = InitInp%InputFileData%nX_high
-      dims(2)   = InitInp%InputFileData%nY_high
-      dims(3)   = InitInp%InputFileData%nZ_high
-      gridSpacing(1) = InitInp%InputFileData%dX_high(1)
-      gridSpacing(2) = InitInp%InputFileData%dY_high(1)
-      gridSpacing(3) = InitInp%InputFileData%dZ_high(1)
-      p%dt_high = InitInp%InputFileData%dt_high
-      
-   end if
-   
-   if ( (gridSpacing(1) <= 0.0_ReKi) .or. (gridSpacing(2) <= 0.0_ReKi) .or. (gridSpacing(3) <= 0.0_ReKi) ) &
-      call SetErrStat ( ErrID_Fatal, 'The high resolution spatial resolution for Turbine 1 must be greater than zero in each spatial direction. ', errStat, errMsg, RoutineName )
-      if (errStat >= AbortErrLev ) return
-
-   p%nX_high          = dims(1)
-   p%nY_high          = dims(2)
-   p%nZ_high          = dims(3)
-   p%X0_high(1)       = origin(1)
-   p%Y0_high(1)       = origin(2)
-   p%Z0_high(1)       = origin(3)
-   p%dX_high(1)       = gridSpacing(1)
-   p%dY_high(1)       = gridSpacing(2)
-   p%dZ_high(1)       = gridSpacing(3)
-   NumGrid_high       = p%nX_high*p%nY_high*p%nZ_high
-   
-   InitOut%X0_high(1) = origin(1)
-   InitOut%Y0_high(1) = origin(2)
-   InitOut%Z0_high(1) = origin(3)  
-   InitOut%dX_high(1) = gridSpacing(1)
-   InitOut%dY_high(1) = gridSpacing(2)
-   InitOut%dZ_high(1) = gridSpacing(3)
-      
-   if ( p%Mod_AmbWind == 1 ) then
-         ! Just using this to make sure dims are >=2 points in each direction
-      call HiResWindCheck(0, 1, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(1), p%dY_high(1), p%dZ_high(1), p%X0_high(1), p%Y0_high(1), p%Z0_high(1), dims, gridSpacing, origin, RoutineName, errMsg2, errStat2)
-         call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
-         if (errStat >= AbortErrLev) return 
-   end if
-   
-   allocate( p%Grid_high(3,NumGrid_high,p%NumTurbines ),stat=errStat2)
-      if (errStat2 /= 0) then
-         call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for Grid_high.', errStat, errMsg, RoutineName )
-         return
-      end if
-      
-   nXYZ_high = 0
-   do nz_high=0, p%nZ_high-1 
-      do ny_high=0, p%nY_high-1
-         do nx_high=0, p%nX_high-1
-            nXYZ_high = nXYZ_high + 1
-            p%Grid_high(1,nXYZ_high,1) = InitOut%X0_high(1) + nx_high*InitOut%dX_high(1)
-            p%Grid_high(2,nXYZ_high,1) = InitOut%Y0_high(1) + ny_high*InitOut%dY_high(1)
-            p%Grid_high(3,nXYZ_high,1) = InitOut%Z0_high(1) + nz_high*InitOut%dZ_high(1)            
-         end do
-      end do
-   end do
- 
-   !---------------------------------------------------------------------------
-   ! Parse the remaining turbine's 1st timestep, high res wind input files to 
-   !    gather the grid information and set data associated with those turbines
-   !---------------------------------------------------------------------------
-
-   do nt = 2, p%NumTurbines 
-      
-      if ( p%Mod_AmbWind == 1 ) then
-         FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t0.vtk"
-         Un = -1 ! Set to force closing of file on return
-         call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat2, ErrMsg2 ) 
-            call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
-            if (ErrStat >= AbortErrLev) return 
-      else
-         ! Using InflowWind, so data has been passed in via the InitInp data structure
-         origin(1) = InitInp%InputFileData%X0_high(nt)
-         origin(2) = InitInp%InputFileData%Y0_high(nt)
-         origin(3) = InitInp%InputFileData%Z0_high(nt)
-         gridSpacing(1) = InitInp%InputFileData%dX_high(nt)
-         gridSpacing(2) = InitInp%InputFileData%dY_high(nt)
-         gridSpacing(3) = InitInp%InputFileData%dZ_high(nt)
-
-      end if
-      
-      if ( (gridSpacing(1) <= 0.0_ReKi) .or. (gridSpacing(2) <= 0.0_ReKi) .or. (gridSpacing(3) <= 0.0_ReKi) ) &
-         call SetErrStat ( ErrID_Fatal, 'The high resolution spatial resolution for Turbine '//trim(num2lstr(nt))//' must be greater than zero in each spatial direction. ', errStat, errMsg, RoutineName )
-
-      InitOut%X0_high(nt) = origin(1)
-      InitOut%Y0_high(nt) = origin(2)
-      InitOut%Z0_high(nt) = origin(3)
-      
-      InitOut%dX_high(nt) = gridSpacing(1)
-      InitOut%dY_high(nt) = gridSpacing(2)
-      InitOut%dZ_high(nt) = gridSpacing(3)
-      p%X0_high(nt) = origin(1)
-      p%Y0_high(nt) = origin(2)
-      p%Z0_high(nt) = origin(3)
-      p%dX_high(nt) = gridSpacing(1)
-      p%dY_high(nt) = gridSpacing(2)
-      p%dZ_high(nt) = gridSpacing(3)
-      
-      if ( p%Mod_AmbWind == 1 ) then
-            ! Using this to make sure dims are >=2 points in each direction, and number of grid points in each direction matches turbine 1
-         call HiResWindCheck(0, nt, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(nt), p%dY_high(nt), p%dZ_high(nt), p%X0_high(nt), p%Y0_high(nt), p%Z0_high(nt), dims, gridSpacing, origin, RoutineName, errMsg2, errStat2)
-            call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
-            if (ErrStat >= AbortErrLev) return 
-      end if
-      
-      nXYZ_high = 0
-      do nz_high=0, p%nZ_high-1 
-         do ny_high=0, p%nY_high-1
-            do nx_high=0, p%nX_high-1
-               nXYZ_high = nXYZ_high + 1
-               p%Grid_high(1,nXYZ_high,nt) = InitOut%X0_high(nt) + nx_high*InitOut%dX_high(nt)
-               p%Grid_high(2,nXYZ_high,nt) = InitOut%Y0_high(nt) + ny_high*InitOut%dY_high(nt)
-               p%Grid_high(3,nXYZ_high,nt) = InitOut%Z0_high(nt) + nz_high*InitOut%dZ_high(nt)            
-            end do
-         end do
-      end do
-   
-   end do
-   
-   InitOut%nx_high = p%nx_high
-   InitOut%ny_high = p%ny_high
-   InitOut%nz_high = p%nz_high
-   
-   
+   ! --- Check all high res for all time steps and turbines
    if ( (InitInp%InputFileData%ChkWndFiles) .and. (p%Mod_AmbWind == 1) ) then
       do nt=1,p%NumTurbines
          do n=0,p%NumDT-1  ! We have already checked the first high-res files associated with n=0, but need to check the remaining, so for simplicity of code we will repeat the check on the first file
@@ -513,9 +504,39 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
          end do     
       end do      
    end if
-   
-! End simulated read of low and high res ambient wind files   
-!==============================================================================
+
+contains
+
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+
+   subroutine checkHighResSpacing(iWT)
+      integer(IntKi) :: iWT
+      real(ReKi)                :: gridRatio             ! Temporary real for checking WAT resolution
+      integer(IntKi)            :: k
+      character(ErrMsgLen)      :: TmpMsg                ! Temporary Error message text for WAT resolution checks
+      real(ReKi),     parameter :: fstretch = 2.0_ReKi   ! stretching factor for checking WAT resolution
+
+      if ( (gridSpacing(1) <= 0.0_ReKi) .or. (gridSpacing(2) <= 0.0_ReKi) .or. (gridSpacing(3) <= 0.0_ReKi) ) then
+         errStat2 = ErrID_Fatal
+         errMsg2 = 'The high resolution spatial resolution for Turbine '//trim(num2lstr(iWT))//' must be greater than zero in each spatial direction. '
+         return
+      endif
+
+      if (p%WAT_Enabled) then
+         TmpMsg='Ratio of high res domain resolution to wake added turblence resolution should be between '//trim(Num2LStr(1.0_ReKi/fstretch))//' and '//trim(Num2LStr(fstretch))//', but is '
+         do k=2,3
+            gridRatio = gridSpacing(k)/gridSpacingWAT(k)
+            if (gridRatio < 1.0_ReKi/fstretch .or. gridRatio > fstretch)  then
+               errStat2 = ErrID_Fatal
+               errMsg2  = trim(TmpMsg)//' '//trim(Num2LStr(gridSpacing(k)))//' / '//trim(Num2LStr(gridSpacingWAT(k)))// ' = '//trim(Num2LStr(gridRatio))//' for turbine '//trim(Num2LStr(iWT))//' in X.'
+               return
+            endif
+         enddo
+      endif
+     end subroutine checkHighResSpacing
    
 end subroutine AWAE_IO_InitGridInfo
 

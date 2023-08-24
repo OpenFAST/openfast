@@ -815,8 +815,9 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! Validate the initialization inputs
    call ValidateInitInputData( InitInp%InputFileData, ErrStat2, ErrMsg2 ); if(Failed()) return;
 
-   !------------------
-   ! set the rest of the parameters
+   ! --------------------------------------------------------------------------------
+   ! --- Initialize parameters
+   ! --------------------------------------------------------------------------------
    p%Mod_AmbWind      = InitInp%InputFileData%Mod_AmbWind
    p%NumPlanes        = InitInp%InputFileData%NumPlanes
    p%NumRadii         = InitInp%InputFileData%NumRadii
@@ -834,8 +835,10 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%C_Meander        = InitInp%InputFileData%C_Meander
    p%Mod_Projection   = InitInp%InputFileData%Mod_Projection
    ! Wake Added Turbulence (WAT) Parameters
-   !p%WAT             = InitInp%InputFileData%WAT  
-   !p%WAT_Basename    = InitInp%InputFileData%WAT_Basename
+   p%WAT_Enabled = InitInp%WAT_Enabled
+   if (p%WAT_Enabled) then
+      if (associated(InitInp%WAT_FlowField)) p%WAT_FlowField => InitInp%WAT_FlowField
+   endif
 
    select case ( p%Mod_Meander )
    case (MeanderMod_Uniform)
@@ -877,6 +880,8 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate( p%WT_Position(3,p%NumTurbines),stat=errStat2);  if (Failed0('Could not allocate memory for p%WT_Position.')) return;
    p%WT_Position = InitInp%InputFileData%WT_Position
 
+
+
       ! Obtain the precursor grid information by parsing the necessary input files
       ! This will establish certain parameters as well as all of the initialization outputs
       ! Sets:
@@ -885,6 +890,11 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! InitOutput: X0_high, Y0_high, Z0_high, dX_high, dY_high, dZ_high, nX_high, nY_high, nZ_high
    call AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat2, errMsg2); if(Failed()) return;
 
+   ! --------------------------------------------------------------------------------
+   ! --- Initialize states 
+   ! --------------------------------------------------------------------------------
+   ! initialize tracer for WAT box location
+   xd%WAT_B_Box(1:3) = 0.0_ReKi
    if ( p%Mod_AmbWind > 1 ) then
       ! Using InflowWind, so initialize that module now
       IfW_InitInp%Linearize         = .false.
@@ -1002,8 +1012,9 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    if (errStat >= AbortErrLev) return
 
 
-   !----------------
-   ! initialize inputs
+   ! --------------------------------------------------------------------------------
+   ! --- Initialize inputs 
+   ! --------------------------------------------------------------------------------
    allocate ( u%xhat_plane(     3,                                                 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%xhat_plane.')) return;
    allocate ( u%p_plane   (     3,                                                 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%p_plane.'   )) return;
    allocate ( u%Vx_wake   (-p%NumRadii+1:p%NumRadii-1, -p%NumRadii+1:p%NumRadii-1, 0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 );  if (Failed0('u%Vx_wake.'   )) return;
@@ -1041,6 +1052,13 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    y%Vx_wind_disk  = 0.0_Reki
    y%TI_amb        = 0.0_Reki
 
+   ! --------------------------------------------------------------------------------
+   ! --- Initialize misc 
+   ! --------------------------------------------------------------------------------
+   ! Initialize misc vars : Note these are not the correct initializations because
+   ! that would require valid input data, which we do not have here.  Instead we will check for
+   ! an firstPass flag on the miscVars and if it is false we will properly initialize these state
+   ! in CalcOutput or UpdateStates, as necessary.
    if ( p%NOutDisWindXY > 0 ) then
       ALLOCATE ( m%OutVizXYPlane(3,p%nX_low, p%nY_low,1) , STAT=ErrStat2 );  if (Failed0('the Fast.Farm OutVizXYPlane arrays.')) return;
    end if
@@ -1051,12 +1069,6 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ALLOCATE ( m%OutVizXZPlane(3,p%nX_low, p%nZ_low,1) , STAT=ErrStat2 );  if (Failed0('the Fast.Farm OutVizXZPlane arrays.')) return;
    end if
 
-   !----------------
-   ! Initialize misc vars : Note these are not the correct initializations because
-   ! that would require valid input data, which we do not have here.  Instead we will check for
-   ! an firstPass flag on the miscVars and if it is false we will properly initialize these state
-   ! in CalcOutput or UpdateStates, as necessary.
-   !
    ! miscvars to avoid the allocation per timestep
    allocate ( m%Vamb_low(       3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 ), STAT=errStat2 );  if (Failed0('m%Vamb_low.'     )) return;
    allocate ( m%Vamb_lowpol(    3, 0:p%n_rp_max*8 ),                             STAT=errStat2 );  if (Failed0('m%Vamb_lowpol.'  )) return;
@@ -1075,18 +1087,9 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate ( m%rhat_e(     3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 );   if (Failed0('m%rhat_e.'      )) return;
    allocate ( m%pvec_cs(    3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 );   if (Failed0('m%pvec_cs.'     )) return;
    allocate ( m%pvec_ce(    3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 );   if (Failed0('m%pvec_ce.'     )) return;
-
-   !----------------------
-   ! Wake added turbulence
-   p%WAT_Enabled = InitInp%WAT_Enabled
-   ! initialize tracer for WAT box location
-   xd%WAT_B_Box(1:3) = 0.0_ReKi
-   ! store array of disk average velocities for all turbines
+   ! WAT - store array of disk average velocities for all turbines
    call AllocAry(m%V_amb_low_disk,3,p%NumTurbines,'m%V_amb_low_disk', ErrStat2, ErrMsg2); if(Failed()) return;
    m%V_amb_low_disk=0.0_ReKi ! IMPORTANT ALLOCATION. This misc var is not set before a low res calcoutput
-   if (p%WAT_Enabled) then
-      if (associated(InitInp%WAT_FlowField)) p%WAT_FlowField => InitInp%WAT_FlowField
-   endif
 
    ! Read-in the ambient wind data for the initial calculate output
    call AWAE_UpdateStates( 0.0_DbKi, -1, u, p, x, xd, z, OtherState, m, errStat2, errMsg2 ); if(Failed()) return;

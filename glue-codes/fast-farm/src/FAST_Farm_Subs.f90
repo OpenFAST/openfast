@@ -353,10 +353,6 @@ SUBROUTINE WAT_init( p, WAT_IfW, AWAE_InitInput, ErrStat, ErrMsg )
    character(1024)                          :: sDummy
    character(6)                             :: FileEnding(3)
    integer(IntKi)                           :: i,j,k,n
-   real(ReKi)                               :: vmean, vstd
-   real(ReKi),     parameter                :: fstretch = 2.0_ReKi   ! stretching factor for checking WAT resolution
-   real(ReKi)                               :: TmpRe3(3)             ! Temporary real for checking WAT resolution
-   CHARACTER(ErrMsgLen)                     :: TmpMsg                ! Temporary Error message text for WAT resolution checks
    integer(IntKi)                           :: ErrStat2
    character(ErrMsgLen)                     :: ErrMsg2
    character(*), parameter                  :: RoutineName = 'WAT_init'
@@ -391,6 +387,8 @@ SUBROUTINE WAT_init( p, WAT_IfW, AWAE_InitInput, ErrStat, ErrMsg )
       call SetErrStat(ErrID_Fatal, "Values of WAT_DxDyDz should be strictly positive", ErrStat, ErrMsg, RoutineName)
       return
    endif
+   ! NOTE: We don't check for the dimensions of of the grid here compared to high res because we don't know it for VTKs
+   !       See AWAE_IO_InitGridInfo  
 
    HAWC_InitInput%nx = p%WAT_NxNyNz(1)
    HAWC_InitInput%ny = p%WAT_NxNyNz(2)
@@ -398,24 +396,6 @@ SUBROUTINE WAT_init( p, WAT_IfW, AWAE_InitInput, ErrStat, ErrMsg )
    HAWC_InitInput%dx = p%WAT_DxDyDz(1)
    HAWC_InitInput%dy = p%WAT_DxDyDz(2)
    HAWC_InitInput%dz = p%WAT_DxDyDz(3)
-
-   ! check spatial resolution against turbine high res domains -- this would be checked in the ValidateData routine, except we don't have resolution for Mod_WAT_PreDef at that point
-   TmpMsg='Ratio of high res domain resolution to wake added turblence resolution should be between '//trim(Num2LStr(1.0_ReKi/fstretch))//' and '//trim(Num2LStr(fstretch))//', but is '
-   do i=1,p%NumTurbines
-      TmpRe3(1) = real(AWAE_InitInput%InputFileData%dX_high(i) / p%WAT_DxDyDz(1), ReKi)
-      TmpRe3(2) = real(AWAE_InitInput%InputFileData%dY_high(i) / p%WAT_DxDyDz(2), ReKi)
-      TmpRe3(3) = real(AWAE_InitInput%InputFileData%dZ_high(i) / p%WAT_DxDyDz(3), ReKi)
-      if (TmpRe3(1) < 1.0_ReKi/fstretch .or. TmpRe3(1) > fstretch)   &
-            call SetErrStat(ErrID_Fatal,trim(TmpMsg)//' '//trim(Num2LStr(AWAE_InitInput%InputFileData%dX_high(i)))//' / '//trim(Num2LStr(p%WAT_DxDyDz(1)))// &
-                                       ' = '//trim(Num2LStr(TmpRe3(1)))//' for turbine '//trim(Num2LStr(i))//' in X.',ErrStat,ErrMsg,RoutineName)
-      if (TmpRe3(2) < 1.0_ReKi/fstretch .or. TmpRe3(2) > fstretch)   &
-            call SetErrStat(ErrID_Fatal,trim(TmpMsg)//' '//trim(Num2LStr(AWAE_InitInput%InputFileData%dY_high(i)))//' / '//trim(Num2LStr(p%WAT_DxDyDz(2)))// &
-                                       ' = '//trim(Num2LStr(TmpRe3(2)))//' for turbine '//trim(Num2LStr(i))//' in Y.',ErrStat,ErrMsg,RoutineName)
-      if (TmpRe3(3) < 1.0_ReKi/fstretch .or. TmpRe3(3) > fstretch)   &
-            call SetErrStat(ErrID_Fatal,trim(TmpMsg)//' '//trim(Num2LStr(AWAE_InitInput%InputFileData%dZ_high(i)))//' / '//trim(Num2LStr(p%WAT_DxDyDz(3)))// &
-                                       ' = '//trim(Num2LStr(TmpRe3(3)))//' for turbine '//trim(Num2LStr(i))//' in Z.',ErrStat,ErrMsg,RoutineName)
-   enddo
-
    HAWC_InitInput%G3D%RefHt            = 0.5_ReKi * p%WAT_NxNyNz(3)*p%WAT_DxDyDz(3)          ! reference height; the height (in meters) of the vertical center of the grid (m)
    HAWC_InitInput%G3D%URef             = 1.0_ReKi    ! Set to 1.0 so that dX = DTime (this affects data storage)
    HAWC_InitInput%G3D%WindProfileType  = 0           ! Wind profile type (0=constant;1=logarithmic,2=power law)
