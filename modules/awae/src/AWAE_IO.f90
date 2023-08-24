@@ -38,45 +38,39 @@ MODULE AWAE_IO
    
    contains
 
-subroutine HiResWindCheck(n, nt, nX, nY, nZ, dX, dY, dZ, X0, Y0, Z0, dims, gridSpacing, origin, callingRoutine, errMsg, errStat)
+subroutine HiResWindCheck(n, nt, dims1, gridSpacing1, origin1, dims2, gridSpacing2, origin2, callingRoutine, errMsg, errStat)
    integer(IntKi),             intent(in   ) :: n               !< high-resolution time step number (0-based)
    integer(IntKi),             intent(in   ) :: nt              !< turbine number
-   integer(IntKi),             intent(in   ) :: nX              !< number of grid points in the X-direction for turbine 1 at high-res time step 0 
-   integer(IntKi),             intent(in   ) :: nY              !< number of grid points in the Y-direction for turbine 1 at high-res time step 0 
-   integer(IntKi),             intent(in   ) :: nZ              !< number of grid points in the Z-direction for turbine 1 at high-res time step 0 
-   real(ReKi),                 intent(in   ) :: dX              !< space between grid points in the X-direction for turbine 1 at high-res time step 0 
-   real(ReKi),                 intent(in   ) :: dY              !< space between grid points in the Y-direction for turbine 1 at high-res time step 0 
-   real(ReKi),                 intent(in   ) :: dZ              !< space between grid points in the Z-direction for turbine 1 at high-res time step 0 
-   real(ReKi),                 intent(in   ) :: X0              !< starting X-location of the grid for turbine 1 at high-res time step 0 (m)
-   real(ReKi),                 intent(in   ) :: Y0              !< starting Y-location of the grid for turbine 1 at high-res time step 0 (m)
-   real(ReKi),                 intent(in   ) :: Z0              !< starting Z-location of the grid for turbine 1 at high-res time step 0 (m)
-   integer(IntKi),             intent(in   ) :: dims(3)         !< dimensions of the grid for turbine nt at high-res time step n (m)
-   real(ReKi),                 intent(in   ) :: gridSpacing(3)  !< spacing between grid points for turbine nt at high-res time step n (m)
-   real(ReKi),                 intent(in   ) :: origin(3)       !< starting coordinates of the grid for turbine nt at high-res time step n (m)
+   integer(IntKi),             intent(in   ) :: dims1(3)        !< dimensions of the grid for turbine nt at high-res time step 0 (m)
+   real(ReKi),                 intent(in   ) :: gridSpacing1(3) !< spacing between grid points for turbine nt at high-res time step 0 (m)
+   real(ReKi),                 intent(in   ) :: origin1(3)      !< starting coordinates of the grid for turbine nt at high-res time step 0 (m)
+   integer(IntKi),             intent(in   ) :: dims2(3)       !< dimensions of the grid for turbine nt at high-res time step n (m)
+   real(ReKi),                 intent(in   ) :: gridSpacing2(3)!< spacing between grid points for turbine nt at high-res time step n (m)
+   real(ReKi),                 intent(in   ) :: origin2(3)     !< starting coordinates of the grid for turbine nt at high-res time step n (m)
    character(*),               intent(in   ) :: callingRoutine  !< string containing the name of the calling routine.
    integer(IntKi),             intent(  out) :: errStat         !< Error status of the operation
    character(*),               intent(  out) :: errMsg          !< Error message if errStat /= ErrID_None
 
       ! grid must have two points in each direction
-   if ( (dims(1) < 2) .or. (dims(2) < 2) .or. (dims(3) < 2) ) then
+   if ( (dims1(1) < 2) .or. (dims1(2) < 2) .or. (dims1(3) < 2) ) then
       call SetErrStat ( ErrID_Fatal, 'The high resolution grid dimensions must contain a minimum of 2 nodes in each spatial direction. Turbine #'//trim(num2lstr(nt))//', time step '//trim(num2lstr(n)), errStat, errMsg, callingRoutine )
       return
    end if
    
       ! All turbines and all time steps must have the same grid dimensions due to array allocation assumptions
-   if ( ( dims(1) .ne. nX ) .or. ( dims(2) .ne. nY ) .or. ( dims(3) .ne. nZ ) ) then
+   if ( any(dims1 .ne. dims2) ) then
       call SetErrStat ( ErrID_Fatal, 'The high resolution grid dimensions for turbine #'//trim(num2lstr(nt))//' and high-res time step '//trim(num2lstr(n))//' do not match turbine #1 and time step 0.', errStat, errMsg, callingRoutine )
       return
    end if
    
       ! spacing must be consistent for a given turbine across all time steps
-   if ( ( gridSpacing(1) .ne. dX ) .or. ( gridSpacing(2) .ne. dY ) .or. ( gridSpacing(3) .ne. dZ ) ) then
+   if ( any(gridSpacing1 .ne. gridSpacing2) ) then
       call SetErrStat ( ErrID_Fatal, 'The high resolution grid spacing for turbine #'//trim(num2lstr(nt))//' and high-res time step '//trim(num2lstr(n))//' do not match time step 0.', errStat, errMsg, callingRoutine )
       return
    end if
    
       ! verify origin of any given turbine is not changing with time step.          
-   if ( ( origin(1) .ne. X0 ) .or. ( origin(2) .ne. Y0 ) .or. ( origin(3) .ne. Z0 ) ) then
+   if ( any(origin1 .ne. origin2) ) then
       call SetErrStat ( ErrID_Fatal, 'The high resolution grid origin for turbine #'//trim(num2lstr(nt))//' and high-res time step '//trim(num2lstr(n))//' do not match time step 0.', errStat, errMsg, callingRoutine )
       return
    end if
@@ -328,68 +322,11 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
       gridSpacingWAT =  (/ 0.0_ReKi, 1/p%WAT_FlowField%Grid3D%InvDY, 1/p%WAT_FlowField%Grid3D%InvDZ /)
    endif
 
-   
-   if ( p%Mod_AmbWind == 1 ) then
-   
-      FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT1"//trim(PathSep)//"Amb.t0.vtk"
-      Un = -1 ! Set to force closing of file on return
-      call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, errStat2, errMsg2 ) 
-         call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
-         if (errStat >= AbortErrLev) return 
-   else
-      
-      ! Using InflowWind, so data has been passed in via the InitInp data structure
-      origin(1) = InitInp%InputFileData%X0_high(1)
-      origin(2) = InitInp%InputFileData%Y0_high(1)
-      origin(3) = InitInp%InputFileData%Z0_high(1)
-      dims(1)   = InitInp%InputFileData%nX_high
-      dims(2)   = InitInp%InputFileData%nY_high
-      dims(3)   = InitInp%InputFileData%nZ_high
-      gridSpacing(1) = InitInp%InputFileData%dX_high(1)
-      gridSpacing(2) = InitInp%InputFileData%dY_high(1)
-      gridSpacing(3) = InitInp%InputFileData%dZ_high(1)
-      p%dt_high = InitInp%InputFileData%dt_high
-      
-   end if
-   
-   ! --- Checks for grid spacing
-   call checkHighResSpacing(iWT=1); if(Failed()) return
-
-   p%nX_high          = dims(1)
-   p%nY_high          = dims(2)
-   p%nZ_high          = dims(3)
-   NumGrid_high       = p%nX_high*p%nY_high*p%nZ_high
-   p%X0_high(1)       = origin(1)
-   p%Y0_high(1)       = origin(2)
-   p%Z0_high(1)       = origin(3)
-   p%dX_high(1)       = gridSpacing(1)
-   p%dY_high(1)       = gridSpacing(2)
-   p%dZ_high(1)       = gridSpacing(3)
-   
-   InitOut%X0_high(1) = origin(1)
-   InitOut%Y0_high(1) = origin(2)
-   InitOut%Z0_high(1) = origin(3)  
-   InitOut%dX_high(1) = gridSpacing(1)
-   InitOut%dY_high(1) = gridSpacing(2)
-   InitOut%dZ_high(1) = gridSpacing(3)
-      
-   if ( p%Mod_AmbWind == 1 ) then
-         ! Just using this to make sure dims are >=2 points in each direction
-      call HiResWindCheck(0, 1, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(1), p%dY_high(1), p%dZ_high(1), p%X0_high(1), p%Y0_high(1), p%Z0_high(1), dims, gridSpacing, origin, RoutineName, errMsg2, errStat2)
-         call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
-         if (errStat >= AbortErrLev) return 
-   end if
-   
-   call AllocAry( p%Grid_high, 3, NumGrid_high, p%NumTurbines, 'Grid_high', errStat2, errMsg2); if(Failed()) return
-      
-   ! Set coordinates of points in a flat array (Grid_low) 
-   call flatCartGridCoordinates(origin, dims, gridSpacing, p%Grid_high(:,:,1))
- 
    !---------------------------------------------------------------------------
-   ! Parse the remaining turbine's 1st timestep, high res wind input files to 
+   ! Parse the turbine's 1st timestep, high res wind input files to 
    !    gather the grid information and set data associated with those turbines
    !---------------------------------------------------------------------------
-   do nt = 2, p%NumTurbines 
+   do nt = 1, p%NumTurbines 
       
       if ( p%Mod_AmbWind == 1 ) then
          FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t0.vtk"
@@ -408,17 +345,22 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
          gridSpacing(1) = InitInp%InputFileData%dX_high(nt)
          gridSpacing(2) = InitInp%InputFileData%dY_high(nt)
          gridSpacing(3) = InitInp%InputFileData%dZ_high(nt)
+         if (nt==1) then
+            p%dt_high = InitInp%InputFileData%dt_high
+         endif
 
       end if
       
       ! --- Checks for grid spacing
       call checkHighResSpacing(iWT=nt); if(Failed()) return
 
-
-      !p%nX_high          = dims(1)
-      !p%nY_high          = dims(2)
-      !p%nZ_high          = dims(3)
-      !NumGrid_high       = p%nX_high*p%nY_high*p%nZ_high
+      if (nt==1) then
+         p%nX_high          = dims(1)
+         p%nY_high          = dims(2)
+         p%nZ_high          = dims(3)
+         NumGrid_high       = p%nX_high*p%nY_high*p%nZ_high
+         call AllocAry( p%Grid_high, 3, NumGrid_high, p%NumTurbines, 'Grid_high', errStat2, errMsg2); if(Failed()) return
+      endif
       p%X0_high(nt) = origin(1)
       p%Y0_high(nt) = origin(2)
       p%Z0_high(nt) = origin(3)
@@ -426,28 +368,27 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
       p%dY_high(nt) = gridSpacing(2)
       p%dZ_high(nt) = gridSpacing(3)
 
-      InitOut%X0_high(nt) = origin(1)
-      InitOut%Y0_high(nt) = origin(2)
-      InitOut%Z0_high(nt) = origin(3)
-      InitOut%dX_high(nt) = gridSpacing(1)
-      InitOut%dY_high(nt) = gridSpacing(2)
-      InitOut%dZ_high(nt) = gridSpacing(3)
       
       if ( p%Mod_AmbWind == 1 ) then
-            ! Using this to make sure dims are >=2 points in each direction, and number of grid points in each direction matches turbine 1
-         call HiResWindCheck(0, nt, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(nt), p%dY_high(nt), p%dZ_high(nt), p%X0_high(nt), p%Y0_high(nt), p%Z0_high(nt), dims, gridSpacing, origin, RoutineName, errMsg2, errStat2)
-            call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
-            if (ErrStat >= AbortErrLev) return 
+         ! Using this to make sure dims are >=2 points in each direction, and number of grid points in each direction matches turbine 1. Other tests will be true.
+         call HiResWindCheck(0, nt, (/p%nX_high, p%nY_high, p%nZ_high/), (/p%dX_high(nt), p%dY_high(nt), p%dZ_high(nt)/), (/p%X0_high(nt), p%Y0_high(nt), p%Z0_high(nt)/), dims, gridSpacing, origin, RoutineName, errMsg2, errStat2); if (Failed()) return
       end if
-      
+
       ! Set coordinates of points in a flat array (Grid_low) 
       call flatCartGridCoordinates(origin, dims, gridSpacing, p%Grid_high(:,:,nt))
    
    end do
    
-   InitOut%nx_high = p%nx_high
-   InitOut%ny_high = p%ny_high
-   InitOut%nz_high = p%nz_high
+   ! --- Transfer from parameters to InitOut
+   InitOut%X0_high(:) = p%X0_high(:)
+   InitOut%Y0_high(:) = p%Y0_high(:)
+   InitOut%Z0_high(:) = p%Z0_high(:)
+   InitOut%dX_high(:) = p%dX_high(:)
+   InitOut%dY_high(:) = p%dY_high(:)
+   InitOut%dZ_high(:) = p%dZ_high(:)
+   InitOut%nx_high    = p%nx_high
+   InitOut%ny_high    = p%ny_high
+   InitOut%nz_high    = p%nz_high
    
 
    ! --- Check low res for all time steps and turbines
@@ -496,9 +437,7 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
                   call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
                   if (ErrStat >= AbortErrLev) return 
                
-               call HiResWindCheck(nhigh, nt, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(nt), p%dY_high(nt), p%dZ_high(nt), p%X0_high(nt), p%Y0_high(nt), p%Z0_high(nt), dims, gridSpacing, origin, RoutineName, errMsg2, errStat2)
-                  call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName )
-                  if (errStat >= AbortErrLev ) return
+               call HiResWindCheck(nhigh, nt, (/p%nX_high, p%nY_high, p%nZ_high/), (/p%dX_high(nt), p%dY_high(nt), p%dZ_high(nt)/), (/p%X0_high(nt), p%Y0_high(nt), p%Z0_high(nt)/), dims, gridSpacing, origin, RoutineName, errMsg2, errStat2); if (Failed()) return
             
             end do
          end do     
