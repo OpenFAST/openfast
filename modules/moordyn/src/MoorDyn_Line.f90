@@ -263,7 +263,7 @@ CONTAINS
       CHARACTER(ErrMsgLen)                   :: ErrMsg2       ! Error message if ErrStat2 /= ErrID_None
       REAL(DbKi)                             :: WetWeight
       REAL(DbKi)                             :: SeabedCD = 0.0_DbKi
-      REAL(DbKi)                             :: TenTol = 0.0001_DbKi
+      REAL(DbKi)                             :: Tol = 0.0001_DbKi
       REAL(DbKi), ALLOCATABLE                :: LSNodes(:)
       REAL(DbKi), ALLOCATABLE                :: LNodesX(:)
       REAL(DbKi), ALLOCATABLE                :: LNodesZ(:)
@@ -335,41 +335,59 @@ CONTAINS
           !       are stored in a module and thus their values are saved from CALL to
           !       CALL).
 
+      IF (XF == 0.0) THEN
 
-             CALL Catenary ( XF           , ZF          , Line%UnstrLen, LineProp%EA  , &
-                             WetWeight    , SeabedCD,    TenTol,     (N+1)     , &
-                             LSNodes, LNodesX, LNodesZ , ErrStat2, ErrMsg2)
+         DO J = 0,N ! Loop through all nodes per line where the line position and tension can be output
+            Line%r(1,J) = Line%r(1,0) + (Line%r(1,N) - Line%r(1,0))*REAL(J, DbKi)/REAL(N, DbKi)
+            Line%r(2,J) = Line%r(2,0) + (Line%r(2,N) - Line%r(2,0))*REAL(J, DbKi)/REAL(N, DbKi)
+            Line%r(3,J) = Line%r(3,0) + (Line%r(3,N) - Line%r(3,0))*REAL(J, DbKi)/REAL(N, DbKi)
+         END DO
 
-      IF (ErrStat2 == ErrID_None) THEN ! if it worked, use it
-          ! Transform the positions of each node on the current line from the local
-          !   coordinate system of the current line to the inertial frame coordinate
-          !   system:
+         CALL WrScr(" Vertical initial profile for Line "//trim(Num2LStr(Line%IdNum))//".")
 
-          DO J = 0,N ! Loop through all nodes per line where the line position and tension can be output
-             Line%r(1,J) = Line%r(1,0) + LNodesX(J+1)*COSPhi
-             Line%r(2,J) = Line%r(2,0) + LNodesX(J+1)*SINPhi
-             Line%r(3,J) = Line%r(3,0) + LNodesZ(J+1)
-          ENDDO              ! J - All nodes per line where the line position and tension can be output
+      ELSE ! If the line is not vertical, solve for the catenary profile
 
+         CALL Catenary ( XF           , ZF          , Line%UnstrLen, LineProp%EA  , &
+                           WetWeight    , SeabedCD,    Tol,     (N+1)     , &
+                           LSNodes, LNodesX, LNodesZ , ErrStat2, ErrMsg2)
 
-      ELSE ! if there is a problem with the catenary approach, just stretch the nodes linearly between fairlead and anchor
+         IF ((abs(LNodesZ(N+1) - ZF) > Tol) .AND. (ErrStat2 == ErrID_None)) THEN 
+          ! Check fairlead node z position is same as z distance between fairlead and anchor
+            ErrStat2 = ErrID_Warn
+            ErrMsg2 = ' Wrong catenary initial profile for Line '//trim(Num2LStr(Line%IdNum))//'. Fairlead and anchor vertical seperation has changed.'
+         ENDIF
 
-          !CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Line_Initialize')
-          call WrScr(" Catenary solve of Line "//trim(Num2LStr(Line%IdNum))//" unsuccessful. Initializing as linear.")
+         IF (ErrStat2 == ErrID_None) THEN ! if it worked, use it
+            ! Transform the positions of each node on the current line from the local
+            !   coordinate system of the current line to the inertial frame coordinate
+            !   system:
 
-!          print *, "Node positions: "
+            DO J = 0,N ! Loop through all nodes per line where the line position and tension can be output
+               Line%r(1,J) = Line%r(1,0) + LNodesX(J+1)*COSPhi
+               Line%r(2,J) = Line%r(2,0) + LNodesX(J+1)*SINPhi
+               Line%r(3,J) = Line%r(3,0) + LNodesZ(J+1)
+            ENDDO              ! J - All nodes per line where the line position and tension can be output
 
-          DO J = 0,N ! Loop through all nodes per line where the line position and tension can be output
-             Line%r(1,J) = Line%r(1,0) + (Line%r(1,N) - Line%r(1,0))*REAL(J, DbKi)/REAL(N, DbKi)
-             Line%r(2,J) = Line%r(2,0) + (Line%r(2,N) - Line%r(2,0))*REAL(J, DbKi)/REAL(N, DbKi)
-             Line%r(3,J) = Line%r(3,0) + (Line%r(3,N) - Line%r(3,0))*REAL(J, DbKi)/REAL(N, DbKi)
-             
-!             print*, Line%r(:,J)
-          ENDDO
-          
-!          print*,"FYI line end A and B node coords are"
-!          print*, Line%r(:,0)
-!          print*, Line%r(:,N)
+         ELSE ! if there is a problem with the catenary approach, just stretch the nodes linearly between fairlead and anchor
+
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Line_Initialize')
+            CALL WrScr(" Catenary solve of Line "//trim(Num2LStr(Line%IdNum))//" unsuccessful. Initializing as linear.")
+
+            ! print *, "Node positions: "
+
+            DO J = 0,N ! Loop through all nodes per line where the line position and tension can be output
+               Line%r(1,J) = Line%r(1,0) + (Line%r(1,N) - Line%r(1,0))*REAL(J, DbKi)/REAL(N, DbKi)
+               Line%r(2,J) = Line%r(2,0) + (Line%r(2,N) - Line%r(2,0))*REAL(J, DbKi)/REAL(N, DbKi)
+               Line%r(3,J) = Line%r(3,0) + (Line%r(3,N) - Line%r(3,0))*REAL(J, DbKi)/REAL(N, DbKi)
+               
+             !          print*, Line%r(:,J)
+             ENDDO
+            
+             !          print*,"FYI line end A and B node coords are"
+             !          print*, Line%r(:,0)
+             !          print*, Line%r(:,N)
+         ENDIF
+
       ENDIF
 
 
@@ -500,6 +518,7 @@ CONTAINS
          INTEGER(4)                   :: MaxIter                                         ! Maximum number of Newton-Raphson iterations possible before giving up (-)
 
          LOGICAL                      :: FirstIter                                       ! Flag to determine whether or not this is the first time through the Newton-Raphson interation (flag)
+         LOGICAL                      :: reverseFlag                                     ! Flag for when the anchor is above the fairlead
 
 
          ErrStat = ERrId_None
@@ -518,9 +537,15 @@ CONTAINS
          W      = REAL( W_In     , DbKi )
          XF     = REAL( XF_In    , DbKi )
          ZF     = REAL( ZF_In    , DbKi )
+      IF ( ZF <  0.0 )  THEN   ! .TRUE. if the fairlead has passed below its anchor
+         ZF = -ZF
+         reverseFlag = .TRUE.
+         CALL WrScr(' Warning from catenary: Anchor point is above the fairlead point for Line '//trim(Num2LStr(Line%IdNum))//', consider changing.')
+      ELSE 
+         reverseFlag = .FALSE.
+      ENDIF
 
 
-         
       !  HF and VF cannot be initialized to zero when a  portion of the line rests on the seabed and the anchor tension is nonzero
          
       ! Generate the initial guess values for the horizontal and vertical tensions
@@ -531,9 +556,9 @@ CONTAINS
          XF2     = XF*XF
          ZF2     = ZF*ZF
 
-         IF     ( XF           == 0.0_DbKi    )  THEN ! .TRUE. if the current mooring line is exactly vertical
-            Lamda0 = 1.0D+06
-         ELSEIF ( L <= SQRT( XF2 + ZF2 ) )  THEN ! .TRUE. if the current mooring line is taut
+         ! IF     ( XF           == 0.0_DbKi    )  THEN ! .TRUE. if the current mooring line is exactly vertical
+         !    Lamda0 = 1.0D+06
+         IF ( L <= SQRT( XF2 + ZF2 ) )  THEN ! .TRUE. if the current mooring line is taut
             Lamda0 = 0.2_DbKi
          ELSE                                    ! The current mooring line must be slack and not vertical
             Lamda0 = SQRT( 3.0_DbKi*( ( L**2 - ZF2 )/XF2 - 1.0_DbKi ) )
@@ -549,33 +574,27 @@ CONTAINS
          IF (    Tol <= EPSILON(TOL) )  THEN   ! .TRUE. when the convergence tolerance is specified incorrectly
            ErrStat = ErrID_Warn
            ErrMsg = ' Convergence tolerance must be greater than zero in routine Catenary().'
-           return
+           RETURN
          ELSEIF ( XF <  0.0_DbKi )  THEN   ! .TRUE. only when the local coordinate system is not computed correctly
            ErrStat = ErrID_Warn
            ErrMsg =  ' The horizontal distance between an anchor and its'// &
                          ' fairlead must not be less than zero in routine Catenary().'
-           return
-
-         ELSEIF ( ZF <  0.0_DbKi )  THEN   ! .TRUE. if the fairlead has passed below its anchor
-           ErrStat = ErrID_Warn
-           ErrMsg =  " A line's fairlead is defined as below its anchor. You may need to swap a line's fairlead and anchor end nodes."
-           return
-
+           RETURN
          ELSEIF ( L  <= 0.0_DbKi )  THEN   ! .TRUE. when the unstretched line length is specified incorrectly
            ErrStat = ErrID_Warn
            ErrMsg =  ' Unstretched length of line must be greater than zero in routine Catenary().'
-           return
+           RETURN
 
          ELSEIF ( EA <= 0.0_DbKi )  THEN   ! .TRUE. when the unstretched line length is specified incorrectly
            ErrStat = ErrID_Warn
            ErrMsg =  ' Extensional stiffness of line must be greater than zero in routine Catenary().'
-           return
+           RETURN
 
          ELSEIF ( W  == 0.0_DbKi )  THEN   ! .TRUE. when the weight of the line in fluid is zero so that catenary solution is ill-conditioned
            ErrStat = ErrID_Warn
            ErrMsg = ' The weight of the line in fluid must not be zero. '// &
                          ' Routine Catenary() cannot solve quasi-static mooring line solution.'
-           return
+           RETURN
 
 
          ELSEIF ( W  >  0.0_DbKi )  THEN   ! .TRUE. when the line will sink in fluid
@@ -584,9 +603,9 @@ CONTAINS
 
             IF ( ( L  >=  LMax   ) .AND. ( CB >= 0.0_DbKi ) )  then  ! .TRUE. if the line is as long or longer than its maximum possible value with seabed interaction
                ErrStat = ErrID_Warn
-               !ErrMsg =  ' Unstretched mooring line length too large. '// &
-               !             ' Routine Catenary() cannot solve quasi-static mooring line solution.'
-               return
+               ErrMsg =  ' Unstretched mooring line length too large. '// &
+                           ' Routine Catenary() cannot solve quasi-static mooring line solution.'
+               RETURN
             END IF
 
          ENDIF
@@ -717,13 +736,13 @@ CONTAINS
             
             DET = dXFdHF*dZFdVF - dXFdVF*dZFdHF
             
-            if ( EqualRealNos( DET, 0.0_DbKi ) ) then               
+            IF ( EqualRealNos( DET, 0.0_DbKi ) ) THEN               
 !bjj: there is a serious problem with the debugger here when DET = 0
                 ErrStat = ErrID_Warn
                 ErrMsg =  ' Iteration not convergent (DET is 0). '// &
                           ' Routine Catenary() cannot solve quasi-static mooring line solution.'
-                return
-            endif
+                RETURN
+            ENDIF
 
                
             dHF = ( -dZFdVF*EXF + dXFdVF*EZF )/DET    ! This is the incremental change in horizontal tension at the fairlead as predicted by Newton-Raphson
@@ -937,6 +956,19 @@ CONTAINS
          ENDIF
 
 
+         IF (reverseFlag) THEN
+		      ! Follows process of MoorPy catenary.py
+            s = s( size(s):1:-1 )
+            X = X( size(X):1:-1 )
+            Z = Z( size(Z):1:-1 )
+            Te = Te( size(Te):1:-1 )
+            DO I = 1,N
+               s(I) = L - s(I)
+               X(I) = XF - X(I)
+               Z(I) = Z(I) - ZF
+            ENDDO
+            ZF = -ZF ! Return to orginal value
+         ENDIF
 
             ! The Newton-Raphson iteration is only accurate in double precision, so
             !   convert the output arguments back into the default precision for real
