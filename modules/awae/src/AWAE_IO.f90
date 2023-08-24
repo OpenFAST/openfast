@@ -345,9 +345,6 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
          gridSpacing(1) = InitInp%InputFileData%dX_high(nt)
          gridSpacing(2) = InitInp%InputFileData%dY_high(nt)
          gridSpacing(3) = InitInp%InputFileData%dZ_high(nt)
-         if (nt==1) then
-            p%dt_high = InitInp%InputFileData%dt_high
-         endif
 
       end if
       

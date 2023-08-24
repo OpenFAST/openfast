@@ -819,12 +819,13 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! --- Initialize parameters
    ! --------------------------------------------------------------------------------
    p%Mod_AmbWind      = InitInp%InputFileData%Mod_AmbWind
+   p%dt_high          = InitInp%InputFileData%dt_high
+   p%dt_low           = InitInp%InputFileData%dt_low
    p%NumPlanes        = InitInp%InputFileData%NumPlanes
    p%NumRadii         = InitInp%InputFileData%NumRadii
    p%NumTurbines      = InitInp%InputFileData%NumTurbines
    p%WindFilePath     = InitInp%InputFileData%WindFilePath ! TODO: Make sure this wasn't specified with the trailing folder separator. Note: on Windows a trailing / or \ causes no problem! GJH
    p%n_high_low       = InitInp%n_high_low
-   p%dt_low           = InitInp%InputFileData%dt_low
    p%NumDT            = InitInp%NumDT
    p%NOutDisWindXY    = InitInp%InputFileData%NOutDisWindXY
    p%NOutDisWindYZ    = InitInp%InputFileData%NOutDisWindYZ

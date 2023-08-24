@@ -653,12 +653,13 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
 
    !---------------------- AMBIENT WIND: INFLOWWIND MODULE ---------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Ambient Wind: InflowWind Module', ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
-
-   ! timesteps
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT_low, "DT_Low", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
-   if ( AWAE_InitInp%Mod_AmbWind > 1 ) p%DT_low = AWAE_InitInp%DT_low
-
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT_high, "DT_High", "Time step for high-resolution wind data input files (s) [>0.0]", ErrStat2, ErrMsg2, UnEc); if (Failed()) return
+
+   ! Ensure consistency between AWAE_Inputs and FAST.Farm time steps
+   if ( AWAE_InitInp%Mod_AmbWind == 1) AWAE_InitInp%DT_high = p%DT_high
+   if ( AWAE_InitInp%Mod_AmbWind == 1) AWAE_InitInp%DT_low  = p%DT_low
+   if ( AWAE_InitInp%Mod_AmbWind > 1 ) p%DT_low = AWAE_InitInp%DT_low
    if ( AWAE_InitInp%Mod_AmbWind > 1 ) p%DT_high = AWAE_InitInp%DT_high
 
    ! low res
