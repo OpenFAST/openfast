@@ -655,7 +655,8 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
 
                ! Calculate the translational displacement of each GLL node in the FAST coordinate system,
                ! referenced against the DCM of the blade root at T=0.
-            y%BldMotion%TranslationDisp(1:3,temp_id2) = MATMUL(p%GlbRot,x%q(1:3,temp_id))
+            y%BldMotion%TranslationDisp(1:3,temp_id2) = p%GlbPos + matmul(p%GlbRot, p%uuN0(1:3, j, i) + x%q(1:3, temp_id)) - &
+                                                        y%BldMotion%Position(1:3,1) - matmul(y%BldMotion%RefOrientation(:,:,1), p%uuN0(1:3, j, i))
 
 !bjj: note differences here compared to BDrot_to_FASTdcm
 !adp: in BDrot_to_FASTdcm we are assuming that x%q(4:6,:) is zero because there is no rotatinoal displacement yet
@@ -689,7 +690,9 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
 
                ! Calculate the translational displacement of each quadrature node in the FAST coordinate system,
                ! referenced against the DCM of the blade root at T=0.
-            y%BldMotion%TranslationDisp(1:3,temp_id2) = MATMUL(p%GlbRot,m%qp%uuu(1:3,j,i) )
+            ! y%BldMotion%TranslationDisp(1:3,temp_id2) = MATMUL(p%GlbRot,m%qp%uuu(1:3,j,i) )
+            y%BldMotion%TranslationDisp(1:3,temp_id2) = p%GlbPos + matmul(p%GlbRot, p%uu0(1:3, j, i) + m%qp%uuu(1:3,j,i)) - &
+                                                        y%BldMotion%Position(1:3,1) - matmul(y%BldMotion%RefOrientation(:,:,1), p%uu0(1:3, j, i))
 
 
 !bjj: note differences here compared to BDrot_to_FASTdcm
@@ -701,7 +704,7 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
 
             CALL BD_CrvMatrixR(cc0,temp_R)  ! returns temp_R (the transpose of the DCM orientation matrix)
                ! Store the DCM for the j'th node of the i'th element (in FAST coordinate system)
-            y%BldMotion%Orientation(1:3,1:3,temp_id2) = TRANSPOSE(temp_R)
+            y%BldMotion%Orientation(1:3,1:3,temp_id2) = matmul(p%GlbRot, TRANSPOSE(temp_R))
 
                ! Calculate the translation velocity and store in FAST coordinate system
                ! referenced against the DCM of the blade root at T=0.
@@ -749,6 +752,10 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
        ! now set the accelerations:
        
        ! The first node on the mesh is just the root location:   
+       y%BldMotion%TranslationDisp(:,1)   = u%RootMotion%TranslationDisp(:,1)
+       y%BldMotion%Orientation(:,:,1)     = u%RootMotion%Orientation(:,:,1)
+       y%BldMotion%TranslationVel(:,1)    = u%RootMotion%TranslationVel(:,1)
+       y%BldMotion%RotationVel(:,1)       = u%RootMotion%RotationVel(:,1)
        y%BldMotion%TranslationAcc(:,1)    = u%RootMotion%TranslationAcc(:,1)
        y%BldMotion%RotationAcc(:,1)       = u%RootMotion%RotationAcc(:,1)
          
