@@ -8,7 +8,6 @@ module UA_Dvr_Subs
    
    implicit none
 
-   
    type UA_Dvr_InitInput
       logical         :: Echo            
       real(ReKi)      :: SpdSound        
@@ -30,30 +29,32 @@ module UA_Dvr_Subs
       character(1024) :: InputsFile      
       logical         :: SumPrint         
       logical         :: WrAFITables
+      ! Section
+      real(ReKi)      :: MM(3,3)
+      real(ReKi)      :: CC(3,3)
+      real(ReKi)      :: KK(3,3)
+      logical         :: activeDOFs(3)
+      real(ReKi)      :: initPos(3)
+      real(ReKi)      :: initVel(3)
    end type UA_Dvr_InitInput
    
    contains
    
    subroutine ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
-
       character(1024),               intent( in    )   :: inputFile
       type(UA_Dvr_InitInput),       intent(   out )   :: InitInp
       integer,                       intent(   out )   :: ErrStat              ! returns a non-zero value when an error occurs  
       character(*),                  intent(   out )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-   
          ! Local variables  
       integer                                          :: UnIn                 ! Unit number for the input file
       integer                                          :: UnEchoLocal          ! The local unit number for this module's echo file
       character(1024)                                  :: EchoFile             ! Name of HydroDyn echo file  
       character(1024)                                  :: FileName             ! Name of HydroDyn input file  
-
       integer(IntKi)                                   :: errStat2    ! Status of error message
       character(1024)                                  :: errMsg2     ! Error message if ErrStat /= ErrID_None
       character(*), parameter                          :: RoutineName = 'ReadDriverInputFile'
-
       character(1024) :: PriPath                         ! the path to the primary input file
       CALL GetPath( inputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
-
    
          ! Initialize the echo file unit to -1 which is the default to prevent echoing, we will alter this based on user input
       UnEchoLocal = -1

@@ -19,10 +19,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-
-
-   
-   
 program UnsteadyAero_Driver
 
    use NWTC_Library
@@ -31,19 +27,17 @@ program UnsteadyAero_Driver
    use UnsteadyAero_Types
    use UnsteadyAero
    use UA_Dvr_Subs
-   USE VersionInfo
+   use VersionInfo
+
+   use LinDyn
 
    implicit none
-
-   
-   
-   
-   
     ! Variables
    integer(IntKi), parameter                     :: NumInp = 2           ! Number of inputs sent to UA_UpdateStates (must be at least 2)
    
    real(DbKi)  :: dt, t, uTimes(NumInp)
    integer     :: i, j, n, iu
+   ! --- UA
    type(UA_InitInputType)                        :: InitInData           ! Input data for initialization
    type(UA_InitOutputType)                       :: InitOutData          ! Output data from initialization
    type(UA_ContinuousStateType)                  :: x                    ! Continuous states
@@ -53,6 +47,19 @@ program UnsteadyAero_Driver
    type(UA_ParameterType)                        :: p                    ! Parameters
    type(UA_InputType)                            :: u(NumInp)            ! System inputs
    type(UA_OutputType)                           :: y                    ! System outputs
+   ! --- LinDyn
+   type(LD_InitInputType)                        :: LD_InitInData           ! Input data for initialization
+   type(LD_InitOutputType)                       :: LD_InitOutData          ! Output data from initialization
+   type(LD_ContinuousStateType)                  :: LD_x                    ! Continuous states
+   type(LD_DiscreteStateType)                    :: LD_xd                   ! Discrete states
+   type(LD_OtherStateType)                       :: LD_OtherState           ! Other/optimization states
+   type(LD_MiscVarType)                          :: LD_m                    ! Misc/optimization variables
+   type(LD_ParameterType)                        :: LD_p                    ! Parameters
+   type(LD_InputType)                            :: LD_u(NumInp)            ! System inputs
+   type(LD_OutputType)                           :: LD_y                    ! System outputs
+
+
+
    integer(IntKi)                                :: ErrStat              ! Status of error message
    character(ErrMsgLen)                          :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
@@ -160,14 +167,21 @@ program UnsteadyAero_Driver
    
    InitInData%WrSum = dvrInitInp%SumPrint ! write all the AFI data
 
+   if ( dvrInitInp%SimMod == 3 ) then
+
+      print*,'>>>> STopping'
    
-   if ( dvrInitInp%SimMod == 1 ) then
+
+      call NormStop()
+
+
+   elseif ( dvrInitInp%SimMod == 1 ) then
          ! Using the frequency and NCycles, determine how long the simulation needs to run
       simTime   = dvrInitInp%NCycles/dvrInitInp%Frequency
       nSimSteps = dvrInitInp%StepsPerCycle*dvrInitInp%NCycles  ! we could add 1 here to make this a complete cycle
       dt        = simTime / nSimSteps
       
-   else
+   else if ( dvrInitInp%SimMod == 2 ) then
          ! Read time-series data file with a 1 line header and then each row contains time-step data with 4, white-space-separated columns
          ! time,  Angle-of-attack, Vrel, omega 
       call ReadTimeSeriesData( dvrInitInp%InputsFile, nSimSteps, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg )

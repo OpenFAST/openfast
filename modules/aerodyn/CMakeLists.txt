@@ -88,7 +88,7 @@ add_executable(unsteadyaero_driver
   src/UnsteadyAero_Driver.f90
   src/UA_Dvr_Subs.f90
 )
-target_link_libraries(unsteadyaero_driver aerodyn_driver_subs)
+target_link_libraries(unsteadyaero_driver aerodyn_driver_subs lindynlib)
 
 # AeroDyn-InflowWind c-bindings interface library
 add_library(aerodyn_inflow_c_binding SHARED 

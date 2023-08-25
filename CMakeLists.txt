@@ -200,6 +200,7 @@ set(OPENFAST_MODULES
   icefloe
   wakedynamics
   awae
+  lindyn
   map
   turbsim
   supercontroller

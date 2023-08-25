@@ -1,0 +1,55 @@
+###################################################################################################################################
+# Registry for Linear Dynamics Module
+###################################################################################################################################
+include   Registry_NWTC_Library.txt
+
+#param     ElasticSection/ES      -                INTEGER           ES_Baseline      -        1   -   "UAMod = 1 [Baseline model (Original)]" -
+
+# ..... Initialization data .......................................................................................................
+# Initialization inputs
+typedef   LinDyn/LD                    InitInputType                 DbKi                     dt                              -             -         -        "time step" s
+typedef   ^                            ^                             ReKi                     MM                              {:}{:}        -         -        "Mass      matrix"    -
+typedef   ^                            ^                             ReKi                     CC                              {:}{:}        -         -        "Damping   matrix"    -
+typedef   ^                            ^                             ReKi                     KK                              {:}{:}        -         -        "Stiffness matrix"    -
+typedef   ^                            ^                             ReKi                     x0                              {:}           0         -        "Degrees of freedom initial conditions" -
+typedef   ^                            ^                             ReKi                     xd0                             {:}           0         -        "Velocities initial conditions" -
+typedef   ^                            ^                             IntKi                    activeDOFs                      {:}          .true.     -        "Degrees of freedom that are active"   -
+typedef   ^                            ^                             character(8)             prefix                          -             ""        -        "Prefix for degrees of freedom"        -
+
+# Initialization outputs
+typedef   ^                            InitOutputType                character(19)            WriteOutputHdr                  {:}           -         -        "The is the list of all output channel header strings (includes all sub-module channels)"    -
+typedef   ^                            ^                             character(19)            WriteOutputUnt                  {:}           -         -        "The is the list of all output channel unit strings (includes all sub-module channels)"    -
+
+# ..... States ....................................................................................................................
+# Continuous states
+typedef   ^                            ContinuousStateType           ReKi                     q                               {:}           -         -        "Continuous states q =(x,xdot)"        "-"
+
+# Discrete (non-differentiable) states:
+typedef   ^                            DiscreteStateType             Logical                  Dummy                           -             -        -         "" -
+
+# Constraint states:
+typedef   ^                            ConstraintStateType           Logical                  Dummy                           -             -         -        "" -
+
+# Other states:
+typedef   ^                            OtherStateType                Logical                  Dummy                           -             -         -        "" -
+
+# ..... Misc/Optimization variables.................................................................................................
+typedef   ^                            MiscVarType                   ReKi                     mMinvC                          {:}{:}        -         -        "-M^-1 C" -
+typedef   ^                            ^                             ReKi                     mMinvK                          {:}{:}        -         -        "-M^-1 K" -
+
+
+# ..... Parameters ................................................................................................................
+typedef   ^                            ParameterType                 DbKi                     dt                              -             -         -        "time step" s
+typedef   ^                            ^                             ReKi                     MM                              {:}{:}        -         -        "Mass      Matrix" -
+typedef   ^                            ^                             ReKi                     CC                              {:}{:}        -         -        "Damping   Matrix" -
+typedef   ^                            ^                             ReKi                     KK                              {:}{:}        -         -        "Stiffness Matrix" -
+typedef   ^                            ^                             IntKi                    activeDOFs                      {:}           -         -        "Degrees of freedom that are active" -
+
+# ..... Inputs ....................................................................................................................
+typedef   ^                            InputType                     ReKi                     Fext                            :             -         -        "External loads" 
+
+# ..... Outputs ...................................................................................................................                            
+typedef   ^                            OutputType                    ReKi                     qd                              {:}           -                  "Time derivative of continuous states" - 
+typedef   ^                            OutputType                    ReKi                     qdd                             {:}           -                  "Time derivative of continuous states" - 
+typedef   ^                            ^                             ReKi                     WriteOutput                     {:}           -         -        "outputs to be written to a file"  -
+
