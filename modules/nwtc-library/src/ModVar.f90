@@ -51,7 +51,7 @@ public :: MV_InitVarsVals, MV_LinkOutputInput, MV_VarIndex, MV_PackMesh, MV_Unpa
 public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff
 public :: MV_AddVar, MV_AddMeshVar, MV_AddModule, SetFlags
 public :: LoadFields, MotionFields, TransFields, AngularFields, MeshFields
-public :: wm_to_dcm, wm_compose, wm_from_dcm, wm_inv
+public :: wm_to_dcm, wm_compose, wm_from_dcm, wm_inv, wm_to_xyz, wm_from_xyz
 public :: MV_FieldString
 
 contains
@@ -438,14 +438,13 @@ subroutine MV_Perturb(Var, iLin, PerturbSign, BaseAry, PerturbAry, iPerturb)
 
    ! If variable field is orientation, perturbation is in WM parameters
    if (Var%Field == VF_Orientation) then
-      j = mod(iLin - 1, 3)                         ! component being modified (0, 1, 2)
-      i = iLin - j                                 ! index of start of WM parameters (3)
-      iLoc = Var%iLoc(i:i + 2)                     ! array index vector
-      WMp = 0.0_R8Ki                               ! Init WM perturbation to zero
-      ! WMp(j + 1) = 4.0_R8Ki*tan(Perturb/4.0_R8Ki)  ! WM perturbation around X,Y,Z axis
-      WMp(j + 1) = Perturb                       ! WM perturbation around X,Y,Z axis
-      WM = PerturbAry(iLoc)                        ! Current WM parameters value
-      PerturbAry(iLoc) = wm_compose(WM, WMp)       ! Compose value and perturbation
+      j = mod(iLin - 1, 3)                                ! component being modified (0, 1, 2)
+      i = iLin - j                                        ! index of start of WM parameters (3)
+      iLoc = Var%iLoc(i:i + 2)                            ! array index vector
+      WMp = 0.0_R8Ki                                      ! Init WM perturbation to zero
+      WMp(j + 1) = Perturb                                ! WM perturbation around X,Y,Z axis
+      WM = PerturbAry(iLoc)                               ! Current WM parameters value
+      PerturbAry(iLoc) = wm_compose(WM, wm_from_xyz(WMp)) ! Compose value and perturbation
    else
       PerturbAry(Var%iLoc(iLin)) = PerturbAry(Var%iLoc(iLin)) + Perturb
    end if
@@ -476,8 +475,7 @@ subroutine MV_ComputeDiff(VarAry, PosAry, NegAry, DiffAry)
             DeltaWM = wm_compose(wm_inv(NegAry(ind)), PosAry(ind))
 
             ! Calculate change in rotation in XYZ in radians
-            ! DiffAry(ind) = 4.0_R8Ki*atan(DeltaWM/4.0_R8Ki)
-            DiffAry(ind) = DeltaWM
+            DiffAry(ind) = wm_to_xyz(DeltaWM)   ! store delta as radians
          end do
 
       else
@@ -887,6 +885,31 @@ pure function wm_from_dcm(R) result(c)
    em = sm(0) + SIGN(2.0_R8Ki*SQRT(sm(i)), sm(0))
    em = 4.0_R8Ki/em                                        ! 1 / ( 4 t_{r0} c_{i} ), assuming 0 <= c_0 < 4 and c_{i} > 0
    c = em*sm(1:3)
+end function
+
+pure function wm_to_xyz(c) result(xyz)
+   real(R8Ki), intent(in) :: c(3)
+   real(R8Ki)             :: phi, n(3), xyz(3), m
+   m = sqrt(dot_product(c,c))
+   if (m == 0.0_R8Ki) then
+      xyz = 0.0_R8Ki
+      return
+   end if
+   n = c/m
+   phi = 4.0_R8Ki*atan(m/4.0_R8Ki)
+   xyz = phi*n
+end function
+
+pure function wm_from_xyz(xyz) result(c)
+   real(R8Ki), intent(in) :: xyz(3)
+   real(R8Ki)             :: phi, n(3), c(3)
+   phi = sqrt(dot_product(xyz,xyz))
+   if (phi == 0.0_R8Ki) then
+      c = 0.0_R8Ki
+      return
+   end if
+   n = xyz / phi
+   c = 4.0_R8Ki*tan(phi/4.0_R8Ki) * n
 end function
 
 ! pure function wm_from_dcm(R) result(c)

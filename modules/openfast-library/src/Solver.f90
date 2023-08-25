@@ -553,6 +553,8 @@ subroutine Solver_DefineMappings(Mappings, Mods, ErrStat, ErrMsg)
                  SrcMod => Mods(Mappings(iMap)%SrcModIdx), &
                  DstMod => Mods(Mappings(iMap)%DstModIdx))
 
+         ! TODO: Add logic to check if mesh exists, skip mapping if it doesn't exist
+
          ! If load mapping
          if (map%IsLoad) then
 
@@ -713,9 +715,7 @@ subroutine Solver_Step0(p, m, ModData, Turbine, ErrStat, ErrMsg)
    ! Transfer initial state from modules to solver
    call PackModuleStates(ModData(p%iModTC), STATE_CURR, Turbine, x=m%x)
 
-   ! Transfer initial state to next state q matrix (qn)
-   ! The qn matrix is being used because the solution step routine predicts
-   ! the the step starting state, q, from qn.
+   ! Transfer initial state to state q matrix
    call Solver_TransferXtoQ(p%ixqd, m%x, m%qn)
 
    ! Allocate acceleration array which will be used to check for convergence
@@ -791,19 +791,98 @@ subroutine Solver_Step0(p, m, ModData, Turbine, ErrStat, ErrMsg)
       call FAST_ResetRemapFlags(ModData(p%iModAll(i)), Turbine, ErrStat2, ErrMsg2); if (Failed()) return
    end do
 
-   !----------------------------------------------------------------------------
-   ! Calculate inititial Jacobian
-   !----------------------------------------------------------------------------
-
-   ! Calculate the solver Jacobian
-   call Solver_BuildJacobian(p, m, ModData, t_initial, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-
 contains
    function Failed()
       logical :: Failed
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Failed = ErrStat >= AbortErrLev
    end function
+end subroutine
+
+subroutine UpdateBeamDynGlobalReference(p, m, Mod, T, ErrStat, ErrMsg)
+   type(TC_ParameterType), intent(in)     :: p        !< Parameters
+   type(TC_MiscVarType), intent(inout)    :: m        !< Misc variables
+   type(ModDataType), intent(in)          :: Mod
+   type(FAST_TurbineType), intent(inout)  :: T        !< Turbine type
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
+
+   character(*), parameter    :: RoutineName = 'UpdateBeamDynGlobalReference'
+   integer(IntKi)             :: ErrStat2
+   character(ErrMsgLen)       :: ErrMsg2
+   real(R8Ki)                 :: GlbWM_old(3), GlbWM_new(3), GlbWM_diff(3)
+   real(R8Ki)                 :: GlbRot_old(3, 3), GlbRot_new(3, 3), GlbRot_diff(3, 3)
+   real(R8Ki)                 :: GlbPos_old(3), GlbPos_new(3), GlbPos_diff(3)
+   real(R8Ki)                 :: pos(3), rot(3), trans_vel(3), rot_vel(3), uuN0(3)
+   integer(IntKi)             :: i, j, temp_id, temp_id2
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! Save old global position, rotation, and WM
+   GlbPos_old = T%BD%p(Mod%Ins)%GlbPos
+   GlbRot_old = T%BD%p(Mod%Ins)%GlbRot
+   GlbWM_old = T%BD%p(Mod%Ins)%Glb_crv
+
+   ! Calculate new global position, rotation, and WM from root motion
+   GlbPos_new = T%BD%Input(1, Mod%Ins)%RootMotion%Position(:, 1) + &
+                T%BD%Input(1, Mod%Ins)%RootMotion%TranslationDisp(:, 1)
+   GlbRot_new = transpose(T%BD%Input(1, Mod%Ins)%RootMotion%Orientation(:, :, 1))
+   GlbWM_new = wm_from_dcm(GlbRot_new)
+
+   ! Update the module global values
+   T%BD%p(Mod%Ins)%GlbPos = GlbPos_new
+   T%BD%p(Mod%Ins)%GlbRot = GlbRot_new
+   T%BD%p(Mod%Ins)%Glb_crv = GlbWM_new
+
+   ! Calculate differences between old and new reference
+   GlbRot_diff = matmul(transpose(GlbRot_old), GlbRot_new)
+   GlbWM_diff = wm_compose(wm_inv(GlbWM_old), GlbWM_new)
+   GlbPos_diff = GlbPos_old - GlbPos_new
+
+   associate (x_BD => T%BD%x(Mod%Ins, STATE_PRED), p_BD => T%BD%p(Mod%Ins))
+
+      x_BD%q(:, 1) = 0.0_R8Ki
+      x_BD%dqdt(1:3, 1) = matmul(GlbRot_diff, T%BD%Input(1, Mod%Ins)%RootMotion%TranslationVel(:, 1))
+      x_BD%dqdt(4:6, 1) = matmul(GlbRot_diff, T%BD%Input(1, Mod%Ins)%RootMotion%RotationVel(:, 1))
+
+      do i = 1, p_BD%elem_total
+         do j = 1, p_BD%nodes_per_elem
+
+            temp_id = (i - 1)*(p_BD%nodes_per_elem - 1) + j ! The last node of the first element is used as the first node in the second element.
+            temp_id2 = (i - 1)*p_BD%nodes_per_elem + j      ! Index to a node within element i
+
+            if (temp_id == 1) cycle
+
+            x_BD%q(1:3, temp_id) = GlbPos_old + matmul(GlbRot_old, p_BD%uuN0(1:3, j, i) + x_BD%q(1:3, temp_id)) - &
+                                   GlbPos_new - matmul(GlbRot_new, p_BD%uuN0(1:3, j, i))
+
+            ! Get the absolute position of the node
+            ! x_BD%q(1:3, temp_id) = matmul(GlbRot_new, (matmul(transpose(GlbRot_old), p_BD%uuN0(1:3, j, i)) - &
+            !                                            matmul(transpose(GlbRot_new), p_BD%uuN0(1:3, j, i)))) + &
+            !                        matmul(transpose(GlbRot_diff), x_BD%q(1:3, temp_id))
+
+            ! Update the node orientation rotation of the node
+            x_BD%q(4:6, temp_id) = wm_compose(wm_inv(GlbWM_diff), x_BD%q(4:6, temp_id))
+
+            ! Update the translational velocity
+            x_BD%dqdt(1:3, temp_id) = matmul(transpose(GlbRot_diff), x_BD%dqdt(1:3, temp_id))
+
+            ! Update the rotational velocity
+            x_BD%dqdt(4:6, temp_id) = matmul(transpose(GlbRot_diff), x_BD%dqdt(4:6, temp_id))
+
+         end do
+      end do
+
+   end associate
+
+   ! T%BD%x(Mod%Ins, STATE_PRED)%q = 0
+   ! T%BD%x(Mod%Ins, STATE_PRED)%dqdt = 0
+
+   call BD_PackStateValues(T%BD%p(Mod%Ins), T%BD%x(Mod%Ins, STATE_PRED), T%BD%m(Mod%Ins)%Vals%x)
+   call XferLocToGbl1D(Mod%ixs, T%BD%m(Mod%Ins)%Vals%x, m%xn)
+   call Solver_TransferXtoQ(p%ixqd, m%xn, m%qn)
+
 end subroutine
 
 subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrMsg)
@@ -857,28 +936,34 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
    !----------------------------------------------------------------------------
    ! Prediction - guess solution state variables at end of time step
+   ! m%qn contains the states at the end of the last step.
+   ! m%q contains the prediction which is copied to m%qn at the start of the
+   ! correction loop.
    !----------------------------------------------------------------------------
 
-   ! Calculate displacements, velocities, and accelerations for next step
-   associate (q => m%qn(:, 1), qd => m%qn(:, 2), qdd => m%qn(:, 3), aa => m%qn(:, 4), &
-              nq => m%q(:, 1), nqd => m%q(:, 2), nqdd => m%q(:, 3), naa => m%q(:, 4))
-      nqdd = qdd*p%AccBlend                                                            ! Acceleration
-      naa = ((1.0_R8Ki - p%AlphaF)*nqdd + p%AlphaF*qdd - p%AlphaM*aa)/(1 - p%AlphaM)   ! Algorithmic acceleration
-      nqd = qd + p%DT*(1 - p%Gamma)*aa + p%DT*p%Gamma*naa                              ! Velocity
-      nq = q + p%DT*qd + p%DT**2*(0.5 - p%Beta)*aa + p%DT**2*p%Beta*naa                ! Displacment
-   end associate
+   ! Acceleration for next step
+   m%q(:, COL_A) = p%AccBlend*m%qn(:, COL_A)
 
-   ! Calculate difference in state matrix (q is the updated state matrix now)
-   m%dq = m%q - m%qn
+   ! Algorithm acceleration for next step
+   m%q(:, COL_AA) = ((1.0_R8Ki - p%AlphaF)*m%q(:, COL_A) + &
+                     p%AlphaF*m%qn(:, COL_A) - &
+                     p%AlphaM*m%qn(:, COL_AA))/(1 - p%AlphaM)
+
+   ! Calculate change in position and velocities
+   ! (position states include orientations which must be composed with deltas)
+   m%dq = 0.0_R8Ki
+   m%dq(:, COL_V) = p%DT*(1 - p%Gamma)*m%qn(:, COL_AA) + p%DT*p%Gamma*m%q(:, COL_AA)
+   m%dq(:, COL_D) = p%DT*m%qn(:, COL_V) + p%DT**2*(0.5 - p%Beta)*m%qn(:, COL_AA) + p%DT**2*p%Beta*m%q(:, COL_AA)
 
    ! Transfer delta state matrix to delta x array
+   m%dx = 0.0_R8Ki
    call Solver_TransferQtoX(p%ixqd, m%dq, m%dx)
 
    ! Add delta to x array to get new states (respect variable fields)
    ! required for orientation fields in states
    call AddDeltaToStates(Mods, p%iModTC, m%dx, m%x)
 
-   ! Update state matrix with values updated by adding deltas
+   ! Update state matrix with updated state values
    call Solver_TransferXtoQ(p%ixqd, m%x, m%q)
 
    ! Initialize delta arrays for iterations
@@ -935,8 +1020,6 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
       ! Loop through convergence iterations
       do iterConv = 0, p%MaxConvIter
 
-         write (m%DebugUnit, *) "iterConv = ", iterConv
-
          ! Decrement number of iterations before updating the Jacobian
          m%IterUntilUJac = m%IterUntilUJac - 1
 
@@ -956,21 +1039,22 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
          if (iterConv >= p%MaxConvIter) exit
 
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-eps  = ", pack(Turbine%BD%m(1)%qp%E1(1:3,:,1) - Turbine%BD%m(1)%qp%RR0(1:3,3,:,1), .true.)
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-eps  = ", pack(Turbine%BD%m(2)%qp%E1(1:3,:,1) - Turbine%BD%m(1)%qp%RR0(1:3,3,:,1), .true.)
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-kappa  = ", pack(Turbine%BD%m(1)%qp%kappa(1:3,:,1), .true.)
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-kappa  = ", pack(Turbine%BD%m(2)%qp%kappa(1:3,:,1), .true.)
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-Nrrr  = ", pack(Turbine%BD%m(1)%Nrrr(1:3,:,1), .true.)
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-Nrrr  = ", pack(Turbine%BD%m(2)%Nrrr(1:3,:,1), .true.)
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RR  = ", wm_compose(wm_inv(Turbine%BD%p(1)%Glb_crv), wm_from_dcm(Turbine%BD%Input(1,1)%RootMotion%Orientation(:,:,1)))
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RR  = ", wm_compose(wm_inv(Turbine%BD%p(2)%Glb_crv), wm_from_dcm(Turbine%BD%Input(1,2)%RootMotion%Orientation(:,:,1)))
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-Glb_crv  = ", Turbine%BD%p(1)%Glb_crv
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-Glb_crv  = ", Turbine%BD%p(2)%Glb_crv
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RRoot  = ", wm_from_dcm(Turbine%BD%Input(1,1)%RootMotion%Orientation(:,:,1))
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RRoot  = ", wm_from_dcm(Turbine%BD%Input(1,2)%RootMotion%Orientation(:,:,1))
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RRoot-dcm  = ", pack(Turbine%BD%Input(1,1)%RootMotion%Orientation(:,:,1), .true.)
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RRoot-dcm  = ", pack(Turbine%BD%Input(1,2)%RootMotion%Orientation(:,:,1), .true.)
+         write (m%DebugUnit, *) "iterConv = ", iterConv
 
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-eps  = ", pack(Turbine%BD%m(1)%qp%E1(1:3, :, 1) - Turbine%BD%m(1)%qp%RR0(1:3, 3, :, 1), .true.)
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-eps  = ", pack(Turbine%BD%m(2)%qp%E1(1:3,:,1) - Turbine%BD%m(1)%qp%RR0(1:3,3,:,1), .true.)
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-kappa  = ", pack(Turbine%BD%m(1)%qp%kappa(1:3, :, 1), .true.)
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-kappa  = ", pack(Turbine%BD%m(2)%qp%kappa(1:3,:,1), .true.)
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-Nrrr  = ", pack(Turbine%BD%m(1)%Nrrr(1:3, :, 1), .true.)
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-Nrrr  = ", pack(Turbine%BD%m(2)%Nrrr(1:3,:,1), .true.)
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-Glb_crv  = ", Turbine%BD%p(1)%Glb_crv
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-Glb_crv  = ", Turbine%BD%p(2)%Glb_crv
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RRoot  = ", wm_from_dcm(Turbine%BD%Input(1, 1)%RootMotion%Orientation(:, :, 1))
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RRoot  = ", wm_from_dcm(Turbine%BD%Input(1,2)%RootMotion%Orientation(:,:,1))
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RR  = ", wm_compose(wm_inv(Turbine%BD%p(1)%Glb_crv), wm_from_dcm(Turbine%BD%Input(1, 1)%RootMotion%Orientation(:, :, 1)))
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RR  = ", wm_compose(wm_inv(Turbine%BD%p(2)%Glb_crv), wm_from_dcm(Turbine%BD%Input(1,2)%RootMotion%Orientation(:,:,1)))
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RRoot-dcm  = ", pack(Turbine%BD%Input(1,1)%RootMotion%Orientation(:,:,1), .true.)
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RRoot-dcm  = ", pack(Turbine%BD%Input(1,2)%RootMotion%Orientation(:,:,1), .true.)
 
          !----------------------------------------------------------------------
          ! Update Jacobian
@@ -979,8 +1063,9 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! If number of iterations or steps until Jacobian is to be updated
          ! is zero or less, then rebuild the Jacobian. Note: Solver_BuildJacobian
          ! resets these counters.
-         if ((m%IterUntilUJac <= 0) .or. (m%StepsUntilUJac <= 0)) then
-            call Solver_BuildJacobian(p, m, Mods, t_global_next, &
+         if ((m%IterUntilUJac <= 0) .or. (m%StepsUntilUJac <= 0) .or. (n_t_global_next == 1)) then
+
+            call Solver_BuildJacobian(p, m, Mods, t_global_next, n_t_global_next*100 + iterConv, &
                                       Turbine, ErrStat2, ErrMsg2); if (Failed()) return
          end if
 
@@ -1099,8 +1184,16 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    end do
 
    !----------------------------------------------------------------------------
-   ! Update for next step
+   ! Update states for next step
    !----------------------------------------------------------------------------
+
+   ! Reset BeamDyn global reference and rescale BeamDyn states
+   ! Loop through tight coupling modules, if module is BeamDyn, update global ref
+   do i = 1, size(p%iModTC)
+      if (Mods(p%iModTC(i))%ID == Module_BD) then
+         call UpdateBeamDynGlobalReference(p, m, Mods(p%iModTC(i)), Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+      end if
+   end do
 
    ! Copy the final predicted states from step t_global_next to actual states for that step
    do i = 1, size(p%iModAll)
@@ -1138,7 +1231,7 @@ subroutine ComputeDiffU(Mods, ModOrder, PosAry, NegAry, DiffAry)
    real(R8Ki), intent(in)        :: NegAry(:)      ! Negative result array
    real(R8Ki), intent(inout)     :: DiffAry(:)     ! Array containing difference
    integer(IntKi)                :: i, j, k, ind(3)
-   real(R8Ki)                    :: DeltaWM(3)
+   real(R8Ki)                    :: DeltaWM(3), n(3), phi
 
    ! Loop through module index order
    do i = 1, size(ModOrder)
@@ -1163,6 +1256,9 @@ subroutine ComputeDiffU(Mods, ModOrder, PosAry, NegAry, DiffAry)
                   DeltaWM = wm_compose(wm_inv(NegAry(ind)), PosAry(ind))
 
                   ! Calculate change in rotation in XYZ in radians
+                  ! phi = TwoNorm(DeltaWM)
+                  ! n = DeltaWM/phi
+                  ! DiffAry(ind) = 4.0_R8Ki*atan(phi/4.0_R8Ki)*n
                   ! DiffAry(ind) = 4.0_R8Ki*atan(DeltaWM/4.0_R8Ki)
                   DiffAry(ind) = DeltaWM
                end do
@@ -1177,11 +1273,12 @@ subroutine ComputeDiffU(Mods, ModOrder, PosAry, NegAry, DiffAry)
    end do
 end subroutine
 
-subroutine Solver_BuildJacobian(p, m, ModData, this_time, Turbine, ErrStat, ErrMsg)
+subroutine Solver_BuildJacobian(p, m, Mods, this_time, iter, Turbine, ErrStat, ErrMsg)
    type(TC_ParameterType), intent(in)     :: p           !< Parameters
    type(TC_MiscVarType), intent(inOUT)    :: m           !< Misc variables
-   type(ModDataType), intent(in)          :: ModData(:)  !< Array of module data
+   type(ModDataType), intent(in)          :: Mods(:)     !< Array of module data
    real(DbKi), intent(in)                 :: this_time   !< Time
+   integer(IntKi), intent(in)             :: iter
    type(FAST_TurbineType), intent(inout)  :: Turbine     !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1214,18 +1311,18 @@ subroutine Solver_BuildJacobian(p, m, ModData, this_time, Turbine, ErrStat, ErrM
 
    ! Calculate dYdx, dXdx, dXdu for tight coupling modules
    do i = 1, size(p%iModTC)
-      call FAST_CalcJacobian(ModData(p%iModTC(i)), this_time, STATE_PRED, Turbine, ErrStat2, ErrMsg2, &
+      call FAST_CalcJacobian(Mods(p%iModTC(i)), this_time, STATE_PRED, Turbine, ErrStat2, ErrMsg2, &
                              dYdx=m%dYdx, dXdx=m%dXdx, dXdu=m%dXdu); if (Failed()) return
    end do
 
    ! Calculate dYdu Loop for Option 1 modules
    do i = 1, size(p%iModOpt1)
-      call FAST_CalcJacobian(ModData(p%iModOpt1(i)), this_time, STATE_PRED, Turbine, ErrStat2, ErrMsg2, &
+      call FAST_CalcJacobian(Mods(p%iModOpt1(i)), this_time, STATE_PRED, Turbine, ErrStat2, ErrMsg2, &
                              dYdu=m%dYdu); if (Failed()) return
    end do
 
    ! Calculate dUdu and dUdy for Option 1 meshes
-   call FAST_LinearizeMappings(ModData, p%iModOpt1, m%Mappings, Turbine, ErrStat2, ErrMsg2, &
+   call FAST_LinearizeMappings(Mods, p%iModOpt1, m%Mappings, Turbine, ErrStat2, ErrMsg2, &
                                dUdu=m%dUdu, dUdy=m%dUdy); if (Failed()) return
 
    !----------------------------------------------------------------------------
@@ -1293,13 +1390,13 @@ subroutine Solver_BuildJacobian(p, m, ModData, this_time, Turbine, ErrStat, ErrM
    !    ! call DumpMatrix(munit, "ED-dXdx.bin", Turbine%ED%m%Vals%dXdx, ErrStat2, ErrMsg2); if (Failed()) return
    !    ! call DumpMatrix(munit, "ED-dYdu.bin", Turbine%ED%m%Vals%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
    !    ! call DumpMatrix(munit, "ED-dYdx.bin", Turbine%ED%m%Vals%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
-   !    ! call DumpMatrix(munit, "BD-dXdu.bin", Turbine%BD%m(1)%Vals%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
-   !    ! call DumpMatrix(munit, "BD-dXdx.bin", Turbine%BD%m(1)%Vals%dXdx, ErrStat2, ErrMsg2); if (Failed()) return
-   !    ! call DumpMatrix(munit, "BD-dYdu.bin", Turbine%BD%m(1)%Vals%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
-   !    ! call DumpMatrix(munit, "BD-dYdx.bin", Turbine%BD%m(1)%Vals%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
-   !    call DumpMatrix(munit, "J.bin", m%Jac, ErrStat2, ErrMsg2); if (Failed()) return
    !    call DumpMatrix(munit, "G.bin", m%G, ErrStat2, ErrMsg2); if (Failed()) return
    ! end if
+   ! call DumpMatrix(munit, "jacs/BD-dXdu-"//trim(num2lstr(iter))//".bin", Turbine%BD%m(1)%Vals%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
+   ! call DumpMatrix(munit, "jacs/BD-dXdx-"//trim(num2lstr(iter))//".bin", Turbine%BD%m(1)%Vals%dXdx, ErrStat2, ErrMsg2); if (Failed()) return
+   ! call DumpMatrix(munit, "jacs/BD-dYdu-"//trim(num2lstr(iter))//".bin", Turbine%BD%m(1)%Vals%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
+   ! call DumpMatrix(munit, "jacs/BD-dYdx-"//trim(num2lstr(iter))//".bin", Turbine%BD%m(1)%Vals%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
+   ! call DumpMatrix(munit, "jacs/J-"//trim(num2lstr(iter))//".bin", m%Jac, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Factor jacobian matrix
    call LAPACK_getrf(size(m%Jac, 1), size(m%Jac, 1), m%Jac, m%IPIV, ErrStat2, ErrMsg2)
@@ -1341,6 +1438,7 @@ subroutine AddDeltaToStates(Mods, ModOrder, dx, x)
    character(*), parameter          :: RoutineName = 'AddDeltaToStates'
    integer(IntKi)                   :: iMod, iIns
    integer(IntKi)                   :: i, j, k, ind(3)
+   real(R8Ki)                       :: n(3), phi
 
    ! Loop through modules in order
    do i = 1, size(ModOrder)
@@ -1363,8 +1461,7 @@ subroutine AddDeltaToStates(Mods, ModOrder, dx, x)
                ! Compose WM components (dx is in radians)
                do k = 1, size(Var%iGblSol), 3
                   ind = Var%iGblSol(k:k + 2)
-                  ! x(ind) = wm_compose(4.0_R8Ki*tan(dx(ind)/4.0_R8Ki), x(ind))
-                  x(ind) = wm_compose(dx(ind), x(ind))
+                  x(ind) = wm_compose(wm_from_xyz(dx(ind)), x(ind)) ! dx is in radians
                end do
             end select
          end associate
@@ -1406,8 +1503,7 @@ subroutine AddDeltaToInputs(Mods, ModOrder, du, u)
                ! Compose WM components (du is in radians)
                do k = 1, size(Var%iGblSol), 3
                   ind = Var%iGblSol(k:k + 2)
-                  ! u(ind) = wm_compose(4.0_R8Ki*tan(du(ind)/4.0_R8Ki), u(ind))
-                  u(ind) = wm_compose(du(ind), u(ind))
+                  u(ind) = wm_compose(wm_from_xyz(du(ind)), u(ind))  ! du is in radians
                end do
             end select
 
