@@ -843,8 +843,8 @@ subroutine UpdateBeamDynGlobalReference(p, m, Mod, T, ErrStat, ErrMsg)
    associate (x_BD => T%BD%x(Mod%Ins, STATE_PRED), p_BD => T%BD%p(Mod%Ins))
 
       x_BD%q(:, 1) = 0.0_R8Ki
-      x_BD%dqdt(1:3, 1) = matmul(GlbRot_diff, T%BD%Input(1, Mod%Ins)%RootMotion%TranslationVel(:, 1))
-      x_BD%dqdt(4:6, 1) = matmul(GlbRot_diff, T%BD%Input(1, Mod%Ins)%RootMotion%RotationVel(:, 1))
+      x_BD%dqdt(1:3, 1) = matmul(transpose(GlbRot_diff), T%BD%Input(1, Mod%Ins)%RootMotion%TranslationVel(:, 1))
+      x_BD%dqdt(4:6, 1) = matmul(transpose(GlbRot_diff), T%BD%Input(1, Mod%Ins)%RootMotion%RotationVel(:, 1))
 
       do i = 1, p_BD%elem_total
          do j = 1, p_BD%nodes_per_elem
