@@ -53,6 +53,7 @@ program UnsteadyAero_Driver
    type(LD_ContinuousStateType)                  :: LD_x                    ! Continuous states
    type(LD_DiscreteStateType)                    :: LD_xd                   ! Discrete states
    type(LD_OtherStateType)                       :: LD_OtherState           ! Other/optimization states
+   type(LD_ConstraintStateType)                  :: LD_z                    ! Constraint states
    type(LD_MiscVarType)                          :: LD_m                    ! Misc/optimization variables
    type(LD_ParameterType)                        :: LD_p                    ! Parameters
    type(LD_InputType)                            :: LD_u(NumInp)            ! System inputs
@@ -118,10 +119,34 @@ program UnsteadyAero_Driver
       simTime   = dvrInitInp%TMax
       dt        = dvrInitInp%dt
       nSimSteps = int(simTime/dt) ! TODO
-      print*,'nSimSteps',nSimSteps
+      print*,'nSimSteps',nSimSteps, simTime, dt
 
       ! --- Initialize Elastic Section
-      !call LD_Init(LD_InitInData, LD_u(1), LD_p, LD_x, LD_xd, LD_O, LD_y, LD_m, LD_InitOutData, errStat, errMsg); call checkError()
+      call LD_InitInputData(3, LD_InitInData, errStat, errMsg); call checkError()
+      LD_InitInData%dt        = dt
+      LD_InitInData%IntMethod = 1  ! TODO
+      LD_InitInData%prefix    = '' ! TODO for output channel names
+      LD_InitInData%MM         = dvrInitInp%MM
+      LD_InitInData%CC         = dvrInitInp%CC
+      LD_InitInData%KK         = dvrInitInp%KK
+      LD_InitInData%x0         = dvrInitInp%initPos
+      LD_InitInData%xd0        = dvrInitInp%initVel
+      LD_InitInData%activeDOFs = dvrInitInp%activeDOFs
+      call LD_Init(LD_InitInData, LD_u(1), LD_p, LD_x, LD_xd, LD_z, LD_OtherState, LD_y, LD_m, LD_InitOutData, errStat, errMsg); call checkError()
+
+      ! set inputs:
+      !u(1) = time at n=1  (t=   0)
+      !u(2) = time at n=0  (t= -dt)
+      !u(3) = time at n=-1 (t= -2dt) if NumInp > 2
+      !       t  = (n-1)*dt
+      do iu = 1, NumInp !u(NumInp) is overwritten in time-sim loop, so no need to init here 
+         uTimes(iu) = (2-iu-1)*dt
+      enddo
+      ! Allocs
+      do iu = 2,NumInp
+         call AllocAry(LD_u(iu)%Fext, LD_p%nx, 'Fext', errStat, errMsg); call checkError()
+      enddo
+
    end if
 
    ! --- Init UA input data based on driver inputs
@@ -136,21 +161,54 @@ program UnsteadyAero_Driver
    end if
 
 
+   if ( dvrInitInp%SimMod == 3 ) then
+
+      LD_u(1)%Fext=0.0_ReKi ! TODO TODO
+      LD_u(2)%Fext=0.0_ReKi ! TODO TODO
+
+      ! --- time marching loop
+      do n = 1, nSimSteps
+         ! set inputs:
+         DO iu = NumInp-1, 1, -1
+            LD_u(     iu+1) = LD_u(     iu)
+            uTimes(iu+1) = uTimes(iu)
+         END DO
+!          ! first value of uTimes/u contain inputs at t+dt
+!          call setUAinputs(n+1,  u(1), uTimes(1), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg); call checkError()
+         uTimes(1) = (n+1-1)*dt
+
+         t = uTimes(2)
+         ! Use existing states to compute the outputs
+         call LD_CalcOutput(t, LD_u(2), LD_p, LD_x, LD_xd, LD_z, LD_OtherState, LD_y, LD_m, errStat, errMsg); call checkError()
+         !! Use existing states to compute the outputs
+         !call UA_CalcOutput(i, j, t, u(2),  p, x, xd, OtherState, AFI_Params(AFIndx(i,j)), y, m, errStat, errMsg ); call checkError()
+         print*,'t',t, LD_x%q
+!          ! Generate file outputs
+!          call UA_WriteOutputToFile(t, p, y)
+         ! Prepare states for next time step
+         call LD_UpdateStates(t, n, LD_u, uTimes, LD_p, LD_x, LD_xd, LD_z, LD_OtherState, LD_m, errStat, errMsg); call checkError()
+!          ! Prepare states for next time step
+!          call UA_UpdateStates(i, j, t, n, u, uTimes, p, x, xd, OtherState, AFI_Params(AFIndx(i,j)), m, errStat, errMsg ); call checkError()
+      end do
+
+      print*,'STOPPING FOR NOW'
+      call cleanUp()
+      call NormStop()
+   endif
 
    ! set inputs:
    !u(1) = time at n=1  (t=   0)
    !u(2) = time at n=0  (t= -dt)
    !u(3) = time at n=-1 (t= -2dt) if NumInp > 2
-
    DO iu = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here 
       call setUAinputs(2-iu,  u(iu), uTimes(iu), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg); call checkError()
    END DO
 
    ! --- time marching loop
-   do n = 1, nSimSteps
+   i = 1 ! nodes per blade
+   j = 1 ! number of blades
 
-      i = 1 ! nodes per blade
-      j = 1 ! number of blades
+   do n = 1, nSimSteps
      
       ! set inputs:
       DO iu = NumInp-1, 1, -1

@@ -115,18 +115,20 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    ! --- ELASTIC SECTION section
    if (InitInp%SimMod==3) then ! Temporary to avoid changing r-test for now
    call ParseCom(FI, iLine, Line                        , errStat2, errMsg2, UnEcho); if(Failed()) return
-   call ParseAry(FI, iLine, 'ActiveDOFs'   , InitInp%activeDOFs, 3, errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseVar(FI, iLine, 'TMax'         , InitInp%Tmax         , errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseVar(FI, iLine, 'DT'           , InitInp%dt           , errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseAry(FI, iLine, 'activeDOFs'   , InitInp%activeDOFs, 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'initPos'      , InitInp%initPos   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'initVel'      , InitInp%initVel   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'MassMatrix1'  , InitInp%MM(1,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
-   call ParseAry(FI, iLine, 'MassMatrix2'  , InitInp%MM(1,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
-   call ParseAry(FI, iLine, 'MassMatrix3'  , InitInp%MM(1,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseAry(FI, iLine, 'MassMatrix2'  , InitInp%MM(2,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseAry(FI, iLine, 'MassMatrix3'  , InitInp%MM(3,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'DampMatrix1'  , InitInp%CC(1,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
-   call ParseAry(FI, iLine, 'DampMatrix2'  , InitInp%CC(1,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
-   call ParseAry(FI, iLine, 'DampMatrix3'  , InitInp%CC(1,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseAry(FI, iLine, 'DampMatrix2'  , InitInp%CC(2,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseAry(FI, iLine, 'DampMatrix3'  , InitInp%CC(3,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'StifMatrix1'  , InitInp%KK(1,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
-   call ParseAry(FI, iLine, 'StifMatrix2'  , InitInp%KK(1,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
-   call ParseAry(FI, iLine, 'StifMatrix3'  , InitInp%KK(1,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseAry(FI, iLine, 'StifMatrix2'  , InitInp%KK(2,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseAry(FI, iLine, 'StifMatrix3'  , InitInp%KK(3,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    endif
 
    ! --- OUTPUT section

@@ -45,7 +45,7 @@ module LinDyn
 ! 
 contains
 
-subroutine LD_Init(InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode, InitOut, errStat, errMsg)
+subroutine LD_Init(InitInp, u, p, x, xd, z, OtherState, y, m, InitOut, errStat, errMsg)
    type(LD_InitInputType),       intent(in   ) :: InitInp     !< Input data for initialization routine
    type(LD_InputType),           intent(out)   :: u           !< An initial guess for the input; input mesh must be defined
    type(LD_ParameterType),       intent(out)   :: p           !< Parameters
@@ -55,13 +55,11 @@ subroutine LD_Init(InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode, InitO
    type(LD_OtherStateType),      intent(out)   :: OtherState  !< Initial other states (logical, etc)
    type(LD_OutputType),          intent(out)   :: y           !< Initial system outputs (outputs are not calculated;
    type(LD_MiscVarType),         intent(out)   :: m           !< Misc variables for optimization (not copied in glue code)
-   real(DbKi),                   intent(inout) :: dt_gluecode !< Coupling interval in seconds: the rate that
    type(LD_InitOutputType),      intent(out)   :: InitOut     !< Output for initialization routine
    integer(IntKi),               intent(out)   :: errStat     !< Error status of the operation
    character(*),                 intent(out)   :: errMsg      !< Error message if errStat /= ErrID_None
    integer(IntKi)  :: errStat2    ! Status of error message
    character(1024) :: errMsg2     ! Error message if ErrStat /= ErrID_None
-   integer(IntKi)  :: i, n ! Loop counter
    ! Misc Init
    errStat = ErrID_None
    errMsg  = ""
@@ -69,11 +67,12 @@ subroutine LD_Init(InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode, InitO
    call DispNVD( LD_Ver ) ! Display the module information
 
    ! --- Setting Params from InitInp
-   n = size(p%MM,1)
-   call AllocAry(p%MM        , n, n, 'MM', errStat2, errMsg2); if(Failed()) return
-   call AllocAry(p%CC        , n, n, 'CC', errStat2, errMsg2); if(Failed()) return
-   call AllocAry(p%KK        , n, n, 'KK', errStat2, errMsg2); if(Failed()) return
-   call AllocAry(p%activeDOFs, n   , 'activeDOFs', errStat2, errMsg2); if(Failed()) return
+   p%nx = size(InitInp%MM,1)
+   p%nq = 2*p%nx
+   call AllocAry(p%MM        , p%nx, p%nx, 'MM', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(p%CC        , p%nx, p%nx, 'CC', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(p%KK        , p%nx, p%nx, 'KK', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(p%activeDOFs, p%nx      , 'activeDOFs', errStat2, errMsg2); if(Failed()) return
    p%dt         = InitInp%dt
    p%IntMethod  = InitInp%IntMethod
    p%MM         = InitInp%MM
@@ -81,74 +80,74 @@ subroutine LD_Init(InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode, InitO
    p%KK         = InitInp%KK
    p%activeDOFs = InitInp%activeDOFs
 
-!    INTERFACE LAPACK_getri 
-!    SUBROUTINE LAPACK_DGETRI( N, A, IPIV, WORK, LWORK, ErrStat, ErrMsg )
+   print*,''
+   print*,'M',p%MM(1,:)
+   print*,'M',p%MM(2,:)
+   print*,'M',p%MM(3,:)
+   print*,''
+   print*,'C',p%CC(1,:)
+   print*,'C',p%CC(2,:)
+   print*,'C',p%CC(3,:)
+   print*,''
+   print*,'K',p%KK(1,:)
+   print*,'K',p%KK(2,:)
+   print*,'K',p%KK(3,:)
+   print*,''
 
+   call StateMatrices(p%MM, p%CC, p%KK, p%AA, p%BB, errStat2, errMsg2); if(Failed()) return
 
-!    ! Setting p%OutParam from OutList
-!    call SetOutParam(InputFileData%OutList, InputFileData%NumOuts, p, errStat, errMsg); if(Failed()) return
-!    ! Set the constant state matrices A,B,C,D
-!    call SetStateMatrices(p, errStat, errMsg)
-!   
-!    ! --- Allocate and init continuous states
-!    call AllocAry( x%qm    , p%nCB,'CB DOF positions' , errStat,errMsg); if(Failed()) return
-!    call AllocAry( x%qmdot , p%nCB,'CB DOF velocities', errStat,errMsg); if(Failed()) return
-!    if (allocated(InputFileData%InitPosList)) then
-!        if (size(InputFileData%InitPosList)/=p%nCB) then
-!            call SeterrStat(ErrID_Fatal, 'The number of elements of `InitPosList` ('//trim(Num2LStr(size(InputFileData%InitPosList)))//') does not match the number of CB modes: '//trim(Num2LStr(p%nCB)), errStat, errMsg, 'LD_Init'); 
-!            return
-!        endif
-!        do I=1,p%nCB;
-!            x%qm(I)=InputFileData%InitPosList(I);
-!        end do
-!    else
-!        do I=1,p%nCB; x%qm   (I)=0; end do
-!    endif
-!    if (allocated(InputFileData%InitVelList)) then
-!        if (size(InputFileData%InitVelList)/=p%nCB) then
-!            call SeterrStat(ErrID_Fatal, 'The number of elements of `InitVelList` ('//trim(Num2LStr(size(InputFileData%InitVelList)))//') does not match the number of CB modes: '//trim(Num2LStr(p%nCB)), errStat, errMsg, 'LD_Init'); 
-!            return
-!        endif
-!        do I=1,p%nCB;
-!            x%qmdot(I)=InputFileData%InitVelList(I);
-!        enddo
-!    else
-!        do I=1,p%nCB; x%qmdot(I)=0; end do
-!    endif
-! 
-!    ! Other states
-!    xd%DummyDiscState          = 0.0_ReKi
-!    z%DummyConstrState         = 0.0_ReKi
-!    ! allocate OtherState%xdot if using multi-step method; initialize n
-!    if ( ( p%IntMethod .eq. 2) .OR. ( p%IntMethod .eq. 3)) THEN
-!        allocate( OtherState%xdot(4), STAT=errStat )
-!        errMsg='Error allocating OtherState%xdot'
-!        if(Failed()) return
-!    endif
-! 
-!    ! Initialize Misc Variables:
-!    !m%EquilStart = InputFileData%EquilStart
-!    m%EquilStart = .False. ! Feature not yet implemented
-! 
-!    m%Indx = 1 ! used to optimize interpolation of loads in time
-!    call AllocAry( m%F_at_t, p%nTot,'Loads at t', errStat,errMsg); if(Failed()) return
-!    do I=1,p%nTot; m%F_at_t(I)=0; end do
-!    call AllocAry( m%xFlat, 2*p%nCB,'xFlat', errStat,errMsg); if(Failed()) return
-!    do I=1,2*p%nCB; m%xFlat(I)=0; end do
-!    do I=1,N_inPUTS; m%uFlat(I)=0; end do
-!    
+   print*,''
+   print*,'A',p%AA(1,:)
+   print*,'A',p%AA(2,:)
+   print*,'A',p%AA(3,:)
+   print*,'A',p%AA(4,:)
+   print*,'A',p%AA(5,:)
+   print*,'A',p%AA(6,:)
+   print*,''
+   print*,'B',p%BB(1,:)
+   print*,'B',p%BB(2,:)
+   print*,'B',p%BB(3,:)
+   print*,'B',p%BB(4,:)
+   print*,'B',p%BB(5,:)
+   print*,'B',p%BB(6,:)
+
+   ! --- Allocate STates
+   call AllocAry( x%q    , p%nq,'DOFs' , errStat,errMsg); if(Failed()) return
+   x%q(     1:p%nx) = InitInp%x0
+   x%q(p%nx+1:p%nq) = InitInp%xd0
+
+   ! allocate OtherState%xdot if using multi-step method; initialize n
+   if ( ( p%IntMethod .eq. 2) .OR. ( p%IntMethod .eq. 3)) THEN
+       allocate( OtherState%xdot(4), STAT=errStat2); errMsg2='Error allocating OtherState%xdot'
+       if(Failed()) return
+   endif
+
+   ! --- Initialize Misc Variables:
+
 !    ! Define initial guess (set up mesh first) for the system inputs here:
 !    call Init_meshes(u, y, InitInp, errStat, errMsg); if(Failed()) return
-! 
-!    ! --- Outputs
-!    call AllocAry( m%AllOuts, ID_QStart+3*p%nCBFull-1, "LinDyn AllOut", errStat,errMsg ); if(Failed()) return
-!    m%AllOuts(1:ID_QStart+3*p%nCBFull-1) = 0.0
-!    call AllocAry( y%WriteOutput,        p%NumOuts,'WriteOutput',   errStat,errMsg); if(Failed()) return
-!    call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',errStat,errMsg); if(Failed()) return
-!    call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',errStat,errMsg); if(Failed()) return
-!    y%WriteOutput(1:p%NumOuts) = 0.0
-!    InitOut%WriteOutputHdr(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Name
-!    InitOut%WriteOutputUnt(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Units     
+   ! --- Guess inputs
+   call AllocAry(u%Fext, p%nx, 'Fext', errStat2, errMsg2); if(Failed()) return
+   u%Fext=0.0_ReKi
+
+   ! --- Outputs
+   call AllocAry(y%qd, p%nx, 'qd', errStat2, errMsg2); if(Failed()) return
+   y%qd = 0.0_ReKi
+   y%qd(1:p%nx) = InitInp%xd0
+
+   ! --- Write Outputs
+   p%NumOuts = 0
+!    ! Setting p%OutParam from OutList
+!    call SetOutParam(InputFileData%OutList, InputFileData%NumOuts, p, errStat, errMsg); if(Failed()) return
+!   
+   call AllocAry( m%AllOuts, p%NumOuts, "LinDyn AllOut", errStat,errMsg ); if(Failed()) return
+   m%AllOuts(:) = 0.0_ReKi
+   call AllocAry( y%WriteOutput,        p%NumOuts,'WriteOutput',   errStat,errMsg); if(Failed()) return
+   call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',errStat,errMsg); if(Failed()) return
+   call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',errStat,errMsg); if(Failed()) return
+   y%WriteOutput(1:p%NumOuts) = 0.0
+   !InitOut%WriteOutputHdr(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Name
+   !InitOut%WriteOutputUnt(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Units     
    InitOut%Ver = LD_Ver
 !       
 !    if (InitInp%Linearize) then
@@ -187,7 +186,6 @@ subroutine LD_Init(InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode, InitO
 !           InitOut%LinNames_x(I)       = 'Mode '//trim(Num2LStr(p%ActiveCBDOF(I)))//' displacement, -';
 !           InitOut%LinNames_x(I+p%nCB) = 'Mode '//trim(Num2LStr(p%ActiveCBDOF(I)))//' velocity, -';
 !       enddo
-!       ! 
 !       InitOut%RotFrame_x = .false. ! note that meshes are in the global, not rotating frame
 !       InitOut%RotFrame_y = .false. ! note that meshes are in the global, not rotating frame
 !       InitOut%RotFrame_u = .false. ! note that meshes are in the global, not rotating frame
@@ -200,99 +198,118 @@ subroutine LD_Init(InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode, InitO
 !    endif
 ! 
 contains
-    logical function Failed()
-        call SeterrStatSimple(errStat, errMsg, 'LD_Init')
-        Failed =  errStat >= AbortErrLev
-    end function Failed
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'LD_Init' )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed) call CleanUp()
+   end function Failed
+   subroutine CleanUp()
+   end subroutine CleanUp
 end subroutine LD_Init
-! 
-! 
 !----------------------------------------------------------------------------------------------------------------------------------
-! subroutine SetStateMatrices( p, errStat, errMsg)
-! subroutine SetStateMatrices( p, errStat, errMsg)
-! !..................................................................................................................................
-!    type(LD_ParameterType), intent(inout) :: p                                   !< All the parameter matrices stored in this input file
-!    integer(IntKi),              intent(out)   :: errStat                             !< Error status                              
-!    character(*),                intent(out)   :: errMsg                              !< Error message
-!    ! Local variables:
-!    integer(IntKi)                          :: I                                         ! loop counter
-!    integer(IntKi)                          :: nX                                        ! Number of states
-!    integer(IntKi)                          :: nU                                        ! Number of inputs
-!    integer(IntKi)                          :: nY                                        ! Number of ouputs
-!    integer(IntKi)                          :: n1                                        ! Number of interface DOF
-!    integer(IntKi)                          :: n2                                        ! Number of CB DOF
-!    real(ReKi), dimension(:,:), allocatable :: I22
-!    ! Init 
-!    nX = 2*p%nCB
-!    nU = 3*6
-!    nY = 6
-!    n1 = 6
-!    n2 = p%nCB
-!    if (allocated(p%AMat)) deallocate(p%AMat)
-!    if (allocated(p%BMat)) deallocate(p%BMat)
-!    if (allocated(p%CMat)) deallocate(p%CMat)
-!    if (allocated(p%DMat)) deallocate(p%DMat)
-!    if (allocated(p%M11))  deallocate(p%M11)
-!    if (allocated(p%M12))  deallocate(p%M12)
-!    if (allocated(p%M22))  deallocate(p%M22)
-!    if (allocated(p%M21))  deallocate(p%M21)
-!    if (allocated(p%C11))  deallocate(p%C11)
-!    if (allocated(p%C12))  deallocate(p%C12)
-!    if (allocated(p%C22))  deallocate(p%C22)
-!    if (allocated(p%C21))  deallocate(p%C21)
-!    if (allocated(p%K11))  deallocate(p%C11)
-!    if (allocated(p%K22))  deallocate(p%C22)
-!    ! Allocation
-!    call allocAry(p%AMat, nX, nX, 'p%AMat', errStat, errMsg); if(Failed()) return ; p%AMat(1:nX,1:nX) =0
-!    call allocAry(p%BMat, nX, nU, 'p%BMat', errStat, errMsg); if(Failed()) return ; p%BMat(1:nX,1:nU) =0
-!    call allocAry(p%FX  , nX,     'p%FX'  , errStat, errMsg); if(Failed()) return ; p%Fx  (1:nX)      =0
-!    call allocAry(p%CMat, nY, nX, 'p%CMat', errStat, errMsg); if(Failed()) return ; p%CMat(1:nY,1:nX) =0
-!    call allocAry(p%DMat, nY, nU, 'p%DMat', errStat, errMsg); if(Failed()) return ; p%DMat(1:nY,1:nU) =0
-!    call allocAry(p%FY  , nY,     'p%FY'  , errStat, errMsg); if(Failed()) return ; p%FY  (1:nY)      =0
-!    call allocAry(p%M11 , n1, n1, 'p%M11' , errStat, errMsg); if(Failed()) return ; p%M11 (1:n1,1:n1) =0
-!    call allocAry(p%K11 , n1, n1, 'p%K11' , errStat, errMsg); if(Failed()) return ; p%K11 (1:n1,1:n1) =0
-!    call allocAry(p%C11 , n1, n1, 'p%C11' , errStat, errMsg); if(Failed()) return ; p%C11 (1:n1,1:n1) =0
-!    call allocAry(p%M22 , n2, n2, 'p%M22' , errStat, errMsg); if(Failed()) return ; p%M22 (1:n2,1:n2) =0
-!    call allocAry(p%K22 , n2, n2, 'p%K22' , errStat, errMsg); if(Failed()) return ; p%K22 (1:n2,1:n2) =0
-!    call allocAry(p%C22 , n2, n2, 'p%C22' , errStat, errMsg); if(Failed()) return ; p%C22 (1:n2,1:n2) =0
-!    call allocAry(p%M12 , n1, n2, 'p%M12' , errStat, errMsg); if(Failed()) return ; p%M12 (1:n1,1:n2) =0
-!    call allocAry(p%C12 , n1, n2, 'p%C12' , errStat, errMsg); if(Failed()) return ; p%C12 (1:n1,1:n2) =0
-!    call allocAry(p%M21 , n2, n1, 'p%M21' , errStat, errMsg); if(Failed()) return ; p%M21 (1:n2,1:n1) =0
-!    call allocAry(p%C21 , n2, n1, 'p%C21' , errStat, errMsg); if(Failed()) return ; p%C21 (1:n2,1:n1) =0
-!    call allocAry(  I22 , n2, n2, '  I22' , errStat, errMsg); if(Failed()) return ;   I22 (1:n2,1:n2) =0
-!    do I=1,n2 ; I22(I,I)=1; enddo ! Identity matrix
-!    ! Submatrices
-!    p%M11(1:n1,1:n1) = p%Mass(1:n1      ,1:n1      )
-!    p%C11(1:n1,1:n1) = p%Damp(1:n1      ,1:n1      )
-!    p%K11(1:n1,1:n1) = p%Stff(1:n1      ,1:n1      )
-!    p%M12(1:n1,1:n2) = p%Mass(1:n1      ,n1+1:n1+n2)
-!    p%C12(1:n1,1:n2) = p%Damp(1:n1      ,n1+1:n1+n2)
-!    p%M21(1:n2,1:n1) = p%Mass(n1+1:n1+n2,1:n1      )
-!    p%C21(1:n2,1:n1) = p%Damp(n1+1:n1+n2,1:n1      )
-!    p%M22(1:n2,1:n2) = p%Mass(n1+1:n1+n2,n1+1:n1+n2)
-!    p%C22(1:n2,1:n2) = p%Damp(n1+1:n1+n2,n1+1:n1+n2)
-!    p%K22(1:n2,1:n2) = p%Stff(n1+1:n1+n2,n1+1:n1+n2)
-!    ! A matrix
-!    p%AMat(1:n2   ,n2+1:nX) = I22   (1:n2,1:n2)
-!    p%AMat(n2+1:nX,1:n2   ) = -p%K22(1:n2,1:n2)
-!    p%AMat(n2+1:nX,n2+1:nX) = -p%C22(1:n2,1:n2)
-!    ! B matrix
-!    p%BMat(n2+1:nX,7 :12  ) = -p%C21(1:n2,1:6)
-!    p%BMat(n2+1:nX,13:18  ) = -p%M21(1:n2,1:6)
-!    ! C matrix
-!    p%CMat(1:nY,1:n2   ) = matmul(p%M12,p%K22)
-!    p%CMat(1:nY,n2+1:nX) = matmul(p%M12,p%C22) - p%C12
-!    ! D matrix
-!    p%DMat(1:nY,1:6   ) = -p%K11
-!    p%DMat(1:nY,7:12  ) = -p%C11 + matmul(p%M12,p%C21)
-!    p%DMat(1:nY,13:18 ) = -p%M11 + matmul(p%M12,p%M21)
-! CONTAinS
-!     logical function Failed()
-!         call SeterrStatSimple(errStat, errMsg, 'LD_SetStateMatrices')
-!         Failed =  errStat >= AbortErrLev
-!     end function Failed
-! end subroutine SetStateMatrices
-! !----------------------------------------------------------------------------------------------------------------------------------
+!> Allocate init input data for module based on number of degrees of freedom
+subroutine LD_InitInputData(nx, InitInp, errStat, errMsg)
+   integer(IntKi),               intent(in ) :: nx        !< Number of degrees of freedom
+   type(LD_InitInputType),       intent(out) :: InitInp     !< Input data for initialization routine
+   integer(IntKi),               intent(out) :: errStat   !< Error status of the operation
+   character(*),                 intent(out) :: errMsg    !< Error message if errStat /= ErrID_None
+   integer(IntKi)  :: errStat2    ! Status of error message
+   character(1024) :: errMsg2     ! Error message if ErrStat /= ErrID_None
+   ! Initialize errStat
+   errStat   = ErrID_None           ! no error has occurred
+   errMsg    = ""
+   call AllocAry(InitInp%MM        , nx, nx, 'MM' , errStat2, errMsg2); if(Failed()) return
+   call AllocAry(InitInp%CC        , nx, nx, 'CC' , errStat2, errMsg2); if(Failed()) return
+   call AllocAry(InitInp%KK        , nx, nx, 'KK' , errStat2, errMsg2); if(Failed()) return
+   call AllocAry(InitInp%x0        , nx    , 'x0' , errStat2, errMsg2); if(Failed()) return
+   call AllocAry(InitInp%xd0       , nx    , 'xd0', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(InitInp%activeDOFs, nx    , 'activeDOFs', errStat2, errMsg2); if(Failed()) return
+   InitInp%MM         = 0.0_ReKi
+   InitInp%CC         = 0.0_ReKi
+   InitInp%KK         = 0.0_ReKi
+   InitInp%x0         = 0.0_ReKi
+   InitInp%xd0        = 0.0_ReKi
+   InitInp%activeDOFs = .True.
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'LD_Init' )
+      Failed = ErrStat >= AbortErrLev
+   end function Failed
+end subroutine LD_InitInputData
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Compute A and B state matrices for a linear mechanical system
+!! NOTE: Generic function (no derived types), keep it that way
+!! A = [   0        I       ]     B = [0      ]
+!!     [-M^{-1}K   -M^{-1}C ]       = [-M^{-1}]
+subroutine StateMatrices(MM, CC, KK, AA, BB, errStat, errMsg)
+   real(ReKi),              intent(in ) :: MM(:,:)
+   real(ReKi),              intent(in ) :: CC(:,:)
+   real(ReKi),              intent(in ) :: KK(:,:)
+   real(ReKi), allocatable, intent(out) :: AA(:,:)
+   real(ReKi), allocatable, intent(out) :: BB(:,:)
+   integer(IntKi),          intent(out) :: errStat   !< Error status of the operation
+   character(*),            intent(out) :: errMsg    !< Error message if errStat /= ErrID_None
+   integer(IntKi)                          :: errStat2    ! Status of error message
+   character(1024)                         :: errMsg2     ! Error message if ErrStat /= ErrID_None
+   integer                                 :: nx, nq, i
+   real(ReKi), dimension(:,:), allocatable :: MLU     ! LU factorization of M matrix
+   real(ReKi), dimension(:,:), allocatable :: MinvX   ! Tmp array to store either: M^{-1} C, M^{-1} K , or M^{-1}
+   real(ReKi), dimension(:) , allocatable  :: WORK    ! LAPACK variable
+   integer, allocatable                    :: IPIV(:) ! LAPACK variable
+   integer                                 :: LWORK   ! LAPACK variable
+   ! Initialize errStat
+   errStat = ErrID_None
+   errMsg  = ""
+
+   ! --- Init A and B matrix
+   nx = size(MM,1)
+   nq = 2*nx
+   call AllocAry(AA, nq, nq, 'AA', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(BB, nq, nx, 'BB', errStat2, errMsg2); if(Failed()) return
+   AA(:,:) = 0.0_ReKi
+   BB(:,:) = 0.0_ReKi
+   do i=1,nx ; AA(i,i+nx)=1; enddo ! Identity matrix for upper right block
+
+   ! --- Compute misc inverse of M and put in A and B matrices
+   call AllocAry(IPIV        , nx    , 'IPIV' , errStat2, errMsg2); if(Failed()) return
+   call AllocAry(MinvX       , nx, nx, 'MinvX', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(MLU         , nx, nx, 'MLU'  , errStat2, errMsg2); if(Failed()) return
+
+   ! LU Factorization of M
+   MLU = MM ! temp copy
+   call LAPACK_getrf(nx, nx, MLU, IPIV, errStat2, errMsg2); if(Failed()) return
+
+   ! M^-1 C
+   MinvX = CC
+   call LAPACK_getrs('n', nx, MLU, IPIV, MinvX, errStat2, errMsg2); if(Failed()) return
+   AA(nx+1:nq,nx+1:nq) = -MinvX
+
+   ! M^-1 K
+   MinvX = KK
+   call LAPACK_getrs('n', nx, MLU, IPIV, MinvX, errStat2, errMsg2); if(Failed()) return
+   AA(nx+1:nq, 1:nx) = -MinvX
+
+   ! Inverse of M
+   MinvX = MLU
+   LWORK=nx*nx ! Somehow LWORK = -1 does not work
+   allocate(WORK(LWORk))
+   call LAPACK_getri(nx, MinvX, IPIV, WORK, LWORK, errStat2, errMsg2); if(Failed()) return
+   BB(nx+1:nq, : ) = -MinvX
+
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'LD_Init' )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed) call CleanUp()
+   end function Failed
+   subroutine CleanUp()
+      if (allocated(MLU))   deallocate(MLU)
+      if (allocated(IPIV))  deallocate(IPIV)
+      if (allocated(WORK )) deallocate(WORK)
+      if (allocated(MinvX)) deallocate(MinvX)
+   end subroutine CleanUp
+end subroutine StateMatrices
+!----------------------------------------------------------------------------------------------------------------------------------
 ! subroutine Init_meshes(u, y, InitInp, errStat, errMsg)
 !    type(LD_InputType),           intent(inout)  :: u           !< System inputs
 !    type(LD_OutputType),          intent(inout)  :: y           !< System outputs
@@ -328,351 +345,257 @@ end subroutine LD_Init
 !         Failed =  errStat >= AbortErrLev
 !     end function Failed
 ! end subroutine Init_meshes
-! !----------------------------------------------------------------------------------------------------------------------------------
-! !> This routine is called at the end of the simulation.
-! subroutine LD_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
-! !..................................................................................................................................
-!    type(LD_InputType),           intent(inout)  :: u           !< System inputs
-!    type(LD_ParameterType),       intent(inout)  :: p           !< Parameters
-!    type(LD_ContinuousStateType), intent(inout)  :: x           !< Continuous states
-!    type(LD_DiscreteStateType),   intent(inout)  :: xd          !< Discrete states
-!    type(LD_ConstraintStateType), intent(inout)  :: z           !< Constraint states
-!    type(LD_OtherStateType),      intent(inout)  :: OtherState  !< Other states
-!    type(LD_OutputType),          intent(inout)  :: y           !< System outputs
-!    type(LD_MiscVarType),         intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
-!    integer(IntKi),                    intent(  out)  :: errStat     !< Error status of the operation
-!    character(*),                      intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
-!    ! Place any last minute operations or calculations here:
-!    ! Close files here (but because of checkpoint-restart capability, it is not recommended to have files open during the simulation):
-!    ! Destroy the input data:
-!    call LD_DestroyInput( u, errStat, errMsg ); if(Failed()) return
-!    ! Destroy the parameter data:
-!    call LD_DestroyParam( p, errStat, errMsg ); if(Failed()) return
-!    ! Destroy the state data:
-!    call LD_DestroyContState(   x,          errStat,errMsg); if(Failed()) return
-!    call LD_DestroyDiscState(   xd,         errStat,errMsg); if(Failed()) return
-!    call LD_DestroyConstrState( z,          errStat,errMsg); if(Failed()) return
-!    call LD_DestroyOtherState(  OtherState, errStat,errMsg); if(Failed()) return
-!    ! Destroy the output data:
-!    call LD_DestroyOutput( y, errStat, errMsg ); if(Failed()) return
-!    ! Destroy the misc data:
-!    call LD_DestroyMisc( m, errStat, errMsg ); if(Failed()) return
-! CONTAinS
-!     logical function Failed()
-!         call SeterrStatSimple(errStat, errMsg, 'LD_End')
-!         Failed =  errStat >= AbortErrLev
-!     end function Failed
-! end subroutine LD_End
-! 
-! 
-! !----------------------------------------------------------------------------------------------------------------------------------
-! !> This subroutine implements the fourth-order Adams-Bashforth Method (RK4) for numerically integrating ordinary differential 
-! !! equations:
-! !!  Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
-! !!      x(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
-! !!  See, e.g.,
-! !!      http://en.wikipedia.org/wiki/Linear_multistep_method
-! !!      K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
-! subroutine LD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat, errMsg )
-! !..................................................................................................................................
-!    real(DbKi),                        intent(in   )  :: t           !< Current simulation time in seconds
-!    integer(IntKi),                    intent(in   )  :: n           !< time step number
-!    type(LD_InputType),           intent(inout)  :: u(:)        !< Inputs at t
-!    real(DbKi),                        intent(in   )  :: utimes(:)   !< times of input
-!    type(LD_ParameterType),       intent(in   )  :: p           !< Parameters
-!    type(LD_ContinuousStateType), intent(inout)  :: x           !< Continuous states at t on input at t + dt on output
-!    type(LD_DiscreteStateType),   intent(in   )  :: xd          !< Discrete states at t
-!    type(LD_ConstraintStateType), intent(in   )  :: z           !< Constraint states at t (possibly a guess)
-!    type(LD_OtherStateType),      intent(inout)  :: OtherState  !< Other states at t on input at t + dt on output
-!    type(LD_MiscVarType),         intent(inout)  :: m           !< Misc/optimization variables
-!    integer(IntKi),                    intent(  out)  :: errStat     !< Error status of the operation
-!    character(*),                      intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
-!    ! local variables
-!    type(LD_ContinuousStateType) :: xdot       ! Continuous state derivs at t
-!    type(LD_InputType)           :: u_interp
-!    ! Initialize errStat
-!    errStat = ErrID_None
-!    errMsg  = "" 
-!    
-!    ! need xdot at t
-!    call LD_CopyInput(u(1), u_interp, MESH_NEWCOPY, errStat, errMsg  )  ! we need to allocate input arrays/meshes before calling ExtrapInterp...
-!    call LD_Input_ExtrapInterp(u, utimes, u_interp, t, errStat, errMsg)
-!    call LD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, errStat, errMsg ) ! initializes xdot
-!    call LD_DestroyInput( u_interp, errStat, errMsg)   ! we don't need this local copy anymore
-!    if (n .le. 2) then
-!       OtherState%n = n
-!       call LD_CopyContState(xdot, OtherState%xdot(3-n), MESH_UPDATECOPY, errStat, errMsg )
-!       call LD_RK4(t, n, u, utimes, p, x, xd, z, OtherState, m, errStat, errMsg )
-!    else
-!       if (OtherState%n .lt. n) then
-!          OtherState%n = n
-!          call LD_CopyContState(OtherState%xdot(3), OtherState%xdot(4), MESH_UPDATECOPY, errStat, errMsg )
-!          call LD_CopyContState(OtherState%xdot(2), OtherState%xdot(3), MESH_UPDATECOPY, errStat, errMsg )
-!          call LD_CopyContState(OtherState%xdot(1), OtherState%xdot(2), MESH_UPDATECOPY, errStat, errMsg )
-!       elseif (OtherState%n .gt. n) then
-!          errStat = ErrID_Fatal
-!          errMsg = ' Backing up in time is not supported with a multistep method '
-!          RETURN
-!       endif
-!       call LD_CopyContState( xdot, OtherState%xdot ( 1 ), MESH_UPDATECOPY, errStat, errMsg )
-!       !OtherState%xdot ( 1 )     = xdot  ! make sure this is most up to date
-!       x%qm    = x%qm    + (p%EP_DeltaT / 24.) * ( 55.*OtherState%xdot(1)%qm - 59.*OtherState%xdot(2)%qm    + 37.*OtherState%xdot(3)%qm  &
-!                                     - 9. * OtherState%xdot(4)%qm )
-!       x%qmdot = x%qmdot + (p%EP_DeltaT / 24.) * ( 55.*OtherState%xdot(1)%qmdot - 59.*OtherState%xdot(2)%qmdot  &
-!                                        + 37.*OtherState%xdot(3)%qmdot  - 9.*OtherState%xdot(4)%qmdot )
-!    endif
-!    call LD_DestroyContState(xdot, errStat, errMsg)
-!    call LD_DestroyInput(u_interp, errStat, errMsg)
-!    
-! end subroutine LD_AB4
-! !----------------------------------------------------------------------------------------------------------------------------------
-! !> This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating ordinary 
-! !! differential equations:
-! !!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
-! !!   Adams-Bashforth Predictor:
-! !!      x^p(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
-! !!   Adams-Moulton Corrector:
-! !!      x(t+dt) = x(t)  + (dt / 24.) * ( 9.*f(t+dt,x^p) + 19.*f(t,x) - 5.*f(t-dt,x) + 1.*f(t-2.*dt,x) )
-! !!  See, e.g.,
-! !!      http://en.wikipedia.org/wiki/Linear_multistep_method
-! !!      K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
-! subroutine LD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat, errMsg )
-! !..................................................................................................................................
-!    real(DbKi),                          intent(in   ) :: t           !< Current simulation time in seconds
-!    integer(IntKi),                      intent(in   ) :: n           !< time step number
-!    type(LD_InputType),             intent(inout) :: u(:)        !< Inputs at t
-!    real(DbKi),                          intent(in   ) :: utimes(:)   !< times of input
-!    type(LD_ParameterType),         intent(in   ) :: p           !< Parameters
-!    type(LD_ContinuousStateType),   intent(inout) :: x           !< Continuous states at t on input at t + dt on output ! TODO TODO TODO in
-!    type(LD_DiscreteStateType),     intent(in   ) :: xd          !< Discrete states at t
-!    type(LD_ConstraintStateType),   intent(in   ) :: z           !< Constraint states at t (possibly a guess)
-!    type(LD_OtherStateType),        intent(inout) :: OtherState  !< Other states at t on input at t + dt on output
-!    type(LD_MiscVarType),           intent(inout) :: m           !< Misc/optimization variables
-!    integer(IntKi),                      intent(  out) :: errStat     !< Error status of the operation
-!    character(*),                        intent(  out) :: errMsg      !< Error message if errStat /= ErrID_None
-!    ! local variables
-!    type(LD_InputType)            :: u_interp        ! Continuous states at t
-!    type(LD_ContinuousStateType)  :: x_pred          ! Continuous states at t
-!    type(LD_ContinuousStateType)  :: xdot_pred       ! Continuous states at t
-!    
-!    ! Initialize errStat
-!    errStat = ErrID_None
-!    errMsg  = "" 
-!    
-!    call LD_CopyContState(x, x_pred, MESH_NEWCOPY, errStat, errMsg) !initialize x_pred      
-!    call LD_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, m, errStat, errMsg )
-!    if (n .gt. 2) then
-!       call LD_CopyInput( u(1), u_interp, MESH_NEWCOPY, errStat, errMsg) ! make copy so that arrays/meshes get initialized/allocated for ExtrapInterp
-!       call LD_Input_ExtrapInterp(u, utimes, u_interp, t + p%EP_DeltaT, errStat, errMsg)
-!       call LD_CalcContStateDeriv(t + p%EP_DeltaT, u_interp, p, x_pred, xd, z, OtherState, m, xdot_pred, errStat, errMsg ) ! initializes xdot_pred
-!       call LD_DestroyInput( u_interp, errStat, errMsg) ! local copy no longer needed
-!    
-!       x%qm    = x%qm    + (p%EP_DeltaT / 24.) * ( 9. * xdot_pred%qm +  19. * OtherState%xdot(1)%qm - 5. * OtherState%xdot(2)%qm &
-!                                        + 1. * OtherState%xdot(3)%qm )
-!    
-!       x%qmdot = x%qmdot + (p%EP_DeltaT / 24.) * ( 9. * xdot_pred%qmdot + 19. * OtherState%xdot(1)%qmdot - 5. * OtherState%xdot(2)%qmdot &
-!                                        + 1. * OtherState%xdot(3)%qmdot )
-!       call LD_DestroyContState( xdot_pred, errStat, errMsg) ! local copy no longer needed
-!    else
-!       x%qm    = x_pred%qm
-!       x%qmdot = x_pred%qmdot
-!    endif
-!    call LD_DestroyContState( x_pred, errStat, errMsg) ! local copy no longer needed
-! end subroutine LD_ABM4
-! 
-! !----------------------------------------------------------------------------------------------------------------------------------
-! !> This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
-! !!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
-! !!   Define constants k1, k2, k3, and k4 as 
-! !!        k1 = dt * f(t        , x_t        )
-! !!        k2 = dt * f(t + dt/2 , x_t + k1/2 )
-! !!        k3 = dt * f(t + dt/2 , x_t + k2/2 ), and
-! !!        k4 = dt * f(t + dt   , x_t + k3   ).
-! !!   Then the continuous states at t = t + dt are
-! !!        x_(t+dt) = x_t + k1/6 + k2/3 + k3/3 + k4/6 + O(dt^5)
-! !! For details, see:
-! !!   Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for 
-! !!   Runge-Kutta." sections 16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
-! !!   Cambridge University Press, pp. 704-716, 1992.
-! subroutine LD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat, errMsg )
-! !..................................................................................................................................
-!    real(DbKi),                     intent(in   )      :: t           !< Current simulation time in seconds
-!    integer(IntKi),                 intent(in   )      :: n           !< time step number
-!    type(LD_InputType),             intent(inout) :: u(:)        !< Inputs at t
-!    real(DbKi),                     intent(in   )      :: utimes(:)   !< times of input
-!    type(LD_ParameterType),         intent(in   ) :: p           !< Parameters
-!    type(LD_ContinuousStateType),   intent(inout) :: x           !< Continuous states at t on input at t + dt on output
-!    type(LD_DiscreteStateType),     intent(in   ) :: xd          !< Discrete states at t
-!    type(LD_ConstraintStateType),   intent(in   ) :: z           !< Constraint states at t (possibly a guess)
-!    type(LD_OtherStateType),        intent(inout) :: OtherState  !< Other states at t on input at t + dt on output
-!    type(LD_MiscVarType),           intent(inout) :: m           !< Misc/optimization variables
-!    integer(IntKi),                 intent(  out)      :: errStat     !< Error status of the operation
-!    character(*),                   intent(  out)      :: errMsg      !< Error message if errStat /= ErrID_None
-!    ! local variables
-!    type(LD_ContinuousStateType)                 :: xdot        ! time derivatives of continuous states      
-!    type(LD_ContinuousStateType)                 :: k1          ! RK4 constant; see above
-!    type(LD_ContinuousStateType)                 :: k2          ! RK4 constant; see above 
-!    type(LD_ContinuousStateType)                 :: k3          ! RK4 constant; see above 
-!    type(LD_ContinuousStateType)                 :: k4          ! RK4 constant; see above 
-!    type(LD_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
-!    type(LD_InputType)                           :: u_interp    ! interpolated value of inputs 
-!    ! Initialize errStat
-!    errStat = ErrID_None
-!    errMsg  = "" 
-!    
-!    ! Initialize interim vars
-!    !bjj: the state type contains allocatable arrays, so we must first allocate space:
-!    call LD_CopyContState( x, k1,       MESH_NEWCOPY, errStat, errMsg )
-!    call LD_CopyContState( x, k2,       MESH_NEWCOPY, errStat, errMsg )
-!    call LD_CopyContState( x, k3,       MESH_NEWCOPY, errStat, errMsg )
-!    call LD_CopyContState( x, k4,       MESH_NEWCOPY, errStat, errMsg )
-!    call LD_CopyContState( x, x_tmp,    MESH_NEWCOPY, errStat, errMsg )
-!    
-!    ! interpolate u to find u_interp = u(t)
-!    call LD_CopyInput(u(1), u_interp, MESH_NEWCOPY, errStat, errMsg  )  ! we need to allocate input arrays/meshes before calling ExtrapInterp...     
-!    call LD_Input_ExtrapInterp( u, utimes, u_interp, t, errStat, errMsg )
-!    
-!    ! find xdot at t
-!    call LD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, errStat, errMsg ) !initializes xdot
-!    
-!    k1%qm    = p%EP_DeltaT * xdot%qm
-!    k1%qmdot = p%EP_DeltaT * xdot%qmdot
-!    x_tmp%qm    = x%qm    + 0.5 * k1%qm
-!    x_tmp%qmdot = x%qmdot + 0.5 * k1%qmdot
-!    
-!    ! interpolate u to find u_interp = u(t + dt/2)
-!    call LD_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%EP_DeltaT, errStat, errMsg)
-!    
-!    ! find xdot at t + dt/2
-!    call LD_CalcContStateDeriv( t + 0.5*p%EP_DeltaT, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, errStat, errMsg )
-!    
-!    k2%qm    = p%EP_DeltaT * xdot%qm
-!    k2%qmdot = p%EP_DeltaT * xdot%qmdot
-!    x_tmp%qm    = x%qm    + 0.5 * k2%qm
-!    x_tmp%qmdot = x%qmdot + 0.5 * k2%qmdot
-!    
-!    ! find xdot at t + dt/2
-!    call LD_CalcContStateDeriv( t + 0.5*p%EP_DeltaT, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, errStat, errMsg )
-!    
-!    k3%qm    = p%EP_DeltaT * xdot%qm
-!    k3%qmdot = p%EP_DeltaT * xdot%qmdot
-!    x_tmp%qm    = x%qm    + k3%qm
-!    x_tmp%qmdot = x%qmdot + k3%qmdot
-!    
-!    ! interpolate u to find u_interp = u(t + dt)
-!    call LD_Input_ExtrapInterp(u, utimes, u_interp, t + p%EP_DeltaT, errStat, errMsg)
-!    
-!    ! find xdot at t + dt
-!    call LD_CalcContStateDeriv( t + p%EP_DeltaT, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, errStat, errMsg )
-!    
-!    k4%qm    = p%EP_DeltaT * xdot%qm
-!    k4%qmdot = p%EP_DeltaT * xdot%qmdot
-!    x%qm    = x%qm    +  ( k1%qm    + 2. * k2%qm    + 2. * k3%qm    + k4%qm    ) / 6.      
-!    x%qmdot = x%qmdot +  ( k1%qmdot + 2. * k2%qmdot + 2. * k3%qmdot + k4%qmdot ) / 6.      
-!    call ExitThisRoutine()
-! CONTAinS      
-!    !...............................................................................................................................
-!    subroutine ExitThisRoutine()
-!       ! This subroutine destroys all the local variables
-!       integer(IntKi)             :: errStat3    ! The error identifier (errStat)
-!       character(1024)            :: errMsg3     ! The error message (errMsg)
-!       call LD_DestroyContState( xdot,     errStat3, errMsg3 )
-!       call LD_DestroyContState( k1,       errStat3, errMsg3 )
-!       call LD_DestroyContState( k2,       errStat3, errMsg3 )
-!       call LD_DestroyContState( k3,       errStat3, errMsg3 )
-!       call LD_DestroyContState( k4,       errStat3, errMsg3 )
-!       call LD_DestroyContState( x_tmp,    errStat3, errMsg3 )
-!       call LD_DestroyInput(     u_interp, errStat3, errMsg3 )
-!    end subroutine ExitThisRoutine            
-!       
-! end subroutine LD_RK4
-! 
-! 
-! !----------------------------------------------------------------------------------------------------------------------------------
-! !> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other
-! !! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
-! subroutine LD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, errStat, errMsg )
-! !..................................................................................................................................
-!    real(DbKi),                         intent(in   ) :: t               !< Current simulation time in seconds
-!    integer(IntKi),                     intent(in   ) :: n               !< Current step of the simulation: t = n*Interval
-!    type(LD_InputType),            intent(inout) :: Inputs(:)       !< Inputs at InputTimes (output from this routine only
-!                                                                         !!  because of record keeping in routines that copy meshes)
-!    real(DbKi),                         intent(in   ) :: InputTimes(:)   !< Times in seconds associated with Inputs
-!    type(LD_ParameterType),        intent(in   ) :: p               !< Parameters
-!    type(LD_ContinuousStateType),  intent(inout) :: x               !< Input: Continuous states at t;
-!                                                                         !!   Output: Continuous states at t + Interval
-!    type(LD_DiscreteStateType),    intent(inout) :: xd              !< Input: Discrete states at t;
-!                                                                         !!   Output: Discrete states at t + Interval
-!    type(LD_ConstraintStateType),  intent(inout) :: z               !< Input: Constraint states at t;
-!                                                                         !!   Output: Constraint states at t + Interval
-!    type(LD_OtherStateType),       intent(inout) :: OtherState      !< Other states: Other states at t;
-!                                                                         !!   Output: Other states at t + Interval
-!    type(LD_MiscVarType),          intent(inout) :: m               !<  Misc variables for optimization (not copied in glue code)
-!    integer(IntKi),                     intent(  out) :: errStat         !< Error status of the operation
-!    character(*),                       intent(  out) :: errMsg          !< Error message if errStat /= ErrID_None
-!    ! Initialize variables
-!    errStat   = ErrID_None           ! no error has occurred
-!    errMsg    = ""
-!    if ( p%nCB == 0) return ! no modes = no states
-!    if (p%IntMethod .eq. 1) then 
-!       call LD_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, errStat, errMsg )
-!    elseif (p%IntMethod .eq. 2) then
-!       call LD_AB4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, errStat, errMsg )
-!    elseif (p%IntMethod .eq. 3) then
-!       call LD_ABM4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, errStat, errMsg )
-!    else  
-!       call SeterrStat(ErrID_Fatal,'Invalid time integration method:'//Num2LStr(p%IntMethod),errStat,errMsg,'LD_UpdateState') 
-!    end IF
-! end subroutine LD_UpdateStates
-! !----------------------------------------------------------------------------------------------------------------------------------
-! !> This is a routine for computing outputs, used in both loose and tight coupling.
-! subroutine LD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
-!    real(DbKi),                        intent(in   )  :: t           !< Current simulation time in seconds
-!    type(LD_InputType),           intent(in   )  :: u           !< Inputs at t
-!    type(LD_ParameterType),       intent(in   )  :: p           !< Parameters
-!    type(LD_ContinuousStateType), intent(in   )  :: x           !< Continuous states at t
-!    type(LD_DiscreteStateType),   intent(in   )  :: xd          !< Discrete states at t
-!    type(LD_ConstraintStateType), intent(in   )  :: z           !< Constraint states at t
-!    type(LD_OtherStateType),      intent(in   )  :: OtherState  !< Other states at t
-!    type(LD_MiscVarType),         intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
-!    type(LD_OutputType),          intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
-!                                                                      !!   nectivity information does not have to be recalculated)
-!    integer(IntKi),                    intent(  out)  :: errStat     !< Error status of the operation
-!    character(*),                      intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
-!    ! Local variables
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine is called at the end of the simulation.
+subroutine LD_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
+   type(LD_InputType),           intent(inout) :: u          !< System inputs
+   type(LD_ParameterType),       intent(inout) :: p          !< Parameters
+   type(LD_ContinuousStateType), intent(inout) :: x          !< Continuous states
+   type(LD_DiscreteStateType),   intent(inout) :: xd         !< Discrete states
+   type(LD_ConstraintStateType), intent(inout) :: z          !< Constraint states
+   type(LD_OtherStateType),      intent(inout) :: OtherState !< Other states
+   type(LD_OutputType),          intent(inout) :: y          !< System outputs
+   type(LD_MiscVarType),         intent(inout) :: m          !< Misc variables for optimization (not copied in glue code)
+   integer(IntKi),               intent(out)   :: errStat    !< Error status of the operation
+   character(*),                 intent(out)   :: errMsg     !< Error message if errStat /= ErrID_None
+   ! Initialize errStat
+   errStat   = ErrID_None           ! no error has occurred
+   errMsg    = ""
+   call LD_DestroyInput      (u         ,errStat,errMsg)
+   call LD_DestroyParam      (p         ,errStat,errMsg)
+   call LD_DestroyContState  (x         ,errStat,errMsg)
+   call LD_DestroyDiscState  (xd        ,errStat,errMsg)
+   call LD_DestroyConstrState(z         ,errStat,errMsg)
+   call LD_DestroyOtherState (OtherState,errStat,errMsg)
+   call LD_DestroyOutput     (y         ,errStat,errMsg)
+   call LD_DestroyMisc       (m         ,errStat,errMsg)
+end subroutine LD_End
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Fourth-order Adams-Bashforth Method (RK4) for numerically integration (see ElastoDyn.f9)
+subroutine LD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat, errMsg )
+   real(DbKi),                   intent(in   ) :: t          !< Current simulation time in seconds
+   integer(IntKi),               intent(in   ) :: n          !< time step number
+   type(LD_InputType),           intent(inout) :: u(:)       !< Inputs at t
+   real(DbKi),                   intent(in   ) :: utimes(:)  !< times of input
+   type(LD_ParameterType),       intent(in   ) :: p          !< Parameters
+   type(LD_ContinuousStateType), intent(inout) :: x          !< Continuous states at t on input at t + dt on output
+   type(LD_DiscreteStateType),   intent(in   ) :: xd         !< Discrete states at t
+   type(LD_ConstraintStateType), intent(in   ) :: z          !< Constraint states at t (possibly a guess)
+   type(LD_OtherStateType),      intent(inout) :: OtherState !< Other states at t on input at t + dt on output
+   type(LD_MiscVarType),         intent(inout) :: m          !< Misc/optimization variables
+   integer(IntKi),               intent(out)   :: errStat    !< Error status of the operation
+   character(*),                 intent(out)   :: errMsg     !< Error message if errStat /= ErrID_None
+   ! local variables
+   type(LD_ContinuousStateType) :: xdot       ! Continuous state derivs at t
+   type(LD_InputType)           :: u_interp
+   ! Initialize errStat
+   errStat = ErrID_None
+   errMsg  = "" 
+   
+   ! need xdot at t
+   call LD_CopyInput(u(1), u_interp, MESH_NEWCOPY, errStat, errMsg  )  ! we need to allocate input arrays/meshes before calling ExtrapInterp...
+   call LD_Input_ExtrapInterp(u, utimes, u_interp, t, errStat, errMsg)
+   call LD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, errStat, errMsg ) ! initializes xdot
+   call LD_DestroyInput( u_interp, errStat, errMsg)   ! we don't need this local copy anymore
+   if (n .le. 2) then
+      OtherState%n = n
+      call LD_CopyContState(xdot, OtherState%xdot(3-n), MESH_UPDATECOPY, errStat, errMsg )
+      call LD_RK4(t, n, u, utimes, p, x, xd, z, OtherState, m, errStat, errMsg )
+   else
+      if (OtherState%n .lt. n) then
+         OtherState%n = n
+         call LD_CopyContState(OtherState%xdot(3), OtherState%xdot(4), MESH_UPDATECOPY, errStat, errMsg )
+         call LD_CopyContState(OtherState%xdot(2), OtherState%xdot(3), MESH_UPDATECOPY, errStat, errMsg )
+         call LD_CopyContState(OtherState%xdot(1), OtherState%xdot(2), MESH_UPDATECOPY, errStat, errMsg )
+      elseif (OtherState%n .gt. n) then
+         errStat = ErrID_Fatal
+         errMsg = ' Backing up in time is not supported with a multistep method '
+         return
+      endif
+      call LD_CopyContState( xdot, OtherState%xdot ( 1 ), MESH_UPDATECOPY, errStat, errMsg )
+      !OtherState%xdot ( 1 )     = xdot  ! make sure this is most up to date
+      x%q = x%q + (p%dt / 24._ReKi) * (55._ReKi*OtherState%xdot(1)%q - 59._ReKi*OtherState%xdot(2)%q + 37._ReKi*OtherState%xdot(3)%q - 9._ReKi * OtherState%xdot(4)%q)
+   endif
+   call LD_DestroyContState(xdot, errStat, errMsg)
+   call LD_DestroyInput(u_interp, errStat, errMsg)
+end subroutine LD_AB4
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating (see ElastoDyn.f90)
+subroutine LD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat, errMsg )
+   real(DbKi),                   intent(in   ) :: t          !< Current simulation time in seconds
+   integer(IntKi),               intent(in   ) :: n          !< time step number
+   type(LD_InputType),           intent(inout) :: u(:)       !< Inputs at t
+   real(DbKi),                   intent(in   ) :: utimes(:)  !< times of input
+   type(LD_ParameterType),       intent(in   ) :: p          !< Parameters
+   type(LD_ContinuousStateType), intent(inout) :: x          !< Continuous states at t on input at t + dt on output ! TODO TODO TODO in
+   type(LD_DiscreteStateType),   intent(in   ) :: xd         !< Discrete states at t
+   type(LD_ConstraintStateType), intent(in   ) :: z          !< Constraint states at t (possibly a guess)
+   type(LD_OtherStateType),      intent(inout) :: OtherState !< Other states at t on input at t + dt on output
+   type(LD_MiscVarType),         intent(inout) :: m          !< Misc/optimization variables
+   integer(IntKi),               intent(out)   :: errStat    !< Error status of the operation
+   character(*),                 intent(out)   :: errMsg     !< Error message if errStat /= ErrID_None
+   ! local variables
+   type(LD_InputType)            :: u_interp        ! Continuous states at t
+   type(LD_ContinuousStateType)  :: x_pred          ! Continuous states at t
+   type(LD_ContinuousStateType)  :: xdot_pred       ! Continuous states at t
+   ! Initialize errStat
+   errStat = ErrID_None
+   errMsg  = "" 
+   call LD_CopyContState(x, x_pred, MESH_NEWCOPY, errStat, errMsg) !initialize x_pred      
+   call LD_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, m, errStat, errMsg )
+   if (n .gt. 2) then
+      call LD_CopyInput( u(1), u_interp, MESH_NEWCOPY, errStat, errMsg) ! make copy so that arrays/meshes get initialized/allocated for ExtrapInterp
+      call LD_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, errStat, errMsg)
+      call LD_CalcContStateDeriv(t + p%dt, u_interp, p, x_pred, xd, z, OtherState, m, xdot_pred, errStat, errMsg ) ! initializes xdot_pred
+      call LD_DestroyInput( u_interp, errStat, errMsg) ! local copy no longer needed
+   
+      x%q    = x%q    + (p%dt / 24.) * ( 9. * xdot_pred%q +  19. * OtherState%xdot(1)%q - 5. * OtherState%xdot(2)%q  + 1. * OtherState%xdot(3)%q )
+      call LD_DestroyContState( xdot_pred, errStat, errMsg) ! local copy no longer needed
+   else
+      x%q    = x_pred%q
+   endif
+   call LD_DestroyContState( x_pred, errStat, errMsg) ! local copy no longer needed
+end subroutine LD_ABM4
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Fourth-order Runge-Kutta Method (RK4) for numerically integration (see ElastoDyn.f90)
+subroutine LD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat, errMsg )
+   real(DbKi),                   intent(in   ) :: t          !< Current simulation time in seconds
+   integer(IntKi),               intent(in   ) :: n          !< time step number
+   type(LD_InputType),           intent(inout) :: u(:)       !< Inputs at t
+   real(DbKi),                   intent(in   ) :: utimes(:)  !< times of input
+   type(LD_ParameterType),       intent(in   ) :: p          !< Parameters
+   type(LD_ContinuousStateType), intent(inout) :: x          !< Continuous states at t on input at t + dt on output
+   type(LD_DiscreteStateType),   intent(in   ) :: xd         !< Discrete states at t
+   type(LD_ConstraintStateType), intent(in   ) :: z          !< Constraint states at t (possibly a guess)
+   type(LD_OtherStateType),      intent(inout) :: OtherState !< Other states at t on input at t + dt on output
+   type(LD_MiscVarType),         intent(inout) :: m          !< Misc/optimization variables
+   integer(IntKi),               intent(out)   :: errStat    !< Error status of the operation
+   character(*),                 intent(out)   :: errMsg     !< Error message if errStat /= ErrID_None
+   ! local variables
+   type(LD_ContinuousStateType)                 :: xdot        ! time derivatives of continuous states      
+   type(LD_ContinuousStateType)                 :: k1          ! RK4 constant; see above
+   type(LD_ContinuousStateType)                 :: k2          ! RK4 constant; see above 
+   type(LD_ContinuousStateType)                 :: k3          ! RK4 constant; see above 
+   type(LD_ContinuousStateType)                 :: k4          ! RK4 constant; see above 
+   type(LD_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
+   type(LD_InputType)                           :: u_interp    ! interpolated value of inputs 
+   ! Initialize errStat
+   errStat = ErrID_None
+   errMsg  = "" 
+   
+   ! Initialize interim vars
+   call LD_CopyContState( x, k1,       MESH_NEWCOPY, errStat, errMsg )
+   call LD_CopyContState( x, k2,       MESH_NEWCOPY, errStat, errMsg )
+   call LD_CopyContState( x, k3,       MESH_NEWCOPY, errStat, errMsg )
+   call LD_CopyContState( x, k4,       MESH_NEWCOPY, errStat, errMsg )
+   call LD_CopyContState( x, x_tmp,    MESH_NEWCOPY, errStat, errMsg )
+   
+   ! interpolate u to find u_interp = u(t)
+   call LD_CopyInput(u(1), u_interp, MESH_NEWCOPY, errStat, errMsg  )  ! we need to allocate input arrays/meshes before calling ExtrapInterp...     
+   call LD_Input_ExtrapInterp( u, utimes, u_interp, t, errStat, errMsg )
+   
+   ! find xdot at t
+   call LD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, errStat, errMsg ) !initializes xdot
+   
+   k1%q    = p%dt * xdot%q
+   x_tmp%q = x%q    + 0.5_ReKi * k1%q
+   
+   ! interpolate u to find u_interp = u(t + dt/2)
+   call LD_Input_ExtrapInterp(u, utimes, u_interp, t+0.5_ReKi*p%dt, errStat, errMsg)
+   
+   ! find xdot at t + dt/2
+   call LD_CalcContStateDeriv( t + 0.5_ReKi*p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, errStat, errMsg )
+   
+   k2%q    = p%dt * xdot%q
+   x_tmp%q = x%q    + 0.5_ReKi * k2%q
+   
+   ! find xdot at t + dt/2
+   call LD_CalcContStateDeriv( t + 0.5_ReKi*p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, errStat, errMsg )
+   
+   k3%q    = p%dt * xdot%q
+   x_tmp%q = x%q    + k3%q
+   
+   ! interpolate u to find u_interp = u(t + dt)
+   call LD_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, errStat, errMsg)
+   
+   ! find xdot at t + dt
+   call LD_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, errStat, errMsg )
+   k4%q   = p%dt * xdot%q
+   x%q    = x%q    +  ( k1%q    + 2._ReKi * k2%q    + 2._ReKi * k3%q    + k4%q    ) / 6._ReKi
+   call CleanUp()
+contains      
+   subroutine CleanUp()
+      integer(IntKi)             :: errStat3    ! The error identifier (errStat)
+      character(1024)            :: errMsg3     ! The error message (errMsg)
+      call LD_DestroyContState( xdot,     errStat3, errMsg3 )
+      call LD_DestroyContState( k1,       errStat3, errMsg3 )
+      call LD_DestroyContState( k2,       errStat3, errMsg3 )
+      call LD_DestroyContState( k3,       errStat3, errMsg3 )
+      call LD_DestroyContState( k4,       errStat3, errMsg3 )
+      call LD_DestroyContState( x_tmp,    errStat3, errMsg3 )
+      call LD_DestroyInput(     u_interp, errStat3, errMsg3 )
+   end subroutine CleanUp            
+end subroutine LD_RK4
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Loose coupling routine for solving states at t+dt
+subroutine LD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, errStat, errMsg )
+   real(DbKi),                   intent(in   ) :: t             !< Current simulation time in seconds
+   integer(IntKi),               intent(in   ) :: n             !< Current step of the simulation: t = n*dt
+   type(LD_InputType),           intent(inout) :: Inputs(:)     !< Inputs at InputTimes (output from this routine only
+   real(DbKi),                   intent(in   ) :: InputTimes(:) !< Times in seconds associated with Inputs
+   type(LD_ParameterType),       intent(in   ) :: p             !< Parameters
+   type(LD_ContinuousStateType), intent(inout) :: x             !< Input: Continuous states at t;  Output: at t+dt
+   type(LD_DiscreteStateType),   intent(inout) :: xd            !< Input: Discrete states at t;    Output: at t+dt
+   type(LD_ConstraintStateType), intent(inout) :: z             !< Input: Constraint states at t;  Output: at t+dt
+   type(LD_OtherStateType),      intent(inout) :: OtherState    !< Other states: Other states at t;Output: at t+dt
+   type(LD_MiscVarType),         intent(inout) :: m             !< Misc variables for optimization (not copied in glue code)
+   integer(IntKi),               intent(out)   :: errStat       !< Error status of the operation
+   character(*),                 intent(out)   :: errMsg        !< Error message if errStat /= ErrID_None
+   ! Initialize variables
+   errStat   = ErrID_None           ! no error has occurred
+   errMsg    = ""
+   if ( p%nq == 0) return 
+   if (p%IntMethod .eq. 1) then 
+      call LD_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, errStat, errMsg )
+   elseif (p%IntMethod .eq. 2) then
+      call LD_AB4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, errStat, errMsg )
+   elseif (p%IntMethod .eq. 3) then
+      call LD_ABM4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, errStat, errMsg )
+   else  
+      call SeterrStat(ErrID_Fatal,'Invalid time integration method:'//Num2LStr(p%IntMethod),errStat,errMsg,'LD_UpdateState') 
+   end if
+end subroutine LD_UpdateStates
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This is a routine for computing outputs, used in both loose and tight coupling.
+subroutine LD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
+   real(DbKi),                   intent(in   ) :: t          !< Current simulation time in seconds
+   type(LD_InputType),           intent(in   ) :: u          !< Inputs at t
+   type(LD_ParameterType),       intent(in   ) :: p          !< Parameters
+   type(LD_ContinuousStateType), intent(in   ) :: x          !< Continuous states at t
+   type(LD_DiscreteStateType),   intent(in   ) :: xd         !< Discrete states at t
+   type(LD_ConstraintStateType), intent(in   ) :: z          !< Constraint states at t
+   type(LD_OtherStateType),      intent(in   ) :: OtherState !< Other states at t
+   type(LD_MiscVarType),         intent(inout) :: m          !< Misc variables for optimization (not copied in glue code)
+   type(LD_OutputType),          intent(inout) :: y          !< Outputs computed at t (Input only so that mesh con-
+   integer(IntKi),               intent(out)   :: errStat    !< Error status of the operation
+   character(*),                 intent(out)   :: errMsg     !< Error message if errStat /= ErrID_None
+   ! Local variables
+   type(LD_ContinuousStateType) :: dxdt !< 
+   integer(IntKi)  :: errStat2    ! Status of error message
+   character(1024) :: errMsg2     ! Error message if ErrStat /= ErrID_None
 !    integer(IntKi)                                  :: I                 !< Generic counters
 !    real(ReKi), dimension(6)                        :: Fc                !< Output coupling force
-!    ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%Forces
-!    call InterpStpMat(real(t,ReKi), p%times, p%Forces, m%Indx, p%nTimeSteps, m%F_at_t)
+   ! Initialize variables
+   errStat   = ErrID_None           ! no error has occurred
+   errMsg    = ""
 ! 
-!    ! --- Flatening vectors and using linear state formulation y=Cx+Du+Fy
-!    ! u flat (x1, \dot{x1}, \ddot{x1})
-!    m%uFlat(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
-!    m%uFlat(4:6)   = GetSmllRotAngs(u%PtfmMesh%Orientation(:,:,1), errStat, errMsg); call SeterrStatSimple(errStat, errMsg, 'LD_CalcOutput')
-!    m%uFlat(7:9  ) = u%PtfmMesh%TranslationVel(:,1)
-!    m%uFlat(10:12) = u%PtfmMesh%RotationVel   (:,1)
-!    m%uFlat(13:15) = u%PtfmMesh%TranslationAcc(:,1)
-!    m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
-! 
-!    !--- Computing output:  y = Cx + Du + Fy  
-!    ! 
-!    if (p%nCB>0) then
-!        ! x flat
-!        m%xFlat(      1:p%nCB  ) = x%qm   (1:p%nCB)
-!        m%xFlat(p%nCB+1:2*p%nCB) = x%qmdot(1:p%nCB)
-! 
-!        ! >>> MATMUL implementation
-!        !Fc = matmul(p%CMat, m%xFlat) + matmul(p%DMat, m%uFlat) + m%F_at_t(1:6) - matmul(p%M12, m%F_at_t(6+1:6+p%nCB))
-! 
-!        ! >>> LAPACK implementation
-!        Fc(1:6) = m%F_at_t(1:6) ! Fc = F1r + ...
-!        !           GEMV(TRS, M  , N      , alpha    , A     , LDA, X                    ,inCX, Beta  ,  Y, IncY)
-!        call LAPACK_GEMV('n', 6  , 2*p%nCB,  1.0_ReKi, p%CMat, 6  , m%xFlat              , 1, 1.0_ReKi, Fc, 1   ) ! = C*x + (F1r)
-!        call LAPACK_GEMV('n', 6  ,   18   ,  1.0_ReKi, p%DMat, 6  , m%uFlat              , 1, 1.0_ReKi, Fc, 1   ) ! + D*u
-!        call LAPACK_GEMV('n', 6  , p%nCB  , -1.0_ReKi, p%M12 , 6  , m%F_at_t(6+1:6+p%nCB), 1, 1.0_ReKi, Fc, 1   ) ! - M12*F2r
-!    else
-!        Fc =                           matmul(p%DMat, m%uFlat) + m%F_at_t(1:6) 
-!    endif
+   ! --- Compute accelerations
+   call LD_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, dxdt, errStat2, errMsg2)
+   y%qd = dxdt%q
+
+
+
+   !--- Computing output:  y = Cx + Du + Fy  
 ! 
 !    ! Update the output mesh
 !    do i=1,3
@@ -707,123 +630,56 @@ end subroutine LD_Init
 !           y%WriteOutput(I) = -9.9999e20
 !       endif
 !    enddo    
-! end subroutine LD_CalcOutput
-! !----------------------------------------------------------------------------------------------------------------------------------
-! 
-! 
-! !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! !> This is a tight coupling routine for computing derivatives of continuous states.
-! subroutine LD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, errStat, errMsg )
-! !..................................................................................................................................
-!    real(DbKi),                        intent(in   )  :: t           !< Current simulation time in seconds
-!    type(LD_InputType),           intent(in   )  :: u           !< Inputs at t
-!    type(LD_ParameterType),       intent(in   )  :: p           !< Parameters
-!    type(LD_ContinuousStateType), intent(in   )  :: x           !< Continuous states at t
-!    type(LD_DiscreteStateType),   intent(in   )  :: xd          !< Discrete states at t
-!    type(LD_ConstraintStateType), intent(in   )  :: z           !< Constraint states at t
-!    type(LD_OtherStateType),      intent(in   )  :: OtherState  !< Other states at t
-!    type(LD_MiscVarType),         intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
-!    type(LD_ContinuousStateType), intent(  out)  :: dxdt        !< Continuous state derivatives at t
-!    integer(IntKi),                    intent(  out)  :: errStat     !< Error status of the operation
-!    character(*),                      intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
-!    ! Local variables
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'LD_CalcOutput' )
+      Failed =  errStat >= AbortErrLev
+   end function Failed
+end subroutine LD_CalcOutput
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Tight coupling routine for computing derivatives of continuous states.
+subroutine LD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, errStat, errMsg )
+   real(DbKi),                   intent(in   ) :: t          !< Current simulation time in seconds
+   type(LD_InputType),           intent(in   ) :: u          !< Inputs at t
+   type(LD_ParameterType),       intent(in   ) :: p          !< Parameters
+   type(LD_ContinuousStateType), intent(in   ) :: x          !< Continuous states at t
+   type(LD_DiscreteStateType),   intent(in   ) :: xd         !< Discrete states at t
+   type(LD_ConstraintStateType), intent(in   ) :: z          !< Constraint states at t
+   type(LD_OtherStateType),      intent(in   ) :: OtherState !< Other states at t
+   type(LD_MiscVarType),         intent(inout) :: m          !< Misc variables for optimization (not copied in glue code)
+   type(LD_ContinuousStateType), intent(out)   :: dxdt       !< Continuous state derivatives at t
+   integer(IntKi),               intent(out)   :: errStat    !< Error status of the operation
+   character(*),                 intent(out)   :: errMsg     !< Error message if errStat /= ErrID_None
+   ! Local variables
+   integer(IntKi)  :: errStat2    ! Status of error message
+   character(1024) :: errMsg2     ! Error message if ErrStat /= ErrID_None
 !    integer(IntKi)                                    :: I
-!    ! Allocation of output dxdt (since intent(out))
-!    call AllocAry(dxdt%qm,    p%nCB, 'dxdt%qm',    errStat, errMsg); if(Failed()) return
-!    call AllocAry(dxdt%qmdot, p%nCB, 'dxdt%qmdot', errStat, errMsg); if(Failed()) return
-!    if ( p%nCB == 0 ) return
-!    do I=1,p%nCB; dxdt%qm   (I)=0; enddo
-!    do I=1,p%nCB; dxdt%qmdot(I)=0; enddo
-! 
-!    ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%F
-!    call InterpStpMat(real(t,ReKi), p%times, p%Forces, m%Indx, p%nTimeSteps, m%F_at_t)
-! 
-!    ! u flat (x1, \dot{x1}, \ddot{x1})
-!    m%uFlat(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
-!    m%uFlat(4:6)   = GetSmllRotAngs(u%PtfmMesh%Orientation(:,:,1), errStat, errMsg); if(Failed()) return
-!    m%uFlat(7:9  ) = u%PtfmMesh%TranslationVel(:,1)
-!    m%uFlat(10:12) = u%PtfmMesh%RotationVel   (:,1)
-!    m%uFlat(13:15) = u%PtfmMesh%TranslationAcc(:,1)
-!    m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
-! 
-!    ! --- Computation of qm and qmdot
-!    ! >>> Latex formulae:
-!    ! \ddot{x2} = -K22 x2 - C22 \dot{x2}  - C21 \dot{x1} - M21 \ddot{x1} + fr2
-!    ! >>> MATMUL IMPLEMENTATION 
-!    !dxdt%qm= x%qmdot
-!    !dxdt%qmdot = - matmul(p%K22,x%qm) - matmul(p%C22,x%qmdot) &
-!    !             - matmul(p%C21,m%uFlat(7:12)) - matmul(p%M21, m%uFlat(13:18)) + m%F_at_t(6+1:6+p%nCB)
-!    ! >>> BLAS IMPLEMENTATION 
-!    !           COPY( N   , X                    , inCX, Y      , inCY)
-!    call LAPACK_COPY(p%nCB, x%qmdot              , 1  , dxdt%qm    , 1  ) ! qmdot=qmdot
-!    call LAPACK_COPY(p%nCB, m%F_at_t(6+1:6+p%nCB), 1  , dxdt%qmdot , 1  )                                          ! qmddot = fr2
-!    !           GEMV(TRS, M    , N     , alpha    , A    , LDA  , X              ,inCX, Beta   ,  Y        , IncY)
-!    call LAPACK_GEMV('n', p%nCB, p%nCB , -1.0_ReKi, p%K22, p%nCB, x%qm          , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - K22 x2
-!    call LAPACK_GEMV('n', p%nCB, 6     , -1.0_ReKi, p%C21, p%nCB, m%uFlat(7:12) , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - C21 \dot{x1}
-!    call LAPACK_GEMV('n', p%nCB, p%nCB , -1.0_ReKi, p%C22, p%nCB, x%qmdot       , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - C22 \dot{x2}
-!    call LAPACK_GEMV('n', p%nCB, 6     , -1.0_ReKi, p%M21, p%nCB, m%uFlat(13:18), 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - M21 \ddot{x1}
-! 
-! CONTAinS
-!     logical function Failed()
-!         call SeterrStatSimple(errStat, errMsg, 'LD_CalcContStateDeriv')
-!         Failed =  errStat >= AbortErrLev
-!     end function Failed
-! end subroutine LD_CalcContStateDeriv
-! !----------------------------------------------------------------------------------------------------------------------------------
-! !> This is a tight coupling routine for updating discrete states.
-! subroutine LD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg )
-! !..................................................................................................................................
-!    real(DbKi),                        intent(in   )  :: t           !< Current simulation time in seconds
-!    integer(IntKi),                    intent(in   )  :: n           !< Current step of the simulation: t = n*Interval
-!    type(LD_InputType),           intent(in   )  :: u           !< Inputs at t
-!    type(LD_ParameterType),       intent(in   )  :: p           !< Parameters
-!    type(LD_ContinuousStateType), intent(in   )  :: x           !< Continuous states at t
-!    type(LD_DiscreteStateType),   intent(inout)  :: xd          !< Input: Discrete states at t, Output: Discrete states at t + Interval
-!    type(LD_ConstraintStateType), intent(in   )  :: z           !< Constraint states at t
-!    type(LD_OtherStateType),      intent(in   )  :: OtherState  !< Other states at t
-!    type(LD_MiscVarType),         intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
-!    integer(IntKi),                    intent(  out)  :: errStat     !< Error status of the operation
-!    character(*),                      intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
-!    ! Initialize errStat
-!    errStat = ErrID_None
-!    errMsg  = ""
-!    ! Update discrete states here:
-!    xd%DummyDiscState = 0.0_Reki
-! end subroutine LD_UpdateDiscState
-! !----------------------------------------------------------------------------------------------------------------------------------
-! !> This is a tight coupling routine for solving for the residual of the constraint state functions.
-! subroutine LD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, Z_residual, errStat, errMsg )
-! !..................................................................................................................................
-!    real(DbKi),                        intent(in   )  :: t           !< Current simulation time in seconds
-!    type(LD_InputType),           intent(in   )  :: u           !< Inputs at t
-!    type(LD_ParameterType),       intent(in   )  :: p           !< Parameters
-!    type(LD_ContinuousStateType), intent(in   )  :: x           !< Continuous states at t
-!    type(LD_DiscreteStateType),   intent(in   )  :: xd          !< Discrete states at t
-!    type(LD_ConstraintStateType), intent(in   )  :: z           !< Constraint states at t (possibly a guess)
-!    type(LD_OtherStateType),      intent(in   )  :: OtherState  !< Other states at t
-!    type(LD_MiscVarType),         intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
-!    type(LD_ConstraintStateType), intent(  out)  :: Z_residual  !< Residual of the constraint state functions using
-!                                                                     !!     the input values described above
-!    integer(IntKi),                    intent(  out)  :: errStat     !< Error status of the operation
-!    character(*),                      intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
-!    ! Initialize errStat
-!    errStat = ErrID_None
-!    errMsg  = ""
-!    ! Solve for the residual of the constraint state functions here:
-!    Z_residual%DummyConstrState = 0.0_ReKi
-! 
-! end subroutine LD_CalcConstrStateResidual
-! !----------------------------------------------------------------------------------------------------------------------------------
-! 
-! !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! ! ###### The following four routines are Jacobian routines for linearization capabilities #######
-! ! If the module does not implement them, set errStat = ErrID_Fatal in LD_Init() when InitInp%Linearize is .true.
-! !----------------------------------------------------------------------------------------------------------------------------------
-! !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-! !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
-! 
+   ! Initialize variables
+   errStat   = ErrID_None           ! no error has occurred
+   errMsg    = ""
+   ! Allocation of output dxdt (since intent(out))
+   call AllocAry(dxdt%q, p%nq, 'dxdt%q', errStat2, errMsg2); if(Failed()) return
+   if ( p%nq == 0 ) return
+
+   ! --- Computation of dq
+   ! >>> MATMUL IMPLEMENTATION 
+   dxdt%q = matmul(p%AA,x%q) + matmul(p%BB,u%Fext)
+   ! >>> BLAS IMPLEMENTATION 
+   !           COPY( N   , X                    , inCX, Y      , inCY)
+   !call LAPACK_COPY(p%nCB, x%qmdot              , 1  , dxdt%qm    , 1  ) ! qmdot=qmdot
+   !!           GEMV(TRS, M    , N     , alpha    , A  , LDA , X  ,inCX, Beta   ,  Y         , IncY)
+   !call LAPACK_GEMV('n', p%nq, p%nq  ,  1.0_ReKi, p%AA, p%nq, x%q   , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - K22 x2
+   !call LAPACK_GEMV('n', p%nq, p%nx  ,  1.0_ReKi, p%BB, p%nq, u%Fext, 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - M21 \ddot{x1}
+!
+contains
+   logical function Failed()
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'LD_CalcContStateDeriv' )
+      Failed =  errStat >= AbortErrLev
+   end function Failed
+end subroutine LD_CalcContStateDeriv
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!>
 ! subroutine LD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg, dYdu, dXdu, dXddu, dZdu)
-! !..................................................................................................................................
 !    real(DbKi),                         intent(in   ) :: t          !< Time in seconds at operating point
 !    type(LD_InputType),            intent(in   ) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
 !    type(LD_ParameterType),        intent(in   ) :: p          !< Parameters

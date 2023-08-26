@@ -14,7 +14,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     KK                              {:}{:}        -         -        "Stiffness matrix"    -
 typedef   ^                            ^                             ReKi                     x0                              {:}           0         -        "Degrees of freedom initial conditions" -
 typedef   ^                            ^                             ReKi                     xd0                             {:}           0         -        "Velocities initial conditions" -
-typedef   ^                            ^                             IntKi                    activeDOFs                      {:}          .true.     -        "Degrees of freedom that are active"   -
+typedef   ^                            ^                             logical                  activeDOFs                      {:}          .true.     -        "Degrees of freedom that are active"   -
 typedef   ^                            ^                             character(8)             prefix                          -             ""        -        "Prefix for degrees of freedom"        -
 
 # Initialization outputs
@@ -33,27 +33,36 @@ typedef   ^                            DiscreteStateType             Logical    
 typedef   ^                            ConstraintStateType           Logical                  Dummy                           -             -         -        "" -
 
 # Other states:
-typedef   ^                            OtherStateType                Logical                  Dummy                           -             -         -        "" -
+typedef   ^                            OtherStateType                LD_ContinuousStateType   xdot                           {:}            -         -        "Previous state derivs for m-step time integrator"
+typedef   ^                            ^                             IntKi                    n                               -             -         -        "Tracks time step for which OtherState was updated last"
 
 # ..... Misc/Optimization variables.................................................................................................
 typedef   ^                            MiscVarType                   Logical                  Dummy                           -             -         -        "" -
+typedef   ^                            ^                             ReKi                     AllOuts                         {:}           -         -        "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
 
 
 # ..... Parameters ................................................................................................................
 typedef   ^                            ParameterType                 DbKi                     dt                              -             -         -        "time step" s
 typedef   ^                            ^                             IntKi                    IntMethod                       -             -         -        "Identifier for integration method (1 [RK4], 2 [AB4], or 3 [ABM4])" -
+typedef   ^                            ^                             IntKi                    nx                              -             -         -        "Number of degrees of freedom (size of M)" -
+typedef   ^                            ^                             IntKi                    nq                              -             -         -        "nq=2*nx" -
 typedef   ^                            ^                             ReKi                     MM                              {:}{:}        -         -        "Mass      Matrix" -
 typedef   ^                            ^                             ReKi                     CC                              {:}{:}        -         -        "Damping   Matrix" -
 typedef   ^                            ^                             ReKi                     KK                              {:}{:}        -         -        "Stiffness Matrix" -
 typedef   ^                            ^                             ReKi                     Minv                            {:}{:}        -         -        "Inverse of Mass matrix" -
-typedef   ^                            ^                             IntKi                    activeDOFs                      {:}           -         -        "Degrees of freedom that are active" -
-typedef   ^                            ^                             IntKi                    AA                              {:}{:}        -         -        "State matrix" -
+typedef   ^                            ^                             Logical                  activeDOFs                      {:}           -         -        "Degrees of freedom that are active" -
+typedef   ^                            ^                             ReKi                     AA                              {:}{:}        -         -        "State matrix A" -
+typedef   ^                            ^                             ReKi                     BB                              {:}{:}        -         -        "State matrix B" -
+typedef   ^                            ^                             IntKi                    NumOuts                         -             -         -        "Number of values in WriteOutput" -
+typedef   ^                            ^                             OutParmType              OutParam                        {:}           -         -        "Names and units (and other characteristics) of all requested output parameters" -
+typedef   ^                            ^                             IntKi                    OutParamLinIndx                 {:}{:}        -         -        "Index into WriteOutput for linearization analysis" -
+
+
 
 # ..... Inputs ....................................................................................................................
 typedef   ^                            InputType                     ReKi                     Fext                            :             -         -        "External loads" 
 
 # ..... Outputs ...................................................................................................................                            
 typedef   ^                            OutputType                    ReKi                     qd                              {:}           -                  "Time derivative of continuous states" - 
-typedef   ^                            OutputType                    ReKi                     qdd                             {:}           -                  "Time derivative of continuous states" - 
 typedef   ^                            ^                             ReKi                     WriteOutput                     {:}           -         -        "outputs to be written to a file"  -
 
