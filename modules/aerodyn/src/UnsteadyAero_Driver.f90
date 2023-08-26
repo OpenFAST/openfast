@@ -38,7 +38,7 @@ program UnsteadyAero_Driver
    real(DbKi)  :: dt, t, uTimes(NumInp)
    integer     :: i, j, n, iu
    ! --- UA
-   type(UA_InitInputType)                        :: InitInData           ! Input data for initialization
+   type(UA_InitInputType)                        :: UA_InitInData           ! Input data for initialization
    type(UA_InitOutputType)                       :: InitOutData          ! Output data from initialization
    type(UA_ContinuousStateType)                  :: x                    ! Continuous states
    type(UA_DiscreteStateType)                    :: xd                   ! Discrete states
@@ -63,8 +63,6 @@ program UnsteadyAero_Driver
    integer(IntKi)                                :: ErrStat              ! Status of error message
    character(ErrMsgLen)                          :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
-   integer, parameter                            :: NumAFfiles = 1
-   character(1024)                               :: afNames(NumAFfiles)
    type(AFI_ParameterType)                       :: AFI_Params(NumAFfiles)
    integer, allocatable                          :: AFIndx(:,:)
    CHARACTER(1024)                               :: dvrFilename          ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
@@ -76,7 +74,6 @@ program UnsteadyAero_Driver
    real(ReKi), allocatable                       :: AOAarr(:)
    real(ReKi), allocatable                       :: Uarr(:)
    real(ReKi), allocatable                       :: OmegaArr(:)
-   logical                                       :: UA_f_cn ! Should the separation function be computed using Cn or Cl
    
    CHARACTER(200)                                :: git_commit
    TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'UnsteadyAero Driver', '', '' )  ! The version number of this program.
@@ -87,7 +84,6 @@ program UnsteadyAero_Driver
    ErrMsg  = ''
    ErrStat = ErrID_None
    
-   
       ! Display the copyright notice
    CALL DispCopyrightLicense( version%Name )
       ! Obtain OpenFAST git commit hash
@@ -96,123 +92,50 @@ program UnsteadyAero_Driver
    CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
    
    
-      ! Parse the driver file if one was provided, if not, then set driver parameters using hardcoded values
+   ! --- Parse the driver file if one
    if ( command_argument_count() > 1 ) then
       call print_help()
-      call checkError()
-   end if
-  
-   
-      ! Establish initialization inputs which are fixed for the stand-alone driver, but would be
-      ! variable for a coupled simulation
-   InitInData%nNodesPerBlade  = 1 
-   InitInData%numBlades       = 1
-   
-      ! Set up initialization data
-   allocate(AFIndx(InitInData%nNodesPerBlade,InitInData%numBlades), STAT = ErrStat)
-      if ( ErrStat /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Error trying to allocate InitInData%AFIndx.', ErrStat, ErrMsg, RoutineName)
-         call checkError()
-      end if
-   
-   allocate(InitInData%c(InitInData%nNodesPerBlade,InitInData%numBlades), STAT = ErrStat)
-      if ( ErrStat /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Error trying to allocate InitInData%c.', ErrStat, ErrMsg, RoutineName)
-         call checkError()
-      end if
-   
-   allocate( InitInData%UAOff_innerNode(InitInData%numBlades), InitInData%UAOff_outerNode(InitInData%numBlades), STAT = ErrStat)
-      if ( ErrStat /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Error trying to allocate UAOff_innerNode and UAOff_outerNode.', ErrStat, ErrMsg, RoutineName)
-         call checkError()
-      end if
-   ! don't turn off UA based on span location:
-   InitInData%UAOff_innerNode = 0
-   InitInData%UAOff_outerNode = InitInData%nNodesPerBlade + 1
-      
-      ! Parse the driver input file and run the simulation based on that file
-      
-   if ( command_argument_count() == 1 ) then
-      
-      call get_command_argument(1, dvrFilename)
-      call ReadDriverInputFile( dvrFilename, dvrInitInp, errStat, errMsg )
-         call checkError()
-      InitInData%a_s          = dvrInitInp%SpdSound
-      InitInData%c(1,1)       = dvrInitInp%Chord
-      InitInData%UAMod        = dvrInitInp%UAMod 
-      InitInData%Flookup      = dvrInitInp%Flookup
-   
-   else
-      
-      dvrInitInp%OutRootName  = './TestingUA_Driver'
-      InitInData%UAMod        = 1  
-      InitInData%Flookup      = .FALSE.
-      InitInData%a_s          = 340.29 ! m/s  
-      InitInData%c(1,1)       = 1.0
-      
-      dvrInitInp%InflowVel    = 30.0 ! m/s
-      dvrInitInp%Re           = 75  ! million
-      dvrInitInp%AirFoil1     = './OSU075_FAST.txt'
-      dvrInitInp%SimMod       = 1
-      dvrInitInp%NCycles      = 3.0
-      dvrInitInp%Frequency    = 1.2 ! Hz
-      dvrInitInp%StepsPerCycle= 180
-      dvrInitInp%Amplitude    = 10.0 ! deg
-      dvrInitInp%Mean         =  2.0 ! deg
-      dvrInitInp%Phase        =  0 ! steps of a cycle
-      dvrInitInp%InputsFile   = ''
-      
-   end if
-   InitInData%OutRootName = dvrInitInp%OutRootName
-   
-   InitInData%WrSum = dvrInitInp%SumPrint ! write all the AFI data
-
-   if ( dvrInitInp%SimMod == 3 ) then
-
-      print*,'>>>> STopping'
-   
-
       call NormStop()
+   endif
+   call get_command_argument(1, dvrFilename)
+   call ReadDriverInputFile( dvrFilename, dvrInitInp, errStat, errMsg ); call checkError()
 
 
-   elseif ( dvrInitInp%SimMod == 1 ) then
-         ! Using the frequency and NCycles, determine how long the simulation needs to run
+   ! --- Time simulation control
+   if ( dvrInitInp%SimMod == 1 ) then
+      ! Using the frequency and NCycles, determine how long the simulation needs to run
       simTime   = dvrInitInp%NCycles/dvrInitInp%Frequency
       nSimSteps = dvrInitInp%StepsPerCycle*dvrInitInp%NCycles  ! we could add 1 here to make this a complete cycle
       dt        = simTime / nSimSteps
       
    else if ( dvrInitInp%SimMod == 2 ) then
-         ! Read time-series data file with a 1 line header and then each row contains time-step data with 4, white-space-separated columns
-         ! time,  Angle-of-attack, Vrel, omega 
-      call ReadTimeSeriesData( dvrInitInp%InputsFile, nSimSteps, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg )
-         call checkError()
+      ! Read time-series data file with columns:( time,  Angle-of-attack, Vrel, omega )
+      call ReadTimeSeriesData( dvrInitInp%InputsFile, nSimSteps, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg ); call checkError()
       dt = (timeArr(nSimSteps) - timeArr(1)) / (nSimSteps-1)
       nSimSteps = nSimSteps-NumInp + 1
-      
+
+   elseif ( dvrInitInp%SimMod == 3 ) then
+      simTime   = dvrInitInp%TMax
+      dt        = dvrInitInp%dt
+      nSimSteps = int(simTime/dt) ! TODO
+      print*,'nSimSteps',nSimSteps
+
+      ! --- Initialize Elastic Section
+      !call LD_Init(LD_InitInData, LD_u(1), LD_p, LD_x, LD_xd, LD_O, LD_y, LD_m, LD_InitOutData, errStat, errMsg); call checkError()
    end if
-     
-      ! Initialize the Airfoil Info Params
-   afNames(1)  = dvrInitInp%AirFoil1 ! All nodes/blades are using the same 2D airfoil
-   AFIndx(1,1) = 1
-   UA_f_cn  = (InitInData%UAMod /= UA_HGM).and.(InitInData%UAMod /= UA_OYE)  ! HGM and OYE use the separation function based on cl instead of cn
-   call Init_AFI( InitInData%UAMod, NumAFfiles, afNames, dvrInitInp%UseCm, UA_f_cn, AFI_Params, errStat, errMsg )
-      call checkError()
 
-   if (dvrInitInp%WrAFITables) then
-      call WriteAFITables(AFI_Params(1), dvrInitInp%OutRootName, dvrInitInp%UseCm, UA_f_cn)
-   endif
-   
-   
-      ! Initialize UnsteadyAero (after AFI)
-   call UA_Init( InitInData, u(1), p, x, xd, OtherState, y, m, dt, AFI_Params, AFIndx, InitOutData, errStat, errMsg ) 
-      call checkError()
+   ! --- Init UA input data based on driver inputs
+   call driverInputsToUAInitData(dvrInitInp, UA_InitInData, AFI_Params, AFIndx, errStat, errMsg); call checkError()
 
-
+   ! --- Initialize UnsteadyAero (need AFI)
+   call UA_Init( UA_InitInData, u(1), p, x, xd, OtherState, y, m, dt, AFI_Params, AFIndx, InitOutData, errStat, errMsg ); call checkError()
    if (p%NumOuts <= 0) then
       ErrStat = ErrID_Fatal
       ErrMsg = "No outputs have been selected. Rebuild the executable with -DUA_OUTS"
       call checkError()
    end if
+
+
 
    ! set inputs:
    !u(1) = time at n=1  (t=   0)
@@ -220,13 +143,10 @@ program UnsteadyAero_Driver
    !u(3) = time at n=-1 (t= -2dt) if NumInp > 2
 
    DO iu = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here 
-      call setUAinputs(2-iu,  u(iu), uTimes(iu), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg) 
-         call checkError()
+      call setUAinputs(2-iu,  u(iu), uTimes(iu), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg); call checkError()
    END DO
-   
-      ! Set inputs which do not vary with node or time
 
-      ! time marching loop
+   ! --- time marching loop
    do n = 1, nSimSteps
 
       i = 1 ! nodes per blade
@@ -239,35 +159,26 @@ program UnsteadyAero_Driver
       END DO
   
       ! first value of uTimes/u contain inputs at t+dt
-      call setUAinputs(n+1,  u(1), uTimes(1), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg) 
-         call checkError()
+      call setUAinputs(n+1,  u(1), uTimes(1), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg); call checkError()
         
       t = uTimes(2)
 
-         ! Use existing states to compute the outputs
-      call UA_CalcOutput(i, j, t, u(2),  p, x, xd, OtherState, AFI_Params(AFIndx(i,j)), y, m, errStat, errMsg )
-         call checkError()
+      ! Use existing states to compute the outputs
+      call UA_CalcOutput(i, j, t, u(2),  p, x, xd, OtherState, AFI_Params(AFIndx(i,j)), y, m, errStat, errMsg ); call checkError()
             
-         ! Generate file outputs
+      ! Generate file outputs
       call UA_WriteOutputToFile(t, p, y)
-
       
-         ! Prepare states for next time step
-      call UA_UpdateStates(i, j, t, n, u, uTimes, p, x, xd, OtherState, AFI_Params(AFIndx(i,j)), m, errStat, errMsg )
-         call checkError()
-               
+      ! Prepare states for next time step
+      call UA_UpdateStates(i, j, t, n, u, uTimes, p, x, xd, OtherState, AFI_Params(AFIndx(i,j)), m, errStat, errMsg ); call checkError()
       
    end do
    
-   
-   !-------------------------------------------------------------------------------------------------
-   ! Close our output file
-   !-------------------------------------------------------------------------------------------------
-   
+   ! --- Exit
    call Cleanup()
    call NormStop()
-   
-   contains
+
+contains
    
    !====================================================================================================
    subroutine Cleanup()
@@ -295,6 +206,8 @@ program UnsteadyAero_Driver
       end if
       
    end subroutine checkError
+   !----------------------------------------------------------------------------------------------------  
+
    !----------------------------------------------------------------------------------------------------  
    subroutine setUAinputs(n,u,t,dt,dvrInitInp,timeArr,AOAarr,Uarr,OmegaArr,errStat,errMsg)
    

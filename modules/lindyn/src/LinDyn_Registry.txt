@@ -8,6 +8,7 @@ include   Registry_NWTC_Library.txt
 # ..... Initialization data .......................................................................................................
 # Initialization inputs
 typedef   LinDyn/LD                    InitInputType                 DbKi                     dt                              -             -         -        "time step" s
+typedef   ^                            ^                             IntKi                    IntMethod                       -             -         -        "Identifier for integration method (1 [RK4], 2 [AB4], or 3 [ABM4])" -
 typedef   ^                            ^                             ReKi                     MM                              {:}{:}        -         -        "Mass      matrix"    -
 typedef   ^                            ^                             ReKi                     CC                              {:}{:}        -         -        "Damping   matrix"    -
 typedef   ^                            ^                             ReKi                     KK                              {:}{:}        -         -        "Stiffness matrix"    -
@@ -17,6 +18,7 @@ typedef   ^                            ^                             IntKi      
 typedef   ^                            ^                             character(8)             prefix                          -             ""        -        "Prefix for degrees of freedom"        -
 
 # Initialization outputs
+typedef LinDyn/LD                      InitOutputType                ProgDesc                 Ver                              -            -         -        "This module's name, version, and date"	-
 typedef   ^                            InitOutputType                character(19)            WriteOutputHdr                  {:}           -         -        "The is the list of all output channel header strings (includes all sub-module channels)"    -
 typedef   ^                            ^                             character(19)            WriteOutputUnt                  {:}           -         -        "The is the list of all output channel unit strings (includes all sub-module channels)"    -
 
@@ -34,16 +36,18 @@ typedef   ^                            ConstraintStateType           Logical    
 typedef   ^                            OtherStateType                Logical                  Dummy                           -             -         -        "" -
 
 # ..... Misc/Optimization variables.................................................................................................
-typedef   ^                            MiscVarType                   ReKi                     mMinvC                          {:}{:}        -         -        "-M^-1 C" -
-typedef   ^                            ^                             ReKi                     mMinvK                          {:}{:}        -         -        "-M^-1 K" -
+typedef   ^                            MiscVarType                   Logical                  Dummy                           -             -         -        "" -
 
 
 # ..... Parameters ................................................................................................................
 typedef   ^                            ParameterType                 DbKi                     dt                              -             -         -        "time step" s
+typedef   ^                            ^                             IntKi                    IntMethod                       -             -         -        "Identifier for integration method (1 [RK4], 2 [AB4], or 3 [ABM4])" -
 typedef   ^                            ^                             ReKi                     MM                              {:}{:}        -         -        "Mass      Matrix" -
 typedef   ^                            ^                             ReKi                     CC                              {:}{:}        -         -        "Damping   Matrix" -
 typedef   ^                            ^                             ReKi                     KK                              {:}{:}        -         -        "Stiffness Matrix" -
+typedef   ^                            ^                             ReKi                     Minv                            {:}{:}        -         -        "Inverse of Mass matrix" -
 typedef   ^                            ^                             IntKi                    activeDOFs                      {:}           -         -        "Degrees of freedom that are active" -
+typedef   ^                            ^                             IntKi                    AA                              {:}{:}        -         -        "State matrix" -
 
 # ..... Inputs ....................................................................................................................
 typedef   ^                            InputType                     ReKi                     Fext                            :             -         -        "External loads" 
