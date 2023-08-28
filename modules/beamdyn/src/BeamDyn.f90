@@ -196,7 +196,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
    call Init_OtherStates(u, p, OtherState, ErrStat2, ErrMsg2); if (Failed()) return
 
       ! initialize outputs (need to do this after initializing inputs and parameters (p%nnu0))
-   call Init_y(p, OtherSTate, u, y, ErrStat2, ErrMsg2); if (Failed()) return
+   call Init_y(p, OtherState, u, y, ErrStat2, ErrMsg2); if (Failed()) return
 
       ! allocate and initialize misc vars (do this after initializing input and output meshes):
    call Init_MiscVars(p, u, y, MiscVar, ErrStat2, ErrMsg2); if (Failed()) return
@@ -878,7 +878,7 @@ subroutine SetRefFrame( u, OtherState, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   ! Calculate new global position, rotation, and WM from root motion.  Note that this is similar to the InitRefFrame routine 
+   ! Calculate new global position, rotation, and WM from root motion.  Note that this is similar to the InitRefFrame routine
    OtherState%GlbPos = u%RootMotion%Position(:, 1) + &
                        u%RootMotion%TranslationDisp(:, 1)
    OtherState%GlbRot = transpose(u%RootMotion%Orientation(:, :, 1))
@@ -914,8 +914,8 @@ subroutine SetParameters(InitInp, InputFileData, p, OtherState, ErrStat, ErrMsg)
    ErrMsg  = ""
 
 
-      ! Gravity vector
-   p%gravity = MATMUL(InitInp%gravity,OtherState%GlbRot)
+      ! Gravity vector -- inertial frame!  This must be multiplied by OtherState%GlbRot to get into the BD rotating reference frame
+   p%gravity = InitInp%gravity
 
 
    !....................
@@ -2098,13 +2098,13 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       CALL BD_QPDataVelocity( p, x_tmp, m )           ! x%dqdt --> m%qp%vvv, m%qp%vvp
 
       ! calculate accelerations and reaction loads (in m%RHS):
-      CALL BD_CalcForceAcc(m%u, p, m, ErrStat2,ErrMsg2)
+      CALL BD_CalcForceAcc(m%u, p, OtherState, m, ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSE
          ! Calculate the elastic forces for the static case.
       DO nelem=1,p%elem_total
-         CALL BD_StaticElementMatrix( nelem, p%gravity, p, m )
+         CALL BD_StaticElementMatrix( nelem, MATMUL(p%gravity,OtherState%GlbRot), p, m )
       ENDDO
 
    ENDIF
@@ -2226,7 +2226,7 @@ SUBROUTINE BD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
    CALL BD_QPDataVelocity( p, dxdt, m )           ! x%dqdt --> m%qp%vvv, m%qp%vvp
 
    ! calculate accelerations and reaction loads (in m%RHS):
-   CALL BD_CalcForceAcc(m%u, p, m, ErrStat2,ErrMsg2)
+   CALL BD_CalcForceAcc(m%u, p, OtherState, m, ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) return
       
@@ -3264,10 +3264,11 @@ END SUBROUTINE BD_AssembleRHS
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine total element forces and mass matrices
 !FIXME: note similarities with BD_ElementMatrixGA2
-SUBROUTINE BD_ElementMatrixAcc(  nelem, p, m )
+SUBROUTINE BD_ElementMatrixAcc(  nelem, p, OtherState, m )
 
    INTEGER(IntKi),               INTENT(IN   )  :: nelem       !< number of current element
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState  !< other states -- includes the orientation
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
 
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ElementMatrixAcc'
@@ -3277,7 +3278,7 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, m )
    IF(p%damp_flag .NE. 0) THEN
       CALL BD_DissipativeForce( nelem, p, m, .FALSE. )         ! Calculate dissipative terms on Fc, Fd
    ENDIF
-   CALL BD_GravityForce( nelem, p, m, p%gravity )              ! Calculate Fg      
+   CALL BD_GravityForce( nelem, p, m, MATMUL(p%gravity,OtherState%GlbRot) )              ! Calculate Fg      
    CALL BD_GyroForce( nelem, p, m )                            ! Calculate Fb  (velocity terms from InertialForce with aaa=0)
 
    CALL BD_InertialMassMatrix( nelem, p, m )                   ! Calculate Mi
@@ -3473,7 +3474,7 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
    DO j=1,p%ld_retries
 
        CALL BD_DistrLoadCopy( p, u_interp, m, load_test ) ! move the input loads from u_interp into misc vars
-       gravity_temp(:) = p%gravity(:)*load_test
+       gravity_temp(:) = MATMUL(p%gravity,OtherState%GlbRot)*load_test
 
        CALL BD_StaticSolution(x, gravity_temp, p, m, piter, ErrStat2, ErrMsg2)
        call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)  ! concerned about error reporting
@@ -4168,7 +4169,7 @@ SUBROUTINE BD_GenerateQuasiStaticElement( x, OtherState, p, m )
 
    DO nelem=1,p%elem_total
 
-      CALL BD_QuasiStaticElementMatrix( nelem, p, m )
+      CALL BD_QuasiStaticElementMatrix( nelem, p, OtherState, m )
       CALL BD_AssembleStiffK(nelem,p,m%elk,m%StifK)
       CALL BD_AssembleRHS(nelem,p,m%elf,m%RHS)
 
@@ -4179,10 +4180,11 @@ END SUBROUTINE BD_GenerateQuasiStaticElement
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_QuasiStaticElementMatrix(  nelem, p, m )
+SUBROUTINE BD_QuasiStaticElementMatrix(  nelem, p, OtherState, m )
 
    INTEGER(IntKi),               INTENT(IN   )  :: nelem             !< current element number
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p                 !< Parameters
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState        !< other states (contains global rotation to get gravity in correct orientation)
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< misc/optimization variables
 
    INTEGER(IntKi)              :: i
@@ -4193,7 +4195,7 @@ SUBROUTINE BD_QuasiStaticElementMatrix(  nelem, p, m )
 
 
    CALL BD_ElasticForce(  nelem,p,m,.true. )    ! Calculate Fc, Fd  [and Oe, Pe, and Qe for N-R algorithm]
-   CALL BD_GravityForce(  nelem,p,m,p%gravity )   ! Calculate Fg
+   CALL BD_GravityForce(  nelem,p,m,MATMUL(p%gravity,OtherState%GlbRot) )   ! Calculate Fg
    
       ! NOTE: we only use Ki (not Gi or Mi as we are not calculating \delta{a} or \delta{v})
    CALL BD_InertialForce( nelem,p,m,.true. )    ! Calculate Fi      [and Mi, Gi, Ki]
@@ -4488,7 +4490,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
          end if
 
          ! initialize the accelerations in OtherState%Acc
-      CALL BD_InitAcc( u_interp, p, x, m, OtherState%Acc, ErrStat2, ErrMsg2)
+      CALL BD_InitAcc( u_interp, p, x, OtherState, m, OtherState%Acc, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) then
             call cleanup()
@@ -4989,7 +4991,7 @@ SUBROUTINE BD_GenerateDynamicElementGA2( x, OtherState, p, m, fact )
    DO nelem=1,p%elem_total
 
         ! compute m%elk,m%elf,m%elm,m%elg:
-      CALL BD_ElementMatrixGA2(fact, nelem, p, m )
+      CALL BD_ElementMatrixGA2(fact, nelem, p, OtherState, m )
 
       IF(fact) THEN
          CALL BD_AssembleStiffK(nelem,p,m%elk,m%StifK)
@@ -5005,9 +5007,10 @@ END SUBROUTINE BD_GenerateDynamicElementGA2
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !FIXME: lots of pieces of BD_ElementMatrixAcc show up in here
-SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
+SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, OtherState, m )
 
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p                 !< Parameters
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState        !< other states (contains global orientation to get gravity in right direction)
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< misc/optimization variables
 
    LOGICAL,                      INTENT(IN   )  :: fact              !< are we factoring?
@@ -5032,7 +5035,7 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
       CALL BD_DissipativeForce( nelem,p,m,fact )              ! Calculate dissipative terms on Fc, Fd [and Sd, Od, Pd and Qd, betaC, Gd, Xd, Yd for N-R algorithm]
    ENDIF
    
-   CALL BD_GravityForce( nelem, p, m, p%gravity )
+   CALL BD_GravityForce( nelem, p, m, MATMUL(p%gravity,OtherState%GlbRot) )
    
    
 
@@ -5469,11 +5472,12 @@ END SUBROUTINE BD_CalcCentripAcc
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !! Routine for computing outputs, used in both loose and tight coupling.
-SUBROUTINE BD_InitAcc( u, p, x, m, qdotdot, ErrStat, ErrMsg )
+SUBROUTINE BD_InitAcc( u, p, x, OtherState, m, qdotdot, ErrStat, ErrMsg )
 
    TYPE(BD_InputType),           INTENT(IN   )  :: u              !< Inputs at t (in BD coordinates)
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p              !< Parameters
    TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x              !< Continuous states at t
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState     !< Other states at t
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m              !< Misc/optimization variables
    REAL(BDKi),                   INTENT(  OUT)  :: qdotdot(:,:)   !< accelerations
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat        !< Error status of the operation
@@ -5497,7 +5501,7 @@ SUBROUTINE BD_InitAcc( u, p, x, m, qdotdot, ErrStat, ErrMsg )
    CALL BD_QPDataVelocity(p, x, m)
 
       ! set misc vars, particularly m%RHS
-   CALL BD_CalcForceAcc( u, p, m, ErrStat2, ErrMsg2 )
+   CALL BD_CalcForceAcc( u, p, OtherState, m, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! set accelerations with inputs from the root and BD_CalcForceAcc solution
@@ -5581,10 +5585,11 @@ END SUBROUTINE BD_InitAcc
 !!
 !! The root reaction force is therefore calculated afterwards as
 !! \f$  F_\textrm{root} = f_1 - \sum_{i} m_{1,i} a_{i}  \f$.
-SUBROUTINE BD_CalcForceAcc( u, p, m, ErrStat, ErrMsg )
+SUBROUTINE BD_CalcForceAcc( u, p, OtherState, m, ErrStat, ErrMsg )
 
    TYPE(BD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState  !< other states (contains ref orientation)
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -5611,7 +5616,7 @@ SUBROUTINE BD_CalcForceAcc( u, p, m, ErrStat, ErrMsg )
 
       ! Calculate the global mass matrix and force vector for the beam
    DO nelem=1,p%elem_total
-      CALL BD_ElementMatrixAcc( nelem, p, m )            ! Calculate m%elm and m%elf
+      CALL BD_ElementMatrixAcc( nelem, p, OtherState, m )            ! Calculate m%elm and m%elf
       CALL BD_AssembleStiffK(nelem,p,m%elm, m%MassM)     ! Assemble full mass matrix
       CALL BD_AssembleRHS(nelem,p,m%elf, m%RHS)          ! Assemble right hand side force terms
    ENDDO
@@ -6863,6 +6868,79 @@ SUBROUTINE BD_WriteMassStiffInFirstNodeFrame( p, x, m, ErrStat, ErrMsg )
       END SUBROUTINE cleanup
 END SUBROUTINE BD_WriteMassStiffInFirstNodeFrame
 !----------------------------------------------------------------------------------------------------------------------------------
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Update the state information to follow the blade rootmotion mesh.
+!!    - move the state information in x from the previous reference frame at time T (u(2)%rootmotion) to the new reference frame at T+dt (u(1)%rootmation)
+!!    - the GlbRot, GlbPos, and Glb_crv values are stored as otherstates and updated
+!!    - 
+subroutine UpdateBeamDynGlobalReference(u,p,x,OtherState,ErrStat,ErrMsg)
+   type(BD_InputType),           intent(in   ) :: u          !< Inputs at utimes
+   type(BD_ParameterType),       intent(in   ) :: p          !< Parameters
+   type(BD_ContinuousStateType), intent(inout) :: x          !< Input: Continuous states at t;
+   type(BD_OtherStateType),      intent(inout) :: OtherState !< Other states: Other states at t;
+   integer(IntKi),               intent(  out) :: ErrStat    !< Error status of the operation
+   character(*),                 intent(  out) :: ErrMsg     !< Error message if ErrStat /=
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2    ! Temporary Error message
+   character(*), parameter       :: RoutineName = 'UpdateBeamDynGlobalReference'
+   real(R8Ki)                    :: GlbWM_old(3), GlbWM_new(3), GlbWM_diff(3)
+   real(R8Ki)                    :: GlbRot_old(3, 3), GlbRot_new(3, 3), GlbRot_diff(3, 3)
+   real(R8Ki)                    :: GlbPos_old(3), GlbPos_new(3), GlbPos_diff(3)
+   real(R8Ki)                    :: pos(3), rot(3), trans_vel(3), rot_vel(3), uuN0(3)
+   integer(IntKi)                :: i, j, temp_id, temp_id2
+
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
+
+   ! Save old global position, rotation, and WM
+   GlbPos_old = OtherState%GlbPos
+   GlbRot_old = OtherState%GlbRot
+   GlbWM_old  = OtherState%Glb_crv
+
+   ! Calculate new global position, rotation, and WM from root motion (updates otherstate reference frame info)
+   call SetRefFrame(u,OtherState,ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName); if (ErrStat >= AbortErrLev) return
+   GlbPos_new = OtherState%GlbPos
+   GlbRot_new = OtherState%GlbRot
+   GlbWM_new  = OtherState%Glb_crv
+
+   ! Calculate differences between old and new reference
+   GlbRot_diff = matmul(transpose(GlbRot_old), GlbRot_new)
+   !GlbWM_diff = wm_compose(wm_inv(GlbWM_old), GlbWM_new)
+   call BD_CrvCompose(GlbWM_diff, GlbWM_old, GlbWM_new, FLAG_R1TR2)
+   GlbPos_diff = GlbPos_old - GlbPos_new
+
+
+   ! Root node is always aligned with root motion mesh 
+   x%q(:, 1) = 0.0_R8Ki
+   x%dqdt(1:3, 1) = matmul(transpose(GlbRot_new), u%RootMotion%TranslationVel(:, 1))
+   x%dqdt(4:6, 1) = matmul(transpose(GlbRot_new), u%RootMotion%RotationVel(:, 1))
+
+   do i = 1, p%elem_total
+      do j = 1, p%nodes_per_elem
+
+         temp_id = (i - 1)*(p%nodes_per_elem - 1) + j ! The last node of the first element is used as the first node in the second element.
+         temp_id2 = (i - 1)*p%nodes_per_elem + j      ! Index to a node within element i
+
+         ! Calculate displacement in terms of new root motion mesh position
+         x%q(1:3, temp_id) = matmul(transpose(GlbRot_new), &
+                                    GlbPos_old + matmul(GlbRot_old, p%uuN0(1:3, j, i) + x%q(1:3, temp_id)) - &
+                                    GlbPos_new - matmul(GlbRot_new, p%uuN0(1:3, j, i)))
+
+         ! Update the node orientation rotation of the node
+         !x%q(4:6, temp_id) = wm_compose(wm_inv(GlbWM_diff), x%q(4:6, temp_id))
+         call BD_CrvCompose(x%q(4:6, temp_id), GlbWM_diff, x%q(4:6, temp_id), FLAG_R1TR2)
+
+         ! Update the translational velocity
+         x%dqdt(1:3, temp_id) = matmul(transpose(GlbRot_diff), x%dqdt(1:3, temp_id))
+
+         ! Update the rotational velocity
+         x%dqdt(4:6, temp_id) = matmul(transpose(GlbRot_diff), x%dqdt(4:6, temp_id))
+
+      end do
+   end do
+end subroutine
+
 
 
 
