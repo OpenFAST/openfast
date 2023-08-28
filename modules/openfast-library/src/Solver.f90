@@ -852,15 +852,10 @@ subroutine UpdateBeamDynGlobalReference(p, m, Mod, T, ErrStat, ErrMsg)
             temp_id = (i - 1)*(p_BD%nodes_per_elem - 1) + j ! The last node of the first element is used as the first node in the second element.
             temp_id2 = (i - 1)*p_BD%nodes_per_elem + j      ! Index to a node within element i
 
-            if (temp_id == 1) cycle
-
-            x_BD%q(1:3, temp_id) = GlbPos_old + matmul(GlbRot_old, p_BD%uuN0(1:3, j, i) + x_BD%q(1:3, temp_id)) - &
-                                   GlbPos_new - matmul(GlbRot_new, p_BD%uuN0(1:3, j, i))
-
-            ! Get the absolute position of the node
-            ! x_BD%q(1:3, temp_id) = matmul(GlbRot_new, (matmul(transpose(GlbRot_old), p_BD%uuN0(1:3, j, i)) - &
-            !                                            matmul(transpose(GlbRot_new), p_BD%uuN0(1:3, j, i)))) + &
-            !                        matmul(transpose(GlbRot_diff), x_BD%q(1:3, temp_id))
+            ! Calculate displacements from new reference
+            x_BD%q(1:3, temp_id) = matmul(transpose(GlbRot_new), &
+                                          GlbPos_old + matmul(GlbRot_old, p_BD%uuN0(1:3, j, i) + x_BD%q(1:3, temp_id)) - &
+                                          GlbPos_new - matmul(GlbRot_new, p_BD%uuN0(1:3, j, i)))
 
             ! Update the node orientation rotation of the node
             x_BD%q(4:6, temp_id) = wm_compose(wm_inv(GlbWM_diff), x_BD%q(4:6, temp_id))
