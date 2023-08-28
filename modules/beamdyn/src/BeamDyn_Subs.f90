@@ -658,7 +658,7 @@ SUBROUTINE Set_BldMotion_NoAcc(p, u, x, OtherState, m, y)
                ! Calculate the translational displacement of each GLL node in the FAST coordinate system,
                ! referenced against the DCM of the blade root at T=0.
             y%BldMotion%TranslationDisp(1:3,temp_id2) = OtherState%GlbPos + matmul(OtherState%GlbRot, p%uuN0(1:3, j, i) + x%q(1:3, temp_id)) - &
-                                                        y%BldMotion%Position(1:3,1) - matmul(y%BldMotion%RefOrientation(:,:,1), p%uuN0(1:3, j, i))
+                                                        y%BldMotion%Position(1:3,temp_id2)
 
 !bjj: note differences here compared to BDrot_to_FASTdcm
 !adp: in BDrot_to_FASTdcm we are assuming that x%q(4:6,:) is zero because there is no rotatinoal displacement yet
@@ -671,7 +671,7 @@ SUBROUTINE Set_BldMotion_NoAcc(p, u, x, OtherState, m, y)
             CALL BD_CrvMatrixR(cc0,temp_R)  ! returns temp_R (the transpose of the DCM orientation matrix)
 
                ! Store the DCM for the j'th node of the i'th element (in FAST coordinate system)            
-            y%BldMotion%Orientation(1:3,1:3,temp_id2) = TRANSPOSE(temp_R)
+            y%BldMotion%Orientation(1:3,1:3,temp_id2) = MATMUL(OtherState%GlbRot,TRANSPOSE(temp_R))
 
                ! Calculate the translation velocity and store in FAST coordinate system
                ! referenced against the DCM of the blade root at T=0.
@@ -696,7 +696,7 @@ SUBROUTINE Set_BldMotion_NoAcc(p, u, x, OtherState, m, y)
                ! Calculate the translational displacement of each quadrature node in the FAST coordinate system,
                ! referenced against the DCM of the blade root at T=0.
             y%BldMotion%TranslationDisp(1:3,temp_id2) = OtherState%GlbPos + matmul(OtherState%GlbRot, p%uu0(1:3, j, i) + m%qp%uuu(1:3,j,i)) - &
-                                                        y%BldMotion%Position(1:3,1) - matmul(y%BldMotion%RefOrientation(:,:,1), p%uu0(1:3, j, i))
+                                                        y%BldMotion%Position(1:3,temp_id2)
 
 
 !bjj: note differences here compared to BDrot_to_FASTdcm
@@ -706,7 +706,8 @@ SUBROUTINE Set_BldMotion_NoAcc(p, u, x, OtherState, m, y)
             CALL BD_CrvCompose( cc, m%qp%uuu(4:6,j,i), p%uu0(4:6,j,i), FLAG_R1R2 )
             CALL BD_CrvCompose( cc0, OtherState%Glb_crv, cc, FLAG_R1R2 )
 
-            ! Store the DCM for the j'th node of the i'th element (in FAST coordinate system)
+            CALL BD_CrvMatrixR(cc0,temp_R)  ! returns temp_R (the transpose of the DCM orientation matrix)
+               ! Store the DCM for the j'th node of the i'th element (in FAST coordinate system)
             y%BldMotion%Orientation(1:3,1:3,temp_id2) = TRANSPOSE(temp_R)
 
                ! Calculate the translation velocity and store in FAST coordinate system
