@@ -276,7 +276,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
       
    end if
          
-   CALL Set_BldMotion_NoAcc(p, x, MiscVar, y)
+   CALL Set_BldMotion_NoAcc(p, u, x, MiscVar, y)
 
    IF(QuasiStaticInitialized) THEN
       ! Set the BldMotion mesh acceleration but only if quasistatic succeeded

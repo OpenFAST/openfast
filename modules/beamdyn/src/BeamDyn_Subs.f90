@@ -623,9 +623,10 @@ END SUBROUTINE BD_TrapezoidalPointWeight
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calculates y%BldMotion%TranslationDisp, y%BldMotion%Orientation, y%BldMotion%TranslationVel, and
 !! y%BldMotion%RotationVel, which depend only on states (and indirectly, u%RootMotion), and parameters.
-SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
+SUBROUTINE Set_BldMotion_NoAcc(p, u, x, m, y)
 
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(BD_InputType),           INTENT(IN   )  :: u           !< Inputs at t - in the FAST coordinate system (NOT BD)
    TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
    TYPE(BD_MiscVarType),         INTENT(IN   )  :: m           !< misc/optimization variables
    TYPE(BD_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
@@ -683,6 +684,9 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
       ENDDO
       
    CASE (BD_MESH_QP)
+
+      y%BldMotion%TranslationVel(:,1)    = u%RootMotion%TranslationVel(:,1)
+      y%BldMotion%RotationVel(:,1)       = u%RootMotion%RotationVel(:,1)
       
       DO i=1,p%elem_total
          DO j=1,p%nqp
@@ -690,39 +694,31 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
 
                ! Calculate the translational displacement of each quadrature node in the FAST coordinate system,
                ! referenced against the DCM of the blade root at T=0.
-            ! y%BldMotion%TranslationDisp(1:3,temp_id2) = MATMUL(p%GlbRot,m%qp%uuu(1:3,j,i) )
-            y%BldMotion%TranslationDisp(1:3,temp_id2) = p%GlbPos + matmul(p%GlbRot, p%uu0(1:3, j, i) + m%qp%uuu(1:3,j,i)) - &
-                                                        y%BldMotion%Position(1:3,1) - matmul(y%BldMotion%RefOrientation(:,:,1), p%uu0(1:3, j, i))
-
+            y%BldMotion%TranslationDisp(1:3,temp_id2) = p%GlbPos + MATMUL(p%GlbRot, p%uu0(1:3,j,i) + m%qp%uuu(1:3,j,i)) - y%BldMotion%Position(1:3,temp_id2)
 
 !bjj: note differences here compared to BDrot_to_FASTdcm
 !adp: in BDrot_to_FASTdcm we are assuming that x%q(4:6,:) is zero because there is no rotatinoal displacement yet
                ! Find the rotation parameter in global coordinates (initial orientation + rotation parameters)
                ! referenced against the DCM of the blade root at T=0.
-            CALL BD_CrvCompose( cc, m%qp%uuu(4:6,j,i), p%uu0(4:6,j,i), FLAG_R1R2 )
-            CALL BD_CrvCompose( cc0, p%Glb_crv, cc, FLAG_R1R2 )
+            temp_R = wm_to_dcm(wm_compose(p%Glb_crv, wm_compose(m%qp%uuu(4:6,j,i), p%uu0(4:6,j,i))))
 
-            CALL BD_CrvMatrixR(cc0,temp_R)  ! returns temp_R (the transpose of the DCM orientation matrix)
-               ! Store the DCM for the j'th node of the i'th element (in FAST coordinate system)
-            y%BldMotion%Orientation(1:3,1:3,temp_id2) = matmul(p%GlbRot, TRANSPOSE(temp_R))
+            ! Store the DCM for the j'th node of the i'th element (in FAST coordinate system)
+            y%BldMotion%Orientation(1:3,1:3,temp_id2) = TRANSPOSE(temp_R)
 
                ! Calculate the translation velocity and store in FAST coordinate system
                ! referenced against the DCM of the blade root at T=0.
-            y%BldMotion%TranslationVel(1:3,temp_id2) = MATMUL(p%GlbRot,m%qp%vvv(1:3,j,i))
+            y%BldMotion%TranslationVel(1:3,temp_id2) = MATMUL(p%GlbRot, m%qp%vvv(1:3,j,i))
 
                ! Calculate the rotational velocity and store in FAST coordinate system
                ! referenced against the DCM of the blade root at T=0.
-            y%BldMotion%RotationVel(1:3,temp_id2) = MATMUL(p%GlbRot,m%qp%vvv(4:6,j,i))
+            y%BldMotion%RotationVel(1:3,temp_id2) = MATMUL(p%GlbRot, m%qp%vvv(4:6,j,i))
             
          ENDDO
       ENDDO
       
-
-
    CASE (BD_MESH_STATIONS)
    END SELECT
    
-      
 END SUBROUTINE Set_BldMotion_NoAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calculates values for the y%BldMotion mesh.
@@ -744,7 +740,7 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
 
 
       ! set positions and velocities (not accelerations)
-   call Set_BldMotion_NoAcc(p, x, m, y)
+   call Set_BldMotion_NoAcc(p, u, x, m, y)
 
    ! Only need this bit for dynamic cases
    IF ( p%analysis_type /= BD_STATIC_ANALYSIS ) THEN
@@ -752,10 +748,6 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
        ! now set the accelerations:
        
        ! The first node on the mesh is just the root location:   
-       y%BldMotion%TranslationDisp(:,1)   = u%RootMotion%TranslationDisp(:,1)
-       y%BldMotion%Orientation(:,:,1)     = u%RootMotion%Orientation(:,:,1)
-       y%BldMotion%TranslationVel(:,1)    = u%RootMotion%TranslationVel(:,1)
-       y%BldMotion%RotationVel(:,1)       = u%RootMotion%RotationVel(:,1)
        y%BldMotion%TranslationAcc(:,1)    = u%RootMotion%TranslationAcc(:,1)
        y%BldMotion%RotationAcc(:,1)       = u%RootMotion%RotationAcc(:,1)
          
