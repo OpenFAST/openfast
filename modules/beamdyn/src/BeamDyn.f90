@@ -50,7 +50,7 @@ MODULE BeamDyn
                                                !   states(z)
    PUBLIC :: BD_GetOP                          !< Routine to pack the operating point values (for linearization) into arrays
 
-   PUBLIC :: UpdateBeamDynGlobalReference      !< update the BeamDyn reference.  The reference for the calculations follows u%RootMotionMesh
+   PUBLIC :: BD_UpdateGlobalRef      !< update the BeamDyn reference.  The reference for the calculations follows u%RootMotionMesh
                                                !  and therefore x%q must be updated from T -> T+DT to include the root motion from T->T+DT
 
 
@@ -213,7 +213,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
       
    end if
          
-   CALL Set_BldMotion_NoAcc(p, u, x, OtherState, MiscVar, y)
+   CALL Set_BldMotion_NoAcc(p, x, OtherState, MiscVar, y)
 
    IF(QuasiStaticInitialized) THEN
       ! Set the BldMotion mesh acceleration but only if quasistatic succeeded
@@ -2128,7 +2128,7 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'');  if (ErrStat >= AbortErrLev) return
 
       ! change reference frame to root motion at t=T+DT (u(1)%RootMotionMesh)
-      call UpdateBeamDynGlobalReference(u(1),p,x,OtherState,ErrStat2,ErrMsg2)
+      call BD_UpdateGlobalRef(u(1),p,x,OtherState,ErrStat2,ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
    ELSE !IF(p%analysis_type == BD_STATIC_ANALYSIS) THEN
       CALL BD_Static( t, u, utimes, p, x, OtherState, m, ErrStat, ErrMsg )
@@ -2232,7 +2232,8 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    CALL BD_DistrLoadCopy( p, m%u, m )
 
       ! Incorporate boundary conditions (note that we are doing this because the first node isn't really a state. should fix x so we don't need a temp copy here.)
-   x_tmp%q(   1:3,1) = 0.0_BDKi  ! No displacement relative to root
+   x_tmp%q(1:3,1) = m%u%RootMotion%TranslationDisp(:,1) + &
+                    matmul(m%u%RootMotion%Position(:,1) - OtherState%GlbPos, OtherState%GlbRot)
    CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1), p, OtherState, x_tmp%q(   4:6,1), ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
@@ -2262,7 +2263,6 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
 
       ! Calculate internal forces and moments
    CALL BD_InternalForceMoment( x_tmp, OtherState, p, m )
-   CALL BD_InternalForceMoment( x_tmp, p, m )
 
       ! Transfer the FirstNodeReaction forces to the output ReactionForce
    y%ReactionForce%Force(:,1)    =  MATMUL(OtherState%GlbRot,m%FirstNodeReactionLclForceMoment(1:3))
@@ -2271,7 +2271,6 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
 
        ! set y%BldMotion fields:
    CALL Set_BldMotion_Mesh( p, m%u2, x_tmp, OtherState, m, y)
-   CALL Set_BldMotion_Mesh( p, m%u2, x_tmp, m, y)
 
    !-------------------------------------------------------
    !  compute RootMxr and RootMyr for ServoDyn and
@@ -2365,15 +2364,11 @@ SUBROUTINE BD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
    CALL BD_CopyContState(x, dxdt, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-   ! dxdt%q(   1:3,1) = m%u%RootMotion%TranslationDisp(:,1)
-   ! CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1),p, dxdt%q(   4:6,1), OtherState, ErrStat2, ErrMsg2)
-   !    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   !    if (ErrStat >= AbortErrLev) return
-   ! dxdt%q(   1:3,1) = m%u%RootMotion%TranslationDisp(:,1)
-   ! CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1),p, dxdt%q(   4:6,1), ErrStat2, ErrMsg2)
-   !    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   !    if (ErrStat >= AbortErrLev) return
-  !dxdt%q(   4:6,1) = ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1),p)
+   dxdt%q(1:3,1) = m%u%RootMotion%TranslationDisp(:,1) + &
+                   matmul(m%u%RootMotion%Position(:,1) - OtherState%GlbPos, OtherState%GlbRot)
+   CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1), p, OtherState, dxdt%q(4:6,1), ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
    dxdt%dqdt(1:3,1) = m%u%RootMotion%TranslationVel(:,1)
    dxdt%dqdt(4:6,1) = m%u%Rootmotion%RotationVel(:,1)
 
@@ -6735,21 +6730,83 @@ END SUBROUTINE BD_WriteMassStiffInFirstNodeFrame
 !!    - move the state information in x from the previous reference frame at time T (u(2)%rootmotion) to the new reference frame at T+dt (u(1)%rootmation)
 !!    - the GlbRot, GlbPos, and Glb_crv values are stored as otherstates and updated
 !!    - 
-subroutine UpdateBeamDynGlobalReference(u,p,x,OtherState,ErrStat,ErrMsg)
+subroutine BD_UpdateGlobalRef(u, p, x, OtherState, ErrStat, ErrMsg)
    type(BD_InputType),           intent(in   ) :: u          !< Inputs at utimes
    type(BD_ParameterType),       intent(in   ) :: p          !< Parameters
    type(BD_ContinuousStateType), intent(inout) :: x          !< Input: Continuous states at t;
    type(BD_OtherStateType),      intent(inout) :: OtherState !< Other states: Other states at t;
    integer(IntKi),               intent(  out) :: ErrStat    !< Error status of the operation
    character(*),                 intent(  out) :: ErrMsg     !< Error message if ErrStat /=
+
+   character(*), parameter       :: RoutineName = 'BD_UpdateGlobalRef'
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2    ! Temporary Error message
-   character(*), parameter       :: RoutineName = 'UpdateBeamDynGlobalReference'
    real(R8Ki)                    :: GlbWM_old(3), GlbWM_new(3), GlbWM_diff(3)
    real(R8Ki)                    :: GlbRot_old(3, 3), GlbRot_new(3, 3), GlbRot_diff(3, 3)
-   real(R8Ki)                    :: GlbPos_old(3), GlbPos_new(3), GlbPos_diff(3)
+   real(R8Ki)                    :: GlbPos_old(3), GlbPos_new(3)
    real(R8Ki)                    :: pos(3), rot(3), trans_vel(3), rot_vel(3), uuN0(3)
    integer(IntKi)                :: i, j, temp_id, temp_id2
+
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
+
+   ! Save old global position, rotation, and WM
+   GlbPos_old = OtherState%GlbPos
+   GlbRot_old = OtherState%GlbRot
+   GlbWM_old  = OtherState%Glb_crv
+
+   ! Calculate new global position, rotation, and WM from root motion (updates otherstate reference frame info)
+   OtherState%GlbPos = u%RootMotion%Position(:, 1) + &
+                       u%RootMotion%TranslationDisp(:, 1)
+   OtherState%GlbRot = transpose(u%RootMotion%Orientation(:, :, 1))
+   OtherState%Glb_crv = wm_from_dcm(OtherState%GlbRot)
+
+   ! Save new global position, rotation, and WM
+   GlbPos_new = OtherState%GlbPos
+   GlbRot_new = OtherState%GlbRot
+   GlbWM_new  = OtherState%Glb_crv
+
+   ! Calculate differences between old and new reference
+   GlbRot_diff = matmul(transpose(GlbRot_new), GlbRot_old)
+   GlbWM_diff = wm_from_dcm(GlbRot_diff)
+
+   do i = 1, p%elem_total
+      do j = 1, p%nodes_per_elem
+
+         temp_id = (i - 1)*(p%nodes_per_elem - 1) + j ! The last node of the first element is used as the first node in the second element.
+
+         ! Calculate displacement in terms of new root motion mesh position
+         x%q(1:3, temp_id) = matmul(transpose(GlbRot_new),&
+                                    GlbPos_old - GlbPos_new + &
+                                    matmul(GlbRot_old, p%uuN0(1:3, j, i) + x%q(1:3, temp_id)) - &
+                                    matmul(GlbRot_new, p%uuN0(1:3, j, i)))
+         
+         ! Update the node orientation
+         x%q(4:6, temp_id) = wm_compose(GlbWM_diff, x%q(4:6, temp_id))
+      end do
+   end do
+
+   ! Update the translational velocity
+   x%dqdt(1:3, :) = matmul(GlbRot_diff, x%dqdt(1:3, :))
+
+   ! Update the rotational velocity
+   x%dqdt(4:6, :) = matmul(GlbRot_diff, x%dqdt(4:6, :))
+
+   ! Update translational acceleration
+   ! OtherState%acc(1:3, :) = matmul(GlbRot_diff, OtherState%acc(1:3, :))
+
+   ! Update rotational acceleration
+   ! OtherState%acc(4:6, :) = matmul(GlbRot_diff, OtherState%acc(4:6, :))
+
+   ! Root node is always aligned with root motion mesh 
+   ! x%q(:, 1) = 0.0_R8Ki
+   ! x%dqdt(1:3, 1) = matmul(u%RootMotion%TranslationVel(:, 1), GlbRot_new)
+   ! x%dqdt(4:6, 1) = matmul(u%RootMotion%RotationVel(:, 1), GlbRot_new)
+   ! OtherState%acc(1:3, 1) = matmul(u%RootMotion%TranslationAcc(:, 1), GlbRot_new)
+   ! OtherState%acc(4:6, 1) = matmul(u%RootMotion%RotationAcc(:, 1), GlbRot_new)
+
+end subroutine
+
 subroutine BD_PackStateValues(p, x, Values)
    type(BD_ParameterType), intent(in)        :: p
    type(BD_ContinuousStateType), intent(in)  :: x
@@ -6769,8 +6826,6 @@ subroutine BD_PackStateValues(p, x, Values)
    end do
 end subroutine
 
-   ErrStat  = ErrID_None
-   ErrMsg   = ""
 subroutine BD_UnpackStateValues(p, Values, x)
    type(BD_ParameterType), intent(in)           :: p
    real(R8Ki), intent(in)                       :: Values(:)
@@ -6790,10 +6845,6 @@ subroutine BD_UnpackStateValues(p, Values, x)
    end do
 end subroutine
 
-   ! Save old global position, rotation, and WM
-   GlbPos_old = OtherState%GlbPos
-   GlbRot_old = OtherState%GlbRot
-   GlbWM_old  = OtherState%Glb_crv
 subroutine BD_PackInputValues(p, u, Values)
    type(BD_ParameterType), intent(in)  :: p
    type(BD_InputType), intent(in)      :: u
@@ -6805,11 +6856,6 @@ subroutine BD_PackInputValues(p, u, Values)
    call MV_PackMesh(p%Vars%u, iv, u%DistrLoad, Values)
 end subroutine
 
-   ! Calculate new global position, rotation, and WM from root motion (updates otherstate reference frame info)
-   call SetRefFrame(u,OtherState,ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName); if (ErrStat >= AbortErrLev) return
-   GlbPos_new = OtherState%GlbPos
-   GlbRot_new = OtherState%GlbRot
-   GlbWM_new  = OtherState%Glb_crv
 subroutine BD_UnpackInputValues(p, Values, u)
    type(BD_ParameterType), intent(in)  :: p
    real(R8Ki), intent(in)              :: Values(:)
@@ -6819,43 +6865,6 @@ subroutine BD_UnpackInputValues(p, Values, u)
    call MV_UnpackMesh(p%Vars%u, iv, Values, u%RootMotion)
    call MV_UnpackMesh(p%Vars%u, iv, Values, u%PointLoad)
    call MV_UnpackMesh(p%Vars%u, iv, Values, u%DistrLoad)
-end subroutine
-
-   ! Calculate differences between old and new reference
-   GlbRot_diff = matmul(transpose(GlbRot_old), GlbRot_new)
-   !GlbWM_diff = wm_compose(wm_inv(GlbWM_old), GlbWM_new)
-   call BD_CrvCompose(GlbWM_diff, GlbWM_old, GlbWM_new, FLAG_R1TR2)
-   GlbPos_diff = GlbPos_old - GlbPos_new
-
-
-   ! Root node is always aligned with root motion mesh 
-   x%q(:, 1) = 0.0_R8Ki
-   x%dqdt(1:3, 1) = matmul(transpose(GlbRot_new), u%RootMotion%TranslationVel(:, 1))
-   x%dqdt(4:6, 1) = matmul(transpose(GlbRot_new), u%RootMotion%RotationVel(:, 1))
-
-   do i = 1, p%elem_total
-      do j = 1, p%nodes_per_elem
-
-         temp_id = (i - 1)*(p%nodes_per_elem - 1) + j ! The last node of the first element is used as the first node in the second element.
-         temp_id2 = (i - 1)*p%nodes_per_elem + j      ! Index to a node within element i
-
-         ! Calculate displacement in terms of new root motion mesh position
-         x%q(1:3, temp_id) = matmul(transpose(GlbRot_new), &
-                                    matmul(GlbRot_old, p%uuN0(1:3, j, i) + x%q(1:3, temp_id)) - &
-                                    matmul(GlbRot_new, p%uuN0(1:3, j, i)))
-
-         ! Update the node orientation rotation of the node
-         !x%q(4:6, temp_id) = wm_compose(wm_inv(GlbWM_diff), x%q(4:6, temp_id))
-         call BD_CrvCompose(x%q(4:6, temp_id), GlbWM_diff, x%q(4:6, temp_id), FLAG_R1TR2)
-
-         ! Update the translational velocity
-         x%dqdt(1:3, temp_id) = matmul(transpose(GlbRot_diff), x%dqdt(1:3, temp_id))
-
-         ! Update the rotational velocity
-         x%dqdt(4:6, temp_id) = matmul(transpose(GlbRot_diff), x%dqdt(4:6, temp_id))
-
-      end do
-   end do
 end subroutine
 
 subroutine BD_PackOutputValues(p, y, Values)

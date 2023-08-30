@@ -265,11 +265,11 @@ contains
    end function
 end subroutine
 
-subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, T, ErrStat, ErrMsg, x_TC)
+subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, x_TC, T, ErrStat, ErrMsg)
    type(ModDataType), intent(in)           :: Mod         !< Module data
    real(DbKi), intent(in)                  :: t_initial   !< Initial simulation time (almost always 0)
    integer(IntKi), intent(in)              :: n_t_global  !< Integer time step
-   real(R8Ki), optional, intent(in)        :: x_TC(:)     !< Tight coupling state array
+   real(R8Ki), intent(inout)               :: x_TC(:)     !< Tight coupling state array
    type(FAST_TurbineType), intent(inout)   :: T           !< Turbine type
    integer(IntKi), intent(out)             :: ErrStat
    character(*), intent(out)               :: ErrMsg
@@ -302,24 +302,37 @@ subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, T, ErrStat, ErrMsg, x_T
 
    case (Module_BD)
 
-      ! If tight coupling states are supplied, transfer to module
-      if (present(x_TC)) then
-         call BD_PackStateValues(T%BD%p(Mod%Ins), T%BD%x(Mod%Ins, STATE_PRED), T%BD%m(Mod%Ins)%Vals%x)
-         call XferGblToLoc1D(Mod%ixs, x_TC, T%BD%m(Mod%Ins)%Vals%x)
-         call BD_UnpackStateValues(T%BD%p(Mod%Ins), T%BD%m(Mod%Ins)%Vals%x, T%BD%x(Mod%Ins, STATE_PRED))
-      end if
+      ! Transfer tight coupling states to module
+      call BD_PackStateValues(T%BD%p(Mod%Ins), T%BD%x(Mod%Ins, STATE_PRED), T%BD%m(Mod%Ins)%Vals%x)
+      call XferGblToLoc1D(Mod%ixs, x_TC, T%BD%m(Mod%Ins)%Vals%x)
+      call BD_UnpackStateValues(T%BD%p(Mod%Ins), T%BD%m(Mod%Ins)%Vals%x, T%BD%x(Mod%Ins, STATE_PRED))
+
+      ! Update the global reference
+      call BD_UpdateGlobalRef(T%BD%Input(1, Mod%Ins), &
+                              T%BD%p(Mod%Ins), &
+                              T%BD%x(Mod%Ins, STATE_PRED), &
+                              T%BD%OtherSt(Mod%Ins, STATE_PRED), &
+                              ErrStat, ErrMsg); if (Failed()) return
+
+      ! Transfer updated states to solver
+      call BD_PackStateValues(T%BD%p(Mod%Ins), &
+                              T%BD%x(Mod%Ins, STATE_PRED), &
+                              T%BD%m(Mod%Ins)%Vals%x)
+      call XferLocToGbl1D(Mod%ixs, T%BD%m(Mod%Ins)%Vals%x, x_TC)
 
    case (Module_ED)
 
-      ! If tight coupling states are supplied, transfer to module
-      if (present(x_TC)) then
-         call ED_PackStateValues(T%ED%p, T%ED%x(STATE_PRED), T%ED%m%Vals%x)
-         call XferGblToLoc1D(Mod%ixs, x_TC, T%ED%m%Vals%x)
-         call ED_UnpackStateValues(T%ED%p, T%ED%m%Vals%x, T%ED%x(STATE_PRED))
-      end if
+      ! Transfer tight coupling states to module
+      call ED_PackStateValues(T%ED%p, T%ED%x(STATE_PRED), T%ED%m%Vals%x)
+      call XferGblToLoc1D(Mod%ixs, x_TC, T%ED%m%Vals%x)
+      call ED_UnpackStateValues(T%ED%p, T%ED%m%Vals%x, T%ED%x(STATE_PRED))
 
-      ! Update the azimuth angle in ED
+      ! Update the azimuth angle
       call ED_UpdateAzimuth(T%ED%p, T%ED%x(STATE_PRED), T%p_FAST%DT)
+
+      ! Transfer updated states to solver
+      call ED_PackStateValues(T%ED%p, T%ED%x(STATE_PRED), T%ED%m%Vals%x)
+      call XferLocToGbl1D(Mod%ixs, T%ED%m%Vals%x, x_TC)
 
 !  case (Module_ExtPtfm)
 !  case (Module_FEAM)

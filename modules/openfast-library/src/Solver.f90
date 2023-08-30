@@ -792,87 +792,10 @@ subroutine Solver_Step0(p, m, ModData, Turbine, ErrStat, ErrMsg)
    end do
 
 contains
-   function Failed()
-      logical :: Failed
+   logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Failed = ErrStat >= AbortErrLev
    end function
-end subroutine
-
-subroutine UpdateBeamDynGlobalReference(p, m, Mod, T, ErrStat, ErrMsg)
-   type(TC_ParameterType), intent(in)     :: p        !< Parameters
-   type(TC_MiscVarType), intent(inout)    :: m        !< Misc variables
-   type(ModDataType), intent(in)          :: Mod
-   type(FAST_TurbineType), intent(inout)  :: T        !< Turbine type
-   integer(IntKi), intent(out)            :: ErrStat
-   character(*), intent(out)              :: ErrMsg
-
-   character(*), parameter    :: RoutineName = 'UpdateBeamDynGlobalReference'
-   integer(IntKi)             :: ErrStat2
-   character(ErrMsgLen)       :: ErrMsg2
-   real(R8Ki)                 :: GlbWM_old(3), GlbWM_new(3), GlbWM_diff(3)
-   real(R8Ki)                 :: GlbRot_old(3, 3), GlbRot_new(3, 3), GlbRot_diff(3, 3)
-   real(R8Ki)                 :: GlbPos_old(3), GlbPos_new(3)
-   integer(IntKi)             :: i, j, k
-
-   ErrStat = ErrID_None
-   ErrMsg = ''
-
-   associate (p_BD => T%BD%p(Mod%Ins), &
-              m_BD => T%BD%m(Mod%Ins), &
-              u_BD => T%BD%Input(1, Mod%Ins), &
-              x_BD => T%BD%x(Mod%Ins, STATE_PRED))
-
-      ! Save old global position, rotation, and WM (AO)
-      GlbPos_old = p_BD%GlbPos
-      GlbRot_old = p_BD%GlbRot
-      GlbWM_old = p_BD%Glb_crv
-
-      ! Calculate new global position, rotation, and WM from root motion (BO)
-      GlbPos_new = u_BD%RootMotion%Position(:, 1) + &
-                   u_BD%RootMotion%TranslationDisp(:, 1)
-      GlbRot_new = transpose(u_BD%RootMotion%Orientation(:, :, 1))
-      GlbWM_new = wm_from_dcm(GlbRot_new)
-
-      ! Update the module global values
-      p_BD%GlbPos = GlbPos_new
-      p_BD%GlbRot = GlbRot_new
-      p_BD%Glb_crv = GlbWM_new
-
-      ! Calculate differences between old and new reference (BA = BO*AO^T)
-      GlbRot_diff = matmul(GlbRot_new, transpose(GlbRot_old))
-      GlbWM_diff = wm_inv(wm_compose(GlbWM_new, wm_inv(GlbWM_old)))
-
-      do i = 1, p_BD%elem_total
-         do j = 1, p_BD%nodes_per_elem
-
-            ! State index
-            k = (i - 1)*(p_BD%nodes_per_elem - 1) + j
-
-            ! Calculate displacements from new reference
-            x_BD%q(1:3, k) = matmul(transpose(GlbRot_new), &
-                                    matmul(GlbRot_old, p_BD%uuN0(1:3, j, i) + x_BD%q(1:3, k)) - &
-                                    matmul(GlbRot_new, p_BD%uuN0(1:3, j, i)))
-
-            ! Update the node orientation rotation of the node
-            x_BD%q(4:6, k) = wm_compose(GlbWM_diff, x_BD%q(4:6, k))
-
-            ! Update the translational and rotational velocities
-            x_BD%dqdt(1:3, k) = matmul(GlbRot_diff, x_BD%dqdt(1:3, k))
-            x_BD%dqdt(4:6, k) = matmul(GlbRot_diff, x_BD%dqdt(4:6, k))
-         end do
-      end do
-
-      ! Overwrite values at first node based on root motion
-      x_BD%q(:, 1) = 0.0_R8Ki
-      x_BD%dqdt(1:3, 1) = matmul(GlbRot_new, u_BD%RootMotion%TranslationVel(:, 1))
-      x_BD%dqdt(4:6, 1) = matmul(GlbRot_new, u_BD%RootMotion%RotationVel(:, 1))
-
-      call BD_PackStateValues(p_BD, x_BD, m_BD%Vals%x)
-      call XferLocToGbl1D(Mod%ixs, m_BD%Vals%x, m%xn)
-
-   end associate
-
 end subroutine
 
 subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrMsg)
@@ -982,8 +905,8 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
       do i = 1, size(p%iModOpt2)
          call FAST_InputSolve(Mods(p%iModOpt2(i)), m%Mappings, 1, &
                               Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-         call FAST_UpdateStates(Mods(p%iModOpt2(i)), t_initial, n_t_global, &
-                                Turbine, ErrStat2, ErrMsg2, m%xn); if (Failed()) return
+         call FAST_UpdateStates(Mods(p%iModOpt2(i)), t_initial, n_t_global, m%xn, &
+                                Turbine, ErrStat2, ErrMsg2); if (Failed()) return
          call FAST_CalcOutput(Mods(p%iModOpt2(i)), t_global_next, STATE_PRED, &
                               Turbine, ErrStat2, ErrMsg2); if (Failed()) return
          if (i < 2) then
@@ -996,9 +919,13 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
       do i = 1, size(p%iModOpt1US)
          call FAST_InputSolve(Mods(p%iModOpt1US(i)), m%Mappings, 1, &
                               Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-         call FAST_UpdateStates(Mods(p%iModOpt1US(i)), t_initial, n_t_global, &
+         call FAST_UpdateStates(Mods(p%iModOpt1US(i)), t_initial, n_t_global, m%xn, &
                                 Turbine, ErrStat2, ErrMsg2); if (Failed()) return
       end do
+
+      ! Populate state matrix with latest values from state array in case it
+      ! changed during FAST_UpdateStates calls
+      call Solver_TransferXtoQ(p%ixqd, m%xn, m%qn)
 
       ! Pack Option 1 inputs into u array
       call PackModuleInputs(Mods, p%iModOpt1, Turbine, u=m%un)
@@ -1021,7 +948,6 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
             call FAST_CalcOutput(Mods(p%iModOpt1(i)), t_global_next, STATE_PRED, &
                                  Turbine, ErrStat2, ErrMsg2); if (Failed()) return
          end do
-         ! call PackModuleOutputs(Mods, p%iModOpt1, Turbine, m%y)
 
          !----------------------------------------------------------------------
          ! If iteration limit reached, exit loop
@@ -1032,19 +958,19 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          write (m%DebugUnit, *) "iterConv = ", iterConv
 
          write (m%DebugUnit, '(A,*(ES16.7))') " BD1-eps  = ", pack(Turbine%BD%m(1)%qp%E1(1:3, :, 1) - Turbine%BD%m(1)%qp%RR0(1:3, 3, :, 1), .true.)
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-eps  = ", pack(Turbine%BD%m(2)%qp%E1(1:3, :, 1) - Turbine%BD%m(1)%qp%RR0(1:3, 3, :, 1), .true.)
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-eps  = ", pack(Turbine%BD%m(2)%qp%E1(1:3, :, 1) - Turbine%BD%m(1)%qp%RR0(1:3, 3, :, 1), .true.)
          write (m%DebugUnit, '(A,*(ES16.7))') " BD1-kappa  = ", pack(Turbine%BD%m(1)%qp%kappa(1:3, :, 1), .true.)
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-kappa  = ", pack(Turbine%BD%m(2)%qp%kappa(1:3, :, 1), .true.)
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-kappa  = ", pack(Turbine%BD%m(2)%qp%kappa(1:3, :, 1), .true.)
          write (m%DebugUnit, '(A,*(ES16.7))') " BD1-Nrrr  = ", pack(Turbine%BD%m(1)%Nrrr(1:3, :, 1), .true.)
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-Nrrr  = ", pack(Turbine%BD%m(2)%Nrrr(1:3, :, 1), .true.)
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-Glb_crv  = ", Turbine%BD%p(1)%Glb_crv
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-Glb_crv  = ", Turbine%BD%p(2)%Glb_crv
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RRoot  = ", wm_from_dcm(Turbine%BD%Input(1, 1)%RootMotion%Orientation(:, :, 1))
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RRoot  = ", wm_from_dcm(Turbine%BD%Input(1, 2)%RootMotion%Orientation(:, :, 1))
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RR  = ", wm_compose(wm_inv(Turbine%BD%p(1)%Glb_crv), wm_from_dcm(Turbine%BD%Input(1, 1)%RootMotion%Orientation(:, :, 1)))
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RR  = ", wm_compose(wm_inv(Turbine%BD%p(2)%Glb_crv), wm_from_dcm(Turbine%BD%Input(1, 2)%RootMotion%Orientation(:, :, 1)))
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-Nrrr  = ", pack(Turbine%BD%m(2)%Nrrr(1:3, :, 1), .true.)
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-Glb_crv  = ", Turbine%BD%OtherSt(1, STATE_PRED)%Glb_crv
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-Glb_crv  = ", Turbine%BD%p(2)%Glb_crv
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RRoot  = ", wm_from_dcm(transpose(Turbine%BD%Input(1, 1)%RootMotion%Orientation(:, :, 1)))
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RRoot  = ", wm_from_dcm(Turbine%BD%Input(1, 2)%RootMotion%Orientation(:, :, 1))
+         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RR  = ", wm_compose(wm_inv(Turbine%BD%OtherSt(1, STATE_PRED)%Glb_crv), wm_from_dcm(transpose(Turbine%BD%Input(1, 1)%RootMotion%Orientation(:, :, 1))))
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RR  = ", wm_compose(wm_inv(Turbine%BD%p(2)%Glb_crv), wm_from_dcm(Turbine%BD%Input(1, 2)%RootMotion%Orientation(:, :, 1)))
          write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RRoot-dcm  = ", pack(Turbine%BD%Input(1, 1)%RootMotion%Orientation(:, :, 1), .true.)
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RRoot-dcm  = ", pack(Turbine%BD%Input(1, 2)%RootMotion%Orientation(:, :, 1), .true.)
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RRoot-dcm  = ", pack(Turbine%BD%Input(1, 2)%RootMotion%Orientation(:, :, 1), .true.)
 
          !----------------------------------------------------------------------
          ! Update Jacobian
@@ -1177,17 +1103,6 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    !----------------------------------------------------------------------------
    ! Update states for next step
    !----------------------------------------------------------------------------
-
-   ! Reset BeamDyn global reference and rescale BeamDyn states
-   ! Loop through tight coupling modules, if module is BeamDyn, update global ref
-   do i = 1, size(p%iModTC)
-      if (Mods(p%iModTC(i))%ID == Module_BD) then
-         call UpdateBeamDynGlobalReference(p, m, Mods(p%iModTC(i)), Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-      end if
-   end do
-
-   ! Populate state matrix with latest values from state array
-   call Solver_TransferXtoQ(p%ixqd, m%xn, m%qn)
 
    ! Copy the final predicted states from step t_global_next to actual states for that step
    do i = 1, size(p%iModAll)
