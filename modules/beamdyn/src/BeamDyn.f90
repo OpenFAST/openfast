@@ -2262,7 +2262,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    ENDIF
 
       ! Calculate internal forces and moments
-   CALL BD_InternalForceMoment( x_tmp, OtherState, p, m )
+   CALL BD_InternalForceMoment( x, OtherState, p, m )
 
       ! Transfer the FirstNodeReaction forces to the output ReactionForce
    y%ReactionForce%Force(:,1)    =  MATMUL(OtherState%GlbRot,m%FirstNodeReactionLclForceMoment(1:3))
@@ -2270,7 +2270,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
 
 
        ! set y%BldMotion fields:
-   CALL Set_BldMotion_Mesh( p, m%u2, x_tmp, OtherState, m, y)
+   CALL Set_BldMotion_Mesh( p, m%u2, x, OtherState, m, y)
 
    !-------------------------------------------------------
    !  compute RootMxr and RootMyr for ServoDyn and
@@ -2384,21 +2384,6 @@ SUBROUTINE BD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) return
       
-   ! dxdt%q contains angular velocities in terms of WM parameters, convert these to rad/s
-   ! do i = 2, size(dxdt%q, 2)
-   !    c = dxdt%q(4:6, i)
-   !    c0 = 2.0_R8Ki - dot_product(c, c)
-   !    vc = 2.0_R8Ki / (4.0_R8Ki - c0)
-   !    ct = reshape([0.0_R8Ki, -c(3), c(2), c(3), 0.0_R8Ki, -c(1), -c(2), c(1), 0.0_R8Ki], [3, 3])
-   !    H = 0.0_R8Ki
-   !    do j = 1,3
-   !       H(j,j) = 1.0_R8Ki
-   !    end do
-   !    cdot(:,1) = dxdt%dqdt(4:6, i)
-   !    H = vc*(H + vc/2.0_R8Ki*ct + vc/8.0_R8Ki*matmul(ct, ct))
-   !    dxdt%dqdt(4:6, i) = pack(matmul(H, cdot), .true.)
-   ! end do
-
       ! now set the derivatives of the continuous states. 
       ! I am a little concerned that W-M parameter derivatives are in the wrong units, but I think this is the same issue that is in the GA2 solve (the opposite direction)
    dxdt%q = dxdt%dqdt
@@ -4816,9 +4801,14 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,OtherState, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-      ! Root displacements -- no displacement relative to the root (reference frame attached to u%RootMotionMesh)
-   x%q(1:3,1) = 0.0_BDKi 
-   x%q(4:6,1) = 0.0_BDKi 
+      ! Root displacements
+   x%q(1:3,1) = u%RootMotion%TranslationDisp(1:3,1) + &
+                matmul(u%RootMotion%Position(:,1) - OtherState%GlbPos, OtherState%GlbRot)
+
+      ! Root rotations
+   CALL ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1),p, OtherState, x%q(4:6,1), ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 
 
       ! Root velocities/angular velocities and accelerations/angular accelerations
@@ -6767,7 +6757,7 @@ subroutine BD_UpdateGlobalRef(u, p, x, OtherState, ErrStat, ErrMsg)
    GlbWM_new  = OtherState%Glb_crv
 
    ! Calculate differences between old and new reference
-   GlbRot_diff = matmul(transpose(GlbRot_new), GlbRot_old)
+   GlbRot_diff = matmul(transpose(GlbRot_old), GlbRot_new)
    GlbWM_diff = wm_from_dcm(GlbRot_diff)
 
    do i = 1, p%elem_total
@@ -6776,7 +6766,7 @@ subroutine BD_UpdateGlobalRef(u, p, x, OtherState, ErrStat, ErrMsg)
          temp_id = (i - 1)*(p%nodes_per_elem - 1) + j ! The last node of the first element is used as the first node in the second element.
 
          ! Calculate displacement in terms of new root motion mesh position
-         x%q(1:3, temp_id) = matmul(transpose(GlbRot_new),&
+         x%q(1:3, temp_id) = matmul(transpose(GlbRot_new), &
                                     GlbPos_old - GlbPos_new + &
                                     matmul(GlbRot_old, p%uuN0(1:3, j, i) + x%q(1:3, temp_id)) - &
                                     matmul(GlbRot_new, p%uuN0(1:3, j, i)))
@@ -6792,18 +6782,10 @@ subroutine BD_UpdateGlobalRef(u, p, x, OtherState, ErrStat, ErrMsg)
    ! Update the rotational velocity
    x%dqdt(4:6, :) = matmul(GlbRot_diff, x%dqdt(4:6, :))
 
-   ! Update translational acceleration
-   ! OtherState%acc(1:3, :) = matmul(GlbRot_diff, OtherState%acc(1:3, :))
-
-   ! Update rotational acceleration
-   ! OtherState%acc(4:6, :) = matmul(GlbRot_diff, OtherState%acc(4:6, :))
-
    ! Root node is always aligned with root motion mesh 
-   ! x%q(:, 1) = 0.0_R8Ki
-   ! x%dqdt(1:3, 1) = matmul(u%RootMotion%TranslationVel(:, 1), GlbRot_new)
-   ! x%dqdt(4:6, 1) = matmul(u%RootMotion%RotationVel(:, 1), GlbRot_new)
-   ! OtherState%acc(1:3, 1) = matmul(u%RootMotion%TranslationAcc(:, 1), GlbRot_new)
-   ! OtherState%acc(4:6, 1) = matmul(u%RootMotion%RotationAcc(:, 1), GlbRot_new)
+   x%q(:, 1) = 0.0_R8Ki
+   x%dqdt(1:3, 1) = matmul(u%RootMotion%TranslationVel(:, 1), GlbRot_new)
+   x%dqdt(4:6, 1) = matmul(u%RootMotion%RotationVel(:, 1), GlbRot_new)
 
 end subroutine
 

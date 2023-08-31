@@ -24,6 +24,7 @@ MODULE FAST_Linear
 
    ! USE FAST_Solver  ! I mostly just want the modules that are inherited from this module, not the routines in it
    USE FAST_ModTypes
+   USE NWTC_LAPACK
 
    USE AeroDyn
    USE AeroDyn14

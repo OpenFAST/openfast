@@ -345,7 +345,7 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
    m%dUdy = 0.0_R8Ki
 
    !----------------------------------------------------------------------------
-   ! Allocate Jacobian matrix, RHS, and Delta
+   ! Allocate solver Jacobian matrix, RHS, and Delta
    !----------------------------------------------------------------------------
 
    ! Initialize size of system
@@ -372,6 +372,11 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
    call AllocAry(m%IPIV, NumJac, "m%IPIV", ErrStat, ErrMsg); if (Failed()) return
    m%Jac = 0.0_R8Ki
 
+   ! Initialize iterations and steps until Jacobian is calculated to zero
+   ! so it will be calculated in first step
+   m%IterUntilUJac = 0
+   m%StepsUntilUJac = 0
+
    !----------------------------------------------------------------------------
    ! Calculate generalized alpha parameters
    !----------------------------------------------------------------------------
@@ -393,55 +398,55 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
 
    ! munit = -1
 
-   call GetNewUnit(m%DebugUnit, ErrStat2, ErrMsg2); if (Failed()) return
-   call OpenFOutFile(m%DebugUnit, "solver.dbg", ErrStat2, ErrMsg2); if (Failed()) return
+   ! call GetNewUnit(m%DebugUnit, ErrStat2, ErrMsg2); if (Failed()) return
+   ! call OpenFOutFile(m%DebugUnit, "solver.dbg", ErrStat2, ErrMsg2); if (Failed()) return
 
-   write (m%DebugUnit, *) "NumX      = ", NumX
-   write (m%DebugUnit, *) "NumU      = ", NumU
-   write (m%DebugUnit, *) "NumY      = ", NumY
-   write (m%DebugUnit, *) "NumJac    = ", NumJac
-   write (m%DebugUnit, '(A,*(I4))') " p%iJX2    = ", p%iJX2
-   write (m%DebugUnit, '(A,*(I4))') " p%iJT     = ", p%iJT
-   write (m%DebugUnit, '(A,*(I4))') " p%iJ1     = ", p%iJ1
-   write (m%DebugUnit, '(A,*(I4))') " p%iJL     = ", p%iJL
-   write (m%DebugUnit, '(A,*(I4))') " p%iX2Tight = ", p%iX2Tight
-   write (m%DebugUnit, '(A,*(I4))') " p%iX1Tight = ", p%iX1Tight
-   write (m%DebugUnit, '(A,*(I4))') " p%iUTight = ", p%iUTight
-   write (m%DebugUnit, '(A,*(I4))') " p%iUOpt1  = ", p%iUOpt1
-   write (m%DebugUnit, '(A,*(I4))') " p%iyTight = ", p%iyTight
-   write (m%DebugUnit, '(A,*(I4))') " p%iyOpt1  = ", p%iyOpt1
-   write (m%DebugUnit, *) "shape(m%dYdx) = ", shape(m%dYdx)
-   write (m%DebugUnit, *) "shape(m%dYdu) = ", shape(m%dYdu)
-   write (m%DebugUnit, *) "shape(m%dXdx) = ", shape(m%dXdx)
-   write (m%DebugUnit, *) "shape(m%dXdu) = ", shape(m%dXdu)
-   write (m%DebugUnit, *) "shape(m%dUdu) = ", shape(m%dUdu)
-   write (m%DebugUnit, *) "shape(m%dUdy) = ", shape(m%dUdy)
+   ! write (m%DebugUnit, *) "NumX      = ", NumX
+   ! write (m%DebugUnit, *) "NumU      = ", NumU
+   ! write (m%DebugUnit, *) "NumY      = ", NumY
+   ! write (m%DebugUnit, *) "NumJac    = ", NumJac
+   ! write (m%DebugUnit, '(A,*(I4))') " p%iJX2    = ", p%iJX2
+   ! write (m%DebugUnit, '(A,*(I4))') " p%iJT     = ", p%iJT
+   ! write (m%DebugUnit, '(A,*(I4))') " p%iJ1     = ", p%iJ1
+   ! write (m%DebugUnit, '(A,*(I4))') " p%iJL     = ", p%iJL
+   ! write (m%DebugUnit, '(A,*(I4))') " p%iX2Tight = ", p%iX2Tight
+   ! write (m%DebugUnit, '(A,*(I4))') " p%iX1Tight = ", p%iX1Tight
+   ! write (m%DebugUnit, '(A,*(I4))') " p%iUTight = ", p%iUTight
+   ! write (m%DebugUnit, '(A,*(I4))') " p%iUOpt1  = ", p%iUOpt1
+   ! write (m%DebugUnit, '(A,*(I4))') " p%iyTight = ", p%iyTight
+   ! write (m%DebugUnit, '(A,*(I4))') " p%iyOpt1  = ", p%iyOpt1
+   ! write (m%DebugUnit, *) "shape(m%dYdx) = ", shape(m%dYdx)
+   ! write (m%DebugUnit, *) "shape(m%dYdu) = ", shape(m%dYdu)
+   ! write (m%DebugUnit, *) "shape(m%dXdx) = ", shape(m%dXdx)
+   ! write (m%DebugUnit, *) "shape(m%dXdu) = ", shape(m%dXdu)
+   ! write (m%DebugUnit, *) "shape(m%dUdu) = ", shape(m%dUdu)
+   ! write (m%DebugUnit, *) "shape(m%dUdy) = ", shape(m%dUdy)
 
-   do i = 1, size(Mods)
-      write (m%DebugUnit, *) "Module   = ", Mods(i)%Abbr
-      write (m%DebugUnit, *) "ModuleID = ", Mods(i)%ID
-      do j = 1, size(Mods(i)%Vars%x)
-         if (.not. allocated(Mods(i)%Vars%x(j)%iGblSol)) cycle
-         write (m%DebugUnit, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" X "//trim(Mods(i)%Vars%x(j)%Name)// &
-            " ("//trim(MV_FieldString(Mods(i)%Vars%x(j)%Field))//")"
-         write (m%DebugUnit, '(A,*(I4))') "  X iLoc    = ", Mods(i)%Vars%x(j)%iLoc
-         write (m%DebugUnit, '(A,*(I4))') "  X iGblSol = ", Mods(i)%Vars%x(j)%iGblSol
-      end do
-      do j = 1, size(Mods(i)%Vars%u)
-         if (.not. allocated(Mods(i)%Vars%u(j)%iGblSol)) cycle
-         write (m%DebugUnit, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" U "//trim(Mods(i)%Vars%u(j)%Name)// &
-            " ("//trim(MV_FieldString(Mods(i)%Vars%u(j)%Field))//")"
-         write (m%DebugUnit, '(A,*(I4))') "  U iLoc    = ", Mods(i)%Vars%u(j)%iLoc
-         write (m%DebugUnit, '(A,*(I4))') "  U iGblSol = ", Mods(i)%Vars%u(j)%iGblSol
-      end do
-      do j = 1, size(Mods(i)%Vars%y)
-         if (.not. allocated(Mods(i)%Vars%y(j)%iGblSol)) cycle
-         write (m%DebugUnit, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" Y "//trim(Mods(i)%Vars%y(j)%Name)// &
-            " ("//trim(MV_FieldString(Mods(i)%Vars%y(j)%Field))//")"
-         write (m%DebugUnit, '(A,*(I4))') "  Y iLoc    = ", Mods(i)%Vars%y(j)%iLoc
-         write (m%DebugUnit, '(A,*(I4))') "  Y iGblSol = ", Mods(i)%Vars%y(j)%iGblSol
-      end do
-   end do
+   ! do i = 1, size(Mods)
+   !    write (m%DebugUnit, *) "Module   = ", Mods(i)%Abbr
+   !    write (m%DebugUnit, *) "ModuleID = ", Mods(i)%ID
+   !    do j = 1, size(Mods(i)%Vars%x)
+   !       if (.not. allocated(Mods(i)%Vars%x(j)%iGblSol)) cycle
+   !       write (m%DebugUnit, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" X "//trim(Mods(i)%Vars%x(j)%Name)// &
+   !          " ("//trim(MV_FieldString(Mods(i)%Vars%x(j)%Field))//")"
+   !       write (m%DebugUnit, '(A,*(I4))') "  X iLoc    = ", Mods(i)%Vars%x(j)%iLoc
+   !       write (m%DebugUnit, '(A,*(I4))') "  X iGblSol = ", Mods(i)%Vars%x(j)%iGblSol
+   !    end do
+   !    do j = 1, size(Mods(i)%Vars%u)
+   !       if (.not. allocated(Mods(i)%Vars%u(j)%iGblSol)) cycle
+   !       write (m%DebugUnit, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" U "//trim(Mods(i)%Vars%u(j)%Name)// &
+   !          " ("//trim(MV_FieldString(Mods(i)%Vars%u(j)%Field))//")"
+   !       write (m%DebugUnit, '(A,*(I4))') "  U iLoc    = ", Mods(i)%Vars%u(j)%iLoc
+   !       write (m%DebugUnit, '(A,*(I4))') "  U iGblSol = ", Mods(i)%Vars%u(j)%iGblSol
+   !    end do
+   !    do j = 1, size(Mods(i)%Vars%y)
+   !       if (.not. allocated(Mods(i)%Vars%y(j)%iGblSol)) cycle
+   !       write (m%DebugUnit, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" Y "//trim(Mods(i)%Vars%y(j)%Name)// &
+   !          " ("//trim(MV_FieldString(Mods(i)%Vars%y(j)%Field))//")"
+   !       write (m%DebugUnit, '(A,*(I4))') "  Y iLoc    = ", Mods(i)%Vars%y(j)%iLoc
+   !       write (m%DebugUnit, '(A,*(I4))') "  Y iGblSol = ", Mods(i)%Vars%y(j)%iGblSol
+   !    end do
+   ! end do
 
 contains
    function Failed()
@@ -836,7 +841,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    ! Decrement number of time steps before updating the Jacobian
    m%StepsUntilUJac = m%StepsUntilUJac - 1
 
-   write (m%DebugUnit, *) "step = ", n_t_global_next
+   ! write (m%DebugUnit, *) "step = ", n_t_global_next
 
    !----------------------------------------------------------------------------
    ! Extrapolate/interpolate inputs for all modules
@@ -892,7 +897,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    iterCorr = 0
    do while (iterCorr <= p%NumCrctn)
 
-      write (m%DebugUnit, *) "iterCorr = ", iterCorr
+      ! write (m%DebugUnit, *) "iterCorr = ", iterCorr
 
       ! Copy state for correction step
       m%qn = m%q
@@ -900,6 +905,10 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
       ! Reset mappings updated flags
       m%Mappings%Updated = .false.
+
+      !-------------------------------------------------------------------------
+      ! Option 2 Solve
+      !-------------------------------------------------------------------------
 
       ! Loop through Option 2 modules
       do i = 1, size(p%iModOpt2)
@@ -914,6 +923,10 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
                                  Turbine, ErrStat2, ErrMsg2); if (Failed()) return
          end if
       end do
+
+      !-------------------------------------------------------------------------
+      ! Option 1 Solve
+      !-------------------------------------------------------------------------
 
       ! Get inputs and update states for Option 1 modules not in Option 2
       do i = 1, size(p%iModOpt1US)
@@ -955,32 +968,14 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
          if (iterConv >= p%MaxConvIter) exit
 
-         write (m%DebugUnit, *) "iterConv = ", iterConv
-
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-eps  = ", pack(Turbine%BD%m(1)%qp%E1(1:3, :, 1) - Turbine%BD%m(1)%qp%RR0(1:3, 3, :, 1), .true.)
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-eps  = ", pack(Turbine%BD%m(2)%qp%E1(1:3, :, 1) - Turbine%BD%m(1)%qp%RR0(1:3, 3, :, 1), .true.)
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-kappa  = ", pack(Turbine%BD%m(1)%qp%kappa(1:3, :, 1), .true.)
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-kappa  = ", pack(Turbine%BD%m(2)%qp%kappa(1:3, :, 1), .true.)
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-Nrrr  = ", pack(Turbine%BD%m(1)%Nrrr(1:3, :, 1), .true.)
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-Nrrr  = ", pack(Turbine%BD%m(2)%Nrrr(1:3, :, 1), .true.)
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-Glb_crv  = ", Turbine%BD%OtherSt(1, STATE_PRED)%Glb_crv
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-Glb_crv  = ", Turbine%BD%p(2)%Glb_crv
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RRoot  = ", wm_from_dcm(transpose(Turbine%BD%Input(1, 1)%RootMotion%Orientation(:, :, 1)))
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RRoot  = ", wm_from_dcm(Turbine%BD%Input(1, 2)%RootMotion%Orientation(:, :, 1))
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RR  = ", wm_compose(wm_inv(Turbine%BD%OtherSt(1, STATE_PRED)%Glb_crv), wm_from_dcm(transpose(Turbine%BD%Input(1, 1)%RootMotion%Orientation(:, :, 1))))
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RR  = ", wm_compose(wm_inv(Turbine%BD%p(2)%Glb_crv), wm_from_dcm(Turbine%BD%Input(1, 2)%RootMotion%Orientation(:, :, 1)))
-         write (m%DebugUnit, '(A,*(ES16.7))') " BD1-RRoot-dcm  = ", pack(Turbine%BD%Input(1, 1)%RootMotion%Orientation(:, :, 1), .true.)
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " BD2-RRoot-dcm  = ", pack(Turbine%BD%Input(1, 2)%RootMotion%Orientation(:, :, 1), .true.)
-
          !----------------------------------------------------------------------
          ! Update Jacobian
          !----------------------------------------------------------------------
 
          ! If number of iterations or steps until Jacobian is to be updated
-         ! is zero or less, then rebuild the Jacobian. Note: Solver_BuildJacobian
-         ! resets these counters.
+         ! is zero or less, or first solution step, then rebuild the Jacobian. 
+         ! Note: Solver_BuildJacobian resets these counters.
          if ((m%IterUntilUJac <= 0) .or. (m%StepsUntilUJac <= 0) .or. (n_t_global_next == 1)) then
-
             call Solver_BuildJacobian(p, m, Mods, t_global_next, n_t_global_next*100 + iterConv, &
                                       Turbine, ErrStat2, ErrMsg2); if (Failed()) return
          end if
@@ -1020,8 +1015,6 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! Solve for state and input perturbations
          !----------------------------------------------------------------------
 
-         write (m%DebugUnit, '(A,*(ES16.7))') " XB = ", m%XB
-
          ! Solve Jacobian and RHS
          call LAPACK_getrs('N', size(m%Jac, 1), m%Jac, m%IPIV, m%XB, ErrStat2, ErrMsg2); if (Failed()) return
 
@@ -1030,13 +1023,6 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          !----------------------------------------------------------------------
 
          delta_norm = TwoNorm(m%XB(:, 1))/size(m%XB)
-
-         write (m%DebugUnit, '(A,*(ES16.7))') " y  = ", m%y
-         write (m%DebugUnit, '(A,*(ES16.7))') " u  = ", m%un
-         write (m%DebugUnit, '(A,*(ES16.7))') " u_tmp = ", m%u_tmp
-         write (m%DebugUnit, '(A,*(ES16.7))') " U  = ", m%UDiff
-         write (m%DebugUnit, '(A,*(ES16.7))') " x  = ", m%xn
-         write (m%DebugUnit, *) "delta_norm = ", delta_norm
 
          if (delta_norm < p%ConvTol) exit
 
@@ -1086,8 +1072,15 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! Transfer updated states and inputs to relevant modules
          !----------------------------------------------------------------------
 
-         write (m%DebugUnit, '(A,*(ES16.7))') " du = ", m%du
-         write (m%DebugUnit, '(A,*(ES16.7))') " dx = ", m%dx
+         ! write (m%DebugUnit, *) "iterConv = ", iterConv
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " y  = ", m%y
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " u  = ", m%un
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " u_tmp = ", m%u_tmp
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " U  = ", m%UDiff
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " x  = ", m%xn
+         ! write (m%DebugUnit, *) "delta_norm = ", delta_norm
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " du = ", m%du
+         ! write (m%DebugUnit, '(A,*(ES16.7))') " dx = ", m%dx
 
       end do
 

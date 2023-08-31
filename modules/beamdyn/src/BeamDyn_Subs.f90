@@ -686,9 +686,6 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, OtherState, m, y)
       
    CASE (BD_MESH_QP)
 
-      y%BldMotion%TranslationVel(:,1)    = u%RootMotion%TranslationVel(:,1)
-      y%BldMotion%RotationVel(:,1)       = u%RootMotion%RotationVel(:,1)
-      
       DO i=1,p%elem_total
          DO j=1,p%nqp
             temp_id2 = (i-1)*p%nqp + j + p%qp_indx_offset            ! Index to a node within element i           
