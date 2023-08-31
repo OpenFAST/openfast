@@ -656,9 +656,10 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, OtherState, m, y)
 
                ! Calculate the translational displacement of each GLL node in the FAST coordinate system,
                ! referenced against the DCM of the blade root at T=0.
-            y%BldMotion%TranslationDisp(1:3,temp_id2) = OtherState%GlbPos - y%BldMotion%Position(1:3,temp_id2) + &
-                                                        matmul(OtherState%GlbRot, p%uuN0(1:3, j, i) + x%q(1:3, temp_id))
-                                                        
+!            y%BldMotion%TranslationDisp(1:3,temp_id2) = OtherState%GlbPos - y%BldMotion%Position(1:3,temp_id2) + &
+!                                                        matmul(OtherState%GlbRot, p%uuN0(1:3, j, i) + x%q(1:3, temp_id))
+            y%BldMotion%TranslationDisp(1:3,temp_id2) = OtherState%GlbPos + matmul(OtherState%GlbRot, p%uuN0(1:3, j, i) + x%q(1:3, temp_id)) - &
+                                                        y%BldMotion%Position(1:3,temp_id2)
 
 !bjj: note differences here compared to BDrot_to_FASTdcm
 !adp: in BDrot_to_FASTdcm we are assuming that x%q(4:6,:) is zero because there is no rotatinoal displacement yet
