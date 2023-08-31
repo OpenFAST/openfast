@@ -656,6 +656,8 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, OtherState, m, y)
 
                ! Calculate the translational displacement of each GLL node in the FAST coordinate system,
                ! referenced against the DCM of the blade root at T=0.
+!            y%BldMotion%TranslationDisp(1:3,temp_id2) = OtherState%GlbPos - y%BldMotion%Position(1:3,temp_id2) + &
+!                                                        matmul(OtherState%GlbRot, p%uuN0(1:3, j, i) + x%q(1:3, temp_id))
             y%BldMotion%TranslationDisp(1:3,temp_id2) = OtherState%GlbPos + matmul(OtherState%GlbRot, p%uuN0(1:3, j, i) + x%q(1:3, temp_id)) - &
                                                         y%BldMotion%Position(1:3,temp_id2)
 
@@ -670,7 +672,7 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, OtherState, m, y)
             CALL BD_CrvMatrixR(cc0,temp_R)  ! returns temp_R (the transpose of the DCM orientation matrix)
 
                ! Store the DCM for the j'th node of the i'th element (in FAST coordinate system)            
-            y%BldMotion%Orientation(1:3,1:3,temp_id2) = MATMUL(OtherState%GlbRot,TRANSPOSE(temp_R))
+            y%BldMotion%Orientation(1:3,1:3,temp_id2) = TRANSPOSE(temp_R)
 
                ! Calculate the translation velocity and store in FAST coordinate system
                ! referenced against the DCM of the blade root at T=0.
@@ -717,12 +719,9 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, OtherState, m, y)
          ENDDO
       ENDDO
       
-
-
    CASE (BD_MESH_STATIONS)
    END SELECT
    
-      
 END SUBROUTINE Set_BldMotion_NoAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calculates values for the y%BldMotion mesh.
@@ -753,10 +752,6 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, OtherState, m, y)
        ! now set the accelerations:
        
        ! The first node on the mesh is just the root location:   
-       y%BldMotion%TranslationDisp(:,1)   = u%RootMotion%TranslationDisp(:,1)
-       y%BldMotion%Orientation(:,:,1)     = u%RootMotion%Orientation(:,:,1)
-       y%BldMotion%TranslationVel(:,1)    = u%RootMotion%TranslationVel(:,1)
-       y%BldMotion%RotationVel(:,1)       = u%RootMotion%RotationVel(:,1)
        y%BldMotion%TranslationAcc(:,1)    = u%RootMotion%TranslationAcc(:,1)
        y%BldMotion%RotationAcc(:,1)       = u%RootMotion%RotationAcc(:,1)
          
@@ -1075,7 +1070,7 @@ SUBROUTINE BD_ComputeIniNodalCrv(e3, phi, cc, ErrStat, ErrMsg)
    Rr(:,2) = Cross_Product(e3,e1)
    Rr(:,1) = e1(:)
  
-   identity = 0.
+   identity = 0.0_BDKi
    do i = 1,3
      identity(i,i) = 1.0_BDKi
    enddo
