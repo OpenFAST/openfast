@@ -868,9 +868,12 @@ end subroutine InitRefFrame
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> Set the global rotation information -- stored in OtherStates
-subroutine SetRefFrame( u, OtherState, ErrStat, ErrMsg )
+!! This only works for u in the global frame!!!!
+subroutine SetRefFrame( u, GlbPos, GlbRot, Glb_Crv, ErrStat, ErrMsg )
    type(BD_InputType),           intent(in   )  :: u                 !< Inputs
-   type(BD_OtherStateType),      intent(inout)  :: OtherState        !< Global rotations are stored in otherstate
+   real(R8Ki),                   intent(  out)  :: GlbPos(3)
+   real(R8Ki),                   intent(  out)  :: GlbRot(3,3)
+   real(R8Ki),                   intent(  out)  :: Glb_crv(3)
    integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
    integer(intKi)                               :: ErrStat2          ! temporary Error status
@@ -881,13 +884,12 @@ subroutine SetRefFrame( u, OtherState, ErrStat, ErrMsg )
    ErrMsg  = ""
 
    ! Calculate new global position, rotation, and WM from root motion.  Note that this is similar to the InitRefFrame routine
-   OtherState%GlbPos = u%RootMotion%Position(:, 1) + &
-                       u%RootMotion%TranslationDisp(:, 1)
-   OtherState%GlbRot = transpose(u%RootMotion%Orientation(:, :, 1))
-   !OtherState%Glb_crv = wm_from_dcm(OtherState%GlbRot)
-   CALL BD_CrvExtractCrv(OtherState%GlbRot, OtherState%Glb_crv, ErrStat2, ErrMsg2)
+   GlbPos = u%RootMotion%Position(:, 1) + &
+            u%RootMotion%TranslationDisp(:, 1)
+   GlbRot = transpose(u%RootMotion%Orientation(:, :, 1))
+   !Glb_crv = wm_from_dcm(OtherState%GlbRot)
+   CALL BD_CrvExtractCrv(GlbRot, Glb_crv, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
 end subroutine SetRefFrame
 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -1772,8 +1774,8 @@ subroutine Init_OtherStates( u, p, OtherState, ErrStat, ErrMsg )
    ! BJJ: not sure this should be used in CalcOutput when we are calculating Jacobians (this will alter the operating point of the continuous state)
    OtherState%RunQuasiStaticInit = .FALSE.
    
-   ! set the global position information
-   call SetRefFrame(u,OtherState,ErrStat2,ErrMsg2);  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ! set the global position information -- u must be in the global frame for the SetRefFrame routine
+   call SetRefFrame(u, OtherState%GlbPos, OtherState%GlbRot, OtherState%Glb_Crv, ErrStat2,ErrMsg2);  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 end subroutine Init_OtherStates
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -1919,7 +1921,7 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'');  if (ErrStat >= AbortErrLev) return
 
       ! change reference frame to root motion at t=T+DT (u(1)%RootMotionMesh)
-      call UpdateBeamDynGlobalReference(u(1),p,x,OtherState,ErrStat2,ErrMsg2)
+     call UpdateBeamDynGlobalReference(u(1),p,x,OtherState,ErrStat2,ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
    ELSE !IF(p%analysis_type == BD_STATIC_ANALYSIS) THEN
       CALL BD_Static( t, u, utimes, p, x, OtherState, m, ErrStat, ErrMsg )
@@ -2023,7 +2025,8 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    CALL BD_DistrLoadCopy( p, m%u, m )
 
       ! Incorporate boundary conditions (note that we are doing this because the first node isn't really a state. should fix x so we don't need a temp copy here.)
-   x_tmp%q(   1:3,1) = 0.0_BDKi  ! No displacement relative to root
+   x_tmp%q(1:3,1) = m%u%RootMotion%TranslationDisp(:,1) + &
+                    matmul(m%u%RootMotion%Position(:,1) - OtherState%GlbPos, OtherState%GlbRot)
    CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1), p, OtherState, x_tmp%q(   4:6,1), ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
@@ -2121,6 +2124,10 @@ SUBROUTINE BD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! LOCAL variables
+   real(R8Ki)                                   :: GlbPos_new(3)
+   real(R8Ki)                                   :: GlbRot_new(3,3)
+   real(R8Ki)                                   :: GlbWM_new(3)
+   real(R8Ki)                                   :: GlbWM_diff(3)
    INTEGER(IntKi)                         :: ErrStat2          ! The error status code
    CHARACTER(ErrMsgLen)                   :: ErrMsg2           ! The error message, if an error occurred
    CHARACTER(*), PARAMETER                :: RoutineName = 'BD_CalcContStateDeriv'
@@ -2152,11 +2159,19 @@ SUBROUTINE BD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
    CALL BD_CopyContState(x, dxdt, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-   ! dxdt%q(   1:3,1) = m%u%RootMotion%TranslationDisp(:,1)
-   ! CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1),p, dxdt%q(   4:6,1), OtherState, ErrStat2, ErrMsg2)
-   !    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   !    if (ErrStat >= AbortErrLev) return
-  !dxdt%q(   4:6,1) = ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1),p)
+   ! Find the root position/rotation information at extrapolated u -- u must be in the global frame for the SetRefFrame routine
+   call SetRefFrame(u, GlbPos_new, GlbRot_new, GlbWM_new, ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) return
+
+   ! Root displacement is relative to the GlbPos at time T, which is simply the difference between
+   ! the previous root position (GlbPos) and the new extrapolated position (Pos+TransDisp)
+   dxdt%q(1:3,1) = m%u%RootMotion%TranslationDisp(:,1) + &
+                    matmul(m%u%RootMotion%Position(:,1) - OtherState%GlbPos, OtherState%GlbRot)
+   CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1), p, OtherState, dxdt%q(   4:6,1), ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+
    dxdt%dqdt(1:3,1) = m%u%RootMotion%TranslationVel(:,1)
    dxdt%dqdt(4:6,1) = m%u%Rootmotion%RotationVel(:,1)
 
@@ -4601,18 +4616,24 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,OtherState, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-   INTEGER(IntKi)                                     :: ErrStat2    ! Temporary Error status
-   CHARACTER(ErrMsgLen)                               :: ErrMsg2     ! Temporary Error message
+   real(R8Ki)                                   :: GlbPos_new(3)
+   real(R8Ki)                                   :: GlbRot_new(3,3)
+   real(R8Ki)                                   :: GlbWM_new(3)
+   real(R8Ki)                                   :: GlbWM_diff(3)
+   INTEGER(IntKi)                               :: ErrStat2    ! Temporary Error status
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2     ! Temporary Error message
    CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_BoundaryGA2'
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-      ! Root displacements -- no displacement relative to the root (reference frame attached to u%RootMotionMesh)
-   x%q(1:3,1) = 0.0_BDKi 
-   x%q(4:6,1) = 0.0_BDKi 
-
+   ! NOTE: u is in a BD local frame.  So cannot use SetRefFrame routine (note there are differences here)
+   x%q(1:3,1) = u%RootMotion%TranslationDisp(:,1) + &
+                    matmul(u%RootMotion%Position(:,1) - OtherState%GlbPos, OtherState%GlbRot)
+   CALL ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1), p, OtherState, x%q(   4:6,1), ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
 
       ! Root velocities/angular velocities and accelerations/angular accelerations
    x%dqdt(1:3,1)         = u%RootMotion%TranslationVel(1:3,1)
@@ -6825,7 +6846,7 @@ subroutine UpdateBeamDynGlobalReference(u,p,x,OtherState,ErrStat,ErrMsg)
    character(*), parameter       :: RoutineName = 'UpdateBeamDynGlobalReference'
    real(R8Ki)                    :: GlbWM_old(3), GlbWM_new(3), GlbWM_diff(3)
    real(R8Ki)                    :: GlbRot_old(3, 3), GlbRot_new(3, 3), GlbRot_diff(3, 3)
-   real(R8Ki)                    :: GlbPos_old(3), GlbPos_new(3), GlbPos_diff(3)
+   real(R8Ki)                    :: GlbPos_old(3), GlbPos_new(3)
    real(R8Ki)                    :: pos(3), rot(3), trans_vel(3), rot_vel(3), uuN0(3)
    integer(IntKi)                :: i, j, temp_id, temp_id2
 
@@ -6837,23 +6858,19 @@ subroutine UpdateBeamDynGlobalReference(u,p,x,OtherState,ErrStat,ErrMsg)
    GlbRot_old = OtherState%GlbRot
    GlbWM_old  = OtherState%Glb_crv
 
-   ! Calculate new global position, rotation, and WM from root motion (updates otherstate reference frame info)
-   call SetRefFrame(u,OtherState,ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName); if (ErrStat >= AbortErrLev) return
+   ! Calculate new global position, rotation, and WM from root motion -- u must be in the global frame for the     SetRefFrame routine
+   call SetRefFrame(u, OtherState%GlbPos, OtherState%GlbRot, OtherState%Glb_Crv, ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) return
    GlbPos_new = OtherState%GlbPos
    GlbRot_new = OtherState%GlbRot
    GlbWM_new  = OtherState%Glb_crv
 
    ! Calculate differences between old and new reference
-   GlbRot_diff = matmul(transpose(GlbRot_old), GlbRot_new)
-   !GlbWM_diff = wm_compose(wm_inv(GlbWM_old), GlbWM_new)
-   call BD_CrvCompose(GlbWM_diff, GlbWM_old, GlbWM_new, FLAG_R1TR2)
-   GlbPos_diff = GlbPos_old - GlbPos_new
+   GlbRot_diff = matmul(transpose(GlbRot_new), GlbRot_old)
+   !GlbWM_diff = wm_inv(wm_compose(wm_inv(GlbWM_new), GlbWM_old))
+   call BD_CrvCompose(GlbWM_diff, GlbWM_new, GlbWM_old, FLAG_R1TR2)
 
-
-   ! Root node is always aligned with root motion mesh 
-   x%q(:, 1) = 0.0_R8Ki
-   x%dqdt(1:3, 1) = matmul(transpose(GlbRot_new), u%RootMotion%TranslationVel(:, 1))
-   x%dqdt(4:6, 1) = matmul(transpose(GlbRot_new), u%RootMotion%RotationVel(:, 1))
 
    do i = 1, p%elem_total
       do j = 1, p%nodes_per_elem
@@ -6862,22 +6879,39 @@ subroutine UpdateBeamDynGlobalReference(u,p,x,OtherState,ErrStat,ErrMsg)
          temp_id2 = (i - 1)*p%nodes_per_elem + j      ! Index to a node within element i
 
          ! Calculate displacement in terms of new root motion mesh position
-         x%q(1:3, temp_id) = matmul(transpose(GlbRot_new), &
+         x%q(1:3, temp_id) =  matmul(transpose(GlbRot_new), &
+                                    GlbPos_old - GlbPos_new + &
                                     matmul(GlbRot_old, p%uuN0(1:3, j, i) + x%q(1:3, temp_id)) - &
                                     matmul(GlbRot_new, p%uuN0(1:3, j, i)))
 
          ! Update the node orientation rotation of the node
          !x%q(4:6, temp_id) = wm_compose(wm_inv(GlbWM_diff), x%q(4:6, temp_id))
-         call BD_CrvCompose(x%q(4:6, temp_id), GlbWM_diff, x%q(4:6, temp_id), FLAG_R1TR2)
+         call BD_CrvCompose(x%q(4:6, temp_id), GlbWM_diff, x%q(4:6, temp_id), FLAG_R1R2)
 
          ! Update the translational velocity
-         x%dqdt(1:3, temp_id) = matmul(transpose(GlbRot_diff), x%dqdt(1:3, temp_id))
+         x%dqdt(1:3, temp_id) = matmul(GlbRot_diff, x%dqdt(1:3, temp_id))
 
          ! Update the rotational velocity
-         x%dqdt(4:6, temp_id) = matmul(transpose(GlbRot_diff), x%dqdt(4:6, temp_id))
+         x%dqdt(4:6, temp_id) = matmul(GlbRot_diff, x%dqdt(4:6, temp_id))
+
+         ! Update translational acceleration
+         OtherState%acc(1:3, :) = matmul(GlbRot_diff, OtherState%acc(1:3, :))
+
+         ! Update rotational acceleration
+         OtherState%acc(4:6, :) = matmul(GlbRot_diff, OtherState%acc(4:6, :))
 
       end do
    end do
+
+   ! Root node is always aligned with root motion mesh 
+   x%q(1:3, 1) = 0.0_R8Ki 
+   x%q(4:6, 1) = 0.0_R8Ki
+   x%dqdt(1:3, 1) = matmul(u%RootMotion%TranslationVel(:, 1), GlbRot_new)
+   x%dqdt(4:6, 1) = matmul(u%RootMotion%RotationVel(:, 1), GlbRot_new)
+   OtherState%acc(1:3, 1) = matmul(u%RootMotion%TranslationAcc(:, 1), GlbRot_new)
+   OtherState%acc(4:6, 1) = matmul(u%RootMotion%RotationAcc(:, 1), GlbRot_new)
+
+
 end subroutine
 
 
