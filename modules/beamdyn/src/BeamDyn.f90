@@ -1059,9 +1059,12 @@ end subroutine InitRefFrame
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> Set the global rotation information -- stored in OtherStates
-subroutine SetRefFrame( u, OtherState, ErrStat, ErrMsg )
+!! This only works for u in the global frame!!!!
+subroutine SetRefFrame( u, GlbPos, GlbRot, Glb_Crv, ErrStat, ErrMsg )
    type(BD_InputType),           intent(in   )  :: u                 !< Inputs
-   type(BD_OtherStateType),      intent(inout)  :: OtherState        !< Global rotations are stored in otherstate
+   real(R8Ki),                   intent(  out)  :: GlbPos(3)
+   real(R8Ki),                   intent(  out)  :: GlbRot(3,3)
+   real(R8Ki),                   intent(  out)  :: Glb_crv(3)
    integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
    integer(intKi)                               :: ErrStat2          ! temporary Error status
@@ -1072,13 +1075,12 @@ subroutine SetRefFrame( u, OtherState, ErrStat, ErrMsg )
    ErrMsg  = ""
 
    ! Calculate new global position, rotation, and WM from root motion.  Note that this is similar to the InitRefFrame routine
-   OtherState%GlbPos = u%RootMotion%Position(:, 1) + &
-                       u%RootMotion%TranslationDisp(:, 1)
-   OtherState%GlbRot = transpose(u%RootMotion%Orientation(:, :, 1))
-   !OtherState%Glb_crv = wm_from_dcm(OtherState%GlbRot)
-   CALL BD_CrvExtractCrv(OtherState%GlbRot, OtherState%Glb_crv, ErrStat2, ErrMsg2)
+   GlbPos = u%RootMotion%Position(:, 1) + &
+            u%RootMotion%TranslationDisp(:, 1)
+   GlbRot = transpose(u%RootMotion%Orientation(:, :, 1))
+   !Glb_crv = wm_from_dcm(OtherState%GlbRot)
+   CALL BD_CrvExtractCrv(GlbRot, Glb_crv, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
 end subroutine SetRefFrame
 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -1981,8 +1983,8 @@ subroutine Init_OtherStates( u, p, OtherState, ErrStat, ErrMsg )
    ! BJJ: not sure this should be used in CalcOutput when we are calculating Jacobians (this will alter the operating point of the continuous state)
    OtherState%RunQuasiStaticInit = .FALSE.
    
-   ! set the global position information
-   call SetRefFrame(u,OtherState,ErrStat2,ErrMsg2);  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ! set the global position information -- u must be in the global frame for the SetRefFrame routine
+   call SetRefFrame(u, OtherState%GlbPos, OtherState%GlbRot, OtherState%Glb_Crv, ErrStat2,ErrMsg2);  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 end subroutine Init_OtherStates
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -2331,6 +2333,10 @@ SUBROUTINE BD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! LOCAL variables
+   real(R8Ki)                                   :: GlbPos_new(3)
+   real(R8Ki)                                   :: GlbRot_new(3,3)
+   real(R8Ki)                                   :: GlbWM_new(3)
+   real(R8Ki)                                   :: GlbWM_diff(3)
    INTEGER(IntKi)                         :: ErrStat2          ! The error status code
    CHARACTER(ErrMsgLen)                   :: ErrMsg2           ! The error message, if an error occurred
    CHARACTER(*), PARAMETER                :: RoutineName = 'BD_CalcContStateDeriv'
@@ -2364,11 +2370,19 @@ SUBROUTINE BD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
    CALL BD_CopyContState(x, dxdt, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
+   ! Find the root position/rotation information at extrapolated u -- u must be in the global frame for the SetRefFrame routine
+   call SetRefFrame(u, GlbPos_new, GlbRot_new, GlbWM_new, ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) return
+
+   ! Root displacement is relative to the GlbPos at time T, which is simply the difference between
+   ! the previous root position (GlbPos) and the new extrapolated position (Pos+TransDisp)
    dxdt%q(1:3,1) = m%u%RootMotion%TranslationDisp(:,1) + &
-                   matmul(m%u%RootMotion%Position(:,1) - OtherState%GlbPos, OtherState%GlbRot)
-   CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1), p, OtherState, dxdt%q(4:6,1), ErrStat2, ErrMsg2)
+                    matmul(m%u%RootMotion%Position(:,1) - OtherState%GlbPos, OtherState%GlbRot)
+   CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1), p, OtherState, dxdt%q(   4:6,1), ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
+
    dxdt%dqdt(1:3,1) = m%u%RootMotion%TranslationVel(:,1)
    dxdt%dqdt(4:6,1) = m%u%Rootmotion%RotationVel(:,1)
 
@@ -4793,23 +4807,24 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,OtherState, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-   INTEGER(IntKi)                                     :: ErrStat2    ! Temporary Error status
-   CHARACTER(ErrMsgLen)                               :: ErrMsg2     ! Temporary Error message
+   real(R8Ki)                                   :: GlbPos_new(3)
+   real(R8Ki)                                   :: GlbRot_new(3,3)
+   real(R8Ki)                                   :: GlbWM_new(3)
+   real(R8Ki)                                   :: GlbWM_diff(3)
+   INTEGER(IntKi)                               :: ErrStat2    ! Temporary Error status
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2     ! Temporary Error message
    CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_BoundaryGA2'
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-      ! Root displacements
-   x%q(1:3,1) = u%RootMotion%TranslationDisp(1:3,1) + &
-                matmul(u%RootMotion%Position(:,1) - OtherState%GlbPos, OtherState%GlbRot)
-
-      ! Root rotations
-   CALL ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1),p, OtherState, x%q(4:6,1), ErrStat2, ErrMsg2)
-   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-
+   ! NOTE: u is in a BD local frame.  So cannot use SetRefFrame routine (note there are differences here)
+   x%q(1:3,1) = u%RootMotion%TranslationDisp(:,1) + &
+                    matmul(u%RootMotion%Position(:,1) - OtherState%GlbPos, OtherState%GlbRot)
+   CALL ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1), p, OtherState, x%q(   4:6,1), ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
 
       ! Root velocities/angular velocities and accelerations/angular accelerations
    x%dqdt(1:3,1)         = u%RootMotion%TranslationVel(1:3,1)
