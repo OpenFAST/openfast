@@ -41,7 +41,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -127,7 +127,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -173,7 +173,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -226,7 +226,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -264,7 +264,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -302,7 +302,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -342,7 +342,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -404,7 +404,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -460,7 +460,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -519,7 +519,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -567,7 +567,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -620,7 +620,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -670,7 +670,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -720,7 +720,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -770,7 +770,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -820,7 +820,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -870,7 +870,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -920,7 +920,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
