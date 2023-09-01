@@ -588,7 +588,7 @@ jobs:
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j8 \
+          ctest -VV -j4 \
           -L openfast \
           -LE "cpp|linear|python|fastlib" \
           -E "5MW_OC4Semi_WSt_WavesWN|5MW_OC3Mnpl_DLL_WTurb_WavesIrr|5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth|5MW_OC3Trpd_DLL_WSt_WavesReg|5MW_Land_BD_DLL_WTurb"
@@ -891,7 +891,7 @@ jobs:
       - name: Run OpenFAST linearization tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j8 -L linear
+          ctest -VV -j4 -L linear
       - name: Failing test artifacts
         uses: actions/upload-artifact@v3
         if: failure()
