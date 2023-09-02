@@ -54,7 +54,7 @@ MODULE BeamDyn
                                                !  and therefore x%q must be updated from T -> T+DT to include the root motion from T->T+DT
 
    ! do we change the reference frame at each State update?
-   LOGICAL, PARAMETER :: ChangeRefFrame=.true.
+   LOGICAL, PARAMETER :: ChangeRefFrame = .true.
 
 CONTAINS
 
@@ -1080,9 +1080,9 @@ subroutine SetRefFrame( u, GlbPos, GlbRot, Glb_Crv, ErrStat, ErrMsg )
    GlbPos = u%RootMotion%Position(:, 1) + &
             u%RootMotion%TranslationDisp(:, 1)
    GlbRot = transpose(u%RootMotion%Orientation(:, :, 1))
-   !Glb_crv = wm_from_dcm(OtherState%GlbRot)
    CALL BD_CrvExtractCrv(GlbRot, Glb_crv, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL BD_CrvMatrixR(Glb_crv, GlbRot)
 end subroutine SetRefFrame
 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -2131,11 +2131,9 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
       CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'');  if (ErrStat >= AbortErrLev) return
 
-      if (ChangeRefFrame) then
-         ! change reference frame to root motion at t=T+DT (u(1)%RootMotionMesh)
-         call BD_UpdateGlobalRef(u(1),p,x,OtherState,ErrStat2,ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
-      endif
+      ! change reference frame to root motion at t=T+DT (u(1)%RootMotionMesh)
+      call BD_UpdateGlobalRef(u(1),p,x,OtherState,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
    ELSE !IF(p%analysis_type == BD_STATIC_ANALYSIS) THEN
       CALL BD_Static( t, u, utimes, p, x, OtherState, m, ErrStat, ErrMsg )
    ENDIF
@@ -6747,6 +6745,9 @@ subroutine BD_UpdateGlobalRef(u, p, x, OtherState, ErrStat, ErrMsg)
 
    ErrStat  = ErrID_None
    ErrMsg   = ""
+
+   ! If reference frame shouldn't be changed, return
+   if (.not. ChangeRefFrame) return
 
    ! Save old global position, rotation, and WM
    GlbPos_old = OtherState%GlbPos
