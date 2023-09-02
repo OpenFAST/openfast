@@ -54,7 +54,7 @@ MODULE BeamDyn
                                                !  and therefore x%q must be updated from T -> T+DT to include the root motion from T->T+DT
 
    ! do we change the reference frame at each State update?
-   LOGICAL, PARAMETER :: ChangeRefFrame=.true.
+   LOGICAL, PARAMETER :: ChangeRefFrame = .true.
 
 CONTAINS
 
@@ -889,9 +889,9 @@ subroutine SetRefFrame( u, GlbPos, GlbRot, Glb_Crv, ErrStat, ErrMsg )
    GlbPos = u%RootMotion%Position(:, 1) + &
             u%RootMotion%TranslationDisp(:, 1)
    GlbRot = transpose(u%RootMotion%Orientation(:, :, 1))
-   !Glb_crv = wm_from_dcm(OtherState%GlbRot)
    CALL BD_CrvExtractCrv(GlbRot, Glb_crv, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL BD_CrvMatrixR(Glb_crv, GlbRot)
 end subroutine SetRefFrame
 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -1922,11 +1922,9 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
       CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'');  if (ErrStat >= AbortErrLev) return
 
-      if (ChangeRefFrame) then
-         ! change reference frame to root motion at t=T+DT (u(1)%RootMotionMesh)
-         call BD_UpdateGlobalRef(u(1),p,x,OtherState,ErrStat2,ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
-      endif
+      ! change reference frame to root motion at t=T+DT (u(1)%RootMotionMesh)
+      call BD_UpdateGlobalRef(u(1),p,x,OtherState,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
    ELSE !IF(p%analysis_type == BD_STATIC_ANALYSIS) THEN
       CALL BD_Static( t, u, utimes, p, x, OtherState, m, ErrStat, ErrMsg )
    ENDIF
@@ -6843,10 +6841,13 @@ subroutine BD_UpdateGlobalRef(u, p, x, OtherState, ErrStat, ErrMsg)
    real(R8Ki)                    :: GlbRot_old(3, 3), GlbRot_new(3, 3), GlbRot_diff(3, 3)
    real(R8Ki)                    :: GlbPos_old(3), GlbPos_new(3)
    real(R8Ki)                    :: pos(3), rot(3), trans_vel(3), rot_vel(3), uuN0(3)
-   integer(IntKi)                :: i, j, temp_id, temp_id2
+   integer(IntKi)                :: i, j, temp_id
 
    ErrStat  = ErrID_None
    ErrMsg   = ""
+
+   ! If reference frame shouldn't be changed, return
+   if (.not. ChangeRefFrame) return
 
    ! Save old global position, rotation, and WM
    GlbPos_old = OtherState%GlbPos
@@ -6862,18 +6863,14 @@ subroutine BD_UpdateGlobalRef(u, p, x, OtherState, ErrStat, ErrMsg)
    GlbWM_new  = OtherState%Glb_crv
 
    ! Calculate differences between old and new reference
-!   GlbRot_diff = matmul(transpose(GlbRot_old), GlbRot_new)
-   GlbRot_diff = matmul(transpose(GlbRot_new), GlbRot_old)
-!   GlbWM_diff = wm_from_dcm(GlbRot_diff)
-   call BD_CrvExtractCrv( GlbRot_diff, GlbWM_diff, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) return
-
+   call BD_CrvCompose(GlbWM_diff, GlbWM_new, GlbWM_old, FLAG_R1TR2)
+   call BD_CrvMatrixR(GlbWM_diff, GlbRot_diff)
 
    do i = 1, p%elem_total
       do j = 1, p%nodes_per_elem
 
-         temp_id = (i - 1)*(p%nodes_per_elem - 1) + j ! The last node of the first element is used as the first node in the second element.
+         ! The last node of the first element is used as the first node in the second element.
+         temp_id = (i - 1)*(p%nodes_per_elem - 1) + j 
 
          ! Calculate displacement in terms of new root motion mesh position
          x%q(1:3, temp_id) =  matmul(transpose(GlbRot_new), &
@@ -6882,35 +6879,31 @@ subroutine BD_UpdateGlobalRef(u, p, x, OtherState, ErrStat, ErrMsg)
                                     matmul(GlbRot_new, p%uuN0(1:3, j, i)))
 
          ! Update the node orientation rotation of the node
-         !x%q(4:6, temp_id) = wm_compose(wm_inv(GlbWM_diff), x%q(4:6, temp_id))
          call BD_CrvCompose(x%q(4:6, temp_id), GlbWM_diff, x%q(4:6, temp_id), FLAG_R1R2)
-
-         ! Update the translational velocity
-         x%dqdt(1:3, temp_id) = matmul(GlbRot_diff, x%dqdt(1:3, temp_id))
-
-         ! Update the rotational velocity
-         x%dqdt(4:6, temp_id) = matmul(GlbRot_diff, x%dqdt(4:6, temp_id))
-
-         ! Update translational acceleration
-         OtherState%acc(1:3, :) = matmul(GlbRot_diff, OtherState%acc(1:3, :))
-         OtherState%xcc(1:3, :) = matmul(GlbRot_diff, OtherState%xcc(1:3, :))
-
-         ! Update rotational acceleration
-         OtherState%acc(4:6, :) = matmul(GlbRot_diff, OtherState%acc(4:6, :))
-         OtherState%xcc(4:6, :) = matmul(GlbRot_diff, OtherState%xcc(4:6, :))
 
       end do
    end do
+
+   ! Update the translational velocity
+   x%dqdt(1:3, :) = matmul(GlbRot_diff, x%dqdt(1:3, :))
+
+   ! Update the rotational velocity
+   x%dqdt(4:6, :) = matmul(GlbRot_diff, x%dqdt(4:6, :))
+   
+   ! Update the translational and rotational acceleration for GA2 algorithm
+   OtherState%acc(1:3, 1) = matmul(u%RootMotion%TranslationAcc(:, 1), GlbRot_new)
+   OtherState%acc(4:6, 1) = matmul(u%RootMotion%RotationAcc(:, 1), GlbRot_new)
+   OtherState%acc(1:3, 2:) = matmul(GlbRot_diff, OtherState%acc(1:3, 2:))
+   OtherState%acc(4:6, 2:) = matmul(GlbRot_diff, OtherState%acc(4:6, 2:))
+
+   ! Update the translational and rotational algorithm acceleration for GA2 algorithm
+   OtherState%xcc(1:3, :) = matmul(GlbRot_diff, OtherState%xcc(1:3, :))
+   OtherState%xcc(4:6, :) = matmul(GlbRot_diff, OtherState%xcc(4:6, :))
 
    ! Root node is always aligned with root motion mesh 
    x%q(:, 1) = 0.0_R8Ki
    x%dqdt(1:3, 1) = matmul(u%RootMotion%TranslationVel(:, 1), GlbRot_new)
    x%dqdt(4:6, 1) = matmul(u%RootMotion%RotationVel(:, 1), GlbRot_new)
-   OtherState%acc(1:3, 1) = matmul(u%RootMotion%TranslationAcc(:, 1), GlbRot_new)
-   OtherState%acc(4:6, 1) = matmul(u%RootMotion%RotationAcc(:, 1), GlbRot_new)
-
-!   OtherState%acc(:,:) = 0.0_R8Ki
-    OtherState%xcc(:,:) = 0.0_R8Ki
 
 end subroutine
 
