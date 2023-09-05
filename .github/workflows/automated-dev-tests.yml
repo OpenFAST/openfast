@@ -43,10 +43,14 @@ jobs:
         with:
           python-version: '3.10'
           cache: 'pip'
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v1
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
       - name: Setup workspace
         run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure build
@@ -57,12 +61,15 @@ jobs:
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
             -DBUILD_SHARED_LIBS:BOOL=OFF \
             -DGENERATE_TYPES=ON \
             -DVARIABLE_TRACKING=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
+            -DBUILD_OPENFAST_SIMULINK_API=ON \
             ${GITHUB_WORKSPACE}
             # -DDOUBLE_PRECISION=OFF \
       - name: Build all
@@ -85,6 +92,10 @@ jobs:
         uses: actions/checkout@main
         with:
           submodules: recursive
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev
       - name: Setup workspace
         run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure build
@@ -95,6 +106,8 @@ jobs:
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
             -DBUILD_SHARED_LIBS:BOOL=OFF \
             -DVARIABLE_TRACKING=OFF \
@@ -123,6 +136,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
       - name: Setup workspace
         run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure build
@@ -133,6 +148,8 @@ jobs:
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
             -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
             -DVARIABLE_TRACKING=OFF \
             -DBUILD_TESTING:BOOL=ON \
@@ -161,11 +178,14 @@ jobs:
         with:
           python-version: '3.10'
           cache: 'pip'
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v1
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev  # gcovr
       - name: Setup workspace
         run: cmake -E make_directory ${{runner.workspace}}/openfast/build
@@ -177,6 +197,8 @@ jobs:
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
             -DCMAKE_BUILD_TYPE:STRING=RELWITHDEBINFO \
             -DOPENMP:BOOL=ON \
             -DDOUBLE_PRECISION=ON \
@@ -186,6 +208,7 @@ jobs:
             -DBUILD_SHARED_LIBS:BOOL=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
+            -DBUILD_OPENFAST_SIMULINK_API=ON \
             ${GITHUB_WORKSPACE}
       - name: Build openfast-postlib
         working-directory: ${{runner.workspace}}/openfast/build
@@ -216,7 +239,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            ${GITHUB_WORKSPACE}
       - name: Build OpenFAST C-Interfaces
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -247,7 +277,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            ${GITHUB_WORKSPACE}
       - name: Build OpenFAST glue-code
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -278,7 +315,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            ${GITHUB_WORKSPACE}
       - name: Build FAST.Farm
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -310,6 +354,8 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev
       - name: Setup workspace
         run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure build
@@ -320,6 +366,7 @@ jobs:
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
             -DBUILD_SHARED_LIBS:BOOL=OFF \
             -DGENERATE_TYPES=ON \
@@ -370,7 +417,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
       - name: Run AeroDyn tests
         uses: ./.github/actions/tests-module-aerodyn
         with:
@@ -419,11 +475,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
@@ -478,7 +536,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3" vtk
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
       - name: Run Interface / API tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -517,23 +584,108 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
           cmake --build . --target regression_test_controllers
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
           ctest -VV -j8 \
           -L openfast \
-          -LE "cpp|linear|python|fastlib" \
+          -LE "cpp|linear|python|fastlib|aeromap" \
           -E "5MW_OC4Semi_WSt_WavesWN|5MW_OC3Mnpl_DLL_WTurb_WavesIrr|5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth|5MW_OC3Trpd_DLL_WSt_WavesReg|5MW_Land_BD_DLL_WTurb"
       - name: Failing test artifacts
         uses: actions/upload-artifact@v3
         if: failure()
         with:
           name: rtest-OF
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-OF-simulink:
+    runs-on: ubuntu-22.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3.0.4
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev libopenblas-dev libopenblas-openmp-dev
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v1
+      - name: Build FAST_SFunc
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DUSE_LOCAL_STATIC_LAPACK:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+          cmake --build . --target FAST_SFunc
+      - name: Run MATLAB tests and generate artifacts
+        uses: matlab-actions/run-tests@v1
+        with:
+          source-folder: ${{runner.workspace}}/openfast/build/glue-codes/simulink; ${{runner.workspace}}/openfast/glue-codes/simulink/examples
+          test-results-junit: test-results/results.xml
+          code-coverage-cobertura: code-coverage/coverage.xml
+
+
+  rtest-OF-5MW_Land_AeroMap:
+    runs-on: ubuntu-22.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3.0.4
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Run 5MW aero map tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L aeromap -LE "cpp|linear|python" -R 5MW_Land_AeroMap
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: rtest-OF-5MW_Land_AeroMap
           path: |
             ${{runner.workspace}}/openfast/build/reg_tests/modules
             ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
@@ -564,10 +716,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
           cmake --build . --target regression_test_controllers
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
@@ -608,10 +766,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
           cmake --build . --target regression_test_controllers
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
@@ -652,10 +816,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
           cmake --build . --target regression_test_controllers
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
@@ -696,10 +866,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
           cmake --build . --target regression_test_controllers
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
@@ -740,10 +916,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
           cmake --build . --target regression_test_controllers
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
@@ -784,11 +966,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target regression_test_controllers
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
       - name: Run OpenFAST linearization tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
@@ -828,10 +1015,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
           cmake --build . --target regression_test_controllers
       - name: Run FAST.Farm tests
         working-directory: ${{runner.workspace}}/openfast/build

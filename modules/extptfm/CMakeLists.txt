@@ -18,7 +18,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/ExtPtfm_MCKF_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/ExtPtfm_MCKF_Types.f90)
 endif()
 
-add_library(extptfm_mckflib 
+add_library(extptfm_mckflib STATIC
   src/ExtPtfm_MCKF.f90
   src/ExtPtfm_MCKF_IO.f90
   src/ExtPtfm_MCKF_Types.f90

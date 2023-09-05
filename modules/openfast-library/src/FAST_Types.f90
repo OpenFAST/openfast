@@ -40,7 +40,7 @@ USE SubDyn_Types
 USE SeaState_Types
 USE HydroDyn_Types
 USE IceFloe_Types
-USE OpenFOAM_Types
+USE ExternalInflow_Types
 USE SCDataEx_Types
 USE IceDyn_Types
 USE FEAMooring_Types
@@ -54,7 +54,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_None = 0      ! No module selected [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_Glue = 1      ! Glue code [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_IfW = 2      ! InflowWind [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_OpFM = 3      ! OpenFOAM [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ExtInfw = 3      ! ExternalInflow [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_ED = 4      ! ElastoDyn [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_BD = 5      ! BeamDyn [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Module_AD14 = 6      ! AeroDyn14 [-]
@@ -73,6 +73,12 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: NumModules = 18      ! The number of modules available in FAST [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxNBlades = 3      ! Maximum number of blades allowed on a turbine [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: IceD_MaxLegs = 4      ! because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Pitch = 1      ! pitch [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_TSR = 2      ! TSR [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_WS = 3      ! wind speed [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_RotSpeed = 4      ! rotor speed [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Err = 5      ! err in the ss solve [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: SS_Indx_Iter = 6      ! number of iterations [-]
 ! =========  FAST_VTK_BLSurfaceType  =======
   TYPE, PUBLIC :: FAST_VTK_BLSurfaceType
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AirfoilCoords      !< x,y coordinates for airfoil around each blade node on a blade (relative to reference) [-]
@@ -109,6 +115,14 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: x_eig_phase      !< phase of eigenvector (dimension 1=state, dim 2= azimuth, dim 3 = mode) [-]
   END TYPE FAST_VTK_ModeShapeType
 ! =======================
+! =========  FAST_SS_CaseType  =======
+  TYPE, PUBLIC :: FAST_SS_CaseType
+    REAL(ReKi)  :: RotSpeed = 0.0_ReKi      !< Rotor speed for this case of the steady-state solve [>0] [(rad/s)]
+    REAL(ReKi)  :: TSR = 0.0_ReKi      !< TSR for this case of the steady-state solve [>0] [(-)]
+    REAL(ReKi)  :: WindSpeed = 0.0_ReKi      !< Windspeed for this case of the steady-state solve [>0] [(m/s)]
+    REAL(ReKi)  :: Pitch = 0.0_ReKi      !< Pitch angle for this case of the steady-state solve [(rad)]
+  END TYPE FAST_SS_CaseType
+! =======================
 ! =========  FAST_ParameterType  =======
   TYPE, PUBLIC :: FAST_ParameterType
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Integration time step [global time] [s]
@@ -118,7 +132,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: TMax = 0.0_R8Ki      !< Total run time [s]
     INTEGER(IntKi)  :: InterpOrder = 0_IntKi      !< Interpolation order {0,1,2} [-]
     INTEGER(IntKi)  :: NumCrctn = 0_IntKi      !< Number of correction iterations [-]
-    INTEGER(IntKi)  :: KMax = 0_IntKi      !< Maximum number of input-output-solve iterations (KMax >= 1) [-]
+    INTEGER(IntKi)  :: KMax = 0_IntKi      !< Maximum number of input-output-solve or nonlinear solve residual equation iterations (KMax >= 1) [>0] [-]
     INTEGER(IntKi)  :: numIceLegs = 0_IntKi      !< number of suport-structure legs in contact with ice (IceDyn coupling) [-]
     INTEGER(IntKi)  :: nBeams = 0_IntKi      !< number of BeamDyn instances [-]
     LOGICAL  :: BD_OutputSibling = .false.      !< flag to determine if BD input is sibling of output mesh [-]
@@ -128,7 +142,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:9)  :: SizeJac_Opt1 = 0_IntKi      !< (1)=size of matrix; (2)=size of ED portion; (3)=size of SD portion [2 meshes]; (4)=size of HD portion; (5)=size of BD portion blade 1; (6)=size of BD portion blade 2; (7)=size of BD portion blade 3; (8)=size of Orca portion; (9)=size of ExtPtfm portion; [-]
     INTEGER(IntKi)  :: SolveOption = 0_IntKi      !< Switch to determine which solve option we are going to use (see Solve_FullOpt1, etc) [-]
     INTEGER(IntKi)  :: CompElast = 0_IntKi      !< Compute blade loads (switch) {Module_ED; Module_BD} [-]
-    INTEGER(IntKi)  :: CompInflow = 0_IntKi      !< Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_OpFM} [-]
+    INTEGER(IntKi)  :: CompInflow = 0_IntKi      !< Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_ExtInfw} [-]
     INTEGER(IntKi)  :: CompAero = 0_IntKi      !< Compute aerodynamic loads (switch) {Module_None; Module_AD14; Module_AD} [-]
     INTEGER(IntKi)  :: CompServo = 0_IntKi      !< Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD} [-]
     INTEGER(IntKi)  :: CompSeaSt = 0_IntKi      !< Compute sea states; wave kinematics (switch) {Module_None; Module_SeaSt} [-]
@@ -168,7 +182,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: n_ChkptTime = 0_IntKi      !< Number of time steps between writing checkpoint files [-]
     INTEGER(IntKi)  :: n_DT_Out = 0_IntKi      !< Number of time steps between writing a line in the time-marching output files [-]
     INTEGER(IntKi)  :: n_VTKTime = 0_IntKi      !< Number of time steps between writing VTK files [-]
-    INTEGER(IntKi)  :: TurbineType = 0_IntKi      !< Type_LandBased, Type_Offshore_Fixed, Type_Offshore_Floating, Type_MHK_Fixed, or Type_MHK_Floating [-]
     LOGICAL  :: WrBinOutFile = .false.      !< Write a binary output file? (.outb) [-]
     LOGICAL  :: WrTxtOutFile = .false.      !< Write a text (formatted) output file? (.out) [-]
     INTEGER(IntKi)  :: WrBinMod = 0_IntKi      !< If writing binary, which file format is to be written [1, 2, or 3] [-]
@@ -205,6 +218,17 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Lin_NumMods = 0_IntKi      !< number of modules in the linearization [-]
     INTEGER(IntKi) , DIMENSION(1:NumModules)  :: Lin_ModOrder = 0_IntKi      !< indices that determine which order the modules are in the glue-code linearization matrix [-]
     INTEGER(IntKi)  :: LinInterpOrder = 0_IntKi      !< Interpolation order for CalcSteady solution [-]
+    LOGICAL  :: CompAeroMaps = .false.      !< Flag to determine if we are calculating aero maps [-]
+    INTEGER(IntKi)  :: N_UJac = 0_IntKi      !< Number of iterations between re-calculating Jacobian [(-)]
+    INTEGER(IntKi)  :: NumBl_Lin = 0_IntKi      !< number of blades in the jacobian [-]
+    REAL(R8Ki)  :: tolerSquared = 0.0_R8Ki      !< Convergence tolerance for nonlinear solve residual equation [>0] squared [(-)]
+    INTEGER(IntKi)  :: NumSSCases = 0_IntKi      !< Number of cases for steady-state solver generation [>0] [(-)]
+    INTEGER(IntKi)  :: WindSpeedOrTSR = 0_IntKi      !< Choice of swept parameter (switch) { 1:wind speed; 2: TSR } [(-)]
+    REAL(ReKi)  :: RotSpeedInit = 0.0_ReKi      !< Initial rotor speed for steady-state solve [>0] [(rad/s)]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: RotSpeed      !< List of rotor speeds for steady-state solve [>0] [(rad/s)]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WS_TSR      !< List of WindSpeed or TSRs (depending on WindSpeedOrTSR setting) for aeromap generation [(m/s or -)]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Pitch      !< List of pitch angles for aeromap generation [(rad)]
+    INTEGER(IntKi)  :: GearBox_index = 0_IntKi      !< Index to gearbox rotation in state array (for steady-state calculations) [-]
   END TYPE FAST_ParameterType
 ! =======================
 ! =========  FAST_LinStateSave  =======
@@ -362,7 +386,7 @@ IMPLICIT NONE
     TYPE(FAST_LinFileType)  :: Lin      !< linearization data for output [-]
     INTEGER(IntKi)  :: ActualChanLen = 0_IntKi      !< width of the column headers output in the text and/or binary file [-]
     TYPE(FAST_LinStateSave)  :: op      !< operating points of states and inputs for VTK output of mode shapes [-]
-    REAL(ReKi) , DIMENSION(1:5)  :: DriverWriteOutput = 0.0_ReKi      !< pitch and tsr for current aero map case, plus error, number of iterations, wind speed [-]
+    REAL(ReKi) , DIMENSION(1:6)  :: DriverWriteOutput = 0.0_ReKi      !< pitch and tsr for current aero map case, plus error, number of iterations, wind speed, rotor speed [-]
   END TYPE FAST_OutputFileType
 ! =======================
 ! =========  IceDyn_Data  =======
@@ -473,13 +497,13 @@ IMPLICIT NONE
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: InputTimes      !< Array of times associated with Input Array [-]
   END TYPE InflowWind_Data
 ! =======================
-! =========  OpenFOAM_Data  =======
-  TYPE, PUBLIC :: OpenFOAM_Data
-    TYPE(OpFM_InputType)  :: u      !< System inputs [-]
-    TYPE(OpFM_OutputType)  :: y      !< System outputs [-]
-    TYPE(OpFM_ParameterType)  :: p      !< Parameters [-]
-    TYPE(OpFM_MiscVarType)  :: m      !< Parameters [-]
-  END TYPE OpenFOAM_Data
+! =========  ExternalInflow_Data  =======
+  TYPE, PUBLIC :: ExternalInflow_Data
+    TYPE(ExtInfw_InputType)  :: u      !< System inputs [-]
+    TYPE(ExtInfw_OutputType)  :: y      !< System outputs [-]
+    TYPE(ExtInfw_ParameterType)  :: p      !< Parameters [-]
+    TYPE(ExtInfw_MiscVarType)  :: m      !< Parameters [-]
+  END TYPE ExternalInflow_Data
 ! =======================
 ! =========  SCDataEx_Data  =======
   TYPE, PUBLIC :: SCDataEx_Data
@@ -686,6 +710,7 @@ IMPLICIT NONE
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: u_BD_Distrload      !< copy of BD DistrLoad input meshes [-]
     TYPE(MeshType)  :: u_Orca_PtfmMesh      !< copy of Orca PtfmMesh input mesh [-]
     TYPE(MeshType)  :: u_ExtPtfm_PtfmMesh      !< copy of ExtPtfm_MCKF PtfmMesh input mesh [-]
+    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: HubOrient      !< Orientation matrix to translate results from blade 1 to remaining blades in aeromaps [(-)]
   END TYPE FAST_ModuleMapType
 ! =======================
 ! =========  FAST_ExternInputType  =======
@@ -731,8 +756,8 @@ IMPLICIT NONE
     TYPE(AD_InitOutputType)  :: OutData_AD      !< AD Initialization output data [-]
     TYPE(InflowWind_InitInputType)  :: InData_IfW      !< IfW Initialization input data [-]
     TYPE(InflowWind_InitOutputType)  :: OutData_IfW      !< IfW Initialization output data [-]
-    TYPE(OpFM_InitInputType)  :: InData_OpFM      !< OpFM Initialization input data [-]
-    TYPE(OpFM_InitOutputType)  :: OutData_OpFM      !< OpFM Initialization output data [-]
+    TYPE(ExtInfw_InitInputType)  :: InData_ExtInfw      !< ExtInfw Initialization input data [-]
+    TYPE(ExtInfw_InitOutputType)  :: OutData_ExtInfw      !< ExtInfw Initialization output data [-]
     TYPE(SeaSt_InitInputType)  :: InData_SeaSt      !< SeaSt Initialization input data [-]
     TYPE(SeaSt_InitOutputType)  :: OutData_SeaSt      !< SeaSt Initialization output data [-]
     TYPE(HydroDyn_InitInputType)  :: InData_HD      !< HD Initialization input data [-]
@@ -792,7 +817,7 @@ IMPLICIT NONE
     TYPE(AeroDyn_Data)  :: AD      !< Data for the AeroDyn module [-]
     TYPE(AeroDyn14_Data)  :: AD14      !< Data for the AeroDyn14 module [-]
     TYPE(InflowWind_Data)  :: IfW      !< Data for InflowWind module [-]
-    TYPE(OpenFOAM_Data)  :: OpFM      !< Data for OpenFOAM integration module [-]
+    TYPE(ExternalInflow_Data)  :: ExtInfw      !< Data for ExternalInflow integration module [-]
     TYPE(SCDataEx_Data)  :: SC_DX      !< Data for SuperController integration module [-]
     TYPE(SeaState_Data)  :: SeaSt      !< Data for the SeaState module [-]
     TYPE(HydroDyn_Data)  :: HD      !< Data for the HydroDyn module [-]
@@ -1408,12 +1433,64 @@ subroutine FAST_UnPackVTK_ModeShapeType(Buf, OutData)
    end if
 end subroutine
 
+subroutine FAST_CopySS_CaseType(SrcSS_CaseTypeData, DstSS_CaseTypeData, CtrlCode, ErrStat, ErrMsg)
+   type(FAST_SS_CaseType), intent(in) :: SrcSS_CaseTypeData
+   type(FAST_SS_CaseType), intent(inout) :: DstSS_CaseTypeData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'FAST_CopySS_CaseType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   DstSS_CaseTypeData%RotSpeed = SrcSS_CaseTypeData%RotSpeed
+   DstSS_CaseTypeData%TSR = SrcSS_CaseTypeData%TSR
+   DstSS_CaseTypeData%WindSpeed = SrcSS_CaseTypeData%WindSpeed
+   DstSS_CaseTypeData%Pitch = SrcSS_CaseTypeData%Pitch
+end subroutine
+
+subroutine FAST_DestroySS_CaseType(SS_CaseTypeData, ErrStat, ErrMsg)
+   type(FAST_SS_CaseType), intent(inout) :: SS_CaseTypeData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   character(*), parameter        :: RoutineName = 'FAST_DestroySS_CaseType'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+end subroutine
+
+subroutine FAST_PackSS_CaseType(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(FAST_SS_CaseType), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'FAST_PackSS_CaseType'
+   if (Buf%ErrStat >= AbortErrLev) return
+   call RegPack(Buf, InData%RotSpeed)
+   call RegPack(Buf, InData%TSR)
+   call RegPack(Buf, InData%WindSpeed)
+   call RegPack(Buf, InData%Pitch)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
+
+subroutine FAST_UnPackSS_CaseType(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(FAST_SS_CaseType), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'FAST_UnPackSS_CaseType'
+   if (Buf%ErrStat /= ErrID_None) return
+   call RegUnpack(Buf, OutData%RotSpeed)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%TSR)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WindSpeed)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%Pitch)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
+
 subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    type(FAST_ParameterType), intent(in) :: SrcParamData
    type(FAST_ParameterType), intent(inout) :: DstParamData
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_CopyParam'
@@ -1476,7 +1553,6 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%n_ChkptTime = SrcParamData%n_ChkptTime
    DstParamData%n_DT_Out = SrcParamData%n_DT_Out
    DstParamData%n_VTKTime = SrcParamData%n_VTKTime
-   DstParamData%TurbineType = SrcParamData%TurbineType
    DstParamData%WrBinOutFile = SrcParamData%WrBinOutFile
    DstParamData%WrTxtOutFile = SrcParamData%WrTxtOutFile
    DstParamData%WrBinMod = SrcParamData%WrBinMod
@@ -1517,6 +1593,50 @@ subroutine FAST_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%Lin_NumMods = SrcParamData%Lin_NumMods
    DstParamData%Lin_ModOrder = SrcParamData%Lin_ModOrder
    DstParamData%LinInterpOrder = SrcParamData%LinInterpOrder
+   DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
+   DstParamData%N_UJac = SrcParamData%N_UJac
+   DstParamData%NumBl_Lin = SrcParamData%NumBl_Lin
+   DstParamData%tolerSquared = SrcParamData%tolerSquared
+   DstParamData%NumSSCases = SrcParamData%NumSSCases
+   DstParamData%WindSpeedOrTSR = SrcParamData%WindSpeedOrTSR
+   DstParamData%RotSpeedInit = SrcParamData%RotSpeedInit
+   if (allocated(SrcParamData%RotSpeed)) then
+      LB(1:1) = lbound(SrcParamData%RotSpeed)
+      UB(1:1) = ubound(SrcParamData%RotSpeed)
+      if (.not. allocated(DstParamData%RotSpeed)) then
+         allocate(DstParamData%RotSpeed(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%RotSpeed.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%RotSpeed = SrcParamData%RotSpeed
+   end if
+   if (allocated(SrcParamData%WS_TSR)) then
+      LB(1:1) = lbound(SrcParamData%WS_TSR)
+      UB(1:1) = ubound(SrcParamData%WS_TSR)
+      if (.not. allocated(DstParamData%WS_TSR)) then
+         allocate(DstParamData%WS_TSR(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WS_TSR.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%WS_TSR = SrcParamData%WS_TSR
+   end if
+   if (allocated(SrcParamData%Pitch)) then
+      LB(1:1) = lbound(SrcParamData%Pitch)
+      UB(1:1) = ubound(SrcParamData%Pitch)
+      if (.not. allocated(DstParamData%Pitch)) then
+         allocate(DstParamData%Pitch(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Pitch.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%Pitch = SrcParamData%Pitch
+   end if
+   DstParamData%GearBox_index = SrcParamData%GearBox_index
 end subroutine
 
 subroutine FAST_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -1532,6 +1652,15 @@ subroutine FAST_DestroyParam(ParamData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroyVTK_ModeShapeType(ParamData%VTK_modes, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(ParamData%RotSpeed)) then
+      deallocate(ParamData%RotSpeed)
+   end if
+   if (allocated(ParamData%WS_TSR)) then
+      deallocate(ParamData%WS_TSR)
+   end if
+   if (allocated(ParamData%Pitch)) then
+      deallocate(ParamData%Pitch)
+   end if
 end subroutine
 
 subroutine FAST_PackParam(Buf, Indata)
@@ -1596,7 +1725,6 @@ subroutine FAST_PackParam(Buf, Indata)
    call RegPack(Buf, InData%n_ChkptTime)
    call RegPack(Buf, InData%n_DT_Out)
    call RegPack(Buf, InData%n_VTKTime)
-   call RegPack(Buf, InData%TurbineType)
    call RegPack(Buf, InData%WrBinOutFile)
    call RegPack(Buf, InData%WrTxtOutFile)
    call RegPack(Buf, InData%WrBinMod)
@@ -1633,6 +1761,29 @@ subroutine FAST_PackParam(Buf, Indata)
    call RegPack(Buf, InData%Lin_NumMods)
    call RegPack(Buf, InData%Lin_ModOrder)
    call RegPack(Buf, InData%LinInterpOrder)
+   call RegPack(Buf, InData%CompAeroMaps)
+   call RegPack(Buf, InData%N_UJac)
+   call RegPack(Buf, InData%NumBl_Lin)
+   call RegPack(Buf, InData%tolerSquared)
+   call RegPack(Buf, InData%NumSSCases)
+   call RegPack(Buf, InData%WindSpeedOrTSR)
+   call RegPack(Buf, InData%RotSpeedInit)
+   call RegPack(Buf, allocated(InData%RotSpeed))
+   if (allocated(InData%RotSpeed)) then
+      call RegPackBounds(Buf, 1, lbound(InData%RotSpeed), ubound(InData%RotSpeed))
+      call RegPack(Buf, InData%RotSpeed)
+   end if
+   call RegPack(Buf, allocated(InData%WS_TSR))
+   if (allocated(InData%WS_TSR)) then
+      call RegPackBounds(Buf, 1, lbound(InData%WS_TSR), ubound(InData%WS_TSR))
+      call RegPack(Buf, InData%WS_TSR)
+   end if
+   call RegPack(Buf, allocated(InData%Pitch))
+   if (allocated(InData%Pitch)) then
+      call RegPackBounds(Buf, 1, lbound(InData%Pitch), ubound(InData%Pitch))
+      call RegPack(Buf, InData%Pitch)
+   end if
+   call RegPack(Buf, InData%GearBox_index)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1640,6 +1791,9 @@ subroutine FAST_UnPackParam(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(FAST_ParameterType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FAST_UnPackParam'
+   integer(IntKi)  :: LB(1), UB(1)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
    call RegUnpack(Buf, OutData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1755,8 +1909,6 @@ subroutine FAST_UnPackParam(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%n_VTKTime)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%TurbineType)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WrBinOutFile)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WrTxtOutFile)
@@ -1826,6 +1978,64 @@ subroutine FAST_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%Lin_ModOrder)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%LinInterpOrder)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%CompAeroMaps)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%N_UJac)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%NumBl_Lin)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%tolerSquared)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%NumSSCases)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WindSpeedOrTSR)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%RotSpeedInit)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (allocated(OutData%RotSpeed)) deallocate(OutData%RotSpeed)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%RotSpeed(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%RotSpeed.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%RotSpeed)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%WS_TSR)) deallocate(OutData%WS_TSR)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%WS_TSR(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WS_TSR.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%WS_TSR)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%Pitch)) deallocate(OutData%Pitch)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%Pitch(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Pitch.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%Pitch)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   call RegUnpack(Buf, OutData%GearBox_index)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -9549,71 +9759,71 @@ subroutine FAST_UnPackInflowWind_Data(Buf, OutData)
    end if
 end subroutine
 
-subroutine FAST_CopyOpenFOAM_Data(SrcOpenFOAM_DataData, DstOpenFOAM_DataData, CtrlCode, ErrStat, ErrMsg)
-   type(OpenFOAM_Data), intent(inout) :: SrcOpenFOAM_DataData
-   type(OpenFOAM_Data), intent(inout) :: DstOpenFOAM_DataData
+subroutine FAST_CopyExternalInflow_Data(SrcExternalInflow_DataData, DstExternalInflow_DataData, CtrlCode, ErrStat, ErrMsg)
+   type(ExternalInflow_Data), intent(inout) :: SrcExternalInflow_DataData
+   type(ExternalInflow_Data), intent(inout) :: DstExternalInflow_DataData
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'FAST_CopyOpenFOAM_Data'
+   character(*), parameter        :: RoutineName = 'FAST_CopyExternalInflow_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call OpFM_CopyInput(SrcOpenFOAM_DataData%u, DstOpenFOAM_DataData%u, CtrlCode, ErrStat2, ErrMsg2)
+   call ExtInfw_CopyInput(SrcExternalInflow_DataData%u, DstExternalInflow_DataData%u, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call OpFM_CopyOutput(SrcOpenFOAM_DataData%y, DstOpenFOAM_DataData%y, CtrlCode, ErrStat2, ErrMsg2)
+   call ExtInfw_CopyOutput(SrcExternalInflow_DataData%y, DstExternalInflow_DataData%y, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call OpFM_CopyParam(SrcOpenFOAM_DataData%p, DstOpenFOAM_DataData%p, CtrlCode, ErrStat2, ErrMsg2)
+   call ExtInfw_CopyParam(SrcExternalInflow_DataData%p, DstExternalInflow_DataData%p, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call OpFM_CopyMisc(SrcOpenFOAM_DataData%m, DstOpenFOAM_DataData%m, CtrlCode, ErrStat2, ErrMsg2)
+   call ExtInfw_CopyMisc(SrcExternalInflow_DataData%m, DstExternalInflow_DataData%m, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 end subroutine
 
-subroutine FAST_DestroyOpenFOAM_Data(OpenFOAM_DataData, ErrStat, ErrMsg)
-   type(OpenFOAM_Data), intent(inout) :: OpenFOAM_DataData
+subroutine FAST_DestroyExternalInflow_Data(ExternalInflow_DataData, ErrStat, ErrMsg)
+   type(ExternalInflow_Data), intent(inout) :: ExternalInflow_DataData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
-   character(*), parameter        :: RoutineName = 'FAST_DestroyOpenFOAM_Data'
+   character(*), parameter        :: RoutineName = 'FAST_DestroyExternalInflow_Data'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call OpFM_DestroyInput(OpenFOAM_DataData%u, ErrStat2, ErrMsg2)
+   call ExtInfw_DestroyInput(ExternalInflow_DataData%u, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call OpFM_DestroyOutput(OpenFOAM_DataData%y, ErrStat2, ErrMsg2)
+   call ExtInfw_DestroyOutput(ExternalInflow_DataData%y, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call OpFM_DestroyParam(OpenFOAM_DataData%p, ErrStat2, ErrMsg2)
+   call ExtInfw_DestroyParam(ExternalInflow_DataData%p, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call OpFM_DestroyMisc(OpenFOAM_DataData%m, ErrStat2, ErrMsg2)
+   call ExtInfw_DestroyMisc(ExternalInflow_DataData%m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
-subroutine FAST_PackOpenFOAM_Data(Buf, Indata)
+subroutine FAST_PackExternalInflow_Data(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
-   type(OpenFOAM_Data), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'FAST_PackOpenFOAM_Data'
+   type(ExternalInflow_Data), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'FAST_PackExternalInflow_Data'
    if (Buf%ErrStat >= AbortErrLev) return
-   call OpFM_PackInput(Buf, InData%u) 
-   call OpFM_PackOutput(Buf, InData%y) 
-   call OpFM_PackParam(Buf, InData%p) 
-   call OpFM_PackMisc(Buf, InData%m) 
+   call ExtInfw_PackInput(Buf, InData%u) 
+   call ExtInfw_PackOutput(Buf, InData%y) 
+   call ExtInfw_PackParam(Buf, InData%p) 
+   call ExtInfw_PackMisc(Buf, InData%m) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
-subroutine FAST_UnPackOpenFOAM_Data(Buf, OutData)
+subroutine FAST_UnPackExternalInflow_Data(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
-   type(OpenFOAM_Data), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'FAST_UnPackOpenFOAM_Data'
+   type(ExternalInflow_Data), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'FAST_UnPackExternalInflow_Data'
    if (Buf%ErrStat /= ErrID_None) return
-   call OpFM_UnpackInput(Buf, OutData%u) ! u 
-   call OpFM_UnpackOutput(Buf, OutData%y) ! y 
-   call OpFM_UnpackParam(Buf, OutData%p) ! p 
-   call OpFM_UnpackMisc(Buf, OutData%m) ! m 
+   call ExtInfw_UnpackInput(Buf, OutData%u) ! u 
+   call ExtInfw_UnpackOutput(Buf, OutData%y) ! y 
+   call ExtInfw_UnpackParam(Buf, OutData%p) ! p 
+   call ExtInfw_UnpackMisc(Buf, OutData%m) ! m 
 end subroutine
 
 subroutine FAST_CopySCDataEx_Data(SrcSCDataEx_DataData, DstSCDataEx_DataData, CtrlCode, ErrStat, ErrMsg)
@@ -12214,8 +12424,8 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)                 :: LB(2), UB(2)
+   integer(IntKi)  :: i1, i2, i3
+   integer(IntKi)                 :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_CopyModuleMapType'
@@ -12735,14 +12945,26 @@ subroutine FAST_CopyModuleMapType(SrcModuleMapTypeData, DstModuleMapTypeData, Ct
    call MeshCopy(SrcModuleMapTypeData%u_ExtPtfm_PtfmMesh, DstModuleMapTypeData%u_ExtPtfm_PtfmMesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcModuleMapTypeData%HubOrient)) then
+      LB(1:3) = lbound(SrcModuleMapTypeData%HubOrient)
+      UB(1:3) = ubound(SrcModuleMapTypeData%HubOrient)
+      if (.not. allocated(DstModuleMapTypeData%HubOrient)) then
+         allocate(DstModuleMapTypeData%HubOrient(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstModuleMapTypeData%HubOrient.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstModuleMapTypeData%HubOrient = SrcModuleMapTypeData%HubOrient
+   end if
 end subroutine
 
 subroutine FAST_DestroyModuleMapType(ModuleMapTypeData, ErrStat, ErrMsg)
    type(FAST_ModuleMapType), intent(inout) :: ModuleMapTypeData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(IntKi)  :: i1, i2, i3
+   integer(IntKi)  :: LB(3), UB(3)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'FAST_DestroyModuleMapType'
@@ -13040,14 +13262,17 @@ subroutine FAST_DestroyModuleMapType(ModuleMapTypeData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call MeshDestroy( ModuleMapTypeData%u_ExtPtfm_PtfmMesh, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(ModuleMapTypeData%HubOrient)) then
+      deallocate(ModuleMapTypeData%HubOrient)
+   end if
 end subroutine
 
 subroutine FAST_PackModuleMapType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(FAST_ModuleMapType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'FAST_PackModuleMapType'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(IntKi)  :: i1, i2, i3
+   integer(IntKi)  :: LB(3), UB(3)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%ED_P_2_BD_P))
    if (allocated(InData%ED_P_2_BD_P)) then
@@ -13313,6 +13538,11 @@ subroutine FAST_PackModuleMapType(Buf, Indata)
    end if
    call MeshPack(Buf, InData%u_Orca_PtfmMesh) 
    call MeshPack(Buf, InData%u_ExtPtfm_PtfmMesh) 
+   call RegPack(Buf, allocated(InData%HubOrient))
+   if (allocated(InData%HubOrient)) then
+      call RegPackBounds(Buf, 3, lbound(InData%HubOrient), ubound(InData%HubOrient))
+      call RegPack(Buf, InData%HubOrient)
+   end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -13320,8 +13550,8 @@ subroutine FAST_UnPackModuleMapType(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(FAST_ModuleMapType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'FAST_UnPackModuleMapType'
-   integer(IntKi)  :: i1, i2
-   integer(IntKi)  :: LB(2), UB(2)
+   integer(IntKi)  :: i1, i2, i3
+   integer(IntKi)  :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
@@ -13754,6 +13984,20 @@ subroutine FAST_UnPackModuleMapType(Buf, OutData)
    end if
    call MeshUnpack(Buf, OutData%u_Orca_PtfmMesh) ! u_Orca_PtfmMesh 
    call MeshUnpack(Buf, OutData%u_ExtPtfm_PtfmMesh) ! u_ExtPtfm_PtfmMesh 
+   if (allocated(OutData%HubOrient)) deallocate(OutData%HubOrient)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 3, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%HubOrient(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%HubOrient.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%HubOrient)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
 end subroutine
 
 subroutine FAST_CopyExternInputType(SrcExternInputTypeData, DstExternInputTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -13982,10 +14226,10 @@ subroutine FAST_CopyInitData(SrcInitDataData, DstInitDataData, CtrlCode, ErrStat
    call InflowWind_CopyInitOutput(SrcInitDataData%OutData_IfW, DstInitDataData%OutData_IfW, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call OpFM_CopyInitInput(SrcInitDataData%InData_OpFM, DstInitDataData%InData_OpFM, CtrlCode, ErrStat2, ErrMsg2)
+   call ExtInfw_CopyInitInput(SrcInitDataData%InData_ExtInfw, DstInitDataData%InData_ExtInfw, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call OpFM_CopyInitOutput(SrcInitDataData%OutData_OpFM, DstInitDataData%OutData_OpFM, CtrlCode, ErrStat2, ErrMsg2)
+   call ExtInfw_CopyInitOutput(SrcInitDataData%OutData_ExtInfw, DstInitDataData%OutData_ExtInfw, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call SeaSt_CopyInitInput(SrcInitDataData%InData_SeaSt, DstInitDataData%InData_SeaSt, CtrlCode, ErrStat2, ErrMsg2)
@@ -14092,9 +14336,9 @@ subroutine FAST_DestroyInitData(InitDataData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call InflowWind_DestroyInitOutput(InitDataData%OutData_IfW, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call OpFM_DestroyInitInput(InitDataData%InData_OpFM, ErrStat2, ErrMsg2)
+   call ExtInfw_DestroyInitInput(InitDataData%InData_ExtInfw, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call OpFM_DestroyInitOutput(InitDataData%OutData_OpFM, ErrStat2, ErrMsg2)
+   call ExtInfw_DestroyInitOutput(InitDataData%OutData_ExtInfw, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call SeaSt_DestroyInitInput(InitDataData%InData_SeaSt, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -14165,8 +14409,8 @@ subroutine FAST_PackInitData(Buf, Indata)
    call AD_PackInitOutput(Buf, InData%OutData_AD) 
    call InflowWind_PackInitInput(Buf, InData%InData_IfW) 
    call InflowWind_PackInitOutput(Buf, InData%OutData_IfW) 
-   call OpFM_PackInitInput(Buf, InData%InData_OpFM) 
-   call OpFM_PackInitOutput(Buf, InData%OutData_OpFM) 
+   call ExtInfw_PackInitInput(Buf, InData%InData_ExtInfw) 
+   call ExtInfw_PackInitOutput(Buf, InData%OutData_ExtInfw) 
    call SeaSt_PackInitInput(Buf, InData%InData_SeaSt) 
    call SeaSt_PackInitOutput(Buf, InData%OutData_SeaSt) 
    call HydroDyn_PackInitInput(Buf, InData%InData_HD) 
@@ -14225,8 +14469,8 @@ subroutine FAST_UnPackInitData(Buf, OutData)
    call AD_UnpackInitOutput(Buf, OutData%OutData_AD) ! OutData_AD 
    call InflowWind_UnpackInitInput(Buf, OutData%InData_IfW) ! InData_IfW 
    call InflowWind_UnpackInitOutput(Buf, OutData%OutData_IfW) ! OutData_IfW 
-   call OpFM_UnpackInitInput(Buf, OutData%InData_OpFM) ! InData_OpFM 
-   call OpFM_UnpackInitOutput(Buf, OutData%OutData_OpFM) ! OutData_OpFM 
+   call ExtInfw_UnpackInitInput(Buf, OutData%InData_ExtInfw) ! InData_ExtInfw 
+   call ExtInfw_UnpackInitOutput(Buf, OutData%OutData_ExtInfw) ! OutData_ExtInfw 
    call SeaSt_UnpackInitInput(Buf, OutData%InData_SeaSt) ! InData_SeaSt 
    call SeaSt_UnpackInitOutput(Buf, OutData%OutData_SeaSt) ! OutData_SeaSt 
    call HydroDyn_UnpackInitInput(Buf, OutData%InData_HD) ! InData_HD 
@@ -14504,7 +14748,7 @@ subroutine FAST_CopyTurbineType(SrcTurbineTypeData, DstTurbineTypeData, CtrlCode
    call FAST_CopyInflowWind_Data(SrcTurbineTypeData%IfW, DstTurbineTypeData%IfW, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   call FAST_CopyOpenFOAM_Data(SrcTurbineTypeData%OpFM, DstTurbineTypeData%OpFM, CtrlCode, ErrStat2, ErrMsg2)
+   call FAST_CopyExternalInflow_Data(SrcTurbineTypeData%ExtInfw, DstTurbineTypeData%ExtInfw, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call FAST_CopySCDataEx_Data(SrcTurbineTypeData%SC_DX, DstTurbineTypeData%SC_DX, CtrlCode, ErrStat2, ErrMsg2)
@@ -14571,7 +14815,7 @@ subroutine FAST_DestroyTurbineType(TurbineTypeData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroyInflowWind_Data(TurbineTypeData%IfW, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call FAST_DestroyOpenFOAM_Data(TurbineTypeData%OpFM, ErrStat2, ErrMsg2)
+   call FAST_DestroyExternalInflow_Data(TurbineTypeData%ExtInfw, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroySCDataEx_Data(TurbineTypeData%SC_DX, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -14613,7 +14857,7 @@ subroutine FAST_PackTurbineType(Buf, Indata)
    call FAST_PackAeroDyn_Data(Buf, InData%AD) 
    call FAST_PackAeroDyn14_Data(Buf, InData%AD14) 
    call FAST_PackInflowWind_Data(Buf, InData%IfW) 
-   call FAST_PackOpenFOAM_Data(Buf, InData%OpFM) 
+   call FAST_PackExternalInflow_Data(Buf, InData%ExtInfw) 
    call FAST_PackSCDataEx_Data(Buf, InData%SC_DX) 
    call FAST_PackSeaState_Data(Buf, InData%SeaSt) 
    call FAST_PackHydroDyn_Data(Buf, InData%HD) 
@@ -14645,7 +14889,7 @@ subroutine FAST_UnPackTurbineType(Buf, OutData)
    call FAST_UnpackAeroDyn_Data(Buf, OutData%AD) ! AD 
    call FAST_UnpackAeroDyn14_Data(Buf, OutData%AD14) ! AD14 
    call FAST_UnpackInflowWind_Data(Buf, OutData%IfW) ! IfW 
-   call FAST_UnpackOpenFOAM_Data(Buf, OutData%OpFM) ! OpFM 
+   call FAST_UnpackExternalInflow_Data(Buf, OutData%ExtInfw) ! ExtInfw 
    call FAST_UnpackSCDataEx_Data(Buf, OutData%SC_DX) ! SC_DX 
    call FAST_UnpackSeaState_Data(Buf, OutData%SeaSt) ! SeaSt 
    call FAST_UnpackHydroDyn_Data(Buf, OutData%HD) ! HD 

@@ -94,6 +94,7 @@ if not os.path.isdir(testBuildDirectory):
     os.makedirs(testBuildDirectory)
     for file in (glob.glob(os.path.join(inputsDirectory,"*.inp")) +
                  glob.glob(os.path.join(inputsDirectory,"*.bts"))+
+                 glob.glob(os.path.join(inputsDirectory,"*.bin"))+
                  glob.glob(os.path.join(inputsDirectory,"*.wnd"))+
                  glob.glob(os.path.join(inputsDirectory,"*.hh"))+
                  glob.glob(os.path.join(inputsDirectory,"*.sum"))):

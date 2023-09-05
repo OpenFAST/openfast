@@ -27,23 +27,22 @@ import shutil
 import subprocess
 import rtestlib as rtl
 
-def _runCase(executable, inputFile, logFile, stdout, restart=False):
+def _runCase(executable, inputFile, logFile, stdout, restart=False, ExtraFlags=""):
     if logFile is None:
-        command = f"{executable} {inputFile}"
+        command = f"{executable} {inputFile} {ExtraFlags}"
     elif restart:
         command = f"{executable} -restart {os.path.splitext(inputFile)[0]} > {logFile}"
     else:
-        command = f"{executable} {inputFile} > {logFile}"
+        command = f"{executable} {inputFile} {ExtraFlags} > {logFile}"
     print(command)
     return subprocess.call(command, stdout=stdout, shell=True)
     
-def _runGenericCase(inputFile, executable, verbose=False, restart=False, log=True):
+def _runGenericCase(inputFile, executable, verbose=False, restart=False, ExtraFlags=""):
     stdout = sys.stdout if verbose else open(os.devnull, 'w')
     
     rtl.validateFileOrExit(inputFile)
     rtl.validateExeOrExit(executable)
     
-#bjj, why wouldn't we check if log is true instead of verbose being false to generate a log file???
     if verbose:
         logFile = None
     else:
@@ -54,12 +53,12 @@ def _runGenericCase(inputFile, executable, verbose=False, restart=False, log=Tru
         else:
             logFile = caseparent + os.path.sep + casebase + '.log'
     
-    returnCode = _runCase(executable, inputFile, logFile, stdout, restart)
+    returnCode = _runCase(executable, inputFile, logFile, stdout, restart, ExtraFlags)
     print("COMPLETE with code {}".format(returnCode), flush=True)    
     
     return returnCode
 
-def _runUACase(inputFile, executable, verbose=False, log=True):
+def _runUACase(inputFile, executable, verbose=False):
     stdout = sys.stdout if verbose else open(os.devnull, 'w')
     
     rtl.validateFileOrExit(inputFile)
@@ -78,6 +77,9 @@ def _runUACase(inputFile, executable, verbose=False, log=True):
 
 def runOpenfastCase(inputFile, executable, verbose=False, restart=False):
     return _runGenericCase(inputFile, executable, verbose, restart)
+
+def runAeromapCase(inputFile, executable, verbose=False):
+    return _runGenericCase(inputFile, executable, verbose, "-steadystate")
 
 def runAerodynDriverCase(inputFile, executable, verbose=False):
     caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])

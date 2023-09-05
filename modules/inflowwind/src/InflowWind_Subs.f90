@@ -679,7 +679,7 @@ SUBROUTINE InflowWind_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
 
       ! make sure that all values for WindVzi are above ground.  Set to 0 otherwise.
 
-   IF ( InitInp%MHK == 1 .or. InitInp%MHK == 2 ) THEN
+   IF ( InitInp%MHK /= MHK_None ) THEN
       DO I = 1, InputFileData%NWindVel
          IF ( InputFileData%WindVziList(I) >= InitInp%WtrDpth + InitInp%MSL2SWL ) THEN
             CALL SetErrStat( ErrID_Warn, ' Requested wind velocity at point ( '//   &

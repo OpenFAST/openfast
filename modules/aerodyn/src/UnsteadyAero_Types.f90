@@ -181,6 +181,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: sigma3      !< multiplier for T_V [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: n      !< counter for continuous state integration [-]
     TYPE(UA_ContinuousStateType) , DIMENSION(1:4)  :: xdot      !< history states for continuous state integration [-]
+    TYPE(UA_ContinuousStateType) , DIMENSION(1:4)  :: xHistory      !< history states for continuous state integration [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: t_vortexBegin      !< HGMV model: simulation time when vortex lift term became active [s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: SignOfOmega      !< HGMV model: sign of omega when vortex lift term became active  [s]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: PositivePressure      !< HGMV model: logical flag indicating if the vortex lift became active because of positive pressure (or negative) [-]
@@ -221,6 +222,8 @@ IMPLICIT NONE
     LOGICAL  :: ShedEffect = .false.      !< Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods) [-]
     INTEGER(IntKi)  :: lin_nx = 0      !< Number of continuous states for linearization [-]
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: UA_off_forGood      !< logical flag indicating if UA is off for good [-]
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: lin_xIndx      !< array to indicate which state to perturb for UA [-]
+    REAL(R8Ki) , DIMENSION(1:5)  :: dx = 0.0_R8Ki      !< array to indicate size of state perturbations [-]
   END TYPE UA_ParameterType
 ! =======================
 ! =========  UA_InputType  =======
@@ -2252,6 +2255,13 @@ subroutine UA_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   LB(1:1) = lbound(SrcOtherStateData%xHistory)
+   UB(1:1) = ubound(SrcOtherStateData%xHistory)
+   do i1 = LB(1), UB(1)
+      call UA_CopyContState(SrcOtherStateData%xHistory(i1), DstOtherStateData%xHistory(i1), CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end do
    if (allocated(SrcOtherStateData%t_vortexBegin)) then
       LB(1:2) = lbound(SrcOtherStateData%t_vortexBegin)
       UB(1:2) = ubound(SrcOtherStateData%t_vortexBegin)
@@ -2373,6 +2383,12 @@ subroutine UA_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
       call UA_DestroyContState(OtherStateData%xdot(i1), ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end do
+   LB(1:1) = lbound(OtherStateData%xHistory)
+   UB(1:1) = ubound(OtherStateData%xHistory)
+   do i1 = LB(1), UB(1)
+      call UA_DestroyContState(OtherStateData%xHistory(i1), ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
    if (allocated(OtherStateData%t_vortexBegin)) then
       deallocate(OtherStateData%t_vortexBegin)
    end if
@@ -2437,6 +2453,11 @@ subroutine UA_PackOtherState(Buf, Indata)
    UB(1:1) = ubound(InData%xdot)
    do i1 = LB(1), UB(1)
       call UA_PackContState(Buf, InData%xdot(i1)) 
+   end do
+   LB(1:1) = lbound(InData%xHistory)
+   UB(1:1) = ubound(InData%xHistory)
+   do i1 = LB(1), UB(1)
+      call UA_PackContState(Buf, InData%xHistory(i1)) 
    end do
    call RegPack(Buf, allocated(InData%t_vortexBegin))
    if (allocated(InData%t_vortexBegin)) then
@@ -2573,6 +2594,11 @@ subroutine UA_UnPackOtherState(Buf, OutData)
    UB(1:1) = ubound(OutData%xdot)
    do i1 = LB(1), UB(1)
       call UA_UnpackContState(Buf, OutData%xdot(i1)) ! xdot 
+   end do
+   LB(1:1) = lbound(OutData%xHistory)
+   UB(1:1) = ubound(OutData%xHistory)
+   do i1 = LB(1), UB(1)
+      call UA_UnpackContState(Buf, OutData%xHistory(i1)) ! xHistory 
    end do
    if (allocated(OutData%t_vortexBegin)) deallocate(OutData%t_vortexBegin)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -2979,6 +3005,19 @@ subroutine UA_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstParamData%UA_off_forGood = SrcParamData%UA_off_forGood
    end if
+   if (allocated(SrcParamData%lin_xIndx)) then
+      LB(1:2) = lbound(SrcParamData%lin_xIndx)
+      UB(1:2) = ubound(SrcParamData%lin_xIndx)
+      if (.not. allocated(DstParamData%lin_xIndx)) then
+         allocate(DstParamData%lin_xIndx(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%lin_xIndx.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstParamData%lin_xIndx = SrcParamData%lin_xIndx
+   end if
+   DstParamData%dx = SrcParamData%dx
 end subroutine
 
 subroutine UA_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -2993,6 +3032,9 @@ subroutine UA_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
    if (allocated(ParamData%UA_off_forGood)) then
       deallocate(ParamData%UA_off_forGood)
+   end if
+   if (allocated(ParamData%lin_xIndx)) then
+      deallocate(ParamData%lin_xIndx)
    end if
 end subroutine
 
@@ -3025,6 +3067,12 @@ subroutine UA_PackParam(Buf, Indata)
       call RegPackBounds(Buf, 2, lbound(InData%UA_off_forGood), ubound(InData%UA_off_forGood))
       call RegPack(Buf, InData%UA_off_forGood)
    end if
+   call RegPack(Buf, allocated(InData%lin_xIndx))
+   if (allocated(InData%lin_xIndx)) then
+      call RegPackBounds(Buf, 2, lbound(InData%lin_xIndx), ubound(InData%lin_xIndx))
+      call RegPack(Buf, InData%lin_xIndx)
+   end if
+   call RegPack(Buf, InData%dx)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -3092,6 +3140,22 @@ subroutine UA_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%UA_off_forGood)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
+   if (allocated(OutData%lin_xIndx)) deallocate(OutData%lin_xIndx)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 2, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%lin_xIndx(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%lin_xIndx.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%lin_xIndx)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   call RegUnpack(Buf, OutData%dx)
+   if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
 subroutine UA_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)

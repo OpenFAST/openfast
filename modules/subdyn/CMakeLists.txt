@@ -18,7 +18,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/SubDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SubDyn_Types.f90)
 endif()
 
-add_library(subdynlib
+add_library(subdynlib STATIC
   src/SubDyn.f90
   src/FEM.f90
   src/SD_FEM.f90
