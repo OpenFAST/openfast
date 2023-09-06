@@ -884,28 +884,28 @@ end function
 pure function wm_to_xyz(c) result(xyz)
    real(R8Ki), intent(in) :: c(3)
    real(R8Ki)             :: phi, n(3), xyz(3), m
-   m = sqrt(dot_product(c,c))
-   if (m == 0.0_R8Ki) then
-      xyz = 0.0_R8Ki
-      return
-   end if
-   n = c/m
-   phi = 4.0_R8Ki*atan(m/4.0_R8Ki)
-   xyz = phi*n
-   ! xyz = c
+   ! m = sqrt(dot_product(c,c))
+   ! if (m == 0.0_R8Ki) then
+   !    xyz = 0.0_R8Ki
+   !    return
+   ! end if
+   ! n = c/m
+   ! phi = 4.0_R8Ki*atan(m/4.0_R8Ki)
+   ! xyz = phi*n
+   xyz = c
 end function
 
 pure function wm_from_xyz(xyz) result(c)
    real(R8Ki), intent(in) :: xyz(3)
    real(R8Ki)             :: phi, n(3), c(3)
-   phi = sqrt(dot_product(xyz,xyz))
-   if (phi == 0.0_R8Ki) then
-      c = 0.0_R8Ki
-      return
-   end if
-   n = xyz / phi
-   c = 4.0_R8Ki*tan(phi/4.0_R8Ki) * n
-   ! c = xyz
+   ! phi = sqrt(dot_product(xyz,xyz))
+   ! if (phi == 0.0_R8Ki) then
+   !    c = 0.0_R8Ki
+   !    return
+   ! end if
+   ! n = xyz / phi
+   ! c = 4.0_R8Ki*tan(phi/4.0_R8Ki) * n
+   c = xyz
 end function
 
 ! pure function wm_from_dcm(R) result(c)
@@ -945,7 +945,7 @@ end function
 pure function cross(a, b) result(c)
    real(R8Ki), intent(in) :: a(3), b(3)
    real(R8Ki)             :: c(3)
-   c = [a(2)*b(3) - a(3)*b(2), -a(3)*b(1) + a(1)*b(3), a(1)*b(2) - a(2)*b(1)]
+   c = [a(2)*b(3) - a(3)*b(2), a(3)*b(1) - a(1)*b(3), a(1)*b(2) - b(1)*a(2)]
 end function
 
 end module
