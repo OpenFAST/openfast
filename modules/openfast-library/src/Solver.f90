@@ -743,7 +743,7 @@ subroutine Solver_Step0(p, m, ModData, Turbine, ErrStat, ErrMsg)
 
    ! Initialize algorithmic acceleration from actual acceleration
    m%qn(:, COL_AA) = m%qn(:, COL_A)
-   m%q = m%qn
+   m%q = 0.0_R8Ki
 
    !----------------------------------------------------------------------------
    ! Initialize module input and state arrays for interpolation/extrapolation
@@ -828,11 +828,17 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
                      p%AlphaF*m%qn(:, COL_A) - &
                      p%AlphaM*m%qn(:, COL_AA))/(1.0_R8Ki - p%AlphaM)
 
-   ! Calculate change in position and velocities
-   ! (position states include orientations which must be composed with deltas)
-   m%dq = 0.0_R8Ki
-   m%dq(:, COL_V) = p%DT*(1.0_R8Ki - p%Gamma)*m%qn(:, COL_AA) + p%DT*p%Gamma*m%q(:, COL_AA)
-   m%dq(:, COL_D) = p%DT*m%qn(:, COL_V) + p%DT**2*(0.5_R8Ki - p%Beta)*m%qn(:, COL_AA) + p%DT**2*p%Beta*m%q(:, COL_AA)
+   m%q(:, COL_D) = m%qn(:, COL_D) + &
+                   p%DT*m%qn(:,COL_V) + &
+                   p%DT**2*(0.5_R8Ki - p%Beta)*m%qn(:, COL_AA) + &
+                   p%DT**2*p%Beta*m%q(:, COL_AA)
+   
+   m%q(:, COL_V) = m%qn(:, COL_V) + &
+                   p%DT*(1.0_R8Ki - p%Gamma)*m%qn(:, COL_AA) + &
+                   p%DT*p%Gamma*m%q(:, COL_AA)
+
+   ! Calculate difference between new and old states
+   m%dq = m%q - m%qn
 
    ! Transfer delta state matrix to delta x array
    m%dx = 0.0_R8Ki
@@ -1067,7 +1073,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          end do
 
          ! Update the global reference
-         ! call BD_UpdateGlobalRef(u_BD, p_BD, x_BD, os_BD, ErrStat, ErrMsg); if (Failed()) return
+         call BD_UpdateGlobalRef(u_BD, p_BD, x_BD, os_BD, ErrStat, ErrMsg); if (Failed()) return
 
          ! Update accelerations and algorithmic accelerations
          do j = 1, size(p_BD%Vars%x)
