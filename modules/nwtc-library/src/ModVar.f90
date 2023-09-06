@@ -100,27 +100,30 @@ subroutine MV_InitVarsVals(Vars, Vals, Linearize, ErrStat, ErrMsg)
    ErrMsg = ''
 
    ! Initialize state variables
+   if (.not. allocated(Vars%x)) allocate(Vars%x(0))
    StartIndex = 1
    do i = 1, size(Vars%x)
       call ModVarType_Init(Vars%x(i), StartIndex, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
    end do
 
    ! Initialize input variables
+   if (.not. allocated(Vars%x)) allocate(Vars%u(0))
    StartIndex = 1
    do i = 1, size(Vars%u)
       call ModVarType_Init(Vars%u(i), StartIndex, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
    end do
 
    ! Initialize output variables
+   if (.not. allocated(Vars%x)) allocate(Vars%y(0))
    StartIndex = 1
    do i = 1, size(Vars%y)
       call ModVarType_Init(Vars%y(i), StartIndex, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
    end do
 
-   ! Calculate number of variables in group (exclude non linearization vars)
-   Vars%Nx = sum(Vars%x%Size, iand(Vars%x%Flags, VF_NoLin) == 0)
-   Vars%Nu = sum(Vars%u%Size, iand(Vars%u%Flags, VF_NoLin) == 0)
-   Vars%Ny = sum(Vars%y%Size, iand(Vars%y%Flags, VF_NoLin) == 0)
+   ! Calculate number of state, input, and output variables
+   Vars%Nx = sum(Vars%x%Num)
+   Vars%Nu = sum(Vars%u%Num)
+   Vars%Ny = sum(Vars%y%Num)
 
    ! Allocate state, input, and output values
    call AllocAry(Vals%x, Vars%Nx, "Vals%x", ErrStat2, ErrMsg2); if (Failed()) return
@@ -179,12 +182,6 @@ subroutine ModVarType_Init(Var, Index, Linearize, ErrStat, ErrMsg)
    ErrMsg = ''
 
    !----------------------------------------------------------------------------
-   ! Basic Variable
-   !----------------------------------------------------------------------------
-
-   Var%NumLin = Var%Size
-
-   !----------------------------------------------------------------------------
    ! Mesh
    !----------------------------------------------------------------------------
 
@@ -192,11 +189,10 @@ subroutine ModVarType_Init(Var, Index, Linearize, ErrStat, ErrMsg)
    if (iand(Var%Flags, VF_Mesh) > 0) then
 
       ! Size is the number of nodes in a mesh
-      Var%Nodes = Var%Size
+      Var%Nodes = Var%Num
 
-      ! Number of linearization values
-      Var%NumLin = Var%Nodes*3
-      Var%Size = Var%Nodes*3
+      ! Number of values
+      Var%Num = Var%Nodes*3
 
       ! If linearization requested
       if (Linearize) then
@@ -232,19 +228,17 @@ subroutine ModVarType_Init(Var, Index, Linearize, ErrStat, ErrMsg)
    end if
 
    !----------------------------------------------------------------------------
-   ! No Linearization
+   ! Linearization
    !----------------------------------------------------------------------------
 
-   if (iand(Var%Flags, VF_NoLin) > 0) then   ! No Linearization
+   if (Linearize) then
 
-      ! Number of linearization values is zero if NoLin flag is set
-      Var%NumLin = 0
-
-   else if (Linearize) then
-
-      ! If insufficient linearization names, return error
-      if (size(Var%LinNames) < Var%NumLin) then
+      ! If incorrect number of linearization names, return error
+      if (size(Var%LinNames) < Var%Num) then
          call SetErrStat(ErrID_Fatal, "insufficient LinNames given for "//Var%Name, ErrStat, ErrMsg, RoutineName)
+         return
+      else if (size(Var%LinNames) > Var%Num) then
+         call SetErrStat(ErrID_Fatal, "excessive LinNames given for "//Var%Name, ErrStat, ErrMsg, RoutineName)
          return
       end if
    end if
@@ -254,11 +248,11 @@ subroutine ModVarType_Init(Var, Index, Linearize, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------
 
    ! Initialize local index
-   call AllocAry(Var%iLoc, Var%Size, "Var%iLoc", ErrStat2, ErrMsg2); if (Failed()) return
-   Var%iLoc = [(index + i, i=0, Var%Size - 1)]
+   call AllocAry(Var%iLoc, Var%Num, "Var%iLoc", ErrStat2, ErrMsg2); if (Failed()) return
+   Var%iLoc = [(index + i, i=0, Var%Num - 1)]
 
    ! Update index based on variable size
-   index = index + Var%Size
+   index = index + Var%Num
 
 contains
    function Failed()
@@ -613,7 +607,7 @@ subroutine MV_AddVar(VarAry, Name, Field, Num, Flags, iUsr, Perturb, LinNames, A
    Var = ModVarType(Name=Name, Field=Field)
 
    ! Set optional values
-   if (present(Num)) Var%Size = Num
+   if (present(Num)) Var%Num = Num
    if (present(Flags)) Var%Flags = Flags
    if (present(iUsr)) Var%iUsr = iUsr
    if (present(Perturb)) Var%Perturb = Perturb
@@ -898,6 +892,7 @@ pure function wm_to_xyz(c) result(xyz)
    n = c/m
    phi = 4.0_R8Ki*atan(m/4.0_R8Ki)
    xyz = phi*n
+   ! xyz = c
 end function
 
 pure function wm_from_xyz(xyz) result(c)
@@ -910,6 +905,7 @@ pure function wm_from_xyz(xyz) result(c)
    end if
    n = xyz / phi
    c = 4.0_R8Ki*tan(phi/4.0_R8Ki) * n
+   ! c = xyz
 end function
 
 ! pure function wm_from_dcm(R) result(c)

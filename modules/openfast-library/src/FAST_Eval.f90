@@ -37,10 +37,10 @@ use SubDyn
 
 implicit none
 
-integer(IntKi), parameter  :: IS_Option1 = 1, &
-                              IS_Option2 = 2, &
-                              IS_Residual = 4, &
-                              IS_All = 255
+! Input Solve destinations
+integer(IntKi), parameter  :: IS_Input = 1, IS_u = 2
+
+#define SOLVER_DEBUG
 
 contains
 
@@ -265,11 +265,12 @@ contains
    end function
 end subroutine
 
-subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, x_TC, T, ErrStat, ErrMsg)
+subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, x_TC, q_TC, T, ErrStat, ErrMsg)
    type(ModDataType), intent(in)           :: Mod         !< Module data
    real(DbKi), intent(in)                  :: t_initial   !< Initial simulation time (almost always 0)
    integer(IntKi), intent(in)              :: n_t_global  !< Integer time step
    real(R8Ki), intent(inout)               :: x_TC(:)     !< Tight coupling state array
+   real(R8Ki), intent(inout)               :: q_TC(:, :)   !< Tight coupling state matrix
    type(FAST_TurbineType), intent(inout)   :: T           !< Turbine type
    integer(IntKi), intent(out)             :: ErrStat
    character(*), intent(out)               :: ErrMsg
@@ -277,7 +278,7 @@ subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, x_TC, T, ErrStat, ErrMs
    character(*), parameter    :: RoutineName = 'FAST_UpdateStates'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
-   integer(IntKi)             :: j
+   integer(IntKi)             :: i, j
    integer(IntKi)             :: j_ss                ! substep loop counter
    integer(IntKi)             :: n_t_module          ! simulation time step, loop counter for individual modules
    real(DbKi)                 :: t_module            ! Current simulation time for module
@@ -307,18 +308,10 @@ subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, x_TC, T, ErrStat, ErrMs
       call XferGblToLoc1D(Mod%ixs, x_TC, T%BD%m(Mod%Ins)%Vals%x)
       call BD_UnpackStateValues(T%BD%p(Mod%Ins), T%BD%m(Mod%Ins)%Vals%x, T%BD%x(Mod%Ins, STATE_PRED))
 
-      ! Update the global reference
-      call BD_UpdateGlobalRef(T%BD%Input(1, Mod%Ins), &
-                              T%BD%p(Mod%Ins), &
-                              T%BD%x(Mod%Ins, STATE_PRED), &
-                              T%BD%OtherSt(Mod%Ins, STATE_PRED), &
-                              ErrStat, ErrMsg); if (Failed()) return
-
-      ! Transfer updated states to solver
-      call BD_PackStateValues(T%BD%p(Mod%Ins), &
-                              T%BD%x(Mod%Ins, STATE_PRED), &
-                              T%BD%m(Mod%Ins)%Vals%x)
-      call XferLocToGbl1D(Mod%ixs, T%BD%m(Mod%Ins)%Vals%x, x_TC)
+      ! Root node is always aligned with root motion mesh 
+      T%BD%x(Mod%Ins, STATE_PRED)%q(:, 1) = 0.0_R8Ki
+      T%BD%x(Mod%Ins, STATE_PRED)%dqdt(1:3, 1) = matmul(T%BD%Input(1, Mod%Ins)%RootMotion%TranslationVel(:, 1), T%BD%OtherSt(1, Mod%Ins)%GlbRot)
+      T%BD%x(Mod%Ins, STATE_PRED)%dqdt(4:6, 1) = matmul(T%BD%Input(1, Mod%Ins)%RootMotion%RotationVel(:, 1), T%BD%OtherSt(1, Mod%Ins)%GlbRot)
 
    case (Module_ED)
 
@@ -665,21 +658,32 @@ subroutine XferLocToGbl1D(Inds, Loc, Gbl)
    integer(IntKi), intent(in) :: Inds(:, :)
    real(R8Ki), intent(in)     :: Loc(:)
    real(R8Ki), intent(inout)  :: Gbl(:)
-   Gbl(Inds(:, 2)) = Loc(Inds(:, 1))
+   integer(IntKi)             :: i
+   do i = 1, size(Inds, dim=2)
+      Gbl(Inds(2, i)) = Loc(Inds(1, i))
+   end do
 end subroutine
 
 subroutine XferGblToLoc1D(Inds, Gbl, Loc)
    integer(IntKi), intent(in) :: Inds(:, :)
    real(R8Ki), intent(in)     :: Gbl(:)
    real(R8Ki), intent(inout)  :: Loc(:)
-   Loc(Inds(:, 1)) = Gbl(Inds(:, 2))
+   integer(IntKi)             :: i
+   do i = 1, size(Inds, dim=2)
+      Loc(Inds(1, i)) = Gbl(Inds(2, i))
+   end do
 end subroutine
 
 subroutine XferLocToGbl2D(RowInds, ColInds, Loc, Gbl)
    integer(IntKi), intent(in) :: RowInds(:, :), ColInds(:, :)
    real(R8Ki), intent(in)     :: Loc(:, :)
    real(R8Ki), intent(inout)  :: Gbl(:, :)
-   Gbl(RowInds(:, 2), ColInds(:, 2)) = Loc(RowInds(:, 1), ColInds(:, 1))
+   integer(IntKi)             :: i, j
+   do i = 1, size(ColInds, dim=2)
+      do j = 1, size(RowInds, dim=2)
+         Gbl(RowInds(2, j), ColInds(2, i)) = Loc(RowInds(1, j), ColInds(1, i))
+      end do
+   end do
 end subroutine
 
 subroutine FAST_CopyStates(Mod, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
@@ -1031,9 +1035,9 @@ subroutine FAST_InputSolve(Mod, Maps, Dst, T, ErrStat, ErrMsg)
    case (Module_BD)
 
       select case (Dst)
-      case (1)
+      case (IS_Input)
          u_BD => T%BD%Input(1, Mod%Ins)
-      case (2)
+      case (IS_u)
          u_BD => T%BD%u(Mod%Ins)
       end select
 
@@ -1046,9 +1050,9 @@ subroutine FAST_InputSolve(Mod, Maps, Dst, T, ErrStat, ErrMsg)
    case (Module_ED)
 
       select case (Dst)
-      case (1)
+      case (IS_Input)
          u_ED => T%ED%Input(1)
-      case (2)
+      case (IS_u)
          u_ED => T%ED%u
       end select
 
@@ -1251,10 +1255,10 @@ contains
       do ir = 1, size(RowVars)
          if (RowVars(ir)%Field /= RowField) cycle
          n = 1
-         mSize = RowVars(ir)%Size
+         mSize = RowVars(ir)%Num
          do ic = 1, size(ColVars)
             if (ColVars(ic)%Field /= ColField) cycle
-            nSize = ColVars(ic)%Size
+            nSize = ColVars(ic)%Num
             Gbl(RowVars(ir)%iGblSol, ColVars(ic)%iGblSol) = Gbl(RowVars(ir)%iGblSol, ColVars(ic)%iGblSol) + &
                                                             Loc(m:m + mSize - 1, n:n + nSize - 1)
             ! write (*, *) 'Rows = ', RowVars(ir)%iGblSol

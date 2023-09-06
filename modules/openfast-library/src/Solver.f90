@@ -16,23 +16,20 @@ implicit none
 
 private
 
-! q matrix column indices (displacement, velocity, accel, algo accel)
+! Public functions
+public Solver_Init, Solver_Step0, Solver_Step
+
+! q matrix column indices (displacement, velocity, accel, algorithmic accel)
 integer(IntKi), parameter  :: COL_D = 1, COL_V = 2, COL_A = 3, COL_AA = 4
 
 ! Tight coupling modules
 integer(IntKi), parameter  :: TC_Modules(*) = [Module_ED, Module_BD, Module_SD]
 
-public Solver_Init, Solver_Step0, Solver_Step
-
-! Transfer Module Flags
-integer(IntKi), parameter  :: XM_x = 1, &
-                              XM_dxdt = 2, &
-                              XM_dYdx = 4, &
-                              XM_dXdx = 8, &
-                              XM_dYdu = 16, &
-                              XM_dXdu = 32
-
-integer(IntKi) :: munit
+! Debugging
+logical, parameter         :: DebugSolver = .true.
+integer(IntKi)             :: DebugUn = -1
+logical, parameter         :: DebugJacobian = .true.
+integer(IntKi)             :: MatrixUn = -1
 
 contains
 
@@ -40,7 +37,7 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
 
    type(TC_ParameterType), intent(inout)     :: p           !< Parameters
    type(TC_MiscVarType), intent(out)         :: m           !< Misc variables for optimization (not copied in glue code)
-   type(ModDataType), intent(inout)          :: Mods(:)  !< Solution variables from modules
+   type(ModDataType), intent(inout)          :: Mods(:)     !< Module data
    integer(IntKi), intent(out)               :: ErrStat     !< Error status of the operation
    character(*), intent(out)                 :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
@@ -48,10 +45,8 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
    integer(IntKi)                            :: ErrStat2    ! local error status
    character(ErrMsgLen)                      :: ErrMsg2     ! local error message
    integer(IntKi)                            :: i, j, k, n
-   integer(IntKi)                            :: NumX, NumU, NumY, NumQ, NumJac
-   integer(IntKi), allocatable               :: iq(:), modIDs(:), vec1(:), vec2(:)
-   logical                                   :: isLoad
-   logical, allocatable                      :: isLoadTight(:), isLoadOption1(:)
+   integer(IntKi)                            :: NumX, NumQ, NumU, NumY, NumJ
+   integer(IntKi), allocatable               :: modIDs(:), vec1(:), vec2(:), iuLoad(:)
    type(TC_MappingType)                      :: MeshMap
 
    !----------------------------------------------------------------------------
@@ -92,88 +87,186 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
                    pack([(i, i=1, size(Mods))], ModIDs == Module_HD), &
                    pack([(i, i=1, size(Mods))], ModIDs == Module_Orca)]
 
+   ! Ordering array for BeamDyn modules  
+   p%iModBD = [pack([(i, i=1, size(Mods))], ModIDs == Module_BD)]              
+
    !----------------------------------------------------------------------------
    ! Initialize mesh mappings (must be done before calculating global indices)
    !----------------------------------------------------------------------------
 
-   call Solver_DefineMappings(m%Mappings, Mods, ErrStat2, ErrMsg2); if (Failed()) return
+   call Solver_DefineMappings(m%Mappings, Mods, ErrStat2, ErrMsg2)
+   if (Failed()) return
 
    !----------------------------------------------------------------------------
-   ! Calculate Variable cateogries and global indices
-   ! TODO: reorder to improve data locality
+   ! Calculate state variable global indices and transfer index arrays
+   ! for tight coupling modules
    !----------------------------------------------------------------------------
 
+   ! Initialize number of state variables to zero
    NumX = 0
-   do i = 1, size(Mods)
-      vec1 = [(0, k=1, 0)]
-      vec2 = [(0, k=1, 0)]
-      do j = 1, size(Mods(i)%Vars%x)
-         Mods(i)%Vars%x(j)%Cat = VarCategory(Mods(i)%ID, Mods(i)%Vars%x(j)%Field)
-         if (Mods(i)%Vars%x(j)%Cat == VC_Tight) then
-            Mods(i)%Vars%x(j)%iGblSol = [(NumX + k, k=1, Mods(i)%Vars%x(j)%Size)]
-            vec1 = [vec1, Mods(i)%Vars%x(j)%iLoc]
-            vec2 = [vec2, Mods(i)%Vars%x(j)%iGblSol]
-            NumX = NumX + Mods(i)%Vars%x(j)%Size
-         end if
-      end do
-      Mods(i)%ixs = reshape([vec1, vec2], [size(vec1), 2])
+
+   ! Loop through tight coupling modules, set Solve flag
+   do i = 1, size(p%iModTC)
+      associate (Mod => Mods(p%iModTC(i)))
+         do j = 1, size(Mod%Vars%x)
+            call SetFlags(Mod%Vars%x(j), VF_Solve)
+         end do
+      end associate
    end do
 
+   ! Loop through x displacement variables (DerivOrder == 0), set global index
+   do i = 1, size(p%iModTC)
+      associate (Mod => Mods(p%iModTC(i)))
+         do j = 1, size(Mod%Vars%x)
+            if (Mod%Vars%x(j)%DerivOrder == 0) then
+               Mod%Vars%x(j)%iGblSol = [(NumX + k, k=1, Mod%Vars%x(j)%Num)]
+               NumX = NumX + Mod%Vars%x(j)%Num
+            end if
+         end do
+      end associate
+   end do
+
+   ! Start and end indices for first derivative of X
+   p%iX1 = [1, NumX]
+
+   ! Loop through x velocity variables (DerivOrder == 1), set global index
+   do i = 1, size(p%iModTC)
+      associate (Mod => Mods(p%iModTC(i)))
+         do j = 1, size(Mod%Vars%x)
+            if (Mod%Vars%x(j)%DerivOrder == 1) then
+               Mod%Vars%x(j)%iGblSol = [(NumX + k, k=1, Mod%Vars%x(j)%Num)]
+               NumX = NumX + Mod%Vars%x(j)%Num
+            end if
+         end do
+      end associate
+   end do
+
+   ! Start and end indices for second derivative of X
+   p%iX2 = [p%iX1(2) + 1, NumX]
+
+   ! Loop through x variables, and collect global and local indices
+   do i = 1, size(p%iModTC)
+      allocate (vec1(0), vec2(0))
+      associate (Mod => Mods(p%iModTC(i)))
+         do j = 1, size(Mod%Vars%x)
+            vec1 = [vec1, Mod%Vars%x(j)%iLoc]
+            vec2 = [vec2, Mod%Vars%x(j)%iGblSol]
+         end do
+         call AllocAry(Mod%ixs, 2, size(vec1), "Mod%ixs", ErrStat2, ErrMsg2); if (Failed()) return
+         Mod%ixs(1, :) = vec1
+         Mod%ixs(2, :) = vec2
+      end associate
+      deallocate (vec1, vec2)
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Calculate input variable global indices and transfer arrays
+   ! for tight coupling and option one modules
+   !----------------------------------------------------------------------------
+
+   allocate (iuLoad(0))
+
+   ! Initialze number of input variables to zero
    NumU = 0
+
+   ! Loop through tight coupling modules and calculate global indices
+   do i = 1, size(p%iModTC)
+      do j = 1, size(Mods(p%iModTC(i))%Vars%u)
+         associate (Var => Mods(p%iModTC(i))%Vars%u(j))
+            if ((.not. allocated(Var%iGblSol)) .and. (iand(Var%Flags, VF_Solve) > 0)) then
+               Var%iGblSol = [(NumU + k, k=1, Var%Num)]
+               NumU = NumU + Var%Num
+            end if
+         end associate
+      end do
+   end do
+
+   ! Save number of tight coupling inputs
+   p%iUT = [1, NumU]
+
+   ! Loop through option 1 modules and calculate global indices
+   do i = 1, size(p%iModOpt1)
+      do j = 1, size(Mods(p%iModOpt1(i))%Vars%u)
+         associate (Var => Mods(p%iModOpt1(i))%Vars%u(j))
+            if ((.not. allocated(Var%iGblSol)) .and. (iand(Var%Flags, VF_Solve) > 0)) then
+               Var%iGblSol = [(NumU + k, k=1, Var%Num)]
+               NumU = NumU + Var%Num
+            end if
+         end associate
+      end do
+   end do
+
+   ! Calculate number of option 1 inputs
+   p%iU1 = [p%iUT(2) + 1, NumU]
+
+   ! Loop through all modules
    do i = 1, size(Mods)
-      vec1 = [(0, k=1, 0)]
-      vec2 = [(0, k=1, 0)]
+      allocate (vec1(0), vec2(0))
       do j = 1, size(Mods(i)%Vars%u)
-         Mods(i)%Vars%u(j)%Cat = VarCategory(Mods(i)%ID, Mods(i)%Vars%u(j)%Field)
-         if (iand(Mods(i)%Vars%u(j)%Flags, VF_Solve) > 0) then
-            Mods(i)%Vars%u(j)%iGblSol = [(NumU + k, k=1, Mods(i)%Vars%u(j)%Size)]
-            vec1 = [vec1, Mods(i)%Vars%u(j)%iLoc]
-            vec2 = [vec2, Mods(i)%Vars%u(j)%iGblSol]
-            NumU = NumU + Mods(i)%Vars%u(j)%Size
-         end if
+         if (.not. allocated(Mods(i)%Vars%u(j)%iGblSol)) cycle
+         vec1 = [vec1, Mods(i)%Vars%u(j)%iLoc]
+         vec2 = [vec2, Mods(i)%Vars%u(j)%iGblSol]
+         select case (Mods(i)%Vars%u(j)%Field)
+         case (VF_Force, VF_Moment)
+            iuLoad = [iuLoad, Mods(i)%Vars%u(j)%iGblSol]
+         end select
       end do
-      Mods(i)%ius = reshape([vec1, vec2], [size(vec1), 2])
+      call AllocAry(Mods(i)%ius, 2, size(vec1), "Mods(i)%ius", ErrStat2, ErrMsg2); if (Failed()) return
+      Mods(i)%ius(1, :) = vec1
+      Mods(i)%ius(2, :) = vec2
+      deallocate (vec1, vec2)
    end do
 
+   !----------------------------------------------------------------------------
+   ! Calculate output variable categories and indices
+   !----------------------------------------------------------------------------
+
+   ! Initialize the number of output variables
    NumY = 0
-   do i = 1, size(Mods)
-      vec1 = [(0, k=1, 0)]
-      vec2 = [(0, k=1, 0)]
-      do j = 1, size(Mods(i)%Vars%y)
-         Mods(i)%Vars%y(j)%Cat = VarCategory(Mods(i)%ID, Mods(i)%Vars%y(j)%Field)
-         if (iand(Mods(i)%Vars%y(j)%Flags, VF_Solve) > 0) then
-            Mods(i)%Vars%y(j)%iGblSol = [(NumY + k, k=1, Mods(i)%Vars%y(j)%Size)]
-            vec1 = [vec1, Mods(i)%Vars%y(j)%iLoc]
-            vec2 = [vec2, Mods(i)%Vars%y(j)%iGblSol]
-            NumY = NumY + Mods(i)%Vars%y(j)%Size
-         end if
+
+   ! Loop through tight coupling modules and calculate global indices
+   do i = 1, size(p%iModTC)
+      do j = 1, size(Mods(p%iModTC(i))%Vars%y)
+         associate (Var => Mods(p%iModTC(i))%Vars%y(j))
+            if ((.not. allocated(Var%iGblSol)) .and. (iand(Var%Flags, VF_Solve) > 0)) then
+               Var%iGblSol = [(NumY + k, k=1, Var%Num)]
+               NumY = NumY + Var%Num
+            end if
+         end associate
       end do
-      Mods(i)%iys = reshape([vec1, vec2], [size(vec1), 2])
    end do
 
-   !----------------------------------------------------------------------------
-   ! Allocate storage
-   !----------------------------------------------------------------------------
+   ! Save number of tight coupling inputs
+   p%iyT = [1, NumY]
 
-   ! State and State Derivative
-   call AllocAry(m%x, NumX, "m%x", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%xn, NumX, "m%xn", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%dx, NumX, "m%dx", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%dxdt, NumX, "m%dxdt", ErrStat2, ErrMsg2); if (Failed()) return
-   m%x = 0.0_R8Ki
-   m%dx = 0.0_R8Ki
-   m%dxdt = 0.0_R8Ki
+   ! Loop through option 1 modules and calculate global indices
+   do i = 1, size(p%iModOpt1)
+      do j = 1, size(Mods(p%iModOpt1(i))%Vars%y)
+         associate (Var => Mods(p%iModOpt1(i))%Vars%y(j))
+            if ((.not. allocated(Var%iGblSol)) .and. (iand(Var%Flags, VF_Solve) > 0)) then
+               Var%iGblSol = [(NumY + k, k=1, Var%Num)]
+               NumY = NumY + Var%Num
+            end if
+         end associate
+      end do
+   end do
 
-   ! Inputs and Input Temporary
-   call AllocAry(m%u, NumU, "m%u", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%un, NumU, "m%un", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%du, NumU, "m%du", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%u_tmp, NumU, "m%u_tmp", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%UDiff, NumU, "m%UDiff", ErrStat2, ErrMsg2); if (Failed()) return
+   ! Calculate number of option 1 inputs
+   p%iy1 = [p%iyT(2) + 1, NumY]
 
-   ! Outputs
-   call AllocAry(m%y, NumY, "m%y", ErrStat2, ErrMsg2); if (Failed()) return
-   m%y = 0.0_R8Ki
+   ! Loop through all modules
+   do i = 1, size(Mods)
+      allocate (vec1(0), vec2(0))
+      do j = 1, size(Mods(i)%Vars%y)
+         if (.not. allocated(Mods(i)%Vars%y(j)%iGblSol)) cycle
+         vec1 = [vec1, Mods(i)%Vars%y(j)%iLoc]
+         vec2 = [vec2, Mods(i)%Vars%y(j)%iGblSol]
+      end do
+      call AllocAry(Mods(i)%iys, 2, size(vec1), "Mods(i)%iys", ErrStat2, ErrMsg2); if (Failed()) return
+      Mods(i)%iys(1, :) = vec1
+      Mods(i)%iys(2, :) = vec2
+      deallocate (vec1, vec2)
+   end do
 
    !----------------------------------------------------------------------------
    ! Allocate q storage for generalized alpha algorithm
@@ -196,10 +289,6 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
    ! Loop through modules
    do i = 1, size(Mods)
 
-      ! Allocate iq to store q index for each variable
-      call AllocAry(iq, size(Mods(i)%Vars%x), "iq", ErrStat2, ErrMsg2); if (Failed()) return
-      iq = 0
-
       ! Skip modules that aren't in tight coupling
       if (all(Mods(i)%ID /= TC_Modules)) cycle
 
@@ -207,14 +296,14 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
       do j = 1, size(Mods(i)%Vars%x)
 
          ! Skip variables which already have a q index
-         if (iq(j) /= 0) cycle
+         if (allocated(Mods(i)%Vars%x(j)%iq)) cycle
 
          ! Skip load variables (force and moment)
          if (any(Mods(i)%Vars%x(j)%Field == LoadFields)) cycle
 
          ! Set q index for variable and update number
-         iq(j) = NumQ + 1
-         NumQ = NumQ + Mods(i)%Vars%x(j)%Size
+         Mods(i)%Vars%x(j)%iq = [(NumQ + k, k=1, Mods(i)%Vars%x(j)%Num)]
+         NumQ = NumQ + Mods(i)%Vars%x(j)%Num
 
          ! Loop through remaining vars  if the names match
          do k = i + 1, size(Mods(i)%Vars%x)
@@ -232,8 +321,8 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
                cycle
             end select
 
-            ! Copy q index
-            iq(k) = iq(j)
+            ! Copy q row indices
+            Mods(i)%Vars%x(k)%iq = Mods(i)%Vars%x(j)%iq
 
          end do
       end do
@@ -241,87 +330,41 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
       ! Loop through state variables and build mapping array between x and q
       ! ixqd is 3xN where each row is [global x array index, q matrix row, q matrix col]
       do j = 1, size(Mods(i)%Vars%x)
-         do k = 1, Mods(i)%Vars%x(j)%Size
+         do k = 1, Mods(i)%Vars%x(j)%Num
             n = n + 1
-            p%ixqd(:, n) = [Mods(i)%Vars%x(j)%iGblSol(k), iq(j) + k - 1, Mods(i)%Vars%x(j)%DerivOrder + 1]
+            p%ixqd(:, n) = [Mods(i)%Vars%x(j)%iGblSol(k), Mods(i)%Vars%x(j)%iq(k), Mods(i)%Vars%x(j)%DerivOrder + 1]
          end do
       end do
 
-      ! Deallocate iq for use by next module
-      deallocate (iq)
    end do
 
    ! Remove x->q indicies that aren't set
    p%ixqd = p%ixqd(:, 1:n)
 
+   !----------------------------------------------------------------------------
+   ! Allocate state and input storage
+   !----------------------------------------------------------------------------
+
+   ! State, State delta, and State Derivative
+   call AllocAry(m%x, NumX, "m%x", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%xn, NumX, "m%xn", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%dx, NumX, "m%dx", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%dxdt, NumX, "m%dxdt", ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! Inputs and Input Temporary
+   call AllocAry(m%u, NumU, "m%u", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%un, NumU, "m%un", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%du, NumU, "m%du", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%u_tmp, NumU, "m%u_tmp", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%UDiff, NumU, "m%UDiff", ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! Outputs
+   call AllocAry(m%y, NumY, "m%y", ErrStat2, ErrMsg2); if (Failed()) return
+
    ! Allocate/initialize global q storage
    call AllocAry(m%q, NumQ, 4, "m%q", ErrStat2, ErrMsg2); if (Failed()) return
    call AllocAry(m%qn, NumQ, 4, "m%qn", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%dq, NumQ, 4, "m%qn", ErrStat2, ErrMsg2); if (Failed()) return
-   m%q = 0.0_R8Ki
-   m%qn = 0.0_R8Ki
-   m%dq = 0.0_R8Ki
-
-   !----------------------------------------------------------------------------
-   ! Mapping arrays
-   !----------------------------------------------------------------------------
-
-   ! Calculate index mapping arrays for X1Tight and X2Tight
-   call AllocAry(p%iX1Tight, 0, "p%iX1Tight", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(p%iX2Tight, 0, "p%iX2Tight", ErrStat2, ErrMsg2); if (Failed()) return
-   do i = 1, size(Mods)
-      do j = 1, size(Mods(i)%Vars%x)
-         if (Mods(i)%Vars%x(j)%Cat == VC_Tight) then
-            select case (Mods(i)%Vars%x(j)%DerivOrder)
-            case (0)
-               p%iX1Tight = [p%iX1Tight, Mods(i)%Vars%x(j)%iGblSol]
-            case (1)
-               p%iX2Tight = [p%iX2Tight, Mods(i)%Vars%x(j)%iGblSol]
-            end select
-         end if
-      end do
-   end do
-
-   ! Calculate index mapping arrays for U^Tight and U^Option1
-   call AllocAry(p%iuLoad, 0, "p%iuLoad", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(p%iUTight, 0, "p%iUTight", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(p%iUOpt1, 0, "p%iUOpt1", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(isLoadTight, 0, "isLoadTight", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(isLoadOption1, 0, "isLoadOption1", ErrStat2, ErrMsg2); if (Failed()) return
-   do i = 1, size(Mods)
-      do j = 1, size(Mods(i)%Vars%u)
-         associate (Var => Mods(i)%Vars%u(j))
-            if (iand(Var%Flags, VF_Solve) == 0) cycle
-            isLoad = any(LoadFields == Var%Field)
-            select case (Var%Cat)
-            case (VC_Tight)
-               p%iUTight = [p%iUTight, Var%iGblSol]
-               isLoadTight = [isLoadTight, spread(isLoad, 1, Var%Size)]
-            case (VC_Option1)
-               p%iUOpt1 = [p%iUOpt1, Var%iGblSol]
-               isLoadOption1 = [isLoadOption1, spread(isLoad, 1, Var%Size)]
-            end select
-            if (isLoad) then
-               p%iuLoad = [p%iuLoad, Var%iGblSol]
-            end if
-         end associate
-      end do
-   end do
-
-   ! Calculate index mapping arrays for y^Tight and y^Option1
-   call AllocAry(p%iyTight, 0, "p%iyTight", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(p%iyOpt1, 0, "p%iyOpt1", ErrStat2, ErrMsg2); if (Failed()) return
-   do i = 1, size(Mods)
-      do j = 1, size(Mods(i)%Vars%y)
-         if (iand(Mods(i)%Vars%y(j)%Flags, VF_Solve) == 0) cycle
-         select case (Mods(i)%Vars%y(j)%Cat)
-         case (VC_Tight)
-            p%iyTight = [p%iyTight, Mods(i)%Vars%y(j)%iGblSol]
-         case (VC_Option1)
-            p%iyOpt1 = [p%iyOpt1, Mods(i)%Vars%y(j)%iGblSol]
-         end select
-      end do
-   end do
+   call AllocAry(m%dq, NumQ, 4, "m%dq", ErrStat2, ErrMsg2); if (Failed()) return
 
    !----------------------------------------------------------------------------
    ! Allocate Jacobian matrices
@@ -336,40 +379,27 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
    call AllocAry(m%G, NumU, NumU, "m%G", ErrStat2, ErrMsg2); if (Failed()) return
    call AllocAry(m%IPIV2, NumU, "m%IPIV2", ErrStat2, ErrMsg2); if (Failed()) return
 
-   ! Initialize Jacobian matrices
-   m%dYdx = 0.0_R8Ki
-   m%dYdu = 0.0_R8Ki
-   m%dXdx = 0.0_R8Ki
-   m%dXdu = 0.0_R8Ki
-   m%dUdu = 0.0_R8Ki
-   m%dUdy = 0.0_R8Ki
-
    !----------------------------------------------------------------------------
    ! Allocate solver Jacobian matrix, RHS, and Delta
    !----------------------------------------------------------------------------
 
-   ! Initialize size of system
-   NumJac = 0
+   ! Calculate size of Jacobian matrix
+   NumJ = NumQ + NumU
 
-   ! Allocate and initialize indices of q vars in Jacobian matrix
-   p%iJX2 = [(NumJac + i, i=1, size(p%iX2Tight))]
-   NumJac = NumJac + size(p%iJX2)
+   ! Get start and end indicies for state part of Jacobian
+   p%iJX = [1, NumQ]
 
-   ! Allocate and initialize indices of tight coupling vars in Jacobian matrix
-   p%iJT = [(NumJac + i, i=1, size(p%iUTight))]
-   NumJac = NumJac + size(p%iJT)
-
-   ! Allocate and initialize indices of option 1 vars in Jacobian matrix
-   p%iJ1 = [(NumJac + i, i=1, size(p%iUOpt1))]
-   NumJac = NumJac + size(p%iJ1)
+   ! Get start and end indicies for input part of Jacobian
+   p%iJUT = p%iUT + NumQ
+   p%iJU = [1, NumU] + NumQ
 
    ! Get Jacobian indicies containing loads
-   p%iJL = [pack(p%iJT, isLoadTight), pack(p%iJ1, isLoadOption1)]
+   p%iJL = iuLoad + NumQ
 
    ! Allocate Macobian matrix, RHS/X matrix, Pivot array
-   call AllocAry(m%Jac, NumJac, NumJac, "m%Jac", ErrStat, ErrMsg); if (Failed()) return
-   call AllocAry(m%XB, NumJac, 1, "m%XB", ErrStat, ErrMsg); if (Failed()) return
-   call AllocAry(m%IPIV, NumJac, "m%IPIV", ErrStat, ErrMsg); if (Failed()) return
+   call AllocAry(m%Jac, NumJ, NumJ, "m%Jac", ErrStat, ErrMsg); if (Failed()) return
+   call AllocAry(m%XB, NumJ, 1, "m%XB", ErrStat, ErrMsg); if (Failed()) return
+   call AllocAry(m%IPIV, NumJ, "m%IPIV", ErrStat, ErrMsg); if (Failed()) return
    m%Jac = 0.0_R8Ki
 
    ! Initialize iterations and steps until Jacobian is calculated to zero
@@ -381,7 +411,7 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
    ! Calculate generalized alpha parameters
    !----------------------------------------------------------------------------
 
-   p%AccBlend = 1.0_R8Ki
+   p%AccBlend = 0.0_R8Ki
 
    p%AlphaM = (2.0_R8Ki*p%RhoInf - 1.0_R8Ki)/(p%RhoInf + 1.0_R8Ki)
    p%AlphaF = p%RhoInf/(p%RhoInf + 1.0_R8Ki)
@@ -396,90 +426,22 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
    ! Debug
    !----------------------------------------------------------------------------
 
-   ! munit = -1
-
-   ! call GetNewUnit(m%DebugUnit, ErrStat2, ErrMsg2); if (Failed()) return
-   ! call OpenFOutFile(m%DebugUnit, "solver.dbg", ErrStat2, ErrMsg2); if (Failed()) return
-
-   ! write (m%DebugUnit, *) "NumX      = ", NumX
-   ! write (m%DebugUnit, *) "NumU      = ", NumU
-   ! write (m%DebugUnit, *) "NumY      = ", NumY
-   ! write (m%DebugUnit, *) "NumJac    = ", NumJac
-   ! write (m%DebugUnit, '(A,*(I4))') " p%iJX2    = ", p%iJX2
-   ! write (m%DebugUnit, '(A,*(I4))') " p%iJT     = ", p%iJT
-   ! write (m%DebugUnit, '(A,*(I4))') " p%iJ1     = ", p%iJ1
-   ! write (m%DebugUnit, '(A,*(I4))') " p%iJL     = ", p%iJL
-   ! write (m%DebugUnit, '(A,*(I4))') " p%iX2Tight = ", p%iX2Tight
-   ! write (m%DebugUnit, '(A,*(I4))') " p%iX1Tight = ", p%iX1Tight
-   ! write (m%DebugUnit, '(A,*(I4))') " p%iUTight = ", p%iUTight
-   ! write (m%DebugUnit, '(A,*(I4))') " p%iUOpt1  = ", p%iUOpt1
-   ! write (m%DebugUnit, '(A,*(I4))') " p%iyTight = ", p%iyTight
-   ! write (m%DebugUnit, '(A,*(I4))') " p%iyOpt1  = ", p%iyOpt1
-   ! write (m%DebugUnit, *) "shape(m%dYdx) = ", shape(m%dYdx)
-   ! write (m%DebugUnit, *) "shape(m%dYdu) = ", shape(m%dYdu)
-   ! write (m%DebugUnit, *) "shape(m%dXdx) = ", shape(m%dXdx)
-   ! write (m%DebugUnit, *) "shape(m%dXdu) = ", shape(m%dXdu)
-   ! write (m%DebugUnit, *) "shape(m%dUdu) = ", shape(m%dUdu)
-   ! write (m%DebugUnit, *) "shape(m%dUdy) = ", shape(m%dUdy)
-
-   ! do i = 1, size(Mods)
-   !    write (m%DebugUnit, *) "Module   = ", Mods(i)%Abbr
-   !    write (m%DebugUnit, *) "ModuleID = ", Mods(i)%ID
-   !    do j = 1, size(Mods(i)%Vars%x)
-   !       if (.not. allocated(Mods(i)%Vars%x(j)%iGblSol)) cycle
-   !       write (m%DebugUnit, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" X "//trim(Mods(i)%Vars%x(j)%Name)// &
-   !          " ("//trim(MV_FieldString(Mods(i)%Vars%x(j)%Field))//")"
-   !       write (m%DebugUnit, '(A,*(I4))') "  X iLoc    = ", Mods(i)%Vars%x(j)%iLoc
-   !       write (m%DebugUnit, '(A,*(I4))') "  X iGblSol = ", Mods(i)%Vars%x(j)%iGblSol
-   !    end do
-   !    do j = 1, size(Mods(i)%Vars%u)
-   !       if (.not. allocated(Mods(i)%Vars%u(j)%iGblSol)) cycle
-   !       write (m%DebugUnit, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" U "//trim(Mods(i)%Vars%u(j)%Name)// &
-   !          " ("//trim(MV_FieldString(Mods(i)%Vars%u(j)%Field))//")"
-   !       write (m%DebugUnit, '(A,*(I4))') "  U iLoc    = ", Mods(i)%Vars%u(j)%iLoc
-   !       write (m%DebugUnit, '(A,*(I4))') "  U iGblSol = ", Mods(i)%Vars%u(j)%iGblSol
-   !    end do
-   !    do j = 1, size(Mods(i)%Vars%y)
-   !       if (.not. allocated(Mods(i)%Vars%y(j)%iGblSol)) cycle
-   !       write (m%DebugUnit, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" Y "//trim(Mods(i)%Vars%y(j)%Name)// &
-   !          " ("//trim(MV_FieldString(Mods(i)%Vars%y(j)%Field))//")"
-   !       write (m%DebugUnit, '(A,*(I4))') "  Y iLoc    = ", Mods(i)%Vars%y(j)%iLoc
-   !       write (m%DebugUnit, '(A,*(I4))') "  Y iGblSol = ", Mods(i)%Vars%y(j)%iGblSol
-   !    end do
-   ! end do
+   if (DebugSolver) then
+      call GetNewUnit(DebugUn, ErrStat2, ErrMsg2); if (Failed()) return
+      call OpenFOutFile(DebugUn, "solver.dbg", ErrStat2, ErrMsg2); if (Failed()) return
+      call Solver_Init_Debug(p, m, Mods)
+   end if
 
 contains
-   function Failed()
-      logical :: Failed
+   logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Failed = ErrStat >= AbortErrLev
    end function
-
-   pure function VarCategory(ModID, VarField) result(VarCat)
-      integer(IntKi), intent(in) :: ModID, VarField
-      integer(IntKi)             :: VarCat
-      ! If tight coupling module, then category is Tight
-      if (any(ModID == TC_Modules)) then
-         VarCat = VC_Tight
-         return
-      end if
-      select case (VarField)
-      case (VF_Orientation, VF_TransDisp, VF_AngularDisp)   ! Position
-         VarCat = VC_Option2
-      case (VF_TransVel, VF_AngularVel)                     ! Velocity
-         VarCat = VC_Option2
-      case (VF_TransAcc, VF_AngularAcc)                     ! Acceleration
-         VarCat = VC_Option1
-      case default
-         VarCat = VC_None
-      end select
-   end function
-
 end subroutine
 
 subroutine Solver_DefineMappings(Mappings, Mods, ErrStat, ErrMsg)
    type(TC_MappingType), allocatable, intent(inout)   :: Mappings(:)
-   type(ModDataType), intent(inout)                   :: Mods(:)  !< Solution variables from modules
+   type(ModDataType), intent(inout)                   :: Mods(:)  !< Module data
    integer(IntKi), intent(out)                        :: ErrStat     !< Error status of the operation
    character(*), intent(out)                          :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
@@ -672,7 +634,7 @@ end function NeedWriteOutput
 subroutine Solver_Step0(p, m, ModData, Turbine, ErrStat, ErrMsg)
    type(TC_ParameterType), intent(in)        :: p           !< Parameters
    type(TC_MiscVarType), intent(inout)       :: m           !< Misc variables
-   type(ModDataType), intent(in)             :: ModData(:)  !< Solution variables from modules
+   type(ModDataType), intent(in)             :: ModData(:)  !< Module data
    type(FAST_TurbineType), intent(inout)     :: Turbine     !< Turbine type
    integer(IntKi), intent(out)               :: ErrStat
    character(*), intent(out)                 :: ErrMsg
@@ -781,6 +743,7 @@ subroutine Solver_Step0(p, m, ModData, Turbine, ErrStat, ErrMsg)
 
    ! Initialize algorithmic acceleration from actual acceleration
    m%qn(:, COL_AA) = m%qn(:, COL_A)
+   m%q = m%qn
 
    !----------------------------------------------------------------------------
    ! Initialize module input and state arrays for interpolation/extrapolation
@@ -808,7 +771,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    real(DbKi), intent(in)                    :: t_initial   !< Initial simulation time
    type(TC_ParameterType), intent(in)        :: p           !< Parameters
    type(TC_MiscVarType), intent(inout)       :: m           !< Misc variables
-   type(ModDataType), intent(in)             :: Mods(:)  !< Solution variables from modules
+   type(ModDataType), intent(in)             :: Mods(:)  !< Module data
    type(FAST_TurbineType), intent(inout)     :: Turbine     !< Turbine type
    integer(IntKi), intent(out)               :: ErrStat
    character(*), intent(out)                 :: ErrMsg
@@ -822,7 +785,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    real(ReKi)                 :: delta_norm
    real(DbKi)                 :: t_global_next       ! next simulation time (m_FAST%t_global + p_FAST%dt)
    integer(IntKi)             :: n_t_global_next     ! n_t_global + 1
-   integer(IntKi)             :: i
+   integer(IntKi)             :: i, j
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -840,8 +803,6 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
    ! Decrement number of time steps before updating the Jacobian
    m%StepsUntilUJac = m%StepsUntilUJac - 1
-
-   ! write (m%DebugUnit, *) "step = ", n_t_global_next
 
    !----------------------------------------------------------------------------
    ! Extrapolate/interpolate inputs for all modules
@@ -865,13 +826,13 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    ! Algorithm acceleration for next step
    m%q(:, COL_AA) = ((1.0_R8Ki - p%AlphaF)*m%q(:, COL_A) + &
                      p%AlphaF*m%qn(:, COL_A) - &
-                     p%AlphaM*m%qn(:, COL_AA))/(1 - p%AlphaM)
+                     p%AlphaM*m%qn(:, COL_AA))/(1.0_R8Ki - p%AlphaM)
 
    ! Calculate change in position and velocities
    ! (position states include orientations which must be composed with deltas)
    m%dq = 0.0_R8Ki
-   m%dq(:, COL_V) = p%DT*(1 - p%Gamma)*m%qn(:, COL_AA) + p%DT*p%Gamma*m%q(:, COL_AA)
-   m%dq(:, COL_D) = p%DT*m%qn(:, COL_V) + p%DT**2*(0.5 - p%Beta)*m%qn(:, COL_AA) + p%DT**2*p%Beta*m%q(:, COL_AA)
+   m%dq(:, COL_V) = p%DT*(1.0_R8Ki - p%Gamma)*m%qn(:, COL_AA) + p%DT*p%Gamma*m%q(:, COL_AA)
+   m%dq(:, COL_D) = p%DT*m%qn(:, COL_V) + p%DT**2*(0.5_R8Ki - p%Beta)*m%qn(:, COL_AA) + p%DT**2*p%Beta*m%q(:, COL_AA)
 
    ! Transfer delta state matrix to delta x array
    m%dx = 0.0_R8Ki
@@ -897,8 +858,6 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    iterCorr = 0
    do while (iterCorr <= p%NumCrctn)
 
-      ! write (m%DebugUnit, *) "iterCorr = ", iterCorr
-
       ! Copy state for correction step
       m%qn = m%q
       m%xn = m%x
@@ -914,7 +873,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
       do i = 1, size(p%iModOpt2)
          call FAST_InputSolve(Mods(p%iModOpt2(i)), m%Mappings, 1, &
                               Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-         call FAST_UpdateStates(Mods(p%iModOpt2(i)), t_initial, n_t_global, m%xn, &
+         call FAST_UpdateStates(Mods(p%iModOpt2(i)), t_initial, n_t_global, m%xn, m%qn, &
                                 Turbine, ErrStat2, ErrMsg2); if (Failed()) return
          call FAST_CalcOutput(Mods(p%iModOpt2(i)), t_global_next, STATE_PRED, &
                               Turbine, ErrStat2, ErrMsg2); if (Failed()) return
@@ -932,7 +891,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
       do i = 1, size(p%iModOpt1US)
          call FAST_InputSolve(Mods(p%iModOpt1US(i)), m%Mappings, 1, &
                               Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-         call FAST_UpdateStates(Mods(p%iModOpt1US(i)), t_initial, n_t_global, m%xn, &
+         call FAST_UpdateStates(Mods(p%iModOpt1US(i)), t_initial, n_t_global, m%xn, m%qn, &
                                 Turbine, ErrStat2, ErrMsg2); if (Failed()) return
       end do
 
@@ -973,11 +932,11 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          !----------------------------------------------------------------------
 
          ! If number of iterations or steps until Jacobian is to be updated
-         ! is zero or less, or first solution step, then rebuild the Jacobian. 
-         ! Note: Solver_BuildJacobian resets these counters.
+         ! is zero or less, or first solution step, then rebuild the Jacobian.
+         ! Note: BuildJacobian resets these counters.
          if ((m%IterUntilUJac <= 0) .or. (m%StepsUntilUJac <= 0) .or. (n_t_global_next == 1)) then
-            call Solver_BuildJacobian(p, m, Mods, t_global_next, n_t_global_next*100 + iterConv, &
-                                      Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+            call BuildJacobian(p, m, Mods, t_global_next, n_t_global_next*100 + iterConv, &
+                               Turbine, ErrStat2, ErrMsg2); if (Failed()) return
          end if
 
          !----------------------------------------------------------------------
@@ -991,7 +950,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          end do
 
          ! Calculate difference between predicted and actual accelerations
-         m%XB(p%iJX2, 1) = m%qn(:, COL_A) - m%dxdt(p%iX2Tight)
+         m%XB(p%iJX(1):p%iJX(2), 1) = m%qn(:, COL_A) - m%dxdt(p%iX2(1):p%iX2(2))
 
          ! Transfer Option 1 outputs to temporary inputs and collect into u_tmp
          do i = 1, size(p%iModOpt1)
@@ -1000,13 +959,12 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
             call FAST_InputSolve(Mods(p%iModOpt1(i)), m%Mappings, 2, &
                                  Turbine, ErrStat2, ErrMsg2); if (Failed()) return
          end do
-         call PackModuleInputs(Mods, p%iModOpt1, Turbine, u_tmp=m%u_tmp)
+         call PackModuleUs(Mods, p%iModOpt1, Turbine, m%u_tmp)
 
          ! Calculate difference in U for all Option 1 modules (un - u_tmp)
          ! and add to RHS for TC and Option 1 modules
-         call ComputeDiffU(Mods, p%iModOpt1, m%un, m%u_tmp, m%UDiff)
-         m%XB(p%iJT, 1) = m%UDiff(p%iUTight)
-         m%XB(p%iJ1, 1) = m%UDiff(p%iUOpt1)
+         call ComputeDeltaU(Mods, p%iModOpt1, m%un, m%u_tmp, m%UDiff)
+         m%XB(p%iJU(1):p%iJU(2), 1) = m%UDiff
 
          ! Apply conditioning factor to loads in RHS
          m%XB(p%iJL, 1) = m%XB(p%iJL, 1)/p%Scale_UJac
@@ -1024,6 +982,10 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
          delta_norm = TwoNorm(m%XB(:, 1))/size(m%XB)
 
+         if (DebugSolver) then
+            call Solver_Step_Debug(p, m, n_t_global_next, iterCorr, iterConv, delta_norm)
+         end if
+
          if (delta_norm < p%ConvTol) exit
 
          ! Remove conditioning
@@ -1034,10 +996,13 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          !----------------------------------------------------------------------
 
          ! Calculate change in state matrix
-         m%dq(:, COL_D) = -p%C(3)*m%XB(p%iJX2, 1)
-         m%dq(:, COL_V) = -p%C(2)*m%XB(p%iJX2, 1)
-         m%dq(:, COL_A) = -m%XB(p%iJX2, 1)
-         m%dq(:, COL_AA) = -p%C(1)*m%XB(p%iJX2, 1)
+         m%dq(:, COL_D) = -p%C(3)*m%XB(p%iJX(1):p%iJX(2), 1)
+         m%dq(:, COL_V) = -p%C(2)*m%XB(p%iJX(1):p%iJX(2), 1)
+         m%dq(:, COL_A) = -m%XB(p%iJX(1):p%iJX(2), 1)
+         m%dq(:, COL_AA) = -p%C(1)*m%XB(p%iJX(1):p%iJX(2), 1)
+
+         ! Update state matrix with deltas
+         m%qn = m%qn + m%dq
 
          ! Transfer change in q state matrix to change in x array
          m%dx = 0.0_R8Ki
@@ -1046,9 +1011,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! Add delta to x array to get new states (respect variable fields)
          call AddDeltaToStates(Mods, p%iModTC, m%dx, m%xn)
 
-         ! Update new state matrix with new state array values
-         ! The transfer overwrites values that were changed in AddDeltaToStates
-         m%qn = m%qn + m%dq
+         ! Overwrites state matrix values that were changed in AddDeltaToStates        
          call Solver_TransferXtoQ(p%ixqd, m%xn, m%qn)
 
          ! Transfer updated state to TC modules
@@ -1059,28 +1022,13 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          !----------------------------------------------------------------------
 
          ! Update change in inputs
-         m%du(p%iUTight) = -m%XB(p%iJT, 1)
-         m%du(p%iUOpt1) = -m%XB(p%iJ1, 1)
+         m%du = -m%XB(p%iJU(1):p%iJU(2), 1)
 
          ! Apply deltas to inputs, update modules
          call AddDeltaToInputs(Mods, p%iModOpt1, m%du, m%un)
 
          ! Transfer updated inputs to Option 1 modules
          call UnpackModuleInputs(Mods, p%iModOpt1, Turbine, u=m%un)
-
-         !----------------------------------------------------------------------
-         ! Transfer updated states and inputs to relevant modules
-         !----------------------------------------------------------------------
-
-         ! write (m%DebugUnit, *) "iterConv = ", iterConv
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " y  = ", m%y
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " u  = ", m%un
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " u_tmp = ", m%u_tmp
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " U  = ", m%UDiff
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " x  = ", m%xn
-         ! write (m%DebugUnit, *) "delta_norm = ", delta_norm
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " du = ", m%du
-         ! write (m%DebugUnit, '(A,*(ES16.7))') " dx = ", m%dx
 
       end do
 
@@ -1096,6 +1044,49 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    !----------------------------------------------------------------------------
    ! Update states for next step
    !----------------------------------------------------------------------------
+
+   ! Loop through BeamDyn instances
+   do i = 1, size(p%iModBD)
+      associate (Mod => Mods(p%iModBD(i)), &
+                 p_BD => Turbine%BD%p(Mods(p%iModBD(i))%Ins), &
+                 m_BD => Turbine%BD%m(Mods(p%iModBD(i))%Ins), &
+                 u_BD => Turbine%BD%Input(1, Mods(p%iModBD(i))%Ins), &
+                 x_BD => Turbine%BD%x(Mods(p%iModBD(i))%Ins, STATE_PRED), &
+                 os_BD => Turbine%BD%OtherSt(Mods(p%iModBD(i))%Ins, STATE_PRED))
+
+         ! Update accelerations and algorithmic accelerations
+         do j = 1, size(p_BD%Vars%x)
+            select case (p_BD%Vars%x(j)%Field)
+            case (VF_TransDisp)
+               os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr(1)) = m%qn(p_BD%Vars%x(j)%iq, COL_A)
+               os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr(1)) = m%qn(p_BD%Vars%x(j)%iq, COL_AA)
+            case (VF_Orientation)
+               os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr(1)) = m%qn(p_BD%Vars%x(j)%iq, COL_A)
+               os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr(1)) = m%qn(p_BD%Vars%x(j)%iq, COL_AA)
+            end select
+         end do
+
+         ! Update the global reference
+         ! call BD_UpdateGlobalRef(u_BD, p_BD, x_BD, os_BD, ErrStat, ErrMsg); if (Failed()) return
+
+         ! Update accelerations and algorithmic accelerations
+         do j = 1, size(p_BD%Vars%x)
+            select case (p_BD%Vars%x(j)%Field)
+            case (VF_TransDisp)
+               m%qn(p_BD%Vars%x(j)%iq, COL_A) = os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr(1))
+               m%qn(p_BD%Vars%x(j)%iq, COL_AA) = os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr(1))
+            case (VF_Orientation)
+               m%qn(p_BD%Vars%x(j)%iq, COL_A) = os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr(1))
+               m%qn(p_BD%Vars%x(j)%iq, COL_AA) = os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr(1))
+            end select
+         end do
+
+         ! Transfer updated states to solver
+         call BD_PackStateValues(p_BD, x_BD, m_BD%Vals%x)
+         call XferLocToGbl1D(Mod%ixs, m_BD%Vals%x, m%xn)
+      end associate
+
+   end do
 
    ! Copy the final predicted states from step t_global_next to actual states for that step
    do i = 1, size(p%iModAll)
@@ -1126,58 +1117,9 @@ contains
    end function
 end subroutine
 
-subroutine ComputeDiffU(Mods, ModOrder, PosAry, NegAry, DiffAry)
-   type(ModDataType), intent(in) :: Mods(:)      ! Array of variables
-   integer(IntKi), intent(in)    :: ModOrder(:)
-   real(R8Ki), intent(in)        :: PosAry(:)      ! Positive result array
-   real(R8Ki), intent(in)        :: NegAry(:)      ! Negative result array
-   real(R8Ki), intent(inout)     :: DiffAry(:)     ! Array containing difference
-   integer(IntKi)                :: i, j, k, ind(3)
-   real(R8Ki)                    :: DeltaWM(3), n(3), phi
-
-   ! Loop through module index order
-   do i = 1, size(ModOrder)
-
-      ! Loop through input variables in module
-      do j = 1, size(Mods(ModOrder(i))%Vars%u)
-
-         associate (Var => Mods(ModOrder(i))%Vars%u(j))
-
-            if (.not. allocated(Var%iGblSol)) cycle
-
-            ! If variable field is orientation
-            if (Var%Field == VF_Orientation) then
-
-               ! Loop through nodes
-               do k = 1, Var%Nodes
-
-                  ! Get vector of indicies of WM rotation parameters in array
-                  ind = Var%iGblSol(3*(k - 1) + 1:3*k)
-
-                  ! Compose WM parameters to go from negative to positive array
-                  DeltaWM = wm_compose(wm_inv(NegAry(ind)), PosAry(ind))
-
-                  ! Calculate change in rotation in XYZ in radians
-                  ! phi = TwoNorm(DeltaWM)
-                  ! n = DeltaWM/phi
-                  ! DiffAry(ind) = 4.0_R8Ki*atan(phi/4.0_R8Ki)*n
-                  ! DiffAry(ind) = 4.0_R8Ki*atan(DeltaWM/4.0_R8Ki)
-                  DiffAry(ind) = DeltaWM
-               end do
-
-            else
-
-               ! Subtract negative array from positive array
-               DiffAry(Var%iGblSol) = PosAry(Var%iGblSol) - NegAry(Var%iGblSol)
-            end if
-         end associate
-      end do
-   end do
-end subroutine
-
-subroutine Solver_BuildJacobian(p, m, Mods, this_time, iter, Turbine, ErrStat, ErrMsg)
+subroutine BuildJacobian(p, m, Mods, this_time, iter, Turbine, ErrStat, ErrMsg)
    type(TC_ParameterType), intent(in)     :: p           !< Parameters
-   type(TC_MiscVarType), intent(inOUT)    :: m           !< Misc variables
+   type(TC_MiscVarType), intent(inout)    :: m           !< Misc variables
    type(ModDataType), intent(in)          :: Mods(:)     !< Array of module data
    real(DbKi), intent(in)                 :: this_time   !< Time
    integer(IntKi), intent(in)             :: iter
@@ -1185,7 +1127,7 @@ subroutine Solver_BuildJacobian(p, m, Mods, this_time, iter, Turbine, ErrStat, E
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
 
-   character(*), parameter                :: RoutineName = 'Solver_BuildJacobian'
+   character(*), parameter                :: RoutineName = 'BuildJacobian'
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
    integer(IntKi)                         :: i, j
@@ -1203,7 +1145,7 @@ subroutine Solver_BuildJacobian(p, m, Mods, this_time, iter, Turbine, ErrStat, E
    ! Get module Jacobians and assemble
    !----------------------------------------------------------------------------
 
-   ! Initialize matrices
+   ! Initialize Jacobian matrices
    m%dYdx = 0.0_R8Ki
    m%dXdx = 0.0_R8Ki
    m%dXdu = 0.0_R8Ki
@@ -1239,70 +1181,47 @@ subroutine Solver_BuildJacobian(p, m, Mods, this_time, iter, Turbine, ErrStat, E
    ! G
    ! m%G = m%dUdu + matmul(m%dUdy, m%dYdu)
    m%G = m%dUdu
-   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, m%dUdy, m%dYdu, 1.0_R8Ki, m%G, ErrStat2, ErrMsg2); if (Failed()) return
+   call LAPACK_GEMM('N', 'N', 1.0_R8Ki, m%dUdy, m%dYdu, 1.0_R8Ki, m%G, ErrStat2, ErrMsg2)
+   if (Failed()) return
+
    !----------------------------------------------------------------------------
    ! Assemble Jacobian
    !----------------------------------------------------------------------------
 
    ! Group (1,1)
-   m%Jac(p%iJX2, p%iJX2) = -p%C(2)*m%dXdx(p%iX2Tight, p%iX2Tight) - p%C(3)*m%dXdx(p%iX2Tight, p%iX1Tight)
-   do i = 1, size(p%iJX2)
-      m%Jac(p%iJX2(i), p%iJX2(i)) = m%Jac(p%iJX2(i), p%iJX2(i)) + 1.0_R8Ki
+   m%Jac(p%iJX(1):p%iJX(2), p%iJX(1):p%iJX(2)) = &
+      -p%C(2)*m%dXdx(p%iX2(1):p%iX2(2), p%iX2(1):p%iX2(2)) - &
+      p%C(3)*m%dXdx(p%iX2(1):p%iX2(2), p%iX1(1):p%iX1(2))
+   do i = p%iJX(1), p%iJX(2)
+      m%Jac(i, i) = m%Jac(i, i) + 1.0_R8Ki
    end do
 
    ! Group (2,1)
-   m%Jac(p%iJT, p%iJX2) = p%C(2)*matmul(m%dUdy(p%iUTight, p%iyTight), m%dYdx(p%iyTight, p%iX2Tight)) + &
-                          p%C(3)*matmul(m%dUdy(p%iUTight, p%iyTight), m%dYdx(p%iyTight, p%iX1Tight))
+   m%Jac(p%iJUT(1):p%iJUT(2), p%iJX(1):p%iJX(2)) = &
+      p%C(2)*matmul(m%dUdy(p%iUT(1):p%iUT(2), p%iyT(1):p%iyT(2)), &
+                    m%dYdx(p%iyT(1):p%iyT(2), p%iX2(1):p%iX2(2))) + &
+      p%C(3)*matmul(m%dUdy(p%iUT(1):p%iUT(2), p%iyT(1):p%iyT(2)), &
+                    m%dYdx(p%iyT(1):p%iyT(2), p%iX1(1):p%iX1(2)))
 
    ! Group (1,2)
-   m%Jac(p%iJX2, p%iJT) = -m%dXdu(p%iX2Tight, p%iUTight)
+   m%Jac(p%iJX(1):p%iJX(2), p%iJUT(1):p%iJUT(2)) = -m%dXdu(p%iX2(1):p%iX2(2), p%iUT(1):p%iUT(2))
 
-   ! Group (2,2)
-   m%Jac(p%iJT, p%iJT) = m%G(p%iUTight, p%iUTight)
-   ! m%Jac(p%iJT, p%iJT) = m%dUdu(p%iUTight, p%iUTight) + &
-   !                       matmul(m%dUdy(p%iUTight, p%iyTight), m%dYdu(p%iyTight, p%iUTight))
-
-   ! If modules in option 1
-   if (size(p%iJ1) > 0) then
-
-      ! Group (3,2)
-      m%Jac(p%iJ1, p%iJT) = m%dUdu(p%iUOpt1, p%iUTight) + &
-                            matmul(m%dUdy(p%iUOpt1, p%iyTight), m%dYdu(p%iyTight, p%iUTight))
-      ! Group (2,3)
-      m%Jac(p%iJT, p%iJ1) = m%dUdu(p%iUTight, p%iUOpt1) + &
-                            matmul(m%dUdy(p%iUTight, p%iyOpt1), m%dYdu(p%iyOpt1, p%iUOpt1))
-      ! Group (3,3)
-      m%Jac(p%iJ1, p%iJ1) = m%dUdu(p%iUOpt1, p%iUOpt1) + &
-                            matmul(m%dUdy(p%iUOpt1, p%iyOpt1), m%dYdu(p%iyOpt1, p%iUOpt1))
-   end if
+   ! Group (2,2) - Inputs
+   m%Jac(p%iJU(1):p%iJU(2), p%iJU(1):p%iJU(2)) = m%G
 
    ! Condition jacobian matrix before factoring
    m%Jac(p%iJL, :) = m%Jac(p%iJL, :)/p%Scale_UJac
    m%Jac(:, p%iJL) = m%Jac(:, p%iJL)*p%Scale_UJac
 
-   ! if (munit == -1) then
-   !    call GetNewUnit(munit, ErrStat2, ErrMsg2); if (Failed()) return
-   !    call DumpMatrix(munit, "dUdu.bin", m%dUdu, ErrStat2, ErrMsg2); if (Failed()) return
-   !    call DumpMatrix(munit, "dUdy.bin", m%dUdy, ErrStat2, ErrMsg2); if (Failed()) return
-   !    call DumpMatrix(munit, "dXdu.bin", m%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
-   !    call DumpMatrix(munit, "dXdx.bin", m%dXdx, ErrStat2, ErrMsg2); if (Failed()) return
-   !    call DumpMatrix(munit, "dYdu.bin", m%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
-   !    call DumpMatrix(munit, "dYdx.bin", m%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
-   !    ! call DumpMatrix(munit, "ED-dXdu.bin", Turbine%ED%m%Vals%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
-   !    ! call DumpMatrix(munit, "ED-dXdx.bin", Turbine%ED%m%Vals%dXdx, ErrStat2, ErrMsg2); if (Failed()) return
-   !    ! call DumpMatrix(munit, "ED-dYdu.bin", Turbine%ED%m%Vals%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
-   !    ! call DumpMatrix(munit, "ED-dYdx.bin", Turbine%ED%m%Vals%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
-   !    call DumpMatrix(munit, "G.bin", m%G, ErrStat2, ErrMsg2); if (Failed()) return
-   ! end if
-   ! call DumpMatrix(munit, "jacs/BD-dXdu-"//trim(num2lstr(iter))//".bin", Turbine%BD%m(1)%Vals%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
-   ! call DumpMatrix(munit, "jacs/BD-dXdx-"//trim(num2lstr(iter))//".bin", Turbine%BD%m(1)%Vals%dXdx, ErrStat2, ErrMsg2); if (Failed()) return
-   ! call DumpMatrix(munit, "jacs/BD-dYdu-"//trim(num2lstr(iter))//".bin", Turbine%BD%m(1)%Vals%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
-   ! call DumpMatrix(munit, "jacs/BD-dYdx-"//trim(num2lstr(iter))//".bin", Turbine%BD%m(1)%Vals%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
-   ! call DumpMatrix(munit, "jacs/J-"//trim(num2lstr(iter))//".bin", m%Jac, ErrStat2, ErrMsg2); if (Failed()) return
+   ! Write debug matrices if requested
+   if (DebugJacobian) then
+      call BuildJacobian_Debug(m, Turbine, ErrStat2, ErrMsg2)
+      if (Failed()) return
+   end if
 
    ! Factor jacobian matrix
    call LAPACK_getrf(size(m%Jac, 1), size(m%Jac, 1), m%Jac, m%IPIV, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (Failed()) return
 
 contains
    logical function Failed()
@@ -1311,28 +1230,8 @@ contains
    end function
 end subroutine
 
-subroutine DumpMatrix(unit, filename, A, ErrStat, ErrMsg)
-   integer(IntKi), intent(in)             :: unit
-   character(*), intent(in)               :: filename
-   real(R8Ki), intent(in)                 :: A(:, :)
-   integer(IntKi), intent(out)            :: ErrStat
-   character(*), intent(out)              :: ErrMsg
-
-   character(*), parameter                :: RoutineName = 'DumpMatrix'
-   integer(IntKi)                         :: ErrStat2
-   character(ErrMsgLen)                   :: ErrMsg2
-
-   ErrStat = ErrID_None
-   ErrMsg = ''
-
-   call OpenBOutFile(unit, filename, ErrStat2, ErrMsg2)
-   write (unit) int(shape(A), B4Ki)
-   write (unit) pack(A, .true.)
-   close (unit)
-end subroutine
-
 subroutine AddDeltaToStates(Mods, ModOrder, dx, x)
-   type(ModDataType), intent(in)    :: Mods(:)  !< Solution variables from modules
+   type(ModDataType), intent(in)    :: Mods(:)  !< Module data
    integer(IntKi), intent(in)       :: ModOrder(:)
    real(R8Ki), intent(in)           :: dx(:)
    real(R8Ki), intent(inout)        :: x(:)
@@ -1373,7 +1272,7 @@ subroutine AddDeltaToStates(Mods, ModOrder, dx, x)
 end subroutine
 
 subroutine AddDeltaToInputs(Mods, ModOrder, du, u)
-   type(ModDataType), intent(in)    :: Mods(:)  !< Solution variables from modules
+   type(ModDataType), intent(in)    :: Mods(:)  !< Module data
    integer(IntKi), intent(in)       :: ModOrder(:)
    real(R8Ki), intent(in)           :: du(:)
    real(R8Ki), intent(inout)        :: u(:)
@@ -1402,10 +1301,10 @@ subroutine AddDeltaToInputs(Mods, ModOrder, du, u)
                ! un(Var%iGblSol) = mod(u(Var%iGblSol) + du(Var%iGblSol), TwoPi_R8)
                u(Var%iGblSol) = u(Var%iGblSol) + du(Var%iGblSol)
             case (VF_Orientation)
-               ! Compose WM components (du is in radians)
+               ! Compose WM components (change in orientation with orientation)
                do k = 1, size(Var%iGblSol), 3
                   ind = Var%iGblSol(k:k + 2)
-                  u(ind) = wm_compose(wm_from_xyz(du(ind)), u(ind))  ! du is in radians
+                  u(ind) = wm_compose(wm_from_xyz(du(ind)), u(ind))
                end do
             end select
 
@@ -1414,35 +1313,76 @@ subroutine AddDeltaToInputs(Mods, ModOrder, du, u)
    end do
 end subroutine
 
+subroutine ComputeDeltaU(Mods, ModOrder, PosAry, NegAry, DiffAry)
+   type(ModDataType), intent(in) :: Mods(:)        ! Array of modules
+   integer(IntKi), intent(in)    :: ModOrder(:)    ! Array of module indices
+   real(R8Ki), intent(in)        :: PosAry(:)      ! Positive result array
+   real(R8Ki), intent(in)        :: NegAry(:)      ! Negative result array
+   real(R8Ki), intent(inout)     :: DiffAry(:)     ! Array containing difference
+   integer(IntKi)                :: i, j, k, ind(3)
+   real(R8Ki)                    :: DeltaWM(3)
+
+   ! Loop through module index order
+   do i = 1, size(ModOrder)
+
+      ! Loop through input variables in module
+      do j = 1, size(Mods(ModOrder(i))%Vars%u)
+
+         associate (Var => Mods(ModOrder(i))%Vars%u(j))
+
+            if (.not. allocated(Var%iGblSol)) cycle
+
+            ! If variable field is orientation
+            if (Var%Field == VF_Orientation) then
+
+               ! Loop through nodes
+               do k = 1, Var%Nodes, 3
+
+                  ! Get vector of indicies of WM rotation parameters in array
+                  ind = Var%iGblSol(k:k + 2)
+
+                  ! Compose WM parameters to go from negative to positive array
+                  ! then store change in radians
+                  DiffAry(ind) = wm_to_xyz(wm_compose(wm_inv(NegAry(ind)), PosAry(ind)))
+               end do
+
+            else
+
+               ! Subtract negative array from positive array
+               DiffAry(Var%iGblSol) = PosAry(Var%iGblSol) - NegAry(Var%iGblSol)
+            end if
+         end associate
+      end do
+   end do
+end subroutine
+
 subroutine PackModuleStates(ModData, this_state, T, x)
-   type(ModDataType), intent(in)                      :: ModData(:)  !< Solution variables from modules
-   integer(IntKi), intent(in)                         :: this_state  !< State index
-   type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
-   real(R8Ki), allocatable, optional, intent(inout)   :: x(:)
-   integer(IntKi)                                     :: ii, j
+   type(ModDataType), intent(in)          :: ModData(:)  !< Module data
+   integer(IntKi), intent(in)             :: this_state  !< State index
+   type(FAST_TurbineType), intent(inout)  :: T           !< Turbine type
+   real(R8Ki), intent(inout)              :: x(:)
+   integer(IntKi)                         :: ii, j
 
    ! Must support all Tight Coupling modules
-   if (present(x)) then
-      do j = 1, size(ModData)
-         ii = ModData(j)%Ins
-         select case (ModData(j)%ID)
-         case (Module_ED)
-            call ED_PackStateValues(T%ED%p, T%ED%x(this_state), T%ED%m%Vals%x)
-            call XferLocToGbl1D(ModData(j)%ixs, T%ED%m%Vals%x, x)
-         case (Module_BD)
-            call BD_PackStateValues(T%BD%p(ii), T%BD%x(ii, this_state), T%BD%m(ii)%Vals%x)
-            call XferLocToGbl1D(ModData(j)%ixs, T%BD%m(ii)%Vals%x, x)
-         case (Module_SD)
-            ! call SD_PackStateValues(SD%p, SD%x(this_state), SD%m%Vals%x)
-            ! x(SD%p%Vars%ix) = SD%m%Vals%x
-         end select
-      end do
-   end if
+   do j = 1, size(ModData)
+      ii = ModData(j)%Ins
+      select case (ModData(j)%ID)
+      case (Module_ED)
+         call ED_PackStateValues(T%ED%p, T%ED%x(this_state), T%ED%m%Vals%x)
+         call XferLocToGbl1D(ModData(j)%ixs, T%ED%m%Vals%x, x)
+      case (Module_BD)
+         call BD_PackStateValues(T%BD%p(ii), T%BD%x(ii, this_state), T%BD%m(ii)%Vals%x)
+         call XferLocToGbl1D(ModData(j)%ixs, T%BD%m(ii)%Vals%x, x)
+      case (Module_SD)
+         ! call SD_PackStateValues(SD%p, SD%x(this_state), SD%m%Vals%x)
+         ! x(SD%p%Vars%ix) = SD%m%Vals%x
+      end select
+   end do
 
 end subroutine
 
 subroutine UnpackModuleStates(ModData, ModOrder, this_state, T, x)
-   type(ModDataType), intent(in)          :: ModData(:)  !< Solution variables from modules
+   type(ModDataType), intent(in)          :: ModData(:)  !< Module data
    integer(IntKi), intent(in)             :: ModOrder(:)
    integer(IntKi), intent(in)             :: this_state  !< State index
    type(FAST_TurbineType), intent(inout)  :: T           !< Turbine type
@@ -1453,11 +1393,9 @@ subroutine UnpackModuleStates(ModData, ModOrder, this_state, T, x)
       associate (Mod => ModData(ModOrder(j)))
          select case (Mod%ID)
          case (Module_ED)
-            call ED_PackStateValues(T%ED%p, T%ED%x(this_state), T%ED%m%Vals%x)
             call XferGblToLoc1D(Mod%ixs, x, T%ED%m%Vals%x)
             call ED_UnpackStateValues(T%ED%p, T%ED%m%Vals%x, T%ED%x(this_state))
          case (Module_BD)
-            call BD_PackStateValues(T%BD%p(Mod%Ins), T%BD%x(Mod%Ins, this_state), T%BD%m(Mod%Ins)%Vals%x)
             call XferGblToLoc1D(Mod%ixs, x, T%BD%m(Mod%Ins)%Vals%x)
             call BD_UnpackStateValues(T%BD%p(Mod%Ins), T%BD%m(Mod%Ins)%Vals%x, T%BD%x(Mod%Ins, this_state))
          case (Module_SD)
@@ -1468,54 +1406,61 @@ subroutine UnpackModuleStates(ModData, ModOrder, this_state, T, x)
 end subroutine
 
 ! PackModuleInputs packs input values from Option 1 modules
-subroutine PackModuleInputs(ModData, ModOrder, T, u, u_tmp)
-   type(ModDataType), intent(in)          :: ModData(:)  !< Solution variables from modules
+subroutine PackModuleInputs(ModData, ModOrder, T, u)
+   type(ModDataType), intent(in)          :: ModData(:)  !< Module data
    integer(IntKi), intent(in)             :: ModOrder(:)
    type(FAST_TurbineType), intent(inout)  :: T           !< Turbine type
-   real(R8Ki), optional, intent(inout)    :: u(:), u_tmp(:)
+   real(R8Ki), optional, intent(inout)    :: u(:)
    integer(IntKi)                         :: j
 
-   if (present(u)) then
-      do j = 1, size(ModOrder)
-         associate (Mod => ModData(ModOrder(j)))
-            select case (Mod%ID)
-            case (Module_ED)
-               call ED_PackInputValues(T%ED%p, T%ED%Input(1), T%ED%m%Vals%u)
-               call XferLocToGbl1D(Mod%ius, T%ED%m%Vals%u, u)
-            case (Module_BD)
-               call BD_PackInputValues(T%BD%p(Mod%Ins), T%BD%Input(1, Mod%Ins), T%BD%m(Mod%Ins)%Vals%u)
-               call XferLocToGbl1D(Mod%ius, T%BD%m(Mod%Ins)%Vals%u, u)
-            case (Module_SD)
-               ! call SD_PackInputValues(SD%p, SD%Input, SD%m%Vals%u)
-               ! u(SD%p%Vars%iu) = SD%m%Vals%u
-            end select
-         end associate
-      end do
-   end if
+   do j = 1, size(ModOrder)
+      associate (Mod => ModData(ModOrder(j)))
+         select case (Mod%ID)
+         case (Module_ED)
+            call ED_PackInputValues(T%ED%p, T%ED%Input(1), T%ED%m%Vals%u)
+            call XferLocToGbl1D(Mod%ius, T%ED%m%Vals%u, u)
+         case (Module_BD)
+            call BD_PackInputValues(T%BD%p(Mod%Ins), T%BD%Input(1, Mod%Ins), T%BD%m(Mod%Ins)%Vals%u)
+            call XferLocToGbl1D(Mod%ius, T%BD%m(Mod%Ins)%Vals%u, u)
+         case (Module_SD)
+            ! call SD_PackInputValues(SD%p, SD%Input, SD%m%Vals%u)
+            ! u(SD%p%Vars%iu) = SD%m%Vals%u
+         end select
+      end associate
+   end do
 
-   if (present(u_tmp)) then
-      do j = 1, size(ModOrder)
-         associate (Mod => ModData(ModOrder(j)))
-            select case (Mod%ID)
-            case (Module_ED)
-               call ED_PackInputValues(T%ED%p, T%ED%u, T%ED%m%Vals%u)
-               call XferLocToGbl1D(Mod%ius, T%ED%m%Vals%u, u_tmp)
-            case (Module_BD)
-               call BD_PackInputValues(T%BD%p(Mod%Ins), T%BD%u(Mod%Ins), T%BD%m(Mod%Ins)%Vals%u)
-               call XferLocToGbl1D(Mod%ius, T%BD%m(Mod%Ins)%Vals%u, u_tmp)
-            case (Module_SD)
-               ! call SD_PackInputValues(SD%p, SD%Input, SD%m%Vals%u)
-               ! u(SD%p%Vars%iu) = SD%m%Vals%u
-            end select
-         end associate
-      end do
-   end if
 end subroutine
 
-! PackModuleInputs packs input values from Option 1 modules
-subroutine UnpackModuleInputs(ModData, ModOrder, T, u)
-   type(ModDataType), intent(in)          :: ModData(:)  !< Solution variables from modules
+! PackModuleUs packs U values from Option 1 modules
+subroutine PackModuleUs(ModData, ModOrder, T, u)
+   type(ModDataType), intent(in)          :: ModData(:)  !< Module data
    integer(IntKi), intent(in)             :: ModOrder(:)
+   type(FAST_TurbineType), intent(inout)  :: T           !< Turbine type
+   real(R8Ki), intent(inout)              :: u(:)
+   integer(IntKi)                         :: j
+
+   do j = 1, size(ModOrder)
+      associate (Mod => ModData(ModOrder(j)))
+         select case (Mod%ID)
+         case (Module_ED)
+            call ED_PackInputValues(T%ED%p, T%ED%u, T%ED%m%Vals%u)
+            call XferLocToGbl1D(Mod%ius, T%ED%m%Vals%u, u)
+         case (Module_BD)
+            call BD_PackInputValues(T%BD%p(Mod%Ins), T%BD%u(Mod%Ins), T%BD%m(Mod%Ins)%Vals%u)
+            call XferLocToGbl1D(Mod%ius, T%BD%m(Mod%Ins)%Vals%u, u)
+         case (Module_SD)
+            ! call SD_PackInputValues(SD%p, SD%Input, SD%m%Vals%u)
+            ! u(SD%p%Vars%iu) = SD%m%Vals%u
+         end select
+      end associate
+   end do
+
+end subroutine
+
+! UnpackModuleInputs unpacks input values from Option 1 modules
+subroutine UnpackModuleInputs(ModData, ModOrder, T, u)
+   type(ModDataType), intent(in)          :: ModData(:)  !< Module data
+   integer(IntKi), intent(in)             :: ModOrder(:) !< Module index array
    type(FAST_TurbineType), intent(inout)  :: T           !< Turbine type
    real(R8Ki), intent(in)                 :: u(:)
    integer(IntKi)                         :: j
@@ -1539,27 +1484,134 @@ subroutine UnpackModuleInputs(ModData, ModOrder, T, u)
 
 end subroutine
 
-! PackModuleOutputs packs output values from Option 1 modules
-subroutine PackModuleOutputs(ModData, ModOrder, T, y)
-   type(ModDataType), intent(in)          :: ModData(:)  !< Solution variables from modules
-   integer(IntKi), intent(in)             :: ModOrder(:)
-   type(FAST_TurbineType), intent(inout)  :: T           !< Turbine type
-   real(R8Ki), intent(inout)              :: y(:)
-   integer(IntKi)                         :: j
+!-------------------------------------------------------------------------------
+! Debugging routines
+!-------------------------------------------------------------------------------
 
-   do j = 1, size(ModOrder)
-      associate (Mod => ModData(ModOrder(j)))
-         select case (Mod%ID)
-         case (Module_ED)
-            call ED_PackOutputValues(T%ED%p, T%ED%y, T%ED%m%Vals%y)
-            call XferLocToGbl1D(Mod%iys, T%ED%m%Vals%y, y)
-         case (Module_BD)
-            call BD_PackOutputValues(T%BD%p(Mod%Ins), T%BD%y(Mod%Ins), T%BD%m(Mod%Ins)%Vals%y)
-            call XferLocToGbl1D(Mod%iys, T%BD%m(Mod%Ins)%Vals%y, y)
-         end select
-      end associate
+subroutine Solver_Init_Debug(p, m, Mods)
+   type(TC_ParameterType), intent(in)  :: p           !< Parameters
+   type(TC_MiscVarType), intent(in)    :: m           !< Misc variables
+   type(ModDataType), intent(in)       :: Mods(:)     !< Module data
+   integer(IntKi)                      :: i, j
+
+   write (DebugUn, '(A,*(I4))') " p%iJX2  = ", p%iJX
+   write (DebugUn, '(A,*(I4))') " p%iJUT  = ", p%iJUT
+   write (DebugUn, '(A,*(I4))') " p%iJU   = ", p%iJU
+   write (DebugUn, '(A,*(I4))') " p%iJL   = ", p%iJL
+   write (DebugUn, '(A,*(I4))') " p%iX2   = ", p%iX2
+   write (DebugUn, '(A,*(I4))') " p%iX1   = ", p%iX1
+   write (DebugUn, '(A,*(I4))') " p%iUT   = ", p%iUT
+   write (DebugUn, '(A,*(I4))') " p%iU1   = ", p%iU1
+   write (DebugUn, '(A,*(I4))') " p%iyT   = ", p%iyT
+   write (DebugUn, '(A,*(I4))') " p%iy1   = ", p%iy1
+   write (DebugUn, *) "shape(m%dYdx) = ", shape(m%dYdx)
+   write (DebugUn, *) "shape(m%dYdu) = ", shape(m%dYdu)
+   write (DebugUn, *) "shape(m%dXdx) = ", shape(m%dXdx)
+   write (DebugUn, *) "shape(m%dXdu) = ", shape(m%dXdu)
+   write (DebugUn, *) "shape(m%dUdu) = ", shape(m%dUdu)
+   write (DebugUn, *) "shape(m%dUdy) = ", shape(m%dUdy)
+
+   do i = 1, size(Mods)
+      write (DebugUn, *) "Module   = ", Mods(i)%Abbr
+      write (DebugUn, *) "ModuleID = ", Mods(i)%ID
+      do j = 1, size(Mods(i)%Vars%x)
+         if (.not. allocated(Mods(i)%Vars%x(j)%iGblSol)) cycle
+         write (DebugUn, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" X "//trim(Mods(i)%Vars%x(j)%Name)// &
+            " ("//trim(MV_FieldString(Mods(i)%Vars%x(j)%Field))//")"
+         write (DebugUn, '(A,*(I4))') "  X iLoc    = ", Mods(i)%Vars%x(j)%iLoc
+         write (DebugUn, '(A,*(I4))') "  X iGblSol = ", Mods(i)%Vars%x(j)%iGblSol
+      end do
+      do j = 1, size(Mods(i)%Vars%u)
+         if (.not. allocated(Mods(i)%Vars%u(j)%iGblSol)) cycle
+         write (DebugUn, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" U "//trim(Mods(i)%Vars%u(j)%Name)// &
+            " ("//trim(MV_FieldString(Mods(i)%Vars%u(j)%Field))//")"
+         write (DebugUn, '(A,*(I4))') "  U iLoc    = ", Mods(i)%Vars%u(j)%iLoc
+         write (DebugUn, '(A,*(I4))') "  U iGblSol = ", Mods(i)%Vars%u(j)%iGblSol
+      end do
+      do j = 1, size(Mods(i)%Vars%y)
+         if (.not. allocated(Mods(i)%Vars%y(j)%iGblSol)) cycle
+         write (DebugUn, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" Y "//trim(Mods(i)%Vars%y(j)%Name)// &
+            " ("//trim(MV_FieldString(Mods(i)%Vars%y(j)%Field))//")"
+         write (DebugUn, '(A,*(I4))') "  Y iLoc    = ", Mods(i)%Vars%y(j)%iLoc
+         write (DebugUn, '(A,*(I4))') "  Y iGblSol = ", Mods(i)%Vars%y(j)%iGblSol
+      end do
    end do
+end subroutine
 
+subroutine Solver_Step_Debug(p, m, step, iterCorr, iterConv, delta_norm)
+   type(TC_ParameterType), intent(in)  :: p           !< Parameters
+   type(TC_MiscVarType), intent(in)    :: m           !< Misc variables
+   integer(IntKi), intent(in)          :: step, iterCorr, iterConv
+   real(R8Ki), intent(in)              :: delta_norm
+
+   write (DebugUn, *) "step = ", step
+   write (DebugUn, *) "iterCorr = ", iterCorr
+   write (DebugUn, *) "iterConv = ", iterConv
+   write (DebugUn, '(A,*(ES16.7))') " du = ", m%du
+   write (DebugUn, '(A,*(ES16.7))') " dx = ", m%dx
+   write (DebugUn, '(A,*(ES16.7))') " u  = ", m%un
+   write (DebugUn, '(A,*(ES16.7))') " u_tmp = ", m%u_tmp
+   write (DebugUn, '(A,*(ES16.7))') " U  = ", m%UDiff
+   write (DebugUn, '(A,*(ES16.7))') " x  = ", m%xn
+   write (DebugUn, *) "delta_norm = ", delta_norm
+end subroutine
+
+subroutine BuildJacobian_Debug(m, T, ErrStat, ErrMsg)
+   type(TC_MiscVarType), intent(in)    :: m        !< Misc variables
+   type(FAST_TurbineType), intent(in)  :: T        !< Turbine
+   integer(IntKi), intent(out)         :: ErrStat
+   character(*), intent(out)           :: ErrMsg
+
+   character(*), parameter    :: RoutineName = 'BuildJacobian_Debug'
+   integer(IntKi)             :: ErrStat2
+   character(ErrMsgLen)       :: ErrMsg2
+
+   if (MatrixUn == -1) then
+      call GetNewUnit(MatrixUn, ErrStat2, ErrMsg2); if (Failed()) return
+   end if
+
+   call DumpMatrix(MatrixUn, "dUdu.bin", m%dUdu, ErrStat2, ErrMsg2); if (Failed()) return
+   call DumpMatrix(MatrixUn, "dUdy.bin", m%dUdy, ErrStat2, ErrMsg2); if (Failed()) return
+   call DumpMatrix(MatrixUn, "dXdu.bin", m%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
+   call DumpMatrix(MatrixUn, "dXdx.bin", m%dXdx, ErrStat2, ErrMsg2); if (Failed()) return
+   call DumpMatrix(MatrixUn, "dYdu.bin", m%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
+   call DumpMatrix(MatrixUn, "dYdx.bin", m%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
+   call DumpMatrix(MatrixUn, "ED-dXdu.bin", T%ED%m%Vals%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
+   call DumpMatrix(MatrixUn, "ED-dXdx.bin", T%ED%m%Vals%dXdx, ErrStat2, ErrMsg2); if (Failed()) return
+   call DumpMatrix(MatrixUn, "ED-dYdu.bin", T%ED%m%Vals%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
+   call DumpMatrix(MatrixUn, "ED-dYdx.bin", T%ED%m%Vals%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
+   call DumpMatrix(MatrixUn, "G.bin", m%G, ErrStat2, ErrMsg2); if (Failed()) return
+   call DumpMatrix(MatrixUn, "BD-dXdu.bin", T%BD%m(1)%Vals%dXdu, ErrStat2, ErrMsg2); if (Failed()) return
+   call DumpMatrix(MatrixUn, "BD-dXdx.bin", T%BD%m(1)%Vals%dXdx, ErrStat2, ErrMsg2); if (Failed()) return
+   call DumpMatrix(MatrixUn, "BD-dYdu.bin", T%BD%m(1)%Vals%dYdu, ErrStat2, ErrMsg2); if (Failed()) return
+   call DumpMatrix(MatrixUn, "BD-dYdx.bin", T%BD%m(1)%Vals%dYdx, ErrStat2, ErrMsg2); if (Failed()) return
+   call DumpMatrix(MatrixUn, "J.bin", m%Jac, ErrStat2, ErrMsg2); if (Failed()) return
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
+subroutine DumpMatrix(unit, filename, A, ErrStat, ErrMsg)
+   integer(IntKi), intent(in)             :: unit
+   character(*), intent(in)               :: filename
+   real(R8Ki), intent(in)                 :: A(:, :)
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
+
+   character(*), parameter                :: RoutineName = 'DumpMatrix'
+   integer(IntKi)                         :: ErrStat2
+   character(ErrMsgLen)                   :: ErrMsg2
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   call OpenBOutFile(unit, filename, ErrStat2, ErrMsg2)
+   write (unit) int(shape(A), B4Ki)
+   write (unit) pack(A, .true.)
+   close (unit)
 end subroutine
 
 end module

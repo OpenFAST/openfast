@@ -587,9 +587,6 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
    call MV_AddVar(p%Vars%u, "BlPitchComC", VF_Scalar, Flags=VF_Ext, &
                   LinNames=['Extended input: collective blade-pitch command, rad'])
    p%iBlPitchComCVar = size(p%Vars%u)
-   ! call MV_AddVar(p%Vars%u, "TwrAddedMass",  VF_Scalar, Num=6*6*p%TwrNodes, Flags=VF_NoLin)
-   ! call MV_AddVar(p%Vars%u, "PtfmAddedMass", VF_Scalar, Num=6*6,            Flags=VF_NoLin)
-   ! call MV_AddVar(p%Vars%u, "HSSBrTrqC",     VF_Scalar, Num=1,              Flags=VF_NoLin)
    
    ! Set minimum input perturbations
    do i = 1,size(p%Vars%u)
@@ -650,7 +647,7 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
    if (ErrStat >= AbortErrLev) return
    InitOut%DerivOrder_x = 2
    do i = 1, size(p%Vars%x)
-      do j = 1, p%Vars%x(i)%NumLin
+      do j = 1, p%Vars%x(i)%Num
          InitOut%LinNames_x(p%Vars%x(i)%iLoc) = p%Vars%x(i)%LinNames
          InitOut%RotFrame_x(p%Vars%x(i)%iLoc) = iand(p%Vars%x(i)%Flags, VF_RotFrame) > 0
       end do
@@ -662,7 +659,7 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
    call AllocAry(InitOut%IsLoad_u,   p%Vars%Nu, 'IsLoad_u',   ErrStat2, ErrMsg2); if (Failed()) return
    if (ErrStat >= AbortErrLev) return
    do i = 1, size(p%Vars%u)
-      do j = 1, p%Vars%u(i)%NumLin
+      do j = 1, p%Vars%u(i)%Num
          InitOut%LinNames_u(p%Vars%u(i)%iLoc) = p%Vars%u(i)%LinNames
          InitOut%RotFrame_u(p%Vars%u(i)%iLoc) = iand(p%Vars%u(i)%Flags, VF_RotFrame) > 0
          InitOut%IsLoad_u(p%Vars%u(i)%iLoc)   = iand(p%Vars%u(i)%Field, VF_Force+VF_Moment) > 0
@@ -674,7 +671,7 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
    CALL AllocAry(InitOut%RotFrame_y, p%Vars%Ny, 'RotFrame_y', ErrStat2, ErrMsg2); if (Failed()) return
    if (ErrStat >= AbortErrLev) return
    do i = 1, size(p%Vars%y)
-      do j = 1, p%Vars%y(i)%NumLin
+      do j = 1, p%Vars%y(i)%Num
          InitOut%LinNames_y(p%Vars%y(i)%iLoc) = p%Vars%y(i)%LinNames
          InitOut%RotFrame_y(p%Vars%y(i)%iLoc) = iand(p%Vars%y(i)%Flags, VF_RotFrame) > 0
       end do
@@ -10602,11 +10599,11 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       ! Loop through input variables
       do i = 1, size(p%Vars%u)
 
-         ! If variable is not for linearization or is extended, skip
-         if (iand(p%Vars%u(i)%Flags, VF_NoLin+VF_Ext) > 0) cycle
+         ! If extended linearization variable, skip
+         if (iand(p%Vars%u(i)%Flags, VF_Ext) > 0) cycle
 
          ! Loop through number of linearization perturbations in variable
-         do j = 1,p%Vars%u(i)%NumLin
+         do j = 1,p%Vars%u(i)%Num
                        
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%u(i), j, 1, m%Vals%u, m%Vals%u_perturb, k)
@@ -10643,10 +10640,10 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       do i = 1,size(p%Vars%u)
 
          ! If extended linearization variable, skip
-         if (iand(p%Vars%u(i)%Flags, VF_NoLin+VF_Ext) > 0) cycle
+         if (iand(p%Vars%u(i)%Flags, VF_Ext) > 0) cycle
 
          ! Loop through number of linearization perturbations in variable
-         do j = 1,p%Vars%u(i)%NumLin
+         do j = 1,p%Vars%u(i)%Num
                        
             ! Calculate positive perturbation and resulting continuous state derivatives
             call MV_Perturb(p%Vars%u(i), j, 1, m%Vals%u, m%Vals%u_perturb, k)
@@ -10761,11 +10758,11 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       ! Loop through state variables
       do i = 1,size(p%Vars%x)
 
-         ! If variable is not for linearization or is extended, skip
-         if (iand(p%Vars%x(i)%Flags, VF_NoLin+VF_Ext) > 0) cycle
+         ! If extended linearization variable, skip
+         if (iand(p%Vars%x(i)%Flags, VF_Ext) > 0) cycle
 
          ! Loop through number of linearization perturbations in variable
-         do j = 1,p%Vars%x(i)%NumLin
+         do j = 1,p%Vars%x(i)%Num
                         
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%x(i), j, 1, m%Vals%x, m%Vals%x_perturb, k)
@@ -10798,11 +10795,11 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       ! Loop through state variables
       do i = 1,size(p%Vars%x)
 
-         ! If no-lin or extended linearization variable, skip
-         if (iand(p%Vars%x(i)%Flags, VF_NoLin+VF_Ext) > 0) cycle
+         ! If extended linearization variable, skip
+         if (iand(p%Vars%x(i)%Flags, VF_Ext) > 0) cycle
 
          ! Loop through number of linearization perturbations in variable
-         do j = 1,p%Vars%x(i)%NumLin
+         do j = 1,p%Vars%x(i)%Num
                         
             ! Calculate positive perturbation and resulting continuous state derivatives
             call MV_Perturb(p%Vars%x(i), j, 1, m%Vals%x, m%Vals%x_perturb, k)

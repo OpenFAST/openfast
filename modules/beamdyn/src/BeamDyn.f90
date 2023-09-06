@@ -408,7 +408,7 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
    call AllocAry(InitOut%DerivOrder_x, p%Vars%Nx, 'DerivOrder_x', ErrStat2, ErrMsg2); if (Failed()) return
    InitOut%DerivOrder_x = 2
    do i = 1, size(p%Vars%x)
-      do j = 1, p%Vars%x(i)%NumLin
+      do j = 1, p%Vars%x(i)%Num
          InitOut%LinNames_x(p%Vars%x(i)%iLoc) = p%Vars%x(i)%LinNames
          InitOut%RotFrame_x(p%Vars%x(i)%iLoc) = iand(p%Vars%x(i)%Flags, VF_RotFrame) > 0
       end do
@@ -419,7 +419,7 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
    call AllocAry(InitOut%RotFrame_u, p%Vars%Nu, 'RotFrame_u', ErrStat2, ErrMsg2); if (Failed()) return
    call AllocAry(InitOut%IsLoad_u,   p%Vars%Nu, 'IsLoad_u',   ErrStat2, ErrMsg2); if (Failed()) return
    do i = 1, size(p%Vars%u)
-      do j = 1, p%Vars%u(i)%NumLin
+      do j = 1, p%Vars%u(i)%Num
          InitOut%LinNames_u(p%Vars%u(i)%iLoc) = p%Vars%u(i)%LinNames
          InitOut%RotFrame_u(p%Vars%u(i)%iLoc) = iand(p%Vars%u(i)%Flags, VF_RotFrame) > 0
          InitOut%IsLoad_u(p%Vars%u(i)%iLoc)   = iand(p%Vars%u(i)%Field, VF_Force+VF_Moment) > 0
@@ -430,7 +430,7 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
    call AllocAry(InitOut%LinNames_y, p%Vars%Ny, 'LinNames_y', ErrStat2, ErrMsg2); if (Failed()) return
    call AllocAry(InitOut%RotFrame_y, p%Vars%Ny, 'RotFrame_y', ErrStat2, ErrMsg2); if (Failed()) return
    do i = 1, size(p%Vars%y)
-      do j = 1, p%Vars%y(i)%NumLin
+      do j = 1, p%Vars%y(i)%Num
          InitOut%LinNames_y(p%Vars%y(i)%iLoc) = p%Vars%y(i)%LinNames
          InitOut%RotFrame_y(p%Vars%y(i)%iLoc) = iand(p%Vars%y(i)%Flags, VF_RotFrame) > 0
       end do
@@ -2262,7 +2262,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    ENDIF
 
       ! Calculate internal forces and moments
-   CALL BD_InternalForceMoment( x, OtherState, p, m )
+   CALL BD_InternalForceMoment( x_tmp, OtherState, p, m )
 
       ! Transfer the FirstNodeReaction forces to the output ReactionForce
    y%ReactionForce%Force(:,1)    =  MATMUL(OtherState%GlbRot,m%FirstNodeReactionLclForceMoment(1:3))
@@ -2270,7 +2270,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
 
 
        ! set y%BldMotion fields:
-   CALL Set_BldMotion_Mesh( p, m%u2, x, OtherState, m, y)
+   CALL Set_BldMotion_Mesh( p, m%u2, x_tmp, OtherState, m, y)
 
    !-------------------------------------------------------
    !  compute RootMxr and RootMyr for ServoDyn and
@@ -6039,11 +6039,11 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       ! Loop through input variables
       do i = 1, size(p%Vars%u)
 
-         ! If variable is not for linearization or is extended, skip
-         if (iand(p%Vars%u(i)%Flags, VF_NoLin+VF_Ext) > 0) cycle
+         ! If variable is for extended linearization, skip
+         if (iand(p%Vars%u(i)%Flags, VF_Ext) > 0) cycle
 
          ! Loop through number of linearization perturbations in variable
-         do j = 1,p%Vars%u(i)%NumLin
+         do j = 1,p%Vars%u(i)%Num
 
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%u(i), j, 1, m%Vals%u, m%Vals%u_perturb, k)
@@ -6081,7 +6081,7 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          if (iand(p%Vars%u(i)%Flags, VF_Ext) > 0) cycle
 
          ! Loop through number of linearization perturbations in variable
-         do j = 1,p%Vars%u(i)%NumLin
+         do j = 1,p%Vars%u(i)%Num
 
             ! Calculate positive perturbation and resulting continuous state derivatives
             call MV_Perturb(p%Vars%u(i), j, 1, m%Vals%u, m%Vals%u_perturb, k)
@@ -6302,11 +6302,11 @@ SUBROUTINE BD_JacobianPContState_noRotate( t, u, p, x, xd, z, OtherState, y, m, 
       ! Loop through state variables
       do i = 1,size(p%Vars%x)
 
-         ! If variable is not for linearization or is extended, skip
-         if (iand(p%Vars%x(i)%Flags, VF_NoLin+VF_Ext) > 0) cycle
+         ! If variable is for extended linearization, skip
+         if (iand(p%Vars%x(i)%Flags, VF_Ext) > 0) cycle
             
          ! Loop through number of linearization perturbations in variable
-         do j = 1,p%Vars%x(i)%NumLin
+         do j = 1,p%Vars%x(i)%Num
                         
             ! Calculate positive perturbation
             call MV_Perturb(p%Vars%x(i), j, 1, m%Vals%x, m%Vals%x_perturb, k)
@@ -6344,7 +6344,7 @@ SUBROUTINE BD_JacobianPContState_noRotate( t, u, p, x, xd, z, OtherState, y, m, 
          if (iand(p%Vars%x(i)%Flags, VF_Ext) > 0) cycle
 
          ! Loop through number of linearization perturbations in variable
-         do j = 1,p%Vars%x(i)%Size
+         do j = 1,p%Vars%x(i)%Num
                         
             ! Calculate positive perturbation and resulting continuous state derivatives
             call MV_Perturb(p%Vars%x(i), j, 1, m%Vals%x, m%Vals%x_perturb, k)
@@ -6730,12 +6730,11 @@ subroutine BD_UpdateGlobalRef(u, p, x, OtherState, ErrStat, ErrMsg)
 
    character(*), parameter       :: RoutineName = 'BD_UpdateGlobalRef'
    integer(IntKi)                :: ErrStat2
-   character(ErrMsgLen)          :: ErrMsg2    ! Temporary Error message
+   character(ErrMsgLen)          :: ErrMsg2
    real(R8Ki)                    :: GlbWM_old(3), GlbWM_new(3), GlbWM_diff(3)
    real(R8Ki)                    :: GlbRot_old(3, 3), GlbRot_new(3, 3), GlbRot_diff(3, 3)
    real(R8Ki)                    :: GlbPos_old(3), GlbPos_new(3)
-   real(R8Ki)                    :: pos(3), rot(3), trans_vel(3), rot_vel(3), uuN0(3)
-   integer(IntKi)                :: i, j, temp_id, temp_id2
+   integer(IntKi)                :: i, j, temp_id
 
    ErrStat  = ErrID_None
    ErrMsg   = ""
@@ -6746,33 +6745,36 @@ subroutine BD_UpdateGlobalRef(u, p, x, OtherState, ErrStat, ErrMsg)
    GlbWM_old  = OtherState%Glb_crv
 
    ! Calculate new global position, rotation, and WM from root motion (updates otherstate reference frame info)
-   OtherState%GlbPos = u%RootMotion%Position(:, 1) + &
-                       u%RootMotion%TranslationDisp(:, 1)
-   OtherState%GlbRot = transpose(u%RootMotion%Orientation(:, :, 1))
-   OtherState%Glb_crv = wm_from_dcm(OtherState%GlbRot)
+   GlbPos_new = u%RootMotion%Position(:, 1) + &
+                u%RootMotion%TranslationDisp(:, 1)
+   GlbRot_new = transpose(u%RootMotion%Orientation(:, :, 1))
+   GlbWM_new = wm_from_dcm(GlbRot_new)
+   GlbRot_new = wm_to_dcm(GlbWM_new)
 
    ! Save new global position, rotation, and WM
-   GlbPos_new = OtherState%GlbPos
-   GlbRot_new = OtherState%GlbRot
-   GlbWM_new  = OtherState%Glb_crv
+   OtherState%GlbPos = GlbPos_new
+   OtherState%GlbRot = GlbRot_new
+   OtherState%Glb_crv = GlbWM_new
 
    ! Calculate differences between old and new reference
-   GlbRot_diff = matmul(transpose(GlbRot_old), GlbRot_new)
-   GlbWM_diff = wm_from_dcm(GlbRot_diff)
+   GlbWM_diff = wm_compose(wm_inv(GlbWM_new), GlbWM_old)
+   GlbRot_diff = wm_to_dcm(GlbWM_diff)
 
+   ! Loop through elements and nodes
    do i = 1, p%elem_total
       do j = 1, p%nodes_per_elem
 
-         temp_id = (i - 1)*(p%nodes_per_elem - 1) + j ! The last node of the first element is used as the first node in the second element.
+         ! The last node of the first element is used as the first node in the second element.
+         temp_id = (i - 1)*(p%nodes_per_elem - 1) + j 
 
          ! Calculate displacement in terms of new root motion mesh position
-         x%q(1:3, temp_id) = matmul(transpose(GlbRot_new), &
-                                    GlbPos_old - GlbPos_new + &
-                                    matmul(GlbRot_old, p%uuN0(1:3, j, i) + x%q(1:3, temp_id)) - &
-                                    matmul(GlbRot_new, p%uuN0(1:3, j, i)))
-         
-         ! Update the node orientation
-         x%q(4:6, temp_id) = wm_compose(GlbWM_diff, x%q(4:6, temp_id))
+         x%q(1:3, temp_id) =  matmul(transpose(GlbRot_new), &
+                                     GlbPos_old - GlbPos_new + &
+                                     matmul(GlbRot_old, p%uuN0(1:3, j, i) + x%q(1:3, temp_id)) - &
+                                     matmul(GlbRot_new, p%uuN0(1:3, j, i)))
+
+         ! Update the node orientation rotation of the node
+         call BD_CrvCompose(x%q(4:6, temp_id), GlbWM_diff, x%q(4:6, temp_id), FLAG_R1R2)
       end do
    end do
 
@@ -6781,6 +6783,16 @@ subroutine BD_UpdateGlobalRef(u, p, x, OtherState, ErrStat, ErrMsg)
 
    ! Update the rotational velocity
    x%dqdt(4:6, :) = matmul(GlbRot_diff, x%dqdt(4:6, :))
+   
+   ! Update the translational and rotational acceleration for GA2 algorithm
+   OtherState%acc(1:3, 1) = matmul(u%RootMotion%TranslationAcc(:, 1), GlbRot_new)
+   OtherState%acc(4:6, 1) = matmul(u%RootMotion%RotationAcc(:, 1), GlbRot_new)
+   OtherState%acc(1:3, 2:) = matmul(GlbRot_diff, OtherState%acc(1:3, 2:))
+   OtherState%acc(4:6, 2:) = matmul(GlbRot_diff, OtherState%acc(4:6, 2:))
+
+   ! Update the translational and rotational algorithm acceleration for GA2 algorithm
+   OtherState%xcc(1:3, :) = matmul(GlbRot_diff, OtherState%xcc(1:3, :))
+   OtherState%xcc(4:6, :) = matmul(GlbRot_diff, OtherState%xcc(4:6, :))
 
    ! Root node is always aligned with root motion mesh 
    x%q(:, 1) = 0.0_R8Ki

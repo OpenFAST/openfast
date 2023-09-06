@@ -126,20 +126,20 @@ typedef ^ ^                 R8Ki            AlphaF                 -  -  -      
 typedef ^ ^                 R8Ki            Beta                   -  -  -      "Generalized-alpha beta coefficient" -
 typedef ^ ^                 R8Ki            Gamma                  -  -  -      "Generalized-alpha gamma coefficient" -
 typedef ^ ^                 R8Ki            C                      3  -  -      "Generalized-alpha coefficient array" -
-typedef ^ ^                 IntKi           iX1Tight               :  -  -      "" -
-typedef ^ ^                 IntKi           iX2Tight               :  -  -      "" -
-typedef ^ ^                 IntKi           iUTight                :  -  -      "" -
-typedef ^ ^                 IntKi           iUOpt1                 :  -  -      "" -
-typedef ^ ^                 IntKi           iyTight                :  -  -      "" -
-typedef ^ ^                 IntKi           iyOpt1                 :  -  -      "" -
-typedef ^ ^                 IntKi           ixqd                   :: -  -      "" -
-typedef ^ ^                 IntKi           iuLoad                 :  -  -      "Indices of u load variables" -
-typedef ^ ^                 IntKi           iJX2                   :  -  -      "Indices of Jacobian q variables" -
-typedef ^ ^                 IntKi           iJT                    :  -  -      "Indices of Jacobian tight coupling variables" -
-typedef ^ ^                 IntKi           iJ1                    :  -  -      "Indices of Jacobian option 1 variables" -
+typedef ^ ^                 IntKi           iX1                    2  -  -      "" -
+typedef ^ ^                 IntKi           iX2                    2  -  -      "" -
+typedef ^ ^                 IntKi           iUT                    2  -  -      "" -
+typedef ^ ^                 IntKi           iU1                    2  -  -      "" -
+typedef ^ ^                 IntKi           iyT                    2  -  -      "" -
+typedef ^ ^                 IntKi           iy1                    2  -  -      "" -
+typedef ^ ^                 IntKi           iJX                    2  -  -      "Indices of Jacobian q variables" -
+typedef ^ ^                 IntKi           iJU                    2  -  -      "Indices of Jacobian input variables" -
+typedef ^ ^                 IntKi           iJUT                   2  -  -      "Indices of Jacobian input variables from tight coupling" -
 typedef ^ ^                 IntKi           iJL                    :  -  -      "Indices of Jacobian load variables" -
+typedef ^ ^                 IntKi           ixqd                   :: -  -      "" -
 typedef ^ ^                 IntKi           iModAll                :  -  -      "ModData index order for all modules" -
 typedef ^ ^                 IntKi           iModTC                 :  -  -      "ModData index order for tight coupling modules" -
+typedef ^ ^                 IntKi           iModBD                 :  -  -      "ModData index order for BD modules" -
 typedef ^ ^                 IntKi           iModOpt1               :  -  -      "ModData index order for option 1 modules" -
 typedef ^ ^                 IntKi           iModOpt1US             :  -  -      "ModData index order for option 1 modules to update states" -
 typedef ^ ^                 IntKi           iModOpt2               :  -  -      "ModData index order for option 2 modules" -
@@ -175,7 +175,6 @@ typedef ^ ^                 R8Ki            dx                     :  -  -      
 typedef ^ ^                 R8Ki            du                     :  -  -      "" -
 typedef ^ ^                 R8Ki            UDiff                  :  -  -      "" -
 typedef ^ ^                 TC_MappingType  Mappings               :  -  -      "Array of mesh mappings in solver" -
-typedef ^ ^                 IntKi           DebugUnit              -  -  -      "Unit number to write debug info" -
 
 
 # ..... FAST_ParameterType data .......................................................................................................

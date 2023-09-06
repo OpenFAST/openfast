@@ -67,25 +67,23 @@ param       ^       -           IntKi           VC_Option2          -   3   -   
 
 typedef     ^       ModVarType  character(VarNameLen)   Name        -   -   -   ""  -
 typedef     ^       ^           IntKi           Field               -   0   -   ""  -
-typedef     ^       ^           IntKi           Cat                 -   0   -   ""  -
 typedef     ^       ^           IntKi           Nodes               -   1   -   ""  -
-typedef     ^       ^           IntKi           Size                -   1   -   ""  -
+typedef     ^       ^           IntKi           Num                 -   1   -   ""  -
 typedef     ^       ^           IntKi           Flags               -   0   -   ""  -
 typedef     ^       ^           IntKi           DerivOrder          -   0   -   ""  -
-typedef     ^       ^           IntKi           NumLin              -   0   -   ""  -
 typedef     ^       ^           IntKi           iUsr                :   -   -   "user defined indices for variable"  -
 typedef     ^       ^           IntKi           iLoc                :   -   -   "indices in local arrays"  -
-typedef     ^       ^           IntKi           iGblSol             :   -   -   "indices in global arrays"  -
-typedef     ^       ^           IntKi           iGblLin             :   -   -   "indices in global arrays"  -
-typedef     ^       ^           IntKi           iy                  ::  -   -   "indices of output to sum for input"  -
+typedef     ^       ^           IntKi           iGblSol             :   -   -   "indices in global solver arrays"  -
+typedef     ^       ^           IntKi           iGblLin             :   -   -   "indices in global linearization arrays"  -
+typedef     ^       ^           IntKi           iq                  :   -   -   "q matrix row index"  -
 typedef     ^       ^           R8Ki            Perturb             -   0   -   "perturbation"  -
 typedef     ^       ^           character(LinChanLen)   LinNames    :   -   -   ""  -
 
 typedef     ^       ModVarsType IntKi           ModNum              -   0   -   ""  -
 typedef     ^       ^           character(6)    ModAbbr             -   -   -   ""  -
-typedef     ^       ^           ModVarType      x                   :   -   -   ""  -
-typedef     ^       ^           ModVarType      u                   :   -   -   ""  -
-typedef     ^       ^           ModVarType      y                   :   -   -   ""  -
+typedef     ^       ^           ModVarType      x                   :   -   -   "Module state variable array"  -
+typedef     ^       ^           ModVarType      u                   :   -   -   "Module input variable array"  -
+typedef     ^       ^           ModVarType      y                   :   -   -   "Module output variable array"  -
 typedef     ^       ^           IntKi           Nx                  -   -   -   ""  -
 typedef     ^       ^           IntKi           Nu                  -   -   -   ""  -
 typedef     ^       ^           IntKi           Ny                  -   -   -   ""  -
@@ -106,12 +104,11 @@ typedef     ^       ^           R8Ki            dYdu                ::  -   -   
 typedef     ^       ^           R8Ki            dXdu                ::  -   -   ""  -
 
 typedef     ^       ModDataType IntKi           Idx                 -   0   -   "Module index in array of modules"  -
-typedef     ^       ^           IntKi           ID                  -   0   -   ""  -
-typedef     ^       ^           character(ChanLen) Abbr             -   -   -   ""  -
-typedef     ^       ^           IntKi           Ins                 -   0   -   ""  -
-typedef     ^       ^           R8Ki            DT                  -   0   -   ""  -
-typedef     ^       ^           IntKi           SubSteps            -   0   -   ""  -
-typedef     ^       ^           IntKi           SolveOption         -   0   -   ""  -
+typedef     ^       ^           IntKi           ID                  -   0   -   "Module identification number"  -
+typedef     ^       ^           character(ChanLen) Abbr             -   -   -   "Module name abbreviation"  -
+typedef     ^       ^           IntKi           Ins                 -   0   -   "Module instance number"  -
+typedef     ^       ^           R8Ki            DT                  -   0   -   "Module time step"  -
+typedef     ^       ^           IntKi           SubSteps            -   0   -   "Module number of substeps per solver time step"  -
 typedef     ^       ^           IntKi           ixs                 ::  -   -   "index array mapping local x vector to global x vector" -
 typedef     ^       ^           IntKi           ius                 ::  -   -   "index array mapping local u vector to global u vector" -
 typedef     ^       ^           IntKi           iys                 ::  -   -   "index array mapping local y vector to global y vector" -
