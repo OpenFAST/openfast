@@ -194,6 +194,7 @@ CONTAINS
       p%mu_kA                = 0.0_DbKi
       p%mc                   = 1.0_DbKi
       p%cv                   = 200.0_DbKi
+      p%VisMeshes            = InitInp%VisMeshes   ! Visualization meshes requested by glue code
       DepthValue = ""  ! Start off as empty string, to only be filled if MD setting is specified (otherwise InitInp%WtrDepth is used)
                        ! DepthValue and InitInp%WtrDepth are processed later by setupBathymetry.
       WaterKinValue = ""
@@ -2207,6 +2208,14 @@ CONTAINS
       
       ! TODO: add feature for automatic water depth increase based on max anchor depth!
 
+
+      !--------------------------------------------------
+      ! initialize line visualization meshes if needed
+      if (p%VisMeshes .and. p%NLines > 0) then
+         call VisLinesMesh_Init(p,m,y,ErrStat2,ErrMsg2); if(Failed()) return
+      endif
+
+
    CONTAINS
 
 
@@ -2251,7 +2260,7 @@ CONTAINS
 
             IF ( ErrStat >= AbortErrLev ) THEN                
                IF (ALLOCATED(m%CpldConIs        ))  DEALLOCATE(m%CpldConIs       )
-               IF (ALLOCATED(m%FreeConIs       ))  DEALLOCATE(m%FreeConIs       )
+               IF (ALLOCATED(m%FreeConIs        ))  DEALLOCATE(m%FreeConIs       )
                IF (ALLOCATED(m%LineStateIs1     ))  DEALLOCATE(m%LineStateIs1     )
                IF (ALLOCATED(m%LineStateIsN     ))  DEALLOCATE(m%LineStateIsN     )
                IF (ALLOCATED(m%ConStateIs1      ))  DEALLOCATE(m%ConStateIs1     )
@@ -2606,6 +2615,13 @@ CONTAINS
   !    IF ( ErrStat >= AbortErrLev ) RETURN
 
 
+      !--------------------------------------------------
+      ! update line visualization meshes if needed
+      if (p%VisMeshes .and. p%NLines > 0) then
+         call VisLinesMesh_Update(p,m,y,ErrStat2,ErrMsg2)
+         CALL CheckError(ErrStat2, ErrMsg2)
+         IF ( ErrStat >= AbortErrLev ) RETURN
+      endif
 
    CONTAINS
 

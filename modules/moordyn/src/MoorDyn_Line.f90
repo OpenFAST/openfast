@@ -39,7 +39,8 @@ MODULE MoorDyn_Line
    PUBLIC :: Line_GetEndStuff
    PUBLIC :: Line_GetEndSegmentInfo
    PUBLIC :: Line_SetEndOrientation
-   
+   public :: VisLinesMesh_Init
+   public :: VisLinesMesh_Update
    
 
 CONTAINS
@@ -1630,6 +1631,95 @@ CONTAINS
 
    END SUBROUTINE Line_SetEndOrientation
    !--------------------------------------------------------------
+
+   subroutine VisLinesMesh_Init(p,m,y,ErrStat,ErrMsg)
+      type(MD_ParameterType), intent(in   )  :: p
+      type(MD_MiscVarType),   intent(in   )  :: m
+      type(MD_OutputType),    intent(inout)  :: y
+      integer(IntKi),         intent(  out)  :: ErrStat
+      character(*),           intent(  out)  :: ErrMsg
+      integer(IntKi)                         :: ErrStat2
+      character(ErrMsgLen)                   :: ErrMsg2
+      integer(IntKi)                         :: i,l
+      character(*), parameter                :: RoutineName = 'VisLinesMesh_Init'
+
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+
+      ! allocate line2 mesh for all lines
+      allocate (y%VisLinesMesh(p%NLines), STAT=ErrStat2);   if (Failed0('visualization mesh for lines')) return
+
+      ! Initialize mesh for each line (line nodes start at 0 index, so N+1 total nodes)
+      do l=1,p%NLines
+         CALL MeshCreate( BlankMesh = y%VisLinesMesh(l), &
+                NNodes          = m%LineList(l)%N+1,     &
+                IOS             = COMPONENT_OUTPUT,      &
+                TranslationDisp = .true.,                &
+                ErrStat=ErrStat2, ErrMess=ErrMsg2)
+         if (Failed())  return
+
+         ! Internal nodes (line nodes start at 0 index)
+         do i = 0,m%LineList(l)%N
+            call MeshPositionNode ( y%VisLinesMesh(l), i+1, real(m%LineList(l)%r(:,I),ReKi), ErrStat2, ErrMsg2 )
+            if (Failed())  return
+         enddo
+
+         ! make elements (line nodes start at 0 index, so N+1 total nodes)
+         do i = 2,m%LineList(l)%N+1
+            call MeshConstructElement ( Mesh      = y%VisLinesMesh(l)  &
+                                       , Xelement = ELEMENT_LINE2      &
+                                       , P1       = i-1                &   ! node1 number
+                                       , P2       = i                  &   ! node2 number
+                                       , ErrStat  = ErrStat2           &
+                                       , ErrMess  = ErrMsg2            )
+            if (Failed())  return
+         enddo
+
+         ! Commit mesh
+         call MeshCommit ( y%VisLinesMesh(l), ErrStat2, ErrMsg2 )
+         if (Failed())  return
+      enddo
+   contains
+      logical function Failed()
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         Failed = ErrStat >= AbortErrLev
+      end function Failed
+
+      ! check for failed where /= 0 is fatal
+      logical function Failed0(txt)
+         character(*), intent(in) :: txt
+         if (errStat /= 0) then
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = "Could not allocate "//trim(txt)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         endif
+         Failed0 = ErrStat >= AbortErrLev
+      end function Failed0
+   end subroutine VisLinesMesh_Init
+
+
+
+   subroutine VisLinesMesh_Update(p,m,y,ErrStat,ErrMsg)
+      type(MD_ParameterType), intent(in   )  :: p
+      type(MD_MiscVarType),   intent(in   )  :: m
+      type(MD_OutputType),    intent(inout)  :: y
+      integer(IntKi),         intent(  out)  :: ErrStat
+      character(*),           intent(  out)  :: ErrMsg
+      integer(IntKi)                         :: i,l
+      character(*), parameter                :: RoutineName = 'VisLinesMesh_Update'
+
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+
+      ! Initialize mesh for each line (line nodes start at 0 index, so N+1 total nodes)
+      do l=1,p%NLines
+         ! Update node positions nodes (line nodes start at 0 index)
+         do i = 0,m%LineList(l)%N
+            y%VisLinesMesh(l)%TranslationDisp(:,i+1) = real(m%LineList(l)%r(:,I),ReKi) - y%VisLinesMesh(l)%Position(:,i+1)
+         enddo
+      enddo
+   end subroutine VisLinesMesh_Update
+
 
 
 END MODULE MoorDyn_Line

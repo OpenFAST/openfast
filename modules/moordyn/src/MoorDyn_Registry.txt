@@ -34,6 +34,7 @@ typedef   ^           ^                FileInfoType       PassedPrimaryInputData
 typedef   ^           ^                LOGICAL            Echo           -   ""     -   "echo parameter - do we want to echo the header line describing the input file?"
 typedef   ^           ^                CHARACTER(ChanLen) OutList        {:}   ""   -   "string containing list of output channels requested in input file"
 typedef   ^           ^                Logical            Linearize      -   .FALSE. -  "Flag that tells this module if the glue code wants to linearize." -
+typedef   ^           ^                Logical            VisMeshes      -   .FALSE. -  "Glue code requesting visualization meshes" -
 
 #typedef   ^       ^                    DbKi         UGrid                  {:}{:}{:} -  -   "water velocities time series at each grid point"            -
 #typedef   ^       ^                    DbKi         UdGrid                 {:}{:}{:} -  -   "water accelerations time series at each grid point"            -
@@ -422,6 +423,7 @@ typedef   ^       ^                    R8Ki         dx                 {:}      
 typedef   ^       ^                    Integer      Jac_ny              -           -  -   "number of outputs in jacobian matrix" -
 typedef   ^       ^                    Integer      Jac_nx              -           -  -   "number of continuous states in jacobian matrix" -
 typedef   ^       ^                    Integer      dxIdx_map2_xStateIdx {:}        -  -   "Mapping array from index of dX array to corresponding state index" -
+typedef   ^       ^                    Logical      VisMeshes           -           -  -   "Using visualization meshes as requested by glue code" -
 
 
 # ============================== Inputs ============================================================================================================================================
@@ -439,3 +441,7 @@ typedef   ^       OutputType           MeshType     CoupledLoads          {:}   
 typedef   ^       ^                    ReKi         WriteOutput            {:}   -    -   "output vector returned to glue code" ""
 # should CoupledLoads be an array?
 #typedef   ^       ^                    DbKi         rAll                   {:}{:} -    -   "Mesh of all point positions: bodies, rods, points, line internal nodes"   -
+typedef   ^       ^                    MeshType     VisLinesMesh          {:}   -    -   "Line2 mesh for visualizing mooring lines" -
+typedef   ^       ^                    MeshType     VisRodsMesh           {:}   -    -   "Line2 mesh for visualizing mooring rods" -
+typedef   ^       ^                    MeshType     VisBodiesMesh         {:}   -    -   "Point mesh for visualizing mooring bodies" -
+typedef   ^       ^                    MeshType     VisAnchsMesh          {:}   -    -   "Point mesh for visualizing mooring anchors" -

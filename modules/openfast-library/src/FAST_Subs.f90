@@ -1011,7 +1011,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_MD%Tmax      = p_FAST%TMax                      ! expected simulation duration (used by MoorDyn for wave kinematics preprocesing)
 
       Init%InData_MD%Linearize = p_FAST%Linearize
-
+      if (p_FAST%WrVTK /= VTK_None) Init%InData_MD%VisMeshes=.true.
 
       CALL MD_Init( Init%InData_MD, MD%Input(1), MD%p, MD%x(STATE_CURR), MD%xd(STATE_CURR), MD%z(STATE_CURR), &
                     MD%OtherSt(STATE_CURR), MD%y, MD%m, p_FAST%dt_module( MODULE_MD ), Init%OutData_MD, ErrStat2, ErrMsg2 )
@@ -5677,6 +5677,13 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM, H
          call MeshWrVTK(p_FAST%TurbinePos, MD%y%CoupledLoads(1), trim(p_FAST%VTK_OutFileRoot)//'.MD_PtFairlead', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth, MD%Input(1)%CoupledKinematics(1) )
          !call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%CoupledKinematics, trim(p_FAST%VTK_OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
       end if
+      if (allocated(MD%y%VisLinesMesh)) then
+         do j=1,size(MD%y%VisLinesMesh)
+            if (MD%y%VisLinesMesh(j)%Committed) then
+               call MeshWrVTK(p_FAST%TurbinePos, MD%y%VisLinesMesh(j), trim(p_FAST%VTK_OutFileRoot)//'.MD_Line'//trim(Num2LStr(j)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrSTat2, ErrMsg2, p_FAST%VTK_tWidth )
+            endif
+         enddo
+      endif
 
 ! FEAMooring
    ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
@@ -5739,7 +5746,7 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM,
    TYPE(IceFloe_Data),       INTENT(IN   ) :: IceF                !< IceFloe data
    TYPE(IceDyn_Data),        INTENT(IN   ) :: IceD                !< All the IceDyn data used in time-step loop
 
-   INTEGER(IntKi)                          :: NumBl, k
+   INTEGER(IntKi)                          :: NumBl, k, j
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'WrVTK_BasicMeshes'
@@ -5807,8 +5814,16 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM,
 ! Mooring Lines?
 !   IF ( p_FAST%CompMooring == Module_MAP ) THEN
 !      call MeshWrVTK(p_FAST%TurbinePos, MAPp%Input(1)%PtFairDisplacement, trim(p_FAST%VTK_OutFileRoot)//'.MAP_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
-!   ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
-!      call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%CoupledKinematics, trim(p_FAST%VTK_OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
+   if ( p_FAST%CompMooring == Module_MD ) then
+      !call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%CoupledKinematics, trim(p_FAST%VTK_OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
+      if (allocated(MD%y%VisLinesMesh)) then
+         do j=1,size(MD%y%VisLinesMesh)
+            if (MD%y%VisLinesMesh(j)%Committed) then
+               call MeshWrVTK(p_FAST%TurbinePos, MD%y%VisLinesMesh(j), trim(p_FAST%VTK_OutFileRoot)//'.MD_Line'//trim(Num2LStr(j)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrSTat2, ErrMsg2, p_FAST%VTK_tWidth )
+            endif
+         enddo
+      endif
+   endif
 !   ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
 !      call MeshWrVTK(p_FAST%TurbinePos, FEAM%Input(1)%PtFairleadDisplacement, trim(p_FAST%VTK_OutFileRoot)//'FEAM_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
 !   END IF
@@ -5843,7 +5858,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW
 
 
    logical, parameter                      :: OutputFields = .FALSE. ! due to confusion about what fields mean on a surface, we are going to just output the basic meshes if people ask for fields
-   INTEGER(IntKi)                          :: NumBl, k
+   INTEGER(IntKi)                          :: NumBl, k, l
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'WrVTK_Surfaces'
@@ -5934,8 +5949,18 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW
 ! Mooring Lines?            
 !   IF ( p_FAST%CompMooring == Module_MAP ) THEN
 !      call MeshWrVTK(p_FAST%TurbinePos, MAPp%Input(1)%PtFairDisplacement, trim(p_FAST%VTK_OutFileRoot)//'.MAP_PtFair_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2 )
-!   ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
-!      call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%CoupledKinematics, trim(p_FAST%VTK_OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2 )        
+   if ( p_FAST%CompMooring == Module_MD ) THEN
+      !call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%CoupledKinematics, trim(p_FAST%VTK_OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2 )        
+      if (allocated(MD%y%VisLinesMesh)) then
+         do l=1,size(MD%y%VisLinesMesh)
+            if (MD%y%VisLinesMesh(l)%Committed) then  ! No orientation data, so surface representation not possible
+               call MeshWrVTK(p_FAST%TurbinePos, MD%y%VisLinesMesh(l), trim(p_FAST%VTK_OutFileRoot)//'.MD_Line'//trim(Num2LStr(l)), y_FAST%VTK_count, p_FAST%VTK_fields, &
+                     ErrSTat2, ErrMsg2, p_FAST%VTK_tWidth )
+            endif
+         enddo
+      endif
+
+   endif
 !   ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
 !      call MeshWrVTK(p_FAST%TurbinePos, FEAM%Input(1)%PtFairleadDisplacement, trim(p_FAST%VTK_OutFileRoot)//'FEAM_PtFair_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2   )
 !   END IF
