@@ -113,8 +113,8 @@ typedef  ^                       ^                 CHARACTER(LinChanLen)  LinNam
 typedef  ^                       ^                 LOGICAL                RotFrame_y       {:}  -   -    "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
 typedef  ^                       ^                 LOGICAL                RotFrame_u       {:}  -   -    "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
 typedef  ^                       ^                 LOGICAL                IsLoad_u         {:}  -   -    "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
-typedef  ^                       ^                 FlowFieldType         *FlowField        -   -   -    "Flow field data to represent all wind types"  -
-
+typedef  ^                       ^                 FlowFieldType         *FlowField         -   -   -    "Flow field data to represent all wind types"  -
+typedef	 ^                       ^                 ModVarsType           *Vars              -   -   -    "Module Variables"
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -131,6 +131,7 @@ typedef  ^                       ^                 OutParmType       OutParam   
 typedef  ^                       ^                 IntKi             OutParamLinIndx  {:}{:} -     -     "Index into WriteOutput for WindViXYZ in linearization analysis" -
 typedef  ^                       ^               lidar_ParameterType lidar             -     -     -     "Lidar parameter data"                                       -
 typedef  ^                       ^                 LOGICAL           OutputAccel      -     .FALSE.     -      "Flag to output wind acceleration"                                    -
+typedef  ^                       ^                 ModVarsType      &Vars              -     -     -      "Module Variables"                                    -
 
 
 # ..... Inputs ....................................................................................................................
@@ -167,3 +168,4 @@ typedef  ^                       ^                 InflowWind_InputType  u_Avg  
 typedef  ^                       ^                 InflowWind_OutputType y_Avg         -     -     -     "outputs for computing rotor-averaged values"  -
 typedef  ^                       ^                 InflowWind_InputType  u_Hub         -     -     -     "inputs for computing hub values"  -
 typedef  ^                       ^                 InflowWind_OutputType y_Hub         -     -     -     "outputs for computing hub values"  -
+typedef  ^                       ^                 ModValsType           Vals          -     -     -     "Values corresponding to module variables"

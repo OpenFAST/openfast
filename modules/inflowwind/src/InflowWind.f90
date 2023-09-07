@@ -143,8 +143,6 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    INTEGER(IntKi)                                        :: SumFileUnit       !< Unit number for the summary file
    CHARACTER(256)                                        :: SumFileName       !< Name of the summary file
    CHARACTER(256)                                        :: EchoFileName      !< Name of the summary file
-   CHARACTER(1), PARAMETER                               :: UVW(3) = (/'U','V','W'/)
-   CHARACTER(1), PARAMETER                               :: XYZ(3) = (/'X','Y','Z'/)
    INTEGER(IntKi)                                        :: TmpErrStat
    CHARACTER(ErrMsgLen)                                  :: TmpErrMsg         !< temporary error message
 
@@ -582,75 +580,16 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
    InitOutData%WriteOutputUnt = p%OutParam(1:p%NumOuts)%Units     
 
    !----------------------------------------------------------------------------
-   ! Linearization
+   ! Module Variables
    !----------------------------------------------------------------------------
-      
-   ! allocate and fill variables for linearization
-   if (InitInp%Linearize) then
 
-      ! If field is uniform and there is any nonzero upflow, return error
-      ! Math needs work before this can be implemented
-      if (p%FlowField%FieldType == Uniform_FieldType) then
-         if (any(p%FlowField%Uniform%AngleV /= 0.0_ReKi)) then
-            call SetErrStat(ErrID_Fatal, 'Upflow in uniform wind files must be 0 for linearization analysis in InflowWind.', ErrStat, ErrMsg, RoutineName)
-            call Cleanup()
-            return
-         end if
-      end if
-
-      ! also need to add InputGuess%HubOrientation to the u%Linear items
-      CALL AllocAry(InitOutData%LinNames_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'LinNames_u', TmpErrStat, TmpErrMsg) ! add hub position, orientation(3) + extended inputs
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      CALL AllocAry(InitOutData%RotFrame_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'RotFrame_u', TmpErrStat, TmpErrMsg)
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      CALL AllocAry(InitOutData%IsLoad_u, InitInp%NumWindPoints*3 + size(InputGuess%HubPosition) + 3 + NumExtendedInputs, 'IsLoad_u', TmpErrStat, TmpErrMsg)
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      CALL AllocAry(InitOutData%LinNames_y, InitInp%NumWindPoints*3 + size(y%DiskVel) + p%NumOuts, 'LinNames_y', TmpErrStat, TmpErrMsg)
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      CALL AllocAry(InitOutData%RotFrame_y, InitInp%NumWindPoints*3 + size(y%DiskVel) + p%NumOuts, 'RotFrame_y', TmpErrStat, TmpErrMsg)
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF (ErrStat >= AbortErrLev) THEN
+   CALL Init_ModuleVars(InitInp, InputGuess, p, y, m, InitOutData, InputFileData, TmpErrStat, TmpErrMsg)
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat>= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       ENDIF
       
-      do i=1,InitInp%NumWindPoints
-         do j=1,3
-            InitOutData%LinNames_y((i-1)*3+j) = UVW(j)//'-component inflow velocity at node '//trim(num2lstr(i))//', m/s'
-            InitOutData%LinNames_u((i-1)*3+j) = XYZ(j)//'-component position of node '//trim(num2lstr(i))//', m'
-         end do
-      end do
-
-      ! hub position
-      Lin_Indx = InitInp%NumWindPoints*3
-      do j=1,3
-         InitOutData%LinNames_y(Lin_Indx+j) = 'average '//UVW(j)//'-component rotor-disk velocity, m/s'
-         InitOutData%LinNames_u(Lin_Indx+j) = XYZ(j)//'-component position of moving hub, m'
-      end do
-      Lin_Indx = Lin_Indx + 3
-      
-      ! hub orientation angles
-      do j=1,3
-         InitOutData%LinNames_u(Lin_Indx+j) = XYZ(j)//' orientation of moving hub, rad'
-      end do
-      Lin_Indx = Lin_Indx + 3
-      
-      InitOutData%LinNames_u(Lin_Indx + 1) = 'Extended input: horizontal wind speed (steady/uniform wind), m/s'
-      InitOutData%LinNames_u(Lin_Indx + 2) = 'Extended input: vertical power-law shear exponent, -'
-      InitOutData%LinNames_u(Lin_Indx + 3) = 'Extended input: propagation direction, rad'         
-      
-      do i=1,p%NumOuts
-         InitOutData%LinNames_y(i+3*InitInp%NumWindPoints+size(y%DiskVel)) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
-      end do
-
-      ! IfW inputs and outputs are in the global, not rotating frame
-      InitOutData%RotFrame_u = .false. 
-      InitOutData%RotFrame_y = .false. 
-
-      InitOutData%IsLoad_u = .false. ! IfW inputs for linearization are not loads
-      
-   end if
-               
    ! Set the version information in InitOutData
    InitOutData%Ver = IfW_Ver
 
@@ -678,6 +617,134 @@ CONTAINS
    
 END SUBROUTINE InflowWind_Init
 
+!----------------------------------------------------------------------------------------------------------------------------------
+subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat, ErrMsg)
+   TYPE(InflowWind_InitInputType),    INTENT(IN   )  :: InitInp        !< Input data for initialization routine
+   TYPE(InflowWind_InputType),        INTENT(IN   )  :: u              !< An initial guess for the input; input mesh must be defined
+   TYPE(InflowWind_ParameterType),    INTENT(INOUT)  :: p              !< Parameters
+   TYPE(InflowWind_OutputType),       INTENT(IN)     :: y              !< Initial system outputs (outputs are not calculated;
+   TYPE(InflowWind_MiscVarType),      INTENT(INOUT)  :: m              !< Misc variables for optimization (not copied in glue code)
+   TYPE(InflowWind_InitOutputType),   INTENT(INOUT)  :: InitOut        !< Output for initialization routine
+   TYPE(InflowWind_InputFile),        INTENT(IN   )  :: InputFileData  !< Input file data
+   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat        !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   
+   character(*), parameter    :: RoutineName = 'Init_ModuleVars'
+   INTEGER(IntKi)             :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)       :: ErrMsg2                      ! Temporary Error message
+   CHARACTER(1), PARAMETER    :: UVW(3) = (/'U','V','W'/)
+   CHARACTER(1), PARAMETER    :: XYZ(3) = (/'X','Y','Z'/)
+   integer(IntKi)             :: i, j, flags
+   REAL(R8Ki)                 :: MaxThrust, MaxTorque, ScaleLength
+   TYPE(ModVarType)           :: Var
+
+   ! Allocate space for variables (deallocate if already allocated)
+   if (associated(p%Vars)) deallocate(p%Vars)
+   allocate(p%Vars, stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Associate pointers in initialization output
+   InitOut%Vars => p%Vars
+
+   !----------------------------------------------------------------------------
+   ! Input variables
+   !----------------------------------------------------------------------------
+
+   ! Wind points
+   do i = 1, InitInp%NumWindPoints
+      call MV_AddVar(p%Vars%u, 'node '//trim(num2lstr(i))//' position', VF_Scalar, Num=3, &
+                     LinNames=[(XYZ(j)//'-component position of node '//trim(num2lstr(i))//', m', j=1,3)])
+   end do
+
+   ! Hub
+   call MV_AddVar(p%Vars%u, 'hub position', VF_Scalar, Num=3, &
+                  LinNames=[(XYZ(j)//'-component position of moving hub, m', j=1,3)])
+   call MV_AddVar(p%Vars%u, 'hub orientation', VF_Scalar, Num=3, &
+                  LinNames=[(XYZ(j)//' orientation of moving hub, rad', j=1,3)])
+
+   ! Extended
+   call MV_AddVar(p%Vars%u, 'VelH', VF_Scalar, Flags=VF_Ext, &
+                  LinNames=['Extended input: horizontal wind speed (steady/uniform wind), m/s'])
+   call MV_AddVar(p%Vars%u, 'ShrExp', VF_Scalar, Flags=VF_Ext, &
+                  LinNames=['Extended input: vertical power-law shear exponent, -'])
+   call MV_AddVar(p%Vars%u, 'PropDir', VF_Scalar, Flags=VF_Ext, &
+                  LinNames=['Extended input: propagation direction, rad'])
+
+   !----------------------------------------------------------------------------
+   ! Output variables
+   !----------------------------------------------------------------------------
+
+   ! Inflow velocity at wind points
+   do i = 1, InitInp%NumWindPoints
+      call MV_AddVar(p%Vars%y, 'node '//trim(num2lstr(i))//' inflow', VF_Scalar, Num=3, &
+                     LinNames=[(UVW(j)//'-component inflow velocity at node '//trim(num2lstr(i))//', m/s', j=1,3)])
+   end do
+
+   ! Average rotor disk velocity
+   call MV_AddVar(p%Vars%y, 'avg rotor disk velocity', VF_Scalar, Num=3, &
+                     LinNames=[('average '//UVW(j)//'-component rotor-disk velocity, m/s', j=1,3)])
+   
+   ! Outputs
+   do i = 1, p%NumOuts
+      call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, VF_Scalar, Num=p%NumOuts, &
+                     LinNames=[trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units])
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Initialize Variables and Values
+   !----------------------------------------------------------------------------
+
+   CALL MV_InitVarsVals(p%Vars, m%Vals, InitInp%Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+   !----------------------------------------------------------------------------
+   ! Linearization
+   !----------------------------------------------------------------------------
+
+   ! If linearization is not requested, return
+   if (.not. InitInp%Linearize) return
+
+   ! If field is uniform and there is any nonzero upflow, return error
+   ! Math needs work before this can be implemented
+   if (p%FlowField%FieldType == Uniform_FieldType) then
+      if (any(p%FlowField%Uniform%AngleV /= 0.0_ReKi)) then
+         call SetErrStat(ErrID_Fatal, 'Upflow in uniform wind files must be 0 for linearization analysis in InflowWind.', ErrStat, ErrMsg, RoutineName)
+         return
+      end if
+   end if
+   
+   ! Input Variables
+   call AllocAry(InitOut%LinNames_u, p%Vars%Nu, 'LinNames_u', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(InitOut%RotFrame_u, p%Vars%Nu, 'RotFrame_u', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(InitOut%IsLoad_u,   p%Vars%Nu, 'IsLoad_u',   ErrStat2, ErrMsg2); if (Failed()) return
+   if (ErrStat >= AbortErrLev) return
+   do i = 1, size(p%Vars%u)
+      do j = 1, p%Vars%u(i)%Num
+         InitOut%LinNames_u(p%Vars%u(i)%iLoc) = p%Vars%u(i)%LinNames
+         InitOut%RotFrame_u(p%Vars%u(i)%iLoc) = iand(p%Vars%u(i)%Flags, VF_RotFrame) > 0
+         InitOut%IsLoad_u(p%Vars%u(i)%iLoc)   = iand(p%Vars%u(i)%Field, VF_Force+VF_Moment) > 0
+      end do
+   end do
+
+   ! Output variables
+   CALL AllocAry(InitOut%LinNames_y, p%Vars%Ny, 'LinNames_y', ErrStat2, ErrMsg2); if (Failed()) return
+   CALL AllocAry(InitOut%RotFrame_y, p%Vars%Ny, 'RotFrame_y', ErrStat2, ErrMsg2); if (Failed()) return
+   if (ErrStat >= AbortErrLev) return
+   do i = 1, size(p%Vars%y)
+      do j = 1, p%Vars%y(i)%Num
+         InitOut%LinNames_y(p%Vars%y(i)%iLoc) = p%Vars%y(i)%LinNames
+         InitOut%RotFrame_y(p%Vars%y(i)%iLoc) = iand(p%Vars%y(i)%Flags, VF_RotFrame) > 0
+      end do
+   end do
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
 
 !====================================================================================================
 !> This routine takes an input dataset of type InputType which contains a position array of dimensions 3*n. It then calculates
