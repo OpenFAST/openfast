@@ -26,9 +26,9 @@ integer(IntKi), parameter  :: COL_D = 1, COL_V = 2, COL_A = 3, COL_AA = 4
 integer(IntKi), parameter  :: TC_Modules(*) = [Module_ED, Module_BD, Module_SD]
 
 ! Debugging
-logical, parameter         :: DebugSolver = .true.
+logical, parameter         :: DebugSolver = .false.
 integer(IntKi)             :: DebugUn = -1
-logical, parameter         :: DebugJacobian = .true.
+logical, parameter         :: DebugJacobian = .false.
 integer(IntKi)             :: MatrixUn = -1
 
 contains
@@ -87,8 +87,8 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
                    pack([(i, i=1, size(Mods))], ModIDs == Module_HD), &
                    pack([(i, i=1, size(Mods))], ModIDs == Module_Orca)]
 
-   ! Ordering array for BeamDyn modules  
-   p%iModBD = [pack([(i, i=1, size(Mods))], ModIDs == Module_BD)]              
+   ! Ordering array for BeamDyn modules
+   p%iModBD = [pack([(i, i=1, size(Mods))], ModIDs == Module_BD)]
 
    !----------------------------------------------------------------------------
    ! Initialize mesh mappings (must be done before calculating global indices)
@@ -411,7 +411,7 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
    ! Calculate generalized alpha parameters
    !----------------------------------------------------------------------------
 
-   p%AccBlend = 0.0_R8Ki
+   p%AccBlend = 1.0_R8Ki
 
    p%AlphaM = (2.0_R8Ki*p%RhoInf - 1.0_R8Ki)/(p%RhoInf + 1.0_R8Ki)
    p%AlphaF = p%RhoInf/(p%RhoInf + 1.0_R8Ki)
@@ -828,11 +828,13 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
                      p%AlphaF*m%qn(:, COL_A) - &
                      p%AlphaM*m%qn(:, COL_AA))/(1.0_R8Ki - p%AlphaM)
 
+   ! Calculate displacements for the next step
    m%q(:, COL_D) = m%qn(:, COL_D) + &
-                   p%DT*m%qn(:,COL_V) + &
+                   p%DT*m%qn(:, COL_V) + &
                    p%DT**2*(0.5_R8Ki - p%Beta)*m%qn(:, COL_AA) + &
                    p%DT**2*p%Beta*m%q(:, COL_AA)
-   
+
+   ! Calculate velocities for the next step
    m%q(:, COL_V) = m%qn(:, COL_V) + &
                    p%DT*(1.0_R8Ki - p%Gamma)*m%qn(:, COL_AA) + &
                    p%DT*p%Gamma*m%q(:, COL_AA)
@@ -1017,7 +1019,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! Add delta to x array to get new states (respect variable fields)
          call AddDeltaToStates(Mods, p%iModTC, m%dx, m%xn)
 
-         ! Overwrites state matrix values that were changed in AddDeltaToStates        
+         ! Overwrites state matrix values that were changed in AddDeltaToStates
          call Solver_TransferXtoQ(p%ixqd, m%xn, m%qn)
 
          ! Transfer updated state to TC modules
@@ -1091,8 +1093,10 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          call BD_PackStateValues(p_BD, x_BD, m_BD%Vals%x)
          call XferLocToGbl1D(Mod%ixs, m_BD%Vals%x, m%xn)
       end associate
-
    end do
+
+   ! Update state matrix from state array
+   call Solver_TransferXtoQ(p%ixqd, m%xn, m%qn)
 
    ! Copy the final predicted states from step t_global_next to actual states for that step
    do i = 1, size(p%iModAll)

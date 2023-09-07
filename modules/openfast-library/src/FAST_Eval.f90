@@ -308,12 +308,6 @@ subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, x_TC, q_TC, T, ErrStat,
       call XferGblToLoc1D(Mod%ixs, x_TC, T%BD%m(Mod%Ins)%Vals%x)
       call BD_UnpackStateValues(T%BD%p(Mod%Ins), T%BD%m(Mod%Ins)%Vals%x, T%BD%x(Mod%Ins, STATE_PRED))
 
-      ! Root node is always aligned with root motion mesh
-      associate (u_BD => T%BD%Input(1, Mod%Ins), x_BD => T%BD%x(Mod%Ins, STATE_PRED), OtherSt_BD => T%BD%OtherSt(1, Mod%Ins))
-         x_BD%q(:, 1) = 0.0_R8Ki
-         x_BD%dqdt(1:3, 1) = matmul(u_BD%RootMotion%TranslationVel(:, 1), OtherSt_BD%GlbRot)
-         x_BD%dqdt(4:6, 1) = matmul(u_BD%RootMotion%RotationVel(:, 1), OtherSt_BD%GlbRot)
-      end associate
 
    case (Module_ED)
 
