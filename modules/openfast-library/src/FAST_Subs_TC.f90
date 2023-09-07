@@ -286,7 +286,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    end if
 
    ! Add module to array of modules
-   call MV_AddModule(m_FAST%Modules, Module_ED, 'ED', 1, p_FAST%dt_module(Module_ED), p_FAST%DT, &
+   CALL MV_AddModule(m_FAST%Modules, Module_ED, 'ED', 1, p_FAST%dt_module(Module_ED), p_FAST%DT, &
                      Init%OutData_ED%Vars, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -411,7 +411,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          end if
 
             ! Add module instance to array of modules
-         call MV_AddModule(m_FAST%Modules, Module_BD, 'BD', k, p_FAST%dt_module(Module_BD), p_FAST%DT, Init%OutData_BD(k)%Vars, ErrStat2, ErrMsg2)
+         CALL MV_AddModule(m_FAST%Modules, Module_BD, 'BD', k, p_FAST%dt_module(Module_BD), p_FAST%DT, Init%OutData_BD(k)%Vars, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
       END DO
@@ -527,6 +527,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       CALL SetModuleSubstepTime(Module_AD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
+      CALL MV_AddModule(m_FAST%Modules, Module_AD, 'AD', 1, p_FAST%dt_module(Module_AD), p_FAST%DT, &
+                        Init%OutData_AD%Vars, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
       allocate( y_FAST%Lin%Modules(MODULE_AD)%Instance(1), stat=ErrStat2)
       if (ErrStat2 /= 0 ) then
          call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(AD).", ErrStat, ErrMsg, RoutineName )
@@ -626,6 +630,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       p_FAST%ModuleInitialized(Module_IfW) = .TRUE.
       CALL SetModuleSubstepTime(Module_IfW, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      CALL MV_AddModule(m_FAST%Modules, Module_IfW, 'IfW', 1, p_FAST%dt_module(Module_IfW), p_FAST%DT, &
+                        Init%OutData_IfW%Vars, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! Set pointers to flowfield
       IF (p_FAST%CompAero == Module_AD) AD%p%FlowField => IfW%p%FlowField
@@ -1409,6 +1417,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
       CALL SetModuleSubstepTime(Module_SrvD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      CALL MV_AddModule(m_FAST%Modules, Module_SrvD, 'SrvD', 1, p_FAST%dt_module(Module_SrvD), p_FAST%DT, &
+                        Init%OutData_SrvD%Vars, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       !! initialize SrvD%y%ElecPwr and SrvD%y%GenTq because they are one timestep different (used as input for the next step)?
                   
