@@ -53,6 +53,9 @@ MODULE BeamDyn
    PUBLIC :: BD_UpdateGlobalRef      !< update the BeamDyn reference.  The reference for the calculations follows u%RootMotionMesh
                                                !  and therefore x%q must be updated from T -> T+DT to include the root motion from T->T+DT
 
+   PUBLIC :: BD_PackStateValues, BD_UnpackStateValues
+   PUBLIC :: BD_PackInputValues, BD_UnpackInputValues
+
    ! do we change the reference frame at each State update?
    LOGICAL, PARAMETER :: ChangeRefFrame = .true.
 
