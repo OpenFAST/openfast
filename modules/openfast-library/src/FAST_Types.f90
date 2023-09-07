@@ -147,7 +147,7 @@ IMPLICIT NONE
     REAL(R8Ki)  :: AlphaF = 0.0_R8Ki      !< Generalized-alpha alpha_f coefficient [-]
     REAL(R8Ki)  :: Beta = 0.0_R8Ki      !< Generalized-alpha beta coefficient [-]
     REAL(R8Ki)  :: Gamma = 0.0_R8Ki      !< Generalized-alpha gamma coefficient [-]
-    REAL(R8Ki) , DIMENSION(1:3)  :: C = 0.0_R8Ki      !< Generalized-alpha coefficient array [-]
+    REAL(R8Ki) , DIMENSION(1:7)  :: C = 0.0_R8Ki      !< Generalized-alpha coefficient array [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iX1 = 0_IntKi      !<  [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iX2 = 0_IntKi      !<  [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iUT = 0_IntKi      !<  [-]
@@ -190,7 +190,6 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: G      !< Used to merge state matrices [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jac      !<  [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IPIV      !<  [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: IPIV2      !<  [-]
     INTEGER(IntKi)  :: IterTotal = 0      !<  [-]
     INTEGER(IntKi)  :: IterUntilUJac = 0      !< Number of convergence iterations until Jacobian update [-]
     INTEGER(IntKi)  :: StepsUntilUJac = 0      !< Number of time steps until Jacobian update [-]
@@ -2360,18 +2359,6 @@ subroutine FAST_CopyTC_MiscVarType(SrcTC_MiscVarTypeData, DstTC_MiscVarTypeData,
       end if
       DstTC_MiscVarTypeData%IPIV = SrcTC_MiscVarTypeData%IPIV
    end if
-   if (allocated(SrcTC_MiscVarTypeData%IPIV2)) then
-      LB(1:1) = lbound(SrcTC_MiscVarTypeData%IPIV2)
-      UB(1:1) = ubound(SrcTC_MiscVarTypeData%IPIV2)
-      if (.not. allocated(DstTC_MiscVarTypeData%IPIV2)) then
-         allocate(DstTC_MiscVarTypeData%IPIV2(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_MiscVarTypeData%IPIV2.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstTC_MiscVarTypeData%IPIV2 = SrcTC_MiscVarTypeData%IPIV2
-   end if
    DstTC_MiscVarTypeData%IterTotal = SrcTC_MiscVarTypeData%IterTotal
    DstTC_MiscVarTypeData%IterUntilUJac = SrcTC_MiscVarTypeData%IterUntilUJac
    DstTC_MiscVarTypeData%StepsUntilUJac = SrcTC_MiscVarTypeData%StepsUntilUJac
@@ -2515,9 +2502,6 @@ subroutine FAST_DestroyTC_MiscVarType(TC_MiscVarTypeData, ErrStat, ErrMsg)
    if (allocated(TC_MiscVarTypeData%IPIV)) then
       deallocate(TC_MiscVarTypeData%IPIV)
    end if
-   if (allocated(TC_MiscVarTypeData%IPIV2)) then
-      deallocate(TC_MiscVarTypeData%IPIV2)
-   end if
    if (allocated(TC_MiscVarTypeData%dq)) then
       deallocate(TC_MiscVarTypeData%dq)
    end if
@@ -2652,11 +2636,6 @@ subroutine FAST_PackTC_MiscVarType(Buf, Indata)
    if (allocated(InData%IPIV)) then
       call RegPackBounds(Buf, 1, lbound(InData%IPIV), ubound(InData%IPIV))
       call RegPack(Buf, InData%IPIV)
-   end if
-   call RegPack(Buf, allocated(InData%IPIV2))
-   if (allocated(InData%IPIV2)) then
-      call RegPackBounds(Buf, 1, lbound(InData%IPIV2), ubound(InData%IPIV2))
-      call RegPack(Buf, InData%IPIV2)
    end if
    call RegPack(Buf, InData%IterTotal)
    call RegPack(Buf, InData%IterUntilUJac)
@@ -2994,20 +2973,6 @@ subroutine FAST_UnPackTC_MiscVarType(Buf, OutData)
          return
       end if
       call RegUnpack(Buf, OutData%IPIV)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%IPIV2)) deallocate(OutData%IPIV2)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%IPIV2(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%IPIV2.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%IPIV2)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    call RegUnpack(Buf, OutData%IterTotal)

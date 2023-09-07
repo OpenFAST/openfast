@@ -125,7 +125,7 @@ typedef ^ ^                 R8Ki            AlphaM                 -  -  -      
 typedef ^ ^                 R8Ki            AlphaF                 -  -  -      "Generalized-alpha alpha_f coefficient" -
 typedef ^ ^                 R8Ki            Beta                   -  -  -      "Generalized-alpha beta coefficient" -
 typedef ^ ^                 R8Ki            Gamma                  -  -  -      "Generalized-alpha gamma coefficient" -
-typedef ^ ^                 R8Ki            C                      3  -  -      "Generalized-alpha coefficient array" -
+typedef ^ ^                 R8Ki            C                      7  -  -      "Generalized-alpha coefficient array" -
 typedef ^ ^                 IntKi           iX1                    2  -  -      "" -
 typedef ^ ^                 IntKi           iX2                    2  -  -      "" -
 typedef ^ ^                 IntKi           iUT                    2  -  -      "" -
@@ -166,7 +166,6 @@ typedef ^ ^                 R8Ki            XB                     :: -  -      
 typedef ^ ^                 R8Ki            G                      :: -  -      "Used to merge state matrices" -
 typedef ^ ^                 R8Ki            Jac                    :: -  -      "" -
 typedef ^ ^                 IntKi           IPIV                   :  -  -      "" -
-typedef ^ ^                 IntKi           IPIV2                  :  -  -      "" -
 typedef ^ ^                 IntKi           IterTotal              -  0  -      "" -
 typedef ^ ^                 IntKi           IterUntilUJac          -  0  -      "Number of convergence iterations until Jacobian update" -
 typedef ^ ^                 IntKi           StepsUntilUJac         -  0  -      "Number of time steps until Jacobian update" -
