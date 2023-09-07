@@ -28,6 +28,7 @@ integer(IntKi), parameter  :: TC_Modules(*) = [Module_ED, Module_BD, Module_SD]
 ! Debugging
 logical, parameter         :: DebugSolver = .false.
 integer(IntKi)             :: DebugUn = -1
+character(*), parameter    :: DebugFile = 'solver.dbg'
 logical, parameter         :: DebugJacobian = .false.
 integer(IntKi)             :: MatrixUn = -1
 
@@ -46,60 +47,186 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
    character(ErrMsgLen)                      :: ErrMsg2     ! local error message
    integer(IntKi)                            :: i, j, k, n
    integer(IntKi)                            :: NumX, NumQ, NumU, NumY, NumJ
-   integer(IntKi), allocatable               :: modIDs(:), vec1(:), vec2(:), iuLoad(:)
+   integer(IntKi), allocatable               :: modIDs(:), modInds(:)
    type(TC_MappingType)                      :: MeshMap
 
    !----------------------------------------------------------------------------
    ! Module ordering for solve
    !----------------------------------------------------------------------------
 
+   ! Create array of indices for Mods array
+   modInds = [(i, i=1, size(Mods))]
+
    ! Get array of module IDs
    modIDs = [(Mods(i)%ID, i=1, size(Mods))]
 
-   ! Ordering array for all modules
-   p%iModAll = [pack([(i, i=1, size(Mods))], ModIDs == Module_SrvD), &
-                pack([(i, i=1, size(Mods))], ModIDs == Module_AD), &
-                pack([(i, i=1, size(Mods))], ModIDs == Module_ED), &
-                pack([(i, i=1, size(Mods))], ModIDs == Module_BD), &
-                pack([(i, i=1, size(Mods))], ModIDs == Module_SD)]
+   ! Indicies of all modules
+   p%iModAll = [pack(modInds, ModIDs == Module_SrvD), &
+                pack(modInds, ModIDs == Module_IfW), &
+                pack(modInds, ModIDs == Module_AD), &
+                pack(modInds, ModIDs == Module_ED), &
+                pack(modInds, ModIDs == Module_BD), &
+                pack(modInds, ModIDs == Module_SD)]
 
-   ! Ordering array for tight coupling modules
-   p%iModTC = [pack([(i, i=1, size(Mods))], ModIDs == Module_ED), &
-               pack([(i, i=1, size(Mods))], ModIDs == Module_BD), &
-               pack([(i, i=1, size(Mods))], ModIDs == Module_SD)]
+   ! Indicies of tight coupling modules
+   p%iModTC = [pack(modInds, ModIDs == Module_ED), &
+               pack(modInds, ModIDs == Module_BD), &
+               pack(modInds, ModIDs == Module_SD)]
 
-   ! Ordering array for Option 2 solve
-   p%iModOpt2 = [pack([(i, i=1, size(Mods))], ModIDs == Module_ED), &
-                 pack([(i, i=1, size(Mods))], ModIDs == Module_BD), &
-                 pack([(i, i=1, size(Mods))], ModIDs == Module_SD)]
+   ! Indicies of Option 2 modules
+   p%iModOpt2 = [pack(modInds, ModIDs == Module_SrvD), &
+                 pack(modInds, ModIDs == Module_ED), &
+                 pack(modInds, ModIDs == Module_BD), &
+                 pack(modInds, ModIDs == Module_SD), &
+                 pack(modInds, ModIDs == Module_IfW), &
+                 pack(modInds, ModIDs == Module_AD), &
+                 pack(modInds, ModIDs == Module_FEAM), &
+                 pack(modInds, ModIDs == Module_IceD), &
+                 pack(modInds, ModIDs == Module_IceF), &
+                 pack(modInds, ModIDs == Module_MAP), &
+                 pack(modInds, ModIDs == Module_MD)]
 
-   ! Ordering array for Option 1 solve
-   p%iModOpt1 = [pack([(i, i=1, size(Mods))], ModIDs == Module_ED), &
-                 pack([(i, i=1, size(Mods))], ModIDs == Module_BD), &
-                 pack([(i, i=1, size(Mods))], ModIDs == Module_SD), &
-                 pack([(i, i=1, size(Mods))], ModIDs == Module_ExtPtfm), &
-                 pack([(i, i=1, size(Mods))], ModIDs == Module_HD), &
-                 pack([(i, i=1, size(Mods))], ModIDs == Module_Orca)]
+   ! Indicies of Option 1 modules
+   p%iModOpt1 = [pack(modInds, ModIDs == Module_ED), &
+                 pack(modInds, ModIDs == Module_BD), &
+                 pack(modInds, ModIDs == Module_SD), &
+                 pack(modInds, ModIDs == Module_ExtPtfm), &
+                 pack(modInds, ModIDs == Module_HD), &
+                 pack(modInds, ModIDs == Module_Orca)]
 
-   ! Ordering array for Option 1 modules that were not in Option 2
+   ! Indicies of Option 1 modules that were not in Option 2
    ! These modules need to do update states and calc output before Option 1 solve
-   p%iModOpt1US = [pack([(i, i=1, size(Mods))], ModIDs == Module_ExtPtfm), &
-                   pack([(i, i=1, size(Mods))], ModIDs == Module_HD), &
-                   pack([(i, i=1, size(Mods))], ModIDs == Module_Orca)]
+   p%iModOpt1US = [pack(modInds, ModIDs == Module_ExtPtfm), &
+                   pack(modInds, ModIDs == Module_HD), &
+                   pack(modInds, ModIDs == Module_Orca)]
 
-   ! Ordering array for BeamDyn modules
-   p%iModBD = [pack([(i, i=1, size(Mods))], ModIDs == Module_BD)]
+   ! Indices of BeamDyn modules
+   p%iModBD = [pack(modInds, ModIDs == Module_BD)]
 
    !----------------------------------------------------------------------------
    ! Initialize mesh mappings (must be done before calculating global indices)
    !----------------------------------------------------------------------------
 
-   call Solver_DefineMappings(m%Mappings, Mods, ErrStat2, ErrMsg2)
+   call DefineMappings(m%Mappings, Mods, ErrStat2, ErrMsg2)
    if (Failed()) return
 
    !----------------------------------------------------------------------------
-   ! Calculate state variable global indices and transfer index arrays
-   ! for tight coupling modules
+   ! Calculate variable global indices and related index arrays
+   !----------------------------------------------------------------------------
+
+   call CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat2, ErrMsg2)
+   if (Failed()) return
+
+   !----------------------------------------------------------------------------
+   ! Allocate state, input, and output storage
+   !----------------------------------------------------------------------------
+
+   ! State arrays
+   call AllocAry(m%x, NumX, "m%x", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%xn, NumX, "m%xn", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%dx, NumX, "m%dx", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%dxdt, NumX, "m%dxdt", ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! State matrices
+   call AllocAry(m%q, NumQ, 4, "m%q", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%qn, NumQ, 4, "m%qn", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%dq, NumQ, 4, "m%dq", ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! Inputs array
+   call AllocAry(m%u, NumU, "m%u", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%un, NumU, "m%un", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%du, NumU, "m%du", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%u_tmp, NumU, "m%u_tmp", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%UDiff, NumU, "m%UDiff", ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! Output arrays
+   call AllocAry(m%y, NumY, "m%y", ErrStat2, ErrMsg2); if (Failed()) return
+
+   !----------------------------------------------------------------------------
+   ! Allocate Jacobian matrices
+   !----------------------------------------------------------------------------
+
+   call AllocAry(m%dYdx, NumY, NumX, "m%dYdx", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%dYdu, NumY, NumU, "m%dYdu", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%dXdx, NumX, NumX, "m%dXdx", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%dXdu, NumX, NumU, "m%dXdu", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%dUdu, NumU, NumU, "m%dUdu", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%dUdy, NumU, NumY, "m%dUdy", ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(m%G, NumU, NumU, "m%G", ErrStat2, ErrMsg2); if (Failed()) return
+
+   !----------------------------------------------------------------------------
+   ! Allocate solver Jacobian matrix and right hand side
+   !----------------------------------------------------------------------------
+
+   ! Allocate Jacobian matrix, RHS/X matrix, Pivot array
+   call AllocAry(m%Jac, NumJ, NumJ, "m%Jac", ErrStat, ErrMsg); if (Failed()) return
+   call AllocAry(m%XB, NumJ, 1, "m%XB", ErrStat, ErrMsg); if (Failed()) return
+   call AllocAry(m%IPIV, NumJ, "m%IPIV", ErrStat, ErrMsg); if (Failed()) return
+   m%Jac = 0.0_R8Ki
+
+   ! Initialize iterations and steps until Jacobian is calculated to zero
+   ! so it is calculated in first step
+   m%IterUntilUJac = 0
+   m%StepsUntilUJac = 0
+
+   !----------------------------------------------------------------------------
+   ! Calculate generalized alpha parameters
+   !----------------------------------------------------------------------------
+
+   ! Acceleration blending term between current and next value, used during
+   ! state prediction (1.0 = constant acceleration, 0.0 = no acceleration).
+   p%AccBlend = 1.0_R8Ki
+
+   p%AlphaM = (2.0_R8Ki*p%RhoInf - 1.0_R8Ki)/(p%RhoInf + 1.0_R8Ki)
+   p%AlphaF = p%RhoInf/(p%RhoInf + 1.0_R8Ki)
+   p%Gamma = 0.5_R8Ki - p%AlphaM + p%AlphaF
+   p%Beta = (1.0_R8Ki - p%AlphaM + p%AlphaF)**2.0_R8Ki/4.0_R8Ki
+
+   ! Constants used in Jacobian construction and state prediction
+   p%C(1) = (1.0_R8Ki - p%AlphaF)/(1.0_R8Ki - p%AlphaM)
+   p%C(2) = p%DT*p%Gamma*p%C(1)
+   p%C(3) = p%DT**2*p%Beta*p%C(1)
+   p%C(4) = p%DT**2*(0.5_R8Ki - p%Beta)
+   p%C(5) = p%DT**2*p%Beta
+   p%C(6) = p%DT*(1.0_R8Ki - p%Gamma)
+   p%C(7) = p%DT*p%Gamma
+
+   !----------------------------------------------------------------------------
+   ! Write debug info to file
+   !----------------------------------------------------------------------------
+
+   if (DebugSolver) then
+      call GetNewUnit(DebugUn, ErrStat2, ErrMsg2); if (Failed()) return
+      call OpenFOutFile(DebugUn, DebugFile, ErrStat2, ErrMsg2); if (Failed()) return
+      call Solver_Init_Debug(p, m, Mods)
+   end if
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
+subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, ErrMsg)
+   type(TC_ParameterType), intent(inout)  :: p           !< Parameters
+   type(ModDataType), intent(inout)       :: Mods(:)     !< Module data
+   integer(IntKi), intent(out)            :: NumX, NumU, NumY, NumQ, NumJ
+   integer(IntKi), intent(out)            :: ErrStat     !< Error status of the operation
+   character(*), intent(out)              :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter                :: RoutineName = 'Solver_Init'
+   integer(IntKi)                         :: ErrStat2    ! local error status
+   character(ErrMsgLen)                   :: ErrMsg2     ! local error message
+   integer(IntKi), allocatable            :: modIDs(:), vec1(:), vec2(:), iuLoad(:)
+   integer(IntKi)                         :: i, j, k, n
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   !----------------------------------------------------------------------------
+   ! Calculate state variable global indices and transfer arrays
+   ! for tight coupling and option one modules
    !----------------------------------------------------------------------------
 
    ! Initialize number of state variables to zero
@@ -196,7 +323,7 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
       end do
    end do
 
-   ! Calculate number of option 1 inputs
+   ! Save number of option 1 inputs
    p%iU1 = [p%iUT(2) + 1, NumU]
 
    ! Loop through all modules
@@ -338,49 +465,11 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
 
    end do
 
-   ! Remove x->q indicies that aren't set
+   ! Remove unused x->q indicies
    p%ixqd = p%ixqd(:, 1:n)
 
    !----------------------------------------------------------------------------
-   ! Allocate state and input storage
-   !----------------------------------------------------------------------------
-
-   ! State, State delta, and State Derivative
-   call AllocAry(m%x, NumX, "m%x", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%xn, NumX, "m%xn", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%dx, NumX, "m%dx", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%dxdt, NumX, "m%dxdt", ErrStat2, ErrMsg2); if (Failed()) return
-
-   ! Inputs and Input Temporary
-   call AllocAry(m%u, NumU, "m%u", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%un, NumU, "m%un", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%du, NumU, "m%du", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%u_tmp, NumU, "m%u_tmp", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%UDiff, NumU, "m%UDiff", ErrStat2, ErrMsg2); if (Failed()) return
-
-   ! Outputs
-   call AllocAry(m%y, NumY, "m%y", ErrStat2, ErrMsg2); if (Failed()) return
-
-   ! Allocate/initialize global q storage
-   call AllocAry(m%q, NumQ, 4, "m%q", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%qn, NumQ, 4, "m%qn", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%dq, NumQ, 4, "m%dq", ErrStat2, ErrMsg2); if (Failed()) return
-
-   !----------------------------------------------------------------------------
-   ! Allocate Jacobian matrices
-   !----------------------------------------------------------------------------
-
-   call AllocAry(m%dYdx, NumY, NumX, "m%dYdx", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%dYdu, NumY, NumU, "m%dYdu", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%dXdx, NumX, NumX, "m%dXdx", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%dXdu, NumX, NumU, "m%dXdu", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%dUdu, NumU, NumU, "m%dUdu", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%dUdy, NumU, NumY, "m%dUdy", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%G, NumU, NumU, "m%G", ErrStat2, ErrMsg2); if (Failed()) return
-   call AllocAry(m%IPIV2, NumU, "m%IPIV2", ErrStat2, ErrMsg2); if (Failed()) return
-
-   !----------------------------------------------------------------------------
-   ! Allocate solver Jacobian matrix, RHS, and Delta
+   ! Jacobian indices and ranges
    !----------------------------------------------------------------------------
 
    ! Calculate size of Jacobian matrix
@@ -396,42 +485,6 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
    ! Get Jacobian indicies containing loads
    p%iJL = iuLoad + NumQ
 
-   ! Allocate Macobian matrix, RHS/X matrix, Pivot array
-   call AllocAry(m%Jac, NumJ, NumJ, "m%Jac", ErrStat, ErrMsg); if (Failed()) return
-   call AllocAry(m%XB, NumJ, 1, "m%XB", ErrStat, ErrMsg); if (Failed()) return
-   call AllocAry(m%IPIV, NumJ, "m%IPIV", ErrStat, ErrMsg); if (Failed()) return
-   m%Jac = 0.0_R8Ki
-
-   ! Initialize iterations and steps until Jacobian is calculated to zero
-   ! so it will be calculated in first step
-   m%IterUntilUJac = 0
-   m%StepsUntilUJac = 0
-
-   !----------------------------------------------------------------------------
-   ! Calculate generalized alpha parameters
-   !----------------------------------------------------------------------------
-
-   p%AccBlend = 1.0_R8Ki
-
-   p%AlphaM = (2.0_R8Ki*p%RhoInf - 1.0_R8Ki)/(p%RhoInf + 1.0_R8Ki)
-   p%AlphaF = p%RhoInf/(p%RhoInf + 1.0_R8Ki)
-   p%Gamma = 0.5_R8Ki - p%AlphaM + p%AlphaF
-   p%Beta = (1.0_R8Ki - p%AlphaM + p%AlphaF)**2/4.0_R8Ki
-
-   p%C(1) = (1.0_R8Ki - p%AlphaF)/(1.0_R8Ki - p%AlphaM)
-   p%C(2) = p%DT*p%Gamma*p%C(1)
-   p%C(3) = p%DT**2*p%Beta*p%C(1)
-
-   !----------------------------------------------------------------------------
-   ! Debug
-   !----------------------------------------------------------------------------
-
-   if (DebugSolver) then
-      call GetNewUnit(DebugUn, ErrStat2, ErrMsg2); if (Failed()) return
-      call OpenFOutFile(DebugUn, "solver.dbg", ErrStat2, ErrMsg2); if (Failed()) return
-      call Solver_Init_Debug(p, m, Mods)
-   end if
-
 contains
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -439,13 +492,13 @@ contains
    end function
 end subroutine
 
-subroutine Solver_DefineMappings(Mappings, Mods, ErrStat, ErrMsg)
+subroutine DefineMappings(Mappings, Mods, ErrStat, ErrMsg)
    type(TC_MappingType), allocatable, intent(inout)   :: Mappings(:)
-   type(ModDataType), intent(inout)                   :: Mods(:)  !< Module data
+   type(ModDataType), intent(inout)                   :: Mods(:)     !< Module data
    integer(IntKi), intent(out)                        :: ErrStat     !< Error status of the operation
    character(*), intent(out)                          :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-   character(*), parameter   :: RoutineName = 'Solver_DefineMappings'
+   character(*), parameter   :: RoutineName = 'DefineMappings'
    integer(IntKi)            :: ErrStat2    ! local error status
    character(ErrMsgLen)      :: ErrMsg2     ! local error message
    integer(IntKi)            :: iMap, iModOut, iModIn, i, j
@@ -596,7 +649,7 @@ contains
    end subroutine
 end subroutine
 
-subroutine Solver_TransferXtoQ(ixqd, x, q)
+subroutine TransferXtoQ(ixqd, x, q)
    integer(IntKi), intent(in) :: ixqd(:, :)
    real(R8Ki), intent(in)     :: x(:)
    real(R8Ki), intent(inout)  :: q(:, :)
@@ -606,7 +659,7 @@ subroutine Solver_TransferXtoQ(ixqd, x, q)
    end do
 end subroutine
 
-subroutine Solver_TransferQtoX(ixqd, q, x)
+subroutine TransferQtoX(ixqd, q, x)
    integer(IntKi), intent(in) :: ixqd(:, :)
    real(R8Ki), intent(in)     :: q(:, :)
    real(R8Ki), intent(inout)  :: x(:)
@@ -629,7 +682,7 @@ pure function NeedWriteOutput(n_t_global, t_global, t_initial, n_DT_Out) result(
    else
       WriteNeeded = .false.
    end if
-end function NeedWriteOutput
+end function
 
 subroutine Solver_Step0(p, m, ModData, Turbine, ErrStat, ErrMsg)
    type(TC_ParameterType), intent(in)        :: p           !< Parameters
@@ -683,7 +736,7 @@ subroutine Solver_Step0(p, m, ModData, Turbine, ErrStat, ErrMsg)
    call PackModuleStates(ModData(p%iModTC), STATE_CURR, Turbine, x=m%x)
 
    ! Transfer initial state to state q matrix
-   call Solver_TransferXtoQ(p%ixqd, m%x, m%qn)
+   call TransferXtoQ(p%ixqd, m%x, m%qn)
 
    ! Allocate acceleration array which will be used to check for convergence
    ! of initial acceleration. Transfer initial accelerations from q matrix
@@ -831,27 +884,27 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    ! Calculate displacements for the next step
    m%q(:, COL_D) = m%qn(:, COL_D) + &
                    p%DT*m%qn(:, COL_V) + &
-                   p%DT**2*(0.5_R8Ki - p%Beta)*m%qn(:, COL_AA) + &
-                   p%DT**2*p%Beta*m%q(:, COL_AA)
+                   p%C(4)*m%qn(:, COL_AA) + &
+                   p%C(5)*m%q(:, COL_AA)
 
    ! Calculate velocities for the next step
    m%q(:, COL_V) = m%qn(:, COL_V) + &
-                   p%DT*(1.0_R8Ki - p%Gamma)*m%qn(:, COL_AA) + &
-                   p%DT*p%Gamma*m%q(:, COL_AA)
+                   p%C(6)*m%qn(:, COL_AA) + &
+                   p%C(7)*m%q(:, COL_AA)
 
    ! Calculate difference between new and old states
    m%dq = m%q - m%qn
 
    ! Transfer delta state matrix to delta x array
    m%dx = 0.0_R8Ki
-   call Solver_TransferQtoX(p%ixqd, m%dq, m%dx)
+   call TransferQtoX(p%ixqd, m%dq, m%dx)
 
    ! Add delta to x array to get new states (respect variable fields)
    ! required for orientation fields in states
    call AddDeltaToStates(Mods, p%iModTC, m%dx, m%x)
 
    ! Update state matrix with updated state values
-   call Solver_TransferXtoQ(p%ixqd, m%x, m%q)
+   call TransferXtoQ(p%ixqd, m%x, m%q)
 
    ! Initialize delta arrays for iterations
    m%dq = 0.0_R8Ki
@@ -905,7 +958,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
       ! Populate state matrix with latest values from state array in case it
       ! changed during FAST_UpdateStates calls
-      call Solver_TransferXtoQ(p%ixqd, m%xn, m%qn)
+      call TransferXtoQ(p%ixqd, m%xn, m%qn)
 
       ! Pack Option 1 inputs into u array
       call PackModuleInputs(Mods, p%iModOpt1, Turbine, u=m%un)
@@ -1014,13 +1067,13 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
          ! Transfer change in q state matrix to change in x array
          m%dx = 0.0_R8Ki
-         call Solver_TransferQtoX(p%ixqd, m%dq, m%dx)
+         call TransferQtoX(p%ixqd, m%dq, m%dx)
 
          ! Add delta to x array to get new states (respect variable fields)
          call AddDeltaToStates(Mods, p%iModTC, m%dx, m%xn)
 
          ! Overwrites state matrix values that were changed in AddDeltaToStates
-         call Solver_TransferXtoQ(p%ixqd, m%xn, m%qn)
+         call TransferXtoQ(p%ixqd, m%xn, m%qn)
 
          ! Transfer updated state to TC modules
          call UnpackModuleStates(Mods, p%iModTC, STATE_PRED, Turbine, x=m%xn)
@@ -1096,7 +1149,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    end do
 
    ! Update state matrix from state array
-   call Solver_TransferXtoQ(p%ixqd, m%xn, m%qn)
+   call TransferXtoQ(p%ixqd, m%xn, m%qn)
 
    ! Copy the final predicted states from step t_global_next to actual states for that step
    do i = 1, size(p%iModAll)
