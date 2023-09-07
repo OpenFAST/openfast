@@ -517,7 +517,7 @@ SUBROUTINE InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, Cons
          InitInp%BoxExceedAllow .or. (p%lidar%SensorType /= SensorType_None)
 
       ! Calculate field average if box is allowed to be exceeded
-      if (p%FlowField%Grid3D%BoxExceedAllow) then
+      if (p%FlowField%Grid3D%BoxExceedAllow) then 
          call IfW_Grid3DField_CalcVelAvgProfile(p%FlowField%Grid3D, p%FlowField%AccFieldValid, TmpErrStat, TmpErrMsg)
          call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return

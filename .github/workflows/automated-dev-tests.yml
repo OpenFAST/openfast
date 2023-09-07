@@ -41,7 +41,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v1
@@ -130,7 +130,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -176,7 +176,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v1
@@ -232,7 +232,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -270,7 +270,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -308,7 +308,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -348,7 +348,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -410,7 +410,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -468,7 +468,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -529,7 +529,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -577,7 +577,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -598,7 +598,7 @@ jobs:
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j8 \
+          ctest -VV -j4 \
           -L openfast \
           -LE "cpp|linear|python|fastlib|aeromap" \
           -E "5MW_OC4Semi_WSt_WavesWN|5MW_OC3Mnpl_DLL_WTurb_WavesIrr|5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth|5MW_OC3Trpd_DLL_WSt_WavesReg|5MW_Land_BD_DLL_WTurb"
@@ -660,7 +660,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -759,7 +759,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -809,7 +809,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -859,7 +859,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -909,7 +909,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -959,7 +959,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -979,7 +979,7 @@ jobs:
       - name: Run OpenFAST linearization tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j8 -L linear
+          ctest -VV -j4 -L linear
       - name: Failing test artifacts
         uses: actions/upload-artifact@v3
         if: failure()
@@ -1008,7 +1008,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
