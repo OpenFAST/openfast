@@ -633,6 +633,8 @@ subroutine inductionFactors0(B, r, chord, phi, cn, ct, Vx, Vy, F, wakerotation, 
    ! Convert from double to ReKi
    a_out     = real(     a, ReKi )
    ap_out    = real(    ap, ReKi )
+   k_out     = real(     k, ReKi )
+   kp_out    = real(    kp, ReKi )
 
 end subroutine inductionFactors0
 subroutine getTangentialInduction(a, cphi, sphi, Vx, F, kpCorrectionFactor, sigma_p, ct, VxCorrected, effectiveYaw, H, MomentumCorr, ap, kp)
