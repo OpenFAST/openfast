@@ -531,7 +531,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OgnlGeAzRo      !< Original DOF_GeAz row in AugMat [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QD2T      !< Solution (acceleration) vector; the first time derivative of QDT [-]
     LOGICAL  :: IgnoreMod = .false.      !< whether to ignore the modulo in ED outputs (necessary for linearization perturbations) [-]
-    TYPE(ModValsType)  :: Vals 
+    TYPE(ModValsType)  :: Vals      !< Values corresponding to module variables [-]
   END TYPE ED_MiscVarType
 ! =======================
 ! =========  ED_ParameterType  =======
