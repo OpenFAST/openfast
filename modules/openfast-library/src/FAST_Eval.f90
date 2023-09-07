@@ -930,9 +930,6 @@ subroutine FAST_ResetRemapFlags(Mod, T, ErrStat, ErrMsg)
 
 !  case (Module_SrvD)
 
-   case default
-      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(Mod%ID)), ErrStat, ErrMsg, RoutineName)
-      return
    end select
 
 contains
