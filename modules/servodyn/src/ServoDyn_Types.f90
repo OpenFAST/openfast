@@ -90,6 +90,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
     INTEGER(IntKi)  :: CouplingScheme = 0_IntKi      !< Switch that indicates if a particular coupling scheme is required [-]
     LOGICAL  :: UseHSSBrake = .false.      !< flag to determine if high-speed shaft brake is potentially used (true=yes) [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
@@ -372,6 +373,7 @@ IMPLICIT NONE
     TYPE(StC_OutputType) , DIMENSION(:), ALLOCATABLE  :: y_SStC      !< StC module outputs - substructure [-]
     TYPE(SrvD_ModuleMapType)  :: SrvD_MeshMap      !< Mesh mapping from inputs/output meshes to StC input/output meshes [-]
     INTEGER(IntKi)  :: PrevTstepNcall = -1      !< Previous timestep N for tracking when in predictor/corrector loop for setting StC u values [-]
+    TYPE(ModValsType)  :: Vals      !< Module Values [-]
   END TYPE SrvD_MiscVarType
 ! =======================
 ! =========  SrvD_ParameterType  =======
@@ -465,6 +467,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: TrimCase = 0_IntKi      !< Controller parameter to be trimmed {1:yaw; 2:torque; 3:pitch} [used only if CalcSteady=True] [-]
     REAL(ReKi)  :: TrimGain = 0.0_ReKi      !< Proportional gain for the rotational speed error (>0) [used only if TrimCase>0] [rad/(rad/s) for yaw or pitch; Nm/(rad/s) for torque]
     REAL(ReKi)  :: RotSpeedRef = 0.0_ReKi      !< Reference rotor speed [rad/s]
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
     TYPE(StC_ParameterType) , DIMENSION(:), ALLOCATABLE  :: BStC      !< StC module parameters - blade [-]
     TYPE(StC_ParameterType) , DIMENSION(:), ALLOCATABLE  :: NStC      !< StC module parameters - nacelle [-]
     TYPE(StC_ParameterType) , DIMENSION(:), ALLOCATABLE  :: TStC      !< StC module parameters - tower [-]
@@ -1211,6 +1214,7 @@ subroutine SrvD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, E
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInitOutputData%Vars => SrcInitOutputData%Vars
    DstInitOutputData%CouplingScheme = SrcInitOutputData%CouplingScheme
    DstInitOutputData%UseHSSBrake = SrcInitOutputData%UseHSSBrake
    if (allocated(SrcInitOutputData%LinNames_y)) then
@@ -1328,6 +1332,7 @@ subroutine SrvD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   nullify(InitOutputData%Vars)
    if (allocated(InitOutputData%LinNames_y)) then
       deallocate(InitOutputData%LinNames_y)
    end if
@@ -1358,6 +1363,7 @@ subroutine SrvD_PackInitOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SrvD_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SrvD_PackInitOutput'
+   logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
@@ -1370,6 +1376,13 @@ subroutine SrvD_PackInitOutput(Buf, Indata)
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
+   call RegPack(Buf, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(Buf, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(Buf, InData%Vars) 
+      end if
+   end if
    call RegPack(Buf, InData%CouplingScheme)
    call RegPack(Buf, InData%UseHSSBrake)
    call RegPack(Buf, allocated(InData%LinNames_y))
@@ -1422,6 +1435,8 @@ subroutine SrvD_UnPackInitOutput(Buf, OutData)
    integer(IntKi)  :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(IntKi)  :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    if (allocated(OutData%WriteOutputHdr)) deallocate(OutData%WriteOutputHdr)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -1452,6 +1467,26 @@ subroutine SrvD_UnPackInitOutput(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(Buf, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
    call RegUnpack(Buf, OutData%CouplingScheme)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%UseHSSBrake)
@@ -5274,6 +5309,9 @@ subroutine SrvD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstMiscData%PrevTstepNcall = SrcMiscData%PrevTstepNcall
+   call NWTC_Library_CopyModValsType(SrcMiscData%Vals, DstMiscData%Vals, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine SrvD_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -5409,6 +5447,8 @@ subroutine SrvD_DestroyMisc(MiscData, ErrStat, ErrMsg)
       deallocate(MiscData%y_SStC)
    end if
    call SrvD_DestroyModuleMapType(MiscData%SrvD_MeshMap, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call NWTC_Library_DestroyModValsType(MiscData%Vals, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -5546,6 +5586,7 @@ subroutine SrvD_PackMisc(Buf, Indata)
    end if
    call SrvD_PackModuleMapType(Buf, InData%SrvD_MeshMap) 
    call RegPack(Buf, InData%PrevTstepNcall)
+   call NWTC_Library_PackModValsType(Buf, InData%Vals) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -5770,6 +5811,7 @@ subroutine SrvD_UnPackMisc(Buf, OutData)
    call SrvD_UnpackModuleMapType(Buf, OutData%SrvD_MeshMap) ! SrvD_MeshMap 
    call RegUnpack(Buf, OutData%PrevTstepNcall)
    if (RegCheckErr(Buf, RoutineName)) return
+   call NWTC_Library_UnpackModValsType(Buf, OutData%Vals) ! Vals 
 end subroutine
 
 subroutine SrvD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -5944,6 +5986,18 @@ subroutine SrvD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%TrimCase = SrcParamData%TrimCase
    DstParamData%TrimGain = SrcParamData%TrimGain
    DstParamData%RotSpeedRef = SrcParamData%RotSpeedRef
+   if (associated(SrcParamData%Vars)) then
+      if (.not. associated(DstParamData%Vars)) then
+         allocate(DstParamData%Vars, stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
    if (allocated(SrcParamData%BStC)) then
       LB(1:1) = lbound(SrcParamData%BStC)
       UB(1:1) = ubound(SrcParamData%BStC)
@@ -6264,6 +6318,12 @@ subroutine SrvD_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
    call FreeDynamicLib( ParamData%DLL_Trgt, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (associated(ParamData%Vars)) then
+      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      deallocate(ParamData%Vars)
+      ParamData%Vars => null()
+   end if
    if (allocated(ParamData%BStC)) then
       LB(1:1) = lbound(ParamData%BStC)
       UB(1:1) = ubound(ParamData%BStC)
@@ -6359,6 +6419,7 @@ subroutine SrvD_PackParam(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SrvD_PackParam'
    integer(IntKi)  :: i1, i2, i3
    integer(IntKi)  :: LB(3), UB(3)
+   logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%DT)
    call RegPack(Buf, InData%HSSBrDT)
@@ -6477,6 +6538,13 @@ subroutine SrvD_PackParam(Buf, Indata)
    call RegPack(Buf, InData%TrimCase)
    call RegPack(Buf, InData%TrimGain)
    call RegPack(Buf, InData%RotSpeedRef)
+   call RegPack(Buf, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(Buf, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(Buf, InData%Vars) 
+      end if
+   end if
    call RegPack(Buf, allocated(InData%BStC))
    if (allocated(InData%BStC)) then
       call RegPackBounds(Buf, 1, lbound(InData%BStC), ubound(InData%BStC))
@@ -6622,6 +6690,8 @@ subroutine SrvD_UnPackParam(Buf, OutData)
    integer(IntKi)  :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(IntKi)  :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    call RegUnpack(Buf, OutData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -6873,6 +6943,26 @@ subroutine SrvD_UnPackParam(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%RotSpeedRef)
    if (RegCheckErr(Buf, RoutineName)) return
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(Buf, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
    if (allocated(OutData%BStC)) deallocate(OutData%BStC)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return

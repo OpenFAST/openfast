@@ -166,6 +166,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: AD_InitOutputType
     TYPE(RotInitOutputType) , DIMENSION(:), ALLOCATABLE  :: rotors      !< Rotor init output type [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
   END TYPE AD_InitOutputType
 ! =======================
 ! =========  RotInputFile  =======
@@ -366,6 +367,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindPos      !< XYZ coordinates to query for wind velocity/acceleration [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindVel      !< XYZ components of wind velocity [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WindAcc      !< XYZ components of wind acceleration [-]
+    TYPE(ModValsType)  :: Vals      !< Module Values [-]
   END TYPE AD_MiscVarType
 ! =======================
 ! =========  RotParameterType  =======
@@ -447,6 +449,7 @@ IMPLICIT NONE
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false) [-]
     LOGICAL  :: UA_Flag = .false.      !< logical flag indicating whether to use UnsteadyAero [-]
     TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Pointer of InflowWinds flow field data type [-]
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
   END TYPE AD_ParameterType
 ! =======================
 ! =========  RotInputType  =======
@@ -2154,6 +2157,7 @@ subroutine AD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInitOutputData%Vars => SrcInitOutputData%Vars
 end subroutine
 
 subroutine AD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -2178,6 +2182,7 @@ subroutine AD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   nullify(InitOutputData%Vars)
 end subroutine
 
 subroutine AD_PackInitOutput(Buf, Indata)
@@ -2186,6 +2191,7 @@ subroutine AD_PackInitOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'AD_PackInitOutput'
    integer(IntKi)  :: i1
    integer(IntKi)  :: LB(1), UB(1)
+   logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%rotors))
    if (allocated(InData%rotors)) then
@@ -2197,6 +2203,13 @@ subroutine AD_PackInitOutput(Buf, Indata)
       end do
    end if
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
+   call RegPack(Buf, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(Buf, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(Buf, InData%Vars) 
+      end if
+   end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -2208,6 +2221,8 @@ subroutine AD_UnPackInitOutput(Buf, OutData)
    integer(IntKi)  :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(IntKi)  :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    if (allocated(OutData%rotors)) deallocate(OutData%rotors)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -2225,6 +2240,26 @@ subroutine AD_UnPackInitOutput(Buf, OutData)
       end do
    end if
    call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(Buf, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
 end subroutine
 
 subroutine AD_CopyRotInputFile(SrcRotInputFileData, DstRotInputFileData, CtrlCode, ErrStat, ErrMsg)
@@ -5128,6 +5163,9 @@ subroutine AD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%WindAcc = SrcMiscData%WindAcc
    end if
+   call NWTC_Library_CopyModValsType(SrcMiscData%Vals, DstMiscData%Vals, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine AD_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -5172,6 +5210,8 @@ subroutine AD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%WindAcc)) then
       deallocate(MiscData%WindAcc)
    end if
+   call NWTC_Library_DestroyModValsType(MiscData%Vals, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine AD_PackMisc(Buf, Indata)
@@ -5216,6 +5256,7 @@ subroutine AD_PackMisc(Buf, Indata)
       call RegPackBounds(Buf, 2, lbound(InData%WindAcc), ubound(InData%WindAcc))
       call RegPack(Buf, InData%WindAcc)
    end if
+   call NWTC_Library_PackModValsType(Buf, InData%Vals) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -5302,6 +5343,7 @@ subroutine AD_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%WindAcc)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
+   call NWTC_Library_UnpackModValsType(Buf, OutData%Vals) ! Vals 
 end subroutine
 
 subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -6329,6 +6371,18 @@ subroutine AD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
    DstParamData%UA_Flag = SrcParamData%UA_Flag
    DstParamData%FlowField => SrcParamData%FlowField
+   if (associated(SrcParamData%Vars)) then
+      if (.not. associated(DstParamData%Vars)) then
+         allocate(DstParamData%Vars, stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
 end subroutine
 
 subroutine AD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -6363,6 +6417,12 @@ subroutine AD_DestroyParam(ParamData, ErrStat, ErrMsg)
    call FVW_DestroyParam(ParamData%FVW, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(ParamData%FlowField)
+   if (associated(ParamData%Vars)) then
+      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      deallocate(ParamData%Vars)
+      ParamData%Vars => null()
+   end if
 end subroutine
 
 subroutine AD_PackParam(Buf, Indata)
@@ -6403,6 +6463,13 @@ subroutine AD_PackParam(Buf, Indata)
       call RegPackPointer(Buf, c_loc(InData%FlowField), PtrInIndex)
       if (.not. PtrInIndex) then
          call IfW_FlowField_PackFlowFieldType(Buf, InData%FlowField) 
+      end if
+   end if
+   call RegPack(Buf, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(Buf, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(Buf, InData%Vars) 
       end if
    end if
    if (RegCheckErr(Buf, RoutineName)) return
@@ -6481,6 +6548,26 @@ subroutine AD_UnPackParam(Buf, OutData)
       end if
    else
       OutData%FlowField => null()
+   end if
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(Buf, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
    end if
 end subroutine
 

@@ -138,6 +138,7 @@ typedef	^	RotInitOutputType	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
 
 typedef	^	InitOutputType	RotInitOutputType	 rotors	{:}	-	-	"Rotor init output type"	-
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
+typedef	^	InitOutputType	ModVarsType *Vars	-	-	-	"Module Variables"	-
 # ..... Input file data ...........................................................................................................
 
 # ..... Primary Input file data ...................................................................................................
@@ -324,6 +325,7 @@ typedef	^	MiscVarType	FVW_MiscVarType	FVW	-	-	-	"MiscVars from the FVW module"	-
 typedef	^	MiscVarType	ReKi            WindPos	{:}{:} - -	"XYZ coordinates to query for wind velocity/acceleration"	-
 typedef	^	MiscVarType	ReKi            WindVel	{:}{:} - -	"XYZ components of wind velocity"	-
 typedef	^	MiscVarType	ReKi            WindAcc	{:}{:} - -	"XYZ components of wind acceleration"	-
+typedef	^	MiscVarType	ModValsType     Vals	-   -   -	"Module Values"	-
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -410,6 +412,7 @@ typedef	^	ParameterType	FVW_ParameterType	FVW	-	-	-	"Parameters for FVW module"
 typedef   ^     ParameterType LOGICAL         CompAeroMaps   -  .FALSE. -   "flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false)"	-
 typedef   ^     ParameterType LOGICAL         UA_Flag       -  -  -  "logical flag indicating whether to use UnsteadyAero"        - 
 typedef ^   ParameterType   FlowFieldType *FlowField -  -   -    "Pointer of InflowWinds flow field data type" - 
+typedef ^   ParameterType   ModVarsType &Vars -  -   -    "Module Variables" - 
 
 
 # ..... Inputs ....................................................................................................................

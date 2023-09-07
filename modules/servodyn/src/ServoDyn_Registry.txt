@@ -71,6 +71,7 @@ typedef	^	InitInputType	ReKi	URefLid      	 -   -	-	"Reference average wind spee
 typedef  ^  InitOutputType    CHARACTER(ChanLen)      WriteOutputHdr    {:} - -  "Names of the output-to-file channels"   -
 typedef  ^  InitOutputType    CHARACTER(ChanLen)      WriteOutputUnt    {:} - -  "Units of the output-to-file channels"   -
 typedef  ^  InitOutputType    ProgDesc                Ver               -   - -  "This module's name, version, and date"   -
+typedef  ^  InitOutputType    ModVarsType            *Vars              -   - -  "Module Variables"   -
 typedef  ^  InitOutputType    IntKi                   CouplingScheme    -   - -  "Switch that indicates if a particular coupling scheme is required"   -
 typedef  ^  InitOutputType    Logical                 UseHSSBrake       -   - -  "flag to determine if high-speed shaft brake is potentially used (true=yes)"   -
 # Linearization
@@ -360,6 +361,7 @@ typedef	^	MiscVarType	StC_OutputType	y_TStC	{:}	-	-	"StC module outputs - tower"
 typedef	^	MiscVarType	StC_OutputType	y_SStC	{:}	-	-	"StC module outputs - substructure"	-
 typedef	^	MiscVarType	SrvD_ModuleMapType	SrvD_MeshMap	-	-	-	"Mesh mapping from inputs/output meshes to StC input/output meshes"	-
 typedef	^	MiscVarType	IntKi	PrevTstepNcall	-	-1	-	"Previous timestep N for tracking when in predictor/corrector loop for setting StC u values"	-
+typedef	^	MiscVarType	ModValsType     Vals	-   -   -	"Module Values"	-
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -457,6 +459,7 @@ typedef	^	ParameterType	IntKi	TrimCase	-	-	-	"Controller parameter to be trimmed
 typedef	^	ParameterType	ReKi	TrimGain	-	-	-	"Proportional gain for the rotational speed error (>0) [used only if TrimCase>0]"	"rad/(rad/s) for yaw or pitch; Nm/(rad/s) for torque"
 typedef	^	ParameterType	ReKi	RotSpeedRef	-	-	-	"Reference rotor speed"	"rad/s"
 # parameters for other modules:
+typedef	^	ParameterType	ModVarsType        &Vars	-	-	-	"Module Variables"	-
 typedef	^	ParameterType	StC_ParameterType	BStC	{:}	-	-	"StC module parameters - blade"	-
 typedef	^	ParameterType	StC_ParameterType	NStC	{:}	-	-	"StC module parameters - nacelle"	-
 typedef	^	ParameterType	StC_ParameterType	TStC	{:}	-	-	"StC module parameters - tower"	-
