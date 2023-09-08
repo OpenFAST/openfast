@@ -1,9 +1,9 @@
 module Solver
 
+use NWTC_LAPACK
 use FAST_Solver
 use FAST_ModTypes
 use FAST_Eval
-use NWTC_LAPACK
 use ElastoDyn
 use BeamDyn
 use SubDyn
@@ -26,7 +26,7 @@ integer(IntKi), parameter  :: COL_D = 1, COL_V = 2, COL_A = 3, COL_AA = 4
 integer(IntKi), parameter  :: TC_Modules(*) = [Module_ED, Module_BD, Module_SD]
 
 ! Debugging
-logical, parameter         :: DebugSolver = .false.
+logical, parameter         :: DebugSolver = .true.
 integer(IntKi)             :: DebugUn = -1
 character(*), parameter    :: DebugFile = 'solver.dbg'
 logical, parameter         :: DebugJacobian = .false.
@@ -34,18 +34,19 @@ integer(IntKi)             :: MatrixUn = -1
 
 contains
 
-subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
+subroutine Solver_Init(p, m, Mods, Turbine, ErrStat, ErrMsg)
 
    type(TC_ParameterType), intent(inout)     :: p           !< Parameters
    type(TC_MiscVarType), intent(out)         :: m           !< Misc variables for optimization (not copied in glue code)
    type(ModDataType), intent(inout)          :: Mods(:)     !< Module data
+   type(FAST_TurbineType), intent(inout)     :: Turbine     !< all data for one instance of a turbine
    integer(IntKi), intent(out)               :: ErrStat     !< Error status of the operation
    character(*), intent(out)                 :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    character(*), parameter                   :: RoutineName = 'Solver_Init'
    integer(IntKi)                            :: ErrStat2    ! local error status
    character(ErrMsgLen)                      :: ErrMsg2     ! local error message
-   integer(IntKi)                            :: i, j, k, n
+   integer(IntKi)                            :: i, j, k
    integer(IntKi)                            :: NumX, NumQ, NumU, NumY, NumJ
    integer(IntKi), allocatable               :: modIDs(:), modInds(:)
    type(TC_MappingType)                      :: MeshMap
@@ -62,11 +63,11 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
 
    ! Indicies of all modules
    p%iModAll = [pack(modInds, ModIDs == Module_SrvD), &
-                pack(modInds, ModIDs == Module_IfW), &
-                pack(modInds, ModIDs == Module_AD), &
                 pack(modInds, ModIDs == Module_ED), &
                 pack(modInds, ModIDs == Module_BD), &
-                pack(modInds, ModIDs == Module_SD)]
+                pack(modInds, ModIDs == Module_SD), &
+                pack(modInds, ModIDs == Module_IfW), &
+                pack(modInds, ModIDs == Module_AD)]
 
    ! Indicies of tight coupling modules
    p%iModTC = [pack(modInds, ModIDs == Module_ED), &
@@ -107,7 +108,7 @@ subroutine Solver_Init(p, m, Mods, ErrStat, ErrMsg)
    ! Initialize mesh mappings (must be done before calculating global indices)
    !----------------------------------------------------------------------------
 
-   call DefineMappings(m%Mappings, Mods, ErrStat2, ErrMsg2)
+   call FAST_InitMappings(m%Mappings, Mods, Turbine, ErrStat2, ErrMsg2)
    if (Failed()) return
 
    !----------------------------------------------------------------------------
@@ -219,7 +220,7 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
    integer(IntKi)                         :: ErrStat2    ! local error status
    character(ErrMsgLen)                   :: ErrMsg2     ! local error message
    integer(IntKi), allocatable            :: modIDs(:), vec1(:), vec2(:), iuLoad(:)
-   integer(IntKi)                         :: i, j, k, n
+   integer(IntKi)                         :: i, j, k, num
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -411,7 +412,7 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
 
    ! Initialize number of q states (ignore derivatives)
    NumQ = 0
-   n = 0
+   num = 0
 
    ! Loop through modules
    do i = 1, size(Mods)
@@ -458,15 +459,15 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
       ! ixqd is 3xN where each row is [global x array index, q matrix row, q matrix col]
       do j = 1, size(Mods(i)%Vars%x)
          do k = 1, Mods(i)%Vars%x(j)%Num
-            n = n + 1
-            p%ixqd(:, n) = [Mods(i)%Vars%x(j)%iGblSol(k), Mods(i)%Vars%x(j)%iq(k), Mods(i)%Vars%x(j)%DerivOrder + 1]
+            num = num + 1
+            p%ixqd(:, num) = [Mods(i)%Vars%x(j)%iGblSol(k), Mods(i)%Vars%x(j)%iq(k), Mods(i)%Vars%x(j)%DerivOrder + 1]
          end do
       end do
 
    end do
 
    ! Remove unused x->q indicies
-   p%ixqd = p%ixqd(:, 1:n)
+   p%ixqd = p%ixqd(:, 1:num)
 
    !----------------------------------------------------------------------------
    ! Jacobian indices and ranges
@@ -490,163 +491,6 @@ contains
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Failed = ErrStat >= AbortErrLev
    end function
-end subroutine
-
-subroutine DefineMappings(Mappings, Mods, ErrStat, ErrMsg)
-   type(TC_MappingType), allocatable, intent(inout)   :: Mappings(:)
-   type(ModDataType), intent(inout)                   :: Mods(:)     !< Module data
-   integer(IntKi), intent(out)                        :: ErrStat     !< Error status of the operation
-   character(*), intent(out)                          :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-   character(*), parameter   :: RoutineName = 'DefineMappings'
-   integer(IntKi)            :: ErrStat2    ! local error status
-   character(ErrMsgLen)      :: ErrMsg2     ! local error message
-   integer(IntKi)            :: iMap, iModOut, iModIn, i, j
-   logical, allocatable      :: isActive(:)
-
-   ErrStat = ErrID_None
-   ErrMsg = ''
-
-   !----------------------------------------------------------------------------
-   ! Define mesh mappings between modules
-   !----------------------------------------------------------------------------
-
-   ! Define a list of all possible module mesh mappings between modules
-   ! Note: the mesh names must map those defined in MV_AddMeshVar in the modules
-   allocate (Mappings(0), stat=ErrStat2)
-   if (ErrStat2 /= 0) then
-      call SetErrStat(ErrID_Fatal, "Error allocating mappings", ErrStat, ErrMsg, RoutineName)
-      return
-   end if
-
-   do iMap = 1, size(Mods)
-      if (Mods(iMap)%ID == Module_BD) then
-         iModOut = Mods(iMap)%Ins
-         call AddMotionMapping(Key='ED BladeRoot -> BD RootMotion', &
-                               SrcModID=Module_ED, SrcIns=1, SrcMeshName='Blade root '//trim(Num2LStr(iModOut)), &
-                               DstModID=Module_BD, DstIns=iModOut, DstMeshName='RootMotion')
-         call AddLoadMapping(Key='BD ReactionForce -> ED HubLoad', &
-                             SrcModID=Module_BD, SrcIns=iModOut, SrcMeshName='ReactionForce', SrcDispMeshName='RootMotion', &
-                             DstModID=Module_ED, DstIns=1, DstMeshName='Hub', DstDispMeshName='Hub')
-      end if
-   end do
-
-   !----------------------------------------------------------------------------
-   ! Get module indices in ModData and determine which mappings are active
-   !----------------------------------------------------------------------------
-
-   ! Allocate array to indicate if mapping is active and initialize to false
-   call AllocAry(isActive, size(Mappings), "isActive", ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-
-   isActive = .false.
-
-   ! Loop through mappings
-   do iMap = 1, size(Mappings)
-
-      ! Loop modules, if module ID matches source module ID
-      ! and module instance matches source module instance, exit loop
-      do iModOut = 1, size(Mods)
-         if ((Mappings(iMap)%SrcModID == Mods(iModOut)%ID) .and. &
-             (Mappings(iMap)%SrcIns == Mods(iModOut)%Ins)) exit
-      end do
-
-      ! Loop through modules, if module ID matches destination module ID
-      ! and module instance matches destinatino module instance, exit loop
-      do iModIn = 1, size(Mods)
-         if ((Mappings(iMap)%DstModID == Mods(iModIn)%ID) .and. &
-             (Mappings(iMap)%DstIns == Mods(iModIn)%Ins)) exit
-      end do
-
-      ! If input or output module not found, mapping is not active, cycle
-      if (iModOut > size(Mods) .or. iModIn > size(Mods)) cycle
-
-      ! Mark mapping as active
-      isActive(iMap) = .true.
-
-      ! Module input/ouput IDs and instances found, populate mapping
-      Mappings(iMap)%SrcModIdx = iModOut
-      Mappings(iMap)%DstModIdx = iModIn
-
-      associate (map => Mappings(iMap), &
-                 SrcMod => Mods(Mappings(iMap)%SrcModIdx), &
-                 DstMod => Mods(Mappings(iMap)%DstModIdx))
-
-         ! TODO: Add logic to check if mesh exists, skip mapping if it doesn't exist
-
-         ! If load mapping
-         if (map%IsLoad) then
-
-            ! Source mesh variable indices
-            map%SrcVarIdx = [(MV_VarIndex(SrcMod%Vars%y, map%SrcMeshName, LoadFields(iModOut)), iModOut=1, size(LoadFields))]
-            map%SrcVarIdx = pack(map%SrcVarIdx, map%SrcVarIdx > 0)
-
-            ! Destination mesh variable indices
-            map%DstVarIdx = [(MV_VarIndex(DstMod%Vars%u, map%DstMeshName, LoadFields(iModOut)), iModOut=1, size(LoadFields))]
-            map%DstVarIdx = pack(map%DstVarIdx, map%DstVarIdx > 0)
-
-            ! Source displacement mesh is in input of source module (only translation displacement needed)
-            map%SrcDispVarIdx = MV_VarIndex(SrcMod%Vars%u, map%SrcDispMeshName, VF_TransDisp)
-
-            ! Destination displacement mesh is in output of destination module (only translation displacement needed)
-            map%DstDispVarIdx = MV_VarIndex(DstMod%Vars%y, map%DstDispMeshName, VF_TransDisp)
-
-            ! Mark displacement variables with Solve flag
-            call SetFlags(SrcMod%Vars%u(map%SrcDispVarIdx), VF_Solve)
-            call SetFlags(DstMod%Vars%y(map%DstDispVarIdx), VF_Solve)
-
-         else
-
-            ! Source mesh motion field variables
-            map%SrcVarIdx = [(MV_VarIndex(SrcMod%Vars%y, map%SrcMeshName, MotionFields(iModOut)), iModOut=1, size(MotionFields))]
-            map%SrcVarIdx = pack(map%SrcVarIdx, map%SrcVarIdx > 0)
-
-            ! Destination mesh motion field variables
-            map%DstVarIdx = [(MV_VarIndex(DstMod%Vars%u, map%DstMeshName, MotionFields(iModOut)), iModOut=1, size(MotionFields))]
-            map%DstVarIdx = pack(map%DstVarIdx, map%DstVarIdx > 0)
-
-         end if
-
-         ! Mark variables with Solve flag
-         do iModOut = 1, size(map%SrcVarIdx)
-            call SetFlags(SrcMod%Vars%y(map%SrcVarIdx(iModOut)), VF_Solve)
-         end do
-         do iModOut = 1, size(map%DstVarIdx)
-            call SetFlags(DstMod%Vars%u(map%DstVarIdx(iModOut)), VF_Solve)
-         end do
-
-      end associate
-
-   end do
-
-   ! Remove inactive mappings
-   Mappings = pack(Mappings, mask=isActive)
-
-contains
-   subroutine AddLoadMapping(Key, SrcModID, SrcIns, SrcMeshName, SrcDispMeshName, &
-                             DstModID, DstIns, DstMeshName, DstDispMeshName)
-      character(*), intent(in)                           :: Key
-      integer(IntKi), intent(in)                         :: SrcModID, DstModID
-      integer(IntKi), intent(in)                         :: SrcIns, DstIns
-      character(*), intent(in)                           :: SrcMeshName, DstMeshName
-      character(*), intent(in)                           :: SrcDispMeshName, DstDispMeshName
-      if (.not. allocated(Mappings)) allocate (Mappings(0))
-      Mappings = [Mappings, TC_MappingType(Key=Key, isLoad=.true., &
-                                           SrcModID=SrcModID, SrcIns=SrcIns, SrcMeshName=SrcMeshName, SrcDispMeshName=SrcDispMeshName, &
-                                           DstModID=DstModID, DstIns=DstIns, DstMeshName=DstMeshName, DstDispMeshName=DstDispMeshName)]
-   end subroutine
-   subroutine AddMotionMapping(Key, SrcModID, SrcIns, SrcMeshName, &
-                               DstModID, DstIns, DstMeshName)
-      character(*), intent(in) :: Key
-      integer(IntKi), intent(in) :: SrcModID, DstModID
-      integer(IntKi), intent(in) :: SrcIns, DstIns
-      character(*), intent(in) :: SrcMeshName, DstMeshName
-      if (.not. allocated(Mappings)) allocate (Mappings(0))
-      Mappings = [Mappings, TC_MappingType(Key=Key, isLoad=.false., &
-                                           SrcModID=SrcModID, SrcIns=SrcIns, SrcMeshName=SrcMeshName, &
-                                           DstModID=DstModID, DstIns=DstIns, DstMeshName=DstMeshName)]
-   end subroutine
 end subroutine
 
 subroutine TransferXtoQ(ixqd, x, q)
@@ -708,14 +552,7 @@ subroutine Solver_Step0(p, m, ModData, Turbine, ErrStat, ErrMsg)
    ErrMsg = ''
 
    !----------------------------------------------------------------------------
-   ! Initialize module mappings
-   ! TODO: Move this into init
-   !----------------------------------------------------------------------------
-
-   call FAST_InitMappings(m%Mappings, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-
-   !----------------------------------------------------------------------------
-   ! Miscellaneous initial step
+   ! Miscellaneous initial step setup
    !----------------------------------------------------------------------------
 
    t_initial = Turbine%m_FAST%t_global
@@ -743,8 +580,8 @@ subroutine Solver_Step0(p, m, ModData, Turbine, ErrStat, ErrMsg)
    call AllocAry(accel, size(m%qn, dim=2), "accel", ErrStat2, ErrMsg2); if (Failed()) return
    accel = m%qn(:, COL_A)
 
-   ! Reset mappings updated flags
-   m%Mappings%Updated = .false.
+   ! Reset mapping ready for transfer flag
+   m%Mappings%Ready = .false.
 
    ! Loop until initial accelerations are converged, or max iterations are reached.
    ! TODO: may need a separate variable for max initial acceleration convergence iterations
@@ -754,11 +591,9 @@ subroutine Solver_Step0(p, m, ModData, Turbine, ErrStat, ErrMsg)
 
       ! Transfer inputs and calculate outputs for all modules (use current state)
       do i = 1, size(p%iModAll)
-         call FAST_InputSolve(ModData(p%iModAll(i)), m%Mappings, 1, &
+         call FAST_InputSolve(ModData(p%iModAll(i)), m%Mappings, IS_Input, &
                               Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-         call FAST_CalcOutput(ModData(p%iModAll(i)), t_initial, STATE_CURR, &
-                              Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-         call FAST_MapOutputs(ModData(p%iModAll(i)), m%Mappings, &
+         call FAST_CalcOutput(ModData(p%iModAll(i)), m%Mappings, t_initial, STATE_CURR, &
                               Turbine, ErrStat2, ErrMsg2); if (Failed()) return
       end do
 
@@ -923,8 +758,8 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
       m%qn = m%q
       m%xn = m%x
 
-      ! Reset mappings updated flags
-      m%Mappings%Updated = .false.
+      ! Reset mapping ready flags
+      m%Mappings%Ready = .false.
 
       !-------------------------------------------------------------------------
       ! Option 2 Solve
@@ -932,16 +767,12 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
       ! Loop through Option 2 modules
       do i = 1, size(p%iModOpt2)
-         call FAST_InputSolve(Mods(p%iModOpt2(i)), m%Mappings, 1, &
+         call FAST_InputSolve(Mods(p%iModOpt2(i)), m%Mappings, IS_Input, &
                               Turbine, ErrStat2, ErrMsg2); if (Failed()) return
          call FAST_UpdateStates(Mods(p%iModOpt2(i)), t_initial, n_t_global, m%xn, m%qn, &
                                 Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-         call FAST_CalcOutput(Mods(p%iModOpt2(i)), t_global_next, STATE_PRED, &
+         call FAST_CalcOutput(Mods(p%iModOpt2(i)), m%Mappings, t_global_next, STATE_PRED, &
                               Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-         if (i < 2) then
-            call FAST_MapOutputs(Mods(p%iModOpt2(i)), m%Mappings, &
-                                 Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-         end if
       end do
 
       !-------------------------------------------------------------------------
@@ -950,7 +781,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
       ! Get inputs and update states for Option 1 modules not in Option 2
       do i = 1, size(p%iModOpt1US)
-         call FAST_InputSolve(Mods(p%iModOpt1US(i)), m%Mappings, 1, &
+         call FAST_InputSolve(Mods(p%iModOpt1US(i)), m%Mappings, IS_Input, &
                               Turbine, ErrStat2, ErrMsg2); if (Failed()) return
          call FAST_UpdateStates(Mods(p%iModOpt1US(i)), t_initial, n_t_global, m%xn, m%qn, &
                                 Turbine, ErrStat2, ErrMsg2); if (Failed()) return
@@ -978,7 +809,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          !----------------------------------------------------------------------
 
          do i = 1, size(p%iModOpt1)
-            call FAST_CalcOutput(Mods(p%iModOpt1(i)), t_global_next, STATE_PRED, &
+            call FAST_CalcOutput(Mods(p%iModOpt1(i)), m%Mappings, t_global_next, STATE_PRED, &
                                  Turbine, ErrStat2, ErrMsg2); if (Failed()) return
          end do
 
@@ -997,7 +828,8 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! Note: BuildJacobian resets these counters.
          if ((m%IterUntilUJac <= 0) .or. (m%StepsUntilUJac <= 0) .or. (n_t_global_next == 1)) then
             call BuildJacobian(p, m, Mods, t_global_next, n_t_global_next*100 + iterConv, &
-                               Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+                               Turbine, ErrStat2, ErrMsg2)
+            if (Failed()) return
          end if
 
          !----------------------------------------------------------------------
@@ -1007,7 +839,8 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! Calculate continuous state derivatives for tight coupling modules
          do i = 1, size(p%iModTC)
             call FAST_CalcContStateDeriv(Mods(p%iModTC(i)), t_global_next, STATE_PRED, &
-                                         Turbine, ErrStat2, ErrMsg2, dxdt=m%dxdt); if (Failed()) return
+                                         Turbine, ErrStat2, ErrMsg2, dxdt=m%dxdt)
+            if (Failed()) return
          end do
 
          ! Calculate difference between predicted and actual accelerations
@@ -1015,10 +848,9 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
          ! Transfer Option 1 outputs to temporary inputs and collect into u_tmp
          do i = 1, size(p%iModOpt1)
-            call FAST_MapOutputs(Mods(p%iModOpt1(i)), m%Mappings, &
-                                 Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-            call FAST_InputSolve(Mods(p%iModOpt1(i)), m%Mappings, 2, &
-                                 Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+            call FAST_InputSolve(Mods(p%iModOpt1(i)), m%Mappings, IS_u, &
+                                 Turbine, ErrStat2, ErrMsg2)
+            if (Failed()) return
          end do
          call PackModuleUs(Mods, p%iModOpt1, Turbine, m%u_tmp)
 
@@ -1035,7 +867,8 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          !----------------------------------------------------------------------
 
          ! Solve Jacobian and RHS
-         call LAPACK_getrs('N', size(m%Jac, 1), m%Jac, m%IPIV, m%XB, ErrStat2, ErrMsg2); if (Failed()) return
+         call LAPACK_getrs('N', size(m%Jac, 1), m%Jac, m%IPIV, m%XB, ErrStat2, ErrMsg2)
+         if (Failed()) return
 
          !----------------------------------------------------------------------
          ! Check perturbations for convergence and exit if below tolerance

@@ -308,7 +308,6 @@ subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, x_TC, q_TC, T, ErrStat,
       call XferGblToLoc1D(Mod%ixs, x_TC, T%BD%m(Mod%Ins)%Vals%x)
       call BD_UnpackStateValues(T%BD%p(Mod%Ins), T%BD%m(Mod%Ins)%Vals%x, T%BD%x(Mod%Ins, STATE_PRED))
 
-
    case (Module_ED)
 
       ! Transfer tight coupling states to module
@@ -380,20 +379,164 @@ contains
    end function
 end subroutine
 
-subroutine FAST_InitMappings(Maps, T, ErrStat, ErrMsg)
-   type(TC_MappingType), intent(inout)             :: Maps(:)
-   type(FAST_TurbineType), target, intent(inout)   :: T           !< Turbine type
-   integer(IntKi), intent(out)                     :: ErrStat
-   character(*), intent(out)                       :: ErrMsg
+subroutine FAST_InitMappings(Maps, Mods, T, ErrStat, ErrMsg)
+   type(TC_MappingType), allocatable, intent(inout)   :: Maps(:)
+   type(ModDataType), intent(inout)                   :: Mods(:)     !< Module data
+   type(FAST_TurbineType), target, intent(inout)      :: T           !< Turbine type
+   integer(IntKi), intent(out)                        :: ErrStat
+   character(*), intent(out)                          :: ErrMsg
 
-   character(*), parameter       :: RoutineName = 'FAST_InputSolve'
-   integer(IntKi)                :: ErrStat2
-   character(ErrMsgLen)          :: ErrMsg2
-   integer(IntKi)                :: i
-   integer(IntKi)                :: DstIns, SrcIns
+   character(*), parameter    :: RoutineName = 'FAST_InitMappings'
+   integer(IntKi)             :: ErrStat2
+   character(ErrMsgLen)       :: ErrMsg2
+   integer(IntKi)             :: i
+   integer(IntKi)             :: DstIns, SrcIns
+   integer(IntKi)             :: iMap, ModIns, iModIn
+   logical, allocatable       :: isActive(:)
 
    ErrStat = ErrID_None
    ErrMsg = ''
+
+   !----------------------------------------------------------------------------
+   ! Define mesh mappings between modules
+   !----------------------------------------------------------------------------
+
+   ! Define a list of all possible module mesh mappings between modules
+   ! Note: the mesh names must map those defined in MV_AddMeshVar in the modules
+   allocate (Maps(0), stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat(ErrID_Fatal, "Error allocating mappings", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Loop through modules
+   do iMap = 1, size(Mods)
+
+      ! Module instance
+      ModIns = Mods(iMap)%Ins
+
+      ! Switch based on module ID
+      select case (Mods(iMap)%ID)
+
+      case (Module_AD)
+
+         call AddMotionMapping(Key='ED HubPtMotion -> AD HubMotion', &
+                               SrcModID=Module_ED, SrcIns=1, SrcMeshName='Hub', &
+                               DstModID=Module_AD, DstIns=1, DstMeshName='HubMotion', &
+                               Active=T%AD%Input(1)%rotors(1)%TowerMotion%Committed)
+
+         call AddMotionMapping(Key='ED HubPtMotion -> AD HubMotion', &
+                               SrcModID=Module_ED, SrcIns=1, SrcMeshName='Hub', &
+                               DstModID=Module_AD, DstIns=1, DstMeshName='HubMotion')
+
+      case (Module_BD)
+
+         call AddMotionMapping(Key='ED BladeRoot -> BD RootMotion', &
+                               SrcModID=Module_ED, SrcIns=1, SrcMeshName='Blade root '//trim(Num2LStr(ModIns)), &
+                               DstModID=Module_BD, DstIns=ModIns, DstMeshName='RootMotion')
+
+         call AddLoadMapping(Key='BD ReactionForce -> ED HubLoad', &
+                             SrcModID=Module_BD, SrcIns=ModIns, SrcMeshName='ReactionForce', SrcDispMeshName='RootMotion', &
+                             DstModID=Module_ED, DstIns=1, DstMeshName='Hub', DstDispMeshName='Hub')
+
+      end select
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Get module indices in ModData and determine which mappings are active
+   !----------------------------------------------------------------------------
+
+   ! Allocate array to indicate if mapping is active and initialize to false
+   call AllocAry(isActive, size(Maps), "isActive", ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   isActive = .false.
+
+   ! Loop through Maps
+   do iMap = 1, size(Maps)
+
+      ! Loop modules, if module ID matches source module ID
+      ! and module instance matches source module instance, exit loop
+      do ModIns = 1, size(Mods)
+         if ((Maps(iMap)%SrcModID == Mods(ModIns)%ID) .and. &
+             (Maps(iMap)%SrcIns == Mods(ModIns)%Ins)) exit
+      end do
+
+      ! Loop through modules, if module ID matches destination module ID
+      ! and module instance matches destinatino module instance, exit loop
+      do iModIn = 1, size(Mods)
+         if ((Maps(iMap)%DstModID == Mods(iModIn)%ID) .and. &
+             (Maps(iMap)%DstIns == Mods(iModIn)%Ins)) exit
+      end do
+
+      ! If input or output module not found, mapping is not active, cycle
+      if (ModIns > size(Mods) .or. iModIn > size(Mods)) cycle
+
+      ! Mark mapping as active
+      isActive(iMap) = .true.
+
+      ! Module input/ouput IDs and instances found, populate mapping
+      Maps(iMap)%SrcModIdx = ModIns
+      Maps(iMap)%DstModIdx = iModIn
+
+      associate (Map => Maps(iMap), &
+                 SrcMod => Mods(Maps(iMap)%SrcModIdx), &
+                 DstMod => Mods(Maps(iMap)%DstModIdx))
+
+         ! TODO: Add logic to check if mesh exists, skip mapping if it doesn't exist
+
+         ! If load mapping
+         if (Map%IsLoad) then
+
+            ! Source mesh variable indices
+            Map%SrcVarIdx = [(MV_VarIndex(SrcMod%Vars%y, Map%SrcMeshName, LoadFields(ModIns)), ModIns=1, size(LoadFields))]
+            Map%SrcVarIdx = pack(Map%SrcVarIdx, Map%SrcVarIdx > 0)
+
+            ! Destination mesh variable indices
+            Map%DstVarIdx = [(MV_VarIndex(DstMod%Vars%u, Map%DstMeshName, LoadFields(ModIns)), ModIns=1, size(LoadFields))]
+            Map%DstVarIdx = pack(Map%DstVarIdx, Map%DstVarIdx > 0)
+
+            ! Source displacement mesh is in input of source module (only translation displacement needed)
+            Map%SrcDispVarIdx = MV_VarIndex(SrcMod%Vars%u, Map%SrcDispMeshName, VF_TransDisp)
+
+            ! Destination displacement mesh is in output of destination module (only translation displacement needed)
+            Map%DstDispVarIdx = MV_VarIndex(DstMod%Vars%y, Map%DstDispMeshName, VF_TransDisp)
+
+            ! Mark displacement variables with Solve flag
+            call SetFlags(SrcMod%Vars%u(Map%SrcDispVarIdx), VF_Solve)
+            call SetFlags(DstMod%Vars%y(Map%DstDispVarIdx), VF_Solve)
+
+         else
+
+            ! Source mesh motion field variables
+            map%SrcVarIdx = [(MV_VarIndex(SrcMod%Vars%y, map%SrcMeshName, MotionFields(ModIns)), ModIns=1, size(MotionFields))]
+            map%SrcVarIdx = pack(map%SrcVarIdx, map%SrcVarIdx > 0)
+
+            ! Destination mesh motion field variables
+            map%DstVarIdx = [(MV_VarIndex(DstMod%Vars%u, map%DstMeshName, MotionFields(ModIns)), ModIns=1, size(MotionFields))]
+            map%DstVarIdx = pack(map%DstVarIdx, map%DstVarIdx > 0)
+
+         end if
+
+         ! Mark variables with Solve flag
+         do ModIns = 1, size(map%SrcVarIdx)
+            call SetFlags(SrcMod%Vars%y(map%SrcVarIdx(ModIns)), VF_Solve)
+         end do
+         do ModIns = 1, size(map%DstVarIdx)
+            call SetFlags(DstMod%Vars%u(map%DstVarIdx(ModIns)), VF_Solve)
+         end do
+
+      end associate
+
+   end do
+
+   ! Remove inactive mappings
+   Maps = pack(Maps, mask=isActive)
+
+   !----------------------------------------------------------------------------
+   ! Initialize Mapping meshes
+   !----------------------------------------------------------------------------
 
    ! Loop through mappings
    do i = 1, size(Maps)
@@ -424,14 +567,44 @@ subroutine FAST_InitMappings(Maps, T, ErrStat, ErrMsg)
    end do
 
 contains
+   subroutine AddLoadMapping(Key, SrcModID, SrcIns, SrcMeshName, SrcDispMeshName, &
+                             DstModID, DstIns, DstMeshName, DstDispMeshName, Active)
+      character(*), intent(in)      :: Key
+      integer(IntKi), intent(in)    :: SrcModID, DstModID
+      integer(IntKi), intent(in)    :: SrcIns, DstIns
+      character(*), intent(in)      :: SrcMeshName, DstMeshName
+      character(*), intent(in)      :: SrcDispMeshName, DstDispMeshName
+      logical, optional, intent(in) :: Active
+      if (present(Active)) then
+         if (.not. Active) return
+      end if
+      Maps = [Maps, TC_MappingType(Key=Key, isLoad=.true., &
+                                   SrcModID=SrcModID, SrcIns=SrcIns, SrcMeshName=SrcMeshName, SrcDispMeshName=SrcDispMeshName, &
+                                   DstModID=DstModID, DstIns=DstIns, DstMeshName=DstMeshName, DstDispMeshName=DstDispMeshName)]
+   end subroutine
+   subroutine AddMotionMapping(Key, SrcModID, SrcIns, SrcMeshName, &
+                               DstModID, DstIns, DstMeshName, Active)
+      character(*), intent(in)      :: Key
+      integer(IntKi), intent(in)    :: SrcModID, DstModID
+      integer(IntKi), intent(in)    :: SrcIns, DstIns
+      character(*), intent(in)      :: SrcMeshName, DstMeshName
+      logical, optional, intent(in) :: Active
+      if (present(Active)) then
+         if (.not. Active) return
+      end if
+      Maps = [Maps, TC_MappingType(Key=Key, isLoad=.false., &
+                                   SrcModID=SrcModID, SrcIns=SrcIns, SrcMeshName=SrcMeshName, &
+                                   DstModID=DstModID, DstIns=DstIns, DstMeshName=DstMeshName)]
+   end subroutine
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Failed = ErrStat >= AbortErrLev
    end function
 end subroutine
 
-subroutine FAST_CalcOutput(Mod, this_time, this_state, T, ErrStat, ErrMsg)
+subroutine FAST_CalcOutput(Mod, Maps, this_time, this_state, T, ErrStat, ErrMsg)
    type(ModDataType), intent(in)           :: Mod         !< Module data
+   type(TC_MappingType), intent(inout)     :: Maps(:)     !< Output->Input mappings
    real(DbKi), intent(in)                  :: this_time   !< Time
    integer(IntKi), intent(in)              :: this_state  !< State index
    type(FAST_TurbineType), intent(inout)   :: T           !< Turbine type
@@ -441,8 +614,7 @@ subroutine FAST_CalcOutput(Mod, this_time, this_state, T, ErrStat, ErrMsg)
    character(*), parameter    :: RoutineName = 'FAST_CalcOutput'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
-   integer(IntKi)             :: j
-   integer(IntKi)             :: j_ss                ! substep loop counter
+   integer(IntKi)             :: i
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -491,6 +663,11 @@ subroutine FAST_CalcOutput(Mod, this_time, this_state, T, ErrStat, ErrMsg)
       call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(Mod%ID)), ErrStat, ErrMsg, RoutineName)
       return
    end select
+
+   ! Set updated flag in mappings where this module is the source
+   do i = 1, size(Maps)
+      if (Maps(i)%SrcModIdx == Mod%Idx) Maps(i)%Ready = .true.
+   end do
 
 contains
    logical function Failed()
@@ -939,62 +1116,6 @@ contains
    end function
 end subroutine
 
-subroutine FAST_MapOutputs(Mod, Maps, T, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)                   :: Mod      !< Module data
-   type(TC_MappingType), intent(inout)             :: Maps(:)
-   type(FAST_TurbineType), target, intent(inout)   :: T        !< Turbine type
-   integer(IntKi), intent(out)                     :: ErrStat
-   character(*), intent(out)                       :: ErrMsg
-
-   character(*), parameter       :: RoutineName = 'FAST_TransferOutputs'
-   integer(IntKi)                :: ErrStat2
-   character(ErrMsgLen)          :: ErrMsg2
-   integer(IntKi)                :: i
-   integer(IntKi)                :: DstIns, SrcIns
-
-   ! Loop through mappings that use this module's outputs
-   do i = 1, size(Maps)
-
-      ! If map doesn't apply to this module, cycle
-      if (Mod%Idx /= Maps(i)%SrcModIdx) cycle
-
-      ! Get source and destination module instances
-      SrcIns = Maps(i)%SrcIns
-      DstIns = Maps(i)%DstIns
-
-      ! Select based on mapping Key (must match Key in m%Mappings in Solver.f90)
-      select case (Maps(i)%Key)
-
-      case ('ED BladeRoot -> BD RootMotion')
-
-         call Transfer_Point_to_Point(T%ED%y%BladeRootMotion(DstIns), Maps(i)%MeshTmp, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (Failed()) return
-         !
-
-      case ('BD ReactionForce -> ED HubLoad')
-
-         ! u_BD_RootMotion and y_ED2%HubPtMotion contain the displaced positions for load calculations
-         call Transfer_Point_to_Point(T%BD%y(SrcIns)%ReactionForce, Maps(i)%MeshTmp, Maps(i)%MeshMap, ErrStat2, ErrMsg2, &
-                                      T%BD%Input(1, SrcIns)%RootMotion, T%ED%y%HubPtMotion); if (Failed()) return
-         ! u_ED%HubPtLoad%Force = u_ED%HubPtLoad%Force + Maps(i)%MeshTmp%Force
-         ! u_ED%HubPtLoad%Moment = u_ED%HubPtLoad%Moment + Maps(i)%MeshTmp%Moment
-
-      case default
-         call SetErrStat(ErrID_Fatal, 'Invalid Mapping Key: '//Maps(i)%Key, ErrStat, ErrMsg, RoutineName)
-         return
-      end select
-
-      ! Set flag indicating that mapping has been updated
-      Maps(i)%Updated = .true.
-
-   end do
-
-contains
-   logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      Failed = ErrStat >= AbortErrLev
-   end function
-end subroutine
-
 subroutine FAST_InputSolve(Mod, Maps, Dst, T, ErrStat, ErrMsg)
    type(ModDataType), intent(in)                   :: Mod     !< Module data
    type(TC_MappingType), intent(inout)             :: Maps(:)
@@ -1069,11 +1190,11 @@ subroutine FAST_InputSolve(Mod, Maps, Dst, T, ErrStat, ErrMsg)
    ! Loop through mappings that set this module's inputs
    do i = 1, size(Maps)
 
-      ! If mapping hasn't been updated, cycle
-      if (.not. Maps(i)%Updated) cycle
-
-      ! If map doesn't apply to this module, cycle
+      ! If this is not the destination module, cycle
       if (Mod%Idx /= Maps(i)%DstModIdx) cycle
+
+      ! If mapping source has not been calculated, cycle
+      if (.not. Maps(i)%Ready) cycle
 
       ! Get source and destination module instances
       SrcIns = Maps(i)%SrcIns
@@ -1084,7 +1205,8 @@ subroutine FAST_InputSolve(Mod, Maps, Dst, T, ErrStat, ErrMsg)
 
       case ('ED BladeRoot -> BD RootMotion')
 
-         call MeshCopy(Maps(i)%MeshTmp, u_BD%RootMotion, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+         call Transfer_Point_to_Point(T%ED%y%BladeRootMotion(DstIns), u_BD%RootMotion, Maps(i)%MeshMap, ErrStat2, ErrMsg2)
+         if (Failed()) return
 
       case ('BD ReactionForce -> ED HubLoad')
 
@@ -1093,6 +1215,10 @@ subroutine FAST_InputSolve(Mod, Maps, Dst, T, ErrStat, ErrMsg)
             u_ED%HubPtLoad%Moment = 0.0_ReKi
             ED_ResetHubPtLoad = .false.
          end if
+
+         call Transfer_Point_to_Point(T%BD%y(SrcIns)%ReactionForce, Maps(i)%MeshTmp, Maps(i)%MeshMap, ErrStat2, ErrMsg2, &
+                                      T%BD%Input(1, SrcIns)%RootMotion, T%ED%y%HubPtMotion)
+         if (Failed()) return
 
          u_ED%HubPtLoad%Force = u_ED%HubPtLoad%Force + Maps(i)%MeshTmp%Force
          u_ED%HubPtLoad%Moment = u_ED%HubPtLoad%Moment + Maps(i)%MeshTmp%Moment

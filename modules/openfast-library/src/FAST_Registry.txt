@@ -109,7 +109,7 @@ typedef ^ ^                 IntKi                   DstDispVarIdx   -  -  -     
 typedef ^ ^                 MeshType                MeshTmp         -  -  -     "Temporary mesh for intermediate transfers" -
 typedef ^ ^                 MeshMapType             MeshMap         -  -  -     "Mesh mapping from output variable to input variable" -
 typedef ^ ^                 logical                 IsLoad          -  -  -     "Flag indicating if this is a load or motion mapping" -
-typedef ^ ^                 logical                 Updated         -  -  -     "Flag indicating if this mesh has been updated" -
+typedef ^ ^                 logical                 Ready           -  -  -     "Flag indicating output has been ready to be transferred" -
 
 # Parameters 
 typedef ^ TC_ParameterType  R8Ki            DT                     -  -  -      "solution time step" -

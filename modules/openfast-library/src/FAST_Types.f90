@@ -129,7 +129,7 @@ IMPLICIT NONE
     TYPE(MeshType)  :: MeshTmp      !< Temporary mesh for intermediate transfers [-]
     TYPE(MeshMapType)  :: MeshMap      !< Mesh mapping from output variable to input variable [-]
     LOGICAL  :: IsLoad = .false.      !< Flag indicating if this is a load or motion mapping [-]
-    LOGICAL  :: Updated = .false.      !< Flag indicating if this mesh has been updated [-]
+    LOGICAL  :: Ready = .false.      !< Flag indicating output has been ready to be transferred [-]
   END TYPE TC_MappingType
 ! =======================
 ! =========  TC_ParameterType  =======
@@ -1561,7 +1561,7 @@ subroutine FAST_CopyTC_MappingType(SrcTC_MappingTypeData, DstTC_MappingTypeData,
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstTC_MappingTypeData%IsLoad = SrcTC_MappingTypeData%IsLoad
-   DstTC_MappingTypeData%Updated = SrcTC_MappingTypeData%Updated
+   DstTC_MappingTypeData%Ready = SrcTC_MappingTypeData%Ready
 end subroutine
 
 subroutine FAST_DestroyTC_MappingType(TC_MappingTypeData, ErrStat, ErrMsg)
@@ -1616,7 +1616,7 @@ subroutine FAST_PackTC_MappingType(Buf, Indata)
    call MeshPack(Buf, InData%MeshTmp) 
    call NWTC_Library_PackMeshMapType(Buf, InData%MeshMap) 
    call RegPack(Buf, InData%IsLoad)
-   call RegPack(Buf, InData%Updated)
+   call RegPack(Buf, InData%Ready)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1686,7 +1686,7 @@ subroutine FAST_UnPackTC_MappingType(Buf, OutData)
    call NWTC_Library_UnpackMeshMapType(Buf, OutData%MeshMap) ! MeshMap 
    call RegUnpack(Buf, OutData%IsLoad)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Updated)
+   call RegUnpack(Buf, OutData%Ready)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
