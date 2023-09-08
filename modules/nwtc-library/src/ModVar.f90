@@ -107,14 +107,14 @@ subroutine MV_InitVarsVals(Vars, Vals, Linearize, ErrStat, ErrMsg)
    end do
 
    ! Initialize input variables
-   if (.not. allocated(Vars%x)) allocate(Vars%u(0))
+   if (.not. allocated(Vars%u)) allocate(Vars%u(0))
    StartIndex = 1
    do i = 1, size(Vars%u)
       call ModVarType_Init(Vars%u(i), StartIndex, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
    end do
 
    ! Initialize output variables
-   if (.not. allocated(Vars%x)) allocate(Vars%y(0))
+   if (.not. allocated(Vars%y)) allocate(Vars%y(0))
    StartIndex = 1
    do i = 1, size(Vars%y)
       call ModVarType_Init(Vars%y(i), StartIndex, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
