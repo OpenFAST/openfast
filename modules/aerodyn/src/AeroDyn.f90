@@ -513,7 +513,26 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          if (Failed()) return;
       enddo
    end if
-   
+
+      !............................................................................................
+      ! Initialize Module Variables:
+      !............................................................................................
+
+   ! Allocate space for variables (deallocate if already allocated)
+   if (associated(p%Vars)) deallocate(p%Vars)
+   allocate(p%Vars, stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Associate pointers in initialization output
+   InitOut%Vars => p%Vars
+
+   ! Initialize variables and values
+   CALL MV_InitVarsVals(p%Vars, m%Vals, InitInp%Linearize, ErrStat2, ErrMsg2)
+   if (Failed()) return
+
       !............................................................................................
       ! Print the summary file if requested:
       !............................................................................................
