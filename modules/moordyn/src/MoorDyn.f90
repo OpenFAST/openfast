@@ -932,8 +932,8 @@ CONTAINS
                      CALL Body_AddRod(m%GroundBody, l, tempArray)   ! add rod l to Ground body
                            
 
-                     else if ((let1 == "PINNED") .or. (let1 == "PIN")) then
-                        m%RodList(l)%typeNum = 1
+                  else if ((let1 == "PINNED") .or. (let1 == "PIN")) then
+                     m%RodList(l)%typeNum = 1
                      CALL Body_AddRod(m%GroundBody, l, tempArray)   ! add rod l to Ground body
                      
                      p%nFreeRods=p%nFreeRods+1  ! add this pinned rod to the free list because it is half free
@@ -2211,8 +2211,13 @@ CONTAINS
 
       !--------------------------------------------------
       ! initialize line visualization meshes if needed
-      if (p%VisMeshes .and. p%NLines > 0) then
-         call VisLinesMesh_Init(p,m,y,ErrStat2,ErrMsg2); if(Failed()) return
+      if (p%VisMeshes) then
+         if (p%NLines > 0) then
+            call VisLinesMesh_Init(p,m,y,ErrStat2,ErrMsg2); if(Failed()) return
+         endif
+         if (p%NRods > 0) then
+            call VisRodsMesh_Init(p,m,y,ErrStat2,ErrMsg2); if(Failed()) return
+         endif
       endif
 
 
@@ -2617,10 +2622,17 @@ CONTAINS
 
       !--------------------------------------------------
       ! update line visualization meshes if needed
-      if (p%VisMeshes .and. p%NLines > 0) then
-         call VisLinesMesh_Update(p,m,y,ErrStat2,ErrMsg2)
-         CALL CheckError(ErrStat2, ErrMsg2)
-         IF ( ErrStat >= AbortErrLev ) RETURN
+      if (p%VisMeshes) then
+         if (p%NLines > 0) then
+            call VisLinesMesh_Update(p,m,y,ErrStat2,ErrMsg2)
+            call CheckError(ErrStat2, ErrMsg2)
+            if ( ErrStat >= AbortErrLev ) return
+         endif
+         if (p%NRods > 0) then
+            call VisRodsMesh_Update(p,m,y,ErrStat2,ErrMsg2)
+            call CheckError(ErrStat2, ErrMsg2)
+            if ( ErrStat >= AbortErrLev ) return
+         endif
       endif
 
    CONTAINS

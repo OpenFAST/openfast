@@ -5684,6 +5684,13 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM, H
             endif
          enddo
       endif
+      if (allocated(MD%y%VisRodsMesh)) then
+         do j=1,size(MD%y%VisRodsMesh)
+            if (MD%y%VisRodsMesh(j)%Committed) then
+               call MeshWrVTK(p_FAST%TurbinePos, MD%y%VisRodsMesh(j), trim(p_FAST%VTK_OutFileRoot)//'.MD_Rod'//trim(Num2LStr(j)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrSTat2, ErrMsg2, p_FAST%VTK_tWidth )
+            endif
+         enddo
+      endif
 
 ! FEAMooring
    ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
@@ -5823,6 +5830,13 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW, OpFM,
             endif
          enddo
       endif
+      if (allocated(MD%y%VisRodsMesh)) then
+         do j=1,size(MD%y%VisRodsMesh)
+            if (MD%y%VisRodsMesh(j)%Committed) then
+               call MeshWrVTK(p_FAST%TurbinePos, MD%y%VisRodsMesh(j), trim(p_FAST%VTK_OutFileRoot)//'.MD_Rod'//trim(Num2LStr(j)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrSTat2, ErrMsg2, p_FAST%VTK_tWidth )
+            endif
+         enddo
+      endif
    endif
 !   ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
 !      call MeshWrVTK(p_FAST%TurbinePos, FEAM%Input(1)%PtFairleadDisplacement, trim(p_FAST%VTK_OutFileRoot)//'FEAM_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_tWidth )
@@ -5959,7 +5973,14 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD, IfW
             endif
          enddo
       endif
-
+      if (allocated(MD%y%VisRodsMesh)) then
+         do l=1,size(MD%y%VisRodsMesh)
+            if (MD%y%VisRodsMesh(l)%Committed) then  ! No orientation data, so surface representation not possible
+               call MeshWrVTK_Ln2Surface(p_FAST%TurbinePos, MD%y%VisRodsMesh(l), trim(p_FAST%VTK_OutFileRoot)//'.MD_Rod'//trim(Num2LStr(l))//'Surface', y_FAST%VTK_count, p_FAST%VTK_fields, &
+                     ErrSTat2, ErrMsg2, p_FAST%VTK_tWidth, NumSegments=p_FAST%VTK_Surface%NumSectors, Radius=MD%p%VisRodsDiam(l)%Diam )
+            endif
+         enddo
+      endif
    endif
 !   ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
 !      call MeshWrVTK(p_FAST%TurbinePos, FEAM%Input(1)%PtFairleadDisplacement, trim(p_FAST%VTK_OutFileRoot)//'FEAM_PtFair_motion', y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2   )

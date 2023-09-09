@@ -307,6 +307,11 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: ObjID      !< number of Connect or Line object [-]
   END TYPE MD_OutParmType
 ! =======================
+! =========  VisDiam  =======
+  TYPE, PUBLIC :: VisDiam
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Diam      !< Diameter for visualization [-]
+  END TYPE VisDiam
+! =======================
 ! =========  MD_InitOutputType  =======
   TYPE, PUBLIC :: MD_InitOutputType
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: writeOutputHdr      !< first line output file contents: output variable names [-]
@@ -453,6 +458,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Jac_nx      !< number of continuous states in jacobian matrix [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: dxIdx_map2_xStateIdx      !< Mapping array from index of dX array to corresponding state index [-]
     LOGICAL  :: VisMeshes      !< Using visualization meshes as requested by glue code [-]
+    TYPE(VisDiam) , DIMENSION(:), ALLOCATABLE  :: VisRodsDiam      !< Diameters for visualization of rods [-]
   END TYPE MD_ParameterType
 ! =======================
 ! =========  MD_InputType  =======
@@ -6888,6 +6894,192 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE MD_UnPackOutParmType
 
+ SUBROUTINE MD_CopyVisDiam( SrcVisDiamData, DstVisDiamData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(VisDiam), INTENT(IN) :: SrcVisDiamData
+   TYPE(VisDiam), INTENT(INOUT) :: DstVisDiamData
+   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+! Local 
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'MD_CopyVisDiam'
+! 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+IF (ALLOCATED(SrcVisDiamData%Diam)) THEN
+  i1_l = LBOUND(SrcVisDiamData%Diam,1)
+  i1_u = UBOUND(SrcVisDiamData%Diam,1)
+  IF (.NOT. ALLOCATED(DstVisDiamData%Diam)) THEN 
+    ALLOCATE(DstVisDiamData%Diam(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstVisDiamData%Diam.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstVisDiamData%Diam = SrcVisDiamData%Diam
+ENDIF
+ END SUBROUTINE MD_CopyVisDiam
+
+ SUBROUTINE MD_DestroyVisDiam( VisDiamData, ErrStat, ErrMsg, DEALLOCATEpointers )
+  TYPE(VisDiam), INTENT(INOUT) :: VisDiamData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'MD_DestroyVisDiam'
+
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+IF (ALLOCATED(VisDiamData%Diam)) THEN
+  DEALLOCATE(VisDiamData%Diam)
+ENDIF
+ END SUBROUTINE MD_DestroyVisDiam
+
+ SUBROUTINE MD_PackVisDiam( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+  TYPE(VisDiam),  INTENT(IN) :: InData
+  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
+  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
+  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'MD_PackVisDiam'
+ ! buffers to store subtypes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+
+  OnlySize = .FALSE.
+  IF ( PRESENT(SizeOnly) ) THEN
+    OnlySize = SizeOnly
+  ENDIF
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+  Int_BufSz   = Int_BufSz   + 1     ! Diam allocated yes/no
+  IF ( ALLOCATED(InData%Diam) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! Diam upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Diam)  ! Diam
+  END IF
+  IF ( Re_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Db_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Int_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred = 1
+
+  IF ( .NOT. ALLOCATED(InData%Diam) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Diam,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Diam,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%Diam,1), UBOUND(InData%Diam,1)
+        ReKiBuf(Re_Xferred) = InData%Diam(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+ END SUBROUTINE MD_PackVisDiam
+
+ SUBROUTINE MD_UnPackVisDiam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+  TYPE(VisDiam), INTENT(INOUT) :: OutData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    ! Local variables
+  INTEGER(IntKi)                 :: Buf_size
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'MD_UnPackVisDiam'
+ ! buffers to store meshes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Diam not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Diam)) DEALLOCATE(OutData%Diam)
+    ALLOCATE(OutData%Diam(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Diam.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%Diam,1), UBOUND(OutData%Diam,1)
+        OutData%Diam(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+ END SUBROUTINE MD_UnPackVisDiam
+
  SUBROUTINE MD_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(MD_InitOutputType), INTENT(IN) :: SrcInitOutputData
    TYPE(MD_InitOutputType), INTENT(INOUT) :: DstInitOutputData
@@ -11211,6 +11403,22 @@ IF (ALLOCATED(SrcParamData%dxIdx_map2_xStateIdx)) THEN
     DstParamData%dxIdx_map2_xStateIdx = SrcParamData%dxIdx_map2_xStateIdx
 ENDIF
     DstParamData%VisMeshes = SrcParamData%VisMeshes
+IF (ALLOCATED(SrcParamData%VisRodsDiam)) THEN
+  i1_l = LBOUND(SrcParamData%VisRodsDiam,1)
+  i1_u = UBOUND(SrcParamData%VisRodsDiam,1)
+  IF (.NOT. ALLOCATED(DstParamData%VisRodsDiam)) THEN 
+    ALLOCATE(DstParamData%VisRodsDiam(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%VisRodsDiam.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DO i1 = LBOUND(SrcParamData%VisRodsDiam,1), UBOUND(SrcParamData%VisRodsDiam,1)
+      CALL MD_Copyvisdiam( SrcParamData%VisRodsDiam(i1), DstParamData%VisRodsDiam(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
+ENDIF
  END SUBROUTINE MD_CopyParam
 
  SUBROUTINE MD_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -11306,6 +11514,13 @@ IF (ALLOCATED(ParamData%dx)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%dxIdx_map2_xStateIdx)) THEN
   DEALLOCATE(ParamData%dxIdx_map2_xStateIdx)
+ENDIF
+IF (ALLOCATED(ParamData%VisRodsDiam)) THEN
+DO i1 = LBOUND(ParamData%VisRodsDiam,1), UBOUND(ParamData%VisRodsDiam,1)
+  CALL MD_Destroyvisdiam( ParamData%VisRodsDiam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+ENDDO
+  DEALLOCATE(ParamData%VisRodsDiam)
 ENDIF
  END SUBROUTINE MD_DestroyParam
 
@@ -11525,6 +11740,29 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%dxIdx_map2_xStateIdx)  ! dxIdx_map2_xStateIdx
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! VisMeshes
+  Int_BufSz   = Int_BufSz   + 1     ! VisRodsDiam allocated yes/no
+  IF ( ALLOCATED(InData%VisRodsDiam) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! VisRodsDiam upper/lower bounds for each dimension
+    DO i1 = LBOUND(InData%VisRodsDiam,1), UBOUND(InData%VisRodsDiam,1)
+      Int_BufSz   = Int_BufSz + 3  ! VisRodsDiam: size of buffers for each call to pack subtype
+      CALL MD_Packvisdiam( Re_Buf, Db_Buf, Int_Buf, InData%VisRodsDiam(i1), ErrStat2, ErrMsg2, .TRUE. ) ! VisRodsDiam 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! VisRodsDiam
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! VisRodsDiam
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! VisRodsDiam
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+    END DO
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -12148,6 +12386,47 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%VisMeshes, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%VisRodsDiam) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%VisRodsDiam,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%VisRodsDiam,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%VisRodsDiam,1), UBOUND(InData%VisRodsDiam,1)
+      CALL MD_Packvisdiam( Re_Buf, Db_Buf, Int_Buf, InData%VisRodsDiam(i1), ErrStat2, ErrMsg2, OnlySize ) ! VisRodsDiam 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+    END DO
+  END IF
  END SUBROUTINE MD_PackParam
 
  SUBROUTINE MD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -12857,6 +13136,62 @@ ENDIF
   END IF
     OutData%VisMeshes = TRANSFER(IntKiBuf(Int_Xferred), OutData%VisMeshes)
     Int_Xferred = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! VisRodsDiam not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%VisRodsDiam)) DEALLOCATE(OutData%VisRodsDiam)
+    ALLOCATE(OutData%VisRodsDiam(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%VisRodsDiam.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    DO i1 = LBOUND(OutData%VisRodsDiam,1), UBOUND(OutData%VisRodsDiam,1)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL MD_Unpackvisdiam( Re_Buf, Db_Buf, Int_Buf, OutData%VisRodsDiam(i1), ErrStat2, ErrMsg2 ) ! VisRodsDiam 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
+  END IF
  END SUBROUTINE MD_UnPackParam
 
  SUBROUTINE MD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )

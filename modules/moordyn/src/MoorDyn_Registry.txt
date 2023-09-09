@@ -283,6 +283,8 @@ typedef  ^            ^                IntKi              OType         -       
 typedef  ^            ^                IntKi              NodeID        -        -  -   "node number if OType=0.  0=anchor, -1=N=Fairlead"
 typedef  ^            ^                IntKi              ObjID         -        -  -   "number of Connect or Line object"
 
+## ============================== Visualization data storage for diameter ============================================================================================================================
+typedef   ^           VisDiam          ReKi               Diam         {:}       -  -   "Diameter for visualization" -
 
 ## ============================== Define Initialization outputs here: ================================================================================================================================
 typedef   ^            InitOutputType  CHARACTER(ChanLen)  writeOutputHdr  {:} ""  -   "first line output file contents: output variable names"
@@ -424,6 +426,7 @@ typedef   ^       ^                    Integer      Jac_ny              -       
 typedef   ^       ^                    Integer      Jac_nx              -           -  -   "number of continuous states in jacobian matrix" -
 typedef   ^       ^                    Integer      dxIdx_map2_xStateIdx {:}        -  -   "Mapping array from index of dX array to corresponding state index" -
 typedef   ^       ^                    Logical      VisMeshes           -           -  -   "Using visualization meshes as requested by glue code" -
+typedef   ^       ^                    VisDiam      VisRodsDiam        {:}          -  -   "Diameters for visualization of rods" -
 
 
 # ============================== Inputs ============================================================================================================================================
