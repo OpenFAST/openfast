@@ -106,6 +106,7 @@ typedef ^ ^                 IntKi                   SrcVarIdx       :  -  -     
 typedef ^ ^                 IntKi                   DstVarIdx       :  -  -     "motion variable index" -
 typedef ^ ^                 IntKi                   SrcDispVarIdx   -  -  -     "source displacement var index [if IsLoad=true]" -
 typedef ^ ^                 IntKi                   DstDispVarIdx   -  -  -     "destination displacement var index [if IsLoad=true]" -
+typedef ^ ^                 IntKi                   Idx             -  -  -     "Optional index for specifying transfers" -
 typedef ^ ^                 MeshType                MeshTmp         -  -  -     "Temporary mesh for intermediate transfers" -
 typedef ^ ^                 MeshMapType             MeshMap         -  -  -     "Mesh mapping from output variable to input variable" -
 typedef ^ ^                 logical                 IsLoad          -  -  -     "Flag indicating if this is a load or motion mapping" -

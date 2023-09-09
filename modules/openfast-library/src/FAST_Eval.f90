@@ -44,8 +44,8 @@ integer(IntKi), parameter  :: IS_Input = 1, IS_u = 2
 
 contains
 
-subroutine FAST_ExtrapInterp(Mod, t_global_next, T, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)          :: Mod              !< Module data
+subroutine FAST_ExtrapInterp(ModData, t_global_next, T, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)          :: ModData          !< Module data
    real(DbKi), intent(in)                 :: t_global_next    !< next global time step (t + dt), at which we're extrapolating inputs (and ED outputs)
    type(FAST_TurbineType), intent(inout)  :: T                !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
@@ -60,7 +60,7 @@ subroutine FAST_ExtrapInterp(Mod, t_global_next, T, ErrStat, ErrMsg)
    ErrMsg = ''
 
    ! Select based on module ID
-   select case (Mod%ID)
+   select case (ModData%ID)
 
    case (Module_AD)
 
@@ -74,13 +74,13 @@ subroutine FAST_ExtrapInterp(Mod, t_global_next, T, ErrStat, ErrMsg)
 
    case (Module_BD)
 
-      call BD_Input_ExtrapInterp(T%BD%Input(:, Mod%Ins), T%BD%InputTimes(:, Mod%Ins), T%BD%u(Mod%Ins), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
+      call BD_Input_ExtrapInterp(T%BD%Input(:, ModData%Ins), T%BD%InputTimes(:, ModData%Ins), T%BD%u(ModData%Ins), t_global_next, ErrStat2, ErrMsg2); if (Failed()) return
       do j = T%p_FAST%InterpOrder, 1, -1
-         call BD_CopyInput(T%BD%Input(j, Mod%Ins), T%BD%Input(j + 1, Mod%Ins), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
-         T%BD%InputTimes(j + 1, Mod%Ins) = T%BD%InputTimes(j, Mod%Ins)
+         call BD_CopyInput(T%BD%Input(j, ModData%Ins), T%BD%Input(j + 1, ModData%Ins), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
+         T%BD%InputTimes(j + 1, ModData%Ins) = T%BD%InputTimes(j, ModData%Ins)
       end do
-      call BD_CopyInput(T%BD%u(Mod%Ins), T%BD%Input(1, Mod%Ins), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
-      T%BD%InputTimes(1, Mod%Ins) = t_global_next
+      call BD_CopyInput(T%BD%u(ModData%Ins), T%BD%Input(1, ModData%Ins), MESH_UPDATECOPY, Errstat2, ErrMsg2); if (Failed()) return
+      T%BD%InputTimes(1, ModData%Ins) = t_global_next
 
    case (Module_ED)
 
@@ -152,7 +152,7 @@ subroutine FAST_ExtrapInterp(Mod, t_global_next, T, ErrStat, ErrMsg)
       T%SrvD%InputTimes(1) = t_global_next
 
    case default
-      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(Mod%ID)), ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(ModData%ID)), ErrStat, ErrMsg, RoutineName)
       return
    end select
 
@@ -163,8 +163,8 @@ contains
    end function
 end subroutine
 
-subroutine FAST_InitIO(Mod, this_time, DT, T, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)           :: Mod         !< Module data
+subroutine FAST_InitIO(ModData, this_time, DT, T, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)           :: ModData     !< Module data
    real(DbKi), intent(in)                  :: this_time   !< Initial simulation time (almost always 0)
    real(DbKi), intent(in)                  :: DT          !< Glue code time step size
    type(FAST_TurbineType), intent(inout)   :: T           !< Turbine type
@@ -181,10 +181,10 @@ subroutine FAST_InitIO(Mod, this_time, DT, T, ErrStat, ErrMsg)
    ErrMsg = ''
 
    ! Copy state from current to predicted and initialze meshes
-   call FAST_CopyStates(Mod, T, STATE_CURR, STATE_PRED, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Select based on module ID
-   select case (Mod%ID)
+   select case (ModData%ID)
 
    case (Module_AD)
 
@@ -196,11 +196,11 @@ subroutine FAST_InitIO(Mod, this_time, DT, T, ErrStat, ErrMsg)
 
    case (Module_BD)
 
-      T%BD%InputTimes(:, Mod%Ins) = this_time - DT*[(k, k=0, T%p_FAST%InterpOrder)]
+      T%BD%InputTimes(:, ModData%Ins) = this_time - DT*[(k, k=0, T%p_FAST%InterpOrder)]
       do k = 2, T%p_FAST%InterpOrder + 1
-         call BD_CopyInput(T%BD%Input(1, Mod%Ins), T%BD%Input(k, Mod%Ins), MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
+         call BD_CopyInput(T%BD%Input(1, ModData%Ins), T%BD%Input(k, ModData%Ins), MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
       end do
-      call BD_CopyInput(T%BD%Input(1, Mod%Ins), T%BD%u(Mod%Ins), MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
+      call BD_CopyInput(T%BD%Input(1, ModData%Ins), T%BD%u(ModData%Ins), MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_ED)
 
@@ -254,7 +254,7 @@ subroutine FAST_InitIO(Mod, this_time, DT, T, ErrStat, ErrMsg)
       call SrvD_CopyInput(T%SrvD%Input(1), T%SrvD%u, MESH_NEWCOPY, Errstat2, ErrMsg2); if (Failed()) return
 
    case default
-      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(Mod%ID)), ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(ModData%ID)), ErrStat, ErrMsg, RoutineName)
       return
    end select
 
@@ -265,12 +265,12 @@ contains
    end function
 end subroutine
 
-subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, x_TC, q_TC, T, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)           :: Mod         !< Module data
+subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)           :: ModData     !< Module data
    real(DbKi), intent(in)                  :: t_initial   !< Initial simulation time (almost always 0)
    integer(IntKi), intent(in)              :: n_t_global  !< Integer time step
    real(R8Ki), intent(inout)               :: x_TC(:)     !< Tight coupling state array
-   real(R8Ki), intent(inout)               :: q_TC(:, :)   !< Tight coupling state matrix
+   real(R8Ki), intent(inout)               :: q_TC(:, :)  !< Tight coupling state matrix
    type(FAST_TurbineType), intent(inout)   :: T           !< Turbine type
    integer(IntKi), intent(out)             :: ErrStat
    character(*), intent(out)               :: ErrMsg
@@ -287,16 +287,16 @@ subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, x_TC, q_TC, T, ErrStat,
    ErrMsg = ''
 
    ! Copy from current to predicted state (MESH_UPDATECOPY)
-   call FAST_CopyStates(Mod, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
+   call FAST_CopyStates(ModData, T, STATE_CURR, STATE_PRED, MESH_UPDATECOPY, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Select based on module ID
-   select case (Mod%ID)
+   select case (ModData%ID)
 
    case (Module_AD)
 
-      do j_ss = 1, Mod%SubSteps
-         n_t_module = n_t_global*Mod%SubSteps + j_ss - 1
-         t_module = n_t_module*Mod%DT + t_initial
+      do j_ss = 1, ModData%SubSteps
+         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+         t_module = n_t_module*ModData%DT + t_initial
          call AD_UpdateStates(t_module, n_t_module, T%AD%Input, T%AD%InputTimes, T%AD%p, T%AD%x(STATE_PRED), &
                               T%AD%xd(STATE_PRED), T%AD%z(STATE_PRED), T%AD%OtherSt(STATE_PRED), T%AD%m, ErrStat2, ErrMsg2); if (Failed()) return
       end do
@@ -304,15 +304,15 @@ subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, x_TC, q_TC, T, ErrStat,
    case (Module_BD)
 
       ! Transfer tight coupling states to module
-      call BD_PackStateValues(T%BD%p(Mod%Ins), T%BD%x(Mod%Ins, STATE_PRED), T%BD%m(Mod%Ins)%Vals%x)
-      call XferGblToLoc1D(Mod%ixs, x_TC, T%BD%m(Mod%Ins)%Vals%x)
-      call BD_UnpackStateValues(T%BD%p(Mod%Ins), T%BD%m(Mod%Ins)%Vals%x, T%BD%x(Mod%Ins, STATE_PRED))
+      call BD_PackStateValues(T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, STATE_PRED), T%BD%m(ModData%Ins)%Vals%x)
+      call XferGblToLoc1D(ModData%ixs, x_TC, T%BD%m(ModData%Ins)%Vals%x)
+      call BD_UnpackStateValues(T%BD%p(ModData%Ins), T%BD%m(ModData%Ins)%Vals%x, T%BD%x(ModData%Ins, STATE_PRED))
 
    case (Module_ED)
 
       ! Transfer tight coupling states to module
       call ED_PackStateValues(T%ED%p, T%ED%x(STATE_PRED), T%ED%m%Vals%x)
-      call XferGblToLoc1D(Mod%ixs, x_TC, T%ED%m%Vals%x)
+      call XferGblToLoc1D(ModData%ixs, x_TC, T%ED%m%Vals%x)
       call ED_UnpackStateValues(T%ED%p, T%ED%m%Vals%x, T%ED%x(STATE_PRED))
 
       ! Update the azimuth angle
@@ -320,15 +320,15 @@ subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, x_TC, q_TC, T, ErrStat,
 
       ! Transfer updated states to solver
       call ED_PackStateValues(T%ED%p, T%ED%x(STATE_PRED), T%ED%m%Vals%x)
-      call XferLocToGbl1D(Mod%ixs, T%ED%m%Vals%x, x_TC)
+      call XferLocToGbl1D(ModData%ixs, T%ED%m%Vals%x, x_TC)
 
 !  case (Module_ExtPtfm)
 !  case (Module_FEAM)
    case (Module_HD)
 
-      do j_ss = 1, Mod%SubSteps
-         n_t_module = n_t_global*Mod%SubSteps + j_ss - 1
-         t_module = n_t_module*Mod%DT + t_initial
+      do j_ss = 1, ModData%SubSteps
+         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+         t_module = n_t_module*ModData%DT + t_initial
          call HydroDyn_UpdateStates(t_module, n_t_module, T%HD%Input, T%HD%InputTimes, T%HD%p, T%HD%x(STATE_PRED), T%HD%xd(STATE_PRED), &
                                     T%HD%z(STATE_PRED), T%HD%OtherSt(STATE_PRED), T%HD%m, ErrStat2, ErrMsg2); if (Failed()) return
       end do
@@ -337,9 +337,9 @@ subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, x_TC, q_TC, T, ErrStat,
 !  case (Module_IceF)
    case (Module_IfW)
 
-      do j_ss = 1, Mod%SubSteps
-         n_t_module = n_t_global*Mod%SubSteps + j_ss - 1
-         t_module = n_t_module*Mod%DT + t_initial
+      do j_ss = 1, ModData%SubSteps
+         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+         t_module = n_t_module*ModData%DT + t_initial
          call InflowWind_UpdateStates(t_module, n_t_module, T%IfW%Input, T%IfW%InputTimes, T%IfW%p, T%IfW%x(STATE_PRED), T%IfW%xd(STATE_PRED), &
                                       T%IfW%z(STATE_PRED), T%IfW%OtherSt(STATE_PRED), T%IfW%m, ErrStat2, ErrMsg2); if (Failed()) return
       end do
@@ -350,9 +350,9 @@ subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, x_TC, q_TC, T, ErrStat,
 !  case (Module_Orca)
    case (Module_SD)
 
-      do j_ss = 1, Mod%SubSteps
-         n_t_module = n_t_global*Mod%SubSteps + j_ss - 1
-         t_module = n_t_module*Mod%DT + t_initial
+      do j_ss = 1, ModData%SubSteps
+         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+         t_module = n_t_module*ModData%DT + t_initial
          call SD_UpdateStates(t_module, n_t_module, T%SD%Input, T%SD%InputTimes, T%SD%p, T%SD%x(STATE_PRED), &
                               T%SD%xd(STATE_PRED), T%SD%z(STATE_PRED), T%SD%OtherSt(STATE_PRED), T%SD%m, ErrStat2, ErrMsg2); if (Failed()) return
       end do
@@ -360,15 +360,15 @@ subroutine FAST_UpdateStates(Mod, t_initial, n_t_global, x_TC, q_TC, T, ErrStat,
 !  case (Module_SeaSt)
    case (Module_SrvD)
 
-      do j_ss = 1, Mod%SubSteps
-         n_t_module = n_t_global*Mod%SubSteps + j_ss - 1
-         t_module = n_t_module*Mod%DT + t_initial
+      do j_ss = 1, ModData%SubSteps
+         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
+         t_module = n_t_module*ModData%DT + t_initial
          call SrvD_UpdateStates(t_module, n_t_module, T%SrvD%Input, T%SrvD%InputTimes, T%SrvD%p, T%SrvD%x(STATE_PRED), T%SrvD%xd(STATE_PRED), &
                                 T%SrvD%z(STATE_PRED), T%SrvD%OtherSt(STATE_PRED), T%SrvD%m, ErrStat2, ErrMsg2); if (Failed()) return
       end do
 
    case default
-      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(Mod%ID)), ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(ModData%ID)), ErrStat, ErrMsg, RoutineName)
       return
    end select
 
@@ -382,7 +382,7 @@ end subroutine
 subroutine FAST_InitMappings(Maps, Mods, T, ErrStat, ErrMsg)
    type(TC_MappingType), allocatable, intent(inout)   :: Maps(:)
    type(ModDataType), intent(inout)                   :: Mods(:)     !< Module data
-   type(FAST_TurbineType), target, intent(inout)      :: T           !< Turbine type
+   type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
 
@@ -390,9 +390,7 @@ subroutine FAST_InitMappings(Maps, Mods, T, ErrStat, ErrMsg)
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
    integer(IntKi)             :: i
-   integer(IntKi)             :: DstIns, SrcIns
-   integer(IntKi)             :: iMap, ModIns, iModIn
-   logical, allocatable       :: isActive(:)
+   integer(IntKi)             :: iMap, ModIns, iModIn, iModSrc, iModDst
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -409,92 +407,151 @@ subroutine FAST_InitMappings(Maps, Mods, T, ErrStat, ErrMsg)
       return
    end if
 
-   ! Loop through modules
-   do iMap = 1, size(Mods)
+   ! Loop through module pairings
+   do iModSrc = 1, size(Mods)
+      do iModDst = 1, size(Mods)
+         associate (ModSrc => Mods(iModSrc), ModDst => Mods(iModDst))
 
-      ! Module instance
-      ModIns = Mods(iMap)%Ins
+            select case (ModDst%ID)
 
-      ! Switch based on module ID
-      select case (Mods(iMap)%ID)
+            case (Module_BD)  ! BeamDyn Input ----------------------------------
 
-      case (Module_AD)
+               select case (ModSrc%ID)
+               case (Module_ED)
 
-         call AddMotionMapping(Key='ED HubPtMotion -> AD HubMotion', &
-                               SrcModID=Module_ED, SrcIns=1, SrcMeshName='Hub', &
-                               DstModID=Module_AD, DstIns=1, DstMeshName='HubMotion', &
-                               Active=T%AD%Input(1)%rotors(1)%TowerMotion%Committed)
+                  call MapMotionMesh(Key='ED BladeRoot -> BD RootMotion', &
+                                     SrcMod=ModSrc, SrcMeshName='BladeRootMotion'//trim(Num2LStr(ModDst%Ins)), &
+                                     DstMod=ModDst, DstMeshName='RootMotion')
 
-         call AddMotionMapping(Key='ED HubPtMotion -> AD HubMotion', &
-                               SrcModID=Module_ED, SrcIns=1, SrcMeshName='Hub', &
-                               DstModID=Module_AD, DstIns=1, DstMeshName='HubMotion')
+               case (Module_AD)
 
-      case (Module_BD)
+                  call MapLoadMesh(Key='AD BladeLoad -> BD BladeLoad', &
+                                   SrcMod=ModSrc, SrcMeshName='BladeLoad'//Num2LStr(ModDst%Ins), SrcDispMeshName='BladeMotion'//Num2LStr(i), &
+                                   DstMod=ModDst, DstMeshName='DistrLoad', DstDispMeshName='BladeMotion')
 
-         call AddMotionMapping(Key='ED BladeRoot -> BD RootMotion', &
-                               SrcModID=Module_ED, SrcIns=1, SrcMeshName='Blade root '//trim(Num2LStr(ModIns)), &
-                               DstModID=Module_BD, DstIns=ModIns, DstMeshName='RootMotion')
+               case (Module_SrvD)
 
-         call AddLoadMapping(Key='BD ReactionForce -> ED HubLoad', &
-                             SrcModID=Module_BD, SrcIns=ModIns, SrcMeshName='ReactionForce', SrcDispMeshName='RootMotion', &
-                             DstModID=Module_ED, DstIns=1, DstMeshName='Hub', DstDispMeshName='Hub')
+               end select
 
-      end select
+            case (Module_ED)  ! ElastoDyn Input --------------------------------
+
+               select case (ModSrc%ID)
+               case (Module_BD)
+
+                  call MapLoadMesh(Key='BD ReactionForce -> ED HubLoad', &
+                                   SrcMod=ModSrc, SrcMeshName='ReactionForce', SrcDispMeshName='RootMotion', &
+                                   DstMod=ModDst, DstMeshName='HubLoad', DstDispMeshName='HubMotion')
+
+               case (Module_AD)
+
+                  if (T%p_FAST%CompElast == Module_ED) then
+                     do i = 1, size(T%ED%Input(1)%BladePtLoads, 1)
+                        call MapLoadMesh(Key='AD BladeLoad -> ED BladeLoad', Idx=i, &
+                                         SrcMod=ModSrc, SrcMeshName='BladeLoad'//Num2LStr(i), SrcDispMeshName='BladeMotion'//Num2LStr(i), &
+                                         DstMod=ModDst, DstMeshName='BladeLoad'//Num2LStr(i), DstDispMeshName='BladeMotion'//Num2LStr(i))
+                     end do
+                  end if
+
+                  call MapLoadMesh(Key='AD TowerLoad -> ED TowerLoad', &
+                                   SrcMod=ModSrc, SrcMeshName='TowerLoad', SrcDispMeshName='TowerMotion', &
+                                   DstMod=ModDst, DstMeshName='TowerLoad', DstDispMeshName='TowerMotion', &
+                                   Active=T%AD%y%rotors(1)%TowerLoad%committed)
+
+                  call MapLoadMesh(Key='AD NacelleLoad -> ED NacelleLoad', &
+                                   SrcMod=ModSrc, SrcMeshName='NacelleLoad', SrcDispMeshName='NacelleMotion', &
+                                   DstMod=ModDst, DstMeshName='NacelleLoad', DstDispMeshName='NacelleMotion', &
+                                   Active=T%AD%Input(1)%rotors(1)%NacelleMotion%committed)
+
+                  call MapLoadMesh(Key='AD HubLoad -> ED HubLoad', &
+                                   SrcMod=ModSrc, SrcMeshName='HubLoad', SrcDispMeshName='HubMotion', &
+                                   DstMod=ModDst, DstMeshName='HubLoad', DstDispMeshName='HubMotion', &
+                                   Active=T%AD%Input(1)%rotors(1)%HubMotion%committed)
+
+                  call MapLoadMesh(Key='AD TFinLoad -> ED TFinLoad', &
+                                   SrcMod=ModSrc, SrcMeshName='TFinLoad', SrcDispMeshName='TFinMotion', &
+                                   DstMod=ModDst, DstMeshName='TFinLoad', DstDispMeshName='TFinMotion', &
+                                   Active=T%AD%Input(1)%rotors(1)%TFinMotion%committed)
+
+               case (Module_SrvD)
+
+               end select
+
+            case (Module_AD)  ! AeroDyn Input ----------------------------------
+
+               select case (ModSrc%ID)
+               case (Module_ED)
+
+                  call MapMotionMesh(Key='ED TowerMotion -> AD TowerMotion', &
+                                     SrcMod=ModSrc, SrcMeshName='TowerMotion', &
+                                     DstMod=ModDst, DstMeshName='TowerMotion', &
+                                     Active=T%AD%Input(1)%rotors(1)%TowerMotion%Committed)
+
+                  call MapMotionMesh(Key='ED HubMotion -> AD HubMotion', &
+                                     SrcMod=ModSrc, SrcMeshName='HubMotion', &
+                                     DstMod=ModDst, DstMeshName='HubMotion')
+
+                  call MapMotionMesh(Key='ED NacelleMotion -> AD NacelleMotion', &
+                                     SrcMod=ModSrc, SrcMeshName='NacelleMotion', &
+                                     DstMod=ModDst, DstMeshName='NacelleMotion', &
+                                     Active=T%AD%Input(1)%rotors(1)%NacelleMotion%Committed)
+
+                  call MapMotionMesh(Key='ED TFinMotion -> AD TFinMotion', &
+                                     SrcMod=ModSrc, SrcMeshName='TFinMotion', &
+                                     DstMod=ModDst, DstMeshName='TFinMotion', &
+                                     Active=T%AD%Input(1)%rotors(1)%TFinMotion%Committed)
+
+                  do i = 1, size(T%ED%y%BladeRootMotion)
+                     call MapMotionMesh(Key='ED BladeRootMotion -> AD BladeRootMotion', Idx=i, &
+                                        SrcMod=ModSrc, SrcMeshName='BladeRootMotion'//Num2LStr(i), &
+                                        DstMod=ModDst, DstMeshName='BladeRootMotion'//Num2LStr(i))
+                  end do
+
+                  if (T%p_FAST%CompElast == Module_ED) then
+                     do i = 1, size(T%ED%y%BladeLn2Mesh)
+                        call MapMotionMesh(Key='ED BladeMotion -> AD BladeMotion', Idx=i, &
+                                           SrcMod=ModSrc, SrcMeshName='BladeMotion'//Num2LStr(i), &
+                                           DstMod=ModDst, DstMeshName='BladeMotion'//Num2LStr(i))
+                     end do
+                  end if
+
+               case (Module_BD)
+
+                  call MapMotionMesh(Key='BD BladeMotion -> AD BladeMotion', &
+                                     SrcMod=ModSrc, SrcMeshName='BladeMotion', &
+                                     DstMod=ModDst, DstMeshName='BladeMotion'//Num2LStr(i))
+
+               case (Module_SrvD)
+
+               end select
+
+            end select
+         end associate
+      end do
    end do
 
    !----------------------------------------------------------------------------
    ! Get module indices in ModData and determine which mappings are active
    !----------------------------------------------------------------------------
 
-   ! Allocate array to indicate if mapping is active and initialize to false
-   call AllocAry(isActive, size(Maps), "isActive", ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-
-   isActive = .false.
-
    ! Loop through Maps
    do iMap = 1, size(Maps)
-
-      ! Loop modules, if module ID matches source module ID
-      ! and module instance matches source module instance, exit loop
-      do ModIns = 1, size(Mods)
-         if ((Maps(iMap)%SrcModID == Mods(ModIns)%ID) .and. &
-             (Maps(iMap)%SrcIns == Mods(ModIns)%Ins)) exit
-      end do
-
-      ! Loop through modules, if module ID matches destination module ID
-      ! and module instance matches destinatino module instance, exit loop
-      do iModIn = 1, size(Mods)
-         if ((Maps(iMap)%DstModID == Mods(iModIn)%ID) .and. &
-             (Maps(iMap)%DstIns == Mods(iModIn)%Ins)) exit
-      end do
-
-      ! If input or output module not found, mapping is not active, cycle
-      if (ModIns > size(Mods) .or. iModIn > size(Mods)) cycle
-
-      ! Mark mapping as active
-      isActive(iMap) = .true.
-
-      ! Module input/ouput IDs and instances found, populate mapping
-      Maps(iMap)%SrcModIdx = ModIns
-      Maps(iMap)%DstModIdx = iModIn
 
       associate (Map => Maps(iMap), &
                  SrcMod => Mods(Maps(iMap)%SrcModIdx), &
                  DstMod => Mods(Maps(iMap)%DstModIdx))
 
-         ! TODO: Add logic to check if mesh exists, skip mapping if it doesn't exist
+         ! If source and destination modules are not part of the tight coupling, cycle
+         ! if (.not. (SrcMod%IsTC .and. DstMod%IsTC)) cycle
 
          ! If load mapping
          if (Map%IsLoad) then
 
             ! Source mesh variable indices
-            Map%SrcVarIdx = [(MV_VarIndex(SrcMod%Vars%y, Map%SrcMeshName, LoadFields(ModIns)), ModIns=1, size(LoadFields))]
+            Map%SrcVarIdx = [(MV_VarIndex(SrcMod%Vars%y, Map%SrcMeshName, LoadFields(i)), i=1, size(LoadFields))]
             Map%SrcVarIdx = pack(Map%SrcVarIdx, Map%SrcVarIdx > 0)
 
             ! Destination mesh variable indices
-            Map%DstVarIdx = [(MV_VarIndex(DstMod%Vars%u, Map%DstMeshName, LoadFields(ModIns)), ModIns=1, size(LoadFields))]
+            Map%DstVarIdx = [(MV_VarIndex(DstMod%Vars%u, Map%DstMeshName, LoadFields(i)), i=1, size(LoadFields))]
             Map%DstVarIdx = pack(Map%DstVarIdx, Map%DstVarIdx > 0)
 
             ! Source displacement mesh is in input of source module (only translation displacement needed)
@@ -504,35 +561,32 @@ subroutine FAST_InitMappings(Maps, Mods, T, ErrStat, ErrMsg)
             Map%DstDispVarIdx = MV_VarIndex(DstMod%Vars%y, Map%DstDispMeshName, VF_TransDisp)
 
             ! Mark displacement variables with Solve flag
-            call SetFlags(SrcMod%Vars%u(Map%SrcDispVarIdx), VF_Solve)
-            call SetFlags(DstMod%Vars%y(Map%DstDispVarIdx), VF_Solve)
+            if (Map%SrcDispVarIdx > 0) call SetFlags(SrcMod%Vars%u(Map%SrcDispVarIdx), VF_Solve)
+            if (Map%DstDispVarIdx > 0) call SetFlags(DstMod%Vars%y(Map%DstDispVarIdx), VF_Solve)
 
          else
 
             ! Source mesh motion field variables
-            map%SrcVarIdx = [(MV_VarIndex(SrcMod%Vars%y, map%SrcMeshName, MotionFields(ModIns)), ModIns=1, size(MotionFields))]
+            map%SrcVarIdx = [(MV_VarIndex(SrcMod%Vars%y, map%SrcMeshName, MotionFields(i)), i=1, size(MotionFields))]
             map%SrcVarIdx = pack(map%SrcVarIdx, map%SrcVarIdx > 0)
 
             ! Destination mesh motion field variables
-            map%DstVarIdx = [(MV_VarIndex(DstMod%Vars%u, map%DstMeshName, MotionFields(ModIns)), ModIns=1, size(MotionFields))]
+            map%DstVarIdx = [(MV_VarIndex(DstMod%Vars%u, map%DstMeshName, MotionFields(i)), i=1, size(MotionFields))]
             map%DstVarIdx = pack(map%DstVarIdx, map%DstVarIdx > 0)
 
          end if
 
          ! Mark variables with Solve flag
-         do ModIns = 1, size(map%SrcVarIdx)
-            call SetFlags(SrcMod%Vars%y(map%SrcVarIdx(ModIns)), VF_Solve)
+         do i = 1, size(map%SrcVarIdx)
+            call SetFlags(SrcMod%Vars%y(map%SrcVarIdx(i)), VF_Solve)
          end do
-         do ModIns = 1, size(map%DstVarIdx)
-            call SetFlags(DstMod%Vars%u(map%DstVarIdx(ModIns)), VF_Solve)
+         do i = 1, size(map%DstVarIdx)
+            call SetFlags(DstMod%Vars%u(map%DstVarIdx(i)), VF_Solve)
          end do
 
       end associate
 
    end do
-
-   ! Remove inactive mappings
-   Maps = pack(Maps, mask=isActive)
 
    !----------------------------------------------------------------------------
    ! Initialize Mapping meshes
@@ -541,69 +595,418 @@ subroutine FAST_InitMappings(Maps, Mods, T, ErrStat, ErrMsg)
    ! Loop through mappings
    do i = 1, size(Maps)
 
-      ! Get output and input module instance indices
-      SrcIns = Maps(i)%SrcIns
-      DstIns = Maps(i)%DstIns
-
       ! Select by mapping key
       select case (Maps(i)%Key)
 
-      case ('ED BladeRoot -> BD RootMotion')
+      case ('AD BladeLoad -> BD BladeLoad')
+         call MeshMapCreate(T%AD%y%rotors(1)%BladeLoad(Maps(i)%DstIns), T%BD%Input(1, Maps(i)%DstIns)%DistrLoad, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (MapFailed()) return
 
-         call MeshMapCreate(T%ED%y%BladeRootMotion(DstIns), T%BD%Input(1, DstIns)%RootMotion, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (Failed()) return
-         call MeshCopy(T%BD%Input(1, DstIns)%RootMotion, Maps(i)%MeshTmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+      case ('AD BladeLoad -> ED BladeLoad')
+         call MeshMapCreate(T%AD%y%rotors(1)%BladeLoad(Maps(i)%Idx), T%ED%Input(1)%BladePtLoads(Maps(i)%Idx), Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (MapFailed()) return
+         ! call MeshCopy(T%ED%Input(1)%BladePtLoads(Maps(i)%Idx), Maps(i)%MeshTmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (MapFailed()) return
+
+      case ('AD NacelleLoad -> ED NacelleLoad')
+         call MeshMapCreate(T%AD%y%rotors(1)%NacelleLoad, T%ED%Input(1)%NacelleLoads, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (MapFailed()) return
+         call MeshCopy(T%ED%Input(1)%NacelleLoads, Maps(i)%MeshTmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (MapFailed()) return
+
+      case ('AD HubLoad -> ED HubLoad')
+         call MeshMapCreate(T%AD%y%rotors(1)%HubLoad, T%ED%Input(1)%HubPtLoad, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (MapFailed()) return
+         call MeshCopy(T%ED%Input(1)%HubPtLoad, Maps(i)%MeshTmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (MapFailed()) return
+
+      case ('AD TFinLoad -> ED TFinLoad')
+         call MeshMapCreate(T%AD%y%rotors(1)%TFinLoad, T%ED%Input(1)%TFinCMLoads, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (MapFailed()) return
+
+      case ('AD TowerLoad -> ED TowerLoad')
+         call MeshMapCreate(T%AD%y%rotors(1)%TowerLoad, T%ED%Input(1)%TowerPtLoads, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (MapFailed()) return
+         call MeshCopy(T%ED%Input(1)%TowerPtLoads, Maps(i)%MeshTmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (MapFailed()) return
+
+      case ('BD BladeMotion -> AD BladeMotion')
+         call MeshMapCreate(T%BD%y(Maps(i)%DstIns)%BldMotion, T%AD%Input(1)%rotors(1)%BladeMotion(Maps(i)%DstIns), Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (MapFailed()) return
 
       case ('BD ReactionForce -> ED HubLoad')
+         call MeshMapCreate(T%BD%y(Maps(i)%DstIns)%ReactionForce, T%ED%Input(1)%HubPtLoad, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (MapFailed()) return
+         call MeshCopy(T%ED%Input(1)%HubPtLoad, Maps(i)%MeshTmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (MapFailed()) return
 
-         call MeshMapCreate(T%BD%y(DstIns)%ReactionForce, T%ED%Input(1)%HubPtLoad, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (Failed()) return
-         ! Copy temporary mesh to transfer reaction force because actual mesh is needed to sum multiple forces
-         call MeshCopy(T%ED%Input(1)%HubPtLoad, Maps(i)%MeshTmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+      case ('ED BladeMotion -> AD BladeMotion')
+         call MeshMapCreate(T%ED%y%BladeLn2Mesh(Maps(i)%Idx), T%AD%Input(1)%rotors(1)%BladeMotion(Maps(i)%Idx), Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (MapFailed()) return
+
+      case ('ED BladeRoot -> BD RootMotion')
+         call MeshMapCreate(T%ED%y%BladeRootMotion(Maps(i)%DstIns), T%BD%Input(1, Maps(i)%DstIns)%RootMotion, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (MapFailed()) return
+
+      case ('ED BladeRootMotion -> AD BladeRootMotion')
+         call MeshMapCreate(T%ED%y%BladeRootMotion(Maps(i)%Idx), T%AD%Input(1)%rotors(1)%BladeRootMotion(Maps(i)%Idx), Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (MapFailed()) return
+
+      case ('ED HubMotion -> AD HubMotion')
+         call MeshMapCreate(T%ED%y%HubPtMotion, T%AD%Input(1)%rotors(1)%HubMotion, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (MapFailed()) return
+
+      case ('ED NacelleMotion -> AD NacelleMotion')
+         call MeshMapCreate(T%ED%y%NacelleMotion, T%AD%Input(1)%rotors(1)%NacelleMotion, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (MapFailed()) return
+
+      case ('ED TFinMotion -> AD TFinMotion')
+         call MeshMapCreate(T%ED%y%TFinCMMotion, T%AD%Input(1)%rotors(1)%TFinMotion, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (MapFailed()) return
+
+      case ('ED TowerMotion -> AD TowerMotion')
+         call MeshMapCreate(T%ED%y%TowerLn2Mesh, T%AD%Input(1)%rotors(1)%TowerMotion, Maps(i)%MeshMap, ErrStat2, ErrMsg2); if (MapFailed()) return
+
+      case default
+         call SetErrStat(ErrID_Fatal, 'Invalid Mapping Key: '//Maps(i)%Key, ErrStat, ErrMsg, RoutineName)
+         return
+      end select
+   end do
+
+contains
+   subroutine MapLoadMesh(Key, SrcMod, SrcMeshName, SrcDispMeshName, &
+                          DstMod, DstMeshName, DstDispMeshName, Idx, Active)
+      character(*), intent(in)               :: Key
+      type(ModDataType), intent(in)          :: SrcMod, DstMod
+      character(*), intent(in)               :: SrcMeshName, DstMeshName
+      character(*), intent(in)               :: SrcDispMeshName, DstDispMeshName
+      integer(IntKi), optional, intent(in)   :: Idx
+      logical, optional, intent(in)          :: Active
+      integer(IntKi)                         :: LocIdx
+      if (present(Active)) then
+         if (.not. Active) return
+      end if
+      LocIdx = 0
+      if (present(Idx)) LocIdx = Idx
+      Maps = [Maps, TC_MappingType(Key=Key, isLoad=.true., &
+                                   SrcModIdx=SrcMod%Idx, SrcModID=SrcMod%ID, SrcIns=SrcMod%Ins, SrcMeshName=SrcMeshName, SrcDispMeshName=SrcDispMeshName, &
+                                   DstModIdx=DstMod%Idx, DstModID=DstMod%ID, DstIns=DstMod%Ins, DstMeshName=DstMeshName, DstDispMeshName=DstDispMeshName, &
+                                   Idx=LocIdx)]
+   end subroutine
+
+   subroutine MapMotionMesh(Key, SrcMod, SrcMeshName, &
+                            DstMod, DstMeshName, Idx, Active)
+      character(*), intent(in)               :: Key
+      type(ModDataType), intent(in)          :: SrcMod, DstMod
+      character(*), intent(in)               :: SrcMeshName, DstMeshName
+      integer(IntKi), optional, intent(in)   :: Idx
+      logical, optional, intent(in)          :: Active
+      integer(IntKi)                         :: LocIdx
+      if (present(Active)) then
+         if (.not. Active) return
+      end if
+      LocIdx = 0
+      if (present(Idx)) LocIdx = Idx
+      Maps = [Maps, TC_MappingType(Key=Key, isLoad=.false., &
+                                   SrcModIdx=SrcMod%Idx, SrcModID=SrcMod%ID, SrcIns=SrcMod%Ins, SrcMeshName=SrcMeshName, &
+                                   DstModIdx=DstMod%Idx, DstModID=DstMod%ID, DstIns=DstMod%Ins, DstMeshName=DstMeshName, &
+                                   Idx=LocIdx)]
+   end subroutine
+
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+
+   logical function MapFailed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':'//Maps(i)%Key)
+      MapFailed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
+subroutine FAST_InputSolve(ModData, Maps, Dst, T, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)          :: ModData      !< Module data
+   type(TC_MappingType), intent(inout)    :: Maps(:)
+   integer(IntKi), intent(in)             :: Dst
+   type(FAST_TurbineType), intent(inout)  :: T        !< Turbine type
+   integer(IntKi), intent(out)            :: ErrStat
+   character(*), intent(out)              :: ErrMsg
+
+   character(*), parameter       :: RoutineName = 'FAST_InputSolve'
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+   integer(IntKi)                :: i, j, k
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! Check that Dst is valid
+   if (Dst /= IS_Input .and. Dst /= IS_u) then
+      call SetErrStat(ErrID_Fatal, "Dst must be 1 or 2, given "//trim(Num2LStr(Dst)), ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Select based on destination module ID
+   select case (ModData%ID)
+   case (Module_AD)
+      if (Dst == IS_Input) then
+         call AD_InputSolve1(ModData, Maps, T%AD%Input(1), T, Errstat2, ErrMsg2)
+      else
+         call AD_InputSolve1(ModData, Maps, T%AD%u, T, Errstat2, ErrMsg2)
+      end if
+   case (Module_BD)
+      if (Dst == IS_Input) then
+         call BD_InputSolve1(ModData, Maps, T%BD%Input(1, ModData%Ins), T, Errstat2, ErrMsg2)
+      else
+         call BD_InputSolve1(ModData, Maps, T%BD%u(ModData%Ins), T, Errstat2, ErrMsg2)
+      end if
+   case (Module_ED)
+      if (Dst == IS_Input) then
+         call ED_InputSolve1(ModData, Maps, T%ED%Input(1), T, ErrStat2, ErrMsg2)
+      else
+         call ED_InputSolve1(ModData, Maps, T%ED%u, T, ErrStat2, ErrMsg2)
+      end if
+   case (Module_IfW)
+      if (Dst == IS_Input) then
+         call IfW_InputSolve1(ModData, Maps, T%IfW%Input(1), T, ErrStat2, ErrMsg2)
+      else
+         call IfW_InputSolve1(ModData, Maps, T%IfW%u, T, ErrStat2, ErrMsg2)
+      end if
+   end select
+
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
+
+subroutine BD_InputSolve1(ModData, Maps, u_BD, T, ErrStat, ErrMsg)
+   type(BD_InputType), intent(inout)               :: u_BD
+   type(ModDataType), intent(in)                   :: ModData      !< Module data
+   type(TC_MappingType), intent(inout)             :: Maps(:)
+   type(FAST_TurbineType), target, intent(inout)   :: T        !< Turbine type
+   integer(IntKi), intent(out)                     :: ErrStat
+   character(*), intent(out)                       :: ErrMsg
+
+   character(*), parameter       :: RoutineName = 'BD_InputSolve'
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+   integer(IntKi)                :: i
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! Loop through mappings that set this module's inputs
+   do i = 1, size(Maps)
+
+      ! If this is not the destination module, cycle
+      if (ModData%Idx /= Maps(i)%DstModIdx) cycle
+
+      ! If mapping source has not been calculated, cycle
+      if (.not. Maps(i)%Ready) cycle
+
+      select case (Maps(i)%Key)
+      case ('AD BladeLoad -> BD BladeLoad')
+         call Transfer_Line2_to_Line2(T%AD%y%rotors(1)%BladeLoad(Maps(i)%DstIns), &
+                                      u_BD%DistrLoad, Maps(i)%MeshMap, ErrStat2, ErrMsg2, &
+                                      T%AD%Input(1)%rotors(1)%BladeMotion(Maps(i)%DstIns), &
+                                      T%BD%y(Maps(i)%DstIns)%BldMotion)
+
+      case ('ED BladeRoot -> BD RootMotion')
+         call Transfer_Point_to_Point(T%ED%y%BladeRootMotion(Maps(i)%DstIns), &
+                                      u_BD%RootMotion, Maps(i)%MeshMap, ErrStat2, ErrMsg2)
 
       case default
          call SetErrStat(ErrID_Fatal, 'Invalid Mapping Key: '//Maps(i)%Key, ErrStat, ErrMsg, RoutineName)
          return
       end select
 
+      ! Check for transfer errors and return if failed
+      if (ErrStat2 >= AbortErrLev) then
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':'//Maps(i)%Key)
+         return
+      end if
+   end do
+end subroutine
+
+subroutine AD_InputSolve1(ModData, Maps, u_AD, T, ErrStat, ErrMsg)
+   type(AD_InputType), intent(inout)               :: u_AD
+   type(ModDataType), intent(in)                   :: ModData      !< Module data
+   type(TC_MappingType), intent(inout)             :: Maps(:)
+   type(FAST_TurbineType), target, intent(inout)   :: T        !< Turbine type
+   integer(IntKi), intent(out)                     :: ErrStat
+   character(*), intent(out)                       :: ErrMsg
+
+   character(*), parameter       :: RoutineName = 'AD_InputSolve'
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+   integer(IntKi)                :: i
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! Loop through mappings that set this module's inputs
+   do i = 1, size(Maps)
+
+      ! If this is not the destination module, cycle
+      if (ModData%Idx /= Maps(i)%DstModIdx) cycle
+
+      ! If mapping source has not been calculated, cycle
+      if (.not. Maps(i)%Ready) cycle
+
+      select case (Maps(i)%Key)
+      case ('BD BladeMotion -> AD BladeMotion')
+         call Transfer_Line2_to_Line2(T%BD%y(Maps(i)%SrcIns)%BldMotion, &
+                                      u_AD%rotors(1)%BladeMotion(Maps(i)%SrcIns), &
+                                      Maps(i)%MeshMap, ErrStat2, ErrMsg2)
+
+      case ('ED BladeMotion -> AD BladeMotion')
+         call Transfer_Line2_to_Line2(T%ED%y%BladeLn2Mesh(Maps(i)%Idx), &
+                                      u_AD%rotors(1)%BladeMotion(Maps(i)%Idx), &
+                                      Maps(i)%MeshMap, ErrStat2, ErrMsg2)
+
+      case ('ED BladeRootMotion -> AD BladeRootMotion')
+         call Transfer_Point_to_Point(T%ED%y%BladeRootMotion(Maps(i)%Idx), &
+                                      u_AD%rotors(1)%BladeRootMotion(Maps(i)%Idx), &
+                                      Maps(i)%MeshMap, ErrStat2, ErrMsg2)
+
+      case ('ED HubMotion -> AD HubMotion')
+         call Transfer_Point_to_Point(T%ED%y%HubPtMotion, &
+                                      u_AD%rotors(1)%HubMotion, &
+                                      Maps(i)%MeshMap, ErrStat2, ErrMsg2)
+
+      case ('ED NacelleMotion -> AD NacelleMotion')
+         call Transfer_Point_to_Point(T%ED%y%NacelleMotion, &
+                                      u_AD%rotors(1)%NacelleMotion, &
+                                      Maps(i)%MeshMap, ErrStat2, ErrMsg2)
+
+      case ('ED TFinMotion -> AD TFinMotion')
+         call Transfer_Point_to_Point(T%ED%y%TFinCMMotion, &
+                                      u_AD%rotors(1)%TFinMotion, &
+                                      Maps(i)%MeshMap, ErrStat2, ErrMsg2)
+
+      case ('ED TowerMotion -> AD TowerMotion')
+         call Transfer_Line2_to_Line2(T%ED%y%TowerLn2Mesh, &
+                                      u_AD%rotors(1)%TowerMotion, &
+                                      Maps(i)%MeshMap, ErrStat2, ErrMsg2)
+
+      case default
+         call SetErrStat(ErrID_Fatal, 'Invalid Mapping Key: '//Maps(i)%Key, ErrStat, ErrMsg, RoutineName)
+         return
+      end select
+
+      ! Check for transfer errors and return if failed
+      if (ErrStat2 >= AbortErrLev) then
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':'//Maps(i)%Key)
+         return
+      end if
+   end do
+end subroutine
+
+subroutine ED_InputSolve1(ModData, Maps, u_ED, T, ErrStat, ErrMsg)
+   type(ED_InputType), intent(inout)               :: u_ED
+   type(ModDataType), intent(in)                   :: ModData     !< Module data
+   type(TC_MappingType), intent(inout)             :: Maps(:)
+   type(FAST_TurbineType), target, intent(inout)   :: T           !< Turbine type
+   integer(IntKi), intent(out)                     :: ErrStat
+   character(*), intent(out)                       :: ErrMsg
+
+   character(*), parameter       :: RoutineName = 'ED_InputSolve'
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2
+   integer(IntKi)                :: i
+   logical                       :: ED_ResetHubLoadsFlag
+   logical                       :: ED_ResetNacelleLoadsFlag
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ED_ResetHubLoadsFlag = .true.
+   ED_ResetNacelleLoadsFlag = .true.
+
+   ! Loop through mappings that set this module's inputs
+   do i = 1, size(Maps)
+
+      ! If this is not the destination module, cycle
+      if (ModData%Idx /= Maps(i)%DstModIdx) cycle
+
+      ! If mapping source has not been calculated, cycle
+      if (.not. Maps(i)%Ready) cycle
+
+      select case (Maps(i)%Key)
+      case ('AD BladeLoad -> ED BladeLoad')
+         call Transfer_Line2_to_Point(T%AD%y%rotors(1)%BladeLoad(Maps(i)%Idx), &
+                                      u_ED%BladePtLoads(Maps(i)%Idx), &
+                                      Maps(i)%MeshMap, ErrStat2, ErrMsg2, &
+                                      T%AD%Input(1)%rotors(1)%BladeMotion(Maps(i)%Idx), &
+                                      T%ED%y%BladeLn2Mesh(Maps(i)%Idx))
+
+      case ('AD NacelleLoad -> ED NacelleLoad')
+         call ED_ResetNacelleLoads()
+         call Transfer_Point_to_Point(T%AD%y%rotors(1)%NacelleLoad, &
+                                      Maps(i)%MeshTmp, &
+                                      Maps(i)%MeshMap, ErrStat2, ErrMsg2, &
+                                      T%AD%Input(1)%rotors(1)%NacelleMotion, &
+                                      T%ED%y%NacelleMotion)
+         u_ED%NacelleLoads%Force = u_ED%NacelleLoads%Force + Maps(i)%MeshTmp%Force
+         u_ED%NacelleLoads%Moment = u_ED%NacelleLoads%Moment + Maps(i)%MeshTmp%Moment
+
+      case ('AD HubLoad -> ED HubLoad')
+         call ED_ResetHubLoads()
+         call Transfer_Point_to_Point(T%AD%y%rotors(1)%HubLoad, &
+                                      Maps(i)%MeshTmp, &
+                                      Maps(i)%MeshMap, ErrStat2, ErrMsg2, &
+                                      T%AD%Input(1)%rotors(1)%HubMotion, &
+                                      T%ED%y%HubPtMotion)
+         u_ED%HubPtLoad%Force = u_ED%HubPtLoad%Force + Maps(i)%MeshTmp%Force
+         u_ED%HubPtLoad%Moment = u_ED%HubPtLoad%Moment + Maps(i)%MeshTmp%Moment
+
+      case ('AD TFinLoad -> ED TFinLoad')
+         call Transfer_Point_to_Point(T%AD%y%rotors(1)%TFinLoad, &
+                                      u_ED%TFinCMLoads, Maps(i)%MeshMap, &
+                                      ErrStat2, ErrMsg2, &
+                                      T%AD%Input(1)%rotors(1)%TFinMotion, &
+                                      T%ED%y%TFinCMMotion)
+
+      case ('AD TowerLoad -> ED TowerLoad')
+         call Transfer_Line2_to_Point(T%AD%y%rotors(1)%TowerLoad, &
+                                      u_ED%TowerPtLoads, Maps(i)%MeshMap, &
+                                      ErrStat2, ErrMsg2, &
+                                      T%AD%Input(1)%rotors(1)%TowerMotion, &
+                                      T%ED%y%TowerLn2Mesh)
+
+      case ('BD ReactionForce -> ED HubLoad')
+         call ED_ResetHubLoads()
+         call Transfer_Point_to_Point(T%BD%y(Maps(i)%SrcIns)%ReactionForce, &
+                                      Maps(i)%MeshTmp, &
+                                      Maps(i)%MeshMap, ErrStat2, ErrMsg2, &
+                                      T%BD%Input(1, Maps(i)%SrcIns)%RootMotion, &
+                                      T%ED%y%HubPtMotion)
+         u_ED%HubPtLoad%Force = u_ED%HubPtLoad%Force + Maps(i)%MeshTmp%Force
+         u_ED%HubPtLoad%Moment = u_ED%HubPtLoad%Moment + Maps(i)%MeshTmp%Moment
+
+      case default
+         call SetErrStat(ErrID_Fatal, 'Invalid Mapping Key: '//Maps(i)%Key, ErrStat, ErrMsg, RoutineName)
+         return
+      end select
+
+      ! Check for transfer errors and return if failed
+      if (ErrStat2 >= AbortErrLev) then
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':'//Maps(i)%Key)
+         return
+      end if
    end do
 
 contains
-   subroutine AddLoadMapping(Key, SrcModID, SrcIns, SrcMeshName, SrcDispMeshName, &
-                             DstModID, DstIns, DstMeshName, DstDispMeshName, Active)
-      character(*), intent(in)      :: Key
-      integer(IntKi), intent(in)    :: SrcModID, DstModID
-      integer(IntKi), intent(in)    :: SrcIns, DstIns
-      character(*), intent(in)      :: SrcMeshName, DstMeshName
-      character(*), intent(in)      :: SrcDispMeshName, DstDispMeshName
-      logical, optional, intent(in) :: Active
-      if (present(Active)) then
-         if (.not. Active) return
+   subroutine ED_ResetHubLoads()
+      if (ED_ResetHubLoadsFlag) then
+         ED_ResetHubLoadsFlag = .false.
+         u_ED%HubPtLoad%Force = 0.0_ReKi
+         u_ED%HubPtLoad%Moment = 0.0_ReKi
       end if
-      Maps = [Maps, TC_MappingType(Key=Key, isLoad=.true., &
-                                   SrcModID=SrcModID, SrcIns=SrcIns, SrcMeshName=SrcMeshName, SrcDispMeshName=SrcDispMeshName, &
-                                   DstModID=DstModID, DstIns=DstIns, DstMeshName=DstMeshName, DstDispMeshName=DstDispMeshName)]
    end subroutine
-   subroutine AddMotionMapping(Key, SrcModID, SrcIns, SrcMeshName, &
-                               DstModID, DstIns, DstMeshName, Active)
-      character(*), intent(in)      :: Key
-      integer(IntKi), intent(in)    :: SrcModID, DstModID
-      integer(IntKi), intent(in)    :: SrcIns, DstIns
-      character(*), intent(in)      :: SrcMeshName, DstMeshName
-      logical, optional, intent(in) :: Active
-      if (present(Active)) then
-         if (.not. Active) return
+   subroutine ED_ResetNacelleLoads()
+      if (ED_ResetNacelleLoadsFlag) then
+         ED_ResetNacelleLoadsFlag = .false.
+         u_ED%NacelleLoads%Force = 0.0_ReKi
+         u_ED%NacelleLoads%Moment = 0.0_ReKi
       end if
-      Maps = [Maps, TC_MappingType(Key=Key, isLoad=.false., &
-                                   SrcModID=SrcModID, SrcIns=SrcIns, SrcMeshName=SrcMeshName, &
-                                   DstModID=DstModID, DstIns=DstIns, DstMeshName=DstMeshName)]
    end subroutine
-   logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      Failed = ErrStat >= AbortErrLev
-   end function
 end subroutine
 
-subroutine FAST_CalcOutput(Mod, Maps, this_time, this_state, T, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)           :: Mod         !< Module data
+subroutine IfW_InputSolve1(ModData, Maps, u_IfW, T, ErrStat, ErrMsg)
+   type(InflowWind_InputType), intent(inout)       :: u_IfW
+   type(ModDataType), intent(in)                   :: ModData  !< Module data
+   type(TC_MappingType), intent(inout)             :: Maps(:)
+   type(FAST_TurbineType), target, intent(inout)   :: T        !< Turbine type
+   integer(IntKi), intent(out)                     :: ErrStat
+   character(*), intent(out)                       :: ErrMsg
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+end subroutine
+
+subroutine FAST_CalcOutput(ModData, Maps, this_time, this_state, T, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)           :: ModData     !< Module data
    type(TC_MappingType), intent(inout)     :: Maps(:)     !< Output->Input mappings
    real(DbKi), intent(in)                  :: this_time   !< Time
    integer(IntKi), intent(in)              :: this_state  !< State index
@@ -620,7 +1023,7 @@ subroutine FAST_CalcOutput(Mod, Maps, this_time, this_state, T, ErrStat, ErrMsg)
    ErrMsg = ''
 
    ! Select based on module ID
-   select case (Mod%ID)
+   select case (ModData%ID)
 
    case (Module_AD)
 
@@ -629,9 +1032,9 @@ subroutine FAST_CalcOutput(Mod, Maps, this_time, this_state, T, ErrStat, ErrMsg)
 
    case (Module_BD)
 
-      call BD_CalcOutput(this_time, T%BD%Input(1, Mod%Ins), T%BD%p(Mod%Ins), T%BD%x(Mod%Ins, this_state), &
-                         T%BD%xd(Mod%Ins, this_state), T%BD%z(Mod%Ins, this_state), T%BD%OtherSt(Mod%Ins, this_state), &
-                         T%BD%y(Mod%Ins), T%BD%m(Mod%Ins), ErrStat2, ErrMsg2); if (Failed()) return
+      call BD_CalcOutput(this_time, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, this_state), &
+                         T%BD%xd(ModData%Ins, this_state), T%BD%z(ModData%Ins, this_state), T%BD%OtherSt(ModData%Ins, this_state), &
+                         T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2); if (Failed()) return
 
    case (Module_ED)
 
@@ -660,13 +1063,13 @@ subroutine FAST_CalcOutput(Mod, Maps, this_time, this_state, T, ErrStat, ErrMsg)
                            T%SrvD%OtherSt(this_state), T%SrvD%y, T%SrvD%m, ErrStat2, ErrMsg2); if (Failed()) return
 
    case default
-      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(Mod%ID)), ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(ModData%ID)), ErrStat, ErrMsg, RoutineName)
       return
    end select
 
    ! Set updated flag in mappings where this module is the source
    do i = 1, size(Maps)
-      if (Maps(i)%SrcModIdx == Mod%Idx) Maps(i)%Ready = .true.
+      if (Maps(i)%SrcModIdx == ModData%Idx) Maps(i)%Ready = .true.
    end do
 
 contains
@@ -676,8 +1079,8 @@ contains
    end function
 end subroutine
 
-subroutine FAST_CalcContStateDeriv(Mod, this_time, this_state, T, ErrStat, ErrMsg, dxdt)
-   type(ModDataType), intent(in)           :: Mod         !< Module data
+subroutine FAST_CalcContStateDeriv(ModData, this_time, this_state, T, ErrStat, ErrMsg, dxdt)
+   type(ModDataType), intent(in)           :: ModData     !< Module data
    real(DbKi), intent(in)                  :: this_time   !< Time
    integer(IntKi), intent(in)              :: this_state  !< State index
    type(FAST_TurbineType), intent(inout)   :: T           !< Turbine type
@@ -693,18 +1096,18 @@ subroutine FAST_CalcContStateDeriv(Mod, this_time, this_state, T, ErrStat, ErrMs
    ErrMsg = ''
 
    ! Select based on module ID
-   select case (Mod%ID)
+   select case (ModData%ID)
 
 !  case (Module_AD)
 
    case (Module_BD)
 
-      call BD_CalcContStateDeriv(this_time, T%BD%Input(1, Mod%Ins), T%BD%p(Mod%Ins), T%BD%x(Mod%Ins, this_state), &
-                                 T%BD%xd(Mod%Ins, this_state), T%BD%z(Mod%Ins, this_state), T%BD%OtherSt(Mod%Ins, this_state), &
-                                 T%BD%m(Mod%Ins), T%BD%dxdt(Mod%Ins), ErrStat2, ErrMsg2); if (Failed()) return
+      call BD_CalcContStateDeriv(this_time, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, this_state), &
+                                 T%BD%xd(ModData%Ins, this_state), T%BD%z(ModData%Ins, this_state), T%BD%OtherSt(ModData%Ins, this_state), &
+                                 T%BD%m(ModData%Ins), T%BD%dxdt(ModData%Ins), ErrStat2, ErrMsg2); if (Failed()) return
       if (present(dxdt)) then
-         call BD_PackStateValues(T%BD%p(Mod%Ins), T%BD%dxdt(Mod%Ins), T%BD%m(Mod%Ins)%Vals%dxdt)
-         call XferLocToGbl1D(Mod%ixs, T%BD%m(Mod%Ins)%Vals%dxdt, dxdt)
+         call BD_PackStateValues(T%BD%p(ModData%Ins), T%BD%dxdt(ModData%Ins), T%BD%m(ModData%Ins)%Vals%dxdt)
+         call XferLocToGbl1D(ModData%ixs, T%BD%m(ModData%Ins)%Vals%dxdt, dxdt)
       end if
 
    case (Module_ED)
@@ -714,7 +1117,7 @@ subroutine FAST_CalcContStateDeriv(Mod, this_time, this_state, T, ErrStat, ErrMs
                                  T%ED%dxdt, ErrStat2, ErrMsg2); if (Failed()) return
       if (present(dxdt)) then
          call ED_PackStateValues(T%ED%p, T%ED%dxdt, T%ED%m%Vals%dxdt)
-         call XferLocToGbl1D(Mod%ixs, T%ED%m%Vals%dxdt, dxdt)
+         call XferLocToGbl1D(ModData%ixs, T%ED%m%Vals%dxdt, dxdt)
       end if
 
 !  case (Module_ExtPtfm)
@@ -731,7 +1134,7 @@ subroutine FAST_CalcContStateDeriv(Mod, this_time, this_state, T, ErrStat, ErrMs
 !  case (Module_SeaSt)
 !  case (Module_SrvD)
    case default
-      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(Mod%ID)), ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(ModData%ID)), ErrStat, ErrMsg, RoutineName)
       return
    end select
 
@@ -742,8 +1145,8 @@ contains
    end function
 end subroutine
 
-subroutine FAST_CalcJacobian(Mod, this_time, this_state, T, ErrStat, ErrMsg, dYdx, dXdx, dYdu, dXdu)
-   type(ModDataType), intent(in)                      :: Mod         !< Module data
+subroutine FAST_CalcJacobian(ModData, this_time, this_state, T, ErrStat, ErrMsg, dYdx, dXdx, dYdu, dXdu)
+   type(ModDataType), intent(in)                      :: ModData     !< Module data
    real(DbKi), intent(in)                             :: this_time   !< Time
    integer(IntKi), intent(in)                         :: this_state  !< State
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
@@ -760,37 +1163,37 @@ subroutine FAST_CalcJacobian(Mod, this_time, this_state, T, ErrStat, ErrMsg, dYd
    ErrMsg = ''
 
    ! Select based on module ID
-   select case (Mod%ID)
+   select case (ModData%ID)
 
 !  case (Module_AD)
 
    case (Module_BD)
 
-      call BD_JacobianPInput(this_time, T%BD%Input(1, Mod%Ins), T%BD%p(Mod%Ins), T%BD%x(Mod%Ins, this_state), T%BD%xd(Mod%Ins, this_state), &
-                             T%BD%z(Mod%Ins, this_state), T%BD%OtherSt(Mod%Ins, this_state), T%BD%y(Mod%Ins), T%BD%m(Mod%Ins), &
-                             ErrStat2, ErrMsg2, dYdu=T%BD%m(Mod%Ins)%Vals%dYdu, dXdu=T%BD%m(Mod%Ins)%Vals%dXdu); if (Failed()) return
-      if (present(dYdu)) call XferLocToGbl2D(Mod%iys, Mod%ius, T%BD%m(Mod%Ins)%Vals%dYdu, dYdu)
-      if (present(dXdu)) call XferLocToGbl2D(Mod%ixs, Mod%ius, T%BD%m(Mod%Ins)%Vals%dXdu, dXdu)
+      call BD_JacobianPInput(this_time, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, this_state), T%BD%xd(ModData%Ins, this_state), &
+                             T%BD%z(ModData%Ins, this_state), T%BD%OtherSt(ModData%Ins, this_state), T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), &
+                             ErrStat2, ErrMsg2, dYdu=T%BD%m(ModData%Ins)%Vals%dYdu, dXdu=T%BD%m(ModData%Ins)%Vals%dXdu); if (Failed()) return
+      if (present(dYdu)) call XferLocToGbl2D(ModData%iys, ModData%ius, T%BD%m(ModData%Ins)%Vals%dYdu, dYdu)
+      if (present(dXdu)) call XferLocToGbl2D(ModData%ixs, ModData%ius, T%BD%m(ModData%Ins)%Vals%dXdu, dXdu)
 
-      call BD_JacobianPContState(this_time, T%BD%Input(1, Mod%Ins), T%BD%p(Mod%Ins), T%BD%x(Mod%Ins, this_state), T%BD%xd(Mod%Ins, this_state), &
-                                 T%BD%z(Mod%Ins, this_state), T%BD%OtherSt(Mod%Ins, this_state), T%BD%y(Mod%Ins), T%BD%m(Mod%Ins), &
-                                 ErrStat2, ErrMsg2, dYdx=T%BD%m(Mod%Ins)%Vals%dYdx, dXdx=T%BD%m(Mod%Ins)%Vals%dXdx); if (Failed()) return
-      if (present(dYdx)) call XferLocToGbl2D(Mod%iys, Mod%ixs, T%BD%m(Mod%Ins)%Vals%dYdx, dYdx)
-      if (present(dXdx)) call XferLocToGbl2D(Mod%ixs, Mod%ixs, T%BD%m(Mod%Ins)%Vals%dXdx, dXdx)
+      call BD_JacobianPContState(this_time, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, this_state), T%BD%xd(ModData%Ins, this_state), &
+                                 T%BD%z(ModData%Ins, this_state), T%BD%OtherSt(ModData%Ins, this_state), T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), &
+                                 ErrStat2, ErrMsg2, dYdx=T%BD%m(ModData%Ins)%Vals%dYdx, dXdx=T%BD%m(ModData%Ins)%Vals%dXdx); if (Failed()) return
+      if (present(dYdx)) call XferLocToGbl2D(ModData%iys, ModData%ixs, T%BD%m(ModData%Ins)%Vals%dYdx, dYdx)
+      if (present(dXdx)) call XferLocToGbl2D(ModData%ixs, ModData%ixs, T%BD%m(ModData%Ins)%Vals%dXdx, dXdx)
 
    case (Module_ED)
 
       call ED_JacobianPInput(this_time, T%ED%Input(1), T%ED%p, T%ED%x(this_state), T%ED%xd(this_state), &
                              T%ED%z(this_state), T%ED%OtherSt(this_state), T%ED%y, T%ED%m, &
                              ErrStat2, ErrMsg2, dYdu=T%ED%m%Vals%dYdu, dXdu=T%ED%m%Vals%dXdu); if (Failed()) return
-      if (present(dYdu)) call XferLocToGbl2D(Mod%iys, Mod%ius, T%ED%m%Vals%dYdu, dYdu)
-      if (present(dXdu)) call XferLocToGbl2D(Mod%ixs, Mod%ius, T%ED%m%Vals%dXdu, dXdu)
+      if (present(dYdu)) call XferLocToGbl2D(ModData%iys, ModData%ius, T%ED%m%Vals%dYdu, dYdu)
+      if (present(dXdu)) call XferLocToGbl2D(ModData%ixs, ModData%ius, T%ED%m%Vals%dXdu, dXdu)
 
       call ED_JacobianPContState(this_time, T%ED%Input(1), T%ED%p, T%ED%x(this_state), T%ED%xd(this_state), &
                                  T%ED%z(this_state), T%ED%OtherSt(this_state), T%ED%y, T%ED%m, &
                                  ErrStat2, ErrMsg2, dYdx=T%ED%m%Vals%dYdx, dXdx=T%ED%m%Vals%dXdx); if (Failed()) return
-      if (present(dYdx)) call XferLocToGbl2D(Mod%iys, Mod%ixs, T%ED%m%Vals%dYdx, dYdx)
-      if (present(dXdx)) call XferLocToGbl2D(Mod%ixs, Mod%ixs, T%ED%m%Vals%dXdx, dXdx)
+      if (present(dYdx)) call XferLocToGbl2D(ModData%iys, ModData%ixs, T%ED%m%Vals%dYdx, dYdx)
+      if (present(dXdx)) call XferLocToGbl2D(ModData%ixs, ModData%ixs, T%ED%m%Vals%dXdx, dXdx)
 
 !  case (Module_ExtPtfm)
 !  case (Module_FEAM)
@@ -806,7 +1209,7 @@ subroutine FAST_CalcJacobian(Mod, this_time, this_state, T, ErrStat, ErrMsg, dYd
 !  case (Module_SeaSt)
 !  case (Module_SrvD)
    case default
-      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(Mod%ID)), ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(ModData%ID)), ErrStat, ErrMsg, RoutineName)
       return
    end select
 
@@ -817,14 +1220,14 @@ contains
    end function
 end subroutine
 
-subroutine FAST_SaveStates(Mod, T, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)             :: Mod      !< Module data
+subroutine FAST_SaveStates(ModData, T, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)             :: ModData  !< Module data
    type(FAST_TurbineType), intent(inout)     :: T        !< Turbine type
    integer(IntKi), intent(out)               :: ErrStat
    character(*), intent(out)                 :: ErrMsg
 
    ! Copy state from predicted to current with MESH_UPDATECOPY
-   call FAST_CopyStates(Mod, T, STATE_PRED, STATE_CURR, MESH_UPDATECOPY, ErrStat, ErrMsg)
+   call FAST_CopyStates(ModData, T, STATE_PRED, STATE_CURR, MESH_UPDATECOPY, ErrStat, ErrMsg)
 end subroutine
 
 subroutine XferLocToGbl1D(Inds, Loc, Gbl)
@@ -859,8 +1262,8 @@ subroutine XferLocToGbl2D(RowInds, ColInds, Loc, Gbl)
    end do
 end subroutine
 
-subroutine FAST_CopyStates(Mod, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)                      :: Mod         !< Module data
+subroutine FAST_CopyStates(ModData, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)                      :: ModData     !< Module data
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
    integer(IntKi), intent(in)                         :: Src, Dst    !< State indices
    integer(IntKi), intent(in)                         :: CtrlCode    !< Mesh copy code
@@ -880,7 +1283,7 @@ subroutine FAST_CopyStates(Mod, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
    ErrMsg = ''
 
    ! Select based on module ID
-   select case (Mod%ID)
+   select case (ModData%ID)
 
    case (Module_AD)
 
@@ -891,10 +1294,10 @@ subroutine FAST_CopyStates(Mod, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
 
    case (Module_BD)
 
-      call BD_CopyContState(T%BD%x(Mod%Ins, Src), T%BD%x(Mod%Ins, Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call BD_CopyDiscState(T%BD%xd(Mod%Ins, Src), T%BD%xd(Mod%Ins, Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call BD_CopyConstrState(T%BD%z(Mod%Ins, Src), T%BD%z(Mod%Ins, Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
-      call BD_CopyOtherState(T%BD%OtherSt(Mod%Ins, Src), T%BD%OtherSt(Mod%Ins, Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call BD_CopyContState(T%BD%x(ModData%Ins, Src), T%BD%x(ModData%Ins, Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call BD_CopyDiscState(T%BD%xd(ModData%Ins, Src), T%BD%xd(ModData%Ins, Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call BD_CopyConstrState(T%BD%z(ModData%Ins, Src), T%BD%z(ModData%Ins, Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
+      call BD_CopyOtherState(T%BD%OtherSt(ModData%Ins, Src), T%BD%OtherSt(ModData%Ins, Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case (Module_ED)
 
@@ -942,7 +1345,7 @@ subroutine FAST_CopyStates(Mod, T, Src, Dst, CtrlCode, ErrStat, ErrMsg)
       call SrvD_CopyOtherState(T%SrvD%OtherSt(Src), T%SrvD%OtherSt(Dst), CtrlCode, Errstat2, ErrMsg2); if (Failed()) return
 
    case default
-      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(Mod%ID)), ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(ModData%ID)), ErrStat, ErrMsg, RoutineName)
       return
    end select
 
@@ -953,8 +1356,8 @@ contains
    end function
 end subroutine
 
-subroutine FAST_ResetRemapFlags(Mod, T, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)           :: Mod     !< Module data
+subroutine FAST_ResetRemapFlags(ModData, T, ErrStat, ErrMsg)
+   type(ModDataType), intent(in)           :: ModData !< Module data
    type(FAST_TurbineType), intent(inout)   :: T       !< Turbine type
    integer(IntKi), intent(out)             :: ErrStat
    character(*), intent(out)               :: ErrMsg
@@ -968,7 +1371,7 @@ subroutine FAST_ResetRemapFlags(Mod, T, ErrStat, ErrMsg)
    ErrMsg = ''
 
    ! Select based on module ID
-   select case (Mod%ID)
+   select case (ModData%ID)
 
    case (Module_AD)
 
@@ -1003,13 +1406,13 @@ subroutine FAST_ResetRemapFlags(Mod, T, ErrStat, ErrMsg)
 
    case (Module_BD)
 
-      T%BD%Input(1, Mod%Ins)%RootMotion%RemapFlag = .false.
-      T%BD%Input(1, Mod%Ins)%PointLoad%RemapFlag = .false.
-      T%BD%Input(1, Mod%Ins)%DistrLoad%RemapFlag = .false.
-      T%BD%Input(1, Mod%Ins)%HubMotion%RemapFlag = .false.
+      T%BD%Input(1, ModData%Ins)%RootMotion%RemapFlag = .false.
+      T%BD%Input(1, ModData%Ins)%PointLoad%RemapFlag = .false.
+      T%BD%Input(1, ModData%Ins)%DistrLoad%RemapFlag = .false.
+      T%BD%Input(1, ModData%Ins)%HubMotion%RemapFlag = .false.
 
-      T%BD%y(Mod%Ins)%ReactionForce%RemapFlag = .false.
-      T%BD%y(Mod%Ins)%BldMotion%RemapFlag = .false.
+      T%BD%y(ModData%Ins)%ReactionForce%RemapFlag = .false.
+      T%BD%y(ModData%Ins)%BldMotion%RemapFlag = .false.
 
    case (Module_ED)
 
@@ -1059,9 +1462,9 @@ subroutine FAST_ResetRemapFlags(Mod, T, ErrStat, ErrMsg)
 
    case (Module_IceD)
 
-      if (T%IceD%Input(1, Mod%Ins)%PointMesh%Committed) then
-         T%IceD%Input(1, Mod%Ins)%PointMesh%RemapFlag = .false.
-         T%IceD%y(Mod%Ins)%PointMesh%RemapFlag = .false.
+      if (T%IceD%Input(1, ModData%Ins)%PointMesh%Committed) then
+         T%IceD%Input(1, ModData%Ins)%PointMesh%RemapFlag = .false.
+         T%IceD%y(ModData%Ins)%PointMesh%RemapFlag = .false.
       end if
 
    case (Module_IceF)
@@ -1070,8 +1473,6 @@ subroutine FAST_ResetRemapFlags(Mod, T, ErrStat, ErrMsg)
          T%IceF%Input(1)%iceMesh%RemapFlag = .false.
          T%IceF%y%iceMesh%RemapFlag = .false.
       end if
-
-!  case (Module_IfW)
 
    case (Module_MAP)
 
@@ -1082,8 +1483,6 @@ subroutine FAST_ResetRemapFlags(Mod, T, ErrStat, ErrMsg)
 
       T%MD%Input(1)%CoupledKinematics(1)%RemapFlag = .false.
       T%MD%y%CoupledLoads(1)%RemapFlag = .false.
-
-!  case (Module_OpFM)
 
    case (Module_Orca)
 
@@ -1103,137 +1502,8 @@ subroutine FAST_ResetRemapFlags(Mod, T, ErrStat, ErrMsg)
          T%SD%y%Y3Mesh%RemapFlag = .false.
       end if
 
-!  case (Module_SeaSt)
-
-!  case (Module_SrvD)
-
    end select
 
-contains
-   logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      Failed = ErrStat >= AbortErrLev
-   end function
-end subroutine
-
-subroutine FAST_InputSolve(Mod, Maps, Dst, T, ErrStat, ErrMsg)
-   type(ModDataType), intent(in)                   :: Mod     !< Module data
-   type(TC_MappingType), intent(inout)             :: Maps(:)
-   integer(IntKi), intent(in)                      :: Dst
-   type(FAST_TurbineType), target, intent(inout)   :: T           !< Turbine type
-   integer(IntKi), intent(out)                     :: ErrStat
-   character(*), intent(out)                       :: ErrMsg
-
-   character(*), parameter       :: RoutineName = 'FAST_InputSolve'
-   integer(IntKi)                :: ErrStat2
-   character(ErrMsgLen)          :: ErrMsg2
-   integer(IntKi)                :: i, j, k
-   integer(IntKi)                :: DstIns, SrcIns
-   type(ED_InputType), pointer   :: u_ED
-   type(BD_InputType), pointer   :: u_BD
-   logical                       :: ED_ResetHubPtLoad
-
-   ErrStat = ErrID_None
-   ErrMsg = ''
-
-   ! Check that Dst is valid
-   if (Dst /= 1 .and. Dst /= 2) then
-      call SetErrStat(ErrID_Fatal, "Dst must be 1 or 2, given "//trim(Num2LStr(Dst)), ErrStat, ErrMsg, RoutineName)
-      return
-   end if
-
-   select case (Mod%ID)
-
-   case (Module_AD)
-
-   case (Module_BD)
-
-      select case (Dst)
-      case (IS_Input)
-         u_BD => T%BD%Input(1, Mod%Ins)
-      case (IS_u)
-         u_BD => T%BD%u(Mod%Ins)
-      end select
-
-      ! u_BD%DistrLoad%Force = 0.0_ReKi
-      ! u_BD%DistrLoad%Moment = 0.0_ReKi
-
-      ! u_BD%PointLoad%Force = 0.0_ReKi
-      ! u_BD%PointLoad%Moment = 0.0_ReKi
-
-   case (Module_ED)
-
-      select case (Dst)
-      case (IS_Input)
-         u_ED => T%ED%Input(1)
-      case (IS_u)
-         u_ED => T%ED%u
-      end select
-
-      ED_ResetHubPtLoad = .true.
-
-      ! u_ED%NacelleLoads%Force = 0.0_ReKi
-      ! u_ED%NacelleLoads%Moment = 0.0_ReKi
-
-      ! u_ED%TowerPtLoads%Force = 0.0_ReKi
-      ! u_ED%TowerPtLoads%Moment = 0.0_ReKi
-
-      ! u_ED%TwrAddedMass = 0.0_ReKi
-      ! u_ED%PtfmAddedMass = 0.0_ReKi
-
-   case (Module_IfW)
-
-   case (Module_SrvD)
-
-   end select
-
-   ! Loop through mappings that set this module's inputs
-   do i = 1, size(Maps)
-
-      ! If this is not the destination module, cycle
-      if (Mod%Idx /= Maps(i)%DstModIdx) cycle
-
-      ! If mapping source has not been calculated, cycle
-      if (.not. Maps(i)%Ready) cycle
-
-      ! Get source and destination module instances
-      SrcIns = Maps(i)%SrcIns
-      DstIns = Maps(i)%DstIns
-
-      ! Select based on mapping Key (must match Key in m%Mappings in Solver.f90)
-      select case (Maps(i)%Key)
-
-      case ('ED BladeRoot -> BD RootMotion')
-
-         call Transfer_Point_to_Point(T%ED%y%BladeRootMotion(DstIns), u_BD%RootMotion, Maps(i)%MeshMap, ErrStat2, ErrMsg2)
-         if (Failed()) return
-
-      case ('BD ReactionForce -> ED HubLoad')
-
-         if (ED_ResetHubPtLoad) then
-            u_ED%HubPtLoad%Force = 0.0_ReKi
-            u_ED%HubPtLoad%Moment = 0.0_ReKi
-            ED_ResetHubPtLoad = .false.
-         end if
-
-         call Transfer_Point_to_Point(T%BD%y(SrcIns)%ReactionForce, Maps(i)%MeshTmp, Maps(i)%MeshMap, ErrStat2, ErrMsg2, &
-                                      T%BD%Input(1, SrcIns)%RootMotion, T%ED%y%HubPtMotion)
-         if (Failed()) return
-
-         u_ED%HubPtLoad%Force = u_ED%HubPtLoad%Force + Maps(i)%MeshTmp%Force
-         u_ED%HubPtLoad%Moment = u_ED%HubPtLoad%Moment + Maps(i)%MeshTmp%Moment
-
-      case default
-         call SetErrStat(ErrID_Fatal, 'Invalid Mapping Key: '//Maps(i)%Key, ErrStat, ErrMsg, RoutineName)
-         return
-      end select
-   end do
-
-contains
-   logical function Failed()
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      Failed = ErrStat >= AbortErrLev
-   end function
 end subroutine
 
 subroutine FAST_LinearizeMappings(ModData, ModOrder, Mappings, T, ErrStat, ErrMsg, dUdu, dUdy)
@@ -1245,7 +1515,7 @@ subroutine FAST_LinearizeMappings(ModData, ModOrder, Mappings, T, ErrStat, ErrMs
    character(*), intent(out)                       :: ErrMsg
    real(R8Ki), optional, intent(inout)             :: dUdu(:, :), dUdy(:, :)
 
-   character(*), parameter       :: RoutineName = 'FAST_InputSolve'
+   character(*), parameter       :: RoutineName = 'FAST_LinearizeMappings'
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
    integer(IntKi)                :: j, k
@@ -1257,8 +1527,9 @@ subroutine FAST_LinearizeMappings(ModData, ModOrder, Mappings, T, ErrStat, ErrMs
    ! Loop through mapping array
    do j = 1, size(Mappings)
 
-      ! If mapping input and output modules are not in module order array, cycle
-      if (all(Mappings(j)%DstModIdx /= ModOrder) .and. all(Mappings(j)%SrcModIdx /= ModOrder)) cycle
+      ! If source and destination modules are not in tight coupling, cycle
+      if ((.not. ModData(Mappings(j)%DstModIdx)%IsTC) .or. &
+          (.not. ModData(Mappings(j)%SrcModIdx)%IsTC)) cycle
 
       ! Get input/output module instances
       iiu = Mappings(j)%DstIns

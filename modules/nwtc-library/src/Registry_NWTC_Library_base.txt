@@ -107,6 +107,7 @@ typedef     ^       ModDataType IntKi           Idx                 -   0   -   
 typedef     ^       ^           IntKi           ID                  -   0   -   "Module identification number"  -
 typedef     ^       ^           character(ChanLen) Abbr             -   -   -   "Module name abbreviation"  -
 typedef     ^       ^           IntKi           Ins                 -   0   -   "Module instance number"  -
+typedef     ^       ^           logical         IsTC                -   F   -   "Flag indicating module is part of tight coupling" -
 typedef     ^       ^           R8Ki            DT                  -   0   -   "Module time step"  -
 typedef     ^       ^           IntKi           SubSteps            -   0   -   "Module number of substeps per solver time step"  -
 typedef     ^       ^           IntKi           ixs                 ::  -   -   "index array mapping local x vector to global x vector" -

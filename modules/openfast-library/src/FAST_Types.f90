@@ -126,6 +126,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DstVarIdx      !< motion variable index [-]
     INTEGER(IntKi)  :: SrcDispVarIdx = 0_IntKi      !< source displacement var index [if IsLoad=true] [-]
     INTEGER(IntKi)  :: DstDispVarIdx = 0_IntKi      !< destination displacement var index [if IsLoad=true] [-]
+    INTEGER(IntKi)  :: Idx = 0_IntKi      !< Optional index for specifying transfers [-]
     TYPE(MeshType)  :: MeshTmp      !< Temporary mesh for intermediate transfers [-]
     TYPE(MeshMapType)  :: MeshMap      !< Mesh mapping from output variable to input variable [-]
     LOGICAL  :: IsLoad = .false.      !< Flag indicating if this is a load or motion mapping [-]
@@ -1554,6 +1555,7 @@ subroutine FAST_CopyTC_MappingType(SrcTC_MappingTypeData, DstTC_MappingTypeData,
    end if
    DstTC_MappingTypeData%SrcDispVarIdx = SrcTC_MappingTypeData%SrcDispVarIdx
    DstTC_MappingTypeData%DstDispVarIdx = SrcTC_MappingTypeData%DstDispVarIdx
+   DstTC_MappingTypeData%Idx = SrcTC_MappingTypeData%Idx
    call MeshCopy(SrcTC_MappingTypeData%MeshTmp, DstTC_MappingTypeData%MeshTmp, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -1613,6 +1615,7 @@ subroutine FAST_PackTC_MappingType(Buf, Indata)
    end if
    call RegPack(Buf, InData%SrcDispVarIdx)
    call RegPack(Buf, InData%DstDispVarIdx)
+   call RegPack(Buf, InData%Idx)
    call MeshPack(Buf, InData%MeshTmp) 
    call NWTC_Library_PackMeshMapType(Buf, InData%MeshMap) 
    call RegPack(Buf, InData%IsLoad)
@@ -1681,6 +1684,8 @@ subroutine FAST_UnPackTC_MappingType(Buf, OutData)
    call RegUnpack(Buf, OutData%SrcDispVarIdx)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%DstDispVarIdx)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%Idx)
    if (RegCheckErr(Buf, RoutineName)) return
    call MeshUnpack(Buf, OutData%MeshTmp) ! MeshTmp 
    call NWTC_Library_UnpackMeshMapType(Buf, OutData%MeshMap) ! MeshMap 

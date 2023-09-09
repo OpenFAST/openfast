@@ -545,7 +545,7 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
    ! Blade Point Loads
    if (allocated(u%BladePtLoads)) then
       do i = 1, p%NumBl
-         call MV_AddMeshVar(p%Vars%u, "Blade "//trim(Num2LStr(i)), LoadFields, &
+         call MV_AddMeshVar(p%Vars%u, "BladeLoad"//trim(Num2LStr(i)), LoadFields, &
                             Nodes=p%BldNodes, &
                             Perturbs=[MaxThrust / (100.0_R8Ki*p%NumBl*p%BldNodes), &
                                       MaxTorque / (100.0_R8Ki*p%NumBl*p%BldNodes)])
@@ -553,22 +553,22 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
    end if
 
    ! Platform point loads
-   call MV_AddMeshVar(p%Vars%u, "Platform", LoadFields, &
+   call MV_AddMeshVar(p%Vars%u, "PlatformLoad", LoadFields, &
                       Nodes=u%PlatformPtMesh%NNodes, &
                       Perturbs=[MaxThrust / 100.0_R8Ki, &
                                 MaxTorque / 100.0_R8Ki])
    ! Tower point loads
-   call MV_AddMeshVar(p%Vars%u, "Tower", LoadFields, &
+   call MV_AddMeshVar(p%Vars%u, "TowerLoad", LoadFields, &
                       Nodes=u%TowerPtLoads%Nnodes, &
                       Perturbs=[MaxThrust / (100.0_R8Ki*p%NumBl*p%TwrNodes), &
                                 MaxTorque / (100.0_R8Ki*p%NumBl*p%TwrNodes)])
    ! Hub point loads
-   call MV_AddMeshVar(p%Vars%u, "Hub", LoadFields, &
+   call MV_AddMeshVar(p%Vars%u, "HubLoad", LoadFields, &
                       Nodes=u%HubPtLoad%NNodes, &
                       Perturbs=[MaxThrust / 100.0_R8Ki, &
                                 MaxTorque / 100.0_R8Ki])
    ! Nacelle point loads
-   call MV_AddMeshVar(p%Vars%u, "Nacelle", LoadFields, &
+   call MV_AddMeshVar(p%Vars%u, "NacelleLoad", LoadFields, &
                       Nodes=u%NacelleLoads%NNodes, &
                       Perturbs=[MaxThrust / 100.0_R8Ki, &
                                 MaxTorque / 100.0_R8Ki])
@@ -599,16 +599,16 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
 
    if (allocated(y%BladeLn2Mesh))then
       do i = 1, p%NumBl
-         call MV_AddMeshVar(p%Vars%y, 'Blade '//Num2LStr(i), MotionFields, Nodes=y%BladeLn2Mesh(i)%Nnodes, Flags=VF_Line)
+         call MV_AddMeshVar(p%Vars%y, 'BladeMotion'//Num2LStr(i), MotionFields, Nodes=y%BladeLn2Mesh(i)%Nnodes, Flags=VF_Line)
       end do
    end if 
-   call MV_AddMeshVar(p%Vars%y, 'Platform', MotionFields, Nodes=y%PlatformPtMesh%Nnodes)
-   call MV_AddMeshVar(p%Vars%y, 'Tower', MotionFields, Nodes=y%TowerLn2Mesh%Nnodes, Flags=VF_Line)
-   call MV_AddMeshVar(p%Vars%y, 'Hub', [VF_TransDisp, VF_Orientation, VF_AngularVel], Nodes=y%HubPtMotion%Nnodes)
+   call MV_AddMeshVar(p%Vars%y, 'PlatformMotion', MotionFields, Nodes=y%PlatformPtMesh%Nnodes)
+   call MV_AddMeshVar(p%Vars%y, 'TowerMotion', MotionFields, Nodes=y%TowerLn2Mesh%Nnodes, Flags=VF_Line)
+   call MV_AddMeshVar(p%Vars%y, 'HubMotion', [VF_TransDisp, VF_Orientation, VF_AngularVel], Nodes=y%HubPtMotion%Nnodes)
    do i = 1, p%NumBl
-      call MV_AddMeshVar(p%Vars%y, 'Blade root '//Num2LStr(i), MotionFields, Nodes=y%BladeRootMotion(i)%Nnodes)
+      call MV_AddMeshVar(p%Vars%y, 'BladeRootMotion'//Num2LStr(i), MotionFields, Nodes=y%BladeRootMotion(i)%Nnodes)
    end do
-   call MV_AddMeshVar(p%Vars%y, 'Nacelle', MotionFields, Nodes=y%NacelleMotion%Nnodes)
+   call MV_AddMeshVar(p%Vars%y, 'NacelleMotion', MotionFields, Nodes=y%NacelleMotion%Nnodes)
    call MV_AddVar(p%Vars%y, 'Yaw',     VF_AngularDisp, LinNames=['Yaw, rad'])
    call MV_AddVar(p%Vars%y, 'YawRate', VF_Scalar,   LinNames=['YawRate, rad/s'])
    call MV_AddVar(p%Vars%y, 'HSS_Spd', VF_Scalar,   LinNames=['HSS_Spd, rad/s'])

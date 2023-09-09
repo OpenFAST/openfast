@@ -104,6 +104,9 @@ subroutine Solver_Init(p, m, Mods, Turbine, ErrStat, ErrMsg)
    ! Indices of BeamDyn modules
    p%iModBD = [pack(modInds, ModIDs == Module_BD)]
 
+   ! Set tight coupling flag to true for tight coupling modules
+   Mods(p%iModTC)%IsTC = .true.
+
    !----------------------------------------------------------------------------
    ! Initialize mesh mappings (must be done before calculating global indices)
    !----------------------------------------------------------------------------
@@ -880,7 +883,9 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
             call Solver_Step_Debug(p, m, n_t_global_next, iterCorr, iterConv, delta_norm)
          end if
 
-         if (delta_norm < p%ConvTol) exit
+         ! If at least one convergence iteration has been done and
+         ! the RHS norm is less than convergence tolerance, exit loop
+         if ((iterConv > 0) .and. (delta_norm < p%ConvTol)) exit
 
          ! Remove conditioning
          m%XB(p%iJL, 1) = m%XB(p%iJL, 1)*p%Scale_UJac
@@ -1036,6 +1041,8 @@ subroutine BuildJacobian(p, m, Mods, this_time, iter, Turbine, ErrStat, ErrMsg)
    ! Reset Jacobian update countdown values
    m%IterUntilUJac = p%NIter_UJac
    m%StepsUntilUJac = p%NStep_UJac
+
+   if (size(m%Jac) == 0) return
 
    !----------------------------------------------------------------------------
    ! Get module Jacobians and assemble
@@ -1390,16 +1397,16 @@ subroutine Solver_Init_Debug(p, m, Mods)
    type(ModDataType), intent(in)       :: Mods(:)     !< Module data
    integer(IntKi)                      :: i, j
 
-   write (DebugUn, '(A,*(I4))') " p%iJX2  = ", p%iJX
-   write (DebugUn, '(A,*(I4))') " p%iJUT  = ", p%iJUT
-   write (DebugUn, '(A,*(I4))') " p%iJU   = ", p%iJU
-   write (DebugUn, '(A,*(I4))') " p%iJL   = ", p%iJL
-   write (DebugUn, '(A,*(I4))') " p%iX2   = ", p%iX2
-   write (DebugUn, '(A,*(I4))') " p%iX1   = ", p%iX1
-   write (DebugUn, '(A,*(I4))') " p%iUT   = ", p%iUT
-   write (DebugUn, '(A,*(I4))') " p%iU1   = ", p%iU1
-   write (DebugUn, '(A,*(I4))') " p%iyT   = ", p%iyT
-   write (DebugUn, '(A,*(I4))') " p%iy1   = ", p%iy1
+   write (DebugUn, '(A,*(I6))') " p%iJX2  = ", p%iJX
+   write (DebugUn, '(A,*(I6))') " p%iJUT  = ", p%iJUT
+   write (DebugUn, '(A,*(I6))') " p%iJU   = ", p%iJU
+   write (DebugUn, '(A,*(I6))') " p%iJL   = ", p%iJL
+   write (DebugUn, '(A,*(I6))') " p%iX2   = ", p%iX2
+   write (DebugUn, '(A,*(I6))') " p%iX1   = ", p%iX1
+   write (DebugUn, '(A,*(I6))') " p%iUT   = ", p%iUT
+   write (DebugUn, '(A,*(I6))') " p%iU1   = ", p%iU1
+   write (DebugUn, '(A,*(I6))') " p%iyT   = ", p%iyT
+   write (DebugUn, '(A,*(I6))') " p%iy1   = ", p%iy1
    write (DebugUn, *) "shape(m%dYdx) = ", shape(m%dYdx)
    write (DebugUn, *) "shape(m%dYdu) = ", shape(m%dYdu)
    write (DebugUn, *) "shape(m%dXdx) = ", shape(m%dXdx)
@@ -1414,23 +1421,33 @@ subroutine Solver_Init_Debug(p, m, Mods)
          if (.not. allocated(Mods(i)%Vars%x(j)%iGblSol)) cycle
          write (DebugUn, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" X "//trim(Mods(i)%Vars%x(j)%Name)// &
             " ("//trim(MV_FieldString(Mods(i)%Vars%x(j)%Field))//")"
-         write (DebugUn, '(A,*(I4))') "  X iLoc    = ", Mods(i)%Vars%x(j)%iLoc
-         write (DebugUn, '(A,*(I4))') "  X iGblSol = ", Mods(i)%Vars%x(j)%iGblSol
+         write (DebugUn, '(A,*(I6))') "  X iLoc    = ", Mods(i)%Vars%x(j)%iLoc
+         write (DebugUn, '(A,*(I6))') "  X iGblSol = ", Mods(i)%Vars%x(j)%iGblSol
       end do
       do j = 1, size(Mods(i)%Vars%u)
          if (.not. allocated(Mods(i)%Vars%u(j)%iGblSol)) cycle
          write (DebugUn, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" U "//trim(Mods(i)%Vars%u(j)%Name)// &
             " ("//trim(MV_FieldString(Mods(i)%Vars%u(j)%Field))//")"
-         write (DebugUn, '(A,*(I4))') "  U iLoc    = ", Mods(i)%Vars%u(j)%iLoc
-         write (DebugUn, '(A,*(I4))') "  U iGblSol = ", Mods(i)%Vars%u(j)%iGblSol
+         write (DebugUn, '(A,*(I6))') "  U iLoc    = ", Mods(i)%Vars%u(j)%iLoc
+         write (DebugUn, '(A,*(I6))') "  U iGblSol = ", Mods(i)%Vars%u(j)%iGblSol
       end do
       do j = 1, size(Mods(i)%Vars%y)
          if (.not. allocated(Mods(i)%Vars%y(j)%iGblSol)) cycle
          write (DebugUn, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" Y "//trim(Mods(i)%Vars%y(j)%Name)// &
             " ("//trim(MV_FieldString(Mods(i)%Vars%y(j)%Field))//")"
-         write (DebugUn, '(A,*(I4))') "  Y iLoc    = ", Mods(i)%Vars%y(j)%iLoc
-         write (DebugUn, '(A,*(I4))') "  Y iGblSol = ", Mods(i)%Vars%y(j)%iGblSol
+         write (DebugUn, '(A,*(I6))') "  Y iLoc    = ", Mods(i)%Vars%y(j)%iLoc
+         write (DebugUn, '(A,*(I6))') "  Y iGblSol = ", Mods(i)%Vars%y(j)%iGblSol
       end do
+   end do
+
+   do i = 1, size(m%Mappings)
+      associate (SrcMod => Mods(m%Mappings(i)%SrcModIdx), &
+                 DstMod => Mods(m%Mappings(i)%DstModIdx))
+         write (DebugUn, *) "Mapping = "//m%Mappings(i)%Key
+         write (DebugUn, *) "   Src = "//trim(SrcMod%Abbr)//' Ins:'//trim(num2lstr(SrcMod%Ins))//' ModIdx:'//trim(num2lstr(SrcMod%Idx))
+         write (DebugUn, *) "   Dst = "//trim(DstMod%Abbr)//' Ins:'//trim(num2lstr(DstMod%Ins))//' ModIdx:'//trim(num2lstr(DstMod%Idx))
+         if (m%Mappings(i)%Idx /= 0) write (DebugUn, *) "   Idx = "//trim(num2lstr(m%Mappings(i)%Idx))
+      end associate
    end do
 end subroutine
 

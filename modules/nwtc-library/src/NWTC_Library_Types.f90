@@ -161,6 +161,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: ID = 0      !< Module identification number [-]
     character(ChanLen)  :: Abbr      !< Module name abbreviation [-]
     INTEGER(IntKi)  :: Ins = 0      !< Module instance number [-]
+    LOGICAL  :: IsTC = .false.      !< Flag indicating module is part of tight coupling [-]
     REAL(R8Ki)  :: DT = 0      !< Module time step [-]
     INTEGER(IntKi)  :: SubSteps = 0      !< Module number of substeps per solver time step [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ixs      !< index array mapping local x vector to global x vector [-]
@@ -1764,6 +1765,7 @@ subroutine NWTC_Library_CopyModDataType(SrcModDataTypeData, DstModDataTypeData, 
    DstModDataTypeData%ID = SrcModDataTypeData%ID
    DstModDataTypeData%Abbr = SrcModDataTypeData%Abbr
    DstModDataTypeData%Ins = SrcModDataTypeData%Ins
+   DstModDataTypeData%IsTC = SrcModDataTypeData%IsTC
    DstModDataTypeData%DT = SrcModDataTypeData%DT
    DstModDataTypeData%SubSteps = SrcModDataTypeData%SubSteps
    if (allocated(SrcModDataTypeData%ixs)) then
@@ -1836,6 +1838,7 @@ subroutine NWTC_Library_PackModDataType(Buf, Indata)
    call RegPack(Buf, InData%ID)
    call RegPack(Buf, InData%Abbr)
    call RegPack(Buf, InData%Ins)
+   call RegPack(Buf, InData%IsTC)
    call RegPack(Buf, InData%DT)
    call RegPack(Buf, InData%SubSteps)
    call RegPack(Buf, allocated(InData%ixs))
@@ -1880,6 +1883,8 @@ subroutine NWTC_Library_UnPackModDataType(Buf, OutData)
    call RegUnpack(Buf, OutData%Abbr)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Ins)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%IsTC)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
