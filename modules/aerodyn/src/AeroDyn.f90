@@ -6809,8 +6809,8 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
       !Module/Mesh/Field: u%InflowOnBlade(:,:,1) = 25;
       !Module/Mesh/Field: u%InflowOnBlade(:,:,2) = 26;
       !Module/Mesh/Field: u%InflowOnBlade(:,:,3) = 27;
-   do k=1,size(u%Bld)    ! p%NumBlades
-      do i=1,size(u%Bld(k)%InflowOnBlade,2) ! numNodes
+      do k=1,size(u%Bld)    ! p%NumBlades
+         do i=1,size(u%Bld(k)%InflowOnBlade,2) ! numNodes
             do j=1,3
                p%Jac_u_indx(index,1) =  24 + k
                p%Jac_u_indx(index,2) =  j !component index:  j
@@ -6978,7 +6978,7 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, p_AD, u, InitOut, ErrStat, ErrMsg)
          
    end if
    
-   END SUBROUTINE Init_Jacobian_u
+END SUBROUTINE Init_Jacobian_u
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
 

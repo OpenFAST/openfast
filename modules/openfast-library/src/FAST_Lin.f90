@@ -384,51 +384,51 @@ SUBROUTINE Init_Lin_IfW( p_FAST, y_FAST, u_AD )
          end do    
       end if
                   
-      IF (p_FAST%CompAero == MODULE_AD) THEN 
-                           
-         DO K = 1,SIZE(u_AD%rotors(1)%BladeMotion)
-            DO J = 1,u_AD%rotors(1)%BladeMotion(k)%Nnodes
-               Node = Node + 1 ! InflowWind node
-               NodeDesc = ' (blade '//trim(num2lstr(k))//', node '//trim(num2lstr(j))//')'
-               
-               do i=1,3 !XYZ components of this node
-                  i2 = (Node-1)*3 + i
-                                    
-                  position = index(y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2), ',') - 1
-                  y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2) = y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2)(1:position)//trim(NodeDesc)//&
-                                                                           y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2)(position+1:)
-                                                       
-                  position = index(y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2), ',') - 1
-                  y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2) = y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2)(1:position)//trim(NodeDesc)//&
-                                                                           y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2)(position+1:)
-                  
-                  ! IfW has inputs and outputs in the global frame
-                  !y_FAST%Lin%Modules(Module_IfW)%Instance(1)%RotFrame_u(i2) = .true.
-                  !y_FAST%Lin%Modules(Module_IfW)%Instance(1)%RotFrame_y(i2) = .true.
-                  
-               end do            
-            END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
-         END DO !K = 1,p%NumBl     
-         
-            ! tower:
-         DO J=1,u_AD%rotors(1)%TowerMotion%nnodes
-            Node = Node + 1  
-            NodeDesc = ' (Tower node '//trim(num2lstr(j))//')'
-
-            do i=1,3 !XYZ components of this node
-               i2 = (Node-1)*3 + i
-                                    
-               position = index(y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2), ',') - 1
-               y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2) = y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2)(1:position)//trim(NodeDesc)//&
-                                                                        y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2)(position+1:)
-                                     
-               position = index(y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2), ',') - 1
-               y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2) = y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2)(1:position)//trim(NodeDesc)//&
-                                                                        y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2)(position+1:)
-            end do            
-         END DO              
-         
-      END IF     
+      ! BJJ: SINCE INFLOWWIND NOW DOES NOT GET INITIALIZED WITH THE NUMBER OF POINTS, THIS CODE DOES NOT APPLY:
+      !IF (p_FAST%CompAero == MODULE_AD) THEN 
+      !                     
+      !   DO K = 1,SIZE(u_AD%rotors(1)%BladeMotion)
+      !      DO J = 1,u_AD%rotors(1)%BladeMotion(k)%Nnodes
+      !         Node = Node + 1 ! InflowWind node
+      !         NodeDesc = ' (blade '//trim(num2lstr(k))//', node '//trim(num2lstr(j))//')'
+      !         
+      !         do i=1,3 !XYZ components of this node
+      !            i2 = (Node-1)*3 + i
+      !            position = index(y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2), ',') - 1
+      !            y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2) = y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2)(1:position)//trim(NodeDesc)//&
+      !                                                                     y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2)(position+1:)
+      !                                                 
+      !            position = index(y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2), ',') - 1
+      !            y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2) = y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2)(1:position)//trim(NodeDesc)//&
+      !                                                                     y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2)(position+1:)
+      !            
+      !            ! IfW has inputs and outputs in the global frame
+      !            !y_FAST%Lin%Modules(Module_IfW)%Instance(1)%RotFrame_u(i2) = .true.
+      !            !y_FAST%Lin%Modules(Module_IfW)%Instance(1)%RotFrame_y(i2) = .true.
+      !            
+      !         end do            
+      !      END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
+      !   END DO !K = 1,p%NumBl     
+      !   
+      !      ! tower:
+      !   DO J=1,u_AD%rotors(1)%TowerMotion%nnodes
+      !      Node = Node + 1  
+      !      NodeDesc = ' (Tower node '//trim(num2lstr(j))//')'
+      !
+      !      do i=1,3 !XYZ components of this node
+      !         i2 = (Node-1)*3 + i
+      !                              
+      !         position = index(y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2), ',') - 1
+      !         y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2) = y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2)(1:position)//trim(NodeDesc)//&
+      !                                                                  y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_u(i2)(position+1:)
+      !                               
+      !         position = index(y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2), ',') - 1
+      !         y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2) = y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2)(1:position)//trim(NodeDesc)//&
+      !                                                                  y_FAST%Lin%Modules(Module_IfW)%Instance(1)%Names_y(i2)(position+1:)
+      !      end do            
+      !   END DO              
+      !   
+      !END IF     
    
 END SUBROUTINE Init_Lin_IfW
 !----------------------------------------------------------------------------------------------------------------------------------
