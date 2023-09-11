@@ -1306,6 +1306,8 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
+   ! NOTE: p_AD%FlowField is set in the glue code (or ADI module); seems like FlowField should be an initialization input so that would be clearer for new developers...
+   
    p_AD%UA_Flag       = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
    p_AD%CompAeroMaps  = InitInp%CompAeroMaps
 
@@ -1713,6 +1715,9 @@ subroutine AD_CalcWind(t, u, p, o, m, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
 
+   if (.not. associated(p%FlowField)) return  ! use the initial (or input) values for these inputs
+   ! bjj: if the previous line is not appropriate, then some other check for if FlowField has been set should be used.
+   
    ! Initialize node. The StartNode is used for OpenFOAM to provide the wind
    ! velocities. The node ordering in OpenFOAM must match that used in here.
    StartNode = 1
