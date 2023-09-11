@@ -79,7 +79,7 @@ def runOpenfastCase(inputFile, executable, verbose=False, restart=False):
     return _runGenericCase(inputFile, executable, verbose, restart)
 
 def runAeromapCase(inputFile, executable, verbose=False):
-    return _runGenericCase(inputFile, executable, verbose, "-steadystate")
+    return _runGenericCase(inputFile, executable, verbose, restart=False, ExtraFlags="-steadystate")
 
 def runAerodynDriverCase(inputFile, executable, verbose=False):
     caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
