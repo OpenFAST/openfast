@@ -69,7 +69,7 @@ typedef	^	FAST_VTK_SurfaceType	IntKi	NWaveElevPts	{2}	-	-	"number of points for 
 typedef	^	FAST_VTK_SurfaceType	SiKi	WaveElevXY	{:}{:}	-	-	"X-Y locations for WaveElev output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number."	"m,-"
 typedef	^	FAST_VTK_SurfaceType	SiKi	WaveElev	{:}{:}	-	-	"wave elevation at WaveElevXY; first dimension is time step; second dimension is point number"	"m,-"
 typedef	^	FAST_VTK_SurfaceType	FAST_VTK_BLSurfaceType	BladeShape	{:}	-	-	"AirfoilCoords for each blade"	m
-typedef	^	FAST_VTK_SurfaceType	SiKi	MorisonRad	{:}	-	-	"radius of each Morison node"	m
+typedef	^	FAST_VTK_SurfaceType	SiKi	MorisonVisRad	{:}	-	-	"radius of each Morison node"	m
 
 
 typedef   ^   FAST_VTK_ModeShapeType   CHARACTER(1024)  CheckpointRoot -   -  -  "name of the checkpoint file written by FAST when linearization data was produced"

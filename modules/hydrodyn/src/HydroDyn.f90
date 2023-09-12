@@ -450,7 +450,11 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       InputFileData%Waves%WaveFieldMod  = InitInp%WaveFieldMod
       InputFileData%Waves%PtfmLocationX = InitInp%PtfmLocationX
       InputFileData%Waves%PtfmLocationY = InitInp%PtfmLocationY
-      
+
+         ! Were visualization meshes requested?
+      p%VisMeshes = InitInp%VisMeshes
+
+
          ! Now call each sub-module's *_Init subroutine
          ! to fully initialize each sub-module based on the necessary initialization data
       
@@ -1367,9 +1371,11 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          ELSE
             InputFileData%Morison%OutSwtch     = 0
          END IF
+
+            ! Were visualization meshes requested?
+         InputFileData%Morison%VisMeshes = p%VisMeshes
         
             ! Initialize the Morison Element Calculations 
-      
          CALL Morison_Init(InputFileData%Morison, u%Morison, p%Morison, x%Morison, xd%Morison, z%Morison, OtherState%Morison, &
                                y%Morison, m%Morison, Interval, InitOut%Morison, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)

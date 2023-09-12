@@ -256,12 +256,13 @@ typedef   ^                            ^                             SiKi       
 typedef   ^                            ^                             SiKi                     WaveDynP                         {:}{:}     -        -         ""    -
 typedef   ^                            ^                             SiKi                     WaveVel                          {:}{:}{:}  -        -         ""    -
 typedef   ^                            ^                             INTEGER                  nodeInWater                      {:}{:}     -        -         "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
+typedef   ^                            ^                             logical                  VisMeshes                         -      .false.     -         "Output visualization meshes" -
 #
 #
 # Define outputs from the initialization routine here:
 #
 #typedef   ^                            InitOutputType                MeshType                 Mesh                              -          -        -         "Unused?"    -
-#typedef   ^                            ^                             SiKi                     Morison_Rad                      {:}         -        -         "radius of node (for FAST visualization)" (m)
+typedef   ^                            InitOutputType                SiKi                      MorisonVisRad                    {:}        -        -         "radius of node (for FAST visualization)" (m)
 typedef   ^                            InitOutputType                CHARACTER(ChanLen)        WriteOutputHdr                   {:}        -        -         "User-requested Output channel names"    -
 typedef   ^                            ^                             CHARACTER(ChanLen)        WriteOutputUnt                   {:}        -        -         ""    -
 #
@@ -310,6 +311,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     F_A_End                      {:}{:}         -         -         "Lumped added mass loads at time t, which may not correspond to the WaveTime array of times"   -
 typedef   ^                            ^                             ReKi                     F_BF_End                      {:}{:}     -         -         ""        -
 typedef   ^                            ^                             INTEGER                  LastIndWave                     -              -         -         "Last time index used in the wave kinematics arrays"   -
+typedef   ^                            ^                             MeshMapType              VisMeshMap                      -            -         -         "Mesh mapping for visualization mesh" -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -349,6 +351,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -          -         -        ""        -
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -          -         -         ""        -
 typedef   ^                            ^                             CHARACTER(ChanLen)       Delim                           -          -         -         ""        -
+typedef   ^                            ^                             logical                  VisMeshes                       -        .false.     -         "Output visualization meshes" -
 #
 #
 # ..... Inputs ....................................................................................................................
@@ -360,4 +363,5 @@ typedef   ^                            InputType                     MeshType   
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef   ^                            OutputType                   MeshType                 Mesh                     -         -         -         "Loads on each node output mesh" -
+typedef   ^                            ^                            MeshType                 VisMesh                  -         -         -         "Line mesh for visualization" -
 typedef   ^                            ^                            ReKi                     WriteOutput                     {:}       -         -         ""  -
