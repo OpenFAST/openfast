@@ -284,7 +284,7 @@ typedef  ^            ^                IntKi              NodeID        -       
 typedef  ^            ^                IntKi              ObjID         -        -  -   "number of Connect or Line object"
 
 ## ============================== Visualization data storage for diameter ============================================================================================================================
-typedef   ^           VisDiam          ReKi               Diam         {:}       -  -   "Diameter for visualization" -
+typedef   ^           VisDiam          SiKi               Diam         {:}       -  -   "Diameter for visualization" -
 
 ## ============================== Define Initialization outputs here: ================================================================================================================================
 typedef   ^            InitOutputType  CHARACTER(ChanLen)  writeOutputHdr  {:} ""  -   "first line output file contents: output variable names"

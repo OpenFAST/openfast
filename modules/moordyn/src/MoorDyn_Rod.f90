@@ -1244,7 +1244,7 @@ CONTAINS
          ! Set rod diameter for visualization
          call AllocAry(p%VisRodsDiam(l)%Diam,m%RodList(l)%N+1,'',ErrStat2,ErrMsg2)
          if (Failed())  return
-         p%VisRodsDiam(l)%Diam=m%RodTypeList(m%RodList(l)%PropsIdNum)%d
+         p%VisRodsDiam(l)%Diam=real(m%RodTypeList(m%RodList(l)%PropsIdNum)%d,SiKi)
       enddo
    contains
       logical function Failed()

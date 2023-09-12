@@ -309,7 +309,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  VisDiam  =======
   TYPE, PUBLIC :: VisDiam
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Diam      !< Diameter for visualization [-]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: Diam      !< Diameter for visualization [-]
   END TYPE VisDiam
 ! =======================
 ! =========  MD_InitOutputType  =======
@@ -7074,7 +7074,7 @@ ENDIF
        RETURN
     END IF
       DO i1 = LBOUND(OutData%Diam,1), UBOUND(OutData%Diam,1)
-        OutData%Diam(i1) = ReKiBuf(Re_Xferred)
+        OutData%Diam(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
