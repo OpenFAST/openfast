@@ -88,7 +88,7 @@ CONTAINS
       REAL(ReKi)                                   :: OrMat(3,3)     ! rotation matrix for setting fairlead positions correctly if there is initial platform rotation
       REAL(ReKi)                                   :: OrMat2(3,3)
       REAL(R8Ki)                                   :: OrMatRef(3,3)
-      REAL(DbKi), ALLOCATABLE                      :: FairTensIC(:,:)! array of size nCpldPoints, 3 to store three latest fairlead tensions of each line
+      REAL(DbKi), ALLOCATABLE                      :: FairTensIC(:,:)! array of size nCpldPoints, 10 latest fairlead tensions of each line
       CHARACTER(20)                                :: TempString     ! temporary string for incidental use
       INTEGER(IntKi)                               :: ErrStat2       ! Error status of the operation
       CHARACTER(ErrMsgLen)                         :: ErrMsg2        ! Error message if ErrStat2 /= ErrID_None
@@ -1718,12 +1718,14 @@ CONTAINS
       
       ALLOCATE ( u%CoupledKinematics(p%nTurbines), STAT = ErrStat2 )
       IF ( ErrStat2 /= ErrID_None ) THEN
-        CALL CheckError(ErrID_Fatal, ' Error allocating CoupledKinematics input array.')
+         ErrMsg2 = ' Error allocating CoupledKinematics input array.'
+        CALL CheckError(ErrID_Fatal, ErrMsg2)
         RETURN
       END IF
       ALLOCATE ( y%CoupledLoads(p%nTurbines), STAT = ErrStat2 )
       IF ( ErrStat2 /= ErrID_None ) THEN
-        CALL CheckError(ErrID_Fatal, ' Error allocating CoupledLoads output array.')
+         ErrMsg2 = ' Error allocating CoupledLoads output array.'
+        CALL CheckError(ErrID_Fatal, ErrMsg2)
         RETURN
       END IF
       
@@ -1970,7 +1972,7 @@ CONTAINS
          CALL Line_Initialize( m%LineList(l), m%LineTypeList(m%LineList(l)%PropsIdNum), p%rhoW ,  ErrStat2, ErrMsg2)
             CALL CheckError( ErrStat2, ErrMsg2 )
             IF (ErrStat >= AbortErrLev) RETURN
-            !IF (ErrStat >= ErrId_Warn) CALL WrScr("   Note: Catenary pre-solver was unsuccessful for one or more lines so started with linear node spacing instead.")  ! make this statement more accurate
+            IF (ErrStat >= ErrId_Warn) CALL WrScr(' Catenary solve of Line '//trim(Num2LStr(m%LineList(l)%IdNum))//' unsuccessful. Initializing as linear.')
 
          IF (wordy > 2) print *, "Line ", l, " with NumSegs =", N
          IF (wordy > 2) print *, "its states range from index ", m%LineStateIs1(l), " to ", m%LineStateIsN(l)
@@ -2140,11 +2142,11 @@ CONTAINS
             END DO
 
 
-            ! provide status message
-            ! bjj: putting this in a string so we get blanks to cover up previous values (if current string is shorter than previous one)
-            Message = '   t='//trim(Num2LStr(t))//'  FairTen 1: '//trim(Num2LStr(FairTensIC(1,1)))// &
-                           ', '//trim(Num2LStr(FairTensIC(1,2)))//', '//trim(Num2LStr(FairTensIC(1,3))) 
-            CALL WrOver( Message )
+            ! ! provide status message
+            ! ! bjj: putting this in a string so we get blanks to cover up previous values (if current string is shorter than previous one)
+            ! Message = '   t='//trim(Num2LStr(t))//'  FairTen 1: '//trim(Num2LStr(FairTensIC(1,1)))// &
+            !                ', '//trim(Num2LStr(FairTensIC(1,2)))//', '//trim(Num2LStr(FairTensIC(1,3))) 
+            ! CALL WrOver( Message )
 
             ! check for convergence (compare current tension at each fairlead with previous 9 values)
             IF (I > 9) THEN
@@ -2166,6 +2168,10 @@ CONTAINS
 
                IF (Converged == 1)  THEN  ! if we made it with all cases satisfying the threshold
                   CALL WrScr('   Fairlead tensions converged to '//trim(Num2LStr(100.0*InputFileDat%threshIC))//'% after '//trim(Num2LStr(t))//' seconds.')
+                  DO l = 1, p%nLines 
+                      CALL WrScr('   Fairlead tension: '//trim(Num2LStr(FairTensIC(l,1))))
+                      CALL WrScr('   Fairlead forces: '//trim(Num2LStr(m%LineList(l)%Fnet(1, m%LineList(l)%N)))//', '//trim(Num2LStr(m%LineList(l)%Fnet(2, m%LineList(l)%N)))//', '//trim(Num2LStr(m%LineList(l)%Fnet(3, m%LineList(l)%N))))
+                  ENDDO
                   EXIT  ! break out of the time stepping loop
                END IF
             END IF
@@ -2233,7 +2239,7 @@ CONTAINS
 
             ! Passed arguments
          INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
-         CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
+         CHARACTER(*),   INTENT(INOUT) :: Msg         ! The error message (ErrMsg)
 
          INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
          CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
@@ -2245,6 +2251,8 @@ CONTAINS
 
             ErrMsg = TRIM(ErrMsg)//' MD_Init:'//TRIM(Msg)
             ErrStat = MAX(ErrStat, ErrID)
+
+            Msg = "" ! Reset the error message now that it has been logged into ErrMsg
 
             ! Clean up if we're going to return on error: close files, deallocate local arrays
 

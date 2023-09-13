@@ -343,7 +343,7 @@ CONTAINS
             Line%r(3,J) = Line%r(3,0) + (Line%r(3,N) - Line%r(3,0))*REAL(J, DbKi)/REAL(N, DbKi)
          END DO
 
-         CALL WrScr(" Vertical initial profile for Line "//trim(Num2LStr(Line%IdNum))//".")
+         CALL WrScr(' Vertical initial profile for Line '//trim(Num2LStr(Line%IdNum))//'.')
 
       ELSE ! If the line is not vertical, solve for the catenary profile
 
@@ -354,7 +354,7 @@ CONTAINS
          IF ((abs(LNodesZ(N+1) - ZF) > Tol) .AND. (ErrStat2 == ErrID_None)) THEN 
           ! Check fairlead node z position is same as z distance between fairlead and anchor
             ErrStat2 = ErrID_Warn
-            ErrMsg2 = ' Wrong catenary initial profile for Line '//trim(Num2LStr(Line%IdNum))//'. Fairlead and anchor vertical seperation has changed.'
+            ErrMsg2 = ' Wrong catenary initial profile. Fairlead and anchor vertical seperation has changed. '
          ENDIF
 
          IF (ErrStat2 == ErrID_None) THEN ! if it worked, use it
@@ -369,9 +369,7 @@ CONTAINS
             ENDDO              ! J - All nodes per line where the line position and tension can be output
 
          ELSE ! if there is a problem with the catenary approach, just stretch the nodes linearly between fairlead and anchor
-
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Line_Initialize')
-            CALL WrScr(" Catenary solve of Line "//trim(Num2LStr(Line%IdNum))//" unsuccessful. Initializing as linear.")
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, ' Line_Initialize: Line '//trim(Num2LStr(Line%IdNum))//' ')
 
             ! print *, "Node positions: "
 
@@ -593,7 +591,7 @@ CONTAINS
          ELSEIF ( W  == 0.0_DbKi )  THEN   ! .TRUE. when the weight of the line in fluid is zero so that catenary solution is ill-conditioned
            ErrStat = ErrID_Warn
            ErrMsg = ' The weight of the line in fluid must not be zero. '// &
-                         ' Routine Catenary() cannot solve quasi-static mooring line solution.'
+                         'Routine Catenary() cannot solve quasi-static mooring line solution.'
            RETURN
 
 
