@@ -53,7 +53,12 @@ MODULE BeamDyn
    PUBLIC :: BD_UpdateGlobalRef      !< update the BeamDyn reference.  The reference for the calculations follows u%RootMotionMesh
                                                !  and therefore x%q must be updated from T -> T+DT to include the root motion from T->T+DT
 
-   ! do we change the reference frame at each State update?
+   ! The original formulation kept all states in the inertial reference frame.  This has been leading to convergence issues
+   ! when there is a large rotational change from the reference frame (i.e. large turbine yaw, large blade pitch).  During
+   ! the development of the tight coupling algorithm for OpenFAST, we decided to try changing all the states in BeamDyn to
+   ! follow the moving BladeRootMotion mesh.  This requires changing the states after an UpdateStates call to be relative to
+   ! the new BladeRootMotion mesh orientation and position.
+   ! Upadate the reference frame after each State update (or use the old method)?
    LOGICAL, PARAMETER :: ChangeRefFrame = .true.
 
 CONTAINS
@@ -6825,7 +6830,6 @@ END SUBROUTINE BD_WriteMassStiffInFirstNodeFrame
 !> Update the state information to follow the blade rootmotion mesh.
 !!    - move the state information in x from the previous reference frame at time T (u(2)%rootmotion) to the new reference frame at T+dt (u(1)%rootmation)
 !!    - the GlbRot, GlbPos, and Glb_crv values are stored as otherstates and updated
-!!    - 
 subroutine BD_UpdateGlobalRef(u, p, x, OtherState, ErrStat, ErrMsg)
    type(BD_InputType),           intent(in   ) :: u          !< Inputs at utimes
    type(BD_ParameterType),       intent(in   ) :: p          !< Parameters

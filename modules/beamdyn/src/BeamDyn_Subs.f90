@@ -656,8 +656,6 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, OtherState, m, y)
 
                ! Calculate the translational displacement of each GLL node in the FAST coordinate system,
                ! referenced against the DCM of the blade root at T=0.
-!            y%BldMotion%TranslationDisp(1:3,temp_id2) = OtherState%GlbPos - y%BldMotion%Position(1:3,temp_id2) + &
-!                                                        matmul(OtherState%GlbRot, p%uuN0(1:3, j, i) + x%q(1:3, temp_id))
             y%BldMotion%TranslationDisp(1:3,temp_id2) = OtherState%GlbPos + matmul(OtherState%GlbRot, p%uuN0(1:3, j, i) + x%q(1:3, temp_id)) - &
                                                         y%BldMotion%Position(1:3,temp_id2)
 
@@ -719,9 +717,12 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, OtherState, m, y)
          ENDDO
       ENDDO
       
+
+
    CASE (BD_MESH_STATIONS)
    END SELECT
    
+      
 END SUBROUTINE Set_BldMotion_NoAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calculates values for the y%BldMotion mesh.
