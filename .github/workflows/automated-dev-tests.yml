@@ -41,12 +41,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
       - name: Setup workspace
         run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure build
@@ -58,6 +60,7 @@ jobs:
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
             -DBUILD_SHARED_LIBS:BOOL=OFF \
             -DGENERATE_TYPES=ON \
@@ -86,6 +89,10 @@ jobs:
         uses: actions/checkout@main
         with:
           submodules: recursive
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev
       - name: Setup workspace
         run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure build
@@ -97,6 +104,7 @@ jobs:
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
             -DCMAKE_BUILD_TYPE:STRING=DEBUG \
             -DBUILD_SHARED_LIBS:BOOL=OFF \
             -DVARIABLE_TRACKING=OFF \
@@ -119,12 +127,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
       - name: Setup workspace
         run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure build
@@ -136,6 +146,7 @@ jobs:
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
             -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
             -DVARIABLE_TRACKING=OFF \
             -DBUILD_TESTING:BOOL=ON \
@@ -162,13 +173,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev  # gcovr
       - name: Setup workspace
         run: cmake -E make_directory ${{runner.workspace}}/openfast/build
@@ -181,6 +193,7 @@ jobs:
             -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
             -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
             -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
             -DCMAKE_BUILD_TYPE:STRING=RELWITHDEBINFO \
             -DOPENMP:BOOL=ON \
             -DDOUBLE_PRECISION=ON \
@@ -213,13 +226,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure build
         working-directory: ${{runner.workspace}}/openfast/build
@@ -250,13 +264,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure build
         working-directory: ${{runner.workspace}}/openfast/build
@@ -287,13 +302,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure build
         working-directory: ${{runner.workspace}}/openfast/build
@@ -326,12 +342,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev
       - name: Setup workspace
         run: cmake -E make_directory ${{runner.workspace}}/openfast/build
       - name: Configure build
@@ -386,13 +404,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
@@ -441,13 +460,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
@@ -499,13 +519,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3" vtk
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
@@ -546,13 +567,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
@@ -566,7 +588,7 @@ jobs:
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j8 \
+          ctest -VV -j4 \
           -L openfast \
           -LE "cpp|linear|python|fastlib" \
           -E "5MW_OC4Semi_WSt_WavesWN|5MW_OC3Mnpl_DLL_WTurb_WavesIrr|5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth|5MW_OC3Trpd_DLL_WSt_WavesReg|5MW_Land_BD_DLL_WTurb"
@@ -598,13 +620,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
@@ -647,13 +670,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
@@ -696,13 +720,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
@@ -745,13 +770,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
@@ -794,13 +820,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
@@ -843,13 +870,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
@@ -863,7 +891,7 @@ jobs:
       - name: Run OpenFAST linearization tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j8 -L linear
+          ctest -VV -j4 -L linear
       - name: Failing test artifacts
         uses: actions/upload-artifact@v3
         if: failure()
@@ -892,13 +920,14 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
           sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
           sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
       - name: Configure Tests
         working-directory: ${{runner.workspace}}/openfast/build
