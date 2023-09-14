@@ -325,11 +325,11 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
          do j = 1, size(p_BD%Vars%x)
             select case (p_BD%Vars%x(j)%Field)
             case (VF_TransDisp)
-               os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr) = q_TC(p_BD%Vars%x(j)%iq, 3)
-               os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr) = q_TC(p_BD%Vars%x(j)%iq, 4)
+               os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr(1)) = q_TC(p_BD%Vars%x(j)%iq, 3)
+               os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr(1)) = q_TC(p_BD%Vars%x(j)%iq, 4)
             case (VF_Orientation)
-               os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr) = q_TC(p_BD%Vars%x(j)%iq, 3)
-               os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr) = q_TC(p_BD%Vars%x(j)%iq, 4)
+               os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr(1)) = q_TC(p_BD%Vars%x(j)%iq, 3)
+               os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr(1)) = q_TC(p_BD%Vars%x(j)%iq, 4)
             end select
          end do
 
@@ -341,11 +341,11 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
          do j = 1, size(p_BD%Vars%x)
             select case (p_BD%Vars%x(j)%Field)
             case (VF_TransDisp)
-               q_TC(p_BD%Vars%x(j)%iq, 3) = os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr)
-               q_TC(p_BD%Vars%x(j)%iq, 4) = os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr)
+               q_TC(p_BD%Vars%x(j)%iq, 3) = os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr(1))
+               q_TC(p_BD%Vars%x(j)%iq, 4) = os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr(1))
             case (VF_Orientation)
-               q_TC(p_BD%Vars%x(j)%iq, 3) = os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr)
-               q_TC(p_BD%Vars%x(j)%iq, 4) = os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr)
+               q_TC(p_BD%Vars%x(j)%iq, 3) = os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr(1))
+               q_TC(p_BD%Vars%x(j)%iq, 4) = os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr(1))
             end select
          end do
 
@@ -485,34 +485,34 @@ subroutine FAST_InitMappings(Maps, Mods, T, ErrStat, ErrMsg)
 
                   call MapMotionMesh(Key='ED TowerMotion -> AD TowerMotion', &
                                      SrcMod=ModSrc, SrcMeshName='TowerMotion', &
-                                     DstMod=ModDst, DstMeshName='TowerMotion', &
+                                     DstMod=ModDst, DstMeshName='R1TowerMotion', &
                                      Active=T%AD%Input(1)%rotors(1)%TowerMotion%Committed)
 
                   call MapMotionMesh(Key='ED HubMotion -> AD HubMotion', &
                                      SrcMod=ModSrc, SrcMeshName='HubMotion', &
-                                     DstMod=ModDst, DstMeshName='HubMotion')
+                                     DstMod=ModDst, DstMeshName='R1HubMotion')
 
                   call MapMotionMesh(Key='ED NacelleMotion -> AD NacelleMotion', &
                                      SrcMod=ModSrc, SrcMeshName='NacelleMotion', &
-                                     DstMod=ModDst, DstMeshName='NacelleMotion', &
+                                     DstMod=ModDst, DstMeshName='R1NacelleMotion', &
                                      Active=T%AD%Input(1)%rotors(1)%NacelleMotion%Committed)
 
                   call MapMotionMesh(Key='ED TFinMotion -> AD TFinMotion', &
                                      SrcMod=ModSrc, SrcMeshName='TFinMotion', &
-                                     DstMod=ModDst, DstMeshName='TFinMotion', &
+                                     DstMod=ModDst, DstMeshName='R1TFinMotion', &
                                      Active=T%AD%Input(1)%rotors(1)%TFinMotion%Committed)
 
                   do i = 1, size(T%ED%y%BladeRootMotion)
                      call MapMotionMesh(Key='ED BladeRootMotion -> AD BladeRootMotion', i1=i, &
                                         SrcMod=ModSrc, SrcMeshName='BladeRootMotion'//IdxStr(i), &
-                                        DstMod=ModDst, DstMeshName='BladeRootMotion'//IdxStr(i))
+                                        DstMod=ModDst, DstMeshName='R1BladeRootMotion'//IdxStr(i))
                   end do
 
                   if (T%p_FAST%CompElast == Module_ED) then
                      do i = 1, size(T%ED%y%BladeLn2Mesh)
                         call MapMotionMesh(Key='ED BladeMotion -> AD BladeMotion', i1=i, &
                                            SrcMod=ModSrc, SrcMeshName='BladeMotion'//IdxStr(i), &
-                                           DstMod=ModDst, DstMeshName='BladeMotion'//IdxStr(i))
+                                           DstMod=ModDst, DstMeshName='R1BladeMotion'//IdxStr(i))
                      end do
                   end if
 
@@ -520,7 +520,7 @@ subroutine FAST_InitMappings(Maps, Mods, T, ErrStat, ErrMsg)
 
                   call MapMotionMesh(Key='BD BladeMotion -> AD BladeMotion', &
                                      SrcMod=ModSrc, SrcMeshName='BladeMotion', &
-                                     DstMod=ModDst, DstMeshName='BladeMotion'//IdxStr(ModSrc%Ins))
+                                     DstMod=ModDst, DstMeshName='R1BladeMotion'//IdxStr(ModSrc%Ins))
 
                case (Module_SrvD)
 
@@ -673,41 +673,20 @@ subroutine FAST_InitMappings(Maps, Mods, T, ErrStat, ErrMsg)
             ! Destination displacement mesh is in output of destination module (only translation displacement needed)
             Map%DstDispVarIdx = MV_VarIndex(DstMod%Vars%y, Map%DstDispMeshName, VF_TransDisp)
 
-            ! If source mesh not found, return with error
-            if (size(Map%SrcVarIdx) == 0) then
-               call SetErrStat(ErrID_Fatal, 'No load fields found for src mesh '//trim(Map%SrcMeshName)//' in mapping '//trim(Map%Key), ErrStat, ErrMsg, RoutineName)
-               return
-            end if
+            ! If source or destination meshes not found, return error
+            if (size(Map%SrcVarIdx) == 0) call SetErrStat(ErrID_Fatal, 'Mapping "'//trim(Map%Key)//'": No load fields found for src mesh '//Map%SrcMeshName, ErrStat, ErrMsg, RoutineName)
+            if (size(Map%DstVarIdx) == 0) call SetErrStat(ErrID_Fatal, 'Mapping "'//trim(Map%Key)//'": No load fields found for dst mesh '//Map%DstMeshName, ErrStat, ErrMsg, RoutineName)
+            if (Map%SrcDispVarIdx == 0) call SetErrStat(ErrID_Fatal, 'Mapping "'//trim(Map%Key)//'": No TransDisp field found for src mesh '//Map%SrcDispMeshName, ErrStat, ErrMsg, RoutineName)
+            if (Map%DstDispVarIdx == 0) call SetErrStat(ErrID_Fatal, 'Mapping "'//trim(Map%Key)//'": No TransDisp field found for dst mesh '//Map%DstDispMeshName, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
 
-            ! If source displacement mesh not found, return with error
-            if (Map%SrcDispVarIdx == 0) then
-               call SetErrStat(ErrID_Fatal, 'No TransDisp field found for src mesh '//trim(Map%SrcDispMeshName)//' in mapping '//trim(Map%Key), ErrStat, ErrMsg, RoutineName)
-               return
-            end if
+            ! Set Variable solve flag to true
+            SrcMod%Vars%y(map%SrcVarIdx)%Solve = .true.
+            DstMod%Vars%u(map%DstVarIdx)%Solve = .true.
 
-            ! If destination mesh not found, return with error
-            if (size(Map%SrcVarIdx) == 0) then
-               call SetErrStat(ErrID_Fatal, 'No load fields found for dst mesh '//trim(Map%DstMeshName)//' in mapping '//trim(Map%Key), ErrStat, ErrMsg, RoutineName)
-               return
-            end if
-
-            ! If source displacement mesh not found, return with error
-            if (Map%DstDispVarIdx == 0) then
-               call SetErrStat(ErrID_Fatal, 'No TransDisp field found for dst mesh '//trim(Map%DstDispMeshName)//' in mapping '//trim(Map%Key), ErrStat, ErrMsg, RoutineName)
-               return
-            end if
-
-            ! Mark variables with Solve flag
-            do i = 1, size(map%SrcVarIdx)
-               call SetFlags(SrcMod%Vars%y(map%SrcVarIdx(i)), VF_Solve)
-            end do
-            do i = 1, size(map%DstVarIdx)
-               call SetFlags(DstMod%Vars%u(map%DstVarIdx(i)), VF_Solve)
-            end do
-
-            ! Mark displacement variables with Solve flag
-            if (Map%SrcDispVarIdx > 0) call SetFlags(SrcMod%Vars%u(Map%SrcDispVarIdx), VF_Solve)
-            if (Map%DstDispVarIdx > 0) call SetFlags(DstMod%Vars%y(Map%DstDispVarIdx), VF_Solve)
+            ! Set displacement variable solve flag to true
+            if (Map%SrcDispVarIdx > 0) SrcMod%Vars%u(Map%SrcDispVarIdx)%Solve = .true.
+            if (Map%DstDispVarIdx > 0) DstMod%Vars%y(Map%DstDispVarIdx)%Solve = .true.
 
          case (Map_MotionMesh)
 
@@ -719,27 +698,14 @@ subroutine FAST_InitMappings(Maps, Mods, T, ErrStat, ErrMsg)
             map%DstVarIdx = [(MV_VarIndex(DstMod%Vars%u, map%DstMeshName, MotionFields(i)), i=1, size(MotionFields))]
             map%DstVarIdx = pack(map%DstVarIdx, map%DstVarIdx > 0)
 
-            ! If source mesh not found, return with error
-            if (size(Map%SrcVarIdx) == 0) then
-               call SetErrStat(ErrID_Fatal, 'No load fields found for src mesh '//trim(Map%SrcMeshName)//' in mapping '//trim(Map%Key), &
-                               ErrStat, ErrMsg, RoutineName)
-               return
-            end if
+            ! If source or destination meshes not found, return error
+            if (size(Map%SrcVarIdx) == 0) call SetErrStat(ErrID_Fatal, 'Mapping "'//trim(Map%Key)//'": No motion fields found for src mesh '//Map%SrcMeshName, ErrStat, ErrMsg, RoutineName)
+            if (size(Map%DstVarIdx) == 0) call SetErrStat(ErrID_Fatal, 'Mapping "'//trim(Map%Key)//'": No motion fields found for dst mesh '//Map%DstMeshName, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
 
-            ! If destination mesh not found, return with error
-            if (size(Map%SrcVarIdx) == 0) then
-               call SetErrStat(ErrID_Fatal, 'No load fields found for dst mesh '//trim(Map%DstMeshName)//' in mapping '//trim(Map%Key), &
-                               ErrStat, ErrMsg, RoutineName)
-               return
-            end if
-
-            ! Mark variables with Solve flag
-            do i = 1, size(map%SrcVarIdx)
-               call SetFlags(SrcMod%Vars%y(map%SrcVarIdx(i)), VF_Solve)
-            end do
-            do i = 1, size(map%DstVarIdx)
-               call SetFlags(DstMod%Vars%u(map%DstVarIdx(i)), VF_Solve)
-            end do
+            ! Set Variable solve flag to true
+            SrcMod%Vars%y(map%SrcVarIdx)%Solve = .true.
+            DstMod%Vars%u(map%DstVarIdx)%Solve = .true.
 
          case (Map_NonMesh)
             ! Nothing to do for non-mesh mapping
@@ -1523,11 +1489,10 @@ contains
    end function
 end subroutine
 
-subroutine FAST_CalcContStateDeriv(ModData, ThisTime, ThisState, IsSolve, T, ErrStat, ErrMsg, dxdt)
+subroutine FAST_CalcContStateDeriv(ModData, ThisTime, ThisState, T, ErrStat, ErrMsg, dxdt)
    type(ModDataType), intent(in)           :: ModData     !< Module data
    real(DbKi), intent(in)                  :: ThisTime    !< Time
    integer(IntKi), intent(in)              :: ThisState   !< State index
-   logical, intent(in)                     :: IsSolve     !< Calculate solver derivs, otherwise linearization
    type(FAST_TurbineType), intent(inout)   :: T           !< Turbine type
    integer(IntKi), intent(out)             :: ErrStat
    character(*), intent(out)               :: ErrMsg
@@ -1590,7 +1555,102 @@ contains
    end function
 end subroutine
 
-subroutine FAST_CalcJacobian(ModData, ThisTime, ThisState, IsSolve, T, ErrStat, ErrMsg, dYdx, dXdx, dYdu, dXdu)
+subroutine FAST_JacobianPInput(MD, ThisTime, ThisState, IsSolve, T, ErrStat, ErrMsg, dYdu, dXdu)
+   type(ModDataType), intent(in)                      :: MD          !< Module data
+   real(DbKi), intent(in)                             :: ThisTime    !< Time
+   integer(IntKi), intent(in)                         :: ThisState   !< State
+   type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
+   logical, intent(in)                                :: IsSolve     !< Calculate solver Jacobians, otherwise linearization
+   integer(IntKi), intent(out)                        :: ErrStat
+   character(*), intent(out)                          :: ErrMsg
+   real(R8Ki), allocatable, optional, intent(inout)   :: dYdu(:, :), dXdu(:, :)
+
+   character(*), parameter    :: RoutineName = 'FAST_JacobianPInput'
+   integer(IntKi)             :: ErrStat2
+   character(ErrMsgLen)       :: ErrMsg2
+   integer(IntKi)             :: Args
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+   ! Calculate number representing which arguments are present
+   Args = 0
+   if (present(dYdu)) Args = Args + 1
+   if (present(dXdu)) Args = Args + 2
+
+   ! Select based on module ID
+   select case (MD%ID)
+
+!  case (Module_AD)
+
+   case (Module_BD)
+
+      select case (Args)
+      case (1)
+         call BD_JacobianPInput(ThisTime, T%BD%Input(1, MD%Ins), T%BD%p(MD%Ins), T%BD%x(MD%Ins, ThisState), T%BD%xd(MD%Ins, ThisState), &
+                                T%BD%z(MD%Ins, ThisState), T%BD%OtherSt(MD%Ins, ThisState), T%BD%y(MD%Ins), T%BD%m(MD%Ins), &
+                                ErrStat2, ErrMsg2, IsSolve=IsSolve, dYdu=T%BD%m(MD%Ins)%Vals%dYdu); if (Failed()) return
+         call XferLocToGbl2D(MD%iys, MD%ius, T%BD%m(MD%Ins)%Vals%dYdu, dYdu)
+      case (2)
+         call BD_JacobianPInput(ThisTime, T%BD%Input(1, MD%Ins), T%BD%p(MD%Ins), T%BD%x(MD%Ins, ThisState), T%BD%xd(MD%Ins, ThisState), &
+                                T%BD%z(MD%Ins, ThisState), T%BD%OtherSt(MD%Ins, ThisState), T%BD%y(MD%Ins), T%BD%m(MD%Ins), &
+                                ErrStat2, ErrMsg2, IsSolve=IsSolve, dXdu=T%BD%m(MD%Ins)%Vals%dXdu); if (Failed()) return
+         call XferLocToGbl2D(MD%ixs, MD%ius, T%BD%m(MD%Ins)%Vals%dXdu, dXdu)
+      case (3)
+         call BD_JacobianPInput(ThisTime, T%BD%Input(1, MD%Ins), T%BD%p(MD%Ins), T%BD%x(MD%Ins, ThisState), T%BD%xd(MD%Ins, ThisState), &
+                                T%BD%z(MD%Ins, ThisState), T%BD%OtherSt(MD%Ins, ThisState), T%BD%y(MD%Ins), T%BD%m(MD%Ins), &
+                                ErrStat2, ErrMsg2, IsSolve=IsSolve, dYdu=T%BD%m(MD%Ins)%Vals%dYdu, dXdu=T%BD%m(MD%Ins)%Vals%dXdu); if (Failed()) return
+         call XferLocToGbl2D(MD%iys, MD%ius, T%BD%m(MD%Ins)%Vals%dYdu, dYdu)
+         call XferLocToGbl2D(MD%ixs, MD%ius, T%BD%m(MD%Ins)%Vals%dXdu, dXdu)
+      end select
+
+   case (Module_ED)
+
+      select case (Args)
+      case (1)
+         call ED_JacobianPInput(ThisTime, T%ED%Input(1), T%ED%p, T%ED%x(ThisState), T%ED%xd(ThisState), &
+                                T%ED%z(ThisState), T%ED%OtherSt(ThisState), T%ED%y, T%ED%m, &
+                                ErrStat2, ErrMsg2, IsSolve=IsSolve, dYdu=T%ED%m%Vals%dYdu); if (Failed()) return
+         call XferLocToGbl2D(MD%iys, MD%ius, T%ED%m%Vals%dYdu, dYdu)
+      case (2)
+         call ED_JacobianPInput(ThisTime, T%ED%Input(1), T%ED%p, T%ED%x(ThisState), T%ED%xd(ThisState), &
+                                T%ED%z(ThisState), T%ED%OtherSt(ThisState), T%ED%y, T%ED%m, &
+                                ErrStat2, ErrMsg2, IsSolve=IsSolve, dXdu=T%ED%m%Vals%dXdu); if (Failed()) return
+         call XferLocToGbl2D(MD%ixs, MD%ius, T%ED%m%Vals%dXdu, dXdu)
+      case (3)
+         call ED_JacobianPInput(ThisTime, T%ED%Input(1), T%ED%p, T%ED%x(ThisState), T%ED%xd(ThisState), &
+                                T%ED%z(ThisState), T%ED%OtherSt(ThisState), T%ED%y, T%ED%m, &
+                                ErrStat2, ErrMsg2, IsSolve=IsSolve, dYdu=T%ED%m%Vals%dYdu, dXdu=T%ED%m%Vals%dXdu); if (Failed()) return
+         call XferLocToGbl2D(MD%iys, MD%ius, T%ED%m%Vals%dYdu, dYdu)
+         call XferLocToGbl2D(MD%ixs, MD%ius, T%ED%m%Vals%dXdu, dXdu)
+      end select
+
+!  case (Module_ExtPtfm)
+!  case (Module_FEAM)
+!  case (Module_HD)
+!  case (Module_IceD)
+!  case (Module_IceF)
+!  case (Module_IfW)
+!  case (Module_MAP)
+!  case (Module_MD)
+!  case (Module_OpFM)
+!  case (Module_Orca)
+!  case (Module_SD)
+!  case (Module_SeaSt)
+!  case (Module_SrvD)
+   case default
+      call SetErrStat(ErrID_Fatal, "Unknown module ID "//trim(Num2LStr(MD%ID)), ErrStat, ErrMsg, RoutineName)
+      return
+   end select
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      Failed = ErrStat >= AbortErrLev
+   end function
+end subroutine
+
+subroutine FAST_JacobianPContState(ModData, ThisTime, ThisState, IsSolve, T, ErrStat, ErrMsg, dYdx, dXdx)
    type(ModDataType), intent(in)                      :: ModData     !< Module data
    real(DbKi), intent(in)                             :: ThisTime    !< Time
    integer(IntKi), intent(in)                         :: ThisState   !< State
@@ -1598,15 +1658,20 @@ subroutine FAST_CalcJacobian(ModData, ThisTime, ThisState, IsSolve, T, ErrStat, 
    logical, intent(in)                                :: IsSolve     !< Calculate solver Jacobians, otherwise linearization
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
-   real(R8Ki), allocatable, optional, intent(inout)   :: dYdx(:, :), dXdx(:, :), dYdu(:, :), dXdu(:, :)
+   real(R8Ki), allocatable, optional, intent(inout)   :: dYdx(:, :), dXdx(:, :)
 
-   character(*), parameter    :: RoutineName = 'FAST_CalcJacobian'
+   character(*), parameter    :: RoutineName = 'FAST_JacobianPContState'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
-   integer(IntKi)             :: j_ss     ! substep loop counter
+   integer(IntKi)             :: Args
 
    ErrStat = ErrID_None
    ErrMsg = ''
+
+   ! Calculate number representing which arguments are present
+   Args = 0
+   if (present(dYdx)) Args = Args + 1
+   if (present(dXdx)) Args = Args + 2
 
    ! Select based on module ID
    select case (ModData%ID)
@@ -1615,31 +1680,57 @@ subroutine FAST_CalcJacobian(ModData, ThisTime, ThisState, IsSolve, T, ErrStat, 
 
    case (Module_BD)
 
-      call BD_JacobianPInput(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, ThisState), T%BD%xd(ModData%Ins, ThisState), &
-                             T%BD%z(ModData%Ins, ThisState), T%BD%OtherSt(ModData%Ins, ThisState), T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), &
-                             ErrStat2, ErrMsg2, dYdu=T%BD%m(ModData%Ins)%Vals%dYdu, dXdu=T%BD%m(ModData%Ins)%Vals%dXdu); if (Failed()) return
-      if (present(dYdu)) call XferLocToGbl2D(ModData%iys, ModData%ius, T%BD%m(ModData%Ins)%Vals%dYdu, dYdu)
-      if (present(dXdu)) call XferLocToGbl2D(ModData%ixs, ModData%ius, T%BD%m(ModData%Ins)%Vals%dXdu, dXdu)
-
-      call BD_JacobianPContState(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, ThisState), T%BD%xd(ModData%Ins, ThisState), &
-                                 T%BD%z(ModData%Ins, ThisState), T%BD%OtherSt(ModData%Ins, ThisState), T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), &
-                                 ErrStat2, ErrMsg2, dYdx=T%BD%m(ModData%Ins)%Vals%dYdx, dXdx=T%BD%m(ModData%Ins)%Vals%dXdx); if (Failed()) return
-      if (present(dYdx)) call XferLocToGbl2D(ModData%iys, ModData%ixs, T%BD%m(ModData%Ins)%Vals%dYdx, dYdx)
-      if (present(dXdx)) call XferLocToGbl2D(ModData%ixs, ModData%ixs, T%BD%m(ModData%Ins)%Vals%dXdx, dXdx)
+      select case (Args)
+      case (1)
+         call BD_JacobianPContState(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), &
+                                    T%BD%x(ModData%Ins, ThisState), T%BD%xd(ModData%Ins, ThisState), &
+                                    T%BD%z(ModData%Ins, ThisState), T%BD%OtherSt(ModData%Ins, ThisState), &
+                                    T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
+                                    IsSolve=IsSolve, dYdx=T%BD%m(ModData%Ins)%Vals%dYdx); if (Failed()) return
+         call XferLocToGbl2D(ModData%iys, ModData%ixs, T%BD%m(ModData%Ins)%Vals%dYdx, dYdx)
+      case (2)
+         call BD_JacobianPContState(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), &
+                                    T%BD%x(ModData%Ins, ThisState), T%BD%xd(ModData%Ins, ThisState), &
+                                    T%BD%z(ModData%Ins, ThisState), T%BD%OtherSt(ModData%Ins, ThisState), &
+                                    T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
+                                    IsSolve=IsSolve, dXdx=T%BD%m(ModData%Ins)%Vals%dXdx); if (Failed()) return
+         call XferLocToGbl2D(ModData%ixs, ModData%ixs, T%BD%m(ModData%Ins)%Vals%dXdx, dXdx)
+      case (3)
+         call BD_JacobianPContState(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), &
+                                    T%BD%x(ModData%Ins, ThisState), T%BD%xd(ModData%Ins, ThisState), &
+                                    T%BD%z(ModData%Ins, ThisState), T%BD%OtherSt(ModData%Ins, ThisState), &
+                                    T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), ErrStat2, ErrMsg2, &
+                                    IsSolve=IsSolve, dYdx=T%BD%m(ModData%Ins)%Vals%dYdx, dXdx=T%BD%m(ModData%Ins)%Vals%dXdx); if (Failed()) return
+         call XferLocToGbl2D(ModData%iys, ModData%ixs, T%BD%m(ModData%Ins)%Vals%dYdx, dYdx)
+         call XferLocToGbl2D(ModData%ixs, ModData%ixs, T%BD%m(ModData%Ins)%Vals%dXdx, dXdx)
+      end select
 
    case (Module_ED)
 
-      call ED_JacobianPInput(ThisTime, T%ED%Input(1), T%ED%p, T%ED%x(ThisState), T%ED%xd(ThisState), &
-                             T%ED%z(ThisState), T%ED%OtherSt(ThisState), T%ED%y, T%ED%m, &
-                             ErrStat2, ErrMsg2, dYdu=T%ED%m%Vals%dYdu, dXdu=T%ED%m%Vals%dXdu); if (Failed()) return
-      if (present(dYdu)) call XferLocToGbl2D(ModData%iys, ModData%ius, T%ED%m%Vals%dYdu, dYdu)
-      if (present(dXdu)) call XferLocToGbl2D(ModData%ixs, ModData%ius, T%ED%m%Vals%dXdu, dXdu)
-
-      call ED_JacobianPContState(ThisTime, T%ED%Input(1), T%ED%p, T%ED%x(ThisState), T%ED%xd(ThisState), &
-                                 T%ED%z(ThisState), T%ED%OtherSt(ThisState), T%ED%y, T%ED%m, &
-                                 ErrStat2, ErrMsg2, dYdx=T%ED%m%Vals%dYdx, dXdx=T%ED%m%Vals%dXdx); if (Failed()) return
-      if (present(dYdx)) call XferLocToGbl2D(ModData%iys, ModData%ixs, T%ED%m%Vals%dYdx, dYdx)
-      if (present(dXdx)) call XferLocToGbl2D(ModData%ixs, ModData%ixs, T%ED%m%Vals%dXdx, dXdx)
+      select case (Args)
+      case (1)
+         call ED_JacobianPContState(ThisTime, T%ED%Input(1), T%ED%p, &
+                                    T%ED%x(ThisState), T%ED%xd(ThisState), &
+                                    T%ED%z(ThisState), T%ED%OtherSt(ThisState), &
+                                    T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
+                                    IsSolve=IsSolve, dYdx=T%ED%m%Vals%dYdx); if (Failed()) return
+         call XferLocToGbl2D(ModData%iys, ModData%ixs, T%ED%m%Vals%dYdx, dYdx)
+      case (2)
+         call ED_JacobianPContState(ThisTime, T%ED%Input(1), T%ED%p, &
+                                    T%ED%x(ThisState), T%ED%xd(ThisState), &
+                                    T%ED%z(ThisState), T%ED%OtherSt(ThisState), &
+                                    T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
+                                    IsSolve=IsSolve, dXdx=T%ED%m%Vals%dXdx); if (Failed()) return
+         call XferLocToGbl2D(ModData%ixs, ModData%ixs, T%ED%m%Vals%dXdx, dXdx)
+      case (3)
+         call ED_JacobianPContState(ThisTime, T%ED%Input(1), T%ED%p, &
+                                    T%ED%x(ThisState), T%ED%xd(ThisState), &
+                                    T%ED%z(ThisState), T%ED%OtherSt(ThisState), &
+                                    T%ED%y, T%ED%m, ErrStat2, ErrMsg2, &
+                                    IsSolve=IsSolve, dYdx=T%ED%m%Vals%dYdx, dXdx=T%ED%m%Vals%dXdx); if (Failed()) return
+         call XferLocToGbl2D(ModData%iys, ModData%ixs, T%ED%m%Vals%dYdx, dYdx)
+         call XferLocToGbl2D(ModData%ixs, ModData%ixs, T%ED%m%Vals%dXdx, dXdx)
+      end select
 
 !  case (Module_ExtPtfm)
 !  case (Module_FEAM)

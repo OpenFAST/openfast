@@ -529,7 +529,7 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
 
       ! Add variable (only active variables are in x)
       call MV_AddVar(p%Vars%x, Var%Name, Var%Field, Flags=Var%Flags, &
-                     iUsr=Var%iUsr, Perturb=Var%Perturb, LinNames=Var%LinNames)
+                     iUsr=Var%iUsr(1), Perturb=Var%Perturb, LinNames=Var%LinNames)
    end do
 
    !----------------------------------------------------------------------------
@@ -712,6 +712,107 @@ contains
       Failed =  ErrStat >= AbortErrLev
    end function Failed
 end subroutine
+
+
+subroutine ED_PackStateValues(p, x, ary)
+   type(ED_ParameterType), intent(in)        :: p
+   type(ED_ContinuousStateType), intent(in)  :: x
+   real(R8Ki), intent(out)                   :: ary(:)
+   integer(IntKi)                            :: i
+   do i = 1, size(p%Vars%x)
+      select case(p%Vars%x(i)%Field)
+      case (VF_TransDisp, VF_AngularDisp)
+         ary(p%Vars%x(i)%iLoc(1)) = x%QT(p%Vars%x(i)%iUsr(1))
+      case (VF_TransVel, VF_AngularVel)
+         ary(p%Vars%x(i)%iLoc(1)) = x%QDT(p%Vars%x(i)%iUsr(1))
+      end select
+   end do
+end subroutine
+
+subroutine ED_UnpackStateValues(p, ary, x)
+   type(ED_ParameterType), intent(in)           :: p
+   real(R8Ki), intent(in)                       :: ary(:)
+   type(ED_ContinuousStateType), intent(inout)  :: x
+   integer(IntKi)                               :: i
+   do i = 1, size(p%Vars%x)
+      select case(p%Vars%x(i)%Field)
+      case (VF_TransDisp, VF_AngularDisp)
+         x%QT(p%Vars%x(i)%iUsr) = ary(p%Vars%x(i)%iLoc(1))
+      case (VF_TransVel, VF_AngularVel)
+         x%QDT(p%Vars%x(i)%iUsr) = ary(p%Vars%x(i)%iLoc(1))
+      end select
+   end do
+end subroutine
+
+subroutine ED_PackInputValues(p, u, ary)
+   type(ED_ParameterType), intent(in)  :: p
+   type(ED_InputType), intent(in)      :: u
+   real(R8Ki), intent(out)             :: ary(:)
+   integer(IntKi)                      :: iv, i
+   iv = 1
+   if (allocated(u%BladePtLoads)) then
+      do i = 1, size(u%BladePtLoads)
+         call MV_PackMesh(p%Vars%u, iv, u%BladePtLoads(i), ary)
+      end do
+   end if
+   call MV_PackMesh(p%Vars%u, iv, u%PlatformPtMesh, ary)
+   call MV_PackMesh(p%Vars%u, iv, u%TowerPtLoads, ary)
+   call MV_PackMesh(p%Vars%u, iv, u%HubPtLoad, ary)
+   call MV_PackMesh(p%Vars%u, iv, u%NacelleLoads, ary)
+   call MV_PackVar(p%Vars%u, iv, u%BlPitchCom, ary)
+   call MV_PackVar(p%Vars%u, iv, u%YawMom, ary)
+   call MV_PackVar(p%Vars%u, iv, u%GenTrq, ary)
+   call MV_PackVar(p%Vars%u, iv, u%BlPitchCom(1), ary)
+end subroutine
+
+subroutine ED_UnpackInputValues(p, ary, u)
+   type(ED_ParameterType), intent(in)  :: p
+   real(R8Ki), intent(in)              :: ary(:)
+   type(ED_InputType), intent(inout)   :: u
+   integer(IntKi)                      :: iv, i
+   iv = 1
+   if (allocated(u%BladePtLoads)) then
+      do i = 1, size(u%BladePtLoads)
+         call MV_UnpackMesh(p%Vars%u, iv, ary, u%BladePtLoads(i))
+      end do
+   end if
+   call MV_UnpackMesh(p%Vars%u, iv, ary, u%PlatformPtMesh)
+   call MV_UnpackMesh(p%Vars%u, iv, ary, u%TowerPtLoads)
+   call MV_UnpackMesh(p%Vars%u, iv, ary, u%HubPtLoad)
+   call MV_UnpackMesh(p%Vars%u, iv, ary, u%NacelleLoads)
+   call MV_UnpackVar(p%Vars%u, iv, ary, u%BlPitchCom)
+   call MV_UnpackVar(p%Vars%u, iv, ary, u%YawMom)
+   call MV_UnpackVar(p%Vars%u, iv, ary, u%GenTrq)
+end subroutine
+
+subroutine ED_PackOutputValues(p, y, ary)
+   type(ED_ParameterType), intent(in)  :: p
+   type(ED_OutputType), intent(in)     :: y
+   real(R8Ki), intent(out)             :: ary(:)
+   integer(IntKi)                      :: iv, i
+   iv = 1
+   if (allocated(y%BladeLn2Mesh)) then
+      do i = 1, size(y%BladeLn2Mesh)
+         call MV_PackMesh(p%Vars%y, iv, y%BladeLn2Mesh(i), ary)
+      end do
+   end if
+   call MV_PackMesh(p%Vars%y, iv, y%PlatformPtMesh, ary)
+   call MV_PackMesh(p%Vars%y, iv, y%TowerLn2Mesh, ary)
+   call MV_PackMesh(p%Vars%y, iv, y%HubPtMotion, ary)
+   if (allocated(y%BladeRootMotion)) then
+      do i = 1, size(y%BladeRootMotion)
+         call MV_PackMesh(p%Vars%y, iv, y%BladeRootMotion(i), ary)
+      end do
+   end if
+   call MV_PackMesh(p%Vars%y, iv, y%NacelleMotion, ary)
+   call MV_PackVar(p%Vars%y, iv, y%Yaw, ary)
+   call MV_PackVar(p%Vars%y, iv, y%YawRate, ary)
+   call MV_PackVar(p%Vars%y, iv, y%HSS_Spd, ary)
+   do while (iv <= size(p%Vars%y))
+      call MV_PackVar(p%Vars%y, iv, y%WriteOutput(p%Vars%y(iv)%iUsr(1):p%Vars%y(iv)%iUsr(2)), ary)
+   end do
+end subroutine
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 SUBROUTINE ED_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
@@ -10547,7 +10648,7 @@ END SUBROUTINE FixHSSBrTq
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
-SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu )
+SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, IsSolve )
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -10572,12 +10673,14 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
                                                                                !!   respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with 
                                                                                !!   respect to the inputs (u) [intent in to avoid deallocation]
+   LOGICAL, OPTIONAL,                    intent(in)              :: IsSolve    !< Flag indicating this is called from the solver, skip non-solver variables
 
       ! local variables
    TYPE(ED_OutputType)                               :: y_p
    TYPE(ED_ContinuousStateType)                      :: x_p
    TYPE(ED_InputType)                                :: u_perturb
    INTEGER(IntKi)                                    :: i, j, k
+   LOGICAL                                           :: IsSolveLoc
    
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
@@ -10589,6 +10692,12 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    ErrStat = ErrID_None
    ErrMsg  = ''
    m%IgnoreMod = .true. ! to compute perturbations, we need to ignore the modulo function
+
+   if (present(IsSolve)) then
+      IsSolveLoc = IsSolve
+   else
+      IsSolveLoc = .false.
+   end if
    
       ! make a copy of the inputs to perturb
    call ED_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
@@ -10604,17 +10713,14 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          call AllocAry(dYdu, p%Vars%Ny, p%Vars%Nu, 'dYdu', ErrStat2, ErrMsg2); if (Failed()) return
       end if
       
-         ! make a copy of outputs because we will need two for the central difference computations (with orientations)
-      call ED_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
+      ! Copy outputs because we will need two for the central difference computations (with orientations)
+      call ED_CopyOutput(y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2); if (Failed()) return
 
       ! Loop through input variables
       do i = 1, size(p%Vars%u)
 
-         ! If extended linearization variable, skip
-         if (iand(p%Vars%u(i)%Flags, VF_Ext) > 0) cycle
-
-         ! TODO: Remove for linearization
-         if (iand(p%Vars%u(i)%Flags, VF_Solve) == 0) cycle
+         ! If extended linearization variable or solver call and variable not marked for solve, skip
+         if ((iand(p%Vars%u(i)%Flags, VF_Ext) > 0) .or. (IsSolveLoc .and. (.not. p%Vars%u(i)%Solve))) cycle
 
          ! Loop through number of linearization perturbations in variable
          do j = 1,p%Vars%u(i)%Num
@@ -10653,11 +10759,8 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       ! Loop through input variables
       do i = 1,size(p%Vars%u)
 
-         ! If extended linearization variable, skip
-         if (iand(p%Vars%u(i)%Flags, VF_Ext) > 0) cycle
-
-         ! TODO: Remove for linearization
-         if (iand(p%Vars%u(i)%Flags, VF_Solve) == 0) cycle
+         ! If extended linearization variable or solver call and variable not marked for solve, skip
+         if ((iand(p%Vars%u(i)%Flags, VF_Ext) > 0) .or. (IsSolveLoc .and. (.not. p%Vars%u(i)%Solve))) cycle
 
          ! Loop through number of linearization perturbations in variable
          do j = 1,p%Vars%u(i)%Num
@@ -10712,7 +10815,7 @@ END SUBROUTINE ED_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
+SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, IsSolve )
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -10737,12 +10840,14 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
                                                                                !!   to the continuous states (x) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state functions (Z) with respect 
                                                                                !!   to the continuous states (x) [intent in to avoid deallocation]
+   LOGICAL, OPTIONAL,                    INTENT(IN)              :: IsSolve    !< Flag indicating this is called from the solver, skip non-solver variables
    
       ! local variables
    TYPE(ED_OutputType)                               :: y_p
    TYPE(ED_ContinuousStateType)                      :: x_p
    TYPE(ED_ContinuousStateType)                      :: x_perturb
    INTEGER(IntKi)                                    :: i, j, k
+   LOGICAL                                           :: IsSolveLoc
    
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
@@ -10754,6 +10859,12 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    ErrStat = ErrID_None
    ErrMsg  = ''
    m%IgnoreMod = .true. ! to get true perturbations, we can't use the modulo function
+
+   if (present(IsSolve)) then
+      IsSolveLoc = IsSolve
+   else
+      IsSolveLoc = .false.
+   end if
 
       ! Pack operating point state values for perturbations
    call ED_PackStateValues(p, x, m%Vals%x)
@@ -10775,11 +10886,8 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       ! Loop through state variables
       do i = 1,size(p%Vars%x)
 
-         ! If extended linearization variable, skip
-         if (iand(p%Vars%x(i)%Flags, VF_Ext) > 0) cycle
-
-         ! TODO: Remove for linearization
-         if (iand(p%Vars%x(i)%Flags, VF_Solve) == 0) cycle
+         ! If extended linearization variable or solver call and variable not marked for solve, skip
+         if ((iand(p%Vars%x(i)%Flags, VF_Ext) > 0) .or. (IsSolveLoc .and. (.not. p%Vars%x(i)%Solve))) cycle
 
          ! Loop through number of linearization perturbations in variable
          do j = 1,p%Vars%x(i)%Num
@@ -10815,11 +10923,8 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       ! Loop through state variables
       do i = 1,size(p%Vars%x)
 
-         ! If extended linearization variable, skip
-         if (iand(p%Vars%x(i)%Flags, VF_Ext) > 0) cycle
-
-         ! TODO: Remove for linearization
-         if (iand(p%Vars%x(i)%Flags, VF_Solve) == 0) cycle
+         ! If extended linearization variable or solver call and variable not marked for solve, skip
+         if ((iand(p%Vars%x(i)%Flags, VF_Ext) > 0) .or. (IsSolveLoc .and. (.not. p%Vars%x(i)%Solve))) cycle
 
          ! Loop through number of linearization perturbations in variable
          do j = 1,p%Vars%x(i)%Num
@@ -11131,107 +11236,6 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
 END SUBROUTINE ED_GetOP
 !----------------------------------------------------------------------------------------------------------------------------------
-
-subroutine ED_PackStateValues(p, x, ary)
-   type(ED_ParameterType), intent(in)        :: p
-   type(ED_ContinuousStateType), intent(in)  :: x
-   real(R8Ki), intent(out)                   :: ary(:)
-   integer(IntKi)                            :: i
-   do i = 1, size(p%Vars%x)
-      select case(p%Vars%x(i)%Field)
-      case (VF_TransDisp, VF_AngularDisp)
-         ary(p%Vars%x(i)%iLoc(1)) = x%QT(p%Vars%x(i)%iUsr)
-      case (VF_TransVel, VF_AngularVel)
-         ary(p%Vars%x(i)%iLoc(1)) = x%QDT(p%Vars%x(i)%iUsr)
-      end select
-   end do
-end subroutine
-
-subroutine ED_UnpackStateValues(p, ary, x)
-   type(ED_ParameterType), intent(in)           :: p
-   real(R8Ki), intent(in)                       :: ary(:)
-   type(ED_ContinuousStateType), intent(inout)  :: x
-   integer(IntKi)                               :: i
-   do i = 1, size(p%Vars%x)
-      select case(p%Vars%x(i)%Field)
-      case (VF_TransDisp, VF_AngularDisp)
-         x%QT(p%Vars%x(i)%iUsr) = ary(p%Vars%x(i)%iLoc(1))
-      case (VF_TransVel, VF_AngularVel)
-         x%QDT(p%Vars%x(i)%iUsr) = ary(p%Vars%x(i)%iLoc(1))
-      end select
-   end do
-end subroutine
-
-subroutine ED_PackInputValues(p, u, ary)
-   type(ED_ParameterType), intent(in)  :: p
-   type(ED_InputType), intent(in)      :: u
-   real(R8Ki), intent(out)             :: ary(:)
-   integer(IntKi)                      :: iv, i
-   iv = 1
-   if (allocated(u%BladePtLoads)) then
-      do i = 1, size(u%BladePtLoads)
-         call MV_PackMesh(p%Vars%u, iv, u%BladePtLoads(i), ary)
-      end do
-   end if
-   call MV_PackMesh(p%Vars%u, iv, u%PlatformPtMesh, ary)
-   call MV_PackMesh(p%Vars%u, iv, u%TowerPtLoads, ary)
-   call MV_PackMesh(p%Vars%u, iv, u%HubPtLoad, ary)
-   call MV_PackMesh(p%Vars%u, iv, u%NacelleLoads, ary)
-   call MV_PackVar(p%Vars%u, iv, u%BlPitchCom, ary)
-   call MV_PackVar(p%Vars%u, iv, u%YawMom, ary)
-   call MV_PackVar(p%Vars%u, iv, u%GenTrq, ary)
-   call MV_PackVar(p%Vars%u, iv, u%BlPitchCom(1), ary)
-end subroutine
-
-subroutine ED_UnpackInputValues(p, ary, u)
-   type(ED_ParameterType), intent(in)  :: p
-   real(R8Ki), intent(in)              :: ary(:)
-   type(ED_InputType), intent(inout)   :: u
-   integer(IntKi)                      :: iv, i
-   iv = 1
-   if (allocated(u%BladePtLoads)) then
-      do i = 1, size(u%BladePtLoads)
-         call MV_UnpackMesh(p%Vars%u, iv, ary, u%BladePtLoads(i))
-      end do
-   end if
-   call MV_UnpackMesh(p%Vars%u, iv, ary, u%PlatformPtMesh)
-   call MV_UnpackMesh(p%Vars%u, iv, ary, u%TowerPtLoads)
-   call MV_UnpackMesh(p%Vars%u, iv, ary, u%HubPtLoad)
-   call MV_UnpackMesh(p%Vars%u, iv, ary, u%NacelleLoads)
-   call MV_UnpackVar(p%Vars%u, iv, ary, u%BlPitchCom)
-   call MV_UnpackVar(p%Vars%u, iv, ary, u%YawMom)
-   call MV_UnpackVar(p%Vars%u, iv, ary, u%GenTrq)
-end subroutine
-
-subroutine ED_PackOutputValues(p, y, ary)
-   type(ED_ParameterType), intent(in)  :: p
-   type(ED_OutputType), intent(in)     :: y
-   real(R8Ki), intent(out)             :: ary(:)
-   integer(IntKi)                      :: iv, i, j
-   iv = 1
-   if (allocated(y%BladeLn2Mesh)) then
-      do i = 1, size(y%BladeLn2Mesh)
-         call MV_PackMesh(p%Vars%y, iv, y%BladeLn2Mesh(i), ary)
-      end do
-   end if
-   call MV_PackMesh(p%Vars%y, iv, y%PlatformPtMesh, ary)
-   call MV_PackMesh(p%Vars%y, iv, y%TowerLn2Mesh, ary)
-   call MV_PackMesh(p%Vars%y, iv, y%HubPtMotion, ary)
-   if (allocated(y%BladeRootMotion)) then
-      do i = 1, size(y%BladeRootMotion)
-         call MV_PackMesh(p%Vars%y, iv, y%BladeRootMotion(i), ary)
-      end do
-   end if
-   call MV_PackMesh(p%Vars%y, iv, y%NacelleMotion, ary)
-   call MV_PackVar(p%Vars%y, iv, y%Yaw, ary)
-   call MV_PackVar(p%Vars%y, iv, y%YawRate, ary)
-   call MV_PackVar(p%Vars%y, iv, y%HSS_Spd, ary)
-   do while (iv <= size(p%Vars%y))
-      i = p%Vars%y(iv)%iUsr
-      j = i + p%Vars%y(iv)%Num - 1
-      call MV_PackVar(p%Vars%y, iv, y%WriteOutput(i:j), ary)
-   end do
-end subroutine
 
 END MODULE ElastoDyn
 !**********************************************************************************************************************************

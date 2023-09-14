@@ -288,7 +288,7 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
    INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
 
-   integer(IntKi)          :: i, j, flags
+   integer(IntKi)          :: i, j, flags, idx
    REAL(R8Ki)              :: MaxThrust, MaxTorque
    CHARACTER(200)          :: Describe
 
@@ -316,13 +316,15 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
    do i = 2, p%node_total
       Describe = 'finite element node '//trim(num2lstr(i))//' (number of elements = '//&
                   trim(num2lstr(p%elem_total))//'; element order = '//trim(num2lstr(p%nodes_per_elem-1))//')'
-      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), VF_TransDisp, Num=3, Flags=flags, &
+      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), VF_TransDisp, Num=3, &
+                     Flags=flags, &
                      iUsr=i, &
                      Perturb=0.2_BDKi*D2R_D * p%blade_length, &
                      LinNames=[trim(Describe)//' translational displacement in X, m', &
                                trim(Describe)//' translational displacement in Y, m', &
                                trim(Describe)//' translational displacement in Z, m'])
-      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), VF_Orientation, Num=3, Flags=flags, &
+      call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), VF_Orientation, Num=3, &
+                     Flags=flags, &
                      iUsr=i, &
                      Perturb=0.2_BDKi*D2R_D, &
                      LinNames=[trim(Describe)//' rotational displacement in X, rad', &
@@ -384,13 +386,15 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
                      LinNames=[trim(p%OutParam(i)%Name)//', '//trim(p%OutParam(i)%Units)], &
                      Active=p%OutParam(i)%Indx > 0)
    end do
+   idx = p%NumOuts + 1
    do i = 1, p%BldNd_NumOuts
-      ! call MV_AddVar(p%Vars%y, 'Node'//p%BldNd_OutParam(i)%Name, VF_Scalar, &
-      !                Num=size(p%BldNd_BlOutNd), &
-      !                Flags=BldNd_OutParamFlags(p%BldNd_OutParam(i)%Name), &
-      !                iUsr=[(j, j=1,size(p%BldNd_BlOutNd))] + p%NumOuts + (i-1)*size(p%BldNd_BlOutNd), &
-      !                LinNames=[(BldNd_LinChan(p%BldNd_OutParam(i), j), j=1,size(p%BldNd_BlOutNd))], &
-      !                Active=p%BldNd_OutParam(i)%Indx > 0)
+      call MV_AddVar(p%Vars%y, p%BldNd_OutParam(i)%Name, VF_Scalar, &
+                     Num=size(p%BldNd_BlOutNd), &
+                     Flags=BldNd_OutParamFlags(p%BldNd_OutParam(i)%Name), &
+                     iUsr=idx, &
+                     LinNames=[(BldNd_LinChan(p%BldNd_OutParam(i), j), j=1,size(p%BldNd_BlOutNd))], &
+                     Active=p%BldNd_OutParam(i)%Indx > 0)
+      idx = idx + size(p%BldNd_BlOutNd)
    end do
 
    !----------------------------------------------------------------------------
@@ -476,6 +480,79 @@ contains
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
       Failed =  ErrStat >= AbortErrLev
    end function Failed
+end subroutine
+
+subroutine BD_PackStateValues(p, x, Values)
+   type(BD_ParameterType), intent(in)        :: p
+   type(BD_ContinuousStateType), intent(in)  :: x
+   real(R8Ki), intent(out)                   :: Values(:)
+   integer(IntKi)                            :: i
+   do i = 1, size(p%Vars%x)
+      select case(p%Vars%x(i)%Field)
+      case (VF_TransDisp)
+         Values(p%Vars%x(i)%iLoc) = x%q(1:3,p%Vars%x(i)%iUsr(1))     ! XYZ displacement
+      case (VF_TransVel)
+         Values(p%Vars%x(i)%iLoc) = x%dqdt(1:3,p%Vars%x(i)%iUsr(1))  ! XYZ velocity
+      case (VF_Orientation)
+         Values(p%Vars%x(i)%iLoc) = x%q(4:6,p%Vars%x(i)%iUsr(1))     ! WM parameters
+      case (VF_AngularVel)
+         Values(p%Vars%x(i)%iLoc) = x%dqdt(4:6,p%Vars%x(i)%iUsr(1))  ! Angular velocity
+      end select
+   end do
+end subroutine
+
+subroutine BD_UnpackStateValues(p, Values, x)
+   type(BD_ParameterType), intent(in)           :: p
+   real(R8Ki), intent(in)                       :: Values(:)
+   type(BD_ContinuousStateType), intent(inout)  :: x
+   integer(IntKi)                               :: i
+   do i = 1, size(p%Vars%x)
+      select case(p%Vars%x(i)%Field)
+      case (VF_TransDisp)
+         x%q(1:3,p%Vars%x(i)%iUsr(1)) = Values(p%Vars%x(i)%iLoc)     ! XYZ displacement
+      case (VF_TransVel)
+         x%dqdt(1:3,p%Vars%x(i)%iUsr(1)) = Values(p%Vars%x(i)%iLoc)  ! XYZ velocity
+      case (VF_Orientation)
+         x%q(4:6,p%Vars%x(i)%iUsr(1)) = Values(p%Vars%x(i)%iLoc)     ! WM parameters
+      case (VF_AngularVel)
+         x%dqdt(4:6,p%Vars%x(i)%iUsr(1)) = Values(p%Vars%x(i)%iLoc)  ! Angular velocity
+      end select
+   end do
+end subroutine
+
+subroutine BD_PackInputValues(p, u, Values)
+   type(BD_ParameterType), intent(in)  :: p
+   type(BD_InputType), intent(in)      :: u
+   real(R8Ki), intent(out)             :: Values(:)
+   integer(IntKi)                      :: iv
+   iv = 1
+   call MV_PackMesh(p%Vars%u, iv, u%RootMotion, Values)
+   call MV_PackMesh(p%Vars%u, iv, u%PointLoad, Values)
+   call MV_PackMesh(p%Vars%u, iv, u%DistrLoad, Values)
+end subroutine
+
+subroutine BD_UnpackInputValues(p, Values, u)
+   type(BD_ParameterType), intent(in)  :: p
+   real(R8Ki), intent(in)              :: Values(:)
+   type(BD_InputType), intent(inout)   :: u
+   integer(IntKi)                      :: iv
+   iv = 1
+   call MV_UnpackMesh(p%Vars%u, iv, Values, u%RootMotion)
+   call MV_UnpackMesh(p%Vars%u, iv, Values, u%PointLoad)
+   call MV_UnpackMesh(p%Vars%u, iv, Values, u%DistrLoad)
+end subroutine
+
+subroutine BD_PackOutputValues(p, y, Values)
+   type(BD_ParameterType), intent(in)  :: p
+   type(BD_OutputType), intent(in)     :: y
+   real(R8Ki), intent(out)             :: Values(:)
+   integer(IntKi)                      :: iv
+   iv = 1
+   call MV_PackMesh(p%Vars%y, iv, y%ReactionForce, Values)
+   call MV_PackMesh(p%Vars%y, iv, y%BldMotion, Values)
+   do while (iv <= size(p%Vars%y))
+      call MV_PackVar(p%Vars%y, iv, y%WriteOutput(p%Vars%y(iv)%iUsr(1):p%Vars%y(iv)%iUsr(2)), Values)
+   end do
 end subroutine
 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -5985,7 +6062,7 @@ END SUBROUTINE PitchActuator_SetBC
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
-SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
+SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu, IsSolve)
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
@@ -6010,12 +6087,14 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
                                                                                !!   respect to the inputs (u) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with
                                                                                !!   respect to the inputs (u) [intent in to avoid deallocation]
+   LOGICAL, OPTIONAL,                    INTENT(IN)              :: IsSolve    !< Flag indicating this is called from the solver, skip non-solver variables
    
    TYPE(BD_OutputType)                :: y_p
    TYPE(BD_ContinuousStateType)       :: x_p
    TYPE(BD_InputType)                 :: u_perturb
    INTEGER(IntKi)                     :: i, j, k
    REAL(R8Ki)                         :: RotateStates(3,3)
+   LOGICAL                            :: IsSolveLoc
    
    character(*), parameter            :: RoutineName = 'BD_JacobianPInput'
    integer(intKi)                     :: ErrStat2
@@ -6024,6 +6103,12 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
+
+   if (present(IsSolve)) then
+      IsSolveLoc = IsSolve
+   else
+      IsSolveLoc = .false.
+   end if
   
       ! get OP values here:
    call BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 ); if (Failed()) return
@@ -6048,12 +6133,8 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       ! Loop through input variables
       do i = 1, size(p%Vars%u)
 
-         ! If variable is for extended linearization, skip
-         if (iand(p%Vars%u(i)%Flags, VF_Ext) > 0) cycle
-
-         ! If variable is for extended linearization, skip
-         ! TODO: Remove for linearization
-         if (iand(p%Vars%u(i)%Flags, VF_Solve) == 0) cycle
+         ! If extended linearization variable or solver call and variable not marked for solve, skip
+         if ((iand(p%Vars%u(i)%Flags, VF_Ext) > 0) .or. (IsSolveLoc .and. (.not. p%Vars%u(i)%Solve))) cycle
 
          ! Loop through number of linearization perturbations in variable
          do j = 1,p%Vars%u(i)%Num
@@ -6090,12 +6171,8 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       ! Loop through input variables
       do i = 1,size(p%Vars%u)
 
-         ! If extended linearization variable, skip
-         if (iand(p%Vars%u(i)%Flags, VF_Ext) > 0) cycle
-
-         ! If variable is for extended linearization, skip
-         ! TODO: Remove for linearization
-         if (iand(p%Vars%u(i)%Flags, VF_Solve) == 0) cycle
+         ! If extended linearization variable or solver call and variable not marked for solve, skip
+         if ((iand(p%Vars%u(i)%Flags, VF_Ext) > 0) .or. (IsSolveLoc .and. (.not. p%Vars%u(i)%Solve))) cycle
 
          ! Loop through number of linearization perturbations in variable
          do j = 1,p%Vars%u(i)%Num
@@ -6150,7 +6227,7 @@ END SUBROUTINE BD_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
-SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, StateRotation )
+SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx, StateRotation, IsSolve )
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )      :: t                  !< Time in seconds at operating point
@@ -6180,12 +6257,13 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
                                                                                   !!   functions (Z) with respect to
                                                                                   !!   the continuous states (x) [intent in to avoid deallocation]
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: StateRotation(:,:) !< Matrix by which the states are optionally rotated
-
+   LOGICAL, OPTIONAL,                    INTENT(IN)         :: IsSolve    !< Flag indicating this is called from the solver, skip non-solver variables
 
       ! local variables
    INTEGER(IntKi)                                    :: i
    REAL(R8Ki)                                        :: RotateStates(3,3)
    REAL(R8Ki)                                        :: RotateStatesTranspose(3,3)
+   LOGICAL                                           :: IsSolveLoc
    
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
@@ -6196,10 +6274,17 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   ! Calculate Jacobian without rotation
-   call BD_JacobianPContState_noRotate(t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2, dYdx, dXdx); if (Failed()) return
+   if (present(IsSolve)) then
+      IsSolveLoc = IsSolve
+   else
+      IsSolveLoc = .false.
+   end if
 
-   if (p%RotStates) then
+   ! Calculate Jacobian without rotation
+   call BD_JacobianPContState_noRotate(t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2, dYdx, dXdx, IsSolveLoc); if (Failed()) return
+
+   ! If states need to be rotated
+   if (.not. IsSolveLoc .and. p%RotStates) then
       RotateStates          = matmul( u%RootMotion%Orientation(:,:,1), transpose( u%RootMotion%RefOrientation(:,:,1) ) )
       RotateStatesTranspose = transpose( RotateStates )
 
@@ -6209,14 +6294,6 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          end if
          StateRotation = RotateStates
       end if
-   else
-      if ( present(StateRotation) ) then
-         if (allocated(StateRotation)) deallocate(StateRotation)
-      end if
-   end if
-
-   ! If states need to be rotated
-   if (p%RotStates) then
 
       ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
       IF (PRESENT(dYdx)) THEN
@@ -6235,7 +6312,10 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          end do
       END IF
 
+   else if ( present(StateRotation) ) then
+      if (allocated(StateRotation)) deallocate(StateRotation)
    end if
+
 
    IF ( PRESENT( dXddx ) ) THEN
       if (allocated(dXddx)) deallocate(dXddx)
@@ -6255,7 +6335,7 @@ END SUBROUTINE BD_JacobianPContState
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, and dX/dx are returned.
 !SUBROUTINE BD_JacobianPContState_noRotate( t, u, p, x, xd, z, OtherState, y, m, calledFrom, ErrStat, ErrMsg, dYdx, dXdx )
-SUBROUTINE BD_JacobianPContState_noRotate( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx )
+SUBROUTINE BD_JacobianPContState_noRotate( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, IsSolve )
 !..................................................................................................................................
 
    REAL(DbKi),                           INTENT(IN   )      :: t                  !< Time in seconds at operating point
@@ -6279,6 +6359,7 @@ SUBROUTINE BD_JacobianPContState_noRotate( t, u, p, x, xd, z, OtherState, y, m, 
    REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)      :: dXdx(:,:)          !< Partial derivatives of continuous state
                                                                                   !!   functions (X) with respect to
                                                                                   !!   the continuous states (x) [intent in to avoid deallocation]
+   LOGICAL, OPTIONAL,                    INTENT(IN)         :: IsSolve    !< Flag indicating this is called from the solver, skip non-solver variables
 
 
       ! local variables
@@ -6288,6 +6369,7 @@ SUBROUTINE BD_JacobianPContState_noRotate( t, u, p, x, xd, z, OtherState, y, m, 
    INTEGER(IntKi)                                    :: i, j, k
    INTEGER(IntKi)                                    :: index
    INTEGER(IntKi)                                    :: dof
+   LOGICAL                                           :: IsSolveLoc
    
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
@@ -6298,6 +6380,12 @@ SUBROUTINE BD_JacobianPContState_noRotate( t, u, p, x, xd, z, OtherState, y, m, 
 
    ErrStat = ErrID_None
    ErrMsg  = ''
+
+   if (present(IsSolve)) then
+      IsSolveLoc = IsSolve
+   else
+      IsSolveLoc = .false.
+   end if
 
       ! Pack operating point state values for perturbations
    call BD_PackStateValues(p, x, m%Vals%x)
@@ -6319,8 +6407,8 @@ SUBROUTINE BD_JacobianPContState_noRotate( t, u, p, x, xd, z, OtherState, y, m, 
       ! Loop through state variables
       do i = 1,size(p%Vars%x)
 
-         ! If variable is for extended linearization, skip
-         if (iand(p%Vars%x(i)%Flags, VF_Ext) > 0) cycle
+         ! If extended linearization variable or solver call and variable not marked for solve, skip
+         if ((iand(p%Vars%x(i)%Flags, VF_Ext) > 0) .or. (IsSolveLoc .and. (.not. p%Vars%x(i)%Solve))) cycle
             
          ! Loop through number of linearization perturbations in variable
          do j = 1,p%Vars%x(i)%Num
@@ -6356,9 +6444,9 @@ SUBROUTINE BD_JacobianPContState_noRotate( t, u, p, x, xd, z, OtherState, y, m, 
       
       ! Loop through state variables
       do i = 1,size(p%Vars%x)
-
-         ! If no-lin or extended linearization variable, skip
-         if (iand(p%Vars%x(i)%Flags, VF_Ext) > 0) cycle
+         
+         ! If extended linearization variable or solver call and variable not marked for solve, skip
+         if ((iand(p%Vars%x(i)%Flags, VF_Ext) > 0) .or. (IsSolveLoc .and. (.not. p%Vars%x(i)%Solve))) cycle
 
          ! Loop through number of linearization perturbations in variable
          do j = 1,p%Vars%x(i)%Num
@@ -6819,79 +6907,6 @@ subroutine BD_UpdateGlobalRef(u, p, x, OtherState, ErrStat, ErrMsg)
    x%dqdt(1:3, 1) = matmul(u%RootMotion%TranslationVel(:, 1), GlbRot_new)
    x%dqdt(4:6, 1) = matmul(u%RootMotion%RotationVel(:, 1), GlbRot_new)
 
-end subroutine
-
-subroutine BD_PackStateValues(p, x, Values)
-   type(BD_ParameterType), intent(in)        :: p
-   type(BD_ContinuousStateType), intent(in)  :: x
-   real(R8Ki), intent(out)                   :: Values(:)
-   integer(IntKi)                            :: i
-   do i = 1, size(p%Vars%x)
-      select case(p%Vars%x(i)%Field)
-      case (VF_TransDisp)
-         Values(p%Vars%x(i)%iLoc) = x%q(1:3,p%Vars%x(i)%iUsr)     ! XYZ displacement
-      case (VF_TransVel)
-         Values(p%Vars%x(i)%iLoc) = x%dqdt(1:3,p%Vars%x(i)%iUsr)  ! XYZ velocity
-      case (VF_Orientation)
-         Values(p%Vars%x(i)%iLoc) = x%q(4:6,p%Vars%x(i)%iUsr)     ! WM parameters
-      case (VF_AngularVel)
-         Values(p%Vars%x(i)%iLoc) = x%dqdt(4:6,p%Vars%x(i)%iUsr)  ! Angular velocity
-      end select
-   end do
-end subroutine
-
-subroutine BD_UnpackStateValues(p, Values, x)
-   type(BD_ParameterType), intent(in)           :: p
-   real(R8Ki), intent(in)                       :: Values(:)
-   type(BD_ContinuousStateType), intent(inout)  :: x
-   integer(IntKi)                               :: i
-   do i = 1, size(p%Vars%x)
-      select case(p%Vars%x(i)%Field)
-      case (VF_TransDisp)
-         x%q(1:3,p%Vars%x(i)%iUsr) = Values(p%Vars%x(i)%iLoc)     ! XYZ displacement
-      case (VF_TransVel)
-         x%dqdt(1:3,p%Vars%x(i)%iUsr) = Values(p%Vars%x(i)%iLoc)  ! XYZ velocity
-      case (VF_Orientation)
-         x%q(4:6,p%Vars%x(i)%iUsr) = Values(p%Vars%x(i)%iLoc)     ! WM parameters
-      case (VF_AngularVel)
-         x%dqdt(4:6,p%Vars%x(i)%iUsr) = Values(p%Vars%x(i)%iLoc)  ! Angular velocity
-      end select
-   end do
-end subroutine
-
-subroutine BD_PackInputValues(p, u, Values)
-   type(BD_ParameterType), intent(in)  :: p
-   type(BD_InputType), intent(in)      :: u
-   real(R8Ki), intent(out)             :: Values(:)
-   integer(IntKi)                      :: iv
-   iv = 1
-   call MV_PackMesh(p%Vars%u, iv, u%RootMotion, Values)
-   call MV_PackMesh(p%Vars%u, iv, u%PointLoad, Values)
-   call MV_PackMesh(p%Vars%u, iv, u%DistrLoad, Values)
-end subroutine
-
-subroutine BD_UnpackInputValues(p, Values, u)
-   type(BD_ParameterType), intent(in)  :: p
-   real(R8Ki), intent(in)              :: Values(:)
-   type(BD_InputType), intent(inout)   :: u
-   integer(IntKi)                      :: iv
-   iv = 1
-   call MV_UnpackMesh(p%Vars%u, iv, Values, u%RootMotion)
-   call MV_UnpackMesh(p%Vars%u, iv, Values, u%PointLoad)
-   call MV_UnpackMesh(p%Vars%u, iv, Values, u%DistrLoad)
-end subroutine
-
-subroutine BD_PackOutputValues(p, y, Values)
-   type(BD_ParameterType), intent(in)  :: p
-   type(BD_OutputType), intent(in)     :: y
-   real(R8Ki), intent(out)             :: Values(:)
-   integer(IntKi)                      :: iv
-   iv = 1
-   call MV_PackMesh(p%Vars%y, iv, y%ReactionForce, Values)
-   call MV_PackMesh(p%Vars%y, iv, y%BldMotion, Values) ! TODO: Add TrimOP
-   do while (iv <= size(p%Vars%y))
-      call MV_PackVar(p%Vars%y, iv, y%WriteOutput(p%Vars%y(iv)%iUsr), Values)
-   end do
 end subroutine
 
 !-----------------------------------------------------------------------------------------------------------------------------------

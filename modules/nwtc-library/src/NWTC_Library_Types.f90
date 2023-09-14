@@ -49,9 +49,7 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_Mesh = 1      ! Variable contained in mesh [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_Line = 2      ! Variable is for a line mesh [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_RotFrame = 4      ! Variable in rotating frame [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_NoLin = 8      ! Variable to be linearized [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_Ext = 16      ! Variable for extended linearization [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_Solve = 32      ! Variable used for input residual calculation [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_Ext = 8      ! Variable for extended linearization [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VF_Any = 4095      ! Enable all flags (used for filtering) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VC_None = 0      !  [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: VC_Tight = 1      !  [-]
@@ -120,9 +118,10 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iSol      !< indices in solver arrays [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iLin      !< indices in linearization arrays [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iq      !< row index in solver q matrix [-]
-    INTEGER(IntKi)  :: iUsr = 0      !< first user defined index for variable [-]
+    INTEGER(IntKi) , DIMENSION(1:2)  :: iUsr = 0_IntKi      !< first user defined index for variable, can be used a lower/upper bounds [-]
     INTEGER(IntKi)  :: jUsr = 0      !< second user defined index for variable [-]
     REAL(R8Ki)  :: Perturb = 0      !< perturbation [-]
+    LOGICAL  :: Solve = .false.      !< flag indicating that variable is used by solver [-]
     character(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames      !<  [-]
   END TYPE ModVarType
 ! =======================
@@ -816,6 +815,7 @@ subroutine NWTC_Library_CopyModVarType(SrcModVarTypeData, DstModVarTypeData, Ctr
    DstModVarTypeData%iUsr = SrcModVarTypeData%iUsr
    DstModVarTypeData%jUsr = SrcModVarTypeData%jUsr
    DstModVarTypeData%Perturb = SrcModVarTypeData%Perturb
+   DstModVarTypeData%Solve = SrcModVarTypeData%Solve
    if (allocated(SrcModVarTypeData%LinNames)) then
       LB(1:1) = lbound(SrcModVarTypeData%LinNames)
       UB(1:1) = ubound(SrcModVarTypeData%LinNames)
@@ -888,6 +888,7 @@ subroutine NWTC_Library_PackModVarType(Buf, Indata)
    call RegPack(Buf, InData%iUsr)
    call RegPack(Buf, InData%jUsr)
    call RegPack(Buf, InData%Perturb)
+   call RegPack(Buf, InData%Solve)
    call RegPack(Buf, allocated(InData%LinNames))
    if (allocated(InData%LinNames)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames), ubound(InData%LinNames))
@@ -977,6 +978,8 @@ subroutine NWTC_Library_UnPackModVarType(Buf, OutData)
    call RegUnpack(Buf, OutData%jUsr)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Perturb)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%Solve)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%LinNames)) deallocate(OutData%LinNames)
    call RegUnpack(Buf, IsAllocAssoc)

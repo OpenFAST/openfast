@@ -617,7 +617,7 @@ subroutine MV_AddVar(VarAry, Name, Field, Num, Flags, iUsr, jUsr, Perturb, LinNa
    ! Set optional values
    if (present(Num)) Var%Num = Num
    if (present(Flags)) Var%Flags = Flags
-   if (present(iUsr)) Var%iUsr = iUsr
+   if (present(iUsr)) Var%iUsr = [iUsr, iUsr + Var%Num - 1]
    if (present(jUsr)) Var%jUsr = jUsr
    if (present(Perturb)) Var%Perturb = Perturb
    if (present(LinNames)) then

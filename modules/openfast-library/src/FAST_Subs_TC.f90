@@ -4294,9 +4294,20 @@ SUBROUTINE FAST_Solution0_T(Turbine, ErrStat, ErrMsg)
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
+   character(*), parameter    :: RoutineName = 'FAST_Solution0_T'
+   integer(IntKi)             :: ErrStat2
+   character(ErrMsgLen)       :: ErrMsg2
+
+   if (Turbine%p_FAST%WrSttsTime) then
+      call SimStatus_FirstTime(Turbine%m_FAST%TiLstPrn, Turbine%m_FAST%PrevClockTime, &
+                               Turbine%m_FAST%SimStrtTime, Turbine%m_FAST%UsrTime2, Turbine%m_FAST%t_global, &
+                               Turbine%p_FAST%TMax, Turbine%p_FAST%TDesc)
+   end if
+
    ! Get initial conditions for solver
-   CALL Solver_Step0(Turbine%p_FAST%Solver, Turbine%m_FAST%Solver, Turbine%m_FAST%Modules, Turbine, ErrStat, ErrMsg)
-   if (ErrStat >= AbortErrLev) return
+   CALL Solver_Step0(Turbine%p_FAST%Solver, Turbine%m_FAST%Solver, Turbine%m_FAST%Modules, Turbine, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
 
    ! CALL FAST_Solution0(Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
    !                   Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, Turbine%SC_DX,&
@@ -4306,7 +4317,8 @@ SUBROUTINE FAST_Solution0_T(Turbine, ErrStat, ErrMsg)
    CALL WriteOutputToFile(0, Turbine%m_FAST%t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%ED, Turbine%BD, &
                            Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, Turbine%SeaSt, Turbine%HD, Turbine%SD, &
                            Turbine%ExtPtfm, Turbine%SrvD, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
-                           Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg)
+                           Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
 END SUBROUTINE FAST_Solution0_T
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -4893,7 +4905,7 @@ SUBROUTINE FAST_Solution_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg = ''
 
-      ! Get initial conditions for solver
+      ! Advance simulation one step and calculate outputs
    CALL Solver_Step(n_t_global, t_initial, Turbine%p_FAST%Solver, Turbine%m_FAST%Solver, Turbine%m_FAST%Modules, Turbine, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
@@ -4903,11 +4915,26 @@ SUBROUTINE FAST_Solution_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
    !                Turbine%SeaSt, Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
    !                Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )
 
+   !----------------------------------------------------------------------------
+   ! Write output data to file
+   !----------------------------------------------------------------------------
+
    CALL WriteOutputToFile(n_t_global + 1, t_global_next, Turbine%p_FAST, Turbine%y_FAST, Turbine%ED, Turbine%BD, &
                            Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, Turbine%SeaSt, Turbine%HD, Turbine%SD, &
                            Turbine%ExtPtfm, Turbine%SrvD, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                            Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   !----------------------------------------------------------------------------
+   ! Display simulation status every SttsTime-seconds (i.e., n_SttsTime steps):
+   !----------------------------------------------------------------------------
+
+   if (Turbine%p_FAST%WrSttsTime) then
+      if (MOD(n_t_global + 1, Turbine%p_FAST%n_SttsTime) == 0) then
+         call SimStatus(Turbine%m_FAST%TiLstPrn, Turbine%m_FAST%PrevClockTime, &
+                        Turbine%m_FAST%t_global, Turbine%p_FAST%TMax, Turbine%p_FAST%TDesc)
+      end if
+   end if
 
 END SUBROUTINE FAST_Solution_T
 !----------------------------------------------------------------------------------------------------------------------------------

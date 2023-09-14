@@ -55,9 +55,7 @@ param       ^       -           IntKi           VF_None             -   0   -   
 param       ^       -           IntKi           VF_Mesh             -   1   -   "Variable contained in mesh"  -
 param       ^       -           IntKi           VF_Line             -   2   -   "Variable is for a line mesh"  -
 param       ^       -           IntKi           VF_RotFrame         -   4   -   "Variable in rotating frame"  -
-param       ^       -           IntKi           VF_NoLin            -   8   -   "Variable to be linearized"  -
-param       ^       -           IntKi           VF_Ext              -  16   -   "Variable for extended linearization"  -
-param       ^       -           IntKi           VF_Solve            -  32   -   "Variable used for input residual calculation"  -
+param       ^       -           IntKi           VF_Ext              -   8   -   "Variable for extended linearization"  -
 param       ^       -           IntKi           VF_Any              - 4095  -   "Enable all flags (used for filtering)"  -
 
 param       ^       -           IntKi           VC_None             -   0   -   ""  -
@@ -75,9 +73,10 @@ typedef     ^       ^           IntKi           iLoc                :   -   -   
 typedef     ^       ^           IntKi           iSol                :   -   -   "indices in solver arrays"  -
 typedef     ^       ^           IntKi           iLin                :   -   -   "indices in linearization arrays"  -
 typedef     ^       ^           IntKi           iq                  :   -   -   "row index in solver q matrix"  -
-typedef     ^       ^           IntKi           iUsr                -   0   -   "first user defined index for variable"  -
+typedef     ^       ^           IntKi           iUsr                2   -   -   "first user defined index for variable, can be used a lower/upper bounds"  -
 typedef     ^       ^           IntKi           jUsr                -   0   -   "second user defined index for variable"  -
 typedef     ^       ^           R8Ki            Perturb             -   0   -   "perturbation"  -
+typedef     ^       ^           logical         Solve               -   F   -   "flag indicating that variable is used by solver"  -
 typedef     ^       ^           character(LinChanLen)   LinNames    :   -   -   ""  -
 
 typedef     ^       ModVarsType IntKi           ModNum              -   0   -   ""  -

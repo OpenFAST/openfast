@@ -241,25 +241,15 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
    ! Initialize number of state variables to zero
    NumX = 0
 
-   ! Loop through tight coupling modules, set Solve flag
+   ! Loop through tight coupling modules, set Solve flag for all states
    do i = 1, size(p%iModTC)
-      associate (Mod => Mods(p%iModTC(i)))
-         do j = 1, size(Mod%Vars%x)
-            call SetFlags(Mod%Vars%x(j), VF_Solve)
-         end do
-      end associate
+      Mods(p%iModTC(i))%Vars%x%Solve = .true.
    end do
 
    ! Loop through x displacement variables (DerivOrder == 0), set global index
    do i = 1, size(p%iModTC)
-      associate (Mod => Mods(p%iModTC(i)))
-         do j = 1, size(Mod%Vars%x)
-            if (Mod%Vars%x(j)%DerivOrder == 0) then
-               Mod%Vars%x(j)%iSol = [(NumX + k, k=1, Mod%Vars%x(j)%Num)]
-               NumX = NumX + Mod%Vars%x(j)%Num
-            end if
-         end do
-      end associate
+      call SetGlobalIndices(Mods(p%iModTC(i))%Vars%x, NumX, &
+                            Mods(p%iModTC(i))%Vars%x%DerivOrder == 0)
    end do
 
    ! Start and end indices for first derivative of X
@@ -267,14 +257,8 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
 
    ! Loop through x velocity variables (DerivOrder == 1), set global index
    do i = 1, size(p%iModTC)
-      associate (Mod => Mods(p%iModTC(i)))
-         do j = 1, size(Mod%Vars%x)
-            if (Mod%Vars%x(j)%DerivOrder == 1) then
-               Mod%Vars%x(j)%iSol = [(NumX + k, k=1, Mod%Vars%x(j)%Num)]
-               NumX = NumX + Mod%Vars%x(j)%Num
-            end if
-         end do
-      end associate
+      call SetGlobalIndices(Mods(p%iModTC(i))%Vars%x, NumX, &
+                            Mods(p%iModTC(i))%Vars%x%DerivOrder == 1)
    end do
 
    ! Start and end indices for second derivative of X
@@ -307,14 +291,7 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
 
    ! Loop through tight coupling modules and calculate global indices
    do i = 1, size(p%iModTC)
-      do j = 1, size(Mods(p%iModTC(i))%Vars%u)
-         associate (Var => Mods(p%iModTC(i))%Vars%u(j))
-            if ((.not. allocated(Var%iSol)) .and. (iand(Var%Flags, VF_Solve) > 0)) then
-               Var%iSol = [(NumU + k, k=1, Var%Num)]
-               NumU = NumU + Var%Num
-            end if
-         end associate
-      end do
+      call SetGlobalIndices(Mods(p%iModTC(i))%Vars%u, NumU)
    end do
 
    ! Save number of tight coupling inputs
@@ -322,14 +299,7 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
 
    ! Loop through option 1 modules and calculate global indices
    do i = 1, size(p%iModOpt1)
-      do j = 1, size(Mods(p%iModOpt1(i))%Vars%u)
-         associate (Var => Mods(p%iModOpt1(i))%Vars%u(j))
-            if ((.not. allocated(Var%iSol)) .and. (iand(Var%Flags, VF_Solve) > 0)) then
-               Var%iSol = [(NumU + k, k=1, Var%Num)]
-               NumU = NumU + Var%Num
-            end if
-         end associate
-      end do
+      call SetGlobalIndices(Mods(p%iModOpt1(i))%Vars%u, NumU)
    end do
 
    ! Save number of option 1 inputs
@@ -360,31 +330,17 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
    ! Initialize the number of output variables
    NumY = 0
 
-   ! Loop through tight coupling modules and calculate global indices
+   ! Loop through tight coupling modules and calculate output global indices
    do i = 1, size(p%iModTC)
-      do j = 1, size(Mods(p%iModTC(i))%Vars%y)
-         associate (Var => Mods(p%iModTC(i))%Vars%y(j))
-            if ((.not. allocated(Var%iSol)) .and. (iand(Var%Flags, VF_Solve) > 0)) then
-               Var%iSol = [(NumY + k, k=1, Var%Num)]
-               NumY = NumY + Var%Num
-            end if
-         end associate
-      end do
+      call SetGlobalIndices(Mods(p%iModTC(i))%Vars%y, NumY)
    end do
 
    ! Save number of tight coupling inputs
    p%iyT = [1, NumY]
 
-   ! Loop through option 1 modules and calculate global indices
+   ! Loop through option 1 modules and calculate output global indices
    do i = 1, size(p%iModOpt1)
-      do j = 1, size(Mods(p%iModOpt1(i))%Vars%y)
-         associate (Var => Mods(p%iModOpt1(i))%Vars%y(j))
-            if ((.not. allocated(Var%iSol)) .and. (iand(Var%Flags, VF_Solve) > 0)) then
-               Var%iSol = [(NumY + k, k=1, Var%Num)]
-               NumY = NumY + Var%Num
-            end if
-         end associate
-      end do
+      call SetGlobalIndices(Mods(p%iModOpt1(i))%Vars%y, NumY)
    end do
 
    ! Calculate number of option 1 inputs
@@ -495,6 +451,21 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
    p%iJL = iuLoad + NumQ
 
 contains
+   subroutine SetGlobalIndices(Vars, NumV, Mask)
+      type(ModVarType), intent(inout)  :: Vars(:)
+      integer(IntKi), intent(inout)    :: NumV
+      logical, optional, intent(in)     :: Mask(:)
+      do j = 1, size(Vars)
+         if (present(Mask)) then
+            if (.not. Mask(j)) cycle
+         end if
+         if (Vars(j)%Solve .and. (.not. allocated(Vars(j)%iSol))) then
+            Vars(j)%iSol = [(NumV + k, k=1, Vars(j)%Num)]
+            NumV = NumV + Vars(j)%Num
+         end if
+      end do
+   end subroutine
+
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Failed = ErrStat >= AbortErrLev
@@ -568,12 +539,6 @@ subroutine Solver_Step0(p, m, Mods, Turbine, ErrStat, ErrMsg)
    t_global_next = t_initial + n_t_global_next*p%DT
    Turbine%y_FAST%WriteThisStep = NeedWriteOutput(n_t_global_next, t_global_next, t_initial, Turbine%p_FAST%n_DT_Out)
 
-   if (Turbine%p_FAST%WrSttsTime) then
-      call SimStatus_FirstTime(Turbine%m_FAST%TiLstPrn, Turbine%m_FAST%PrevClockTime, &
-                               Turbine%m_FAST%SimStrtTime, Turbine%m_FAST%UsrTime2, t_initial, &
-                               Turbine%p_FAST%TMax, Turbine%p_FAST%TDesc)
-   end if
-
    ! Set flag to warn about convergence errors
    m%ConvWarn = .true.
 
@@ -599,7 +564,7 @@ subroutine Solver_Step0(p, m, Mods, Turbine, ErrStat, ErrMsg)
    ! TODO: may need a separate variable for max initial acceleration convergence iterations
    converged = .false.
    k = 1
-   do while ((.not. converged) .and. (k <= p%MaxConvIter))
+   do while ((.not. converged) .and. (k <= 2*p%MaxConvIter))
 
       ! Transfer inputs and calculate outputs for all modules (use current state)
       do i = 1, size(p%iModInit)
@@ -611,7 +576,7 @@ subroutine Solver_Step0(p, m, Mods, Turbine, ErrStat, ErrMsg)
 
       ! Calculate continuous state derivatives for tight coupling modules (use current state)
       do i = 1, size(p%iModTC)
-         call FAST_CalcContStateDeriv(Mods(p%iModTC(i)), t_initial, STATE_CURR, IsSolve, &
+         call FAST_CalcContStateDeriv(Mods(p%iModTC(i)), t_initial, STATE_CURR, &
                                       Turbine, ErrStat2, ErrMsg2, dxdt=m%dxdt); if (Failed()) return
       end do
 
@@ -674,7 +639,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
    logical, parameter         :: IsSolve = .true.
-   integer(IntKi)             :: iterConv, iterCorr
+   integer(IntKi)             :: iterConv, iterCorr, NumCorrections
    real(ReKi)                 :: delta_norm
    real(DbKi)                 :: t_global_next       ! next simulation time (m_FAST%t_global + p_FAST%dt)
    integer(IntKi)             :: n_t_global_next     ! n_t_global + 1
@@ -757,7 +722,8 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
    ! Loop through correction iterations
    iterCorr = 0
-   do while (iterCorr <= p%NumCrctn)
+   NumCorrections = p%NumCrctn
+   do while (iterCorr <= NumCorrections)
 
       ! Copy state for correction step
       m%qn = m%q
@@ -823,7 +789,17 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          !----------------------------------------------------------------------
 
          if (iterConv >= p%MaxConvIter) then
-            if (m%ConvWarn) then
+
+            ! If number of corrections is less than or the same as limit,
+            ! increase number of corrections and set counter to trigger 
+            ! a Jacobian update on correction step.
+            if (NumCorrections <= p%NumCrctn) then
+               NumCorrections = NumCorrections + 1
+               m%IterUntilUJac = 0
+
+            else if (m%ConvWarn) then
+
+               ! Otherwise, warn that convergence failed
                call SetErrStat(ErrID_Warn, "Failed to converge in "//trim(Num2LStr(p%MaxConvIter))// &
                                " iterations on step "//trim(Num2LStr(n_t_global_next))// &
                                " (error="//trim(Num2LStr(delta_norm))// &
@@ -831,6 +807,8 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
                                "). Warning will not be displayed again.", ErrStat, ErrMsg, RoutineName)
                m%ConvWarn = .false.
             end if
+
+            ! Exit loop
             exit
          end if
 
@@ -842,8 +820,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! is zero or less, or first solution step, then rebuild the Jacobian.
          ! Note: BuildJacobian resets these counters.
          if ((m%IterUntilUJac <= 0) .or. (m%StepsUntilUJac <= 0) .or. (n_t_global_next == 1)) then
-            call BuildJacobian(p, m, Mods, t_global_next, n_t_global_next*100 + iterConv, &
-                               Turbine, ErrStat2, ErrMsg2)
+            call BuildJacobian(p, m, Mods, t_global_next, Turbine, ErrStat2, ErrMsg2)
             if (Failed()) return
          end if
 
@@ -853,7 +830,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
          ! Calculate continuous state derivatives for tight coupling modules
          do i = 1, size(p%iModTC)
-            call FAST_CalcContStateDeriv(Mods(p%iModTC(i)), t_global_next, STATE_PRED, IsSolve, &
+            call FAST_CalcContStateDeriv(Mods(p%iModTC(i)), t_global_next, STATE_PRED, &
                                          Turbine, ErrStat2, ErrMsg2, dxdt=m%dxdt)
             if (Failed()) return
          end do
@@ -889,9 +866,10 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! Check perturbations for convergence and exit if below tolerance
          !----------------------------------------------------------------------
 
-         ! Calculate average L2 norm of change in states and inputs 
+         ! Calculate average L2 norm of change in states and inputs
          delta_norm = TwoNorm(m%XB(:, 1))/size(m%XB)
 
+         ! Write step debug info if requested
          if (DebugSolver) then
             call Solver_Step_Debug(p, m, n_t_global_next, iterCorr, iterConv, delta_norm)
          end if
@@ -973,17 +951,6 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    ! Update the global time
    Turbine%m_FAST%t_global = t_global_next
 
-   !----------------------------------------------------------------------------
-   ! Display simulation status every SttsTime-seconds (i.e., n_SttsTime steps):
-   !----------------------------------------------------------------------------
-
-   if (Turbine%p_FAST%WrSttsTime) then
-      if (MOD(n_t_global_next, Turbine%p_FAST%n_SttsTime) == 0) then
-         call SimStatus(Turbine%m_FAST%TiLstPrn, Turbine%m_FAST%PrevClockTime, &
-                        Turbine%m_FAST%t_global, Turbine%p_FAST%TMax, Turbine%p_FAST%TDesc)
-      end if
-   end if
-
 contains
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -991,12 +958,11 @@ contains
    end function
 end subroutine
 
-subroutine BuildJacobian(p, m, Mods, this_time, iter, Turbine, ErrStat, ErrMsg)
+subroutine BuildJacobian(p, m, Mods, ThisTime, Turbine, ErrStat, ErrMsg)
    type(TC_ParameterType), intent(in)     :: p           !< Parameters
    type(TC_MiscVarType), intent(inout)    :: m           !< Misc variables
    type(ModDataType), intent(in)          :: Mods(:)     !< Array of module data
-   real(DbKi), intent(in)                 :: this_time   !< Time
-   integer(IntKi), intent(in)             :: iter
+   real(DbKi), intent(in)                 :: ThisTime    !< Time
    type(FAST_TurbineType), intent(inout)  :: Turbine     !< Turbine type
    integer(IntKi), intent(out)            :: ErrStat
    character(*), intent(out)              :: ErrMsg
@@ -1006,8 +972,6 @@ subroutine BuildJacobian(p, m, Mods, this_time, iter, Turbine, ErrStat, ErrMsg)
    character(ErrMsgLen)                   :: ErrMsg2
    logical, parameter                     :: IsSolve = .true.
    integer(IntKi)                         :: i, j
-   real(R8Ki), allocatable                :: tmp(:, :)
-   real(R8Ki), dimension(3)               :: wm_b, wm_p, wm_n, wm_d, wm_pert, delta
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -1028,23 +992,26 @@ subroutine BuildJacobian(p, m, Mods, this_time, iter, Turbine, ErrStat, ErrMsg)
    m%dXdu = 0.0_R8Ki
    m%dYdu = 0.0_R8Ki
    m%dUdy = 0.0_R8Ki
-   call Eye2D(m%dUdu, ErrStat2, ErrMsg2); if (Failed()) return
+   call Eye2D(m%dUdu, ErrStat2, ErrMsg2)
+   if (Failed()) return
 
    ! Calculate dYdx, dXdx, dXdu for tight coupling modules
    do i = 1, size(p%iModTC)
-      call FAST_CalcJacobian(Mods(p%iModTC(i)), this_time, STATE_PRED, IsSolve, Turbine, ErrStat2, ErrMsg2, &
-                             dYdx=m%dYdx, dXdx=m%dXdx, dXdu=m%dXdu); if (Failed()) return
+      call FAST_JacobianPContState(Mods(p%iModTC(i)), ThisTime, STATE_PRED, IsSolve, Turbine, ErrStat2, ErrMsg2, dYdx=m%dYdx, dXdx=m%dXdx)
+      if (Failed()) return
+      call FAST_JacobianPInput(Mods(p%iModTC(i)), ThisTime, STATE_PRED, IsSolve, Turbine, ErrStat2, ErrMsg2, dXdu=m%dXdu)
+      if (Failed()) return
    end do
 
    ! Calculate dYdu Loop for Option 1 modules
    do i = 1, size(p%iModOpt1)
-      call FAST_CalcJacobian(Mods(p%iModOpt1(i)), this_time, STATE_PRED, IsSolve, Turbine, ErrStat2, ErrMsg2, &
-                             dYdu=m%dYdu); if (Failed()) return
+      call FAST_JacobianPInput(Mods(p%iModOpt1(i)), ThisTime, STATE_PRED, IsSolve, Turbine, ErrStat2, ErrMsg2, dYdu=m%dYdu)
+      if (Failed()) return
    end do
 
    ! Calculate dUdu and dUdy for Option 1 meshes
-   call FAST_LinearizeMappings(Mods, p%iModOpt1, m%Mappings, Turbine, ErrStat2, ErrMsg2, &
-                               dUdu=m%dUdu, dUdy=m%dUdy); if (Failed()) return
+   call FAST_LinearizeMappings(Mods, p%iModOpt1, m%Mappings, Turbine, ErrStat2, ErrMsg2, dUdu=m%dUdu, dUdy=m%dUdy)
+   if (Failed()) return
 
    !----------------------------------------------------------------------------
    ! Form full system matrices
@@ -1162,7 +1129,7 @@ subroutine AddDeltaToInputs(Mods, ModOrder, du, u)
          associate (Var => Mods(ModOrder(i))%Vars%u(j))
 
             ! If this is not a solve variable, cycle
-            if (iand(Var%Flags, VF_Solve) == 0) cycle
+            if (.not. Var%Solve) cycle
 
             ! Select based on field type
             select case (Var%Field)
