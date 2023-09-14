@@ -389,6 +389,9 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    if (InitInput%Linearize) then
      call SD_Init_Jacobian(Init, p, u, y, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
    endif
+
+   ! Initialize module variables
+   call Init_ModuleVars(InitInput, u, p, y, m, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
    
    ! Tell GLUECODE the SubDyn timestep interval 
    Interval = p%SDdeltaT
@@ -412,6 +415,105 @@ CONTAINS
    END SUBROUTINE CleanUp
 
 END SUBROUTINE SD_Init
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Init_ModuleVars initializes the variables for this module for use by the solver and linearization
+subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
+   TYPE(SD_InitInputType),    INTENT(IN   )  :: InitInp     !< Input data for initialization routine
+   TYPE(SD_InputType),        INTENT(IN   )  :: u           !< An initial guess for the input; input mesh must be defined
+   TYPE(SD_ParameterType),    INTENT(INOUT)  :: p           !< Parameters
+   TYPE(SD_OutputType),       INTENT(IN)     :: y           !< Initial system outputs (outputs are not calculated;
+   TYPE(SD_MiscVarType),      INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
+   TYPE(SD_InitOutputType),   INTENT(INOUT)  :: InitOut     !< Output for initialization routine
+   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter :: RoutineName = 'Init_ModuleVars'
+   INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
+
+   integer(IntKi)          :: i, j, flags
+   REAL(R8Ki)              :: MaxThrust, MaxTorque
+   CHARACTER(200)          :: Describe
+
+   ! Allocate space for variables (deallocate if already allocated)
+   if (associated(p%Vars)) deallocate(p%Vars)
+   allocate(p%Vars, stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Add pointers to vars to inititialization output
+   InitOut%Vars => p%Vars
+
+   !----------------------------------------------------------------------------
+   ! Continuous State Variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Input variables
+   !----------------------------------------------------------------------------
+   
+   !----------------------------------------------------------------------------
+   ! Output variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Initialize Variables and Values
+   !----------------------------------------------------------------------------
+
+   CALL MV_InitVarsVals(p%Vars, m%Vals, InitInp%Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+   !----------------------------------------------------------------------------
+   ! Linearization
+   !----------------------------------------------------------------------------
+
+   ! If linearization is not requested, return
+   ! if (.not. InitInp%Linearize) return
+   ! TODO: Use variables for linearization
+   return
+
+   ! State Variables
+   call AllocAry(InitOut%LinNames_x, p%Vars%Nx, 'LinNames_x', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(InitOut%RotFrame_x, p%Vars%Nx, 'RotFrame_x', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(InitOut%DerivOrder_x, p%Vars%Nx, 'DerivOrder_x', ErrStat2, ErrMsg2); if (Failed()) return
+   InitOut%DerivOrder_x = 2
+   do i = 1, size(p%Vars%x)
+      do j = 1, p%Vars%x(i)%Num
+         InitOut%LinNames_x(p%Vars%x(i)%iLoc) = p%Vars%x(i)%LinNames
+         InitOut%RotFrame_x(p%Vars%x(i)%iLoc) = iand(p%Vars%x(i)%Flags, VF_RotFrame) > 0
+      end do
+   end do
+
+   ! Input Variables
+   call AllocAry(InitOut%LinNames_u, p%Vars%Nu, 'LinNames_u', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(InitOut%RotFrame_u, p%Vars%Nu, 'RotFrame_u', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(InitOut%IsLoad_u,   p%Vars%Nu, 'IsLoad_u',   ErrStat2, ErrMsg2); if (Failed()) return
+   do i = 1, size(p%Vars%u)
+      do j = 1, p%Vars%u(i)%Num
+         InitOut%LinNames_u(p%Vars%u(i)%iLoc) = p%Vars%u(i)%LinNames
+         InitOut%RotFrame_u(p%Vars%u(i)%iLoc) = iand(p%Vars%u(i)%Flags, VF_RotFrame) > 0
+         InitOut%IsLoad_u(p%Vars%u(i)%iLoc)   = iand(p%Vars%u(i)%Field, VF_Force+VF_Moment) > 0
+      end do
+   end do
+
+   ! Output variables
+   call AllocAry(InitOut%LinNames_y, p%Vars%Ny, 'LinNames_y', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(InitOut%RotFrame_y, p%Vars%Ny, 'RotFrame_y', ErrStat2, ErrMsg2); if (Failed()) return
+   do i = 1, size(p%Vars%y)
+      do j = 1, p%Vars%y(i)%Num
+         InitOut%LinNames_y(p%Vars%y(i)%iLoc) = p%Vars%y(i)%LinNames
+         InitOut%RotFrame_y(p%Vars%y(i)%iLoc) = iand(p%Vars%y(i)%Flags, VF_RotFrame) > 0
+      end do
+   end do
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete and other states.
