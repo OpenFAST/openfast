@@ -73,6 +73,9 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: NumModules = 18      ! The number of modules available in FAST [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: MaxNBlades = 3      ! Maximum number of blades allowed on a turbine [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: IceD_MaxLegs = 4      ! because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Map_LoadMesh = 1      ! Load mesh mapping type [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Map_MotionMesh = 2      ! Motion mesh mapping type [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Map_NonMesh = 3      ! Non mesh mapping type [-]
 ! =========  FAST_VTK_BLSurfaceType  =======
   TYPE, PUBLIC :: FAST_VTK_BLSurfaceType
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AirfoilCoords      !< x,y coordinates for airfoil around each blade node on a blade (relative to reference) [-]
@@ -111,26 +114,27 @@ IMPLICIT NONE
 ! =======================
 ! =========  TC_MappingType  =======
   TYPE, PUBLIC :: TC_MappingType
-    character(VarNameLen)  :: Key      !< Mapping Key [-]
-    character(VarNameLen)  :: SrcMeshName      !< source mesh name [-]
-    character(VarNameLen)  :: DstMeshName      !< destination mesh name [-]
+    character(VarNameLen)  :: Key = ''      !< Mapping Key [-]
+    character(VarNameLen)  :: SrcMeshName = ''      !< source mesh name [-]
+    character(VarNameLen)  :: DstMeshName = ''      !< destination mesh name [-]
     character(VarNameLen)  :: SrcDispMeshName = ''      !< source displacement mesh name [if IsLoad=true] [-]
     character(VarNameLen)  :: DstDispMeshName = ''      !< destination displacement mesh name [if IsLoad=true] [-]
-    INTEGER(IntKi)  :: SrcModID = 0_IntKi      !< Output module ID [-]
-    INTEGER(IntKi)  :: DstModID = 0_IntKi      !< Input module ID [-]
-    INTEGER(IntKi)  :: SrcModIdx = 0_IntKi      !< Output module index in ModData array [-]
-    INTEGER(IntKi)  :: DstModIdx = 0_IntKi      !< Input module index in ModData array [-]
-    INTEGER(IntKi)  :: SrcIns = 0_IntKi      !< Output module Instance [-]
-    INTEGER(IntKi)  :: DstIns = 0_IntKi      !< Input module Instance [-]
+    INTEGER(IntKi)  :: i1 = 0      !< Optional index for specifying transfers [-]
+    INTEGER(IntKi)  :: i2 = 0      !< Optional index for specifying transfers [-]
+    INTEGER(IntKi)  :: SrcModIdx = 0      !< Output module index in ModData array [-]
+    INTEGER(IntKi)  :: DstModIdx = 0      !< Input module index in ModData array [-]
+    INTEGER(IntKi)  :: SrcModID = 0      !< Output module ID [-]
+    INTEGER(IntKi)  :: DstModID = 0      !< Input module ID [-]
+    INTEGER(IntKi)  :: SrcIns = 0      !< Output module Instance [-]
+    INTEGER(IntKi)  :: DstIns = 0      !< Input module Instance [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: SrcVarIdx      !< motion variable index [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DstVarIdx      !< motion variable index [-]
-    INTEGER(IntKi)  :: SrcDispVarIdx = 0_IntKi      !< source displacement var index [if IsLoad=true] [-]
-    INTEGER(IntKi)  :: DstDispVarIdx = 0_IntKi      !< destination displacement var index [if IsLoad=true] [-]
-    INTEGER(IntKi)  :: Idx = 0_IntKi      !< Optional index for specifying transfers [-]
+    INTEGER(IntKi)  :: SrcDispVarIdx = 0      !< source displacement var index [if IsLoad=true] [-]
+    INTEGER(IntKi)  :: DstDispVarIdx = 0      !< destination displacement var index [if IsLoad=true] [-]
+    INTEGER(IntKi)  :: Typ = 0      !< Integer denoting mapping type (1=Load Mesh, 2=Motion Mesh, 3=Non-Mesh) [-]
+    LOGICAL  :: Ready = .false.      !< Flag indicating output has been ready to be transferred [-]
     TYPE(MeshType)  :: MeshTmp      !< Temporary mesh for intermediate transfers [-]
     TYPE(MeshMapType)  :: MeshMap      !< Mesh mapping from output variable to input variable [-]
-    LOGICAL  :: IsLoad = .false.      !< Flag indicating if this is a load or motion mapping [-]
-    LOGICAL  :: Ready = .false.      !< Flag indicating output has been ready to be transferred [-]
   END TYPE TC_MappingType
 ! =======================
 ! =========  TC_ParameterType  =======
@@ -160,12 +164,13 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:2)  :: iJUT = 0_IntKi      !< Indices of Jacobian input variables from tight coupling [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iJL      !< Indices of Jacobian load variables [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ixqd      !<  [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModAll      !< ModData index order for all modules [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModInit      !< ModData index order for step 0 initialization [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModTC      !< ModData index order for tight coupling modules [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModBD      !< ModData index order for BD modules [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModOpt1      !< ModData index order for option 1 modules [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModOpt1US      !< ModData index order for option 1 modules to update states [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModOpt2      !< ModData index order for option 2 modules [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iModPost      !< ModData index order for post option 1 modules [-]
   END TYPE TC_ParameterType
 ! =======================
 ! =========  TC_MiscVarType  =======
@@ -198,6 +203,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< Change in x [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !<  [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: UDiff      !<  [-]
+    LOGICAL  :: ConvWarn = .false.      !< Flag to warn about convergence failure [-]
     TYPE(TC_MappingType) , DIMENSION(:), ALLOCATABLE  :: Mappings      !< Array of mesh mappings in solver [-]
   END TYPE TC_MiscVarType
 ! =======================
@@ -1523,10 +1529,12 @@ subroutine FAST_CopyTC_MappingType(SrcTC_MappingTypeData, DstTC_MappingTypeData,
    DstTC_MappingTypeData%DstMeshName = SrcTC_MappingTypeData%DstMeshName
    DstTC_MappingTypeData%SrcDispMeshName = SrcTC_MappingTypeData%SrcDispMeshName
    DstTC_MappingTypeData%DstDispMeshName = SrcTC_MappingTypeData%DstDispMeshName
-   DstTC_MappingTypeData%SrcModID = SrcTC_MappingTypeData%SrcModID
-   DstTC_MappingTypeData%DstModID = SrcTC_MappingTypeData%DstModID
+   DstTC_MappingTypeData%i1 = SrcTC_MappingTypeData%i1
+   DstTC_MappingTypeData%i2 = SrcTC_MappingTypeData%i2
    DstTC_MappingTypeData%SrcModIdx = SrcTC_MappingTypeData%SrcModIdx
    DstTC_MappingTypeData%DstModIdx = SrcTC_MappingTypeData%DstModIdx
+   DstTC_MappingTypeData%SrcModID = SrcTC_MappingTypeData%SrcModID
+   DstTC_MappingTypeData%DstModID = SrcTC_MappingTypeData%DstModID
    DstTC_MappingTypeData%SrcIns = SrcTC_MappingTypeData%SrcIns
    DstTC_MappingTypeData%DstIns = SrcTC_MappingTypeData%DstIns
    if (allocated(SrcTC_MappingTypeData%SrcVarIdx)) then
@@ -1555,15 +1563,14 @@ subroutine FAST_CopyTC_MappingType(SrcTC_MappingTypeData, DstTC_MappingTypeData,
    end if
    DstTC_MappingTypeData%SrcDispVarIdx = SrcTC_MappingTypeData%SrcDispVarIdx
    DstTC_MappingTypeData%DstDispVarIdx = SrcTC_MappingTypeData%DstDispVarIdx
-   DstTC_MappingTypeData%Idx = SrcTC_MappingTypeData%Idx
+   DstTC_MappingTypeData%Typ = SrcTC_MappingTypeData%Typ
+   DstTC_MappingTypeData%Ready = SrcTC_MappingTypeData%Ready
    call MeshCopy(SrcTC_MappingTypeData%MeshTmp, DstTC_MappingTypeData%MeshTmp, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    call NWTC_Library_CopyMeshMapType(SrcTC_MappingTypeData%MeshMap, DstTC_MappingTypeData%MeshMap, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstTC_MappingTypeData%IsLoad = SrcTC_MappingTypeData%IsLoad
-   DstTC_MappingTypeData%Ready = SrcTC_MappingTypeData%Ready
 end subroutine
 
 subroutine FAST_DestroyTC_MappingType(TC_MappingTypeData, ErrStat, ErrMsg)
@@ -1597,10 +1604,12 @@ subroutine FAST_PackTC_MappingType(Buf, Indata)
    call RegPack(Buf, InData%DstMeshName)
    call RegPack(Buf, InData%SrcDispMeshName)
    call RegPack(Buf, InData%DstDispMeshName)
-   call RegPack(Buf, InData%SrcModID)
-   call RegPack(Buf, InData%DstModID)
+   call RegPack(Buf, InData%i1)
+   call RegPack(Buf, InData%i2)
    call RegPack(Buf, InData%SrcModIdx)
    call RegPack(Buf, InData%DstModIdx)
+   call RegPack(Buf, InData%SrcModID)
+   call RegPack(Buf, InData%DstModID)
    call RegPack(Buf, InData%SrcIns)
    call RegPack(Buf, InData%DstIns)
    call RegPack(Buf, allocated(InData%SrcVarIdx))
@@ -1615,11 +1624,10 @@ subroutine FAST_PackTC_MappingType(Buf, Indata)
    end if
    call RegPack(Buf, InData%SrcDispVarIdx)
    call RegPack(Buf, InData%DstDispVarIdx)
-   call RegPack(Buf, InData%Idx)
+   call RegPack(Buf, InData%Typ)
+   call RegPack(Buf, InData%Ready)
    call MeshPack(Buf, InData%MeshTmp) 
    call NWTC_Library_PackMeshMapType(Buf, InData%MeshMap) 
-   call RegPack(Buf, InData%IsLoad)
-   call RegPack(Buf, InData%Ready)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1641,13 +1649,17 @@ subroutine FAST_UnPackTC_MappingType(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%DstDispMeshName)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%SrcModID)
+   call RegUnpack(Buf, OutData%i1)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%DstModID)
+   call RegUnpack(Buf, OutData%i2)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%SrcModIdx)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%DstModIdx)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%SrcModID)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%DstModID)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%SrcIns)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1685,14 +1697,12 @@ subroutine FAST_UnPackTC_MappingType(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%DstDispVarIdx)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Idx)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call MeshUnpack(Buf, OutData%MeshTmp) ! MeshTmp 
-   call NWTC_Library_UnpackMeshMapType(Buf, OutData%MeshMap) ! MeshMap 
-   call RegUnpack(Buf, OutData%IsLoad)
+   call RegUnpack(Buf, OutData%Typ)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Ready)
    if (RegCheckErr(Buf, RoutineName)) return
+   call MeshUnpack(Buf, OutData%MeshTmp) ! MeshTmp 
+   call NWTC_Library_UnpackMeshMapType(Buf, OutData%MeshMap) ! MeshMap 
 end subroutine
 
 subroutine FAST_CopyTC_ParameterType(SrcTC_ParameterTypeData, DstTC_ParameterTypeData, CtrlCode, ErrStat, ErrMsg)
@@ -1753,17 +1763,17 @@ subroutine FAST_CopyTC_ParameterType(SrcTC_ParameterTypeData, DstTC_ParameterTyp
       end if
       DstTC_ParameterTypeData%ixqd = SrcTC_ParameterTypeData%ixqd
    end if
-   if (allocated(SrcTC_ParameterTypeData%iModAll)) then
-      LB(1:1) = lbound(SrcTC_ParameterTypeData%iModAll)
-      UB(1:1) = ubound(SrcTC_ParameterTypeData%iModAll)
-      if (.not. allocated(DstTC_ParameterTypeData%iModAll)) then
-         allocate(DstTC_ParameterTypeData%iModAll(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcTC_ParameterTypeData%iModInit)) then
+      LB(1:1) = lbound(SrcTC_ParameterTypeData%iModInit)
+      UB(1:1) = ubound(SrcTC_ParameterTypeData%iModInit)
+      if (.not. allocated(DstTC_ParameterTypeData%iModInit)) then
+         allocate(DstTC_ParameterTypeData%iModInit(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_ParameterTypeData%iModAll.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_ParameterTypeData%iModInit.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstTC_ParameterTypeData%iModAll = SrcTC_ParameterTypeData%iModAll
+      DstTC_ParameterTypeData%iModInit = SrcTC_ParameterTypeData%iModInit
    end if
    if (allocated(SrcTC_ParameterTypeData%iModTC)) then
       LB(1:1) = lbound(SrcTC_ParameterTypeData%iModTC)
@@ -1825,6 +1835,18 @@ subroutine FAST_CopyTC_ParameterType(SrcTC_ParameterTypeData, DstTC_ParameterTyp
       end if
       DstTC_ParameterTypeData%iModOpt2 = SrcTC_ParameterTypeData%iModOpt2
    end if
+   if (allocated(SrcTC_ParameterTypeData%iModPost)) then
+      LB(1:1) = lbound(SrcTC_ParameterTypeData%iModPost)
+      UB(1:1) = ubound(SrcTC_ParameterTypeData%iModPost)
+      if (.not. allocated(DstTC_ParameterTypeData%iModPost)) then
+         allocate(DstTC_ParameterTypeData%iModPost(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstTC_ParameterTypeData%iModPost.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstTC_ParameterTypeData%iModPost = SrcTC_ParameterTypeData%iModPost
+   end if
 end subroutine
 
 subroutine FAST_DestroyTC_ParameterType(TC_ParameterTypeData, ErrStat, ErrMsg)
@@ -1840,8 +1862,8 @@ subroutine FAST_DestroyTC_ParameterType(TC_ParameterTypeData, ErrStat, ErrMsg)
    if (allocated(TC_ParameterTypeData%ixqd)) then
       deallocate(TC_ParameterTypeData%ixqd)
    end if
-   if (allocated(TC_ParameterTypeData%iModAll)) then
-      deallocate(TC_ParameterTypeData%iModAll)
+   if (allocated(TC_ParameterTypeData%iModInit)) then
+      deallocate(TC_ParameterTypeData%iModInit)
    end if
    if (allocated(TC_ParameterTypeData%iModTC)) then
       deallocate(TC_ParameterTypeData%iModTC)
@@ -1857,6 +1879,9 @@ subroutine FAST_DestroyTC_ParameterType(TC_ParameterTypeData, ErrStat, ErrMsg)
    end if
    if (allocated(TC_ParameterTypeData%iModOpt2)) then
       deallocate(TC_ParameterTypeData%iModOpt2)
+   end if
+   if (allocated(TC_ParameterTypeData%iModPost)) then
+      deallocate(TC_ParameterTypeData%iModPost)
    end if
 end subroutine
 
@@ -1898,10 +1923,10 @@ subroutine FAST_PackTC_ParameterType(Buf, Indata)
       call RegPackBounds(Buf, 2, lbound(InData%ixqd), ubound(InData%ixqd))
       call RegPack(Buf, InData%ixqd)
    end if
-   call RegPack(Buf, allocated(InData%iModAll))
-   if (allocated(InData%iModAll)) then
-      call RegPackBounds(Buf, 1, lbound(InData%iModAll), ubound(InData%iModAll))
-      call RegPack(Buf, InData%iModAll)
+   call RegPack(Buf, allocated(InData%iModInit))
+   if (allocated(InData%iModInit)) then
+      call RegPackBounds(Buf, 1, lbound(InData%iModInit), ubound(InData%iModInit))
+      call RegPack(Buf, InData%iModInit)
    end if
    call RegPack(Buf, allocated(InData%iModTC))
    if (allocated(InData%iModTC)) then
@@ -1927,6 +1952,11 @@ subroutine FAST_PackTC_ParameterType(Buf, Indata)
    if (allocated(InData%iModOpt2)) then
       call RegPackBounds(Buf, 1, lbound(InData%iModOpt2), ubound(InData%iModOpt2))
       call RegPack(Buf, InData%iModOpt2)
+   end if
+   call RegPack(Buf, allocated(InData%iModPost))
+   if (allocated(InData%iModPost)) then
+      call RegPackBounds(Buf, 1, lbound(InData%iModPost), ubound(InData%iModPost))
+      call RegPack(Buf, InData%iModPost)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -2013,18 +2043,18 @@ subroutine FAST_UnPackTC_ParameterType(Buf, OutData)
       call RegUnpack(Buf, OutData%ixqd)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   if (allocated(OutData%iModAll)) deallocate(OutData%iModAll)
+   if (allocated(OutData%iModInit)) deallocate(OutData%iModInit)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(Buf, 1, LB, UB)
       if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%iModAll(LB(1):UB(1)),stat=stat)
+      allocate(OutData%iModInit(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%iModAll.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%iModInit.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
          return
       end if
-      call RegUnpack(Buf, OutData%iModAll)
+      call RegUnpack(Buf, OutData%iModInit)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    if (allocated(OutData%iModTC)) deallocate(OutData%iModTC)
@@ -2095,6 +2125,20 @@ subroutine FAST_UnPackTC_ParameterType(Buf, OutData)
          return
       end if
       call RegUnpack(Buf, OutData%iModOpt2)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%iModPost)) deallocate(OutData%iModPost)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%iModPost(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%iModPost.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%iModPost)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine
@@ -2415,6 +2459,7 @@ subroutine FAST_CopyTC_MiscVarType(SrcTC_MiscVarTypeData, DstTC_MiscVarTypeData,
       end if
       DstTC_MiscVarTypeData%UDiff = SrcTC_MiscVarTypeData%UDiff
    end if
+   DstTC_MiscVarTypeData%ConvWarn = SrcTC_MiscVarTypeData%ConvWarn
    if (allocated(SrcTC_MiscVarTypeData%Mappings)) then
       LB(1:1) = lbound(SrcTC_MiscVarTypeData%Mappings)
       UB(1:1) = ubound(SrcTC_MiscVarTypeData%Mappings)
@@ -2665,6 +2710,7 @@ subroutine FAST_PackTC_MiscVarType(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%UDiff), ubound(InData%UDiff))
       call RegPack(Buf, InData%UDiff)
    end if
+   call RegPack(Buf, InData%ConvWarn)
    call RegPack(Buf, allocated(InData%Mappings))
    if (allocated(InData%Mappings)) then
       call RegPackBounds(Buf, 1, lbound(InData%Mappings), ubound(InData%Mappings))
@@ -3042,6 +3088,8 @@ subroutine FAST_UnPackTC_MiscVarType(Buf, OutData)
       call RegUnpack(Buf, OutData%UDiff)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
+   call RegUnpack(Buf, OutData%ConvWarn)
+   if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%Mappings)) deallocate(OutData%Mappings)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return

@@ -384,7 +384,7 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
    INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
 
-   integer(IntKi)          :: i, j, flags
+   integer(IntKi)          :: i, j, k, idx
    REAL(R8Ki)              :: MaxThrust, MaxTorque, ScaleLength
    TYPE(ModVarType)        :: Var
 
@@ -407,88 +407,88 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
 
    ! Add continuous state variables (translation and rotation)
    call MV_AddVar(p%Vars%x, 'PlatformSurge', VF_TransDisp, &
-                  iUsr=[DOF_Sg], &
+                  iUsr=DOF_Sg, &
                   Perturb=0.2_R8Ki * D2R_D * max(p%TowerHt, 1.0_ReKi), &
                   LinNames=['Platform horizontal surge translation DOF (internal DOF index = DOF_Sg), m'], &
                   Active=InputFileData%PtfmSgDOF)
    call MV_AddVar(p%Vars%x, 'PlatformSway', VF_TransDisp, &
-                  iUsr=[DOF_Sw], &
+                  iUsr=DOF_Sw, &
                   Perturb=0.2_R8Ki * D2R_D * max(p%TowerHt, 1.0_ReKi), &
                   LinNames=['Platform horizontal sway translation DOF (internal DOF index = DOF_Sw), m'], &
                   Active=InputFileData%PtfmSwDOF)
    call MV_AddVar(p%Vars%x, 'PlatformHeave', VF_TransDisp, &
-                  iUsr=[DOF_Hv], &
+                  iUsr=DOF_Hv, &
                   Perturb=0.2_R8Ki * D2R_D * max(p%TowerHt, 1.0_ReKi), &
                   LinNames=['Platform vertical heave translation DOF (internal DOF index = DOF_Hv), m'], &
                   Active=InputFileData%PtfmHvDOF)
    call MV_AddVar(p%Vars%x, 'PlatformRoll', VF_AngularDisp, &
-                  iUsr=[DOF_R], &
+                  iUsr=DOF_R, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Platform roll tilt rotation DOF (internal DOF index = DOF_R), rad'], &
                   Active=InputFileData%PtfmRDOF)
    call MV_AddVar(p%Vars%x, 'PlatformPitch', VF_AngularDisp, &
-                  iUsr=[DOF_P], &
+                  iUsr=DOF_P, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Platform pitch tilt rotation DOF (internal DOF index = DOF_P), rad'], &
                   Active=InputFileData%PtfmPDOF)
    call MV_AddVar(p%Vars%x, 'PlatformYaw', VF_AngularDisp, &
-                  iUsr=[DOF_Y], &
+                  iUsr=DOF_Y, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Platform yaw rotation DOF (internal DOF index = DOF_Y), rad'], &
                   Active=InputFileData%PtfmYDOF)
    call MV_AddVar(p%Vars%x, 'TowerFA1', VF_TransDisp, &
-                  iUsr=[DOF_TFA1], &
+                  iUsr=DOF_TFA1, &
                   Perturb=0.020_R8Ki * D2R_D * p%TwrFlexL, &
                   LinNames=['1st tower fore-aft bending mode DOF (internal DOF index = DOF_TFA1), m'], &
                   Active=InputFileData%TwFADOF1)
    call MV_AddVar(p%Vars%x, 'TowerSS1', VF_TransDisp, &
-                  iUsr=[DOF_TSS1], &
+                  iUsr=DOF_TSS1, &
                   Perturb=0.020_R8Ki * D2R_D * p%TwrFlexL, &
                   LinNames=['1st tower side-to-side bending mode DOF (internal DOF index = DOF_TSS1), m'], &
                   Active=InputFileData%TwSSDOF1)
    call MV_AddVar(p%Vars%x, 'TowerFA2', VF_TransDisp, &
-                  iUsr=[DOF_TFA2], &
+                  iUsr=DOF_TFA2, &
                   Perturb=0.002_R8Ki * D2R_D * p%TwrFlexL, &
                   LinNames=['2nd tower fore-aft bending mode DOF (internal DOF index = DOF_TFA2), m'], &
                   Active=InputFileData%TwFADOF2)
    call MV_AddVar(p%Vars%x, 'TowerSS2', VF_TransDisp, &
-                  iUsr=[DOF_TSS2], &
+                  iUsr=DOF_TSS2, &
                   Perturb=0.002_R8Ki * D2R_D * p%TwrFlexL, &
                   LinNames=['2nd tower side-to-side bending mode DOF (internal DOF index = DOF_TSS2), m'], &
                   Active=InputFileData%TwSSDOF2)
    call MV_AddVar(p%Vars%x, 'NacelleYaw', VF_AngularDisp, &
-                  iUsr=[DOF_Yaw], &
+                  iUsr=DOF_Yaw, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Nacelle yaw DOF (internal DOF index = DOF_Yaw), rad'], &
                   Active=InputFileData%YawDOF)
    call MV_AddVar(p%Vars%x, 'RotorFurl', VF_AngularDisp, &
-                  iUsr=[DOF_RFrl], &
+                  iUsr=DOF_RFrl, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Rotor-furl DOF (internal DOF index = DOF_RFrl), rad'], &
                   Active=InputFileData%RFrlDOF)
    call MV_AddVar(p%Vars%x, 'GeneratorAzimuth', VF_AngularDisp, &
-                  iUsr=[DOF_GeAz], &
+                  iUsr=DOF_GeAz, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Variable speed generator DOF (internal DOF index = DOF_GeAz), rad'], &
                   Active=InputFileData%GenDOF)
    call MV_AddVar(p%Vars%x, 'DrivetrainFlexibility', VF_AngularDisp, &
-                  iUsr=[DOF_DrTr], &
+                  iUsr=DOF_DrTr, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Drivetrain rotational-flexibility DOF (internal DOF index = DOF_DrTr), rad'], &
                   Active=InputFileData%DrTrDOF)
    call MV_AddVar(p%Vars%x, 'TailFurl', VF_AngularDisp, &
-                  iUsr=[DOF_TFrl], &
+                  iUsr=DOF_TFrl, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Tail-furl DOF (internal DOF index = DOF_TFrl), rad'], &
                   Active=InputFileData%TFrlDOF)
    call MV_AddVar(p%Vars%x, 'RotorTeeter', VF_AngularDisp, &
-                  iUsr=[DOF_Teet], &
+                  iUsr=DOF_Teet, &
                   Perturb=2.0_R8Ki * D2R_D, &
                   LinNames=['Hub teetering DOF (internal DOF index = DOF_Teet), rad'], &
                   Active=InputFileData%TeetDOF)
    do i = 1, p%NumBl
       call MV_AddVar(p%Vars%x, 'Blade'//trim(Num2LStr(i))//'Flap1', VF_TransDisp, Flags=VF_RotFrame, &
-                     iUsr=[DOF_BF(i,1)], &
+                     iUsr=DOF_BF(i,1), &
                      Perturb=0.20_R8Ki * D2R_D * p%BldFlexL, &
                      LinNames=['1st flapwise bending-mode DOF of blade '//trim(Num2LStr(i))//&
                               ' (internal DOF index = DOF_BF('//trim(Num2LStr(i))//',1)), m'], &
@@ -496,7 +496,7 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
    end do
    do i = 1, p%NumBl
       call MV_AddVar(p%Vars%x, 'Blade'//trim(Num2LStr(i))//'Edge1', VF_TransDisp, Flags=VF_RotFrame, &
-                     iUsr=[DOF_BE(i,1)], &
+                     iUsr=DOF_BE(i,1), &
                      Perturb=0.20_R8Ki * D2R_D * p%BldFlexL, &
                      LinNames=['1st edgewise bending-mode DOF of blade '//trim(Num2LStr(i))//&
                               ' (internal DOF index = DOF_BE('//trim(Num2LStr(i))//',1)), m'], &
@@ -504,7 +504,7 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
    end do
    do i = 1, p%NumBl
       call MV_AddVar(p%Vars%x, 'Blade'//trim(Num2LStr(i))//'Flap2', VF_TransDisp, Flags=VF_RotFrame, &
-                     iUsr=[DOF_BF(i,2)], &
+                     iUsr=DOF_BF(i,2), &
                      Perturb=0.02_R8Ki * D2R_D * p%BldFlexL, &
                      LinNames=['2nd flapwise bending-mode DOF of blade '//trim(Num2LStr(i))//&
                               ' (internal DOF index = DOF_BF('//trim(Num2LStr(i))//',2)), m'], &
@@ -545,10 +545,11 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
    ! Blade Point Loads
    if (allocated(u%BladePtLoads)) then
       do i = 1, p%NumBl
-         call MV_AddMeshVar(p%Vars%u, "BladeLoad"//trim(Num2LStr(i)), LoadFields, &
+         call MV_AddMeshVar(p%Vars%u, "BladeLoad"//IdxStr(i), LoadFields, &
                             Nodes=p%BldNodes, &
                             Perturbs=[MaxThrust / (100.0_R8Ki*p%NumBl*p%BldNodes), &
-                                      MaxTorque / (100.0_R8Ki*p%NumBl*p%BldNodes)])
+                                      MaxTorque / (100.0_R8Ki*p%NumBl*p%BldNodes)], &
+                            Active=u%BladePtLoads(i)%committed)
       end do
    end if
 
@@ -599,14 +600,14 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
 
    if (allocated(y%BladeLn2Mesh))then
       do i = 1, p%NumBl
-         call MV_AddMeshVar(p%Vars%y, 'BladeMotion'//Num2LStr(i), MotionFields, Nodes=y%BladeLn2Mesh(i)%Nnodes, Flags=VF_Line)
+         call MV_AddMeshVar(p%Vars%y, 'BladeMotion'//IdxStr(i), MotionFields, Nodes=y%BladeLn2Mesh(i)%Nnodes, Flags=VF_Line)
       end do
    end if 
    call MV_AddMeshVar(p%Vars%y, 'PlatformMotion', MotionFields, Nodes=y%PlatformPtMesh%Nnodes)
    call MV_AddMeshVar(p%Vars%y, 'TowerMotion', MotionFields, Nodes=y%TowerLn2Mesh%Nnodes, Flags=VF_Line)
    call MV_AddMeshVar(p%Vars%y, 'HubMotion', [VF_TransDisp, VF_Orientation, VF_AngularVel], Nodes=y%HubPtMotion%Nnodes)
    do i = 1, p%NumBl
-      call MV_AddMeshVar(p%Vars%y, 'BladeRootMotion'//Num2LStr(i), MotionFields, Nodes=y%BladeRootMotion(i)%Nnodes)
+      call MV_AddMeshVar(p%Vars%y, 'BladeRootMotion'//IdxStr(i), MotionFields, Nodes=y%BladeRootMotion(i)%Nnodes)
    end do
    call MV_AddMeshVar(p%Vars%y, 'NacelleMotion', MotionFields, Nodes=y%NacelleMotion%Nnodes)
    call MV_AddVar(p%Vars%y, 'Yaw',     VF_AngularDisp, LinNames=['Yaw, rad'])
@@ -615,16 +616,20 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
    do i = 1, p%NumOuts
       call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, VF_Scalar, &
                      Flags=OutParamFlags(p%OutParam(i)%Indx), &
-                     iUsr=[i], &
+                     iUsr=i, &
                      LinNames=[trim(p%OutParam(i)%Name)//', '//trim(p%OutParam(i)%Units)], &
                      Active=p%OutParam(i)%Indx > 0)
    end do
-   do i = 1, p%BldNd_TotNumOuts
-      call MV_AddVar(p%Vars%y, p%BldNd_OutParam(i)%Name, VF_Scalar, &
-                     Flags=VF_RotFrame, &
-                     iUsr=[p%NumOuts+i], &
-                     LinNames=[trim(p%BldNd_OutParam(i)%Name)//', '//trim(p%BldNd_OutParam(i)%Units)], &
-                     Active=p%BldNd_OutParam(i)%Indx > 0)
+   idx = p%NumOuts + 1
+   do i = 1, p%BldNd_NumOuts
+      do j = 1, p%BldNd_BladesOut
+         call MV_AddVar(p%Vars%y, p%BldNd_OutParam(i)%Name, VF_Scalar, Num=p%BldNodes, &
+                        Flags=VF_RotFrame, &
+                        iUsr=idx, &
+                        LinNames=[(BldOutLinName(p%BldNd_OutParam(i), j, k), k=1, p%BldNodes)], &
+                        Active=p%BldNd_OutParam(i)%Indx > 0)
+         idx = idx + p%BldNodes
+      end do
    end do
 
    !----------------------------------------------------------------------------
@@ -678,6 +683,12 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat,
    end do
 
 contains
+   function BldOutLinName(OutParam, iBlade, iNode) result(Name)
+      integer(IntKi), intent(in)    :: iBlade, iNode
+      type(OutParmType), intent(in) :: OutParam
+      character(LinChanLen)         :: Name
+      write(Name, '("B",I1.1,"N",I3.3,A,", ",A)') iBlade, iNode, trim(OutParam%Name), trim(OutParam%Units)
+   end function
    function OutParamFlags(indx) result(flags)
       integer(IntKi), intent(in) :: indx
       integer(IntKi)             :: flags
@@ -10602,6 +10613,9 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          ! If extended linearization variable, skip
          if (iand(p%Vars%u(i)%Flags, VF_Ext) > 0) cycle
 
+         ! TODO: Remove for linearization
+         if (iand(p%Vars%u(i)%Flags, VF_Solve) == 0) cycle
+
          ! Loop through number of linearization perturbations in variable
          do j = 1,p%Vars%u(i)%Num
                        
@@ -10641,6 +10655,9 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
          ! If extended linearization variable, skip
          if (iand(p%Vars%u(i)%Flags, VF_Ext) > 0) cycle
+
+         ! TODO: Remove for linearization
+         if (iand(p%Vars%u(i)%Flags, VF_Solve) == 0) cycle
 
          ! Loop through number of linearization perturbations in variable
          do j = 1,p%Vars%u(i)%Num
@@ -10761,6 +10778,9 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          ! If extended linearization variable, skip
          if (iand(p%Vars%x(i)%Flags, VF_Ext) > 0) cycle
 
+         ! TODO: Remove for linearization
+         if (iand(p%Vars%x(i)%Flags, VF_Solve) == 0) cycle
+
          ! Loop through number of linearization perturbations in variable
          do j = 1,p%Vars%x(i)%Num
                         
@@ -10797,6 +10817,9 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
          ! If extended linearization variable, skip
          if (iand(p%Vars%x(i)%Flags, VF_Ext) > 0) cycle
+
+         ! TODO: Remove for linearization
+         if (iand(p%Vars%x(i)%Flags, VF_Solve) == 0) cycle
 
          ! Loop through number of linearization perturbations in variable
          do j = 1,p%Vars%x(i)%Num
@@ -11117,9 +11140,9 @@ subroutine ED_PackStateValues(p, x, ary)
    do i = 1, size(p%Vars%x)
       select case(p%Vars%x(i)%Field)
       case (VF_TransDisp, VF_AngularDisp)
-         ary(p%Vars%x(i)%iLoc) = x%QT(p%Vars%x(i)%iUsr)
+         ary(p%Vars%x(i)%iLoc(1)) = x%QT(p%Vars%x(i)%iUsr)
       case (VF_TransVel, VF_AngularVel)
-         ary(p%Vars%x(i)%iLoc) = x%QDT(p%Vars%x(i)%iUsr)
+         ary(p%Vars%x(i)%iLoc(1)) = x%QDT(p%Vars%x(i)%iUsr)
       end select
    end do
 end subroutine
@@ -11132,9 +11155,9 @@ subroutine ED_UnpackStateValues(p, ary, x)
    do i = 1, size(p%Vars%x)
       select case(p%Vars%x(i)%Field)
       case (VF_TransDisp, VF_AngularDisp)
-         x%QT(p%Vars%x(i)%iUsr) = ary(p%Vars%x(i)%iLoc)
+         x%QT(p%Vars%x(i)%iUsr) = ary(p%Vars%x(i)%iLoc(1))
       case (VF_TransVel, VF_AngularVel)
-         x%QDT(p%Vars%x(i)%iUsr) = ary(p%Vars%x(i)%iLoc)
+         x%QDT(p%Vars%x(i)%iUsr) = ary(p%Vars%x(i)%iLoc(1))
       end select
    end do
 end subroutine
@@ -11184,7 +11207,7 @@ subroutine ED_PackOutputValues(p, y, ary)
    type(ED_ParameterType), intent(in)  :: p
    type(ED_OutputType), intent(in)     :: y
    real(R8Ki), intent(out)             :: ary(:)
-   integer(IntKi)                      :: iv, i
+   integer(IntKi)                      :: iv, i, j
    iv = 1
    if (allocated(y%BladeLn2Mesh)) then
       do i = 1, size(y%BladeLn2Mesh)
@@ -11204,7 +11227,9 @@ subroutine ED_PackOutputValues(p, y, ary)
    call MV_PackVar(p%Vars%y, iv, y%YawRate, ary)
    call MV_PackVar(p%Vars%y, iv, y%HSS_Spd, ary)
    do while (iv <= size(p%Vars%y))
-      call MV_PackVar(p%Vars%y, iv, y%WriteOutput(p%Vars%y(iv)%iUsr(1)), ary)
+      i = p%Vars%y(iv)%iUsr
+      j = i + p%Vars%y(iv)%Num - 1
+      call MV_PackVar(p%Vars%y, iv, y%WriteOutput(i:j), ary)
    end do
 end subroutine
 

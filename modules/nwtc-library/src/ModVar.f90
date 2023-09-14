@@ -52,7 +52,7 @@ public :: MV_ComputeCentralDiff, MV_Perturb, MV_ComputeDiff
 public :: MV_AddVar, MV_AddMeshVar, MV_AddModule, SetFlags
 public :: LoadFields, MotionFields, TransFields, AngularFields, MeshFields
 public :: wm_to_dcm, wm_compose, wm_from_dcm, wm_inv, wm_to_xyz, wm_from_xyz
-public :: MV_FieldString
+public :: MV_FieldString, IdxStr
 
 contains
 
@@ -100,21 +100,21 @@ subroutine MV_InitVarsVals(Vars, Vals, Linearize, ErrStat, ErrMsg)
    ErrMsg = ''
 
    ! Initialize state variables
-   if (.not. allocated(Vars%x)) allocate(Vars%x(0))
+   if (.not. allocated(Vars%x)) allocate (Vars%x(0))
    StartIndex = 1
    do i = 1, size(Vars%x)
       call ModVarType_Init(Vars%x(i), StartIndex, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
    end do
 
    ! Initialize input variables
-   if (.not. allocated(Vars%u)) allocate(Vars%u(0))
+   if (.not. allocated(Vars%u)) allocate (Vars%u(0))
    StartIndex = 1
    do i = 1, size(Vars%u)
       call ModVarType_Init(Vars%u(i), StartIndex, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
    end do
 
    ! Initialize output variables
-   if (.not. allocated(Vars%y)) allocate(Vars%y(0))
+   if (.not. allocated(Vars%y)) allocate (Vars%y(0))
    StartIndex = 1
    do i = 1, size(Vars%y)
       call ModVarType_Init(Vars%y(i), StartIndex, Linearize, ErrStat2, ErrMsg2); if (Failed()) return
@@ -525,6 +525,14 @@ subroutine MV_AddModule(ModAry, ModID, ModAbbr, Instance, ModDT, SolverDT, Vars,
    ModData = ModDataType(Idx=size(ModAry) + 1, ID=ModID, Abbr=ModAbbr, &
                          Ins=Instance, DT=ModDT, Vars=Vars)
 
+   ! Allocate source and destination mapping arrays
+   call AllocAry(ModData%SrcMaps, 0, "ModData%SrcMaps", ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call AllocAry(ModData%DstMaps, 0, "ModData%DstMaps", ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
    !----------------------------------------------------------------------------
    ! Calculate Module Substepping
    !----------------------------------------------------------------------------
@@ -587,11 +595,11 @@ subroutine MV_AddMeshVar(VarAry, Name, Fields, Nodes, Flags, Perturbs, Active)
    end do
 end subroutine
 
-subroutine MV_AddVar(VarAry, Name, Field, Num, Flags, iUsr, Perturb, LinNames, Active)
+subroutine MV_AddVar(VarAry, Name, Field, Num, Flags, iUsr, jUsr, Perturb, LinNames, Active)
    type(ModVarType), allocatable, intent(inout) :: VarAry(:)
    character(*), intent(in)                     :: Name
    integer(IntKi), intent(in)                   :: Field
-   integer(IntKi), optional, intent(in)         :: Num, Flags, iUsr(:)
+   integer(IntKi), optional, intent(in)         :: Num, Flags, iUsr, jUsr
    real(R8Ki), optional, intent(in)             :: Perturb
    logical, optional, intent(in)                :: Active
    character(*), optional, intent(in)           :: LinNames(:)
@@ -610,6 +618,7 @@ subroutine MV_AddVar(VarAry, Name, Field, Num, Flags, iUsr, Perturb, LinNames, A
    if (present(Num)) Var%Num = Num
    if (present(Flags)) Var%Flags = Flags
    if (present(iUsr)) Var%iUsr = iUsr
+   if (present(jUsr)) Var%jUsr = jUsr
    if (present(Perturb)) Var%Perturb = Perturb
    if (present(LinNames)) then
       allocate (Var%LinNames(size(LinNames)))
@@ -733,6 +742,23 @@ function string_equal_ci(s1, s2) result(is_equal)
    is_equal = .true.
 end function
 
+function IdxStr(i1, i2, i3, i4, i5) result(s)
+   integer(IntKi), intent(in)             :: i1
+   integer(IntKi), optional, intent(in)   :: i2, i3, i4, i5
+   character(100)                         :: s
+   if (present(i5)) then
+      s = '('//trim(Num2LStr(i1))//','//trim(Num2LStr(i2))//','//trim(Num2LStr(i3))//','//trim(Num2LStr(i4))//','//trim(Num2LStr(i5))//')'
+   else if (present(i4)) then
+      s = '('//trim(Num2LStr(i1))//','//trim(Num2LStr(i2))//','//trim(Num2LStr(i3))//','//trim(Num2LStr(i4))//')'
+   else if (present(i3)) then
+      s = '('//trim(Num2LStr(i1))//','//trim(Num2LStr(i2))//','//trim(Num2LStr(i3))//')'
+   else if (present(i2)) then
+      s = '('//trim(Num2LStr(i1))//','//trim(Num2LStr(i2))//')'
+   else
+      s = '('//trim(Num2LStr(i1))//')'
+   end if
+end function
+
 !-------------------------------------------------------------------------------
 ! Rotation Utilities
 !-------------------------------------------------------------------------------
@@ -821,9 +847,9 @@ pure function wm_to_dcm(c) result(R)
    real(R8Ki), intent(in)  :: c(3)
    real(R8Ki)              :: R(3, 3), c0, vc, ct(3, 3)
    integer(IntKi)          :: i, j
-   ct(1,:) = [0.0_R8Ki, -c(3), c(2)]
-   ct(2,:) = [c(3), 0.0_R8Ki, -c(1)]
-   ct(3,:) = [-c(2), c(1), 0.0_R8Ki]
+   ct(1, :) = [0.0_R8Ki, -c(3), c(2)]
+   ct(2, :) = [c(3), 0.0_R8Ki, -c(1)]
+   ct(3, :) = [-c(2), c(1), 0.0_R8Ki]
    c0 = 2.0_R8Ki - dot_product(c, c)/8.0_R8Ki
    vc = 2.0_R8Ki/(4.0_R8Ki - c0)
    R = vc*vc*(c0*ct + matmul(ct, ct))/2.0_R8Ki
@@ -884,28 +910,28 @@ end function
 pure function wm_to_xyz(c) result(xyz)
    real(R8Ki), intent(in) :: c(3)
    real(R8Ki)             :: phi, n(3), xyz(3), m
-   ! m = sqrt(dot_product(c,c))
-   ! if (m == 0.0_R8Ki) then
-   !    xyz = 0.0_R8Ki
-   !    return
-   ! end if
-   ! n = c/m
-   ! phi = 4.0_R8Ki*atan(m/4.0_R8Ki)
-   ! xyz = phi*n
-   xyz = c
+   m = sqrt(dot_product(c,c))
+   if (m == 0.0_R8Ki) then
+      xyz = 0.0_R8Ki
+      return
+   end if
+   n = c/m
+   phi = 4.0_R8Ki*atan(m/4.0_R8Ki)
+   xyz = phi*n
+   ! xyz = c
 end function
 
 pure function wm_from_xyz(xyz) result(c)
    real(R8Ki), intent(in) :: xyz(3)
    real(R8Ki)             :: phi, n(3), c(3)
-   ! phi = sqrt(dot_product(xyz,xyz))
-   ! if (phi == 0.0_R8Ki) then
-   !    c = 0.0_R8Ki
-   !    return
-   ! end if
-   ! n = xyz / phi
-   ! c = 4.0_R8Ki*tan(phi/4.0_R8Ki) * n
-   c = xyz
+   phi = sqrt(dot_product(xyz,xyz))
+   if (phi == 0.0_R8Ki) then
+      c = 0.0_R8Ki
+      return
+   end if
+   n = xyz / phi
+   c = 4.0_R8Ki*tan(phi/4.0_R8Ki) * n
+   ! c = xyz
 end function
 
 ! pure function wm_from_dcm(R) result(c)

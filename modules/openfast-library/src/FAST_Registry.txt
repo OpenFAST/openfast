@@ -91,26 +91,30 @@ typedef   ^   FAST_VTK_ModeShapeType   R8Ki     x_eig_phase     {:}{:}{:}  -  - 
 # ..... Tight Coupling Generalized Alpha Solver Data .............
 
 # Mapping Type
-typedef ^ TC_MappingType    character(VarNameLen)   Key             -  -  -     "Mapping Key" -
-typedef ^ ^                 character(VarNameLen)   SrcMeshName     -  -  -     "source mesh name" -
-typedef ^ ^                 character(VarNameLen)   DstMeshName     -  -  -     "destination mesh name" -
+param	^ -                 IntKi                   Map_LoadMesh    -  1  -     "Load mesh mapping type"	-
+param	^ -                 IntKi                   Map_MotionMesh  -  2  -     "Motion mesh mapping type"	-
+param	^ -                 IntKi                   Map_NonMesh     -  3  -     "Non mesh mapping type"	-
+typedef ^ TC_MappingType    character(VarNameLen)   Key             - ''  -     "Mapping Key" -
+typedef ^ ^                 character(VarNameLen)   SrcMeshName     - ''  -     "source mesh name" -
+typedef ^ ^                 character(VarNameLen)   DstMeshName     - ''  -     "destination mesh name" -
 typedef ^ ^                 character(VarNameLen)   SrcDispMeshName - ''  -     "source displacement mesh name [if IsLoad=true]" -
 typedef ^ ^                 character(VarNameLen)   DstDispMeshName - ''  -     "destination displacement mesh name [if IsLoad=true]" -
-typedef ^ ^                 IntKi                   SrcModID        -  -  -     "Output module ID" -
-typedef ^ ^                 IntKi                   DstModID        -  -  -     "Input module ID" -
-typedef ^ ^                 IntKi                   SrcModIdx       -  -  -     "Output module index in ModData array" -
-typedef ^ ^                 IntKi                   DstModIdx       -  -  -     "Input module index in ModData array" -
-typedef ^ ^                 IntKi                   SrcIns          -  -  -     "Output module Instance" -
-typedef ^ ^                 IntKi                   DstIns          -  -  -     "Input module Instance" -
+typedef ^ ^                 IntKi                   i1              -  0  -     "Optional index for specifying transfers" -
+typedef ^ ^                 IntKi                   i2              -  0  -     "Optional index for specifying transfers" -
+typedef ^ ^                 IntKi                   SrcModIdx       -  0  -     "Output module index in ModData array" -
+typedef ^ ^                 IntKi                   DstModIdx       -  0  -     "Input module index in ModData array" -
+typedef ^ ^                 IntKi                   SrcModID        -  0  -     "Output module ID" -
+typedef ^ ^                 IntKi                   DstModID        -  0  -     "Input module ID" -
+typedef ^ ^                 IntKi                   SrcIns          -  0  -     "Output module Instance" -
+typedef ^ ^                 IntKi                   DstIns          -  0  -     "Input module Instance" -
 typedef ^ ^                 IntKi                   SrcVarIdx       :  -  -     "motion variable index" -
 typedef ^ ^                 IntKi                   DstVarIdx       :  -  -     "motion variable index" -
-typedef ^ ^                 IntKi                   SrcDispVarIdx   -  -  -     "source displacement var index [if IsLoad=true]" -
-typedef ^ ^                 IntKi                   DstDispVarIdx   -  -  -     "destination displacement var index [if IsLoad=true]" -
-typedef ^ ^                 IntKi                   Idx             -  -  -     "Optional index for specifying transfers" -
+typedef ^ ^                 IntKi                   SrcDispVarIdx   -  0  -     "source displacement var index [if IsLoad=true]" -
+typedef ^ ^                 IntKi                   DstDispVarIdx   -  0  -     "destination displacement var index [if IsLoad=true]" -
+typedef ^ ^                 IntKi                   Typ             -  0  -     "Integer denoting mapping type (1=Load Mesh, 2=Motion Mesh, 3=Non-Mesh)" -
+typedef ^ ^                 logical                 Ready           -  F  -     "Flag indicating output has been ready to be transferred" -
 typedef ^ ^                 MeshType                MeshTmp         -  -  -     "Temporary mesh for intermediate transfers" -
 typedef ^ ^                 MeshMapType             MeshMap         -  -  -     "Mesh mapping from output variable to input variable" -
-typedef ^ ^                 logical                 IsLoad          -  -  -     "Flag indicating if this is a load or motion mapping" -
-typedef ^ ^                 logical                 Ready           -  -  -     "Flag indicating output has been ready to be transferred" -
 
 # Parameters 
 typedef ^ TC_ParameterType  R8Ki            DT                     -  -  -      "solution time step" -
@@ -138,12 +142,13 @@ typedef ^ ^                 IntKi           iJU                    2  -  -      
 typedef ^ ^                 IntKi           iJUT                   2  -  -      "Indices of Jacobian input variables from tight coupling" -
 typedef ^ ^                 IntKi           iJL                    :  -  -      "Indices of Jacobian load variables" -
 typedef ^ ^                 IntKi           ixqd                   :: -  -      "" -
-typedef ^ ^                 IntKi           iModAll                :  -  -      "ModData index order for all modules" -
+typedef ^ ^                 IntKi           iModInit               :  -  -      "ModData index order for step 0 initialization" -
 typedef ^ ^                 IntKi           iModTC                 :  -  -      "ModData index order for tight coupling modules" -
 typedef ^ ^                 IntKi           iModBD                 :  -  -      "ModData index order for BD modules" -
 typedef ^ ^                 IntKi           iModOpt1               :  -  -      "ModData index order for option 1 modules" -
 typedef ^ ^                 IntKi           iModOpt1US             :  -  -      "ModData index order for option 1 modules to update states" -
 typedef ^ ^                 IntKi           iModOpt2               :  -  -      "ModData index order for option 2 modules" -
+typedef ^ ^                 IntKi           iModPost               :  -  -      "ModData index order for post option 1 modules" -
 
 # Misc/Optimization variables 
 typedef ^ TC_MiscVarType    R8Ki            q                      :: -  -      "" -
@@ -174,6 +179,7 @@ typedef ^ ^                 R8Ki            dq                     :: -  -      
 typedef ^ ^                 R8Ki            dx                     :  -  -      "Change in x" -
 typedef ^ ^                 R8Ki            du                     :  -  -      "" -
 typedef ^ ^                 R8Ki            UDiff                  :  -  -      "" -
+typedef ^ ^                 logical         ConvWarn               -  -  -      "Flag to warn about convergence failure" -
 typedef ^ ^                 TC_MappingType  Mappings               :  -  -      "Array of mesh mappings in solver" -
 
 

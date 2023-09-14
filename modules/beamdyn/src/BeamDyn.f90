@@ -317,13 +317,13 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
       Describe = 'finite element node '//trim(num2lstr(i))//' (number of elements = '//&
                   trim(num2lstr(p%elem_total))//'; element order = '//trim(num2lstr(p%nodes_per_elem-1))//')'
       call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), VF_TransDisp, Num=3, Flags=flags, &
-                     iUsr=[i], &
+                     iUsr=i, &
                      Perturb=0.2_BDKi*D2R_D * p%blade_length, &
                      LinNames=[trim(Describe)//' translational displacement in X, m', &
                                trim(Describe)//' translational displacement in Y, m', &
                                trim(Describe)//' translational displacement in Z, m'])
       call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), VF_Orientation, Num=3, Flags=flags, &
-                     iUsr=[i], &
+                     iUsr=i, &
                      Perturb=0.2_BDKi*D2R_D, &
                      LinNames=[trim(Describe)//' rotational displacement in X, rad', &
                                trim(Describe)//' rotational displacement in Y, rad', &
@@ -334,13 +334,13 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
       Describe = 'First time derivative of finite element node '//trim(num2lstr(i))//' (number of elements = '//&
                   trim(num2lstr(p%elem_total))//'; element order = '//trim(num2lstr(p%nodes_per_elem-1))//')'
       call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), VF_TransVel, Num=3, Flags=flags, &
-                     iUsr=[i], &
+                     iUsr=i, &
                      Perturb=0.2_BDKi*D2R_D * p%blade_length, &
                      LinNames=[trim(Describe)//' translational displacement in X, m/s', &
                                trim(Describe)//' translational displacement in Y, m/s', &
                                trim(Describe)//' translational displacement in Z, m/s'])
       call MV_AddVar(p%Vars%x, "Blade Node "//trim(num2lstr(i)), VF_AngularVel, Num=3, Flags=flags, &
-                     iUsr=[i], &
+                     iUsr=i, &
                      Perturb=0.2_BDKi*D2R_D, &
                      LinNames=[trim(Describe)//' rotational displacement in X, rad/s', &
                               trim(Describe)//' rotational displacement in Y, rad/s', &
@@ -379,19 +379,18 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
    call MV_AddMeshVar(p%Vars%y, 'BladeMotion', MotionFields, Nodes=y%BldMotion%Nnodes)
    do i = 1, p%NumOuts
       call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, VF_Scalar, &
-                     Num=1, &
                      Flags=OutParamFlags(p%OutParam(i)%Indx), &
-                     iUsr=[i], &
+                     iUsr=i, &
                      LinNames=[trim(p%OutParam(i)%Name)//', '//trim(p%OutParam(i)%Units)], &
                      Active=p%OutParam(i)%Indx > 0)
    end do
    do i = 1, p%BldNd_NumOuts
-      call MV_AddVar(p%Vars%y, 'Node'//p%BldNd_OutParam(i)%Name, VF_Scalar, &
-                     Num=size(p%BldNd_BlOutNd), &
-                     Flags=BldNd_OutParamFlags(p%BldNd_OutParam(i)%Name), &
-                     iUsr=[(j, j=1,size(p%BldNd_BlOutNd))] + p%NumOuts + (i-1)*size(p%BldNd_BlOutNd), &
-                     LinNames=[(BldNd_LinChan(p%BldNd_OutParam(i), j), j=1,size(p%BldNd_BlOutNd))], &
-                     Active=p%BldNd_OutParam(i)%Indx > 0)
+      ! call MV_AddVar(p%Vars%y, 'Node'//p%BldNd_OutParam(i)%Name, VF_Scalar, &
+      !                Num=size(p%BldNd_BlOutNd), &
+      !                Flags=BldNd_OutParamFlags(p%BldNd_OutParam(i)%Name), &
+      !                iUsr=[(j, j=1,size(p%BldNd_BlOutNd))] + p%NumOuts + (i-1)*size(p%BldNd_BlOutNd), &
+      !                LinNames=[(BldNd_LinChan(p%BldNd_OutParam(i), j), j=1,size(p%BldNd_BlOutNd))], &
+      !                Active=p%BldNd_OutParam(i)%Indx > 0)
    end do
 
    !----------------------------------------------------------------------------
@@ -6052,6 +6051,10 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          ! If variable is for extended linearization, skip
          if (iand(p%Vars%u(i)%Flags, VF_Ext) > 0) cycle
 
+         ! If variable is for extended linearization, skip
+         ! TODO: Remove for linearization
+         if (iand(p%Vars%u(i)%Flags, VF_Solve) == 0) cycle
+
          ! Loop through number of linearization perturbations in variable
          do j = 1,p%Vars%u(i)%Num
 
@@ -6089,6 +6092,10 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
          ! If extended linearization variable, skip
          if (iand(p%Vars%u(i)%Flags, VF_Ext) > 0) cycle
+
+         ! If variable is for extended linearization, skip
+         ! TODO: Remove for linearization
+         if (iand(p%Vars%u(i)%Flags, VF_Solve) == 0) cycle
 
          ! Loop through number of linearization perturbations in variable
          do j = 1,p%Vars%u(i)%Num
@@ -6822,13 +6829,13 @@ subroutine BD_PackStateValues(p, x, Values)
    do i = 1, size(p%Vars%x)
       select case(p%Vars%x(i)%Field)
       case (VF_TransDisp)
-         Values(p%Vars%x(i)%iLoc) = x%q(1:3,p%Vars%x(i)%iUsr(1))     ! XYZ displacement
+         Values(p%Vars%x(i)%iLoc) = x%q(1:3,p%Vars%x(i)%iUsr)     ! XYZ displacement
       case (VF_TransVel)
-         Values(p%Vars%x(i)%iLoc) = x%dqdt(1:3,p%Vars%x(i)%iUsr(1))  ! XYZ velocity
+         Values(p%Vars%x(i)%iLoc) = x%dqdt(1:3,p%Vars%x(i)%iUsr)  ! XYZ velocity
       case (VF_Orientation)
-         Values(p%Vars%x(i)%iLoc) = x%q(4:6,p%Vars%x(i)%iUsr(1))     ! WM parameters
+         Values(p%Vars%x(i)%iLoc) = x%q(4:6,p%Vars%x(i)%iUsr)     ! WM parameters
       case (VF_AngularVel)
-         Values(p%Vars%x(i)%iLoc) = x%dqdt(4:6,p%Vars%x(i)%iUsr(1))  ! Angular velocity
+         Values(p%Vars%x(i)%iLoc) = x%dqdt(4:6,p%Vars%x(i)%iUsr)  ! Angular velocity
       end select
    end do
 end subroutine
@@ -6841,13 +6848,13 @@ subroutine BD_UnpackStateValues(p, Values, x)
    do i = 1, size(p%Vars%x)
       select case(p%Vars%x(i)%Field)
       case (VF_TransDisp)
-         x%q(1:3,p%Vars%x(i)%iUsr(1)) = Values(p%Vars%x(i)%iLoc)     ! XYZ displacement
+         x%q(1:3,p%Vars%x(i)%iUsr) = Values(p%Vars%x(i)%iLoc)     ! XYZ displacement
       case (VF_TransVel)
-         x%dqdt(1:3,p%Vars%x(i)%iUsr(1)) = Values(p%Vars%x(i)%iLoc)  ! XYZ velocity
+         x%dqdt(1:3,p%Vars%x(i)%iUsr) = Values(p%Vars%x(i)%iLoc)  ! XYZ velocity
       case (VF_Orientation)
-         x%q(4:6,p%Vars%x(i)%iUsr(1)) = Values(p%Vars%x(i)%iLoc)     ! WM parameters
+         x%q(4:6,p%Vars%x(i)%iUsr) = Values(p%Vars%x(i)%iLoc)     ! WM parameters
       case (VF_AngularVel)
-         x%dqdt(4:6,p%Vars%x(i)%iUsr(1)) = Values(p%Vars%x(i)%iLoc)  ! Angular velocity
+         x%dqdt(4:6,p%Vars%x(i)%iUsr) = Values(p%Vars%x(i)%iLoc)  ! Angular velocity
       end select
    end do
 end subroutine

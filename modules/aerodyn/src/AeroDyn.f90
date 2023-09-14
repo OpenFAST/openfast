@@ -518,20 +518,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! Initialize Module Variables:
       !............................................................................................
 
-   ! Allocate space for variables (deallocate if already allocated)
-   if (associated(p%Vars)) deallocate(p%Vars)
-   allocate(p%Vars, stat=ErrStat2)
-   if (ErrStat2 /= 0) then
-      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
-      return
-   end if
-
-   ! Associate pointers in initialization output
-   InitOut%Vars => p%Vars
-
-   ! Initialize variables and values
-   CALL MV_InitVarsVals(p%Vars, m%Vals, InitInp%Linearize, ErrStat2, ErrMsg2)
-   if (Failed()) return
+   call Init_ModuleVars(InitInp, u, p, y, m, InitOut, errStat2, errMsg2); if (Failed()) return
 
       !............................................................................................
       ! Print the summary file if requested:
@@ -620,6 +607,208 @@ subroutine AD_ReInit(p, x, xd, z, OtherState, m, Interval, ErrStat, ErrMsg )
 
       
 end subroutine AD_ReInit
+!----------------------------------------------------------------------------------------------------------------------------------   
+!> This routine initializes module variables for use by the solver and linearization.
+subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
+   TYPE(AD_InitInputType),    INTENT(IN   )  :: InitInp     !< Input data for initialization routine
+   TYPE(AD_InputType),        INTENT(IN   )  :: u           !< An initial guess for the input; input mesh must be defined
+   TYPE(AD_ParameterType),    INTENT(INOUT)  :: p           !< Parameters
+   TYPE(AD_OutputType),       INTENT(IN)     :: y           !< Initial system outputs (outputs are not calculated;
+   TYPE(AD_MiscVarType),      INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
+   TYPE(AD_InitOutputType),   INTENT(INOUT)  :: InitOut     !< Output for initialization routine
+   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter :: RoutineName = 'Init_ModuleVars'
+   integer(IntKi)          :: ErrStat2                     ! Temporary Error status
+   character(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
+   integer(IntKi)          :: i, j, k
+   character(4)            :: RotorStr
+
+   ! Allocate space for variables (deallocate if already allocated)
+   if (associated(p%Vars)) deallocate(p%Vars)
+   allocate(p%Vars, stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Add pointers to vars to inititialization output
+   InitOut%Vars => p%Vars
+
+      ! Loop through rotors
+   do i = 1, size(InitInp%rotors)
+
+      RotorStr = 'R'//trim(Num2LStr(i))
+
+      associate(rp => p%rotors(i), &
+                ru => u%rotors(i), &
+                ry => y%rotors(i), &
+                rInitOut => InitOut%rotors(i))
+
+         !----------------------------------------------------------------------
+         ! Continuous State Variables
+         !----------------------------------------------------------------------
+
+
+         !----------------------------------------------------------------------
+         ! Input variables
+         !----------------------------------------------------------------------
+
+         ! Add tower motion
+         call MV_AddMeshVar(p%Vars%u, trim(RotorStr)//"TowerMotion", &
+                            Nodes=ru%TowerMotion%NNodes, &
+                            Fields=[VF_TransDisp, VF_Orientation, VF_TransVel])
+         
+         ! Add nacelle motion
+         call MV_AddMeshVar(p%Vars%u, trim(RotorStr)//"NacelleMotion", &
+                            Nodes=ru%NacelleMotion%NNodes, &
+                            Fields=[VF_TransDisp, VF_Orientation, VF_TransVel])
+
+         ! Add hub motion
+         call MV_AddMeshVar(p%Vars%u, trim(RotorStr)//"HubMotion", &
+                            Nodes=ru%HubMotion%NNodes, &
+                            Fields=[VF_TransDisp, VF_Orientation, VF_AngularVel])
+
+         ! Add blade root motion
+         do j = 1, rp%NumBlades
+            call MV_AddMeshVar(p%Vars%u, trim(RotorStr)//"BladeRootMotion"//IdxStr(j), &
+                               Nodes=ru%BladeRootMotion(j)%NNodes, &
+                               Fields=[VF_Orientation])
+         end do
+
+         ! Add blade motion
+         do j = 1, rp%NumBlades
+            call MV_AddMeshVar(p%Vars%u, trim(RotorStr)//"BladeMotion"//IdxStr(j), &
+                               Nodes=ru%BladeMotion(j)%NNodes, &
+                               Fields=[VF_TransDisp, VF_Orientation, VF_TransVel, VF_AngularVel, VF_TransAcc])
+         end do
+
+         ! Add user props
+         do j = 1, size(ru%UserProp,2)
+            do k = 1, size(ru%UserProp,1)
+               call MV_AddVar(p%Vars%u, trim(RotorStr)//"UserProp"//IdxStr(j, k), VF_Scalar, iUsr=j, jUsr=k)
+            end do
+         end do
+
+         !----------------------------------------------------------------------
+         ! Output variables
+         !----------------------------------------------------------------------
+
+         ! Add tower load
+         call MV_AddMeshVar(p%Vars%y, trim(RotorStr)//"TowerLoad", LoadFields, &
+                            Nodes=ry%TowerLoad%NNodes)
+
+         ! Add nacelle load
+         call MV_AddMeshVar(p%Vars%y, trim(RotorStr)//"HubLoad", LoadFields, &
+                            Nodes=ry%HubLoad%NNodes)
+
+         ! Add nacelle load
+         call MV_AddMeshVar(p%Vars%y, trim(RotorStr)//"NacelleLoad", LoadFields, &
+                            Nodes=ry%NacelleLoad%NNodes)
+         
+         ! Loop through blades
+         do j = 1, rp%NumBlades
+
+            ! Add blade load
+            call MV_AddMeshVar(p%Vars%y, trim(RotorStr)//"BladeLoad"//IdxStr(j), LoadFields, &
+                              Nodes=ry%BladeLoad(j)%NNodes)
+         end do
+
+         ! Rotor outputs
+         do j = 1, rp%NumOuts
+            call MV_AddVar(p%Vars%y, rInitOut%WriteOutputHdr(j), VF_Scalar, &
+                           Flags=OutParamFlags(rp%OutParam(j)%Indx), &
+                           iUsr=j, &
+                           LinNames=[trim(rInitOut%WriteOutputHdr(j))//', '//trim(rInitOut%WriteOutputUnt(j))])
+         end do    
+         
+         ! Blade node outputs
+         do j = rp%NumOuts + 1, rp%NumOuts + rp%BldNd_TotNumOuts
+            call MV_AddVar(p%Vars%y, rInitOut%WriteOutputHdr(j), VF_Scalar, &
+                           Flags=VF_RotFrame, &
+                           iUsr=k, &
+                           LinNames=[trim(rInitOut%WriteOutputHdr(j))//', '//trim(rInitOut%WriteOutputUnt(j))])
+         end do
+
+      end associate
+   end do
+
+   !----------------------------------------------------------------------------
+   ! Initialize Variables and Values
+   !----------------------------------------------------------------------------
+
+   CALL MV_InitVarsVals(p%Vars, m%Vals, InitInp%Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+   !----------------------------------------------------------------------------
+   ! Linearization
+   !----------------------------------------------------------------------------
+
+   ! If linearization is not requested, return
+   ! if (.not. InitInp%Linearize) return
+   ! TODO: Use modvars for linearization
+   return
+
+   ! Loop through rotors
+   do i = 1, size(InitInp%rotors)
+
+      ! State Variables
+      call AllocAry(InitOut%rotors(i)%LinNames_x, p%Vars%Nx, 'LinNames_x', ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(InitOut%rotors(i)%RotFrame_x, p%Vars%Nx, 'RotFrame_x', ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(InitOut%rotors(i)%DerivOrder_x, p%Vars%Nx, 'DerivOrder_x', ErrStat2, ErrMsg2); if (Failed()) return
+      InitOut%rotors(i)%DerivOrder_x = 2
+      do j = 1, size(p%Vars%x)
+         do k = 1, p%Vars%x(j)%Num
+            InitOut%rotors(i)%LinNames_x(p%Vars%x(j)%iLoc) = p%Vars%x(j)%LinNames
+            InitOut%rotors(i)%RotFrame_x(p%Vars%x(j)%iLoc) = iand(p%Vars%x(j)%Flags, VF_RotFrame) > 0
+         end do
+      end do
+
+      ! Input Variables
+      call AllocAry(InitOut%rotors(i)%LinNames_u, p%Vars%Nu, 'LinNames_u', ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(InitOut%rotors(i)%RotFrame_u, p%Vars%Nu, 'RotFrame_u', ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(InitOut%rotors(i)%IsLoad_u,   p%Vars%Nu, 'IsLoad_u',   ErrStat2, ErrMsg2); if (Failed()) return
+      do j = 1, size(p%Vars%u)
+         do k = 1, p%Vars%u(j)%Num
+            InitOut%rotors(i)%LinNames_u(p%Vars%u(j)%iLoc) = p%Vars%u(j)%LinNames
+            InitOut%rotors(i)%RotFrame_u(p%Vars%u(j)%iLoc) = iand(p%Vars%u(j)%Flags, VF_RotFrame) > 0
+            InitOut%rotors(i)%IsLoad_u(p%Vars%u(j)%iLoc)   = iand(p%Vars%u(j)%Field, VF_Force+VF_Moment) > 0
+         end do
+      end do
+
+      ! Output variables
+      call AllocAry(InitOut%rotors(i)%LinNames_y, p%Vars%Ny, 'LinNames_y', ErrStat2, ErrMsg2); if (Failed()) return
+      call AllocAry(InitOut%rotors(i)%RotFrame_y, p%Vars%Ny, 'RotFrame_y', ErrStat2, ErrMsg2); if (Failed()) return
+      do j = 1, size(p%Vars%y)
+         do k = 1, p%Vars%y(j)%Num
+            InitOut%rotors(i)%LinNames_y(p%Vars%y(j)%iLoc) = p%Vars%y(j)%LinNames
+            InitOut%rotors(i)%RotFrame_y(p%Vars%y(j)%iLoc) = iand(p%Vars%y(j)%Flags, VF_RotFrame) > 0
+         end do
+      end do
+   end do
+
+contains    
+
+   pure integer(IntKi) function OutParamFlags(idx)
+      integer(IntKi), intent(in) :: idx
+      integer(IntKi), parameter  :: RotFrameInds(*) = [&
+         BAzimuth, BPitch, &
+         BNVUndx, BNVUndy, BNVUndz, BNVDisx, BNVDisy, BNVDisz, BNSTVx, BNSTVy, &
+         BNSTVz, BNVRel, BNDynP, BNRe, BNM, BNVIndx, BNVIndy, BNAxInd, BNTnInd, &
+         BNAlpha, BNTheta, BNPhi, BNCurve, BNCl, BNCd, BNCm, BNCx, BNCy, BNCn, &
+         BNCt, BNFl, BNFd, BNMm, BNFx, BNFy, BNFn, BNFt, BNClrnc]
+      if (any(RotFrameInds == idx)) then
+         OutParamFlags = VF_RotFrame
+      else
+         OutParamFlags = VF_None
+      end if
+   end function
+
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine initializes (allocates) the misc variables for use during the simulation.
 subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)

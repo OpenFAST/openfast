@@ -61,13 +61,13 @@ subroutine Solver_Init(p, m, Mods, Turbine, ErrStat, ErrMsg)
    ! Get array of module IDs
    modIDs = [(Mods(i)%ID, i=1, size(Mods))]
 
-   ! Indicies of all modules
-   p%iModAll = [pack(modInds, ModIDs == Module_SrvD), &
-                pack(modInds, ModIDs == Module_ED), &
-                pack(modInds, ModIDs == Module_BD), &
-                pack(modInds, ModIDs == Module_SD), &
-                pack(modInds, ModIDs == Module_IfW), &
-                pack(modInds, ModIDs == Module_AD)]
+   ! Indicies of all modules in Step 0 initialization order
+   p%iModInit = [pack(modInds, ModIDs == Module_ED), &
+                 pack(modInds, ModIDs == Module_BD), &
+                 pack(modInds, ModIDs == Module_SD), &
+                 pack(modInds, ModIDs == Module_IfW), &
+                 pack(modInds, ModIDs == Module_AD), &
+                 pack(modInds, ModIDs == Module_SrvD)] ! ServoDyn is last
 
    ! Indicies of tight coupling modules
    p%iModTC = [pack(modInds, ModIDs == Module_ED), &
@@ -100,6 +100,11 @@ subroutine Solver_Init(p, m, Mods, Turbine, ErrStat, ErrMsg)
    p%iModOpt1US = [pack(modInds, ModIDs == Module_ExtPtfm), &
                    pack(modInds, ModIDs == Module_HD), &
                    pack(modInds, ModIDs == Module_Orca)]
+
+   ! Indices of modules to perform InputSolves after the Option 1 solve
+   p%iModPost = [pack(modInds, ModIDs == Module_SrvD), &
+                 pack(modInds, ModIDs == Module_MD), &
+                 pack(modInds, ModIDs == Module_OpFM)]
 
    ! Indices of BeamDyn modules
    p%iModBD = [pack(modInds, ModIDs == Module_BD)]
@@ -250,7 +255,7 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
       associate (Mod => Mods(p%iModTC(i)))
          do j = 1, size(Mod%Vars%x)
             if (Mod%Vars%x(j)%DerivOrder == 0) then
-               Mod%Vars%x(j)%iGblSol = [(NumX + k, k=1, Mod%Vars%x(j)%Num)]
+               Mod%Vars%x(j)%iSol = [(NumX + k, k=1, Mod%Vars%x(j)%Num)]
                NumX = NumX + Mod%Vars%x(j)%Num
             end if
          end do
@@ -265,7 +270,7 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
       associate (Mod => Mods(p%iModTC(i)))
          do j = 1, size(Mod%Vars%x)
             if (Mod%Vars%x(j)%DerivOrder == 1) then
-               Mod%Vars%x(j)%iGblSol = [(NumX + k, k=1, Mod%Vars%x(j)%Num)]
+               Mod%Vars%x(j)%iSol = [(NumX + k, k=1, Mod%Vars%x(j)%Num)]
                NumX = NumX + Mod%Vars%x(j)%Num
             end if
          end do
@@ -281,7 +286,7 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
       associate (Mod => Mods(p%iModTC(i)))
          do j = 1, size(Mod%Vars%x)
             vec1 = [vec1, Mod%Vars%x(j)%iLoc]
-            vec2 = [vec2, Mod%Vars%x(j)%iGblSol]
+            vec2 = [vec2, Mod%Vars%x(j)%iSol]
          end do
          call AllocAry(Mod%ixs, 2, size(vec1), "Mod%ixs", ErrStat2, ErrMsg2); if (Failed()) return
          Mod%ixs(1, :) = vec1
@@ -304,8 +309,8 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
    do i = 1, size(p%iModTC)
       do j = 1, size(Mods(p%iModTC(i))%Vars%u)
          associate (Var => Mods(p%iModTC(i))%Vars%u(j))
-            if ((.not. allocated(Var%iGblSol)) .and. (iand(Var%Flags, VF_Solve) > 0)) then
-               Var%iGblSol = [(NumU + k, k=1, Var%Num)]
+            if ((.not. allocated(Var%iSol)) .and. (iand(Var%Flags, VF_Solve) > 0)) then
+               Var%iSol = [(NumU + k, k=1, Var%Num)]
                NumU = NumU + Var%Num
             end if
          end associate
@@ -319,8 +324,8 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
    do i = 1, size(p%iModOpt1)
       do j = 1, size(Mods(p%iModOpt1(i))%Vars%u)
          associate (Var => Mods(p%iModOpt1(i))%Vars%u(j))
-            if ((.not. allocated(Var%iGblSol)) .and. (iand(Var%Flags, VF_Solve) > 0)) then
-               Var%iGblSol = [(NumU + k, k=1, Var%Num)]
+            if ((.not. allocated(Var%iSol)) .and. (iand(Var%Flags, VF_Solve) > 0)) then
+               Var%iSol = [(NumU + k, k=1, Var%Num)]
                NumU = NumU + Var%Num
             end if
          end associate
@@ -334,12 +339,12 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
    do i = 1, size(Mods)
       allocate (vec1(0), vec2(0))
       do j = 1, size(Mods(i)%Vars%u)
-         if (.not. allocated(Mods(i)%Vars%u(j)%iGblSol)) cycle
+         if (.not. allocated(Mods(i)%Vars%u(j)%iSol)) cycle
          vec1 = [vec1, Mods(i)%Vars%u(j)%iLoc]
-         vec2 = [vec2, Mods(i)%Vars%u(j)%iGblSol]
+         vec2 = [vec2, Mods(i)%Vars%u(j)%iSol]
          select case (Mods(i)%Vars%u(j)%Field)
          case (VF_Force, VF_Moment)
-            iuLoad = [iuLoad, Mods(i)%Vars%u(j)%iGblSol]
+            iuLoad = [iuLoad, Mods(i)%Vars%u(j)%iSol]
          end select
       end do
       call AllocAry(Mods(i)%ius, 2, size(vec1), "Mods(i)%ius", ErrStat2, ErrMsg2); if (Failed()) return
@@ -359,8 +364,8 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
    do i = 1, size(p%iModTC)
       do j = 1, size(Mods(p%iModTC(i))%Vars%y)
          associate (Var => Mods(p%iModTC(i))%Vars%y(j))
-            if ((.not. allocated(Var%iGblSol)) .and. (iand(Var%Flags, VF_Solve) > 0)) then
-               Var%iGblSol = [(NumY + k, k=1, Var%Num)]
+            if ((.not. allocated(Var%iSol)) .and. (iand(Var%Flags, VF_Solve) > 0)) then
+               Var%iSol = [(NumY + k, k=1, Var%Num)]
                NumY = NumY + Var%Num
             end if
          end associate
@@ -374,8 +379,8 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
    do i = 1, size(p%iModOpt1)
       do j = 1, size(Mods(p%iModOpt1(i))%Vars%y)
          associate (Var => Mods(p%iModOpt1(i))%Vars%y(j))
-            if ((.not. allocated(Var%iGblSol)) .and. (iand(Var%Flags, VF_Solve) > 0)) then
-               Var%iGblSol = [(NumY + k, k=1, Var%Num)]
+            if ((.not. allocated(Var%iSol)) .and. (iand(Var%Flags, VF_Solve) > 0)) then
+               Var%iSol = [(NumY + k, k=1, Var%Num)]
                NumY = NumY + Var%Num
             end if
          end associate
@@ -389,9 +394,9 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
    do i = 1, size(Mods)
       allocate (vec1(0), vec2(0))
       do j = 1, size(Mods(i)%Vars%y)
-         if (.not. allocated(Mods(i)%Vars%y(j)%iGblSol)) cycle
+         if (.not. allocated(Mods(i)%Vars%y(j)%iSol)) cycle
          vec1 = [vec1, Mods(i)%Vars%y(j)%iLoc]
-         vec2 = [vec2, Mods(i)%Vars%y(j)%iGblSol]
+         vec2 = [vec2, Mods(i)%Vars%y(j)%iSol]
       end do
       call AllocAry(Mods(i)%iys, 2, size(vec1), "Mods(i)%iys", ErrStat2, ErrMsg2); if (Failed()) return
       Mods(i)%iys(1, :) = vec1
@@ -463,7 +468,7 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
       do j = 1, size(Mods(i)%Vars%x)
          do k = 1, Mods(i)%Vars%x(j)%Num
             num = num + 1
-            p%ixqd(:, num) = [Mods(i)%Vars%x(j)%iGblSol(k), Mods(i)%Vars%x(j)%iq(k), Mods(i)%Vars%x(j)%DerivOrder + 1]
+            p%ixqd(:, num) = [Mods(i)%Vars%x(j)%iSol(k), Mods(i)%Vars%x(j)%iq(k), Mods(i)%Vars%x(j)%DerivOrder + 1]
          end do
       end do
 
@@ -531,10 +536,10 @@ pure function NeedWriteOutput(n_t_global, t_global, t_initial, n_DT_Out) result(
    end if
 end function
 
-subroutine Solver_Step0(p, m, ModData, Turbine, ErrStat, ErrMsg)
+subroutine Solver_Step0(p, m, Mods, Turbine, ErrStat, ErrMsg)
    type(TC_ParameterType), intent(in)        :: p           !< Parameters
    type(TC_MiscVarType), intent(inout)       :: m           !< Misc variables
-   type(ModDataType), intent(in)             :: ModData(:)  !< Module data
+   type(ModDataType), intent(in)             :: Mods(:)  !< Module data
    type(FAST_TurbineType), intent(inout)     :: Turbine     !< Turbine type
    integer(IntKi), intent(out)               :: ErrStat
    character(*), intent(out)                 :: ErrMsg
@@ -568,12 +573,15 @@ subroutine Solver_Step0(p, m, ModData, Turbine, ErrStat, ErrMsg)
                                Turbine%p_FAST%TMax, Turbine%p_FAST%TDesc)
    end if
 
+   ! Set flag to warn about convergence errors
+   m%ConvWarn = .true.
+
    !----------------------------------------------------------------------------
    ! Calculate initial accelerations
    !----------------------------------------------------------------------------
 
    ! Transfer initial state from modules to solver
-   call PackModuleStates(ModData(p%iModTC), STATE_CURR, Turbine, x=m%x)
+   call PackModuleStates(Mods(p%iModTC), STATE_CURR, Turbine, x=m%x)
 
    ! Transfer initial state to state q matrix
    call TransferXtoQ(p%ixqd, m%x, m%qn)
@@ -593,16 +601,16 @@ subroutine Solver_Step0(p, m, ModData, Turbine, ErrStat, ErrMsg)
    do while ((.not. converged) .and. (k <= p%MaxConvIter))
 
       ! Transfer inputs and calculate outputs for all modules (use current state)
-      do i = 1, size(p%iModAll)
-         call FAST_InputSolve(ModData(p%iModAll(i)), m%Mappings, IS_Input, &
+      do i = 1, size(p%iModInit)
+         call FAST_InputSolve(Mods(p%iModInit(i)), m%Mappings, IS_Input, &
                               Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-         call FAST_CalcOutput(ModData(p%iModAll(i)), m%Mappings, t_initial, STATE_CURR, &
+         call FAST_CalcOutput(Mods(p%iModInit(i)), m%Mappings, t_initial, STATE_CURR, &
                               Turbine, ErrStat2, ErrMsg2); if (Failed()) return
       end do
 
       ! Calculate continuous state derivatives for tight coupling modules (use current state)
       do i = 1, size(p%iModTC)
-         call FAST_CalcContStateDeriv(ModData(p%iModTC(i)), t_initial, STATE_CURR, &
+         call FAST_CalcContStateDeriv(Mods(p%iModTC(i)), t_initial, STATE_CURR, &
                                       Turbine, ErrStat2, ErrMsg2, dxdt=m%dxdt); if (Failed()) return
       end do
 
@@ -627,10 +635,8 @@ subroutine Solver_Step0(p, m, ModData, Turbine, ErrStat, ErrMsg)
    end do
 
    ! Print warning if not converged
-   if (.not. converged) then
-      call WrScr("Solver: initial accel not converged, diff="//Num2LStr(diff)// &
-                 ", tol="//Num2LStr(p%ConvTol))
-   end if
+   if (.not. converged) call WrScr("Solver: initial accel not converged, diff="// &
+                                   trim(Num2LStr(diff))//", tol="//trim(Num2LStr(p%ConvTol)))
 
    ! Initialize algorithmic acceleration from actual acceleration
    m%qn(:, COL_AA) = m%qn(:, COL_A)
@@ -640,15 +646,11 @@ subroutine Solver_Step0(p, m, ModData, Turbine, ErrStat, ErrMsg)
    ! Initialize module input and state arrays for interpolation/extrapolation
    !----------------------------------------------------------------------------
 
-   ! Loop through all module index array
-   do i = 1, size(p%iModAll)
+   ! Initialize IO and states for all modules (also copies STATE_CURR to STATE_PRED)
+   call FAST_InitIO(Mods, t_initial, p%DT, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
 
-      ! Initialize IO and states for all modules (also copies STATE_CURR to STATE_PRED)
-      call FAST_InitIO(ModData(p%iModAll(i)), t_initial, p%DT, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-
-      ! Reset the Remap flags for all modules
-      call FAST_ResetRemapFlags(ModData(p%iModAll(i)), Turbine, ErrStat2, ErrMsg2); if (Failed()) return
-   end do
+   ! Reset the Remap flags for all modules
+   call FAST_ResetRemapFlags(Mods, m%Mappings, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
 
 contains
    logical function Failed()
@@ -700,8 +702,8 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    !----------------------------------------------------------------------------
 
    ! Loop through all modules and extrap/interp inputs
-   do i = 1, size(p%iModAll)
-      call FAST_ExtrapInterp(Mods(p%iModAll(i)), t_global_next, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+   do i = 1, size(Mods)
+      call FAST_ExtrapInterp(Mods(i), t_global_next, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
    end do
 
    !----------------------------------------------------------------------------
@@ -820,7 +822,17 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! If iteration limit reached, exit loop
          !----------------------------------------------------------------------
 
-         if (iterConv >= p%MaxConvIter) exit
+         if (iterConv >= p%MaxConvIter) then
+            if (m%ConvWarn) then
+               call SetErrStat(ErrID_Warn, "Failed to converge in "//trim(Num2LStr(p%MaxConvIter))// &
+                               " iterations on step "//trim(Num2LStr(n_t_global_next))// &
+                               " (error="//trim(Num2LStr(delta_norm))// &
+                               ", tolerance="//trim(Num2LStr(p%ConvTol))// &
+                               "). Warning will not be displayed again.", ErrStat, ErrMsg, RoutineName)
+               m%ConvWarn = .false.
+            end if
+            exit
+         end if
 
          !----------------------------------------------------------------------
          ! Update Jacobian
@@ -933,11 +945,13 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
       iterCorr = iterCorr + 1
 
-      ! Reset the remap flags on the meshes
-      do i = 1, size(p%iModAll)
-         call FAST_ResetRemapFlags(Mods(p%iModAll(i)), Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+      ! Perform input solve for modules post Option 1
+      do i = 1, size(p%iModPost)
+         call FAST_InputSolve(Mods(p%iModPost(i)), m%Mappings, IS_Input, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
       end do
 
+      ! Reset mesh remap
+      call FAST_ResetRemapFlags(Mods, m%Mappings, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
    end do
 
    !----------------------------------------------------------------------------
@@ -957,11 +971,11 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          do j = 1, size(p_BD%Vars%x)
             select case (p_BD%Vars%x(j)%Field)
             case (VF_TransDisp)
-               os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr(1)) = m%qn(p_BD%Vars%x(j)%iq, COL_A)
-               os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr(1)) = m%qn(p_BD%Vars%x(j)%iq, COL_AA)
+               os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr) = m%qn(p_BD%Vars%x(j)%iq, COL_A)
+               os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr) = m%qn(p_BD%Vars%x(j)%iq, COL_AA)
             case (VF_Orientation)
-               os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr(1)) = m%qn(p_BD%Vars%x(j)%iq, COL_A)
-               os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr(1)) = m%qn(p_BD%Vars%x(j)%iq, COL_AA)
+               os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr) = m%qn(p_BD%Vars%x(j)%iq, COL_A)
+               os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr) = m%qn(p_BD%Vars%x(j)%iq, COL_AA)
             end select
          end do
 
@@ -972,11 +986,11 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          do j = 1, size(p_BD%Vars%x)
             select case (p_BD%Vars%x(j)%Field)
             case (VF_TransDisp)
-               m%qn(p_BD%Vars%x(j)%iq, COL_A) = os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr(1))
-               m%qn(p_BD%Vars%x(j)%iq, COL_AA) = os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr(1))
+               m%qn(p_BD%Vars%x(j)%iq, COL_A) = os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr)
+               m%qn(p_BD%Vars%x(j)%iq, COL_AA) = os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr)
             case (VF_Orientation)
-               m%qn(p_BD%Vars%x(j)%iq, COL_A) = os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr(1))
-               m%qn(p_BD%Vars%x(j)%iq, COL_AA) = os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr(1))
+               m%qn(p_BD%Vars%x(j)%iq, COL_A) = os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr)
+               m%qn(p_BD%Vars%x(j)%iq, COL_AA) = os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr)
             end select
          end do
 
@@ -990,8 +1004,8 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    call TransferXtoQ(p%ixqd, m%xn, m%qn)
 
    ! Copy the final predicted states from step t_global_next to actual states for that step
-   do i = 1, size(p%iModAll)
-      call FAST_SaveStates(Mods(p%iModAll(i)), Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+   do i = 1, size(Mods)
+      call FAST_SaveStates(Mods(i), Turbine, ErrStat2, ErrMsg2); if (Failed()) return
    end do
 
    ! Save new state
@@ -1142,29 +1156,25 @@ subroutine AddDeltaToStates(Mods, ModOrder, dx, x)
    character(*), parameter          :: RoutineName = 'AddDeltaToStates'
    integer(IntKi)                   :: iMod, iIns
    integer(IntKi)                   :: i, j, k, ind(3)
-   real(R8Ki)                       :: n(3), phi
 
-   ! Loop through modules in order
+   ! Loop through module variables based on order array
    do i = 1, size(ModOrder)
-
-      ! Loop through variables
       do j = 1, size(Mods(ModOrder(i))%Vars%x)
-
          associate (Var => Mods(ModOrder(i))%Vars%x(j))
 
             ! Select based on field type
             select case (Var%Field)
             case (VF_Force, VF_Moment, VF_TransDisp, VF_TransVel, VF_TransAcc, VF_AngularVel, VF_AngularAcc)
                ! Add delta x to x
-               x(Var%iGblSol) = x(Var%iGblSol) + dx(Var%iGblSol)
+               x(Var%iSol) = x(Var%iSol) + dx(Var%iSol)
             case (VF_AngularDisp)
                ! Add delta x to x and limit to between -2pi and 2pi
-               ! x(ModData(i)%Vars%x(j)%iGblSol) = mod(x(ModData(i)%Vars%x(j)%iGblSol) + dx(ModData(i)%Vars%x(j)%iGblSol), TwoPi_R8)
-               x(Var%iGblSol) = x(Var%iGblSol) + dx(Var%iGblSol)
+               ! x(ModData(i)%Vars%x(j)%iSol) = mod(x(ModData(i)%Vars%x(j)%iSol) + dx(ModData(i)%Vars%x(j)%iSol), TwoPi_R8)
+               x(Var%iSol) = x(Var%iSol) + dx(Var%iSol)
             case (VF_Orientation)
                ! Compose WM components (dx is in radians)
-               do k = 1, size(Var%iGblSol), 3
-                  ind = Var%iGblSol(k:k + 2)
+               do k = 1, size(Var%iSol), 3
+                  ind = Var%iSol(k:k + 2)
                   x(ind) = wm_compose(wm_from_xyz(dx(ind)), x(ind)) ! dx is in radians
                end do
             end select
@@ -1198,15 +1208,15 @@ subroutine AddDeltaToInputs(Mods, ModOrder, du, u)
             select case (Var%Field)
             case (VF_Force, VF_Moment, VF_TransDisp, VF_TransVel, VF_TransAcc, VF_AngularVel, VF_AngularAcc)
                ! Add delta u to u
-               u(Var%iGblSol) = u(Var%iGblSol) + du(Var%iGblSol)
+               u(Var%iSol) = u(Var%iSol) + du(Var%iSol)
             case (VF_AngularDisp)
                ! Add delta u to u and limit to between -2pi and 2pi
-               ! un(Var%iGblSol) = mod(u(Var%iGblSol) + du(Var%iGblSol), TwoPi_R8)
-               u(Var%iGblSol) = u(Var%iGblSol) + du(Var%iGblSol)
+               ! un(Var%iSol) = mod(u(Var%iSol) + du(Var%iSol), TwoPi_R8)
+               u(Var%iSol) = u(Var%iSol) + du(Var%iSol)
             case (VF_Orientation)
                ! Compose WM components (change in orientation with orientation)
-               do k = 1, size(Var%iGblSol), 3
-                  ind = Var%iGblSol(k:k + 2)
+               do k = 1, size(Var%iSol), 3
+                  ind = Var%iSol(k:k + 2)
                   u(ind) = wm_compose(wm_from_xyz(du(ind)), u(ind))
                end do
             end select
@@ -1233,7 +1243,7 @@ subroutine ComputeDeltaU(Mods, ModOrder, PosAry, NegAry, DiffAry)
 
          associate (Var => Mods(ModOrder(i))%Vars%u(j))
 
-            if (.not. allocated(Var%iGblSol)) cycle
+            if (.not. allocated(Var%iSol)) cycle
 
             ! If variable field is orientation
             if (Var%Field == VF_Orientation) then
@@ -1242,7 +1252,7 @@ subroutine ComputeDeltaU(Mods, ModOrder, PosAry, NegAry, DiffAry)
                do k = 1, Var%Nodes, 3
 
                   ! Get vector of indicies of WM rotation parameters in array
-                  ind = Var%iGblSol(k:k + 2)
+                  ind = Var%iSol(k:k + 2)
 
                   ! Compose WM parameters to go from negative to positive array
                   ! then store change in radians
@@ -1252,7 +1262,7 @@ subroutine ComputeDeltaU(Mods, ModOrder, PosAry, NegAry, DiffAry)
             else
 
                ! Subtract negative array from positive array
-               DiffAry(Var%iGblSol) = PosAry(Var%iGblSol) - NegAry(Var%iGblSol)
+               DiffAry(Var%iSol) = PosAry(Var%iSol) - NegAry(Var%iSol)
             end if
          end associate
       end do
@@ -1418,25 +1428,26 @@ subroutine Solver_Init_Debug(p, m, Mods)
       write (DebugUn, *) "Module   = ", Mods(i)%Abbr
       write (DebugUn, *) "ModuleID = ", Mods(i)%ID
       do j = 1, size(Mods(i)%Vars%x)
-         if (.not. allocated(Mods(i)%Vars%x(j)%iGblSol)) cycle
+         if (.not. allocated(Mods(i)%Vars%x(j)%iSol)) cycle
          write (DebugUn, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" X "//trim(Mods(i)%Vars%x(j)%Name)// &
             " ("//trim(MV_FieldString(Mods(i)%Vars%x(j)%Field))//")"
-         write (DebugUn, '(A,*(I6))') "  X iLoc    = ", Mods(i)%Vars%x(j)%iLoc
-         write (DebugUn, '(A,*(I6))') "  X iGblSol = ", Mods(i)%Vars%x(j)%iGblSol
+         write (DebugUn, '(A,*(I6))') "  X iLoc = ", Mods(i)%Vars%x(j)%iLoc
+         write (DebugUn, '(A,*(I6))') "  X iSol = ", Mods(i)%Vars%x(j)%iSol
+         if (allocated(Mods(i)%Vars%x(j)%iq)) write (DebugUn, '(A,*(I6))') "  X iq   = ", Mods(i)%Vars%x(j)%iSol
       end do
       do j = 1, size(Mods(i)%Vars%u)
-         if (.not. allocated(Mods(i)%Vars%u(j)%iGblSol)) cycle
+         if (.not. allocated(Mods(i)%Vars%u(j)%iSol)) cycle
          write (DebugUn, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" U "//trim(Mods(i)%Vars%u(j)%Name)// &
             " ("//trim(MV_FieldString(Mods(i)%Vars%u(j)%Field))//")"
-         write (DebugUn, '(A,*(I6))') "  U iLoc    = ", Mods(i)%Vars%u(j)%iLoc
-         write (DebugUn, '(A,*(I6))') "  U iGblSol = ", Mods(i)%Vars%u(j)%iGblSol
+         write (DebugUn, '(A,*(I6))') "  U iLoc = ", Mods(i)%Vars%u(j)%iLoc
+         write (DebugUn, '(A,*(I6))') "  U iSol = ", Mods(i)%Vars%u(j)%iSol
       end do
       do j = 1, size(Mods(i)%Vars%y)
-         if (.not. allocated(Mods(i)%Vars%y(j)%iGblSol)) cycle
+         if (.not. allocated(Mods(i)%Vars%y(j)%iSol)) cycle
          write (DebugUn, *) "Var = "//trim(Mods(i)%Abbr)//trim(Num2LStr(Mods(i)%Ins))//" Y "//trim(Mods(i)%Vars%y(j)%Name)// &
             " ("//trim(MV_FieldString(Mods(i)%Vars%y(j)%Field))//")"
-         write (DebugUn, '(A,*(I6))') "  Y iLoc    = ", Mods(i)%Vars%y(j)%iLoc
-         write (DebugUn, '(A,*(I6))') "  Y iGblSol = ", Mods(i)%Vars%y(j)%iGblSol
+         write (DebugUn, '(A,*(I6))') "  Y iLoc = ", Mods(i)%Vars%y(j)%iLoc
+         write (DebugUn, '(A,*(I6))') "  Y iSol = ", Mods(i)%Vars%y(j)%iSol
       end do
    end do
 
@@ -1446,7 +1457,8 @@ subroutine Solver_Init_Debug(p, m, Mods)
          write (DebugUn, *) "Mapping = "//m%Mappings(i)%Key
          write (DebugUn, *) "   Src = "//trim(SrcMod%Abbr)//' Ins:'//trim(num2lstr(SrcMod%Ins))//' ModIdx:'//trim(num2lstr(SrcMod%Idx))
          write (DebugUn, *) "   Dst = "//trim(DstMod%Abbr)//' Ins:'//trim(num2lstr(DstMod%Ins))//' ModIdx:'//trim(num2lstr(DstMod%Idx))
-         if (m%Mappings(i)%Idx /= 0) write (DebugUn, *) "   Idx = "//trim(num2lstr(m%Mappings(i)%Idx))
+         if (m%Mappings(i)%i1 /= 0) write (DebugUn, *) "   i1 = "//trim(num2lstr(m%Mappings(i)%i1))
+         if (m%Mappings(i)%i2 /= 0) write (DebugUn, *) "   i2 = "//trim(num2lstr(m%Mappings(i)%i2))
       end associate
    end do
 end subroutine

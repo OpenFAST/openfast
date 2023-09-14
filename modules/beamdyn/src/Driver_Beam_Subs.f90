@@ -641,6 +641,8 @@ SUBROUTINE BD_InputSolve( t, u, DvrData, ErrStat, ErrMsg)
    REAL(R8Ki)                                 :: Orientation(3,3)
    REAL(R8Ki)                                 :: wt               ! time from start start of simulation multiplied by magnitude of rotational velocity
    REAL(R8Ki)                                 :: swt, cwt         ! sine and cosine of w*t
+   REAL(ReKi)                                 :: LoadFreq
+   REAL(ReKi)                                 :: LoadScale
    
    integer(intKi)                             :: ErrStat2         ! temporary Error status
    character(ErrMsgLen)                       :: ErrMsg2          ! temporary Error message
@@ -681,16 +683,19 @@ SUBROUTINE BD_InputSolve( t, u, DvrData, ErrStat, ErrMsg)
    !.............................
    CALL Transfer_Point_to_Point( DvrData%mplLoads, u%PointLoad, DvrData%Map_mplLoads_to_PointLoad, ErrStat2, ErrMsg2, DvrData%mplMotion, DvrData%y_BldMotion_at_u_point)  
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   LoadFreq = 0.2
+   LoadScale = cos(t*2.0_ReKi*PI*LoadFreq)
    
-   u%PointLoad%Force(1:3,u%PointLoad%NNodes)  = u%PointLoad%Force(1:3,u%PointLoad%NNodes)  + DvrData%TipLoad(1:3)
-   u%PointLoad%Moment(1:3,u%PointLoad%NNodes) = u%PointLoad%Moment(1:3,u%PointLoad%NNodes) + DvrData%TipLoad(4:6)
+   u%PointLoad%Force(1:3,u%PointLoad%NNodes)  = u%PointLoad%Force(1:3,u%PointLoad%NNodes)  + DvrData%TipLoad(1:3) * LoadScale
+   u%PointLoad%Moment(1:3,u%PointLoad%NNodes) = u%PointLoad%Moment(1:3,u%PointLoad%NNodes) + DvrData%TipLoad(4:6) * LoadScale
    
    !.............................
    ! LINE2 mesh: DistrLoad
    !.............................
    DO i=1,u%DistrLoad%NNodes
-      u%DistrLoad%Force(:,i) =  DvrData%DistrLoad(1:3)
-      u%DistrLoad%Moment(:,i)=  DvrData%DistrLoad(4:6)
+      u%DistrLoad%Force(:,i) =  DvrData%DistrLoad(1:3) * LoadScale
+      u%DistrLoad%Moment(:,i)=  DvrData%DistrLoad(4:6) * LoadScale
    ENDDO
 
 END SUBROUTINE BD_InputSolve

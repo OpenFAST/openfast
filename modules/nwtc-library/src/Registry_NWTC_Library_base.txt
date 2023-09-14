@@ -71,11 +71,12 @@ typedef     ^       ^           IntKi           Nodes               -   1   -   
 typedef     ^       ^           IntKi           Num                 -   1   -   ""  -
 typedef     ^       ^           IntKi           Flags               -   0   -   ""  -
 typedef     ^       ^           IntKi           DerivOrder          -   0   -   ""  -
-typedef     ^       ^           IntKi           iUsr                :   -   -   "user defined indices for variable"  -
 typedef     ^       ^           IntKi           iLoc                :   -   -   "indices in local arrays"  -
-typedef     ^       ^           IntKi           iGblSol             :   -   -   "indices in global solver arrays"  -
-typedef     ^       ^           IntKi           iGblLin             :   -   -   "indices in global linearization arrays"  -
-typedef     ^       ^           IntKi           iq                  :   -   -   "q matrix row index"  -
+typedef     ^       ^           IntKi           iSol                :   -   -   "indices in solver arrays"  -
+typedef     ^       ^           IntKi           iLin                :   -   -   "indices in linearization arrays"  -
+typedef     ^       ^           IntKi           iq                  :   -   -   "row index in solver q matrix"  -
+typedef     ^       ^           IntKi           iUsr                -   0   -   "first user defined index for variable"  -
+typedef     ^       ^           IntKi           jUsr                -   0   -   "second user defined index for variable"  -
 typedef     ^       ^           R8Ki            Perturb             -   0   -   "perturbation"  -
 typedef     ^       ^           character(LinChanLen)   LinNames    :   -   -   ""  -
 
@@ -114,3 +115,5 @@ typedef     ^       ^           IntKi           ixs                 ::  -   -   
 typedef     ^       ^           IntKi           ius                 ::  -   -   "index array mapping local u vector to global u vector" -
 typedef     ^       ^           IntKi           iys                 ::  -   -   "index array mapping local y vector to global y vector" -
 typedef     ^       ^           ModVarsType    *Vars                -   -   -   "Pointer to module variables type"  -
+typedef     ^       ^           IntKi           SrcMaps             :   -   -   "Indices of mappings where module is the source"
+typedef     ^       ^           IntKi           DstMaps             :   -   -   "Indices of mappings where module is the destination"

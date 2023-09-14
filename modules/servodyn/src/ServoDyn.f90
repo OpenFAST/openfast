@@ -586,6 +586,11 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       InitOut%CouplingScheme = ExplicitLoose
    END IF
 
+      !............................................................................................
+      ! Initialize module variables
+      !............................................................................................
+   call ModuleVars_Init( InitInp, u, p, y, m, InitOut, ErrStat2, ErrMsg2 )
+   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       !............................................................................................
       ! Close summary file:
@@ -615,6 +620,102 @@ contains
       CALL StC_DestroyCtrlChanInitInfoType(StC_CtrlChanInitInfo, ErrStat2, ErrMsg2 )
    end subroutine Cleanup
 END SUBROUTINE SrvD_Init
+
+!----------------------------------------------------------------------------------------------------------------------------------   
+!> This routine initializes module variables for use by the solver and linearization.
+subroutine ModuleVars_Init(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
+   TYPE(SrvD_InitInputType),  INTENT(IN   )  :: InitInp     !< Input data for initialization routine
+   TYPE(SrvD_InputType),      INTENT(IN   )  :: u           !< An initial guess for the input; input mesh must be defined
+   TYPE(SrvD_ParameterType),  INTENT(INOUT)  :: p           !< Parameters
+   TYPE(SrvD_OutputType),     INTENT(IN)     :: y           !< Initial system outputs (outputs are not calculated;
+   TYPE(SrvD_MiscVarType),    INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
+   TYPE(SrvD_InitOutputType), INTENT(INOUT)  :: InitOut     !< Output for initialization routine
+   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter :: RoutineName = 'ModuleVars_Init'
+   integer(IntKi)          :: ErrStat2                     ! Temporary Error status
+   character(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
+   integer(IntKi)          :: i, j, k
+
+   ! Allocate space for variables (deallocate if already allocated)
+   if (associated(p%Vars)) deallocate(p%Vars)
+   allocate(p%Vars, stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Add pointers to vars to inititialization output
+   InitOut%Vars => p%Vars
+
+   !----------------------------------------------------------------------------
+   ! Continuous State Variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Input variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Output variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Initialize Variables and Values
+   !----------------------------------------------------------------------------
+
+   CALL MV_InitVarsVals(p%Vars, m%Vals, InitInp%Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+   !----------------------------------------------------------------------------
+   ! Linearization
+   !----------------------------------------------------------------------------
+
+   ! If linearization is not requested, return
+   ! if (.not. InitInp%Linearize) return
+   ! TODO: Use modvars for linearization
+   return
+
+   ! State Variables
+   call AllocAry(InitOut%LinNames_x, p%Vars%Nx, 'LinNames_x', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(InitOut%RotFrame_x, p%Vars%Nx, 'RotFrame_x', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(InitOut%DerivOrder_x, p%Vars%Nx, 'DerivOrder_x', ErrStat2, ErrMsg2); if (Failed()) return
+   InitOut%DerivOrder_x = 2
+   do i = 1, size(p%Vars%x)
+      do j = 1, p%Vars%x(i)%Num
+         InitOut%LinNames_x(p%Vars%x(i)%iLoc) = p%Vars%x(i)%LinNames
+         InitOut%RotFrame_x(p%Vars%x(i)%iLoc) = iand(p%Vars%x(i)%Flags, VF_RotFrame) > 0
+      end do
+   end do
+
+   ! Input Variables
+   call AllocAry(InitOut%LinNames_u, p%Vars%Nu, 'LinNames_u', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(InitOut%RotFrame_u, p%Vars%Nu, 'RotFrame_u', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(InitOut%IsLoad_u,   p%Vars%Nu, 'IsLoad_u',   ErrStat2, ErrMsg2); if (Failed()) return
+   do i = 1, size(p%Vars%u)
+      do j = 1, p%Vars%u(i)%Num
+         InitOut%LinNames_u(p%Vars%u(i)%iLoc) = p%Vars%u(i)%LinNames
+         InitOut%RotFrame_u(p%Vars%u(i)%iLoc) = iand(p%Vars%u(i)%Flags, VF_RotFrame) > 0
+         InitOut%IsLoad_u(p%Vars%u(i)%iLoc)   = iand(p%Vars%u(i)%Field, VF_Force+VF_Moment) > 0
+      end do
+   end do
+
+   ! Output variables
+   call AllocAry(InitOut%LinNames_y, p%Vars%Ny, 'LinNames_y', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(InitOut%RotFrame_y, p%Vars%Ny, 'RotFrame_y', ErrStat2, ErrMsg2); if (Failed()) return
+   do i = 1, size(p%Vars%y)
+      do j = 1, p%Vars%y(i)%Num
+         InitOut%LinNames_y(p%Vars%y(i)%iLoc) = p%Vars%y(i)%LinNames
+         InitOut%RotFrame_y(p%Vars%y(i)%iLoc) = iand(p%Vars%y(i)%Flags, VF_RotFrame) > 0
+      end do
+   end do
+
+contains    
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Initialize everything needed for linearization
