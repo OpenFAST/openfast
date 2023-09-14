@@ -4883,12 +4883,20 @@ SUBROUTINE FAST_Solution_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
    TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine             !< all data for one instance of a turbine
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter    :: RoutineName = 'FAST_Solution_T'
+   integer(IntKi)                          :: ErrStat2
+   character(ErrMsgLen)                    :: ErrMsg2
    real(dbki) :: t_global_next
    t_global_next = t_initial + (n_t_global+1)*Turbine%p_FAST%DT
 
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
       ! Get initial conditions for solver
-   CALL Solver_Step(n_t_global, t_initial, Turbine%p_FAST%Solver, Turbine%m_FAST%Solver, Turbine%m_FAST%Modules, Turbine, ErrStat, ErrMsg)
-   if (ErrStat >= AbortErrLev) return
+   CALL Solver_Step(n_t_global, t_initial, Turbine%p_FAST%Solver, Turbine%m_FAST%Solver, Turbine%m_FAST%Modules, Turbine, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
    
    ! CALL FAST_Solution(t_initial, n_t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
    !                Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, Turbine%SC_DX, &
@@ -4898,7 +4906,8 @@ SUBROUTINE FAST_Solution_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
    CALL WriteOutputToFile(n_t_global + 1, t_global_next, Turbine%p_FAST, Turbine%y_FAST, Turbine%ED, Turbine%BD, &
                            Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, Turbine%SeaSt, Turbine%HD, Turbine%SD, &
                            Turbine%ExtPtfm, Turbine%SrvD, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
-                           Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg)
+                           Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
 END SUBROUTINE FAST_Solution_T
 !----------------------------------------------------------------------------------------------------------------------------------
