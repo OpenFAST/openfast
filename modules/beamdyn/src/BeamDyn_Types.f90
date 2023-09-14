@@ -60,6 +60,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: kp_coordinate      !< Key point coordinates array [-]
     INTEGER(IntKi)  :: kp_total = 0_IntKi      !< Total number of key points [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
@@ -70,7 +71,6 @@ IMPLICIT NONE
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization [-]
-    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
   END TYPE BD_InitOutputType
 ! =======================
 ! =========  BladeInputData  =======
@@ -458,6 +458,7 @@ subroutine BD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInitOutputData%Vars => SrcInitOutputData%Vars
    if (allocated(SrcInitOutputData%kp_coordinate)) then
       LB(1:2) = lbound(SrcInitOutputData%kp_coordinate)
       UB(1:2) = ubound(SrcInitOutputData%kp_coordinate)
@@ -567,7 +568,6 @@ subroutine BD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
       end if
       DstInitOutputData%DerivOrder_x = SrcInitOutputData%DerivOrder_x
    end if
-   DstInitOutputData%Vars => SrcInitOutputData%Vars
 end subroutine
 
 subroutine BD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -587,6 +587,7 @@ subroutine BD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   nullify(InitOutputData%Vars)
    if (allocated(InitOutputData%kp_coordinate)) then
       deallocate(InitOutputData%kp_coordinate)
    end if
@@ -614,7 +615,6 @@ subroutine BD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%DerivOrder_x)) then
       deallocate(InitOutputData%DerivOrder_x)
    end if
-   nullify(InitOutputData%Vars)
 end subroutine
 
 subroutine BD_PackInitOutput(Buf, Indata)
@@ -634,6 +634,13 @@ subroutine BD_PackInitOutput(Buf, Indata)
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
+   call RegPack(Buf, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(Buf, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(Buf, InData%Vars) 
+      end if
+   end if
    call RegPack(Buf, allocated(InData%kp_coordinate))
    if (allocated(InData%kp_coordinate)) then
       call RegPackBounds(Buf, 2, lbound(InData%kp_coordinate), ubound(InData%kp_coordinate))
@@ -680,13 +687,6 @@ subroutine BD_PackInitOutput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%DerivOrder_x), ubound(InData%DerivOrder_x))
       call RegPack(Buf, InData%DerivOrder_x)
    end if
-   call RegPack(Buf, associated(InData%Vars))
-   if (associated(InData%Vars)) then
-      call RegPackPointer(Buf, c_loc(InData%Vars), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call NWTC_Library_PackModVarsType(Buf, InData%Vars) 
-      end if
-   end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -729,6 +729,26 @@ subroutine BD_UnPackInitOutput(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(Buf, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
    if (allocated(OutData%kp_coordinate)) deallocate(OutData%kp_coordinate)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -856,26 +876,6 @@ subroutine BD_UnPackInitOutput(Buf, OutData)
       end if
       call RegUnpack(Buf, OutData%DerivOrder_x)
       if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (associated(OutData%Vars)) deallocate(OutData%Vars)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%Vars)
-      else
-         allocate(OutData%Vars,stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%Vars)
-         call NWTC_Library_UnpackModVarsType(Buf, OutData%Vars) ! Vars 
-      end if
-   else
-      OutData%Vars => null()
    end if
 end subroutine
 

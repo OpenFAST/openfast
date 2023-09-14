@@ -98,6 +98,7 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_x      !< Names of the continuous states used in linearization [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
@@ -188,6 +189,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  SD_MiscVarType  =======
   TYPE, PUBLIC :: SD_MiscVarType
+    TYPE(ModValsType)  :: Vals      !< Values corresponding to module variables [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: qmdotdot      !< 2nd Derivative of states, used only for output-file purposes [-]
     REAL(ReKi) , DIMENSION(1:6)  :: u_TP = 0.0_ReKi 
     REAL(ReKi) , DIMENSION(1:6)  :: udot_TP = 0.0_ReKi 
@@ -221,6 +223,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  SD_ParameterType  =======
   TYPE, PUBLIC :: SD_ParameterType
+    TYPE(ModVarsType) , POINTER :: Vars => NULL()      !< Module Variables [-]
     REAL(DbKi)  :: SDDeltaT = 0.0_R8Ki      !< Time step (for integration of continuous states) [seconds]
     INTEGER(IntKi)  :: IntMethod = 0_IntKi      !< Integration Method (1/2/3)Length of y2 array [-]
     INTEGER(IntKi)  :: nDOF = 0_IntKi      !< Total degree of freedom [-]
@@ -1193,6 +1196,7 @@ subroutine SD_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, Err
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   DstInitOutputData%Vars => SrcInitOutputData%Vars
    if (allocated(SrcInitOutputData%LinNames_y)) then
       LB(1:1) = lbound(SrcInitOutputData%LinNames_y)
       UB(1:1) = ubound(SrcInitOutputData%LinNames_y)
@@ -1320,6 +1324,7 @@ subroutine SD_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   nullify(InitOutputData%Vars)
    if (allocated(InitOutputData%LinNames_y)) then
       deallocate(InitOutputData%LinNames_y)
    end if
@@ -1353,6 +1358,7 @@ subroutine SD_PackInitOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SD_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SD_PackInitOutput'
+   logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
@@ -1365,6 +1371,13 @@ subroutine SD_PackInitOutput(Buf, Indata)
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
+   call RegPack(Buf, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(Buf, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(Buf, InData%Vars) 
+      end if
+   end if
    call RegPack(Buf, allocated(InData%LinNames_y))
    if (allocated(InData%LinNames_y)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames_y), ubound(InData%LinNames_y))
@@ -1420,6 +1433,8 @@ subroutine SD_UnPackInitOutput(Buf, OutData)
    integer(IntKi)  :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(IntKi)  :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    if (allocated(OutData%WriteOutputHdr)) deallocate(OutData%WriteOutputHdr)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -1450,6 +1465,26 @@ subroutine SD_UnPackInitOutput(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(Buf, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
    if (allocated(OutData%LinNames_y)) deallocate(OutData%LinNames_y)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2898,9 +2933,13 @@ subroutine SD_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    character(*),    intent(  out) :: ErrMsg
    integer(IntKi)                 :: LB(1), UB(1)
    integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SD_CopyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_CopyModValsType(SrcMiscData%Vals, DstMiscData%Vals, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcMiscData%qmdotdot)) then
       LB(1:1) = lbound(SrcMiscData%qmdotdot)
       UB(1:1) = ubound(SrcMiscData%qmdotdot)
@@ -3200,9 +3239,13 @@ subroutine SD_DestroyMisc(MiscData, ErrStat, ErrMsg)
    type(SD_MiscVarType), intent(inout) :: MiscData
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'SD_DestroyMisc'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   call NWTC_Library_DestroyModValsType(MiscData%Vals, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(MiscData%qmdotdot)) then
       deallocate(MiscData%qmdotdot)
    end if
@@ -3282,6 +3325,7 @@ subroutine SD_PackMisc(Buf, Indata)
    type(SD_MiscVarType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SD_PackMisc'
    if (Buf%ErrStat >= AbortErrLev) return
+   call NWTC_Library_PackModValsType(Buf, InData%Vals) 
    call RegPack(Buf, allocated(InData%qmdotdot))
    if (allocated(InData%qmdotdot)) then
       call RegPackBounds(Buf, 1, lbound(InData%qmdotdot), ubound(InData%qmdotdot))
@@ -3418,6 +3462,7 @@ subroutine SD_UnPackMisc(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
+   call NWTC_Library_UnpackModValsType(Buf, OutData%Vals) ! Vals 
    if (allocated(OutData%qmdotdot)) deallocate(OutData%qmdotdot)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3779,6 +3824,18 @@ subroutine SD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SD_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(SrcParamData%Vars)) then
+      if (.not. associated(DstParamData%Vars)) then
+         allocate(DstParamData%Vars, stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%Vars.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      call NWTC_Library_CopyModVarsType(SrcParamData%Vars, DstParamData%Vars, CtrlCode, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   end if
    DstParamData%SDDeltaT = SrcParamData%SDDeltaT
    DstParamData%IntMethod = SrcParamData%IntMethod
    DstParamData%nDOF = SrcParamData%nDOF
@@ -4572,6 +4629,12 @@ subroutine SD_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SD_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (associated(ParamData%Vars)) then
+      call NWTC_Library_DestroyModVarsType(ParamData%Vars, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      deallocate(ParamData%Vars)
+      ParamData%Vars => null()
+   end if
    if (allocated(ParamData%Elems)) then
       deallocate(ParamData%Elems)
    end if
@@ -4799,7 +4862,15 @@ subroutine SD_PackParam(Buf, Indata)
    character(*), parameter         :: RoutineName = 'SD_PackParam'
    integer(IntKi)  :: i1, i2
    integer(IntKi)  :: LB(2), UB(2)
+   logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
+   call RegPack(Buf, associated(InData%Vars))
+   if (associated(InData%Vars)) then
+      call RegPackPointer(Buf, c_loc(InData%Vars), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call NWTC_Library_PackModVarsType(Buf, InData%Vars) 
+      end if
+   end if
    call RegPack(Buf, InData%SDDeltaT)
    call RegPack(Buf, InData%IntMethod)
    call RegPack(Buf, InData%nDOF)
@@ -5178,7 +5249,29 @@ subroutine SD_UnPackParam(Buf, OutData)
    integer(IntKi)  :: LB(2), UB(2)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(IntKi)  :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
+   if (associated(OutData%Vars)) deallocate(OutData%Vars)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%Vars)
+      else
+         allocate(OutData%Vars,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%Vars.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%Vars)
+         call NWTC_Library_UnpackModVarsType(Buf, OutData%Vars) ! Vars 
+      end if
+   else
+      OutData%Vars => null()
+   end if
    call RegUnpack(Buf, OutData%SDDeltaT)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%IntMethod)

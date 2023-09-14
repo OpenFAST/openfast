@@ -41,6 +41,7 @@ typedef   ^         InitInputType Logical         DynamicSolve - .TRUE. - "Use d
 typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputHdr {:}  -   -   "Names of the output-to-file channels"   -
 typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputUnt {:}  -   -   "Units of the output-to-file channels"   -
 typedef   ^        InitOutputType ProgDesc            Ver             -   -   -   "This module's name, version, and date"  -
+typedef	  ^	       InitOutputType ModVarsType        *Vars            -   -   -   "Module Variables"
 typedef   ^        InitOutputType R8Ki                kp_coordinate  {:}{:} - -   "Key point coordinates array"            -
 typedef   ^        InitOutputType IntKi               kp_total        -   -   -   "Total number of key points" -
 typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_y   {:}  -   -   "Names of the outputs used in linearization" -
@@ -53,7 +54,6 @@ typedef   ^        InitOutputType LOGICAL               RotFrame_x   {:}  -   - 
 typedef   ^        InitOutputType LOGICAL               RotFrame_u   {:}  -   -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
 typedef   ^        InitOutputType LOGICAL               IsLoad_u     {:}  -   -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 typedef   ^        InitOutputType IntKi                 DerivOrder_x {:}  -   -   "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
-typedef	  ^	       InitOutputType ModVarsType          *Vars          -   -   -   "Module Variables"
 
 # ..... Blade Input file data........................................................................
 typedef   ^        BladeInputData    IntKi    station_total    -     -     -    "Number of blade input stations"
