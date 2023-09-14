@@ -301,30 +301,77 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
       do j_ss = 1, ModData%SubSteps
          n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
          t_module = n_t_module*ModData%DT + t_initial
-         call AD_UpdateStates(t_module, n_t_module, T%AD%Input, T%AD%InputTimes, T%AD%p, T%AD%x(STATE_PRED), &
-                              T%AD%xd(STATE_PRED), T%AD%z(STATE_PRED), T%AD%OtherSt(STATE_PRED), T%AD%m, ErrStat2, ErrMsg2); if (Failed()) return
+         call AD_UpdateStates(t_module, n_t_module, T%AD%Input, T%AD%InputTimes, &
+                              T%AD%p, T%AD%x(STATE_PRED), T%AD%xd(STATE_PRED), &
+                              T%AD%z(STATE_PRED), T%AD%OtherSt(STATE_PRED), &
+                              T%AD%m, ErrStat2, ErrMsg2)
+         if (Failed()) return
       end do
 
    case (Module_BD)
 
-      ! Transfer tight coupling states to module
-      call BD_PackStateValues(T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, STATE_PRED), T%BD%m(ModData%Ins)%Vals%x)
-      call XferGblToLoc1D(ModData%ixs, x_TC, T%BD%m(ModData%Ins)%Vals%x)
-      call BD_UnpackStateValues(T%BD%p(ModData%Ins), T%BD%m(ModData%Ins)%Vals%x, T%BD%x(ModData%Ins, STATE_PRED))
+      associate (p_BD => T%BD%p(ModData%Ins), &
+                 m_BD => T%BD%m(ModData%Ins), &
+                 u_BD => T%BD%Input(1, ModData%Ins), &
+                 x_BD => T%BD%x(ModData%Ins, STATE_PRED), &
+                 os_BD => T%BD%OtherSt(ModData%Ins, STATE_PRED))
+
+         ! Transfer tight coupling states to module
+         call BD_PackStateValues(p_BD, x_BD, m_BD%Vals%x)
+         call XferGblToLoc1D(ModData%ixs, x_TC, m_BD%Vals%x)
+         call BD_UnpackStateValues(p_BD, m_BD%Vals%x, x_BD)
+
+         ! Set BD accelerations and algorithmic accelerations from q matrix
+         do j = 1, size(p_BD%Vars%x)
+            select case (p_BD%Vars%x(j)%Field)
+            case (VF_TransDisp)
+               os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr) = q_TC(p_BD%Vars%x(j)%iq, 3)
+               os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr) = q_TC(p_BD%Vars%x(j)%iq, 4)
+            case (VF_Orientation)
+               os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr) = q_TC(p_BD%Vars%x(j)%iq, 3)
+               os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr) = q_TC(p_BD%Vars%x(j)%iq, 4)
+            end select
+         end do
+
+         ! Update the global reference
+         call BD_UpdateGlobalRef(u_BD, p_BD, x_BD, os_BD, ErrStat, ErrMsg)
+         if (Failed()) return
+
+         ! Update q matrix accelerations and algorithmic accelerations from BD
+         do j = 1, size(p_BD%Vars%x)
+            select case (p_BD%Vars%x(j)%Field)
+            case (VF_TransDisp)
+               q_TC(p_BD%Vars%x(j)%iq, 3) = os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr)
+               q_TC(p_BD%Vars%x(j)%iq, 4) = os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr)
+            case (VF_Orientation)
+               q_TC(p_BD%Vars%x(j)%iq, 3) = os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr)
+               q_TC(p_BD%Vars%x(j)%iq, 4) = os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr)
+            end select
+         end do
+
+         ! Transfer updated states to solver
+         call BD_PackStateValues(p_BD, x_BD, m_BD%Vals%x)
+         call XferLocToGbl1D(ModData%ixs, m_BD%Vals%x, x_TC)
+      end associate
 
    case (Module_ED)
 
-      ! Transfer tight coupling states to module
-      call ED_PackStateValues(T%ED%p, T%ED%x(STATE_PRED), T%ED%m%Vals%x)
-      call XferGblToLoc1D(ModData%ixs, x_TC, T%ED%m%Vals%x)
-      call ED_UnpackStateValues(T%ED%p, T%ED%m%Vals%x, T%ED%x(STATE_PRED))
+      associate (p_ED => T%ED%p, m_ED => T%ED%m, &
+                 u_ED => T%ED%Input(1), x_ED => T%ED%x(STATE_PRED))
 
-      ! Update the azimuth angle
-      call ED_UpdateAzimuth(T%ED%p, T%ED%x(STATE_PRED), T%p_FAST%DT)
+         ! Transfer tight coupling states to module
+         call ED_PackStateValues(p_ED, x_ED, m_ED%Vals%x)
+         call XferGblToLoc1D(ModData%ixs, x_TC, m_ED%Vals%x)
+         call ED_UnpackStateValues(p_ED, m_ED%Vals%x, x_ED)
 
-      ! Transfer updated states to solver
-      call ED_PackStateValues(T%ED%p, T%ED%x(STATE_PRED), T%ED%m%Vals%x)
-      call XferLocToGbl1D(ModData%ixs, T%ED%m%Vals%x, x_TC)
+         ! Update the azimuth angle
+         call ED_UpdateAzimuth(p_ED, x_ED, T%p_FAST%DT)
+
+         ! Transfer updated states to solver
+         call ED_PackStateValues(p_ED, x_ED, m_ED%Vals%x)
+         call XferLocToGbl1D(ModData%ixs, m_ED%Vals%x, x_TC)
+
+      end associate
 
 !  case (Module_ExtPtfm)
 !  case (Module_FEAM)
@@ -333,8 +380,11 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
       do j_ss = 1, ModData%SubSteps
          n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
          t_module = n_t_module*ModData%DT + t_initial
-         call HydroDyn_UpdateStates(t_module, n_t_module, T%HD%Input, T%HD%InputTimes, T%HD%p, T%HD%x(STATE_PRED), T%HD%xd(STATE_PRED), &
-                                    T%HD%z(STATE_PRED), T%HD%OtherSt(STATE_PRED), T%HD%m, ErrStat2, ErrMsg2); if (Failed()) return
+         call HydroDyn_UpdateStates(t_module, n_t_module, T%HD%Input, T%HD%InputTimes, T%HD%p, &
+                                    T%HD%x(STATE_PRED), T%HD%xd(STATE_PRED), &
+                                    T%HD%z(STATE_PRED), T%HD%OtherSt(STATE_PRED), &
+                                    T%HD%m, ErrStat2, ErrMsg2)
+         if (Failed()) return
       end do
 
 !  case (Module_IceD)
@@ -344,8 +394,11 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
       do j_ss = 1, ModData%SubSteps
          n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
          t_module = n_t_module*ModData%DT + t_initial
-         call InflowWind_UpdateStates(t_module, n_t_module, T%IfW%Input, T%IfW%InputTimes, T%IfW%p, T%IfW%x(STATE_PRED), T%IfW%xd(STATE_PRED), &
-                                      T%IfW%z(STATE_PRED), T%IfW%OtherSt(STATE_PRED), T%IfW%m, ErrStat2, ErrMsg2); if (Failed()) return
+         call InflowWind_UpdateStates(t_module, n_t_module, T%IfW%Input, T%IfW%InputTimes, T%IfW%p, &
+                                      T%IfW%x(STATE_PRED), T%IfW%xd(STATE_PRED), &
+                                      T%IfW%z(STATE_PRED), T%IfW%OtherSt(STATE_PRED), &
+                                      T%IfW%m, ErrStat2, ErrMsg2)
+         if (Failed()) return
       end do
 
 !  case (Module_MAP)
@@ -354,12 +407,15 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
 !  case (Module_Orca)
    case (Module_SD)
 
-      do j_ss = 1, ModData%SubSteps
-         n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
-         t_module = n_t_module*ModData%DT + t_initial
-         call SD_UpdateStates(t_module, n_t_module, T%SD%Input, T%SD%InputTimes, T%SD%p, T%SD%x(STATE_PRED), &
-                              T%SD%xd(STATE_PRED), T%SD%z(STATE_PRED), T%SD%OtherSt(STATE_PRED), T%SD%m, ErrStat2, ErrMsg2); if (Failed()) return
-      end do
+      associate (p_SD => T%SD%p, m_SD => T%SD%m, &
+                 u_SD => T%SD%Input(1), x_SD => T%SD%x(STATE_PRED))
+
+         ! Transfer tight coupling states to module
+         ! call SD_PackStateValues(p_SD, x_SD, m_SD%Vals%x)
+         ! call XferGblToLoc1D(ModData%ixs, x_TC, m_SD%Vals%x)
+         ! call SD_UnpackStateValues(p_SD, m_SD%Vals%x, x_SD)
+
+      end associate
 
 !  case (Module_SeaSt)
    case (Module_SrvD)
@@ -367,8 +423,11 @@ subroutine FAST_UpdateStates(ModData, t_initial, n_t_global, x_TC, q_TC, T, ErrS
       do j_ss = 1, ModData%SubSteps
          n_t_module = n_t_global*ModData%SubSteps + j_ss - 1
          t_module = n_t_module*ModData%DT + t_initial
-         call SrvD_UpdateStates(t_module, n_t_module, T%SrvD%Input, T%SrvD%InputTimes, T%SrvD%p, T%SrvD%x(STATE_PRED), T%SrvD%xd(STATE_PRED), &
-                                T%SrvD%z(STATE_PRED), T%SrvD%OtherSt(STATE_PRED), T%SrvD%m, ErrStat2, ErrMsg2); if (Failed()) return
+         call SrvD_UpdateStates(t_module, n_t_module, T%SrvD%Input, T%SrvD%InputTimes, T%SrvD%p, &
+                                T%SrvD%x(STATE_PRED), T%SrvD%xd(STATE_PRED), &
+                                T%SrvD%z(STATE_PRED), T%SrvD%OtherSt(STATE_PRED), &
+                                T%SrvD%m, ErrStat2, ErrMsg2)
+         if (Failed()) return
       end do
 
    case default
@@ -1026,7 +1085,7 @@ subroutine AD_InputSolve1(ModData, Maps, u_AD, T, ErrStat, ErrMsg)
 
 contains
    logical function Failed()
-      Failed = ErrStat2 >= AbortErrLev
+      Failed = ErrStat2 /= ErrID_None
       if (Failed) call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':Key="'//Maps(i)%Key//'"')
    end function
 end subroutine
@@ -1084,7 +1143,7 @@ subroutine BD_InputSolve1(ModData, Maps, u_BD, T, ErrStat, ErrMsg)
 
 contains
    logical function Failed()
-      Failed = ErrStat2 >= AbortErrLev
+      Failed = ErrStat2 /= ErrID_None
       if (Failed) call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':Key="'//Maps(i)%Key//'"')
    end function
 end subroutine
@@ -1259,7 +1318,7 @@ subroutine IfW_InputSolve1(ModData, Maps, u_IfW, T, ErrStat, ErrMsg)
 
 contains
    logical function Failed()
-      Failed = ErrStat2 >= AbortErrLev
+      Failed = ErrStat2 /= ErrID_None
       if (Failed) call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':Key="'//Maps(i)%Key//'"')
    end function
 end subroutine
@@ -1374,7 +1433,7 @@ subroutine SrvD_InputSolve1(ModData, Maps, u_SrvD, T, ErrStat, ErrMsg)
 
 contains
    logical function Failed()
-      Failed = ErrStat2 >= AbortErrLev
+      Failed = ErrStat2 /= ErrID_None
       if (Failed) call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':Key="'//Maps(i)%Key//'"')
    end function
 end subroutine
@@ -1464,10 +1523,11 @@ contains
    end function
 end subroutine
 
-subroutine FAST_CalcContStateDeriv(ModData, this_time, this_state, T, ErrStat, ErrMsg, dxdt)
+subroutine FAST_CalcContStateDeriv(ModData, ThisTime, ThisState, IsSolve, T, ErrStat, ErrMsg, dxdt)
    type(ModDataType), intent(in)           :: ModData     !< Module data
-   real(DbKi), intent(in)                  :: this_time   !< Time
-   integer(IntKi), intent(in)              :: this_state  !< State index
+   real(DbKi), intent(in)                  :: ThisTime    !< Time
+   integer(IntKi), intent(in)              :: ThisState   !< State index
+   logical, intent(in)                     :: IsSolve     !< Calculate solver derivs, otherwise linearization
    type(FAST_TurbineType), intent(inout)   :: T           !< Turbine type
    integer(IntKi), intent(out)             :: ErrStat
    character(*), intent(out)               :: ErrMsg
@@ -1487,8 +1547,8 @@ subroutine FAST_CalcContStateDeriv(ModData, this_time, this_state, T, ErrStat, E
 
    case (Module_BD)
 
-      call BD_CalcContStateDeriv(this_time, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, this_state), &
-                                 T%BD%xd(ModData%Ins, this_state), T%BD%z(ModData%Ins, this_state), T%BD%OtherSt(ModData%Ins, this_state), &
+      call BD_CalcContStateDeriv(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, ThisState), &
+                                 T%BD%xd(ModData%Ins, ThisState), T%BD%z(ModData%Ins, ThisState), T%BD%OtherSt(ModData%Ins, ThisState), &
                                  T%BD%m(ModData%Ins), T%BD%dxdt(ModData%Ins), ErrStat2, ErrMsg2); if (Failed()) return
       if (present(dxdt)) then
          call BD_PackStateValues(T%BD%p(ModData%Ins), T%BD%dxdt(ModData%Ins), T%BD%m(ModData%Ins)%Vals%dxdt)
@@ -1497,8 +1557,8 @@ subroutine FAST_CalcContStateDeriv(ModData, this_time, this_state, T, ErrStat, E
 
    case (Module_ED)
 
-      call ED_CalcContStateDeriv(this_time, T%ED%Input(1), T%ED%p, T%ED%x(this_state), T%ED%xd(this_state), &
-                                 T%ED%z(this_state), T%ED%OtherSt(this_state), T%ED%m, &
+      call ED_CalcContStateDeriv(ThisTime, T%ED%Input(1), T%ED%p, T%ED%x(ThisState), T%ED%xd(ThisState), &
+                                 T%ED%z(ThisState), T%ED%OtherSt(ThisState), T%ED%m, &
                                  T%ED%dxdt, ErrStat2, ErrMsg2); if (Failed()) return
       if (present(dxdt)) then
          call ED_PackStateValues(T%ED%p, T%ED%dxdt, T%ED%m%Vals%dxdt)
@@ -1530,19 +1590,20 @@ contains
    end function
 end subroutine
 
-subroutine FAST_CalcJacobian(ModData, this_time, this_state, T, ErrStat, ErrMsg, dYdx, dXdx, dYdu, dXdu)
+subroutine FAST_CalcJacobian(ModData, ThisTime, ThisState, IsSolve, T, ErrStat, ErrMsg, dYdx, dXdx, dYdu, dXdu)
    type(ModDataType), intent(in)                      :: ModData     !< Module data
-   real(DbKi), intent(in)                             :: this_time   !< Time
-   integer(IntKi), intent(in)                         :: this_state  !< State
+   real(DbKi), intent(in)                             :: ThisTime    !< Time
+   integer(IntKi), intent(in)                         :: ThisState   !< State
    type(FAST_TurbineType), intent(inout)              :: T           !< Turbine type
+   logical, intent(in)                                :: IsSolve     !< Calculate solver Jacobians, otherwise linearization
    integer(IntKi), intent(out)                        :: ErrStat
    character(*), intent(out)                          :: ErrMsg
    real(R8Ki), allocatable, optional, intent(inout)   :: dYdx(:, :), dXdx(:, :), dYdu(:, :), dXdu(:, :)
 
-   character(*), parameter    :: RoutineName = 'FAST_CalcContStateDeriv'
+   character(*), parameter    :: RoutineName = 'FAST_CalcJacobian'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
-   integer(IntKi)             :: j_ss                ! substep loop counter
+   integer(IntKi)             :: j_ss     ! substep loop counter
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -1554,28 +1615,28 @@ subroutine FAST_CalcJacobian(ModData, this_time, this_state, T, ErrStat, ErrMsg,
 
    case (Module_BD)
 
-      call BD_JacobianPInput(this_time, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, this_state), T%BD%xd(ModData%Ins, this_state), &
-                             T%BD%z(ModData%Ins, this_state), T%BD%OtherSt(ModData%Ins, this_state), T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), &
+      call BD_JacobianPInput(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, ThisState), T%BD%xd(ModData%Ins, ThisState), &
+                             T%BD%z(ModData%Ins, ThisState), T%BD%OtherSt(ModData%Ins, ThisState), T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), &
                              ErrStat2, ErrMsg2, dYdu=T%BD%m(ModData%Ins)%Vals%dYdu, dXdu=T%BD%m(ModData%Ins)%Vals%dXdu); if (Failed()) return
       if (present(dYdu)) call XferLocToGbl2D(ModData%iys, ModData%ius, T%BD%m(ModData%Ins)%Vals%dYdu, dYdu)
       if (present(dXdu)) call XferLocToGbl2D(ModData%ixs, ModData%ius, T%BD%m(ModData%Ins)%Vals%dXdu, dXdu)
 
-      call BD_JacobianPContState(this_time, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, this_state), T%BD%xd(ModData%Ins, this_state), &
-                                 T%BD%z(ModData%Ins, this_state), T%BD%OtherSt(ModData%Ins, this_state), T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), &
+      call BD_JacobianPContState(ThisTime, T%BD%Input(1, ModData%Ins), T%BD%p(ModData%Ins), T%BD%x(ModData%Ins, ThisState), T%BD%xd(ModData%Ins, ThisState), &
+                                 T%BD%z(ModData%Ins, ThisState), T%BD%OtherSt(ModData%Ins, ThisState), T%BD%y(ModData%Ins), T%BD%m(ModData%Ins), &
                                  ErrStat2, ErrMsg2, dYdx=T%BD%m(ModData%Ins)%Vals%dYdx, dXdx=T%BD%m(ModData%Ins)%Vals%dXdx); if (Failed()) return
       if (present(dYdx)) call XferLocToGbl2D(ModData%iys, ModData%ixs, T%BD%m(ModData%Ins)%Vals%dYdx, dYdx)
       if (present(dXdx)) call XferLocToGbl2D(ModData%ixs, ModData%ixs, T%BD%m(ModData%Ins)%Vals%dXdx, dXdx)
 
    case (Module_ED)
 
-      call ED_JacobianPInput(this_time, T%ED%Input(1), T%ED%p, T%ED%x(this_state), T%ED%xd(this_state), &
-                             T%ED%z(this_state), T%ED%OtherSt(this_state), T%ED%y, T%ED%m, &
+      call ED_JacobianPInput(ThisTime, T%ED%Input(1), T%ED%p, T%ED%x(ThisState), T%ED%xd(ThisState), &
+                             T%ED%z(ThisState), T%ED%OtherSt(ThisState), T%ED%y, T%ED%m, &
                              ErrStat2, ErrMsg2, dYdu=T%ED%m%Vals%dYdu, dXdu=T%ED%m%Vals%dXdu); if (Failed()) return
       if (present(dYdu)) call XferLocToGbl2D(ModData%iys, ModData%ius, T%ED%m%Vals%dYdu, dYdu)
       if (present(dXdu)) call XferLocToGbl2D(ModData%ixs, ModData%ius, T%ED%m%Vals%dXdu, dXdu)
 
-      call ED_JacobianPContState(this_time, T%ED%Input(1), T%ED%p, T%ED%x(this_state), T%ED%xd(this_state), &
-                                 T%ED%z(this_state), T%ED%OtherSt(this_state), T%ED%y, T%ED%m, &
+      call ED_JacobianPContState(ThisTime, T%ED%Input(1), T%ED%p, T%ED%x(ThisState), T%ED%xd(ThisState), &
+                                 T%ED%z(ThisState), T%ED%OtherSt(ThisState), T%ED%y, T%ED%m, &
                                  ErrStat2, ErrMsg2, dYdx=T%ED%m%Vals%dYdx, dXdx=T%ED%m%Vals%dXdx); if (Failed()) return
       if (present(dYdx)) call XferLocToGbl2D(ModData%iys, ModData%ixs, T%ED%m%Vals%dYdx, dYdx)
       if (present(dXdx)) call XferLocToGbl2D(ModData%ixs, ModData%ixs, T%ED%m%Vals%dXdx, dXdx)

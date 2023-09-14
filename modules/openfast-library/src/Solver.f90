@@ -547,6 +547,7 @@ subroutine Solver_Step0(p, m, Mods, Turbine, ErrStat, ErrMsg)
    character(*), parameter    :: RoutineName = 'Solver_Step0'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
+   logical, parameter         :: IsSolve = .true.
    integer(IntKi)             :: i, j, k
    real(R8Ki), allocatable    :: accel(:)
    real(R8Ki)                 :: diff
@@ -610,7 +611,7 @@ subroutine Solver_Step0(p, m, Mods, Turbine, ErrStat, ErrMsg)
 
       ! Calculate continuous state derivatives for tight coupling modules (use current state)
       do i = 1, size(p%iModTC)
-         call FAST_CalcContStateDeriv(Mods(p%iModTC(i)), t_initial, STATE_CURR, &
+         call FAST_CalcContStateDeriv(Mods(p%iModTC(i)), t_initial, STATE_CURR, IsSolve, &
                                       Turbine, ErrStat2, ErrMsg2, dxdt=m%dxdt); if (Failed()) return
       end do
 
@@ -664,7 +665,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    real(DbKi), intent(in)                    :: t_initial   !< Initial simulation time
    type(TC_ParameterType), intent(in)        :: p           !< Parameters
    type(TC_MiscVarType), intent(inout)       :: m           !< Misc variables
-   type(ModDataType), intent(in)             :: Mods(:)  !< Module data
+   type(ModDataType), intent(in)             :: Mods(:)     !< Module data
    type(FAST_TurbineType), intent(inout)     :: Turbine     !< Turbine type
    integer(IntKi), intent(out)               :: ErrStat
    character(*), intent(out)                 :: ErrMsg
@@ -672,9 +673,8 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    character(*), parameter    :: RoutineName = 'Solver_Step'
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
-   integer(IntKi)             :: NumCorrections      ! number of corrections for this time step
+   logical, parameter         :: IsSolve = .true.
    integer(IntKi)             :: iterConv, iterCorr
-   logical                    :: update_jacobian
    real(ReKi)                 :: delta_norm
    real(DbKi)                 :: t_global_next       ! next simulation time (m_FAST%t_global + p_FAST%dt)
    integer(IntKi)             :: n_t_global_next     ! n_t_global + 1
@@ -853,7 +853,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
          ! Calculate continuous state derivatives for tight coupling modules
          do i = 1, size(p%iModTC)
-            call FAST_CalcContStateDeriv(Mods(p%iModTC(i)), t_global_next, STATE_PRED, &
+            call FAST_CalcContStateDeriv(Mods(p%iModTC(i)), t_global_next, STATE_PRED, IsSolve, &
                                          Turbine, ErrStat2, ErrMsg2, dxdt=m%dxdt)
             if (Failed()) return
          end do
@@ -889,6 +889,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! Check perturbations for convergence and exit if below tolerance
          !----------------------------------------------------------------------
 
+         ! Calculate average L2 norm of change in states and inputs 
          delta_norm = TwoNorm(m%XB(:, 1))/size(m%XB)
 
          if (DebugSolver) then
@@ -958,48 +959,6 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    ! Update states for next step
    !----------------------------------------------------------------------------
 
-   ! Loop through BeamDyn instances
-   do i = 1, size(p%iModBD)
-      associate (Mod => Mods(p%iModBD(i)), &
-                 p_BD => Turbine%BD%p(Mods(p%iModBD(i))%Ins), &
-                 m_BD => Turbine%BD%m(Mods(p%iModBD(i))%Ins), &
-                 u_BD => Turbine%BD%Input(1, Mods(p%iModBD(i))%Ins), &
-                 x_BD => Turbine%BD%x(Mods(p%iModBD(i))%Ins, STATE_PRED), &
-                 os_BD => Turbine%BD%OtherSt(Mods(p%iModBD(i))%Ins, STATE_PRED))
-
-         ! Update accelerations and algorithmic accelerations
-         do j = 1, size(p_BD%Vars%x)
-            select case (p_BD%Vars%x(j)%Field)
-            case (VF_TransDisp)
-               os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr) = m%qn(p_BD%Vars%x(j)%iq, COL_A)
-               os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr) = m%qn(p_BD%Vars%x(j)%iq, COL_AA)
-            case (VF_Orientation)
-               os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr) = m%qn(p_BD%Vars%x(j)%iq, COL_A)
-               os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr) = m%qn(p_BD%Vars%x(j)%iq, COL_AA)
-            end select
-         end do
-
-         ! Update the global reference
-         call BD_UpdateGlobalRef(u_BD, p_BD, x_BD, os_BD, ErrStat, ErrMsg); if (Failed()) return
-
-         ! Update accelerations and algorithmic accelerations
-         do j = 1, size(p_BD%Vars%x)
-            select case (p_BD%Vars%x(j)%Field)
-            case (VF_TransDisp)
-               m%qn(p_BD%Vars%x(j)%iq, COL_A) = os_BD%acc(1:3, p_BD%Vars%x(j)%iUsr)
-               m%qn(p_BD%Vars%x(j)%iq, COL_AA) = os_BD%xcc(1:3, p_BD%Vars%x(j)%iUsr)
-            case (VF_Orientation)
-               m%qn(p_BD%Vars%x(j)%iq, COL_A) = os_BD%acc(4:6, p_BD%Vars%x(j)%iUsr)
-               m%qn(p_BD%Vars%x(j)%iq, COL_AA) = os_BD%xcc(4:6, p_BD%Vars%x(j)%iUsr)
-            end select
-         end do
-
-         ! Transfer updated states to solver
-         call BD_PackStateValues(p_BD, x_BD, m_BD%Vals%x)
-         call XferLocToGbl1D(Mod%ixs, m_BD%Vals%x, m%xn)
-      end associate
-   end do
-
    ! Update state matrix from state array
    call TransferXtoQ(p%ixqd, m%xn, m%qn)
 
@@ -1045,6 +1004,7 @@ subroutine BuildJacobian(p, m, Mods, this_time, iter, Turbine, ErrStat, ErrMsg)
    character(*), parameter                :: RoutineName = 'BuildJacobian'
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
+   logical, parameter                     :: IsSolve = .true.
    integer(IntKi)                         :: i, j
    real(R8Ki), allocatable                :: tmp(:, :)
    real(R8Ki), dimension(3)               :: wm_b, wm_p, wm_n, wm_d, wm_pert, delta
@@ -1072,13 +1032,13 @@ subroutine BuildJacobian(p, m, Mods, this_time, iter, Turbine, ErrStat, ErrMsg)
 
    ! Calculate dYdx, dXdx, dXdu for tight coupling modules
    do i = 1, size(p%iModTC)
-      call FAST_CalcJacobian(Mods(p%iModTC(i)), this_time, STATE_PRED, Turbine, ErrStat2, ErrMsg2, &
+      call FAST_CalcJacobian(Mods(p%iModTC(i)), this_time, STATE_PRED, IsSolve, Turbine, ErrStat2, ErrMsg2, &
                              dYdx=m%dYdx, dXdx=m%dXdx, dXdu=m%dXdu); if (Failed()) return
    end do
 
    ! Calculate dYdu Loop for Option 1 modules
    do i = 1, size(p%iModOpt1)
-      call FAST_CalcJacobian(Mods(p%iModOpt1(i)), this_time, STATE_PRED, Turbine, ErrStat2, ErrMsg2, &
+      call FAST_CalcJacobian(Mods(p%iModOpt1(i)), this_time, STATE_PRED, IsSolve, Turbine, ErrStat2, ErrMsg2, &
                              dYdu=m%dYdu); if (Failed()) return
    end do
 
