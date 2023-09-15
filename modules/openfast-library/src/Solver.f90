@@ -201,6 +201,17 @@ subroutine Solver_Init(p, m, Mods, Turbine, ErrStat, ErrMsg)
    p%C(7) = p%DT*p%Gamma
 
    !----------------------------------------------------------------------------
+   ! Solver Outputs
+   !----------------------------------------------------------------------------
+
+   call AllocAry(Turbine%y_FAST%WriteOutput, 3, 'y_FAST%WriteOutput', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(Turbine%y_FAST%WriteOutputHdr, 3, 'y_FAST%WriteOutputHdr', ErrStat2, ErrMsg2); if (Failed()) return
+   call AllocAry(Turbine%y_FAST%WriteOutputUnt, 3, 'y_FAST%WriteOutputUnit', ErrStat2, ErrMsg2); if (Failed()) return
+
+   Turbine%y_FAST%WriteOutputHdr = [character(ChanLen) :: 'ConvIter', 'ConvError', 'NumUJac']
+   Turbine%y_FAST%WriteOutputUnt = [character(ChanLen) :: '(-)', '(-)', '(-)']
+
+   !----------------------------------------------------------------------------
    ! Write debug info to file
    !----------------------------------------------------------------------------
 
@@ -521,7 +532,7 @@ subroutine Solver_Step0(p, m, Mods, Turbine, ErrStat, ErrMsg)
    logical, parameter         :: IsSolve = .true.
    integer(IntKi)             :: i, j, k
    real(R8Ki), allocatable    :: accel(:)
-   real(R8Ki)                 :: diff
+   real(R8Ki)                 :: ConvError
    logical                    :: converged
    integer(IntKi), parameter  :: n_t_global = -1     ! loop counter
    integer(IntKi), parameter  :: n_t_global_next = 0 ! loop counter
@@ -563,7 +574,7 @@ subroutine Solver_Step0(p, m, Mods, Turbine, ErrStat, ErrMsg)
    ! Loop until initial accelerations are converged, or max iterations are reached.
    ! TODO: may need a separate variable for max initial acceleration convergence iterations
    converged = .false.
-   k = 1
+   k = 0
    do while ((.not. converged) .and. (k <= 2*p%MaxConvIter))
 
       ! Transfer inputs and calculate outputs for all modules (use current state)
@@ -587,11 +598,11 @@ subroutine Solver_Step0(p, m, Mods, Turbine, ErrStat, ErrMsg)
          if (p%ixqd(3, i) == COL_V) accel(p%ixqd(2, i)) = m%dxdt(p%ixqd(1, i))
       end do
 
-      ! Calculate diff as L2 norm of current and new accelerations
-      diff = TwoNorm(accel - m%qn(:, COL_A))
+      ! Calculate convergence error as L2 norm of diff between current and new accelerations
+      ConvError = TwoNorm(accel - m%qn(:, COL_A))
 
-      ! If difference is less than converence tolerance, set flag and exit loop
-      if ((k > 1) .and. (diff < p%ConvTol)) converged = .true.
+      ! If difference is less than convergence tolerance, set flag and exit loop
+      if ((k > 1) .and. (ConvError < p%ConvTol)) converged = .true.
 
       ! Update acceleration in q matrix
       m%qn(:, COL_A) = accel
@@ -602,7 +613,7 @@ subroutine Solver_Step0(p, m, Mods, Turbine, ErrStat, ErrMsg)
 
    ! Print warning if not converged
    if (.not. converged) call WrScr("Solver: initial accel not converged, diff="// &
-                                   trim(Num2LStr(diff))//", tol="//trim(Num2LStr(p%ConvTol)))
+                                   trim(Num2LStr(ConvError))//", tol="//trim(Num2LStr(p%ConvTol)))
 
    ! Initialize algorithmic acceleration from actual acceleration
    m%qn(:, COL_AA) = m%qn(:, COL_A)
@@ -617,6 +628,14 @@ subroutine Solver_Step0(p, m, Mods, Turbine, ErrStat, ErrMsg)
 
    ! Reset the Remap flags for all modules
    call FAST_ResetRemapFlags(Mods, m%Mappings, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+
+   !----------------------------------------------------------------------------
+   ! Set Outputs
+   !----------------------------------------------------------------------------
+
+   Turbine%y_FAST%WriteOutput(1) = real(k, ReKi)         ! ConvIter
+   Turbine%y_FAST%WriteOutput(2) = real(ConvError, ReKi) ! ConvError
+   Turbine%y_FAST%WriteOutput(3) = 0.0_ReKi              ! NumUJac
 
 contains
    logical function Failed()
@@ -639,11 +658,13 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    integer(IntKi)             :: ErrStat2
    character(ErrMsgLen)       :: ErrMsg2
    logical, parameter         :: IsSolve = .true.
-   integer(IntKi)             :: iterConv, iterCorr, NumCorrections
+   integer(IntKi)             :: iterConv, iterCorr, iterTotal
+   integer(IntKi)             :: NumUJac, NumCorrections
    real(ReKi)                 :: delta_norm
-   real(DbKi)                 :: t_global_next       ! next simulation time (m_FAST%t_global + p_FAST%dt)
-   integer(IntKi)             :: n_t_global_next     ! n_t_global + 1
+   real(DbKi)                 :: t_global_next     ! next simulation time (m_FAST%t_global + p_FAST%dt)
+   integer(IntKi)             :: n_t_global_next   ! n_t_global + 1
    integer(IntKi)             :: i, j
+   logical                    :: ConvUJac          ! Jacobian updated for convergence
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -661,6 +682,13 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
    ! Decrement number of time steps before updating the Jacobian
    m%StepsUntilUJac = m%StepsUntilUJac - 1
+
+   ! Set Jacobian updated for convergence flag to false
+   ConvUJac = .false.
+
+   ! Init counters for number of Jacobian updates and number of convergence iterations
+   NumUJac = 0
+   iterTotal = 0
 
    !----------------------------------------------------------------------------
    ! Extrapolate/interpolate inputs for all modules
@@ -772,6 +800,9 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
       ! Loop through convergence iterations
       do iterConv = 0, p%MaxConvIter
 
+         ! Increment total number of convergence iterations in step
+         iterTotal = iterTotal + 1
+
          ! Decrement number of iterations before updating the Jacobian
          m%IterUntilUJac = m%IterUntilUJac - 1
 
@@ -785,30 +816,37 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          end do
 
          !----------------------------------------------------------------------
-         ! If iteration limit reached, exit loop
+         ! Convergence iteration check
          !----------------------------------------------------------------------
 
+         ! If convergence iteration has reached or exceeded limit
          if (iterConv >= p%MaxConvIter) then
 
-            ! If number of corrections is less than or the same as limit,
-            ! increase number of corrections and set counter to trigger 
-            ! a Jacobian update on correction step.
-            if (NumCorrections <= p%NumCrctn) then
-               NumCorrections = NumCorrections + 1
+            ! If Jacobian has not been updated for convergence
+            if (.not. ConvUJac) then
+
+               ! Set counter to trigger a Jacobian update on next convergence iteration
                m%IterUntilUJac = 0
 
-            else if (m%ConvWarn) then
+               ! If at the maximum number of correction iterations,
+               ! increase limit to retry the step after the Jacobian is updated
+               if (iterCorr == NumCorrections) NumCorrections = NumCorrections + 1
 
-               ! Otherwise, warn that convergence failed
+               ! Set flag indicating that the jacobian has been updated for convergence
+               ConvUJac = .true.
+
+            else
+
+               ! Otherwise, correction iteration with Jacobian update has been tried,
+               ! display warning that convergence failed and move to next step
                call SetErrStat(ErrID_Warn, "Failed to converge in "//trim(Num2LStr(p%MaxConvIter))// &
                                " iterations on step "//trim(Num2LStr(n_t_global_next))// &
                                " (error="//trim(Num2LStr(delta_norm))// &
                                ", tolerance="//trim(Num2LStr(p%ConvTol))// &
                                "). Warning will not be displayed again.", ErrStat, ErrMsg, RoutineName)
-               m%ConvWarn = .false.
             end if
 
-            ! Exit loop
+            ! Exit convergence loop to next correction iteration or next step
             exit
          end if
 
@@ -820,6 +858,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! is zero or less, or first solution step, then rebuild the Jacobian.
          ! Note: BuildJacobian resets these counters.
          if ((m%IterUntilUJac <= 0) .or. (m%StepsUntilUJac <= 0) .or. (n_t_global_next == 1)) then
+            NumUJac = NumUJac + 1
             call BuildJacobian(p, m, Mods, t_global_next, Turbine, ErrStat2, ErrMsg2)
             if (Failed()) return
          end if
@@ -840,8 +879,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
          ! Transfer Option 1 outputs to temporary inputs and collect into u_tmp
          do i = 1, size(p%iModOpt1)
-            call FAST_InputSolve(Mods(p%iModOpt1(i)), m%Mappings, IS_u, &
-                                 Turbine, ErrStat2, ErrMsg2)
+            call FAST_InputSolve(Mods(p%iModOpt1(i)), m%Mappings, IS_u, Turbine, ErrStat2, ErrMsg2)
             if (Failed()) return
          end do
          call PackModuleUs(Mods, p%iModOpt1, Turbine, m%u_tmp)
@@ -894,7 +932,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! Update state matrix with deltas
          m%qn = m%qn + m%dq
 
-         ! Transfer change in q state matrix to change in x array
+         ! Transfer change in q state matrix to change in x state array
          m%dx = 0.0_R8Ki
          call TransferQtoX(p%ixqd, m%dq, m%dx)
 
@@ -922,15 +960,18 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
       end do
 
+      ! Increment correction iteration counter
       iterCorr = iterCorr + 1
 
-      ! Perform input solve for modules post Option 1
+      ! Perform input solve for modules post Option 1 convergence
       do i = 1, size(p%iModPost)
-         call FAST_InputSolve(Mods(p%iModPost(i)), m%Mappings, IS_Input, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+         call FAST_InputSolve(Mods(p%iModPost(i)), m%Mappings, IS_Input, Turbine, ErrStat2, ErrMsg2)
+         if (Failed()) return
       end do
 
       ! Reset mesh remap
-      call FAST_ResetRemapFlags(Mods, m%Mappings, Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+      call FAST_ResetRemapFlags(Mods, m%Mappings, Turbine, ErrStat2, ErrMsg2)
+      if (Failed()) return
    end do
 
    !----------------------------------------------------------------------------
@@ -942,13 +983,25 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
    ! Copy the final predicted states from step t_global_next to actual states for that step
    do i = 1, size(Mods)
-      call FAST_SaveStates(Mods(i), Turbine, ErrStat2, ErrMsg2); if (Failed()) return
+      call FAST_SaveStates(Mods(i), Turbine, ErrStat2, ErrMsg2)
+      if (Failed()) return
    end do
 
    ! Save new state
    m%x = m%xn
 
+   !----------------------------------------------------------------------------
+   ! Set Outputs
+   !----------------------------------------------------------------------------
+
+   Turbine%y_FAST%WriteOutput(1) = real(iterTotal, ReKi)    ! ConvIter
+   Turbine%y_FAST%WriteOutput(2) = real(delta_norm, ReKi)   ! ConvError
+   Turbine%y_FAST%WriteOutput(3) = real(NumUJac, ReKi)      ! NumUJac
+
+   !----------------------------------------------------------------------------
    ! Update the global time
+   !----------------------------------------------------------------------------
+
    Turbine%m_FAST%t_global = t_global_next
 
 contains

@@ -1469,12 +1469,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    END IF
 
 
-   ! ........................
-   ! Set up output for glue code (must be done after all modules are initialized so we have their WriteOutput information)
-   ! ........................
 
-   CALL FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    ! -------------------------------------------------------------------------
    ! Initialize tight coupling solver
@@ -1486,6 +1481,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          CALL Cleanup()
          RETURN
       END IF
+
+   ! -------------------------------------------------------------------------
+   ! Set up output for glue code (must be done after all modules are initialized so we have their WriteOutput information)
+   ! -------------------------------------------------------------------------
+
+   CALL FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    ! -------------------------------------------------------------------------
    ! Initialize mesh-mapping data
@@ -2245,6 +2247,7 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, Init, ErrStat, ErrMsg )
    !......................................................
    y_FAST%numOuts = 0    ! Inintialize entire array
    
+   IF ( ALLOCATED( y_FAST%WriteOutputHdr            ) ) y_FAST%numOuts(Module_Glue) = SIZE(y_FAST%WriteOutputHdr)
    IF ( ALLOCATED( Init%OutData_IfW%WriteOutputHdr  ) ) y_FAST%numOuts(Module_IfW)  = SIZE(Init%OutData_IfW%WriteOutputHdr)
    IF ( ALLOCATED( Init%OutData_OpFM%WriteOutputHdr ) ) y_FAST%numOuts(Module_OpFM) = SIZE(Init%OutData_OpFM%WriteOutputHdr)
    IF ( ALLOCATED( Init%OutData_ED%WriteOutputHdr   ) ) y_FAST%numOuts(Module_ED)   = SIZE(Init%OutData_ED%WriteOutputHdr)
@@ -2272,22 +2275,24 @@ end do
    !......................................................
    ! Initialize the output channel names and units
    !......................................................
-      y_FAST%numOuts(Module_Glue) = 1 ! time
-
    
-   NumOuts   = SUM( y_FAST%numOuts )
+   NumOuts   = SUM( y_FAST%numOuts ) + 1
 
    CALL AllocAry( y_FAST%ChannelNames,NumOuts, 'ChannelNames', ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) RETURN
    CALL AllocAry( y_FAST%ChannelUnits,NumOuts, 'ChannelUnits', ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) RETURN
-
-      ! Glue outputs: 
+   
    y_FAST%ChannelNames(1) = 'Time'
    y_FAST%ChannelUnits(1) = '(s)'
 
-   
-   indxNext = y_FAST%numOuts(Module_Glue) + 1
+   indxNext = 2
+
+   DO i=1,y_FAST%numOuts(Module_Glue) !GlueCode
+      y_FAST%ChannelNames(indxNext) = y_FAST%WriteOutputHdr(i)
+      y_FAST%ChannelUnits(indxNext) = y_FAST%WriteOutputUnt(i)
+      indxNext = indxNext + 1
+   END DO
    
    DO i=1,y_FAST%numOuts(Module_IfW) !InflowWind
       y_FAST%ChannelNames(indxNext) = Init%OutData_IfW%WriteOutputHdr(i)
@@ -5541,9 +5546,9 @@ SUBROUTINE FillOutputAry(p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, y_AD, 
       indxLast = 0
       indxNext = 1
       
-      IF (y_FAST%numOuts(Module_Glue) > 1) THEN ! if we output more than just the time channel....
-         indxLast = indxNext + SIZE(y_FAST%DriverWriteOutput) - 1
-         OutputAry(indxNext:indxLast) = y_FAST%DriverWriteOutput
+      IF (y_FAST%numOuts(Module_Glue) > 0) THEN ! if we output more than just the time channel....
+         indxLast = indxNext + SIZE(y_FAST%WriteOutput) - 1
+         OutputAry(indxNext:indxLast) = y_FAST%WriteOutput
          indxNext = IndxLast + 1
       END IF
 

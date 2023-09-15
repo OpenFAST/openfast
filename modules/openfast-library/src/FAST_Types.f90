@@ -461,7 +461,9 @@ IMPLICIT NONE
     TYPE(FAST_LinFileType)  :: Lin      !< linearization data for output [-]
     INTEGER(IntKi)  :: ActualChanLen = 0_IntKi      !< width of the column headers output in the text and/or binary file [-]
     TYPE(FAST_LinStateSave)  :: op      !< operating points of states and inputs for VTK output of mode shapes [-]
-    REAL(ReKi) , DIMENSION(1:5)  :: DriverWriteOutput = 0.0_ReKi      !< pitch and tsr for current aero map case, plus error, number of iterations, wind speed [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !< pitch and tsr for current aero map case, plus error, number of iterations, wind speed [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< headers of data output from the driver [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< units of data output from the driver [-]
   END TYPE FAST_OutputFileType
 ! =======================
 ! =========  IceDyn_Data  =======
@@ -8349,7 +8351,42 @@ subroutine FAST_CopyOutputFileType(SrcOutputFileTypeData, DstOutputFileTypeData,
    call FAST_CopyLinStateSave(SrcOutputFileTypeData%op, DstOutputFileTypeData%op, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstOutputFileTypeData%DriverWriteOutput = SrcOutputFileTypeData%DriverWriteOutput
+   if (allocated(SrcOutputFileTypeData%WriteOutput)) then
+      LB(1:1) = lbound(SrcOutputFileTypeData%WriteOutput)
+      UB(1:1) = ubound(SrcOutputFileTypeData%WriteOutput)
+      if (.not. allocated(DstOutputFileTypeData%WriteOutput)) then
+         allocate(DstOutputFileTypeData%WriteOutput(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputFileTypeData%WriteOutput.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputFileTypeData%WriteOutput = SrcOutputFileTypeData%WriteOutput
+   end if
+   if (allocated(SrcOutputFileTypeData%WriteOutputHdr)) then
+      LB(1:1) = lbound(SrcOutputFileTypeData%WriteOutputHdr)
+      UB(1:1) = ubound(SrcOutputFileTypeData%WriteOutputHdr)
+      if (.not. allocated(DstOutputFileTypeData%WriteOutputHdr)) then
+         allocate(DstOutputFileTypeData%WriteOutputHdr(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputFileTypeData%WriteOutputHdr.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputFileTypeData%WriteOutputHdr = SrcOutputFileTypeData%WriteOutputHdr
+   end if
+   if (allocated(SrcOutputFileTypeData%WriteOutputUnt)) then
+      LB(1:1) = lbound(SrcOutputFileTypeData%WriteOutputUnt)
+      UB(1:1) = ubound(SrcOutputFileTypeData%WriteOutputUnt)
+      if (.not. allocated(DstOutputFileTypeData%WriteOutputUnt)) then
+         allocate(DstOutputFileTypeData%WriteOutputUnt(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputFileTypeData%WriteOutputUnt.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputFileTypeData%WriteOutputUnt = SrcOutputFileTypeData%WriteOutputUnt
+   end if
 end subroutine
 
 subroutine FAST_DestroyOutputFileType(OutputFileTypeData, ErrStat, ErrMsg)
@@ -8385,6 +8422,15 @@ subroutine FAST_DestroyOutputFileType(OutputFileTypeData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call FAST_DestroyLinStateSave(OutputFileTypeData%op, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(OutputFileTypeData%WriteOutput)) then
+      deallocate(OutputFileTypeData%WriteOutput)
+   end if
+   if (allocated(OutputFileTypeData%WriteOutputHdr)) then
+      deallocate(OutputFileTypeData%WriteOutputHdr)
+   end if
+   if (allocated(OutputFileTypeData%WriteOutputUnt)) then
+      deallocate(OutputFileTypeData%WriteOutputUnt)
+   end if
 end subroutine
 
 subroutine FAST_PackOutputFileType(Buf, Indata)
@@ -8433,7 +8479,21 @@ subroutine FAST_PackOutputFileType(Buf, Indata)
    call FAST_PackLinFileType(Buf, InData%Lin) 
    call RegPack(Buf, InData%ActualChanLen)
    call FAST_PackLinStateSave(Buf, InData%op) 
-   call RegPack(Buf, InData%DriverWriteOutput)
+   call RegPack(Buf, allocated(InData%WriteOutput))
+   if (allocated(InData%WriteOutput)) then
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
+      call RegPack(Buf, InData%WriteOutput)
+   end if
+   call RegPack(Buf, allocated(InData%WriteOutputHdr))
+   if (allocated(InData%WriteOutputHdr)) then
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
+      call RegPack(Buf, InData%WriteOutputHdr)
+   end if
+   call RegPack(Buf, allocated(InData%WriteOutputUnt))
+   if (allocated(InData%WriteOutputUnt)) then
+      call RegPackBounds(Buf, 1, lbound(InData%WriteOutputUnt), ubound(InData%WriteOutputUnt))
+      call RegPack(Buf, InData%WriteOutputUnt)
+   end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -8533,8 +8593,48 @@ subroutine FAST_UnPackOutputFileType(Buf, OutData)
    call RegUnpack(Buf, OutData%ActualChanLen)
    if (RegCheckErr(Buf, RoutineName)) return
    call FAST_UnpackLinStateSave(Buf, OutData%op) ! op 
-   call RegUnpack(Buf, OutData%DriverWriteOutput)
+   if (allocated(OutData%WriteOutput)) deallocate(OutData%WriteOutput)
+   call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%WriteOutput(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutput.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%WriteOutput)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%WriteOutputHdr)) deallocate(OutData%WriteOutputHdr)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%WriteOutputHdr(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputHdr.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%WriteOutputHdr)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%WriteOutputUnt)) deallocate(OutData%WriteOutputUnt)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%WriteOutputUnt(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputUnt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%WriteOutputUnt)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
 end subroutine
 
 subroutine FAST_CopyIceDyn_Data(SrcIceDyn_DataData, DstIceDyn_DataData, CtrlCode, ErrStat, ErrMsg)
