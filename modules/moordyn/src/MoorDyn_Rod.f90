@@ -827,7 +827,7 @@ CONTAINS
             Rod%Mext = Rod%Mext + (/ Mtemp*sinBeta, -Mtemp*cosBeta, 0.0_DbKi /) 
          
             ! axial drag
-            Rod%Dq(:,I) = Rod%Dq(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
+            Rod%Dq(:,I) = Rod%Dq(:,I) + 0.5 * VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
          
             ! >>> what about rotational drag?? <<<   eqn will be  Pi* Rod%d**4/16.0 omega_rel?^2...  *0.5 * Cd...
 
@@ -857,7 +857,7 @@ CONTAINS
             Rod%Mext = Rod%Mext + (/ Mtemp*sinBeta, -Mtemp*cosBeta, 0.0_DbKi /) 
            
             ! axial drag
-            Rod%Dq(:,I) = Rod%Dq(:,I) + VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
+            Rod%Dq(:,I) = Rod%Dq(:,I) + 0.5 * VOF * 0.25* Pi*Rod%d*Rod%d * p%rhoW*Rod%CdEnd * MagVq * Vq
             
             ! long-wave diffraction force
             Rod%Aq(:,I) = Rod%Aq(:,I) + VOF * p%rhoW* Rod%CaEnd * (2.0/3.0*Pi*Rod%d**3 /8.0) * aq
