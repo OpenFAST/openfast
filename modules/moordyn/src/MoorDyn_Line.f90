@@ -351,12 +351,6 @@ CONTAINS
                            WetWeight    , SeabedCD,    Tol,     (N+1)     , &
                            LSNodes, LNodesX, LNodesZ , ErrStat2, ErrMsg2)
 
-         IF ((abs(LNodesZ(N+1) - ZF) > Tol) .AND. (ErrStat2 == ErrID_None)) THEN 
-          ! Check fairlead node z position is same as z distance between fairlead and anchor
-            ErrStat2 = ErrID_Warn
-            ErrMsg2 = ' Wrong catenary initial profile. Fairlead and anchor vertical seperation has changed. '
-         ENDIF
-
          IF (ErrStat2 == ErrID_None) THEN ! if it worked, use it
             ! Transform the positions of each node on the current line from the local
             !   coordinate system of the current line to the inertial frame coordinate
@@ -369,8 +363,11 @@ CONTAINS
             ENDDO              ! J - All nodes per line where the line position and tension can be output
 
          ELSE ! if there is a problem with the catenary approach, just stretch the nodes linearly between fairlead and anchor
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, ' Line_Initialize: Line '//trim(Num2LStr(Line%IdNum))//' ')
-
+            ! CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, ' Line_Initialize: Line '//trim(Num2LStr(Line%IdNum))//' ')
+            CALL WrScr('   Catenary solve of Line '//trim(Num2LStr(Line%IdNum))//' unsuccessful. Initializing as linear.')
+            IF (wordy == 1) THEN 
+               CALL WrScr('   Message from catenary solver: '//ErrMsg2)
+            ENDIF
             ! print *, "Node positions: "
 
             DO J = 0,N ! Loop through all nodes per line where the line position and tension can be output
@@ -590,8 +587,7 @@ CONTAINS
 
          ELSEIF ( W  == 0.0_DbKi )  THEN   ! .TRUE. when the weight of the line in fluid is zero so that catenary solution is ill-conditioned
            ErrStat = ErrID_Warn
-           ErrMsg = ' The weight of the line in fluid must not be zero. '// &
-                         'Routine Catenary() cannot solve quasi-static mooring line solution.'
+           ErrMsg = ' The weight of the line in fluid must not be zero in routine Catenary().'
            RETURN
 
 
@@ -601,8 +597,7 @@ CONTAINS
 
             IF ( ( L  >=  LMax   ) .AND. ( CB >= 0.0_DbKi ) )  then  ! .TRUE. if the line is as long or longer than its maximum possible value with seabed interaction
                ErrStat = ErrID_Warn
-               ErrMsg =  ' Unstretched mooring line length too large. '// &
-                           ' Routine Catenary() cannot solve quasi-static mooring line solution.'
+               ErrMsg =  ' Unstretched mooring line length too large in routine Catenary().'
                RETURN
             END IF
 
@@ -737,8 +732,7 @@ CONTAINS
             IF ( EqualRealNos( DET, 0.0_DbKi ) ) THEN               
 !bjj: there is a serious problem with the debugger here when DET = 0
                 ErrStat = ErrID_Warn
-                ErrMsg =  ' Iteration not convergent (DET is 0). '// &
-                          ' Routine Catenary() cannot solve quasi-static mooring line solution.'
+                ErrMsg =  ' Iteration not convergent (DET is 0) in routine Catenary().'
                 RETURN
             ENDIF
 
@@ -793,8 +787,7 @@ CONTAINS
 
            ELSEIF ( ( I == MaxIter )        .AND. ( .NOT. FirstIter         ) )  THEN ! .TRUE. if we've iterated as much as we can take without finding a solution; Abort
              ErrStat = ErrID_Warn
-             ErrMsg =  ' Iteration not convergent. '// &
-                       ' Routine Catenary() cannot solve quasi-static mooring line solution.'
+             ErrMsg =  ' Iteration not convergent in routine Catenary().'
              RETURN
 
 
@@ -966,6 +959,13 @@ CONTAINS
                Z(I) = Z(I) - ZF
             ENDDO
             ZF = -ZF ! Return to orginal value
+         ENDIF
+
+         IF (abs(Z(N+1) - ZF) > Tol) THEN 
+            ! Check fairlead node z position is same as z distance between fairlead and anchor
+              ErrStat2 = ErrID_Warn
+              ErrMsg2 = ' Wrong catenary initial profile. Fairlead and anchor vertical seperation has changed in routine Catenary().'
+              RETURN
          ENDIF
 
             ! The Newton-Raphson iteration is only accurate in double precision, so

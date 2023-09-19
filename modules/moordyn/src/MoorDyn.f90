@@ -35,7 +35,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.0.0', '2022-12-08' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v2.0.0', '2023-09-18' )
 
    INTEGER(IntKi), PARAMETER            :: wordy = 0   ! verbosity level. >1 = more console output
 
@@ -164,7 +164,7 @@ CONTAINS
       InitOut%Ver = MD_ProgDesc
 
       CALL WrScr('   This is MoorDyn v2, with significant input file changes from v1.')
-      CALL WrScr('   Copyright: (C) 2022 National Renewable Energy Laboratory, (C) 2019 Matt Hall')
+      CALL WrScr('   Copyright: (C) 2023 National Renewable Energy Laboratory, (C) 2019 Matt Hall')
 
 
       !---------------------------------------------------------------------------------------------
@@ -362,7 +362,7 @@ CONTAINS
                   Line = NextLine(i)
                END DO
 
-            else if (INDEX(Line, "CONTROL") > 0) then ! if failure conditions header
+            else if (INDEX(Line, "CONTROL") > 0) then ! if control conditions header
 
                IF (wordy > 1) print *, "   Reading control channels: ";
                
@@ -1972,7 +1972,6 @@ CONTAINS
          CALL Line_Initialize( m%LineList(l), m%LineTypeList(m%LineList(l)%PropsIdNum), p%rhoW ,  ErrStat2, ErrMsg2)
             CALL CheckError( ErrStat2, ErrMsg2 )
             IF (ErrStat >= AbortErrLev) RETURN
-            IF (ErrStat >= ErrId_Warn) CALL WrScr(' Catenary solve of Line '//trim(Num2LStr(m%LineList(l)%IdNum))//' unsuccessful. Initializing as linear.')
 
          IF (wordy > 2) print *, "Line ", l, " with NumSegs =", N
          IF (wordy > 2) print *, "its states range from index ", m%LineStateIs1(l), " to ", m%LineStateIsN(l)
@@ -2142,11 +2141,11 @@ CONTAINS
             END DO
 
 
-            ! ! provide status message
-            ! ! bjj: putting this in a string so we get blanks to cover up previous values (if current string is shorter than previous one)
-            ! Message = '   t='//trim(Num2LStr(t))//'  FairTen 1: '//trim(Num2LStr(FairTensIC(1,1)))// &
-            !                ', '//trim(Num2LStr(FairTensIC(1,2)))//', '//trim(Num2LStr(FairTensIC(1,3))) 
-            ! CALL WrOver( Message )
+            ! provide status message
+            ! bjj: putting this in a string so we get blanks to cover up previous values (if current string is shorter than previous one)
+            Message = '   t='//trim(Num2LStr(t))//'  FairTen 1: '//trim(Num2LStr(FairTensIC(1,1)))// &
+                           ', '//trim(Num2LStr(FairTensIC(1,2)))//', '//trim(Num2LStr(FairTensIC(1,3))) 
+            CALL WrOver( Message )
 
             ! check for convergence (compare current tension at each fairlead with previous 9 values)
             IF (I > 9) THEN
