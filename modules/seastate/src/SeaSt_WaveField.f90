@@ -457,7 +457,8 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, forceNodeInWater, fetchDy
    CHARACTER(ErrMsgLen)                       :: errMsg2
 
    INTEGER(IntKi)                             :: NumPoints, i, startNode
-   REAL(SiKi)                                 :: FDynP_node, FV_node(3), FA_node(3), FAMCF_node(3), PosOffset(3)
+   REAL(SiKi)                                 :: FDynP_node, FV_node(3), FA_node(3), FAMCF_node(3)
+   REAL(ReKi)                                 :: PosOffset(3)
 
    REAL(ReKi), allocatable                    :: FV_DC(:,:), FA_DC(:,:)
 
