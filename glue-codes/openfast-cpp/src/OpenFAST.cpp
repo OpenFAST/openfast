@@ -1349,7 +1349,7 @@ void fast::OpenFAST::advance_to_next_driver_time_step(bool writeFiles) {
     if (writeFiles) {
       for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
           int tStepRatio = dtDriver/dtFAST;
-          if ( (((nt_global - ntStart) % (restartFreq_*tStepRatio)) == 0 )  && (nt_global != ntStart) ) {
+          if ( (restartFreq_*tStepRatio > 0) && (((nt_global - ntStart) % (restartFreq_*tStepRatio)) == 0 )  && (nt_global != ntStart) ) {
               turbineData[iTurb].FASTRestartFileName = " "; // if blank, it will use FAST convention <RootName>.nt_global
               FAST_CreateCheckpoint(&iTurb, turbineData[iTurb].FASTRestartFileName.data(), &ErrStat, ErrMsg);
               checkError(ErrStat, ErrMsg);
