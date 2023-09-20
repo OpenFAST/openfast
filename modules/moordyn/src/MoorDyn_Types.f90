@@ -139,7 +139,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: MD_Point
     INTEGER(IntKi)  :: IdNum      !< integer identifier of this point [-]
     CHARACTER(10)  :: type      !< type of Point: fix, vessel, point [-]
-    INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  0=fixed, 1=vessel, 2=point [-]
+    INTEGER(IntKi)  :: typeNum      !< integer identifying the type.  1=fixed, -1=vessel, 0=free [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: Attached      !< list of IdNums of lines attached to this point node [-]
     INTEGER(IntKi) , DIMENSION(1:10)  :: Top      !< list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A) [-]
     INTEGER(IntKi)  :: nAttached = 0      !< number of attached lines [-]
