@@ -2,6 +2,7 @@ MODULE SeaSt_WaveField
 
 USE SeaState_Interp
 USE SeaSt_WaveField_Types
+USE IfW_FlowField
 
 IMPLICIT NONE
    
@@ -138,11 +139,12 @@ SUBROUTINE WaveField_GetNodeWaveNormal( WaveField, Time, pos, r, n, ErrStat, Err
 END SUBROUTINE WaveField_GetNodeWaveNormal
 
 !-------------------- Subroutine for full wave field kinematics --------------------!
-SUBROUTINE WaveField_GetNodeWaveKin( WaveField, Time, pos, forceNodeInWater, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat, ErrMsg )
+SUBROUTINE WaveField_GetNodeWaveKin( WaveField, Time, pos, forceNodeInWater, fetchDynCurrent, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat, ErrMsg )
    TYPE(SeaSt_WaveFieldType), INTENT( IN    ) :: WaveField
    REAL(DbKi),                INTENT( IN    ) :: Time
    REAL(ReKi),                INTENT( IN    ) :: pos(3)
    LOGICAL,                   INTENT( IN    ) :: forceNodeInWater
+   LOGICAL,                   INTENT( IN    ) :: fetchDynCurrent
    REAL(SiKi),                INTENT(   OUT ) :: WaveElev1
    REAL(SiKi),                INTENT(   OUT ) :: WaveElev2
    REAL(SiKi),                INTENT(   OUT ) :: WaveElev
@@ -155,7 +157,9 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, Time, pos, forceNodeInWater, nod
    INTEGER(IntKi),            INTENT(   OUT ) :: ErrStat ! Error status of the operation
    CHARACTER(*),              INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
 
-   REAL(ReKi)                                 :: posXY(2), posPrime(3), posXY0(3)
+   REAL(ReKi)                                 :: posXY(2), posPrime(3), posXY0(3), PosOffset(3), posDummy(3,1)
+   INTEGER(IntKi)                             :: startNode
+   REAL(ReKi), allocatable                    :: FV_DC(:,:), FA_DC(:,:)
    TYPE(SeaSt_Interp_MiscVarType)             :: SeaSt_Interp_m
    LOGICAL                                    :: FirstWarn_Clamp
    CHARACTER(*),              PARAMETER       :: RoutineName = 'WaveField_GetNodeWaveKin'
@@ -291,21 +295,44 @@ SUBROUTINE WaveField_GetNodeWaveKin( WaveField, Time, pos, forceNodeInWater, nod
       
    END IF ! If wave stretching is on or off
    
+   IF (fetchDynCurrent .AND. WaveField%hasCurrField) THEN
+      startNode = 1
+      PosOffset = (/0.0_ReKi,0.0_ReKi,WaveField%EffWtrDpth/)
+      posDummy(:,1) = pos
+      ALLOCATE(FV_DC(3,1), STAT=ErrStat2)
+      if (ErrStat2 /= 0) then
+         call SetErrStat( ErrID_Info, 'Error allocationg FV_DC', ErrStat, ErrMsg, RoutineName )
+         return
+      end if     
+      ALLOCATE(FA_DC(3,1), STAT=ErrStat2)
+      if (ErrStat2 /= 0) then
+         call SetErrStat( ErrID_Info, 'Error allocationg FA_DC', ErrStat, ErrMsg, RoutineName )
+         return
+      end if     
+      CALL IfW_FlowField_GetVelAcc(WaveField%CurrField, startNode, Time, posDummy, FV_DC, FA_DC, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      FV = FV + nodeInWater * FV_DC(:,1)
+      FA = FA + nodeInWater * FA_DC(:,1)
+   END IF
+
 END SUBROUTINE WaveField_GetNodeWaveKin
 
 !-------------------- Subroutine for wave field velocity only --------------------!
-SUBROUTINE WaveField_GetNodeWaveVel( WaveField, Time, pos, forceNodeInWater, nodeInWater, FV, ErrStat, ErrMsg )
+SUBROUTINE WaveField_GetNodeWaveVel( WaveField, Time, pos, forceNodeInWater, fetchDynCurrent, nodeInWater, FV, ErrStat, ErrMsg )
    TYPE(SeaSt_WaveFieldType), INTENT( IN    ) :: WaveField
    REAL(DbKi),                INTENT( IN    ) :: Time
    REAL(ReKi),                INTENT( IN    ) :: pos(3)
    LOGICAL,                   INTENT( IN    ) :: forceNodeInWater
+   LOGICAL,                   INTENT( IN    ) :: fetchDynCurrent
    INTEGER(IntKi),            INTENT(   OUT ) :: nodeInWater
    REAL(SiKi),                INTENT(   OUT ) :: FV(3)
    INTEGER(IntKi),            INTENT(   OUT ) :: ErrStat ! Error status of the operation
    CHARACTER(*),              INTENT(   OUT ) :: ErrMsg  ! Error message if errStat /= ErrID_None
 
    REAL(SiKi)                                 :: WaveElev
-   REAL(ReKi)                                 :: posXY(2), posPrime(3), posXY0(3)
+   REAL(ReKi)                                 :: posXY(2), posPrime(3), posXY0(3), PosOffset(3), posDummy(3,1)
+   REAL(ReKi), allocatable                    :: FV_DC(:,:), FA_DC(:,:)
+   INTEGER(IntKi)                             :: startNode
    TYPE(SeaSt_Interp_MiscVarType)             :: SeaSt_Interp_m
    LOGICAL                                    :: FirstWarn_Clamp
    CHARACTER(*),              PARAMETER       :: RoutineName = 'WaveField_GetNodeWaveVel'
@@ -392,13 +419,28 @@ SUBROUTINE WaveField_GetNodeWaveVel( WaveField, Time, pos, forceNodeInWater, nod
       
    END IF ! If wave stretching is on or off
    
+   IF (fetchDynCurrent .AND. WaveField%hasCurrField) THEN
+      startNode = 1
+      PosOffset = (/0.0_ReKi,0.0_ReKi,WaveField%EffWtrDpth/)
+      posDummy(:,1) = pos
+      ALLOCATE(FV_DC(3,1), STAT=ErrStat2)
+      if (ErrStat2 /= 0) then
+         call SetErrStat( ErrID_Info, 'Error allocationg FV_DC', ErrStat, ErrMsg, RoutineName )
+         return
+      end if   
+      CALL IfW_FlowField_GetVelAcc(WaveField%CurrField, startNode, Time, posDummy, FV_DC, FA_DC, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      FV = FV + nodeInWater * FV_DC(:,1)
+   END IF
+
 END SUBROUTINE WaveField_GetNodeWaveVel
 
-SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, forceNodeInWater, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat, ErrMsg )
+SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, forceNodeInWater, fetchDynCurrent, nodeInWater, WaveElev1, WaveElev2, WaveElev, FDynP, FV, FA, FAMCF, ErrStat, ErrMsg )
    TYPE(SeaSt_WaveFieldType), INTENT( IN    ) :: WaveField
    REAL(DbKi),                INTENT( IN    ) :: Time
    REAL(ReKi),                INTENT( IN    ) :: pos(:,:)
    LOGICAL,                   INTENT( IN    ) :: forceNodeInWater
+   LOGICAL,                   INTENT( IN    ) :: fetchDynCurrent
    REAL(SiKi),                INTENT(   OUT ) :: WaveElev1(:)
    REAL(SiKi),                INTENT(   OUT ) :: WaveElev2(:)
    REAL(SiKi),                INTENT(   OUT ) :: WaveElev(:)
@@ -414,15 +456,17 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, forceNodeInWater, nodeInW
    INTEGER(IntKi)                             :: errStat2
    CHARACTER(ErrMsgLen)                       :: errMsg2
 
-   INTEGER(IntKi)                             :: NumPoints, i
-   REAL(SiKi)                                 :: FDynP_node, FV_node(3), FA_node(3), FAMCF_node(3)
+   INTEGER(IntKi)                             :: NumPoints, i, startNode
+   REAL(SiKi)                                 :: FDynP_node, FV_node(3), FA_node(3), FAMCF_node(3), PosOffset(3)
+
+   REAL(ReKi), allocatable                    :: FV_DC(:,:), FA_DC(:,:)
 
    ErrStat   = ErrID_None
    ErrMsg    = ""
 
    NumPoints = size(pos, dim=2)
    DO i = 1, NumPoints
-      CALL WaveField_GetNodeWaveKin( WaveField, Time, pos(:,i), forceNodeInWater, nodeInWater(i), WaveElev1(i), WaveElev2(i), WaveElev(i), FDynP_node, FV_node, FA_node, FAMCF_node, ErrStat2, ErrMsg2 )
+      CALL WaveField_GetNodeWaveKin( WaveField, Time, pos(:,i), forceNodeInWater, .FALSE., nodeInWater(i), WaveElev1(i), WaveElev2(i), WaveElev(i), FDynP_node, FV_node, FA_node, FAMCF_node, ErrStat2, ErrMsg2 )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       FDynP(i) = REAL(FDynP_node,ReKi)
       FV(:, i) = REAL(FV_node,   ReKi)
@@ -432,6 +476,31 @@ SUBROUTINE WaveField_GetWaveKin( WaveField, Time, pos, forceNodeInWater, nodeInW
       END IF
    END DO
 
+   ! If dynamic current field from IfW is present, get velocity and acceleration contributions
+   IF (fetchDynCurrent .AND. WaveField%hasCurrField) THEN
+      startNode = 1
+      PosOffset = (/0.0_ReKi,0.0_ReKi,WaveField%EffWtrDpth/)
+      ALLOCATE(FV_DC( 3, NumPoints ), STAT=ErrStat2)
+      if (ErrStat2 /= 0) then
+         call SetErrStat( ErrID_Info, 'Error allocationg FV_DC', ErrStat, ErrMsg, RoutineName )
+         return
+      end if     
+      ALLOCATE(FA_DC( 3, NumPoints ), STAT=ErrStat2)
+      if (ErrStat2 /= 0) then
+         call SetErrStat( ErrID_Info, 'Error allocationg FA_DC', ErrStat, ErrMsg, RoutineName )
+         return
+      end if     
+      CALL IfW_FlowField_GetVelAcc(WaveField%CurrField, startNode, Time, pos, FV_DC, FA_DC, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      ! Add contributions from IfW current field if node is in water
+      DO i = 1, NumPoints
+         FV(:,i) = FV(:,i) + nodeInWater(i) * FV_DC(:,i)
+         FA(:,i) = FA(:,i) + nodeInWater(i) * FA_DC(:,i)
+      END DO
+
+   END IF
+   
 END SUBROUTINE WaveField_GetWaveKin
 
 END MODULE SeaSt_WaveField

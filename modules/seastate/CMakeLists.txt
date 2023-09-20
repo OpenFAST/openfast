@@ -40,7 +40,7 @@ add_library(seastlib
   src/SeaSt_WaveField_Types.f90
   src/SeaState_Types.f90
 )
-target_link_libraries(seastlib nwtclibs versioninfolib)
+target_link_libraries(seastlib ifwlib nwtclibs versioninfolib)
 
 # Driver
 add_executable(seastate_driver 

@@ -178,6 +178,7 @@ PROGRAM HydroDynDriver
    call SeaSt_Init( InitInData_SeaSt, u_SeaSt(1), p_SeaSt,  x_SeaSt, xd_SeaSt, z_SeaSt, OtherState_SeaSt, y_SeaSt, m_SeaSt, Interval, InitOutData_SeaSt, ErrStat, ErrMsg )
    SeaState_Initialized = .true.
       CALL CheckError()
+   p_SeaSt%WaveField%hasCurrField = .FALSE.
 
    if ( Interval /= drvrData%TimeInterval) then
       ErrMsg = 'The SeaState Module attempted to change timestep interval, but this is not allowed.  The SeaState Module must use the Driver Interval.'

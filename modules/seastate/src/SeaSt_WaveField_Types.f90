@@ -32,6 +32,7 @@
 MODULE SeaSt_WaveField_Types
 !---------------------------------------------------------------------------------------------------------------------------------
 USE SeaState_Interp_Types
+USE IfW_FlowField_Types
 USE NWTC_Library
 IMPLICIT NONE
 ! =========  SeaSt_WaveFieldType  =======
@@ -50,11 +51,13 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElev2      !< Second order wave elevation [(m)]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< Parameter information from the SeaState Interpolation module [(-)]
     INTEGER(IntKi)  :: WaveStMod = 0_IntKi      !< Wave stretching model [-]
-    REAL(ReKi)  :: EffWtrDpth = 0.0_ReKi      !< Water depth [(-)]
+    REAL(ReKi)  :: EffWtrDpth = 0.0_ReKi      !< Effective water depth from the seabed to SWL [(-)]
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Vertical distance from mean sea level to still water level [(m)]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevC      !< Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part [(m)]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevC0      !< Fourier components of the incident wave elevation at the platform reference point. First column is the real part; second column is the imaginary part [(m)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveDirArr      !< Wave direction array. Each frequency has a unique direction of WaveNDir > 1 [(degrees)]
+    LOGICAL  :: hasCurrField = .false.      !< True if CurrField is populated for MHK simulations [(-)]
+    TYPE(FlowFieldType) , POINTER :: CurrField => NULL()      !< Pointer to FlowField type from InflowWind containing the dynamic current information [(-)]
   END TYPE SeaSt_WaveFieldType
 ! =======================
 CONTAINS
@@ -257,6 +260,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       end if
       DstSeaSt_WaveFieldTypeData%WaveDirArr = SrcSeaSt_WaveFieldTypeData%WaveDirArr
    end if
+   DstSeaSt_WaveFieldTypeData%hasCurrField = SrcSeaSt_WaveFieldTypeData%hasCurrField
+   DstSeaSt_WaveFieldTypeData%CurrField => SrcSeaSt_WaveFieldTypeData%CurrField
 end subroutine
 
 subroutine SeaSt_WaveField_DestroySeaSt_WaveFieldType(SeaSt_WaveFieldTypeData, ErrStat, ErrMsg)
@@ -315,12 +320,14 @@ subroutine SeaSt_WaveField_DestroySeaSt_WaveFieldType(SeaSt_WaveFieldTypeData, E
    if (allocated(SeaSt_WaveFieldTypeData%WaveDirArr)) then
       deallocate(SeaSt_WaveFieldTypeData%WaveDirArr)
    end if
+   nullify(SeaSt_WaveFieldTypeData%CurrField)
 end subroutine
 
 subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(SeaSt_WaveFieldType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'SeaSt_WaveField_PackSeaSt_WaveFieldType'
+   logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%WaveTime))
    if (allocated(InData%WaveTime)) then
@@ -401,6 +408,14 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%WaveDirArr), ubound(InData%WaveDirArr))
       call RegPack(Buf, InData%WaveDirArr)
    end if
+   call RegPack(Buf, InData%hasCurrField)
+   call RegPack(Buf, associated(InData%CurrField))
+   if (associated(InData%CurrField)) then
+      call RegPackPointer(Buf, c_loc(InData%CurrField), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call IfW_FlowField_PackFlowFieldType(Buf, InData%CurrField) 
+      end if
+   end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -411,6 +426,8 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
    integer(IntKi)  :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(IntKi)  :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    if (allocated(OutData%WaveTime)) deallocate(OutData%WaveTime)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -628,6 +645,28 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
       end if
       call RegUnpack(Buf, OutData%WaveDirArr)
       if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   call RegUnpack(Buf, OutData%hasCurrField)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (associated(OutData%CurrField)) deallocate(OutData%CurrField)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%CurrField)
+      else
+         allocate(OutData%CurrField,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%CurrField.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%CurrField)
+         call IfW_FlowField_UnpackFlowFieldType(Buf, OutData%CurrField) ! CurrField 
+      end if
+   else
+      OutData%CurrField => null()
    end if
 end subroutine
 END MODULE SeaSt_WaveField_Types

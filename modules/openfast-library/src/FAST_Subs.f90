@@ -811,6 +811,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF  
       
+      IF ( p_FAST%MHK .NE. 0_IntKi .AND. p_FAST%CompInflow == Module_IfW) THEN
+         ! Simulating an MHK turbine; load dynamic current from IfW
+         SeaSt%p%WaveField%CurrField  => Init%OutData_IfW%FlowField
+         SeaSt%p%WaveField%hasCurrField = .TRUE.
+      ELSE
+         SeaSt%p%WaveField%hasCurrField = .FALSE.
+      END IF
+
       ! Need to set up other module's InitInput data here because we will also need to clean up SeaState data and would rather not defer that cleanup
       if ( p_FAST%CompHydro == Module_HD ) then
          Init%InData_HD%NStepWave      =  Init%OutData_SeaSt%NStepWave

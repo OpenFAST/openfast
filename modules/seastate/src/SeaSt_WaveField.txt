@@ -2,6 +2,7 @@
 # Data structures for representing wave fields.
 #
 usefrom SeaState_Interp.txt
+usefrom IfW_FlowField.txt
 #---------------------------------------------------------------------------------------------------------------------------------------------------------
 #<Key Word> <Module>         <TypeName>            <FieldType>                   <FieldName>     <Dims>           <Ctrl>   <DNA ME> <Description> <Units>
 #---------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -19,9 +20,10 @@ typedef     ^                ^                     SiKi                         
 typedef     ^                ^                     SiKi                          WaveElev2       {:}{:}{:}        -        -        "Second order wave elevation" (m)
 typedef     ^                ^                     SeaSt_Interp_ParameterType    SeaSt_Interp_p  -                -        -        "Parameter information from the SeaState Interpolation module" (-)
 typedef     ^                ^                     IntKi                         WaveStMod       -                -        -        "Wave stretching model"
-typedef     ^                ^                     ReKi                          EffWtrDpth      -                -        -        "Water depth" (-)
+typedef     ^                ^                     ReKi                          EffWtrDpth      -                -        -        "Effective water depth from the seabed to SWL" (-)
 typedef     ^                ^                     ReKi                          MSL2SWL         -                -        -        "Vertical distance from mean sea level to still water level" (m)
 typedef     ^                ^                     SiKi                          WaveElevC       {:}{:}{:}        -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part" (m)
 typedef     ^                ^                     SiKi                          WaveElevC0      {:}{:}           -        -        "Fourier components of the incident wave elevation at the platform reference point. First column is the real part; second column is the imaginary part" (m)
 typedef     ^                ^                     SiKi                          WaveDirArr      {:}              -        -        "Wave direction array. Each frequency has a unique direction of WaveNDir > 1" (degrees)
-
+typedef     ^                ^                     LOGICAL                       hasCurrField    -                -        -        "True if CurrField is populated for MHK simulations"	(-)
+typedef     ^                ^                     FlowFieldType                *CurrField       -                -        -        "Pointer to FlowField type from InflowWind containing the dynamic current information" (-)
