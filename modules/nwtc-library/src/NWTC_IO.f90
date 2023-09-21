@@ -6379,7 +6379,6 @@ END SUBROUTINE CheckR8Var
    CHARACTER( *), INTENT(IN)          :: VarDescr                                        !< Text string describing the variable.
    CHARACTER( *), INTENT(IN)          :: VarName                                         !< Text string containing the variable name.
       ! Local declarations:
-   INTEGER                            :: IOS                                             ! I/O status returned from the read statement.
    CHARACTER(1024)                    :: sVar                                            ! String to hold the value of the variable
    ! Read full content of variable as one string, should it be "default", or an array
    CALL ReadVar (UnIn, Fil, sVar, VarName, VarDescr, ErrStat, ErrMsg, UnEc)

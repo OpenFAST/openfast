@@ -6977,7 +6977,7 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
 
 
       ! End all modules
-   CALL FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
+   CALL FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, SeaSt, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
       IF (ErrStat2 /= ErrID_None) THEN
          CALL WrScr( NewLine//RoutineName//':'//TRIM(ErrMsg2)//NewLine )
          ErrorLevel = MAX(ErrorLevel,ErrStat2)
@@ -7115,7 +7115,7 @@ SUBROUTINE FAST_EndOutput( p_FAST, y_FAST, m_FAST, ErrStat, ErrMsg )
 END SUBROUTINE FAST_EndOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calls the end routines for each module that was previously initialized.
-SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat, ErrMsg )
+SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, SeaSt, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType), INTENT(INOUT) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
@@ -7129,6 +7129,7 @@ SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
+   TYPE(SeaState_Data),      INTENT(INOUT) :: SeaSt               !< SeaState data
    TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
    TYPE(FEAMooring_Data),    INTENT(INOUT) :: FEAM                !< FEAMooring data
@@ -7242,6 +7243,14 @@ SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD
 
    END IF
 
+   IF ( p_FAST%ModuleInitialized(Module_SeaSt) ) THEN
+     ! make sure this is done AFTER any module that may be pointing to SeaSt data -- we deallocate the pointer targets here
+      CALL SeaSt_End( SeaSt%Input(1), SeaSt%p, SeaSt%x(STATE_CURR), SeaSt%xd(STATE_CURR), SeaSt%z(STATE_CURR), SeaSt%OtherSt(STATE_CURR),  &
+                         SeaSt%y, SeaSt%m, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   END IF
+
+   
    
       ! Write output to file (do this after ending modules so that we have more memory to use if needed)
    CALL FAST_EndOutput( p_FAST, y_FAST, m_FAST, ErrStat2, ErrMsg2 )
