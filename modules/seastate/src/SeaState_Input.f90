@@ -983,6 +983,11 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
 
       ! CurrMod - Current profile model switch
+   if ( InitInp%hasCurrField ) then
+      call SetErrStat( ErrID_Warn,'Expecting current field from InflowWind. Setting CurrMod to 0.',ErrStat,ErrMsg,RoutineName)
+      InputFileData%Current%CurrMod = 0
+   end if
+
 
    if ( ( InputFileData%Current%CurrMod /= 0 ) .AND. ( InputFileData%Current%CurrMod /= 1 ) .AND. ( InputFileData%Current%CurrMod /= 2 ) )  then
       call SetErrStat( ErrID_Fatal,'CurrMod must be 0, 1, or 2.',ErrStat,ErrMsg,RoutineName)
