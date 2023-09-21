@@ -7469,8 +7469,11 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
       ! Get the arrays of data to be stored in the output file
    call FAST_PackTurbineType(Buf, Turbine)
       call SetErrStat(Buf%ErrStat, Buf%ErrMsg, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) return
-
+      if (ErrStat >= AbortErrLev ) then
+         call cleanup()
+         return
+      end if
+      
    FileName    = TRIM(CheckpointRoot)//'.chkp'
    DLLFileName = TRIM(CheckpointRoot)//'.dll.chkp'
 
@@ -7488,6 +7491,7 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
                CLOSE(unOut)
                unOut = -1
             end if
+            call cleanup()
             return
          end if
 
@@ -7501,12 +7505,6 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
 
    ! data from current turbine at time step:
    call WritePackBuffer(Buf, unOut, ErrStat2, ErrMsg2)
-
-      !CALL FAST_CreateCheckpoint(t_initial, n_t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
-      !            Turbine%ED, Turbine%SrvD, Turbine%AD, Turbine%IfW, &
-      !            Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, &
-      !            Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )
-
 
    ! If last turbine or no unit, close output unit
    IF (Turbine%TurbID == NumTurbines .OR. .NOT. PRESENT(Unit)) THEN
@@ -7537,6 +7535,13 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
          Turbine%SrvD%m%dll_data%SimStatus = Turbine%SrvD%m%dll_data%avrSWAP( 1)
       end if
    END IF
+   
+   call cleanup()
+
+contains
+   subroutine cleanup()
+      call DestroyPackBuffer(Buf, ErrStat2, ErrMsg2)
+   end subroutine cleanup
 
 END SUBROUTINE FAST_CreateCheckpoint_T
 !----------------------------------------------------------------------------------------------------------------------------------

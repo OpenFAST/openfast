@@ -277,7 +277,7 @@ struct DataType
                 switch (field.data_type->tag)
                 {
 
-                // Field is a derived type, so check it's fields and
+                // Field is a derived type, so check its fields and
                 // return false if it doesn't only contain reals
                 case Tag::Derived:
                     if (!field.data_type->derived.only_contains_reals())
