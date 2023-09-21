@@ -255,10 +255,8 @@ SUBROUTINE Init_ExtInfw( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, ExtIn
       return
    end if
 
-   ! Initialize flow field with point type
-   ExtInfw%m%FlowField%FieldType = Point_FieldType
-
    ! Initialize flowfield points type
+   ExtInfw%m%FlowField%FieldType = Point_FieldType
    Points_InitInput%NumWindPoints = ExtInfw%p%nNodesVel
    call IfW_Points_Init(Points_InitInput, ExtInfw%m%FlowField%Points, ErrStat2, ErrMsg2); if (Failed()) return
 
