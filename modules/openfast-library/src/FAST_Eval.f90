@@ -645,6 +645,11 @@ subroutine FAST_InitMappings(Maps, Mods, T, ErrStat, ErrMsg)
    ! Get module indices in ModData and determine which mappings are active
    !----------------------------------------------------------------------------
 
+   ! Reorder the mappings so that motion maps come before the load maps
+   Maps = [pack(Maps, Maps%Typ == Map_MotionMesh), &
+           pack(Maps, Maps%Typ == Map_LoadMesh), &
+           pack(Maps, Maps%Typ == Map_NonMesh)]
+
    ! Loop through mappings
    do iMap = 1, size(Maps)
       associate (Map => Maps(iMap), &
