@@ -821,6 +821,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          ! Simulating an MHK turbine; load dynamic current from IfW
          SeaSt%p%WaveField%CurrField  => Init%OutData_IfW%FlowField
          SeaSt%p%WaveField%hasCurrField = .TRUE.
+         ! Set AD pointers to wavefield
+         IF (p_FAST%CompAero == Module_AD) AD%p%WaveField => Init%OutData_SeaSt%WaveField
       ELSE
          SeaSt%p%WaveField%hasCurrField = .FALSE.
       END IF

@@ -68,7 +68,7 @@ add_library(aerodynlib
   src/AeroDyn_Inflow.f90
   src/AeroDyn_Inflow_Types.f90
 )
-target_link_libraries(aerodynlib ifwlib nwtclibs)
+target_link_libraries(aerodynlib ifwlib seastlib nwtclibs)
 
 # AeroDyn Driver Subs Library
 add_library(aerodyn_driver_subs

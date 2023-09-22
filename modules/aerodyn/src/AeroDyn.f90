@@ -32,6 +32,7 @@ module AeroDyn
    use FVW
    use FVW_Subs, only: FVW_AeroOuts
    use IfW_FlowField, only: IfW_FlowField_GetVelAcc
+   use SeaSt_WaveField, only: WaveField_GetWaveVelAcc_AD
    
    implicit none
 
@@ -1695,56 +1696,111 @@ subroutine AD_CalcWind(t, u, p, o, m, ErrStat, ErrMsg)
          PosOffset = 0.0_ReKi
       end if
 
-      ! Hub
-      if (u%rotors(iWT)%HubMotion%Committed) then
-         call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
-            real(u%rotors(iWT)%HubMotion%TranslationDisp + u%rotors(iWT)%HubMotion%Position, ReKi), &
-            u%rotors(iWT)%InflowOnHub, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-         if(Failed()) return 
-      else
-         u%rotors(iWT)%InflowOnHub = 0.0_ReKi
-      end if
-      StartNode = StartNode + 1
-
-      ! Blade
-      do k = 1, p%rotors(iWT)%NumBlades
-         call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
-            real(u%rotors(iWT)%BladeMotion(k)%TranslationDisp + u%rotors(iWT)%BladeMotion(k)%Position, ReKi), &
-            u%rotors(iWT)%Bld(k)%InflowOnBlade, u%rotors(iWT)%Bld(k)%AccelOnBlade, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-         if(Failed()) return
-         StartNode = StartNode + p%rotors(iWT)%NumBlNds
-      end do
-
-      ! Tower
-      if (u%rotors(iWT)%TowerMotion%Nnodes > 0) then
-         call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
-            real(u%rotors(iWT)%TowerMotion%TranslationDisp + u%rotors(iWT)%TowerMotion%Position, ReKi), &
-            u%rotors(iWT)%InflowOnTower, u%rotors(iWT)%AccelOnTower, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-         if(Failed()) return
-         StartNode = StartNode + p%rotors(iWT)%NumTwrNds
-      end if
-
-      ! Nacelle
-      if (u%rotors(iWT)%NacelleMotion%Committed) then   
-         call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
-            real(u%rotors(iWT)%NacelleMotion%TranslationDisp + u%rotors(iWT)%NacelleMotion%Position, ReKi), &
-            u%rotors(iWT)%InflowOnNacelle, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-         if(Failed()) return
+      if (p%rotors(iWT)%MHK .EQ. 0_IntKi) then ! Wind turbines
+         ! Hub
+         if (u%rotors(iWT)%HubMotion%Committed) then
+            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+               real(u%rotors(iWT)%HubMotion%TranslationDisp + u%rotors(iWT)%HubMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnHub, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+            if(Failed()) return 
+         else
+            u%rotors(iWT)%InflowOnHub = 0.0_ReKi
+         end if
          StartNode = StartNode + 1
-      else
-         u%rotors(iWT)%InflowOnNacelle = 0.0_ReKi
-      end if
 
-      ! TailFin
-      if (u%rotors(iWT)%TFinMotion%Committed) then
-         call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
-            real(u%rotors(iWT)%TFinMotion%TranslationDisp + u%rotors(iWT)%TFinMotion%Position, ReKi), &
-            u%rotors(iWT)%InflowOnTailFin, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
-         if(Failed()) return
+         ! Blade
+         do k = 1, p%rotors(iWT)%NumBlades
+            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+               real(u%rotors(iWT)%BladeMotion(k)%TranslationDisp + u%rotors(iWT)%BladeMotion(k)%Position, ReKi), &
+               u%rotors(iWT)%Bld(k)%InflowOnBlade, u%rotors(iWT)%Bld(k)%AccelOnBlade, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+            if(Failed()) return
+            StartNode = StartNode + p%rotors(iWT)%NumBlNds
+         end do
+
+         ! Tower
+         if (u%rotors(iWT)%TowerMotion%Nnodes > 0) then
+            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+               real(u%rotors(iWT)%TowerMotion%TranslationDisp + u%rotors(iWT)%TowerMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnTower, u%rotors(iWT)%AccelOnTower, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+            if(Failed()) return
+            StartNode = StartNode + p%rotors(iWT)%NumTwrNds
+         end if
+
+         ! Nacelle
+         if (u%rotors(iWT)%NacelleMotion%Committed) then   
+            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+               real(u%rotors(iWT)%NacelleMotion%TranslationDisp + u%rotors(iWT)%NacelleMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnNacelle, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+            if(Failed()) return
+            StartNode = StartNode + 1
+         else
+            u%rotors(iWT)%InflowOnNacelle = 0.0_ReKi
+         end if
+
+         ! TailFin
+         if (u%rotors(iWT)%TFinMotion%Committed) then
+            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+               real(u%rotors(iWT)%TFinMotion%TranslationDisp + u%rotors(iWT)%TFinMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnTailFin, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+            if(Failed()) return
+            StartNode = StartNode + 1
+         else
+            u%rotors(iWT)%InflowOnTailFin = 0.0_ReKi
+         end if
+
+      else ! MHK turbines
+         ! Hub
+         if (u%rotors(iWT)%HubMotion%Committed) then
+            call WaveField_GetWaveVelAcc_AD(p%WaveField, StartNode, t, &
+               real(u%rotors(iWT)%HubMotion%TranslationDisp + u%rotors(iWT)%HubMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnHub, NoAcc, ErrStat2, ErrMsg2)
+            if(Failed()) return 
+         else
+            u%rotors(iWT)%InflowOnHub = 0.0_ReKi
+         end if
          StartNode = StartNode + 1
-      else
-         u%rotors(iWT)%InflowOnTailFin = 0.0_ReKi
-      end if
+
+         ! Blade
+         do k = 1, p%rotors(iWT)%NumBlades
+            call WaveField_GetWaveVelAcc_AD(p%WaveField, StartNode, t, &
+               real(u%rotors(iWT)%BladeMotion(k)%TranslationDisp + u%rotors(iWT)%BladeMotion(k)%Position, ReKi), &
+               u%rotors(iWT)%Bld(k)%InflowOnBlade, u%rotors(iWT)%Bld(k)%AccelOnBlade, ErrStat2, ErrMsg2)
+            if(Failed()) return
+            StartNode = StartNode + p%rotors(iWT)%NumBlNds
+         end do
+
+         ! Tower
+         if (u%rotors(iWT)%TowerMotion%Nnodes > 0) then
+            call WaveField_GetWaveVelAcc_AD(p%WaveField, StartNode, t, &
+               real(u%rotors(iWT)%TowerMotion%TranslationDisp + u%rotors(iWT)%TowerMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnTower, u%rotors(iWT)%AccelOnTower, ErrStat2, ErrMsg2)
+            if(Failed()) return
+            StartNode = StartNode + p%rotors(iWT)%NumTwrNds
+         end if
+
+         ! Nacelle
+         if (u%rotors(iWT)%NacelleMotion%Committed) then   
+            call WaveField_GetWaveVelAcc_AD(p%WaveField, StartNode, t, &
+               real(u%rotors(iWT)%NacelleMotion%TranslationDisp + u%rotors(iWT)%NacelleMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnNacelle, NoAcc, ErrStat2, ErrMsg2)
+            if(Failed()) return
+            StartNode = StartNode + 1
+         else
+            u%rotors(iWT)%InflowOnNacelle = 0.0_ReKi
+         end if
+
+         ! TailFin
+         if (u%rotors(iWT)%TFinMotion%Committed) then
+            call WaveField_GetWaveVelAcc_AD(p%WaveField, StartNode, t, &
+               real(u%rotors(iWT)%TFinMotion%TranslationDisp + u%rotors(iWT)%TFinMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnTailFin, NoAcc, ErrStat2, ErrMsg2)
+            if(Failed()) return
+            StartNode = StartNode + 1
+         else
+            u%rotors(iWT)%InflowOnTailFin = 0.0_ReKi
+         end if
+
+      end if ! Wind or MHK turbines
 
    enddo ! iWT
 
