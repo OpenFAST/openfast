@@ -135,7 +135,7 @@ class AeroDynInflowLib(CDLL):
         # Number of turbines
         self.numTurbines = 1
 
-#FIXME: make sure this still works and doesn't need to be expanded to multiple turbines
+#FIXME: some assumptions about a single turbine here.
         # Initial position of hub and blades
         #   used for setup of AD, not used after init.
         self.initHubPos         = np.zeros(shape=(3),dtype=c_float)
@@ -312,7 +312,6 @@ class AeroDynInflowLib(CDLL):
         self._initNumBlades  = self.numBlades
         _turbRefPos = (c_float  * len(turbRefPos))(*turbRefPos)
 
-#FIXME: this is setup for one rotor only right now
         # check hub and root points for initialization
         self.check_init_hubroot()
 
@@ -350,7 +349,6 @@ class AeroDynInflowLib(CDLL):
         self.check_error()
 
 
-#FIXME: split this into ADI_C_SetupRotor
     def adi_init(self, AD_input_string_array, IfW_input_string_array):
         # some bookkeeping initialization
         self._numChannels_c = c_int(0)
@@ -416,8 +414,8 @@ class AeroDynInflowLib(CDLL):
 
 
     ## adi_reinit ------------------------------------------------------------------------------------------------------------
+    #FIXME: this routine is not setup
     #def adi_reinit(self):
-    #    #FIXME: need to pass something in here I think.  Not sure what.
     #
     #    # call ADI_C_ReInit
     #    self.ADI_C_ReInit(
@@ -428,7 +426,6 @@ class AeroDynInflowLib(CDLL):
     #    )
     #
     #    self.check_error()
-    #    #FIXME: anything coming out that needs handling/passing?
 
 
     # adi_setrotormotion ------------------------------------------------------------------------------------------------------------
@@ -851,7 +848,8 @@ class AeroDynInflowLib(CDLL):
 #   correctly, this will be identical to the corresponding values in the
 #   AeroDyn/InflowWind output channels.
 
-#FIXME: this is incorrect
+#FIXME: this may not output everything in the interface (updates have been made
+# since writing this, but this routine was not updated accordingly
 class DriverDbg():
     """
     This is only for debugging purposes only.  The input motions and resulting

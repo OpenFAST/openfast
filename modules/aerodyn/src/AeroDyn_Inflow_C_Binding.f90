@@ -94,6 +94,7 @@ MODULE AeroDyn_Inflow_C_BINDING
    type(ADI_Data)                         :: ADI
    type(ADI_InitInputType)                :: InitInp           !< Initialization data
    type(ADI_InitOutputType)               :: InitOutData       !< Initial output data -- Names, units, and version info.
+   type(ADI_InputType)                    :: ADI_u             !< ADI inputs -- set by AD_SetInputMotion.  Copied as needed (necessary for correction steps)
    !------------------------------
    !  Simulation data
    type(Dvr_SimData)                      :: Sim               !< data about the simulation
@@ -626,6 +627,13 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    enddo
    InputTimePrev = ADI%InputTimes(1) - Sim%dT    ! Initialize for UpdateStates
 
+   !-------------------------------------------------------------
+   ! copy of ADI inputs. AD_SetInputMotion will set this mesh.  When CalcOutput is called,
+   ! this data is used.  When UpdateStates is called, this data is copied over to the ADI%u
+   !-------------------------------------------------------------
+   call ADI_CopyInput (ADI%u(1),  ADI_u,  MESH_NEWCOPY, Errstat2, ErrMsg2)
+      if (Failed())  return
+
 
    !-------------------------------------------------------------
    ! Initial setup of other pieces of x,xd,z,OtherState
@@ -858,7 +866,7 @@ CONTAINS
                         Force    = .TRUE.                ,&
                         Moment   = .TRUE.                )
             if(Failed()) return
-         BldPtLoadMesh(iWT)%RemapFlag  = .TRUE.
+         BldPtLoadMesh(iWT)%RemapFlag  = .FALSE.
  
          ! Temp mesh for load transfer
          CALL MeshCopy( SrcMesh  = BldPtLoadMesh(iWT)    ,&
@@ -870,7 +878,7 @@ CONTAINS
                         Force    = .TRUE.                ,&
                         Moment   = .TRUE.                )
             if(Failed()) return
-         BldPtLoadMesh_tmp(iWT)%RemapFlag  = .TRUE.
+         BldPtLoadMesh_tmp(iWT)%RemapFlag  = .FALSE.
  
  
          ! For checking the mesh
@@ -889,7 +897,7 @@ CONTAINS
 !                       Force    = .TRUE.             ,&
 !                       Moment   = .TRUE.             )
 !           if(Failed()) return
-!        NacLoadMesh(iWT)%RemapFlag  = .TRUE.
+!        NacLoadMesh(iWT)%RemapFlag  = .FALSE.
 !
 !        ! For checking the mesh, uncomment this.
 !        !     note: CU is is output unit (platform dependent).
@@ -1009,6 +1017,8 @@ SUBROUTINE ADI_C_CalcOutput(Time_C, &
    Time = REAL(Time_C,DbKi)
 
    ! Call the main subroutine ADI_CalcOutput to get the resulting forces and moments at time T
+   call ADI_CopyInput (ADI_u, ADI%u(1), MESH_UPDATECOPY, Errstat2, ErrMsg2)   ! copy new inputs over
+      if (Failed())  return
    CALL ADI_CalcOutput( Time, ADI%u(1), ADI%p, ADI%x(STATE_CURR), ADI%xd(STATE_CURR), ADI%z(STATE_CURR), ADI%OtherState(STATE_CURR), ADI%y, ADI%m, ErrStat2, ErrMsg2 )
       if (Failed())  return
 
@@ -1131,6 +1141,11 @@ SUBROUTINE ADI_C_UpdateStates( Time_C, TimeNext_C, &
    CALL ADI_CopyDiscState   (ADI%xd(        STATE_CURR), ADI%xd(        STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
    CALL ADI_CopyConstrState (ADI%z(         STATE_CURR), ADI%z(         STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
    CALL ADI_CopyOtherState  (ADI%OtherState(STATE_CURR), ADI%OtherState(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2);  if (Failed())  return
+
+
+   ! Copy newinputs for time u(INPUT_PRED)
+   call ADI_CopyInput (ADI_u, ADI%u(INPUT_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+      if (Failed())  return
 
 
    ! Call the main subroutine ADI_UpdateStates to get the velocities
@@ -1479,7 +1494,7 @@ contains
       enddo
 
       call MeshCommit ( BldPtMotionMesh(iWT), ErrStat2, ErrMsg2 ); if(Failed()) return
-      BldPtMotionMesh(iWT)%RemapFlag  = .TRUE.
+      BldPtMotionMesh(iWT)%RemapFlag  = .FALSE.
 
       ! For checking the mesh, uncomment this.
       !     note: CU is is output unit (platform dependent).
@@ -1511,7 +1526,7 @@ contains
 !     call MeshConstructElement ( NacMotionMesh(iWT), ELEMENT_POINT, ErrStat2, ErrMsg2, p1=1 ); if(Failed()) return
 !
 !     call MeshCommit ( NacMotionMesh(iWT), ErrStat2, ErrMsg2 ); if(Failed()) return
-!     NacMotionMesh(iWT)%RemapFlag    = .TRUE.
+!     NacMotionMesh(iWT)%RemapFlag    = .FALSE.
 !
 !     ! For checking the mesh, uncomment this.
 !     !     note: CU is is output unit (platform dependent).
@@ -1600,7 +1615,7 @@ subroutine ADI_C_SetRotorMotion( iWT_c,                             &
    ! Transfer motions to input meshes
    do iWT=1,Sim%NumTurbines
       call Set_MotionMesh(iWT, ErrStat2, ErrMsg2);    if (Failed())  return
-      call AD_SetInputMotion( iWT, ADI%u(1), &
+      call AD_SetInputMotion( iWT, ADI_u, &
                HubPos_C,   HubOri_C,   HubVel_C,   HubAcc_C,      &
                NacPos_C,   NacOri_C,   NacVel_C,   NacAcc_C,      &
                BldRootPos_C, BldRootOri_C, BldRootVel_C,   BldRootAcc_C,   &
