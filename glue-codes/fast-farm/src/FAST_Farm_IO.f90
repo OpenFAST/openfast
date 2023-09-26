@@ -853,7 +853,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    !----------------------- CURL WAKE PARAMETERS ------------------------------------------
    CALL ReadCom        ( UnIn, InputFile, "Section Header: Curl wake parameters", ErrStat2, ErrMsg2, UnEc ); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%Swirl        ,    "Swirl", "Swirl switch", .True., ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_VortexDecay,    "k_VortexDecay", "Vortex decay constant", 0.01, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_VortexDecay,    "k_VortexDecay", "Vortex decay constant", 0.0001, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%NumVortices,      "NumVortices", "Number of vortices in the curled wake", 100, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%sigma_D,          "sigma_D", "Gaussian vortex width", 0.2, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%FilterInit,       "FilterInit", "Filter Init", 1 , ErrStat2, ErrMsg2, UnEc); if(failed()) return
@@ -880,7 +880,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_Init
    !call ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_k_Grad, "WAT_k_Grad",   "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.84]",  0.84_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    call ReadVar        ( UnIn, InputFile, WD_InitInp%WAT_k_Def,  "WAT_k_Def",    "Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
    call ReadVar        ( UnIn, InputFile, WD_InitInp%WAT_k_Grad, "WAT_k_Grad",   "Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0]", ErrStat2, ErrMsg2, UnEc); if(failed()) return
-   call ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_D_BrkDwn, "WAT_D_BrkDwn",   "",  3.0_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
+   call ReadVarWDefault( UnIn, InputFile, WD_InitInp%WAT_D_BrkDwn, "WAT_D_BrkDwn",   "",  1.0_ReKi, ErrStat2, ErrMsg2, UnEc); if(failed()) return
    if ( PathIsRelative( p%WAT_BoxFile ) ) p%WAT_BoxFile = TRIM(PriPath)//TRIM(p%WAT_BoxFile)
    if (p%WAT > 0_IntKi) WD_InitInp%WAT = .true.
 
