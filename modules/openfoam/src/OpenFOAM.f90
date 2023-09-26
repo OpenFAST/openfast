@@ -254,11 +254,9 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, OpFM, In
       call SetErrStat( ErrID_Fatal, 'Error allocating m%FlowField', ErrStat, ErrMsg, RoutineName )
       return
    end if
-
-   ! Initialize flow field with point type
-   OpFm%m%FlowField = FlowFieldType(FieldType=Point_FieldType)
-
+   
    ! Initialize flowfield points type
+   OpFm%m%FlowField%FieldType = Point_FieldType
    Points_InitInput%NumWindPoints = OpFM%p%nNodesVel
    call IfW_Points_Init(Points_InitInput, OpFm%m%FlowField%Points, ErrStat2, ErrMsg2); if (Failed()) return
 
