@@ -6196,7 +6196,7 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       
       call BD_DestroyContState( x_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
       
-      if (p%RotStates) then
+      if ((.not. IsSolveLoc) .and. p%RotStates) then
          RotateStates = matmul( u%RootMotion%Orientation(:,:,1), transpose( u%RootMotion%RefOrientation(:,:,1) ) )
          do i=1,size(dXdu,1),3
             dXdu(i:i+2, :) = matmul( RotateStates, dXdu(i:i+2, :) )
@@ -6284,7 +6284,7 @@ SUBROUTINE BD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    call BD_JacobianPContState_noRotate(t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2, dYdx, dXdx, IsSolveLoc); if (Failed()) return
 
    ! If states need to be rotated
-   if (.not. IsSolveLoc .and. p%RotStates) then
+   if ((.not. IsSolveLoc) .and. p%RotStates) then
       RotateStates          = matmul( u%RootMotion%Orientation(:,:,1), transpose( u%RootMotion%RefOrientation(:,:,1) ) )
       RotateStatesTranspose = transpose( RotateStates )
 
