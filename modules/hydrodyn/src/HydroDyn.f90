@@ -2104,7 +2104,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
                indxStart = (iBody-1)*6+1
                indxEnd   = indxStart+5
   
-               m%F_PtfmAdd(indxStart:indxEnd) = p%AddF0(:,1) - matmul(p%AddCLin(:,:,iBody), q(indxStart:indxEnd)) - matmul(p%AddBLin(:,:,iBody), qdot(indxStart:indxEnd)) - matmul(p%AddBQuad(:,:,iBody), qdotsq(indxStart:indxEnd))
+               m%F_PtfmAdd(indxStart:indxEnd) = p%AddF0(:,iBody) - matmul(p%AddCLin(:,:,iBody), q(indxStart:indxEnd)) - matmul(p%AddBLin(:,:,iBody), qdot(indxStart:indxEnd)) - matmul(p%AddBQuad(:,:,iBody), qdotsq(indxStart:indxEnd))
       
                   ! Attach to the output point mesh
                y%WAMITMesh%Force (:,iBody) = m%F_PtfmAdd(indxStart:indxStart+2)
