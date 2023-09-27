@@ -15,7 +15,6 @@ Jonkman and Kelsey Shaler.
 
    
 .. toctree::
-   :numbered:
    :maxdepth: 6
 
    Nomenclature.rst

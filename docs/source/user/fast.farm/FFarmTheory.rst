@@ -1311,7 +1311,6 @@ The basic principle for the wake-added turbulence is illustrated in :numref:`FF:
 
 .. figure:: Pictures/FFWakeAddedTurbBoxCoord.svg
    :alt: Wake Added turbulence
-
    :name: FF:WATSketch
    :width: 100%
    :align: center
