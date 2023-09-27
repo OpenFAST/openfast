@@ -2080,9 +2080,7 @@ subroutine FAST_LinearizeMappings(ModData, ModOrder, Maps, T, ErrStat, ErrMsg, d
 
       ! If source or destination modules are not in tight coupling
       ! or mapping is non-mesh, cycle
-      if ((.not. ModData(Maps(i)%DstModIdx)%IsTC) .or. &
-          (.not. ModData(Maps(i)%SrcModIdx)%IsTC) .or. &
-          (Maps(i)%Typ == Map_NonMesh)) cycle
+      if (Maps(i)%Typ == Map_NonMesh) cycle
 
       ! Select based on mapping Key
       select case (Maps(i)%Key)
@@ -2102,8 +2100,9 @@ subroutine FAST_LinearizeMappings(ModData, ModOrder, Maps, T, ErrStat, ErrMsg, d
          if (Failed()) return
 
       case default
-         call SetErrStat(ErrID_Fatal, 'Unknown Mapping Key: "'//Maps(i)%Key//'"', ErrStat, ErrMsg, RoutineName)
-         return
+         cycle    ! TODO: remove cycle and restore error, all mapping should be linearized
+         ! call SetErrStat(ErrID_Fatal, 'Unknown Mapping Key: "'//Maps(i)%Key//'"', ErrStat, ErrMsg, RoutineName)
+         ! return
       end select
 
       if (present(dUdu)) then
@@ -2117,9 +2116,9 @@ subroutine FAST_LinearizeMappings(ModData, ModOrder, Maps, T, ErrStat, ErrMsg, d
 
 contains
    subroutine dUduSetBlocks(M, SrcMod, DstMod, MML)
-      type(TC_MappingType), intent(inout)          :: M           !< Mapping
-      type(ModDataType), intent(in)                :: SrcMod, DstMod  !< Module data
-      type(MeshMapLinearizationType), intent(in)   :: MML         !< Mesh Map Linearization data
+      type(TC_MappingType), intent(inout)          :: M              !< Mapping
+      type(ModDataType), intent(in)                :: SrcMod, DstMod !< Module data
+      type(MeshMapLinearizationType), intent(in)   :: MML            !< Mesh Map Linearization data
 
       ! Effect of input Translation Velocity on input Translation Displacement
       if (allocated(MML%tv_uD)) then
@@ -2153,7 +2152,7 @@ contains
          call SetBlock(DstMod%Vars%u(M%DstVarIdx), VF_Moment, SrcMod%Vars%y(M%SrcVarIdx), VF_Force, -MML%m_f, dUdy)
       end if
 
-      ! Moment to output translation displacement
+      ! Moment to destination translation displacement
       if (allocated(Maps(i)%MeshMap%dM%m_uD)) then
          call SetBlock(DstMod%Vars%u(M%DstVarIdx), VF_Moment, DstMod%Vars%y([M%DstDispVarIdx]), VF_TransDisp, -MML%m_uD, dUdy)
       end if
