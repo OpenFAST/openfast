@@ -842,8 +842,8 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
                call SetErrStat(ErrID_Warn, "Failed to converge in "//trim(Num2LStr(p%MaxConvIter))// &
                                " iterations on step "//trim(Num2LStr(n_t_global_next))// &
                                " (error="//trim(Num2LStr(delta_norm))// &
-                               ", tolerance="//trim(Num2LStr(p%ConvTol))// &
-                               "). Warning will not be displayed again.", ErrStat, ErrMsg, RoutineName)
+                               ", tolerance="//trim(Num2LStr(p%ConvTol))//").", &
+                               ErrStat, ErrMsg, RoutineName)
             end if
 
             ! Exit convergence loop to next correction iteration or next step
@@ -875,7 +875,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          end do
 
          ! Calculate difference between predicted and actual accelerations
-         m%XB(p%iJX(1):p%iJX(2), 1) = m%qn(:, COL_A) - m%dxdt(p%iX2(1):p%iX2(2))
+         m%XB(p%iJX(1):p%iJX(2), 1) = m%dxdt(p%iX2(1):p%iX2(2)) - m%qn(:, COL_A)
 
          ! Transfer Option 1 outputs to temporary inputs and collect into u_tmp
          do i = 1, size(p%iModOpt1)
@@ -887,7 +887,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! Calculate difference in U for all Option 1 modules (un - u_tmp)
          ! and add to RHS for TC and Option 1 modules
          call ComputeDeltaU(Mods, p%iModOpt1, m%un, m%u_tmp, m%UDiff)
-         m%XB(p%iJU(1):p%iJU(2), 1) = m%UDiff
+         m%XB(p%iJU(1):p%iJU(2), 1) = -m%UDiff
 
          ! Apply conditioning factor to loads in RHS
          m%XB(p%iJL, 1) = m%XB(p%iJL, 1)/p%Scale_UJac
@@ -924,10 +924,10 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          !----------------------------------------------------------------------
 
          ! Calculate change in state matrix
-         m%dq(:, COL_D) = -p%C(3)*m%XB(p%iJX(1):p%iJX(2), 1)
-         m%dq(:, COL_V) = -p%C(2)*m%XB(p%iJX(1):p%iJX(2), 1)
-         m%dq(:, COL_A) = -m%XB(p%iJX(1):p%iJX(2), 1)
-         m%dq(:, COL_AA) = -p%C(1)*m%XB(p%iJX(1):p%iJX(2), 1)
+         m%dq(:, COL_D) = p%C(3)*m%XB(p%iJX(1):p%iJX(2), 1)
+         m%dq(:, COL_V) = p%C(2)*m%XB(p%iJX(1):p%iJX(2), 1)
+         m%dq(:, COL_A) = m%XB(p%iJX(1):p%iJX(2), 1)
+         m%dq(:, COL_AA) = p%C(1)*m%XB(p%iJX(1):p%iJX(2), 1)
 
          ! Update state matrix with deltas
          m%qn = m%qn + m%dq
@@ -950,7 +950,7 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          !----------------------------------------------------------------------
 
          ! Update change in inputs
-         m%du = -m%XB(p%iJU(1):p%iJU(2), 1)
+         m%du = m%XB(p%iJU(1):p%iJU(2), 1)
 
          ! Apply deltas to inputs, update modules
          call AddDeltaToInputs(Mods, p%iModOpt1, m%du, m%un)
