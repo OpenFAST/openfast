@@ -5,19 +5,20 @@
 # Required
 version: 2
 
+# select the docker image to use: stable | latest
+build:
+  os: "ubuntu-22.04"
+  tools:
+    python: "3.11"
+
 formats:
   - htmlzip
   # - pdf
   # - epub
 
 python:
-  version: 3.7
   install:
     - requirements: docs/requirements.txt
-
-# select the docker image to use: stable | latest
-build:
-  image: stable
 
 sphinx:
   builder: html
