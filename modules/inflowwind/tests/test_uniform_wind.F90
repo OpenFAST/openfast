@@ -54,7 +54,7 @@ contains
         INTEGER                         :: ErrStat
         CHARACTER(ErrMsgLen)            :: ErrMsg
         TYPE(FileInfoType)              :: InFileInfo
-        TYPE(FileInfoType)              :: WindType2Data
+        TYPE(FileInfoType)              :: WindType2Info
         CHARACTER(1024), DIMENSION(6)   :: data = (/ &
             '! Wind file for sheared 18 m/s wind with 30 degree direction.    ', &
             '! Time Wind Wind  Vert. Horiz. Vert. LinV Gust                   ', &
@@ -69,7 +69,7 @@ contains
         CHARACTER(ErrMsgLen)                                  :: TmpErrMsg         !< temporary error message
 
         InFileInfo = getInputFileDataWindType2()
-        CALL InitFileInfo(data, WindType2Data, ErrStat, ErrMsg)
+        CALL InitFileInfo(data, WindType2Info, ErrStat, ErrMsg)
 
       ! For diagnostic purposes, the following can be used to display the contents
       ! of the InFileInfo data structure.
@@ -78,11 +78,11 @@ contains
             ! Variable definitions
         InitInp%InputFileName = ""
         InitInp%NumWindPoints = 5
-        InitInp%UseInputFile = .FALSE.
+        InitInp%FilePassingMethod = 1_IntKi
         InitInp%RootName = ""
-        InitInp%PassedFileData = InFileInfo
+        InitInp%PassedFileInfo = InFileInfo
         InitInp%WindType2UseInputFile = .FALSE.
-        InitInp%WindType2Data = WindType2Data
+        InitInp%WindType2Info = WindType2Info
 
         CALL InflowWind_Init( InitInp, InputGuess, p, ContStates, DiscStates, &
                         ConstrStateGuess, OtherStates, y, m, TimeInterval, &

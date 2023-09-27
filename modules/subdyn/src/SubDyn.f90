@@ -4170,44 +4170,6 @@ SUBROUTINE SymMatDebug(M,MAT)
 
 END SUBROUTINE SymMatDebug
 
-FUNCTION is_numeric(string, x)
-   IMPLICIT NONE
-   CHARACTER(len=*), INTENT(IN) :: string
-   REAL(ReKi), INTENT(OUT) :: x
-   LOGICAL :: is_numeric
-   INTEGER :: e,n
-   CHARACTER(len=12) :: fmt
-   x = 0.0_ReKi
-   n=LEN_TRIM(string)
-   WRITE(fmt,'("(F",I0,".0)")') n
-   READ(string,fmt,IOSTAT=e) x
-   is_numeric = e == 0
-END FUNCTION is_numeric
-
-FUNCTION is_integer(string, x)
-   IMPLICIT NONE
-   CHARACTER(len=*), INTENT(IN) :: string
-   INTEGER(IntKi), INTENT(OUT) :: x
-   LOGICAL :: is_integer
-   INTEGER :: e, n
-   x = 0
-   n=LEN_TRIM(string)
-   READ(string,*,IOSTAT=e) x
-   is_integer = e == 0
-END FUNCTION is_integer
-
-FUNCTION is_logical(string, b)
-   IMPLICIT NONE
-   CHARACTER(len=*), INTENT(IN) :: string
-   Logical, INTENT(OUT) :: b
-   LOGICAL :: is_logical
-   INTEGER :: e,n
-   b = .false.
-   n=LEN_TRIM(string)
-   READ(string,*,IOSTAT=e) b
-   is_logical = e == 0
-END FUNCTION is_logical
-
 !> Parses a file for Kxx,Kxy,..Kxthtx,..Kxtz, Kytx, Kyty,..Kztz
 SUBROUTINE ReadSSIfile ( Filename, JointID, SSIK, SSIM, ErrStat, ErrMsg, UnEc )
    USE NWTC_IO

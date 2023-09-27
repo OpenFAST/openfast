@@ -87,12 +87,13 @@ typedef  ^                       ^                 LOGICAL           Use4Dext   
 typedef  ^                       ^                 IntKi             NumWindPoints     -     -     -     "Number of wind velocity points expected"                                     -
 typedef  ^                       ^                 IntKi             TurbineID         -     0     -     "Wind turbine ID number in the fixed (DEFAULT) file name when FixedWindFileRootName = .TRUE. (used by FAST.Farm)"                                     -
 typedef  ^                       ^                 LOGICAL           FixedWindFileRootName - .FALSE. -   "Do the wind data files have a fixed (DEFAULT) file name? (used by FAST.Farm)" -
-typedef  ^                       ^                 LOGICAL           UseInputFile      -   .TRUE.  -     "Should we read everthing from an input file, or do we get it some other way" -
 typedef  ^                       ^                 CHARACTER(1024)   RootName          -     -     -     "RootName for writing output files"
-typedef  ^                       ^                 FileInfoType      PassedFileData    -     -     -     "If we don't use the input file, pass everything through this"                -
+typedef  ^                       ^                 IntKi             FilePassingMethod -     0     -     "Method for file passing {0: None (read from file), 1: as FileInfoType to parse, 2: as InputFileType already parsed}" -
+typedef  ^                       ^                 FileInfoType      PassedFileInfo    -     -     -     "If we don't use the input file, pass everything through this [FilePassingMethod = 1]" -
+typedef  ^                       ^                 InflowWind_InputFile PassedFileData -     -     -     "If we don't use the input file, pass everything through this [FilePassingMethod = 2]" -
 typedef  ^                       ^                 LOGICAL           WindType2UseInputFile   -     .TRUE.     -      "Flag for toggling file based IO in wind type 2."                -
-typedef  ^                       ^                 FileInfoType      WindType2Data     -     -     -      "Optional slot for wind type 2 data if file IO is not used."                -
-typedef  ^                       ^                 LOGICAL           OutputAccel      -     .FALSE.     -      "Flag to output wind acceleration"                                    -
+typedef  ^                       ^                 FileInfoType      WindType2Info     -     -     -      "Optional slot for wind type 2 data if file IO is not used."                -
+typedef  ^                       ^                 LOGICAL           OutputAccel       -     .FALSE.     -      "Flag to output wind acceleration"                                    -
 typedef  ^                       ^              Lidar_InitInputType  lidar             -     -     -     "InitInput for lidar data"                                             -
 typedef  ^                       ^              Grid4D_InitInputType FDext             -     -     -     "InitInput for 4D external wind data"                                             -
 typedef  ^                       ^                 ReKi              RadAvg            -     -     -     "Radius (from hub) used for averaging wind speed" -

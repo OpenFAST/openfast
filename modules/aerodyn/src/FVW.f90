@@ -352,7 +352,6 @@ subroutine FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
    integer(IntKi),             intent(  out) :: ErrStat       !< Error status of the operation
    character(*),               intent(  out) :: ErrMsg        !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   character(1024)         :: rootDir, baseName  ! Simulation root dir and basename
    integer(IntKi)          :: iW, nBldMax
    integer(IntKi), allocatable :: nBldPerRot(:)
    integer(IntKi)          :: ErrStat2

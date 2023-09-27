@@ -185,7 +185,7 @@ subroutine IfW_UniformWind_Init(InitInp, SumFileUnit, UF, FileDat, ErrStat, ErrM
    if (InitInp%UseInputFile) then
       call ProcessComFile(InitInp%WindFileName, WindFileInfo, TmpErrStat, TmpErrMsg)
    else
-      call NWTC_Library_CopyFileInfoType(InitInp%PassedFileData, WindFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg)
+      call NWTC_Library_CopyFileInfoType(InitInp%PassedFileInfo, WindFileInfo, MESH_NEWCOPY, TmpErrStat, TmpErrMsg)
    end if
    call SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return

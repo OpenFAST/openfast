@@ -333,11 +333,11 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    !     RootName is set in ADI_Init using InitInp%RootName
    InitInp%RootName                     = OutRootName
    if (IfWinputFilePassed) then
-      InitInp%IW_InitInp%UseInputFile   = .FALSE.           ! Don't try to read an input -- use passed data instead (blades and AF tables not passed)
-      InitInp%IW_InitInp%InputFile      = "passed_ifw_file" ! not actually used
-      call InitFileInfo(IfWinputFileString, InitInp%IW_InitInp%PassedFileData, ErrStat2, ErrMsg2); if (Failed())  return
+      InitInp%IW_InitInp%FilePassingMethod   = 1_IntKi           ! Don't try to read an input -- use passed data instead (blades and AF tables not passed) using FileInfoType
+      InitInp%IW_InitInp%InputFile           = "passed_ifw_file" ! not actually used
+      call InitFileInfo(IfWinputFileString, InitInp%IW_InitInp%PassedFileInfo, ErrStat2, ErrMsg2); if (Failed())  return
    else
-      InitInp%IW_InitINp%UseInputFile   = .TRUE.            ! Read input info from a primary input file
+      InitInp%IW_InitINp%FilePassingMethod   = 0_IntKi           ! Read input info from a primary input file
       i = min(IntfStrLen,IfWinputFileStringLength_C)
       TmpFileName = ''
       TmpFileName(1:i) = IfWinputFileString(1:i)
@@ -352,7 +352,7 @@ SUBROUTINE AeroDyn_Inflow_C_Init( ADinputFilePassed, ADinputFileString_C, ADinpu
    !     CU is the screen -- system dependent.
    if (debugverbose >= 3) then
       if (ADinputFilePassed)     call Print_FileInfo_Struct( CU, InitInp%AD%PassedPrimaryInputData )
-      if (IfWinputFilePassed)    call Print_FileInfo_Struct( CU, InitInp%IW_InitInp%PassedFileData )
+      if (IfWinputFilePassed)    call Print_FileInfo_Struct( CU, InitInp%IW_InitInp%PassedFileInfo )
    endif
 
    ! Store data about the simulation (NOTE: we are not fully populating the Sim data structure)

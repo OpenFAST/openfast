@@ -100,6 +100,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: n_high_low = 0_IntKi      !< Number of high-resolution time steps per low [-]
     INTEGER(IntKi)  :: NumDT = 0_IntKi      !< Number of low-resolution (FAST.Farm driver/glue code) time steps [-]
     CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
+    LOGICAL  :: WAT_Enabled = .false.      !< Is WAT enabled? [-]
+    TYPE(FlowFieldType) , POINTER :: WAT_FlowField => NULL()      !< Pointer to the InflowWinds flow field data type [-]
   END TYPE AWAE_InitInputType
 ! =======================
 ! =========  AWAE_InitOutputType  =======
@@ -134,6 +136,8 @@ IMPLICIT NONE
 ! =========  AWAE_DiscreteStateType  =======
   TYPE, PUBLIC :: AWAE_DiscreteStateType
     TYPE(InflowWind_DiscreteStateType) , DIMENSION(:), ALLOCATABLE  :: IfW      !< Dummy IfW discrete states [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: WAT_B_Box = 0.0_ReKi      !< Position of passive tracer used to offset the WAT box at each low res time step [m]
+    REAL(ReKi) , DIMENSION(1:3)  :: Ufarm = 0.0_ReKi      !< mean velocity of all disk average flow for all turbines in farm [m/s]
   END TYPE AWAE_DiscreteStateType
 ! =======================
 ! =========  AWAE_ConstraintStateType  =======
@@ -143,7 +147,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  AWAE_OtherStateType  =======
   TYPE, PUBLIC :: AWAE_OtherStateType
-    TYPE(InflowWind_OtherStateType) , DIMENSION(:), ALLOCATABLE  :: IfW      !< Dummy IfW   other states [-]
+    TYPE(InflowWind_OtherStateType) , DIMENSION(:), ALLOCATABLE  :: IfW      !< Dummy IfW other states [-]
   END TYPE AWAE_OtherStateType
 ! =======================
 ! =========  AWAE_MiscVarType  =======
@@ -160,14 +164,15 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: rhat_e      !<  [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: pvec_cs      !<  [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: pvec_ce      !<  [-]
-    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizXYPlane 
-    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizYZPlane 
-    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizXZPlane 
+    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizXYPlane      !< An array holding the output data for a 2D visualization slice [-]
+    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizYZPlane      !< An array holding the output data for a 2D visualization slice [-]
+    REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: outVizXZPlane      !< An array holding the output data for a 2D visualization slice [-]
     TYPE(InflowWind_MiscVarType) , DIMENSION(:), ALLOCATABLE  :: IfW      !< InflowWind module misc vars [-]
     TYPE(InflowWind_InputType)  :: u_IfW_Low      !< InflowWind module inputs for the low-resolution grid [-]
     TYPE(InflowWind_InputType)  :: u_IfW_High      !< InflowWind module inputs for the high-resolution grid [-]
     TYPE(InflowWind_OutputType)  :: y_IfW_Low      !< InflowWind module outputs for the low-resolution grid [-]
     TYPE(InflowWind_OutputType)  :: y_IfW_High      !< InflowWind module outputs for the high-resolution grid [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: V_amb_low_disk      !< Rotor averaged ambiend wind speed for each wind turbine (3 x nWT) [m/s]
   END TYPE AWAE_MiscVarType
 ! =======================
 ! =========  AWAE_ParameterType  =======
@@ -224,6 +229,8 @@ IMPLICIT NONE
     CHARACTER(1024)  :: OutFileRoot      !< The root name derived from the primary FAST.Farm input file [-]
     CHARACTER(1024)  :: OutFileVTKRoot      !< The root name for VTK outputs [-]
     INTEGER(IntKi)  :: VTK_tWidth = 0_IntKi      !< Number of characters for VTK timestamp outputs [-]
+    LOGICAL  :: WAT_Enabled = .false.      !< Switch for turning on and off wake-added turbulence [-]
+    TYPE(FlowFieldType) , POINTER :: WAT_FlowField => NULL()      !< Pointer to the InflowWinds flow field data type [-]
   END TYPE AWAE_ParameterType
 ! =======================
 ! =========  AWAE_OutputType  =======
@@ -242,7 +249,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vy_wake      !< Transverse horizonal wake velocity deficit at wake planes, distributed across the plane, for each turbine (ny,nz,np,nWT) [m/s]
     REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vz_wake      !< Transverse nominally vertical wake velocity deficit at wake planes, distributed across the plane, for each turbine (ny,nz,np,nWT) [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: D_wake      !< Wake diameters at wake planes for each turbine [m]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WAT_k_mt      !< Scaling factor k_mt(r,x) for wake-added turbulence [-]
+    REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: WAT_k      !< Scaling factor for each wake plane and turbine (ny, nz, np, nWT) [-]
   END TYPE AWAE_InputType
 ! =======================
 CONTAINS
@@ -921,6 +928,7 @@ subroutine AWAE_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: LB(0), UB(0)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'AWAE_CopyInitInput'
@@ -932,6 +940,8 @@ subroutine AWAE_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
    DstInitInputData%n_high_low = SrcInitInputData%n_high_low
    DstInitInputData%NumDT = SrcInitInputData%NumDT
    DstInitInputData%OutFileRoot = SrcInitInputData%OutFileRoot
+   DstInitInputData%WAT_Enabled = SrcInitInputData%WAT_Enabled
+   DstInitInputData%WAT_FlowField => SrcInitInputData%WAT_FlowField
 end subroutine
 
 subroutine AWAE_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -945,17 +955,27 @@ subroutine AWAE_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    ErrMsg  = ''
    call AWAE_DestroyInputFileType(InitInputData%InputFileData, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   nullify(InitInputData%WAT_FlowField)
 end subroutine
 
 subroutine AWAE_PackInitInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(AWAE_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'AWAE_PackInitInput'
+   logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call AWAE_PackInputFileType(Buf, InData%InputFileData) 
    call RegPack(Buf, InData%n_high_low)
    call RegPack(Buf, InData%NumDT)
    call RegPack(Buf, InData%OutFileRoot)
+   call RegPack(Buf, InData%WAT_Enabled)
+   call RegPack(Buf, associated(InData%WAT_FlowField))
+   if (associated(InData%WAT_FlowField)) then
+      call RegPackPointer(Buf, c_loc(InData%WAT_FlowField), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call IfW_FlowField_PackFlowFieldType(Buf, InData%WAT_FlowField) 
+      end if
+   end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -963,6 +983,11 @@ subroutine AWAE_UnPackInitInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(AWAE_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'AWAE_UnPackInitInput'
+   integer(IntKi)  :: LB(0), UB(0)
+   integer(IntKi)  :: stat
+   logical         :: IsAllocAssoc
+   integer(IntKi)  :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    call AWAE_UnpackInputFileType(Buf, OutData%InputFileData) ! InputFileData 
    call RegUnpack(Buf, OutData%n_high_low)
@@ -971,6 +996,28 @@ subroutine AWAE_UnPackInitInput(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%OutFileRoot)
    if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WAT_Enabled)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (associated(OutData%WAT_FlowField)) deallocate(OutData%WAT_FlowField)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%WAT_FlowField)
+      else
+         allocate(OutData%WAT_FlowField,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAT_FlowField.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%WAT_FlowField)
+         call IfW_FlowField_UnpackFlowFieldType(Buf, OutData%WAT_FlowField) ! WAT_FlowField 
+      end if
+   else
+      OutData%WAT_FlowField => null()
+   end if
 end subroutine
 
 subroutine AWAE_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -1457,6 +1504,8 @@ subroutine AWAE_CopyDiscState(SrcDiscStateData, DstDiscStateData, CtrlCode, ErrS
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   DstDiscStateData%WAT_B_Box = SrcDiscStateData%WAT_B_Box
+   DstDiscStateData%Ufarm = SrcDiscStateData%Ufarm
 end subroutine
 
 subroutine AWAE_DestroyDiscState(DiscStateData, ErrStat, ErrMsg)
@@ -1497,6 +1546,8 @@ subroutine AWAE_PackDiscState(Buf, Indata)
          call InflowWind_PackDiscState(Buf, InData%IfW(i1)) 
       end do
    end if
+   call RegPack(Buf, InData%WAT_B_Box)
+   call RegPack(Buf, InData%Ufarm)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1524,6 +1575,10 @@ subroutine AWAE_UnPackDiscState(Buf, OutData)
          call InflowWind_UnpackDiscState(Buf, OutData%IfW(i1)) ! IfW 
       end do
    end if
+   call RegUnpack(Buf, OutData%WAT_B_Box)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%Ufarm)
+   if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
 subroutine AWAE_CopyConstrState(SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg)
@@ -1947,6 +2002,18 @@ subroutine AWAE_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call InflowWind_CopyOutput(SrcMiscData%y_IfW_High, DstMiscData%y_IfW_High, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   if (allocated(SrcMiscData%V_amb_low_disk)) then
+      LB(1:2) = lbound(SrcMiscData%V_amb_low_disk)
+      UB(1:2) = ubound(SrcMiscData%V_amb_low_disk)
+      if (.not. allocated(DstMiscData%V_amb_low_disk)) then
+         allocate(DstMiscData%V_amb_low_disk(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%V_amb_low_disk.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstMiscData%V_amb_low_disk = SrcMiscData%V_amb_low_disk
+   end if
 end subroutine
 
 subroutine AWAE_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -2028,6 +2095,9 @@ subroutine AWAE_DestroyMisc(MiscData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call InflowWind_DestroyOutput(MiscData%y_IfW_High, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (allocated(MiscData%V_amb_low_disk)) then
+      deallocate(MiscData%V_amb_low_disk)
+   end if
 end subroutine
 
 subroutine AWAE_PackMisc(Buf, Indata)
@@ -2129,6 +2199,11 @@ subroutine AWAE_PackMisc(Buf, Indata)
    call InflowWind_PackInput(Buf, InData%u_IfW_High) 
    call InflowWind_PackOutput(Buf, InData%y_IfW_Low) 
    call InflowWind_PackOutput(Buf, InData%y_IfW_High) 
+   call RegPack(Buf, allocated(InData%V_amb_low_disk))
+   if (allocated(InData%V_amb_low_disk)) then
+      call RegPackBounds(Buf, 2, lbound(InData%V_amb_low_disk), ubound(InData%V_amb_low_disk))
+      call RegPack(Buf, InData%V_amb_low_disk)
+   end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -2371,6 +2446,20 @@ subroutine AWAE_UnPackMisc(Buf, OutData)
    call InflowWind_UnpackInput(Buf, OutData%u_IfW_High) ! u_IfW_High 
    call InflowWind_UnpackOutput(Buf, OutData%y_IfW_Low) ! y_IfW_Low 
    call InflowWind_UnpackOutput(Buf, OutData%y_IfW_High) ! y_IfW_High 
+   if (allocated(OutData%V_amb_low_disk)) deallocate(OutData%V_amb_low_disk)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 2, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%V_amb_low_disk(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%V_amb_low_disk.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%V_amb_low_disk)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
 end subroutine
 
 subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -2607,6 +2696,8 @@ subroutine AWAE_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%OutFileRoot = SrcParamData%OutFileRoot
    DstParamData%OutFileVTKRoot = SrcParamData%OutFileVTKRoot
    DstParamData%VTK_tWidth = SrcParamData%VTK_tWidth
+   DstParamData%WAT_Enabled = SrcParamData%WAT_Enabled
+   DstParamData%WAT_FlowField => SrcParamData%WAT_FlowField
 end subroutine
 
 subroutine AWAE_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -2671,6 +2762,7 @@ subroutine AWAE_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%OutDisWindY)) then
       deallocate(ParamData%OutDisWindY)
    end if
+   nullify(ParamData%WAT_FlowField)
 end subroutine
 
 subroutine AWAE_PackParam(Buf, Indata)
@@ -2679,6 +2771,7 @@ subroutine AWAE_PackParam(Buf, Indata)
    character(*), parameter         :: RoutineName = 'AWAE_PackParam'
    integer(IntKi)  :: i1, i2, i3
    integer(IntKi)  :: LB(3), UB(3)
+   logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%WindFilePath)
    call RegPack(Buf, InData%NumTurbines)
@@ -2796,6 +2889,14 @@ subroutine AWAE_PackParam(Buf, Indata)
    call RegPack(Buf, InData%OutFileRoot)
    call RegPack(Buf, InData%OutFileVTKRoot)
    call RegPack(Buf, InData%VTK_tWidth)
+   call RegPack(Buf, InData%WAT_Enabled)
+   call RegPack(Buf, associated(InData%WAT_FlowField))
+   if (associated(InData%WAT_FlowField)) then
+      call RegPackPointer(Buf, c_loc(InData%WAT_FlowField), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call IfW_FlowField_PackFlowFieldType(Buf, InData%WAT_FlowField) 
+      end if
+   end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -2807,6 +2908,8 @@ subroutine AWAE_UnPackParam(Buf, OutData)
    integer(IntKi)  :: LB(3), UB(3)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
+   integer(IntKi)  :: PtrIdx
+   type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    call RegUnpack(Buf, OutData%WindFilePath)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3093,6 +3196,28 @@ subroutine AWAE_UnPackParam(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%VTK_tWidth)
    if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WAT_Enabled)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (associated(OutData%WAT_FlowField)) deallocate(OutData%WAT_FlowField)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%WAT_FlowField)
+      else
+         allocate(OutData%WAT_FlowField,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAT_FlowField.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%WAT_FlowField)
+         call IfW_FlowField_UnpackFlowFieldType(Buf, OutData%WAT_FlowField) ! WAT_FlowField 
+      end if
+   else
+      OutData%WAT_FlowField => null()
+   end if
 end subroutine
 
 subroutine AWAE_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -3378,17 +3503,17 @@ subroutine AWAE_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstInputData%D_wake = SrcInputData%D_wake
    end if
-   if (allocated(SrcInputData%WAT_k_mt)) then
-      LB(1:3) = lbound(SrcInputData%WAT_k_mt)
-      UB(1:3) = ubound(SrcInputData%WAT_k_mt)
-      if (.not. allocated(DstInputData%WAT_k_mt)) then
-         allocate(DstInputData%WAT_k_mt(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+   if (allocated(SrcInputData%WAT_k)) then
+      LB(1:4) = lbound(SrcInputData%WAT_k)
+      UB(1:4) = ubound(SrcInputData%WAT_k)
+      if (.not. allocated(DstInputData%WAT_k)) then
+         allocate(DstInputData%WAT_k(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%WAT_k_mt.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%WAT_k.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstInputData%WAT_k_mt = SrcInputData%WAT_k_mt
+      DstInputData%WAT_k = SrcInputData%WAT_k
    end if
 end subroutine
 
@@ -3417,8 +3542,8 @@ subroutine AWAE_DestroyInput(InputData, ErrStat, ErrMsg)
    if (allocated(InputData%D_wake)) then
       deallocate(InputData%D_wake)
    end if
-   if (allocated(InputData%WAT_k_mt)) then
-      deallocate(InputData%WAT_k_mt)
+   if (allocated(InputData%WAT_k)) then
+      deallocate(InputData%WAT_k)
    end if
 end subroutine
 
@@ -3457,10 +3582,10 @@ subroutine AWAE_PackInput(Buf, Indata)
       call RegPackBounds(Buf, 2, lbound(InData%D_wake), ubound(InData%D_wake))
       call RegPack(Buf, InData%D_wake)
    end if
-   call RegPack(Buf, allocated(InData%WAT_k_mt))
-   if (allocated(InData%WAT_k_mt)) then
-      call RegPackBounds(Buf, 3, lbound(InData%WAT_k_mt), ubound(InData%WAT_k_mt))
-      call RegPack(Buf, InData%WAT_k_mt)
+   call RegPack(Buf, allocated(InData%WAT_k))
+   if (allocated(InData%WAT_k)) then
+      call RegPackBounds(Buf, 4, lbound(InData%WAT_k), ubound(InData%WAT_k))
+      call RegPack(Buf, InData%WAT_k)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -3557,18 +3682,18 @@ subroutine AWAE_UnPackInput(Buf, OutData)
       call RegUnpack(Buf, OutData%D_wake)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   if (allocated(OutData%WAT_k_mt)) deallocate(OutData%WAT_k_mt)
+   if (allocated(OutData%WAT_k)) deallocate(OutData%WAT_k)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
    if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
+      call RegUnpackBounds(Buf, 4, LB, UB)
       if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WAT_k_mt(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
+      allocate(OutData%WAT_k(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAT_k_mt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAT_k.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
          return
       end if
-      call RegUnpack(Buf, OutData%WAT_k_mt)
+      call RegUnpack(Buf, OutData%WAT_k)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine

@@ -59,8 +59,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: RefHt = 0.0_ReKi      !< RefHeight [-]
     REAL(ReKi)  :: PLExp = 0.0_ReKi      !< PLExp [-]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK turbine type switch [-]
-    LOGICAL  :: UseInputFile = .TRUE.      !< Should we read everthing from an input file, or is it passed in? [-]
-    TYPE(FileInfoType)  :: PassedFileData      !< If we don't use the input file, pass everything through this [-]
+    INTEGER(IntKi)  :: FilePassingMethod = 0      !< Should we read everthing from an input file (0), passed in as a FileInfoType structure (1), or passed as the IfW_InputFile structure (2) [-]
+    TYPE(FileInfoType)  :: PassedFileInfo      !< If we don't use the input file, pass everything through this as a FileInfo structure [-]
+    TYPE(InflowWind_InputFile)  :: PassedFileData      !< If we don't use the input file, pass everything through this as an IfW InputFile structure [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
   END TYPE ADI_IW_InputData
 ! =======================
@@ -304,8 +305,11 @@ subroutine ADI_CopyIW_InputData(SrcIW_InputDataData, DstIW_InputDataData, CtrlCo
    DstIW_InputDataData%RefHt = SrcIW_InputDataData%RefHt
    DstIW_InputDataData%PLExp = SrcIW_InputDataData%PLExp
    DstIW_InputDataData%MHK = SrcIW_InputDataData%MHK
-   DstIW_InputDataData%UseInputFile = SrcIW_InputDataData%UseInputFile
-   call NWTC_Library_CopyFileInfoType(SrcIW_InputDataData%PassedFileData, DstIW_InputDataData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2)
+   DstIW_InputDataData%FilePassingMethod = SrcIW_InputDataData%FilePassingMethod
+   call NWTC_Library_CopyFileInfoType(SrcIW_InputDataData%PassedFileInfo, DstIW_InputDataData%PassedFileInfo, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call InflowWind_CopyInputFile(SrcIW_InputDataData%PassedFileData, DstIW_InputDataData%PassedFileData, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstIW_InputDataData%Linearize = SrcIW_InputDataData%Linearize
@@ -320,7 +324,9 @@ subroutine ADI_DestroyIW_InputData(IW_InputDataData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'ADI_DestroyIW_InputData'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call NWTC_Library_DestroyFileInfoType(IW_InputDataData%PassedFileData, ErrStat2, ErrMsg2)
+   call NWTC_Library_DestroyFileInfoType(IW_InputDataData%PassedFileInfo, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyInputFile(IW_InputDataData%PassedFileData, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -335,8 +341,9 @@ subroutine ADI_PackIW_InputData(Buf, Indata)
    call RegPack(Buf, InData%RefHt)
    call RegPack(Buf, InData%PLExp)
    call RegPack(Buf, InData%MHK)
-   call RegPack(Buf, InData%UseInputFile)
-   call NWTC_Library_PackFileInfoType(Buf, InData%PassedFileData) 
+   call RegPack(Buf, InData%FilePassingMethod)
+   call NWTC_Library_PackFileInfoType(Buf, InData%PassedFileInfo) 
+   call InflowWind_PackInputFile(Buf, InData%PassedFileData) 
    call RegPack(Buf, InData%Linearize)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -358,9 +365,10 @@ subroutine ADI_UnPackIW_InputData(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%MHK)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%UseInputFile)
+   call RegUnpack(Buf, OutData%FilePassingMethod)
    if (RegCheckErr(Buf, RoutineName)) return
-   call NWTC_Library_UnpackFileInfoType(Buf, OutData%PassedFileData) ! PassedFileData 
+   call NWTC_Library_UnpackFileInfoType(Buf, OutData%PassedFileInfo) ! PassedFileInfo 
+   call InflowWind_UnpackInputFile(Buf, OutData%PassedFileData) ! PassedFileData 
    call RegUnpack(Buf, OutData%Linearize)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine

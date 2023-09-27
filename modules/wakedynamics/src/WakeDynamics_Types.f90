@@ -74,6 +74,8 @@ IMPLICIT NONE
     LOGICAL  :: WAT = .false.      !< Switch for turning on and off wake-added turbulence [-]
     REAL(ReKi)  :: WAT_k_Def = 0.0_ReKi      !< Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6] [-]
     REAL(ReKi)  :: WAT_k_Grad = 0.0_ReKi      !< Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35] [-]
+    REAL(ReKi)  :: WAT_k_Off = 0.0_ReKi      !< Constant Offset added to the wake-added turbulence k-factor [-]
+    REAL(ReKi)  :: WAT_D_BrkDwn = 0.0_ReKi      !< Downstream distance in rotor diameter after which WAT scaling has reched 99% capacity [-]
   END TYPE WD_InputFileType
 ! =======================
 ! =========  WD_InitInputType  =======
@@ -196,6 +198,8 @@ IMPLICIT NONE
     LOGICAL  :: WAT = .false.      !< Switch for turning on and off wake-added turbulence [-]
     REAL(ReKi)  :: WAT_k_Def = 0.0_ReKi      !< Calibrated parameter for the influence of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.6] [-]
     REAL(ReKi)  :: WAT_k_Grad = 0.0_ReKi      !< Calibrated parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added Turbulence (-) [>=0.0] or DEFAULT [DEFAULT=0.35] [-]
+    REAL(ReKi)  :: WAT_k_Off = 0.0_ReKi      !< Constant Offset added to the wake-added turbulence k-factor [-]
+    REAL(ReKi)  :: WAT_k_BrkDwn = 0.0_ReKi      !< Constant for the breakdown of vortices in the wake and trigger the Wake-Added-Turbulence [-]
   END TYPE WD_ParameterType
 ! =======================
 ! =========  WD_InputType  =======
@@ -225,7 +229,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Vz_wake2      !< Transverse nominally vertical wake velocity deficit at wake planes, distributed across the plane [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: D_wake      !< Wake diameters at wake planes [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: x_plane      !< Downwind distance from rotor to each wake plane [m]
-    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WAT_k_mt      !< Scaling factor k_mt(iP,y,z) for wake-added turbulence [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WAT_k      !< Scaling factor k_mt(iP,y,z) for wake-added turbulence [-]
   END TYPE WD_OutputType
 ! =======================
 CONTAINS
@@ -271,6 +275,8 @@ subroutine WD_CopyInputFileType(SrcInputFileTypeData, DstInputFileTypeData, Ctrl
    DstInputFileTypeData%WAT = SrcInputFileTypeData%WAT
    DstInputFileTypeData%WAT_k_Def = SrcInputFileTypeData%WAT_k_Def
    DstInputFileTypeData%WAT_k_Grad = SrcInputFileTypeData%WAT_k_Grad
+   DstInputFileTypeData%WAT_k_Off = SrcInputFileTypeData%WAT_k_Off
+   DstInputFileTypeData%WAT_D_BrkDwn = SrcInputFileTypeData%WAT_D_BrkDwn
 end subroutine
 
 subroutine WD_DestroyInputFileType(InputFileTypeData, ErrStat, ErrMsg)
@@ -319,6 +325,8 @@ subroutine WD_PackInputFileType(Buf, Indata)
    call RegPack(Buf, InData%WAT)
    call RegPack(Buf, InData%WAT_k_Def)
    call RegPack(Buf, InData%WAT_k_Grad)
+   call RegPack(Buf, InData%WAT_k_Off)
+   call RegPack(Buf, InData%WAT_D_BrkDwn)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -390,6 +398,10 @@ subroutine WD_UnPackInputFileType(Buf, OutData)
    call RegUnpack(Buf, OutData%WAT_k_Def)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WAT_k_Grad)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WAT_k_Off)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WAT_D_BrkDwn)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -2090,6 +2102,8 @@ subroutine WD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%WAT = SrcParamData%WAT
    DstParamData%WAT_k_Def = SrcParamData%WAT_k_Def
    DstParamData%WAT_k_Grad = SrcParamData%WAT_k_Grad
+   DstParamData%WAT_k_Off = SrcParamData%WAT_k_Off
+   DstParamData%WAT_k_BrkDwn = SrcParamData%WAT_k_BrkDwn
 end subroutine
 
 subroutine WD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -2167,6 +2181,8 @@ subroutine WD_PackParam(Buf, Indata)
    call RegPack(Buf, InData%WAT)
    call RegPack(Buf, InData%WAT_k_Def)
    call RegPack(Buf, InData%WAT_k_Grad)
+   call RegPack(Buf, InData%WAT_k_Off)
+   call RegPack(Buf, InData%WAT_k_BrkDwn)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -2293,6 +2309,10 @@ subroutine WD_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%WAT_k_Def)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WAT_k_Grad)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WAT_k_Off)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WAT_k_BrkDwn)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -2593,17 +2613,17 @@ subroutine WD_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg
       end if
       DstOutputData%x_plane = SrcOutputData%x_plane
    end if
-   if (allocated(SrcOutputData%WAT_k_mt)) then
-      LB(1:3) = lbound(SrcOutputData%WAT_k_mt)
-      UB(1:3) = ubound(SrcOutputData%WAT_k_mt)
-      if (.not. allocated(DstOutputData%WAT_k_mt)) then
-         allocate(DstOutputData%WAT_k_mt(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+   if (allocated(SrcOutputData%WAT_k)) then
+      LB(1:3) = lbound(SrcOutputData%WAT_k)
+      UB(1:3) = ubound(SrcOutputData%WAT_k)
+      if (.not. allocated(DstOutputData%WAT_k)) then
+         allocate(DstOutputData%WAT_k(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WAT_k_mt.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%WAT_k.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstOutputData%WAT_k_mt = SrcOutputData%WAT_k_mt
+      DstOutputData%WAT_k = SrcOutputData%WAT_k
    end if
 end subroutine
 
@@ -2641,8 +2661,8 @@ subroutine WD_DestroyOutput(OutputData, ErrStat, ErrMsg)
    if (allocated(OutputData%x_plane)) then
       deallocate(OutputData%x_plane)
    end if
-   if (allocated(OutputData%WAT_k_mt)) then
-      deallocate(OutputData%WAT_k_mt)
+   if (allocated(OutputData%WAT_k)) then
+      deallocate(OutputData%WAT_k)
    end if
 end subroutine
 
@@ -2696,10 +2716,10 @@ subroutine WD_PackOutput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%x_plane), ubound(InData%x_plane))
       call RegPack(Buf, InData%x_plane)
    end if
-   call RegPack(Buf, allocated(InData%WAT_k_mt))
-   if (allocated(InData%WAT_k_mt)) then
-      call RegPackBounds(Buf, 3, lbound(InData%WAT_k_mt), ubound(InData%WAT_k_mt))
-      call RegPack(Buf, InData%WAT_k_mt)
+   call RegPack(Buf, allocated(InData%WAT_k))
+   if (allocated(InData%WAT_k)) then
+      call RegPackBounds(Buf, 3, lbound(InData%WAT_k), ubound(InData%WAT_k))
+      call RegPack(Buf, InData%WAT_k)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -2838,18 +2858,18 @@ subroutine WD_UnPackOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%x_plane)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   if (allocated(OutData%WAT_k_mt)) deallocate(OutData%WAT_k_mt)
+   if (allocated(OutData%WAT_k)) deallocate(OutData%WAT_k)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(Buf, 3, LB, UB)
       if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WAT_k_mt(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
+      allocate(OutData%WAT_k(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAT_k_mt.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WAT_k.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
          return
       end if
-      call RegUnpack(Buf, OutData%WAT_k_mt)
+      call RegUnpack(Buf, OutData%WAT_k)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine

@@ -73,7 +73,7 @@ SUBROUTINE DWM_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    CALL WrScr("  Reading the wind file for DWM simulation." )
    
    ! InitInp%IfW%InputFileName is already set in FAST
-   InitInp%IfW%UseInputFile     = .TRUE.
+   InitInp%IfW%FilePassingMethod= 0_IntKi
    InitInp%IfW%NumWindPoints    = 1
    InitInp%IfW%lidar%SensorType = SensorType_None      
    InitInp%IfW%Use4Dext         = .false.

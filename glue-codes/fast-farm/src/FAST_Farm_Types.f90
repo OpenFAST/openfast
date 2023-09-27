@@ -44,6 +44,9 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_WD = 3      ! Wake Dynamics [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_AWAE = 4      ! Ambient Wind and Array Effects [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ModuleFF_MD = 5      ! Farm-level MoorDyn [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_None = 0      ! WAT: off [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_PreDef = 1      ! WAT: predefined turbulence boxes [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Mod_WAT_UserDef = 2      ! WAT: user defined turbulence boxes [-]
 ! =========  Farm_ParameterType  =======
   TYPE, PUBLIC :: Farm_ParameterType
     REAL(DbKi)  :: DT_low = 0.0_R8Ki      !< Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step [seconds]
@@ -66,6 +69,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: n_ChkptTime = 0_IntKi      !< Number of time steps between writing checkpoint files [-]
     REAL(DbKi)  :: TStart = 0.0_R8Ki      !< Time to begin tabular output [s]
     INTEGER(IntKi)  :: n_TMax = 0_IntKi      !< Number of the time step of TMax (the end time of the simulation) [-]
+    REAL(ReKi)  :: RotorDiamRef = 0.0_ReKi      !< Reference turbine rotor diameter for wake calculations (m) [>0.0] [-]
     LOGICAL  :: SumPrint = .false.      !< Print summary data to file? (.sum) [-]
     LOGICAL  :: WrBinOutFile = .false.      !< Write a binary output file? (.outb) [-]
     LOGICAL  :: WrTxtOutFile = .false.      !< Write a text (formatted) output file? (.out) [-]
@@ -83,7 +87,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WindVelX      !< List of coordinates in the X direction for wind output [1 to NWindVel] [meters]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WindVelY      !< List of coordinates in the Y direction for wind output [1 to NWindVel] [meters]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WindVelZ      !< List of coordinates in the Z direction for wind output [1 to NWindVel] [meters]
-    TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
+    TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameter [-]
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of user-requested outputs [-]
     INTEGER(IntKi)  :: NOutSteps = 0_IntKi      !< Maximum number of output steps [-]
     CHARACTER(1024) , DIMENSION(1:3)  :: FileDescLines      !< File Description lines [-]
@@ -98,6 +102,11 @@ IMPLICIT NONE
     REAL(ReKi)  :: X0_low = 0.0_ReKi      !< X-component of the origin of the low-resolution spatial domain [m]
     REAL(ReKi)  :: Y0_low = 0.0_ReKi      !< Y-component of the origin of the low-resolution spatial domain [m]
     REAL(ReKi)  :: Z0_low = 0.0_ReKi      !< Z-component of the origin of the low-resolution spatial domain [m]
+    INTEGER(IntKi)  :: WAT = 0_IntKi      !< Switch between wake-added turbulence box options {0: no wake added turbulence, 1: predefined turbulence box, 2: user defined turbulence box} [-]
+    CHARACTER(1024)  :: WAT_BoxFile      !< Filepath to the file containing the u-component of the turbulence box (either predefined or user-defined). [-]
+    INTEGER(IntKi) , DIMENSION(1:3)  :: WAT_NxNyNz = 0_IntKi      !< Number of points in the x, y, and z directions of the WAT_BoxFile -- derived (WAT=1) or read from input file (WAT=2) [(m)]
+    REAL(ReKi) , DIMENSION(1:3)  :: WAT_DxDyDz = 0.0_ReKi      !< Distance (in meters) between points in the x, y, and z directions of the WAT_BoxFile -- derived (WAT=1) or read from input file (WAT=2) [(m)]
+    LOGICAL  :: WAT_ScaleBox = .false.      !< Flag to scale the input turbulence box to zero mean and unit standard deviation at every node [-]
   END TYPE Farm_ParameterType
 ! =======================
 ! =========  Farm_MiscVarType  =======
@@ -178,6 +187,19 @@ IMPLICIT NONE
     LOGICAL  :: IsInitialized = .FALSE.      !< Has MD_Init been called [-]
   END TYPE MD_Data
 ! =======================
+! =========  WAT_IfW_data  =======
+  TYPE, PUBLIC :: WAT_IfW_data
+    TYPE(InflowWind_ContinuousStateType)  :: x      !< Continuous states [-]
+    TYPE(InflowWind_DiscreteStateType)  :: xd      !< Discrete states [-]
+    TYPE(InflowWind_ConstraintStateType)  :: z      !< Constraint states [-]
+    TYPE(InflowWind_OtherStateType)  :: OtherSt      !< Other states [-]
+    TYPE(InflowWind_ParameterType)  :: p      !< Parameters [-]
+    TYPE(InflowWind_InputType)  :: u      !< System inputs [-]
+    TYPE(InflowWind_OutputType)  :: y      !< System outputs [-]
+    TYPE(InflowWind_MiscVarType)  :: m      !< Misc/optimization variables [-]
+    LOGICAL  :: IsInitialized = .FALSE.      !< Has IfW_Init been called [-]
+  END TYPE WAT_IfW_data
+! =======================
 ! =========  All_FastFarm_Data  =======
   TYPE, PUBLIC :: All_FastFarm_Data
     TYPE(Farm_ParameterType)  :: p      !< FAST.Farm parameter data [-]
@@ -187,6 +209,7 @@ IMPLICIT NONE
     TYPE(AWAE_Data)  :: AWAE      !< Ambient Wind & Array Effects (AWAE) data [-]
     TYPE(SC_Data)  :: SC      !< Super Controller (SC) data [-]
     TYPE(MD_Data)  :: MD      !< Farm-level MoorDyn model data [-]
+    TYPE(WAT_IfW_data)  :: WAT_IfW      !< IfW data for WAT (temporary location until pointers are enabled) [-]
   END TYPE All_FastFarm_Data
 ! =======================
 CONTAINS
@@ -246,6 +269,7 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%n_ChkptTime = SrcParamData%n_ChkptTime
    DstParamData%TStart = SrcParamData%TStart
    DstParamData%n_TMax = SrcParamData%n_TMax
+   DstParamData%RotorDiamRef = SrcParamData%RotorDiamRef
    DstParamData%SumPrint = SrcParamData%SumPrint
    DstParamData%WrBinOutFile = SrcParamData%WrBinOutFile
    DstParamData%WrTxtOutFile = SrcParamData%WrTxtOutFile
@@ -354,6 +378,11 @@ subroutine Farm_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%X0_low = SrcParamData%X0_low
    DstParamData%Y0_low = SrcParamData%Y0_low
    DstParamData%Z0_low = SrcParamData%Z0_low
+   DstParamData%WAT = SrcParamData%WAT
+   DstParamData%WAT_BoxFile = SrcParamData%WAT_BoxFile
+   DstParamData%WAT_NxNyNz = SrcParamData%WAT_NxNyNz
+   DstParamData%WAT_DxDyDz = SrcParamData%WAT_DxDyDz
+   DstParamData%WAT_ScaleBox = SrcParamData%WAT_ScaleBox
 end subroutine
 
 subroutine Farm_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -440,6 +469,7 @@ subroutine Farm_PackParam(Buf, Indata)
    call RegPack(Buf, InData%n_ChkptTime)
    call RegPack(Buf, InData%TStart)
    call RegPack(Buf, InData%n_TMax)
+   call RegPack(Buf, InData%RotorDiamRef)
    call RegPack(Buf, InData%SumPrint)
    call RegPack(Buf, InData%WrBinOutFile)
    call RegPack(Buf, InData%WrTxtOutFile)
@@ -504,6 +534,11 @@ subroutine Farm_PackParam(Buf, Indata)
    call RegPack(Buf, InData%X0_low)
    call RegPack(Buf, InData%Y0_low)
    call RegPack(Buf, InData%Z0_low)
+   call RegPack(Buf, InData%WAT)
+   call RegPack(Buf, InData%WAT_BoxFile)
+   call RegPack(Buf, InData%WAT_NxNyNz)
+   call RegPack(Buf, InData%WAT_DxDyDz)
+   call RegPack(Buf, InData%WAT_ScaleBox)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -579,6 +614,8 @@ subroutine Farm_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%TStart)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%n_TMax)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%RotorDiamRef)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%SumPrint)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -719,6 +756,16 @@ subroutine Farm_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%Y0_low)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Z0_low)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WAT)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WAT_BoxFile)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WAT_NxNyNz)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WAT_DxDyDz)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WAT_ScaleBox)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1567,6 +1614,105 @@ subroutine Farm_UnPackMD_Data(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
+subroutine Farm_CopyWAT_IfW_data(SrcWAT_IfW_dataData, DstWAT_IfW_dataData, CtrlCode, ErrStat, ErrMsg)
+   type(WAT_IfW_data), intent(in) :: SrcWAT_IfW_dataData
+   type(WAT_IfW_data), intent(inout) :: DstWAT_IfW_dataData
+   integer(IntKi),  intent(in   ) :: CtrlCode
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Farm_CopyWAT_IfW_data'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call InflowWind_CopyContState(SrcWAT_IfW_dataData%x, DstWAT_IfW_dataData%x, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call InflowWind_CopyDiscState(SrcWAT_IfW_dataData%xd, DstWAT_IfW_dataData%xd, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call InflowWind_CopyConstrState(SrcWAT_IfW_dataData%z, DstWAT_IfW_dataData%z, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call InflowWind_CopyOtherState(SrcWAT_IfW_dataData%OtherSt, DstWAT_IfW_dataData%OtherSt, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call InflowWind_CopyParam(SrcWAT_IfW_dataData%p, DstWAT_IfW_dataData%p, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call InflowWind_CopyInput(SrcWAT_IfW_dataData%u, DstWAT_IfW_dataData%u, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call InflowWind_CopyOutput(SrcWAT_IfW_dataData%y, DstWAT_IfW_dataData%y, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   call InflowWind_CopyMisc(SrcWAT_IfW_dataData%m, DstWAT_IfW_dataData%m, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   DstWAT_IfW_dataData%IsInitialized = SrcWAT_IfW_dataData%IsInitialized
+end subroutine
+
+subroutine Farm_DestroyWAT_IfW_data(WAT_IfW_dataData, ErrStat, ErrMsg)
+   type(WAT_IfW_data), intent(inout) :: WAT_IfW_dataData
+   integer(IntKi),  intent(  out) :: ErrStat
+   character(*),    intent(  out) :: ErrMsg
+   integer(IntKi)                 :: ErrStat2
+   character(ErrMsgLen)           :: ErrMsg2
+   character(*), parameter        :: RoutineName = 'Farm_DestroyWAT_IfW_data'
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   call InflowWind_DestroyContState(WAT_IfW_dataData%x, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyDiscState(WAT_IfW_dataData%xd, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyConstrState(WAT_IfW_dataData%z, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyOtherState(WAT_IfW_dataData%OtherSt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyParam(WAT_IfW_dataData%p, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyInput(WAT_IfW_dataData%u, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyOutput(WAT_IfW_dataData%y, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call InflowWind_DestroyMisc(WAT_IfW_dataData%m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+end subroutine
+
+subroutine Farm_PackWAT_IfW_data(Buf, Indata)
+   type(PackBuffer), intent(inout) :: Buf
+   type(WAT_IfW_data), intent(in) :: InData
+   character(*), parameter         :: RoutineName = 'Farm_PackWAT_IfW_data'
+   if (Buf%ErrStat >= AbortErrLev) return
+   call InflowWind_PackContState(Buf, InData%x) 
+   call InflowWind_PackDiscState(Buf, InData%xd) 
+   call InflowWind_PackConstrState(Buf, InData%z) 
+   call InflowWind_PackOtherState(Buf, InData%OtherSt) 
+   call InflowWind_PackParam(Buf, InData%p) 
+   call InflowWind_PackInput(Buf, InData%u) 
+   call InflowWind_PackOutput(Buf, InData%y) 
+   call InflowWind_PackMisc(Buf, InData%m) 
+   call RegPack(Buf, InData%IsInitialized)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
+
+subroutine Farm_UnPackWAT_IfW_data(Buf, OutData)
+   type(PackBuffer), intent(inout)    :: Buf
+   type(WAT_IfW_data), intent(inout) :: OutData
+   character(*), parameter            :: RoutineName = 'Farm_UnPackWAT_IfW_data'
+   if (Buf%ErrStat /= ErrID_None) return
+   call InflowWind_UnpackContState(Buf, OutData%x) ! x 
+   call InflowWind_UnpackDiscState(Buf, OutData%xd) ! xd 
+   call InflowWind_UnpackConstrState(Buf, OutData%z) ! z 
+   call InflowWind_UnpackOtherState(Buf, OutData%OtherSt) ! OtherSt 
+   call InflowWind_UnpackParam(Buf, OutData%p) ! p 
+   call InflowWind_UnpackInput(Buf, OutData%u) ! u 
+   call InflowWind_UnpackOutput(Buf, OutData%y) ! y 
+   call InflowWind_UnpackMisc(Buf, OutData%m) ! m 
+   call RegUnpack(Buf, OutData%IsInitialized)
+   if (RegCheckErr(Buf, RoutineName)) return
+end subroutine
+
 subroutine Farm_CopyAll_FastFarm_Data(SrcAll_FastFarm_DataData, DstAll_FastFarm_DataData, CtrlCode, ErrStat, ErrMsg)
    type(All_FastFarm_Data), intent(inout) :: SrcAll_FastFarm_DataData
    type(All_FastFarm_Data), intent(inout) :: DstAll_FastFarm_DataData
@@ -1627,6 +1773,9 @@ subroutine Farm_CopyAll_FastFarm_Data(SrcAll_FastFarm_DataData, DstAll_FastFarm_
    call Farm_CopyMD_Data(SrcAll_FastFarm_DataData%MD, DstAll_FastFarm_DataData%MD, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call Farm_CopyWAT_IfW_data(SrcAll_FastFarm_DataData%WAT_IfW, DstAll_FastFarm_DataData%WAT_IfW, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine Farm_DestroyAll_FastFarm_Data(All_FastFarm_DataData, ErrStat, ErrMsg)
@@ -1668,6 +1817,8 @@ subroutine Farm_DestroyAll_FastFarm_Data(All_FastFarm_DataData, ErrStat, ErrMsg)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call Farm_DestroyMD_Data(All_FastFarm_DataData%MD, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call Farm_DestroyWAT_IfW_data(All_FastFarm_DataData%WAT_IfW, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine Farm_PackAll_FastFarm_Data(Buf, Indata)
@@ -1700,6 +1851,7 @@ subroutine Farm_PackAll_FastFarm_Data(Buf, Indata)
    call Farm_PackAWAE_Data(Buf, InData%AWAE) 
    call Farm_PackSC_Data(Buf, InData%SC) 
    call Farm_PackMD_Data(Buf, InData%MD) 
+   call Farm_PackWAT_IfW_data(Buf, InData%WAT_IfW) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1747,6 +1899,7 @@ subroutine Farm_UnPackAll_FastFarm_Data(Buf, OutData)
    call Farm_UnpackAWAE_Data(Buf, OutData%AWAE) ! AWAE 
    call Farm_UnpackSC_Data(Buf, OutData%SC) ! SC 
    call Farm_UnpackMD_Data(Buf, OutData%MD) ! MD 
+   call Farm_UnpackWAT_IfW_data(Buf, OutData%WAT_IfW) ! WAT_IfW 
 end subroutine
 END MODULE FAST_Farm_Types
 !ENDOFREGISTRYGENERATEDFILE

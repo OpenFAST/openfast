@@ -245,7 +245,7 @@ choose to use a time step that is an integer multiple smaller than or
 equal to **DT_Low**.
 When **Wake_Mod=2,3**, the stability of the algorithm will depend on the choice 
 of **dr** and **DT_Low**.
-(typically  :math:`\textbf{DT_Low}  \lessapprox \textbf{dr}/(2V_\text{Hub})`, 
+(typically  :math:`DT_Low<dr/(2V_\text{Hub})`, 
 see :numref:`FF:ModGuidance`)
 
 
@@ -408,6 +408,7 @@ The wake will adopt a "curled" shape in skewed inflow.
 When Wake_Mod=2,3, the stability of the algorithm will depend on the choice of **dr** and **DT_Low** (see the guidelines (see the guidelines given in :numref:`FF:ModGuidance`).
 
 
+**RotorDiamRef** [float, in m]: Reference turbine rotor diameter for wake calculations. 
 
 
 The wake planes are defined by the following parameters:
@@ -589,7 +590,7 @@ or [**Mod_Wake=3**].
 
 **k_VortexDecay** [-] This constant specifies the decay rate of the 
 spanwise velocity components from the curled wake model. 
-DEFAULT is 0.01.
+DEFAULT is 0.0001.
 
 **NumVortices** [-] The number of vortices in the curled wake model. 
 DEFAULT is 100.
@@ -624,10 +625,57 @@ If DEFAULT is used, then **Mod_Projection=2** when **Mod_Wake=2**,
 and **Mod_Projection=1** otherwise.
 
 
+Wake-Added Turbulence (WAT)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**OutAllPlanes** [-] Output all wake planes in VTK at all time steps. 
-Note: this option requires intensive writing to disk and will drastically slow down the simulation.
+The wake-added turbulence model is described in :numref:`FF:WAT`.
+
+**WAT** [switch] Select whether the wake-added turbulence is included.
+There are three options:
+0) no wake-added turbulence,
+1) use predefined turbulence box for the background turbulence,
+2) use a user defined turbulence box.
+When **WAT=1**, the number of points of the box are inferred from the filename, 
+and the dimensions in each directions are taken as :math:`dx=dy=dz=0.03*\text{RotorDiamRef}`.
+
+**WAT_BoxFile**: [quoted string]
+Filepath to the file containing the u-component of the turbulence box 
+(either predefined or user-defined). This turbulence box is expected to be 
+in the Mann box format. 
+The filename should be of the form "Label_1024x32x16.u" where the extension ".u" 
+is required. FAST.Farm will assume that files with extensions ".v" and ".w" are present,
+and these files will also be read. 
+When **WAT=1**, the three digits separated by "x" in the filename are assumed to be 
+the number of points in the x y and z dimension of the box.
+
+**WAT_NxNyNz**: [three integers, comma separated] 
+Number of points in the x, y, and z directions of the WAT_BoxFile.
+These are used only if WAT=2. 
+
+**WAT_DxDyDz**: [three floats, comma separated] 
+Distances (in meters) between points in the x, y, and z directions of the WAT_BoxFile 
+These are used only if WAT=2.
+When **WAT=1** the dimensions in each directions are taken as :math:`dx=dy=dz=0.03*\text{RotorDiamRef}`.
+
+**WAT_ScaleBox**: [flag]  
+When set to True, the input turbulence box is scaled so that it has zero mean and unit standard deviation at every node.
 DEFAULT is False.
+
+**WAT_k_Def** [float]
+Parameter for the influence of the wake deficit in the wake-added turbulence 
+[>=0.0, no upper bound]
+Currently uncalibrated, no default value. Anticipated value is expected to be around 0.5.
+
+**WAT_k_Grad** [float]
+Parameter for the influence of the radial velocity gradient of the wake deficit in the wake-added turbulence 
+[>=0.0, no upper bound].
+Currently uncalibrated, no default value. Anticipated value is expected to be around 0.5.
+
+**WAT_D_BrkDwn** [float, dimensionless]
+Downstream distance in rotor diameter after which WAT scaling has reached 100% capacity.
+DEFAULT is 1 (i.e. 1D)
+
+
 
 Visualize
 ~~~~~~~~~
@@ -749,6 +797,12 @@ results output file should result in a field that is 10 characters long;
 printed using the “F10.4” format. **OutFmt** is not used when
 **OutFileFmt** = 2. See :numref:`FF:Output:Time` for
 details on time-series results files.
+
+
+**OutAllPlanes** [-] Output all wake planes in VTK at all time steps. 
+Note: this option requires intensive writing to disk and will drastically slow down the simulation.
+DEFAULT is False.
+
 
 FAST.Farm can output wake-related quantities for up to 9 individual
 turbines, not considering the effects of wake merging, at up to 20

@@ -444,7 +444,7 @@ CONTAINS
       ErrStat=ErrID_Fatal
       ErrMsg='Error reading force inputs.'//char(10)//'Prolematic line: '//trim(Line)
       ! NodeID
-      if (.not. is_int(StrArray(1), AL%NodeID) ) then
+      if (.not. is_integer(StrArray(1), AL%NodeID) ) then
          ErrMsg=trim(ErrMsg)//achar(13)//achar(10)//'NodeID needs to be an integer.'
          return
       endif
@@ -486,37 +486,6 @@ CONTAINS
       call WrScr('> Issue: '//trim(Message))
       call WrScr('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
    end subroutine LegacyWarning
-
-   ! --------------------------------------------------------------------------------
-   ! --- Generic routines (also present in other modules, e.g. OLAF, AD Driver) 
-   ! --------------------------------------------------------------------------------
-   function is_numeric(string, x)
-      implicit none
-      character(len=*), intent(in) :: string
-      real(reki), intent(out) :: x
-      logical :: is_numeric
-      integer :: e,n
-      character(len=12) :: fmt
-      x = 0.0_reki
-      n=len_trim(string)
-      write(fmt,'("(F",I0,".0)")') n
-      read(string,fmt,iostat=e) x
-      is_numeric = e == 0
-   end function is_numeric
-
-   function is_int(string, x)
-      implicit none
-      character(len=*), intent(in) :: string
-      integer(IntKi), intent(out) :: x
-      logical :: is_int
-      integer :: e,n
-      character(len=12) :: fmt
-      x = 0
-      n=len_trim(string)
-      write(fmt,'("(I",I0,")")') n
-      read(string,fmt,iostat=e) x
-      is_int = e == 0
-   end function is_int
 
    !> Read a delimited file with one line of header
    subroutine ReadDelimFile(Filename, nCol, Array, errStat, errMsg, nHeaderLines, priPath)
