@@ -3340,6 +3340,8 @@ SUBROUTINE SetVTKParameters_B4HD(p_FAST, InitOutData_ED, InitInData_HD, BD, ErrS
          if (ErrStat >= AbortErrLev) return
 
       Width = p_FAST%VTK_Surface%GroundRad * VTK_GroundFactor
+!FIXME:ADP -- change test after merging to dev branch
+      if (p%MHK /= 0_IntKi) Width = Width * 5.0_ReKi
       dx = Width / (p_FAST%VTK_surface%NWaveElevPts(1) - 1)
       dy = Width / (p_FAST%VTK_surface%NWaveElevPts(2) - 1)
 
