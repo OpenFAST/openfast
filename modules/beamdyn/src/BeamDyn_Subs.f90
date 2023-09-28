@@ -1067,7 +1067,7 @@ SUBROUTINE BD_ComputeIniNodalCrv(e3, phi, cc, ErrStat, ErrMsg)
    Rr(:,2) = Cross_Product(e3,e1)
    Rr(:,1) = e1(:)
  
-   identity = 0.
+   identity = 0.0_BDKi
    do i = 1,3
      identity(i,i) = 1.0_BDKi
    enddo

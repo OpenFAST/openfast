@@ -480,11 +480,11 @@ logical function have_nan(p, m, x, z, u, label)
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Eps_NW))) then
-         print*,trim(label),'NaN in G_FW'//trim(num2lstr(iW))
+         print*,trim(label),'NaN in E_NW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(x%W(iW)%Eps_FW))) then
-         print*,trim(label),'NaN in G_FW'//trim(num2lstr(iW))
+         print*,trim(label),'NaN in E_FW'//trim(num2lstr(iW))
          have_nan=.True.
       endif
       if (any(isnan(z%W(iW)%Gamma_LL))) then
@@ -1625,7 +1625,7 @@ subroutine FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   if ( p%MHK == 1 .or. p%MHK == 2 ) then
+   if ( p%MHK /= MHK_None ) then
       GROUND         = 1.e-4_ReKi - p%WtrDpth
       ABOVE_GROUND   = 0.1_ReKi - p%WtrDpth
    else

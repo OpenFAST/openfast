@@ -17,7 +17,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/WakeDynamics_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/WakeDynamics_Types.f90 -noextrap)
 endif()
 
-add_library(wdlib
+add_library(wdlib STATIC
   src/WakeDynamics.f90
   #src/WakeDynamics_IO.f90
   src/WakeDynamics_Types.f90
