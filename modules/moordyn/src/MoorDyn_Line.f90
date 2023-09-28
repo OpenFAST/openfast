@@ -242,14 +242,14 @@ CONTAINS
 
 
    !----------------------------------------------------------------------------------------=======
-   SUBROUTINE Line_Initialize (Line, LineProp, rhoW, ErrStat, ErrMsg)
+   SUBROUTINE Line_Initialize (Line, LineProp, p, ErrStat, ErrMsg)
       ! calculate initial profile of the line using quasi-static model
 
-      TYPE(MD_Line),     INTENT(INOUT)       :: Line        ! the single line object of interest
-      TYPE(MD_LineProp), INTENT(INOUT)       :: LineProp    ! the single line property set for the line of interest
-      REAL(DbKi),        INTENT(IN)          :: rhoW
-      INTEGER,           INTENT(   INOUT )   :: ErrStat     ! returns a non-zero value when an error occurs
-      CHARACTER(*),      INTENT(   INOUT )   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      TYPE(MD_Line),          INTENT(INOUT)       :: Line        ! the single line object of interest
+      TYPE(MD_LineProp),      INTENT(INOUT)       :: LineProp    ! the single line property set for the line of interest
+      TYPE(MD_ParameterType), INTENT(IN   )       :: p           ! Parameters
+      INTEGER,                INTENT(   INOUT )   :: ErrStat     ! returns a non-zero value when an error occurs
+      CHARACTER(*),           INTENT(   INOUT )   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
       REAL(DbKi)                             :: COSPhi      ! Cosine of the angle between the xi-axis of the inertia frame and the X-axis of the local coordinate system of the current mooring line (-)
       REAL(DbKi)                             :: SINPhi      ! Sine   of the angle between the xi-axis of the inertia frame and the X-axis of the local coordinate system of the current mooring line (-)
@@ -263,7 +263,7 @@ CONTAINS
       CHARACTER(ErrMsgLen)                   :: ErrMsg2       ! Error message if ErrStat2 /= ErrID_None
       REAL(DbKi)                             :: WetWeight
       REAL(DbKi)                             :: SeabedCD = 0.0_DbKi
-      REAL(DbKi)                             :: Tol = 0.0001_DbKi
+      REAL(DbKi)                             :: Tol = 0.00001_DbKi
       REAL(DbKi), ALLOCATABLE                :: LSNodes(:)
       REAL(DbKi), ALLOCATABLE                :: LNodesX(:)
       REAL(DbKi), ALLOCATABLE                :: LNodesZ(:)
@@ -292,7 +292,7 @@ CONTAINS
                 SINPhi  =       ( Line%r(2,N) - Line%r(2,0) )/XF
              ENDIF
 
-        WetWeight = LineProp%w - 0.25*Pi*LineProp%d*LineProp%d*rhoW
+        WetWeight = (LineProp%w - 0.25*Pi*LineProp%d*LineProp%d*p%rhoW)*p%g
 
         !LineNodes = Line%N + 1  ! number of nodes in line for catenary model to worry about
 
@@ -624,7 +624,7 @@ CONTAINS
 
          HF = MAX( HF, Tol )
          XF = MAX( XF, Tol )
-         ZF = MAX( ZF, TOl )
+         ZF = MAX( ZF, Tol )
 
 
 
@@ -730,7 +730,7 @@ CONTAINS
             DET = dXFdHF*dZFdVF - dXFdVF*dZFdHF
             
             IF ( EqualRealNos( DET, 0.0_DbKi ) ) THEN               
-!bjj: there is a serious problem with the debugger here when DET = 0
+            !bjj: there is a serious problem with the debugger here when DET = 0
                 ErrStat = ErrID_Warn
                 ErrMsg =  ' Iteration not convergent (DET is 0) in routine Catenary().'
                 RETURN
@@ -961,7 +961,7 @@ CONTAINS
             ZF = -ZF ! Return to orginal value
          ENDIF
 
-         IF (abs(Z(N+1) - ZF) > Tol) THEN 
+         IF (abs(Z(N) - ZF) > Tol) THEN 
             ! Check fairlead node z position is same as z distance between fairlead and anchor
               ErrStat2 = ErrID_Warn
               ErrMsg2 = ' Wrong catenary initial profile. Fairlead and anchor vertical seperation has changed in routine Catenary().'
