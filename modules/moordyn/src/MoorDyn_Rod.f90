@@ -42,9 +42,11 @@ MODULE MoorDyn_Rod
    PUBLIC :: Rod_GetNetForceAndMass
    PUBLIC :: Rod_AddLine
    PUBLIC :: Rod_RemoveLine
-   
-   
+   public :: VisRodsMesh_Init
+   public :: VisRodsMesh_Update
 
+   
+   
 CONTAINS
 
 
@@ -1187,6 +1189,103 @@ CONTAINS
       end if
       
    END SUBROUTINE Rod_RemoveLine
+
+
+
+   subroutine VisRodsMesh_Init(p,m,y,ErrStat,ErrMsg)
+      type(MD_ParameterType), intent(inout)  :: p
+      type(MD_MiscVarType),   intent(in   )  :: m
+      type(MD_OutputType),    intent(inout)  :: y
+      integer(IntKi),         intent(  out)  :: ErrStat
+      character(*),           intent(  out)  :: ErrMsg
+      integer(IntKi)                         :: ErrStat2
+      character(ErrMsgLen)                   :: ErrMsg2
+      integer(IntKi)                         :: i,l
+      character(*), parameter                :: RoutineName = 'VisRodsMesh_Init'
+
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+
+      ! allocate line2 mesh for all lines
+      allocate (y%VisRodsMesh(p%NRods), STAT=ErrStat2);   if (Failed0('visualization mesh for lines')) return
+      allocate (p%VisRodsDiam(p%NRods), STAT=ErrStat2);   if (Failed0('visualization mesh for lines')) return
+
+      ! Initialize mesh for each line (line nodes start at 0 index, so N+1 total nodes)
+      do l=1,p%NRods
+         CALL MeshCreate( BlankMesh = y%VisRodsMesh(l), &
+                NNodes          = m%RodList(l)%N+1,     &
+                IOS             = COMPONENT_OUTPUT,      &
+                TranslationDisp = .true.,                &
+                Orientation     = .true.,                &
+                ErrStat=ErrStat2, ErrMess=ErrMsg2)
+         if (Failed())  return
+
+         ! Internal nodes (line nodes start at 0 index)
+         do i = 0,m%RodList(l)%N
+            call MeshPositionNode ( y%VisRodsMesh(l), i+1, real(m%RodList(l)%r(:,I),ReKi), ErrStat2, ErrMsg2, Orient=real(m%RodList(l)%OrMat,R8Ki))
+            if (Failed())  return
+         enddo
+
+         ! make elements (line nodes start at 0 index, so N+1 total nodes)
+         do i = 2,m%RodList(l)%N+1
+            call MeshConstructElement ( Mesh      = y%VisRodsMesh(l)  &
+                                       , Xelement = ELEMENT_LINE2      &
+                                       , P1       = i-1                &   ! node1 number
+                                       , P2       = i                  &   ! node2 number
+                                       , ErrStat  = ErrStat2           &
+                                       , ErrMess  = ErrMsg2            )
+            if (Failed())  return
+         enddo
+
+         ! Commit mesh
+         call MeshCommit ( y%VisRodsMesh(l), ErrStat2, ErrMsg2 )
+         if (Failed())  return
+
+         ! Set rod diameter for visualization
+         call AllocAry(p%VisRodsDiam(l)%Diam,m%RodList(l)%N+1,'',ErrStat2,ErrMsg2)
+         if (Failed())  return
+         p%VisRodsDiam(l)%Diam=real(m%RodTypeList(m%RodList(l)%PropsIdNum)%d,SiKi)
+      enddo
+   contains
+      logical function Failed()
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         Failed = ErrStat >= AbortErrLev
+      end function Failed
+
+      ! check for failed where /= 0 is fatal
+      logical function Failed0(txt)
+         character(*), intent(in) :: txt
+         if (errStat /= 0) then
+            ErrStat2 = ErrID_Fatal
+            ErrMsg2  = "Could not allocate "//trim(txt)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         endif
+         Failed0 = ErrStat >= AbortErrLev
+      end function Failed0
+   end subroutine VisRodsMesh_Init
+
+
+
+   subroutine VisRodsMesh_Update(p,m,y,ErrStat,ErrMsg)
+      type(MD_ParameterType), intent(in   )  :: p
+      type(MD_MiscVarType),   intent(in   )  :: m
+      type(MD_OutputType),    intent(inout)  :: y
+      integer(IntKi),         intent(  out)  :: ErrStat
+      character(*),           intent(  out)  :: ErrMsg
+      integer(IntKi)                         :: i,l
+      character(*), parameter                :: RoutineName = 'VisRodsMesh_Update'
+
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+
+      do l=1,p%NRods
+         ! Update rod positions/orientations
+         do i = 0,m%RodList(l)%N
+            y%VisRodsMesh(l)%TranslationDisp(:,i+1) = real(m%RodList(l)%r(:,I),ReKi) - y%VisRodsMesh(l)%Position(:,i+1)
+            y%VisRodsMesh(l)%Orientation(:,:,i+1) = real(m%RodList(l)%OrMat,R8Ki)
+         enddo
+      enddo
+   end subroutine VisRodsMesh_Update
 
 
 
