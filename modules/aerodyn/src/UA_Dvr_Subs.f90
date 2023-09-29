@@ -47,13 +47,17 @@ module UA_Dvr_Subs
       logical         :: activeDOFs(3)
       real(ReKi)      :: initPos(3)
       real(ReKi)      :: initVel(3)
+      ! Inflow
+      integer         :: InflowMod
+      real(ReKi)      :: Inflow(2)
+      character(1024) :: InflowFile
    end type UA_Dvr_InitInput
 
 
    type :: Dvr_Outputs
       integer(intki)                                 :: unOutFile = -1        !< unit number for writing output file
       !integer(intki)                                :: actualchanlen         !< actual length of channels written to text file (less than or equal to chanlen) [-]
-      integer(intki)                                :: nDvrOutputs=0           !< number of outputs for the driver (without ad and iw) [-]
+      integer(intki)                                :: nDvrOutputs=2          !< number of outputs for the driver (without UA) [-]
       !character(20)                                 :: fmt_t                 !< format specifier for time channel [-]
       !character(25)                                 :: fmt_a                 !< format specifier for each column (including delimiter) [-]
       !character(1)                                  :: delim                 !< column delimiter [-]
@@ -69,27 +73,44 @@ module UA_Dvr_Subs
    end type Dvr_Outputs
 
    type Dvr_Data
+      ! Time control
       real(DbKi)                             :: dt
+      real(DbKi)                             :: uTimes(NumInp)
+      real(DbKi)                             :: simTime  
+      integer                                :: numSteps
+      ! Outputs
       type(Dvr_Outputs)                      :: out
-      type(UA_InitInputType)      , pointer  :: UA_InitInData           ! Input data for initialization
-      type(UA_InitOutputType)     , pointer  :: UA_InitOutData          ! Output data from initialization
-      type(UA_ContinuousStateType), pointer  :: UA_x                    ! Continuous states
-      type(UA_DiscreteStateType)  , pointer  :: UA_xd                   ! Discrete states
-      type(UA_OtherStateType)     , pointer  :: UA_OtherState           ! Other/optimization states
-      type(UA_MiscVarType)        , pointer  :: UA_m                    ! Misc/optimization variables
-      type(UA_ParameterType)      , pointer  :: UA_p                    ! Parameters
-      type(UA_InputType)          , pointer  :: UA_u(:)                 ! System inputs
-      type(UA_OutputType)         , pointer  :: UA_y                    ! System outputs
-      type(LD_InitInputType)      , pointer  :: LD_InitInData           ! Input data for initialization
-      type(LD_InitOutputType)     , pointer  :: LD_InitOutData          ! Output data from initialization
-      type(LD_ContinuousStateType), pointer  :: LD_x                    ! Continuous states
-      type(LD_DiscreteStateType)  , pointer  :: LD_xd                   ! Discrete states
-      type(LD_OtherStateType)     , pointer  :: LD_OtherState           ! Other/optimization states
-      type(LD_ConstraintStateType), pointer  :: LD_z                    ! Constraint states
-      type(LD_MiscVarType)        , pointer  :: LD_m                    ! Misc/optimization variables
-      type(LD_ParameterType)      , pointer  :: LD_p                    ! Parameters
-      type(LD_InputType)          , pointer  :: LD_u(:)                 ! System inputs
-      type(LD_OutputType)         , pointer  :: LD_y                    ! System outputs
+      ! Inflow
+      real(ReKi)                             :: U0(NumInp, 2)           ! Inflow velocity vector at time t and t+dt
+      ! AFI
+      type(AFI_ParameterType)                :: AFI_Params(NumAFfiles)
+      integer, allocatable                   :: AFIndx(:,:)
+      ! UA
+      type(UA_InitInputType)                 :: UA_InitInData           ! Input data for initialization
+      type(UA_InitOutputType)                :: UA_InitOutData          ! Output data from initialization
+      type(UA_ContinuousStateType)           :: UA_x                    ! Continuous states
+      type(UA_DiscreteStateType)             :: UA_xd                   ! Discrete states
+      type(UA_OtherStateType)                :: UA_OtherState           ! Other/optimization states
+      type(UA_MiscVarType)                   :: UA_m                    ! Misc/optimization variables
+      type(UA_ParameterType)                 :: UA_p                    ! Parameters
+      type(UA_InputType)                     :: UA_u(NumInp)            ! System inputs
+      type(UA_OutputType)                    :: UA_y                    ! System outputs
+      ! Dynamics
+      type(LD_InitInputType)                 :: LD_InitInData           ! Input data for initialization
+      type(LD_InitOutputType)                :: LD_InitOutData          ! Output data from initialization
+      type(LD_ContinuousStateType)           :: LD_x                    ! Continuous states
+      type(LD_DiscreteStateType)             :: LD_xd                   ! Discrete states
+      type(LD_OtherStateType)                :: LD_OtherState           ! Other/optimization states
+      type(LD_ConstraintStateType)           :: LD_z                    ! Constraint states
+      type(LD_MiscVarType)                   :: LD_m                    ! Misc/optimization variables
+      type(LD_ParameterType)                 :: LD_p                    ! Parameters
+      type(LD_InputType)                     :: LD_u(NumInp)            ! System inputs
+      type(LD_OutputType)                    :: LD_y                    ! System outputs
+      ! Prescribed AoA simulations
+      real(DbKi), allocatable                       :: timeArr(:)
+      real(ReKi), allocatable                       :: AOAarr(:)
+      real(ReKi), allocatable                       :: Uarr(:)
+      real(ReKi), allocatable                       :: OmegaArr(:)
    end type Dvr_Data
 
 contains
@@ -179,6 +200,9 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    call ParseAry(FI, iLine, 'StifMatrix1'  , InitInp%KK(1,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'StifMatrix2'  , InitInp%KK(2,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'StifMatrix3'  , InitInp%KK(3,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseVar(FI, iLine, 'InflowMod'    , InitInp%InflowMod ,    errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseAry(FI, iLine, 'Inflow'       , InitInp%Inflow    , 2, errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseVar(FI, iLine, 'InflowFile'   , InitInp%InflowFile,    errStat2, errMsg2, UnEcho); if(Failed()) return
    endif
 
    ! --- OUTPUT section
@@ -188,7 +212,8 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
 
    ! --- Triggers
    if (PathIsRelative(InitInp%OutRootName)) InitInp%OutRootName = TRIM(PriPath)//TRIM(InitInp%OutRootName)
-   if (PathIsRelative(InitInp%Airfoil1)) InitInp%Airfoil1 = TRIM(PriPath)//TRIM(InitInp%Airfoil1)
+   if (PathIsRelative(InitInp%Airfoil1))    InitInp%Airfoil1 = TRIM(PriPath)//TRIM(InitInp%Airfoil1)
+   if (PathIsRelative(InitInp%InflowFile )) InitInp%InflowFile = TRIM(PriPath)//TRIM(InitInp%InflowFile)
 
    call Cleanup()
 contains
@@ -566,7 +591,7 @@ subroutine Dvr_InitializeDriverOutputs(dvr, out, errStat, errMsg)
    errMsg  = ''
 
    ! --- Allocate driver-level outputs
-   out%nDvrOutputs =  6  ! temporary hack
+   out%nDvrOutputs =  8 ! Ux Uy + LD ! HACK
 
    call AllocAry(out%WriteOutputHdr, 1+out%nDvrOutputs, 'WriteOutputHdr', errStat2, errMsg2); if(Failed()) return
    call AllocAry(out%WriteOutputUnt, 1+out%nDvrOutputs, 'WriteOutputUnt', errStat2, errMsg2); if(Failed()) return
@@ -574,6 +599,10 @@ subroutine Dvr_InitializeDriverOutputs(dvr, out, errStat, errMsg)
    j=1
    out%WriteOutputHdr(j) = 'Time'        ; out%WriteOutputUnt(j) = '(s)'  ; j=j+1
    ! HACK
+   ! Inflow
+   out%WriteOutputHdr(j) = 'Ux'          ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'Uy'          ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
+   ! Dynamics
    out%WriteOutputHdr(j) = 'x'           ; out%WriteOutputUnt(j) = '(m)'  ; j=j+1
    out%WriteOutputHdr(j) = 'y'           ; out%WriteOutputUnt(j) = '(m)'  ; j=j+1
    out%WriteOutputHdr(j) = 'th'          ; out%WriteOutputUnt(j) = '(rad)'  ; j=j+1
@@ -675,10 +704,11 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, errStat, errMsg)
 !    ! Packing all outputs excpet time into one array
    !nUA = size(yADI%AD%rotors(1)%WriteOutput)
    !nLD = size(yADI%IW_WriteOutput)
+   nDV = 2 ! out%nDvrOutputs
    nLD = 6 ! HACK
-   nDV = out%nDvrOutputs
-   !out%outLine(1:nDV)         = dvr%LD_x%q(1:nDV)  ! Driver Write Outputs
-   out%outLine(1:nLD)         = dvr%LD_x%q(1:nDV)  ! Driver Write Outputs
+   out%outLine(1)             = dvr%U0(1, 1)! Ux
+   out%outLine(2)             = dvr%U0(1, 2)! Uy
+   out%outLine(nDV+1:nDV+nLD) = dvr%LD_x%q(1:nLD)  ! Driver Write Outputs
 
  
    !out%outLine(nDV+1:nDV+nAD) = yADI%AD%rotors%WriteOutput     ! AeroDyn WriteOutputs
