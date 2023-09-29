@@ -3340,8 +3340,9 @@ SUBROUTINE SetVTKParameters_B4HD(p_FAST, InitOutData_ED, InitInData_HD, BD, ErrS
          if (ErrStat >= AbortErrLev) return
 
       Width = p_FAST%VTK_Surface%GroundRad * VTK_GroundFactor
-!FIXME:ADP -- change test after merging to dev branch
-      if (p%MHK /= 0_IntKi) Width = Width * 5.0_ReKi
+!FIXME:ADP -- change test after merging to dev branch to compare to MHK_None
+      ! adjust to larger surface area for MHK since MHK turbines tend to be small compared to the platform
+      if (p_FAST%MHK /= 0_IntKi) Width = Width * 5.0_SiKi
       dx = Width / (p_FAST%VTK_surface%NWaveElevPts(1) - 1)
       dy = Width / (p_FAST%VTK_surface%NWaveElevPts(2) - 1)
 
@@ -3423,6 +3424,9 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
    RefPoint = p_FAST%TurbinePos
    if (p_FAST%CompHydro == MODULE_HD) then
       RefLengths = p_FAST%VTK_Surface%GroundRad*VTK_GroundFactor/2.0_SiKi
+!FIXME: after merge to dev, change this test to use MHK_None
+      ! adjust to larger ground area for MHK since MHK turbines tend to be small compared to the platform
+      if (p_FAST%MHK /= 0_IntKi) RefLengths = RefLengths*4.0_SiKi
 
       ! note that p_FAST%TurbinePos(3) must be 0 for offshore turbines
       RefPoint(3) = p_FAST%TurbinePos(3) - InitOutData_HD%WtrDpth
