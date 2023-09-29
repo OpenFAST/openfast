@@ -18,10 +18,10 @@ if (GENERATE_TYPES)
   generate_f90_types(src/OpenFOAM_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/OpenFOAM_Types.f90 -ccode)
 endif()
 
-add_library(foamtypeslib src/OpenFOAM_Types.f90)
+add_library(foamtypeslib STATIC src/OpenFOAM_Types.f90)
 target_link_libraries(foamtypeslib nwtclibs)
 
-add_library(foamfastlib src/OpenFOAM.f90)
+add_library(foamfastlib STATIC src/OpenFOAM.f90)
 target_link_libraries(foamfastlib openfast_prelib)
 target_include_directories(foamfastlib PUBLIC 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  

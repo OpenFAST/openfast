@@ -118,7 +118,7 @@ SUBROUTINE Lidar_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       RETURN
     ENDIF  
 
-   CALL AllocAry(p%lidar%MsrPosition , 3, p%lidar%NumBeam, 'Array for measurement coordinates', TmpErrStat, TmpErrMsg )
+   CALL AllocAry(p%lidar%MsrPosition , 3, max(1,p%lidar%NumBeam), 'Array for measurement coordinates', TmpErrStat, TmpErrMsg )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    IF ( ErrStat>= AbortErrLev ) RETURN 
       
@@ -362,7 +362,8 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
        MeasurementCurrentStep =  INT(t / p%lidar%MeasurementInterval)
        
    IF ( (p%lidar%MeasurementInterval * MeasurementCurrentStep) /= t ) THEN
-       Output%VelocityUVW(:,1) = 0 
+!This isn't returned, so don't set it.
+!       Output%VelocityUVW(:,1) = 0 
    RETURN
    ENDIF
    

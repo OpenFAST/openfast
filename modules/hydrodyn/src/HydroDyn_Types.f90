@@ -98,6 +98,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WaveFieldMod      !< Wave field handling (-) (switch) 0: use individual HydroDyn inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
     REAL(ReKi)  :: PtfmLocationX      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
     REAL(ReKi)  :: PtfmLocationY      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
+    LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
   END TYPE HydroDyn_InitInputType
 ! =======================
 ! =========  HydroDyn_InitOutputType  =======
@@ -224,6 +225,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
     INTEGER(IntKi)  :: Jac_ny      !< number of outputs in jacobian matrix [-]
+    LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
   END TYPE HydroDyn_ParameterType
 ! =======================
 ! =========  HydroDyn_InputType  =======
@@ -1963,6 +1965,7 @@ ENDIF
     DstInitInputData%WaveFieldMod = SrcInitInputData%WaveFieldMod
     DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
     DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
+    DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
  END SUBROUTINE HydroDyn_CopyInitInput
 
  SUBROUTINE HydroDyn_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -2064,6 +2067,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! WaveFieldMod
       Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationX
       Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationY
+      Int_BufSz  = Int_BufSz  + 1  ! VisMeshes
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2169,6 +2173,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%PtfmLocationY
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%VisMeshes, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE HydroDyn_PackInitInput
 
  SUBROUTINE HydroDyn_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2292,6 +2298,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%PtfmLocationY = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%VisMeshes = TRANSFER(IntKiBuf(Int_Xferred), OutData%VisMeshes)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE HydroDyn_UnPackInitInput
 
  SUBROUTINE HydroDyn_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -8122,6 +8130,7 @@ IF (ALLOCATED(SrcParamData%dx)) THEN
     DstParamData%dx = SrcParamData%dx
 ENDIF
     DstParamData%Jac_ny = SrcParamData%Jac_ny
+    DstParamData%VisMeshes = SrcParamData%VisMeshes
  END SUBROUTINE HydroDyn_CopyParam
 
  SUBROUTINE HydroDyn_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -8421,6 +8430,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + SIZE(InData%dx)  ! dx
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! Jac_ny
+      Int_BufSz  = Int_BufSz  + 1  ! VisMeshes
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -8896,6 +8906,8 @@ ENDIF
       END DO
   END IF
     IntKiBuf(Int_Xferred) = InData%Jac_ny
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%VisMeshes, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE HydroDyn_PackParam
 
@@ -9478,6 +9490,8 @@ ENDIF
       END DO
   END IF
     OutData%Jac_ny = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%VisMeshes = TRANSFER(IntKiBuf(Int_Xferred), OutData%VisMeshes)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE HydroDyn_UnPackParam
 

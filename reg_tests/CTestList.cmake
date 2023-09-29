@@ -282,6 +282,7 @@ of_regression("EllipticalWing_OLAF"                    "openfast;aerodyn15;olaf"
 of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrodyn;moordyn;offshore;stc")
 of_regression("MHK_RM1_Fixed"                          "openfast;elastodyn;aerodyn15;mhk")
 of_regression("MHK_RM1_Floating"                       "openfast;elastodyn;aerodyn15;hydrodyn;moordyn;mhk")
+of_regression("Tailfin_FreeYaw1DOF_PolarBased"         "openfast;elastodyn;aerodyn15")
 
 # OpenFAST C++ API test
 if(BUILD_OPENFAST_CPP_API)
@@ -306,6 +307,8 @@ of_regression_py("EllipticalWing_OLAF_py"                    "openfast;fastlib;p
 of_regression_aeroacoustic("IEA_LB_RWT-AeroAcoustics"  "openfast;aerodyn15;aeroacoustics")
 
 # Linearized OpenFAST regression tests
+# of_regression_linear("Fake5MW_AeroLin_B1_UA4_DBEMT3" "openfast;linear;elastodyn") #Also: aerodyn
+of_regression_linear("Fake5MW_AeroLin_B3_UA6"        "openfast;linear;elastodyn") #Also: aerodyn
 of_regression_linear("WP_Stationary_Linear"         "openfast;linear;elastodyn")
 of_regression_linear("Ideal_Beam_Fixed_Free_Linear" "openfast;linear;beamdyn")
 of_regression_linear("Ideal_Beam_Free_Free_Linear"  "openfast;linear;beamdyn")
@@ -386,6 +389,7 @@ ifw_regression("ifw_uniform"                                  "inflowwind")
 ifw_regression("ifw_nativeBladed"                             "inflowwind")
 ifw_regression("ifw_BoxExceed"                                "inflowwind")
 ifw_regression("ifw_BoxExceedTwr"                             "inflowwind")
+ifw_regression("ifw_HAWC"                                     "inflowwind")
 
 # Py-InflowWind regression tests
 py_ifw_regression("py_ifw_turbsimff"                          "inflowwind;python")
