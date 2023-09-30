@@ -39,7 +39,6 @@ program UnsteadyAero_Driver
 
    ! --- All Data
    type(Dvr_Data)         :: dvr
-   TYPE(UA_Dvr_InitInput) :: dvrInitInp           ! Initialization data for the driver program
 
    integer(IntKi)                                :: ErrStat              ! Status of error message
    character(ErrMsgLen)                          :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -70,86 +69,68 @@ program UnsteadyAero_Driver
       call NormStop()
    endif
    call get_command_argument(1, dvrFilename)
-   call ReadDriverInputFile( dvrFilename, dvrInitInp, errStat, errMsg ); call checkError()
+   call ReadDriverInputFile( dvrFilename, dvr%p, errStat, errMsg ); call checkError()
 
-   ! --- Driver Data 
-   dvr%out%Root = dvrInitInp%OutRootName
+   ! --- Driver Parameters
+   call Dvr_SetParameters(dvr%p, errStat, errMsg); call checkError()
 
-   ! --- Time simulation control
-   if ( dvrInitInp%SimMod == 1 ) then
-      ! Using the frequency and NCycles, determine how long the simulation needs to run
-      dvr%simTime   = dvrInitInp%NCycles/dvrInitInp%Frequency
-      dvr%numSteps = dvrInitInp%StepsPerCycle*dvrInitInp%NCycles  ! we could add 1 here to make this a complete cycle
-      dvr%dt        = dvr%simTime / dvr%numSteps
-      
-   else if ( dvrInitInp%SimMod == 2 ) then
-      ! Read time-series data file with columns:( time,  Angle-of-attack, Vrel, omega )
-      call ReadTimeSeriesData( dvrInitInp%InputsFile, dvr%numSteps, dvr%timeArr, dvr%AOAarr, dvr%Uarr, dvr%OmegaArr, errStat, errMsg ); call checkError()
-      dvr%dt = (dvr%timeArr(dvr%numSteps) - dvr%timeArr(1)) / (dvr%numSteps-1)
-      dvr%numSteps = dvr%numSteps-NumInp + 1
-
-   elseif ( dvrInitInp%SimMod == 3 ) then
-      dvr%simTime   = dvrInitInp%TMax
-      dvr%dt        = dvrInitInp%dt
-      dvr%numSteps = int(dvr%simTime/dvr%dt) ! TODO
-
-      ! --- Initialize Elastic Section
+   ! --- Initialize Elastic Section
+   if ( dvr%p%SimMod == 3 ) then
       call LD_InitInputData(3, dvr%LD_InitInData, errStat, errMsg); call checkError()
-      dvr%LD_InitInData%dt        = dvr%dt
+      dvr%LD_InitInData%dt        = dvr%p%dt
       dvr%LD_InitInData%IntMethod = 1  ! TODO
       dvr%LD_InitInData%prefix    = '' ! TODO for output channel names
-      dvr%LD_InitInData%MM         = dvrInitInp%MM
-      dvr%LD_InitInData%CC         = dvrInitInp%CC
-      dvr%LD_InitInData%KK         = dvrInitInp%KK
-      dvr%LD_InitInData%x0         = dvrInitInp%initPos
-      dvr%LD_InitInData%xd0        = dvrInitInp%initVel
-      dvr%LD_InitInData%activeDOFs = dvrInitInp%activeDOFs
+      dvr%LD_InitInData%MM         = dvr%p%MM
+      dvr%LD_InitInData%CC         = dvr%p%CC
+      dvr%LD_InitInData%KK         = dvr%p%KK
+      dvr%LD_InitInData%x0         = dvr%p%initPos
+      dvr%LD_InitInData%xd0        = dvr%p%initVel
+      dvr%LD_InitInData%activeDOFs = dvr%p%activeDOFs
       call LD_Init(dvr%LD_InitInData, dvr%LD_u(1), dvr%LD_p, dvr%LD_x, dvr%LD_xd, dvr%LD_z, dvr%LD_OtherState, dvr%LD_y, dvr%LD_m, dvr%LD_InitOutData, errStat, errMsg); call checkError()
-
-      call Dvr_InitializeDriverOutputs(dvr, dvr%out, errStat, errMsg); call checkError()
-
+      ! Allocate other inputs of LD
+      do iu = 2,NumInp
+         call AllocAry(dvr%LD_u(iu)%Fext, dvr%LD_p%nx, 'Fext', errStat, errMsg); call checkError()
+      enddo
    end if
 
    ! --- Init UA input data based on driver inputs
-   call driverInputsToUAInitData(dvrInitInp, dvr%UA_InitInData, dvr%AFI_Params, dvr%AFIndx, errStat, errMsg); call checkError()
+   call driverInputsToUAInitData(dvr%p, dvr%UA_InitInData, dvr%AFI_Params, dvr%AFIndx, errStat, errMsg); call checkError()
 
    ! --- Initialize UnsteadyAero (need AFI)
-   call UA_Init( dvr%UA_InitInData, dvr%UA_u(1), dvr%UA_p, dvr%UA_x, dvr%UA_xd, dvr%UA_OtherState, dvr%UA_y, dvr%UA_m, dvr%dt, dvr%AFI_Params, dvr%AFIndx, dvr%UA_InitOutData, errStat, errMsg ); call checkError()
+   call UA_Init( dvr%UA_InitInData, dvr%UA_u(1), dvr%UA_p, dvr%UA_x, dvr%UA_xd, dvr%UA_OtherState, dvr%UA_y, dvr%UA_m, dvr%p%dt, dvr%AFI_Params, dvr%AFIndx, dvr%UA_InitOutData, errStat, errMsg ); call checkError()
    if (dvr%UA_p%NumOuts <= 0) then
       ErrStat = ErrID_Fatal
       ErrMsg = "No outputs have been selected. Rebuild the executable with -DUA_OUTS"
       call checkError()
    end if
 
+   ! --- Driver Outputs
+   dvr%out%Root = dvr%p%OutRootName
+   if ( dvr%p%SimMod == 3 ) then
+      call Dvr_InitializeDriverOutputs(dvr, dvr%out, errStat, errMsg); call checkError()
+   endif
 
    ! --- Initialize Inputs
    !u(1) = time at n=1  (t=   0)
    !u(2) = time at n=0  (t= -dt)
    !u(3) = time at n=-1 (t= -2dt) if NumInp > 2
-   if ( dvrInitInp%SimMod == 3 ) then
+   if ( dvr%p%SimMod == 3 ) then
       ! General inputs
       do iu = 1, NumInp !u(NumInp) is overwritten in time-sim loop, so no need to init here 
-         dvr%uTimes(iu) = (2-iu-1)*dvr%dt
+         dvr%uTimes(iu) = (2-iu-1)*dvr%p%dt
       enddo
-      ! LD Inputs - Allocs
-      do iu = 2,NumInp
-         call AllocAry(dvr%LD_u(iu)%Fext, dvr%LD_p%nx, 'Fext', errStat, errMsg); call checkError()
+      ! Inflow "inputs"
+      do iu = 1,NumInp
+         call setInflow(t=dvr%uTimes(iu), p=dvr%p, U0=dvr%U0(iu,:))
       enddo
-      ! UA inputs:
+      ! UA inputs at t=0, stored in u(1)
       do iu = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here 
-         ! TODO TODO TODO
-         dvr%UA_u(iu)%UserProp = 0
-         dvr%UA_u(iu)%Re       = dvrInitInp%Re
-         dvr%UA_u(iu)%omega    =  0.0_ReKi
-         dvr%UA_u(iu)%v_ac(1)  = 0.0_ReKi
-         dvr%UA_u(iu)%v_ac(2)  = 0.0_ReKi
-         dvr%UA_u(iu)%alpha    = 0.0_ReKi
-         dvr%UA_u(iu)%U        = 0.0_ReKi
+         call setUAinputs(dvr%U0(iu,:), dvr%LD_x, dvr%p, dvr%m, dvr%UA_u(iu))
       enddo
    else
-      ! UA inputs:
+      ! UA inputs at t=0, stored in u(1)
       do iu = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here 
-         call setUAinputs(2-iu,  dvr%UA_u(iu), dvr%uTimes(iu), dvr%dt, dvrInitInp, dvr%timeArr, dvr%AOAarr, dvr%Uarr, dvr%OmegaArr, errStat, errMsg); call checkError()
+         call setUAinputsAlphaSim(2-iu,  dvr%UA_u(iu), dvr%uTimes(iu), dvr%p, errStat, errMsg); call checkError()
       end do
    endif
 
@@ -157,68 +138,71 @@ program UnsteadyAero_Driver
    j = 1 ! number of blades
    ! --- Time marching loop
 
-   if ( dvrInitInp%SimMod == 3 ) then
+   if ( dvr%p%SimMod == 3 ) then
 
-      call Dvr_InitializeOutputs(dvr%out, dvr%numSteps, errStat, errMsg)
+      call Dvr_InitializeOutputs(dvr%out, dvr%p%numSteps, errStat, errMsg)
 
       dvr%LD_u(1)%Fext=0.0_ReKi ! TODO TODO
       dvr%LD_u(2)%Fext=0.0_ReKi ! TODO TODO
 
       ! --- time marching loop
-      print*,'>>> Time simulation', dvr%uTimes(1), dvr%numSteps*dvr%dt
-      do n = 1, dvr%numSteps
-         ! set inputs:
+      print*,'>>> Time simulation', dvr%uTimes(1), dvr%p%numSteps*dvr%p%dt
+      do n = 1, dvr%p%numSteps
+
+         ! --- Set inputs at t by storing in u(2) what was in u(1) at previous time step
+         !u(1) = time at n=n+1  (t=t+dt)
+         !u(2) = time at n=n    (t=t   )
          do iu = NumInp-1, 1, -1
-            dvr%UA_u(     iu+1) = dvr%UA_u(     iu)
-            dvr%LD_u(     iu+1) = dvr%LD_u(     iu)
-            dvr%uTimes(iu+1) = dvr%uTimes(iu)
+            dvr%uTimes(iu+1)  = dvr%uTimes(iu)
+            dvr%U0(    iu+1,:)= dvr%U0(iu,:)
+            dvr%UA_u(  iu+1)  = dvr%UA_u(  iu)
+            dvr%LD_u(  iu+1)  = dvr%LD_u(  iu)
          end do
-         !          ! first value of uTimes/u contain inputs at t+dt
 
-         ! Basic inputs
-         dvr%uTimes(1) = (n+1-1)*dvr%dt
-         ! UA-LD Inputs Solve TODO TODO TODO
-         !  call setUAinputs(n+1,  u(1), uTimes(1), dt, dvrInitInp, timeArr, AOAarr, Uarr, OmegaArr, errStat, errMsg); call checkError()
-         dvr%UA_u(1)%UserProp = 0
-         dvr%UA_u(1)%Re       = dvrInitInp%Re
-         dvr%UA_u(1)%omega    = dvr%LD_x%q(6)
-         dvr%UA_u(1)%v_ac(1)  = dvrInitInp%Mean -dvr%LD_x%q(4)
-         dvr%UA_u(1)%v_ac(2)  =                 -dvr%LD_x%q(5)
-         dvr%UA_u(1)%alpha    = 0.0_ReKi
-         dvr%UA_u(1)%U        = sqrt(  dvr%UA_u(1)%v_ac(1)**2  +  dvr%UA_u(1)%v_ac(2)**2)
-
-         t = dvr%uTimes(2)
+         ! --- Calc Outputs at t 
+         iu = 2 ! Index 2 is t
+         t = dvr%uTimes(iu)
          ! Use existing states to compute the outputs
-         call LD_CalcOutput(t, dvr%LD_u(2), dvr%LD_p, dvr%LD_x, dvr%LD_xd, dvr%LD_z, dvr%LD_OtherState, dvr%LD_y, dvr%LD_m, errStat, errMsg); call checkError()
+         call LD_CalcOutput(t, dvr%LD_u(iu), dvr%LD_p, dvr%LD_x, dvr%LD_xd, dvr%LD_z, dvr%LD_OtherState, dvr%LD_y, dvr%LD_m, errStat, errMsg); call checkError()
          !! Use existing states to compute the outputs
-         call UA_CalcOutput(i, j, t, dvr%UA_u(2),  dvr%UA_p, dvr%UA_x, dvr%UA_xd, dvr%UA_OtherState, dvr%AFI_Params(dvr%AFIndx(i,j)), dvr%UA_y, dvr%UA_m, errStat, errMsg ); call checkError()
-
-         dvr%LD_u(1)%Fext(1) = 0.5_ReKi * dvrInitInp%Chord * dvr%UA_u(1)%U**2  * dvr%UA_y%Cl /100   ! TODO TODO
-         dvr%LD_u(1)%Fext(2) = 0.5_ReKi * dvrInitInp%Chord * dvr%UA_u(1)%U**2  * dvr%UA_y%Cd /100   ! TODO TODO
-         !y%Cn
-         !y%Cc
-         !y%Cm
-         !y%Cl
-         !y%Cd
-
-
-
+         call UA_CalcOutput(i, j, t, dvr%UA_u(iu),  dvr%UA_p, dvr%UA_x, dvr%UA_xd, dvr%UA_OtherState, dvr%AFI_Params(dvr%AFIndx(i,j)), dvr%UA_y, dvr%UA_m, errStat, errMsg ); call checkError()
          ! Generate file outputs
          call UA_WriteOutputToFile(t, dvr%UA_p, dvr%UA_y)
-         ! Write outputs for all turbines at nt-1
+         ! Driver outputs
+         call AeroKinetics(dvr%U0(iu,:), dvr%LD_x%q(1:3), dvr%LD_x%q(4:6), (/dvr%UA_y%Cl, dvr%UA_y%Cd, dvr%UA_y%Cm/), dvr%p, dvr%m)
+         ! Write/Store outputs 
          call Dvr_WriteOutputs(n, t, dvr, dvr%out, errStat, errMsg); call checkError()
 
+         ! --- Set inputs at t+dt in u(1)
+         iu = 1 ! Index 1 is t+dt
+         ! Basic inputs
+         dvr%uTimes(iu) = (n+1-1)*dvr%p%dt
+         ! Inflow inputs
+         call setInflow(t=dvr%uTimes(iu), p=dvr%p, U0=dvr%U0(iu,:))
+         ! LinDyn inputs at t+dt
+         ! Using everything at t!!!! Dynamics are deterministic (only a function of values at t)
+         ! NOTE: should use extrap interp maybe
+         call setLDinputs(dvr%U0(2,:), dvr%LD_x, dvr%UA_y, dvr%p, dvr%m, dvr%LD_u(iu))
 
-         ! Prepare states for next time step
+         ! --- Integrate LinDyn from t to t+dt
          call LD_UpdateStates(t, n, dvr%LD_u, dvr%uTimes, dvr%LD_p, dvr%LD_x, dvr%LD_xd, dvr%LD_z, dvr%LD_OtherState, dvr%LD_m, errStat, errMsg); call checkError()
-         ! Prepare states for next time step
+
+         ! Calc LinDyn outputs at t+dt
+         iu = 1 ! Index 1 is t+dt
+         call LD_CalcOutput(t, dvr%LD_u(iu), dvr%LD_p, dvr%LD_x, dvr%LD_xd, dvr%LD_z, dvr%LD_OtherState, dvr%LD_y, dvr%LD_m, errStat, errMsg); call checkError()
+
+         ! --- Set UA Inputs at t+dt
+         call setUAinputs(dvr%U0(iu,:), dvr%LD_x, dvr%p, dvr%m, dvr%UA_u(iu))
+
+         ! --- Integrate LinDyn from t to t+dt
          call UA_UpdateStates(i, j, t, n, dvr%UA_u, dvr%uTimes, dvr%UA_p, dvr%UA_x, dvr%UA_xd, dvr%UA_OtherState, dvr%AFI_Params(dvr%AFIndx(i,j)), dvr%UA_m, errStat, errMsg ); call checkError()
       end do
 
       call Dvr_EndSim(dvr, errStat, errMsg)
+
    else
       ! --- time marching loop
-      do n = 1, dvr%numSteps
+      do n = 1, dvr%p%numSteps
         
          ! set inputs:
          DO iu = NumInp-1, 1, -1
@@ -227,7 +211,7 @@ program UnsteadyAero_Driver
          END DO
      
          ! first value of uTimes/u contain inputs at t+dt
-         call setUAinputs(n+1,  dvr%UA_u(1), dvr%uTimes(1), dvr%dt, dvrInitInp, dvr%timeArr, dvr%AOAarr, dvr%Uarr, dvr%OmegaArr, errStat, errMsg); call checkError()
+         call setUAinputsAlphaSim(n+1,  dvr%UA_u(1), dvr%uTimes(1), dvr%p, errStat, errMsg); call checkError()
            
          t = dvr%uTimes(2)
 
@@ -251,12 +235,8 @@ contains
    
    !====================================================================================================
    subroutine Cleanup()
-   !     The routine cleans up the module echo file and resets the NWTC_Library, reattaching it to 
-   !     any existing echo information
-   !----------------------------------------------------------------------------------------------------  
       call UA_End(dvr%UA_p)
-      
-      ! probably should also deallocate driver variables here
+      ! probably should also deallocate driver variables here...
       
    end subroutine Cleanup
 
@@ -275,96 +255,6 @@ contains
       end if
       
    end subroutine checkError
-   !----------------------------------------------------------------------------------------------------  
-
-   !----------------------------------------------------------------------------------------------------  
-   subroutine setUAinputs(n,u,t,dt,dvrInitInp,timeArr,AOAarr,Uarr,OmegaArr,errStat,errMsg)
-   
-   integer,                intent(in)              :: n
-   type(UA_InputType),     intent(inout)           :: u            ! System inputs
-   real(DbKi),             intent(  out)           :: t
-   real(DbKi),             intent(in)              :: dt
-   TYPE(UA_Dvr_InitInput), intent(in)              :: dvrInitInp           ! Initialization data for the driver program
-   real(DbKi),             intent(in), allocatable :: timeArr(:)
-   real(ReKi),             intent(in), allocatable :: AOAarr(:)
-   real(ReKi),             intent(in), allocatable :: Uarr(:)
-   real(ReKi),             intent(in), allocatable :: OmegaArr(:)
-   integer,                intent(out)             :: errStat
-   character(len=*),       intent(out)             :: errMsg
-   integer                                         :: indx
-   real(ReKi)                                      :: phase
-   real(ReKi)                                      :: d_ref2AC
-   real(ReKi)                                      :: alpha_ref
-   real(ReKi)                                      :: U_ref
-   real(ReKi)                                      :: v_ref(2)
-   real(ReKi)                                      :: v_34(2)
-   logical, parameter :: OscillationAtMidChord=.true.  ! for legacy, use false
-   logical, parameter :: VelocityAt34         =.true.  ! for legacy, use false
-
-      ! Initialize error handling variables
-      ErrMsg  = ''
-      ErrStat = ErrID_None
-
-      u%UserProp = 0
-      u%Re       = dvrInitInp%Re
-   
-      if ( dvrInitInp%SimMod == 1 ) then
-         if (OscillationAtMidChord) then
-            d_ref2AC =-0.25_ReKi  ! -0.25: oscillations at mid_chord
-         else
-            d_ref2AC = 0.0_ReKi   ! 0: oscillations at AC
-         endif
-         U_ref = dvrInitInp%InflowVel  ! m/s
-
-         t       = (n-1)*dt
-         phase = (n+dvrInitInp%Phase-1)*2*pi/dvrInitInp%StepsPerCycle
-         alpha_ref = (dvrInitInp%Amplitude * sin(phase) + dvrInitInp%Mean)*D2R   ! This needs to be in radians
-         v_ref(1) = sin(alpha_ref)*U_ref
-         v_ref(2) = cos(alpha_ref)*U_ref
-         u%omega =  dvrInitInp%Amplitude * cos(phase) * 2*pi/dvrInitInp%StepsPerCycle / dt * D2R  ! This needs to be in radians derivative: d_alpha /d_t
-
-         u%v_ac(1) = v_ref(1) + u%omega * d_ref2AC* dvrInitInp%Chord
-         u%v_ac(2) = v_ref(2)
-
-         v_34(1) = u%v_ac(1) + u%omega * 0.5* dvrInitInp%Chord
-         v_34(2) = u%v_ac(2)
-
-
-         u%alpha = atan2(u%v_ac(1), u%v_ac(2) )  ! 
-         if (VelocityAt34) then
-            u%U =  sqrt(v_34(1)**2 + v_34(2)**2) ! Using U at 3/4
-         else
-            u%U =  sqrt(u%v_ac(1)**2 + u%v_ac(2)**2) ! Using U at 1/4
-         endif
-
-
-      else
-         ! check optional variables and allocation status
-         if (all( (/ allocated(timeArr),allocated(AOAarr),allocated(OmegaArr),allocated(Uarr) /) )) then
-             
-            indx = min(n,size(timeArr))
-            indx = max(1, indx) ! use constant data at initialization
-         
-            ! Load timestep data from the time-series inputs which were previous read from input file
-            t       = timeArr(indx)
-            u%alpha = AOAarr(indx)*pi/180.0   ! This needs to be in radians
-            u%omega = OmegaArr(indx)
-            u%U     = Uarr(indx)
-            if (n> size(timeArr)) then
-              t = t + dt*(n - size(timeArr) ) ! update for NumInp>1;
-            elseif (n < 1) then
-              t = (n-1)*dt
-            end if
-            u%v_ac(1) = sin(u%alpha)*u%U
-            u%v_ac(2) = cos(u%alpha)*u%U
-         else
-            errStat = ErrID_Fatal
-            errMsg = 'mandatory input arrays are not allocated: timeArr,AOAarr,OmegaArr,Uarr'
-         end if
-             
-      end if
-   
-   end subroutine setUAinputs
    !----------------------------------------------------------------------------------------------------  
    
    subroutine print_help()

@@ -593,8 +593,6 @@ subroutine LD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    call LD_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, dxdt, errStat2, errMsg2)
    y%qd = dxdt%q
 
-
-
    !--- Computing output:  y = Cx + Du + Fy  
 ! 
 !    ! Update the output mesh

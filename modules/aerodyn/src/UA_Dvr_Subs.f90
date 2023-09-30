@@ -11,13 +11,15 @@ module UA_Dvr_Subs
 
    integer, parameter        :: NumAFfiles = 1
    integer(IntKi), parameter :: NumInp = 2           ! Number of inputs sent to UA_UpdateStates (must be at least 2)
+   integer(IntKi), parameter :: InflowMod_Cst  = 1   ! Inflow is constant
+   integer(IntKi), parameter :: InflowMod_File = 2   ! Inflow is read from file
    real(ReKi), parameter     :: myNaN = -99.9_ReKi
    integer(IntKi), parameter :: idFmtAscii  = 1
    integer(IntKi), parameter :: idFmtBinary = 2
    integer(IntKi), parameter :: idFmtBoth   = 3
    integer(IntKi), parameter, dimension(3) :: idFmtVALID  = (/idFmtAscii, idFmtBinary, idFmtBoth/)
 
-   type UA_Dvr_InitInput
+   type Dvr_Parameters
       logical         :: Echo            
       real(ReKi)      :: SpdSound        
       character(1024) :: OutRootName
@@ -45,13 +47,30 @@ module UA_Dvr_Subs
       real(ReKi)      :: CC(3,3)
       real(ReKi)      :: KK(3,3)
       logical         :: activeDOFs(3)
+      real(ReKi)      :: GFScaling(3)
       real(ReKi)      :: initPos(3)
       real(ReKi)      :: initVel(3)
+      real(ReKi)      :: Vec_AQ(2)  ! Vector from A to quarter chord /aerodynamic center
+      real(ReKi)      :: Vec_AT(2)  ! Vector from A to three quarter chord
+      real(ReKi)      :: Twist      ! Twist of the airfoil section (input deg, but stored in rad afterwards)
       ! Inflow
       integer         :: InflowMod
       real(ReKi)      :: Inflow(2)
       character(1024) :: InflowFile
-   end type UA_Dvr_InitInput
+      ! ---- Parameters
+      !real(DbKi)                             :: dt
+      real(DbKi)                             :: simTime  
+      integer                                :: numSteps
+      real(ReKi)                             :: KinVisc
+      real(ReKi)                             :: FldDens
+      ! Prescribed AoA simulations
+      real(DbKi), allocatable                :: timeArr(:)
+      real(ReKi), allocatable                :: AOAarr(:)
+      real(ReKi), allocatable                :: Uarr(:)
+      real(ReKi), allocatable                :: OmegaArr(:)
+      ! Prescribed inflow simulations
+      real(DbKi), allocatable                :: vU0(:,:)                ! Inflow as function of time, shape 3xnt for Time, U0x, U0y
+   end type Dvr_Parameters
 
 
    type :: Dvr_Outputs
@@ -72,12 +91,34 @@ module UA_Dvr_Subs
       !integer(intki)  :: n_dt_out      !< number of time steps between writing a line in the time-marching output files [-]
    end type Dvr_Outputs
 
+   type :: Dvr_Misc
+      ! Reminder:
+      ! Q: 1/4 chord / aerodynamic center
+      ! T: 3/4 chord
+      ! A: Airfoil origin
+      real(ReKi) :: Vst_Q(2)        !< Structural velocity   at Q [m/s]
+      real(ReKi) :: Vst_T(2)        !< Structural velocity   at T [m/s]
+      real(ReKi) :: Vrel_Q(2)       !< Relative velocity     at Q [m/s]
+      real(ReKi) :: Vrel_T(2)       !< Relative velocity     at T [m/s]
+      real(ReKi) :: Vrel_norm2_T    !< Squared velocity norm at T [m^2/s^2]
+      real(ReKi) :: Vrel_norm2_Q    !< Squared velocity norm at Q [m^2/s^2]
+      real(ReKi) :: alpha_Q         !< Angle of attack       at Q [rad]
+      real(ReKi) :: alpha_T         !< Angle of attack       at T [rad]
+      real(ReKi) :: phi_Q           !< Flow angle            at Q [rad]
+      real(ReKi) :: phi_T           !< Flow angle            at T [rad]
+      real(ReKi) :: Re              !< Reynolds number (NOT in Million!)
+      real(ReKi) :: L, D, tau_Q     !< Aerodynamic loads     at Q [N/m & Nm/m]
+      real(ReKi) :: FxA, FyA, tau_A !< Aerodynamic loads     at A [N/m & Nm/m] 
+      real(ReKi) :: GF(3)           !< Generalized force, Scaled aerodynamic loads to be representative of the blade
+      real(ReKi) :: twist_full      !< Full twist (includes initial twist, potential pitch, and torsion)
+   end type Dvr_Misc
+
    type Dvr_Data
       ! Time control
-      real(DbKi)                             :: dt
       real(DbKi)                             :: uTimes(NumInp)
-      real(DbKi)                             :: simTime  
-      integer                                :: numSteps
+      ! Parameters / initinp  set as the same...
+      type(Dvr_Parameters)                   :: p ! Initialization/parameter data for the driver program
+      type(Dvr_Misc)                         :: m ! Misc variables for aerodynamic calculations
       ! Outputs
       type(Dvr_Outputs)                      :: out
       ! Inflow
@@ -106,11 +147,6 @@ module UA_Dvr_Subs
       type(LD_ParameterType)                 :: LD_p                    ! Parameters
       type(LD_InputType)                     :: LD_u(NumInp)            ! System inputs
       type(LD_OutputType)                    :: LD_y                    ! System outputs
-      ! Prescribed AoA simulations
-      real(DbKi), allocatable                       :: timeArr(:)
-      real(ReKi), allocatable                       :: AOAarr(:)
-      real(ReKi), allocatable                       :: Uarr(:)
-      real(ReKi), allocatable                       :: OmegaArr(:)
    end type Dvr_Data
 
 contains
@@ -118,7 +154,7 @@ contains
 !--------------------------------------------------------------------------------------------------------------
 subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    character(1024),               intent( in    )   :: filename
-   type(UA_Dvr_InitInput),        intent(   out )   :: InitInp
+   type(Dvr_Parameters),          intent(   out )   :: InitInp
    integer,                       intent(   out )   :: ErrStat              ! returns a non-zero value when an error occurs  
    character(*),                  intent(   out )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    ! Local variables  
@@ -191,6 +227,7 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    call ParseAry(FI, iLine, 'activeDOFs'   , InitInp%activeDOFs, 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'initPos'      , InitInp%initPos   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'initVel'      , InitInp%initVel   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseAry(FI, iLine, 'GFScaling'    , InitInp%GFScaling , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'MassMatrix1'  , InitInp%MM(1,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'MassMatrix2'  , InitInp%MM(2,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'MassMatrix3'  , InitInp%MM(3,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
@@ -200,6 +237,9 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    call ParseAry(FI, iLine, 'StifMatrix1'  , InitInp%KK(1,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'StifMatrix2'  , InitInp%KK(2,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'StifMatrix3'  , InitInp%KK(3,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseVar(FI, iLine, 'Twist'        , InitInp%Twist     ,    errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseAry(FI, iLine, 'Vec_AQ'       , InitInp%Vec_AQ    , 2, errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseAry(FI, iLine, 'Vec_AT'       , InitInp%Vec_AT    , 2, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'InflowMod'    , InitInp%InflowMod ,    errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'Inflow'       , InitInp%Inflow    , 2, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'InflowFile'   , InitInp%InflowFile,    errStat2, errMsg2, UnEcho); if(Failed()) return
@@ -215,6 +255,11 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    if (PathIsRelative(InitInp%Airfoil1))    InitInp%Airfoil1 = TRIM(PriPath)//TRIM(InitInp%Airfoil1)
    if (PathIsRelative(InitInp%InflowFile )) InitInp%InflowFile = TRIM(PriPath)//TRIM(InitInp%InflowFile)
 
+   ! --- Checks
+   if (InitInp%SimMod==3) then ! Temporary to avoid changing r-test for now
+      !if (Check(.not.EqualRealNos(InitInp%MM(1,1), InitInp%MM(2,2), 'Mass matrix entries 11 and 22 should match.') return
+   endif
+
    call Cleanup()
 contains
    logical function Failed()
@@ -222,14 +267,72 @@ contains
       Failed = ErrStat >= AbortErrLev
       if (Failed)    call Cleanup()
    end function Failed
+
    subroutine Cleanup()
       ! Close this module's echo file    
       if ( InitInp%Echo ) then
          close(UnEcho)
       end if
-      CALL NWTC_Library_Destroyfileinfotype(FI, errStat2, errMsg2)
+      Call NWTC_Library_Destroyfileinfotype(FI, errStat2, errMsg2)
    end subroutine Cleanup
+
+   logical function Check(Condition, errMsg_in)
+        logical, intent(in) :: Condition
+        character(len=*), intent(in) :: errMsg_in
+        Check=Condition
+        if (Check) then
+           errStat2=ErrID_Fatal
+           errMsg2 =errMsg_in
+        endif
+   end function Check
+
 end subroutine ReadDriverInputFile
+!--------------------------------------------------------------------------------------------------------------
+subroutine Dvr_SetParameters(p, errStat, errMsg)
+   type(Dvr_Parameters), intent(inout) :: p
+   integer,              intent(out ) :: errStat              ! returns a non-zero value when an error occurs
+   character(*),         intent(out ) :: errMsg               ! Error message if ErrStat /= ErrID_None
+   errStat = ErrID_None
+   errMsg  = ''
+   ! Unit conversions
+   p%Twist  = p%Twist * D2R
+   p%Re     = p%Re * 10**6  ! NOT IN MILLIONS
+   p%Vec_AT = p%Vec_AT * p%chord
+   p%Vec_AQ = p%Vec_AQ * p%chord
+
+   ! TODO KinVisc based on Re and InvlowVel might not be ideal.
+   p%KinVisc = p%InflowVel * p%chord/ p%Re
+   p%FldDens =1.225 ! TODO
+   print*,'Re     ',p%Re
+   print*,'KinVisc',p%KinVisc
+   print*,'FldDens',p%FldDens
+
+   if ( p%SimMod == 1 ) then
+      ! Using the frequency and NCycles, determine how long the simulation needs to run
+      p%simTime   = p%NCycles/p%Frequency
+      p%numSteps  = p%StepsPerCycle*p%NCycles  ! we could add 1 here to make this a complete cycle
+      p%dt        = p%simTime / p%numSteps
+      
+   else if ( p%SimMod == 2 ) then
+      ! Read time-series data file with columns:( time,  Angle-of-attack, Vrel, omega )
+      call ReadTimeSeriesData( p%InputsFile, p%numSteps, p%timeArr, p%AOAarr, p%Uarr, p%OmegaArr, errStat, errMsg );
+      p%dt = (p%timeArr(p%numSteps) - p%timeArr(1)) / (p%numSteps-1)
+      p%numSteps = p%numSteps-NumInp + 1
+
+   elseif ( p%SimMod == 3 ) then
+      p%simTime   = p%TMax
+      !p%dt        = p%dt
+      p%numSteps = int(p%simTime/p%dt) ! TODO
+
+      if (p%InflowMod==InflowMod_File) then
+         ! Read inflow file
+         print*,'Reading inflow file not implemented'
+         STOP
+      endif
+
+   endif
+end subroutine Dvr_SetParameters
+
 !--------------------------------------------------------------------------------------------------------------
 subroutine ReadTimeSeriesData( FileName, nSimSteps, timeArr, AOAarr, Uarr, OmegaArr, ErrStat, ErrMsg )
    character(1024),               intent( in    )   :: FileName
@@ -317,7 +420,7 @@ contains
 end subroutine ReadTimeSeriesData
 !--------------------------------------------------------------------------------------------------------------
 subroutine driverInputsToUAInitData(dvrInitInp, InitInData, AFI_Params, AFIndx, errStat, errMsg)
-   type(UA_Dvr_InitInput) , intent(in ) :: dvrInitInp           ! Initialization data for the driver program
+   type(Dvr_Parameters)   , intent(in ) :: dvrInitInp           ! Initialization data for the driver program
    type(UA_InitInputType) , intent(out) :: InitInData           ! Input data for initialization
    type(AFI_ParameterType), intent(out) :: AFI_Params(NumAFfiles)
    integer, allocatable   , intent(out) :: AFIndx(:,:)
@@ -430,7 +533,236 @@ contains
       call AFI_DestroyInitInput(AFI_InitInputs, errStat2, errMsg2)
    end subroutine Cleanup
 end subroutine Init_AFI  
+!--------------------------------------------------------------------------------------------------------------
+!> Set Inflow inputs
+subroutine setInflow(t, p, U0)
+   real(DbKi),                    intent(in) :: t
+   type(Dvr_Parameters),          intent(in) :: p
+   real(ReKi), dimension(:)                  :: U0
+   if      (p%InflowMod == InflowMod_Cst) then
+      U0(:) = p%Inflow
+   else if (p%InflowMod == InflowMod_File) then
+      print*,'File inflow not Implemented'
+      STOP
+   else
+      print*,'Should never happen'
+      STOP
+   endif
+end subroutine setInflow
+!--------------------------------------------------------------------------------------------------------------
+!> Compute aerodynamic kinematics quantities (velocities and angles) at different points
+subroutine AeroKinematics(U0, q, qd, p, m)
+   real(ReKi),           intent(in)    :: U0(2)    !< Free stream
+   real(ReKi),           intent(in)    :: q(3)     !< Elastic positions  x,y,th
+   real(ReKi),           intent(in)    :: qd(3)    !< Elastic velocities
+   type(Dvr_Parameters), intent(in   ) :: p        !< Parameters
+   type(Dvr_Misc),       intent(inout) :: m        !< Misc aero var
+   real(ReKi), parameter :: W(2) =0 ! Induced velocities
+   real(ReKi) :: ST, CT
 
+
+   ! Full twist
+   m%twist_full = q(3) + p%Twist ! + Pitch if a controller is added
+   ST = sin(m%twist_full)
+   CT = cos(m%twist_full)
+
+   ! Structual velocity including torsional velocity
+   m%Vst_T(1) = qd(1) + qd(3) * (-p%Vec_AT(1)*ST + p%Vec_AT(2)*CT)
+   m%Vst_T(2) = qd(2) + qd(3) * ( p%Vec_AT(1)*CT + p%Vec_AT(2)*ST)
+
+   m%Vst_Q(1) = qd(1) + qd(3) * (-p%Vec_AQ(1)*ST + p%Vec_AQ(2)*CT)
+   m%Vst_Q(2) = qd(2) + qd(3) * ( p%Vec_AQ(1)*CT + p%Vec_AQ(2)*ST)
+
+   ! Relative velocity, Vrel = U0 - Vst + W
+   m%Vrel_T = U0 - m%Vst_T + W
+   m%Vrel_Q = U0 - m%Vst_Q + W
+
+   ! Squared velocity norm
+   m%Vrel_norm2_T = m%Vrel_T(1)**2 + m%Vrel_T(2)**2
+   m%Vrel_norm2_Q = m%Vrel_Q(1)**2 + m%Vrel_Q(2)**2
+
+   ! Flow angle
+   m%phi_Q = atan2(m%Vrel_Q(1), m%Vrel_Q(2))
+   m%phi_T = atan2(m%Vrel_T(1), m%Vrel_T(2))
+
+   ! Angle of attack
+   m%alpha_Q = m%phi_Q - m%twist_full
+   m%alpha_T = m%phi_T - m%twist_full
+
+   ! Reynolds at 1/4 chord
+   m%Re = sqrt(m%Vrel_norm2_Q) * p%chord  / p%KinVisc
+end subroutine AeroKinematics
+
+!--------------------------------------------------------------------------------------------------------------
+!> Compute aerodynamic kinetics quantities (loads)
+subroutine AeroKinetics(U0, q, qd, C_dyn, p, m)
+   real(ReKi),           intent(in)    :: U0(2)    !< Free stream
+   real(ReKi),           intent(in)    :: q(3)     !< Elastic positions  x,y,th
+   real(ReKi),           intent(in)    :: qd(3)    !< Elastic velocities
+   real(ReKi),           intent(in)    :: C_dyn(3) !< Dynamic aerodynamic coefficients (Cl, Cd, Cm)
+   type(Dvr_Parameters), intent(in   ) :: p        !< Parameters
+   type(Dvr_Misc),       intent(inout) :: m        !< Misc aero var
+   real(ReKi) :: ST, CT
+   real(ReKi) :: SP, CP
+   real(ReKi) :: q_dyn
+   !real(ReKi) :: SA, CA
+   !real(ReKi) :: tau_A2
+
+   ! First get kinematics
+   call AeroKinematics(U0, q, qd, p, m)
+
+   ST = sin(m%twist_full)
+   CT = cos(m%twist_full)
+
+   ! Loads at Q
+   q_dyn = 0.5_ReKi * p%FldDens * p%chord * m%Vrel_norm2_Q
+   m%L     = q_dyn * C_dyn(1)
+   m%D     = q_dyn * C_dyn(2)
+   m%tau_Q = q_dyn * C_dyn(3) * p%chord
+
+   ! Loads at A
+   SP = sin(m%phi_Q)
+   CP = cos(m%phi_Q)
+   m%FxA   =  m%L * CP + m%D * SP
+   m%FyA   = -m%L * SP + m%D * CP
+   ! Tau A version 1
+   m%tau_A = m%tau_Q 
+   m%tau_A = m%tau_A - m%FxA * (- p%Vec_AQ(1) * ST + p%Vec_AQ(2) * CT) 
+   m%tau_A = m%tau_A + m%FyA * (  p%Vec_AQ(1) * CT + p%Vec_AQ(2) * ST) 
+   ! Tau A version 2
+   !SA = sin(m%alpha_Q)
+   !CA = cos(m%alpha_Q)
+   !tau_A2 = m%tau_Q 
+   !tau_A2 = tau_A2  - q_dyn *C_dyn(1)* ( p%Vec_AQ(1) * SA + p%Vec_AQ(2) * CA) 
+   !tau_A2 = tau_A2  + q_dyn *C_dyn(2)* ( p%Vec_AQ(1) * CA - p%Vec_AQ(2) * SA) 
+   !print*,'tau_A', m%tau_A, tau_A2
+
+   ! Scaled loads TODO 
+   m%GF(1) = m%FxA    * p%GFScaling(1)
+   m%GF(2) = m%FyA    * p%GFScaling(2)
+   m%GF(3) = m%tau_A  * p%GFScaling(3)
+
+end subroutine AeroKinetics
+
+!> Set LinDyn inputs (scaled aerodynamic forces at point A)
+subroutine setLDinputs(U0, LD_x, UA_y, p, m, LD_u)
+   real(ReKi)          ,         intent(in   ) :: U0(2) !< Parameters
+   type(LD_ContinuousStateType), intent(in   ) :: LD_x  !< LinDyn states
+   type(UA_OutputType),          intent(in   ) :: UA_y  !< UA outputs
+   type(Dvr_Parameters),         intent(in   ) :: p     !< Parameters
+   type(Dvr_Misc),               intent(inout) :: m     !< Misc aero var
+   type(LD_InputType),           intent(inout) :: LD_u  !< LinDyn inputs
+
+   call AeroKinetics  (U0, LD_x%q(1:3), LD_x%q(4:6), (/UA_y%Cl, UA_y%Cd, UA_y%Cm/), p, m)
+   LD_u%Fext(1) = m%GF(1)
+   LD_u%Fext(2) = m%GF(2)
+   LD_u%Fext(3) = m%GF(3)
+
+end subroutine setLDinputs
+
+!> Set UA Inputs from Flow and LinDyn
+subroutine setUAinputs(U0, LD_x, p, m, UA_u)
+   real(ReKi)          ,         intent(in   ) :: U0(2) !< Parameters
+   type(LD_ContinuousStateType), intent(in   ) :: LD_x  !< LinDyn states
+   type(Dvr_Parameters),         intent(in   ) :: p     !< Parameters
+   type(Dvr_Misc),               intent(inout) :: m     !< Misc aero var
+   type(UA_InputType),           intent(inout) :: UA_u  !< UA inputs
+
+   call AeroKinematics(U0, LD_x%q(1:3), LD_x%q(4:6), p, m)
+   UA_u%UserProp = 0
+   UA_u%Re       = m%Re
+   UA_u%omega    = LD_x%q(6)
+   ! Angle of attack and relative velocity at 1/4 point/aerodynamic center point "Q"
+   UA_u%v_ac(1)  = m%Vrel_Q(1)
+   UA_u%v_ac(2)  = m%Vrel_Q(2)
+   UA_u%alpha    = m%alpha_Q
+   UA_u%U        = sqrt(m%Vrel_norm2_Q)
+end subroutine setUAinputs
+
+
+!> Set UA inptus for a simulation where the angle of attack is prescribed and the relative velocity is constant
+subroutine setUAinputsAlphaSim(n, u, t, p, errStat, errMsg)
+   integer,                intent(in)              :: n
+   type(UA_InputType),     intent(inout)           :: u            ! System inputs
+   real(DbKi),             intent(  out)           :: t
+   type(Dvr_Parameters),   intent(in)              :: p           ! Initialization data for the driver program
+   integer,                intent(out)             :: errStat
+   character(len=*),       intent(out)             :: errMsg
+   integer    :: indx
+   real(ReKi) :: phase
+   real(ReKi) :: d_ref2AC
+   real(ReKi) :: alpha_ref
+   real(ReKi) :: U_ref
+   real(ReKi) :: v_ref(2)
+   real(ReKi) :: v_34(2)
+   logical, parameter :: OscillationAtMidChord=.true.  ! for legacy, use false
+   logical, parameter :: VelocityAt34         =.true.  ! for legacy, use false
+
+   ! Initialize error handling variables
+   ErrMsg  = ''
+   ErrStat = ErrID_None
+
+   u%UserProp = 0
+   u%Re       = p%Re
+
+   if ( p%SimMod == 1 ) then
+      if (OscillationAtMidChord) then
+         d_ref2AC =-0.25_ReKi  ! -0.25: oscillations at mid_chord
+      else
+         d_ref2AC = 0.0_ReKi   ! 0: oscillations at AC
+      endif
+      U_ref = p%InflowVel  ! m/s
+
+      t       = (n-1)*p%dt
+      phase = (n+p%Phase-1)*2*pi/p%StepsPerCycle
+      alpha_ref = (p%Amplitude * sin(phase) + p%Mean)*D2R   ! This needs to be in radians
+      v_ref(1) = sin(alpha_ref)*U_ref
+      v_ref(2) = cos(alpha_ref)*U_ref
+      u%omega =  p%Amplitude * cos(phase) * 2*pi/p%StepsPerCycle / p%dt * D2R  ! This needs to be in radians derivative: d_alpha /d_t
+
+      u%v_ac(1) = v_ref(1) + u%omega * d_ref2AC* p%Chord
+      u%v_ac(2) = v_ref(2)
+
+      v_34(1) = u%v_ac(1) + u%omega * 0.5* p%Chord
+      v_34(2) = u%v_ac(2)
+
+
+      u%alpha = atan2(u%v_ac(1), u%v_ac(2) )  ! 
+      if (VelocityAt34) then
+         u%U =  sqrt(v_34(1)**2 + v_34(2)**2) ! Using U at 3/4
+      else
+         u%U =  sqrt(u%v_ac(1)**2 + u%v_ac(2)**2) ! Using U at 1/4
+      endif
+
+
+   else
+      ! check optional variables and allocation status
+      if (all( (/ allocated(p%timeArr),allocated(p%AOAarr),allocated(p%OmegaArr),allocated(p%Uarr) /) )) then
+          
+         indx = min(n,size(p%timeArr))
+         indx = max(1, indx) ! use constant data at initialization
+      
+         ! Load timestep data from the time-series inputs which were previous read from input file
+         t       = p%timeArr(indx)
+         u%alpha = p%AOAarr(indx)*pi/180.0   ! This needs to be in radians
+         u%omega = p%OmegaArr(indx)
+         u%U     = p%Uarr(indx)
+         if (n> size(p%timeArr)) then
+           t = t + p%dt*(n - size(p%timeArr) ) ! update for NumInp>1;
+         elseif (n < 1) then
+           t = (n-1)*p%dt
+         end if
+         u%v_ac(1) = sin(u%alpha)*u%U
+         u%v_ac(2) = cos(u%alpha)*u%U
+      else
+         errStat = ErrID_Fatal
+         errMsg = 'mandatory input arrays are not allocated: timeArr,AOAarr,OmegaArr,Uarr'
+      end if
+          
+   end if
+
+end subroutine setUAinputsAlphaSim
+!----------------------------------------------------------------------------------------------------  
 
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine Dvr_EndSim(dvr, errStat, errMsg)
@@ -450,10 +782,12 @@ subroutine Dvr_EndSim(dvr, errStat, errMsg)
    endif
    if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtBinary) then
       print*,'>>>> OUTPUT',trim(out%Root)//'.outb'
-      call WrBinFAST(trim(out%Root)//'.outb', FileFmtID_ChanLen_In, 'AeroDynDriver', out%WriteOutputHdr, out%WriteOutputUnt, (/0.0_DbKi, dvr%dt/), out%storage(:,:), errStat2, errMsg2)
+      call WrBinFAST(trim(out%Root)//'.outb', FileFmtID_ChanLen_In, 'AeroDynDriver', out%WriteOutputHdr, out%WriteOutputUnt, (/0.0_DbKi, dvr%p%dt/), out%storage(:,:), errStat2, errMsg2)
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
    endif
 end subroutine Dvr_EndSim
+
+
 
    
    
@@ -591,24 +925,51 @@ subroutine Dvr_InitializeDriverOutputs(dvr, out, errStat, errMsg)
    errMsg  = ''
 
    ! --- Allocate driver-level outputs
-   out%nDvrOutputs =  8 ! Ux Uy + LD ! HACK
+   out%nDvrOutputs = 27 + 9 ! Misc + LD
 
    call AllocAry(out%WriteOutputHdr, 1+out%nDvrOutputs, 'WriteOutputHdr', errStat2, errMsg2); if(Failed()) return
    call AllocAry(out%WriteOutputUnt, 1+out%nDvrOutputs, 'WriteOutputUnt', errStat2, errMsg2); if(Failed()) return
 
    j=1
    out%WriteOutputHdr(j) = 'Time'        ; out%WriteOutputUnt(j) = '(s)'  ; j=j+1
-   ! HACK
-   ! Inflow
-   out%WriteOutputHdr(j) = 'Ux'          ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
-   out%WriteOutputHdr(j) = 'Uy'          ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
-   ! Dynamics
-   out%WriteOutputHdr(j) = 'x'           ; out%WriteOutputUnt(j) = '(m)'  ; j=j+1
+   ! Driver Variables
+   out%WriteOutputHdr(j) = 'VUndx'           ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'VUndy'           ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'VSTx_Q'          ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'VSTy_Q'          ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'VSTx_T'          ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'VSTy_T'          ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'Vrelx_Q'         ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'Vrely_Q'         ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'Vrelx_T'         ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'Vrely_T'         ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'Vrel_Q'          ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'Vrel_T'          ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'alpha_Q'         ; out%WriteOutputUnt(j) = '(deg)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'alpha_T'         ; out%WriteOutputUnt(j) = '(deg)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'phi_Q'           ; out%WriteOutputUnt(j) = '(deg)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'phi_T'           ; out%WriteOutputUnt(j) = '(deg)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'twist_full'      ; out%WriteOutputUnt(j) = '(deg)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'Re_T'            ; out%WriteOutputUnt(j) = '(-)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'L'               ; out%WriteOutputUnt(j) = '(N/m)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'D'               ; out%WriteOutputUnt(j) = '(N/m)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'M'               ; out%WriteOutputUnt(j) = '(Nm/m)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'Fx_A'            ; out%WriteOutputUnt(j) = '(N/m)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'Fy_A'            ; out%WriteOutputUnt(j) = '(N/m)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'M_A'             ; out%WriteOutputUnt(j) = '(Nm/m)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'GFx'             ; out%WriteOutputUnt(j) = '(N/m)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'GFy'             ; out%WriteOutputUnt(j) = '(N/m)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'GFM'             ; out%WriteOutputUnt(j) = '(Nm/m)'  ; j=j+1
+   ! Dynamics - HACK should be returned by LD
+   out%WriteOutputHdr(j) = 'x'           ; out%WriteOutputUnt(j) = '(m)'  ; j=j+1 
    out%WriteOutputHdr(j) = 'y'           ; out%WriteOutputUnt(j) = '(m)'  ; j=j+1
    out%WriteOutputHdr(j) = 'th'          ; out%WriteOutputUnt(j) = '(rad)'  ; j=j+1
    out%WriteOutputHdr(j) = 'dx'          ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
    out%WriteOutputHdr(j) = 'dy'          ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
    out%WriteOutputHdr(j) = 'dth'         ; out%WriteOutputUnt(j) = '(rad/s)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'ddx'         ; out%WriteOutputUnt(j) = '(m/s^2)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'ddy'         ; out%WriteOutputUnt(j) = '(m/s^2)'  ; j=j+1
+   out%WriteOutputHdr(j) = 'ddth'        ; out%WriteOutputUnt(j) = '(rad/s^2)'  ; j=j+1
 contains
    logical function Failed()
       CALL SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Dvr_InitializeDriverOutputs' )
@@ -696,7 +1057,7 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, errStat, errMsg)
    character(*)           ,  intent(inout)   :: errMsg               ! Error message if errStat /= ErrID_None
 !    ! Local variables.
 !    character(ChanLen) :: tmpStr         ! temporary string to print the time output as text
-   integer :: nDV , nUA, nLD
+   integer :: nDV , nUA, nLD,j
    errStat = ErrID_None
    errMsg  = ''
    out%outLine = myNaN ! Safety
@@ -704,11 +1065,39 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, errStat, errMsg)
 !    ! Packing all outputs excpet time into one array
    !nUA = size(yADI%AD%rotors(1)%WriteOutput)
    !nLD = size(yADI%IW_WriteOutput)
-   nDV = 2 ! out%nDvrOutputs
+   nDV = 27 ! out%nDvrOutputs
+   j = 1 
+   out%outLine(j) = dvr%U0(1, 1)             ; j=j+1  ! Ux
+   out%outLine(j) = dvr%U0(1, 2)             ; j=j+1  ! Uy
+   out%outLine(j) = dvr%m%Vst_Q(1)           ; j=j+1  !  VSTx_Q
+   out%outLine(j) = dvr%m%Vst_Q(2)           ; j=j+1  ! VSTy_Q
+   out%outLine(j) = dvr%m%Vst_T(1)           ; j=j+1  ! VSTx_T
+   out%outLine(j) = dvr%m%Vst_T(2)           ; j=j+1  ! VSTy_T
+   out%outLine(j) = dvr%m%Vrel_Q(1)          ; j=j+1  ! Vrelx_Q
+   out%outLine(j) = dvr%m%Vrel_Q(2)          ; j=j+1  ! Vrely_Q
+   out%outLine(j) = dvr%m%Vrel_T(1)          ; j=j+1  ! Vrelx_T
+   out%outLine(j) = dvr%m%Vrel_T(2)          ; j=j+1  ! Vrely_T
+   out%outLine(j) = sqrt(dvr%m%Vrel_norm2_Q) ; j=j+1  ! Vrel_Q
+   out%outLine(j) = sqrt(dvr%m%Vrel_norm2_T) ; j=j+1  ! Vrel_T
+   out%outLine(j) = dvr%m%alpha_Q*R2D        ; j=j+1  ! alpha_Q
+   out%outLine(j) = dvr%m%alpha_T*R2D        ; j=j+1  ! alpha_T
+   out%outLine(j) = dvr%m%phi_Q  *R2D        ; j=j+1  ! phi_Q
+   out%outLine(j) = dvr%m%phi_T  *R2D        ; j=j+1  ! phi_T
+   out%outLine(j) = dvr%m%twist_full*R2D     ; j=j+1  ! twist_full
+   out%outLine(j) = dvr%m%Re                 ; j=j+1  ! Re_T
+   out%outLine(j) = dvr%m%L                  ; j=j+1  ! L
+   out%outLine(j) = dvr%m%D                  ; j=j+1  ! D
+   out%outLine(j) = dvr%m%tau_Q              ; j=j+1  ! M
+   out%outLine(j) = dvr%m%FxA                ; j=j+1  ! Fx_A
+   out%outLine(j) = dvr%m%FyA                ; j=j+1  ! Fy_A
+   out%outLine(j) = dvr%m%tau_A              ; j=j+1  ! M_A
+   out%outLine(j) = dvr%m%GF(1)              ; j=j+1  ! GFx
+   out%outLine(j) = dvr%m%GF(2)              ; j=j+1  ! GFy
+   out%outLine(j) = dvr%m%GF(3)              ; j=j+1  ! GFM
+
    nLD = 6 ! HACK
-   out%outLine(1)             = dvr%U0(1, 1)! Ux
-   out%outLine(2)             = dvr%U0(1, 2)! Uy
-   out%outLine(nDV+1:nDV+nLD) = dvr%LD_x%q(1:nLD)  ! Driver Write Outputs
+   out%outLine(nDV+1:nDV+nLD)       = dvr%LD_x%q(1:nLD)
+   out%outLine(nDV+nLD+1:nDV+nLD+3) = dvr%LD_y%qd(4:6)
 
  
    !out%outLine(nDV+1:nDV+nAD) = yADI%AD%rotors%WriteOutput     ! AeroDyn WriteOutputs
