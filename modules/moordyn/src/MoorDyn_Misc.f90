@@ -1005,7 +1005,7 @@ CONTAINS
   !      J = J + (m%RodList(l)%N + 1)
   !   END DO
   !   ! Point reference point coordinates
-  !   J = J + p%nConnects
+  !   J = J + p%nPoints
   !   ! Line internal node coordinates
   !   DO l = 1, p%nLines
   !      J = J + (m%LineList(l)%N - 1)
@@ -1035,9 +1035,9 @@ CONTAINS
   !      END DO
   !   END DO
   !   ! Point reference point coordinates
-  !   DO I = 1, p%nConnects
+  !   DO I = 1, p%nPoints
   !      J = J + 1
-  !      y%rAll(:,J) = m%ConnectList(I)%r
+  !      y%rAll(:,J) = m%PointList(I)%r
   !   END DO      
   !   ! Line internal node coordinates
   !   DO I = 1, p%nLines
