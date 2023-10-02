@@ -26,6 +26,7 @@ The documentation here was derived from AeroDyn Manual for AeroDyn version 15.04
    :maxdepth: 2
    
    introduction.rst
+   coordsys.rst
    input.rst
    output.rst
    modeling.rst

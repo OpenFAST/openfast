@@ -604,9 +604,11 @@ subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ""
    
-   call AllocAry( m%DisturbedInflow, 3_IntKi, p%NumBlNds, p%numBlades, 'OtherState%DisturbedInflow', ErrStat2, ErrMsg2 ) ! must be same size as u%InflowOnBlade
+   call AllocAry( m%DisturbedInflow, 3_IntKi, p%NumBlNds, p%numBlades, 'm%DisturbedInflow', ErrStat2, ErrMsg2 ) ! must be same size as u%InflowOnBlade
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-   call AllocAry( m%orientationAnnulus, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'OtherState%orientationAnnulus', ErrStat2, ErrMsg2 )
+   call AllocAry( m%orientationAnnulus, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'm%orientationAnnulus', ErrStat2, ErrMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   call AllocAry( m%R_li, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'm%R_li', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
      
    call allocAry( m%SigmaCavit, p%NumBlNds, p%numBlades, 'm%SigmaCavit', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -651,6 +653,8 @@ end if
    call AllocAry( m%My, p%NumBlNds, p%NumBlades, 'm%My', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    call AllocAry( m%Mz, p%NumBlNds, p%NumBlades, 'm%Mz', ErrStat2, ErrMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   call AllocAry( m%Vind_i, 3, p%NumBlNds, p%NumBlades, 'm%Vind_i', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       ! mesh mapping data for integrating load over entire rotor:
    allocate( m%B_L_2_H_P(p%NumBlades), Stat = ErrStat2)
@@ -1836,11 +1840,12 @@ subroutine RotWriteOutputs( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRo
    
       ! NOTE: m%BEMT_u(i) indices are set differently from the way OpenFAST typically sets up the u and uTimes arrays
    integer, parameter                           :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
-   integer(intKi)                               :: i
+   integer(intKi)                               :: i, k
 
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'RotCalcOutput'
+   real(R8Ki)                                   :: x_hat_disk(3)
 !   LOGICAL                                      :: CalcWriteOutput   
    !-------------------------------------------------------   
    !     get values to output to file:  
@@ -1864,6 +1869,14 @@ subroutine RotWriteOutputs( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRo
 
       ! Now we need to populate the blade node outputs here
       if (p%NumBlades > 0) then
+         ! For all methods (BEM/FVW), computes R_li: from inertial system to local-polar system
+         ! NOTE: this could be placed either in AeroDyn_IO* or in SetInputs
+         !       The issue right now is the Calculate_MeshOrientation_Rel2Hub is in AeroDyn.f90
+         x_hat_disk = u%HubMotion%Orientation(1,:,1)
+         do k=1,p%NumBlades
+            ! Compute R_li for all nodes
+            call Calculate_MeshOrientation_Rel2Hub(u%BladeMotion(k), u%HubMotion, x_hat_disk, m%R_li(:,:,:,k))
+         enddo
          call Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, indx, iRot, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end if
@@ -2102,16 +2115,16 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
          BlmomentBplus(3) = BlmomentBplus(3) + BlglobCBplus(1) * BlforceBplus(2) - BlglobCBplus(2) * BlforceBplus(1)
 
             ! Sum loads at each node
-         BlFBtmp(j,k,:) = BlFBtmp(j,k,:) + BlforceB
+         BlFBtmp(j,k,:)   = BlFBtmp(j  ,k,:) + BlforceB
          BlFBtmp(j+1,k,:) = BlFBtmp(j+1,k,:) + BlforceBplus
-         BlMBtmp(j,k,:) = BlMBtmp(j,k,:) + BlmomentB
+         BlMBtmp(j,k,:)   = BlMBtmp(j  ,k,:) + BlmomentB
          BlMBtmp(j+1,k,:) = BlMBtmp(j+1,k,:) + BlmomentBplus
 
       end do ! j = nodes
 
          ! Assign loads to point mesh
       do j = 1,p%NumBlNds
-         m%BladeBuoyLoadPoint(k)%Force(:,j) = BlFBtmp(j,k,:)
+         m%BladeBuoyLoadPoint(k)%Force(:,j)  = BlFBtmp(j,k,:)
          m%BladeBuoyLoadPoint(k)%Moment(:,j) = BlMBtmp(j,k,:)
       end do ! j = nodes
 
@@ -2630,7 +2643,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    !..........................
    if (p%AeroProjMod==APM_BEM_NoSweepPitchTwist .or. p%AeroProjMod==APM_LiftingLine) then
 
-      m%BEMT_u(indx)%psi = Azimuth
+      m%BEMT_u(indx)%psi_s = Azimuth
    elseif (p%AeroProjMod==APM_BEM_Polar) then
 
       do k=1,p%NumBlades
@@ -2640,7 +2653,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
          ! Extract azimuth angle for blade k
          ! NOTE: EB, this might need improvements (express wrt hub, also deal with case hubRad=0). This is likely not psi_skew. 
          theta = -EulerExtract( transpose(orientationBladeAzimuth(:,:,1)) )
-         m%BEMT_u(indx)%psi(k) = theta(1)
+         m%BEMT_u(indx)%psi_s(k) = theta(1)
       end do !k=blades
          
       ! Find the most-downwind azimuth angle needed by the skewed wake correction model
@@ -2776,8 +2789,9 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
          m%BEMT_u(indx)%Vz(j,k) = dot_product( tmp, m%orientationAnnulus(3,:,j,k) ) ! radial component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
 
          ! NOTE: We'll likely remove that:
-         m%BEMT_u(indx)%xVelCorr(j,k) = TwoNorm(m%DisturbedInflow(:,j,k))*(             sin(yaw)*sin(-m%BEMT_u(indx)%cantAngle(j,k))*sin(m%BEMT_u(indx)%psi(k)) &
-                                                                            + sin(tilt)*cos(yaw)*sin(-m%BEMT_u(indx)%cantAngle(j,k))*cos(m%BEMT_u(indx)%psi(k)) ) !m%BEMT_u(indx)%Vy(j,k)*sin(-theta(2))*sin(m%BEMT_u(indx)%psi(k))
+         !m%BEMT_u(indx)%xVelCorr(j,k) = TwoNorm(m%DisturbedInflow(:,j,k))*(             sin(yaw)*sin(-m%BEMT_u(indx)%cantAngle(j,k))*sin(m%BEMT_u(indx)%psi_s(k)) &
+         !                                                                   + sin(tilt)*cos(yaw)*sin(-m%BEMT_u(indx)%cantAngle(j,k))*cos(m%BEMT_u(indx)%psi_s(k)) ) !m%BEMT_u(indx)%Vy(j,k)*sin(-theta(2))*sin(m%BEMT_u(indx)%psi(k))
+         m%BEMT_u(indx)%xVelCorr(j,k) = 0.0_ReKi ! TODO
       end do !j=nodes
    end do !k=blades
 
@@ -4003,6 +4017,8 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
    rMax = 0.0_ReKi
    do k=1,p%numBlades
       
+      ! --- Curvilinear coordinates 
+      ! TODO place this in a function
       InitInp%zHub(k) = TwoNorm( u_AD%BladeRootMotion(k)%Position(:,1) - u_AD%HubMotion%Position(:,1) )  
       !if (EqualRealNos(InitInp%zHub(k),0.0_ReKi) ) &
       !   call SetErrStat( ErrID_Fatal, "zHub for blade "//trim(num2lstr(k))//" is zero.", ErrStat, ErrMsg, RoutineName)
@@ -4015,6 +4031,8 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
       
       InitInp%zTip(k) = InitInp%zLocal(p%NumBlNds,k)
       
+      ! --- Projected radius onto plane normal to x_hat_disk
+      ! Note this is the same as local-polar radial position
       y_hat_disk = u_AD%HubMotion%Orientation(2,:,1)
       z_hat_disk = u_AD%HubMotion%Orientation(3,:,1)
       
@@ -4353,7 +4371,7 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
       force_tf(:)    = 0.0_ReKi
       moment_tf(:)    = 0.0_ReKi
       force_tf(1)    = Cx * q
-      force_tf(2)    = Cy * q * p%TFin%TFinChord
+      force_tf(2)    = Cy * q
       force_tf(3)    = 0.0_ReKi
       moment_tf(1:2) = 0.0_ReKi
       moment_tf(3)   = AFI_interp%Cm * q * p%TFin%TFinChord
@@ -4628,13 +4646,16 @@ FUNCTION CalculateTowerInfluence(p, xbar_in, ybar, zbar, W_tower, TwrCd, TwrTI) 
          v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom
 
       elseif (p%TwrPotent == TwrPotent_Bak) then
-         xbar = xbar + 0.1
+         ! Reference: Bak, Madsen, Johansen (2001): Influence from Blade-Tower Interaction on Fatigue Loads and Dynamics (poster);
+         !            Proceedings: EWEC'01; Copenhagen (DK)
+         xbar = xbar + 0.1 ! offset added as part of the original model of Bak et al.
          denom = (xbar**2 + ybar**2)**2
          u_TwrPotent = ( -1.0*xbar**2 + ybar**2 ) / denom
          v_TwrPotent = ( -2.0*xbar    * ybar    ) / denom
          denom = TwoPi*(xbar**2 + ybar**2)
          u_TwrPotent = u_TwrPotent + TwrCd*xbar / denom
          v_TwrPotent = v_TwrPotent + TwrCd*ybar / denom
+         xbar = xbar - 0.1 ! removing offset
                
       end if
    end if

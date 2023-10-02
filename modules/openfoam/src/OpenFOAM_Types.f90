@@ -104,7 +104,7 @@ IMPLICIT NONE
     REAL(KIND=C_FLOAT) :: BladeLength 
     REAL(KIND=C_FLOAT) :: TowerHeight 
     REAL(KIND=C_FLOAT) :: TowerBaseHeight 
-    LOGICAL(KIND=C_BOOL) :: NodeClusterType 
+    INTEGER(KIND=C_INT) :: NodeClusterType 
   END TYPE OpFM_ParameterType_C
   TYPE, PUBLIC :: OpFM_ParameterType
     TYPE( OpFM_ParameterType_C ) :: C_obj
@@ -419,7 +419,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%TowerBaseHeight
     Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%NodeClusterType, IntKiBuf(1))
+    IntKiBuf(Int_Xferred) = InData%NodeClusterType
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE OpFM_PackInitInput
 
@@ -507,7 +507,7 @@ ENDIF
     OutData%TowerBaseHeight = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
       OutData%C_obj%TowerBaseHeight = OutData%TowerBaseHeight
-    OutData%NodeClusterType = TRANSFER(IntKiBuf(Int_Xferred), OutData%NodeClusterType)
+    OutData%NodeClusterType = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
       OutData%C_obj%NodeClusterType = OutData%NodeClusterType
  END SUBROUTINE OpFM_UnPackInitInput
@@ -1957,7 +1957,7 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%TowerBaseHeight
     Re_Xferred = Re_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%NodeClusterType, IntKiBuf(1))
+    IntKiBuf(Int_Xferred) = InData%NodeClusterType
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE OpFM_PackParam
 
@@ -2060,7 +2060,7 @@ ENDIF
     OutData%TowerBaseHeight = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
       OutData%C_obj%TowerBaseHeight = OutData%TowerBaseHeight
-    OutData%NodeClusterType = TRANSFER(IntKiBuf(Int_Xferred), OutData%NodeClusterType)
+    OutData%NodeClusterType = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
       OutData%C_obj%NodeClusterType = OutData%NodeClusterType
  END SUBROUTINE OpFM_UnPackParam

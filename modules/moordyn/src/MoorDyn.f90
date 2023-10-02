@@ -194,6 +194,7 @@ CONTAINS
       p%mu_kA                = 0.0_DbKi
       p%mc                   = 1.0_DbKi
       p%cv                   = 200.0_DbKi
+      p%VisMeshes            = InitInp%VisMeshes   ! Visualization meshes requested by glue code
       DepthValue = ""  ! Start off as empty string, to only be filled if MD setting is specified (otherwise InitInp%WtrDepth is used)
                        ! DepthValue and InitInp%WtrDepth are processed later by setupBathymetry.
       WaterKinValue = ""
@@ -931,8 +932,8 @@ CONTAINS
                      CALL Body_AddRod(m%GroundBody, l, tempArray)   ! add rod l to Ground body
                            
 
-                     else if ((let1 == "PINNED") .or. (let1 == "PIN")) then
-                        m%RodList(l)%typeNum = 1
+                  else if ((let1 == "PINNED") .or. (let1 == "PIN")) then
+                     m%RodList(l)%typeNum = 1
                      CALL Body_AddRod(m%GroundBody, l, tempArray)   ! add rod l to Ground body
                      
                      p%nFreeRods=p%nFreeRods+1  ! add this pinned rod to the free list because it is half free
@@ -2212,6 +2213,19 @@ CONTAINS
       
       ! TODO: add feature for automatic water depth increase based on max anchor depth!
 
+
+      !--------------------------------------------------
+      ! initialize line visualization meshes if needed
+      if (p%VisMeshes) then
+         if (p%NLines > 0) then
+            call VisLinesMesh_Init(p,m,y,ErrStat2,ErrMsg2); if(Failed()) return
+         endif
+         if (p%NRods > 0) then
+            call VisRodsMesh_Init(p,m,y,ErrStat2,ErrMsg2); if(Failed()) return
+         endif
+      endif
+
+
    CONTAINS
 
 
@@ -2257,12 +2271,12 @@ CONTAINS
 
 
             IF ( ErrStat >= AbortErrLev ) THEN                
-               IF (ALLOCATED(m%CpldPointIs        ))  DEALLOCATE(m%CpldPointIs       )
-               IF (ALLOCATED(m%FreePointIs       ))  DEALLOCATE(m%FreePointIs       )
+               IF (ALLOCATED(m%CpldPointIs      ))  DEALLOCATE(m%CpldPointIs      )
+               IF (ALLOCATED(m%FreePointIs      ))  DEALLOCATE(m%FreePointIs      )
                IF (ALLOCATED(m%LineStateIs1     ))  DEALLOCATE(m%LineStateIs1     )
                IF (ALLOCATED(m%LineStateIsN     ))  DEALLOCATE(m%LineStateIsN     )
-               IF (ALLOCATED(m%PointStateIs1      ))  DEALLOCATE(m%PointStateIs1     )
-               IF (ALLOCATED(m%PointStateIsN      ))  DEALLOCATE(m%PointStateIsN     )
+               IF (ALLOCATED(m%PointStateIs1    ))  DEALLOCATE(m%PointStateIs1    )
+               IF (ALLOCATED(m%PointStateIsN    ))  DEALLOCATE(m%PointStateIsN    )
                IF (ALLOCATED(x%states           ))  DEALLOCATE(x%states           )
                IF (ALLOCATED(FairTensIC         ))  DEALLOCATE(FairTensIC         )
 
@@ -2613,6 +2627,20 @@ CONTAINS
   !    IF ( ErrStat >= AbortErrLev ) RETURN
 
 
+      !--------------------------------------------------
+      ! update line visualization meshes if needed
+      if (p%VisMeshes) then
+         if (p%NLines > 0) then
+            call VisLinesMesh_Update(p,m,y,ErrStat2,ErrMsg2)
+            call CheckError(ErrStat2, ErrMsg2)
+            if ( ErrStat >= AbortErrLev ) return
+         endif
+         if (p%NRods > 0) then
+            call VisRodsMesh_Update(p,m,y,ErrStat2,ErrMsg2)
+            call CheckError(ErrStat2, ErrMsg2)
+            if ( ErrStat >= AbortErrLev ) return
+         endif
+      endif
 
    CONTAINS
 
