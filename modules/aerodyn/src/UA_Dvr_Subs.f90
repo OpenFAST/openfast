@@ -1097,7 +1097,7 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, errStat, errMsg)
 
    nLD = 6 ! HACK
    out%outLine(nDV+1:nDV+nLD)       = dvr%LD_x%q(1:nLD)
-   out%outLine(nDV+nLD+1:nDV+nLD+3) = dvr%LD_y%qd(4:6)
+   out%outLine(nDV+nLD+1:nDV+nLD+3) = dvr%LD_y%xdd(1:3)
 
  
    !out%outLine(nDV+1:nDV+nAD) = yADI%AD%rotors%WriteOutput     ! AeroDyn WriteOutputs

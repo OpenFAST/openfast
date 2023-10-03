@@ -1,7 +1,15 @@
 !**********************************************************************************************************************************
-!> LinDyn, module for linear dynamical system with mass, stiffness and damping matrix
-! ..................................................................................................................................
-!! ## LICENSinG
+!> LinDyn, module for a second order linear dynamical system with mass, stiffness and damping matrix
+!!   
+!!  The state is q = [x; xdot], of shape nq = 2*nx
+!!  The input is F_ext of shape nx
+!!  The equation of motion is:
+!!   
+!!     qdot = [xdot ] = [  0              I    ] [ x   ]  + [ 0    ] F_ext
+!!            [xddot]   [-M^{-1} K   -M^{-1} C ] [ xdot]  + [M^{-1}]
+!!  
+!! ..................................................................................................................................
+!! ## Licensing
 !! Copyright (C) 2012-2013, 2015-2016  National Renewable Energy Laboratory
 !!
 !!    This file is part of LinDyn.
@@ -111,86 +119,30 @@ subroutine LD_Init(InitInp, u, p, x, xd, z, OtherState, y, m, InitOut, errStat, 
    print*,'B',p%BB(5,:)
    print*,'B',p%BB(6,:)
 
-   ! --- Allocate STates
-   call AllocAry( x%q    , p%nq,'DOFs' , errStat,errMsg); if(Failed()) return
-   x%q(     1:p%nx) = InitInp%x0
-   x%q(p%nx+1:p%nq) = InitInp%xd0
+   ! --- Allocate States
+   call AllocAry( x%q    , p%nq, 'DOFs', errStat, errMsg); if(Failed()) return
+   call LD_SetInitialConditions(x, InitInp%x0, InitInp%xd0, errStat, errMsg); if(Failed()) return
 
    ! allocate OtherState%xdot if using multi-step method; initialize n
-   if ( ( p%IntMethod .eq. 2) .OR. ( p%IntMethod .eq. 3)) THEN
+   if ( ( p%IntMethod .eq. 2) .OR. ( p%IntMethod .eq. 3)) then
        allocate( OtherState%xdot(4), STAT=errStat2); errMsg2='Error allocating OtherState%xdot'
        if(Failed()) return
    endif
 
-   ! --- Initialize Misc Variables:
+   ! --- Initialize Misc Variables
 
-!    ! Define initial guess (set up mesh first) for the system inputs here:
-!    call Init_meshes(u, y, InitInp, errStat, errMsg); if(Failed()) return
    ! --- Guess inputs
    call AllocAry(u%Fext, p%nx, 'Fext', errStat2, errMsg2); if(Failed()) return
    u%Fext=0.0_ReKi
 
-   ! --- Outputs
-   call AllocAry(y%qd, p%nx, 'qd', errStat2, errMsg2); if(Failed()) return
-   y%qd = 0.0_ReKi
-   y%qd(1:p%nx) = InitInp%xd0
-
-   ! --- Write Outputs
-   p%NumOuts = 0
-!    ! Setting p%OutParam from OutList
-!    call SetOutParam(InputFileData%OutList, InputFileData%NumOuts, p, errStat, errMsg); if(Failed()) return
-!   
-   call AllocAry( m%AllOuts, p%NumOuts, "LinDyn AllOut", errStat,errMsg ); if(Failed()) return
-   m%AllOuts(:) = 0.0_ReKi
-   call AllocAry( y%WriteOutput,        p%NumOuts,'WriteOutput',   errStat,errMsg); if(Failed()) return
-   call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',errStat,errMsg); if(Failed()) return
-   call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',errStat,errMsg); if(Failed()) return
-   y%WriteOutput(1:p%NumOuts) = 0.0
-   !InitOut%WriteOutputHdr(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Name
-   !InitOut%WriteOutputUnt(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Units     
+   ! --- Outputs &  Write Outputs
+   call Init_Outputs(p, m, y, InitInp, InitOut, errStat, errMsg); if(Failed()) return
    InitOut%Ver = LD_Ver
-!       
-!    if (InitInp%Linearize) then
-!       ! TODO The linearization features are in place but waiting for glue-code changes, and testing.
-!       call SeterrStat( ErrID_Fatal, 'LinDyn linearization analysis is currently not supported by the glue code.', errStat, errMsg, 'LD_Init');
-!       if(Failed())return
-!       !Appropriate Jacobian row/column names and rotating-frame flags here:   
-!       call AllocAry(InitOut%LinNames_y, 6+p%NumOuts , 'LinNames_y', errStat, errMsg); if(Failed()) return
-!       call AllocAry(InitOut%RotFrame_y, 6+p%NumOuts , 'RotFrame_y', errStat, errMsg); if(Failed()) return
-!       call AllocAry(InitOut%LinNames_x, 2*p%nCB     , 'LinNames_x', errStat, errMsg); if(Failed()) return
-!       call AllocAry(InitOut%RotFrame_x, 2*p%nCB     , 'RotFrame_x', errStat, errMsg); if(Failed()) return
-!       call AllocAry(InitOut%DerivOrder_x, 2*p%nCB   , 'DerivOrd_x', errStat, errMsg); if(Failed()) return
-!       call AllocAry(InitOut%LinNames_u, N_inPUTS    , 'LinNames_u', errStat, errMsg); if(Failed()) return
-!       call AllocAry(InitOut%RotFrame_u, N_inPUTS    , 'RotFrame_u', errStat, errMsg); if(Failed()) return
-!       call AllocAry(InitOut%IsLoad_u  , N_inPUTS    , 'IsLoad_u'  , errStat, errMsg); if(Failed()) return
-!       InitOut%DerivOrder_x(:)=2
-!       ! LinNames_y
-!       do I=1,3; 
-!           InitOut%LinNames_y(I)   = 'Interface node '//XYZ(I)//' force, N' 
-!           InitOut%LinNames_y(I+3) = 'Interface node '//XYZ(I)//' moment, Nm' 
-!       enddo
-!       do i=1,p%NumOuts
-!           InitOut%LinNames_y(N_outPUTS+i) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
-!       end do
-!       ! LinNames_u
-!       do I=1,3;
-!           InitOut%LinNames_u(I+ 0) = 'Interface node '//XYZ(I)//' translation displacement, m'
-!           InitOut%LinNames_u(I+ 3) = 'Interface node '//XYZ(I)//' rotation, rad'
-!           InitOut%LinNames_u(I+ 6) = 'Interface node '//XYZ(I)//' translation velocity, m/s'
-!           InitOut%LinNames_u(I+ 9) = 'Interface node '//XYZ(I)//' rotation velocity, rad/s'
-!           InitOut%LinNames_u(I+12) = 'Interface node '//XYZ(I)//' translation acceleration, m/s^2'
-!           InitOut%LinNames_u(I+15) = 'Interface node '//XYZ(I)//' rotation acceleration, rad/s^2'
-!       enddo
-!       ! LinNames_x
-!       do I=1,p%nCB; 
-!           InitOut%LinNames_x(I)       = 'Mode '//trim(Num2LStr(p%ActiveCBDOF(I)))//' displacement, -';
-!           InitOut%LinNames_x(I+p%nCB) = 'Mode '//trim(Num2LStr(p%ActiveCBDOF(I)))//' velocity, -';
-!       enddo
-!       InitOut%RotFrame_x = .false. ! note that meshes are in the global, not rotating frame
-!       InitOut%RotFrame_y = .false. ! note that meshes are in the global, not rotating frame
-!       InitOut%RotFrame_u = .false. ! note that meshes are in the global, not rotating frame
-!       InitOut%IsLoad_u   = .false. ! the inputs are not loads but kinematics
-!    end if
+
+   ! --- Linearization
+   !if (InitInp%Linearize) then
+      call Init_Lin(p, InitOut, errStat, errMsg); if(Failed()) return
+   !endif
 ! 
 !    ! --- Summary file 
 !    if (InputFileData%SumPrint) then
@@ -207,12 +159,34 @@ contains
    end subroutine CleanUp
 end subroutine LD_Init
 !----------------------------------------------------------------------------------------------------------------------------------
+subroutine LD_SetInitialConditions(x, x0, xd0, errStat, errMsg)
+   type(LD_ContinuousStateType), intent(inout) :: x       !< Initial continuous states
+   real(ReKi),                   intent(in)    :: x0(:)
+   real(ReKi),                   intent(in)    :: xd0(:)
+   integer(IntKi),               intent(out)   :: errStat !< Error status of the operation
+   character(*),                 intent(out)   :: errMsg  !< Error message if errStat /= ErrID_None
+   integer :: nx
+   nx = int(size(x%q)/2)
+   errStat = ErrID_Fatal
+   if (size(x0)/=size(xd0)) then
+      errMsg ='Shape of x0 and xd0 should match when setting intial conditions'; return
+   endif
+   if (size(x0)/=nx) then
+      errMsg ='Shape of x0 should match nx when setting intial conditions'; return
+   endif
+   errMsg  = ''
+   errStat = ErrID_None
+   x%q(   1:nx)   = x0
+   x%q(nx+1:2*nx) = xd0
+end subroutine LD_SetInitialConditions
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Allocate init input data for module based on number of degrees of freedom
 subroutine LD_InitInputData(nx, InitInp, errStat, errMsg)
    integer(IntKi),               intent(in ) :: nx        !< Number of degrees of freedom
    type(LD_InitInputType),       intent(out) :: InitInp     !< Input data for initialization routine
    integer(IntKi),               intent(out) :: errStat   !< Error status of the operation
    character(*),                 intent(out) :: errMsg    !< Error message if errStat /= ErrID_None
+   integer(IntKi)  :: iDOF
    integer(IntKi)  :: errStat2    ! Status of error message
    character(1024) :: errMsg2     ! Error message if ErrStat /= ErrID_None
    ! Initialize errStat
@@ -224,12 +198,20 @@ subroutine LD_InitInputData(nx, InitInp, errStat, errMsg)
    call AllocAry(InitInp%x0        , nx    , 'x0' , errStat2, errMsg2); if(Failed()) return
    call AllocAry(InitInp%xd0       , nx    , 'xd0', errStat2, errMsg2); if(Failed()) return
    call AllocAry(InitInp%activeDOFs, nx    , 'activeDOFs', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(InitInp%DOFsNames , nx    , 'DOFsNames' , errStat2, errMsg2); if(Failed()) return
+   call AllocAry(InitInp%DOFsUnits , nx    , 'DOFsUnits' , errStat2, errMsg2); if(Failed()) return
    InitInp%MM         = 0.0_ReKi
    InitInp%CC         = 0.0_ReKi
    InitInp%KK         = 0.0_ReKi
    InitInp%x0         = 0.0_ReKi
    InitInp%xd0        = 0.0_ReKi
    InitInp%activeDOFs = .True.
+   ! Default DOFs Names and Units
+   do iDOF=1,nx
+      InitInp%DOFsNames(iDOF)='x'//trim(num2lstr(iDOF))
+      InitInp%DOFsUnits(iDOF)='-'
+   enddo
+
 contains
    logical function Failed()
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'LD_Init' )
@@ -298,7 +280,7 @@ subroutine StateMatrices(MM, CC, KK, AA, BB, errStat, errMsg)
 
 contains
    logical function Failed()
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'LD_Init' )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'StateMatrices' )
       Failed = ErrStat >= AbortErrLev
       if (Failed) call CleanUp()
    end function Failed
@@ -309,42 +291,6 @@ contains
       if (allocated(MinvX)) deallocate(MinvX)
    end subroutine CleanUp
 end subroutine StateMatrices
-!----------------------------------------------------------------------------------------------------------------------------------
-! subroutine Init_meshes(u, y, InitInp, errStat, errMsg)
-!    type(LD_InputType),           intent(inout)  :: u           !< System inputs
-!    type(LD_OutputType),          intent(inout)  :: y           !< System outputs
-!    type(LD_InitInputType),       intent(in   )  :: InitInp     !< Input data for initialization routine
-!    integer(IntKi),                    intent(  out)  :: errStat     !< Error status of the operation
-!    character(*),                      intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
-!    ! Create the input and output meshes associated with platform loads
-!    call MeshCreate(  BlankMesh         = u%PtfmMesh       , &
-!                      IOS               = COMPONENT_inPUT  , &
-!                      Nnodes            = 1                , &
-!                      errStat           = errStat          , &
-!                      ErrMess           = errMsg           , &
-!                      TranslationDisp   = .TRUE.           , &
-!                      Orientation       = .TRUE.           , &
-!                      TranslationVel    = .TRUE.           , &
-!                      RotationVel       = .TRUE.           , &
-!                      TranslationAcc    = .TRUE.           , &
-!                      RotationAcc       = .TRUE.)
-!    if(Failed()) return
-!       
-!    ! Create the node on the mesh, the node is located at the PlatformRefzt, to match ElastoDyn
-!    call MeshPositionNode (u%PtfmMesh, 1, (/0.0_ReKi, 0.0_ReKi, InitInp%PtfmRefzt/), errStat, errMsg ); if(Failed()) return
-!    ! Create the mesh element
-!    call MeshConstructElement (  u%PtfmMesh, ELEMENT_POinT, errStat, errMsg, 1 ); if(Failed()) return
-!    call MeshCommit ( u%PtfmMesh, errStat, errMsg ); if(Failed()) return
-!    ! the output mesh is a sibling of the input:
-!    call MeshCopy( SrcMesh=u%PtfmMesh, DestMesh=y%PtfmMesh, CtrlCode=MESH_SIBLinG, IOS=COMPONENT_outPUT, &
-!                   errStat=errStat, ErrMess=errMsg, Force=.TRUE., Moment=.TRUE. )
-!    if(Failed()) return
-! CONTAinS
-!     logical function Failed()
-!         call SeterrStatSimple(errStat, errMsg, 'Init_meshes')
-!         Failed =  errStat >= AbortErrLev
-!     end function Failed
-! end subroutine Init_meshes
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 subroutine LD_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
@@ -591,7 +537,7 @@ subroutine LD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
 ! 
    ! --- Compute accelerations
    call LD_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, dxdt, errStat2, errMsg2)
-   y%qd = dxdt%q
+   y%xdd(1:p%nx) = dxdt%q(p%nx+1:p%nq)
 
    !--- Computing output:  y = Cx + Du + Fy  
 ! 
@@ -649,9 +595,9 @@ subroutine LD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, errSta
    integer(IntKi),               intent(out)   :: errStat    !< Error status of the operation
    character(*),                 intent(out)   :: errMsg     !< Error message if errStat /= ErrID_None
    ! Local variables
+   integer(IntKi)  :: iDOF
    integer(IntKi)  :: errStat2    ! Status of error message
    character(1024) :: errMsg2     ! Error message if ErrStat /= ErrID_None
-!    integer(IntKi)                                    :: I
    ! Initialize variables
    errStat   = ErrID_None           ! no error has occurred
    errMsg    = ""
@@ -668,335 +614,331 @@ subroutine LD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, errSta
    !!           GEMV(TRS, M    , N     , alpha    , A  , LDA , X  ,inCX, Beta   ,  Y         , IncY)
    !call LAPACK_GEMV('n', p%nq, p%nq  ,  1.0_ReKi, p%AA, p%nq, x%q   , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - K22 x2
    !call LAPACK_GEMV('n', p%nq, p%nx  ,  1.0_ReKi, p%BB, p%nq, u%Fext, 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - M21 \ddot{x1}
-!
+   ! --- Desactivating Constant DOFs
+   do iDOF = 1,p%nx
+      if (.not. p%activeDOFs(iDOF)) then
+         dxdt%q(iDOF     ) = 0.0_ReKi
+         dxdt%q(iDOF+p%nx) = 0.0_ReKi
+      endif
+   enddo
+
 contains
    logical function Failed()
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'LD_CalcContStateDeriv' )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'LD_CalcContStateDeriv' )
       Failed =  errStat >= AbortErrLev
    end function Failed
 end subroutine LD_CalcContStateDeriv
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!>
-! subroutine LD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg, dYdu, dXdu, dXddu, dZdu)
-!    real(DbKi),                         intent(in   ) :: t          !< Time in seconds at operating point
-!    type(LD_InputType),            intent(in   ) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-!    type(LD_ParameterType),        intent(in   ) :: p          !< Parameters
-!    type(LD_ContinuousStateType),  intent(in   ) :: x          !< Continuous states at operating point
-!    type(LD_DiscreteStateType),    intent(in   ) :: xd         !< Discrete states at operating point
-!    type(LD_ConstraintStateType),  intent(in   ) :: z          !< Constraint states at operating point
-!    type(LD_OtherStateType),       intent(in   ) :: OtherState !< Other states at operating point
-!    type(LD_OutputType),           intent(in   ) :: y          !< Output (change to inout if a mesh copy is required); 
-!                                                                    !!   Output fields are not used by this routine, but type is   
-!                                                                    !!   available here so that mesh parameter information (i.e.,  
-!                                                                    !!   connectivity) does not have to be recalculated for dYdu.
-!    type(LD_MiscVarType),          intent(inout) :: m          !< Misc/optimization variables
-!    integer(IntKi),                     intent(  out) :: errStat    !< Error status of the operation
-!    character(*),                       intent(  out) :: errMsg     !< Error message if errStat /= ErrID_None
-!    real(R8Ki), allocatable, OPTIONAL,  intent(inout) :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect 
-!                                                                    !!   to the inputs (u) [intent in to avoid deallocation]
-!    real(R8Ki), allocatable, OPTIONAL,  intent(inout) :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with 
-!                                                                    !!   respect to the inputs (u) [intent in to avoid deallocation]
-!    real(R8Ki), allocatable, OPTIONAL,  intent(inout) :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with 
-!                                                                    !!   respect to the inputs (u) [intent in to avoid deallocation]
-!    real(R8Ki), allocatable, OPTIONAL,  intent(inout) :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with 
-!                                                                    !!   respect to the inputs (u) [intent in to avoid deallocation]
-!    integer(IntKi) :: i,j  ! Loop index
-!    integer(IntKi) :: idx  ! Index of output channel in AllOuts
-!    ! Initialize errStat
-!    errStat = ErrID_None
-!    errMsg  = ''
-!    if (present(dYdu)) then
-!       ! allocate and set dYdu
-!       if (.not. allocated(dYdu)) then
-!           call AllocAry(dYdu, N_outPUTS+p%NumOuts, N_inPUTS, 'dYdu', errStat, errMsg); if(Failed()) return
-!           do i=1,size(dYdu,1); do j=1,size(dYdu,2); dYdu(i,j)=0.0_ReKi; enddo;enddo
-!       end if
-!       dYdu(1:6,1:N_inPUTS) = p%DMat(1:6,1:N_inPUTS)
-!       !dYdu is zero except if WriteOutput is the interface loads 
-!       do i = 1,p%NumOuts
-!           idx  = p%OutParam(i)%Indx
-!           if     (idx==ID_PtfFx) then; dYdu(6+i,1:N_inPUTS) = p%DMat(1,1:N_inPUTS)
-!           elseif (idx==ID_PtfFy) then; dYdu(6+i,1:N_inPUTS) = p%DMat(2,1:N_inPUTS)
-!           elseif (idx==ID_PtfFx) then; dYdu(6+i,1:N_inPUTS) = p%DMat(3,1:N_inPUTS)
-!           elseif (idx==ID_PtfMz) then; dYdu(6+i,1:N_inPUTS) = p%DMat(4,1:N_inPUTS)
-!           elseif (idx==ID_PtfMy) then; dYdu(6+i,1:N_inPUTS) = p%DMat(5,1:N_inPUTS)
-!           elseif (idx==ID_PtfMz) then; dYdu(6+i,1:N_inPUTS) = p%DMat(6,1:N_inPUTS)
-!           else                       ; dYdu(6+i,1:N_inPUTS) = 0.0_ReKi
-!           endif 
-!       end do
-!   end if
-!    if (present(dXdu)) then
-!       ! allocate and set dXdu
-!       if (.not. allocated(dXdu)) then
-!           call AllocAry(dXdu, 2*p%nCB, N_inPUTS, 'dXdu', errStat, errMsg); if(Failed()) return
-!           do i=1,size(dXdu,1); do j=1,size(dXdu,2); dXdu(i,j)=0.0_ReKi; enddo;enddo
-!       end if
-!       dXdu(1:2*p%nCB,1:N_inPUTS) = p%BMat(1:2*p%nCB,1:N_inPUTS)
-!    end if
-!    if (present(dXddu)) then
-!    end if
-!    if (present(dZdu)) then
-!    end if
-! CONTAinS
-!     logical function Failed()
-!         call SeterrStatSimple(errStat, errMsg, 'LD_JacobianPInput')
-!         Failed =  errStat >= AbortErrLev
-!     end function Failed
-! end subroutine LD_JacobianPInput
-! !----------------------------------------------------------------------------------------------------------------------------------
-! !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-! !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
-! subroutine LD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg, dYdx, dXdx, dXddx, dZdx )
-! !..................................................................................................................................
-!    real(DbKi),                         intent(in   ) :: t          !< Time in seconds at operating point
-!    type(LD_InputType),            intent(in   ) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-!    type(LD_ParameterType),        intent(in   ) :: p          !< Parameters
-!    type(LD_ContinuousStateType),  intent(in   ) :: x          !< Continuous states at operating point
-!    type(LD_DiscreteStateType),    intent(in   ) :: xd         !< Discrete states at operating point
-!    type(LD_ConstraintStateType),  intent(in   ) :: z          !< Constraint states at operating point
-!    type(LD_OtherStateType),       intent(in   ) :: OtherState !< Other states at operating point
-!    type(LD_OutputType),           intent(in   ) :: y          !< Output (change to inout if a mesh copy is required); 
-!                                                                    !!   Output fields are not used by this routine, but type is   
-!                                                                    !!   available here so that mesh parameter information (i.e.,  
-!                                                                    !!   connectivity) does not have to be recalculated for dYdx.
-!    type(LD_MiscVarType),          intent(inout) :: m          !< Misc/optimization variables
-!    integer(IntKi),                     intent(  out) :: errStat    !< Error status of the operation
-!    character(*),                       intent(  out) :: errMsg     !< Error message if errStat /= ErrID_None
-!    real(R8Ki), allocatable, OPTIONAL,  intent(inout) :: dYdx(:,:)  !< Partial derivatives of output functions
-!                                                                    !!   (Y) with respect to the continuous
-!                                                                    !!   states (x) [intent in to avoid deallocation]
-!    real(R8Ki), allocatable, OPTIONAL,  intent(inout) :: dXdx(:,:)  !< Partial derivatives of continuous state
-!                                                                    !!   functions (X) with respect to
-!                                                                    !!   the continuous states (x) [intent in to avoid deallocation]
-!    real(R8Ki), allocatable, OPTIONAL,  intent(inout) :: dXddx(:,:) !< Partial derivatives of discrete state
-!                                                                    !!   functions (Xd) with respect to
-!                                                                    !!   the continuous states (x) [intent in to avoid deallocation]
-!    real(R8Ki), allocatable, OPTIONAL,  intent(inout) :: dZdx(:,:)  !< Partial derivatives of constraint state
-!                                                                    !!   functions (Z) with respect to
-!                                                                    !!   the continuous states (x) [intent in to avoid deallocation]
-!    integer(IntKi) :: i,j    ! Loop index
-!    integer(IntKi) :: idx  ! Index of output channel in AllOuts
-!    integer(IntKi) :: iDOF ! Mode number
-!    ! Initialize errStat
-!    errStat = ErrID_None
-!    errMsg  = ''
-!    if (present(dYdx)) then
-!       ! allocate and set dYdx
-!       if (.not. allocated(dYdx)) then
-!           call AllocAry(dYdx, N_outPUTS+p%NumOuts, 2*p%nCB, 'dYdx', errStat, errMsg); if(Failed()) return
-!           do i=1,size(dYdx,1); do j=1,size(dYdx,2); dYdx(i,j)=0.0_ReKi; enddo;enddo
-!       end if
-!       dYdx(1:6,1:2*p%nCB) = p%CMat(1:6, 1:2*p%nCB)
-!       ! WriteOutputs
-!       do i = 1,p%NumOuts
-!           idx  = p%OutParam(i)%Indx
-!           iDOF = mod(idx-ID_QSTART, p%nCB)+1
-!            ! if output is an interface load dYdx is a row of the Cmatrix
-!            if     (idx==ID_PtfFx) then; dYdx(6+i,1:2*p%nCB) = p%CMat(1,1:2*p%nCB)
-!            elseif (idx==ID_PtfFy) then; dYdx(6+i,1:2*p%nCB) = p%CMat(2,1:2*p%nCB)
-!            elseif (idx==ID_PtfFx) then; dYdx(6+i,1:2*p%nCB) = p%CMat(3,1:2*p%nCB)
-!            elseif (idx==ID_PtfMx) then; dYdx(6+i,1:2*p%nCB) = p%CMat(4,1:2*p%nCB)
-!            elseif (idx==ID_PtfMy) then; dYdx(6+i,1:2*p%nCB) = p%CMat(5,1:2*p%nCB)
-!            elseif (idx==ID_PtfMz) then; dYdx(6+i,1:2*p%nCB) = p%CMat(6,1:2*p%nCB)
-!            ! Below we look at the index, we assumed an order for the outputs
-!            ! where after the index ID_Qstart, the AllOutputs are: Q,QDot and Qf
-!            ! An alternative coulbe to look at the name of the DOF instead:
-!            ! e.g. if (index(p%OutParam,'CBQ_')>0) then ... (see SetOutParam) 
-!            else if ((idx-ID_QStart>=  0    ) .and. (idx-ID_QStart<p%nCB) ) then
-!                ! Output is a DOF position, dYdx has a 1 at the proper location
-!                dYdx(6+i,1:2*p%nCB   ) = 0.0_ReKi
-!                dYdx(6+i,        iDOF) = 1.0_ReKi ! TODO TODO TODO ALLDOF_2_DOF
-!            else if ((idx-ID_QStart>=  p%nCB) .and. (idx-ID_QStart<2*p%nCB) ) then
-!                ! Output is a DOF velocity, dYdx has a 1 at the proper location
-!                dYdx(6+i,1:2*p%nCB   ) = 0.0_ReKi
-!                dYdx(6+i,p%nCB + iDOF) = 1.0_ReKi ! TODO TODO TODO ALLDOF_2_DOF
-!            else ! e.g. WaveElevation or CB Forces
-!                dYdx(6+i,1:2*p%nCB  ) = 0.0_ReKi
-!            endif 
-!       end do
-!    end if
-!    if (present(dXdx)) then
-!       ! allocate and set dXdx
-!       if (.not. allocated(dXdx)) then
-!           call AllocAry(dXdx, 2*p%nCB, 2*p%nCB, 'dXdx', errStat, errMsg); if(Failed()) return
-!           do i=1,size(dXdx,1); do j=1,size(dXdx,2); dXdx(i,j)=0.0_ReKi; enddo;enddo
-!       end if
-!       dXdx(1:2*p%nCB,1:2*p%nCB) = p%AMat(1:2*p%nCB,1:2*p%nCB)
-!    end if
-!    if (present(dXddx)) then
-!    end if
-!    if (present(dZdx)) then
-!    end if
-! CONTAinS
-!     logical function Failed()
-!         call SeterrStatSimple(errStat, errMsg, 'LD_JacobianPInput')
-!         Failed =  errStat >= AbortErrLev
-!     end function Failed
-! end subroutine LD_JacobianPContState
-! !----------------------------------------------------------------------------------------------------------------------------------
-! !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-! !! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
-! subroutine LD_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg, dYdxd, dXdxd, dXddxd, dZdxd )
-! !..................................................................................................................................
-! 
-!    real(DbKi),                                intent(in   )           :: t          !< Time in seconds at operating point
-!    type(LD_InputType),                   intent(in   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-!    type(LD_ParameterType),               intent(in   )           :: p          !< Parameters
-!    type(LD_ContinuousStateType),         intent(in   )           :: x          !< Continuous states at operating point
-!    type(LD_DiscreteStateType),           intent(in   )           :: xd         !< Discrete states at operating point
-!    type(LD_ConstraintStateType),         intent(in   )           :: z          !< Constraint states at operating point
-!    type(LD_OtherStateType),              intent(in   )           :: OtherState !< Other states at operating point
-!    type(LD_OutputType),                  intent(in   )           :: y          !< Output (change to inout if a mesh copy is required); 
-!                                                                                     !!   Output fields are not used by this routine, but type is   
-!                                                                                     !!   available here so that mesh parameter information (i.e.,  
-!                                                                                     !!   connectivity) does not have to be recalculated for dYdxd.
-!    type(LD_MiscVarType),                 intent(inout)           :: m          !< Misc/optimization variables
-!    integer(IntKi),                            intent(  out)           :: errStat    !< Error status of the operation
-!    character(*),                              intent(  out)           :: errMsg     !< Error message if errStat /= ErrID_None
-!    real(R8Ki), allocatable, OPTIONAL,         intent(inout)           :: dYdxd(:,:) !< Partial derivatives of output functions
-!                                                                                     !!  (Y) with respect to the discrete
-!                                                                                     !!  states (xd) [intent in to avoid deallocation]
-!    real(R8Ki), allocatable, OPTIONAL,         intent(inout)           :: dXdxd(:,:) !< Partial derivatives of continuous state
-!                                                                                     !!   functions (X) with respect to the
-!                                                                                     !!   discrete states (xd) [intent in to avoid deallocation]
-!    real(R8Ki), allocatable, OPTIONAL,         intent(inout)           :: dXddxd(:,:)!< Partial derivatives of discrete state
-!                                                                                     !!   functions (Xd) with respect to the
-!                                                                                     !!   discrete states (xd) [intent in to avoid deallocation]
-!    real(R8Ki), allocatable, OPTIONAL,         intent(inout)           :: dZdxd(:,:) !< Partial derivatives of constraint state
-!                                                                                     !!   functions (Z) with respect to the
-!    ! Initialize errStat
-!    errStat = ErrID_None
-!    errMsg  = ''
-!    if (present(dYdxd)) then
-!    end if
-!    if (present(dXdxd)) then
-!    end if
-!    if (present(dXddxd)) then
-!    end if
-!    if (present(dZdxd)) then
-!    end if
-! end subroutine LD_JacobianPDiscState
-! !----------------------------------------------------------------------------------------------------------------------------------
-! !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-! !! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
-! subroutine LD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg, dYdz, dXdz, dXddz, dZdz )
-! !..................................................................................................................................
-!    real(DbKi),                                intent(in   )           :: t          !< Time in seconds at operating point
-!    type(LD_InputType),                   intent(in   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-!    type(LD_ParameterType),               intent(in   )           :: p          !< Parameters
-!    type(LD_ContinuousStateType),         intent(in   )           :: x          !< Continuous states at operating point
-!    type(LD_DiscreteStateType),           intent(in   )           :: xd         !< Discrete states at operating point
-!    type(LD_ConstraintStateType),         intent(in   )           :: z          !< Constraint states at operating point
-!    type(LD_OtherStateType),              intent(in   )           :: OtherState !< Other states at operating point
-!    type(LD_OutputType),                  intent(in   )           :: y          !< Output (change to inout if a mesh copy is required); 
-!                                                                                     !!   Output fields are not used by this routine, but type is   
-!                                                                                     !!   available here so that mesh parameter information (i.e.,  
-!                                                                                     !!   connectivity) does not have to be recalculated for dYdz.
-!    type(LD_MiscVarType),                 intent(inout)           :: m          !< Misc/optimization variables
-!    integer(IntKi),                            intent(  out)           :: errStat    !< Error status of the operation
-!    character(*),                              intent(  out)           :: errMsg     !< Error message if errStat /= ErrID_None
-!    real(R8Ki), allocatable, OPTIONAL,         intent(inout)           :: dYdz(:,:)  !< Partial derivatives of output
-!                                                                                     !!  functions (Y) with respect to the
-!                                                                                     !!  constraint states (z) [intent in to avoid deallocation]
-!    real(R8Ki), allocatable, OPTIONAL,         intent(inout)           :: dXdz(:,:)  !< Partial derivatives of continuous
-!                                                                                     !!  state functions (X) with respect to
-!                                                                                     !!  the constraint states (z) [intent in to avoid deallocation]
-!    real(R8Ki), allocatable, OPTIONAL,         intent(inout)           :: dXddz(:,:) !< Partial derivatives of discrete state
-!                                                                                     !!  functions (Xd) with respect to the
-!                                                                                     !!  constraint states (z) [intent in to avoid deallocation]
-!    real(R8Ki), allocatable, OPTIONAL,         intent(inout)           :: dZdz(:,:)  !< Partial derivatives of constraint
-!    ! Initialize errStat
-!    errStat = ErrID_None
-!    errMsg  = ''
-!    if (present(dYdz)) then
-!    end if
-!    if (present(dXdz)) then
-!    end if
-!    if (present(dXddz)) then
-!    end if
-!    if (present(dZdz)) then
-!    end if
-! end subroutine LD_JacobianPConstrState
-! !----------------------------------------------------------------------------------------------------------------------------------
-! !> Routine to pack the data structures representing the operating points into arrays for linearization.
-! subroutine LD_GetOP( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
-!    real(DbKi),                           intent(in   )           :: t          !< Time in seconds at operating point
-!    type(LD_InputType),              intent(in   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-!    type(LD_ParameterType),          intent(in   )           :: p          !< Parameters
-!    type(LD_ContinuousStateType),    intent(in   )           :: x          !< Continuous states at operating point
-!    type(LD_DiscreteStateType),      intent(in   )           :: xd         !< Discrete states at operating point
-!    type(LD_ConstraintStateType),    intent(in   )           :: z          !< Constraint states at operating point
-!    type(LD_OtherStateType),         intent(in   )           :: OtherState !< Other states at operating point
-!    type(LD_OutputType),             intent(in   )           :: y          !< Output at operating point
-!    type(LD_MiscVarType),            intent(inout)           :: m          !< Misc/optimization variables
-!    integer(IntKi),                       intent(  out)           :: errStat    !< Error status of the operation
-!    character(*),                         intent(  out)           :: errMsg     !< Error message if errStat /= ErrID_None
-!    real(ReKi), allocatable, OPTIONAL,    intent(inout)           :: u_op(:)    !< values of linearized inputs
-!    real(ReKi), allocatable, OPTIONAL,    intent(inout)           :: y_op(:)    !< values of linearized outputs
-!    real(ReKi), allocatable, OPTIONAL,    intent(inout)           :: x_op(:)    !< values of linearized continuous states
-!    real(ReKi), allocatable, OPTIONAL,    intent(inout)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
-!    real(ReKi), allocatable, OPTIONAL,    intent(inout)           :: xd_op(:)   !< values of linearized discrete states
-!    real(ReKi), allocatable, OPTIONAL,    intent(inout)           :: z_op(:)    !< values of linearized constraint states
-!    integer(IntKi)                    :: I
-!    type(LD_ContinuousStateType) :: dx          !< derivative of continuous states at operating point
-!    ! Initialize errStat
-!    errStat = ErrID_None
-!    errMsg  = ''
-! 
-!    if ( present( u_op ) ) then
-!        if (.not. allocated(u_op)) then
-!            call AllocAry(u_op, N_inPUTS, 'u_op', errStat, errMsg); if(Failed())return
-!        endif
-!        u_op(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
-!        u_op(4:6)   = GetSmllRotAngs(u%PtfmMesh%Orientation(:,:,1), errStat, errMsg); if(Failed())return
-!        u_op(7:9  ) = u%PtfmMesh%TranslationVel(:,1)
-!        u_op(10:12) = u%PtfmMesh%RotationVel   (:,1)
-!        u_op(13:15) = u%PtfmMesh%TranslationAcc(:,1)
-!        u_op(16:18) = u%PtfmMesh%RotationAcc   (:,1)
-!    end if
-! 
-!    if ( present( y_op ) ) then
-!        if (.not. allocated(y_op)) then
-!            call AllocAry(y_op, N_outPUTS+p%NumOuts, 'y_op', errStat, errMsg); if(Failed())return
-!        endif
-!        ! Update the output mesh
-!        y_op(1:3)=y%PtfmMesh%Force(1:3,1)
-!        y_op(4:6)=y%PtfmMesh%Moment(1:3,1)
-!        do i=1,p%NumOuts         
-!            y_op(i+N_outPUTS) = y%WriteOutput(i)
-!        end do      
-!    end if
-! 
-!    if ( present( x_op ) ) then
-!        if (.not. allocated(x_op)) then
-!            call AllocAry(x_op, 2*p%nCB, 'x_op', errStat, errMsg); if (Failed())return
-!        endif
-!        x_op(1:p%nCB)         = x%qm(1:p%nCB)
-!        x_op(p%nCB+1:2*p%nCB) = x%qmdot(1:p%nCB)
-!    end if
-! 
-!    if ( present( dx_op ) ) then
-!        if (.not. allocated(dx_op)) then
-!            call AllocAry(dx_op, 2*p%nCB, 'dx_op', errStat, errMsg); if (Failed())return
-!        endif
-!        call LD_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, dx, errStat, errMsg); if(Failed()) return
-!        dx_op(1:p%nCB)         = dx%qm(1:p%nCB)
-!        dx_op(p%nCB+1:2*p%nCB) = dx%qmdot(1:p%nCB)
-!    end if
-! 
-!    if ( present( xd_op ) ) then
-!    end if
-!    
-!    if ( present( z_op ) ) then
-!    end if
-! 
-! contains
-!     logical function Failed()
-!         call SeterrStatSimple(errStat, errMsg, 'LD_GetOP')
-!         Failed =  errStat >= AbortErrLev
-!     end function Failed
-! end subroutine LD_GetOP
-! !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Setup outputs
+subroutine Init_Outputs(p, m, y, InitInp, InitOut, errStat, errMsg)
+   ! character(ChanLen),   intent(in)    :: OutList(:) !< list of user-requested outputs
+   type(LD_ParameterType), intent(inout) :: p       !< module parameters
+   type(LD_MiscVarType),   intent(inout) :: m       !< module misc
+   type(LD_OutputType),    intent(inout) :: y       !< module outputs
+   type(LD_InitInputType), intent(in   ) :: InitInp !< module init inputs
+   type(LD_InitOutputType),intent(inout) :: InitOut !< module init outputs
+   integer(intki),         intent(out)   :: errStat !< error status code
+   character(*),           intent(out)   :: errMsg  !< error message, if an error occurred
+   integer         :: errStat2    ! temporary (local) error status
+   character(1024) :: errMsg2     ! Error message if ErrStat /= ErrID_None
+   integer         :: i, iOut
+   errStat = ErrID_None
+   errMsg = ""
+
+   ! --- Regular outputs
+   call AllocAry(y%xdd, p%nx, 'qd', errStat2, errMsg2); if(Failed()) return
+   y%xdd = 0.0_ReKi
+
+   ! --- Write Outputs
+   p%NumOuts = (p%nx) * (1 + 1 + 1 + 1) ! Pos, Vel, Acc, Force
+
+   !call AllocAry(m%AllOuts, p%NumOuts, "LinDyn AllOut", errStat,errMsg ); if(Failed()) return; m%AllOuts(:) = 0.0_ReKi
+   call AllocAry(y%WriteOutput,         p%NumOuts,'WriteOutput',   errStat,errMsg); if(Failed()) return
+   call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',errStat,errMsg); if(Failed()) return
+   call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',errStat,errMsg); if(Failed()) return
+   y%WriteOutput(1:p%NumOuts) = 0.0
+
+   ! Sanity checks
+   if (.not. allocated(InitInp%DOFsNames)) then
+      errStat2 = errID_Fatal; errMsg2='DOFs Names not allocated'; if(Failed()) return
+   else
+      if(size(InitInp%DOFsNames)/=p%nx) then
+         errStat2 = errID_Fatal; errMsg2='Shape of DOFs Names incorrect'; if(Failed()) return
+      endif
+      if (.not.allocated(InitInp%DOFsUnits)) then
+         errStat2 = errID_Fatal; errMsg2='DOFs Units should be allocated if Names are provided'; if(Failed()) return
+      endif
+      if(size(InitInp%DOFsUnits)/=p%nx) then
+         errStat2 = errID_Fatal; errMsg2='Shape of DOFs Units incorrect'; if(Failed()) return
+      endif
+   endif
+
+   iOut = 0 ! Cumulative counter
+   call SetWriteOutputsForDOFs(''  ) ! Positions
+   call SetWriteOutputsForDOFs('d' ) ! Velocities
+   call SetWriteOutputsForDOFs('dd') ! Accelerations
+   call SetWriteOutputsForDOFs('f' ) ! Forces
+
+   ! If using OutParam instead
+   !InitOut%WriteOutputHdr(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Name
+   !InitOut%WriteOutputUnt(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Units     
+   do i = 1,p%NumOuts
+      print*,i, InitOut%WriteOutputHdr(i), InitOut%WriteOutputUnt(i)
+   enddo
+   
+contains
+   subroutine SetWriteOutputsForDOFs(sPrefix)
+      character(len=*) :: sPrefix
+      do i = 1, p%nx
+         iOut = iOut+1
+         InitOut%WriteOutputHdr(iOut) = trim(InitInp%prefix)//trim(sPrefix)//trim(InitInp%DOFsNames(i))
+         ! Units 
+         if (sPrefix == '')   InitOut%WriteOutputUnt(iOut) ='('//trim(InitInp%DOFsUnits(i))//')'
+         if (sPrefix == 'd')  InitOut%WriteOutputUnt(iOut) ='('//trim(InitInp%DOFsUnits(i))//'/s)'
+         if (sPrefix == 'dd') InitOut%WriteOutputUnt(iOut) ='('//trim(InitInp%DOFsUnits(i))//'/s^2)'
+         if (sPrefix == 'f') then 
+            if     (InitInp%DOFsUnits(i)=='m')   then; InitOut%WriteOutputUnt(iOut) ='(N)' ;
+            elseif (InitInp%DOFsUnits(i)=='rad') then; InitOut%WriteOutputUnt(iOut) ='(Nm)' ;
+            else;    InitOut%WriteOutputUnt(iOut) ='(-)'
+            endif
+         endif
+      enddo
+   endsubroutine
+
+   logical function Failed()
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'Init_Outputs' )
+      Failed =  errStat >= AbortErrLev
+   end function Failed
+end subroutine Init_Outputs
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Setup Linearization data
+subroutine Init_Lin(p, InitOut, errStat, errMsg)
+   type(LD_ParameterType), intent(in   ) :: p       !< module parameters
+   type(LD_InitOutputType),intent(inout) :: InitOut !< module init outputs
+   integer(intki),         intent(out)   :: errStat !< error status code
+   character(*),           intent(out)   :: errMsg  !< error message, if an error occurred
+   integer                 :: errStat2                                        ! temporary (local) error status
+   character(1024)         :: errMsg2     ! Error message if ErrStat /= ErrID_None
+   integer                 :: i, nu
+   errStat = ErrID_None
+   errMsg = ""
+   nu = p%nx
+
+!   LinNames_y                      {:}           -         -        "Names of the outputs used in linearization" -
+!   LinNames_x                      {:}           -         -        "Names of the continuous states used in linearization" -
+!   LinNames_u                      {:}           -         -        "Names of the inputs used in linearization" -
+!   RotFrame_y                      {:}           -         -        "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame"	-
+!   RotFrame_x                      {:}           -         -        "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame"	-
+!   RotFrame_u                      {:}           -         -        "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
+!   IsLoad_u                        {:}           -         -        "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+!   DerivOrder_x                    {:}           -         -        "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization" -
+   !Appropriate Jacobian row/column names and rotating-frame flags here:   
+   call AllocAry(InitOut%LinNames_y  , p%NumOuts , 'LinNames_y', errStat, errMsg); if(Failed()) return
+   call AllocAry(InitOut%RotFrame_y  , p%NumOuts , 'RotFrame_y', errStat, errMsg); if(Failed()) return
+   call AllocAry(InitOut%LinNames_x  , p%nq      , 'LinNames_x', errStat, errMsg); if(Failed()) return
+   call AllocAry(InitOut%RotFrame_x  , p%nq      , 'RotFrame_x', errStat, errMsg); if(Failed()) return
+   call AllocAry(InitOut%DerivOrder_x, p%nq      , 'DerivOrd_x', errStat, errMsg); if(Failed()) return
+   call AllocAry(InitOut%LinNames_u  , nu        , 'LinNames_u', errStat, errMsg); if(Failed()) return
+   call AllocAry(InitOut%RotFrame_u  , nu        , 'RotFrame_u', errStat, errMsg); if(Failed()) return
+   call AllocAry(InitOut%IsLoad_u    , nu        , 'IsLoad_u'  , errStat, errMsg); if(Failed()) return
+   InitOut%DerivOrder_x(:)=2
+   ! LinNames_y
+   do i=1, p%NumOuts
+      InitOut%LinNames_y(i) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
+      print*,'y',i, trim(InitOut%LinNames_y(i))
+   enddo
+   ! LinNames_u
+   do i=1, p%nx
+      InitOut%LinNames_u(i) = trim(InitOut%WriteOutputHdr(3*p%nx+ i))//', '//trim(InitOut%WriteOutputUnt(3*p%nx+i))
+      print*,'u',i, trim(InitOut%LinNames_u(i))
+   enddo
+   ! LinNames_x
+   do I=1,p%nq; 
+       InitOut%LinNames_x(I) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
+      print*,'x',i, trim(InitOut%LinNames_x(i))
+   enddo
+   InitOut%RotFrame_x = .false.
+   InitOut%RotFrame_y = .false.
+   InitOut%RotFrame_u = .false.
+   InitOut%IsLoad_u   = .true. 
+   !   
+contains
+   logical function Failed()
+      if (errStat >= AbortErrLev) errMsg = 'LD_JacobianLin:'//trim(errMsg)
+      Failed =  errStat >= AbortErrLev
+   end function Failed
+end subroutine Init_Lin
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Jacobians with respect to inputs (u)
+subroutine LD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg, dYdu, dXdu, dXddu, dZdu)
+   real(DbKi),                        intent(in   ) :: t          !< Time in seconds at operating point
+   type(LD_InputType),                intent(in   ) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   type(LD_ParameterType),            intent(in   ) :: p          !< Parameters
+   type(LD_ContinuousStateType),      intent(in   ) :: x          !< Continuous states at operating point
+   type(LD_DiscreteStateType),        intent(in   ) :: xd         !< Discrete states at operating point
+   type(LD_ConstraintStateType),      intent(in   ) :: z          !< Constraint states at operating point
+   type(LD_OtherStateType),           intent(in   ) :: OtherState !< Other states at operating point
+   type(LD_OutputType),               intent(in   ) :: y          !< Output (change to inout if a mesh copy is required); 
+   type(LD_MiscVarType),              intent(inout) :: m          !< Misc/optimization variables
+   integer(IntKi),                    intent(  out) :: errStat    !< Error status of the operation
+   character(*),                      intent(  out) :: errMsg     !< Error message if errStat /= ErrID_None
+   real(R8Ki), allocatable, optional, intent(inout) :: dYdu(:,:)  !< Jacobians of output functions (Y) with respect to (u)
+   real(R8Ki), allocatable, optional, intent(inout) :: dXdu(:,:)  !< Jacobians of continuous state functions (X) with respect to (u)
+   real(R8Ki), allocatable, optional, intent(inout) :: dXddu(:,:) !< Jacobians of discrete state functions (Xd) with respect to (u)
+   real(R8Ki), allocatable, optional, intent(inout) :: dZdu(:,:)  !< Jacobians of constraint state functions (Z) with respect to (u)
+   integer(IntKi) :: i, nu  ! Loop index
+   ! Initialize errStat
+   errStat = ErrID_None
+   errMsg  = ''
+   nu = p%nx
+   if (present(dYdu)) then
+      if (.not. allocated(dYdu)) then
+          call AllocAry(dYdu, p%NumOuts, nu, 'dYdu', errStat, errMsg); if(Failed()) return
+          dYdu(:,:) = 0.0_ReKi
+      end if
+      !dYdu(1        :  p%nx, :)  = 0.0_ReKi        ! Positions 
+      dYdu(  p%nx+1 : 3*p%nx, :)  = p%BB            ! Velocities and accelerations
+      do i=1, p%nx ; dYdu(3*p%nx+i, i)  = 1.0_ReKi;  enddo ! Forces (which are inputs)
+   end if
+   if (present(dXdu)) then
+      if (.not. allocated(dXdu)) then
+          call AllocAry(dXdu, p%nq, nu, 'dXdu', errStat, errMsg); if(Failed()) return
+          dXdu(:,:) = 0.0_ReKi
+      end if
+      dXdu = p%BB
+   end if
+   if (present(dXddu)) then
+   end if
+   if (present(dZdu)) then
+   end if
+contains
+    logical function Failed()
+        if (errStat >= AbortErrLev) errMsg = 'LD_JacobianPInput:'//trim(errMsg)
+        Failed =  errStat >= AbortErrLev
+    end function Failed
+end subroutine LD_JacobianPInput
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Jacobians with respect to continuous states (x)
+subroutine LD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg, dYdx, dXdx, dXddx, dZdx )
+   real(DbKi),                        intent(in   ) :: t          !< Time in seconds at operating point
+   type(LD_InputType),                intent(in   ) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   type(LD_ParameterType),            intent(in   ) :: p          !< Parameters
+   type(LD_ContinuousStateType),      intent(in   ) :: x          !< Continuous states at operating point
+   type(LD_DiscreteStateType),        intent(in   ) :: xd         !< Discrete states at operating point
+   type(LD_ConstraintStateType),      intent(in   ) :: z          !< Constraint states at operating point
+   type(LD_OtherStateType),           intent(in   ) :: OtherState !< Other states at operating point
+   type(LD_OutputType),               intent(in   ) :: y          !< Output (change to inout if a mesh copy is required);
+   type(LD_MiscVarType),              intent(inout) :: m          !< Misc/optimization variables
+   integer(IntKi),                    intent(out)   :: errStat    !< Error status of the operation
+   character(*),                      intent(out)   :: errMsg     !< Error message if errStat /= ErrID_None
+   real(R8Ki), allocatable, optional, intent(inout) :: dYdx(:,:)  !< Jacobians of output functions (Y) with respect to (x)
+   real(R8Ki), allocatable, optional, intent(inout) :: dXdx(:,:)  !< Jacobians of continuous state functions (X) with respect to (x)
+   real(R8Ki), allocatable, optional, intent(inout) :: dXddx(:,:) !< Jacobians of discrete state functions (Xd) with respect to (x)
+   real(R8Ki), allocatable, optional, intent(inout) :: dZdx(:,:)  !< Jacobians of constraint state functions (Z) with respect to (x)
+   integer(IntKi) :: i    ! Loop index
+   ! Initialize errStat
+   errStat = ErrID_None
+   errMsg  = ''
+   if (present(dYdx)) then
+      ! allocate and set dYdx
+      if (.not. allocated(dYdx)) then
+          call AllocAry(dYdx, p%NumOuts, p%nq, 'dYdx', errStat, errMsg); if(Failed()) return
+          dYdx(:,:) = 0.0_ReKi
+      end if
+      do i=1,p%nx;  dYdx(i,i) = 1.0_ReKi; enddo ! Position
+      dYdx(p%nx+1:3*p%nx,:  ) = p%AA            ! Velocity and acceleration
+      !dYdx(3*p%nx+1:,:) = 0                    ! Forces
+   end if
+   if (present(dXdx)) then
+      ! allocate and set dXdx
+      if (.not. allocated(dXdx)) then
+          call AllocAry(dXdx, p%nq, p%nq, 'dXdx', errStat, errMsg); if(Failed()) return
+          dXdx(:,:) = 0.0_ReKi
+      end if
+      dXdx = p%AA
+   end if
+   if (present(dXddx)) then
+   end if
+   if (present(dZdx)) then
+   end if
+contains
+   logical function Failed()
+      if (errStat >= AbortErrLev) errMsg = 'LD_JacobianPContState:'//trim(errMsg)
+      Failed =  errStat >= AbortErrLev
+   end function Failed
+end subroutine LD_JacobianPContState
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to pack the data structures representing the operating points into arrays for linearization.
+subroutine LD_GetOP( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+   real(DbKi),                        intent(in   ) :: t          !< Time in seconds at operating point
+   type(LD_InputType),                intent(in   ) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   type(LD_ParameterType),            intent(in   ) :: p          !< Parameters
+   type(LD_ContinuousStateType),      intent(in   ) :: x          !< Continuous states at operating point
+   type(LD_DiscreteStateType),        intent(in   ) :: xd         !< Discrete states at operating point
+   type(LD_ConstraintStateType),      intent(in   ) :: z          !< Constraint states at operating point
+   type(LD_OtherStateType),           intent(in   ) :: OtherState !< Other states at operating point
+   type(LD_OutputType),               intent(in   ) :: y          !< Output at operating point
+   type(LD_MiscVarType),              intent(inout) :: m          !< Misc/optimization variables
+   integer(IntKi),                    intent(out)   :: errStat    !< Error status of the operation
+   character(*),                      intent(out)   :: errMsg     !< Error message if errStat /= ErrID_None
+   real(ReKi), allocatable, optional, intent(inout) :: u_op(:)    !< values of linearized inputs
+   real(ReKi), allocatable, optional, intent(inout) :: y_op(:)    !< values of linearized outputs
+   real(ReKi), allocatable, optional, intent(inout) :: x_op(:)    !< values of linearized continuous states
+   real(ReKi), allocatable, optional, intent(inout) :: dx_op(:)   !< values of first time derivatives of linearized continuous states
+   real(ReKi), allocatable, optional, intent(inout) :: xd_op(:)   !< values of linearized discrete states
+   real(ReKi), allocatable, optional, intent(inout) :: z_op(:)    !< values of linearized constraint states
+   integer(IntKi) :: i, nu
+   type(LD_ContinuousStateType) :: dx          !< derivative of continuous states at operating point
+   ! Initialize errStat
+   errStat = ErrID_None
+   errMsg  = ''
+   nu = p%nx
+
+   if ( present( u_op ) ) then
+       if (.not. allocated(u_op)) then
+           call AllocAry(u_op, nu, 'u_op', errStat, errMsg); if(Failed())return
+       endif
+       u_op(:) = u%Fext
+   end if
+
+   if ( present( y_op ) ) then
+       if (.not. allocated(y_op)) then
+           call AllocAry(y_op, p%NumOuts, 'y_op', errStat, errMsg); if(Failed())return
+       endif
+       ! Update the output mesh
+       do i=1,p%NumOuts         
+           y_op(i) = y%WriteOutput(i)
+       end do      
+   end if
+
+   if ( present( x_op ) ) then
+       if (.not. allocated(x_op)) then
+           call AllocAry(x_op, p%nq, 'x_op', errStat, errMsg); if (Failed())return
+       endif
+       x_op = x%q
+   end if
+
+   if ( present( dx_op ) ) then
+       if (.not. allocated(dx_op)) then
+           call AllocAry(dx_op, p%nq, 'dx_op', errStat, errMsg); if (Failed())return
+       endif
+       call LD_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, dx, errStat, errMsg); if(Failed()) return
+       dx_op = dx%q
+   end if
+
+   if ( present( xd_op ) ) then
+   end if
+   
+   if ( present( z_op ) ) then
+   end if
+
+contains
+    logical function Failed()
+      if (errStat >= AbortErrLev) errMsg = 'LD_GetOP:'//trim(errMsg)
+      Failed =  errStat >= AbortErrLev
+    end function Failed
+end subroutine LD_GetOP
 
 end module LinDyn
 !**********************************************************************************************************************************

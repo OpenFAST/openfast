@@ -78,14 +78,16 @@ program UnsteadyAero_Driver
    if ( dvr%p%SimMod == 3 ) then
       call LD_InitInputData(3, dvr%LD_InitInData, errStat, errMsg); call checkError()
       dvr%LD_InitInData%dt        = dvr%p%dt
-      dvr%LD_InitInData%IntMethod = 1  ! TODO
-      dvr%LD_InitInData%prefix    = '' ! TODO for output channel names
+      dvr%LD_InitInData%IntMethod = 1  ! 1=RK4, TODO expose to user
+      dvr%LD_InitInData%prefix    = '' ! for output channel names
       dvr%LD_InitInData%MM         = dvr%p%MM
       dvr%LD_InitInData%CC         = dvr%p%CC
       dvr%LD_InitInData%KK         = dvr%p%KK
       dvr%LD_InitInData%x0         = dvr%p%initPos
       dvr%LD_InitInData%xd0        = dvr%p%initVel
       dvr%LD_InitInData%activeDOFs = dvr%p%activeDOFs
+      dvr%LD_InitInData%DOFsNames = (/'x  ','y  ','th '/)
+      dvr%LD_InitInData%DOFsUnits = (/'m  ','m  ','rad'/)
       call LD_Init(dvr%LD_InitInData, dvr%LD_u(1), dvr%LD_p, dvr%LD_x, dvr%LD_xd, dvr%LD_z, dvr%LD_OtherState, dvr%LD_y, dvr%LD_m, dvr%LD_InitOutData, errStat, errMsg); call checkError()
       ! Allocate other inputs of LD
       do iu = 2,NumInp
