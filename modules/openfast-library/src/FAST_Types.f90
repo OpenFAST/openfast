@@ -115,26 +115,26 @@ IMPLICIT NONE
 ! =========  TC_MappingType  =======
   TYPE, PUBLIC :: TC_MappingType
     character(VarNameLen)  :: Key = ''      !< Mapping Key [-]
-    character(VarNameLen)  :: SrcMeshName = ''      !< source mesh name [-]
-    character(VarNameLen)  :: DstMeshName = ''      !< destination mesh name [-]
-    character(VarNameLen)  :: SrcDispMeshName = ''      !< source displacement mesh name [if IsLoad=true] [-]
-    character(VarNameLen)  :: DstDispMeshName = ''      !< destination displacement mesh name [if IsLoad=true] [-]
     INTEGER(IntKi)  :: i1 = 0      !< Optional index for specifying transfers [-]
     INTEGER(IntKi)  :: i2 = 0      !< Optional index for specifying transfers [-]
-    INTEGER(IntKi)  :: SrcModIdx = 0      !< Output module index in ModData array [-]
-    INTEGER(IntKi)  :: DstModIdx = 0      !< Input module index in ModData array [-]
-    INTEGER(IntKi)  :: SrcModID = 0      !< Output module ID [-]
-    INTEGER(IntKi)  :: DstModID = 0      !< Input module ID [-]
-    INTEGER(IntKi)  :: SrcIns = 0      !< Output module Instance [-]
-    INTEGER(IntKi)  :: DstIns = 0      !< Input module Instance [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: SrcVarIdx      !< motion variable index [-]
-    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DstVarIdx      !< motion variable index [-]
-    INTEGER(IntKi)  :: SrcDispVarIdx = 0      !< source displacement var index [if IsLoad=true] [-]
-    INTEGER(IntKi)  :: DstDispVarIdx = 0      !< destination displacement var index [if IsLoad=true] [-]
+    INTEGER(IntKi)  :: SrcModIdx = 0      !< Source module index in ModData array [-]
+    INTEGER(IntKi)  :: DstModIdx = 0      !< Destination module index in ModData array [-]
+    INTEGER(IntKi)  :: SrcModID = 0      !< Source module ID [-]
+    INTEGER(IntKi)  :: DstModID = 0      !< Destination module ID [-]
+    INTEGER(IntKi)  :: SrcIns = 0      !< Source module Instance [-]
+    INTEGER(IntKi)  :: DstIns = 0      !< Destination module Instance [-]
+    INTEGER(IntKi)  :: SrcMeshID = 0      !< Source mesh identifier [-]
+    INTEGER(IntKi)  :: DstMeshID = 0      !< Destination mesh identifier [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: SrcVarIdx      !< Source motion variable index [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DstVarIdx      !< Destination motion variable index [-]
+    INTEGER(IntKi)  :: SrcDispMeshID = 0      !< Source displacement mesh identifier [-]
+    INTEGER(IntKi)  :: DstDispMeshID = 0      !< Destination displacement mesh identifier [-]
+    INTEGER(IntKi)  :: SrcDispVarIdx = 0      !< Source displacement var index [if Typ=Map_LoadMesh] [-]
+    INTEGER(IntKi)  :: DstDispVarIdx = 0      !< Destination displacement var index [if Typ=Map_LoadMesh] [-]
     INTEGER(IntKi)  :: Typ = 0      !< Integer denoting mapping type (1=Load Mesh, 2=Motion Mesh, 3=Non-Mesh) [-]
-    LOGICAL  :: Ready = .false.      !< Flag indicating output has been ready to be transferred [-]
+    LOGICAL  :: Ready = .false.      !< Flag indicating Source has been ready to be transferred [-]
     TYPE(MeshType)  :: MeshTmp      !< Temporary mesh for intermediate transfers [-]
-    TYPE(MeshMapType)  :: MeshMap      !< Mesh mapping from output variable to input variable [-]
+    TYPE(MeshMapType)  :: MeshMap      !< Mesh mapping from Source variable to Destination variable [-]
   END TYPE TC_MappingType
 ! =======================
 ! =========  TC_ParameterType  =======
@@ -641,6 +641,7 @@ IMPLICIT NONE
 ! =========  HydroDyn_Data  =======
   TYPE, PUBLIC :: HydroDyn_Data
     TYPE(HydroDyn_ContinuousStateType) , DIMENSION(1:2)  :: x      !< Continuous states [-]
+    TYPE(HydroDyn_ContinuousStateType)  :: dxdt      !< Continuous state derivatives [-]
     TYPE(HydroDyn_DiscreteStateType) , DIMENSION(1:2)  :: xd      !< Discrete states [-]
     TYPE(HydroDyn_ConstraintStateType) , DIMENSION(1:2)  :: z      !< Constraint states [-]
     TYPE(HydroDyn_OtherStateType) , DIMENSION(1:2)  :: OtherSt      !< Other states [-]
@@ -1527,10 +1528,6 @@ subroutine FAST_CopyTC_MappingType(SrcTC_MappingTypeData, DstTC_MappingTypeData,
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstTC_MappingTypeData%Key = SrcTC_MappingTypeData%Key
-   DstTC_MappingTypeData%SrcMeshName = SrcTC_MappingTypeData%SrcMeshName
-   DstTC_MappingTypeData%DstMeshName = SrcTC_MappingTypeData%DstMeshName
-   DstTC_MappingTypeData%SrcDispMeshName = SrcTC_MappingTypeData%SrcDispMeshName
-   DstTC_MappingTypeData%DstDispMeshName = SrcTC_MappingTypeData%DstDispMeshName
    DstTC_MappingTypeData%i1 = SrcTC_MappingTypeData%i1
    DstTC_MappingTypeData%i2 = SrcTC_MappingTypeData%i2
    DstTC_MappingTypeData%SrcModIdx = SrcTC_MappingTypeData%SrcModIdx
@@ -1539,6 +1536,8 @@ subroutine FAST_CopyTC_MappingType(SrcTC_MappingTypeData, DstTC_MappingTypeData,
    DstTC_MappingTypeData%DstModID = SrcTC_MappingTypeData%DstModID
    DstTC_MappingTypeData%SrcIns = SrcTC_MappingTypeData%SrcIns
    DstTC_MappingTypeData%DstIns = SrcTC_MappingTypeData%DstIns
+   DstTC_MappingTypeData%SrcMeshID = SrcTC_MappingTypeData%SrcMeshID
+   DstTC_MappingTypeData%DstMeshID = SrcTC_MappingTypeData%DstMeshID
    if (allocated(SrcTC_MappingTypeData%SrcVarIdx)) then
       LB(1:1) = lbound(SrcTC_MappingTypeData%SrcVarIdx)
       UB(1:1) = ubound(SrcTC_MappingTypeData%SrcVarIdx)
@@ -1563,6 +1562,8 @@ subroutine FAST_CopyTC_MappingType(SrcTC_MappingTypeData, DstTC_MappingTypeData,
       end if
       DstTC_MappingTypeData%DstVarIdx = SrcTC_MappingTypeData%DstVarIdx
    end if
+   DstTC_MappingTypeData%SrcDispMeshID = SrcTC_MappingTypeData%SrcDispMeshID
+   DstTC_MappingTypeData%DstDispMeshID = SrcTC_MappingTypeData%DstDispMeshID
    DstTC_MappingTypeData%SrcDispVarIdx = SrcTC_MappingTypeData%SrcDispVarIdx
    DstTC_MappingTypeData%DstDispVarIdx = SrcTC_MappingTypeData%DstDispVarIdx
    DstTC_MappingTypeData%Typ = SrcTC_MappingTypeData%Typ
@@ -1602,10 +1603,6 @@ subroutine FAST_PackTC_MappingType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'FAST_PackTC_MappingType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%Key)
-   call RegPack(Buf, InData%SrcMeshName)
-   call RegPack(Buf, InData%DstMeshName)
-   call RegPack(Buf, InData%SrcDispMeshName)
-   call RegPack(Buf, InData%DstDispMeshName)
    call RegPack(Buf, InData%i1)
    call RegPack(Buf, InData%i2)
    call RegPack(Buf, InData%SrcModIdx)
@@ -1614,6 +1611,8 @@ subroutine FAST_PackTC_MappingType(Buf, Indata)
    call RegPack(Buf, InData%DstModID)
    call RegPack(Buf, InData%SrcIns)
    call RegPack(Buf, InData%DstIns)
+   call RegPack(Buf, InData%SrcMeshID)
+   call RegPack(Buf, InData%DstMeshID)
    call RegPack(Buf, allocated(InData%SrcVarIdx))
    if (allocated(InData%SrcVarIdx)) then
       call RegPackBounds(Buf, 1, lbound(InData%SrcVarIdx), ubound(InData%SrcVarIdx))
@@ -1624,6 +1623,8 @@ subroutine FAST_PackTC_MappingType(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%DstVarIdx), ubound(InData%DstVarIdx))
       call RegPack(Buf, InData%DstVarIdx)
    end if
+   call RegPack(Buf, InData%SrcDispMeshID)
+   call RegPack(Buf, InData%DstDispMeshID)
    call RegPack(Buf, InData%SrcDispVarIdx)
    call RegPack(Buf, InData%DstDispVarIdx)
    call RegPack(Buf, InData%Typ)
@@ -1643,14 +1644,6 @@ subroutine FAST_UnPackTC_MappingType(Buf, OutData)
    if (Buf%ErrStat /= ErrID_None) return
    call RegUnpack(Buf, OutData%Key)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%SrcMeshName)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%DstMeshName)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%SrcDispMeshName)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%DstDispMeshName)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%i1)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%i2)
@@ -1666,6 +1659,10 @@ subroutine FAST_UnPackTC_MappingType(Buf, OutData)
    call RegUnpack(Buf, OutData%SrcIns)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%DstIns)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%SrcMeshID)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%DstMeshID)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%SrcVarIdx)) deallocate(OutData%SrcVarIdx)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -1695,6 +1692,10 @@ subroutine FAST_UnPackTC_MappingType(Buf, OutData)
       call RegUnpack(Buf, OutData%DstVarIdx)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
+   call RegUnpack(Buf, OutData%SrcDispMeshID)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%DstDispMeshID)
+   if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%SrcDispVarIdx)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%DstDispVarIdx)
@@ -12433,6 +12434,9 @@ subroutine FAST_CopyHydroDyn_Data(SrcHydroDyn_DataData, DstHydroDyn_DataData, Ct
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    end do
+   call HydroDyn_CopyContState(SrcHydroDyn_DataData%dxdt, DstHydroDyn_DataData%dxdt, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    LB(1:1) = lbound(SrcHydroDyn_DataData%xd)
    UB(1:1) = ubound(SrcHydroDyn_DataData%xd)
    do i1 = LB(1), UB(1)
@@ -12532,6 +12536,8 @@ subroutine FAST_DestroyHydroDyn_Data(HydroDyn_DataData, ErrStat, ErrMsg)
       call HydroDyn_DestroyContState(HydroDyn_DataData%x(i1), ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    end do
+   call HydroDyn_DestroyContState(HydroDyn_DataData%dxdt, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    LB(1:1) = lbound(HydroDyn_DataData%xd)
    UB(1:1) = ubound(HydroDyn_DataData%xd)
    do i1 = LB(1), UB(1)
@@ -12595,6 +12601,7 @@ subroutine FAST_PackHydroDyn_Data(Buf, Indata)
    do i1 = LB(1), UB(1)
       call HydroDyn_PackContState(Buf, InData%x(i1)) 
    end do
+   call HydroDyn_PackContState(Buf, InData%dxdt) 
    LB(1:1) = lbound(InData%xd)
    UB(1:1) = ubound(InData%xd)
    do i1 = LB(1), UB(1)
@@ -12655,6 +12662,7 @@ subroutine FAST_UnPackHydroDyn_Data(Buf, OutData)
    do i1 = LB(1), UB(1)
       call HydroDyn_UnpackContState(Buf, OutData%x(i1)) ! x 
    end do
+   call HydroDyn_UnpackContState(Buf, OutData%dxdt) ! dxdt 
    LB(1:1) = lbound(OutData%xd)
    UB(1:1) = ubound(OutData%xd)
    do i1 = LB(1), UB(1)

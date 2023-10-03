@@ -822,6 +822,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       p_FAST%ModuleInitialized(Module_SeaSt) = .TRUE.
       CALL SetModuleSubstepTime(Module_SeaSt, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+         ! Add module instance to array of modules
+      CALL MV_AddModule(m_FAST%Modules, Module_SeaSt, 'SeaSt', 1, p_FAST%dt_module(Module_SeaSt), p_FAST%DT, Init%OutData_SeaSt%Vars, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -886,6 +890,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       p_FAST%ModuleInitialized(Module_HD) = .TRUE.
       CALL SetModuleSubstepTime(Module_HD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+         ! Add module instance to array of modules
+      CALL MV_AddModule(m_FAST%Modules, Module_HD, 'HD', 1, p_FAST%dt_module(Module_HD), p_FAST%DT, Init%OutData_HD%Vars, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -952,6 +960,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       p_FAST%ModuleInitialized(Module_SD) = .TRUE.
       CALL SetModuleSubstepTime(Module_SD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+         ! Add module instance to array of modules
+      CALL MV_AddModule(m_FAST%Modules, Module_SD, 'SD', 1, p_FAST%dt_module(Module_SD), p_FAST%DT, Init%OutData_SD%Vars, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       allocate( y_FAST%Lin%Modules(MODULE_SD)%Instance(1), stat=ErrStat2)
       if (ErrStat2 /= 0 ) then

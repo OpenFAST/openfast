@@ -72,6 +72,7 @@ typedef   ^                  ^                      Logical                  Lin
 typedef   ^                  InitOutputType         CHARACTER(ChanLen)       WriteOutputHdr    {:}     -      -  "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
 typedef   ^                  ^                      CHARACTER(ChanLen)       WriteOutputUnt    {:}     -      -  "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
 typedef   ^                  ^                      ProgDesc                 Ver               -       -      -  "Version of SeaState"
+typedef   ^                  ^                      ModVarsType             *Vars              -       -      -  "Module variables for solver and linearization"
 typedef   ^                  ^                      ReKi                     WtrDens           -       -      -  "Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default)"    (kg/m^3)
 typedef   ^                  ^                      ReKi                     WtrDpth           -       -      -  "Water depth, this is necessary to inform glue-code what the module is using for WtrDpth (may not be the glue-code's default)"    (m)
 typedef   ^                  ^                      ReKi                     MSL2SWL           -       -      -  "Offset between still-water level and mean sea level, this is necessary to inform glue-code what the module is using for MSL2SWL (may not be the glue-code's default)"    (m)
@@ -133,7 +134,8 @@ typedef   ^                            OtherStateType                R8Ki    Unu
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef   ^                  MiscVarType            INTEGER                  Decimate          -       -      -  "The output decimation counter" -
+typedef   ^                  MiscVarType            ModValsType              Vals              -       -      -  "Module values for solver and linearization" -
+typedef   ^                  ^                      INTEGER                  Decimate          -       -      -  "The output decimation counter" -
 typedef   ^                  ^                      DbKi                     LastOutTime       -       -      -  "Last time step which was written to the output file (sec)"    -
 typedef   ^                  ^                      INTEGER                  LastIndWave       -       -      -  "The last index used in the wave kinematics arrays, used to optimize interpolation"   -
 typedef   ^                  ^                      SeaSt_Interp_MiscVarType       SeaSt_Interp_m            -       -      -  "misc var information from the SeaState Interpolation module"   -
@@ -142,7 +144,8 @@ typedef   ^                  ^                      SeaSt_Interp_MiscVarType    
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
-typedef   ^                  ParameterType          Waves2_ParameterType     Waves2            -       -      -  "Parameter data for the Waves2 module"  -
+typedef   ^                  ParameterType          ModVarsType             &Vars              -       -      -  "Module variables for solver and linearization"  -
+typedef   ^                  ^                      Waves2_ParameterType     Waves2            -       -      -  "Parameter data for the Waves2 module"  -
 typedef   ^                  ^                      SiKi                     WaveTime          {*}     -      -  "Array of time samples, (sec)"        -
 typedef   ^                  ^                      DbKi                     WaveDT            -       -      -  "Wave DT" sec
 typedef   ^                  ^                      INTEGER                  NGridPts          -       -      -  "Number of data points in the wave kinematics grid"        -

@@ -95,26 +95,26 @@ param	^ -                 IntKi                   Map_LoadMesh    -  1  -     "L
 param	^ -                 IntKi                   Map_MotionMesh  -  2  -     "Motion mesh mapping type"	-
 param	^ -                 IntKi                   Map_NonMesh     -  3  -     "Non mesh mapping type"	-
 typedef ^ TC_MappingType    character(VarNameLen)   Key             - ''  -     "Mapping Key" -
-typedef ^ ^                 character(VarNameLen)   SrcMeshName     - ''  -     "source mesh name" -
-typedef ^ ^                 character(VarNameLen)   DstMeshName     - ''  -     "destination mesh name" -
-typedef ^ ^                 character(VarNameLen)   SrcDispMeshName - ''  -     "source displacement mesh name [if IsLoad=true]" -
-typedef ^ ^                 character(VarNameLen)   DstDispMeshName - ''  -     "destination displacement mesh name [if IsLoad=true]" -
 typedef ^ ^                 IntKi                   i1              -  0  -     "Optional index for specifying transfers" -
 typedef ^ ^                 IntKi                   i2              -  0  -     "Optional index for specifying transfers" -
-typedef ^ ^                 IntKi                   SrcModIdx       -  0  -     "Output module index in ModData array" -
-typedef ^ ^                 IntKi                   DstModIdx       -  0  -     "Input module index in ModData array" -
-typedef ^ ^                 IntKi                   SrcModID        -  0  -     "Output module ID" -
-typedef ^ ^                 IntKi                   DstModID        -  0  -     "Input module ID" -
-typedef ^ ^                 IntKi                   SrcIns          -  0  -     "Output module Instance" -
-typedef ^ ^                 IntKi                   DstIns          -  0  -     "Input module Instance" -
-typedef ^ ^                 IntKi                   SrcVarIdx       :  -  -     "motion variable index" -
-typedef ^ ^                 IntKi                   DstVarIdx       :  -  -     "motion variable index" -
-typedef ^ ^                 IntKi                   SrcDispVarIdx   -  0  -     "source displacement var index [if IsLoad=true]" -
-typedef ^ ^                 IntKi                   DstDispVarIdx   -  0  -     "destination displacement var index [if IsLoad=true]" -
+typedef ^ ^                 IntKi                   SrcModIdx       -  0  -     "Source module index in ModData array" -
+typedef ^ ^                 IntKi                   DstModIdx       -  0  -     "Destination module index in ModData array" -
+typedef ^ ^                 IntKi                   SrcModID        -  0  -     "Source module ID" -
+typedef ^ ^                 IntKi                   DstModID        -  0  -     "Destination module ID" -
+typedef ^ ^                 IntKi                   SrcIns          -  0  -     "Source module Instance" -
+typedef ^ ^                 IntKi                   DstIns          -  0  -     "Destination module Instance" -
+typedef ^ ^                 IntKi                   SrcMeshID       -  0  -     "Source mesh identifier" -
+typedef ^ ^                 IntKi                   DstMeshID       -  0  -     "Destination mesh identifier" -
+typedef ^ ^                 IntKi                   SrcVarIdx       :  -  -     "Source motion variable index" -
+typedef ^ ^                 IntKi                   DstVarIdx       :  -  -     "Destination motion variable index" -
+typedef ^ ^                 IntKi                   SrcDispMeshID   -  0  -     "Source displacement mesh identifier" -
+typedef ^ ^                 IntKi                   DstDispMeshID   -  0  -     "Destination displacement mesh identifier" -
+typedef ^ ^                 IntKi                   SrcDispVarIdx   -  0  -     "Source displacement var index [if Typ=Map_LoadMesh]" -
+typedef ^ ^                 IntKi                   DstDispVarIdx   -  0  -     "Destination displacement var index [if Typ=Map_LoadMesh]" -
 typedef ^ ^                 IntKi                   Typ             -  0  -     "Integer denoting mapping type (1=Load Mesh, 2=Motion Mesh, 3=Non-Mesh)" -
-typedef ^ ^                 logical                 Ready           -  F  -     "Flag indicating output has been ready to be transferred" -
+typedef ^ ^                 logical                 Ready           -  F  -     "Flag indicating Source has been ready to be transferred" -
 typedef ^ ^                 MeshType                MeshTmp         -  -  -     "Temporary mesh for intermediate transfers" -
-typedef ^ ^                 MeshMapType             MeshMap         -  -  -     "Mesh mapping from output variable to input variable" -
+typedef ^ ^                 MeshMapType             MeshMap         -  -  -     "Mesh mapping from Source variable to Destination variable" -
 
 # Parameters 
 typedef ^ TC_ParameterType  R8Ki            DT                     -  -  -      "solution time step" -
@@ -616,6 +616,7 @@ typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
 # ..... HydroDyn data .......................................................................................................
 typedef	FAST	HydroDyn_Data	HydroDyn_ContinuousStateType	x	{2}	-	-	"Continuous states"
+typedef	FAST	HydroDyn_Data	HydroDyn_ContinuousStateType	dxdt	-	-	-	"Continuous state derivatives"
 typedef	^	^	HydroDyn_DiscreteStateType	xd	{2}	-	-	"Discrete states"
 typedef	^	^	HydroDyn_ConstraintStateType	z	{2}	-	-	"Constraint states"
 typedef	^	^	HydroDyn_OtherStateType	OtherSt	{2}	-	-	"Other states"

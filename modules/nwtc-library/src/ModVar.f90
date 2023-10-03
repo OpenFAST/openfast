@@ -343,10 +343,9 @@ subroutine MV_PackMesh(VarAry, iVar, Mesh, Values)
    integer(IntKi), intent(inout) :: iVar
    type(MeshType), intent(in)    :: Mesh
    real(R8Ki), intent(inout)     :: Values(:)
-   character(VarNameLen)         :: MeshName
-   integer(IntKi)                :: j
-   MeshName = VarAry(iVar)%Name
-   do while (VarAry(iVar)%Name == MeshName)
+   integer(IntKi)                :: MeshID, j
+   MeshID = VarAry(iVar)%MeshID
+   do while (VarAry(iVar)%MeshID == MeshID)
       select case (VarAry(iVar)%Field)
       case (VF_Force)
          Values(VarAry(iVar)%iLoc) = pack(Mesh%Force, .true.)
@@ -379,10 +378,9 @@ subroutine MV_UnpackMesh(VarAry, iVar, Values, Mesh)
    integer(IntKi), intent(inout) :: iVar
    real(R8Ki), intent(in)        :: Values(:)
    type(MeshType), intent(inout) :: Mesh
-   character(VarNameLen)         :: MeshName
-   integer(IntKi)                :: j
-   MeshName = VarAry(iVar)%Name
-   do while (VarAry(iVar)%Name == MeshName)
+   integer(IntKi)                :: MeshID, j
+   MeshID = VarAry(iVar)%MeshID
+   do while (VarAry(iVar)%MeshID == MeshID)
       select case (VarAry(iVar)%Field)
       case (VF_Force)
          Mesh%Force = reshape(Values(VarAry(iVar)%iLoc), shape(Mesh%Force))
@@ -571,36 +569,41 @@ subroutine MV_AddModule(ModAry, ModID, ModAbbr, Instance, ModDT, SolverDT, Vars,
 
 end subroutine
 
-subroutine MV_AddMeshVar(VarAry, Name, Fields, Nodes, Flags, Perturbs, Active)
+subroutine MV_AddMeshVar(VarAry, Name, Fields, Mesh, Flags, Perturbs)
    type(ModVarType), allocatable, intent(inout) :: VarAry(:)
    character(*), intent(in)                     :: Name
    integer(IntKi), intent(in)                   :: Fields(:)
-   integer(IntKi), intent(in)                   :: Nodes
    integer(IntKi), optional, intent(in)         :: Flags
+   type(MeshType), intent(inout)                :: Mesh
    real(R8Ki), optional, intent(in)             :: Perturbs(:)
-   logical, optional, intent(in)                :: Active
    integer(IntKi)                               :: i, FlagsLocal
    logical                                      :: ActiveLocal
    real(R8Ki), allocatable                      :: PerturbsLocal(:)
+   if (.not. Mesh%committed) return
+   if (allocated(VarAry)) then
+      Mesh%ID = size(VarAry) + 1
+   else
+      Mesh%ID = 1
+   end if
    FlagsLocal = 0
    if (present(Flags)) FlagsLocal = Flags
    FlagsLocal = ior(FlagsLocal, VF_Mesh)
    PerturbsLocal = [(0.0_R8Ki, i=1, size(Fields))]
    if (present(Perturbs)) PerturbsLocal = Perturbs
-   ActiveLocal = .true.
-   if (present(Active)) ActiveLocal = Active
    do i = 1, size(Fields)
-      call MV_AddVar(VarAry, Name, Fields(i), Num=Nodes, Flags=FlagsLocal, &
-                     Perturb=PerturbsLocal(i), Active=ActiveLocal)
+      call MV_AddVar(VarAry, Name, Fields(i), Num=Mesh%Nnodes, Flags=FlagsLocal, &
+                     Perturb=PerturbsLocal(i))
+      VarAry(size(VarAry))%MeshID = Mesh%ID
    end do
 end subroutine
 
-subroutine MV_AddVar(VarAry, Name, Field, Num, Flags, iUsr, jUsr, Perturb, LinNames, Active)
+subroutine MV_AddVar(VarAry, Name, Field, Num, Flags, iUsr, jUsr, DerivOrder, Perturb, LinNames, Active)
    type(ModVarType), allocatable, intent(inout) :: VarAry(:)
    character(*), intent(in)                     :: Name
    integer(IntKi), intent(in)                   :: Field
    integer(IntKi), optional, intent(in)         :: Num, Flags, iUsr, jUsr
    real(R8Ki), optional, intent(in)             :: Perturb
+   integer(IntKi), optional, intent(in)         :: DerivOrder
    logical, optional, intent(in)                :: Active
    character(*), optional, intent(in)           :: LinNames(:)
    integer(IntKi)                               :: i
@@ -628,16 +631,20 @@ subroutine MV_AddVar(VarAry, Name, Field, Num, Flags, iUsr, jUsr, Perturb, LinNa
    end if
 
    ! Set Derivative Order
-   select case (Var%Field)
-   case (VF_Orientation, VF_TransDisp, VF_AngularDisp)   ! Position/displacement
-      Var%DerivOrder = 0
-   case (VF_TransVel, VF_AngularVel)                     ! Velocity
-      Var%DerivOrder = 1
-   case (VF_TransAcc, VF_AngularAcc)                     ! Acceleration
-      Var%DerivOrder = 2
-   case default
-      Var%DerivOrder = -1
-   end select
+   if (present(DerivOrder)) then
+      Var%DerivOrder = DerivOrder
+   else
+      select case (Var%Field)
+      case (VF_Orientation, VF_TransDisp, VF_AngularDisp)   ! Position/displacement
+         Var%DerivOrder = 0
+      case (VF_TransVel, VF_AngularVel)                     ! Velocity
+         Var%DerivOrder = 1
+      case (VF_TransAcc, VF_AngularAcc)                     ! Acceleration
+         Var%DerivOrder = 2
+      case default
+         Var%DerivOrder = -1
+      end select
+   end if
 
    ! Append Var to VarArray
    if (allocated(VarAry)) then

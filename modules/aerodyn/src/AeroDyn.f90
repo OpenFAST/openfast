@@ -611,9 +611,9 @@ end subroutine AD_ReInit
 !> This routine initializes module variables for use by the solver and linearization.
 subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
    TYPE(AD_InitInputType),    INTENT(IN   )  :: InitInp     !< Input data for initialization routine
-   TYPE(AD_InputType),        INTENT(IN   )  :: u           !< An initial guess for the input; input mesh must be defined
+   TYPE(AD_InputType),        INTENT(INOUT)  :: u           !< An initial guess for the input; input mesh must be defined
    TYPE(AD_ParameterType),    INTENT(INOUT)  :: p           !< Parameters
-   TYPE(AD_OutputType),       INTENT(IN)     :: y           !< Initial system outputs (outputs are not calculated;
+   TYPE(AD_OutputType),       INTENT(INOUT)  :: y           !< Initial system outputs (outputs are not calculated;
    TYPE(AD_MiscVarType),      INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
    TYPE(AD_InitOutputType),   INTENT(INOUT)  :: InitOut     !< Output for initialization routine
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     !< Error status of the operation
@@ -657,30 +657,30 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
 
          ! Add tower motion
          call MV_AddMeshVar(p%Vars%u, trim(RotorStr)//"TowerMotion", &
-                            Nodes=ru%TowerMotion%NNodes, &
+                            Mesh=ru%TowerMotion, &
                             Fields=[VF_TransDisp, VF_Orientation, VF_TransVel])
          
          ! Add nacelle motion
          call MV_AddMeshVar(p%Vars%u, trim(RotorStr)//"NacelleMotion", &
-                            Nodes=ru%NacelleMotion%NNodes, &
+                            Mesh=ru%NacelleMotion, &
                             Fields=[VF_TransDisp, VF_Orientation, VF_TransVel])
 
          ! Add hub motion
          call MV_AddMeshVar(p%Vars%u, trim(RotorStr)//"HubMotion", &
-                            Nodes=ru%HubMotion%NNodes, &
+                            Mesh=ru%HubMotion, &
                             Fields=[VF_TransDisp, VF_Orientation, VF_AngularVel])
 
          ! Add blade root motion
          do j = 1, rp%NumBlades
             call MV_AddMeshVar(p%Vars%u, trim(RotorStr)//"BladeRootMotion"//IdxStr(j), &
-                               Nodes=ru%BladeRootMotion(j)%NNodes, &
+                               Mesh=ru%BladeRootMotion(j), &
                                Fields=[VF_Orientation])
          end do
 
          ! Add blade motion
          do j = 1, rp%NumBlades
             call MV_AddMeshVar(p%Vars%u, trim(RotorStr)//"BladeMotion"//IdxStr(j), &
-                               Nodes=ru%BladeMotion(j)%NNodes, &
+                               Mesh=ru%BladeMotion(j), &
                                Fields=[VF_TransDisp, VF_Orientation, VF_TransVel, VF_AngularVel, VF_TransAcc])
          end do
 
@@ -696,23 +696,17 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
          !----------------------------------------------------------------------
 
          ! Add tower load
-         call MV_AddMeshVar(p%Vars%y, trim(RotorStr)//"TowerLoad", LoadFields, &
-                            Nodes=ry%TowerLoad%NNodes)
+         call MV_AddMeshVar(p%Vars%y, trim(RotorStr)//"TowerLoad", LoadFields, Mesh=ry%TowerLoad)
 
          ! Add nacelle load
-         call MV_AddMeshVar(p%Vars%y, trim(RotorStr)//"HubLoad", LoadFields, &
-                            Nodes=ry%HubLoad%NNodes)
+         call MV_AddMeshVar(p%Vars%y, trim(RotorStr)//"HubLoad", LoadFields, Mesh=ry%HubLoad)
 
          ! Add nacelle load
-         call MV_AddMeshVar(p%Vars%y, trim(RotorStr)//"NacelleLoad", LoadFields, &
-                            Nodes=ry%NacelleLoad%NNodes)
+         call MV_AddMeshVar(p%Vars%y, trim(RotorStr)//"NacelleLoad", LoadFields, Mesh=ry%NacelleLoad)
          
-         ! Loop through blades
+         ! Loop through blades, add blade loads
          do j = 1, rp%NumBlades
-
-            ! Add blade load
-            call MV_AddMeshVar(p%Vars%y, trim(RotorStr)//"BladeLoad"//IdxStr(j), LoadFields, &
-                              Nodes=ry%BladeLoad(j)%NNodes)
+            call MV_AddMeshVar(p%Vars%y, trim(RotorStr)//"BladeLoad"//IdxStr(j), LoadFields, Mesh=ry%BladeLoad(j))
          end do
 
          ! Rotor outputs

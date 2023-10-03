@@ -276,9 +276,9 @@ END SUBROUTINE BD_Init
 
 subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
    TYPE(BD_InitInputType),    INTENT(IN   )  :: InitInp     !< Input data for initialization routine
-   TYPE(BD_InputType),        INTENT(IN   )  :: u           !< An initial guess for the input; input mesh must be defined
+   TYPE(BD_InputType),        INTENT(INOUT)  :: u           !< An initial guess for the input; input mesh must be defined
    TYPE(BD_ParameterType),    INTENT(INOUT)  :: p           !< Parameters
-   TYPE(BD_OutputType),       INTENT(IN)     :: y           !< Initial system outputs (outputs are not calculated;
+   TYPE(BD_OutputType),       INTENT(INOUT)  :: y           !< Initial system outputs (outputs are not calculated;
    TYPE(BD_MiscVarType),      INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
    TYPE(BD_InitOutputType),   INTENT(INOUT)  :: InitOut     !< Output for initialization routine
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     !< Error status of the operation
@@ -357,7 +357,7 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
    MaxTorque =  14.0_R8Ki*p%blade_length**3
 
    call MV_AddMeshVar(p%Vars%u, "RootMotion", MotionFields, &
-                      Nodes=u%RootMotion%Nnodes, &
+                      Mesh=u%RootMotion, &
                       Perturbs=[0.2_R8Ki*D2R_D * p%blade_length, &    ! VF_TransDisp
                                 0.2_R8Ki*D2R_D, &                     ! VF_Orientation
                                 0.2_R8Ki*D2R_D * p%blade_length, &    ! VF_TransVel
@@ -365,11 +365,11 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
                                 0.2_R8Ki*D2R_D * p%blade_length, &    ! VF_TransAcc
                                 0.2_R8Ki*D2R_D])                      ! VF_AngularAcc
    call MV_AddMeshVar(p%Vars%u, "PointLoad", LoadFields, &
-                      Nodes=u%PointLoad%Nnodes, &
+                      Mesh=u%PointLoad, &
                       Perturbs=[MaxThrust/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes), &  ! VF_Force
                                 MaxTorque/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes)])   ! VF_Moment
    call MV_AddMeshVar(p%Vars%u, "DistrLoad", LoadFields, Flags=VF_Line, &
-                      Nodes=u%DistrLoad%Nnodes, &
+                      Mesh=u%DistrLoad, &
                       Perturbs=[MaxThrust/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes), &  ! VF_Force
                                 MaxTorque/(100.0_R8Ki*3.0_R8Ki*u%PointLoad%Nnodes)])   ! VF_Moment
 
@@ -377,8 +377,8 @@ subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, ErrStat, ErrMsg)
    ! Output variables
    !----------------------------------------------------------------------------
 
-   call MV_AddMeshVar(p%Vars%y, 'ReactionForce', LoadFields, Nodes=y%ReactionForce%Nnodes)
-   call MV_AddMeshVar(p%Vars%y, 'BladeMotion', MotionFields, Nodes=y%BldMotion%Nnodes)
+   call MV_AddMeshVar(p%Vars%y, 'ReactionForce', LoadFields, Mesh=y%ReactionForce)
+   call MV_AddMeshVar(p%Vars%y, 'BladeMotion', MotionFields, Mesh=y%BldMotion)
    do i = 1, p%NumOuts
       call MV_AddVar(p%Vars%y, p%OutParam(i)%Name, VF_Scalar, &
                      Flags=OutParamFlags(p%OutParam(i)%Indx), &

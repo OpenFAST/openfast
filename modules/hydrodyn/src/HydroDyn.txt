@@ -109,6 +109,7 @@ typedef   ^                            InitOutputType                Morison_Ini
 typedef   ^                            InitOutputType                CHARACTER(ChanLen)       WriteOutputHdr                  {:}        -        -         "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
 typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputUnt                  {:}        -        -         "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
 typedef   ^                            ^                             ProgDesc                 Ver                             -          -        -         "Version of HydroDyn"
+typedef   ^                            InitOutputType                ModVarsType             *Vars                            -          -        -         "Module Variables"  -
 typedef   ^                            ^                             CHARACTER(LinChanLen)    LinNames_y                      {:}        -        -         "Names of the outputs used in linearization"	-
 typedef   ^                            ^                             CHARACTER(LinChanLen)    LinNames_x                      {:}        -        -         "Names of the continuous states used in linearization"	-
 typedef   ^                            ^                             CHARACTER(LinChanLen)    LinNames_u                      {:}        -        -         "Names of the inputs used in linearization"	-
@@ -146,7 +147,8 @@ typedef   ^                            ^                             Morison_Oth
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef   ^                            MiscVarType                   MeshType                 AllHdroOrigin                   -          -          -         "An intermediate mesh used to transfer hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
+typedef   ^                            MiscVarType                   ModValsType              Vals                            -          -          -         "Module Values" -
+typedef   ^                            ^                             MeshType                 AllHdroOrigin                   -          -          -         "An intermediate mesh used to transfer hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
 typedef   ^                            ^                             HD_ModuleMapType         HD_MeshMap                      -          -          -
 typedef   ^                            ^                             INTEGER                  Decimate                        -          -          -         "The output decimation counter" -
 typedef   ^                            ^                             DbKi                     LastOutTime                     -          -          -         "Last time step which was written to the output file (sec)"    -
@@ -162,7 +164,8 @@ typedef   ^                            ^                             WAMIT_Input
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
-typedef   ^                            ParameterType                 INTEGER                  nWAMITObj                       -          -          -         "number of WAMIT input files and matrices.  If NBodyMod = 1 then nPotFiles will be 1 even if NBody > 1" -
+typedef   ^                            ParameterType                 ModVarsType             &Vars                            -          -          -         "Module Variables" -
+typedef   ^                            ^                             INTEGER                  nWAMITObj                       -          -          -         "number of WAMIT input files and matrices.  If NBodyMod = 1 then nPotFiles will be 1 even if NBody > 1" -
 typedef   ^                            ^                             INTEGER                  vecMultiplier                   -          -          -         "multiplier for the WAMIT vectors and matrices.  If NBodyMod=1 then this = NBody, else 1" -
 typedef   ^                            ^                             WAMIT_ParameterType      WAMIT                           {:}        -          -         "Parameter data for the WAMIT module"  -
 typedef   ^                            ^                             WAMIT2_ParameterType     WAMIT2                          {:}        -          -         "Parameter data for the WAMIT2 module"  -

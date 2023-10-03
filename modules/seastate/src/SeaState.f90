@@ -647,6 +647,9 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          
       end if
 
+         ! Initialize modules
+      CALL Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
          ! Destroy the local initialization data
       CALL CleanUp()
@@ -681,6 +684,72 @@ CONTAINS
    END SUBROUTINE CleanUp
 !................................
 END SUBROUTINE SeaSt_Init
+
+subroutine Init_ModuleVars(InitInp, u, p, y, m, InitOut, InputFileData, ErrStat, ErrMsg)
+   TYPE(SeaSt_InitInputType),    INTENT(IN   )  :: InitInp        !< Input data for initialization routine
+   TYPE(SeaSt_InputType),        INTENT(IN   )  :: u              !< An initial guess for the input; input mesh must be defined
+   TYPE(SeaSt_ParameterType),    INTENT(INOUT)  :: p              !< Parameters
+   TYPE(SeaSt_OutputType),       INTENT(IN)     :: y              !< Initial system outputs (outputs are not calculated;
+   TYPE(SeaSt_MiscVarType),      INTENT(INOUT)  :: m              !< Misc variables for optimization (not copied in glue code)
+   TYPE(SeaSt_InitOutputType),   INTENT(INOUT)  :: InitOut        !< Output for initialization routine
+   TYPE(SeaSt_InputFile),        INTENT(IN   )  :: InputFileData  !< Input file data
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat        !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter :: RoutineName = 'Init_ModuleVars'
+   INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
+
+   integer(IntKi)          :: i, j, k, idx
+   REAL(R8Ki)              :: MaxThrust, MaxTorque, ScaleLength
+   TYPE(ModVarType)        :: Var
+
+   ! Allocate space for variables (deallocate if already allocated)
+   if (associated(p%Vars)) deallocate(p%Vars)
+   allocate(p%Vars, stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat(ErrID_Fatal, "Error allocating p%Vars", ErrStat, ErrMsg, RoutineName)
+      return
+   end if
+
+   ! Associate pointers in initialization output
+   InitOut%Vars => p%Vars
+
+   !----------------------------------------------------------------------------
+   ! Continuous State Variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Input variables
+   !----------------------------------------------------------------------------
+
+   !----------------------------------------------------------------------------
+   ! Output variables
+   !----------------------------------------------------------------------------
+
+   ! call MV_AddVar(p%Vars%y, "Outputs", VF_Scalar, p%NumOuts, &
+   !                LinNames=[(trim(InitOut%WriteOutputHdr(i))//', '//&
+   !                           trim(InitOut%WriteOutputUnt(i)), i=1,p%NumOuts)])
+
+   !----------------------------------------------------------------------------
+   ! Initialize Variables and Values
+   !----------------------------------------------------------------------------
+
+   CALL MV_InitVarsVals(p%Vars, m%Vals, InitInp%Linearize, ErrStat2, ErrMsg2); if (Failed()) return
+
+   !----------------------------------------------------------------------------
+   ! Linearization
+   !----------------------------------------------------------------------------
+
+   ! If linearization is not requested, return
+   if (.not. InitInp%Linearize) return
+
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
+end subroutine
 
 
 !----------------------------------------------------------------------------------------------------------------------------------

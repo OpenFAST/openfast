@@ -120,8 +120,9 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: iq      !< row index in solver q matrix [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: iUsr = 0_IntKi      !< first user defined index for variable, can be used a lower/upper bounds [-]
     INTEGER(IntKi)  :: jUsr = 0      !< second user defined index for variable [-]
-    REAL(R8Ki)  :: Perturb = 0      !< perturbation [-]
+    INTEGER(IntKi)  :: MeshID = 0      !< Mesh identification number [-]
     LOGICAL  :: Solve = .false.      !< flag indicating that variable is used by solver [-]
+    REAL(R8Ki)  :: Perturb = 0      !< perturbation [-]
     character(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames      !<  [-]
   END TYPE ModVarType
 ! =======================
@@ -814,8 +815,9 @@ subroutine NWTC_Library_CopyModVarType(SrcModVarTypeData, DstModVarTypeData, Ctr
    end if
    DstModVarTypeData%iUsr = SrcModVarTypeData%iUsr
    DstModVarTypeData%jUsr = SrcModVarTypeData%jUsr
-   DstModVarTypeData%Perturb = SrcModVarTypeData%Perturb
+   DstModVarTypeData%MeshID = SrcModVarTypeData%MeshID
    DstModVarTypeData%Solve = SrcModVarTypeData%Solve
+   DstModVarTypeData%Perturb = SrcModVarTypeData%Perturb
    if (allocated(SrcModVarTypeData%LinNames)) then
       LB(1:1) = lbound(SrcModVarTypeData%LinNames)
       UB(1:1) = ubound(SrcModVarTypeData%LinNames)
@@ -887,8 +889,9 @@ subroutine NWTC_Library_PackModVarType(Buf, Indata)
    end if
    call RegPack(Buf, InData%iUsr)
    call RegPack(Buf, InData%jUsr)
-   call RegPack(Buf, InData%Perturb)
+   call RegPack(Buf, InData%MeshID)
    call RegPack(Buf, InData%Solve)
+   call RegPack(Buf, InData%Perturb)
    call RegPack(Buf, allocated(InData%LinNames))
    if (allocated(InData%LinNames)) then
       call RegPackBounds(Buf, 1, lbound(InData%LinNames), ubound(InData%LinNames))
@@ -977,9 +980,11 @@ subroutine NWTC_Library_UnPackModVarType(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%jUsr)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Perturb)
+   call RegUnpack(Buf, OutData%MeshID)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Solve)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%Perturb)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%LinNames)) deallocate(OutData%LinNames)
    call RegUnpack(Buf, IsAllocAssoc)

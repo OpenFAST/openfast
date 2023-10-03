@@ -75,8 +75,9 @@ typedef     ^       ^           IntKi           iLin                :   -   -   
 typedef     ^       ^           IntKi           iq                  :   -   -   "row index in solver q matrix"  -
 typedef     ^       ^           IntKi           iUsr                2   -   -   "first user defined index for variable, can be used a lower/upper bounds"  -
 typedef     ^       ^           IntKi           jUsr                -   0   -   "second user defined index for variable"  -
-typedef     ^       ^           R8Ki            Perturb             -   0   -   "perturbation"  -
+typedef     ^       ^           IntKi           MeshID              -   0   -   "Mesh identification number"  -
 typedef     ^       ^           logical         Solve               -   F   -   "flag indicating that variable is used by solver"  -
+typedef     ^       ^           R8Ki            Perturb             -   0   -   "perturbation"  -
 typedef     ^       ^           character(LinChanLen)   LinNames    :   -   -   ""  -
 
 typedef     ^       ModVarsType IntKi           ModNum              -   0   -   ""  -

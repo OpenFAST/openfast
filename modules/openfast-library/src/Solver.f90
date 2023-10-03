@@ -26,7 +26,7 @@ integer(IntKi), parameter  :: COL_D = 1, COL_V = 2, COL_A = 3, COL_AA = 4
 integer(IntKi), parameter  :: TC_Modules(*) = [Module_ED, Module_BD, Module_SD]
 
 ! Debugging
-logical, parameter         :: DebugSolver = .true.
+logical, parameter         :: DebugSolver = .false.
 integer(IntKi)             :: DebugUn = -1
 character(*), parameter    :: DebugFile = 'solver.dbg'
 logical, parameter         :: DebugJacobian = .false.
@@ -284,8 +284,10 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
             vec2 = [vec2, Mod%Vars%x(j)%iSol]
          end do
          call AllocAry(Mod%ixs, 2, size(vec1), "Mod%ixs", ErrStat2, ErrMsg2); if (Failed()) return
-         Mod%ixs(1, :) = vec1
-         Mod%ixs(2, :) = vec2
+         if (size(vec1) > 0) then
+            Mod%ixs(1, :) = vec1
+            Mod%ixs(2, :) = vec2
+         end if
       end associate
       deallocate (vec1, vec2)
    end do
@@ -329,8 +331,10 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
          end select
       end do
       call AllocAry(Mods(i)%ius, 2, size(vec1), "Mods(i)%ius", ErrStat2, ErrMsg2); if (Failed()) return
-      Mods(i)%ius(1, :) = vec1
-      Mods(i)%ius(2, :) = vec2
+      if (size(vec1) > 0) then
+         Mods(i)%ius(1, :) = vec1
+         Mods(i)%ius(2, :) = vec2
+      end if
       deallocate (vec1, vec2)
    end do
 
@@ -366,8 +370,10 @@ subroutine CalcVarGlobalIndices(p, Mods, NumX, NumU, NumY, NumQ, NumJ, ErrStat, 
          vec2 = [vec2, Mods(i)%Vars%y(j)%iSol]
       end do
       call AllocAry(Mods(i)%iys, 2, size(vec1), "Mods(i)%iys", ErrStat2, ErrMsg2); if (Failed()) return
-      Mods(i)%iys(1, :) = vec1
-      Mods(i)%iys(2, :) = vec2
+      if (size(vec1) > 0) then
+         Mods(i)%iys(1, :) = vec1
+         Mods(i)%iys(2, :) = vec2
+      end if
       deallocate (vec1, vec2)
    end do
 
@@ -1260,15 +1266,15 @@ subroutine PackModuleStates(ModData, this_state, T, x)
    do j = 1, size(ModData)
       ii = ModData(j)%Ins
       select case (ModData(j)%ID)
-      case (Module_ED)
-         call ED_PackStateValues(T%ED%p, T%ED%x(this_state), T%ED%m%Vals%x)
-         call XferLocToGbl1D(ModData(j)%ixs, T%ED%m%Vals%x, x)
       case (Module_BD)
          call BD_PackStateValues(T%BD%p(ii), T%BD%x(ii, this_state), T%BD%m(ii)%Vals%x)
          call XferLocToGbl1D(ModData(j)%ixs, T%BD%m(ii)%Vals%x, x)
+      case (Module_ED)
+         call ED_PackStateValues(T%ED%p, T%ED%x(this_state), T%ED%m%Vals%x)
+         call XferLocToGbl1D(ModData(j)%ixs, T%ED%m%Vals%x, x)
       case (Module_SD)
-         ! call SD_PackStateValues(SD%p, SD%x(this_state), SD%m%Vals%x)
-         ! x(SD%p%Vars%ix) = SD%m%Vals%x
+         call SD_PackStateValues(T%SD%p, T%SD%x(this_state), T%SD%m%Vals%x)
+         call XferLocToGbl1D(ModData(j)%ixs, T%SD%m%Vals%x, x)
       end select
    end do
 
@@ -1282,17 +1288,19 @@ subroutine UnpackModuleStates(ModData, ModOrder, this_state, T, x)
    real(R8Ki), intent(inout)              :: x(:)
    integer(IntKi)                         :: j
 
+   ! Must support all Tight Coupling modules
    do j = 1, size(ModOrder)
       associate (Mod => ModData(ModOrder(j)))
          select case (Mod%ID)
-         case (Module_ED)
-            call XferGblToLoc1D(Mod%ixs, x, T%ED%m%Vals%x)
-            call ED_UnpackStateValues(T%ED%p, T%ED%m%Vals%x, T%ED%x(this_state))
          case (Module_BD)
             call XferGblToLoc1D(Mod%ixs, x, T%BD%m(Mod%Ins)%Vals%x)
             call BD_UnpackStateValues(T%BD%p(Mod%Ins), T%BD%m(Mod%Ins)%Vals%x, T%BD%x(Mod%Ins, this_state))
+         case (Module_ED)
+            call XferGblToLoc1D(Mod%ixs, x, T%ED%m%Vals%x)
+            call ED_UnpackStateValues(T%ED%p, T%ED%m%Vals%x, T%ED%x(this_state))
          case (Module_SD)
-            ! call SD_UnpackStateValues(SD%p, x(SD%p%Vars%ix), SD%x(this_state))
+            call XferGblToLoc1D(Mod%ixs, x, T%SD%m%Vals%x)
+            call SD_UnpackStateValues(T%SD%p, T%SD%m%Vals%x, T%SD%x(this_state))
          end select
       end associate
    end do
@@ -1309,15 +1317,24 @@ subroutine PackModuleInputs(ModData, ModOrder, T, u)
    do j = 1, size(ModOrder)
       associate (Mod => ModData(ModOrder(j)))
          select case (Mod%ID)
-         case (Module_ED)
-            call ED_PackInputValues(T%ED%p, T%ED%Input(1), T%ED%m%Vals%u)
-            call XferLocToGbl1D(Mod%ius, T%ED%m%Vals%u, u)
          case (Module_BD)
             call BD_PackInputValues(T%BD%p(Mod%Ins), T%BD%Input(1, Mod%Ins), T%BD%m(Mod%Ins)%Vals%u)
             call XferLocToGbl1D(Mod%ius, T%BD%m(Mod%Ins)%Vals%u, u)
+         case (Module_ED)
+            call ED_PackInputValues(T%ED%p, T%ED%Input(1), T%ED%m%Vals%u)
+            call XferLocToGbl1D(Mod%ius, T%ED%m%Vals%u, u)
+         case (Module_ExtPtfm)
+            ! call ExtPtfm_PackInputValues(T%ExtPtfm%p, T%ExtPtfm%Input(1), T%ExtPtfm%m%Vals%u)
+            ! call XferLocToGbl1D(Mod%ius, T%ExtPtfm%m%Vals%u, u)
+         case (Module_Orca)
+            ! call Orca_PackInputValues(T%Orca%p, T%Orca%Input(1), T%Orca%m%Vals%u)
+            ! call XferLocToGbl1D(Mod%ius, T%Orca%m%Vals%u, u)
+         case (Module_HD)
+            call HD_PackInputValues(T%HD%p, T%HD%Input(1), T%HD%m%Vals%u)
+            call XferLocToGbl1D(Mod%ius, T%HD%m%Vals%u, u)
          case (Module_SD)
-            ! call SD_PackInputValues(SD%p, SD%Input, SD%m%Vals%u)
-            ! u(SD%p%Vars%iu) = SD%m%Vals%u
+            call SD_PackInputValues(T%SD%p, T%SD%Input(1), T%SD%m%Vals%u)
+            call XferLocToGbl1D(Mod%ius, T%SD%m%Vals%u, u)
          end select
       end associate
    end do
@@ -1335,15 +1352,24 @@ subroutine PackModuleUs(ModData, ModOrder, T, u)
    do j = 1, size(ModOrder)
       associate (Mod => ModData(ModOrder(j)))
          select case (Mod%ID)
-         case (Module_ED)
-            call ED_PackInputValues(T%ED%p, T%ED%u, T%ED%m%Vals%u)
-            call XferLocToGbl1D(Mod%ius, T%ED%m%Vals%u, u)
          case (Module_BD)
             call BD_PackInputValues(T%BD%p(Mod%Ins), T%BD%u(Mod%Ins), T%BD%m(Mod%Ins)%Vals%u)
             call XferLocToGbl1D(Mod%ius, T%BD%m(Mod%Ins)%Vals%u, u)
+         case (Module_ED)
+            call ED_PackInputValues(T%ED%p, T%ED%u, T%ED%m%Vals%u)
+            call XferLocToGbl1D(Mod%ius, T%ED%m%Vals%u, u)
+         case (Module_ExtPtfm)
+            ! call ExtPtfm_PackInputValues(T%ExtPtfm%p, T%ExtPtfm%u, T%ExtPtfm%m%Vals%u)
+            ! call XferLocToGbl1D(Mod%ius, T%ExtPtfm%m%Vals%u, u)
+         case (Module_Orca)
+            ! call Orca_PackInputValues(T%Orca%p, T%Orca%u, T%Orca%m%Vals%u)
+            ! call XferLocToGbl1D(Mod%ius, T%Orca%m%Vals%u, u)
+         case (Module_HD)
+            call HD_PackInputValues(T%HD%p, T%HD%u, T%HD%m%Vals%u)
+            call XferLocToGbl1D(Mod%ius, T%HD%m%Vals%u, u)
          case (Module_SD)
-            ! call SD_PackInputValues(SD%p, SD%Input, SD%m%Vals%u)
-            ! u(SD%p%Vars%iu) = SD%m%Vals%u
+            call SD_PackInputValues(T%SD%p, T%SD%u, T%SD%m%Vals%u)
+            call XferLocToGbl1D(Mod%ius, T%SD%m%Vals%u, u)
          end select
       end associate
    end do
@@ -1361,16 +1387,30 @@ subroutine UnpackModuleInputs(ModData, ModOrder, T, u)
    do j = 1, size(ModOrder)
       associate (Mod => ModData(ModOrder(j)))
          select case (Mod%ID)
-         case (Module_ED)
-            call ED_PackInputValues(T%ED%p, T%ED%Input(1), T%ED%m%Vals%u)
-            call XferGblToLoc1D(Mod%ius, u, T%ED%m%Vals%u)
-            call ED_UnpackInputValues(T%ED%p, T%ED%m%Vals%u, T%ED%Input(1))
          case (Module_BD)
             call BD_PackInputValues(T%BD%p(Mod%Ins), T%BD%Input(1, Mod%Ins), T%BD%m(Mod%Ins)%Vals%u)
             call XferGblToLoc1D(Mod%ius, u, T%BD%m(Mod%Ins)%Vals%u)
             call BD_UnpackInputValues(T%BD%p(Mod%Ins), T%BD%m(Mod%Ins)%Vals%u, T%BD%Input(1, Mod%Ins))
+         case (Module_ED)
+            call ED_PackInputValues(T%ED%p, T%ED%Input(1), T%ED%m%Vals%u)
+            call XferGblToLoc1D(Mod%ius, u, T%ED%m%Vals%u)
+            call ED_UnpackInputValues(T%ED%p, T%ED%m%Vals%u, T%ED%Input(1))
+         case (Module_ExtPtfm)
+            ! call ExtPtfm_PackInputValues(T%ExtPtfm%p, T%ExtPtfm%Input(1), T%ExtPtfm%m%Vals%u)
+            ! call XferGblToLoc1D(Mod%ius, u, T%ExtPtfm%m%Vals%u)
+            ! call ExtPtfm_UnpackInputValues(T%ExtPtfm%p, T%ExtPtfm%m%Vals%u, T%ExtPtfm%Input(1))
+         case (Module_Orca)
+            ! call Orca_PackInputValues(T%Orca%p, T%Orca%Input(1), T%Orca%m%Vals%u)
+            ! call XferGblToLoc1D(Mod%ius, u, T%Orca%m%Vals%u)
+            ! call Orca_UnpackInputValues(T%Orca%p, T%Orca%m%Vals%u, T%Orca%Input(1))
+         case (Module_HD)
+            call HD_PackInputValues(T%HD%p, T%HD%Input(1), T%HD%m%Vals%u)
+            call XferGblToLoc1D(Mod%ius, u, T%HD%m%Vals%u)
+            call HD_UnpackInputValues(T%HD%p, T%HD%m%Vals%u, T%HD%Input(1))
          case (Module_SD)
-            ! call SD_UnpackInputValues(SD%p, u(SD%p%Vars%iu), SD%Input(1))
+            call SD_PackInputValues(T%SD%p, T%SD%Input(1), T%SD%m%Vals%u)
+            call XferGblToLoc1D(Mod%ius, u, T%SD%m%Vals%u)
+            call SD_UnpackInputValues(T%SD%p, T%SD%m%Vals%u, T%SD%Input(1))
          end select
       end associate
    end do
