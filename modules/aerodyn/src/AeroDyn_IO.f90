@@ -658,6 +658,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    character(ErrMsgLen)                            :: ErrMsg_NoAllBldNdOuts
    integer(IntKi)                                  :: CurLine           !< current entry in FileInfo_In%Lines array
    real(ReKi)                                      :: TmpRe5(5)         !< temporary 8 number array for reading values in
+   character(1024)                                 :: sDummy            !< temporary string
 
    character(*), parameter                         :: RoutineName = 'ParsePrimaryFileInfo'
 
@@ -1018,6 +1019,33 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
 !FIXME: improve logic on the node outputs
    ! Prevent segfault when no blades specified.  All logic tests on BldNd_NumOuts at present.
    if (InputFileData%BldNd_BladesOut <= 0)   InputFileData%BldNd_NumOuts = 0
+
+
+   !====== Advanced Options =============================================================================
+   if ((CurLine) >= size(FileInfo_In%Lines)) RETURN
+
+   call WrScr(' - Reading advanced options for AeroDyn')
+   do CurLine= CurLine, size(FileInfo_In%Lines)
+      sDummy = FileInfo_In%Lines(CurLine)
+      call Conv2UC(sDummy)  ! to uppercase
+      if (index(sDummy, '!') == 1 .or. index(sDummy, '=') == 1 .or. index(sDummy, '#') == 1 .or. index(sDummy, '---') == 1) then
+         ! pass comment lines
+         elseif (index(sDummy, 'SECTAVG')>1) then
+            read(sDummy, '(L1)') InputFileData%SectAvg
+            print*,'   >>> SectAvg        ',InputFileData%SectAvg
+         elseif (index(sDummy, 'SA_PSIBWD')>1) then
+            read(sDummy, *) InputFileData%SA_PsiBwd
+            print*,'   >>> SA_PsiBwd      ',InputFileData%SA_PsiBwd
+         elseif (index(sDummy, 'SA_PSIFWD')>1) then
+            read(sDummy, *) InputFileData%SA_PsiFwd
+            print*,'   >>> SA_PsiFwd      ',InputFileData%SA_PsiFwd
+         elseif (index(sDummy, 'SA_NPERSEC')>1) then
+            read(sDummy, *) InputFileData%SA_nPerSec
+            print*,'   >>> SA_nPerSec     ',InputFileData%SA_nPerSec
+         else
+            print*,'[WARN] AeroDyn Line ignored: '//trim(sDummy)
+      endif
+   enddo
 
    RETURN
 CONTAINS

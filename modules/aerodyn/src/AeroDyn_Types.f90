@@ -217,6 +217,10 @@ IMPLICIT NONE
     LOGICAL  :: TIDrag = .false.      !< Include the drag term in the tangential-induction calculation? [unused when WakeMod=0 or TanInd=FALSE] [flag]
     REAL(ReKi)  :: IndToler = 0.0_ReKi      !< Convergence tolerance for BEM induction factors [unused when WakeMod=0] [-]
     REAL(ReKi)  :: MaxIter = 0.0_ReKi      !< Maximum number of iteration steps [unused when WakeMod=0] [-]
+    LOGICAL  :: SectAvg = .false.      !< Use Sector average for BEM inflow velocity calculation [-]
+    REAL(ReKi)  :: SA_PsiBwd = -60      !< Sector Average - Backard Azimuth (<0) [deg]
+    REAL(ReKi)  :: SA_PsiFwd = 60      !< Sector Average - Forward Azimuth (>0) [deg]
+    INTEGER(IntKi)  :: SA_nPerSec = 11      !< Sector Average - Number of points per sectors (>1) [-]
     INTEGER(IntKi)  :: UAMod = 0_IntKi      !< Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [used only when AFAeroMod=2] [-]
     LOGICAL  :: FLookup = .false.      !< Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAeroMod=2] [flag]
     REAL(ReKi)  :: InCol_Alfa = 0.0_ReKi      !< The column in the airfoil tables that contains the angle of attack [-]
@@ -305,6 +309,7 @@ IMPLICIT NONE
     TYPE(AA_OutputType)  :: AA_y      !< Outputs from the AA module [-]
     TYPE(AA_InputType)  :: AA_u      !< Inputs to the AA module [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: DisturbedInflow      !< InflowOnBlade values modified by tower influence [m/s]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: SectAvgInflow      !< Sector averaged - disturbed inflow to improve BEM shear calculations [m/s]
     REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: orientationAnnulus      !< Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles [-]
     REAL(R8Ki) , DIMENSION(:,:,:,:), ALLOCATABLE  :: R_li      !< Transformation matrix from inertial system to the staggered polar coordinate system of a given section [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [-]
@@ -449,6 +454,10 @@ IMPLICIT NONE
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false) [-]
     LOGICAL  :: UA_Flag = .false.      !< logical flag indicating whether to use UnsteadyAero [-]
     TYPE(FlowFieldType) , POINTER :: FlowField => NULL()      !< Pointer of InflowWinds flow field data type [-]
+    LOGICAL  :: SectAvg = .false.      !< Use Sector average for BEM inflow velocity calculation [-]
+    REAL(ReKi)  :: SA_PsiBwd = 0.0_ReKi      !< Sector Average - Backard Azimuth (<0) [deg]
+    REAL(ReKi)  :: SA_PsiFwd = 0.0_ReKi      !< Sector Average - Forward Azimuth (>0) [deg]
+    INTEGER(IntKi)  :: SA_nPerSec = 0_IntKi      !< Sector Average - Number of points per sector (>1) [-]
   END TYPE AD_ParameterType
 ! =======================
 ! =========  BldInputType  =======
@@ -2599,6 +2608,10 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%TIDrag = SrcInputFileData%TIDrag
    DstInputFileData%IndToler = SrcInputFileData%IndToler
    DstInputFileData%MaxIter = SrcInputFileData%MaxIter
+   DstInputFileData%SectAvg = SrcInputFileData%SectAvg
+   DstInputFileData%SA_PsiBwd = SrcInputFileData%SA_PsiBwd
+   DstInputFileData%SA_PsiFwd = SrcInputFileData%SA_PsiFwd
+   DstInputFileData%SA_nPerSec = SrcInputFileData%SA_nPerSec
    DstInputFileData%UAMod = SrcInputFileData%UAMod
    DstInputFileData%FLookup = SrcInputFileData%FLookup
    DstInputFileData%InCol_Alfa = SrcInputFileData%InCol_Alfa
@@ -2749,6 +2762,10 @@ subroutine AD_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%TIDrag)
    call RegPack(Buf, InData%IndToler)
    call RegPack(Buf, InData%MaxIter)
+   call RegPack(Buf, InData%SectAvg)
+   call RegPack(Buf, InData%SA_PsiBwd)
+   call RegPack(Buf, InData%SA_PsiFwd)
+   call RegPack(Buf, InData%SA_nPerSec)
    call RegPack(Buf, InData%UAMod)
    call RegPack(Buf, InData%FLookup)
    call RegPack(Buf, InData%InCol_Alfa)
@@ -2874,6 +2891,14 @@ subroutine AD_UnPackInputFile(Buf, OutData)
    call RegUnpack(Buf, OutData%IndToler)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%MaxIter)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%SectAvg)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%SA_PsiBwd)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%SA_PsiFwd)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%SA_nPerSec)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%UAMod)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -3695,6 +3720,18 @@ subroutine AD_CopyRotMiscVarType(SrcRotMiscVarTypeData, DstRotMiscVarTypeData, C
       end if
       DstRotMiscVarTypeData%DisturbedInflow = SrcRotMiscVarTypeData%DisturbedInflow
    end if
+   if (allocated(SrcRotMiscVarTypeData%SectAvgInflow)) then
+      LB(1:3) = lbound(SrcRotMiscVarTypeData%SectAvgInflow)
+      UB(1:3) = ubound(SrcRotMiscVarTypeData%SectAvgInflow)
+      if (.not. allocated(DstRotMiscVarTypeData%SectAvgInflow)) then
+         allocate(DstRotMiscVarTypeData%SectAvgInflow(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%SectAvgInflow.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstRotMiscVarTypeData%SectAvgInflow = SrcRotMiscVarTypeData%SectAvgInflow
+   end if
    if (allocated(SrcRotMiscVarTypeData%orientationAnnulus)) then
       LB(1:4) = lbound(SrcRotMiscVarTypeData%orientationAnnulus)
       UB(1:4) = ubound(SrcRotMiscVarTypeData%orientationAnnulus)
@@ -4163,6 +4200,9 @@ subroutine AD_DestroyRotMiscVarType(RotMiscVarTypeData, ErrStat, ErrMsg)
    if (allocated(RotMiscVarTypeData%DisturbedInflow)) then
       deallocate(RotMiscVarTypeData%DisturbedInflow)
    end if
+   if (allocated(RotMiscVarTypeData%SectAvgInflow)) then
+      deallocate(RotMiscVarTypeData%SectAvgInflow)
+   end if
    if (allocated(RotMiscVarTypeData%orientationAnnulus)) then
       deallocate(RotMiscVarTypeData%orientationAnnulus)
    end if
@@ -4326,6 +4366,11 @@ subroutine AD_PackRotMiscVarType(Buf, Indata)
    if (allocated(InData%DisturbedInflow)) then
       call RegPackBounds(Buf, 3, lbound(InData%DisturbedInflow), ubound(InData%DisturbedInflow))
       call RegPack(Buf, InData%DisturbedInflow)
+   end if
+   call RegPack(Buf, allocated(InData%SectAvgInflow))
+   if (allocated(InData%SectAvgInflow)) then
+      call RegPackBounds(Buf, 3, lbound(InData%SectAvgInflow), ubound(InData%SectAvgInflow))
+      call RegPack(Buf, InData%SectAvgInflow)
    end if
    call RegPack(Buf, allocated(InData%orientationAnnulus))
    if (allocated(InData%orientationAnnulus)) then
@@ -4565,6 +4610,20 @@ subroutine AD_UnPackRotMiscVarType(Buf, OutData)
          return
       end if
       call RegUnpack(Buf, OutData%DisturbedInflow)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%SectAvgInflow)) deallocate(OutData%SectAvgInflow)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 3, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%SectAvgInflow(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%SectAvgInflow.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%SectAvgInflow)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    if (allocated(OutData%orientationAnnulus)) deallocate(OutData%orientationAnnulus)
@@ -6347,6 +6406,10 @@ subroutine AD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
    DstParamData%UA_Flag = SrcParamData%UA_Flag
    DstParamData%FlowField => SrcParamData%FlowField
+   DstParamData%SectAvg = SrcParamData%SectAvg
+   DstParamData%SA_PsiBwd = SrcParamData%SA_PsiBwd
+   DstParamData%SA_PsiFwd = SrcParamData%SA_PsiFwd
+   DstParamData%SA_nPerSec = SrcParamData%SA_nPerSec
 end subroutine
 
 subroutine AD_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -6423,6 +6486,10 @@ subroutine AD_PackParam(Buf, Indata)
          call IfW_FlowField_PackFlowFieldType(Buf, InData%FlowField) 
       end if
    end if
+   call RegPack(Buf, InData%SectAvg)
+   call RegPack(Buf, InData%SA_PsiBwd)
+   call RegPack(Buf, InData%SA_PsiFwd)
+   call RegPack(Buf, InData%SA_nPerSec)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -6500,6 +6567,14 @@ subroutine AD_UnPackParam(Buf, OutData)
    else
       OutData%FlowField => null()
    end if
+   call RegUnpack(Buf, OutData%SectAvg)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%SA_PsiBwd)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%SA_PsiFwd)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%SA_nPerSec)
+   if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
 subroutine AD_CopyBldInputType(SrcBldInputTypeData, DstBldInputTypeData, CtrlCode, ErrStat, ErrMsg)

@@ -471,7 +471,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       
       ! many states are in the BEMT module, which were initialized in BEMT_Init()
    do iR = 1, nRotors
-      call Init_MiscVars(m%rotors(iR), p%rotors(iR), u%rotors(iR), y%rotors(iR), errStat2, errMsg2)
+      call Init_MiscVars(m%rotors(iR), p%rotors(iR), p, u%rotors(iR), y%rotors(iR), errStat2, errMsg2)
       if (Failed()) return;
    enddo
       
@@ -599,9 +599,10 @@ subroutine AD_ReInit(p, x, xd, z, OtherState, m, Interval, ErrStat, ErrMsg )
 end subroutine AD_ReInit
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine initializes (allocates) the misc variables for use during the simulation.
-subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
+subroutine Init_MiscVars(m, p, p_AD, u, y, errStat, errMsg)
    type(RotMiscVarType),          intent(inout)  :: m                !< misc/optimization data (not defined in submodules)
    type(RotParameterType),        intent(in   )  :: p                !< Parameters
+   type(AD_ParameterType),        intent(in   )  :: p_AD              !< Parameters
    type(RotInputType),            intent(inout)  :: u                !< input for HubMotion mesh (create sibling mesh here)
    type(RotOutputType),           intent(inout)  :: y                !< output (create mapping between output and otherstate mesh here)
    integer(IntKi),                intent(  out)  :: errStat          !< Error status of the operation
@@ -621,6 +622,9 @@ subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
    
    call AllocAry( m%DisturbedInflow, 3_IntKi, p%NumBlNds, p%numBlades, 'm%DisturbedInflow', ErrStat2, ErrMsg2 ) ! must be same size as u%InflowOnBlade
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+if ((p_AD%SectAvg) .and. ((p_AD%WakeMod == WakeMod_BEMT).or.(p_AD%WakeMod == WakeMod_DBEMT))  ) then
+   call AllocAry( m%SectAvgInflow,   3_IntKi, p%NumBlNds, p%numBlades, 'm%SectAvgInflow'  , ErrStat2, ErrMsg2 ); if(Failed()) return
+endif
    call AllocAry( m%orientationAnnulus, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'm%orientationAnnulus', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    call AllocAry( m%R_li, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'm%R_li', ErrStat2, ErrMsg2 )
@@ -885,6 +889,12 @@ end if
    end if
    
    m%FirstWarn_TowerStrike = .true.
+
+contains
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        Failed =  ErrStat >= AbortErrLev
+   end function Failed
    
 end subroutine Init_MiscVars
 !----------------------------------------------------------------------------------------------------------------------------------   
@@ -1311,6 +1321,11 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p_AD%UA_Flag       = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
    p_AD%CompAeroMaps  = InitInp%CompAeroMaps
 
+   p_AD%SectAvg        = InputFileData%SectAvg
+   p_AD%SA_PsiBwd      = InputFileData%SA_PsiBwd*D2R
+   p_AD%SA_PsiFwd      = InputFileData%SA_PsiFwd*D2R
+   p_AD%SA_nPerSec     = InputFileData%SA_nPerSec
+
    p%MHK              = InitInp%MHK
    
    p_AD%DT            = InputFileData%DTAero
@@ -1320,6 +1335,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p%TwrAero          = InputFileData%TwrAero
    p%CavitCheck       = InputFileData%CavitCheck
    p%Buoyancy         = InputFileData%Buoyancy
+
    
 
    if (InitInp%Linearize .and. InputFileData%WakeMod == WakeMod_BEMT) then
@@ -1643,7 +1659,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       do iR = 1,size(p%rotors)
-         call SetInputs(p%rotors(iR), p, uInterp%rotors(iR), m%rotors(iR), i, errStat2, errMsg2)
+         call SetInputs(t, p%rotors(iR), p, uInterp%rotors(iR), m%rotors(iR), i, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       enddo
    enddo
@@ -1936,7 +1952,7 @@ subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot,
       CalcWriteOutput = .true. ! by default, calculate WriteOutput unless told that we do not need it
    end if
 
-   call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2)      
+   call SetInputs(t, p, p_AD, u, m, indx, errStat2, errMsg2)      
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    if (p_AD%WakeMod /= WakeMod_FVW) then
@@ -2563,7 +2579,7 @@ subroutine RotCalcConstrStateResidual( Time, u, p, p_AD, x, xd, z, OtherState, m
    end if
    
    
-   call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2)
+   call SetInputs(Time, p, p_AD, u, m, indx, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                                 
       
@@ -2603,7 +2619,7 @@ subroutine RotCalcContStateDeriv( t, u, p, p_AD, x, xd, z, OtherState, m, dxdt, 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   call SetInputs(p, p_AD, u, m, InputIndex, ErrStat2, ErrMsg2)
+   call SetInputs(t, p, p_AD, u, m, InputIndex, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    
    call BEMT_CalcContStateDeriv( t, m%BEMT_u(InputIndex), p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, m%BEMT, dxdt%BEMT, p_AD%AFI, ErrStat2, ErrMsg2 )
@@ -2613,7 +2629,8 @@ END SUBROUTINE RotCalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine converts the AeroDyn inputs into values that can be used for its submodules. It calculates the disturbed inflow
 !! on the blade if tower shadow or tower influence are enabled, then uses these values to set m%BEMT_u(indx).
-subroutine SetInputs(p, p_AD, u, m, indx, errStat, errMsg)
+subroutine SetInputs(t, p, p_AD, u, m, indx, errStat, errMsg)
+   real(DbKi),                   intent(in   )  :: t                      !< Current simulation time in seconds
    type(RotParameterType),       intent(in   )  :: p                      !< AD parameters
    type(AD_ParameterType),       intent(in   )  :: p_AD                   !< AD parameters
    type(RotInputType),           intent(in   )  :: u                      !< AD Inputs at Time
@@ -2630,12 +2647,17 @@ subroutine SetInputs(p, p_AD, u, m, indx, errStat, errMsg)
    ErrMsg  = ""
    
    ! Disturbed inflow on blade (if tower shadow present)
-   call SetDisturbedInflow(p, p_AD, u, m, errStat, errMsg)
+   call SetDisturbedInflow(p, p_AD, u, m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
    if (p_AD%WakeMod /= WakeMod_FVW) then
+
+      if (p_AD%SectAvg) then
+         call SetSectAvgInflow(t, p, p_AD, u, m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      endif
+
          ! This needs to extract the inputs from the AD data types (mesh) and massage them for the BEMT module
-      call SetInputsForBEMT(p, u, m, indx, errStat2, errMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call SetInputsForBEMT(p, p_AD, u, m, indx, errStat2, errMsg2)
+         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
    endif
 end subroutine SetInputs
 
@@ -2677,12 +2699,136 @@ subroutine SetDisturbedInflow(p, p_AD, u, m, errStat, errMsg)
 
 end subroutine SetDisturbedInflow
 
+!> Sector Averaged (disturbed when tower influence on) inflow on the blade
+!! Loop on blade nodes and computed a weighted sector average inflow at each node
+subroutine SetSectAvgInflow(t, p, p_AD, u, m, errStat, errMsg)
+   real(DbKi),                   intent(in   )  :: t                      !< Current simulation time in seconds
+   type(RotParameterType),       intent(in   )  :: p                      !< AD parameters
+   type(AD_ParameterType),       intent(in   )  :: p_AD                   !< AD parameters
+   type(RotInputType),           intent(in   )  :: u                      !< AD Inputs at Time
+   type(RotMiscVarType),         intent(inout)  :: m                      !< Misc/optimization variables
+   integer(IntKi),               intent(  out)  :: errStat                !< Error status of the operation
+   character(*),                 intent(  out)  :: errMsg                 !< Error message if ErrStat /= ErrID_None
+   ! local variables             
+   real(R8Ki)              :: R_li        !< 
+   real(ReKi)              :: x_hat_disk(3) !< unit vector normal to disk along hub x axis
+   real(ReKi)              :: r_A(3)      !< Vector from global origin to blade node
+   real(ReKi)              :: r_H(3)      !< Vector from global origin to hub center
+   real(ReKi)              :: r_S(3)      !< Vector from global origin to point in sector
+   real(ReKi)              :: rHS(3)      !< Vector from rotor center to point in sector
+   real(ReKi)              :: rHA(3)      !< Vector from rotor center to blade node
+   real(ReKi)              :: rHA_perp(3) !< Component of rHA perpendicular to x_hat_disk
+   real(ReKi)              :: rHA_para(3) !< Component of rHA paralel to x_hat_disk
+   real(ReKi)              :: rHA_perp_n  !< Norm of rHA_perp
+   real(ReKi)              :: e_r(3)      !< Polar unit vector along rHA_perp
+   real(ReKi)              :: e_t(3)      !< Polar unit vector perpendicular to rHA_perp ("e_theta")
+   real(ReKi)              :: temp_norm
+   real(ReKi)              :: psi         !< Azimuthal offset in the current sector, runs from -psi_bwd to psi_fwd
+   real(ReKi)              :: dpsi        !< Azimuthal increment
+   real(ReKi), allocatable :: SectPos(:,:)!< Points used to define a given sector (for a given blade node A)
+   real(ReKi), allocatable :: SectVel(:,:)!< Inflow velocity at a given sector (Undisturbed and then disturbed)
+   real(ReKi), allocatable :: SectAcc(:,:)!< Inflow velocity at a given sector (Undisturbed and then disturbed)
+   real(ReKi), allocatable :: SectWgt(:)  !< Sector weights for velocity averaging
+   integer(intKi)          :: j,k, ipsi
+   integer(intKi)          :: errStat2
+   character(ErrMsgLen)    :: errMsg2
+   character(*), parameter :: RoutineName   = 'SetSectAvgInflow'
+   !
+   errStat = ErrID_None
+   errMsg  = ""
+
+   if (.not. associated(p_AD%FlowField)) then
+      errStat2 = errID_Fatal
+      errMsg2 = 'FlowField should be allocated'
+      if (Failed()) return
+   endif
+
+   ! Alloc and inits
+   call AllocAry(SectPos, 3, p_AD%SA_nPerSec, "SectPos", errStat2, errMsg2); if(Failed()) return
+   call AllocAry(SectVel, 3, p_AD%SA_nPerSec, "SectVel", errStat2, errMsg2); if(Failed()) return
+   call AllocAry(SectWgt,    p_AD%SA_nPerSec, "SectWgt", errStat2, errMsg2); if(Failed()) return
+   if (allocated(SectAcc)) deallocate(SectAcc) ! IfW_FlowField_GetVelAcc some logic for Acc, so we ensure it's deallocated
+   SectVel = 0.0_ReKi
+   SectPos = 0.0_ReKi
+   SectWgt = 1.0_ReKi/p_AD%SA_nPerSec ! TODO, potentially do a smart weighting function based on psi
+   dpsi = (p_AD%SA_PsiFwd-p_AD%SA_PsiBwd)/(p_AD%SA_nPerSec-1)
+
+   ! Hub 
+   x_hat_disk = real(u%HubMotion%Orientation(1,:,1), ReKi)
+   r_H = u%HubMotion%Position(:,1) + u%HubMotion%TranslationDisp(:,1)
+
+   ! --- Loop on blade nodes and computed a weighted sector average inflow at each node
+   do k=1,p%NumBlades
+      do j=1,p%NumBlNds         
+
+         ! --- Setup a polar coordinate system based on the current blade node
+         ! This is the same kind of calculations as the Calculate_MeshOrientation_Rel2Hub 
+         r_A = u%BladeMotion(k)%Position(:,j) + u%BladeMotion(k)%TranslationDisp(:,j)
+         rHA = r_A - r_H
+         rHA_para = dot_product( x_hat_disk, rHA ) * x_hat_disk
+         rHA_perp = rHA - rHA_para
+         rHA_perp_n = TwoNorm( rHA_perp )
+
+         ! --- Create list of section points around the current blade node
+         if (EqualRealNos(rHA_perp_n, 0.0_ReKi)) then
+            ! We set all points to be the current one (likely the rotor center when no hub..)
+            do ipsi=1,p_AD%SA_nPerSec
+               SectPos(:, ipsi) = r_A
+            enddo
+         else
+            e_r = rHA_perp/rHA_perp_n              ! Unit vector in "radial" coordinate
+            e_t = cross_product( x_hat_disk, e_r ) ! Unit vector in "tangential" coordinate
+            do ipsi=1,p_AD%SA_nPerSec
+               psi = p_AD%SA_PsiBwd + (ipsi-1)*dpsi
+               SectPos(:, ipsi) = (rHA_perp_n*cos(psi) * e_r + rHA_perp_n*sin(psi) * e_t) + rHA_para  + r_H
+            enddo
+         endif
+
+         ! --- Inflow on sector points
+         ! Undisturbed
+         call IfW_FlowField_GetVelAcc(p_AD%FlowField, 1, t, SectPos, SectVel, SectAcc, errStat=errStat2, errMsg=errMsg2); if(Failed()) return
+         ! --- Option 1 Disturbed inflow Before averaging - SectVel is modified in place
+         !if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none) then
+         !   call TwrInflArray(p, u, m, SectPos, SectVel, errStat2, errMsg2); if(Failed()) return
+         !endif
+
+         ! --- Weighting and averaging
+         m%SectAvgInflow(1, j, k) = sum(SectVel(1,:)*SectWgt)
+         m%SectAvgInflow(2, j, k) = sum(SectVel(2,:)*SectWgt)
+         m%SectAvgInflow(3, j, k) = sum(SectVel(3,:)*SectWgt)
+
+         ! --- Option 2 Disturbed after averaging 
+         if (p%TwrPotent /= TwrPotent_none .or. p%TwrShadow /= TwrShadow_none) then
+            ! TODO use a "scalar" function or change the interface of TwrInfl. Waiting for Wind Inputs of AD to be removed from AD
+            call TwrInflArray( p, u, m, reshape(r_A, (/3,1/)), m%SectAvgInflow(:, j:j, k), errStat2, errMsg2); if(Failed()) return
+         endif
+      enddo
+
+   enddo
+
+   call CleanUp()
+contains
+   subroutine CleanUp()
+      if(allocated(SectPos)) deallocate(SectPos)
+      if(allocated(SectVel)) deallocate(SectVel)
+      if(allocated(SectAcc)) deallocate(SectAcc)
+      if(allocated(SectWgt)) deallocate(SectWgt)
+   end subroutine 
+   logical function Failed()
+        call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName) 
+        Failed =  errStat >= AbortErrLev
+        if (Failed) call CleanUp()
+   end function Failed
+end subroutine SetSectAvgInflow
+
+
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets m%BEMT_u(indx).
-subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
+subroutine SetInputsForBEMT(p, p_AD, u, m, indx, errStat, errMsg)
 
    type(RotParameterType),  intent(in   )  :: p                               !< AD parameters
+   type(AD_ParameterType),  intent(in   )  :: p_AD                            !< AD parameters
    type(RotInputType),      intent(in   )  :: u                               !< AD Inputs at Time
    type(RotMiscVarType),    intent(inout)  :: m                               !< Misc/optimization variables
    integer,                 intent(in   )  :: indx                            !< index into m%BEMT_u array; must be 1 or 2 (but not checked here)
@@ -2948,8 +3094,12 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    !..........................
    do k=1,p%NumBlades
       do j=1,p%NumBlNds         
+         if (p_AD%SectAvg) then
+            tmp   = m%SectAvgInflow(:,j,k) - u%BladeMotion(k)%TranslationVel(:,j) ! rel_V(j)_Blade(k)
+         else
+            tmp   = m%DisturbedInflow(:,j,k) - u%BladeMotion(k)%TranslationVel(:,j) ! rel_V(j)_Blade(k)
+         endif
          ! Velocity in "p" or "w" system (depending) on AeroProjMod
-         tmp   = m%DisturbedInflow(:,j,k) - u%BladeMotion(k)%TranslationVel(:,j) ! rel_V(j)_Blade(k)
          m%BEMT_u(indx)%Vx(j,k) = dot_product( tmp, m%orientationAnnulus(1,:,j,k) ) ! normal component (normal to the plane, not chord) of the inflow velocity of the jth node in the kth blade
          m%BEMT_u(indx)%Vy(j,k) = dot_product( tmp, m%orientationAnnulus(2,:,j,k) ) !+ TwoNorm(m%DisturbedInflow(:,j,k))*(sin()*sin(tilt)*)! tangential component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
          m%BEMT_u(indx)%Vz(j,k) = dot_product( tmp, m%orientationAnnulus(3,:,j,k) ) ! radial component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
@@ -3709,6 +3859,13 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    
       if ( InputFileData%SkewMod /= SkewMod_Orthogonal .and. InputFileData%SkewMod /= SkewMod_Uncoupled .and. InputFileData%SkewMod /= SkewMod_PittPeters) &  !  .and. InputFileData%SkewMod /= SkewMod_Coupled )
            call SetErrStat( ErrID_Fatal, 'SkewMod must be 1, or 2.  Option 3 will be implemented in a future version.', ErrStat, ErrMsg, RoutineName )      
+
+      if ( InputFileData%SectAvg) then
+         if (InputFileData%SA_nPerSec <= 1) call SetErrStat(ErrID_Fatal, 'SA_nPerSec must be >=1', ErrStat, ErrMsg, RoutineName)
+         if (InputFileData%SA_PsiBwd > 0)   call SetErrStat(ErrID_Fatal, 'SA_PsiBwd must be negative', ErrStat, ErrMsg, RoutineName)
+         if (InputFileData%SA_PsiFwd < 0)   call SetErrStat(ErrID_Fatal, 'SA_PsiFwd must be positive', ErrStat, ErrMsg, RoutineName)
+         if (InputFileData%SA_PsiFwd <= InputFileData%SA_PsiBwd ) call SetErrStat(ErrID_Fatal, 'SA_PsiFwd must be strictly higher than SA_PsiBwd', ErrStat, ErrMsg, RoutineName)
+      endif
       
    end if !BEMT/DBEMT checks
    
@@ -5289,7 +5446,7 @@ SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, 
 
       ! get OP values here (i.e., set inputs for BEMT):
    if ( p%FrozenWake ) then
-      call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2)
+      call SetInputs(t, p, p_AD, u, m, indx, errStat2, errMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
          
             ! compare m%BEMT_y arguments with call to BEMT_CalcOutput
@@ -5310,7 +5467,7 @@ SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, 
       
    ! initialize x_init so that we get accurrate values for first step
    if (.not. OtherState%BEMT%nodesInitialized ) then
-      call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2)
+      call SetInputs(t, p, p_AD, u, m, indx, errStat2, errMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
       call BEMT_InitStates(t, m%BEMT_u(indx), p%BEMT, x_init%BEMT, xd%BEMT, z%BEMT, OtherState_init%BEMT, m%BEMT, p_AD%AFI, ErrStat2, ErrMsg2 ) ! changes values only if states haven't been initialized
@@ -5373,7 +5530,7 @@ SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, 
          !call AD_UpdateStates( t, 1, (/u_perturb/), (/t/), p, x_copy, xd_copy, z_copy, OtherState_copy, m, errStat2, errMsg2 )
          !   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          !bjj: this is what we want to do instead of the overkill of calling AD_UpdateStates
-         call SetInputs(p, p_AD, u_perturb, m, indx, errStat2, errMsg2)
+         call SetInputs(t, p, p_AD, u_perturb, m, indx, errStat2, errMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
          call UpdatePhi( m%BEMT_u(indx), p%BEMT, z_copy%BEMT%phi, p_AD%AFI, m%BEMT, OtherState_copy%BEMT%ValidPhi, errStat2, errMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
@@ -5396,7 +5553,7 @@ SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, 
             ! get updated z%phi values:
          !call RotUpdateStates( t, 1, (/u_perturb/), (/t/), p, x_copy, xd_copy, z_copy, OtherState_copy, m, errStat2, errMsg2 )
          !   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call SetInputs(p, p_AD, u_perturb, m, indx, errStat2, errMsg2)
+         call SetInputs(t, p, p_AD, u_perturb, m, indx, errStat2, errMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
          call UpdatePhi( m%BEMT_u(indx), p%BEMT, z_copy%BEMT%phi, p_AD%AFI, m%BEMT, OtherState_copy%BEMT%ValidPhi, errStat2, errMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
@@ -5607,7 +5764,7 @@ SUBROUTINE RotJacobianPContState( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_A
 
 
    if ( p%FrozenWake ) then
-      call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2)
+      call SetInputs(t, p, p_AD, u, m, indx, errStat2, errMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
          ! compare arguments with call to BEMT_CalcOutput
@@ -5631,7 +5788,7 @@ SUBROUTINE RotJacobianPContState( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_A
       
    ! initialize x_init so that we get accurrate values for 
    if (.not. OtherState%BEMT%nodesInitialized ) then
-      call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2)
+      call SetInputs(t, p, p_AD, u, m, indx, errStat2, errMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
       call BEMT_InitStates(t, m%BEMT_u(indx), p%BEMT, x_init%BEMT, xd%BEMT, z%BEMT, OtherState_init%BEMT, m%BEMT, p_AD%AFI, ErrStat2, ErrMsg2 ) ! changes values only if states haven't been initialized
@@ -5978,7 +6135,7 @@ SUBROUTINE RotJacobianPConstrState( t, u, p, p_AD, x, xd, z, OtherState, y, m, m
 
       ! get OP values here:   
    !call AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 )  ! (bjj: is this necessary? if not, still need to get BEMT inputs)
-   call SetInputs(p, p_AD, u, m, indx, errStat2, errMsg2)  
+   call SetInputs(t, p, p_AD, u, m, indx, errStat2, errMsg2)  
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
    call BEMT_CopyInput( m%BEMT_u(indx), m%BEMT_u(op_indx), MESH_UPDATECOPY, ErrStat2, ErrMsg2) ! copy the BEMT OP inputs to a temporary location that won't be overwritten
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later                        
