@@ -52,8 +52,8 @@ IMPLICIT NONE
 ! =========  LD_InitOutputType  =======
   TYPE, PUBLIC :: LD_InitOutputType
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
-    character(19) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< The is the list of all output channel header strings (includes all sub-module channels) [-]
-    character(19) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< The is the list of all output channel unit strings (includes all sub-module channels) [-]
+    character(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< The is the list of all output channel header strings (includes all sub-module channels) [-]
+    character(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< The is the list of all output channel unit strings (includes all sub-module channels) [-]
     character(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
     character(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_x      !< Names of the continuous states used in linearization [-]
     character(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]

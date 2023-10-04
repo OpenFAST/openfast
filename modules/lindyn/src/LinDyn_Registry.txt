@@ -22,8 +22,8 @@ typedef   ^                            ^                             logical    
 
 # Initialization outputs
 typedef LinDyn/LD                      InitOutputType                ProgDesc                 Ver                              -            -         -        "This module's name, version, and date"	-
-typedef   ^                            InitOutputType                character(19)            WriteOutputHdr                  {:}           -         -        "The is the list of all output channel header strings (includes all sub-module channels)"    -
-typedef   ^                            ^                             character(19)            WriteOutputUnt                  {:}           -         -        "The is the list of all output channel unit strings (includes all sub-module channels)"    -
+typedef   ^                            InitOutputType                character(ChanLen)       WriteOutputHdr                  {:}           -         -        "The is the list of all output channel header strings (includes all sub-module channels)"    -
+typedef   ^                            ^                             character(ChanLen)       WriteOutputUnt                  {:}           -         -        "The is the list of all output channel unit strings (includes all sub-module channels)"    -
 typedef   ^                            ^                             character(LinChanLen)    LinNames_y                      {:}           -         -        "Names of the outputs used in linearization" -
 typedef   ^                            ^                             character(LinChanLen)    LinNames_x                      {:}           -         -        "Names of the continuous states used in linearization" -
 typedef   ^                            ^                             character(LinChanLen)    LinNames_u                      {:}           -         -        "Names of the inputs used in linearization" -

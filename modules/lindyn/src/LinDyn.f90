@@ -35,21 +35,19 @@ module LinDyn
    implicit none
 
    type(ProgDesc), parameter  :: LD_Ver = ProgDesc( 'LinDyn', '', '' )
-! 
-!    private
 
-!    public :: LD_Init                           !  Initialization routine
-!    public :: LD_End                            !  Ending routine (includes clean up)
-!    public :: LD_UpdateStates                   !  Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
-!    public :: LD_CalcOutput                     !  Routine for computing outputs
+   private
+
+   public :: LD_Init                           !  Initialization routine
+   public :: LD_InitInputData                  ! Set default values and allocations for init
+   public :: LD_End                            !  Ending routine (includes clean up)
+   public :: LD_UpdateStates                   !  Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
+   public :: LD_CalcOutput                     !  Routine for computing outputs
 !    public :: LD_CalcConstrStateResidual        !  Tight coupling routine for returning the constraint state residual
 !    public :: LD_CalcContStateDeriv             !  Tight coupling routine for computing derivatives of continuous states
-!    public :: LD_UpdateDiscState                !  Tight coupling routine for updating discrete states
-!    public :: LD_JacobianPInput                 !  Jacobians of (y, x, xd, z) with respect to the inputs (u)
-!    public :: LD_JacobianPContState             !  Jacobians of (y, x, xd, z) with respect to the continuous (x)
-!    public :: LD_JacobianPDiscState             !  Jacobians of (y, x, xd, z) with respect to the discrete states (xd)
-!    public :: LD_JacobianPConstrState           !  Jacobians of (y, x, xd, z) with respect to the constraint states (z)
-!    public :: LD_GetOP                          !  Routine to get the operating-point values for linearization (from data structures to arrays)
+   public :: LD_JacobianPInput                 !  Jacobians of (y, x, xd, z) with respect to the inputs (u)
+   public :: LD_JacobianPContState             !  Jacobians of (y, x, xd, z) with respect to the continuous (x)
+   public :: LD_GetOP                          !  Routine to get the operating-point values for linearization (from data structures to arrays)
 ! 
 contains
 
@@ -88,36 +86,7 @@ subroutine LD_Init(InitInp, u, p, x, xd, z, OtherState, y, m, InitOut, errStat, 
    p%KK         = InitInp%KK
    p%activeDOFs = InitInp%activeDOFs
 
-   print*,''
-   print*,'M',p%MM(1,:)
-   print*,'M',p%MM(2,:)
-   print*,'M',p%MM(3,:)
-   print*,''
-   print*,'C',p%CC(1,:)
-   print*,'C',p%CC(2,:)
-   print*,'C',p%CC(3,:)
-   print*,''
-   print*,'K',p%KK(1,:)
-   print*,'K',p%KK(2,:)
-   print*,'K',p%KK(3,:)
-   print*,''
-
    call StateMatrices(p%MM, p%CC, p%KK, p%AA, p%BB, errStat2, errMsg2); if(Failed()) return
-
-   print*,''
-   print*,'A',p%AA(1,:)
-   print*,'A',p%AA(2,:)
-   print*,'A',p%AA(3,:)
-   print*,'A',p%AA(4,:)
-   print*,'A',p%AA(5,:)
-   print*,'A',p%AA(6,:)
-   print*,''
-   print*,'B',p%BB(1,:)
-   print*,'B',p%BB(2,:)
-   print*,'B',p%BB(3,:)
-   print*,'B',p%BB(4,:)
-   print*,'B',p%BB(5,:)
-   print*,'B',p%BB(6,:)
 
    ! --- Allocate States
    call AllocAry( x%q    , p%nq, 'DOFs', errStat, errMsg); if(Failed()) return
@@ -140,13 +109,41 @@ subroutine LD_Init(InitInp, u, p, x, xd, z, OtherState, y, m, InitOut, errStat, 
    InitOut%Ver = LD_Ver
 
    ! --- Linearization
-   !if (InitInp%Linearize) then
+   if (InitInp%Linearize) then
       call Init_Lin(p, InitOut, errStat, errMsg); if(Failed()) return
-   !endif
+   endif
 ! 
 !    ! --- Summary file 
 !    if (InputFileData%SumPrint) then
-!        call LD_PrintSum(x, p, m, InitInp%RootName, errStat, errMsg); if(Failed()) return
+!    TODO use yaml  
+!    print*,''
+!    print*,'M',p%MM(1,:)
+!    print*,'M',p%MM(2,:)
+!    print*,'M',p%MM(3,:)
+!    print*,''
+!    print*,'C',p%CC(1,:)
+!    print*,'C',p%CC(2,:)
+!    print*,'C',p%CC(3,:)
+!    print*,''
+!    print*,'K',p%KK(1,:)
+!    print*,'K',p%KK(2,:)
+!    print*,'K',p%KK(3,:)
+!    print*,''
+! 
+!    print*,''
+!    print*,'A',p%AA(1,:)
+!    print*,'A',p%AA(2,:)
+!    print*,'A',p%AA(3,:)
+!    print*,'A',p%AA(4,:)
+!    print*,'A',p%AA(5,:)
+!    print*,'A',p%AA(6,:)
+!    print*,''
+!    print*,'B',p%BB(1,:)
+!    print*,'B',p%BB(2,:)
+!    print*,'B',p%BB(3,:)
+!    print*,'B',p%BB(4,:)
+!    print*,'B',p%BB(5,:)
+!    print*,'B',p%BB(6,:)
 !    endif
 ! 
 contains
@@ -525,55 +522,23 @@ subroutine LD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    type(LD_OutputType),          intent(inout) :: y          !< Outputs computed at t (Input only so that mesh con-
    integer(IntKi),               intent(out)   :: errStat    !< Error status of the operation
    character(*),                 intent(out)   :: errMsg     !< Error message if errStat /= ErrID_None
-   ! Local variables
-   type(LD_ContinuousStateType) :: dxdt !< 
-   integer(IntKi)  :: errStat2    ! Status of error message
-   character(1024) :: errMsg2     ! Error message if ErrStat /= ErrID_None
-!    integer(IntKi)                                  :: I                 !< Generic counters
-!    real(ReKi), dimension(6)                        :: Fc                !< Output coupling force
-   ! Initialize variables
+   type(LD_ContinuousStateType) :: dxdt                                                 !< 
+   integer(IntKi)               :: errStat2    ! Status of error message
+   character(1024)              :: errMsg2     ! Error message if ErrStat /= ErrID_None
    errStat   = ErrID_None           ! no error has occurred
    errMsg    = ""
-! 
+
    ! --- Compute accelerations
    call LD_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, dxdt, errStat2, errMsg2)
    y%xdd(1:p%nx) = dxdt%q(p%nx+1:p%nq)
 
-   !--- Computing output:  y = Cx + Du + Fy  
-! 
-!    ! Update the output mesh
-!    do i=1,3
-!       y%PtfmMesh%Force(I,1)  = Fc(I)
-!       y%PtfmMesh%Moment(I,1) = Fc(I+3)
-!    enddo
-! 
-!    ! --- All Outputs
-!    m%AllOuts(ID_PtfFx) = y%PtfmMesh%Force (1,1)
-!    m%AllOuts(ID_PtfFy) = y%PtfmMesh%Force (2,1)
-!    m%AllOuts(ID_PtfFz) = y%PtfmMesh%Force (3,1)
-!    m%AllOuts(ID_PtfMx) = y%PtfmMesh%Moment(1,1)
-!    m%AllOuts(ID_PtfMy) = y%PtfmMesh%Moment(2,1)
-!    m%AllOuts(ID_PtfMz) = y%PtfmMesh%Moment(3,1)
-!    m%AllOuts(ID_InpFx) = m%F_at_t(1)
-!    m%AllOuts(ID_InpFy) = m%F_at_t(2)
-!    m%AllOuts(ID_InpFz) = m%F_at_t(3)
-!    m%AllOuts(ID_InpMx) = m%F_at_t(4)
-!    m%AllOuts(ID_InpMy) = m%F_at_t(5)
-!    m%AllOuts(ID_InpMz) = m%F_at_t(6)
-!    !y%WriteOutput(ID_WaveElev) = .. ! TODO
-!    do i=1,p%nCB
-!       m%AllOuts(ID_QStart + 0*p%nCBFull -1 + p%ActiveCBDOF(I)) = x%qm   (I)    ! CBQ  - DOF Positions
-!       m%AllOuts(ID_QStart + 1*p%nCBFull -1 + p%ActiveCBDOF(I)) = x%qmdot(I)    ! CBQD - DOF Velocities
-!       m%AllOuts(ID_QStart + 2*p%nCBFull -1 + p%ActiveCBDOF(I)) = m%F_at_t(6+I) ! CBF  - DOF Forces
-!    enddo
-!    ! --- Selected output channels only
-!    do I = 1,p%NumOuts
-!       if (p%OutParam(I)%Indx>0) then
-!           y%WriteOutput(I) = p%OutParam(I)%SignM * m%AllOuts( p%OutParam(I)%Indx )
-!       else
-!           y%WriteOutput(I) = -9.9999e20
-!       endif
-!    enddo    
+   !--- Computing outputs:  y = Cx + Du  (optional)
+
+   ! --- Write Outputs
+   y%WriteOutput(1:2*p%nx) = x%q(1:p%nq)                ! Positions and velocities
+   y%WriteOutput(2*p%nx+1:3*p%nx) = dxdt%q(p%nx+1:p%nq) ! Accelerations
+   y%WriteOutput(3*p%nx+1:4*p%nx) = u%Fext(1:p%nx)      ! Forces
+
 contains
    logical function Failed()
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'LD_CalcOutput' )
@@ -682,9 +647,10 @@ subroutine Init_Outputs(p, m, y, InitInp, InitOut, errStat, errMsg)
    ! If using OutParam instead
    !InitOut%WriteOutputHdr(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Name
    !InitOut%WriteOutputUnt(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Units     
-   do i = 1,p%NumOuts
-      print*,i, InitOut%WriteOutputHdr(i), InitOut%WriteOutputUnt(i)
-   enddo
+   ! Debug output to screen
+   !do i = 1,p%NumOuts
+   !   print*,i, InitOut%WriteOutputHdr(i), InitOut%WriteOutputUnt(i)
+   !enddo
    
 contains
    subroutine SetWriteOutputsForDOFs(sPrefix)

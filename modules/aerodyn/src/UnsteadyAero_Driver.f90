@@ -148,7 +148,7 @@ program UnsteadyAero_Driver
       dvr%LD_u(2)%Fext=0.0_ReKi ! TODO TODO
 
       ! --- time marching loop
-      print*,'>>> Time simulation', dvr%uTimes(1), dvr%p%numSteps*dvr%p%dt
+      call WrScr(' Time simulation - TMax = '//trim(num2lstr(dvr%p%numSteps*dvr%p%dt)))
       do n = 1, dvr%p%numSteps
 
          ! --- Set inputs at t by storing in u(2) what was in u(1) at previous time step

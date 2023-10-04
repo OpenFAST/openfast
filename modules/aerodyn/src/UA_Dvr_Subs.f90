@@ -6,6 +6,7 @@ module UA_Dvr_Subs
    use UnsteadyAero_Types
    use UnsteadyAero
    use LinDyn
+   use LinDyn_Types
    
    implicit none
 
@@ -13,7 +14,7 @@ module UA_Dvr_Subs
    integer(IntKi), parameter :: NumInp = 2           ! Number of inputs sent to UA_UpdateStates (must be at least 2)
    integer(IntKi), parameter :: InflowMod_Cst  = 1   ! Inflow is constant
    integer(IntKi), parameter :: InflowMod_File = 2   ! Inflow is read from file
-   real(ReKi), parameter     :: myNaN = -99.9_ReKi
+   real(ReKi), parameter     :: myNaN = -9999.9_ReKi
    integer(IntKi), parameter :: idFmtAscii  = 1
    integer(IntKi), parameter :: idFmtBinary = 2
    integer(IntKi), parameter :: idFmtBoth   = 3
@@ -76,15 +77,18 @@ module UA_Dvr_Subs
    type :: Dvr_Outputs
       integer(intki)                                 :: unOutFile = -1        !< unit number for writing output file
       !integer(intki)                                :: actualchanlen         !< actual length of channels written to text file (less than or equal to chanlen) [-]
-      integer(intki)                                :: nDvrOutputs=2          !< number of outputs for the driver (without UA) [-]
+      integer(intki)                                :: ny                     !< total number of outputs for the driver 
+      integer(intki)                                :: ny_dvr                 !< number of outputs for the driver (without UA and LD)
+      integer(intki)                                :: ny_UA                  !< number of outputs for UA
+      integer(intki)                                :: ny_LD                  !< number of outputs for LD
       !character(20)                                 :: fmt_t                 !< format specifier for time channel [-]
       !character(25)                                 :: fmt_a                 !< format specifier for each column (including delimiter) [-]
       !character(1)                                  :: delim                 !< column delimiter [-]
       !character(20)                                 :: outfmt                !< format specifier [-]
       integer(intki)                                 :: fileFmt = idFmtBinary !< output format 1=text, 2=binary, 3=both [-]
       character(1024)                                :: root  = ''            !< output file rootname [-]
-      character(chanlen) , dimension(:), allocatable :: writeoutputhdr        !< channel headers [-]
-      character(chanlen) , dimension(:), allocatable :: writeoutputunt        !< channel units [-]
+      character(ChanLen) , dimension(:), allocatable :: WriteOutputHdr        !< channel headers [-]
+      character(ChanLen) , dimension(:), allocatable :: WriteOutputUnt        !< channel units [-]
       real(ReKi) , dimension(:,:), allocatable       :: storage               !< nchannel x ntime [-]
       real(ReKi) , dimension(:), allocatable         :: outline               !< output line to be written to disk [-]
       !real(dbki)  :: dt_outs      !< output time resolution [s]
@@ -643,6 +647,7 @@ subroutine AeroKinetics(U0, q, qd, C_dyn, p, m)
    m%GF(3) = m%tau_A  * p%GFScaling(3)
 
 end subroutine AeroKinetics
+!----------------------------------------------------------------------------------------------------  
 
 !> Set LinDyn inputs (scaled aerodynamic forces at point A)
 subroutine setLDinputs(U0, LD_x, UA_y, p, m, LD_u)
@@ -660,6 +665,7 @@ subroutine setLDinputs(U0, LD_x, UA_y, p, m, LD_u)
 
 end subroutine setLDinputs
 
+!----------------------------------------------------------------------------------------------------  
 !> Set UA Inputs from Flow and LinDyn
 subroutine setUAinputs(U0, LD_x, p, m, UA_u)
    real(ReKi)          ,         intent(in   ) :: U0(2) !< Parameters
@@ -679,7 +685,7 @@ subroutine setUAinputs(U0, LD_x, p, m, UA_u)
    UA_u%U        = sqrt(m%Vrel_norm2_Q)
 end subroutine setUAinputs
 
-
+!----------------------------------------------------------------------------------------------------  
 !> Set UA inptus for a simulation where the angle of attack is prescribed and the relative velocity is constant
 subroutine setUAinputsAlphaSim(n, u, t, p, errStat, errMsg)
    integer,                intent(in)              :: n
@@ -762,7 +768,6 @@ subroutine setUAinputsAlphaSim(n, u, t, p, errStat, errMsg)
    end if
 
 end subroutine setUAinputsAlphaSim
-!----------------------------------------------------------------------------------------------------  
 
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine Dvr_EndSim(dvr, errStat, errMsg)
@@ -781,7 +786,7 @@ subroutine Dvr_EndSim(dvr, errStat, errMsg)
       if (out%unOutFile > 0) close(out%unOutFile)
    endif
    if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtBinary) then
-      print*,'>>>> OUTPUT',trim(out%Root)//'.outb'
+      call WrScr(' Writing output file: '//trim(out%Root)//'.outb')
       call WrBinFAST(trim(out%Root)//'.outb', FileFmtID_ChanLen_In, 'AeroDynDriver', out%WriteOutputHdr, out%WriteOutputUnt, (/0.0_DbKi, dvr%p%dt/), out%storage(:,:), errStat2, errMsg2)
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
    endif
@@ -796,7 +801,7 @@ end subroutine Dvr_EndSim
 ! --------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Concatenate new output channels info to the extisting ones in the driver
-!! TODO COPY PASTED FROM AeroDyn_Inflow. Should be placed in NWTC_Lib
+!! TODO COPY PASTED FROM AeroDyn_Inflow. Should be placed in NWTC_Lib NWTC_Str
 subroutine concatOutputHeaders(WriteOutputHdr0, WriteOutputUnt0, WriteOutputHdr, WriteOutputUnt, errStat, errMsg)
    character(ChanLen), dimension(:), allocatable, intent(inout) ::  WriteOutputHdr0 !< Channel headers
    character(ChanLen), dimension(:), allocatable, intent(inout) ::  WriteOutputUnt0 !< Channel units
@@ -810,7 +815,6 @@ subroutine concatOutputHeaders(WriteOutputHdr0, WriteOutputUnt0, WriteOutputHdr,
    integer :: nOld, nAdd
    errStat = ErrID_None
    errMsg  = ''
-   !print*,'>>> Concat',allocated(WriteOutputHdr0), allocated(WriteOutputUnt0), allocated(WriteOutputHdr), allocated(WriteOutputUnt)
    if (.not.allocated(WriteOutputHdr)) return
    if (.not.allocated(WriteOutputHdr0)) then
       call move_alloc(WriteOutputHdr, WriteOutputHdr0)
@@ -924,11 +928,14 @@ subroutine Dvr_InitializeDriverOutputs(dvr, out, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ''
 
-   ! --- Allocate driver-level outputs
-   out%nDvrOutputs = 27 + 9 ! Misc + LD
+   out%ny_dvr = 27 ! Driver only
+   out%ny_UA = size(dvr%UA_InitOutData%WriteOutputHdr)
+   out%ny_LD = size(dvr%LD_InitOutData%WriteOutputHdr)
 
-   call AllocAry(out%WriteOutputHdr, 1+out%nDvrOutputs, 'WriteOutputHdr', errStat2, errMsg2); if(Failed()) return
-   call AllocAry(out%WriteOutputUnt, 1+out%nDvrOutputs, 'WriteOutputUnt', errStat2, errMsg2); if(Failed()) return
+
+   ! --- Allocate driver-level outputs
+   call AllocAry(out%WriteOutputHdr, 1+out%ny_dvr, 'WriteOutputHdr', errStat2, errMsg2); if(Failed()) return
+   call AllocAry(out%WriteOutputUnt, 1+out%ny_dvr, 'WriteOutputUnt', errStat2, errMsg2); if(Failed()) return
 
    j=1
    out%WriteOutputHdr(j) = 'Time'        ; out%WriteOutputUnt(j) = '(s)'  ; j=j+1
@@ -960,93 +967,22 @@ subroutine Dvr_InitializeDriverOutputs(dvr, out, errStat, errMsg)
    out%WriteOutputHdr(j) = 'GFx'             ; out%WriteOutputUnt(j) = '(N/m)'  ; j=j+1
    out%WriteOutputHdr(j) = 'GFy'             ; out%WriteOutputUnt(j) = '(N/m)'  ; j=j+1
    out%WriteOutputHdr(j) = 'GFM'             ; out%WriteOutputUnt(j) = '(Nm/m)'  ; j=j+1
-   ! Dynamics - HACK should be returned by LD
-   out%WriteOutputHdr(j) = 'x'           ; out%WriteOutputUnt(j) = '(m)'  ; j=j+1 
-   out%WriteOutputHdr(j) = 'y'           ; out%WriteOutputUnt(j) = '(m)'  ; j=j+1
-   out%WriteOutputHdr(j) = 'th'          ; out%WriteOutputUnt(j) = '(rad)'  ; j=j+1
-   out%WriteOutputHdr(j) = 'dx'          ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
-   out%WriteOutputHdr(j) = 'dy'          ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
-   out%WriteOutputHdr(j) = 'dth'         ; out%WriteOutputUnt(j) = '(rad/s)'  ; j=j+1
-   out%WriteOutputHdr(j) = 'ddx'         ; out%WriteOutputUnt(j) = '(m/s^2)'  ; j=j+1
-   out%WriteOutputHdr(j) = 'ddy'         ; out%WriteOutputUnt(j) = '(m/s^2)'  ; j=j+1
-   out%WriteOutputHdr(j) = 'ddth'        ; out%WriteOutputUnt(j) = '(rad/s^2)'  ; j=j+1
+   ! Dynamics 
+   call concatOutputHeaders(out%WriteOutputHdr, out%WriteOutputUnt, dvr%LD_InitOutData%WriteOutputHdr, dvr%LD_InitOutData%WriteOutputUnt, errStat2, errMsg2)
+   ! UA
+   call concatOutputHeaders(out%WriteOutputHdr, out%WriteOutputUnt, dvr%UA_InitOutData%WriteOutputHdr, dvr%UA_InitOutData%WriteOutputUnt, errStat2, errMsg2)
+
+   out%ny = size(out%WriteOutputHdr)
+   ! Debug Write
+   !do j = 1, out%ny
+   !   print*,'Write Out: ',j, trim(out%WriteOutputHdr(j)), ' ', trim(out%WriteOutputUnt(j))
+   !enddo
 contains
    logical function Failed()
       CALL SetErrStat(errStat2, errMsg2, errStat, errMsg, 'Dvr_InitializeDriverOutputs' )
       Failed = errStat >= AbortErrLev
    end function Failed
 end subroutine Dvr_InitializeDriverOutputs
-!----------------------------------------------------------------------------------------------------------------------------------
-! !> Store driver data
-! subroutine Dvr_CalcOutputDriver(dvr, y_ADI, FED, errStat, errMsg)
-!    type(Dvr_SimData), target,  intent(inout) :: dvr              ! driver data
-!    type(FED_Data),    target,   intent(in   ) :: FED       !< Elastic wind turbine data (Fake ElastoDyn)
-!    type(ADI_OutputType),        intent(in   ) :: y_ADI           ! ADI output data
-!    integer(IntKi)           ,   intent(  out) :: errStat         ! Status of error message
-!    character(*)             ,   intent(  out) :: errMsg          ! Error message if errStat /= ErrID_None
-!    integer              :: maxNumBlades, k, j, iWT
-!    real(ReKi)           :: rotations(3)
-!    integer(IntKi)       :: errStat2        ! Status of error message
-!    character(ErrMsgLen) :: errMsg2 ! Error message
-!    real(ReKi), pointer  :: arr(:)
-!    type(WTData), pointer :: wt ! Alias to shorten notation
-!    type(RotFED), pointer :: y_ED ! Alias to shorten notation
-! 
-!    errStat = ErrID_None
-!    errMsg  = ''
-!    
-!    maxNumBlades = 0
-!    do iWT=1,size(dvr%WT)
-!       maxNumBlades= max(maxNumBlades, dvr%WT(iWT)%numBlades)
-!    end do
-! 
-!    ! Determine if a swap array is present
-!    
-!    do iWT = 1, dvr%numTurbines
-!       wt => dvr%wt(iWT)
-!       y_ED => FED%wt(iWT)
-!       if (dvr%wt(iWT)%numBlades >0 ) then ! TODO, export for tower only
-!          arr => dvr%wt(iWT)%WriteOutput
-!          k=1
-!          ! NOTE: to do this properly we would need to store at the previous time step and perform a rotation
-!          arr(k) = dvr%iCase           ; k=k+1
-!          ! Environment
-!          arr(k) = y_ADI%HHVel(1, iWT) ; k=k+1  ! NOTE: stored at beginning of array
-!          arr(k) = y_ADI%HHVel(2, iWT) ; k=k+1
-!          arr(k) = y_ADI%HHVel(3, iWT) ; k=k+1 
-!          arr(k) = y_ADI%PLExp         ; k=k+1 ! shear exp, not set if CompInflow=1
-! 
-!          ! 6 base DOF
-!          rotations  = EulerExtract(y_ED%PlatformPtMesh%Orientation(:,:,1)); 
-!          arr(k) = y_ED%PlatformPtMesh%TranslationDisp(1,1); k=k+1 ! surge
-!          arr(k) = y_ED%PlatformPtMesh%TranslationDisp(2,1); k=k+1 ! sway
-!          arr(k) = y_ED%PlatformPtMesh%TranslationDisp(3,1); k=k+1 ! heave
-!          arr(k) = rotations(1) * R2D  ; k=k+1 ! roll
-!          arr(k) = rotations(2) * R2D  ; k=k+1 ! pitch
-!          arr(k) = rotations(3) * R2D  ; k=k+1 ! yaw
-!          ! RNA motion
-!          arr(k) = wt%nac%yaw*R2D         ; k=k+1 ! yaw [deg]
-!          arr(k) = modulo(real(wt%hub%azimuth+(dvr%dt * wt%hub%rotSpeed)*R2D, ReKi), 360.0_ReKi); k=k+1 ! azimuth [deg], stored at nt-1
-!          arr(k) = wt%hub%rotSpeed*RPS2RPM; k=k+1 ! rotspeed [rpm]
-!          do j=1,maxNumBlades
-!             if (j<= wt%numBlades) then
-!                arr(k) = wt%bld(j)%pitch*R2D ! pitch [deg]
-!             else
-!                arr(k) = 0.0_ReKi ! myNaN
-!             endif
-!             k=k+1;
-!          enddo
-!          ! Swap array
-!          if (wt%hub%motionType == idHubMotionUserFunction) then
-!             do j=1,size(wt%userSwapArray)
-!                arr(k) = wt%userSwapArray(j); k=k+1;
-!             enddo
-!          endif
-! 
-!       endif
-!    enddo
-! 
-! end subroutine Dvr_CalcOutputDriver
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine Dvr_WriteOutputs(nt, t, dvr, out, errStat, errMsg)
    integer(IntKi)         ,  intent(in   )   :: nt                   ! simulation time step
@@ -1062,14 +998,15 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, errStat, errMsg)
    errMsg  = ''
    out%outLine = myNaN ! Safety
 ! 
-!    ! Packing all outputs excpet time into one array
-   !nUA = size(yADI%AD%rotors(1)%WriteOutput)
-   !nLD = size(yADI%IW_WriteOutput)
-   nDV = 27 ! out%nDvrOutputs
+   ! --- Packing all outputs except time into one array
+   nDV = out%ny_dvr
+   nLD = out%ny_LD
+   nUA = out%ny_UA
+   ! Driver outputs
    j = 1 
    out%outLine(j) = dvr%U0(1, 1)             ; j=j+1  ! Ux
    out%outLine(j) = dvr%U0(1, 2)             ; j=j+1  ! Uy
-   out%outLine(j) = dvr%m%Vst_Q(1)           ; j=j+1  !  VSTx_Q
+   out%outLine(j) = dvr%m%Vst_Q(1)           ; j=j+1  ! VSTx_Q
    out%outLine(j) = dvr%m%Vst_Q(2)           ; j=j+1  ! VSTy_Q
    out%outLine(j) = dvr%m%Vst_T(1)           ; j=j+1  ! VSTx_T
    out%outLine(j) = dvr%m%Vst_T(2)           ; j=j+1  ! VSTy_T
@@ -1094,14 +1031,11 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, errStat, errMsg)
    out%outLine(j) = dvr%m%GF(1)              ; j=j+1  ! GFx
    out%outLine(j) = dvr%m%GF(2)              ; j=j+1  ! GFy
    out%outLine(j) = dvr%m%GF(3)              ; j=j+1  ! GFM
+   ! LD Outputs
+   out%outLine(nDV+1:nDV+nLD) = dvr%LD_y%WriteOutput(1:nLD)
+   ! UA Outputs
+   out%outLine(nDV+nLD+1:nDV+nLD+nUA) = dvr%UA_y%WriteOutput(1:nUA)
 
-   nLD = 6 ! HACK
-   out%outLine(nDV+1:nDV+nLD)       = dvr%LD_x%q(1:nLD)
-   out%outLine(nDV+nLD+1:nDV+nLD+3) = dvr%LD_y%xdd(1:3)
-
- 
-   !out%outLine(nDV+1:nDV+nAD) = yADI%AD%rotors%WriteOutput     ! AeroDyn WriteOutputs
-   !out%outLine(nDV+nAD+1:)    = yADI%IW_WriteOutput                 ! InflowWind WriteOutputs
    !if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtAscii) then
    !   ! ASCII
    !   ! time
