@@ -437,6 +437,7 @@ subroutine driverInputsToUAInitData(dvrInitInp, InitInData, AFI_Params, AFIndx, 
    character(*), parameter  :: RoutineName = 'driverInputsToUAInitData'
    errStat     = ErrID_None
    errMsg      = ''
+   InitInData%UA_OUTS  = 2  ! 0=None, 1=Write Outputs, 2=Separate File
 
    ! -- UA Init Input Data
    InitInData%nNodesPerBlade  = 1 

@@ -99,10 +99,14 @@ program UnsteadyAero_Driver
    call driverInputsToUAInitData(dvr%p, dvr%UA_InitInData, dvr%AFI_Params, dvr%AFIndx, errStat, errMsg); call checkError()
 
    ! --- Initialize UnsteadyAero (need AFI)
+   if ( dvr%p%SimMod == 3 ) then
+      ! TODO
+      dvr%UA_InitInData%UA_OUTS = 1  ! 0=None, 1=Write Outputs, 2=Separate File
+   endif
    call UA_Init( dvr%UA_InitInData, dvr%UA_u(1), dvr%UA_p, dvr%UA_x, dvr%UA_xd, dvr%UA_OtherState, dvr%UA_y, dvr%UA_m, dvr%p%dt, dvr%AFI_Params, dvr%AFIndx, dvr%UA_InitOutData, errStat, errMsg ); call checkError()
    if (dvr%UA_p%NumOuts <= 0) then
-      ErrStat = ErrID_Fatal
-      ErrMsg = "No outputs have been selected. Rebuild the executable with -DUA_OUTS"
+      ErrStat = ErrID_Warn
+      ErrMsg = "No outputs from UA are generated."
       call checkError()
    end if
 

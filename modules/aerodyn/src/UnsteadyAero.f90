@@ -746,6 +746,10 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
    p%a_s        = InitInp%a_s       ! this can't be 0
    p%Flookup    = InitInp%Flookup
    p%ShedEffect = InitInp%ShedEffect
+   p%UA_OUTS    = InitInp%UA_OUTS
+#ifdef UA_OUTS 
+   p%UA_OUTS = 2 ! Compiler Flag Override,  2=Write a separate file
+#endif
    
    if (p%UAMod==UA_HGM .or. p%UAMod==UA_HGMV) then
       UA_NumLinStates = 4
@@ -944,13 +948,12 @@ subroutine UA_InitStates_Misc( p, x, xd, OtherState, m, ErrStat, ErrMsg )
       call AllocAry(OtherState%sigma1m   ,p%nNodesPerBlade,p%numBlades,'OtherState%sigma1m',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       call AllocAry(OtherState%sigma3   ,p%nNodesPerBlade,p%numBlades,'OtherState%sigma3',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-      
-#     ifdef UA_OUTS
+      if(p%UA_OUTS>0) then
          call AllocAry(m%TESF     ,p%nNodesPerBlade,p%numBlades,'m%TESF',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          call AllocAry(m%LESF     ,p%nNodesPerBlade,p%numBlades,'m%LESF',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          call AllocAry(m%VRTX     ,p%nNodesPerBlade,p%numBlades,'m%VRTX',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          call AllocAry(m%T_Sh     ,p%nNodesPerBlade,p%numBlades,'m%T_Sh',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-#     endif
+      endif
    end if
    
    call AllocAry(m%weight     ,p%nNodesPerBlade,p%numBlades,'m%weight',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -1041,12 +1044,12 @@ subroutine UA_ReInit( p, x, xd, OtherState, m, ErrStat, ErrMsg )
       OtherState%sigma1m   = 1.0_ReKi
       OtherState%sigma3    = 1.0_ReKi
 
-#     ifdef UA_OUTS
+      if (p%UA_OUTS>0) then
          m%TESF      = .FALSE.
          m%LESF      = .FALSE.
          m%VRTX      = .FALSE.
          m%T_sh      = 0.0_ReKi
-#     endif
+      endif
    
       xd%Cn_prime_minus1      = 0.0_ReKi
       xd%alpha_minus1         = 0.0_ReKi
@@ -1120,12 +1123,6 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
    integer(IntKi)                               :: errStat2    ! temporary Error status of the operation
    character(*), parameter                      :: RoutineName = 'UA_Init'
    
-#ifdef UA_OUTS
-   CHARACTER(6)                                 :: TmpChar                          ! Temporary char array to hold the node digits (3 places only!!!!)
-   integer(IntKi)                               :: i,j, iNode, iOffset
-   character(64)                                :: chanPrefix
-#endif   
-   
       ! Initialize variables for this routine
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1135,27 +1132,50 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
    call NWTC_Init( EchoLibVer=.FALSE. )
 
    if (InitInp%WrSum) then
-      call UA_WriteAFIParamsToFile(InitInp, AFInfo, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
+      call UA_WriteAFIParamsToFile(InitInp, AFInfo, ErrStat2, ErrMsg2); if(Failed()) return
    end if
 
-   call UA_ValidateInput(InitInp, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
+   call UA_ValidateInput(InitInp, ErrStat2, ErrMsg2); if(Failed()) return
    
       ! Allocate and set parameter data structure using initialization data
-   call UA_SetParameters( interval, InitInp, p, AFInfo, AFIndx, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return    
+   call UA_SetParameters( interval, InitInp, p, AFInfo, AFIndx, ErrStat2, ErrMsg2 ); if(Failed()) return
    
-      ! initialize the discrete states, other states, and misc variables
-   call UA_InitStates_Misc( p, x, xd, OtherState, m, ErrStat2, ErrMsg2 )     ! initialize the continuous states
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return    
+      ! initialize the states, and misc variables
+   call UA_InitStates_Misc( p, x, xd, OtherState, m, ErrStat2, ErrMsg2 ); if(Failed()) return
       
+   ! --- Write Outputs
+   call UA_Init_Outputs(InitInp, p, y, InitOut, errStat2, errMsg2); if(Failed()) return
    
-#ifdef UA_OUTS
+contains
+   logical function Failed()
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'UA_Init' )
+      Failed =  errStat >= AbortErrLev
+   end function Failed
+end subroutine UA_Init
+
+!==============================================================================     
+subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
+   type(UA_InitInputType),       intent(in   )  :: InitInp     ! input data for initialization routine ; we're moving allocated data from InitInp to p so must also be intent(out)
+   type(UA_ParameterType),       intent(inout)  :: p           ! Parameters
+   type(UA_OutputType),          intent(inout)  :: y           ! Initial system outputs (outputs are not calculated;
+   !type(UA_MiscVarType),         intent(  out)  :: m           ! Initial misc/optimization variables
+   type(UA_InitOutputType),      intent(  out)  :: InitOut     ! Output for initialization routine
+   integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   character(6)                                 :: TmpChar                          ! Temporary char array to hold the node digits (3 places only!!!!)
+   integer(IntKi)                               :: i,j, iNode, iOffset
+   character(64)                                :: chanPrefix
+   character(ErrMsgLen)                         :: errMsg2     ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)                               :: errStat2    ! temporary Error status of the operation
+   character(*), parameter                      :: RoutineName = 'UA_Init'
+   errStat = errID_None
+   errMsg = ""
+
+   if (p%UA_OUTS==0) then 
+      p%NumOuts = 0
+      p%unOutFile = -1
+      return
+   endif
 
       ! Allocate and set the InitOut data
    if (p%UAMod == UA_HGM .or. p%UAMod == UA_OYE) then
@@ -1184,8 +1204,12 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
          iOffset = (i-1)*p%NumOuts + (j-1)*p%nNodesPerBlade*p%NumOuts 
                   
          !chanPrefix = "B"//trim(num2lstr(j))//"N"//trim(num2lstr(i))
-         write (TmpChar,'(I3.3)') i          ! 3 digit number
-         chanPrefix = 'AB' // TRIM(Num2LStr(j)) // 'N' // TRIM(TmpChar) 
+         if ((p%numBlades==1) .and. (p%nNodesPerBlade==1) .and. p%UA_OUTS==1) then
+            chanPrefix='' ! UA_Driver
+         else
+            write (TmpChar,'(I3.3)') i          ! 3 digit number
+            chanPrefix = 'AB' // TRIM(Num2LStr(j)) // 'N' // TRIM(TmpChar) 
+         endif
          
          InitOut%WriteOutputHdr(iOffset+ 1)  = trim(chanPrefix)//'Alpha'
          InitOut%WriteOutputHdr(iOffset+ 2)  = trim(chanPrefix)//'Vrel'
@@ -1372,7 +1396,9 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
    p%OutFmt  = 'ES19.5e3'
    p%Delim   =''
    
-   if (p%NumOuts > 0) then
+   ! --- Write to File
+   if ((p%NumOuts > 0) .and. p%UA_OUTS==2) then
+      call WrScr('   UA: Writing separate output file: '//trim((InitInp%OutRootName)//'.UA.out'))
       CALL GetNewUnit( p%unOutFile, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
@@ -1396,21 +1422,12 @@ subroutine UA_Init( InitInp, u, p, x, xd, OtherState, y,  m, Interval, &
          WRITE (p%unOutFile,'(:,A,'//trim( p%OutSFmt )//')', ADVANCE='no' )  p%Delim, trim(InitOut%WriteOutputUnt(i))
       end do
       WRITE (p%unOutFile,'()', IOSTAT=ErrStat2)          ! write the line return
-   end if
-         
+   elseif ((p%NumOuts > 0) .and. p%UA_OUTS==2) then
 
-#else
-   p%NumOuts = 0
-   p%unOutFile = -1
-   !.....................................
-   ! add the following two lines only to avoid compiler warnings about uninitialized variables when not building the UA driver:
-   y%cm = 0.0_ReKi 
-   InitOut%Version = ProgDesc( 'Unsteady Aero', '', '' )
-   !.....................................
-   
-#endif
-   
-end subroutine UA_Init
+      call WrScr('   UA: saving write outputs')
+
+   end if
+end subroutine UA_Init_Outputs
 !==============================================================================     
 subroutine UA_ValidateInput(InitInp, ErrStat, ErrMsg)
    type(UA_InitInputType),       intent(in   )  :: InitInp     ! Input data for initialization routine
@@ -2218,12 +2235,12 @@ endif
          end if
       end if
       
-#ifdef UA_OUTS
+   if (p%UA_OUTS>0) then
    m%TESF(i,j) = TESF  
    m%LESF(i,j) = LESF   
    m%VRTX(i,j) = VRTX 
    m%T_sh(i,j) = T_sh
-#endif
+   endif
       
       
 end subroutine UA_UpdateDiscOtherState
@@ -3315,19 +3332,14 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
    real(ReKi)                                   :: alphaE_L, alphaE_D  ! effective angle of attack for lift and drag
    real(ReKi)                                   :: alphaLag_D          ! lagged angle of attack for drag calculation
    real(ReKi)                                   :: adotnorm
-#ifdef UA_OUTS
    real(ReKi)                                   :: delN
    real(ReKi)                                   :: delP
    real(ReKi)                                   :: gammaL
    real(ReKi)                                   :: gammaD
    real(ReKi)                                   :: TransA
-#endif   
 
    type(AFI_OutputType)                         :: AFI_interp
    
-#ifdef UA_OUTS
-   integer                                      :: iOffset
-#endif   
    
    ErrStat   = ErrID_None           ! no error has occurred
    ErrMsg    = ""
@@ -3642,10 +3654,18 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    end if ! Switch on UAMod
+
+   if (p%UA_OUTS>0) then
+      if (allocated(y%WriteOutput)) then  !bjj: because BEMT uses local variables for UA output, y%WriteOutput is not necessarially allocated. Need to figure out a better solution.
+         call CalcWriteOutputs()
+      endif
+   endif
    
-#ifdef UA_OUTS
-   iOffset = (i-1)*p%NumOuts + (j-1)*p%nNodesPerBlade*p%NumOuts
-   if (allocated(y%WriteOutput)) then  !bjj: because BEMT uses local variables for UA output, y%WriteOutput is not necessarially allocated. Need to figure out a better solution.
+contains 
+
+   subroutine CalcWriteOutputs()
+      integer :: iOffset
+      iOffset = (i-1)*p%NumOuts + (j-1)*p%nNodesPerBlade*p%NumOuts
    
       y%WriteOutput(iOffset+ 1)    = u%alpha*R2D
       y%WriteOutput(iOffset+ 2)    = u%U
@@ -3752,10 +3772,8 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
          y%WriteOutput(iOffset+45)    = KC%alpha_filt_cur*R2D
          
       end if
-   end if
-#endif
+   end subroutine CalcWriteOutputs
 
-contains 
    !> Calc Outputs for Boieng-Vertol dynamic stall
    !! See BV_DynStall.f95 of CACTUS, and [70], notations kept more or less consistent
    subroutine BV_CalcOutput()
@@ -3772,15 +3790,13 @@ contains
       call BV_getAlphas(i, j, u, p, xd, BL_p, AFInfo%RelThickness, alpha_34, alphaE_L, alphaLag_D, adotnorm)
       alphaE_D = BV_alphaE_D(adotnorm, alpha_34, alphaLag_D, BL_p, OtherState%activeD(i,j))
 
-#ifdef UA_OUTS
       ! --- Recompute variables, for temporary output to file only
       ! Calculate deltas to negative and positive stall angle (delN, and delP)
+      if (p%UA_OUTS>0) then
       call BV_delNP(adotnorm, alpha_34, alphaLag_D, BL_p, OtherState%activeD(i,j), delN, delP)
       call BV_getGammas(tc=AFInfo%RelThickness, umach=0.0_ReKi, gammaL=gammaL, gammaD=gammaD)
       TransA = BV_TransA(BL_p)
-#endif 
-
-
+      endif
 
       ! --- Cl, _,  at effective angle of attack alphaE
       if (OtherState%activeL(i,j)) then
@@ -3845,8 +3861,7 @@ subroutine UA_WriteOutputToFile(t, p, y)
    integer                                   :: k
       
       ! Generate file outputs
-#ifdef UA_OUTS
-   if (p%unOutFile > 0 .and. allocated(y%WriteOutput)) then
+   if (p%UA_OUTS==2 .and. p%unOutFile > 0 .and. allocated(y%WriteOutput)) then
    
       write (p%unOutFile,"(F19.6)",ADVANCE='no')  t
       do k=1,size(y%WriteOutput)
@@ -3855,7 +3870,6 @@ subroutine UA_WriteOutputToFile(t, p, y)
       WRITE (p%unOutFile,'()')          ! write the line return
 
    end if
-#endif
 
 end subroutine UA_WriteOutputToFile
 !==============================================================================   

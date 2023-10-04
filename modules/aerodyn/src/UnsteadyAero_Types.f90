@@ -55,13 +55,14 @@ IMPLICIT NONE
     LOGICAL  :: WrSum = .false.      !< Write UA AFI parameters to summary file? [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: UAOff_innerNode      !< Last node on each blade where UA should be turned off based on span location from blade root (0 if always on) [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: UAOff_outerNode      !< First node on each blade where UA should be turned off based on span location from blade tip (>nNodesPerBlade if always on) [-]
+    INTEGER(IntKi)  :: UA_OUTS = 0      !< Store write outputs 0=None, 1=WriteOutpus, 2=WriteToFile [-]
   END TYPE UA_InitInputType
 ! =======================
 ! =========  UA_InitOutputType  =======
   TYPE, PUBLIC :: UA_InitOutputType
     TYPE(ProgDesc)  :: Version      !< Version structure [-]
-    CHARACTER(19) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< The is the list of all UA-related output channel header strings (includes all sub-module channels) [-]
-    CHARACTER(19) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< The is the list of all UA-related output channel unit strings (includes all sub-module channels) [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< The is the list of all UA-related output channel header strings (includes all sub-module channels) [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< The is the list of all UA-related output channel unit strings (includes all sub-module channels) [-]
   END TYPE UA_InitOutputType
 ! =======================
 ! =========  UA_KelvinChainType  =======
@@ -224,6 +225,7 @@ IMPLICIT NONE
     LOGICAL , DIMENSION(:,:), ALLOCATABLE  :: UA_off_forGood      !< logical flag indicating if UA is off for good [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: lin_xIndx      !< array to indicate which state to perturb for UA [-]
     REAL(R8Ki) , DIMENSION(1:5)  :: dx      !< array to indicate size of state perturbations [-]
+    INTEGER(IntKi)  :: UA_OUTS = 0      !< Store write outputs 0=None, 1=WriteOutpus, 2=WriteToFile [-]
   END TYPE UA_ParameterType
 ! =======================
 ! =========  UA_InputType  =======
@@ -310,6 +312,7 @@ IF (ALLOCATED(SrcInitInputData%UAOff_outerNode)) THEN
   END IF
     DstInitInputData%UAOff_outerNode = SrcInitInputData%UAOff_outerNode
 ENDIF
+    DstInitInputData%UA_OUTS = SrcInitInputData%UA_OUTS
  END SUBROUTINE UA_CopyInitInput
 
  SUBROUTINE UA_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -403,6 +406,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! UAOff_outerNode upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%UAOff_outerNode)  ! UAOff_outerNode
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! UA_OUTS
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -500,6 +504,8 @@ ENDIF
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
+    IntKiBuf(Int_Xferred) = InData%UA_OUTS
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE UA_PackInitInput
 
  SUBROUTINE UA_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -609,6 +615,8 @@ ENDIF
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
+    OutData%UA_OUTS = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE UA_UnPackInitInput
 
  SUBROUTINE UA_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -6111,6 +6119,7 @@ IF (ALLOCATED(SrcParamData%lin_xIndx)) THEN
     DstParamData%lin_xIndx = SrcParamData%lin_xIndx
 ENDIF
     DstParamData%dx = SrcParamData%dx
+    DstParamData%UA_OUTS = SrcParamData%UA_OUTS
  END SUBROUTINE UA_CopyParam
 
  SUBROUTINE UA_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -6210,6 +6219,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%lin_xIndx)  ! lin_xIndx
   END IF
       Db_BufSz   = Db_BufSz   + SIZE(InData%dx)  ! dx
+      Int_BufSz  = Int_BufSz  + 1  ! UA_OUTS
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -6335,6 +6345,8 @@ ENDIF
       DbKiBuf(Db_Xferred) = InData%dx(i1)
       Db_Xferred = Db_Xferred + 1
     END DO
+    IntKiBuf(Int_Xferred) = InData%UA_OUTS
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE UA_PackParam
 
  SUBROUTINE UA_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -6474,6 +6486,8 @@ ENDIF
       OutData%dx(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
       Db_Xferred = Db_Xferred + 1
     END DO
+    OutData%UA_OUTS = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE UA_UnPackParam
 
  SUBROUTINE UA_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
