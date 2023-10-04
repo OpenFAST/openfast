@@ -26,6 +26,18 @@ if (GENERATE_TYPES)
   generate_f90_types(src/FVW_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FVW_Types.f90)
 endif()
 
+# BasicAero Library
+add_library(basicaerolib 
+  # UnsteadyAero lib
+  src/UnsteadyAero.f90
+  src/UnsteadyAero_Types.f90
+
+  # AirFoil Info lib
+  src/AirfoilInfo.f90
+  src/AirfoilInfo_Types.f90
+)
+target_link_libraries(basicaerolib ifwlib nwtclibs)
+
 # AeroDyn Library
 add_library(aerodynlib STATIC
   src/AeroDyn.f90
@@ -46,14 +58,6 @@ add_library(aerodynlib STATIC
   src/AeroAcoustics_IO.f90
   src/AeroAcoustics_Types.f90
 
-  # UnsteadyAero lib
-  src/UnsteadyAero.f90
-  src/UnsteadyAero_Types.f90
-
-  # AirFoil Info lib
-  src/AirfoilInfo.f90
-  src/AirfoilInfo_Types.f90
-
   # FVW lib
   src/FVW.f90
   src/FVW_IO.f90
@@ -68,7 +72,7 @@ add_library(aerodynlib STATIC
   src/AeroDyn_Inflow.f90
   src/AeroDyn_Inflow_Types.f90
 )
-target_link_libraries(aerodynlib ifwlib nwtclibs)
+target_link_libraries(aerodynlib basicaerolib ifwlib nwtclibs)
 
 # AeroDyn Driver Subs Library
 add_library(aerodyn_driver_subs STATIC
@@ -88,7 +92,7 @@ add_executable(unsteadyaero_driver
   src/UnsteadyAero_Driver.f90
   src/UA_Dvr_Subs.f90
 )
-target_link_libraries(unsteadyaero_driver aerodyn_driver_subs lindynlib)
+target_link_libraries(unsteadyaero_driver basicaerolib lindynlib versioninfolib)
 
 # AeroDyn-InflowWind c-bindings interface library
 add_library(aerodyn_inflow_c_binding SHARED 
@@ -99,7 +103,7 @@ if(APPLE OR UNIX)
    target_compile_definitions(aerodyn_inflow_c_binding PRIVATE IMPLICIT_DLLEXPORT)
 endif()
 
-install(TARGETS aerodynlib aerodyn_driver_subs aerodyn_driver unsteadyaero_driver aerodyn_inflow_c_binding 
+install(TARGETS aerodynlib basicaerolib aerodyn_driver_subs aerodyn_driver unsteadyaero_driver aerodyn_inflow_c_binding 
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
