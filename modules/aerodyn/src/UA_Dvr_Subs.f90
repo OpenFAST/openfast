@@ -262,6 +262,9 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    ! --- Checks
    if (InitInp%SimMod==3) then ! Temporary to avoid changing r-test for now
       !if (Check(.not.EqualRealNos(InitInp%MM(1,1), InitInp%MM(2,2), 'Mass matrix entries 11 and 22 should match.') return
+
+      if (InitInp%Vec_AT(2)<0) call WrScr('[WARN] Vec_AT(2) is negative, but this value is usually positive (for A between T and Q)')
+      if (InitInp%Vec_AQ(2)>0) call WrScr('[WARN] Vec_AQ(2) is positive, but this value is usually negative (for A between T and Q)')
    endif
 
    call Cleanup()
@@ -423,8 +426,8 @@ contains
    end subroutine Cleanup
 end subroutine ReadTimeSeriesData
 !--------------------------------------------------------------------------------------------------------------
-subroutine driverInputsToUAInitData(dvrInitInp, InitInData, AFI_Params, AFIndx, errStat, errMsg)
-   type(Dvr_Parameters)   , intent(in ) :: dvrInitInp           ! Initialization data for the driver program
+subroutine driverInputsToUAInitData(p, InitInData, AFI_Params, AFIndx, errStat, errMsg)
+   type(Dvr_Parameters)   , intent(in ) :: p           ! Initialization data for the driver program
    type(UA_InitInputType) , intent(out) :: InitInData           ! Input data for initialization
    type(AFI_ParameterType), intent(out) :: AFI_Params(NumAFfiles)
    integer, allocatable   , intent(out) :: AFIndx(:,:)
@@ -449,12 +452,13 @@ subroutine driverInputsToUAInitData(dvrInitInp, InitInData, AFI_Params, AFIndx, 
    ! don't turn off UA based on span location:
    InitInData%UAOff_innerNode = 0
    InitInData%UAOff_outerNode = InitInData%nNodesPerBlade + 1
-   InitInData%a_s          = dvrInitInp%SpdSound
-   InitInData%c(1,1)       = dvrInitInp%Chord
-   InitInData%UAMod        = dvrInitInp%UAMod 
-   InitInData%Flookup      = dvrInitInp%Flookup
-   InitInData%OutRootName  = dvrInitInp%OutRootName
-   InitInData%WrSum        = dvrInitInp%SumPrint 
+   InitInData%a_s          = p%SpdSound
+   InitInData%c(1,1)       = p%Chord
+   InitInData%UAMod        = p%UAMod 
+   InitInData%Flookup      = p%Flookup
+   InitInData%OutRootName  = p%OutRootName
+   InitInData%WrSum        = p%SumPrint 
+   InitInData%d_34_to_ac   = (-p%Vec_AQ(2) + p%Vec_AT(2))/p%chord !  d_34_to_ac = d_QT ~0.5 [-], Approximated using y coordinate
 
    ! --- AFI
    allocate(AFIndx(InitInData%nNodesPerBlade,InitInData%numBlades), STAT = errStat2)
@@ -466,11 +470,11 @@ subroutine driverInputsToUAInitData(dvrInitInp, InitInData, AFI_Params, AFIndx, 
 
    UA_f_cn  = (InitInData%UAMod /= UA_HGM).and.(InitInData%UAMod /= UA_OYE)  ! HGM and OYE use the separation function based on cl instead of cn
 
-   afNames(1)  = dvrInitInp%AirFoil1 ! All nodes/blades are using the same 2D airfoil
-   call Init_AFI( InitInData%UAMod, NumAFfiles, afNames, dvrInitInp%UseCm, UA_f_cn, AFI_Params, errStat2, errMsg2); if(Failed()) return
+   afNames(1)  = p%AirFoil1 ! All nodes/blades are using the same 2D airfoil
+   call Init_AFI( InitInData%UAMod, NumAFfiles, afNames, p%UseCm, UA_f_cn, AFI_Params, errStat2, errMsg2); if(Failed()) return
 
-   if (dvrInitInp%WrAFITables) then
-      call WriteAFITables(AFI_Params(1), dvrInitInp%OutRootName, dvrInitInp%UseCm, UA_f_cn)
+   if (p%WrAFITables) then
+      call WriteAFITables(AFI_Params(1), p%OutRootName, p%UseCm, UA_f_cn)
    endif
 contains
    logical function Failed()
@@ -594,6 +598,12 @@ subroutine AeroKinematics(U0, q, qd, p, m)
    m%alpha_Q = m%phi_Q - m%twist_full
    m%alpha_T = m%phi_T - m%twist_full
 
+
+   !alpha_34 = atan2(v_ac(1) + qd(3) * d_ac_to_34, v_ac(2) )  ! Uaero - Uelast
+   !m%alpha_T = atan2(m%Vrel_Q(1) +  qd(3) * (-p%Vec_AQ(2) + p%Vec_AT(2)) ,  m%Vrel_Q(2))
+   !print*,'d_ac_to_34 2', -p%Vec_AQ(2) + p%Vec_AT(2)
+
+
    ! Reynolds at 1/4 chord
    m%Re = sqrt(m%Vrel_norm2_Q) * p%chord  / p%KinVisc
 end subroutine AeroKinematics
@@ -678,12 +688,14 @@ subroutine setUAinputs(U0, LD_x, p, m, UA_u)
    call AeroKinematics(U0, LD_x%q(1:3), LD_x%q(4:6), p, m)
    UA_u%UserProp = 0
    UA_u%Re       = m%Re
-   UA_u%omega    = LD_x%q(6)
+   UA_u%omega    =  -LD_x%q(6) ! NOTE: theta convention for the driver is negative along z, but UA expect an omega along z
    ! Angle of attack and relative velocity at 1/4 point/aerodynamic center point "Q"
-   UA_u%v_ac(1)  = m%Vrel_Q(1)
-   UA_u%v_ac(2)  = m%Vrel_Q(2)
    UA_u%alpha    = m%alpha_Q
    UA_u%U        = sqrt(m%Vrel_norm2_Q)
+   !UA_u%v_ac(1)  = m%Vrel_Q(1) ! This is in global!
+   !UA_u%v_ac(2)  = m%Vrel_Q(2)
+   UA_u%v_ac(1)  = UA_u%U * sin(UA_u%alpha) ! In airfoil coordinate system (a)
+   UA_u%v_ac(2)  = UA_u%U * cos(UA_u%alpha) ! In airfoil coordinate system (a)
 end subroutine setUAinputs
 
 !----------------------------------------------------------------------------------------------------  

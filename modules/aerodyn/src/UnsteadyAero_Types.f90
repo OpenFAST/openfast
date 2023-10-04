@@ -46,6 +46,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: dt      !< time step [s]
     CHARACTER(1024)  :: OutRootName      !< Supplied by Driver:  The name of the root file (without extension) including the full path [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: c      !< Chord length at node [m]
+    REAL(ReKi)  :: d_34_to_ac = 0.5      !< Distance from 3/4 chord to aerodynamic center (typically 0.5) in chord length (no dimension) [-]
     INTEGER(IntKi)  :: numBlades      !< Number nodes of all blades [-]
     INTEGER(IntKi)  :: nNodesPerBlade      !< Number nodes per blades [-]
     INTEGER(IntKi)  :: UAMod      !< Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema] [-]
@@ -209,6 +210,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: UA_ParameterType
     REAL(DbKi)  :: dt      !< time step [s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: c      !< Chord length at node [m]
+    REAL(ReKi)  :: d_34_to_ac = 0.5      !< Distance from 3/4 chord to aerodynamic center (typically 0.5) in chord length (no dimension) [-]
     INTEGER(IntKi)  :: numBlades      !< Number nodes of all blades [-]
     INTEGER(IntKi)  :: nNodesPerBlade      !< Number nodes per blades [-]
     INTEGER(IntKi)  :: UAMod      !< Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema] [-]
@@ -281,6 +283,7 @@ IF (ALLOCATED(SrcInitInputData%c)) THEN
   END IF
     DstInitInputData%c = SrcInitInputData%c
 ENDIF
+    DstInitInputData%d_34_to_ac = SrcInitInputData%d_34_to_ac
     DstInitInputData%numBlades = SrcInitInputData%numBlades
     DstInitInputData%nNodesPerBlade = SrcInitInputData%nNodesPerBlade
     DstInitInputData%UAMod = SrcInitInputData%UAMod
@@ -389,6 +392,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! c upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%c)  ! c
   END IF
+      Re_BufSz   = Re_BufSz   + 1  ! d_34_to_ac
       Int_BufSz  = Int_BufSz  + 1  ! numBlades
       Int_BufSz  = Int_BufSz  + 1  ! nNodesPerBlade
       Int_BufSz  = Int_BufSz  + 1  ! UAMod
@@ -460,6 +464,8 @@ ENDIF
         END DO
       END DO
   END IF
+    ReKiBuf(Re_Xferred) = InData%d_34_to_ac
+    Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%numBlades
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nNodesPerBlade
@@ -565,6 +571,8 @@ ENDIF
         END DO
       END DO
   END IF
+    OutData%d_34_to_ac = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%numBlades = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%nNodesPerBlade = IntKiBuf(Int_Xferred)
@@ -6077,6 +6085,7 @@ IF (ALLOCATED(SrcParamData%c)) THEN
   END IF
     DstParamData%c = SrcParamData%c
 ENDIF
+    DstParamData%d_34_to_ac = SrcParamData%d_34_to_ac
     DstParamData%numBlades = SrcParamData%numBlades
     DstParamData%nNodesPerBlade = SrcParamData%nNodesPerBlade
     DstParamData%UAMod = SrcParamData%UAMod
@@ -6195,6 +6204,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! c upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%c)  ! c
   END IF
+      Re_BufSz   = Re_BufSz   + 1  ! d_34_to_ac
       Int_BufSz  = Int_BufSz  + 1  ! numBlades
       Int_BufSz  = Int_BufSz  + 1  ! nNodesPerBlade
       Int_BufSz  = Int_BufSz  + 1  ! UAMod
@@ -6269,6 +6279,8 @@ ENDIF
         END DO
       END DO
   END IF
+    ReKiBuf(Re_Xferred) = InData%d_34_to_ac
+    Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%numBlades
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%nNodesPerBlade
@@ -6402,6 +6414,8 @@ ENDIF
         END DO
       END DO
   END IF
+    OutData%d_34_to_ac = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%numBlades = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%nNodesPerBlade = IntKiBuf(Int_Xferred)

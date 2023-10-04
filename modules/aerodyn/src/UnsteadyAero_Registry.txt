@@ -32,6 +32,7 @@ param     UnsteadyAero/UA       -                INTEGER           UA_BV        
 typedef   UnsteadyAero/UA              InitInputType                 DbKi                     dt                              -             -         -        "time step" s
 typedef   ^                            ^                             CHARACTER(1024)          OutRootName                     -             -         -        "Supplied by Driver:  The name of the root file (without extension) including the full path"    -
 typedef   ^                            ^                             ReKi                     c                               {:}{:}        -         -        "Chord length at node" m
+typedef   ^                            ^                             ReKi                     d_34_to_ac                      -            0.5        -        "Distance from 3/4 chord to aerodynamic center (typically 0.5) in chord length (no dimension)"       - 
 typedef   ^                            ^                             INTEGER                  numBlades                       -             -         -        "Number nodes of all blades"    -
 typedef   ^                            ^                             INTEGER                  nNodesPerBlade                  -             -         -        "Number nodes per blades"    -
 typedef   ^                            ^                             INTEGER                  UAMod                           -             -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
@@ -190,6 +191,7 @@ typedef   ^                            MiscVarType                   ReKi       
 # Define parameters here:
 typedef   ^                            ParameterType                 DbKi                     dt                              -             -         -        "time step" s
 typedef   ^                            ^                             ReKi                     c                               {:}{:}        -         -        "Chord length at node" m
+typedef   ^                            ^                             ReKi                     d_34_to_ac                      -            0.5        -        "Distance from 3/4 chord to aerodynamic center (typically 0.5) in chord length (no dimension)"       - 
 typedef   ^                            ^                             INTEGER                  numBlades                       -             -         -        "Number nodes of all blades"    -
 typedef   ^                            ^                             INTEGER                  nNodesPerBlade                  -             -         -        "Number nodes per blades"    -
 typedef   ^                            ^                             INTEGER                  UAMod                           -             -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -

@@ -2322,6 +2322,11 @@ subroutine SetInputs_for_UA(BEM_Mod, phi, theta, cantAngle, toeAngle, axInductio
       call GetReynoldsNumber(BEM_Mod,   axInduction, tanInduction, Vx, Vy, Vz, chord, kinVisc, theta, phi, cantAngle, toeAngle, u_UA%Re)
    endif
 
+   ! NOTE: 
+   ! U: is here is the norm of the velocity made of Vx(1-a) and Vy(1+a'). 
+   !    Ideally we would go back to the airfoil coordinate system
+   ! Below, v_ac is in the airfoil coordinate system. In baseline configurations, v_ac(1)>0 and v_ac(2)>0 
+
    u_UA%v_ac(1) = sin(u_UA%alpha)*u_UA%U
    u_UA%v_ac(2) = cos(u_UA%alpha)*u_UA%U
    

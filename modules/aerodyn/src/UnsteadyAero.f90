@@ -740,6 +740,7 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
       if (ErrStat >= AbortErrLev) return
    
    p%c          = InitInp%c         ! this can't be 0
+   p%d_34_to_ac = InitInp%d_34_to_ac ! In the future, set this for all nodes!
    p%numBlades  = InitInp%numBlades
    p%nNodesPerBlade  = InitInp%nNodesPerBlade
    p%UAMod      = InitInp%UAMod
@@ -1715,7 +1716,7 @@ subroutine UA_UpdateDiscOtherState_BV( i, j, u, p, xd, OtherState, AFInfo, m, Er
    
    ! --- Filter angle of attack
    ! Using angle of attack at AC or 3/4 point
-   alpha_34 = Get_Alpha34(u%v_ac, u%omega, 0.5_ReKi*p%c(i,j))
+   alpha_34 = Get_Alpha34(u%v_ac, u%omega, p%d_34_to_ac*p%c(i,j))
    ! Angle of attack at previous time
    if (OtherState%FirstPass(i,j)) then
       alpha_minus1      = alpha_34
@@ -1784,7 +1785,7 @@ subroutine BV_getAlphas(i, j, u, p, xd, BL_p, tc, alpha_34, alphaE_L, alphaLag_D
    real(ReKi), parameter :: umach = 0.0_ReKi !< Mach number umach=Urel*Minf, Minf (freestrem Mach) for incompressible
 
    ! Angle of attack at 3/4 chord point 
-   alpha_34 = Get_Alpha34(u%v_ac, u%omega, 0.5_ReKi*p%c(i,j))
+   alpha_34 = Get_Alpha34(u%v_ac, u%omega, p%d_34_to_ac*p%c(i,j))
 
    ! --- Intermediate variables, using CACTUS notations
    adotnorm = xd%alpha_dot(i,j) * Get_Tu(u%u, p%c(i,j))
@@ -2757,7 +2758,7 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
    Tu = Get_Tu(u%u, p%c(i,j))
 
    if (present(alpha_34)) then
-      alpha_34 = Get_Alpha34(u%v_ac, u%omega, 0.5_ReKi*p%c(i,j))
+      alpha_34 = Get_Alpha34(u%v_ac, u%omega, p%d_34_to_ac*p%c(i,j))
     
       if (present(alphaE)) then
          ! Variables derived from states
@@ -2773,19 +2774,19 @@ SUBROUTINE Get_HGM_constants(i, j, p, u, x, BL_p, Tu, alpha_34, alphaE)
 END SUBROUTINE Get_HGM_constants
 
 !> Compute angle of attack at 3/4 chord point based on values at Aerodynamic center
-real(ReKi) function Get_Alpha34(v_ac, omega, d_ac_to_34)
-   real(ReKi), intent(in) :: v_ac(2)    !< Velocity at aerodynamic center
+real(ReKi) function Get_Alpha34(v_ac, omega, d_34_to_ac)
+   real(ReKi), intent(in) :: v_ac(2)    !< Velocity at aerodynamic center (AC)
    real(ReKi), intent(in) :: omega      !< pitching rate of airfoil
-   real(ReKi), intent(in) :: d_ac_to_34 !< distance from aerodynamic center to 3/4 chord point
-   Get_Alpha34 = atan2(v_ac(1) + omega * d_ac_to_34, v_ac(2) )  ! Uaero - Uelast
+   real(ReKi), intent(in) :: d_34_to_ac !< distance from 3/4 chord to AC point, assumed >0, e.g. =0.5c
+   Get_Alpha34 = atan2(v_ac(1) + omega * d_34_to_ac, v_ac(2) )  ! Uaero - Uelast
 end function Get_Alpha34
 
 !> Compute angle of attack at 2/4 chord point based on values at Aerodynamic center
-real(ReKi) function Get_Alpha24(v_ac, omega, d_ac_to_24)
-   real(ReKi), intent(in) :: v_ac(2)    !< Velocity at aerodynamic center
+real(ReKi) function Get_Alpha24(v_ac, omega, d_24_to_ac)
+   real(ReKi), intent(in) :: v_ac(2)    !< Velocity at aerodynamic center (AC)
    real(ReKi), intent(in) :: omega      !< pitching rate of airfoil
-   real(ReKi), intent(in) :: d_ac_to_24 !< distance from aerodynamic center to 2/4 chord point
-   Get_Alpha24 = atan2(v_ac(1) + omega * d_ac_to_24, v_ac(2) )  ! Uaero - Uelast
+   real(ReKi), intent(in) :: d_24_to_ac !< distance from 2/4 chord to AC point, assumed >0, e.g. =0.25c
+   Get_Alpha24 = atan2(v_ac(1) + omega * d_24_to_ac, v_ac(2) )  ! Uaero - Uelast
 end function Get_Alpha24
 
 !> Compute time constant based on relative velocity u_rel
@@ -3824,7 +3825,7 @@ contains
          Cm25_stat = AFI_interp%Cm
       endif
       ! Static coeffs at 1/2 chord (alpha_50)
-      alpha_50 = Get_Alpha24(u%v_ac, u%omega, 0.25_ReKi*p%c(i,j))
+      alpha_50 = Get_Alpha24(u%v_ac, u%omega, (p%d_34_to_ac-0.25)*p%c(i,j)) ! NOTE: d_24_to_ac = (d_34_to_ac - 1/4)
       call AFI_ComputeAirfoilCoefs(alpha_50, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       Cl50_stat = AFI_interp%Cl
       ! Static coeffs at 3/4 chord (alpha_34)
