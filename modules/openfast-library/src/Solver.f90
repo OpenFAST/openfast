@@ -670,7 +670,6 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
    real(DbKi)                 :: t_global_next     ! next simulation time (m_FAST%t_global + p_FAST%dt)
    integer(IntKi)             :: n_t_global_next   ! n_t_global + 1
    integer(IntKi)             :: i, j
-   logical                    :: ConvUJac          ! Jacobian updated for convergence
 
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -688,9 +687,6 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
 
    ! Decrement number of time steps before updating the Jacobian
    m%StepsUntilUJac = m%StepsUntilUJac - 1
-
-   ! Set Jacobian updated for convergence flag to false
-   ConvUJac = .false.
 
    ! Init counters for number of Jacobian updates and number of convergence iterations
    NumUJac = 0
@@ -828,29 +824,13 @@ subroutine Solver_Step(n_t_global, t_initial, p, m, Mods, Turbine, ErrStat, ErrM
          ! If convergence iteration has reached or exceeded limit
          if (iterConv >= p%MaxConvIter) then
 
-            ! If Jacobian has not been updated for convergence
-            if (.not. ConvUJac) then
-
-               ! Set counter to trigger a Jacobian update on next convergence iteration
-               m%IterUntilUJac = 0
-
-               ! If at the maximum number of correction iterations,
-               ! increase limit to retry the step after the Jacobian is updated
-               if (iterCorr == NumCorrections) NumCorrections = NumCorrections + 1
-
-               ! Set flag indicating that the jacobian has been updated for convergence
-               ConvUJac = .true.
-
-            else
-
-               ! Otherwise, correction iteration with Jacobian update has been tried,
-               ! display warning that convergence failed and move to next step
-               call SetErrStat(ErrID_Warn, "Failed to converge in "//trim(Num2LStr(p%MaxConvIter))// &
-                               " iterations on step "//trim(Num2LStr(n_t_global_next))// &
-                               " (error="//trim(Num2LStr(delta_norm))// &
-                               ", tolerance="//trim(Num2LStr(p%ConvTol))//").", &
-                               ErrStat, ErrMsg, RoutineName)
-            end if
+            ! Otherwise, correction iteration with Jacobian update has been tried,
+            ! display warning that convergence failed and move to next step
+            call SetErrStat(ErrID_Warn, "Failed to converge in "//trim(Num2LStr(p%MaxConvIter))// &
+                            " iterations on step "//trim(Num2LStr(n_t_global_next))// &
+                            " (error="//trim(Num2LStr(delta_norm))// &
+                            ", tolerance="//trim(Num2LStr(p%ConvTol))//").", &
+                            ErrStat, ErrMsg, RoutineName)
 
             ! Exit convergence loop to next correction iteration or next step
             exit
