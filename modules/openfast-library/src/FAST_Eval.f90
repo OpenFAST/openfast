@@ -862,7 +862,6 @@ subroutine LoadMeshMap(Mappings, Key, SrcMod, SrcMesh, SrcDispMesh, &
    character(*), parameter                :: RoutineName = 'MotionMeshMap'
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
-   integer(IntKi)                         :: i1Loc, i2Loc
    type(TC_MappingType)                   :: Mapping
 
    ErrStat = ErrID_None
@@ -888,16 +887,23 @@ subroutine LoadMeshMap(Mappings, Key, SrcMod, SrcMesh, SrcDispMesh, &
       return
    end if
 
-   ! Get optional mapping indicies
-   i1Loc = 0; if (present(i1)) i1Loc = i1
-   i2Loc = 0; if (present(i2)) i2Loc = i2
-
    ! Initialize mapping structure
-   Mapping = TC_MappingType(Key=Key, Typ=Map_LoadMesh, i1=i1Loc, i2=i2Loc, &
-                            SrcModIdx=SrcMod%Idx, SrcModID=SrcMod%ID, SrcIns=SrcMod%Ins, &
-                            SrcMeshID=SrcMesh%ID, SrcDispMeshID=SrcDispMesh%ID, &
-                            DstModIdx=DstMod%Idx, DstModID=DstMod%ID, DstIns=DstMod%Ins, &
-                            DstMeshID=DstMesh%ID, DstDispMeshID=DstDispMesh%ID)
+   Mapping%Key = Key
+   Mapping%Typ = Map_LoadMesh
+   Mapping%SrcModIdx = SrcMod%Idx
+   Mapping%SrcModID = SrcMod%ID
+   Mapping%SrcIns = SrcMod%Ins
+   Mapping%SrcMeshID = SrcMesh%ID
+   Mapping%SrcDispMeshID = SrcDispMesh%ID
+   Mapping%DstModIdx = DstMod%Idx
+   Mapping%DstModID = DstMod%ID
+   Mapping%DstIns = DstMod%Ins
+   Mapping%DstMeshID = DstMesh%ID
+   Mapping%DstDispMeshID = DstDispMesh%ID
+
+   ! Get optional mapping indicies
+   if (present(i1)) Mapping%i1 = i1
+   if (present(i2)) Mapping%i2 = i2
 
    ! Create mesh mapping
    call MeshMapCreate(SrcMesh, DstMesh, Mapping%MeshMap, ErrStat2, ErrMsg2); if (Failed()) return
@@ -929,7 +935,6 @@ subroutine MotionMeshMap(Mappings, Key, SrcMod, SrcMesh, &
    character(*), parameter                :: RoutineName = 'MotionMeshMap'
    integer(IntKi)                         :: ErrStat2
    character(ErrMsgLen)                   :: ErrMsg2
-   integer(IntKi)                         :: i1Loc, i2Loc
    type(TC_MappingType)                   :: Mapping
 
    ErrStat = ErrID_None
@@ -949,14 +954,21 @@ subroutine MotionMeshMap(Mappings, Key, SrcMod, SrcMesh, &
       return
    end if
 
-   ! Get optional mapping indicies
-   i1Loc = 0; if (present(i1)) i1Loc = i1
-   i2Loc = 0; if (present(i2)) i2Loc = i2
-
    ! Initialize mapping structure
-   Mapping = TC_MappingType(Key=Key, Typ=Map_MotionMesh, i1=i1Loc, i2=i2Loc, &
-                            SrcModIdx=SrcMod%Idx, SrcModID=SrcMod%ID, SrcIns=SrcMod%Ins, SrcMeshID=SrcMesh%ID, &
-                            DstModIdx=DstMod%Idx, DstModID=DstMod%ID, DstIns=DstMod%Ins, DstMeshID=DstMesh%ID)
+   Mapping%Key = Key
+   Mapping%Typ = Map_MotionMesh
+   Mapping%SrcModIdx = SrcMod%Idx
+   Mapping%SrcModID = SrcMod%ID
+   Mapping%SrcIns = SrcMod%Ins
+   Mapping%SrcMeshID = SrcMesh%ID
+   Mapping%DstModIdx = DstMod%Idx
+   Mapping%DstModID = DstMod%ID
+   Mapping%DstIns = DstMod%Ins
+   Mapping%DstMeshID = DstMesh%ID
+
+   ! Get optional mapping indicies
+   if (present(i1)) Mapping%i1 = i1
+   if (present(i2)) Mapping%i2 = i2
 
    ! Create mesh mapping
    call MeshMapCreate(SrcMesh, DstMesh, Mapping%MeshMap, ErrStat2, ErrMsg2); if (Failed()) return
@@ -977,17 +989,26 @@ subroutine NonMeshMap(Maps, Key, SrcMod, DstMod, i1, i2, Active)
    type(ModDataType), intent(in)          :: SrcMod, DstMod
    integer(IntKi), optional, intent(in)   :: i1, i2
    logical, optional, intent(in)          :: Active
-   integer(IntKi)                         :: i1Loc, i2Loc
+   type(TC_MappingType)                   :: Mapping
    if (present(Active)) then
       if (.not. Active) return
    end if
-   i1Loc = 0
-   i2Loc = 0
-   if (present(i1)) i1Loc = i1
-   if (present(i2)) i2Loc = i2
-   Maps = [Maps, TC_MappingType(Key=Key, Typ=Map_NonMesh, i1=i1Loc, i2=i2Loc, &
-                                SrcModIdx=SrcMod%Idx, SrcModID=SrcMod%ID, SrcIns=SrcMod%Ins, &
-                                DstModIdx=DstMod%Idx, DstModID=DstMod%ID, DstIns=DstMod%Ins)]
+
+   ! Initialize mapping structure
+   Mapping%Key = Key
+   Mapping%Typ = Map_NonMesh
+   Mapping%SrcModIdx = SrcMod%Idx
+   Mapping%SrcModID = SrcMod%ID
+   Mapping%SrcIns = SrcMod%Ins
+   Mapping%DstModIdx = DstMod%Idx
+   Mapping%DstModID = DstMod%ID
+   Mapping%DstIns = DstMod%Ins
+
+   ! Get optional mapping indicies
+   if (present(i1)) Mapping%i1 = i1
+   if (present(i2)) Mapping%i2 = i2
+
+   Maps = [Maps, Mapping]
 end subroutine
 
 subroutine FAST_InputSolve(ModData, Maps, Dst, T, ErrStat, ErrMsg)
