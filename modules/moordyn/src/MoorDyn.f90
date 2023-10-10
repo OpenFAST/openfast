@@ -826,6 +826,7 @@ CONTAINS
                   if ((let1 == "ANCHOR") .or. (let1 == "FIXED") .or. (let1 == "FIX")) then   ! if a fixed body (this would just be used if someone wanted to temporarly fix a body that things were attached to)
                   
                      m%BodyList(l)%typeNum = 1
+                     m%BodyList(l)%r6 = tempArray     ! set initial body position and orientation
                      
                   else if ((let1 == "COUPLED") .or. (let1 == "VESSEL") .or. (let1 == "CPLD") .or. (let1 == "VES")) then    ! if a coupled body
                      
@@ -1947,6 +1948,13 @@ CONTAINS
          CALL Body_Initialize(m%BodyList(m%FreeBodyIs(l)), x%states(m%BodyStateIs1(l) : m%BodyStateIsN(l)), m)
       END DO
       
+      ! Set up points, lines, and rods attached to a fixed body
+      DO l = 1,p%nBodies
+         IF (m%BodyList(l)%typeNum == 1) THEN
+            CALL Body_InitializeUnfree(m%BodyList(l), m)
+         ENDIF
+      END DO
+      
       ! Go through independent (including pinned) Rods and write the coordinates to the state vector
       DO l = 1,p%nFreeRods
          CALL Rod_Initialize(m%RodList(m%FreeRodIs(l)), x%states(m%RodStateIs1(l):m%RodStateIsN(l)), m)
@@ -1977,6 +1985,10 @@ CONTAINS
          IF (wordy > 2) print *, "Line ", l, " with NumSegs =", N
          IF (wordy > 2) print *, "its states range from index ", m%LineStateIs1(l), " to ", m%LineStateIsN(l)
 
+         PRINT*, 'Line ', l
+         PRINT*, 'Line anch poisition', m%LineList(l)%r(:,0)
+         PRINT*, 'Line Fair poisition', m%LineList(l)%r(:,m%LineList(l)%N)
+
          ! assign the resulting internal node positions to the integrator initial state vector! (velocities leave at 0)
          DO I = 1, N-1
 !            print *, "I=", I
@@ -1998,6 +2010,16 @@ CONTAINS
 
       END DO    !l = 1, p%NLines
 
+      PRINT*, 'Number of lines on point', m%PointList(1)%IdNum, ' is ', m%PointList(1)%nAttached
+      PRINT*, 'Number of lines on point', m%PointList(2)%IdNum, ' is ', m%PointList(2)%nAttached
+      PRINT*, 'Number of lines on point', m%PointList(3)%IdNum, ' is ', m%PointList(3)%nAttached
+      PRINT*, 'Point ', m%PointList(1)%IdNum, ' location ', m%PointList(1)%r
+      PRINT*, 'Point ', m%PointList(2)%IdNum, ' location ', m%PointList(2)%r
+      PRINT*, 'Point ', m%PointList(3)%IdNum, ' location ', m%PointList(3)%r
+      PRINT*, 'Body ', m%BodyList(1)%IdNum, ' location ', m%BodyList(1)%r6
+      PRINT*, 'Body ', m%BodyList(2)%IdNum, ' location ', m%BodyList(2)%r6
+      PRINT*, 'Body ', m%BodyList(1)%IdNum, ' attached points ', m%BodyList(1)%AttachedC(1:3)
+      PRINT*, 'Body ', m%BodyList(2)%IdNum, ' attached points ', m%BodyList(2)%AttachedC(1:3)
 
 
       ! --------------------------------------------------------------------
