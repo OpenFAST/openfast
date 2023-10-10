@@ -240,6 +240,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CPs      !< Control points used for wake rollup computation [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Uind      !< Induced velocities obtained at control points [-]
     TYPE(GridOutType) , DIMENSION(:), ALLOCATABLE  :: GridOutputs      !< Number of VTK grid to output [-]
+    LOGICAL  :: InfoReeval = .true.      !< Give info about Reevaluation: gets set to false after first info statement [-]
   END TYPE FVW_MiscVarType
 ! =======================
 ! =========  Rot_InputType  =======
@@ -3531,6 +3532,7 @@ subroutine FVW_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
       end do
    end if
+   DstMiscData%InfoReeval = SrcMiscData%InfoReeval
 end subroutine
 
 subroutine FVW_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -3639,6 +3641,7 @@ subroutine FVW_PackMisc(Buf, Indata)
          call FVW_PackGridOutType(Buf, InData%GridOutputs(i1)) 
       end do
    end if
+   call RegPack(Buf, InData%InfoReeval)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -3750,6 +3753,8 @@ subroutine FVW_UnPackMisc(Buf, OutData)
          call FVW_UnpackGridOutType(Buf, OutData%GridOutputs(i1)) ! GridOutputs 
       end do
    end if
+   call RegUnpack(Buf, OutData%InfoReeval)
+   if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
 subroutine FVW_CopyRot_InputType(SrcRot_InputTypeData, DstRot_InputTypeData, CtrlCode, ErrStat, ErrMsg)
