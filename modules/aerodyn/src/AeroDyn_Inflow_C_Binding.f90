@@ -349,7 +349,6 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
                IfWinputFilePassed, IfWinputFileString_C, IfWinputFileStringLength_C, OutRootName_C,  &
                gravity_C, defFldDens_C, defKinVisc_C, defSpdSound_C,      &
                defPatm_C, defPvap_C, WtrDpth_C, MSL2SWL_C,                &
-               AeroProjMod_C,                                             &
                InterpOrder_C, DT_C, TMax_C,                               &
                storeHHVel,                                                &
                WrVTK_in, WrVTK_inType, VTKNacDim_in, VTKHubRad_in,        &
@@ -378,11 +377,6 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    real(c_float),             intent(in   )  :: defPvap_C                              !< Vapour pressure of working fluid (Pa) [used only for an MHK turbine cavitation check]
    real(c_float),             intent(in   )  :: WtrDpth_C                              !< Water depth (m)
    real(c_float),             intent(in   )  :: MSL2SWL_C                              !< Offset between still-water level and mean sea level (m) [positive upward]
-   ! Aero calculation method -- AeroProjMod
-   !     APM_BEM_NoSweepPitchTwist - 1 -  "Original AeroDyn model where momentum balance is done in the WithoutSweepPitchTwist system"
-   !     APM_BEM_Polar             - 2 -  "Use staggered polar grid for momentum balance in each annulus"
-   !     APM_LiftingLine           - 3 -  "Use the blade lifting line (i.e. the structural) orientation (currently for OLAF with VAWT)"
-   integer(c_int),            intent(in   )  :: AeroProjMod_C                          !< Type of aerodynamic projection
    ! Interpolation
    integer(c_int),            intent(in   )  :: InterpOrder_C                          !< Interpolation order to use (must be 1 or 2)
    ! Time
@@ -416,6 +410,7 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
    character(ErrMsgLen)                                           :: ErrMsg2           !< temporary error message from a call
    integer(IntKi)                                                 :: i,j,k             !< generic counters
    integer(IntKi)                                                 :: iWT               !< current turbine number (iterate through during setup for ADI_Init call)
+   integer(IntKi)                                                 :: AeroProjMod       !< for checking that all turbines use the same AeroProjMod
    character(*), parameter                                        :: RoutineName = 'ADI_C_Init'  !< for error handling
 
    ! Initialize error handling
@@ -439,6 +434,17 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
       if (Sim%WT(iWT)%NumBlades < 0)   call SetErrStat(ErrID_Fatal,"Rotor "//trim(Num2LStr(iWT))//" not initialized. Call ADI_C_SetupRotor prior to calling ADI_C_Init",ErrStat,ErrMsg,RoutineName)
    enddo
    if (Failed()) return
+
+
+   ! Check that all turbines are using the same AeroProjMod (mixing projection modes is not currently supported)
+   AeroProjMod = InitInp%AD%rotors(1)%AeroProjMod
+   do iWT = 2,Sim%NumTurbines
+      if(AeroProjMod /= InitInp%AD%rotors(iWT)%AeroProjMod) then
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = "Different AeroProjMod values for each turbine (set from TurbineIsHAWT flag).  Check that all turbines are of the same type (HAWT or not)."
+         if (Failed()) return
+      endif
+   enddo
 
    ! Setup temporary storage arrays for simpler transfers
    call SetTempStorage(ErrStat2,ErrMsg2); if (Failed()) return
@@ -556,7 +562,6 @@ SUBROUTINE ADI_C_Init( ADinputFilePassed, ADinputFileString_C, ADinputFileString
 
    ! setup rotors for AD -- interface only supports one rotor at present
    do iWT=1,Sim%NumTurbines
-      InitInp%AD%rotors(iWT)%AeroProjMod = int(AeroProjMod_C, IntKi)
       InitInp%AD%rotors(iWT)%numBlades   = Sim%WT(iWT)%NumBlades
    enddo
 
@@ -1280,7 +1285,7 @@ END SUBROUTINE ADI_C_End
 !--------------------------------------------- AeroDyn SetupRotor ----------------------------------------------
 !===============================================================================================================
 !> Setup the initial rotor root positions etc before initializing
-subroutine ADI_C_SetupRotor(iWT_c, TurbOrigin_C,                 &
+subroutine ADI_C_SetupRotor(iWT_c, TurbineIsHAWT_c, TurbOrigin_C,    &
                HubPos_C, HubOri_C,                                   &
                NacPos_C, NacOri_C,                                   &
                NumBlades_C, BldRootPos_C, BldRootOri_C,              &
@@ -1292,6 +1297,7 @@ subroutine ADI_C_SetupRotor(iWT_c, TurbOrigin_C,                 &
 !GCC$ ATTRIBUTES DLLEXPORT :: ADI_C_SetupRotor
 #endif
    integer(c_int),            intent(in   ) :: iWT_c     !< Wind turbine / rotor number
+   integer(c_int),            intent(in   ) :: TurbineIsHAWT_c                         !< true for HAWT, false for VAWT
    real(c_float),             intent(in   ) :: TurbOrigin_C(3)                         !< turbine origin (tower base). Gets added to all meshes to shift turbine position.
    ! Initial hub and blade root positions/orientations
    real(c_float),             intent(in   )  :: HubPos_C( 3 )                          !< Hub position
@@ -1310,6 +1316,7 @@ subroutine ADI_C_SetupRotor(iWT_c, TurbOrigin_C,                 &
 
    ! local vars
    integer(IntKi)    :: iWT      !< current turbine
+   logical                                                        :: TurbineIsHAWT     !< true for HAWT, false for VAWT
    integer(IntKi)                                                 :: ErrStat           !< aggregated error messagNumBlades_ee
    character(ErrMsgLen)                                           :: ErrMsg            !< aggregated error message
    integer(IntKi)                                                 :: ErrStat2          !< temporary error status  from a call
@@ -1331,6 +1338,20 @@ subroutine ADI_C_SetupRotor(iWT_c, TurbOrigin_C,                 &
    iWT = int(iWT_c, IntKi)
    Sim%WT(iWT)%NumBlades         = int(NumBlades_C,   IntKi)
    Sim%WT(iWT)%OriginInit(1:3)   = real(TurbOrigin_C(1:3), ReKi)
+
+   ! Aero calculation method -- AeroProjMod
+   !     APM_BEM_NoSweepPitchTwist - 1 -  "Original AeroDyn model where momentum balance is done in the WithoutSweepPitchTwist system"
+   !     APM_BEM_Polar             - 2 -  "Use staggered polar grid for momentum balance in each annulus"
+   !     APM_LiftingLine           - 3 -  "Use the blade lifting line (i.e. the structural) orientation (currently for OLAF with VAWT)"
+   ! For now we will set (this may need to be changed later):
+   !     HAWT --> AeroProjMod = 1
+   !     VAWT --> AeroProjMod = 3
+   TurbineIsHAWT = TurbineIsHAWT_c==1_c_int
+   if (TurbineIsHAWT) then
+      InitInp%AD%rotors(iWT)%AeroProjMod = 1
+   else
+      InitInp%AD%rotors(iWT)%AeroProjMod = 3
+   endif
 
 
    call AllocAry(InitInp%AD%rotors(iWT)%BladeRootPosition,       3, Sim%WT(iWT)%NumBlades, 'BldRootPos', errStat2, errMsg2 ); if (Failed()) return
