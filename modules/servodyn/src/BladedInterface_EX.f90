@@ -375,25 +375,33 @@ contains
    subroutine InitLidarMeas()
       integer  :: I,J
       if (p%NumBeam == 0) return ! Nothing to set
-      ! Allocate arrays for inputs
-      if (allocated(InitInp%LidSpeed)) then    ! make sure we have the array allocated before setting it
-         CALL AllocAry(u%LidSpeed, size(InitInp%LidSpeed), 'u%LidSpeed', errStat2, ErrMsg2)
-         if (Failed())  return
+      ! Allocate arrays for inputs -- these may have been set in ServoDyn already
+      if (allocated(InitInp%LidSpeed)) then         ! make sure we have the array allocated before setting it
+         if (.not. allocated(u%LidSpeed)) then
+            CALL AllocAry(u%LidSpeed, size(InitInp%LidSpeed), 'u%LidSpeed', errStat2, ErrMsg2)
+            if (Failed())  return
+         endif
          u%LidSpeed = InitInp%LidSpeed
       endif
       if (allocated(InitInp%MsrPositionsX)) then    ! make sure we have the array allocated before setting it
-         CALL AllocAry(u%MsrPositionsX, size(InitInp%MsrPositionsX), 'u%MsrPositionsX', errStat2, ErrMsg2)
-         if (Failed())  return
+         if (.not. allocated(u%MsrPositionsX)) then
+            CALL AllocAry(u%MsrPositionsX, size(InitInp%MsrPositionsX), 'u%MsrPositionsX', errStat2, ErrMsg2)
+            if (Failed())  return
+         endif
          u%MsrPositionsX = InitInp%MsrPositionsX
       endif
       if (allocated(InitInp%MsrPositionsY)) then    ! make sure we have the array allocated before setting it
-         CALL AllocAry(u%MsrPositionsY, size(InitInp%MsrPositionsY), 'u%MsrPositionsY', errStat2, ErrMsg2)
-         if (Failed())  return
+         if (.not. allocated(u%MsrPositionsY)) then
+            CALL AllocAry(u%MsrPositionsY, size(InitInp%MsrPositionsY), 'u%MsrPositionsY', errStat2, ErrMsg2)
+            if (Failed())  return
+         endif
          u%MsrPositionsY = InitInp%MsrPositionsY
       endif
       if (allocated(InitInp%MsrPositionsZ)) then    ! make sure we have the array allocated before setting it
-         CALL AllocAry(u%MsrPositionsZ, size(InitInp%MsrPositionsZ), 'u%MsrPositionsZ', errStat2, ErrMsg2)
-         if (Failed())  return
+         if (.not. allocated(u%MsrPositionsZ)) then
+            CALL AllocAry(u%MsrPositionsZ, size(InitInp%MsrPositionsZ), 'u%MsrPositionsZ', errStat2, ErrMsg2)
+            if (Failed())  return
+         endif
          u%MsrPositionsZ = InitInp%MsrPositionsZ
       endif
       ! Write summary info to summary file

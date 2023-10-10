@@ -182,8 +182,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: BEMT_InputType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: theta      !< Twist angle (includes all sources of twist)  [Array of size (NumBlNds,numBlades)] [rad]
     REAL(ReKi)  :: chi0 = 0.0_ReKi      !< Angle between the vector normal to the rotor plane and the wind vector (e.g., the yaw angle in the case of no tilt) [rad]
-    REAL(ReKi)  :: psiSkewOffset = 0.0_ReKi      !< Azimuth angle offset (relative to 90 deg) of the most downwind blade when chi0 is non-zero [rad]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: psi      !< Azimuth angle [rad]
+    REAL(ReKi)  :: psiSkewOffset = 0.0_ReKi      !< Skew azimuth angle offset (relative to 90 deg) of the most downwind blade when chi0 is non-zero [rad]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: psi_s      !< Skew azimuth angle [rad]
     REAL(ReKi)  :: omega = 0.0_ReKi      !< Angular velocity of rotor [rad/s]
     REAL(ReKi)  :: TSR = 0.0_ReKi      !< Tip-speed ratio (to check if BEM should be turned off) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vx      !< Local axial velocity at node [m/s]
@@ -207,6 +207,11 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: phi      !< angle between the plane of rotation and the direction of the local wind [rad]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: axInduction      !< axial induction [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: tanInduction      !< tangential induction [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: axInduction_qs      !< axial induction quasi steady [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: tanInduction_qs      !< tangential induction quasi steady [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: k      !< Factor k in blade element theory thrust coefficient [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: k_p      !< Factor kp in blade element theory torque coefficient [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F      !< Tip/hub loss factor [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Re      !< Reynold's number [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AOA      !< angle of attack [rad]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Cx      !< normal force coefficient (normal to the plane, not chord) of the jth node in the kth blade [-]
@@ -1949,17 +1954,17 @@ subroutine BEMT_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
    end if
    DstInputData%chi0 = SrcInputData%chi0
    DstInputData%psiSkewOffset = SrcInputData%psiSkewOffset
-   if (allocated(SrcInputData%psi)) then
-      LB(1:1) = lbound(SrcInputData%psi)
-      UB(1:1) = ubound(SrcInputData%psi)
-      if (.not. allocated(DstInputData%psi)) then
-         allocate(DstInputData%psi(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcInputData%psi_s)) then
+      LB(1:1) = lbound(SrcInputData%psi_s)
+      UB(1:1) = ubound(SrcInputData%psi_s)
+      if (.not. allocated(DstInputData%psi_s)) then
+         allocate(DstInputData%psi_s(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%psi.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%psi_s.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstInputData%psi = SrcInputData%psi
+      DstInputData%psi_s = SrcInputData%psi_s
    end if
    DstInputData%omega = SrcInputData%omega
    DstInputData%TSR = SrcInputData%TSR
@@ -2098,8 +2103,8 @@ subroutine BEMT_DestroyInput(InputData, ErrStat, ErrMsg)
    if (allocated(InputData%theta)) then
       deallocate(InputData%theta)
    end if
-   if (allocated(InputData%psi)) then
-      deallocate(InputData%psi)
+   if (allocated(InputData%psi_s)) then
+      deallocate(InputData%psi_s)
    end if
    if (allocated(InputData%Vx)) then
       deallocate(InputData%Vx)
@@ -2145,10 +2150,10 @@ subroutine BEMT_PackInput(Buf, Indata)
    end if
    call RegPack(Buf, InData%chi0)
    call RegPack(Buf, InData%psiSkewOffset)
-   call RegPack(Buf, allocated(InData%psi))
-   if (allocated(InData%psi)) then
-      call RegPackBounds(Buf, 1, lbound(InData%psi), ubound(InData%psi))
-      call RegPack(Buf, InData%psi)
+   call RegPack(Buf, allocated(InData%psi_s))
+   if (allocated(InData%psi_s)) then
+      call RegPackBounds(Buf, 1, lbound(InData%psi_s), ubound(InData%psi_s))
+      call RegPack(Buf, InData%psi_s)
    end if
    call RegPack(Buf, InData%omega)
    call RegPack(Buf, InData%TSR)
@@ -2234,18 +2239,18 @@ subroutine BEMT_UnPackInput(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%psiSkewOffset)
    if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%psi)) deallocate(OutData%psi)
+   if (allocated(OutData%psi_s)) deallocate(OutData%psi_s)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(Buf, 1, LB, UB)
       if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%psi(LB(1):UB(1)),stat=stat)
+      allocate(OutData%psi_s(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%psi.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%psi_s.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
          return
       end if
-      call RegUnpack(Buf, OutData%psi)
+      call RegUnpack(Buf, OutData%psi_s)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    call RegUnpack(Buf, OutData%omega)
@@ -2459,6 +2464,66 @@ subroutine BEMT_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrM
       end if
       DstOutputData%tanInduction = SrcOutputData%tanInduction
    end if
+   if (allocated(SrcOutputData%axInduction_qs)) then
+      LB(1:2) = lbound(SrcOutputData%axInduction_qs)
+      UB(1:2) = ubound(SrcOutputData%axInduction_qs)
+      if (.not. allocated(DstOutputData%axInduction_qs)) then
+         allocate(DstOutputData%axInduction_qs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%axInduction_qs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%axInduction_qs = SrcOutputData%axInduction_qs
+   end if
+   if (allocated(SrcOutputData%tanInduction_qs)) then
+      LB(1:2) = lbound(SrcOutputData%tanInduction_qs)
+      UB(1:2) = ubound(SrcOutputData%tanInduction_qs)
+      if (.not. allocated(DstOutputData%tanInduction_qs)) then
+         allocate(DstOutputData%tanInduction_qs(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%tanInduction_qs.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%tanInduction_qs = SrcOutputData%tanInduction_qs
+   end if
+   if (allocated(SrcOutputData%k)) then
+      LB(1:2) = lbound(SrcOutputData%k)
+      UB(1:2) = ubound(SrcOutputData%k)
+      if (.not. allocated(DstOutputData%k)) then
+         allocate(DstOutputData%k(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%k.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%k = SrcOutputData%k
+   end if
+   if (allocated(SrcOutputData%k_p)) then
+      LB(1:2) = lbound(SrcOutputData%k_p)
+      UB(1:2) = ubound(SrcOutputData%k_p)
+      if (.not. allocated(DstOutputData%k_p)) then
+         allocate(DstOutputData%k_p(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%k_p.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%k_p = SrcOutputData%k_p
+   end if
+   if (allocated(SrcOutputData%F)) then
+      LB(1:2) = lbound(SrcOutputData%F)
+      UB(1:2) = ubound(SrcOutputData%F)
+      if (.not. allocated(DstOutputData%F)) then
+         allocate(DstOutputData%F(LB(1):UB(1),LB(2):UB(2)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%F.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstOutputData%F = SrcOutputData%F
+   end if
    if (allocated(SrcOutputData%Re)) then
       LB(1:2) = lbound(SrcOutputData%Re)
       UB(1:2) = ubound(SrcOutputData%Re)
@@ -2636,6 +2701,21 @@ subroutine BEMT_DestroyOutput(OutputData, ErrStat, ErrMsg)
    if (allocated(OutputData%tanInduction)) then
       deallocate(OutputData%tanInduction)
    end if
+   if (allocated(OutputData%axInduction_qs)) then
+      deallocate(OutputData%axInduction_qs)
+   end if
+   if (allocated(OutputData%tanInduction_qs)) then
+      deallocate(OutputData%tanInduction_qs)
+   end if
+   if (allocated(OutputData%k)) then
+      deallocate(OutputData%k)
+   end if
+   if (allocated(OutputData%k_p)) then
+      deallocate(OutputData%k_p)
+   end if
+   if (allocated(OutputData%F)) then
+      deallocate(OutputData%F)
+   end if
    if (allocated(OutputData%Re)) then
       deallocate(OutputData%Re)
    end if
@@ -2701,6 +2781,31 @@ subroutine BEMT_PackOutput(Buf, Indata)
    if (allocated(InData%tanInduction)) then
       call RegPackBounds(Buf, 2, lbound(InData%tanInduction), ubound(InData%tanInduction))
       call RegPack(Buf, InData%tanInduction)
+   end if
+   call RegPack(Buf, allocated(InData%axInduction_qs))
+   if (allocated(InData%axInduction_qs)) then
+      call RegPackBounds(Buf, 2, lbound(InData%axInduction_qs), ubound(InData%axInduction_qs))
+      call RegPack(Buf, InData%axInduction_qs)
+   end if
+   call RegPack(Buf, allocated(InData%tanInduction_qs))
+   if (allocated(InData%tanInduction_qs)) then
+      call RegPackBounds(Buf, 2, lbound(InData%tanInduction_qs), ubound(InData%tanInduction_qs))
+      call RegPack(Buf, InData%tanInduction_qs)
+   end if
+   call RegPack(Buf, allocated(InData%k))
+   if (allocated(InData%k)) then
+      call RegPackBounds(Buf, 2, lbound(InData%k), ubound(InData%k))
+      call RegPack(Buf, InData%k)
+   end if
+   call RegPack(Buf, allocated(InData%k_p))
+   if (allocated(InData%k_p)) then
+      call RegPackBounds(Buf, 2, lbound(InData%k_p), ubound(InData%k_p))
+      call RegPack(Buf, InData%k_p)
+   end if
+   call RegPack(Buf, allocated(InData%F))
+   if (allocated(InData%F)) then
+      call RegPackBounds(Buf, 2, lbound(InData%F), ubound(InData%F))
+      call RegPack(Buf, InData%F)
    end if
    call RegPack(Buf, allocated(InData%Re))
    if (allocated(InData%Re)) then
@@ -2832,6 +2937,76 @@ subroutine BEMT_UnPackOutput(Buf, OutData)
          return
       end if
       call RegUnpack(Buf, OutData%tanInduction)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%axInduction_qs)) deallocate(OutData%axInduction_qs)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 2, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%axInduction_qs(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%axInduction_qs.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%axInduction_qs)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%tanInduction_qs)) deallocate(OutData%tanInduction_qs)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 2, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%tanInduction_qs(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%tanInduction_qs.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%tanInduction_qs)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%k)) deallocate(OutData%k)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 2, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%k(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%k.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%k)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%k_p)) deallocate(OutData%k_p)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 2, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%k_p(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%k_p.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%k_p)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
+   if (allocated(OutData%F)) deallocate(OutData%F)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 2, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%F(LB(1):UB(1),LB(2):UB(2)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%F.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%F)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    if (allocated(OutData%Re)) deallocate(OutData%Re)
@@ -3122,8 +3297,8 @@ SUBROUTINE BEMT_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg
    END IF ! check if allocated
    u_out%chi0 = a1*u1%chi0 + a2*u2%chi0
    u_out%psiSkewOffset = a1*u1%psiSkewOffset + a2*u2%psiSkewOffset
-   IF (ALLOCATED(u_out%psi) .AND. ALLOCATED(u1%psi)) THEN
-      u_out%psi = a1*u1%psi + a2*u2%psi
+   IF (ALLOCATED(u_out%psi_s) .AND. ALLOCATED(u1%psi_s)) THEN
+      u_out%psi_s = a1*u1%psi_s + a2*u2%psi_s
    END IF ! check if allocated
    u_out%omega = a1*u1%omega + a2*u2%omega
    u_out%TSR = a1*u1%TSR + a2*u2%TSR
@@ -3224,8 +3399,8 @@ SUBROUTINE BEMT_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, Er
    END IF ! check if allocated
    u_out%chi0 = a1*u1%chi0 + a2*u2%chi0 + a3*u3%chi0
    u_out%psiSkewOffset = a1*u1%psiSkewOffset + a2*u2%psiSkewOffset + a3*u3%psiSkewOffset
-   IF (ALLOCATED(u_out%psi) .AND. ALLOCATED(u1%psi)) THEN
-      u_out%psi = a1*u1%psi + a2*u2%psi + a3*u3%psi
+   IF (ALLOCATED(u_out%psi_s) .AND. ALLOCATED(u1%psi_s)) THEN
+      u_out%psi_s = a1*u1%psi_s + a2*u2%psi_s + a3*u3%psi_s
    END IF ! check if allocated
    u_out%omega = a1*u1%omega + a2*u2%omega + a3*u3%omega
    u_out%TSR = a1*u1%TSR + a2*u2%TSR + a3*u3%TSR
@@ -3375,6 +3550,21 @@ SUBROUTINE BEMT_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMs
    IF (ALLOCATED(y_out%tanInduction) .AND. ALLOCATED(y1%tanInduction)) THEN
       y_out%tanInduction = a1*y1%tanInduction + a2*y2%tanInduction
    END IF ! check if allocated
+   IF (ALLOCATED(y_out%axInduction_qs) .AND. ALLOCATED(y1%axInduction_qs)) THEN
+      y_out%axInduction_qs = a1*y1%axInduction_qs + a2*y2%axInduction_qs
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%tanInduction_qs) .AND. ALLOCATED(y1%tanInduction_qs)) THEN
+      y_out%tanInduction_qs = a1*y1%tanInduction_qs + a2*y2%tanInduction_qs
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%k) .AND. ALLOCATED(y1%k)) THEN
+      y_out%k = a1*y1%k + a2*y2%k
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%k_p) .AND. ALLOCATED(y1%k_p)) THEN
+      y_out%k_p = a1*y1%k_p + a2*y2%k_p
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%F) .AND. ALLOCATED(y1%F)) THEN
+      y_out%F = a1*y1%F + a2*y2%F
+   END IF ! check if allocated
    IF (ALLOCATED(y_out%Re) .AND. ALLOCATED(y1%Re)) THEN
       y_out%Re = a1*y1%Re + a2*y2%Re
    END IF ! check if allocated
@@ -3484,6 +3674,21 @@ SUBROUTINE BEMT_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, E
    END IF ! check if allocated
    IF (ALLOCATED(y_out%tanInduction) .AND. ALLOCATED(y1%tanInduction)) THEN
       y_out%tanInduction = a1*y1%tanInduction + a2*y2%tanInduction + a3*y3%tanInduction
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%axInduction_qs) .AND. ALLOCATED(y1%axInduction_qs)) THEN
+      y_out%axInduction_qs = a1*y1%axInduction_qs + a2*y2%axInduction_qs + a3*y3%axInduction_qs
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%tanInduction_qs) .AND. ALLOCATED(y1%tanInduction_qs)) THEN
+      y_out%tanInduction_qs = a1*y1%tanInduction_qs + a2*y2%tanInduction_qs + a3*y3%tanInduction_qs
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%k) .AND. ALLOCATED(y1%k)) THEN
+      y_out%k = a1*y1%k + a2*y2%k + a3*y3%k
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%k_p) .AND. ALLOCATED(y1%k_p)) THEN
+      y_out%k_p = a1*y1%k_p + a2*y2%k_p + a3*y3%k_p
+   END IF ! check if allocated
+   IF (ALLOCATED(y_out%F) .AND. ALLOCATED(y1%F)) THEN
+      y_out%F = a1*y1%F + a2*y2%F + a3*y3%F
    END IF ! check if allocated
    IF (ALLOCATED(y_out%Re) .AND. ALLOCATED(y1%Re)) THEN
       y_out%Re = a1*y1%Re + a2*y2%Re + a3*y3%Re

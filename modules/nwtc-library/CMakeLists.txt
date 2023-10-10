@@ -141,7 +141,10 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
 endif()
 
 # Create NWTC Library
-add_library(nwtclibs ${NWTC_SYS_FILE} ${NWTCLIBS_SOURCES})
+add_library(nwtclibs STATIC
+  ${NWTC_SYS_FILE} 
+  ${NWTCLIBS_SOURCES}
+)
 target_link_libraries(nwtclibs PUBLIC
   ${LAPACK_LIBRARIES} 
   ${CMAKE_DL_LIBS} 

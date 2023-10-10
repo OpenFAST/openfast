@@ -3574,12 +3574,12 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
    !----------- OUTLIST  -----------------------------------------------------------
       ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it and assume that this section does not exist.
    ErrMsg_NoAllBldNdOuts='Nodal outputs section of ElastoDyn input file not found or improperly formatted.'
+   InputFileData%BldNd_NumOuts   = 0 ! initialize in case of error
+   InputFileData%BldNd_BladesOut = 0 ! initialize in case of error
 
    !----------- OUTLIST for BldNd -----------------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: OutList for Blade node channels', ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
-      InputFileData%BldNd_BladesOut = 0
-      InputFileData%BldNd_NumOuts = 0
       call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN
@@ -3592,7 +3592,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
    CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BladesOut, 'BldNd_BladesOut', 'Which blades to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
       InputFileData%BldNd_BladesOut = 0
-      InputFileData%BldNd_NumOuts = 0
       call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN
@@ -3603,8 +3602,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
       ! TODO: Parse this string into an array of nodes to output at (one idea is to set an array of boolean to T/F for which nodes to output).  At present, we ignore it entirely.
    CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BlOutNd_Str, 'BldNd_BlOutNd_Str', 'Which nodes to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
-      InputFileData%BldNd_BladesOut = 0
-      InputFileData%BldNd_NumOuts = 0
       call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN
@@ -3614,8 +3611,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
       ! Section header for outlist
    CALL ReadCom( UnIn, InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc )
    IF ( ErrStat2 >= AbortErrLev ) THEN
-      InputFileData%BldNd_BladesOut = 0
-      InputFileData%BldNd_NumOuts = 0
       call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN
@@ -3624,13 +3619,18 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
 
       ! OutList - List of user-requested output channels at each node(-):
    CALL ReadOutputList ( UnIn, InputFile, InputFileData%BldNd_OutList, InputFileData%BldNd_NumOuts, 'BldNd_OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
-   IF ( ErrStat2 >= AbortErrLev ) THEN
-      InputFileData%BldNd_BladesOut = 0
+   IF ( ErrStat2 >= AbortErrLev .and. InputFileData%BldNd_NumOuts < 1) THEN
       InputFileData%BldNd_NumOuts = 0
       call wrscr( trim(ErrMsg_NoAllBldNdOuts) )
       CALL Cleanup()
       RETURN
+   ELSE
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ENDIF
+
+!FIXME: this is a hack to fix a segfault.  Better logic is really needed for the nodal outputs.
+   ! Node outputs.  If no blades specified set BldNd_Outs to 0 (all checks are currently done on NumOuts, not BladesOut).
+   if (InputFileData%BldNd_BladesOut <= 0)   InputFileData%BldNd_NumOuts = 0
    !---------------------- END OF FILE -----------------------------------------
    
    call cleanup()
@@ -4131,9 +4131,7 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
    REAL(ReKi)                               :: SmallAngleLimit_Rad                 ! Largest input angle considered "small" (check in input file), radians
    INTEGER(IntKi)                           :: I                                   ! loop counter
    INTEGER(IntKi)                           :: K                                   ! blade number
-   INTEGER(IntKi)                           :: FmtWidth                            ! width of the field returned by the specified OutFmt
-   INTEGER(IntKi)                           :: ErrStat2                            ! Temporary error status
-   CHARACTER(ErrMsgLen)                     :: ErrMsg2                             ! Temporary rror message
+   !!INTEGER(IntKi)                           :: FmtWidth                            ! width of the field returned by the specified OutFmt
    CHARACTER(*), PARAMETER                  :: RoutineName = 'ValidatePrimaryData'
 
       ! Initialize error status and angle limit defined locally (in correct units)
@@ -4183,9 +4181,9 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
    IF ( InputFileData%YawBrMass < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'YawBrMass must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%NacMass   < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'NacMass must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%HubMass   < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'HubMass must not be negative.',ErrStat,ErrMsg,RoutineName)
-   IF ( MHK /= 2 ) THEN
+   IF ( MHK /= MHK_Floating ) THEN
       IF ( InputFileData%Twr2Shft  < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'Twr2Shft must not be negative.',ErrStat,ErrMsg,RoutineName)
-   ELSEIF ( MHK == 2 ) THEN
+   ELSE
       IF ( InputFileData%Twr2Shft  > 0.0_ReKi) call SetErrStat(ErrID_Fatal,'Twr2Shft must not be positive for a floating MHK turbine.',ErrStat,ErrMsg,RoutineName)
    ENDIF
       
@@ -4198,9 +4196,9 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
    IF ( InputFileData%HubIner  < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'HubIner must not be negative.',ErrStat,ErrMsg,RoutineName)
 
       ! Check that TowerHt is in the range [0,inf):
-   IF ( MHK /= 2 ) THEN
+   IF ( MHK /= MHK_Floating ) THEN
       IF ( InputFileData%TowerHt <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'TowerHt must be greater than zero.',ErrStat,ErrMsg,RoutineName )
-   ELSEIF ( MHK == 2 ) THEN
+   ELSE
       IF ( InputFileData%TowerHt >= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'TowerHt must be less than zero for a floating MHK turbine.',ErrStat,ErrMsg,RoutineName )
    ENDIF
 
@@ -4212,7 +4210,7 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
       ! Check that the gearbox efficiency is valid:
    IF ( ( InputFileData%GBoxEff <= 0.0_ReKi ) .OR. ( InputFileData%GBoxEff > 1.0_ReKi ) ) THEN
          CALL SetErrStat( ErrID_Fatal, 'GBoxEff must be in the range (0,1] (i.e., (0,100] percent).',ErrStat,ErrMsg,RoutineName )
-      ENDIF
+   ENDIF
 
       ! warn if 2nd modes are enabled without their corresponding 1st modes
 
@@ -4241,7 +4239,7 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
       END IF
    ENDIF
 
-   IF ( MHK /= 2 ) THEN
+   IF ( MHK /= MHK_Floating ) THEN
 
       IF ( InputFileData%TowerBsHt >= InputFileData%TowerHt ) CALL SetErrStat( ErrID_Fatal, 'TowerBsHt must be less than TowerHt.',ErrStat,ErrMsg,RoutineName)
 
@@ -4251,7 +4249,7 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
       IF ( InputFileData%PtfmRefzt  > InputFileData%TowerBsHt ) &
          CALL SetErrStat( ErrID_Fatal, 'PtfmRefzt must not be greater than TowerBsHt.',ErrStat,ErrMsg,RoutineName)
 
-   ELSEIF ( MHK == 2 ) THEN
+   ELSE
 
       IF ( InputFileData%TowerBsHt <= InputFileData%TowerHt ) CALL SetErrStat( ErrID_Fatal, 'TowerBsHt must be greater than TowerHt for a floating MHK turbine.',ErrStat,ErrMsg,RoutineName)
          
@@ -4261,15 +4259,15 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, MHK, ErrSta
       IF (InputFileData%HubRad >= InputFileData%TipRad ) &
       CALL SetErrStat( ErrID_Fatal, 'HubRad must be less than TipRad.',ErrStat,ErrMsg,RoutineName)
 
-      IF ( MHK /= 2 ) THEN
+      IF ( MHK /= MHK_Floating ) THEN
          IF ( InputFileData%TowerHt + InputFileData%Twr2Shft + InputFileData%OverHang*SIN(InputFileData%ShftTilt) &
                                     <= InputFileData%TipRad )  THEN
             CALL SetErrStat( ErrID_Fatal, 'TowerHt + Twr2Shft + OverHang*SIN(ShftTilt) must be greater than TipRad.',ErrStat,ErrMsg,RoutineName)
          END IF
-      ELSEIF ( MHK == 2 ) THEN
+      ELSE
          IF ( -InputFileData%TowerHt - InputFileData%Twr2Shft - InputFileData%OverHang*SIN(InputFileData%ShftTilt) &
                                     <= InputFileData%TipRad )  THEN
-            CALL SetErrStat( ErrID_Fatal, 'TowerHt + Twr2Shft + OverHang*SIN(ShftTilt) must be greater than TipRad.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat( ErrID_Fatal, '-TowerHt - Twr2Shft - OverHang*SIN(ShftTilt) must be greater than TipRad.',ErrStat,ErrMsg,RoutineName)
          END IF
       ENDIF
    END IF
