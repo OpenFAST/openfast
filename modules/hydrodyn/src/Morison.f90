@@ -586,10 +586,7 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, numJoints, numNodes, nodes, numMemb
       totalMGVol    = totalMGVol    + mem%Vouter - mem%Vinner
       totalDisplVol = totalDisplVol + mem%Vsubmerged
       totalFillVol  = totalFillVol  + mem%Vballast
-         
-      !  IF ( node2%Position(3) <= MSL2SWL .AND. node1%Position(3) >= -WtrDpth) totalDisplVol = totalDisplVol + elementVol
-
- 
+      
       do i = 1, mem%NElements 
          totalMGMass = totalMGMass + mem%m_mg_l(i)
          totalMGMass = totalMGMass + mem%m_mg_u(i)
@@ -2128,7 +2125,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       tMG       = -999.0
       An_drag   = 0.0
       
-      IF ( InitInp%InpJoints(i)%Position(3) >= -p%WtrDpth ) THEN
+      IF ( (InitInp%InpJoints(i)%Position(3)-p%MSL2SWL) >= -p%WtrDpth ) THEN
    
          ! loop through each member attached to the joint, getting the radius of its appropriate end
          DO J = 1, InitInp%InpJoints(I)%NConnections
@@ -2560,7 +2557,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: FDynPFSInt
    REAL(ReKi)               :: vrelFSInt(3)
    REAL(ReKi)               :: pos1Prime(3)
-   REAL(ReKi)               :: WtrDpth
    REAL(ReKi)               :: FAMCFFSInt(3)
    INTEGER(IntKi)           :: MemSubStat, NumFSX
    REAL(DbKi)               :: theta1, theta2
@@ -2575,7 +2571,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    errMsg  = ""               
    Imat    = 0.0_ReKi   
    g       = p%Gravity
-   WtrDpth = p%WtrDpth + p%MSL2SWL ! Water depth measured from the still water level
    
    !===============================================================================================
    ! Get displaced positions of the hydrodynamic nodes   
@@ -4155,7 +4150,6 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
    CHARACTER(*),                      INTENT(  OUT)  :: errMsg      !< Error message if errStat /= ErrID_None
    INTEGER(IntKi)                                    :: J
    INTEGER(IntKi)                                    :: nodeInWater
-   REAL(ReKi)                                        :: WtrDpth
    REAL(ReKi)                                        :: pos(3), vrel(3), FV(3), vmag, vmagf
    REAL(SiKi)                                        :: FVTmp(3)
    INTEGER(IntKi)                                    :: errStat2
@@ -4165,9 +4159,6 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
    ! Initialize errStat  
    errStat = ErrID_None         
    errMsg  = ""               
-   
-   ! Water depth measured from the free surface
-   WtrDpth = p%WtrDpth + p%MSL2SWL
 
    ! Update state of the relative normal velocity high-pass filter at each joint
    DO J = 1, p%NJoints
