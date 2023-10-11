@@ -323,6 +323,7 @@ if(BUILD_FASTFARM)
   ff_regression("LESinflow"  "fastfarm")
 #   ff_regression("Uninflow_curl"  "fastfarm")
   ff_regression("TSinflow_curl"  "fastfarm")
+  ff_regression("ModAmb_3"  "fastfarm")
 endif()
 
 # AeroDyn regression tests
