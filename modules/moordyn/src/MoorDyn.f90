@@ -1985,10 +1985,6 @@ CONTAINS
          IF (wordy > 2) print *, "Line ", l, " with NumSegs =", N
          IF (wordy > 2) print *, "its states range from index ", m%LineStateIs1(l), " to ", m%LineStateIsN(l)
 
-         PRINT*, 'Line ', l
-         PRINT*, 'Line anch poisition', m%LineList(l)%r(:,0)
-         PRINT*, 'Line Fair poisition', m%LineList(l)%r(:,m%LineList(l)%N)
-
          ! assign the resulting internal node positions to the integrator initial state vector! (velocities leave at 0)
          DO I = 1, N-1
 !            print *, "I=", I
@@ -2010,16 +2006,6 @@ CONTAINS
 
       END DO    !l = 1, p%NLines
 
-      PRINT*, 'Number of lines on point', m%PointList(1)%IdNum, ' is ', m%PointList(1)%nAttached
-      PRINT*, 'Number of lines on point', m%PointList(2)%IdNum, ' is ', m%PointList(2)%nAttached
-      PRINT*, 'Number of lines on point', m%PointList(3)%IdNum, ' is ', m%PointList(3)%nAttached
-      PRINT*, 'Point ', m%PointList(1)%IdNum, ' location ', m%PointList(1)%r
-      PRINT*, 'Point ', m%PointList(2)%IdNum, ' location ', m%PointList(2)%r
-      PRINT*, 'Point ', m%PointList(3)%IdNum, ' location ', m%PointList(3)%r
-      PRINT*, 'Body ', m%BodyList(1)%IdNum, ' location ', m%BodyList(1)%r6
-      PRINT*, 'Body ', m%BodyList(2)%IdNum, ' location ', m%BodyList(2)%r6
-      PRINT*, 'Body ', m%BodyList(1)%IdNum, ' attached points ', m%BodyList(1)%AttachedC(1:3)
-      PRINT*, 'Body ', m%BodyList(2)%IdNum, ' attached points ', m%BodyList(2)%AttachedC(1:3)
 
 
       ! --------------------------------------------------------------------
