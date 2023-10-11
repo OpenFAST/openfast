@@ -1120,7 +1120,7 @@ subroutine Init_u( u, p, p_AD, InputFileData, MHK, WtrDpth, InitInp, errStat, er
       if (errStat >= AbortErrLev) return
             
          ! set node initial position/orientation
-      position = 0.0_ReKi
+      position = InitInp%originInit
       do j=1,p%NumTwrNds         
          IF ( MHK == MHK_FixedBottom ) THEN
             position(3) = InputFileData%TwrElev(j) - WtrDpth
