@@ -3150,7 +3150,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             elseif (i == N+1) then
                deltal =  mem%dl/2.0_ReKi
                h_c    = -mem%dl/4.0_ReKi
-            elseif ( mem%i_floor == i+1 ) then ! This node is the upper node of an element which crosses the seabed
+            elseif ( mem%i_floor+1 == i ) then ! This node is the upper node of an element which crosses the seabed
                deltal = mem%dl/2.0_ReKi - mem%h_floor  ! TODO: h_floor is negative valued, should we be subrtracting it from dl/2? GJH
                h_c    = 0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
             else
@@ -3164,7 +3164,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   !TODO: Fix this one
                   pos1 =  u%Mesh%Position(:, mem%NodeIndx(i)) ! use reference position for following equation
                   pos1(3) = pos1(3) - p%MSL2SWL
-                  h = (  pos1(3) ) / mem%cosPhi_ref !TODO: Needs to be augmented for wave stretching
+                  h = ( -pos1(3) ) / mem%cosPhi_ref !TODO: Needs to be augmented for wave stretching
                   deltal = mem%dl/2.0 + h
                   h_c    = 0.5*(h-mem%dl/2.0)
                else
@@ -3189,7 +3189,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             ! ------------------- hydrodynamic drag loads: sides: Section 7.1.2 ------------------------ 
             vec = matmul( mem%Ak,m%vrel(:,mem%NodeIndx(i)) )
             f_hydro = mem%Cd(i)*p%WtrDens*mem%RMG(i)*TwoNorm(vec)*vec  +  &
-                      0.5*mem%AxCd(i)*p%WtrDens*pi*mem%RMG(i)*dRdl_p * matmul( dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )*mem%kkt, m%vrel(:,mem%NodeIndx(i)) )
+                      0.5*mem%AxCd(i)*p%WtrDens*pi*mem%RMG(i)*dRdl_p * abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )
 !            call LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%F_D(:, mem%NodeIndx(i)) )
             call LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_D(:, i) )
             y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(1:3, i)
