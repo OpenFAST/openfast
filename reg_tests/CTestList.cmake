@@ -285,7 +285,7 @@ of_regression("MHK_RM1_Floating"                       "openfast;elastodyn;aerod
 of_regression("Tailfin_FreeYaw1DOF_PolarBased"         "openfast;elastodyn;aerodyn15")
 
 # OpenFAST C++ API test
-if(BUILD_OPENFAST_CPP_API)
+if(BUILD_OPENFAST_CPP_DRIVER)
   of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;fastlib;cpp")
 endif()
 
