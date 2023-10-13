@@ -74,7 +74,7 @@ jobs:
         run: |
           cmake --build . --target all
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-all-debug-${{ github.sha }}
@@ -157,7 +157,7 @@ jobs:
         run: |
           cmake --build . --target regression_test_module_drivers
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-drivers-release-${{ github.sha }}
@@ -208,7 +208,7 @@ jobs:
         working-directory: ${{runner.workspace}}/openfast/build
         run: cmake --build . --target openfast_postlib
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-postlib-release-${{ github.sha }}
@@ -219,7 +219,7 @@ jobs:
     needs: build-postlib-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-postlib-release-${{ github.sha }}
@@ -246,7 +246,7 @@ jobs:
         run: |
           cmake --build . --target openfastlib openfast_cpp openfastcpp aerodyn_inflow_c_binding moordyn_c_binding ifw_c_binding hydrodyn_c_binding regression_test_controllers
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-interfaces-release-${{ github.sha }}
@@ -257,7 +257,7 @@ jobs:
     needs: build-postlib-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-postlib-release-${{ github.sha }}
@@ -284,7 +284,7 @@ jobs:
         run: |
           cmake --build . --target openfast
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
@@ -295,7 +295,7 @@ jobs:
     needs: build-postlib-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-postlib-release-${{ github.sha }}
@@ -322,7 +322,7 @@ jobs:
         run: |
           cmake --build . --target FAST.Farm
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-fastfarm-release-${{ github.sha }}
@@ -397,7 +397,7 @@ jobs:
     needs: build-drivers-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-drivers-release-${{ github.sha }}
@@ -453,7 +453,7 @@ jobs:
     needs: build-all-debug
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-all-debug-${{ github.sha }}
@@ -512,7 +512,7 @@ jobs:
     needs: build-interfaces-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-interfaces-release-${{ github.sha }}
@@ -560,7 +560,7 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
@@ -613,7 +613,7 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
@@ -663,7 +663,7 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
@@ -713,7 +713,7 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
@@ -763,7 +763,7 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
@@ -813,7 +813,7 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
@@ -863,7 +863,7 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
@@ -913,7 +913,7 @@ jobs:
     needs: build-fastfarm-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-fastfarm-release-${{ github.sha }}
