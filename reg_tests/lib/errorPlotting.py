@@ -102,7 +102,7 @@ def _replace_id_script(html_string, plot):
     return html_string
 
 def _save_plot(script, div, path, attribute):
-    div_class = ' class="col-sm-12 col-md-6 col-lg-6"'
+    div_class = ' class=""'
 
     file_name = "_script".join((attribute, ".txt"))
     with open(os.path.join(path, file_name), 'w') as f:
