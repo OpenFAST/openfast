@@ -2093,6 +2093,8 @@ CONTAINS
             END DO
          END DO
 
+         ! dtIC set to fraction of input so convergence is over dtIC
+         InputFileDat%dtIC = InputFileDat%dtIC / 10
 
          ! round dt to integer number of time steps  
          NdtM = ceiling(InputFileDat%dtIC/p%dtM0)            ! get number of mooring time steps to do based on desired time step size
