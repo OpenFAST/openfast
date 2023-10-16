@@ -554,8 +554,10 @@ SUBROUTINE Conv_Rdtn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat
        !  F_RdtnRmndr(I) = 0.0
 
          DO J = 1,6*p%NBody              ! Loop through all platform DOFs
-            
-            DO K = 0, MaxInd ! Loop through all NStepRdtn time steps in the radiation Kernel (less than NStepRdtn time steps are used when ZTime < RdtnTmax)
+            ! Contribution from the first and last time steps are halved to make the integration 2nd-order accurate
+            F_RdtnDT(I) = F_RdtnDT(I) - 0.5_SiKi * p%RdtnKrnl(MaxInd,I,J)*xd%XDHistory(0,J) &
+                                      - 0.5_SiKi * p%RdtnKrnl(0,I,J)*xd%XDHistory(MaxInd,J)
+            DO K = 1, MaxInd-1 ! Loop through all remaining NStepRdtn-2 time steps in the radiation Kernel (less than NStepRdtn time steps are used when ZTime < RdtnTmax)
                F_RdtnDT(I) = F_RdtnDT(I) - p%RdtnKrnl(MaxInd-K,I,J)*xd%XDHistory(K,J)
             END DO  
             !DO K = MAX(0,xd%IndRdtn-p%NStepRdtn  ),xd%IndRdtn-1  ! Loop through all NStepRdtn time steps in the radiation Kernel (less than NStepRdtn time steps are used when ZTime < RdtnTmax)
