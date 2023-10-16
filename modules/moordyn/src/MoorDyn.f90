@@ -2165,7 +2165,7 @@ CONTAINS
                
                DO l = 1, p%nLines   
                   DO K = 1,9
-                     IF ( abs( FairTensIC(l,K)/FairTensIC(l,K+1) - 1.0 ) > InputFileDat%threshIC ) THEN
+                     IF ( abs( FairTensIC(l,1)/FairTensIC(l,K+1) - 1.0 ) > InputFileDat%threshIC ) THEN
                         Converged = 0
                         EXIT
                      END IF
@@ -2175,6 +2175,7 @@ CONTAINS
                END DO
 
                IF (Converged == 1)  THEN  ! if we made it with all cases satisfying the threshold
+                  CALL WrScr(' ') ! serves as line break from write over command in previous printed line
                   CALL WrScr('   Fairlead tensions converged to '//trim(Num2LStr(100.0*InputFileDat%threshIC))//'% after '//trim(Num2LStr(t))//' seconds.')
                   DO l = 1, p%nLines 
                       CALL WrScr('   Fairlead tension: '//trim(Num2LStr(FairTensIC(l,1))))
