@@ -2166,8 +2166,8 @@ CONTAINS
                ! check for non-convergence
                
                DO l = 1, p%nLines   
-                  DO K = 1,9
-                     IF ( abs( FairTensIC(l,1)/FairTensIC(l,K+1) - 1.0 ) > InputFileDat%threshIC ) THEN
+                  DO K = 2,10
+                     IF ( abs( FairTensIC(l,1)/FairTensIC(l,K) - 1.0 ) > InputFileDat%threshIC ) THEN
                         Converged = 0
                         EXIT
                      END IF
