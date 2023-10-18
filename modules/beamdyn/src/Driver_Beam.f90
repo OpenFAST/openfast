@@ -136,7 +136,7 @@ PROGRAM BeamDyn_Driver_Program
    call Init_RotationCenterMesh(DvrData, BD_InitInput, BD_Input(1)%RootMotion, ErrStat, ErrMsg)
       CALL CheckError()
 
-   call CreateMultiPointMeshes(DvrData,BD_InitInput,BD_InitOutput,BD_Parameter, BD_Output, BD_Input(1), ErrStat, ErrMsg)   
+   call CreateMultiPointMeshes(DvrData,BD_InitInput,BD_InitOutput,BD_Parameter,BD_OtherState, BD_Output, BD_Input(1), ErrStat, ErrMsg)   
    call Transfer_MultipointLoads(DvrData, BD_Output, BD_Input(1), ErrStat, ErrMsg)   
    
    CALL Dvr_InitializeOutputFile(DvrOut,BD_InitOutput,RootName,ErrStat,ErrMsg)
