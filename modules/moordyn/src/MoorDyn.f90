@@ -826,6 +826,7 @@ CONTAINS
                   if ((let1 == "ANCHOR") .or. (let1 == "FIXED") .or. (let1 == "FIX")) then   ! if a fixed body (this would just be used if someone wanted to temporarly fix a body that things were attached to)
                   
                      m%BodyList(l)%typeNum = 1
+                     m%BodyList(l)%r6 = tempArray     ! set initial body position and orientation
                      
                   else if ((let1 == "COUPLED") .or. (let1 == "VESSEL") .or. (let1 == "CPLD") .or. (let1 == "VES")) then    ! if a coupled body
                      
@@ -1947,6 +1948,13 @@ CONTAINS
          CALL Body_Initialize(m%BodyList(m%FreeBodyIs(l)), x%states(m%BodyStateIs1(l) : m%BodyStateIsN(l)), m)
       END DO
       
+      ! Set up points, lines, and rods attached to a fixed body
+      DO l = 1,p%nBodies
+         IF (m%BodyList(l)%typeNum == 1) THEN
+            CALL Body_InitializeUnfree(m%BodyList(l), m)
+         ENDIF
+      END DO
+      
       ! Go through independent (including pinned) Rods and write the coordinates to the state vector
       DO l = 1,p%nFreeRods
          CALL Rod_Initialize(m%RodList(m%FreeRodIs(l)), x%states(m%RodStateIs1(l):m%RodStateIsN(l)), m)
@@ -2085,6 +2093,8 @@ CONTAINS
             END DO
          END DO
 
+         ! dtIC set to fraction of input so convergence is over dtIC
+         InputFileDat%dtIC = InputFileDat%dtIC / 10
 
          ! round dt to integer number of time steps  
          NdtM = ceiling(InputFileDat%dtIC/p%dtM0)            ! get number of mooring time steps to do based on desired time step size
@@ -2156,8 +2166,8 @@ CONTAINS
                ! check for non-convergence
                
                DO l = 1, p%nLines   
-                  DO K = 1,9
-                     IF ( abs( FairTensIC(l,K)/FairTensIC(l,K+1) - 1.0 ) > InputFileDat%threshIC ) THEN
+                  DO K = 2,10
+                     IF ( abs( FairTensIC(l,1)/FairTensIC(l,K) - 1.0 ) > InputFileDat%threshIC ) THEN
                         Converged = 0
                         EXIT
                      END IF
@@ -2167,6 +2177,7 @@ CONTAINS
                END DO
 
                IF (Converged == 1)  THEN  ! if we made it with all cases satisfying the threshold
+                  CALL WrScr('') ! serves as line break from write over command in previous printed line
                   CALL WrScr('   Fairlead tensions converged to '//trim(Num2LStr(100.0*InputFileDat%threshIC))//'% after '//trim(Num2LStr(t))//' seconds.')
                   DO l = 1, p%nLines 
                       CALL WrScr('   Fairlead tension: '//trim(Num2LStr(FairTensIC(l,1))))
@@ -2177,6 +2188,7 @@ CONTAINS
             END IF
 
             IF (I == ceiling(InputFileDat%TMaxIC/InputFileDat%dtIC) ) THEN
+               CALL WrScr('') ! serves as line break from write over command in previous printed line
                CALL WrScr('   Fairlead tensions did not converge within TMaxIC='//trim(Num2LStr(InputFileDat%TMaxIC))//' seconds.')
                !ErrStat = ErrID_Warn
                !ErrMsg = '  MD_Init: ran dynamic convergence to TMaxIC without convergence'
