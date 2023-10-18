@@ -2074,9 +2074,23 @@ CONTAINS
          CALL WrScr("   Finalizing initial conditions using dynamic relaxation."//NewLine)  ! newline because next line writes over itself
 
          ! boost drag coefficient of each line type  <<<<<<<< does this actually do anything or do lines hold these coefficients???
-         DO I = 1, p%nLineTypes
-            m%LineTypeList(I)%Cdn = m%LineTypeList(I)%Cdn * InputFileDat%CdScaleIC
-            m%LineTypeList(I)%Cdt = m%LineTypeList(I)%Cdt * InputFileDat%CdScaleIC   ! <<<<< need to update this to apply to all objects' drag
+         DO I = 1, p%nLines
+            m%LineList(I)%Cdn = m%LineList(I)%Cdn * InputFileDat%CdScaleIC
+            m%LineList(I)%Cdt = m%LineList(I)%Cdt * InputFileDat%CdScaleIC 
+         END DO
+
+         DO I = 1, p%nBodies
+            m%BodyList(I)%bodyCdA = m%BodyList(I)%bodyCdA * InputFileDat%CdScaleIC 
+         END Do
+
+         DO I =1, p%nRods
+            m%RodList(I)%Cdn = m%RodList(I)%Cdn * InputFileDat%CdScaleIC
+            m%RodList(I)%Cdt = m%RodList(I)%Cdt * InputFileDat%CdScaleIC
+            m%RodList(I)%CdEnd = m%RodList(I)%CdEnd * InputFileDat%CdScaleIC
+         END Do
+
+         DO I = 1, p%nPoints
+            m%PointList(I)%pointCdA = m%PointList(I)%pointCdA * InputFileDat%CdScaleIC
          END DO
 
          ! allocate array holding 10 latest fairlead tensions
@@ -2201,9 +2215,23 @@ CONTAINS
          CALL MD_DestroyInput( u_array(1), ErrStat2, ErrMsg2 )
 
          ! UNboost drag coefficient of each line type   <<<
-         DO I = 1, p%nLineTypes
-            m%LineTypeList(I)%Cdn = m%LineTypeList(I)%Cdn / InputFileDat%CdScaleIC
-            m%LineTypeList(I)%Cdt = m%LineTypeList(I)%Cdt / InputFileDat%CdScaleIC
+         DO I = 1, p%nLines
+            m%LineList(I)%Cdn = m%LineList(I)%Cdn / InputFileDat%CdScaleIC
+            m%LineList(I)%Cdt = m%LineList(I)%Cdt / InputFileDat%CdScaleIC 
+         END DO
+
+         DO I = 1, p%nBodies
+            m%BodyList(I)%bodyCdA = m%BodyList(I)%bodyCdA / InputFileDat%CdScaleIC 
+         END Do
+
+         DO I =1, p%nRods
+            m%RodList(I)%Cdn = m%RodList(I)%Cdn / InputFileDat%CdScaleIC
+            m%RodList(I)%Cdt = m%RodList(I)%Cdt / InputFileDat%CdScaleIC
+            m%RodList(I)%CdEnd = m%RodList(I)%CdEnd / InputFileDat%CdScaleIC
+         END Do
+
+         DO I = 1, p%nPoints
+            m%PointList(I)%pointCdA = m%PointList(I)%pointCdA / InputFileDat%CdScaleIC
          END DO
 
       end if ! InputFileDat%TMaxIC > 0
