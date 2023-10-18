@@ -2215,9 +2215,9 @@ CONTAINS
          CALL MD_DestroyInput( u_array(1), ErrStat2, ErrMsg2 )
 
          ! UNboost drag coefficient of each line type   <<<
-         DO I = 1, p%nLineTypes
-            m%LineTypeList(I)%Cdn = m%LineTypeList(I)%Cdn / InputFileDat%CdScaleIC
-            m%LineTypeList(I)%Cdt = m%LineTypeList(I)%Cdt / InputFileDat%CdScaleIC
+         DO I = 1, p%nLines
+            m%LineList(I)%Cdn = m%LineList(I)%Cdn / InputFileDat%CdScaleIC
+            m%LineList(I)%Cdt = m%LineList(I)%Cdt / InputFileDat%CdScaleIC 
          END DO
 
          DO I = 1, p%nBodies
