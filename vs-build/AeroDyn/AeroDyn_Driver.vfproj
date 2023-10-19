@@ -110,7 +110,7 @@
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
 		<Filter Name="ADI">
 		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Inflow.f90">
+		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_OpenMP|x64">
