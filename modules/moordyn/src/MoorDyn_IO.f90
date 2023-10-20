@@ -572,13 +572,10 @@ CONTAINS
           p%OutParam(I)%OType = 3                ! Rod object type
           IF (LEN_TRIM(let3)== 0) THEN           ! No third character cluster indicates this is a whole-rod channel or endpoint
             IF (let2(1:2) == 'NA') THEN
-               PRINT *, 'Node A'
                p%OutParam(I)%NodeID = 0 
                let2 = let2(3:)
             ELSE IF (let2(1:2) == 'NB') THEN
-               PRINT *, 'Node B'
                p%OutParam(I)%NodeID = m%RodList(p%OutParam(I)%ObjID)%N
-               PRINT *, 'Node B ID:', p%OutParam(I)%NodeID
                let2 = let2(3:)
             ELSE
                p%OutParam(I)%NodeID = -1
