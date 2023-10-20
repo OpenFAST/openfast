@@ -249,7 +249,7 @@ PROGRAM MoorDyn_Driver
    endif
    
    do iTurb = 1, MD_p%nTurbines
-      ncIn = ncIn + MD_p%nCpldBodies(iTurb)*6 + MD_p%nCpldRods(iTurb)*6 + MD_p%nCpldCons(iTurb)*3
+      ncIn = ncIn + MD_p%nCpldBodies(iTurb)*6 + MD_p%nCpldRods(iTurb)*6 + MD_p%nCpldPoints(iTurb)*3
    end do
 
    call WrScr('MoorDyn has '//trim(num2lstr(ncIn))//' coupled DOFs and/or active-tensioned inputs.')
@@ -519,7 +519,7 @@ PROGRAM MoorDyn_Driver
          END DO
          
          ! any coupled points (type -1)
-         DO l = 1, MD_p%nCpldCons(iTurb)
+         DO l = 1, MD_p%nCpldPoints(iTurb)
             
             MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
             MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)
@@ -608,7 +608,7 @@ PROGRAM MoorDyn_Driver
             END DO
             
             ! any coupled points (type -1)
-            DO l = 1, MD_p%nCpldCons(iTurb)
+            DO l = 1, MD_p%nCpldPoints(iTurb)
                
                MD_u(1)%CoupledKinematics(iTurb)%TranslationDisp(:,K) = r_in(i, J:J+2) - MD_u(1)%CoupledKinematics(iTurb)%Position(:,K) - MD_p%TurbineRefPos(:,iTurb)
                MD_u(1)%CoupledKinematics(iTurb)%TranslationVel( :,K) = rd_in(i, J:J+2)

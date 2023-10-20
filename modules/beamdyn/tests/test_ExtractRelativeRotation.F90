@@ -16,6 +16,7 @@ subroutine test_ExtractRelativeRotation()
     character                  :: ErrMsg
     
     type(BD_ParameterType)     :: parametertype
+    type(BD_OtherStateType)    :: otherstate
     
     ! initialize NWTC_Num constants
     call SetConstants()
@@ -26,9 +27,10 @@ subroutine test_ExtractRelativeRotation()
     ! --------------------------------------------------------------------------
     testname = "static simple beam under gravity:"
     
+    otherstate = simpleOtherState()
     parametertype = simpleParameterType(1,16,16,0,0)
     
-    call ExtractRelativeRotation(identity(), parametertype, rr, ErrStat, ErrMsg)
+    call ExtractRelativeRotation(identity(), parametertype, otherstate, rr, ErrStat, ErrMsg)
     
     @assertEqual((/ 0.0, 0.0, 0.0 /), rr, tolerance, testname)
 end subroutine

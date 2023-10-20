@@ -88,7 +88,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevXY      !< X-Y locations for WaveElev output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number. [m,-]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElev      !< wave elevation at WaveElevXY; first dimension is time step; second dimension is point number [m,-]
     TYPE(FAST_VTK_BLSurfaceType) , DIMENSION(:), ALLOCATABLE  :: BladeShape      !< AirfoilCoords for each blade [m]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: MorisonRad      !< radius of each Morison node [m]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: MorisonVisRad      !< radius of each Morison node [m]
   END TYPE FAST_VTK_SurfaceType
 ! =======================
 ! =========  FAST_VTK_ModeShapeType  =======
@@ -1084,17 +1084,17 @@ IF (ALLOCATED(SrcVTK_SurfaceTypeData%BladeShape)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
-IF (ALLOCATED(SrcVTK_SurfaceTypeData%MorisonRad)) THEN
-  i1_l = LBOUND(SrcVTK_SurfaceTypeData%MorisonRad,1)
-  i1_u = UBOUND(SrcVTK_SurfaceTypeData%MorisonRad,1)
-  IF (.NOT. ALLOCATED(DstVTK_SurfaceTypeData%MorisonRad)) THEN 
-    ALLOCATE(DstVTK_SurfaceTypeData%MorisonRad(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcVTK_SurfaceTypeData%MorisonVisRad)) THEN
+  i1_l = LBOUND(SrcVTK_SurfaceTypeData%MorisonVisRad,1)
+  i1_u = UBOUND(SrcVTK_SurfaceTypeData%MorisonVisRad,1)
+  IF (.NOT. ALLOCATED(DstVTK_SurfaceTypeData%MorisonVisRad)) THEN 
+    ALLOCATE(DstVTK_SurfaceTypeData%MorisonVisRad(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstVTK_SurfaceTypeData%MorisonRad.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstVTK_SurfaceTypeData%MorisonVisRad.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstVTK_SurfaceTypeData%MorisonRad = SrcVTK_SurfaceTypeData%MorisonRad
+    DstVTK_SurfaceTypeData%MorisonVisRad = SrcVTK_SurfaceTypeData%MorisonVisRad
 ENDIF
  END SUBROUTINE FAST_CopyVTK_SurfaceType
 
@@ -1135,8 +1135,8 @@ DO i1 = LBOUND(VTK_SurfaceTypeData%BladeShape,1), UBOUND(VTK_SurfaceTypeData%Bla
 ENDDO
   DEALLOCATE(VTK_SurfaceTypeData%BladeShape)
 ENDIF
-IF (ALLOCATED(VTK_SurfaceTypeData%MorisonRad)) THEN
-  DEALLOCATE(VTK_SurfaceTypeData%MorisonRad)
+IF (ALLOCATED(VTK_SurfaceTypeData%MorisonVisRad)) THEN
+  DEALLOCATE(VTK_SurfaceTypeData%MorisonVisRad)
 ENDIF
  END SUBROUTINE FAST_DestroyVTK_SurfaceType
 
@@ -1219,10 +1219,10 @@ ENDIF
       END IF
     END DO
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! MorisonRad allocated yes/no
-  IF ( ALLOCATED(InData%MorisonRad) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! MorisonRad upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%MorisonRad)  ! MorisonRad
+  Int_BufSz   = Int_BufSz   + 1     ! MorisonVisRad allocated yes/no
+  IF ( ALLOCATED(InData%MorisonVisRad) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! MorisonVisRad upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%MorisonVisRad)  ! MorisonVisRad
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -1363,18 +1363,18 @@ ENDIF
       ENDIF
     END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%MorisonRad) ) THEN
+  IF ( .NOT. ALLOCATED(InData%MorisonVisRad) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MorisonRad,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MorisonRad,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MorisonVisRad,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MorisonVisRad,1)
     Int_Xferred = Int_Xferred + 2
 
-      DO i1 = LBOUND(InData%MorisonRad,1), UBOUND(InData%MorisonRad,1)
-        ReKiBuf(Re_Xferred) = InData%MorisonRad(i1)
+      DO i1 = LBOUND(InData%MorisonVisRad,1), UBOUND(InData%MorisonVisRad,1)
+        ReKiBuf(Re_Xferred) = InData%MorisonVisRad(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -1550,21 +1550,21 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MorisonRad not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MorisonVisRad not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%MorisonRad)) DEALLOCATE(OutData%MorisonRad)
-    ALLOCATE(OutData%MorisonRad(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%MorisonVisRad)) DEALLOCATE(OutData%MorisonVisRad)
+    ALLOCATE(OutData%MorisonVisRad(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MorisonRad.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MorisonVisRad.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-      DO i1 = LBOUND(OutData%MorisonRad,1), UBOUND(OutData%MorisonRad,1)
-        OutData%MorisonRad(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
+      DO i1 = LBOUND(OutData%MorisonVisRad,1), UBOUND(OutData%MorisonVisRad,1)
+        OutData%MorisonVisRad(i1) = REAL(ReKiBuf(Re_Xferred), SiKi)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -48250,7 +48250,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NumActForcePtsTower
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%NodeClusterType, IntKiBuf(1))
+    IntKiBuf(Int_Xferred) = InData%NodeClusterType
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FAST_PackExternInitType
 
@@ -48367,7 +48367,7 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%NumActForcePtsTower = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    OutData%NodeClusterType = TRANSFER(IntKiBuf(Int_Xferred), OutData%NodeClusterType)
+    OutData%NodeClusterType = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE FAST_UnPackExternInitType
 

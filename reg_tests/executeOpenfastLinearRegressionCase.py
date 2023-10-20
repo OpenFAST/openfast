@@ -30,13 +30,16 @@ import argparse
 import numpy as np
 import shutil
 import subprocess
+from eva import eigA, eig
 import rtestlib as rtl
 import openfastDrivers
 import pass_fail
 from errorPlotting import exportCaseSummary
+from fast_linearization_file import FASTLinearizationFile
+# from weio.fast_linearization_file import FASTLinearizationFile
 
 ##### Helper functions
-excludeExt=['.out','.outb','.ech','.yaml','.sum','.log']
+excludeExt=['.out','.outb','.ech','.yaml','.sum','.log','.md']
 
 def file_line_count(filename):
     file_handle = open(filename, 'r')
@@ -45,8 +48,8 @@ def file_line_count(filename):
     file_handle.close()
     return i + 1
 
-def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
-    return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
+def isclose(a, b, rtol=1e-09, atol=0.0):
+    return abs(a-b) <= max(rtol * max(abs(a), abs(b)), atol)
 
 ##### Main program
 
@@ -77,11 +80,31 @@ plotError = args.plot
 noExec = args.noExec
 verbose = args.verbose
 
-# Tolerance have not been tuned for linearization case outputs.
-# This is using 1e-5 since that seemed like a decent value prior to 
-# switching to relative and absolute tolerance.
-rtol = 1e-5
+# --- Tolerances for matrix comparison
+# Outputs of lin matrices have 3 decimal digits leading to minimum error of 0.001  
+# Therefore the relative error to detect a change in the third decimal place
+# is between 1e-3 and 1e-4. We allow a bit of margin and use rtol=2e-3
+# Lin matrices have a lot of small values, so atol is quite important
+rtol = 2e-3
 atol = 1e-5
+
+# --- Tolerances for frequencies 
+# Low frequencies are hard to match, so we use a high atol
+rtol_f=1e-2
+atol_f=1e-2 
+
+# --- Tolerances for damping
+# damping ratio is in [%] so we relax the atol
+rtol_d=1e-2
+atol_d=1e-1  
+
+
+CasePrefix=' Case: {}: '.format(caseName)
+def exitWithError(msg):
+    rtl.exitWithError(CasePrefix+msg)
+def indent(msg, sindent='\t'):
+    return '\n'.join([sindent+s for s in msg.split('\n')])
+
 
 # validate inputs
 rtl.validateExeOrExit(executable)
@@ -100,11 +123,11 @@ testBuildDirectory = os.path.join(buildDirectory, caseName)
 
 # verify all the required directories exist
 if not os.path.isdir(rtest):
-    rtl.exitWithError("The test data directory, {}, does not exist. If you haven't already, run `git submodule update --init --recursive`".format(rtest))
+    exitWithError("The test data directory, {}, does not exist. If you haven't already, run `git submodule update --init --recursive`".format(rtest))
 if not os.path.isdir(targetOutputDirectory):
-    rtl.exitWithError("The test data outputs directory, {}, does not exist. Try running `git submodule update`".format(targetOutputDirectory))
+    exitWithError("The test data outputs directory, {}, does not exist. Try running `git submodule update`".format(targetOutputDirectory))
 if not os.path.isdir(inputsDirectory):
-    rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
+    exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
@@ -130,9 +153,10 @@ else:
                 rtl.copyTree(srcname, dstname, excludeExt=excludeExt)
         else:
             shutil.copy2(srcname, dstname)
-
-if not os.path.isdir(testBuildDirectory):
-    rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt)
+# 
+# Copying the actual test directory
+# if not os.path.isdir(testBuildDirectory):
+rtl.copyTree(inputsDirectory, testBuildDirectory, excludeExt=excludeExt, renameExtDict={'.lin':'.ref_lin'})
 
 ### Run openfast on the test case
 if not noExec:
@@ -143,108 +167,140 @@ if not noExec:
 
 ### Get a all the .lin files in the baseline directory
 baselineOutFiles = [f for f in os.listdir(targetOutputDirectory) if '.lin' in f]
+if len(baselineOutFiles)==0:
+    exitWithError("No lin files present in baseline.")
+
 
 # these should all exist in the local outputs directory
 localFiles = os.listdir(testBuildDirectory)
 localOutFiles = [f for f in localFiles if f in baselineOutFiles]
 if len(localOutFiles) != len(baselineOutFiles):
-    print("Error in case {}: an expected local solution file does not exist.".format(caseName))
-    sys.exit(1)
+    exitWithError("An expected local solution file does not exist:")
 
-### test for regression
-for i, f in enumerate(localOutFiles):
-    local_file = os.path.join(testBuildDirectory, f)
-    baseline_file = os.path.join(targetOutputDirectory, f)
+### test for regression (compare lin files only)
+try:
+    for i, f in enumerate(localOutFiles):
+        local_file = os.path.join(testBuildDirectory, f)
+        baseline_file = os.path.join(targetOutputDirectory, f)
+        if verbose:
+            print(CasePrefix+'ref:', baseline_file)
+            print(CasePrefix+'new:', local_file)
 
-    # verify both files have the same number of lines
-    local_file_line_count = file_line_count(local_file)
-    baseline_file_line_count = file_line_count(baseline_file)
-    if local_file_line_count != baseline_file_line_count:
-        print("Error in case {}: local and baseline solutions have different line counts in".format(caseName))
-        print("\t{}".format(local_file))
-        print("\t{}".format(baseline_file))
-        sys.exit(1)
+        # verify both files have the same number of lines
+        local_file_line_count = file_line_count(local_file)
+        baseline_file_line_count = file_line_count(baseline_file)
+        if local_file_line_count != baseline_file_line_count:
+            Err="Local and baseline solutions have different line counts in"
+            Err+="\n\tFile1:{}".format(local_file)
+            Err+="\n\tFile2:{}\n\n".format(baseline_file)
+            raise Exception(Err)
 
-    # open both files
-    local_handle = open(local_file, 'r')
-    baseline_handle = open(baseline_file, 'r')
+        # open both files
+        floc = FASTLinearizationFile(local_file)
+        fbas = FASTLinearizationFile(baseline_file)
 
-    # parse the files
+        # --- Test that they have the same variables
+        kloc = floc.keys()
+        kbas = fbas.keys()
+        try:
+            np.testing.assert_equal(kloc, kbas)
+        except Exception as e:
+            Err = 'Different keys in local linfile.\n'
+            Err+= '\tNew:{}\n'.format(kloc)
+            Err+= '\tRef:{}\n'.format(kbas)
+            Err+= '\tin linfile: {}.\n'.format(local_file)
+            raise Exception(Err)
 
-    # skip the first 6 lines since they are headers and may change without conseequence
-    for i in range(6):
-        baseline_handle.readline()
-        local_handle.readline()
-    
-    # the next 10 lines are simulation info; save what we need
-    for i in range(11):
-        b_line = baseline_handle.readline()
-        l_line = local_handle.readline()
-        if i == 5:
-            b_num_continuous_states = int(b_line.split()[-1])
-            l_num_continuous_states = int(l_line.split()[-1])
-        elif i == 8:
-            b_num_inputs = int(b_line.split()[-1])
-            l_num_inputs = int(l_line.split()[-1])
-        elif i == 9:
-            b_num_outputs = int(b_line.split()[-1])
-            l_num_outputs = int(l_line.split()[-1])
-    
-    # find the "Jacobian matrices:" line
-    for i in range(local_file_line_count):
-        b_line = baseline_handle.readline()
-        l_line = local_handle.readline()
-        if "Jacobian matrices:" in l_line:
-            break
-    
-    # skip 1 empty/header lines
-    for i in range(1):
-        baseline_handle.readline()
-        local_handle.readline()
+        # --- Compare 10 first frequencies and damping ratios in 'A' matrix
+        if 'A' in fbas.keys(): 
+            Abas = fbas['A']
+            Aloc = floc['A']
+            # Note: we could potentially reorder states like MBC does, but no need for freq/damping
+            _, zeta_bas, _, freq_bas = eigA(Abas, nq=None, nq1=None, sort=True)
+            _, zeta_loc, _, freq_loc = eigA(Aloc, nq=None, nq1=None, sort=True)
 
-    # read and compare Jacobian matrices
-    for i in range(local_file_line_count):
-        b_line = baseline_handle.readline()
-        l_line = local_handle.readline()
-        if ":" in l_line:
-            continue
-        if len(l_line) < 5:
-            break
-        b_elements = b_line.split()
-        l_elements = l_line.split()
-        for j, l_element in enumerate(l_elements):
-            l_float = float(l_element)
-            b_float = float(b_elements[j])
-            if not isclose(l_float, b_float, rtol, atol):
-                print(f"Failed in Jacobian matrix comparison:")
-                print(f"{l_float} in {local_file}")
-                print(f"{b_float} in {baseline_file}")
-                sys.exit(1)
+            if len(freq_bas)==0:
+                # We use complex eigenvalues instead of frequencies/damping
+                # If this fails often, we should discard this test.
+                _, Lambda = eig(Abas, sort=False)
+                v_bas = np.diag(Lambda)
+                _, Lambda = eig(Aloc, sort=False)
+                v_loc = np.diag(Lambda)
 
-    # skip 2 empty/header lines
-    for i in range(2):
-        baseline_handle.readline()
-        local_handle.readline()
+                if verbose:
+                    print(CasePrefix+'val_ref:', v_bas[:7])
+                    print(CasePrefix+'val_new:', v_loc[:7])
+                try:
+                    np.testing.assert_allclose(v_bas[:10], v_loc[:10], rtol=rtol_f, atol=atol_f)
+                except Exception as e:
+                    raise Exception('Failed to compare A-matrix frequencies\n\tLinfile: {}.\n\tException: {}'.format(local_file, indent(e.args[0])))
+            else:
 
-    # read and compare Linearized state matrices
-    for i in range(local_file_line_count):
-        b_line = baseline_handle.readline()
-        l_line = local_handle.readline()
-        if ":" in l_line:
-            continue
-        if len(l_line) < 5:
-            break
-        b_elements = b_line.split()
-        l_elements = l_line.split()
-        for j, l_element in enumerate(l_elements):
-            l_float = float(l_element)
-            b_float = float(b_elements[j])
-            if not isclose(l_float, b_float, rtol, atol):
-                print(f"Failed in state matrix comparison: {l_float} and {b_float}")
-                sys.exit(1)
+                #if verbose:
+                print(CasePrefix+'freq_ref:', np.around(freq_bas[:8]    ,5), '[Hz]')
+                print(CasePrefix+'freq_new:', np.around(freq_loc[:8]    ,5),'[Hz]')
+                print(CasePrefix+'damp_ref:', np.around(zeta_bas[:8]*100,5), '[%]')
+                print(CasePrefix+'damp_new:', np.around(zeta_loc[:8]*100,5), '[%]')
 
-    local_handle.close()
-    baseline_handle.close()
+                try:
+                    np.testing.assert_allclose(freq_loc[:10], freq_bas[:10], rtol=rtol_f, atol=atol_f)
+                except Exception as e:
+                    raise Exception('Failed to compare A-matrix frequencies\n\tLinfile: {}.\n\tException: {}'.format(local_file, indent(e.args[0])))
+
+
+                if caseName=='Ideal_Beam_Free_Free_Linear':
+                    # The free-free case is a bit weird, smae frequencies but dampings are +/- a value
+                    zeta_loc=np.abs(zeta_loc)
+                    zeta_bas=np.abs(zeta_bas)
+
+
+                try:
+                    # Note: damping ratios in [%]
+                    np.testing.assert_allclose(zeta_loc[:10]*100, zeta_bas[:10]*100, rtol=rtol_d, atol=atol_d)
+                except Exception as e:
+                    raise Exception('Failed to compare A-matrix damping ratios\n\tLinfile: {}.\n\tException: {}'.format(local_file, indent(e.args[0])))
+
+
+
+        # --- Compare individual matrices/vectors
+        KEYS= ['A','B','C','D','dUdu','dUdy']
+        KEYS+=['x','y','u','xdot']
+        for k,v in fbas.items():
+            if k in KEYS and v is not None:
+                if verbose:
+                    print(CasePrefix+'key:', k)
+                # Arrays
+                Mloc=np.atleast_2d(floc[k])
+                Mbas=np.atleast_2d(fbas[k])
+
+                # --- Compare dimensions
+                try:
+                    np.testing.assert_equal(Mloc.shape, Mbas.shape)
+                except Exception as e:
+                    Err = 'Different dimensions for variable `{}`.\n'.format(k)
+                    Err+= '\tNew:{}\n'.format(Mloc.shape)
+                    Err+= '\tRef:{}\n'.format(Mbas.shape)
+                    Err+= '\tLinfile: {}.\n'.format(local_file)
+                    raise Exception(Err)
+
+
+                # We for loop below to get the first element that mismatch
+                # Otherwise, do: np.testing.assert_allclose(floc[k], fbas[k], rtol=rtol, atol=atol)
+                for i in range(Mbas.shape[0]):
+                    for j in range(Mbas.shape[1]):
+                        # Old method:
+                        #if not isclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol):
+                        #    sElem = 'Element [{},{}], new : {}, baseline: {}'.format(i+1,j+1,Mloc[i,j], Mbas[i,j])
+                        #    raise Exception('Failed to compare variable `{}`, {} \n\tLinfile: {}.'.format(k, sElem, local_file)) #, e.args[0]))
+                        try:
+                            np.testing.assert_allclose(Mloc[i,j], Mbas[i,j], rtol=rtol, atol=atol)
+                        except Exception as e:
+                            sElem = 'Element [{},{}], new : {}, baseline: {}'.format(i+1,j+1,Mloc[i,j], Mbas[i,j])
+                            raise Exception('Failed to compare variable `{}`, {} \n\tLinfile: {}.\n\tException: {}'.format(k, sElem, local_file, indent(e.args[0])))
+
+except Exception as e:
+    exitWithError(e.args[0])
 
 # passing case
 sys.exit(0)
+

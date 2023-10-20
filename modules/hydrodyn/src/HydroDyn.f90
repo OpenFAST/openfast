@@ -450,7 +450,11 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       InputFileData%Waves%WaveFieldMod  = InitInp%WaveFieldMod
       InputFileData%Waves%PtfmLocationX = InitInp%PtfmLocationX
       InputFileData%Waves%PtfmLocationY = InitInp%PtfmLocationY
-      
+
+         ! Were visualization meshes requested?
+      p%VisMeshes = InitInp%VisMeshes
+
+
          ! Now call each sub-module's *_Init subroutine
          ! to fully initialize each sub-module based on the necessary initialization data
       
@@ -493,6 +497,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             RETURN
          END IF
          tmpWaveElevXY = InitInp%WaveElevXY
+         CALL MOVE_ALLOC(tmpWaveElevXY, InputFileData%Waves%WaveElevXY) ! move this back for waves2 later 
       ENDIF
 
  
@@ -1366,9 +1371,11 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          ELSE
             InputFileData%Morison%OutSwtch     = 0
          END IF
+
+            ! Were visualization meshes requested?
+         InputFileData%Morison%VisMeshes = p%VisMeshes
         
             ! Initialize the Morison Element Calculations 
-      
          CALL Morison_Init(InputFileData%Morison, u%Morison, p%Morison, x%Morison, xd%Morison, z%Morison, OtherState%Morison, &
                                y%Morison, m%Morison, Interval, InitOut%Morison, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -2103,7 +2110,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
                indxStart = (iBody-1)*6+1
                indxEnd   = indxStart+5
   
-               m%F_PtfmAdd(indxStart:indxEnd) = p%AddF0(:,1) - matmul(p%AddCLin(:,:,iBody), q(indxStart:indxEnd)) - matmul(p%AddBLin(:,:,iBody), qdot(indxStart:indxEnd)) - matmul(p%AddBQuad(:,:,iBody), qdotsq(indxStart:indxEnd))
+               m%F_PtfmAdd(indxStart:indxEnd) = p%AddF0(:,iBody) - matmul(p%AddCLin(:,:,iBody), q(indxStart:indxEnd)) - matmul(p%AddBLin(:,:,iBody), qdot(indxStart:indxEnd)) - matmul(p%AddBQuad(:,:,iBody), qdotsq(indxStart:indxEnd))
       
                   ! Attach to the output point mesh
                y%WAMITMesh%Force (:,iBody) = m%F_PtfmAdd(indxStart:indxStart+2)

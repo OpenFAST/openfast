@@ -3631,6 +3631,10 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
       CALL Cleanup()
       RETURN
    ENDIF
+
+!FIXME: this is a hack to fix a segfault.  Better logic is really needed for the nodal outputs.
+   ! Node outputs.  If no blades specified set BldNd_Outs to 0 (all checks are currently done on NumOuts, not BladesOut).
+   if (InputFileData%BldNd_BladesOut <= 0)   InputFileData%BldNd_NumOuts = 0
    !---------------------- END OF FILE -----------------------------------------
    
    call cleanup()

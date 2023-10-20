@@ -34,6 +34,7 @@ typedef   ^           ^                FileInfoType       PassedPrimaryInputData
 typedef   ^           ^                LOGICAL            Echo           -   ""     -   "echo parameter - do we want to echo the header line describing the input file?"
 typedef   ^           ^                CHARACTER(ChanLen) OutList        {:}   ""   -   "string containing list of output channels requested in input file"
 typedef   ^           ^                Logical            Linearize      -   .FALSE. -  "Flag that tells this module if the glue code wants to linearize." -
+typedef   ^           ^                Logical            VisMeshes      -   .FALSE. -  "Glue code requesting visualization meshes" -
 
 #typedef   ^       ^                    DbKi         UGrid                  {:}{:}{:} -  -   "water velocities time series at each grid point"            -
 #typedef   ^       ^                    DbKi         UdGrid                 {:}{:}{:} -  -   "water accelerations time series at each grid point"            -
@@ -50,7 +51,7 @@ typedef   ^       ^                    DbKi         WaveTime                    
 # nvm typedef   ^       ^                    MeshType     FarmCoupledKinematics  {:}    -    -   "array of input kinematics meshes from each of the turbine-level MoorDyn instances"  "[m, m/s]"
 # nvm typedef   ^       ^                    IntKi        FarmNCpldBodies        {:}    -    -   ""             ""
 # nvm typedef   ^       ^                    IntKi        FarmNCpldRods          {:}    -    -   ""             ""
-# nvm typedef   ^       ^                    IntKi        FarmNCpldCons          {:}    -    -   "number of Fairlead Connections"             ""
+# nvm typedef   ^       ^                    IntKi        FarmNCpldPoints          {:}    -    -   "number of Fairlead Points"             ""
 
 # ====================================== Internal data types ========================================================================
 # line properties from line dictionary input
@@ -91,19 +92,19 @@ typedef  ^            ^                DbKi               CdEnd          -      
 typedef  ^            ^                DbKi               CaEnd          -       -  -   "added mass coefficient for rod end"  "[-]"
 
 # this is the Body type, which holds data for each body object
-typedef  ^            MD_Body          IntKi              IdNum          -       -  -   "integer identifier of this Connection"
-typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=fixed, 1=vessel, 2=connect"
-typedef  ^            ^                IntKi              AttachedC      {30}    -  -   "list of IdNums of connections attached to this body"
+typedef  ^            MD_Body          IntKi              IdNum          -       -  -   "integer identifier of this Point"
+typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=free, 1=fixed, -1=vessel"
+typedef  ^            ^                IntKi              AttachedC      {30}    -  -   "list of IdNums of points attached to this body"
 typedef  ^            ^                IntKi              AttachedR      {30}    -  -   "list of IdNums of rods attached to this body"
-typedef  ^            ^                IntKi              nAttachedC     -       0  -   "number of attached connections"
+typedef  ^            ^                IntKi              nAttachedC     -       0  -   "number of attached points"
 typedef  ^            ^                IntKi              nAttachedR     -       0  -   "number of attached rods"
-typedef  ^            ^                DbKi               rConnectRel    {3}{30}     -  -   "relative position of connection on body"
+typedef  ^            ^                DbKi               rPointRel    {3}{30}     -  -   "relative position of point on body"
 typedef  ^            ^                DbKi               r6RodRel       {6}{30}     -  -   "relative position and orientation of rod on body"
-typedef  ^            ^                DbKi               bodyM          -       -  -   ""
-typedef  ^            ^                DbKi               bodyV          -       -  -   ""
-typedef  ^            ^                DbKi               bodyI          {3}     -  -   ""
-typedef  ^            ^                DbKi               bodyCdA        {6}     -  -   "product of drag force and frontal area of connection point" "[m^2]"
-typedef  ^            ^                DbKi               bodyCa         {6}     -  -   "added mass coefficient of connection point" "-"
+typedef  ^            ^                DbKi               bodyM          -       -  -   "body mass (seperate from attached objects)" "[kg]"
+typedef  ^            ^                DbKi               bodyV          -       -  -   "body volume (for buoyancy calculation)" "[m^3]"
+typedef  ^            ^                DbKi               bodyI          {3}     -  -   "body 3x3 inertia matrix diagonals" "[kg-m^2]"
+typedef  ^            ^                DbKi               bodyCdA        {6}     -  -   "product of drag force and frontal area of body" "[m^2]"
+typedef  ^            ^                DbKi               bodyCa         {6}     -  -   "added mass coefficient of body" "-"
 typedef  ^            ^                DbKi               time           -       -  -   "current time"         "[s]"
 typedef  ^            ^                DbKi               r6             {6}     -  -   "position"
 typedef  ^            ^                DbKi               v6             {6}     -  -   "velocity"
@@ -118,20 +119,20 @@ typedef  ^            ^                DbKi               M0             {6}{6} 
 typedef  ^            ^                DbKi               OrMat          {3}{3}  -  -   "DCM for body orientation"
 typedef  ^            ^                DbKi               rCG            {3}     -  -   "vector in body frame from ref point to CG (before rods etc..)"
 
-# this is the Connection type, which holds data for each connection object
-typedef  ^            MD_Connect       IntKi              IdNum          -       -  -   "integer identifier of this Connection"
-typedef  ^            ^                CHARACTER(10)      type           -       -  -   "type of Connect: fix, vessel, connect"
-typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=fixed, 1=vessel, 2=connect"
-typedef  ^            ^                IntKi              Attached       {10}    -  -   "list of IdNums of lines attached to this connection node"
+# this is the Point type, which holds data for each point object
+typedef  ^            MD_Point       IntKi              IdNum          -       -  -   "integer identifier of this point"
+typedef  ^            ^                CHARACTER(10)      type           -       -  -   "type of point: fix, vessel, point"
+typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  1=fixed, -1=vessel, 0=free"
+typedef  ^            ^                IntKi              Attached       {10}    -  -   "list of IdNums of lines attached to this point node"
 typedef  ^            ^                IntKi              Top            {10}    -  -   "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
 typedef  ^            ^                IntKi              nAttached      -       0  -   "number of attached lines"
-typedef  ^            ^                DbKi               conM           -       -  -   ""
-typedef  ^            ^                DbKi               conV           -       -  -   ""
-typedef  ^            ^                DbKi               conFX          -       -  -   ""
-typedef  ^            ^                DbKi               conFY          -       -  -   ""
-typedef  ^            ^                DbKi               conFZ          -       -  -   ""
-typedef  ^            ^                DbKi               conCa          -       -  -   "added mass coefficient of connection point" "-"
-typedef  ^            ^                DbKi               conCdA         -       -  -   "product of drag force and frontal area of connection point" "[m^2]"
+typedef  ^            ^                DbKi               pointM           -       -  -   "point mass" "[kg]"
+typedef  ^            ^                DbKi               pointV           -       -  -   "point volume" "[m^3]"
+typedef  ^            ^                DbKi               pointFX          -       -  -   ""
+typedef  ^            ^                DbKi               pointFY          -       -  -   ""
+typedef  ^            ^                DbKi               pointFZ          -       -  -   ""
+typedef  ^            ^                DbKi               pointCa          -       -  -   "added mass coefficient of point" "-"
+typedef  ^            ^                DbKi               pointCdA         -       -  -   "product of drag force and frontal area of point" "[m^2]"
 typedef  ^            ^                DbKi               time           -       -  -   "current time"         "[s]"
 typedef  ^            ^                DbKi               r              {3}     -  -   "position"
 typedef  ^            ^                DbKi               rd             {3}     -  -   "velocity"
@@ -147,7 +148,7 @@ typedef  ^            ^                DbKi               M              {3}{3} 
 typedef  ^            MD_Rod           IntKi              IdNum         -        -  -   "integer identifier of this Line"
 typedef  ^            ^                CHARACTER(10)      type          -        -  -   "type of Rod.  should match one of RodProp names"
 typedef  ^            ^                IntKi              PropsIdNum    -        -  -   "the IdNum of the associated rod properties"     -
-typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=fixed, 1=vessel, 2=connect"
+typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=fixed, 1=vessel, 2=point"
 typedef  ^            ^                IntKi              AttachedA      {10}    -  -   "list of IdNums of lines attached to end A"
 typedef  ^            ^                IntKi              AttachedB      {10}    -  -   "list of IdNums of lines attached to end B"
 typedef  ^            ^                IntKi              TopA           {10}    -  -   "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"
@@ -156,8 +157,8 @@ typedef  ^            ^                IntKi              nAttachedA     -      
 typedef  ^            ^                IntKi              nAttachedB     -       0  -   "number of attached lines to Rod end B"
 typedef  ^            ^                IntKi              OutFlagList   {20}     -  -   "array specifying what line quantities should be output (1 vs 0)"   -
 typedef  ^            ^                IntKi              N             -        -  -   "The number of elements in the line"              -
-typedef  ^            ^                IntKi              endTypeA      -        -  -   "type of connection at end A: 0=pinned to Connection, 1=cantilevered to Rod."  -
-typedef  ^            ^                IntKi              endTypeB      -        -  -   "type of connection at end B: 0=pinned to Connection, 1=cantilevered to Rod."  -
+typedef  ^            ^                IntKi              endTypeA      -        -  -   "type of point at end A: 0=pinned to Point, 1=cantilevered to Rod."  -
+typedef  ^            ^                IntKi              endTypeB      -        -  -   "type of point at end B: 0=pinned to Point, 1=cantilevered to Rod."  -
 typedef  ^            ^                DbKi               UnstrLen      -        -  -   "length of the rod"   "[m]"
 typedef  ^            ^                DbKi               mass          -        -  -   "mass of the rod"   "[kg]"
 typedef  ^            ^                DbKi               rho           -        -  -   "density"   "[kg/m3]"
@@ -169,8 +170,8 @@ typedef  ^            ^                DbKi               Cdt            -      
 typedef  ^            ^                DbKi               CdEnd          -       -  -   "drag coefficient for rod end"  "[-]"
 typedef  ^            ^                DbKi               CaEnd          -       -  -   "added mass coefficient for rod end"  "[-]"
 typedef  ^            ^                DbKi               time           -       -  -   "current time"         "[s]"
-typedef  ^            ^                DbKi               roll           -       -  -   "roll relative to vertical"         "deg"
-typedef  ^            ^                DbKi               pitch          -       -  -   "pitch relative to vertical"        "deg"
+typedef  ^            ^                DbKi               roll           -       -  -   "roll relative to vertical"         "[rad]"
+typedef  ^            ^                DbKi               pitch          -       -  -   "pitch relative to vertical"        "[rad]"
 typedef  ^            ^                DbKi               h0             -       -  -   "submerged length of rod axis, distance along rod centerline from end A to the waterplane (0 <= h0 <= L)"        "m"
 typedef  ^            ^                DbKi               r            {:}{:}    -  -   "node positions"    -
 typedef  ^            ^                DbKi               rd           {:}{:}    -  -   "node velocities"  -
@@ -211,11 +212,11 @@ typedef  ^            ^                IntKi              PropsIdNum    -       
 typedef  ^            ^                IntKi              ElasticMod    -        -  -   "Which elasticity model to use: {0 basic, 1 viscoelastic, 2 future SYCOM} "     -
 typedef  ^            ^                IntKi              OutFlagList   {20}     -  -   "array specifying what line quantities should be output (1 vs 0)"   -
 typedef  ^            ^                IntKi              CtrlChan      -        0  -   "index of control channel that will drive line active tensioning (0 for none)"   -
-typedef  ^            ^                IntKi              FairConnect   -        -  -   "IdNum of Connection at fairlead"
-typedef  ^            ^                IntKi              AnchConnect   -        -  -   "IdNum of Connection at anchor"
+typedef  ^            ^                IntKi              FairPoint   -        -  -   "IdNum of Point at fairlead"
+typedef  ^            ^                IntKi              AnchPoint   -        -  -   "IdNum of Point at anchor"
 typedef  ^            ^                IntKi              N             -        -  -   "The number of elements in the line"              -
-typedef  ^            ^                IntKi              endTypeA      -        -  -   "type of connection at end A: 0=pinned to Connection, 1=cantilevered to Rod."  -
-typedef  ^            ^                IntKi              endTypeB      -        -  -   "type of connection at end B: 0=pinned to Connection, 1=cantilevered to Rod."  -
+typedef  ^            ^                IntKi              endTypeA      -        -  -   "type of connection at end A: 0=pinned to Point, 1=cantilevered to Rod."  -
+typedef  ^            ^                IntKi              endTypeB      -        -  -   "type of connection at end B: 0=pinned to Point, 1=cantilevered to Rod."  -
 typedef  ^            ^                DbKi               UnstrLen      -        -  -   "unstretched length of the line"   -
 typedef  ^            ^                DbKi               rho           -        -  -   "density"   "[kg/m3]"
 typedef  ^            ^                DbKi               d             -        -  -   "volume-equivalent diameter"   "[m]"
@@ -278,10 +279,12 @@ typedef  ^            MD_Fail          IntKi              IdNum         -       
 typedef  ^            MD_OutParmType   CHARACTER(10)      Name          -        -  -   "name of output channel"
 typedef  ^            ^                CHARACTER(10)      Units         -        -  -   "units string"
 typedef  ^            ^                IntKi              QType         -        -  -   "type of quantity - 0=tension, 1=x, 2=y, 3=z..."
-typedef  ^            ^                IntKi              OType         -        -  -   "type of object - 0=line, 1=connect"
-typedef  ^            ^                IntKi              NodeID        -        -  -   "node number if OType=0.  0=anchor, -1=N=Fairlead"
-typedef  ^            ^                IntKi              ObjID         -        -  -   "number of Connect or Line object"
+typedef  ^            ^                IntKi              OType         -        -  -   "type of object - 0=line, 1=point"
+typedef  ^            ^                IntKi              NodeID        -        -  -   "node number if OType=0.  0=anchor, -1=whole object"
+typedef  ^            ^                IntKi              ObjID         -        -  -   "number of Point or Line object"
 
+## ============================== Visualization data storage for diameter ============================================================================================================================
+typedef   ^           VisDiam          SiKi               Diam         {:}       -  -   "Diameter for visualization" -
 
 ## ============================== Define Initialization outputs here: ================================================================================================================================
 typedef   ^            InitOutputType  CHARACTER(ChanLen)  writeOutputHdr  {:} ""  -   "first line output file contents: output variable names"
@@ -315,22 +318,22 @@ typedef   ^       OtherStateType       SiKi                dummy             -  
 ## ============================== Define Misc variables here: =====================================================================================================================================
 typedef   ^       MiscVarType          MD_LineProp         LineTypeList     {:}  -  -   "array of properties for each line type"   -
 typedef   ^       ^                    MD_RodProp          RodTypeList      {:}  -  -   "array of properties for each rod type"   -
-typedef   ^       ^                    MD_Body             GroundBody        -   -  -   "the single ground body which is the parent of all stationary connections"   -
+typedef   ^       ^                    MD_Body             GroundBody        -   -  -   "the single ground body which is the parent of all stationary points"   -
 typedef   ^       ^                    MD_Body             BodyList         {:}  -  -   "array of body objects"   -
 typedef   ^       ^                    MD_Rod              RodList          {:}  -  -   "array of rod objects"   -
-typedef   ^       ^                    MD_Connect          ConnectList      {:}  -  -   "array of connection objects"   -
+typedef   ^       ^                    MD_Point            PointList      {:}  -  -   "array of point objects"   -
 typedef   ^       ^                    MD_Line             LineList         {:}  -  -   "array of line objects"   -
 typedef   ^       ^                    MD_Fail             FailList         {:}  -  -   "array of line objects"   -
-typedef   ^       ^                    IntKi               FreeConIs        {:}  -  -   "array of free connection indices in ConnectList vector"         ""
-typedef   ^       ^                    IntKi               CpldConIs        {:}{:} -  -   "array of coupled/fairlead connection indices in ConnectList vector"         ""
+typedef   ^       ^                    IntKi               FreePointIs        {:}  -  -   "array of free point indices in PointList vector"         ""
+typedef   ^       ^                    IntKi               CpldPointIs        {:}{:} -  -   "array of coupled/fairlead point indices in PointList vector"         ""
 typedef   ^       ^                    IntKi               FreeRodIs        {:}  -  -   "array of free rod indices in RodList vector"         ""
 typedef   ^       ^                    IntKi               CpldRodIs        {:}{:}  -  -   "array of coupled/fairlead rod indices in RodList vector"         ""
 typedef   ^       ^                    IntKi               FreeBodyIs       {:}  -  -   "array of free body indices in BodyList vector"         ""
 typedef   ^       ^                    IntKi               CpldBodyIs       {:}{:}  -  -   "array of coupled body indices in BodyList vector"         ""
 typedef   ^       ^                    IntKi               LineStateIs1     {:}  -  -   "starting index of each line's states in state vector"                 ""
 typedef   ^       ^                    IntKi               LineStateIsN     {:}  -  -   "ending index of each line's states in state vector"                 ""
-typedef   ^       ^                    IntKi               ConStateIs1      {:}  -  -   "starting index of each line's states in state vector"                 ""
-typedef   ^       ^                    IntKi               ConStateIsN      {:}  -  -   "ending index of each line's states in state vector"                 ""
+typedef   ^       ^                    IntKi               PointStateIs1      {:}  -  -   "starting index of each point's states in state vector"                 ""
+typedef   ^       ^                    IntKi               PointStateIsN      {:}  -  -   "ending index of each point's states in state vector"                 ""
 typedef   ^       ^                    IntKi               RodStateIs1      {:}  -  -   "starting index of each rod's states in state vector"                 ""
 typedef   ^       ^                    IntKi               RodStateIsN      {:}  -  -   "ending index of each rod's states in state vector"                ""
 typedef   ^       ^                    IntKi               BodyStateIs1     {:}  -  -   "starting index of each body's states in state vector"                 ""
@@ -352,8 +355,8 @@ typedef   ^       ^                    IntKi               BathGrid_npoints {:} 
 ## ============================== Parameters ============================================================================================================================================
 typedef   ^       ParameterType        IntKi               nLineTypes     -     0    -   "number of line types"                       ""
 typedef   ^       ^                    IntKi               nRodTypes      -     0    -   "number of rod types"                        ""
-typedef   ^       ^                    IntKi               nConnects      -     0    -   "number of Connection objects"               ""
-typedef   ^       ^                    IntKi               nConnectsExtra -     0    -   "number of Connection objects including space for extra ones that could arise from line failures"               ""
+typedef   ^       ^                    IntKi               nPoints      -     0    -   "number of Point objects"               ""
+typedef   ^       ^                    IntKi               nPointsExtra -     0    -   "number of Point objects including space for extra ones that could arise from line failures"               ""
 typedef   ^       ^                    IntKi               nBodies        -     0    -   "number of Body objects"                     ""
 typedef   ^       ^                    IntKi               nRods          -     0    -   "number of Rod objects"                      ""
 typedef   ^       ^                    IntKi               nLines         -     0    -   "number of Line objects"                     ""
@@ -361,12 +364,12 @@ typedef   ^       ^                    IntKi               nCtrlChans     -     
 typedef   ^       ^                    IntKi               nFails         -     0    -   "number of failure conditions"                     ""
 typedef   ^       ^                    IntKi               nFreeBodies    -     0    -   ""             ""
 typedef   ^       ^                    IntKi               nFreeRods      -     0    -   ""             ""
-typedef   ^       ^                    IntKi               nFreeCons      -     0    -   ""             ""
+typedef   ^       ^                    IntKi               nFreePoints      -     0    -   ""             ""
 typedef   ^       ^                    IntKi               nCpldBodies    {:}   -    -   "number of coupled bodies (for FAST.Farm, size>1 with an entry for each turbine)"             ""
 typedef   ^       ^                    IntKi               nCpldRods      {:}   -    -   "number of coupled rods (for FAST.Farm, size>1 with an entry for each turbine)"             ""
-typedef   ^       ^                    IntKi               nCpldCons      {:}   -    -   "number of coupled points (for FAST.Farm, size>1 with an entry for each turbine)"             ""
-typedef   ^       ^                    IntKi               NConns         -     0    -   "number of Connect type Connections - not to be confused with NConnects"             ""
-typedef   ^       ^                    IntKi               NAnchs         -     0    -   "number of Anchor type Connections"             ""
+typedef   ^       ^                    IntKi               nCpldPoints      {:}   -    -   "number of coupled points (for FAST.Farm, size>1 with an entry for each turbine)"             ""
+typedef   ^       ^                    IntKi               NConns         -     0    -   "number of Connect type Points - not to be confused with NPoints"             ""
+typedef   ^       ^                    IntKi               NAnchs         -     0    -   "number of Anchor type Points"             ""
 typedef   ^       ^                    DbKi                Tmax           -     -    -   "simulation duration" "[s]"
 typedef   ^       ^                    DbKi                g              -  9.81    -   "gravitational constant (positive)"   "[m/s^2]"
 typedef   ^       ^                    DbKi                rhoW           -  1025    -   "density of seawater"              "[kg/m^3]"
@@ -422,6 +425,8 @@ typedef   ^       ^                    R8Ki         dx                 {:}      
 typedef   ^       ^                    Integer      Jac_ny              -           -  -   "number of outputs in jacobian matrix" -
 typedef   ^       ^                    Integer      Jac_nx              -           -  -   "number of continuous states in jacobian matrix" -
 typedef   ^       ^                    Integer      dxIdx_map2_xStateIdx {:}        -  -   "Mapping array from index of dX array to corresponding state index" -
+typedef   ^       ^                    Logical      VisMeshes           -           -  -   "Using visualization meshes as requested by glue code" -
+typedef   ^       ^                    VisDiam      VisRodsDiam        {:}          -  -   "Diameters for visualization of rods" -
 
 
 # ============================== Inputs ============================================================================================================================================
@@ -439,3 +444,7 @@ typedef   ^       OutputType           MeshType     CoupledLoads          {:}   
 typedef   ^       ^                    ReKi         WriteOutput            {:}   -    -   "output vector returned to glue code" ""
 # should CoupledLoads be an array?
 #typedef   ^       ^                    DbKi         rAll                   {:}{:} -    -   "Mesh of all point positions: bodies, rods, points, line internal nodes"   -
+typedef   ^       ^                    MeshType     VisLinesMesh          {:}   -    -   "Line2 mesh for visualizing mooring lines" -
+typedef   ^       ^                    MeshType     VisRodsMesh           {:}   -    -   "Line2 mesh for visualizing mooring rods" -
+typedef   ^       ^                    MeshType     VisBodiesMesh         {:}   -    -   "Point mesh for visualizing mooring bodies" -
+typedef   ^       ^                    MeshType     VisAnchsMesh          {:}   -    -   "Point mesh for visualizing mooring anchors" -

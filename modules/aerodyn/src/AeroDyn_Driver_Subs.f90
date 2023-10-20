@@ -391,7 +391,9 @@ subroutine Dvr_CleanUp(dvr, ADI, FED, initialized, errStat, errMsg)
    call Dvr_EndCase(dvr, ADI, initialized, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
    ! End modules
-   call ADI_End( ADI%u(:), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName); 
+   if (allocated(ADI%x)) then
+      call ADI_End( ADI%u(:), ADI%p, ADI%x(1), ADI%xd(1), ADI%z(1), ADI%OtherState(1), ADI%y, ADI%m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName); 
+   endif
 
    call AD_Dvr_DestroyDvr_SimData   (dvr ,    errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 

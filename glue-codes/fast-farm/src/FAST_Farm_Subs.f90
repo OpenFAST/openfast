@@ -2006,7 +2006,7 @@ subroutine FARM_MD_Increment(t, n, farm, ErrStat, ErrMsg)
    ! ----- map MD load outputs to each turbine's substructure -----   (taken from U FullOpt1...)
    do nt = 1,farm%p%NumTurbines
    
-      if (farm%MD%p%nCpldCons(nt) > 0 ) then   ! only map loads if MoorDyn has connections to this turbine (currently considering only Point connections <<< )
+      if (farm%MD%p%nCpldPoints(nt) > 0 ) then   ! only map loads if MoorDyn has connections to this turbine (currently considering only Point connections <<< )
          
          ! copy the MD output mesh for this turbine into a copy mesh within the FAST instance
          !CALL MeshCopy ( farm%MD%y%CoupledLoads(nt), farm%FWrap(nt)%m%Turbine%MeshMapData%u_FarmMD_CoupledLoads, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
@@ -2709,6 +2709,17 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    END DO
    !$OMP END PARALLEL DO  
    if (ErrStat >= AbortErrLev) return
+
+   ! IO operation, not done using OpenMP
+   DO nt = 1,farm%p%NumTurbines
+      call WD_WritePlaneOutputs( t, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
+                     farm%WD(nt)%OtherSt, farm%WD(nt)%y, farm%WD(nt)%m, ErrStat2, ErrMsg2 )         
+      if (ErrStat2 >= AbortErrLev) then
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)       
+      endif
+   END DO
+   if (ErrStat >= AbortErrLev) return
+
 
    call Transfer_WD_to_AWAE(farm)
    

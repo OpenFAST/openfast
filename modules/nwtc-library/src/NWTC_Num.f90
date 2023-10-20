@@ -6313,7 +6313,13 @@ end function Rad2M180to180Deg
        REAL(R8Ki)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
        REAL(SiKi)                          :: Angle2_mod
-    
+
+         ! If both inputs are the same, then the output must equal the input
+      if (Angle1 == Angle2) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6357,7 +6363,13 @@ end function Rad2M180to180Deg
        REAL(R8Ki)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
        REAL(R8Ki)                          :: Angle2_mod
-    
+
+         ! If both inputs are the same, then the output must equal the input
+      if (Angle1 == Angle2) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6400,7 +6412,13 @@ end function Rad2M180to180Deg
        REAL(SiKi)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
        REAL(SiKi)                          :: Angle2_mod
-    
+
+         ! If both inputs are the same, then the output must equal the input
+      if (Angle1 == Angle2) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6444,7 +6462,13 @@ end function Rad2M180to180Deg
        REAL(SiKi)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
        REAL(R8Ki)                          :: Angle2_mod
-    
+
+         ! If both inputs are the same, then the output must equal the input
+      if (Angle1 == Angle2) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6490,7 +6514,13 @@ end function Rad2M180to180Deg
        REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
        REAL(SiKi)                          :: Angle2_mod
        REAL(SiKi)                          :: Angle3_mod
-    
+
+         ! If all inputs are the same, then the output must equal the input
+      if ((Angle1 == Angle2) .and. (Angle2 == Angle3)) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6553,7 +6583,13 @@ end function Rad2M180to180Deg
        REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
        REAL(R8Ki)                          :: Angle2_mod
        REAL(R8Ki)                          :: Angle3_mod
-    
+
+         ! If all inputs are the same, then the output must equal the input
+      if ((Angle1 == Angle2) .and. (Angle2 == Angle3)) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6616,7 +6652,13 @@ end function Rad2M180to180Deg
        REAL(R8Ki)                          :: scaleFactor               ! temporary for extrapolation/interpolation
        REAL(SiKi)                          :: Angle2_mod
        REAL(SiKi)                          :: Angle3_mod
-    
+
+         ! If all inputs are the same, then the output must equal the input
+      if ((Angle1 == Angle2) .and. (Angle2 == Angle3)) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6679,7 +6721,13 @@ end function Rad2M180to180Deg
        REAL(R8Ki)                          :: scaleFactor               ! temporary for extrapolation/interpolation
        REAL(R8Ki)                          :: Angle2_mod
        REAL(R8Ki)                          :: Angle3_mod
-    
+
+         ! If all inputs are the same, then the output must equal the input
+      if ((Angle1 == Angle2) .and. (Angle2 == Angle3)) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)

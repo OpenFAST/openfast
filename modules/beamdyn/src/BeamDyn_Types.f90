@@ -147,6 +147,9 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: xcc      !< Algorithm acceleration in GA2: (1-alpha_m)*xcc_(n+1) = (1-alpha_f)*Acc_(n+1) + alpha_f*Acc_n - alpha_m*xcc_n [-]
     LOGICAL  :: InitAcc      !< flag to determine if accerlerations have been initialized in updateStates [-]
     LOGICAL  :: RunQuasiStaticInit      !< flag to determine if quasi-static solution initialization should be run again (with load inputs) [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: GlbPos      !< Position Vector between origins of Global (moving frame) and blade frames (BD coordinates)  Follows the RootMotion mesh [-]
+    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: GlbRot      !< Rotation Tensor between Global (moving frame) and Blade frames (BD coordinates; transfers local to global).  Follows the RootMotion mesh [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: Glb_crv      !< CRV parameters of GlbRot.  Follows the RootMotion mesh [-]
   END TYPE BD_OtherStateType
 ! =======================
 ! =========  qpParam  =======
@@ -160,10 +163,11 @@ IMPLICIT NONE
     REAL(DbKi)  :: dt      !< module dt [s]
     REAL(DbKi) , DIMENSION(1:9)  :: coef      !< GA2 Coefficient [-]
     REAL(DbKi)  :: rhoinf      !< Numerical Damping Coefficient for GA2 [-]
-    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: uuN0      !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element) [-]
+    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: uuN0      !< Initial Position Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element) [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: twN0      !< Initial Twist of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: Stif0_QP      !< Sectional Stiffness Properties at quadrature points (6x6xqp) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: Mass0_QP      !< Sectional Mass Properties at quadrature points (6x6xqp) [-]
-    REAL(R8Ki) , DIMENSION(1:3)  :: gravity      !< Gravitational acceleration [m/s^2]
+    REAL(R8Ki) , DIMENSION(1:3)  :: gravity      !< Gravitational acceleration -- intertial frame!!! [m/s^2]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: segment_eta      !< Array stored length ratio of each segment w.r.t. member it lies in [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: member_eta      !< Array stored length ratio of each member  w.r.t. entire blade [-]
     REAL(R8Ki)  :: blade_length      !< Blade Length [-]
@@ -172,16 +176,12 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: blade_IN      !< Blade Length [-]
     REAL(R8Ki) , DIMENSION(1:6)  :: beta      !< Damping Coefficient [-]
     REAL(R8Ki)  :: tol      !< Tolerance used in stopping criterion [-]
-    REAL(R8Ki) , DIMENSION(1:3)  :: GlbPos      !< Initial Position Vector between origins of Global and blade frames (BD coordinates) [-]
-    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: GlbRot      !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global) [-]
-    REAL(R8Ki) , DIMENSION(1:3)  :: Glb_crv      !< CRV parameters of GlbRot [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QPtN      !< Quadrature (QuadPt) point locations in natural frame [-1, 1] [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QPtWeight      !< Weights at each quadrature point (QuadPt) [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Shp      !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points) [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: ShpDer      !< Derivative of shape function matrix (index 1 = FE nodes; index 2=quadrature points) [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jacobian      !< Jacobian value at each quadrature point [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: uu0      !< Initial Disp/Rot value at quadrature point (at T=0) [-]
-    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: rrN0      !< Initial relative rotation array, relative to root (at T=0) (index 1=rot DOF; index 2=FE nodes; index 3=element) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: E10      !< Initial E10 at quadrature point [-]
     INTEGER(IntKi)  :: nodes_per_elem      !< Finite element (GLL) nodes per element [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: node_elem_idx      !< Index to first and last nodes of element in p%node_total sized arrays [-]
@@ -3146,6 +3146,9 @@ IF (ALLOCATED(SrcOtherStateData%xcc)) THEN
 ENDIF
     DstOtherStateData%InitAcc = SrcOtherStateData%InitAcc
     DstOtherStateData%RunQuasiStaticInit = SrcOtherStateData%RunQuasiStaticInit
+    DstOtherStateData%GlbPos = SrcOtherStateData%GlbPos
+    DstOtherStateData%GlbRot = SrcOtherStateData%GlbRot
+    DstOtherStateData%Glb_crv = SrcOtherStateData%Glb_crv
  END SUBROUTINE BD_CopyOtherState
 
  SUBROUTINE BD_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -3224,6 +3227,9 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! InitAcc
       Int_BufSz  = Int_BufSz  + 1  ! RunQuasiStaticInit
+      Db_BufSz   = Db_BufSz   + SIZE(InData%GlbPos)  ! GlbPos
+      Db_BufSz   = Db_BufSz   + SIZE(InData%GlbRot)  ! GlbRot
+      Db_BufSz   = Db_BufSz   + SIZE(InData%Glb_crv)  ! Glb_crv
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3295,6 +3301,20 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%RunQuasiStaticInit, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+    DO i1 = LBOUND(InData%GlbPos,1), UBOUND(InData%GlbPos,1)
+      DbKiBuf(Db_Xferred) = InData%GlbPos(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    DO i2 = LBOUND(InData%GlbRot,2), UBOUND(InData%GlbRot,2)
+      DO i1 = LBOUND(InData%GlbRot,1), UBOUND(InData%GlbRot,1)
+        DbKiBuf(Db_Xferred) = InData%GlbRot(i1,i2)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+    END DO
+    DO i1 = LBOUND(InData%Glb_crv,1), UBOUND(InData%Glb_crv,1)
+      DbKiBuf(Db_Xferred) = InData%Glb_crv(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
  END SUBROUTINE BD_PackOtherState
 
  SUBROUTINE BD_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3375,6 +3395,28 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%RunQuasiStaticInit = TRANSFER(IntKiBuf(Int_Xferred), OutData%RunQuasiStaticInit)
     Int_Xferred = Int_Xferred + 1
+    i1_l = LBOUND(OutData%GlbPos,1)
+    i1_u = UBOUND(OutData%GlbPos,1)
+    DO i1 = LBOUND(OutData%GlbPos,1), UBOUND(OutData%GlbPos,1)
+      OutData%GlbPos(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%GlbRot,1)
+    i1_u = UBOUND(OutData%GlbRot,1)
+    i2_l = LBOUND(OutData%GlbRot,2)
+    i2_u = UBOUND(OutData%GlbRot,2)
+    DO i2 = LBOUND(OutData%GlbRot,2), UBOUND(OutData%GlbRot,2)
+      DO i1 = LBOUND(OutData%GlbRot,1), UBOUND(OutData%GlbRot,1)
+        OutData%GlbRot(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+    END DO
+    i1_l = LBOUND(OutData%Glb_crv,1)
+    i1_u = UBOUND(OutData%Glb_crv,1)
+    DO i1 = LBOUND(OutData%Glb_crv,1), UBOUND(OutData%Glb_crv,1)
+      OutData%Glb_crv(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      Db_Xferred = Db_Xferred + 1
+    END DO
  END SUBROUTINE BD_UnPackOtherState
 
  SUBROUTINE BD_CopyqpParam( SrcqpParamData, DstqpParamData, CtrlCode, ErrStat, ErrMsg )
@@ -3693,6 +3735,20 @@ IF (ALLOCATED(SrcParamData%uuN0)) THEN
   END IF
     DstParamData%uuN0 = SrcParamData%uuN0
 ENDIF
+IF (ALLOCATED(SrcParamData%twN0)) THEN
+  i1_l = LBOUND(SrcParamData%twN0,1)
+  i1_u = UBOUND(SrcParamData%twN0,1)
+  i2_l = LBOUND(SrcParamData%twN0,2)
+  i2_u = UBOUND(SrcParamData%twN0,2)
+  IF (.NOT. ALLOCATED(DstParamData%twN0)) THEN 
+    ALLOCATE(DstParamData%twN0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%twN0.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%twN0 = SrcParamData%twN0
+ENDIF
 IF (ALLOCATED(SrcParamData%Stif0_QP)) THEN
   i1_l = LBOUND(SrcParamData%Stif0_QP,1)
   i1_u = UBOUND(SrcParamData%Stif0_QP,1)
@@ -3756,9 +3812,6 @@ ENDIF
     DstParamData%blade_IN = SrcParamData%blade_IN
     DstParamData%beta = SrcParamData%beta
     DstParamData%tol = SrcParamData%tol
-    DstParamData%GlbPos = SrcParamData%GlbPos
-    DstParamData%GlbRot = SrcParamData%GlbRot
-    DstParamData%Glb_crv = SrcParamData%Glb_crv
 IF (ALLOCATED(SrcParamData%QPtN)) THEN
   i1_l = LBOUND(SrcParamData%QPtN,1)
   i1_u = UBOUND(SrcParamData%QPtN,1)
@@ -3840,22 +3893,6 @@ IF (ALLOCATED(SrcParamData%uu0)) THEN
     END IF
   END IF
     DstParamData%uu0 = SrcParamData%uu0
-ENDIF
-IF (ALLOCATED(SrcParamData%rrN0)) THEN
-  i1_l = LBOUND(SrcParamData%rrN0,1)
-  i1_u = UBOUND(SrcParamData%rrN0,1)
-  i2_l = LBOUND(SrcParamData%rrN0,2)
-  i2_u = UBOUND(SrcParamData%rrN0,2)
-  i3_l = LBOUND(SrcParamData%rrN0,3)
-  i3_u = UBOUND(SrcParamData%rrN0,3)
-  IF (.NOT. ALLOCATED(DstParamData%rrN0)) THEN 
-    ALLOCATE(DstParamData%rrN0(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%rrN0.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%rrN0 = SrcParamData%rrN0
 ENDIF
 IF (ALLOCATED(SrcParamData%E10)) THEN
   i1_l = LBOUND(SrcParamData%E10,1)
@@ -4158,6 +4195,9 @@ ENDIF
 IF (ALLOCATED(ParamData%uuN0)) THEN
   DEALLOCATE(ParamData%uuN0)
 ENDIF
+IF (ALLOCATED(ParamData%twN0)) THEN
+  DEALLOCATE(ParamData%twN0)
+ENDIF
 IF (ALLOCATED(ParamData%Stif0_QP)) THEN
   DEALLOCATE(ParamData%Stif0_QP)
 ENDIF
@@ -4187,9 +4227,6 @@ IF (ALLOCATED(ParamData%Jacobian)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%uu0)) THEN
   DEALLOCATE(ParamData%uu0)
-ENDIF
-IF (ALLOCATED(ParamData%rrN0)) THEN
-  DEALLOCATE(ParamData%rrN0)
 ENDIF
 IF (ALLOCATED(ParamData%E10)) THEN
   DEALLOCATE(ParamData%E10)
@@ -4294,6 +4331,11 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*3  ! uuN0 upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%uuN0)  ! uuN0
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! twN0 allocated yes/no
+  IF ( ALLOCATED(InData%twN0) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! twN0 upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%twN0)  ! twN0
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! Stif0_QP allocated yes/no
   IF ( ALLOCATED(InData%Stif0_QP) ) THEN
     Int_BufSz   = Int_BufSz   + 2*3  ! Stif0_QP upper/lower bounds for each dimension
@@ -4321,9 +4363,6 @@ ENDIF
       Db_BufSz   = Db_BufSz   + SIZE(InData%blade_IN)  ! blade_IN
       Db_BufSz   = Db_BufSz   + SIZE(InData%beta)  ! beta
       Db_BufSz   = Db_BufSz   + 1  ! tol
-      Db_BufSz   = Db_BufSz   + SIZE(InData%GlbPos)  ! GlbPos
-      Db_BufSz   = Db_BufSz   + SIZE(InData%GlbRot)  ! GlbRot
-      Db_BufSz   = Db_BufSz   + SIZE(InData%Glb_crv)  ! Glb_crv
   Int_BufSz   = Int_BufSz   + 1     ! QPtN allocated yes/no
   IF ( ALLOCATED(InData%QPtN) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! QPtN upper/lower bounds for each dimension
@@ -4353,11 +4392,6 @@ ENDIF
   IF ( ALLOCATED(InData%uu0) ) THEN
     Int_BufSz   = Int_BufSz   + 2*3  ! uu0 upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%uu0)  ! uu0
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! rrN0 allocated yes/no
-  IF ( ALLOCATED(InData%rrN0) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! rrN0 upper/lower bounds for each dimension
-      Db_BufSz   = Db_BufSz   + SIZE(InData%rrN0)  ! rrN0
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! E10 allocated yes/no
   IF ( ALLOCATED(InData%E10) ) THEN
@@ -4591,6 +4625,26 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( .NOT. ALLOCATED(InData%twN0) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%twN0,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%twN0,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%twN0,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%twN0,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%twN0,2), UBOUND(InData%twN0,2)
+        DO i1 = LBOUND(InData%twN0,1), UBOUND(InData%twN0,1)
+          DbKiBuf(Db_Xferred) = InData%twN0(i1,i2)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%Stif0_QP) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -4695,20 +4749,6 @@ ENDIF
     END DO
     DbKiBuf(Db_Xferred) = InData%tol
     Db_Xferred = Db_Xferred + 1
-    DO i1 = LBOUND(InData%GlbPos,1), UBOUND(InData%GlbPos,1)
-      DbKiBuf(Db_Xferred) = InData%GlbPos(i1)
-      Db_Xferred = Db_Xferred + 1
-    END DO
-    DO i2 = LBOUND(InData%GlbRot,2), UBOUND(InData%GlbRot,2)
-      DO i1 = LBOUND(InData%GlbRot,1), UBOUND(InData%GlbRot,1)
-        DbKiBuf(Db_Xferred) = InData%GlbRot(i1,i2)
-        Db_Xferred = Db_Xferred + 1
-      END DO
-    END DO
-    DO i1 = LBOUND(InData%Glb_crv,1), UBOUND(InData%Glb_crv,1)
-      DbKiBuf(Db_Xferred) = InData%Glb_crv(i1)
-      Db_Xferred = Db_Xferred + 1
-    END DO
   IF ( .NOT. ALLOCATED(InData%QPtN) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -4819,31 +4859,6 @@ ENDIF
         DO i2 = LBOUND(InData%uu0,2), UBOUND(InData%uu0,2)
           DO i1 = LBOUND(InData%uu0,1), UBOUND(InData%uu0,1)
             DbKiBuf(Db_Xferred) = InData%uu0(i1,i2,i3)
-            Db_Xferred = Db_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%rrN0) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%rrN0,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%rrN0,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%rrN0,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%rrN0,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%rrN0,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%rrN0,3)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i3 = LBOUND(InData%rrN0,3), UBOUND(InData%rrN0,3)
-        DO i2 = LBOUND(InData%rrN0,2), UBOUND(InData%rrN0,2)
-          DO i1 = LBOUND(InData%rrN0,1), UBOUND(InData%rrN0,1)
-            DbKiBuf(Db_Xferred) = InData%rrN0(i1,i2,i3)
             Db_Xferred = Db_Xferred + 1
           END DO
         END DO
@@ -5410,6 +5425,29 @@ ENDIF
         END DO
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! twN0 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%twN0)) DEALLOCATE(OutData%twN0)
+    ALLOCATE(OutData%twN0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%twN0.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%twN0,2), UBOUND(OutData%twN0,2)
+        DO i1 = LBOUND(OutData%twN0,1), UBOUND(OutData%twN0,1)
+          OutData%twN0(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
+        END DO
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Stif0_QP not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -5536,28 +5574,6 @@ ENDIF
     END DO
     OutData%tol = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
-    i1_l = LBOUND(OutData%GlbPos,1)
-    i1_u = UBOUND(OutData%GlbPos,1)
-    DO i1 = LBOUND(OutData%GlbPos,1), UBOUND(OutData%GlbPos,1)
-      OutData%GlbPos(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
-      Db_Xferred = Db_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%GlbRot,1)
-    i1_u = UBOUND(OutData%GlbRot,1)
-    i2_l = LBOUND(OutData%GlbRot,2)
-    i2_u = UBOUND(OutData%GlbRot,2)
-    DO i2 = LBOUND(OutData%GlbRot,2), UBOUND(OutData%GlbRot,2)
-      DO i1 = LBOUND(OutData%GlbRot,1), UBOUND(OutData%GlbRot,1)
-        OutData%GlbRot(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
-        Db_Xferred = Db_Xferred + 1
-      END DO
-    END DO
-    i1_l = LBOUND(OutData%Glb_crv,1)
-    i1_u = UBOUND(OutData%Glb_crv,1)
-    DO i1 = LBOUND(OutData%Glb_crv,1), UBOUND(OutData%Glb_crv,1)
-      OutData%Glb_crv(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
-      Db_Xferred = Db_Xferred + 1
-    END DO
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! QPtN not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -5686,34 +5702,6 @@ ENDIF
         DO i2 = LBOUND(OutData%uu0,2), UBOUND(OutData%uu0,2)
           DO i1 = LBOUND(OutData%uu0,1), UBOUND(OutData%uu0,1)
             OutData%uu0(i1,i2,i3) = REAL(DbKiBuf(Db_Xferred), R8Ki)
-            Db_Xferred = Db_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! rrN0 not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%rrN0)) DEALLOCATE(OutData%rrN0)
-    ALLOCATE(OutData%rrN0(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%rrN0.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i3 = LBOUND(OutData%rrN0,3), UBOUND(OutData%rrN0,3)
-        DO i2 = LBOUND(OutData%rrN0,2), UBOUND(OutData%rrN0,2)
-          DO i1 = LBOUND(OutData%rrN0,1), UBOUND(OutData%rrN0,1)
-            OutData%rrN0(i1,i2,i3) = REAL(DbKiBuf(Db_Xferred), R8Ki)
             Db_Xferred = Db_Xferred + 1
           END DO
         END DO

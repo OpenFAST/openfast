@@ -18,7 +18,7 @@
 # -- OpenFAST Testing
 # -----------------------------------------------------------
 
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.15)
 project(OpenFAST_RegressionTest Fortran)
 
 include(CTest)
@@ -42,7 +42,7 @@ option(CTEST_NO_RUN_FLAG  "Complete the regression test comparison but do not ex
 # Set the OpenFAST executable configuration option and default
 set(CTEST_OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast/openfast${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the OpenFAST executable to use in testing.")
 
-if(BUILD_OPENFAST_CPP_API)
+if(BUILD_OPENFAST_CPP_DRIVER)
   # Set the OpenFAST executable configuration option and default
   set(CTEST_OPENFASTCPP_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast-cpp/openfastcpp${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Specify the OpenFAST C++ executable to use in testing.")
 endif()
@@ -157,6 +157,11 @@ add_custom_command(
   DEPENDS DISCON
   COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ff_dest}/DISCON_WT3.dll"
 )
+add_custom_command(
+  OUTPUT "${ff_dest}/DISCON_WT4.dll"
+  DEPENDS DISCON
+  COMMAND "${CMAKE_COMMAND}" -E copy "${src}/DISCON/build/DISCON.dll" "${ff_dest}/DISCON_WT4.dll"
+)
 
 add_custom_target(
   regression_test_controllers
@@ -170,6 +175,7 @@ add_custom_target(
     "${ff_dest}/DISCON_WT1.dll"
     "${ff_dest}/DISCON_WT2.dll"
     "${ff_dest}/DISCON_WT3.dll"
+    "${ff_dest}/DISCON_WT4.dll"
 )
 
 add_custom_target(

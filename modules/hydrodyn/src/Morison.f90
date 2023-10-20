@@ -1892,6 +1892,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%NMOutputs  = InitInp%NMOutputs                       ! Number of members to output [ >=0 and <10]
    p%OutSwtch   = InitInp%OutSwtch
    p%MSL2SWL    = InitInp%MSL2SWL
+   p%VisMeshes  = InitInp%VisMeshes                       ! visualization mesh for morison elements
    
    ALLOCATE ( p%MOutLst(p%NMOutputs), STAT = errStat )
    IF ( errStat /= ErrID_None ) THEN
@@ -2180,11 +2181,18 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       
    END IF  
    
+   ! visualization Line2 mesh
+   if (p%VisMeshes) then
+      call VisMeshSetup(u,p,y,m,InitOut,ErrStat2,ErrMsg2); call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, 'Morison_Init' )
+      if ( errStat >= AbortErrLev ) return
+   endif
+
    ! We will call CalcOutput to compute the loads for the initial reference position
    ! Then we can use the computed load components in the Summary File
    ! NOTE: Morison module has no states, otherwise we could no do this. GJH
    
    call Morison_CalcOutput(0.0_DbKi, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
+   IF ( errStat > AbortErrLev ) RETURN  
    
       ! Write Summary information now that everything has been initialized. 
    CALL WriteSummaryFile( InitInp%UnSum, InitInp%Gravity, InitInp%MSL2SWL, InitInp%WtrDpth, InitInp%NJoints, InitInp%NNodes, InitInp%Nodes, p%NMembers, p%Members, &
@@ -2198,6 +2206,106 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    !   END SUBROUTINE
 
 END SUBROUTINE Morison_Init
+subroutine VisMeshSetup(u,p,y,m,InitOut,ErrStat,ErrMsg)
+   type(Morison_InputType),      intent(inout)  :: u
+   type(Morison_ParameterType),  intent(in   )  :: p
+   type(Morison_OutputType),     intent(inout)  :: y
+   type(Morison_MiscVarType),    intent(inout)  :: m
+   type(Morison_InitOutputType), intent(inout)  :: InitOut
+   integer(IntKi),               intent(  out)  :: ErrStat
+   character(*),                 intent(  out)  :: ErrMsg
+
+   integer(IntKi)          :: TotNodes                ! total nodes in all elements (may differ from p%NNodes due to overlaps)
+   integer(IntKi)          :: TotElems                ! total number of elements
+   integer(IntKi)          :: NdIdx, iMem, iNd, NdNum ! indexing
+   real(ReKi)              :: NdPos(3),Pos1(3),Pos2(3)
+   real(R8Ki)              :: MemberOrient(3,3)
+   real(R8Ki)              :: Theta(3)                ! Euler rotations
+   integer(IntKi)          :: ErrStat2
+   character(ErrMsgLen)    :: ErrMsg2
+   character(*), parameter :: RoutineName = 'VisMeshSetup'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! Total number of nodes = sum of all member nodes
+   ! Total number of elements = sum of all member elements
+   TotNodes=0
+   TotElems=0
+   do iMem=1,size(p%Members)
+      TotElems = TotElems + p%Members(iMem)%NElements
+      TotNodes = TotNodes + size(p%Members(iMem)%NodeIndx)
+   enddo
+
+   ! Storage for the radius associated with each node
+   call AllocAry( InitOut%MorisonVisRad, TotNodes, 'MorisonVisRad', ErrStat2, ErrMsg2)
+   if (Failed())  return
+
+   call MeshCreate( BlankMesh    = y%VisMesh,         &
+                    IOS          = COMPONENT_OUTPUT,  &
+                    Nnodes       = TotNodes,          &
+                    ErrStat      = ErrStat2,          &
+                    ErrMess      = ErrMsg2,           &
+                    TranslationDisp = .TRUE.,         &
+                    Orientation     = .TRUE.          )
+   if (Failed())  return
+
+   ! Position the nodes
+   NdNum=0   ! node number in y%VisMesh
+   do iMem=1,size(p%Members)
+
+!FIXME:MemberOrient This is not correct for non-circular or curved members
+      ! calculate an orientation using yaw-pitch-roll sequence with roll defined as zero (insufficient info)
+      Pos1=u%Mesh%Position(:,p%Members(iMem)%NodeIndx(1))                              ! start node position of member
+      Pos2=u%Mesh%Position(:,p%Members(iMem)%NodeIndx(size(p%Members(iMem)%NodeIndx))) ! end   node position of member
+      Theta(1) = 0.0_R8Ki                                                        ! roll (assumed since insufficient info)
+      Theta(2) = acos(real((Pos2(3)-Pos1(3))/norm2(Pos2-Pos1),R8Ki))             ! pitch
+      Theta(3) = atan2(real(Pos2(2)-Pos1(2),R8Ki),real(Pos2(1)-Pos1(1),R8Ki))    ! yaw
+      MemberOrient=EulerConstructZYX(Theta)  ! yaw-pitch-roll sequence
+
+      ! Set mesh postion, orientation, and radius
+      do iNd=1,size(p%Members(iMem)%NodeIndx)
+         NdNum=NdNum+1                             ! node number in y%VisMesh
+         NdIdx = p%Members(iMem)%NodeIndx(iNd)     ! node number in u%Mesh
+         NdPos = u%Mesh%Position(:,NdIdx)          ! node position
+         call MeshPositionNode (y%VisMesh, NdNum, u%Mesh%Position(:,NdIdx), ErrStat2,  ErrMsg2, Orient=MemberOrient)
+         if (Failed())  return
+         InitOut%MorisonVisRad(NdNum) = p%Members(iMem)%RMG(iNd)   ! radius (including marine growth) for visualization
+      enddo
+   enddo
+
+   ! make elements (line nodes start at 0 index, so N+1 total nodes)
+   NdNum=0   ! node number in y%VisMesh
+   do iMem=1,size(p%Members)
+      do iNd=1,size(p%Members(iMem)%NodeIndx)
+         NdNum=NdNum+1                             ! node number in y%VisMesh
+         if (iNd==1) cycle
+         call MeshConstructElement ( Mesh      = y%VisMesh,    &
+                                    Xelement = ELEMENT_LINE2,  &
+                                    P1=NdNum-1, P2=NdNum,      &  ! nodes to connect
+                                    errStat      = ErrStat2,   &
+                                    ErrMess      = ErrMsg2     )
+         if (Failed())  return
+      enddo
+   enddo
+
+   ! commit the assembled mesh
+   call MeshCommit ( y%VisMesh, ErrStat2, ErrMsg2)
+   if (Failed())  return
+
+   ! map the mesh to u%Mesh
+   call MeshMapCreate( u%Mesh, y%VisMesh, m%VisMeshMap, ErrStat2, ErrMsg2 )
+   if (Failed())  return
+
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      !if (Failed) then
+      !   call FailCleanup()
+      !endif
+   end function Failed
+end subroutine VisMeshSetup
 
 
 SUBROUTINE RodrigMat(a, R, errStat, errMsg)
@@ -3042,7 +3150,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             elseif (i == N+1) then
                deltal =  mem%dl/2.0_ReKi
                h_c    = -mem%dl/4.0_ReKi
-            elseif ( mem%i_floor == i+1 ) then ! This node is the upper node of an element which crosses the seabed
+            elseif ( mem%i_floor+1 == i ) then ! This node is the upper node of an element which crosses the seabed
                deltal = mem%dl/2.0_ReKi - mem%h_floor  ! TODO: h_floor is negative valued, should we be subrtracting it from dl/2? GJH
                h_c    = 0.5_ReKi*(mem%dl/2.0_ReKi + mem%h_floor)
             else
@@ -3056,7 +3164,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                   !TODO: Fix this one
                   pos1 =  u%Mesh%Position(:, mem%NodeIndx(i)) ! use reference position for following equation
                   pos1(3) = pos1(3) - p%MSL2SWL
-                  h = (  pos1(3) ) / mem%cosPhi_ref !TODO: Needs to be augmented for wave stretching
+                  h = ( -pos1(3) ) / mem%cosPhi_ref !TODO: Needs to be augmented for wave stretching
                   deltal = mem%dl/2.0 + h
                   h_c    = 0.5*(h-mem%dl/2.0)
                else
@@ -3081,7 +3189,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             ! ------------------- hydrodynamic drag loads: sides: Section 7.1.2 ------------------------ 
             vec = matmul( mem%Ak,m%vrel(:,mem%NodeIndx(i)) )
             f_hydro = mem%Cd(i)*p%WtrDens*mem%RMG(i)*TwoNorm(vec)*vec  +  &
-                      0.5*mem%AxCd(i)*p%WtrDens*pi*mem%RMG(i)*dRdl_p * matmul( dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )*mem%kkt, m%vrel(:,mem%NodeIndx(i)) )
+                      0.5*mem%AxCd(i)*p%WtrDens*pi*mem%RMG(i)*dRdl_p * abs(dot_product( mem%k, m%vrel(:,mem%NodeIndx(i)) )) * matmul( mem%kkt, m%vrel(:,mem%NodeIndx(i)) )
 !            call LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%F_D(:, mem%NodeIndx(i)) )
             call LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_D(:, i) )
             y%Mesh%Force (:,mem%NodeIndx(i)) = y%Mesh%Force (:,mem%NodeIndx(i)) + m%memberLoads(im)%F_D(1:3, i)
@@ -3313,8 +3421,15 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             CALL MrsnOut_WriteOutputs( p%UnOutFile, Time, y, p, errStat, errMsg )         
          END IF
       END IF
-      
-   
+
+
+      ! map the motion to the visulization mesh
+      if (p%VisMeshes) then
+         !FIXME: error handling is incorrect here (overwrites all previous errors/warnings)
+         call Transfer_Point_to_Line2( u%Mesh, y%VisMesh, m%VisMeshMap, ErrStat, ErrMsg )
+      endif
+
+
 END SUBROUTINE Morison_CalcOutput
 
 subroutine LumpDistrHydroLoads( f_hydro, k_hat, dl, h_c, lumpedLoad )

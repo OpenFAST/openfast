@@ -1413,8 +1413,8 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
       DvrFlags%NumTimeStepsDefault  =  .FALSE.
    ENDIF
 
-      ! Make sure there is at least one timestep
-   DvrSettings%NumTimeSteps   =  MAX(DvrSettings%NumTimeSteps,1_IntKi)
+      ! Make sure there is at least one timestep (start at index 0)
+   DvrSettings%NumTimeSteps   =  MAX(DvrSettings%NumTimeSteps,0_IntKi)
 
 
       !--------------------------------------------
