@@ -121,7 +121,7 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
       if (Failed())  return;
 
       ! Z_Depth - Depth of the domain the Z direction.
-   call ParseVarWDefault ( FileInfo_In, CurLine, 'Z_Depth', InputFileData%Z_Depth, defWtrDpth, ErrStat2, ErrMsg2, UnEc )
+   call ParseVarWDefault ( FileInfo_In, CurLine, 'Z_Depth', InputFileData%Z_Depth, defWtrDpth+InputFileData%MSL2SWL, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! NX - Number of nodes in half of the X-direction domain.
