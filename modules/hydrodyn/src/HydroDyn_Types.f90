@@ -92,6 +92,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: TMax      !< Supplied by Driver:  The total simulation time [(sec)]
     REAL(ReKi)  :: PtfmLocationX      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
     REAL(ReKi)  :: PtfmLocationY      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
+    LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
     INTEGER(IntKi)  :: NStepWave = 0      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0      !< NStepWave / 2 [-]
     REAL(SiKi)  :: RhoXg      !< = WtrDens*Gravity [-]
@@ -225,6 +226,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
     INTEGER(IntKi)  :: Jac_ny      !< number of outputs in jacobian matrix [-]
     LOGICAL  :: PointsToSeaState = .TRUE.      !< Flag that determines if the data contains pointers to SeaState module or if new copies (from restart) [-]
+    LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
   END TYPE HydroDyn_ParameterType
 ! =======================
 ! =========  HydroDyn_InputType  =======
@@ -1774,6 +1776,7 @@ ENDIF
     DstInitInputData%TMax = SrcInitInputData%TMax
     DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
     DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
+    DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
     DstInitInputData%NStepWave = SrcInitInputData%NStepWave
     DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
     DstInitInputData%RhoXg = SrcInitInputData%RhoXg
@@ -2206,6 +2209,7 @@ ENDIF
       Db_BufSz   = Db_BufSz   + 1  ! TMax
       Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationX
       Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationY
+      Int_BufSz  = Int_BufSz  + 1  ! VisMeshes
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave2
       Re_BufSz   = Re_BufSz   + 1  ! RhoXg
@@ -2398,6 +2402,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%PtfmLocationY
     Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%VisMeshes, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NStepWave
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NStepWave2
@@ -2953,6 +2959,8 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%PtfmLocationY = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%VisMeshes = TRANSFER(IntKiBuf(Int_Xferred), OutData%VisMeshes)
+    Int_Xferred = Int_Xferred + 1
     OutData%NStepWave = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NStepWave2 = IntKiBuf(Int_Xferred)
@@ -7159,6 +7167,7 @@ IF (ALLOCATED(SrcParamData%dx)) THEN
 ENDIF
     DstParamData%Jac_ny = SrcParamData%Jac_ny
     DstParamData%PointsToSeaState = SrcParamData%PointsToSeaState
+    DstParamData%VisMeshes = SrcParamData%VisMeshes
  END SUBROUTINE HydroDyn_CopyParam
 
  SUBROUTINE HydroDyn_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -7417,6 +7426,7 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! Jac_ny
       Int_BufSz  = Int_BufSz  + 1  ! PointsToSeaState
+      Int_BufSz  = Int_BufSz  + 1  ! VisMeshes
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -7804,6 +7814,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%Jac_ny
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%PointsToSeaState, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%VisMeshes, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE HydroDyn_PackParam
 
@@ -8277,6 +8289,8 @@ ENDIF
     OutData%Jac_ny = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%PointsToSeaState = TRANSFER(IntKiBuf(Int_Xferred), OutData%PointsToSeaState)
+    Int_Xferred = Int_Xferred + 1
+    OutData%VisMeshes = TRANSFER(IntKiBuf(Int_Xferred), OutData%VisMeshes)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE HydroDyn_UnPackParam
 

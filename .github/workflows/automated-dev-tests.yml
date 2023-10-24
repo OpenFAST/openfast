@@ -41,7 +41,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v1
@@ -77,7 +77,7 @@ jobs:
         run: |
           cmake --build . --target all
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-all-debug-${{ github.sha }}
@@ -130,7 +130,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -160,7 +160,7 @@ jobs:
         run: |
           cmake --build . --target regression_test_module_drivers
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-drivers-release-${{ github.sha }}
@@ -176,7 +176,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Set up MATLAB
         uses: matlab-actions/setup-matlab@v1
@@ -205,6 +205,7 @@ jobs:
             -DVARIABLE_TRACKING=OFF \
             -DBUILD_FASTFARM:BOOL=ON \
             -DBUILD_OPENFAST_CPP_API:BOOL=ON \
+            -DBUILD_OPENFAST_CPP_DRIVER:BOOL=ON \
             -DBUILD_SHARED_LIBS:BOOL=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
@@ -214,7 +215,7 @@ jobs:
         working-directory: ${{runner.workspace}}/openfast/build
         run: cmake --build . --target openfast_postlib
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-postlib-release-${{ github.sha }}
@@ -225,14 +226,14 @@ jobs:
     needs: build-postlib-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-postlib-release-${{ github.sha }}
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -250,9 +251,9 @@ jobs:
       - name: Build OpenFAST C-Interfaces
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target openfastlib openfast_cpp openfastcpp aerodyn_inflow_c_binding moordyn_c_binding ifw_c_binding hydrodyn_c_binding regression_test_controllers
+          cmake --build . --target openfastlib openfast_cpp_driver openfastcpp aerodyn_inflow_c_binding moordyn_c_binding ifw_c_binding hydrodyn_c_binding regression_test_controllers
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-interfaces-release-${{ github.sha }}
@@ -263,14 +264,14 @@ jobs:
     needs: build-postlib-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-postlib-release-${{ github.sha }}
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -290,7 +291,7 @@ jobs:
         run: |
           cmake --build . --target openfast
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
@@ -301,14 +302,14 @@ jobs:
     needs: build-postlib-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-postlib-release-${{ github.sha }}
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -328,7 +329,7 @@ jobs:
         run: |
           cmake --build . --target FAST.Farm
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-fastfarm-release-${{ github.sha }}
@@ -348,7 +349,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -403,14 +404,14 @@ jobs:
     needs: build-drivers-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-drivers-release-${{ github.sha }}
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -461,14 +462,14 @@ jobs:
     needs: build-all-debug
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-all-debug-${{ github.sha }}
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -522,14 +523,14 @@ jobs:
     needs: build-interfaces-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-interfaces-release-${{ github.sha }}
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -570,14 +571,14 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -598,7 +599,7 @@ jobs:
       - name: Run 5MW tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j8 \
+          ctest -VV -j4 \
           -L openfast \
           -LE "cpp|linear|python|fastlib|aeromap" \
           -E "5MW_OC4Semi_WSt_WavesWN|5MW_OC3Mnpl_DLL_WTurb_WavesIrr|5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth|5MW_OC3Trpd_DLL_WSt_WavesReg|5MW_Land_BD_DLL_WTurb"
@@ -702,14 +703,14 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -752,14 +753,14 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -802,14 +803,14 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -852,14 +853,14 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -902,14 +903,14 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -952,14 +953,14 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
@@ -979,7 +980,7 @@ jobs:
       - name: Run OpenFAST linearization tests
         working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          ctest -VV -j8 -L linear
+          ctest -VV -j4 -L linear
       - name: Failing test artifacts
         uses: actions/upload-artifact@v3
         if: failure()
@@ -1001,14 +1002,14 @@ jobs:
     needs: build-fastfarm-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-fastfarm-release-${{ github.sha }}
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |

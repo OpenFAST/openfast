@@ -16,12 +16,10 @@ The Fortran implementation of MoorDyn, which has been developed
 following the FAST Modularization Framework, is included as a module in
 OpenFAST.
 
-For the C++ implementation of MoorDyn, see http://www.matt-hall.ca/moordyn.
-"MoorDyn C" can be compiled as a dynamically-linked library and features
-simpler functions for easy coupling with models or scripts coded in C/C++,
-Fortran, Matlab/Simulink, etc. It has recently been integrated into WEC-Sim.
+For the C++ implementation of MoorDyn, see https://github.com/FloatingArrayDesign/MoorDyn.
+"MoorDynC" is more adaptable to unique use cases and couplings. It can be compiled as a dynamically-linked library or wrapped for use in Python (as a module), Fortran, and Matlab. It features simpler functions for easy coupling with models or scripts coded in C/C++, Fortran, Matlab/Simulink, etc. An example of this coupling is it’s integration into WEC-Sim.
 
-Both forms of MoorDyn feature the same underlying mooring model, use similar
+Both forms of MoorDyn feature the same underlying mooring model, use the same
 input and output conventions, and are being updated and improved in parallel.
 They follow the same version numbering, with a "C" or "F" suffix for
 differentiation.
