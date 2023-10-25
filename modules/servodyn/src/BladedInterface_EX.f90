@@ -405,35 +405,37 @@ contains
          u%MsrPositionsZ = InitInp%MsrPositionsZ
       endif
       ! Write summary info to summary file
-      if (p%SensorType > 0) then    ! Set these here rather than overwrite every loop step in SensorType 1 or 3
-         J=LidarMsr_StartIdx
-         call WrSumInfoRcvd( J+0, '','Lidar input: Sensor Type')
-         call WrSumInfoRcvd( J+1, '','Lidar input: Number of Beams')
-         call WrSumInfoRcvd( J+2, '','Lidar input: Number of Pulse Gates')
-         call WrSumInfoRcvd( J+3, '','Lidar input: Reference average wind speed for the lidar')
-      endif
-      if (p%SensorType == 1) THEN
-         do I=1,min(p%NumBeam,(LidarMsr_MaxChan-4)/4)    ! Don't overstep the end for the lidar measure group
-            J=LidarMsr_StartIdx + 4 + (I-1)
-            call WrSumInfoRcvd( J+0,                '','Lidar input: Measured Wind Speeds ('//trim(Num2LStr(I))//')')
-            call WrSumInfoRcvd( J+p%NumBeam*1,      '','Lidar input: Measurement Points X ('//trim(Num2LStr(I))//')')
-            call WrSumInfoRcvd( J+p%NumBeam*2,      '','Lidar input: Measurement Points Y ('//trim(Num2LStr(I))//')')
-            call WrSumInfoRcvd( J+p%NumBeam*3,      '','Lidar input: Measurement Points Z ('//trim(Num2LStr(I))//')')
-         enddo
-      elseif (p%SensorType == 2) THEN
-         J=LidarMsr_StartIdx
-         call WrSumInfoRcvd( J+4,                   '','Lidar input: Measured Wind Speeds')
-         call WrSumInfoRcvd( J+5,                   '','Lidar input: Measurement Points X')
-         call WrSumInfoRcvd( J+6,                   '','Lidar input: Measurement Points Y')
-         call WrSumInfoRcvd( J+7,                   '','Lidar input: Measurement Points Z')
-      elseif (p%SensorType == 3) THEN
-         do I=1,min(p%NumPulseGate,(LidarMsr_MaxChan-4)/4)    ! Don't overstep the end for the lidar measure group
-            J=LidarMsr_StartIdx + 4 + (I-1)
-            call WrSumInfoRcvd( J+0,                '','Lidar input: Measured Wind Speeds ('//trim(Num2LStr(I))//')')
-            call WrSumInfoRcvd( J+p%NumPulseGate*1, '','Lidar input: Measurement Points X ('//trim(Num2LStr(I))//')')
-            call WrSumInfoRcvd( J+p%NumPulseGate*2, '','Lidar input: Measurement Points Y ('//trim(Num2LStr(I))//')')
-            call WrSumInfoRcvd( J+p%NumPulseGate*3, '','Lidar input: Measurement Points Z ('//trim(Num2LStr(I))//')')
-         enddo
+      if (UnSum > 0) then
+         if (p%SensorType > 0) then    ! Set these here rather than overwrite every loop step in SensorType 1 or 3
+            J=LidarMsr_StartIdx
+            call WrSumInfoRcvd( J+0, '','Lidar input: Sensor Type')
+            call WrSumInfoRcvd( J+1, '','Lidar input: Number of Beams')
+            call WrSumInfoRcvd( J+2, '','Lidar input: Number of Pulse Gates')
+            call WrSumInfoRcvd( J+3, '','Lidar input: Reference average wind speed for the lidar')
+         endif
+         if (p%SensorType == 1) THEN
+            do I=1,min(p%NumBeam,(LidarMsr_MaxChan-4)/4)    ! Don't overstep the end for the lidar measure group
+               J=LidarMsr_StartIdx + 4 + (I-1)
+               call WrSumInfoRcvd( J+0,                '','Lidar input: Measured Wind Speeds ('//trim(Num2LStr(I))//')')
+               call WrSumInfoRcvd( J+p%NumBeam*1,      '','Lidar input: Measurement Points X ('//trim(Num2LStr(I))//')')
+               call WrSumInfoRcvd( J+p%NumBeam*2,      '','Lidar input: Measurement Points Y ('//trim(Num2LStr(I))//')')
+               call WrSumInfoRcvd( J+p%NumBeam*3,      '','Lidar input: Measurement Points Z ('//trim(Num2LStr(I))//')')
+            enddo
+         elseif (p%SensorType == 2) THEN
+            J=LidarMsr_StartIdx
+            call WrSumInfoRcvd( J+4,                   '','Lidar input: Measured Wind Speeds')
+            call WrSumInfoRcvd( J+5,                   '','Lidar input: Measurement Points X')
+            call WrSumInfoRcvd( J+6,                   '','Lidar input: Measurement Points Y')
+            call WrSumInfoRcvd( J+7,                   '','Lidar input: Measurement Points Z')
+         elseif (p%SensorType == 3) THEN
+            do I=1,min(p%NumPulseGate,(LidarMsr_MaxChan-4)/4)    ! Don't overstep the end for the lidar measure group
+               J=LidarMsr_StartIdx + 4 + (I-1)
+               call WrSumInfoRcvd( J+0,                '','Lidar input: Measured Wind Speeds ('//trim(Num2LStr(I))//')')
+               call WrSumInfoRcvd( J+p%NumPulseGate*1, '','Lidar input: Measurement Points X ('//trim(Num2LStr(I))//')')
+               call WrSumInfoRcvd( J+p%NumPulseGate*2, '','Lidar input: Measurement Points Y ('//trim(Num2LStr(I))//')')
+               call WrSumInfoRcvd( J+p%NumPulseGate*3, '','Lidar input: Measurement Points Z ('//trim(Num2LStr(I))//')')
+            enddo
+         endif
       endif
    end subroutine InitLidarMeas
 

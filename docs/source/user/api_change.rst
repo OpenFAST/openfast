@@ -9,7 +9,7 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
-OpenFAST v3.5.0 to OpenFAST dev
+OpenFAST v3.5.1 to OpenFAST dev
 ----------------------------------
 
 The HydroDyn module was split into HydroDyn and SeaState.  This results in a
@@ -24,6 +24,16 @@ Module                                        Line  Flag Name           Example 
 HydroDyn                                       all                      Complete restructuring of input file
 SeaState                                       all                      New module (split from HydroDyn, so contains some inputs previously found in HydroDyn)
 ============================================= ==== ==================== ========================================================================================================================================================================================================
+
+
+
+OpenFAST v3.5.0 to OpenFAST v3.5.1 
+----------------------------------
+
+No input files changes were made.  Some input files now include additional
+output channels:  AeroDyn nodal outputs for another coordinate system, new
+MoorDyn output names (Connect changed to Point).
+
 
 
 OpenFAST v3.4.0 to OpenFAST v3.5.0 
@@ -71,7 +81,7 @@ Added in OpenFAST `3.4.0`
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Module                                        Line  Flag Name        Example Value
 ============================================= ==== ================= ========================================================================================================================================================================================================
-FAST.Farm                                     17   ModWake           1          Mod_Wake          - Switch between wake formulations {1:Polar, 2:Curl, 3:Cartesian} (-) (switch)
+FAST.Farm                                     42\* ModWake           1          Mod_Wake          - Switch between wake formulations {1:Polar, 2:Curl, 3:Cartesian} (-) (switch)
 FAST.Farm                                     67   CurlSection       --- CURLED-WAKE PARAMETERS [only used if Mod_Wake=2 or 3] ---
 FAST.Farm                                     68   Swirl             DEFAULT    Swirl             - Switch to include swirl velocities in wake (-) (switch) [DEFAULT=True]
 FAST.Farm                                     69   k_VortexDecay     DEFAULT    k_VortexDecay     - Vortex decay constant for curl (-) [DEFAULT=0.01] [only used if Mod_Wake=2]

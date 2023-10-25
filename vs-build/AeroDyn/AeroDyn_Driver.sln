@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.40629.0
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.33529.622
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "AeroDyn_Driver", "AeroDyn_Driver.vfproj", "{97CEFEB9-1DCB-470E-A231-E1DA2F21A9CE}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -18,6 +18,8 @@ Global
 		Debug|x64 = Debug|x64
 		Release_Double|Win32 = Release_Double|Win32
 		Release_Double|x64 = Release_Double|x64
+		Release_OpenMP|Win32 = Release_OpenMP|Win32
+		Release_OpenMP|x64 = Release_OpenMP|x64
 		Release|Win32 = Release|Win32
 		Release|x64 = Release|x64
 	EndGlobalSection
@@ -34,6 +36,10 @@ Global
 		{97CEFEB9-1DCB-470E-A231-E1DA2F21A9CE}.Release_Double|Win32.Build.0 = Release_Double|Win32
 		{97CEFEB9-1DCB-470E-A231-E1DA2F21A9CE}.Release_Double|x64.ActiveCfg = Release_Double|x64
 		{97CEFEB9-1DCB-470E-A231-E1DA2F21A9CE}.Release_Double|x64.Build.0 = Release_Double|x64
+		{97CEFEB9-1DCB-470E-A231-E1DA2F21A9CE}.Release_OpenMP|Win32.ActiveCfg = Release_OpenMP|Win32
+		{97CEFEB9-1DCB-470E-A231-E1DA2F21A9CE}.Release_OpenMP|Win32.Build.0 = Release_OpenMP|Win32
+		{97CEFEB9-1DCB-470E-A231-E1DA2F21A9CE}.Release_OpenMP|x64.ActiveCfg = Release_OpenMP|x64
+		{97CEFEB9-1DCB-470E-A231-E1DA2F21A9CE}.Release_OpenMP|x64.Build.0 = Release_OpenMP|x64
 		{97CEFEB9-1DCB-470E-A231-E1DA2F21A9CE}.Release|Win32.ActiveCfg = Release|Win32
 		{97CEFEB9-1DCB-470E-A231-E1DA2F21A9CE}.Release|Win32.Build.0 = Release|Win32
 		{97CEFEB9-1DCB-470E-A231-E1DA2F21A9CE}.Release|x64.ActiveCfg = Release|x64
@@ -50,6 +56,10 @@ Global
 		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_Double|Win32.Build.0 = Release|Win32
 		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_Double|x64.ActiveCfg = Release|Win32
 		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_Double|x64.Build.0 = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|Win32.ActiveCfg = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|Win32.Build.0 = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|x64.ActiveCfg = Release|Win32
+		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release_OpenMP|x64.Build.0 = Release|Win32
 		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|Win32.ActiveCfg = Release|Win32
 		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|Win32.Build.0 = Release|Win32
 		{DA16A3A6-3297-4628-9E46-C6FA0E3C4D16}.Release|x64.ActiveCfg = Release|Win32
@@ -57,5 +67,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B3809791-8085-4B91-AC43-EB756F90F448}
 	EndGlobalSection
 EndGlobal

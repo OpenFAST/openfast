@@ -29,6 +29,7 @@ MODULE AeroDyn_Inflow_C_BINDING
 
  
    IMPLICIT NONE
+   SAVE
 
    PUBLIC :: AeroDyn_Inflow_C_Init
    !PUBLIC :: AeroDyn_Inflow_C_ReInit

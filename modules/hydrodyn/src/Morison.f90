@@ -1938,6 +1938,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%WaveDisp   = InitInp%WaveDisp
    p%AMMod      = InitInp%AMMod
    p%WaveStMod  = InitInp%WaveStMod
+   p%VisMeshes  = InitInp%VisMeshes                       ! visualization mesh for morison elements
 
    ! Only compute added-mass force up to the free surface if wave stretching is enabled
    IF ( p%WaveStMod .EQ. 0_IntKi ) THEN
@@ -2292,6 +2293,12 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    if ( errStat >= AbortErrLev ) return
    
+   ! visualization Line2 mesh
+   if (p%VisMeshes) then
+      call VisMeshSetup(u,p,y,m,InitOut,ErrStat2,ErrMsg2); call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, 'Morison_Init' )
+      if ( errStat >= AbortErrLev ) return
+   endif
+
    ! We will call CalcOutput to compute the loads for the initial reference position
    ! Then we can use the computed load components in the Summary File
    ! NOTE: Morison module has no states, otherwise we could no do this. GJH
@@ -2312,7 +2319,111 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    !   END SUBROUTINE
 
 END SUBROUTINE Morison_Init
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
+subroutine VisMeshSetup(u,p,y,m,InitOut,ErrStat,ErrMsg)
+   type(Morison_InputType),      intent(inout)  :: u
+   type(Morison_ParameterType),  intent(in   )  :: p
+   type(Morison_OutputType),     intent(inout)  :: y
+   type(Morison_MiscVarType),    intent(inout)  :: m
+   type(Morison_InitOutputType), intent(inout)  :: InitOut
+   integer(IntKi),               intent(  out)  :: ErrStat
+   character(*),                 intent(  out)  :: ErrMsg
+
+   integer(IntKi)          :: TotNodes                ! total nodes in all elements (may differ from p%NNodes due to overlaps)
+   integer(IntKi)          :: TotElems                ! total number of elements
+   integer(IntKi)          :: NdIdx, iMem, iNd, NdNum ! indexing
+   real(ReKi)              :: NdPos(3),Pos1(3),Pos2(3)
+   real(R8Ki)              :: MemberOrient(3,3)
+   real(R8Ki)              :: Theta(3)                ! Euler rotations
+   integer(IntKi)          :: ErrStat2
+   character(ErrMsgLen)    :: ErrMsg2
+   character(*), parameter :: RoutineName = 'VisMeshSetup'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! Total number of nodes = sum of all member nodes
+   ! Total number of elements = sum of all member elements
+   TotNodes=0
+   TotElems=0
+   do iMem=1,size(p%Members)
+      TotElems = TotElems + p%Members(iMem)%NElements
+      TotNodes = TotNodes + size(p%Members(iMem)%NodeIndx)
+   enddo
+
+   ! Storage for the radius associated with each node
+   call AllocAry( InitOut%MorisonVisRad, TotNodes, 'MorisonVisRad', ErrStat2, ErrMsg2)
+   if (Failed())  return
+
+   call MeshCreate( BlankMesh    = y%VisMesh,         &
+                    IOS          = COMPONENT_OUTPUT,  &
+                    Nnodes       = TotNodes,          &
+                    ErrStat      = ErrStat2,          &
+                    ErrMess      = ErrMsg2,           &
+                    TranslationDisp = .TRUE.,         &
+                    Orientation     = .TRUE.          )
+   if (Failed())  return
+
+   ! Position the nodes
+   NdNum=0   ! node number in y%VisMesh
+   do iMem=1,size(p%Members)
+
+!FIXME:MemberOrient This is not correct for non-circular or curved members
+      ! calculate an orientation using yaw-pitch-roll sequence with roll defined as zero (insufficient info)
+      Pos1=u%Mesh%Position(:,p%Members(iMem)%NodeIndx(1))                              ! start node position of member
+      Pos2=u%Mesh%Position(:,p%Members(iMem)%NodeIndx(size(p%Members(iMem)%NodeIndx))) ! end   node position of member
+      Theta(1) = 0.0_R8Ki                                                        ! roll (assumed since insufficient info)
+      Theta(2) = acos(real((Pos2(3)-Pos1(3))/norm2(Pos2-Pos1),R8Ki))             ! pitch
+      Theta(3) = atan2(real(Pos2(2)-Pos1(2),R8Ki),real(Pos2(1)-Pos1(1),R8Ki))    ! yaw
+      MemberOrient=EulerConstructZYX(Theta)  ! yaw-pitch-roll sequence
+
+      ! Set mesh postion, orientation, and radius
+      do iNd=1,size(p%Members(iMem)%NodeIndx)
+         NdNum=NdNum+1                             ! node number in y%VisMesh
+         NdIdx = p%Members(iMem)%NodeIndx(iNd)     ! node number in u%Mesh
+         NdPos = u%Mesh%Position(:,NdIdx)          ! node position
+         call MeshPositionNode (y%VisMesh, NdNum, u%Mesh%Position(:,NdIdx), ErrStat2,  ErrMsg2, Orient=MemberOrient)
+         if (Failed())  return
+         InitOut%MorisonVisRad(NdNum) = p%Members(iMem)%RMG(iNd)   ! radius (including marine growth) for visualization
+      enddo
+   enddo
+
+   ! make elements (line nodes start at 0 index, so N+1 total nodes)
+   NdNum=0   ! node number in y%VisMesh
+   do iMem=1,size(p%Members)
+      do iNd=1,size(p%Members(iMem)%NodeIndx)
+         NdNum=NdNum+1                             ! node number in y%VisMesh
+         if (iNd==1) cycle
+         call MeshConstructElement ( Mesh      = y%VisMesh,    &
+                                    Xelement = ELEMENT_LINE2,  &
+                                    P1=NdNum-1, P2=NdNum,      &  ! nodes to connect
+                                    errStat      = ErrStat2,   &
+                                    ErrMess      = ErrMsg2     )
+         if (Failed())  return
+      enddo
+   enddo
+
+   ! commit the assembled mesh
+   call MeshCommit ( y%VisMesh, ErrStat2, ErrMsg2)
+   if (Failed())  return
+
+   ! map the mesh to u%Mesh
+   call MeshMapCreate( u%Mesh, y%VisMesh, m%VisMeshMap, ErrStat2, ErrMsg2 )
+   if (Failed())  return
+
+contains
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      !if (Failed) then
+      !   call FailCleanup()
+      !endif
+   end function Failed
+end subroutine VisMeshSetup
+
+
 SUBROUTINE RodrigMat(a, R, errStat, errMsg)
    ! calculates rotation matrix R to rotate unit vertical vector to direction of input vector a
    
@@ -3922,7 +4033,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    !---------------------------------------------------------------------------------------------------------------!    
    ! Map calculated results into the y%WriteOutput Array
    CALL MrsnOut_MapOutputs(y, p, u, m)
-        
+
+   ! map the motion to the visulization mesh
+   if (p%VisMeshes) then
+      !FIXME: error handling is incorrect here (overwrites all previous errors/warnings)
+      call Transfer_Point_to_Line2( u%Mesh, y%VisMesh, m%VisMeshMap, ErrStat, ErrMsg )
+   endif
+
 
 
    CONTAINS

@@ -2876,6 +2876,8 @@ subroutine DiskAvgValues(p, u, m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth)
    ! calculate disk-averaged velocities
    m%AvgDiskVel = 0.0_ReKi
    m%AvgDiskVelDist = 0.0_ReKi ! TODO potentially get rid of that in the future
+   if (p%NumBlades <= 0) return  ! The Intel compiler gets array bounds issues in this routine with no blades.
+
    do k=1,p%NumBlades
       do j=1,p%NumBlNds
          m%AvgDiskVelDist = m%AvgDiskVelDist + m%DisturbedInflow(:,j,k)
