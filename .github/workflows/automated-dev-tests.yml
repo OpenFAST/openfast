@@ -624,7 +624,7 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
@@ -654,14 +654,14 @@ jobs:
     needs: build-openfast-release
     steps:
       - name: Cache the workspace
-        uses: actions/cache@v3.0.4
+        uses: actions/cache@v3
         with:
           path: ${{runner.workspace}}
           key: build-openfast-release-${{ github.sha }}
       - name: Setup Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip'
       - name: Install dependencies
         run: |
