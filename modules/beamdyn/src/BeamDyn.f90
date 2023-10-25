@@ -50,7 +50,16 @@ MODULE BeamDyn
                                                !   states(z)
    PUBLIC :: BD_GetOP                          !< Routine to pack the operating point values (for linearization) into arrays
 
+   PUBLIC :: BD_UpdateGlobalRef      !< update the BeamDyn reference.  The reference for the calculations follows u%RootMotionMesh
+                                               !  and therefore x%q must be updated from T -> T+DT to include the root motion from T->T+DT
 
+   ! The original formulation kept all states in the inertial reference frame.  This has been leading to convergence issues
+   ! when there is a large rotational change from the reference frame (i.e. large turbine yaw, large blade pitch).  During
+   ! the development of the tight coupling algorithm for OpenFAST, we decided to try changing all the states in BeamDyn to
+   ! follow the moving BladeRootMotion mesh.  This requires changing the states after an UpdateStates call to be relative to
+   ! the new BladeRootMotion mesh orientation and position.
+   ! Upadate the reference frame after each State update (or use the old method)?
+   LOGICAL, PARAMETER :: ChangeRefFrame = .true.
 
 CONTAINS
 
@@ -109,48 +118,25 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
    CALL DispNVD( BeamDyn_Ver )
 
-   CALL BD_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,Interval,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
+   CALL BD_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,Interval,ErrStat2,ErrMsg2); if (Failed()) return
+   CALL BD_ValidateInputData( InitInp, InputFileData, ErrStat2, ErrMsg2 ); if (Failed()) return
 
-   CALL BD_ValidateInputData( InitInp, InputFileData, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
 
+      ! The reference frame is set by the root motion mesh initial position
+   call InitRefFrame( InitInp, OtherState, ErrStat2, ErrMsg2 ); if (Failed()) return
 
       ! this routine sets *some* of the parameters (basically the "easy" ones)
-   call SetParameters(InitInp, InputFileData, p, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
+   call SetParameters(InitInp, InputFileData, p, OtherState, ErrStat2, ErrMsg2); if (Failed()) return
 
 
    ! Temporary GLL point intrinsic coordinates array
-   CALL BD_GenerateGLL(p%nodes_per_elem,GLL_nodes,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
+   CALL BD_GenerateGLL(p%nodes_per_elem,GLL_nodes,ErrStat2,ErrMsg2); if (Failed()) return
 
    ! In the following, trapezoidalpointweight should be generalized to multi-element; likewise for gausspointweight
 
    IF(p%quadrature .EQ. GAUSS_QUADRATURE) THEN
 
-       CALL BD_GaussPointWeight(p%nqp,p%QPtN,p%QPtWeight,ErrStat2,ErrMsg2) !calculates p%QPtN and p%QPtWeight
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-          if (ErrStat >= AbortErrLev) then
-             call cleanup()
-             return
-          end if
+       CALL BD_GaussPointWeight(p%nqp,p%QPtN,p%QPtWeight,ErrStat2,ErrMsg2); if (Failed()) return !calculates p%QPtN and p%QPtWeight
 
    ELSEIF(p%quadrature .EQ. TRAP_QUADRATURE) THEN
 
@@ -159,41 +145,22 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
    ENDIF
 
       ! compute physical distances to set positions of p%uuN0 (FE GLL_Nodes) (depends on p%SP_Coef):
-   call InitializeNodalLocations(InputFileData%member_total,InputFileData%kp_member,InputFileData%kp_coordinate,p,GLL_nodes,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
+   call InitializeNodalLocations(InputFileData%member_total,InputFileData%kp_member,InputFileData%kp_coordinate,p,GLL_nodes,ErrStat2,ErrMsg2); if (Failed()) return
 
       ! compute p%Shp, p%ShpDer, and p%Jacobian:
    CALL BD_InitShpDerJaco( GLL_Nodes, p )
 
       ! set mass and stiffness matrices: p%Stif0_QP and p%Mass0_QP
-   call InitializeMassStiffnessMatrices(InputFileData, p, ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
+   call InitializeMassStiffnessMatrices(InputFileData, p, ErrStat2,ErrMsg2); if (Failed()) return
 
       ! Set the initial displacements: p%uu0, p%E10
    CALL BD_QuadraturePointDataAt0(p)
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
-
-!FIXME: shift mass stiffness matrices here from the keypoint line to the calculated curvature line in p%uu0
-!   CALL BD_KMshift2Ref(p)
 
 
-   call Initialize_FEweights(p,GLL_nodes,ErrStat2,ErrMsg2) ! set p%FEweight; needs p%uuN0 and p%uu0
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call Initialize_FEweights(p,GLL_nodes,ErrStat2,ErrMsg2); if (Failed()) return ! set p%FEweight; needs p%uuN0 and p%uu0
       
       ! compute blade mass, CG, and IN for summary file:
-   CALL BD_ComputeBladeMassNew( p, ErrStat2, ErrMsg2 )  !computes p%blade_mass,p%blade_CG,p%blade_IN
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_ComputeBladeMassNew( p, ErrStat2, ErrMsg2 ); if (Failed()) return !computes p%blade_mass,p%blade_CG,p%blade_IN
 
 
       ! Actuator
@@ -209,45 +176,19 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
 
       ! Define and initialize system inputs (set up and initialize input meshes) here:
-   call Init_u(InitInp, p, u, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call Init_u(InitInp, p, OtherState, u, ErrStat2, ErrMsg2); if (Failed()) return
 
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
+      ! allocate and initialize other states:  Also sets the GlbRot for the displaced position (needed for x%q initialization)
+   call Init_OtherStates(u, p, OtherState, ErrStat2, ErrMsg2); if (Failed()) return
 
       ! allocate and initialize continuous states (need to do this after initializing inputs):
-   call Init_ContinuousStates(p, u, x, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
-
-      ! allocate and initialize other states:
-   call Init_OtherStates(p, OtherState, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call Init_ContinuousStates(p, u, x, OtherState, ErrStat2, ErrMsg2); if (Failed()) return
 
       ! initialize outputs (need to do this after initializing inputs and parameters (p%nnu0))
-   call Init_y(p, u, y, ErrStat2, ErrMsg2)
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
-
+   call Init_y(p, OtherState, u, y, ErrStat2, ErrMsg2); if (Failed()) return
 
       ! allocate and initialize misc vars (do this after initializing input and output meshes):
-   call Init_MiscVars(p, u, y, MiscVar, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
-
+   call Init_MiscVars(p, u, y, MiscVar, ErrStat2, ErrMsg2); if (Failed()) return
 
 
       ! Now that we have the initial conditions, we can run a quasi-steady-state solve
@@ -257,8 +198,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
          ! This will set m%qp%aaa, OtherState%Acc, x%q, and x%dqdt
          ! (note that we won't ramp loads as there are no loads provided yet.)
          ! if this is not successful, it restores the values of x and sets OtherState%Acc=0
-      CALL BD_QuasiStatic(u,p,x,OtherState,MiscVar,ErrStat2,ErrMsg2, RampLoad=.false.)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL BD_QuasiStatic(u,p,x,OtherState,MiscVar,ErrStat2,ErrMsg2, RampLoad=.false.); if (Failed()) return
 
       QuasiStaticInitialized = ErrStat2 == ErrID_None      ! We have now run the quasi-static initialization once, so don't run again.
    ELSE
@@ -280,7 +220,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
       
    end if
          
-   CALL Set_BldMotion_NoAcc(p, x, MiscVar, y)
+   CALL Set_BldMotion_NoAcc(p, x, OtherState, MiscVar, y)
 
    IF(QuasiStaticInitialized) THEN
       ! Set the BldMotion mesh acceleration but only if quasistatic succeeded
@@ -293,16 +233,14 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
       !.................................
    
       ! set initialization outputs
-   call SetInitOut(p, InitOut, errStat2, errMsg2)
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call SetInitOut(p, InitOut, errStat2, errMsg2); if (Failed()) return
 
 
    !...............................................
 
        ! Print the summary file if requested:
    if (InputFileData%SumPrint) then
-      call BD_PrintSum( p, x, MiscVar, InitInp, ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call BD_PrintSum( p, x, OtherState, MiscVar, InitInp, ErrStat2, ErrMsg2 ); if (Failed()) return
    end if
 
    !...............................................
@@ -316,9 +254,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
       !............................................................................................
       ! Initialize Jacobian:
       !............................................................................................
-   if (InitInp%Linearize .or. p%CompAeroMaps) then
-      call Init_Jacobian( p, u, y, MiscVar, InitOut, ErrStat2, ErrMsg2)
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (InitInp%Linearize) then
+      call Init_Jacobian( p, u, y, MiscVar, InitOut, ErrStat2, ErrMsg2); if (Failed()) return
    end if
 
    
@@ -326,10 +263,15 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
    return
 CONTAINS
-      SUBROUTINE Cleanup()
-         if (allocated(GLL_nodes )) deallocate(GLL_nodes )
-         CALL BD_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2)
-      END SUBROUTINE Cleanup
+   SUBROUTINE Cleanup()
+      if (allocated(GLL_nodes )) deallocate(GLL_nodes )
+      CALL BD_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2)
+   END SUBROUTINE Cleanup
+   logical function Failed()
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      Failed = ErrStat >= AbortErrLev
+      if (Failed)    call Cleanup()
+   end function Failed
 END SUBROUTINE BD_Init
 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -888,12 +830,66 @@ subroutine SetInitOut(p, InitOut, ErrStat, ErrMsg)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 end subroutine SetInitOut
+
+!-----------------------------------------------------------------------------------------------------------------------------------
+!> Set the global rotation information -- stored in OtherStates
+subroutine InitRefFrame( InitInp, OtherState, ErrStat, ErrMsg )
+   type(BD_InitInputType),       intent(in   )  :: InitInp           !< Input data for initialization routine
+   type(BD_OtherStateType),      intent(inout)  :: OtherState        !< Global rotations are stored in otherstate
+   integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+   integer(intKi)                               :: ErrStat2          ! temporary Error status
+   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
+   character(*), parameter                      :: RoutineName = 'InitRefFrame'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+      ! Global position vector
+   OtherState%GlbPos = InitInp%GlbPos
+
+      ! Global rotation tensor.  What comes from the driver may not be a properly formed
+      ! DCM (may have roundoff), so recalculate it from the extracted WM parameters.
+   OtherState%GlbRot = TRANSPOSE(InitInp%GlbRot) ! matrix that now transfers from local to global (FAST's DCMs convert from global to local)
+   CALL BD_CrvExtractCrv(OtherState%GlbRot,OtherState%Glb_crv, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   CALL BD_CrvMatrixR(OtherState%Glb_crv,OtherState%GlbRot) ! ensure that the rotation matrix is a DCM in double precision (this should be the same as TRANSPOSE(InitInp%GlbRot))
+end subroutine InitRefFrame
+
+!-----------------------------------------------------------------------------------------------------------------------------------
+!> Set the global rotation information -- stored in OtherStates
+!! This only works for u in the global frame!!!!
+subroutine SetRefFrame( u, GlbPos, GlbRot, Glb_Crv, ErrStat, ErrMsg )
+   type(BD_InputType),           intent(in   )  :: u                 !< Inputs
+   real(R8Ki),                   intent(  out)  :: GlbPos(3)
+   real(R8Ki),                   intent(  out)  :: GlbRot(3,3)
+   real(R8Ki),                   intent(  out)  :: Glb_crv(3)
+   integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+   integer(intKi)                               :: ErrStat2          ! temporary Error status
+   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
+   character(*), parameter                      :: RoutineName = 'SetRefFrame'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! Calculate new global position, rotation, and WM from root motion.  Note that this is similar to the InitRefFrame routine
+   GlbPos = u%RootMotion%Position(:, 1) + &
+            u%RootMotion%TranslationDisp(:, 1)
+   GlbRot = transpose(u%RootMotion%Orientation(:, :, 1))
+   CALL BD_CrvExtractCrv(GlbRot, Glb_crv, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL BD_CrvMatrixR(Glb_crv, GlbRot)
+end subroutine SetRefFrame
+
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine allocates and initializes most (not all) of the parameters used in BeamDyn.
-subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
+subroutine SetParameters(InitInp, InputFileData, p, OtherState, ErrStat, ErrMsg)
    type(BD_InitInputType),       intent(in   )  :: InitInp           !< Input data for initialization routine
    type(BD_InputFile),           intent(inout)  :: InputFileData     !< data from the input file  [we may need to shift the keypoint to match a MK matrix eta for trap multi-element]
    type(BD_ParameterType),       intent(inout)  :: p                 !< Parameters  ! intent(out) only because it changes p%NdIndx
+   type(BD_OtherStateType),      intent(in   )  :: OtherState        !< Global rotations are stored in otherstate
    integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -915,20 +911,8 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
 
    p%CompAeroMaps = InitInp%CompAeroMaps
    
-      ! Global position vector
-   p%GlbPos = InitInp%GlbPos
-
-
-      ! Global rotation tensor.  What comes from the driver may not be a properly formed
-      ! DCM (may have roundoff), so recalculate it from the extracted WM parameters.
-   p%GlbRot = TRANSPOSE(InitInp%GlbRot) ! matrix that now transfers from local to global (FAST's DCMs convert from global to local)
-   CALL BD_CrvExtractCrv(p%GlbRot,p%Glb_crv, ErrStat2, ErrMsg2)
-   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-   CALL BD_CrvMatrixR(p%Glb_crv,p%GlbRot) ! ensure that the rotation matrix is a DCM in double precision (this should be the same as TRANSPOSE(InitInp%GlbRot))
-
-      ! Gravity vector
-   p%gravity = MATMUL(InitInp%gravity,p%GlbRot)
+      ! Gravity vector -- inertial frame!  This must be multiplied by OtherState%GlbRot to get into the BD rotating reference frame
+   p%gravity = InitInp%gravity
 
 
    !....................
@@ -1191,9 +1175,10 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
 end subroutine SetParameters
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> this routine initializes the outputs, y, that are used in the BeamDyn interface for coupling in the FAST framework.
-subroutine Init_y( p, u, y, ErrStat, ErrMsg)
+subroutine Init_y( p, OtherState, u, y, ErrStat, ErrMsg)
 
    type(BD_ParameterType),       intent(inout)  :: p                 !< Parameters  -- intent(out) only because it changes p%NdIndx
+   type(BD_OtherStateType),      intent(in   )  :: OtherState        !< Global rotations are stored in otherstate
    type(BD_InputType),           intent(inout)  :: u                 !< Inputs
    type(BD_OutputType),          intent(inout)  :: y                 !< Outputs
    integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
@@ -1261,10 +1246,10 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
 
               temp_id = (j-1)*p%dof_node
 
-              Pos = p%GlbPos + MATMUL(p%GlbRot,p%uuN0(1:3,j,i))
+              Pos = OtherState%GlbPos + MATMUL(OtherState%GlbRot,p%uuN0(1:3,j,i))
 
                   ! possible type conversions here:
-              DCM = BDrot_to_FASTdcm(p%uuN0(4:6,j,i),p)
+              DCM = BDrot_to_FASTdcm(p%uuN0(4:6,j,i),p,OtherState)
 
                   ! set the reference position and orientation for each node.
               temp_id = (i-1)*p%nodes_per_elem+j
@@ -1339,10 +1324,11 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
 end subroutine Init_y
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> this routine initializes the inputs, u, that are used in the BeamDyn interface for coupling in the FAST framework.
-subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
+subroutine Init_u( InitInp, p, OtherState, u, ErrStat, ErrMsg )
 
    type(BD_InitInputType),       intent(in   )  :: InitInp           !< Input data for initialization routine
    type(BD_ParameterType),       intent(in   )  :: p                 !< Parameters
+   type(BD_OtherStateType),      intent(in   )  :: OtherState        !< Global rotations are stored in otherstate
    type(BD_InputType),           intent(inout)  :: u                 !< Inputs
    integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
@@ -1420,8 +1406,8 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
       if (ErrStat>=AbortErrLev) return
 
 
-   DCM = TRANSPOSE(p%GlbRot)
-   Pos = p%GlbPos
+   DCM = TRANSPOSE(OtherState%GlbRot)
+   Pos = OtherState%GlbPos
    CALL MeshPositionNode ( Mesh    = u%RootMotion &
                          , INode   = 1            &
                          , Pos     = Pos          &
@@ -1467,11 +1453,11 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
 
    DO i=1,p%elem_total
        DO j=1,p%nodes_per_elem
-           POS = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,j,i))
+           POS = OtherState%GlbPos(1:3) + MATMUL(OtherState%GlbRot,p%uuN0(1:3,j,i))
 
             ! Note:  Here we can use this subroutine to get the DCM.  This is under the assumption
             !        that there is no rotational displacement yet, so x%q is zero
-           DCM = BDrot_to_FASTdcm(p%uuN0(4:6,j,i),p)
+           DCM = BDrot_to_FASTdcm(p%uuN0(4:6,j,i),p,OtherState)
 
            temp_id = (i-1)*(p%nodes_per_elem-1)+j
            CALL MeshPositionNode ( Mesh    = u%PointLoad  &
@@ -1524,11 +1510,11 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
    DO i=1,p%elem_total
       DO j=1,p%nqp      !NOTE: if we add multi-element to trap, we will need to change this.
          temp_id = (i-1)*p%nqp + j + p%qp_indx_offset            ! Index to a node within element i
-         Pos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uu0(1:3,j,i))
+         Pos(1:3) = OtherState%GlbPos(1:3) + MATMUL(OtherState%GlbRot,p%uu0(1:3,j,i))
 
             ! Note:  Here we can use this subroutine to get the DCM.  This is under the assumption
             !        that there is no rotational displacement yet, so m%qp%uuu is zero
-         DCM = BDrot_to_FASTdcm(p%uu0(4:6,j,i),p)
+         DCM = BDrot_to_FASTdcm(p%uu0(4:6,j,i),p,OtherState)
 
          CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
                                 ,INode   = temp_id     &
@@ -1543,8 +1529,8 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
       ! For Gauss quadrature, an additional node is added to the end.
    IF (p%quadrature .EQ. GAUSS_QUADRATURE) THEN
          ! First node
-      Pos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1,1))
-      DCM = BDrot_to_FASTdcm(p%uuN0(4:6,1,1),p)
+      Pos(1:3) = OtherState%GlbPos(1:3) + MATMUL(OtherState%GlbRot,p%uuN0(1:3,1,1))
+      DCM = BDrot_to_FASTdcm(p%uuN0(4:6,1,1),p,OtherState)
       CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
                              ,INode   = 1            &
                              ,Pos     = Pos          &
@@ -1554,8 +1540,8 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
   
          ! Last node 
-      Pos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,p%nodes_per_elem,p%elem_total))
-      DCM = BDrot_to_FASTdcm(p%uuN0(4:6,p%nodes_per_elem,p%elem_total),p)
+      Pos(1:3) = OtherState%GlbPos(1:3) + MATMUL(OtherState%GlbRot,p%uuN0(1:3,p%nodes_per_elem,p%elem_total))
+      DCM = BDrot_to_FASTdcm(p%uuN0(4:6,p%nodes_per_elem,p%elem_total),p,OtherState)
       CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
                              ,INode   = NNodes       &
                              ,Pos     = Pos          &
@@ -1773,9 +1759,10 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
 end subroutine Init_MiscVars
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> this subroutine initializes the other states.
-subroutine Init_OtherStates( p, OtherState, ErrStat, ErrMsg )
+subroutine Init_OtherStates( u, p, OtherState, ErrStat, ErrMsg )
+   type(BD_InputType),           intent(in   )  :: u                 !< inputs (need new root location)
    type(BD_ParameterType),       intent(in   )  :: p                 !< Parameters
-   type(BD_OtherStateType),      intent(inout)  :: OtherState        !< Other states
+   type(BD_OtherStateType),      intent(inout)  :: OtherState        !< Other states (inout since reference info from GlbRot is stored here)
    integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -1806,13 +1793,17 @@ subroutine Init_OtherStates( p, OtherState, ErrStat, ErrMsg )
    ! BJJ: not sure this should be used in CalcOutput when we are calculating Jacobians (this will alter the operating point of the continuous state)
    OtherState%RunQuasiStaticInit = .FALSE.
    
+   ! set the global position information -- u must be in the global frame for the SetRefFrame routine
+   call SetRefFrame(u, OtherState%GlbPos, OtherState%GlbRot, OtherState%Glb_Crv, ErrStat2,ErrMsg2);  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
 end subroutine Init_OtherStates
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> this subroutine initializes the continuous states.
-subroutine Init_ContinuousStates( p, u, x, ErrStat, ErrMsg )
+subroutine Init_ContinuousStates( p, u, x, OtherState, ErrStat, ErrMsg )
    type(BD_ParameterType),       intent(inout)  :: p                 !< Parameters !sets the copy-of-state values
    type(BD_InputType),           intent(inout)  :: u                 !< Inputs  !intent(out) because of mesh copy, otherwise not changed
    type(BD_ContinuousStateType), intent(inout)  :: x                 !< Continuous states
+   type(BD_OtherStateType),      intent(in   )  :: OtherState        !< Other states (contains refrence frame info)
    integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -1847,11 +1838,11 @@ subroutine Init_ContinuousStates( p, u, x, ErrStat, ErrMsg )
       end if
 
       ! convert to BeamDyn-internal system inputs, u_tmp:
-   CALL BD_InputGlobalLocal(p,u_tmp)
+   CALL BD_InputGlobalLocal(p,OtherState,u_tmp)
 
 
       ! initialize states, given parameters and initial inputs (in BD coordinates)
-   CALL BD_CalcIC_Position(u_tmp,p,x, ErrStat2, ErrMsg2)
+   CALL BD_CalcIC_Position(u_tmp,p,x,OtherState, ErrStat2, ErrMsg2)
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL BD_CalcIC_Velocity(u_tmp,p,x)
    CALL Cleanup()
@@ -1937,17 +1928,22 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
    INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat    !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
 
-
+   INTEGER(IntKi)                                 :: ErrStat2   ! Temporary Error status
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2    ! Temporary Error message
 
    ! Initialize ErrStat
-
    ErrStat = ErrID_None
    ErrMsg  = ""
 
    IF(p%analysis_type /= BD_STATIC_ANALYSIS) THEN ! dynamic analysis
-       CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+      CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'');  if (ErrStat >= AbortErrLev) return
+
+      ! change reference frame to root motion at t=T+DT (u(1)%RootMotionMesh)
+      call BD_UpdateGlobalRef(u(1),p,x,OtherState,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'')
    ELSE !IF(p%analysis_type == BD_STATIC_ANALYSIS) THEN
-       CALL BD_Static( t, u, utimes, p, x, OtherState, m, ErrStat, ErrMsg )
+      CALL BD_Static( t, u, utimes, p, x, OtherState, m, ErrStat, ErrMsg )
    ENDIF
 
 END SUBROUTINE BD_UpdateStates
@@ -2042,14 +2038,15 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
 
 
       ! convert to BD coordinates and apply boundary conditions 
-   CALL BD_InputGlobalLocal(p,m%u)
+   CALL BD_InputGlobalLocal(p,OtherState,m%u)
 
       ! Copy over the DistrLoads
    CALL BD_DistrLoadCopy( p, m%u, m )
 
       ! Incorporate boundary conditions (note that we are doing this because the first node isn't really a state. should fix x so we don't need a temp copy here.)
-   x_tmp%q(   1:3,1) = m%u%RootMotion%TranslationDisp(:,1)
-   CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1),p, x_tmp%q(   4:6,1), ErrStat2, ErrMsg2)
+   x_tmp%q(1:3,1) = m%u%RootMotion%TranslationDisp(:,1) + &
+                    matmul(m%u%RootMotion%Position(:,1) - OtherState%GlbPos, OtherState%GlbRot)
+   CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1), p, OtherState, x_tmp%q(   4:6,1), ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    x_tmp%dqdt(1:3,1) = m%u%RootMotion%TranslationVel(:,1)
@@ -2065,27 +2062,27 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       CALL BD_QPDataVelocity( p, x_tmp, m )           ! x%dqdt --> m%qp%vvv, m%qp%vvp
 
       ! calculate accelerations and reaction loads (in m%RHS):
-      CALL BD_CalcForceAcc(m%u, p, m, ErrStat2,ErrMsg2)
+      CALL BD_CalcForceAcc(m%u, p, OtherState, m, ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ELSE
          ! Calculate the elastic forces for the static case.
       DO nelem=1,p%elem_total
-         CALL BD_StaticElementMatrix( nelem, p%gravity, p, m )
+         CALL BD_StaticElementMatrix( nelem, MATMUL(p%gravity,OtherState%GlbRot), p, m )
       ENDDO
 
    ENDIF
 
       ! Calculate internal forces and moments
-   CALL BD_InternalForceMoment( x, p, m )
+   CALL BD_InternalForceMoment( x_tmp, OtherState, p, m )
 
       ! Transfer the FirstNodeReaction forces to the output ReactionForce
-   y%ReactionForce%Force(:,1)    =  MATMUL(p%GlbRot,m%FirstNodeReactionLclForceMoment(1:3))
-   y%ReactionForce%Moment(:,1)   =  MATMUL(p%GlbRot,m%FirstNodeReactionLclForceMoment(4:6))
+   y%ReactionForce%Force(:,1)    =  MATMUL(OtherState%GlbRot,m%FirstNodeReactionLclForceMoment(1:3))
+   y%ReactionForce%Moment(:,1)   =  MATMUL(OtherState%GlbRot,m%FirstNodeReactionLclForceMoment(4:6))
 
 
        ! set y%BldMotion fields:
-   CALL Set_BldMotion_Mesh( p, m%u2, x, m, y)
+   CALL Set_BldMotion_Mesh( p, m%u2, x_tmp, OtherState, m, y)
 
    !-------------------------------------------------------
    !  compute RootMxr and RootMyr for ServoDyn and
@@ -2112,7 +2109,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
          y%WriteOutput(p%NumOuts+1:) = 0.0_ReKi
 
             ! Now we need to populate the blade node outputs here
-         call Calc_WriteBldNdOutput( p, m, y, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
+          call Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       ENDIF
    end if
@@ -2167,7 +2164,7 @@ SUBROUTINE BD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
    ! END Actuator
 
       ! convert to BD coordinates and apply boundary conditions 
-   CALL BD_InputGlobalLocal(p,m%u)
+   CALL BD_InputGlobalLocal(p,OtherState,m%u)
 
       ! Copy over the DistrLoads
    CALL BD_DistrLoadCopy( p, m%u, m )
@@ -2177,11 +2174,13 @@ SUBROUTINE BD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
    CALL BD_CopyContState(x, dxdt, MESH_UPDATECOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-   dxdt%q(   1:3,1) = m%u%RootMotion%TranslationDisp(:,1)
-   CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1),p, dxdt%q(   4:6,1), ErrStat2, ErrMsg2)
+   ! Root displacement is relative to the GlbPos at time T, which is simply the difference between
+   ! the previous root position (GlbPos) and the new extrapolated position (Pos+TransDisp)
+   dxdt%q(1:3,1) = m%u%RootMotion%TranslationDisp(:,1) + &
+                    matmul(m%u%RootMotion%Position(:,1) - OtherState%GlbPos, OtherState%GlbRot)
+   CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1), p, OtherState, dxdt%q(4:6,1), ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
-  !dxdt%q(   4:6,1) = ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1),p)
    dxdt%dqdt(1:3,1) = m%u%RootMotion%TranslationVel(:,1)
    dxdt%dqdt(4:6,1) = m%u%Rootmotion%RotationVel(:,1)
 
@@ -2193,7 +2192,7 @@ SUBROUTINE BD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
    CALL BD_QPDataVelocity( p, dxdt, m )           ! x%dqdt --> m%qp%vvv, m%qp%vvp
 
    ! calculate accelerations and reaction loads (in m%RHS):
-   CALL BD_CalcForceAcc(m%u, p, m, ErrStat2,ErrMsg2)
+   CALL BD_CalcForceAcc(m%u, p, OtherState, m, ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) return
       
@@ -3211,10 +3210,11 @@ END SUBROUTINE BD_AssembleRHS
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine total element forces and mass matrices
 !FIXME: note similarities with BD_ElementMatrixGA2
-SUBROUTINE BD_ElementMatrixAcc(  nelem, p, m )
+SUBROUTINE BD_ElementMatrixAcc(  nelem, p, OtherState, m )
 
    INTEGER(IntKi),               INTENT(IN   )  :: nelem       !< number of current element
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState  !< other states -- includes the orientation
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
 
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ElementMatrixAcc'
@@ -3224,7 +3224,7 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, m )
    IF(p%damp_flag .NE. 0) THEN
       CALL BD_DissipativeForce( nelem, p, m, .FALSE. )         ! Calculate dissipative terms on Fc, Fd
    ENDIF
-   CALL BD_GravityForce( nelem, p, m, p%gravity )              ! Calculate Fg      
+   CALL BD_GravityForce( nelem, p, m, MATMUL(p%gravity,OtherState%GlbRot) )              ! Calculate Fg      
    CALL BD_GyroForce( nelem, p, m )                            ! Calculate Fb  (velocity terms from InertialForce with aaa=0)
 
    CALL BD_InertialMassMatrix( nelem, p, m )                   ! Calculate Mi
@@ -3392,7 +3392,7 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 
       
       ! Transform quantities from global frame to local (blade in BD coords) frame
-   CALL BD_InputGlobalLocal(p,u_interp)
+   CALL BD_InputGlobalLocal(p,OtherState,u_interp)
 
 
       ! Incorporate boundary conditions
@@ -3420,7 +3420,7 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
    DO j=1,p%ld_retries
 
        CALL BD_DistrLoadCopy( p, u_interp, m, load_test ) ! move the input loads from u_interp into misc vars
-       gravity_temp(:) = p%gravity(:)*load_test
+       gravity_temp(:) = MATMUL(p%gravity,OtherState%GlbRot)*load_test
 
        CALL BD_StaticSolution(x, gravity_temp, p, m, piter, ErrStat2, ErrMsg2)
        call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)  ! concerned about error reporting
@@ -3862,7 +3862,7 @@ SUBROUTINE BD_QuasiStatic(u,p,x,OtherState,m,ErrStat,ErrMsg, RampLoad)
 
 
       ! Transform quantities from global frame to local (blade in BD coords) frame
-   CALL BD_InputGlobalLocal(p,u_temp)
+   CALL BD_InputGlobalLocal(p,OtherState,u_temp)
 
       ! Incorporate boundary conditions
    CALL BD_BoundaryGA2(x,p,u_temp,OtherState, ErrStat2, ErrMsg2)
@@ -4115,7 +4115,7 @@ SUBROUTINE BD_GenerateQuasiStaticElement( x, OtherState, p, m )
 
    DO nelem=1,p%elem_total
 
-      CALL BD_QuasiStaticElementMatrix( nelem, p, m )
+      CALL BD_QuasiStaticElementMatrix( nelem, p, OtherState, m )
       CALL BD_AssembleStiffK(nelem,p,m%elk,m%StifK)
       CALL BD_AssembleRHS(nelem,p,m%elf,m%RHS)
 
@@ -4126,10 +4126,11 @@ END SUBROUTINE BD_GenerateQuasiStaticElement
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_QuasiStaticElementMatrix(  nelem, p, m )
+SUBROUTINE BD_QuasiStaticElementMatrix(  nelem, p, OtherState, m )
 
    INTEGER(IntKi),               INTENT(IN   )  :: nelem             !< current element number
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p                 !< Parameters
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState        !< other states (contains global rotation to get gravity in correct orientation)
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< misc/optimization variables
 
    INTEGER(IntKi)              :: i
@@ -4140,7 +4141,7 @@ SUBROUTINE BD_QuasiStaticElementMatrix(  nelem, p, m )
 
 
    CALL BD_ElasticForce(  nelem,p,m,.true. )    ! Calculate Fc, Fd  [and Oe, Pe, and Qe for N-R algorithm]
-   CALL BD_GravityForce(  nelem,p,m,p%gravity )   ! Calculate Fg
+   CALL BD_GravityForce(  nelem,p,m,MATMUL(p%gravity,OtherState%GlbRot) )   ! Calculate Fg
    
       ! NOTE: we only use Ki (not Gi or Mi as we are not calculating \delta{a} or \delta{v})
    CALL BD_InertialForce( nelem,p,m,.true. )    ! Calculate Fi      [and Mi, Gi, Ki]
@@ -4192,9 +4193,10 @@ END SUBROUTINE BD_QuasiStaticElementMatrix
 ! nodes along beam axis for the static case. This is more involved than in the dynamic case because m%EFint is not calculated beforehand.
 ! Nodal forces = K u
 !FIXME:  NOTE: if we go to multiple elements for trap quadrature, we will need to double check this routine.
-SUBROUTINE BD_InternalForceMoment( x, p, m )
+SUBROUTINE BD_InternalForceMoment( x, OtherState, p, m )
 
    TYPE(BD_ContinuousStateType), INTENT(IN   ) :: x            !< Continuous states at t
+   TYPE(BD_OtherStateType),      INTENT(IN   ) :: OtherState   !< Other states at t (contains blade reference frame)
    TYPE(BD_ParameterType),       INTENT(IN   ) :: p            !< Parameters
    TYPE(BD_MiscVarType),         INTENT(INOUT) :: m            !< misc/optimization variables
 
@@ -4306,8 +4308,8 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
 
       ! Rotate coords to global reference frame
    DO i=1,SIZE(m%BldInternalForceFE,DIM=2)
-      m%BldInternalForceFE(1:3,i) =  MATMUL(p%GlbRot,m%BldInternalForceFE(1:3,i))
-      m%BldInternalForceFE(4:6,i) =  MATMUL(p%GlbRot,m%BldInternalForceFE(4:6,i))
+      m%BldInternalForceFE(1:3,i) =  MATMUL(OtherState%GlbRot,m%BldInternalForceFE(1:3,i))
+      m%BldInternalForceFE(4:6,i) =  MATMUL(OtherState%GlbRot,m%BldInternalForceFE(4:6,i))
    ENDDO
    
 
@@ -4420,7 +4422,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
       !................
       
          ! Transform quantities from global frame to local (blade) frame
-      CALL BD_InputGlobalLocal(p,u_interp)
+      CALL BD_InputGlobalLocal(p,OtherState,u_interp)
 
          ! Copy over the DistrLoads
       CALL BD_DistrLoadCopy( p, u_interp, m )
@@ -4434,7 +4436,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
          end if
 
          ! initialize the accelerations in OtherState%Acc
-      CALL BD_InitAcc( u_interp, p, x, m, OtherState%Acc, ErrStat2, ErrMsg2)
+      CALL BD_InitAcc( u_interp, p, x, OtherState, m, OtherState%Acc, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) then
             call cleanup()
@@ -4482,7 +4484,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
    ENDIF
 
       ! Transform quantities from global frame to local (blade in BD coords) frame
-   CALL BD_InputGlobalLocal(p,u_interp)
+   CALL BD_InputGlobalLocal(p,OtherState,u_interp)
 
       ! Copy over the DistrLoads
    CALL BD_DistrLoadCopy( p, u_interp, m )
@@ -4603,21 +4605,24 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,OtherState, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-   INTEGER(IntKi)                                     :: ErrStat2    ! Temporary Error status
-   CHARACTER(ErrMsgLen)                               :: ErrMsg2     ! Temporary Error message
+   INTEGER(IntKi)                               :: ErrStat2    ! Temporary Error status
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2     ! Temporary Error message
    CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_BoundaryGA2'
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   ! NOTE: u is in a BD local frame.  So cannot use SetRefFrame routine (note there are differences here)
+
       ! Root displacements
-   x%q(1:3,1) = u%RootMotion%TranslationDisp(1:3,1)
+   x%q(1:3,1) = u%RootMotion%TranslationDisp(1:3,1) + &
+                    matmul(u%RootMotion%Position(:,1) - OtherState%GlbPos, OtherState%GlbRot)
 
       ! Root rotations
-   CALL ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1),p, x%q(4:6,1), ErrStat2, ErrMsg2)
-   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+   CALL ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1),p, OtherState, x%q(4:6,1), ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
 
       ! Root velocities/angular velocities and accelerations/angular accelerations
    x%dqdt(1:3,1)         = u%RootMotion%TranslationVel(1:3,1)
@@ -4935,7 +4940,7 @@ SUBROUTINE BD_GenerateDynamicElementGA2( x, OtherState, p, m, fact )
    DO nelem=1,p%elem_total
 
         ! compute m%elk,m%elf,m%elm,m%elg:
-      CALL BD_ElementMatrixGA2(fact, nelem, p, m )
+      CALL BD_ElementMatrixGA2(fact, nelem, p, OtherState, m )
 
       IF(fact) THEN
          CALL BD_AssembleStiffK(nelem,p,m%elk,m%StifK)
@@ -4951,9 +4956,10 @@ END SUBROUTINE BD_GenerateDynamicElementGA2
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !FIXME: lots of pieces of BD_ElementMatrixAcc show up in here
-SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
+SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, OtherState, m )
 
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p                 !< Parameters
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState        !< other states (contains global orientation to get gravity in right direction)
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< misc/optimization variables
 
    LOGICAL,                      INTENT(IN   )  :: fact              !< are we factoring?
@@ -4978,7 +4984,7 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
       CALL BD_DissipativeForce( nelem,p,m,fact )              ! Calculate dissipative terms on Fc, Fd [and Sd, Od, Pd and Qd, betaC, Gd, Xd, Yd for N-R algorithm]
    ENDIF
    
-   CALL BD_GravityForce( nelem, p, m, p%gravity )
+   CALL BD_GravityForce( nelem, p, m, MATMUL(p%gravity,OtherState%GlbRot) )
    
    
 
@@ -5147,32 +5153,33 @@ END SUBROUTINE BD_CompTngtStiff
 !!  4 Point forces/moments
 !!  5 Distributed forces/moments
 !! It also transforms the DCM to rotation tensor in the input data structure
-SUBROUTINE BD_InputGlobalLocal(p, u)
+SUBROUTINE BD_InputGlobalLocal(p, OtherState, u)
    TYPE(BD_ParameterType), INTENT(IN   ):: p
+   TYPE(BD_OtherStateType),INTENT(IN   ):: OtherState  !< Other states at t on input; at t+dt on outputs
    TYPE(BD_InputType),     INTENT(INOUT):: u
    INTEGER(IntKi)                       :: i                          !< Generic counter
    CHARACTER(*), PARAMETER              :: RoutineName = 'BD_InputGlobalLocal'
 
    ! Transform Root Motion from Global to Local (Blade) frame
-   u%RootMotion%TranslationDisp(:,1) = MATMUL(u%RootMotion%TranslationDisp(:,1),p%GlbRot)
-   u%RootMotion%TranslationVel(:,1)  = MATMUL(u%RootMotion%TranslationVel( :,1),p%GlbRot)
-   u%RootMotion%RotationVel(:,1)     = MATMUL(u%RootMotion%RotationVel(    :,1),p%GlbRot)
-   u%RootMotion%TranslationAcc(:,1)  = MATMUL(u%RootMotion%TranslationAcc( :,1),p%GlbRot)
-   u%RootMotion%RotationAcc(:,1)     = MATMUL(u%RootMotion%RotationAcc(    :,1),p%GlbRot)
+   u%RootMotion%TranslationDisp(:,1) = MATMUL(u%RootMotion%TranslationDisp(:,1),OtherState%GlbRot)
+   u%RootMotion%TranslationVel(:,1)  = MATMUL(u%RootMotion%TranslationVel( :,1),OtherState%GlbRot)
+   u%RootMotion%RotationVel(:,1)     = MATMUL(u%RootMotion%RotationVel(    :,1),OtherState%GlbRot)
+   u%RootMotion%TranslationAcc(:,1)  = MATMUL(u%RootMotion%TranslationAcc( :,1),OtherState%GlbRot)
+   u%RootMotion%RotationAcc(:,1)     = MATMUL(u%RootMotion%RotationAcc(    :,1),OtherState%GlbRot)
 
    ! Transform DCM to Rotation Tensor (RT)   
    u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1)) ! matrix that now transfers from local to global (FAST's DCMs convert from global to local)
    
    ! Transform Applied Forces from Global to Local (Blade) frame
    DO i=1,p%node_total
-      u%PointLoad%Force(1:3,i)  = MATMUL(u%PointLoad%Force(:,i),p%GlbRot)
-      u%PointLoad%Moment(1:3,i) = MATMUL(u%PointLoad%Moment(:,i),p%GlbRot)
+      u%PointLoad%Force(1:3,i)  = MATMUL(u%PointLoad%Force(:,i),OtherState%GlbRot)
+      u%PointLoad%Moment(1:3,i) = MATMUL(u%PointLoad%Moment(:,i),OtherState%GlbRot)
    ENDDO
    
    ! transform distributed forces and moments
    DO i=1,u%DistrLoad%Nnodes
-      u%DistrLoad%Force(1:3,i)  = MATMUL(u%DistrLoad%Force(:,i),p%GlbRot)
-      u%DistrLoad%Moment(1:3,i) = MATMUL(u%DistrLoad%Moment(:,i),p%GlbRot)
+      u%DistrLoad%Force(1:3,i)  = MATMUL(u%DistrLoad%Force(:,i),OtherState%GlbRot)
+      u%DistrLoad%Moment(1:3,i) = MATMUL(u%DistrLoad%Moment(:,i),OtherState%GlbRot)
    ENDDO
 
 END SUBROUTINE BD_InputGlobalLocal
@@ -5226,11 +5233,12 @@ END SUBROUTINE BD_DistrLoadCopy
 !! The initial displacements/rotations and linear velocities are
 !! set to the root value; the angular velocities over the beam
 !! are computed based on rigid body rotation: \omega = v_{root} \times r_{pos}
-SUBROUTINE BD_CalcIC_Position( u, p, x, ErrStat, ErrMsg)
+SUBROUTINE BD_CalcIC_Position( u, p, x, OtherState, ErrStat, ErrMsg)
 
    TYPE(BD_InputType),           INTENT(IN   )  :: u              !< Inputs at t (in BD coordinates)
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p              !< Parameters
    TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x              !< Continuous states at t
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState     !< Other states (contains reference frame info)
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat        !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
@@ -5251,7 +5259,7 @@ SUBROUTINE BD_CalcIC_Position( u, p, x, ErrStat, ErrMsg)
 
       !  Since RootMotion%Orientation is the transpose of the absolute orientation in the global frame,
       !  we need to find the relative change in orientation from the reference.
-   CALL ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1),p,temp_rv, ErrStat2, ErrMsg2)
+   CALL ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1), p, OtherState, temp_rv, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
@@ -5263,10 +5271,10 @@ SUBROUTINE BD_CalcIC_Position( u, p, x, ErrStat, ErrMsg)
       DO j=k,p%nodes_per_elem
             ! reference at current root orientation.
          temp_p0 = MATMUL(u%rootmotion%orientation(:,:,1),p%uuN0(1:3,j,i))    ! Global frame
-         temp_p0 = MATMUL(temp_p0, p%GlbRot )                                 ! Into the local frame
+         temp_p0 = MATMUL(temp_p0, OtherState%GlbRot )                                 ! Into the local frame
             !  Add the root displacement (in local frame) to the reference at current root orientation in local frame,
             !  and subtract the reference to get the displacement.  This is equivalent to TranslationDisp in the local frame.
-         x%q(1:3,temp_id+j) = u%RootMotion%TranslationDisp(1:3,1) + temp_p0 - p%uuN0(1:3,j,i)
+         x%q(1:3,temp_id+j) = temp_p0 - p%uuN0(1:3,j,i)
       ENDDO
       k = 2 ! start j loop at k=2 for remaining elements (i>1)
    ENDDO
@@ -5413,11 +5421,12 @@ END SUBROUTINE BD_CalcCentripAcc
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !! Routine for computing outputs, used in both loose and tight coupling.
-SUBROUTINE BD_InitAcc( u, p, x, m, qdotdot, ErrStat, ErrMsg )
+SUBROUTINE BD_InitAcc( u, p, x, OtherState, m, qdotdot, ErrStat, ErrMsg )
 
    TYPE(BD_InputType),           INTENT(IN   )  :: u              !< Inputs at t (in BD coordinates)
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p              !< Parameters
    TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x              !< Continuous states at t
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState     !< Other states at t
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m              !< Misc/optimization variables
    REAL(BDKi),                   INTENT(  OUT)  :: qdotdot(:,:)   !< accelerations
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat        !< Error status of the operation
@@ -5441,7 +5450,7 @@ SUBROUTINE BD_InitAcc( u, p, x, m, qdotdot, ErrStat, ErrMsg )
    CALL BD_QPDataVelocity(p, x, m)
 
       ! set misc vars, particularly m%RHS
-   CALL BD_CalcForceAcc( u, p, m, ErrStat2, ErrMsg2 )
+   CALL BD_CalcForceAcc( u, p, OtherState, m, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! set accelerations with inputs from the root and BD_CalcForceAcc solution
@@ -5525,10 +5534,11 @@ END SUBROUTINE BD_InitAcc
 !!
 !! The root reaction force is therefore calculated afterwards as
 !! \f$  F_\textrm{root} = f_1 - \sum_{i} m_{1,i} a_{i}  \f$.
-SUBROUTINE BD_CalcForceAcc( u, p, m, ErrStat, ErrMsg )
+SUBROUTINE BD_CalcForceAcc( u, p, OtherState, m, ErrStat, ErrMsg )
 
    TYPE(BD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState  !< other states (contains ref orientation)
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -5555,7 +5565,7 @@ SUBROUTINE BD_CalcForceAcc( u, p, m, ErrStat, ErrMsg )
 
       ! Calculate the global mass matrix and force vector for the beam
    DO nelem=1,p%elem_total
-      CALL BD_ElementMatrixAcc( nelem, p, m )            ! Calculate m%elm and m%elf
+      CALL BD_ElementMatrixAcc( nelem, p, OtherState, m )            ! Calculate m%elm and m%elf
       CALL BD_AssembleStiffK(nelem,p,m%elm, m%MassM)     ! Assemble full mass matrix
       CALL BD_AssembleRHS(nelem,p,m%elf, m%RHS)          ! Assemble right hand side force terms
    ENDDO
@@ -5857,7 +5867,7 @@ SUBROUTINE BD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          return
       end if
       
-      call Compute_RelState_Matrix(p, u, x, RelState_x, RelState_xdot)
+      call Compute_RelState_Matrix(p, u, x, OtherState, RelState_x, RelState_xdot)
 
       if ( present(StateRel_x) ) then
          if (.not. allocated(StateRel_x)) then
@@ -6821,6 +6831,96 @@ SUBROUTINE BD_WriteMassStiffInFirstNodeFrame( p, x, m, ErrStat, ErrMsg )
       END SUBROUTINE cleanup
 END SUBROUTINE BD_WriteMassStiffInFirstNodeFrame
 !----------------------------------------------------------------------------------------------------------------------------------
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Update the state information to follow the blade rootmotion mesh.
+!!    - move the state information in x from the previous reference frame at time T (u(2)%rootmotion) to the new reference frame at T+dt (u(1)%rootmation)
+!!    - the GlbRot, GlbPos, and Glb_crv values are stored as otherstates and updated
+subroutine BD_UpdateGlobalRef(u, p, x, OtherState, ErrStat, ErrMsg)
+   type(BD_InputType),           intent(in   ) :: u          !< Inputs at utimes
+   type(BD_ParameterType),       intent(in   ) :: p          !< Parameters
+   type(BD_ContinuousStateType), intent(inout) :: x          !< Input: Continuous states at t;
+   type(BD_OtherStateType),      intent(inout) :: OtherState !< Other states: Other states at t;
+   integer(IntKi),               intent(  out) :: ErrStat    !< Error status of the operation
+   character(*),                 intent(  out) :: ErrMsg     !< Error message if ErrStat /=
+
+   character(*), parameter       :: RoutineName = 'BD_UpdateGlobalRef'
+   integer(IntKi)                :: ErrStat2
+   character(ErrMsgLen)          :: ErrMsg2    ! Temporary Error message
+   real(R8Ki)                    :: GlbWM_old(3), GlbWM_new(3), GlbWM_diff(3)
+   real(R8Ki)                    :: GlbRot_old(3, 3), GlbRot_new(3, 3), GlbRot_diff(3, 3)
+   real(R8Ki)                    :: GlbPos_old(3), GlbPos_new(3)
+   real(R8Ki)                    :: pos(3), rot(3), trans_vel(3), rot_vel(3), uuN0(3)
+   integer(IntKi)                :: i, j, temp_id
+
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
+
+   ! If reference frame shouldn't be changed, return
+   if (.not. ChangeRefFrame) return
+
+   ! Save old global position, rotation, and WM
+   GlbPos_old = OtherState%GlbPos
+   GlbRot_old = OtherState%GlbRot
+   GlbWM_old  = OtherState%Glb_crv
+
+   ! Calculate new global position, rotation, and WM from root motion -- u must be in the global frame for the     SetRefFrame routine
+   call SetRefFrame(u, OtherState%GlbPos, OtherState%GlbRot, OtherState%Glb_Crv, ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) return
+   GlbPos_new = OtherState%GlbPos
+   GlbRot_new = OtherState%GlbRot
+   GlbWM_new  = OtherState%Glb_crv
+
+   ! Calculate differences between old and new reference
+   call BD_CrvCompose(GlbWM_diff, GlbWM_new, GlbWM_old, FLAG_R1TR2)
+   call BD_CrvMatrixR(GlbWM_diff, GlbRot_diff)
+
+   do i = 1, p%elem_total
+      do j = 1, p%nodes_per_elem
+
+         ! The last node of the first element is used as the first node in the second element.
+         temp_id = (i - 1)*(p%nodes_per_elem - 1) + j 
+
+         ! Calculate displacement in terms of new root motion mesh position
+         x%q(1:3, temp_id) =  matmul(transpose(GlbRot_new), &
+                                    GlbPos_old - GlbPos_new + &
+                                    matmul(GlbRot_old, p%uuN0(1:3, j, i) + x%q(1:3, temp_id)) - &
+                                    matmul(GlbRot_new, p%uuN0(1:3, j, i)))
+
+         ! Update the node orientation rotation of the node
+         call BD_CrvCompose(x%q(4:6, temp_id), GlbWM_diff, x%q(4:6, temp_id), FLAG_R1R2)
+
+      end do
+   end do
+
+   ! Update the translational velocity
+   x%dqdt(1:3, :) = matmul(GlbRot_diff, x%dqdt(1:3, :))
+
+   ! Update the rotational velocity
+   x%dqdt(4:6, :) = matmul(GlbRot_diff, x%dqdt(4:6, :))
+   
+   ! Update the translational and rotational acceleration for GA2 algorithm
+   OtherState%acc(1:3, 1) = matmul(u%RootMotion%TranslationAcc(:, 1), GlbRot_new)
+   OtherState%acc(4:6, 1) = matmul(u%RootMotion%RotationAcc(:, 1), GlbRot_new)
+   OtherState%acc(1:3, 2:) = matmul(GlbRot_diff, OtherState%acc(1:3, 2:))
+   OtherState%acc(4:6, 2:) = matmul(GlbRot_diff, OtherState%acc(4:6, 2:))
+
+   ! Update the translational and rotational algorithm acceleration for GA2 algorithm
+   OtherState%xcc(1:3, :) = matmul(GlbRot_diff, OtherState%xcc(1:3, :))
+   OtherState%xcc(4:6, :) = matmul(GlbRot_diff, OtherState%xcc(4:6, :))
+
+   ! Root node is always aligned with root motion mesh 
+   x%q(:, 1) = 0.0_R8Ki
+   x%dqdt(1:3, 1) = matmul(u%RootMotion%TranslationVel(:, 1), GlbRot_new)
+   x%dqdt(4:6, 1) = matmul(u%RootMotion%RotationVel(:, 1), GlbRot_new)
+
+end subroutine
+
+
+
+
+
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------

@@ -25,7 +25,7 @@ MODULE MoorDyn_Body
    USE NWTC_Library
    USE MoorDyn_Misc
    !USE MoorDyn_Line,           only : Line_SetEndKinematics, Line_GetEndStuff
-   USE MoorDyn_Point,           only : Connect_SetKinematics, Connect_GetNetForceAndMass
+   USE MoorDyn_Point,           only : Point_SetKinematics, Point_GetNetForceAndMass
    USE MoorDyn_Rod,             only : Rod_Initialize, Rod_SetKinematics, Rod_GetNetForceAndMass
    
    IMPLICIT NONE
@@ -43,7 +43,7 @@ MODULE MoorDyn_Body
    PUBLIC :: Body_GetStateDeriv
    PUBLIC :: Body_DoRHS
    PUBLIC :: Body_GetCoupledForce
-   PUBLIC :: Body_AddConnect
+   PUBLIC :: Body_AddPoint
    PUBLIC :: Body_AddRod
    
    
@@ -84,12 +84,13 @@ CONTAINS
       CALL TranslateMass6to6DOF(Body%rCG, Mtemp, Body%M0)  ! account for potential CG offset <<< is the direction right? <<<
         
       DO J=1,3
-         Body%M0(J,J) = Body%M0(J,J) + Body%BodyV*Body%BodyCa(J) ! add added mass in each direction about ref point (so only diagonals) <<< eventually expand to multi D
+         Body%M0(J,J) = Body%M0(J,J) + Body%BodyV*Body%BodyCa(J)* p%rhow ! add added mass in each direction about ref point (so only diagonals) <<< eventually expand to multi D
       END DO
    
       ! --------------- if this is an independent body (not coupled) ----------
       ! set initial position and orientation of body from input file 
-      Body%r6 = tempArray
+      Body%r6(1:3) = tempArray(1:3)
+      Body%r6(4:6) = tempArray(4:6) * (pi/180)
 
       ! calculate orientation matrix based on latest angles
       !RotMat(r6[3], r6[4], r6[5], OrMat);
@@ -137,7 +138,7 @@ CONTAINS
 !         if (m%RodList(Body%attachedR(l))%typeNum == 2)  CALL Rod_Initialize(m%RodList(Body%attachedR(l)), dummyStates, m%LineList)
 !      END DO
 !      
-!      ! Note: Connections don't need any initialization
+!      ! Note: Points don't need any initialization
 !      
 !   END SUBROUTINE Body_InitializeUnfree
 !   !--------------------------------------------------------------
@@ -160,7 +161,7 @@ CONTAINS
       states(1:6 ) = Body%v6
       
 
-      ! set positions of any dependent connections and rods now (before they are initialized)
+      ! set positions of any dependent points and rods now (before they are initialized)
       CALL Body_SetDependentKin(Body, 0.0_DbKi, m)
             
       ! If any Rod is fixed to the body (not pinned), initialize it now because otherwise it won't be initialized
@@ -168,7 +169,7 @@ CONTAINS
          if (m%RodList(Body%attachedR(l))%typeNum == 2)  CALL Rod_Initialize(m%RodList(Body%attachedR(l)), dummyStates,  m)
       END DO
       
-      ! Note: Connections don't need any initialization
+      ! Note: Points don't need any initialization
       
    END SUBROUTINE Body_Initialize
    !--------------------------------------------------------------
@@ -184,7 +185,7 @@ CONTAINS
       REAL(DbKi)                            :: dummyStates(12) ! dummy vector to mimic states when initializing a rigidly attached rod
    
    
-      ! set positions of any dependent connections and rods now (before they are initialized)
+      ! set positions of any dependent points and rods now (before they are initialized)
       CALL Body_SetDependentKin(Body, 0.0_DbKi, m)
             
       ! If any Rod is fixed to the body (not pinned), initialize it now because otherwise it won't be initialized
@@ -192,7 +193,7 @@ CONTAINS
          if (m%RodList(Body%attachedR(l))%typeNum == 2)  CALL Rod_Initialize(m%RodList(Body%attachedR(l)), dummyStates,  m)
       END DO
       
-      ! Note: Connections don't need any initialization
+      ! Note: Points don't need any initialization
       
    END SUBROUTINE Body_InitializeUnfree
    !--------------------------------------------------------------
@@ -209,7 +210,7 @@ CONTAINS
       Real(DbKi),            INTENT(IN   )  :: v_in(6)   ! 6-DOF velocity
       Real(DbKi),             INTENT(IN   ) :: a_in(6)       ! 6-DOF acceleration (only used for coupled rods)
       Real(DbKi),            INTENT(IN   )  :: t         ! instantaneous time
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m         ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Connections)
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m         ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Points)
 
 
 !      INTEGER(IntKi)                   :: l
@@ -262,26 +263,26 @@ CONTAINS
       Body%v6 = X(1:6)    ! get velocities
       
 
-      ! set positions of any dependent connections and rods
+      ! set positions of any dependent points and rods
       CALL Body_SetDependentKin(Body, t, m)
       
    END SUBROUTINE Body_SetState
    !--------------------------------------------------------------
 
 
-   ! set the states (positions and velocities) of any connects or rods that are part of this body
+   ! set the states (positions and velocities) of any points or rods that are part of this body
    ! also computes the orientation matrix (never skip this sub!)
    !--------------------------------------------------------------
    SUBROUTINE Body_SetDependentKin(Body, t, m)
 
       Type(MD_Body),         INTENT(INOUT)  :: Body        ! the Bodyion object
       REAL(DbKi),            INTENT(IN   )  :: t
-      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Connections)
+      TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m           ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Points)
 
       INTEGER(IntKi)                        :: l              ! index of attached objects
    
-      Real(DbKi)                            :: rConnect(3)
-      Real(DbKi)                            :: rdConnect(3)
+      Real(DbKi)                            :: rPoint(3)
+      Real(DbKi)                            :: rdPoint(3)
       Real(DbKi)                            :: rRod(6)
       Real(DbKi)                            :: vRod(6)
       Real(DbKi)                            :: aRod(6)
@@ -292,15 +293,15 @@ CONTAINS
       !CALL SmllRotTrans('', Body%r6(4), Body%r6(5), Body%r6(6), Body%TransMat, '', ErrStat2, ErrMsg2)
       Body%OrMat = TRANSPOSE( EulerConstruct( Body%r6(4:6) ) ) ! full Euler angle approach <<<< need to check order 
   
-      ! set kinematics of any dependent connections
+      ! set kinematics of any dependent points
       do l = 1,Body%nAttachedC
       
-         CALL transformKinematics(Body%rConnectRel(:,l), Body%r6, Body%OrMat, Body%v6, rConnect, rdConnect) !<<< should double check this function
+         CALL transformKinematics(Body%rPointRel(:,l), Body%r6, Body%OrMat, Body%v6, rPoint, rdPoint) !<<< should double check this function
                   
          ! >>> need to add acceleration terms here too? <<<
                   
-         ! pass above to the connection and get it to calculate the forces
-         CALL Connect_SetKinematics( m%ConnectList(Body%attachedC(l)), rConnect, rdConnect, m%zeros6(1:3), t, m)
+         ! pass above to the point and get it to calculate the forces
+         CALL Point_SetKinematics( m%PointList(Body%attachedC(l)), rPoint, rdPoint, m%zeros6(1:3), t, m)
       end do
       
       ! set kinematics of any dependent Rods
@@ -424,11 +425,11 @@ CONTAINS
 
    
    
-      ! Get contributions from any dependent connections
+      ! Get contributions from any dependent points
       do l = 1,Body%nAttachedC
       
-         ! get net force and mass from Connection on body ref point (global orientation)
-         CALL Connect_GetNetForceAndMass( m%ConnectList(Body%attachedC(l)), Body%r6(1:3), F6_i, M6_i, m, p)
+         ! get net force and mass from Point on body ref point (global orientation)
+         CALL Point_GetNetForceAndMass( m%PointList(Body%attachedC(l)), Body%r6(1:3), F6_i, M6_i, m, p)
          
          if (ABS(F6_i(5)) > 1.0E12) then
             print *, "Warning: extreme pitch moment from body-attached Point ", l
@@ -488,33 +489,33 @@ CONTAINS
    
 
 
-   ! this function handles assigning a connection to a body
+   ! this function handles assigning a point to a body
    !--------------------------------------------------------------
-   SUBROUTINE Body_AddConnect(Body, connectID, coords)
+   SUBROUTINE Body_AddPoint(Body, pointID, coords)
 
-      Type(MD_Body),      INTENT(INOUT)  :: Body        ! the Connection object
-      Integer(IntKi),     INTENT(IN   )  :: connectID
+      Type(MD_Body),      INTENT(INOUT)  :: Body        ! the Point object
+      Integer(IntKi),     INTENT(IN   )  :: pointID
       REAL(DbKi),         INTENT(IN   )  :: coords(3)
 
 
-      IF (wordy > 0) Print*, "C", connectID, "->B", Body%IdNum
+      IF (wordy > 0) Print*, "P", pointID, "->B", Body%IdNum
       
       IF(Body%nAttachedC < 30) THEN                ! this is currently just a maximum imposed by a fixed array size.  could be improved.
-         Body%nAttachedC = Body%nAttachedC + 1     ! increment the number connected
-         Body%AttachedC(Body%nAttachedC) = connectID
-         Body%rConnectRel(:,Body%nAttachedC) = coords  ! store relative position of connect on body
+         Body%nAttachedC = Body%nAttachedC + 1     ! increment the number pointed
+         Body%AttachedC(Body%nAttachedC) = pointID
+         Body%rPointRel(:,Body%nAttachedC) = coords  ! store relative position of point on body
       ELSE
          Print*, "too many Points attached to Body ", Body%IdNum, " in MoorDyn!"
       END IF
 
-   END SUBROUTINE Body_AddConnect
+   END SUBROUTINE Body_AddPoint
 
 
    ! this function handles assigning a rod to a body
    !--------------------------------------------------------------
    SUBROUTINE Body_AddRod(Body, rodID, coords)
 
-      Type(MD_Body),      INTENT(INOUT)  :: Body        ! the Connection object
+      Type(MD_Body),      INTENT(INOUT)  :: Body        ! the Point object
       Integer(IntKi),     INTENT(IN   )  :: rodID
       REAL(DbKi),         INTENT(IN   )  :: coords(6)  ! positions of rod ends A and B relative to body
       

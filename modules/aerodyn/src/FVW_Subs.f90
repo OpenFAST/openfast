@@ -1620,6 +1620,7 @@ subroutine FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
    character(*),                    intent(  out) :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    integer(IntKi) :: iAge, iW, iSpan
    integer(IntKi) :: nBelow
+   integer(IntKi) :: nBelowFW
    real(ReKi) :: GROUND
    real(ReKi) :: ABOVE_GROUND
    ErrStat = ErrID_None
@@ -1634,6 +1635,7 @@ subroutine FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
    endif
 
    nBelow=0
+   nBelowFW=0
    do iW = 1,p%nWings
       do iAge = 1,m%nNW+1
          do iSpan = 1,p%W(iW)%nSpan+1
@@ -1647,10 +1649,11 @@ subroutine FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
    if (m%nFW>0) then
       do iW = 1,p%nWings
          do iAge = 1,m%nFW+1
-            do iSpan = 1,FWnSpan
+            do iSpan = 1,FWnSpan+1
                if (x%W(iW)%r_FW(3, iSpan, iAge) < GROUND) then
                   x%W(iW)%r_FW(3, iSpan, iAge) = ABOVE_GROUND ! could use m%dxdt
                   nBelow=nBelow+1
+                  nBelowFW=nBelowFW+1
                endif
             enddo
          enddo
@@ -1658,6 +1661,9 @@ subroutine FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
    endif
    if (nBelow>0) then
       print*,'[WARN] Check the simulation, some vortices were found below the ground: ',nBelow
+   endif
+   if (nBelowFW>0) then
+      print*,'[WARN] Check the simulation, some far-wake vortices were found below the ground: ',nBelowFW
    endif
 end subroutine FakeGroundEffect
 

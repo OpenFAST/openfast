@@ -99,7 +99,7 @@ endfunction(of_aeromap_regression)
 
 function(of_fastlib_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastRegressionCase.py")
-  set(OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast/openfast_cpp")
+  set(OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast/openfast_cpp_driver")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
   # extra flag in call to "regression" on next line sets the ${TESTDIR}
@@ -312,13 +312,15 @@ of_regression("Tailfin_FreeYaw1DOF_PolarBased"         "openfast;elastodyn;aerod
 of_aeromap_regression("5MW_Land_AeroMap"               "aeromap;elastodyn;aerodyn15")
 
 # OpenFAST C++ API test
-if(BUILD_OPENFAST_CPP_API)
+if(BUILD_OPENFAST_CPP_DRIVER)
   of_cpp_interface_regression("5MW_Land_DLL_WTurb_cpp" "openfast;fastlib;cpp")
 endif()
 
 # OpenFAST C++ Driver test for OpenFAST Library
 # This tests the FAST Library and FAST_Library.h
-of_fastlib_regression("AWT_YFree_WSt"                    "fastlib;elastodyn;aerodyn15;servodyn")
+if(BUILD_OPENFAST_CPP_DRIVER)
+  of_fastlib_regression("AWT_YFree_WSt"                    "fastlib;elastodyn;aerodyn15;servodyn")
+endif(BUILD_OPENFAST_CPP_DRIVER)
 
 # OpenFAST Python API test
 of_regression_py("5MW_Land_DLL_WTurb_py"                     "openfast;fastlib;python;elastodyn;aerodyn15;servodyn")
@@ -350,6 +352,7 @@ if(BUILD_FASTFARM)
   ff_regression("LESinflow"  "fastfarm")
 #   ff_regression("Uninflow_curl"  "fastfarm")
   ff_regression("TSinflow_curl"  "fastfarm")
+  ff_regression("ModAmb_3"  "fastfarm")
 endif()
 
 # AeroDyn regression tests

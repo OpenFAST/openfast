@@ -95,7 +95,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevXY      !< X-Y locations for WaveElev output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number. [m,-]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElev      !< wave elevation at WaveElevXY; first dimension is time step; second dimension is point number [m,-]
     TYPE(FAST_VTK_BLSurfaceType) , DIMENSION(:), ALLOCATABLE  :: BladeShape      !< AirfoilCoords for each blade [m]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: MorisonRad      !< radius of each Morison node [m]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: MorisonVisRad      !< radius of each Morison node [m]
   END TYPE FAST_VTK_SurfaceType
 ! =======================
 ! =========  FAST_VTK_ModeShapeType  =======
@@ -977,17 +977,17 @@ subroutine FAST_CopyVTK_SurfaceType(SrcVTK_SurfaceTypeData, DstVTK_SurfaceTypeDa
          if (ErrStat >= AbortErrLev) return
       end do
    end if
-   if (allocated(SrcVTK_SurfaceTypeData%MorisonRad)) then
-      LB(1:1) = lbound(SrcVTK_SurfaceTypeData%MorisonRad)
-      UB(1:1) = ubound(SrcVTK_SurfaceTypeData%MorisonRad)
-      if (.not. allocated(DstVTK_SurfaceTypeData%MorisonRad)) then
-         allocate(DstVTK_SurfaceTypeData%MorisonRad(LB(1):UB(1)), stat=ErrStat2)
+   if (allocated(SrcVTK_SurfaceTypeData%MorisonVisRad)) then
+      LB(1:1) = lbound(SrcVTK_SurfaceTypeData%MorisonVisRad)
+      UB(1:1) = ubound(SrcVTK_SurfaceTypeData%MorisonVisRad)
+      if (.not. allocated(DstVTK_SurfaceTypeData%MorisonVisRad)) then
+         allocate(DstVTK_SurfaceTypeData%MorisonVisRad(LB(1):UB(1)), stat=ErrStat2)
          if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstVTK_SurfaceTypeData%MorisonRad.', ErrStat, ErrMsg, RoutineName)
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstVTK_SurfaceTypeData%MorisonVisRad.', ErrStat, ErrMsg, RoutineName)
             return
          end if
       end if
-      DstVTK_SurfaceTypeData%MorisonRad = SrcVTK_SurfaceTypeData%MorisonRad
+      DstVTK_SurfaceTypeData%MorisonVisRad = SrcVTK_SurfaceTypeData%MorisonVisRad
    end if
 end subroutine
 
@@ -1020,8 +1020,8 @@ subroutine FAST_DestroyVTK_SurfaceType(VTK_SurfaceTypeData, ErrStat, ErrMsg)
       end do
       deallocate(VTK_SurfaceTypeData%BladeShape)
    end if
-   if (allocated(VTK_SurfaceTypeData%MorisonRad)) then
-      deallocate(VTK_SurfaceTypeData%MorisonRad)
+   if (allocated(VTK_SurfaceTypeData%MorisonVisRad)) then
+      deallocate(VTK_SurfaceTypeData%MorisonVisRad)
    end if
 end subroutine
 
@@ -1061,10 +1061,10 @@ subroutine FAST_PackVTK_SurfaceType(Buf, Indata)
          call FAST_PackVTK_BLSurfaceType(Buf, InData%BladeShape(i1)) 
       end do
    end if
-   call RegPack(Buf, allocated(InData%MorisonRad))
-   if (allocated(InData%MorisonRad)) then
-      call RegPackBounds(Buf, 1, lbound(InData%MorisonRad), ubound(InData%MorisonRad))
-      call RegPack(Buf, InData%MorisonRad)
+   call RegPack(Buf, allocated(InData%MorisonVisRad))
+   if (allocated(InData%MorisonVisRad)) then
+      call RegPackBounds(Buf, 1, lbound(InData%MorisonVisRad), ubound(InData%MorisonVisRad))
+      call RegPack(Buf, InData%MorisonVisRad)
    end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -1145,18 +1145,18 @@ subroutine FAST_UnPackVTK_SurfaceType(Buf, OutData)
          call FAST_UnpackVTK_BLSurfaceType(Buf, OutData%BladeShape(i1)) ! BladeShape 
       end do
    end if
-   if (allocated(OutData%MorisonRad)) deallocate(OutData%MorisonRad)
+   if (allocated(OutData%MorisonVisRad)) deallocate(OutData%MorisonVisRad)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
    if (IsAllocAssoc) then
       call RegUnpackBounds(Buf, 1, LB, UB)
       if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%MorisonRad(LB(1):UB(1)),stat=stat)
+      allocate(OutData%MorisonVisRad(LB(1):UB(1)),stat=stat)
       if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%MorisonRad.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%MorisonVisRad.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
          return
       end if
-      call RegUnpack(Buf, OutData%MorisonRad)
+      call RegUnpack(Buf, OutData%MorisonVisRad)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
 end subroutine

@@ -146,6 +146,10 @@ typedef   ^        OtherStateType  ^    xcc        {:}{:} - - "Algorithm acceler
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 typedef   ^        OtherStateType Logical  InitAcc            -  - - "flag to determine if accerlerations have been initialized in updateStates"
 typedef   ^        OtherStateType Logical  RunQuasiStaticInit -  - - "flag to determine if quasi-static solution initialization should be run again (with load inputs)" -
+# reference frame -- this follows the root motion mesh
+typedef   ^        OtherStateType R8Ki        GlbPos           {3}       - -  "Position Vector between origins of Global (moving frame) and blade frames (BD coordinates)  Follows the RootMotion mesh" -
+typedef   ^        OtherStateType R8Ki        GlbRot           {3}{3}    - -  "Rotation Tensor between Global (moving frame) and Blade frames (BD coordinates; transfers local to global).  Follows the RootMotion mesh" -
+typedef   ^        OtherStateType R8Ki        Glb_crv          {3}       - -  "CRV parameters of GlbRot.  Follows the RootMotion mesh" -
 
 
 # Quadrature point info that does not change throughout the simulation
@@ -172,7 +176,7 @@ typedef   ^        ParameterType R8Ki           uuN0             {:}{:}{:} - -  
 typedef   ^        ParameterType  ^             twN0             {:}{:}    - -  "Initial Twist of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)" -
 typedef   ^        ParameterType  ^             Stif0_QP         {:}{:}{:} - -  "Sectional Stiffness Properties at quadrature points (6x6xqp)" -
 typedef   ^        ParameterType  ^             Mass0_QP         {:}{:}{:} - -  "Sectional Mass Properties at quadrature points (6x6xqp)" -
-typedef   ^        ParameterType  ^             gravity          {3}       - -  "Gravitational acceleration" m/s^2
+typedef   ^        ParameterType  ^             gravity          {3}       - -  "Gravitational acceleration -- intertial frame!!!" m/s^2
 typedef   ^        ParameterType  ^             segment_eta      {:}       - -  "Array stored length ratio of each segment w.r.t. member it lies in" -
 typedef   ^        ParameterType  ^             member_eta       {:}       - -  "Array stored length ratio of each member  w.r.t. entire blade" -
 typedef   ^        ParameterType  ^             blade_length      -        - -  "Blade Length" -
@@ -181,9 +185,6 @@ typedef   ^        ParameterType  ^             blade_CG         {3}       - -  
 typedef   ^        ParameterType  ^             blade_IN         {3}{3}    - -  "Blade Length" -
 typedef   ^        ParameterType  ^             beta             {6}       - -  "Damping Coefficient" -
 typedef   ^        ParameterType  ^             tol              -         - -  "Tolerance used in stopping criterion" -
-typedef   ^        ParameterType  ^             GlbPos           {3}       - -  "Initial Position Vector between origins of Global and blade frames (BD coordinates)" -
-typedef   ^        ParameterType  ^             GlbRot           {3}{3}    - -  "Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)" -
-typedef   ^        ParameterType  ^             Glb_crv          {3}       - -  "CRV parameters of GlbRot" -
 typedef   ^        ParameterType  ^             QPtN             {:}       - -  "Quadrature (QuadPt) point locations in natural frame [-1, 1]" -
 typedef   ^        ParameterType  ^             QPtWeight        {:}       - -  "Weights at each quadrature point (QuadPt)" -
 typedef   ^        ParameterType  ^             Shp              {:}{:}    - -  "Shape function matrix (index 1 = FE nodes; index 2=quadrature points)" -

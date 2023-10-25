@@ -148,6 +148,9 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: xcc      !< Algorithm acceleration in GA2: (1-alpha_m)*xcc_(n+1) = (1-alpha_f)*Acc_(n+1) + alpha_f*Acc_n - alpha_m*xcc_n [-]
     LOGICAL  :: InitAcc = .false.      !< flag to determine if accerlerations have been initialized in updateStates [-]
     LOGICAL  :: RunQuasiStaticInit = .false.      !< flag to determine if quasi-static solution initialization should be run again (with load inputs) [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: GlbPos = 0.0_R8Ki      !< Position Vector between origins of Global (moving frame) and blade frames (BD coordinates)  Follows the RootMotion mesh [-]
+    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: GlbRot = 0.0_R8Ki      !< Rotation Tensor between Global (moving frame) and Blade frames (BD coordinates; transfers local to global).  Follows the RootMotion mesh [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: Glb_crv = 0.0_R8Ki      !< CRV parameters of GlbRot.  Follows the RootMotion mesh [-]
   END TYPE BD_OtherStateType
 ! =======================
 ! =========  qpParam  =======
@@ -165,7 +168,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: twN0      !< Initial Twist of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: Stif0_QP      !< Sectional Stiffness Properties at quadrature points (6x6xqp) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: Mass0_QP      !< Sectional Mass Properties at quadrature points (6x6xqp) [-]
-    REAL(R8Ki) , DIMENSION(1:3)  :: gravity = 0.0_R8Ki      !< Gravitational acceleration [m/s^2]
+    REAL(R8Ki) , DIMENSION(1:3)  :: gravity = 0.0_R8Ki      !< Gravitational acceleration -- intertial frame!!! [m/s^2]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: segment_eta      !< Array stored length ratio of each segment w.r.t. member it lies in [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: member_eta      !< Array stored length ratio of each member  w.r.t. entire blade [-]
     REAL(R8Ki)  :: blade_length = 0.0_R8Ki      !< Blade Length [-]
@@ -174,9 +177,6 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: blade_IN = 0.0_R8Ki      !< Blade Length [-]
     REAL(R8Ki) , DIMENSION(1:6)  :: beta = 0.0_R8Ki      !< Damping Coefficient [-]
     REAL(R8Ki)  :: tol = 0.0_R8Ki      !< Tolerance used in stopping criterion [-]
-    REAL(R8Ki) , DIMENSION(1:3)  :: GlbPos = 0.0_R8Ki      !< Initial Position Vector between origins of Global and blade frames (BD coordinates) [-]
-    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: GlbRot = 0.0_R8Ki      !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global) [-]
-    REAL(R8Ki) , DIMENSION(1:3)  :: Glb_crv = 0.0_R8Ki      !< CRV parameters of GlbRot [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QPtN      !< Quadrature (QuadPt) point locations in natural frame [-1, 1] [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QPtWeight      !< Weights at each quadrature point (QuadPt) [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Shp      !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points) [-]
@@ -1581,6 +1581,9 @@ subroutine BD_CopyOtherState(SrcOtherStateData, DstOtherStateData, CtrlCode, Err
    end if
    DstOtherStateData%InitAcc = SrcOtherStateData%InitAcc
    DstOtherStateData%RunQuasiStaticInit = SrcOtherStateData%RunQuasiStaticInit
+   DstOtherStateData%GlbPos = SrcOtherStateData%GlbPos
+   DstOtherStateData%GlbRot = SrcOtherStateData%GlbRot
+   DstOtherStateData%Glb_crv = SrcOtherStateData%Glb_crv
 end subroutine
 
 subroutine BD_DestroyOtherState(OtherStateData, ErrStat, ErrMsg)
@@ -1615,6 +1618,9 @@ subroutine BD_PackOtherState(Buf, Indata)
    end if
    call RegPack(Buf, InData%InitAcc)
    call RegPack(Buf, InData%RunQuasiStaticInit)
+   call RegPack(Buf, InData%GlbPos)
+   call RegPack(Buf, InData%GlbRot)
+   call RegPack(Buf, InData%Glb_crv)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1657,6 +1663,12 @@ subroutine BD_UnPackOtherState(Buf, OutData)
    call RegUnpack(Buf, OutData%InitAcc)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%RunQuasiStaticInit)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%GlbPos)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%GlbRot)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%Glb_crv)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -1863,9 +1875,6 @@ subroutine BD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%blade_IN = SrcParamData%blade_IN
    DstParamData%beta = SrcParamData%beta
    DstParamData%tol = SrcParamData%tol
-   DstParamData%GlbPos = SrcParamData%GlbPos
-   DstParamData%GlbRot = SrcParamData%GlbRot
-   DstParamData%Glb_crv = SrcParamData%Glb_crv
    if (allocated(SrcParamData%QPtN)) then
       LB(1:1) = lbound(SrcParamData%QPtN)
       UB(1:1) = ubound(SrcParamData%QPtN)
@@ -2340,9 +2349,6 @@ subroutine BD_PackParam(Buf, Indata)
    call RegPack(Buf, InData%blade_IN)
    call RegPack(Buf, InData%beta)
    call RegPack(Buf, InData%tol)
-   call RegPack(Buf, InData%GlbPos)
-   call RegPack(Buf, InData%GlbRot)
-   call RegPack(Buf, InData%Glb_crv)
    call RegPack(Buf, allocated(InData%QPtN))
    if (allocated(InData%QPtN)) then
       call RegPackBounds(Buf, 1, lbound(InData%QPtN), ubound(InData%QPtN))
@@ -2616,12 +2622,6 @@ subroutine BD_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%beta)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%tol)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%GlbPos)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%GlbRot)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Glb_crv)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%QPtN)) deallocate(OutData%QPtN)
    call RegUnpack(Buf, IsAllocAssoc)
