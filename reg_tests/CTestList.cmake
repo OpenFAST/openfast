@@ -367,7 +367,9 @@ ad_regression("ad_BAR_OLAF"                 "aerodyn;bem")
 ad_regression("ad_BAR_SineMotion"           "aerodyn;bem")
 ad_regression("ad_BAR_SineMotion_UA4_DBEMT3" "aerodyn;bem")
 ad_regression("ad_BAR_RNAMotion"            "aerodyn;bem")
+ad_regression("ad_B1n2_OLAF"                "aerodyn;OLAF")
 py_ad_regression("py_ad_5MW_OC4Semi_WSt_WavesWN"     "aerodyn;bem;python")
+py_ad_regression("py_ad_B1n2_OLAF"                   "aerodyn;OLAF;python")
 
 # UnsteadyAero
 ua_regression("ua_redfreq"                  "unsteadyaero")

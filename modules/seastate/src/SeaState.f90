@@ -466,14 +466,16 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%OutSFmt       = InputFileData%OutSFmt
       p%NumOuts       = InputFileData%NumOuts
    
-       ! Define initialization-routine output here:
+      ! Define initialization-routine output here:
       InitOut%Ver = SeaSt_ProgDesc         
-         ! These three come directly from processing the inputs, and so will exist even if not using Morison elements:
-      InitOut%WtrDens = InputFileData%Waves%WtrDens
-      InitOut%WtrDpth = InputFileData%Waves%WtrDpth
-      p%WaveStMod     = InputFileData%Waves%WaveStMod
-      InitOut%MSL2SWL = InputFileData%MSL2SWL
-      p%WtrDpth       = InitOut%WtrDpth  
+      ! These three come directly from processing the inputs, and so will exist even if not using Morison elements:
+      InitOut%WtrDens    = InputFileData%Waves%WtrDens
+      InitOut%WtrDpth    = InputFileData%Waves%WtrDpth - InputFileData%MSL2SWL
+      InitOut%EffWtrDpth = InputFileData%Waves%WtrDpth
+      InitOut%MSL2SWL    = InputFileData%MSL2SWL      
+      p%WaveStMod        = InputFileData%Waves%WaveStMod
+      p%WtrDpth          = InitOut%WtrDpth  
+      p%EffWtrDpth       = InitOut%EffWtrDpth
       
       InitOut%WaveMultiDir = InputFileData%Waves%WaveMultiDir
       InitOut%MCFD    = InputFileData%Waves%MCFD
@@ -543,15 +545,15 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%WvHiCOffS    =  InputFileData%Waves2%WvHiCOffS 
        InitOut%WaveDirMod   =  InputFileData%Waves%WaveDirMod
        InitOut%WaveDir      =  InputFileData%Waves%WaveDir       ! For WAMIT for use in SS_Excitation
-       InitOut%WtrDens      =  InputFileData%Waves%WtrDens
-       InitOut%WtrDpth      =  InputFileData%Waves%WtrDpth
-       InitOut%MSL2SWL      =  InputFileData%MSL2SWL
+       ! InitOut%WtrDens      =  InputFileData%Waves%WtrDens
+       ! InitOut%WtrDpth      =  InputFileData%Waves%WtrDpth
+       ! InitOut%MSL2SWL      =  InputFileData%MSL2SWL
        
        InitOut%SeaSt_Interp_p =  p%seast_interp_p
 
       ! Build WaveField
       p%WaveField%MSL2SWL      =  InitOut%MSL2SWL
-      p%WaveField%EffWtrDpth   =  p%WtrDpth + InitOut%MSL2SWL ! Effective water depth measured from the SWL
+      p%WaveField%EffWtrDpth   =  p%EffWtrDpth                   ! Effective water depth measured from the SWL
       p%WaveField%WaveStMod    =  p%WaveStMod
       ! p%WaveField%WaveTime     => Waves_InitOut%WaveTime
       ! p%WaveField%WaveElev1    => Waves_InitOut%WaveElev

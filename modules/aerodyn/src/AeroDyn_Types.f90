@@ -94,6 +94,7 @@ IMPLICIT NONE
 ! =========  RotInitInputType  =======
   TYPE, PUBLIC :: RotInitInputType
     INTEGER(IntKi)  :: NumBlades = 0_IntKi      !< Number of blades on the turbine [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: originInit = 0.0_ReKi      !< X-Y-Z reference position for the turbine [m]
     REAL(ReKi) , DIMENSION(1:3)  :: HubPosition = 0.0_ReKi      !< X-Y-Z reference position of hub [m]
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: HubOrientation = 0.0_R8Ki      !< DCM reference orientation of hub [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BladeRootPosition      !< X-Y-Z reference position of each blade root (3 x NumBlades) [m]
@@ -843,6 +844,7 @@ subroutine AD_CopyRotInitInputType(SrcRotInitInputTypeData, DstRotInitInputTypeD
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstRotInitInputTypeData%NumBlades = SrcRotInitInputTypeData%NumBlades
+   DstRotInitInputTypeData%originInit = SrcRotInitInputTypeData%originInit
    DstRotInitInputTypeData%HubPosition = SrcRotInitInputTypeData%HubPosition
    DstRotInitInputTypeData%HubOrientation = SrcRotInitInputTypeData%HubOrientation
    if (allocated(SrcRotInitInputTypeData%BladeRootPosition)) then
@@ -897,6 +899,7 @@ subroutine AD_PackRotInitInputType(Buf, Indata)
    character(*), parameter         :: RoutineName = 'AD_PackRotInitInputType'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%NumBlades)
+   call RegPack(Buf, InData%originInit)
    call RegPack(Buf, InData%HubPosition)
    call RegPack(Buf, InData%HubOrientation)
    call RegPack(Buf, allocated(InData%BladeRootPosition))
@@ -926,6 +929,8 @@ subroutine AD_UnPackRotInitInputType(Buf, OutData)
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
    call RegUnpack(Buf, OutData%NumBlades)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%originInit)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%HubPosition)
    if (RegCheckErr(Buf, RoutineName)) return

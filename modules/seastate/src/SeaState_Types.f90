@@ -95,6 +95,7 @@ IMPLICIT NONE
     TYPE(ProgDesc)  :: Ver      !< Version of SeaState [-]
     REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default) [(kg/m^3)]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth, this is necessary to inform glue-code what the module is using for WtrDpth (may not be the glue-code's default) [(m)]
+    REAL(ReKi)  :: EffWtrDpth = 0.0_ReKi      !< Effective water depth equal to the sum of input WtrDpth and MSL2SWL [(m)]
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Offset between still-water level and mean sea level, this is necessary to inform glue-code what the module is using for MSL2SWL (may not be the glue-code's default) [(m)]
     REAL(SiKi) , DIMENSION(:,:), POINTER  :: WaveElevC0 => NULL()      !< Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part [(meters)]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElevC => NULL()      !< Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part [(meters)]
@@ -195,6 +196,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinyi      !< yi-coordinates for points where the incident wave kinematics can be output; these are relative to the mean sea level [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinzi      !< zi-coordinates for points where the incident wave kinematics can be output; these are relative to the mean sea level [(meters)]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [(m)]
+    REAL(ReKi)  :: EffWtrDpth = 0.0_ReKi      !< Effective water depth equal to the sum of input WtrDpth and MSL2SWL [(m)]
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step in seconds for integration of continuous states (if a fixed-step integrator is used) and update of discrete states [-]
     INTEGER(IntKi)  :: WaveStMod = 0_IntKi      !< Wave stretching model [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !<  [-]
@@ -738,6 +740,7 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    if (ErrStat >= AbortErrLev) return
    DstInitOutputData%WtrDens = SrcInitOutputData%WtrDens
    DstInitOutputData%WtrDpth = SrcInitOutputData%WtrDpth
+   DstInitOutputData%EffWtrDpth = SrcInitOutputData%EffWtrDpth
    DstInitOutputData%MSL2SWL = SrcInitOutputData%MSL2SWL
    DstInitOutputData%WaveElevC0 => SrcInitOutputData%WaveElevC0
    DstInitOutputData%WaveElevC => SrcInitOutputData%WaveElevC
@@ -850,6 +853,7 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
    call RegPack(Buf, InData%WtrDens)
    call RegPack(Buf, InData%WtrDpth)
+   call RegPack(Buf, InData%EffWtrDpth)
    call RegPack(Buf, InData%MSL2SWL)
    call RegPack(Buf, associated(InData%WaveElevC0))
    if (associated(InData%WaveElevC0)) then
@@ -1048,6 +1052,8 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    call RegUnpack(Buf, OutData%WtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WtrDpth)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%EffWtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%MSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1800,6 +1806,7 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
       DstParamData%WaveKinzi = SrcParamData%WaveKinzi
    end if
    DstParamData%WtrDpth = SrcParamData%WtrDpth
+   DstParamData%EffWtrDpth = SrcParamData%EffWtrDpth
    DstParamData%DT = SrcParamData%DT
    DstParamData%WaveStMod = SrcParamData%WaveStMod
    if (allocated(SrcParamData%OutParam)) then
@@ -2051,6 +2058,7 @@ subroutine SeaSt_PackParam(Buf, Indata)
       call RegPack(Buf, InData%WaveKinzi)
    end if
    call RegPack(Buf, InData%WtrDpth)
+   call RegPack(Buf, InData%EffWtrDpth)
    call RegPack(Buf, InData%DT)
    call RegPack(Buf, InData%WaveStMod)
    call RegPack(Buf, allocated(InData%OutParam))
@@ -2495,6 +2503,8 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    call RegUnpack(Buf, OutData%WtrDpth)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%EffWtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
