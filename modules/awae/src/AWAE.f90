@@ -1040,6 +1040,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          IfW_InitInp%FixedWindFileRootName = .true.
          IfW_InitInp%NumWindPoints         = p%NumGrid_low
          IfW_InitInp%TurbineID             = 0
+         IfW_InitInp%MHK                   = MHK_None
       
          call InflowWind_Init( IfW_InitInp, m%u_IfW_Low, p%IfW(0), x%IfW(0), xd%IfW(0), z%IfW(0), OtherState%IfW(0), m%y_IfW_Low, m%IfW(0), Interval, IfW_InitOut, ErrStat2, ErrMsg2 )
             call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
