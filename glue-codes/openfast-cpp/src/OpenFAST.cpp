@@ -1508,8 +1508,11 @@ void fast::OpenFAST::step(bool writeFiles) {
     }
 
     if (writeFiles) {
+        // provide an epsilon that is small relative to dtFast to help with integer conversion
+        const double eps = dtFast*1e-6;
         for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-            int tStepRatio = dtDriver/dtFAST;
+            // ensure that the ratio is robust to integer conversion by making sure it will always truncate down
+            int tStepRatio = static_cast<int>((dtDriver+eps)/dtFAST);
             if ( (((nt_global - ntStart) % (restartFreq_ * tStepRatio)) == 0 )  && (nt_global != ntStart) ) {
                 turbineData[iTurb].FASTRestartFileName = " "; // if blank, it will use FAST convention <RootName>.nt_global
                 FAST_CreateCheckpoint(&iTurb, turbineData[iTurb].FASTRestartFileName.data(), &ErrStat, ErrMsg);
