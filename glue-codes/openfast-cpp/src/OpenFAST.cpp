@@ -15,6 +15,14 @@ inline void check_nc_error(int code, std::string msg) {
 
 int fast::OpenFAST::AbortErrLev = ErrID_Fatal; // abort error level; compare with NWTC Library
 
+int time_step_ratio(double fastDt, double driverDt, double epsFactor=1e-6)
+{
+  // ensure that the ratio is robust to integer conversion by making sure it will always truncate down
+  // provide an epsilon that is small relative to dtFast to help with integer conversion
+  const double eps = driverDt*epsFactor;
+  return static_cast<int>((driverDt*eps)/fastDt);
+}
+
 //Constructor
 fast::fastInputs::fastInputs():
     nTurbinesGlob(0),
@@ -1348,7 +1356,7 @@ void fast::OpenFAST::advance_to_next_driver_time_step(bool writeFiles) {
 
     if (writeFiles) {
       for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-          int tStepRatio = dtDriver/dtFAST;
+          int tStepRatio = time_step_ratio(dtFAST, dtDriver);
           if ( (restartFreq_*tStepRatio > 0) && (((nt_global - ntStart) % (restartFreq_*tStepRatio)) == 0 )  && (nt_global != ntStart) ) {
               turbineData[iTurb].FASTRestartFileName = " "; // if blank, it will use FAST convention <RootName>.nt_global
               FAST_CreateCheckpoint(&iTurb, turbineData[iTurb].FASTRestartFileName.data(), &ErrStat, ErrMsg);
@@ -1508,11 +1516,8 @@ void fast::OpenFAST::step(bool writeFiles) {
     }
 
     if (writeFiles) {
-        // provide an epsilon that is small relative to dtFast to help with integer conversion
-        const double eps = dtFast*1e-6;
+        int tStepRatio = time_step_ratio(dtFAST, dtFAST);
         for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-            // ensure that the ratio is robust to integer conversion by making sure it will always truncate down
-            int tStepRatio = static_cast<int>((dtDriver+eps)/dtFAST);
             if ( (((nt_global - ntStart) % (restartFreq_ * tStepRatio)) == 0 )  && (nt_global != ntStart) ) {
                 turbineData[iTurb].FASTRestartFileName = " "; // if blank, it will use FAST convention <RootName>.nt_global
                 FAST_CreateCheckpoint(&iTurb, turbineData[iTurb].FASTRestartFileName.data(), &ErrStat, ErrMsg);
@@ -1582,7 +1587,7 @@ int fast::OpenFAST::checkAndSetSubsteps() {
                 }
             }
             if (dtFAST > 0) {
-                int tStepRatio = dtDriver/dtFAST;
+                int tStepRatio = time_step_ratio(dtFAST, dtDriver);
                 if (std::abs(dtDriver - tStepRatio * dtFAST) < 0.001) {// TODO: Fix arbitrary number 0.001
                     nSubsteps_ = tStepRatio;
                     return 1;
@@ -2607,7 +2612,7 @@ void fast::OpenFAST::writeOutputFile(int iTurbLoc, int n_t_global) {
     check_nc_error(ierr, "nc_open");
 
     size_t count1=1;
-    int tStepRatio = dtDriver/dtFAST;
+    int tStepRatio = time_step_ratio(dtFAST, dtDriver);
     size_t n_tsteps = n_t_global/tStepRatio/outputFreq_ - 1;
     double curTime = n_t_global * dtFAST;
     ierr = nc_put_vara_double(ncid, ncOutVarIDs_["time"], &n_tsteps, &count1, &curTime);
@@ -2902,7 +2907,7 @@ void fast::OpenFAST::writeRestartFile(int iTurbLoc, int n_t_global) {
     check_nc_error(ierr, "nc_open");
 
     size_t count1=1;
-    int tStepRatio = dtDriver/dtFAST;
+    int tStepRatio = time_step_ratio(dtFAST, dtDriver);
     size_t n_tsteps = n_t_global/tStepRatio/restartFreq_ - 1;
     double curTime = n_t_global * dtFAST;
     ierr = nc_put_vara_double(ncid, ncRstVarIDs_["time"], &n_tsteps, &count1, &curTime);
