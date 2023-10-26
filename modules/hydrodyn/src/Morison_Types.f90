@@ -339,10 +339,12 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WaveStMod = 0_IntKi      !<  [-]
     REAL(SiKi)  :: MCFD = 0.0_R4Ki      !< Diameter of the MacCamy-Fuchs member. [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
+    LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
   END TYPE Morison_InitInputType
 ! =======================
 ! =========  Morison_InitOutputType  =======
   TYPE, PUBLIC :: Morison_InitOutputType
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: MorisonVisRad      !< radius of node (for FAST visualization) [(m)]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< User-requested Output channel names [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !<  [-]
   END TYPE Morison_InitOutputType
@@ -390,6 +392,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: V_rel_n      !< Normal relative flow velocity at joints [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: V_rel_n_HiPass      !< High-pass filtered normal relative flow velocity at joints [m/s]
     INTEGER(IntKi)  :: LastIndWave = 0_IntKi      !< Last time index used in the wave kinematics arrays [-]
+    TYPE(MeshMapType)  :: VisMeshMap      !< Mesh mapping for visualization mesh [-]
   END TYPE Morison_MiscVarType
 ! =======================
 ! =========  Morison_ParameterType  =======
@@ -424,6 +427,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: WaveStMod = 0_IntKi      !<  [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< SeaState wave field [-]
+    LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
   END TYPE Morison_ParameterType
 ! =======================
 ! =========  Morison_InputType  =======
@@ -434,6 +438,7 @@ IMPLICIT NONE
 ! =========  Morison_OutputType  =======
   TYPE, PUBLIC :: Morison_OutputType
     TYPE(MeshType)  :: Mesh      !< Loads on each node output mesh [-]
+    TYPE(MeshType)  :: VisMesh      !< Line mesh for visualization [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: WriteOutput      !<  [-]
   END TYPE Morison_OutputType
 ! =======================
@@ -3722,6 +3727,7 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    DstInitInputData%WaveStMod = SrcInitInputData%WaveStMod
    DstInitInputData%MCFD = SrcInitInputData%MCFD
    DstInitInputData%WaveField => SrcInitInputData%WaveField
+   DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
 end subroutine
 
 subroutine Morison_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -3998,6 +4004,7 @@ subroutine Morison_PackInitInput(Buf, Indata)
          call SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, InData%WaveField) 
       end if
    end if
+   call RegPack(Buf, InData%VisMeshes)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -4289,6 +4296,8 @@ subroutine Morison_UnPackInitInput(Buf, OutData)
    else
       OutData%WaveField => null()
    end if
+   call RegUnpack(Buf, OutData%VisMeshes)
+   if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
 subroutine Morison_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg)
@@ -4302,6 +4311,18 @@ subroutine Morison_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode
    character(*), parameter        :: RoutineName = 'Morison_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(SrcInitOutputData%MorisonVisRad)) then
+      LB(1:1) = lbound(SrcInitOutputData%MorisonVisRad)
+      UB(1:1) = ubound(SrcInitOutputData%MorisonVisRad)
+      if (.not. allocated(DstInitOutputData%MorisonVisRad)) then
+         allocate(DstInitOutputData%MorisonVisRad(LB(1):UB(1)), stat=ErrStat2)
+         if (ErrStat2 /= 0) then
+            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%MorisonVisRad.', ErrStat, ErrMsg, RoutineName)
+            return
+         end if
+      end if
+      DstInitOutputData%MorisonVisRad = SrcInitOutputData%MorisonVisRad
+   end if
    if (allocated(SrcInitOutputData%WriteOutputHdr)) then
       LB(1:1) = lbound(SrcInitOutputData%WriteOutputHdr)
       UB(1:1) = ubound(SrcInitOutputData%WriteOutputHdr)
@@ -4335,6 +4356,9 @@ subroutine Morison_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Morison_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
+   if (allocated(InitOutputData%MorisonVisRad)) then
+      deallocate(InitOutputData%MorisonVisRad)
+   end if
    if (allocated(InitOutputData%WriteOutputHdr)) then
       deallocate(InitOutputData%WriteOutputHdr)
    end if
@@ -4348,6 +4372,11 @@ subroutine Morison_PackInitOutput(Buf, Indata)
    type(Morison_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Morison_PackInitOutput'
    if (Buf%ErrStat >= AbortErrLev) return
+   call RegPack(Buf, allocated(InData%MorisonVisRad))
+   if (allocated(InData%MorisonVisRad)) then
+      call RegPackBounds(Buf, 1, lbound(InData%MorisonVisRad), ubound(InData%MorisonVisRad))
+      call RegPack(Buf, InData%MorisonVisRad)
+   end if
    call RegPack(Buf, allocated(InData%WriteOutputHdr))
    if (allocated(InData%WriteOutputHdr)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutputHdr), ubound(InData%WriteOutputHdr))
@@ -4369,6 +4398,20 @@ subroutine Morison_UnPackInitOutput(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
+   if (allocated(OutData%MorisonVisRad)) deallocate(OutData%MorisonVisRad)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackBounds(Buf, 1, LB, UB)
+      if (RegCheckErr(Buf, RoutineName)) return
+      allocate(OutData%MorisonVisRad(LB(1):UB(1)),stat=stat)
+      if (stat /= 0) then 
+         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%MorisonVisRad.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+         return
+      end if
+      call RegUnpack(Buf, OutData%MorisonVisRad)
+      if (RegCheckErr(Buf, RoutineName)) return
+   end if
    if (allocated(OutData%WriteOutputHdr)) deallocate(OutData%WriteOutputHdr)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -4591,7 +4634,7 @@ subroutine Morison_UnPackOtherState(Buf, OutData)
 end subroutine
 
 subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
-   type(Morison_MiscVarType), intent(in) :: SrcMiscData
+   type(Morison_MiscVarType), intent(inout) :: SrcMiscData
    type(Morison_MiscVarType), intent(inout) :: DstMiscData
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
@@ -4848,6 +4891,9 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       DstMiscData%V_rel_n_HiPass = SrcMiscData%V_rel_n_HiPass
    end if
    DstMiscData%LastIndWave = SrcMiscData%LastIndWave
+   call NWTC_Library_CopyMeshMapType(SrcMiscData%VisMeshMap, DstMiscData%VisMeshMap, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine Morison_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -4927,6 +4973,8 @@ subroutine Morison_DestroyMisc(MiscData, ErrStat, ErrMsg)
    if (allocated(MiscData%V_rel_n_HiPass)) then
       deallocate(MiscData%V_rel_n_HiPass)
    end if
+   call NWTC_Library_DestroyMeshMapType(MiscData%VisMeshMap, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
 subroutine Morison_PackMisc(Buf, Indata)
@@ -5041,6 +5089,7 @@ subroutine Morison_PackMisc(Buf, Indata)
       call RegPack(Buf, InData%V_rel_n_HiPass)
    end if
    call RegPack(Buf, InData%LastIndWave)
+   call NWTC_Library_PackMeshMapType(Buf, InData%VisMeshMap) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -5336,6 +5385,7 @@ subroutine Morison_UnPackMisc(Buf, OutData)
    end if
    call RegUnpack(Buf, OutData%LastIndWave)
    if (RegCheckErr(Buf, RoutineName)) return
+   call NWTC_Library_UnpackMeshMapType(Buf, OutData%VisMeshMap) ! VisMeshMap 
 end subroutine
 
 subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
@@ -5551,6 +5601,7 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    DstParamData%NumOuts = SrcParamData%NumOuts
    DstParamData%WaveStMod = SrcParamData%WaveStMod
    DstParamData%WaveField => SrcParamData%WaveField
+   DstParamData%VisMeshes = SrcParamData%VisMeshes
 end subroutine
 
 subroutine Morison_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -5749,6 +5800,7 @@ subroutine Morison_PackParam(Buf, Indata)
          call SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, InData%WaveField) 
       end if
    end if
+   call RegPack(Buf, InData%VisMeshes)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -6013,6 +6065,8 @@ subroutine Morison_UnPackParam(Buf, OutData)
    else
       OutData%WaveField => null()
    end if
+   call RegUnpack(Buf, OutData%VisMeshes)
+   if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
 subroutine Morison_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)
@@ -6076,6 +6130,9 @@ subroutine Morison_CopyOutput(SrcOutputData, DstOutputData, CtrlCode, ErrStat, E
    call MeshCopy(SrcOutputData%Mesh, DstOutputData%Mesh, CtrlCode, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call MeshCopy(SrcOutputData%VisMesh, DstOutputData%VisMesh, CtrlCode, ErrStat2, ErrMsg2 )
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcOutputData%WriteOutput)) then
       LB(1:1) = lbound(SrcOutputData%WriteOutput)
       UB(1:1) = ubound(SrcOutputData%WriteOutput)
@@ -6101,6 +6158,8 @@ subroutine Morison_DestroyOutput(OutputData, ErrStat, ErrMsg)
    ErrMsg  = ''
    call MeshDestroy( OutputData%Mesh, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call MeshDestroy( OutputData%VisMesh, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(OutputData%WriteOutput)) then
       deallocate(OutputData%WriteOutput)
    end if
@@ -6112,6 +6171,7 @@ subroutine Morison_PackOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Morison_PackOutput'
    if (Buf%ErrStat >= AbortErrLev) return
    call MeshPack(Buf, InData%Mesh) 
+   call MeshPack(Buf, InData%VisMesh) 
    call RegPack(Buf, allocated(InData%WriteOutput))
    if (allocated(InData%WriteOutput)) then
       call RegPackBounds(Buf, 1, lbound(InData%WriteOutput), ubound(InData%WriteOutput))
@@ -6129,6 +6189,7 @@ subroutine Morison_UnPackOutput(Buf, OutData)
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
    call MeshUnpack(Buf, OutData%Mesh) ! Mesh 
+   call MeshUnpack(Buf, OutData%VisMesh) ! VisMesh 
    if (allocated(OutData%WriteOutput)) deallocate(OutData%WriteOutput)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -6400,6 +6461,8 @@ SUBROUTINE Morison_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, Er
    
    CALL MeshExtrapInterp1(y1%Mesh, y2%Mesh, tin, y_out%Mesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   CALL MeshExtrapInterp1(y1%VisMesh, y2%VisMesh, tin, y_out%VisMesh, tin_out, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput
    END IF ! check if allocated
@@ -6461,6 +6524,8 @@ SUBROUTINE Morison_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat
    a2 = (t_out - t(1))*(t_out - t(3))/((t(2) - t(1))*(t(2) - t(3)))
    a3 = (t_out - t(1))*(t_out - t(2))/((t(3) - t(1))*(t(3) - t(2)))
    CALL MeshExtrapInterp2(y1%Mesh, y2%Mesh, y3%Mesh, tin, y_out%Mesh, tin_out, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+   CALL MeshExtrapInterp2(y1%VisMesh, y2%VisMesh, y3%VisMesh, tin, y_out%VisMesh, tin_out, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
    IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
       y_out%WriteOutput = a1*y1%WriteOutput + a2*y2%WriteOutput + a3*y3%WriteOutput

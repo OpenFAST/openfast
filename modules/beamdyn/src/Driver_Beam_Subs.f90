@@ -331,12 +331,13 @@ SUBROUTINE Dvr_WriteOutputLine(t,OutUnit, OutFmt, Output)
 end subroutine Dvr_WriteOutputLine
   
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine CreateMultiPointMeshes(DvrData,BD_InitInput,BD_InitOutput,BD_Parameter,y, u, ErrStat,ErrMsg)
+subroutine CreateMultiPointMeshes(DvrData,BD_InitInput,BD_InitOutput,BD_Parameter,BD_OtherState,y, u, ErrStat,ErrMsg)
 
    TYPE(BD_DriverInternalType), INTENT(INOUT) :: DvrData
    TYPE(BD_InitInputType)     , INTENT(IN   ) :: BD_InitInput
    TYPE(BD_InitOutputType)    , INTENT(IN   ) :: BD_InitOutput
    TYPE(BD_ParameterType)     , INTENT(IN   ) :: BD_Parameter
+   TYPE(BD_OtherStateType)    , INTENT(IN   ) :: BD_OtherState
    TYPE(BD_OutputType),         INTENT(IN   ) :: y
    TYPE(BD_InputType),          INTENT(INOUT) :: u                ! sets pointLoad with values from BD driver input file
    INTEGER(IntKi),              INTENT(  OUT) :: ErrStat          ! Error status of the operation
@@ -387,10 +388,10 @@ subroutine CreateMultiPointMeshes(DvrData,BD_InitInput,BD_InitOutput,BD_Paramete
        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
        if (ErrStat >= AbortErrLev) return
        
-       Pos = BD_Parameter%GlbPos + MATMUL(BD_Parameter%GlbRot,temp_POS)
+       Pos = BD_OtherState%GlbPos + MATMUL(BD_OtherState%GlbRot,temp_POS)
        
-       temp_CRV2 = MATMUL(BD_Parameter%GlbRot,temp_CRV)
-       CALL BD_CrvCompose(temp_CRV,BD_Parameter%Glb_crv,temp_CRV2,FLAG_R1R2) !temp_CRV = p%Glb_crv composed with temp_CRV2
+       temp_CRV2 = MATMUL(BD_OtherState%GlbRot,temp_CRV)
+       CALL BD_CrvCompose(temp_CRV,BD_OtherState%Glb_crv,temp_CRV2,FLAG_R1R2) !temp_CRV = m%Glb_crv composed with temp_CRV2
 
        CALL BD_CrvMatrixR(temp_CRV,TmpDCM) ! returns TmpDCM (the transpose of the DCM orientation matrix)
 
