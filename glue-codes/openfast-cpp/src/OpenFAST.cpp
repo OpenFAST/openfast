@@ -19,7 +19,7 @@ int time_step_ratio(double fastDt, double driverDt, double epsFactor=1e-6)
 {
   // ensure that the ratio is robust to integer conversion by making sure it will always truncate down
   // provide an epsilon that is small relative to dtFast to help with integer conversion
-  const double eps = driverDt*epsFactor;
+  const double eps = fastDt*epsFactor;
   return static_cast<int>((driverDt*eps)/fastDt);
 }
 
@@ -1516,7 +1516,7 @@ void fast::OpenFAST::step(bool writeFiles) {
     }
 
     if (writeFiles) {
-        int tStepRatio = time_step_ratio(dtFAST, dtFAST);
+        int tStepRatio = time_step_ratio(dtFAST, dtDriver);
         for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
             if ( (((nt_global - ntStart) % (restartFreq_ * tStepRatio)) == 0 )  && (nt_global != ntStart) ) {
                 turbineData[iTurb].FASTRestartFileName = " "; // if blank, it will use FAST convention <RootName>.nt_global
