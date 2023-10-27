@@ -159,6 +159,12 @@ module UA_Dvr_Subs
       type(LD_ParameterType)                 :: LD_p                    ! Parameters
       type(LD_InputType)                     :: LD_u(NumInp)            ! System inputs
       type(LD_OutputType)                    :: LD_y                    ! System outputs
+      !
+      type(LD_ContinuousStateType)           :: LD_x_swp                ! Continuous states
+      type(LD_OtherStateType)                :: LD_OtherState_swp       ! Other/optimization states
+      type(UA_ContinuousStateType)           :: UA_x_swp                ! Continuous states
+      type(UA_DiscreteStateType)             :: UA_xd_swp               ! Discrete states
+      type(UA_OtherStateType)                :: UA_OtherState_swp       ! Other/optimization states
    end type Dvr_Data
 
 contains

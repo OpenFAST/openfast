@@ -34,7 +34,7 @@ program UnsteadyAero_Driver
    implicit none
     ! Variables
    
-   real(DbKi)  :: t
+   real(DbKi)  :: t, tnext
    integer     :: i, j, n, iu
 
    ! --- All Data
@@ -121,6 +121,8 @@ program UnsteadyAero_Driver
       call Dvr_InitializeDriverOutputs(dvr, dvr%out, errStat, errMsg); call checkError()
    endif
 
+   i = 1 ! nodes per blade
+   j = 1 ! number of blades
    ! --- Initialize Inputs
    !u(1) = time at n=1  (t=   0)
    !u(2) = time at n=0  (t= -dt)
@@ -138,6 +140,12 @@ program UnsteadyAero_Driver
       do iu = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here 
          call setUAinputs(dvr%U0(iu,:), dvr%LD_x, dvr%p, dvr%m, dvr%UA_u(iu))
       enddo
+      ! LD inputs
+      do iu = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here 
+         call UA_CalcOutput(i, j, dvr%uTimes(iu), dvr%UA_u(iu), dvr%UA_p, dvr%UA_x, dvr%UA_xd, dvr%UA_OtherState, dvr%AFI_Params(dvr%AFIndx(i,j)), dvr%UA_y, dvr%UA_m, errStat, errMsg ); call checkError()
+         call setLDinputs(dvr%U0(iu,:), dvr%LD_x, dvr%UA_y, dvr%p, dvr%m, dvr%LD_u(iu))
+      enddo
+
    else
       ! UA inputs at t=0, stored in u(1)
       do iu = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here 
@@ -145,19 +153,14 @@ program UnsteadyAero_Driver
       end do
    endif
 
-   i = 1 ! nodes per blade
-   j = 1 ! number of blades
    ! --- Time marching loop
 
    if ( dvr%p%SimMod == 3 ) then
 
       call Dvr_InitializeOutputs(dvr%out, dvr%p%numSteps, errStat, errMsg)
 
-      dvr%LD_u(1)%Fext=0.0_ReKi ! TODO TODO
-      dvr%LD_u(2)%Fext=0.0_ReKi ! TODO TODO
-
-      ! --- time marching loop
-      call WrScr(' Time simulation - TMax = '//trim(num2lstr(dvr%p%numSteps*dvr%p%dt)))
+      ! --- Time marching loop
+      call WrScr(' Aeroelastic simulation - TMax = '//trim(num2lstr(dvr%p%numSteps*dvr%p%dt)))
       do n = 1, dvr%p%numSteps
 
          ! --- Set inputs at t by storing in u(2) what was in u(1) at previous time step
@@ -170,56 +173,75 @@ program UnsteadyAero_Driver
             dvr%LD_u(  iu+1)  = dvr%LD_u(  iu)
          end do
 
+         ! ----------------------------------------------------------------------------
+         ! --- t
+         ! ----------------------------------------------------------------------------
+         iu             = 2                ! Index 2 is t
+         dvr%uTimes(iu) = (n  -1)*dvr%p%dt ! t
+         t              = dvr%uTimes(iu)   ! t(2)= t
          ! --- Calc Outputs at t 
-         iu = 2 ! Index 2 is t
-         t = dvr%uTimes(iu)
+         ! Use existing states to compute the outputs
+         call UA_CalcOutput(i, j, t, dvr%UA_u(iu),  dvr%UA_p, dvr%UA_x, dvr%UA_xd, dvr%UA_OtherState, dvr%AFI_Params(dvr%AFIndx(i,j)), dvr%UA_y, dvr%UA_m, errStat, errMsg ); call checkError()
+         ! "True" force based on UA outputs - Also compute Misc outputs
+         !call AeroKinetics(dvr%U0(iu,:), dvr%LD_x%q(1:3), dvr%LD_x%q(4:6), (/dvr%UA_y%Cl, dvr%UA_y%Cd, dvr%UA_y%Cm/), dvr%p, dvr%m)
+         call setLDinputs(dvr%U0(iu,:), dvr%LD_x, dvr%UA_y, dvr%p, dvr%m, dvr%LD_u(iu))
          ! Use existing states to compute the outputs
          call LD_CalcOutput(t, dvr%LD_u(iu), dvr%LD_p, dvr%LD_x, dvr%LD_xd, dvr%LD_z, dvr%LD_OtherState, dvr%LD_y, dvr%LD_m, errStat, errMsg); call checkError()
-         !! Use existing states to compute the outputs
-         call UA_CalcOutput(i, j, t, dvr%UA_u(iu),  dvr%UA_p, dvr%UA_x, dvr%UA_xd, dvr%UA_OtherState, dvr%AFI_Params(dvr%AFIndx(i,j)), dvr%UA_y, dvr%UA_m, errStat, errMsg ); call checkError()
          ! Generate file outputs
          call UA_WriteOutputToFile(t, dvr%UA_p, dvr%UA_y)
-         ! Driver outputs
-         call AeroKinetics(dvr%U0(iu,:), dvr%LD_x%q(1:3), dvr%LD_x%q(4:6), (/dvr%UA_y%Cl, dvr%UA_y%Cd, dvr%UA_y%Cm/), dvr%p, dvr%m)
          ! Write/Store outputs 
          call Dvr_WriteOutputs(n, t, dvr, dvr%out, errStat, errMsg); call checkError()
 
+         ! Backup at t - if iteration needed
+         !call backupStates()
+         ! ----------------------------------------------------------------------------
+         ! --- From t to t+dt
+         ! ----------------------------------------------------------------------------
+         iu             = 1                ! Index 1 is t+dt
+         dvr%uTimes(iu) = (n+1-1)*dvr%p%dt ! t+dt
+         tnext          = dvr%uTimes(iu)   ! t(2)= t+dt
          ! --- Set inputs at t+dt in u(1)
-         iu = 1 ! Index 1 is t+dt
-         ! Basic inputs
-         dvr%uTimes(iu) = (n+1-1)*dvr%p%dt
          ! Inflow inputs
-         call setInflow(t=dvr%uTimes(iu), p=dvr%p, m=dvr%m, U0=dvr%U0(iu,:))
+         call setInflow(t=tnext, p=dvr%p, m=dvr%m, U0=dvr%U0(iu,:))
          ! LinDyn inputs at t+dt
-         ! Using everything at t!!!! Dynamics are deterministic (only a function of values at t)
-         ! NOTE: should use extrap interp maybe
-         call setLDinputs(dvr%U0(2,:), dvr%LD_x, dvr%UA_y, dvr%p, dvr%m, dvr%LD_u(iu))
+         call LD_Input_ExtrapInterp(dvr%LD_u(:), dvr%uTimes(:), dvr%LD_u(iu), tnext, errStat, errMsg); call checkError()
 
          ! --- Integrate LinDyn from t to t+dt
          call LD_UpdateStates(t, n, dvr%LD_u, dvr%uTimes, dvr%LD_p, dvr%LD_x, dvr%LD_xd, dvr%LD_z, dvr%LD_OtherState, dvr%LD_m, errStat, errMsg); call checkError()
-
          ! Calc LinDyn outputs at t+dt
-         iu = 1 ! Index 1 is t+dt
          call LD_CalcOutput(t, dvr%LD_u(iu), dvr%LD_p, dvr%LD_x, dvr%LD_xd, dvr%LD_z, dvr%LD_OtherState, dvr%LD_y, dvr%LD_m, errStat, errMsg); call checkError()
 
          ! --- Set UA Inputs at t+dt
          call setUAinputs(dvr%U0(iu,:), dvr%LD_x, dvr%p, dvr%m, dvr%UA_u(iu))
 
-         ! --- Integrate LinDyn from t to t+dt
+         ! --- Integrate UA from t to t+dt
          call UA_UpdateStates(i, j, t, n, dvr%UA_u, dvr%uTimes, dvr%UA_p, dvr%UA_x, dvr%UA_xd, dvr%UA_OtherState, dvr%AFI_Params(dvr%AFIndx(i,j)), dvr%UA_m, errStat, errMsg ); call checkError()
+
+         ! --- One extra iteration with better LD inputs at t+dt
+         !call UA_CalcOutput(i, j, tnext, dvr%UA_u(iu),  dvr%UA_p, dvr%UA_x, dvr%UA_xd, dvr%UA_OtherState, dvr%AFI_Params(dvr%AFIndx(i,j)), dvr%UA_y, dvr%UA_m, errStat, errMsg ); call checkError()
+         !call setLDinputs(dvr%U0(iu,:), dvr%LD_x, dvr%UA_y, dvr%p, dvr%m, dvr%LD_u(iu))
+         !call restoreLDStates()
+         !call LD_UpdateStates(t, n, dvr%LD_u, dvr%uTimes, dvr%LD_p, dvr%LD_x, dvr%LD_xd, dvr%LD_z, dvr%LD_OtherState, dvr%LD_m, errStat, errMsg); call checkError()
+         !call LD_CalcOutput(tnext, dvr%LD_u(iu), dvr%LD_p, dvr%LD_x, dvr%LD_xd, dvr%LD_z, dvr%LD_OtherState, dvr%LD_y, dvr%LD_m, errStat, errMsg); call checkError()
+         !call setUAinputs(dvr%U0(iu,:), dvr%LD_x, dvr%p, dvr%m, dvr%UA_u(iu))
+         !call restoreUAStates()
+         !call UA_UpdateStates(i, j, t, n, dvr%UA_u, dvr%uTimes, dvr%UA_p, dvr%UA_x, dvr%UA_xd, dvr%UA_OtherState, dvr%AFI_Params(dvr%AFIndx(i,j)), dvr%UA_m, errStat, errMsg ); call checkError()
       end do
 
       call Dvr_EndSim(dvr, errStat, errMsg)
 
    else
-      ! --- time marching loop
+      ! --- Time marching loop
+      call WrScr(' UA time simulation - TMax = '//trim(num2lstr(dvr%p%numSteps*dvr%p%dt)))
       do n = 1, dvr%p%numSteps
         
-         ! set inputs:
-         DO iu = NumInp-1, 1, -1
+         ! --- Set inputs at t by storing in u(2) what was in u(1) at previous time step
+         !u(1) = time at n=n+1  (t=t+dt)
+         !u(2) = time at n=n    (t=t   )
+         do iu = NumInp-1, 1, -1
             dvr%UA_u(  iu+1) = dvr%UA_u(     iu)
             dvr%uTimes(iu+1) = dvr%uTimes(iu)
-         END DO
+         end do
      
          ! first value of uTimes/u contain inputs at t+dt
          call setUAinputsAlphaSim(n+1,  dvr%UA_u(1), dvr%uTimes(1), dvr%p, errStat, errMsg); call checkError()
@@ -243,7 +265,22 @@ program UnsteadyAero_Driver
    call NormStop()
 
 contains
-   
+   subroutine backupStates()
+      call UA_CopyContState (dvr%UA_x          , dvr%UA_x_swp          , MESH_UPDATECOPY , errStat , errMsg)
+      call UA_CopyDiscState (dvr%UA_xd         , dvr%UA_xd_swp         , MESH_UPDATECOPY , errStat , errMsg)
+      call UA_CopyOtherState(dvr%UA_OtherState , dvr%UA_OtherState_swp , MESH_UPDATECOPY , errStat , errMsg)
+      call LD_CopyContState (dvr%LD_x          , dvr%LD_x_swp          , MESH_UPDATECOPY , errStat , errMsg)
+      call LD_CopyOtherState(dvr%LD_OtherState , dvr%LD_OtherState_swp , MESH_UPDATECOPY , errStat , errMsg)
+   end subroutine
+   subroutine restoreUAStates()
+      call UA_CopyContState (dvr%UA_x_swp         , dvr%UA_x          , MESH_UPDATECOPY , errStat , errMsg)
+      call UA_CopyDiscState (dvr%UA_xd_swp        , dvr%UA_xd         , MESH_UPDATECOPY , errStat , errMsg)
+      call UA_CopyOtherState(dvr%UA_OtherState_swp, dvr%UA_OtherState , MESH_UPDATECOPY , errStat , errMsg)
+   end subroutine
+   subroutine restoreLDStates()
+      call LD_CopyContState (dvr%LD_x_swp         , dvr%LD_x          , MESH_UPDATECOPY , errStat , errMsg)
+      call LD_CopyOtherState(dvr%LD_OtherState_swp, dvr%LD_OtherState , MESH_UPDATECOPY , errStat , errMsg)
+   end subroutine
    !====================================================================================================
    subroutine Cleanup()
       call UA_End(dvr%UA_p)
