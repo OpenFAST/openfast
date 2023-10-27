@@ -3874,6 +3874,7 @@ subroutine UA_WriteOutputToFile(t, p, y)
 
 end subroutine UA_WriteOutputToFile
 !==============================================================================   
+! TODO Somehow merge this content with the unsteady aero driver summary file?
 subroutine UA_WriteAFIParamsToFile(InitInp, AFInfo, ErrStat, ErrMsg)
    type(AFI_ParameterType),      intent(in   )  :: AFInfo(:)   ! The airfoil parameter data (for all airfoils)
    type(UA_InitInputType),       intent(in   )  :: InitInp     ! input data for initialization routine
@@ -3953,7 +3954,7 @@ subroutine UA_WriteAFIParamsToFile(InitInp, AFInfo, ErrStat, ErrMsg)
    CALL GetNewUnit( unOutFile, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) RETURN
 
-   CALL OpenFOutFile ( unOutFile, trim(InitInp%OutRootName)//'.UA.sum', ErrStat2, ErrMsg2 )
+   CALL OpenFOutFile ( unOutFile, trim(InitInp%OutRootName)//'.sum', ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
       

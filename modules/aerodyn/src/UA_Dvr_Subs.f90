@@ -287,7 +287,7 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
 
    ! --- Triggers
    call GetRoot(FileName, InitInp%OutRootName) ! OutRootName is inferred from current filename.
-   InitInp%OutRootName=trim(InitInp%OutRootName)//'.UA' ! For backward compatibility
+   !InitInp%OutRootName=trim(InitInp%OutRootName)//'.UA' ! For backward compatibility
    !if (PathIsRelative(InitInp%OutRootName)) InitInp%OutRootName = TRIM(PriPath)//TRIM(InitInp%OutRootName)
    if (PathIsRelative(InitInp%Airfoil1))    InitInp%Airfoil1 = TRIM(PriPath)//TRIM(InitInp%Airfoil1)
    if (PathIsRelative(InitInp%AeroTSFile   )) InitInp%AeroTSFile   = TRIM(PriPath)//TRIM(InitInp%AeroTSFile  )
@@ -733,7 +733,7 @@ subroutine Dvr_EndSim(dvr, errStat, errMsg)
    endif
    if (out%fileFmt==idFmt_Both .or. out%fileFmt == idFmt_Binary) then
       call WrScr(' Writing output file: '//trim(out%Root)//'.outb')
-      call WrBinFAST(trim(out%Root)//'.out', FileFmtID_ChanLen_In, 'AeroDynDriver', out%WriteOutputHdr, out%WriteOutputUnt, (/0.0_DbKi, dvr%p%dt/), out%storage(:,:), errStat2, errMsg2)
+      call WrBinFAST(trim(out%Root)//'.outb', FileFmtID_ChanLen_In, 'AeroDynDriver', out%WriteOutputHdr, out%WriteOutputUnt, (/0.0_DbKi, dvr%p%dt/), out%storage(:,:), errStat2, errMsg2)
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
    endif
 end subroutine Dvr_EndSim
@@ -1084,7 +1084,7 @@ subroutine WriteAFITables(AFI_Params, OutRootName, UseCm, UA_f_cn)
       CALL GetNewUnit( unOutFile, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) RETURN
 
-      CALL OpenFOutFile ( unOutFile, trim(OutRootName)//'.UA.Coefs.'//trim(num2lstr(iTab))//'.out', ErrStat, ErrMsg )
+      CALL OpenFOutFile ( unOutFile, trim(OutRootName)//'.Coefs.'//trim(num2lstr(iTab))//'.out', ErrStat, ErrMsg )
          if (ErrStat >= AbortErrLev) then
             call WrScr(Trim(ErrMsg))
             return
