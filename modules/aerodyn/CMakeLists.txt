@@ -27,7 +27,7 @@ if (GENERATE_TYPES)
 endif()
 
 # BasicAero Library
-add_library(basicaerolib 
+add_library(basicaerolib STATIC
   # UnsteadyAero lib
   src/UnsteadyAero.f90
   src/UnsteadyAero_Types.f90
