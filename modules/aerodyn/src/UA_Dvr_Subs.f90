@@ -82,9 +82,7 @@ module UA_Dvr_Subs
       character(1024)                        :: OutRootName ! Automatically obtained from input file name
       ! Prescribed AoA simulations
       real(DbKi), allocatable                :: timeArr(:)
-      real(ReKi), allocatable                :: AOAarr(:)
-      real(ReKi), allocatable                :: Uarr(:)
-      real(ReKi), allocatable                :: OmegaArr(:)
+      real(ReKi), allocatable                :: vPrescrAero(:,:)   ! Aero as function of time, shape nt x 4:  Time, AOA, U, Omega
       ! Prescribed inflow simulations
       real(ReKi), allocatable                :: vU0(:,:)      ! Inflow as function of time, shape nt x 3 : Time, U0x, U0y
    end type Dvr_Parameters
@@ -344,14 +342,14 @@ subroutine Dvr_SetParameters(p, errStat, errMsg)
    errMsg  = ''
    ! Unit conversions
    p%Twist  = p%Twist * D2R
+   p%d_34_to_ac = (-p%Vec_AQ(2) + p%Vec_AT(2)) !  d_34_to_ac = d_QT ~0.5 [-], Approximated using y coordinate
    p%Vec_AT = p%Vec_AT * p%chord
    p%Vec_AQ = p%Vec_AQ * p%chord
 
-   ! TODO KinVisc based on Re and InvlowVel might not be ideal.
-   print*,'    KinVisc',p%KinVisc
-   print*,'    FldDens',p%FldDens
-
    if ( p%SimMod == 1 ) then
+      call WrScr('[WARN] The behavior of SimMod=1 might change in the future.')
+
+      ! We will use a constant Reynolds..
       p%Re = p%InflowVel * p%chord/ p%KinVisc  ! NOT IN MILLIONS
       print*,'    Re     ',p%Re
       ! Using the frequency and NCycles, determine how long the simulation needs to run
@@ -361,109 +359,31 @@ subroutine Dvr_SetParameters(p, errStat, errMsg)
       
    else if ( p%SimMod == 2 ) then
       ! Read time-series data file with columns:( time,  Angle-of-attack, Vrel, omega )
-      call ReadTimeSeriesData( p%AeroTSFile, p%numSteps, p%timeArr, p%AOAarr, p%Uarr, p%OmegaArr, errStat2, errMsg2 );
-      p%dt = (p%timeArr(p%numSteps) - p%timeArr(1)) / (p%numSteps-1)
-      p%numSteps = p%numSteps-NumInp + 1
+      call WrScr( ' Opening prescribe-aero time-series input file: '//trim(p%AeroTSFile) )
+      call ReadDelimFile(p%AeroTSFile, 4, p%vPrescrAero, errStat2, errMsg2); if(Failed()) return
+      p%vPrescrAero(:,2) = p%vPrescrAero(:,2)*D2R ! Deg 2 rad
+      p%dt       = p%dt_PA
+      p%simTime  = p%TMax_PA
+      p%numSteps = int(p%simTime/p%dt)
 
    elseif ( p%SimMod == 3 ) then
       p%simTime   = p%TMax
-      !p%dt        = p%dt
-      p%numSteps = int(p%simTime/p%dt) ! TODO
+      p%numSteps = int(p%simTime/p%dt)
 
       if (p%InflowMod==InflowMod_File) then
          ! Read inflow file
-         call ReadDelimFile(p%InflowTSFile, 3, p%vU0, errStat2, errMsg2);
+         call ReadDelimFile(p%InflowTSFile, 3, p%vU0, errStat2, errMsg2); if(Failed()) return
       endif
 
    endif
-   call setErrStat(errStat2, errMsg2, errStat, errMsg, 'Dvr_SetParameters')
-end subroutine Dvr_SetParameters
 
-!--------------------------------------------------------------------------------------------------------------
-subroutine ReadTimeSeriesData( FileName, nSimSteps, timeArr, AOAarr, Uarr, OmegaArr, ErrStat, ErrMsg )
-   character(1024),               intent( in    )   :: FileName
-   integer,                       intent(   out )   :: nSimSteps
-   real(DbKi),allocatable,        intent(   out )   :: timeArr(:)
-   real(ReKi),allocatable,        intent(   out )   :: AOAarr(:)
-   real(ReKi),allocatable,        intent(   out )   :: Uarr(:)
-   real(ReKi),allocatable,        intent(   out )   :: OmegaArr(:)
-   integer,                       intent(   out )   :: ErrStat              ! returns a non-zero value when an error occurs  
-   character(*),                  intent(   out )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-   
-   real(SiKi)                                       :: dt
-   real(DbKi)                                       :: tmpArr(4)
-   integer(IntKi)                                   :: errStat2    ! Status of error message
-   character(1024)                                  :: errMsg2     ! Error message if ErrStat /= ErrID_None
-   character(*), parameter                          :: RoutineName = 'ReadTimeSeriesData'
-   integer                                          :: UnIn
-   integer                                          :: i
-   integer, parameter                               :: hdrlines=8
-   ErrStat     = ErrID_None
-   ErrMsg      = ''
-   nSimSteps   = 0 ! allocate here in case errors occur
-   
-   call WrScr( ' Opening UnsteadyAero time-series input file: '//trim(FileName) )
-   call GetNewUnit( UnIn )   
-   call OpenFInpFile( UnIn, FileName, errStat2, errMsg2 ); if(Failed()) return
-
-   ! --- Determine how many lines of data are in the file
-   ! TODO use a more generic routine such as ReadDelimFile in NWTC_Lib
-   do i=1,hdrlines
-      call ReadCom( UnIn, FileName, '  UnsteadyAero time-series input file header line 1', errStat2, errMsg2 ); if(Failed()) return
-   enddo
-   do ! Loop on all lines..
-      call  ReadAry( UnIn, FileName, tmpArr, 4, 'Data', 'Time-series data', errStat2, errMsg2  ); 
-      ! The assumption is that the only parsing error occurs at the end of the file and therefore we stop reading data
-      if (errStat2 > ErrID_None) then
-         exit
-      else
-         nSimSteps = nSimSteps + 1
-      end if        
-   end do
-   
-   ! --- Allocate arrays to be read
-   call AllocAry( timeArr , nSimSteps, 'timeArr' , errStat2, errMsg2); if(Failed()) return
-   call AllocAry( AOAArr  , nSimSteps, 'AOAArr'  , errStat2, errMsg2); if(Failed()) return
-   call AllocAry( Uarr    , nSimSteps, 'UArr'    , errStat2, errMsg2); if(Failed()) return
-   call AllocAry( OmegaArr, nSimSteps, 'OmegaArr', errStat2, errMsg2); if(Failed()) return
-      
-   ! --- Read arrays from file
-   rewind(UnIn)
-   do i=1,hdrlines !RRD
-       call ReadCom( UnIn, FileName, '  UnsteadyAero time-series input file header line 1', errStat2, errMsg2 ); if(Failed()) return
-   enddo
-   do i = 1,nSimSteps
-      call  ReadAry( UnIn, FileName, tmpArr, 4, 'Data', 'Time-series data', errStat2, errMsg2  ); if(Failed()) return
-      timeArr(i)  = tmpArr(1)
-      AOAarr(i)   = real(tmpArr(2),ReKi)
-      Uarr(i)     = real(tmpArr(3),ReKi)
-      OmegaArr(i) = real(tmpArr(4),ReKi)
-   end do
-
-   ! --- Sanity checks 
-   if (nSimSteps > 1) then
-      ! TODO SubDyn allows for time interpolation of input array
-      dt = timeArr(2) - timeArr(1)
-      do i = 2,nSimSteps-1
-         if (.not. EqualRealNos(dt, REAL(timeArr(i+1)-timeArr(i), SiKi) ) ) then
-            call SetErrStat( ErrID_Fatal, 'Times in inputfile must be contain the same delta t.', ErrStat, ErrMsg, RoutineName)
-            exit !exit the do loop
-         end if
-      end do
-   end if
-            
-   call Cleanup()
-      
+   if(Failed()) return
 contains
    logical function Failed()
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call setErrStat(errStat2, errMsg2, errStat, errMsg, 'Dvr_SetParameters')
       Failed = ErrStat >= AbortErrLev
-      if (Failed)    call Cleanup()
    end function Failed
-   subroutine Cleanup()
-      close( UnIn )
-   end subroutine Cleanup
-end subroutine ReadTimeSeriesData
+end subroutine Dvr_SetParameters
 !--------------------------------------------------------------------------------------------------------------
 subroutine driverInputsToUAInitData(p, InitInData, AFI_Params, AFIndx, errStat, errMsg)
    type(Dvr_Parameters)   , intent(in ) :: p           ! Initialization data for the driver program
@@ -479,7 +399,7 @@ subroutine driverInputsToUAInitData(p, InitInData, AFI_Params, AFIndx, errStat, 
    character(*), parameter  :: RoutineName = 'driverInputsToUAInitData'
    errStat     = ErrID_None
    errMsg      = ''
-   InitInData%UA_OUTS  = 2  ! 0=None, 1=Write Outputs, 2=Separate File
+   InitInData%UA_OUTS = 1  ! 0=None, 1=Write Outputs, 2=Separate File
 
    ! -- UA Init Input Data
    InitInData%nNodesPerBlade  = 1 
@@ -497,7 +417,7 @@ subroutine driverInputsToUAInitData(p, InitInData, AFI_Params, AFIndx, errStat, 
    InitInData%Flookup      = p%Flookup
    InitInData%OutRootName  = p%OutRootName
    InitInData%WrSum        = p%SumPrint 
-   InitInData%d_34_to_ac   = (-p%Vec_AQ(2) + p%Vec_AT(2))/p%chord !  d_34_to_ac = d_QT ~0.5 [-], Approximated using y coordinate
+   InitInData%d_34_to_ac   = p%d_34_to_ac !  d_34_to_ac = d_QT ~0.5 [-], Approximated using y coordinate
 
    ! --- AFI
    allocate(AFIndx(InitInData%nNodesPerBlade,InitInData%numBlades), STAT = errStat2)
@@ -728,11 +648,12 @@ end subroutine setUAinputs
 
 !----------------------------------------------------------------------------------------------------  
 !> Set UA inptus for a simulation where the angle of attack is prescribed and the relative velocity is constant
-subroutine setUAinputsAlphaSim(n, u, t, p, errStat, errMsg)
+subroutine setUAinputsAlphaSim(n, u, t, p, m, errStat, errMsg)
    integer,                intent(in)              :: n
    type(UA_InputType),     intent(inout)           :: u            ! System inputs
    real(DbKi),             intent(  out)           :: t
    type(Dvr_Parameters),   intent(in)              :: p           ! Initialization data for the driver program
+   type(Dvr_Misc      ),   intent(inout)           :: m           ! Initialization data for the driver program
    integer,                intent(out)             :: errStat
    character(len=*),       intent(out)             :: errMsg
    integer    :: indx
@@ -750,17 +671,17 @@ subroutine setUAinputsAlphaSim(n, u, t, p, errStat, errMsg)
    ErrStat = ErrID_None
 
    u%UserProp = 0
-   u%Re       = p%Re
+   t = (n-1)*p%dt
 
    if ( p%SimMod == 1 ) then
       if (OscillationAtMidChord) then
-         d_ref2AC =-0.25_ReKi  ! -0.25: oscillations at mid_chord
+         d_ref2AC = -0.25_ReKi  ! -0.25: oscillations at mid_chord
+         d_ref2AC = -p%d_34_to_ac/2. ! TODO
       else
          d_ref2AC = 0.0_ReKi   ! 0: oscillations at AC
       endif
       U_ref = p%InflowVel  ! m/s
 
-      t       = (n-1)*p%dt
       phase = (n+p%Phase-1)*2*pi/p%StepsPerCycle
       alpha_ref = (p%Amplitude * sin(phase) + p%Mean)*D2R   ! This needs to be in radians
       v_ref(1) = sin(alpha_ref)*U_ref
@@ -773,39 +694,23 @@ subroutine setUAinputsAlphaSim(n, u, t, p, errStat, errMsg)
       v_34(1) = u%v_ac(1) + u%omega * 0.5* p%Chord
       v_34(2) = u%v_ac(2)
 
-
       u%alpha = atan2(u%v_ac(1), u%v_ac(2) )  ! 
       if (VelocityAt34) then
          u%U =  sqrt(v_34(1)**2 + v_34(2)**2) ! Using U at 3/4
       else
          u%U =  sqrt(u%v_ac(1)**2 + u%v_ac(2)**2) ! Using U at 1/4
       endif
-
+      u%Re = p%Re ! Option for constant Reynolds or not?
 
    else
-      ! check optional variables and allocation status
-      if (all( (/ allocated(p%timeArr),allocated(p%AOAarr),allocated(p%OmegaArr),allocated(p%Uarr) /) )) then
-          
-         indx = min(n,size(p%timeArr))
-         indx = max(1, indx) ! use constant data at initialization
-      
-         ! Load timestep data from the time-series inputs which were previous read from input file
-         t       = p%timeArr(indx)
-         u%alpha = p%AOAarr(indx)*pi/180.0   ! This needs to be in radians
-         u%omega = p%OmegaArr(indx)
-         u%U     = p%Uarr(indx)
-         if (n> size(p%timeArr)) then
-           t = t + p%dt*(n - size(p%timeArr) ) ! update for NumInp>1;
-         elseif (n < 1) then
-           t = (n-1)*p%dt
-         end if
-         u%v_ac(1) = sin(u%alpha)*u%U
-         u%v_ac(2) = cos(u%alpha)*u%U
-      else
-         errStat = ErrID_Fatal
-         errMsg = 'mandatory input arrays are not allocated: timeArr,AOAarr,OmegaArr,Uarr'
-      end if
-          
+      ! Interpolate at current time
+      call interpTimeValue(p%vPrescrAero, t, m%iPALast, m%uPA)
+      u%alpha = m%uPA(2) ! rad
+      u%U     = m%uPA(3)
+      u%omega = m%uPA(4)
+      u%v_ac(1) = sin(u%alpha)*u%U
+      u%v_ac(2) = cos(u%alpha)*u%U
+      u%Re = u%U * p%chord  / p%KinVisc
    end if
 
 end subroutine setUAinputsAlphaSim

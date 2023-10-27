@@ -104,10 +104,6 @@ program UnsteadyAero_Driver
    call driverInputsToUAInitData(dvr%p, dvr%UA_InitInData, dvr%AFI_Params, dvr%AFIndx, errStat, errMsg); call checkError()
 
    ! --- Initialize UnsteadyAero (need AFI)
-   if ( dvr%p%SimMod == 3 ) then
-      ! TODO
-      dvr%UA_InitInData%UA_OUTS = 1  ! 0=None, 1=Write Outputs, 2=Separate File
-   endif
    call UA_Init( dvr%UA_InitInData, dvr%UA_u(1), dvr%UA_p, dvr%UA_x, dvr%UA_xd, dvr%UA_OtherState, dvr%UA_y, dvr%UA_m, dvr%p%dt, dvr%AFI_Params, dvr%AFIndx, dvr%UA_InitOutData, errStat, errMsg ); call checkError()
    if (dvr%UA_p%NumOuts <= 0) then
       ErrStat = ErrID_Warn
@@ -149,7 +145,7 @@ program UnsteadyAero_Driver
    else
       ! UA inputs at t=0, stored in u(1)
       do iu = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here 
-         call setUAinputsAlphaSim(2-iu,  dvr%UA_u(iu), dvr%uTimes(iu), dvr%p, errStat, errMsg); call checkError()
+         call setUAinputsAlphaSim(2-iu,  dvr%UA_u(iu), dvr%uTimes(iu), dvr%p, dvr%m, errStat, errMsg); call checkError()
       end do
    endif
 
@@ -244,7 +240,7 @@ program UnsteadyAero_Driver
          end do
      
          ! first value of uTimes/u contain inputs at t+dt
-         call setUAinputsAlphaSim(n+1,  dvr%UA_u(1), dvr%uTimes(1), dvr%p, errStat, errMsg); call checkError()
+         call setUAinputsAlphaSim(n+1,  dvr%UA_u(1), dvr%uTimes(1), dvr%p, dvr%m, errStat, errMsg); call checkError()
            
          t = dvr%uTimes(2)
 
