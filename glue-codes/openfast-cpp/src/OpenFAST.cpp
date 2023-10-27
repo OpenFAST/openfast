@@ -20,7 +20,7 @@ int time_step_ratio(double fastDt, double driverDt, double epsFactor=1e-6)
   // ensure that the ratio is robust to integer conversion by making sure it will always truncate down
   // provide an epsilon that is small relative to dtFast to help with integer conversion
   const double eps = fastDt*epsFactor;
-  return static_cast<int>((driverDt*eps)/fastDt);
+  return static_cast<int>((driverDt+eps)/fastDt);
 }
 
 //Constructor
