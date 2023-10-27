@@ -89,7 +89,7 @@ program UnsteadyAero_Driver
       dvr%LD_InitInData%DOFsNames = (/'x  ','y  ','th '/)
       dvr%LD_InitInData%DOFsUnits = (/'m  ','m  ','rad'/)
       if (dvr%p%MotionMod==MotionMod_File) then
-         dvr%LD_InitInData%PrescribedMotionFile = dvr%p%MotionFile 
+         dvr%LD_InitInData%PrescribedMotionFile = dvr%p%MotionTSFile 
       else
          dvr%LD_InitInData%PrescribedMotionFile = ''
       endif

@@ -26,15 +26,20 @@ module UA_Dvr_Subs
 
    type Dvr_Parameters
       logical         :: Echo            
+      ! Environment
+      real(ReKi)      :: KinVisc
+      real(ReKi)      :: FldDens
       real(ReKi)      :: SpdSound        
-      character(1024) :: OutRootName
-      real(ReKi)      :: InflowVel       
+      ! 
       integer         :: UAMod           
       logical         :: Flookup        
       logical         :: UseCm         
       character(1024) :: AirFoil1 
       real(ReKi)      :: Chord
+      ! 
       integer         :: SimMod          
+      ! Reduced frequency - SimMod = 1
+      real(ReKi)      :: InflowVel       
       real(ReKi)      :: NCycles         
       real(ReKi)      :: Frequency 
       real(ReKi)      :: Re
@@ -42,10 +47,11 @@ module UA_Dvr_Subs
       real(ReKi)      :: Amplitude       
       real(ReKi)      :: Mean            
       integer         :: Phase           
-      character(1024) :: InputsFile      
-      logical         :: SumPrint         
-      logical         :: WrAFITables
-      ! Section
+      ! Prescribed Aero - SimMod = 2
+      real(ReKi)      :: TMax_PA
+      real(DbKi)      :: dt_PA
+      character(1024) :: AeroTSFile      
+      ! AeroElastic Section - SimMod =3
       real(ReKi)      :: TMax
       real(DbKi)      :: dt
       real(ReKi)      :: MM(3,3)
@@ -61,23 +67,26 @@ module UA_Dvr_Subs
       ! Inflow
       integer         :: InflowMod = InflowMod_Cst
       real(ReKi)      :: Inflow(2)
-      character(1024) :: InflowFile
+      character(1024) :: InflowTSFile
       ! Motion
       integer         :: MotionMod = MotionMod_Cst
-      character(1024) :: MotionFile
+      character(1024) :: MotionTSFile
+      ! Outputs
+      logical         :: SumPrint         
+      logical         :: WrAFITables
       ! ---- Parameters
+      real(ReKi)                             :: d_34_to_ac  
       !real(DbKi)                             :: dt
       real(DbKi)                             :: simTime  
       integer                                :: numSteps
-      real(ReKi)                             :: KinVisc
-      real(ReKi)                             :: FldDens
+      character(1024)                        :: OutRootName ! Automatically obtained from input file name
       ! Prescribed AoA simulations
       real(DbKi), allocatable                :: timeArr(:)
       real(ReKi), allocatable                :: AOAarr(:)
       real(ReKi), allocatable                :: Uarr(:)
       real(ReKi), allocatable                :: OmegaArr(:)
       ! Prescribed inflow simulations
-      real(ReKi), allocatable                :: vU0(:,:)                ! Inflow as function of time, shape 3xnt for Time, U0x, U0y
+      real(ReKi), allocatable                :: vU0(:,:)      ! Inflow as function of time, shape nt x 3 : Time, U0x, U0y
    end type Dvr_Parameters
 
 
@@ -123,6 +132,8 @@ module UA_Dvr_Subs
       real(ReKi) :: GF(3)           !< Generalized force, Scaled aerodynamic loads to be representative of the blade
       real(ReKi) :: twist_full      !< Full twist (includes initial twist, potential pitch, and torsion)
       integer    :: iU0Last = 1     !< Index for faster interpolation of wind speed
+      integer    :: iPALast = 1     !< Index for faster interpolation of prescribed aero
+      real(ReKi) :: uPA(4)          !< Prescribed Aero inputs
    end type Dvr_Misc
 
    type Dvr_Data
@@ -210,13 +221,12 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    iLine = 4
    ! --- Environmental conditions section
    call ParseCom(FI, iLine, Line                        , errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseVar(FI, iLine, 'FldDens',  InitInp%FldDens , errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseVar(FI, iLine, 'KinVisc',  InitInp%KinVisc , errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'SpdSound', InitInp%SpdSound, errStat2, errMsg2, UnEcho); if(Failed()) return
 
    ! --- UNSTEADYAERO section
    call ParseCom(FI, iLine, Line                              , errStat2, errMsg2, UnEcho); if(Failed()) return
-   call ParseVar(FI, iLine, 'OutRootName', InitInp%OutRootName, errStat2, errMsg2, UnEcho); if(Failed()) return
-   call ParseVar(FI, iLine, 'InflowVel'  , InitInp%InflowVel  , errStat2, errMsg2, UnEcho); if(Failed()) return
-   call ParseVar(FI, iLine, 'Re'         , InitInp%Re         , errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'UAMod'      , InitInp%UAMod      , errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'Flookup'    , InitInp%Flookup    , errStat2, errMsg2, UnEcho); if(Failed()) return
    
@@ -224,21 +234,31 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    call ParseCom(FI, iLine, Line                        , errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'AirFoil' , InitInp%AirFoil1, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'Chord'   , InitInp%Chord   , errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseAry(FI, iLine, 'Vec_AQ'       , InitInp%Vec_AQ    , 2, errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseAry(FI, iLine, 'Vec_AT'       , InitInp%Vec_AT    , 2, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'UseCm'   , InitInp%UseCm   , errStat2, errMsg2, UnEcho); if(Failed()) return
    
    ! --- SIMULATION CONTROL section
    call ParseCom(FI, iLine, Line                                  , errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'SimMod'       , InitInp%SimMod       , errStat2, errMsg2, UnEcho); if(Failed()) return
+
+   ! --- REDUCED FREQUENCY
+   call ParseCom(FI, iLine, Line                                  , errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseVar(FI, iLine, 'InflowVel'  , InitInp%InflowVel  , errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'NCycles'      , InitInp%NCycles      , errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'StepsPerCycle', InitInp%StepsPerCycle, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'Frequency'    , InitInp%Frequency    , errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'Amplitude'    , InitInp%Amplitude    , errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'Mean'         , InitInp%Mean         , errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'Phase'        , InitInp%Phase        , errStat2, errMsg2, UnEcho); if(Failed()) return
-   call ParseVar(FI, iLine, 'InputsFile'   , InitInp%InputsFile   , errStat2, errMsg2, UnEcho); if(Failed()) return
+
+   ! --- PRESCRIBED AERO section
+   call ParseCom(FI, iLine, Line                                  , errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseVar(FI, iLine, 'TMax_PA'      , InitInp%Tmax_PA      , errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseVar(FI, iLine, 'DT_PA'        , InitInp%dt_PA        , errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseVar(FI, iLine, 'AeroTSFile'   , InitInp%AeroTSFile   , errStat2, errMsg2, UnEcho); if(Failed()) return
 
    ! --- ELASTIC SECTION section
-   if (InitInp%SimMod==3) then ! Temporary to avoid changing r-test for now
    call ParseCom(FI, iLine, Line                        , errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'TMax'         , InitInp%Tmax         , errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'DT'           , InitInp%dt           , errStat2, errMsg2, UnEcho); if(Failed()) return
@@ -256,14 +276,11 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    call ParseAry(FI, iLine, 'StifMatrix2'  , InitInp%KK(2,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'StifMatrix3'  , InitInp%KK(3,:)   , 3, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'Twist'        , InitInp%Twist     ,    errStat2, errMsg2, UnEcho); if(Failed()) return
-   call ParseAry(FI, iLine, 'Vec_AQ'       , InitInp%Vec_AQ    , 2, errStat2, errMsg2, UnEcho); if(Failed()) return
-   call ParseAry(FI, iLine, 'Vec_AT'       , InitInp%Vec_AT    , 2, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'InflowMod'    , InitInp%InflowMod ,    errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'Inflow'       , InitInp%Inflow    , 2, errStat2, errMsg2, UnEcho); if(Failed()) return
-   call ParseVar(FI, iLine, 'InflowFile'   , InitInp%InflowFile,    errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseVar(FI, iLine, 'InflowTSFile' , InitInp%InflowTSFile,  errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'MotionMod'    , InitInp%MotionMod ,    errStat2, errMsg2, UnEcho); if(Failed()) return
-   call ParseVar(FI, iLine, 'MotionFile'   , InitInp%MotionFile,    errStat2, errMsg2, UnEcho); if(Failed()) return
-   endif
+   call ParseVar(FI, iLine, 'MotionTSFile' , InitInp%MotionTSFile,  errStat2, errMsg2, UnEcho); if(Failed()) return
 
    ! --- OUTPUT section
    call ParseCom(FI, iLine, Line                        , errStat2, errMsg2, UnEcho); if(Failed()) return
@@ -271,10 +288,12 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    call ParseVar(FI, iLine, 'WrAFITables', InitInp%WrAFITables, errStat2, errMsg2, UnEcho); if(Failed()) return
 
    ! --- Triggers
-   if (PathIsRelative(InitInp%OutRootName)) InitInp%OutRootName = TRIM(PriPath)//TRIM(InitInp%OutRootName)
+   call GetRoot(FileName, InitInp%OutRootName) ! OutRootName is inferred from current filename.
+   !if (PathIsRelative(InitInp%OutRootName)) InitInp%OutRootName = TRIM(PriPath)//TRIM(InitInp%OutRootName)
    if (PathIsRelative(InitInp%Airfoil1))    InitInp%Airfoil1 = TRIM(PriPath)//TRIM(InitInp%Airfoil1)
-   if (PathIsRelative(InitInp%InflowFile )) InitInp%InflowFile = TRIM(PriPath)//TRIM(InitInp%InflowFile)
-   if (PathIsRelative(InitInp%MotionFile )) InitInp%MotionFile = TRIM(PriPath)//TRIM(InitInp%MotionFile)
+   if (PathIsRelative(InitInp%AeroTSFile   )) InitInp%AeroTSFile   = TRIM(PriPath)//TRIM(InitInp%AeroTSFile  )
+   if (PathIsRelative(InitInp%InflowTSFile )) InitInp%InflowTSFile = TRIM(PriPath)//TRIM(InitInp%InflowTSFile)
+   if (PathIsRelative(InitInp%MotionTSFile )) InitInp%MotionTSFile = TRIM(PriPath)//TRIM(InitInp%MotionTSFile)
 
    ! --- Checks
    !if (Check(.not.(any(dvr%out%fileFmt==idFmt_Valid   )),   'FileFormat not implemented: '//trim(Num2LStr(InitInp%InflowMod)))) return
@@ -325,18 +344,16 @@ subroutine Dvr_SetParameters(p, errStat, errMsg)
    errMsg  = ''
    ! Unit conversions
    p%Twist  = p%Twist * D2R
-   p%Re     = p%Re * 10**6  ! NOT IN MILLIONS
    p%Vec_AT = p%Vec_AT * p%chord
    p%Vec_AQ = p%Vec_AQ * p%chord
 
    ! TODO KinVisc based on Re and InvlowVel might not be ideal.
-   p%KinVisc = p%InflowVel * p%chord/ p%Re
-   p%FldDens =1.225 ! TODO
-   print*,'    Re     ',p%Re
    print*,'    KinVisc',p%KinVisc
    print*,'    FldDens',p%FldDens
 
    if ( p%SimMod == 1 ) then
+      p%Re = p%InflowVel * p%chord/ p%KinVisc  ! NOT IN MILLIONS
+      print*,'    Re     ',p%Re
       ! Using the frequency and NCycles, determine how long the simulation needs to run
       p%simTime   = p%NCycles/p%Frequency
       p%numSteps  = p%StepsPerCycle*p%NCycles  ! we could add 1 here to make this a complete cycle
@@ -344,7 +361,7 @@ subroutine Dvr_SetParameters(p, errStat, errMsg)
       
    else if ( p%SimMod == 2 ) then
       ! Read time-series data file with columns:( time,  Angle-of-attack, Vrel, omega )
-      call ReadTimeSeriesData( p%InputsFile, p%numSteps, p%timeArr, p%AOAarr, p%Uarr, p%OmegaArr, errStat2, errMsg2 );
+      call ReadTimeSeriesData( p%AeroTSFile, p%numSteps, p%timeArr, p%AOAarr, p%Uarr, p%OmegaArr, errStat2, errMsg2 );
       p%dt = (p%timeArr(p%numSteps) - p%timeArr(1)) / (p%numSteps-1)
       p%numSteps = p%numSteps-NumInp + 1
 
@@ -355,7 +372,7 @@ subroutine Dvr_SetParameters(p, errStat, errMsg)
 
       if (p%InflowMod==InflowMod_File) then
          ! Read inflow file
-         call ReadDelimFile(p%InflowFile, 3, p%vU0, errStat2, errMsg2);
+         call ReadDelimFile(p%InflowTSFile, 3, p%vU0, errStat2, errMsg2);
       endif
 
    endif
@@ -620,12 +637,6 @@ subroutine AeroKinematics(U0, q, qd, p, m)
    m%alpha_Q = m%phi_Q - m%twist_full
    m%alpha_T = m%phi_T - m%twist_full
 
-
-   !alpha_34 = atan2(v_ac(1) + qd(3) * d_ac_to_34, v_ac(2) )  ! Uaero - Uelast
-   !m%alpha_T = atan2(m%Vrel_Q(1) +  qd(3) * (-p%Vec_AQ(2) + p%Vec_AT(2)) ,  m%Vrel_Q(2))
-   !print*,'d_ac_to_34 2', -p%Vec_AQ(2) + p%Vec_AT(2)
-
-
    ! Reynolds at 1/4 chord
    m%Re = sqrt(m%Vrel_norm2_Q) * p%chord  / p%KinVisc
 end subroutine AeroKinematics
@@ -642,8 +653,6 @@ subroutine AeroKinetics(U0, q, qd, C_dyn, p, m)
    real(ReKi) :: ST, CT
    real(ReKi) :: SP, CP
    real(ReKi) :: q_dyn
-   !real(ReKi) :: SA, CA
-   !real(ReKi) :: tau_A2
 
    ! First get kinematics
    call AeroKinematics(U0, q, qd, p, m)
@@ -662,19 +671,18 @@ subroutine AeroKinetics(U0, q, qd, C_dyn, p, m)
    CP = cos(m%phi_Q)
    m%FxA   =  m%L * CP + m%D * SP
    m%FyA   = -m%L * SP + m%D * CP
-   ! Tau A version 1 - Positive about "z"
+   ! Tau A (Positive about "z") - version 1
    m%tau_A = m%tau_Q 
    m%tau_A = m%tau_A - m%FxA * (- p%Vec_AQ(1) * ST + p%Vec_AQ(2) * CT) 
    m%tau_A = m%tau_A + m%FyA * (  p%Vec_AQ(1) * CT + p%Vec_AQ(2) * ST) 
-   ! Tau A version 2
+   ! Tau A (Positive about "z") - version 2
    !SA = sin(m%alpha_Q)
    !CA = cos(m%alpha_Q)
    !tau_A2 = m%tau_Q 
    !tau_A2 = tau_A2  - q_dyn *C_dyn(1)* ( p%Vec_AQ(1) * SA + p%Vec_AQ(2) * CA) 
    !tau_A2 = tau_A2  + q_dyn *C_dyn(2)* ( p%Vec_AQ(1) * CA - p%Vec_AQ(2) * SA) 
-   !print*,'tau_A', m%tau_A, tau_A2
 
-   ! Scaled loads TODO 
+   ! Generalized loads
    m%GF(1) =  m%FxA    * p%GFScaling(1)
    m%GF(2) =  m%FyA    * p%GFScaling(2)
    m%GF(3) = -m%tau_A  * p%GFScaling(3) ! theta_t is negative about z
@@ -714,8 +722,6 @@ subroutine setUAinputs(U0, LD_x, p, m, UA_u)
    ! Angle of attack and relative velocity at 1/4 point/aerodynamic center point "Q"
    UA_u%alpha    = m%alpha_Q
    UA_u%U        = sqrt(m%Vrel_norm2_Q)
-   !UA_u%v_ac(1)  = m%Vrel_Q(1) ! This is in global!
-   !UA_u%v_ac(2)  = m%Vrel_Q(2)
    UA_u%v_ac(1)  = UA_u%U * sin(UA_u%alpha) ! In airfoil coordinate system (a)
    UA_u%v_ac(2)  = UA_u%U * cos(UA_u%alpha) ! In airfoil coordinate system (a)
 end subroutine setUAinputs
