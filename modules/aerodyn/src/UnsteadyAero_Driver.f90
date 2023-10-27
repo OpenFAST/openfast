@@ -60,7 +60,7 @@ program UnsteadyAero_Driver
       ! Obtain OpenFAST git commit hash
    git_commit = QueryGitVersion()
       ! Tell our users what they're running
-   CALL WrScr( ' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( NWTC_Ver%Name )//NewLine )
+   CALL WrScr(' Running '//TRIM( version%Name )//' a part of OpenFAST - '//TRIM(git_Commit))
    
    
    ! --- Parse the driver file if one
@@ -88,6 +88,11 @@ program UnsteadyAero_Driver
       dvr%LD_InitInData%activeDOFs = dvr%p%activeDOFs
       dvr%LD_InitInData%DOFsNames = (/'x  ','y  ','th '/)
       dvr%LD_InitInData%DOFsUnits = (/'m  ','m  ','rad'/)
+      if (dvr%p%MotionMod==MotionMod_File) then
+         dvr%LD_InitInData%PrescribedMotionFile = dvr%p%MotionFile 
+      else
+         dvr%LD_InitInData%PrescribedMotionFile = ''
+      endif
       call LD_Init(dvr%LD_InitInData, dvr%LD_u(1), dvr%LD_p, dvr%LD_x, dvr%LD_xd, dvr%LD_z, dvr%LD_OtherState, dvr%LD_y, dvr%LD_m, dvr%LD_InitOutData, errStat, errMsg); call checkError()
       ! Allocate other inputs of LD
       do iu = 2,NumInp
@@ -127,7 +132,7 @@ program UnsteadyAero_Driver
       enddo
       ! Inflow "inputs"
       do iu = 1,NumInp
-         call setInflow(t=dvr%uTimes(iu), p=dvr%p, U0=dvr%U0(iu,:))
+         call setInflow(t=dvr%uTimes(iu), p=dvr%p, m=dvr%m, U0=dvr%U0(iu,:))
       enddo
       ! UA inputs at t=0, stored in u(1)
       do iu = 1, NumInp-1 !u(NumInp) is overwritten in time-sim loop, so no need to init here 
@@ -184,7 +189,7 @@ program UnsteadyAero_Driver
          ! Basic inputs
          dvr%uTimes(iu) = (n+1-1)*dvr%p%dt
          ! Inflow inputs
-         call setInflow(t=dvr%uTimes(iu), p=dvr%p, U0=dvr%U0(iu,:))
+         call setInflow(t=dvr%uTimes(iu), p=dvr%p, m=dvr%m, U0=dvr%U0(iu,:))
          ! LinDyn inputs at t+dt
          ! Using everything at t!!!! Dynamics are deterministic (only a function of values at t)
          ! NOTE: should use extrap interp maybe

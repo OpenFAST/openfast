@@ -43,8 +43,7 @@ module LinDyn
    public :: LD_End                            !  Ending routine (includes clean up)
    public :: LD_UpdateStates                   !  Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
    public :: LD_CalcOutput                     !  Routine for computing outputs
-!    public :: LD_CalcConstrStateResidual        !  Tight coupling routine for returning the constraint state residual
-!    public :: LD_CalcContStateDeriv             !  Tight coupling routine for computing derivatives of continuous states
+   public :: LD_CalcContStateDeriv             !  Tight coupling routine for computing derivatives of continuous states
    public :: LD_JacobianPInput                 !  Jacobians of (y, x, xd, z) with respect to the inputs (u)
    public :: LD_JacobianPContState             !  Jacobians of (y, x, xd, z) with respect to the continuous (x)
    public :: LD_GetOP                          !  Routine to get the operating-point values for linearization (from data structures to arrays)
@@ -85,20 +84,31 @@ subroutine LD_Init(InitInp, u, p, x, xd, z, OtherState, y, m, InitOut, errStat, 
    p%CC         = InitInp%CC
    p%KK         = InitInp%KK
    p%activeDOFs = InitInp%activeDOFs
-
+   ! Prescribed motion
+   if (len_trim(InitInp%PrescribedMotionFile)>0) then
+      if( count(p%activeDOFs)/=0) then
+         errStat2 = errID_Fatal
+         errMsg2  = 'Currently, prescribed motion is only allowed if all degrees of freedom are turned off'
+         if(Failed()) return
+      endif
+      call WrScr('    Using prescribed motion.')
+      call ReadDelimFile(InitInp%PrescribedMotionFile, (p%nx*3+1), p%PrescribedValues, errStat2, errMsg2); if(Failed()) return
+   else
+      if (allocated(p%PrescribedValues)) deallocate(p%PrescribedValues)
+   endif
    call StateMatrices(p%MM, p%CC, p%KK, p%AA, p%BB, errStat2, errMsg2); if(Failed()) return
+
+   ! --- Misc
+   call allocAry(m%qPrescribed, 3*p%nx, 'qPrescribed', errStat2, errMsg2); if(Failed()) return
+   m%qPrescribed = 0.0_ReKi ! NOTE: will be updated by LD_SetInitialConditions
 
    ! --- Allocate States
    call AllocAry( x%q    , p%nq, 'DOFs', errStat, errMsg); if(Failed()) return
-   call LD_SetInitialConditions(x, InitInp%x0, InitInp%xd0, errStat, errMsg); if(Failed()) return
-
-   ! allocate OtherState%xdot if using multi-step method; initialize n
-   if ( ( p%IntMethod .eq. 2) .OR. ( p%IntMethod .eq. 3)) then
+   call LD_SetInitialConditions(x, InitInp%x0, InitInp%xd0, p, OtherState, m, errStat, errMsg); if(Failed()) return
+   if ( ( p%IntMethod .eq. 2) .OR. ( p%IntMethod .eq. 3)) then !Multi-step methods
        allocate( OtherState%xdot(4), STAT=errStat2); errMsg2='Error allocating OtherState%xdot'
        if(Failed()) return
    endif
-
-   ! --- Initialize Misc Variables
 
    ! --- Guess inputs
    call AllocAry(u%Fext, p%nx, 'Fext', errStat2, errMsg2); if(Failed()) return
@@ -156,12 +166,15 @@ contains
    end subroutine CleanUp
 end subroutine LD_Init
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine LD_SetInitialConditions(x, x0, xd0, errStat, errMsg)
-   type(LD_ContinuousStateType), intent(inout) :: x       !< Initial continuous states
-   real(ReKi),                   intent(in)    :: x0(:)
-   real(ReKi),                   intent(in)    :: xd0(:)
-   integer(IntKi),               intent(out)   :: errStat !< Error status of the operation
-   character(*),                 intent(out)   :: errMsg  !< Error message if errStat /= ErrID_None
+subroutine LD_SetInitialConditions(x, x0, xd0, p, OtherState, m, errStat, errMsg)
+   type(LD_ContinuousStateType), intent(inout) :: x          !< Initial continuous states
+   real(ReKi),                   intent(in)    :: x0(:)      !< Values of the positions at t=0
+   real(ReKi),                   intent(in)    :: xd0(:)     !< Velocity values at t=0
+   type(LD_ParameterType),       intent(in   ) :: p          !< Parameters
+   type(LD_OtherStateType),      intent(inout) :: OtherState !< Other states
+   type(LD_MiscVarType),         intent(inout) :: m          !< Misc variables for optimization (not copied in glue code)
+   integer(IntKi),               intent(out)   :: errStat    !< Error status of the operation
+   character(*),                 intent(out)   :: errMsg     !< Error message if errStat /= ErrID_None
    integer :: nx
    nx = int(size(x%q)/2)
    errStat = ErrID_Fatal
@@ -173,8 +186,15 @@ subroutine LD_SetInitialConditions(x, x0, xd0, errStat, errMsg)
    endif
    errMsg  = ''
    errStat = ErrID_None
-   x%q(   1:nx)   = x0
-   x%q(nx+1:2*nx) = xd0
+
+   if (allocated(p%PrescribedValues)) then
+      call interpTimeValue(p%PrescribedValues, 0.0_DbKi, OtherState%iMotionInterpLast, m%qPrescribed(:))
+      ! TODO the code below will need to be updated if a subset of the DOFs are active
+      x%q(1:p%nq) = m%qPrescribed(1:p%nq)
+   else
+      x%q(   1:nx)   = x0
+      x%q(nx+1:2*nx) = xd0
+   endif
 end subroutine LD_SetInitialConditions
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Allocate init input data for module based on number of degrees of freedom
@@ -497,6 +517,10 @@ subroutine LD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m
    ! Initialize variables
    errStat   = ErrID_None           ! no error has occurred
    errMsg    = ""
+   if (allocated(p%PrescribedValues)) then
+      call interpTimeValue(p%PrescribedValues, t+p%dt, OtherState%iMotionInterpLast, m%qPrescribed(:))
+      x%q(1:p%nq) = m%qPrescribed(1:p%nq)
+   endif
    if ( p%nq == 0) return 
    if (p%IntMethod .eq. 1) then 
       call LD_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, errStat, errMsg )
@@ -529,15 +553,19 @@ subroutine LD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    errMsg    = ""
 
    ! --- Compute accelerations
-   call LD_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, dxdt, errStat2, errMsg2)
-   y%xdd(1:p%nx) = dxdt%q(p%nx+1:p%nq)
+   if (allocated(p%PrescribedValues)) then
+      y%xdd(1:p%nx) = m%qPrescribed(p%nq+1:p%nq+p%nx)
+   else
+      call LD_CalcContStateDeriv(t, u, p, x, xd, z, OtherState, m, dxdt, errStat2, errMsg2)
+      y%xdd(1:p%nx) = dxdt%q(p%nx+1:p%nq)
+   endif
 
    !--- Computing outputs:  y = Cx + Du  (optional)
 
    ! --- Write Outputs
-   y%WriteOutput(1:2*p%nx) = x%q(1:p%nq)                ! Positions and velocities
-   y%WriteOutput(2*p%nx+1:3*p%nx) = dxdt%q(p%nx+1:p%nq) ! Accelerations
-   y%WriteOutput(3*p%nx+1:4*p%nx) = u%Fext(1:p%nx)      ! Forces
+   y%WriteOutput(1:2*p%nx) = x%q(1:p%nq)            ! Positions and velocities
+   y%WriteOutput(2*p%nx+1:3*p%nx) = y%xdd(1:p%nx)   ! Accelerations
+   y%WriteOutput(3*p%nx+1:4*p%nx) = u%Fext(1:p%nx)  ! Forces
 
 contains
    logical function Failed()

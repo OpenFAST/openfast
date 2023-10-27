@@ -47,6 +47,7 @@ IMPLICIT NONE
     character(8) , DIMENSION(:), ALLOCATABLE  :: DOFsNames      !< Names of degrees of freedom for write outputs [-]
     character(8) , DIMENSION(:), ALLOCATABLE  :: DOFsUnits      !< Units of degrees of freedom for write outputs [-]
     LOGICAL  :: Linearize = .false.      !< Flag that tells this module if the glue code wants to linearize. [-]
+    character(2048)  :: PrescribedMotionFile      !< Input file for prescribed motion [-]
   END TYPE LD_InitInputType
 ! =======================
 ! =========  LD_InitOutputType  =======
@@ -83,11 +84,13 @@ IMPLICIT NONE
   TYPE, PUBLIC :: LD_OtherStateType
     TYPE(LD_ContinuousStateType) , DIMENSION(:), ALLOCATABLE  :: xdot      !< Previous state derivs for m-step time integrator [-]
     INTEGER(IntKi)  :: n      !< Tracks time step for which OtherState was updated last [-]
+    INTEGER(IntKi)  :: iMotionInterpLast = 1      !< Last index used to interpolate the presribed motion time series [-]
   END TYPE LD_OtherStateType
 ! =======================
 ! =========  LD_MiscVarType  =======
   TYPE, PUBLIC :: LD_MiscVarType
     LOGICAL  :: Dummy      !<  [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: qPrescribed      !< Prescribed motion/velocity/accelerations for all degrees of freedom at a given time [-]
   END TYPE LD_MiscVarType
 ! =======================
 ! =========  LD_ParameterType  =======
@@ -106,6 +109,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOuts      !< Number of values in WriteOutput [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: OutParamLinIndx      !< Index into WriteOutput for linearization analysis [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PrescribedValues      !< Prescribed motion for all degrees of freedom [-]
   END TYPE LD_ParameterType
 ! =======================
 ! =========  LD_InputType  =======
@@ -242,6 +246,7 @@ IF (ALLOCATED(SrcInitInputData%DOFsUnits)) THEN
     DstInitInputData%DOFsUnits = SrcInitInputData%DOFsUnits
 ENDIF
     DstInitInputData%Linearize = SrcInitInputData%Linearize
+    DstInitInputData%PrescribedMotionFile = SrcInitInputData%PrescribedMotionFile
  END SUBROUTINE LD_CopyInitInput
 
  SUBROUTINE LD_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -370,6 +375,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%DOFsUnits)*LEN(InData%DOFsUnits)  ! DOFsUnits
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%PrescribedMotionFile)  ! PrescribedMotionFile
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -546,6 +552,10 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Linearize, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+    DO I = 1, LEN(InData%PrescribedMotionFile)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%PrescribedMotionFile(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
  END SUBROUTINE LD_PackInitInput
 
  SUBROUTINE LD_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -749,6 +759,10 @@ ENDIF
   END IF
     OutData%Linearize = TRANSFER(IntKiBuf(Int_Xferred), OutData%Linearize)
     Int_Xferred = Int_Xferred + 1
+    DO I = 1, LEN(OutData%PrescribedMotionFile)
+      OutData%PrescribedMotionFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
  END SUBROUTINE LD_UnPackInitInput
 
  SUBROUTINE LD_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -2017,6 +2031,7 @@ IF (ALLOCATED(SrcOtherStateData%xdot)) THEN
     ENDDO
 ENDIF
     DstOtherStateData%n = SrcOtherStateData%n
+    DstOtherStateData%iMotionInterpLast = SrcOtherStateData%iMotionInterpLast
  END SUBROUTINE LD_CopyOtherState
 
  SUBROUTINE LD_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -2109,6 +2124,7 @@ ENDIF
     END DO
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! n
+      Int_BufSz  = Int_BufSz  + 1  ! iMotionInterpLast
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2178,6 +2194,8 @@ ENDIF
     END DO
   END IF
     IntKiBuf(Int_Xferred) = InData%n
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%iMotionInterpLast
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE LD_PackOtherState
 
@@ -2266,6 +2284,8 @@ ENDIF
   END IF
     OutData%n = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
+    OutData%iMotionInterpLast = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE LD_UnPackOtherState
 
  SUBROUTINE LD_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
@@ -2276,6 +2296,7 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'LD_CopyMisc'
@@ -2283,6 +2304,18 @@ ENDIF
    ErrStat = ErrID_None
    ErrMsg  = ""
     DstMiscData%Dummy = SrcMiscData%Dummy
+IF (ALLOCATED(SrcMiscData%qPrescribed)) THEN
+  i1_l = LBOUND(SrcMiscData%qPrescribed,1)
+  i1_u = UBOUND(SrcMiscData%qPrescribed,1)
+  IF (.NOT. ALLOCATED(DstMiscData%qPrescribed)) THEN 
+    ALLOCATE(DstMiscData%qPrescribed(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%qPrescribed.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%qPrescribed = SrcMiscData%qPrescribed
+ENDIF
  END SUBROUTINE LD_CopyMisc
 
  SUBROUTINE LD_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -2306,6 +2339,9 @@ ENDIF
      DEALLOCATEpointers_local = .true.
   END IF
   
+IF (ALLOCATED(MiscData%qPrescribed)) THEN
+  DEALLOCATE(MiscData%qPrescribed)
+ENDIF
  END SUBROUTINE LD_DestroyMisc
 
  SUBROUTINE LD_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2344,6 +2380,11 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1  ! Dummy
+  Int_BufSz   = Int_BufSz   + 1     ! qPrescribed allocated yes/no
+  IF ( ALLOCATED(InData%qPrescribed) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! qPrescribed upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%qPrescribed)  ! qPrescribed
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2373,6 +2414,21 @@ ENDIF
 
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Dummy, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%qPrescribed) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%qPrescribed,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%qPrescribed,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%qPrescribed,1), UBOUND(InData%qPrescribed,1)
+        ReKiBuf(Re_Xferred) = InData%qPrescribed(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE LD_PackMisc
 
  SUBROUTINE LD_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2388,6 +2444,7 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'LD_UnPackMisc'
@@ -2403,6 +2460,24 @@ ENDIF
   Int_Xferred  = 1
     OutData%Dummy = TRANSFER(IntKiBuf(Int_Xferred), OutData%Dummy)
     Int_Xferred = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! qPrescribed not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%qPrescribed)) DEALLOCATE(OutData%qPrescribed)
+    ALLOCATE(OutData%qPrescribed(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%qPrescribed.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%qPrescribed,1), UBOUND(OutData%qPrescribed,1)
+        OutData%qPrescribed(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
  END SUBROUTINE LD_UnPackMisc
 
  SUBROUTINE LD_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
@@ -2552,6 +2627,20 @@ IF (ALLOCATED(SrcParamData%OutParamLinIndx)) THEN
   END IF
     DstParamData%OutParamLinIndx = SrcParamData%OutParamLinIndx
 ENDIF
+IF (ALLOCATED(SrcParamData%PrescribedValues)) THEN
+  i1_l = LBOUND(SrcParamData%PrescribedValues,1)
+  i1_u = UBOUND(SrcParamData%PrescribedValues,1)
+  i2_l = LBOUND(SrcParamData%PrescribedValues,2)
+  i2_u = UBOUND(SrcParamData%PrescribedValues,2)
+  IF (.NOT. ALLOCATED(DstParamData%PrescribedValues)) THEN 
+    ALLOCATE(DstParamData%PrescribedValues(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%PrescribedValues.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%PrescribedValues = SrcParamData%PrescribedValues
+ENDIF
  END SUBROUTINE LD_CopyParam
 
  SUBROUTINE LD_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -2605,6 +2694,9 @@ ENDDO
 ENDIF
 IF (ALLOCATED(ParamData%OutParamLinIndx)) THEN
   DEALLOCATE(ParamData%OutParamLinIndx)
+ENDIF
+IF (ALLOCATED(ParamData%PrescribedValues)) THEN
+  DEALLOCATE(ParamData%PrescribedValues)
 ENDIF
  END SUBROUTINE LD_DestroyParam
 
@@ -2711,6 +2803,11 @@ ENDIF
   IF ( ALLOCATED(InData%OutParamLinIndx) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! OutParamLinIndx upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%OutParamLinIndx)  ! OutParamLinIndx
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! PrescribedValues allocated yes/no
+  IF ( ALLOCATED(InData%PrescribedValues) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! PrescribedValues upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%PrescribedValues)  ! PrescribedValues
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -2942,6 +3039,26 @@ ENDIF
         DO i1 = LBOUND(InData%OutParamLinIndx,1), UBOUND(InData%OutParamLinIndx,1)
           IntKiBuf(Int_Xferred) = InData%OutParamLinIndx(i1,i2)
           Int_Xferred = Int_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%PrescribedValues) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PrescribedValues,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PrescribedValues,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%PrescribedValues,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%PrescribedValues,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%PrescribedValues,2), UBOUND(InData%PrescribedValues,2)
+        DO i1 = LBOUND(InData%PrescribedValues,1), UBOUND(InData%PrescribedValues,1)
+          ReKiBuf(Re_Xferred) = InData%PrescribedValues(i1,i2)
+          Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF
@@ -3217,6 +3334,29 @@ ENDIF
         DO i1 = LBOUND(OutData%OutParamLinIndx,1), UBOUND(OutData%OutParamLinIndx,1)
           OutData%OutParamLinIndx(i1,i2) = IntKiBuf(Int_Xferred)
           Int_Xferred = Int_Xferred + 1
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PrescribedValues not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%PrescribedValues)) DEALLOCATE(OutData%PrescribedValues)
+    ALLOCATE(OutData%PrescribedValues(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%PrescribedValues.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%PrescribedValues,2), UBOUND(OutData%PrescribedValues,2)
+        DO i1 = LBOUND(OutData%PrescribedValues,1), UBOUND(OutData%PrescribedValues,1)
+          OutData%PrescribedValues(i1,i2) = ReKiBuf(Re_Xferred)
+          Re_Xferred = Re_Xferred + 1
         END DO
       END DO
   END IF

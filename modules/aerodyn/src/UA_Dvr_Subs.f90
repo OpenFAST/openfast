@@ -14,11 +14,15 @@ module UA_Dvr_Subs
    integer(IntKi), parameter :: NumInp = 2           ! Number of inputs sent to UA_UpdateStates (must be at least 2)
    integer(IntKi), parameter :: InflowMod_Cst  = 1   ! Inflow is constant
    integer(IntKi), parameter :: InflowMod_File = 2   ! Inflow is read from file
+   integer(IntKi), parameter, dimension(2) :: InflowMod_Valid  = (/InflowMod_Cst, InflowMod_File/)
+   integer(IntKi), parameter :: MotionMod_Cst  = 1   ! Motion is constant
+   integer(IntKi), parameter :: MotionMod_File = 2   ! Motion is read from file
+   integer(IntKi), parameter, dimension(2) :: MotionMod_Valid  = (/MotionMod_Cst, MotionMod_File/)
    real(ReKi), parameter     :: myNaN = -9999.9_ReKi
-   integer(IntKi), parameter :: idFmtAscii  = 1
-   integer(IntKi), parameter :: idFmtBinary = 2
-   integer(IntKi), parameter :: idFmtBoth   = 3
-   integer(IntKi), parameter, dimension(3) :: idFmtVALID  = (/idFmtAscii, idFmtBinary, idFmtBoth/)
+   integer(IntKi), parameter :: idFmt_Ascii  = 1
+   integer(IntKi), parameter :: idFmt_Binary = 2
+   integer(IntKi), parameter :: idFmt_Both   = 3
+   integer(IntKi), parameter, dimension(3) :: idFmt_Valid  = (/idFmt_Ascii, idFmt_Binary, idFmt_Both/)
 
    type Dvr_Parameters
       logical         :: Echo            
@@ -55,9 +59,12 @@ module UA_Dvr_Subs
       real(ReKi)      :: Vec_AT(2)  ! Vector from A to three quarter chord
       real(ReKi)      :: Twist      ! Twist of the airfoil section (input deg, but stored in rad afterwards)
       ! Inflow
-      integer         :: InflowMod
+      integer         :: InflowMod = InflowMod_Cst
       real(ReKi)      :: Inflow(2)
       character(1024) :: InflowFile
+      ! Motion
+      integer         :: MotionMod = MotionMod_Cst
+      character(1024) :: MotionFile
       ! ---- Parameters
       !real(DbKi)                             :: dt
       real(DbKi)                             :: simTime  
@@ -70,7 +77,7 @@ module UA_Dvr_Subs
       real(ReKi), allocatable                :: Uarr(:)
       real(ReKi), allocatable                :: OmegaArr(:)
       ! Prescribed inflow simulations
-      real(DbKi), allocatable                :: vU0(:,:)                ! Inflow as function of time, shape 3xnt for Time, U0x, U0y
+      real(ReKi), allocatable                :: vU0(:,:)                ! Inflow as function of time, shape 3xnt for Time, U0x, U0y
    end type Dvr_Parameters
 
 
@@ -85,7 +92,7 @@ module UA_Dvr_Subs
       !character(25)                                 :: fmt_a                 !< format specifier for each column (including delimiter) [-]
       !character(1)                                  :: delim                 !< column delimiter [-]
       !character(20)                                 :: outfmt                !< format specifier [-]
-      integer(intki)                                 :: fileFmt = idFmtBinary !< output format 1=text, 2=binary, 3=both [-]
+      integer(intki)                                 :: fileFmt = idFmt_Binary !< output format 1=text, 2=binary, 3=both [-]
       character(1024)                                :: root  = ''            !< output file rootname [-]
       character(ChanLen) , dimension(:), allocatable :: WriteOutputHdr        !< channel headers [-]
       character(ChanLen) , dimension(:), allocatable :: WriteOutputUnt        !< channel units [-]
@@ -115,6 +122,7 @@ module UA_Dvr_Subs
       real(ReKi) :: FxA, FyA, tau_A !< Aerodynamic loads     at A [N/m & Nm/m] 
       real(ReKi) :: GF(3)           !< Generalized force, Scaled aerodynamic loads to be representative of the blade
       real(ReKi) :: twist_full      !< Full twist (includes initial twist, potential pitch, and torsion)
+      integer    :: iU0Last = 1     !< Index for faster interpolation of wind speed
    end type Dvr_Misc
 
    type Dvr_Data
@@ -177,7 +185,7 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    ErrMsg  = ''
 
    ! Read all input file lines into fileinfo
-   call WrScr( '  Opening UnsteadyAero Driver input file:  '//trim(FileName) )
+   call WrScr(' Opening UnsteadyAero Driver input file: '//trim(FileName) )
    call ProcessComFile(FileName, FI, errStat2, errMsg2); if (Failed()) return
    CALL GetPath( FileName, PriPath )    ! Input files will be relative to the path where the primary input file is located.
    !call GetRoot(FileName, dvr%root)      
@@ -247,6 +255,8 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    call ParseVar(FI, iLine, 'InflowMod'    , InitInp%InflowMod ,    errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseAry(FI, iLine, 'Inflow'       , InitInp%Inflow    , 2, errStat2, errMsg2, UnEcho); if(Failed()) return
    call ParseVar(FI, iLine, 'InflowFile'   , InitInp%InflowFile,    errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseVar(FI, iLine, 'MotionMod'    , InitInp%MotionMod ,    errStat2, errMsg2, UnEcho); if(Failed()) return
+   call ParseVar(FI, iLine, 'MotionFile'   , InitInp%MotionFile,    errStat2, errMsg2, UnEcho); if(Failed()) return
    endif
 
    ! --- OUTPUT section
@@ -258,8 +268,12 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    if (PathIsRelative(InitInp%OutRootName)) InitInp%OutRootName = TRIM(PriPath)//TRIM(InitInp%OutRootName)
    if (PathIsRelative(InitInp%Airfoil1))    InitInp%Airfoil1 = TRIM(PriPath)//TRIM(InitInp%Airfoil1)
    if (PathIsRelative(InitInp%InflowFile )) InitInp%InflowFile = TRIM(PriPath)//TRIM(InitInp%InflowFile)
+   if (PathIsRelative(InitInp%MotionFile )) InitInp%MotionFile = TRIM(PriPath)//TRIM(InitInp%MotionFile)
 
    ! --- Checks
+   !if (Check(.not.(any(dvr%out%fileFmt==idFmt_Valid   )),   'FileFormat not implemented: '//trim(Num2LStr(InitInp%InflowMod)))) return
+   if (Check(.not.(any(InitInp%InflowMod==InflowMod_Valid)), 'InflowMod not implemented: '//trim(Num2LStr(InitInp%MotionMod)))) return
+   if (Check(.not.(any(InitInp%MotionMod==MotionMod_Valid)), 'MotionMod not implemented: '//trim(Num2LStr(InitInp%MotionMod)))) return
    if (InitInp%SimMod==3) then ! Temporary to avoid changing r-test for now
       !if (Check(.not.EqualRealNos(InitInp%MM(1,1), InitInp%MM(2,2), 'Mass matrix entries 11 and 22 should match.') return
 
@@ -288,8 +302,7 @@ contains
         character(len=*), intent(in) :: errMsg_in
         Check=Condition
         if (Check) then
-           errStat2=ErrID_Fatal
-           errMsg2 =errMsg_in
+           call SetErrStat( ErrID_Fatal, errMsg_in, errStat, errMsg, RoutineName )
         endif
    end function Check
 
@@ -299,6 +312,9 @@ subroutine Dvr_SetParameters(p, errStat, errMsg)
    type(Dvr_Parameters), intent(inout) :: p
    integer,              intent(out ) :: errStat              ! returns a non-zero value when an error occurs
    character(*),         intent(out ) :: errMsg               ! Error message if ErrStat /= ErrID_None
+   integer(IntKi)  :: errStat2    ! Status of error message
+   character(1024) :: errMsg2     ! Error message if ErrStat /= ErrID_None
+   errStat2= ErrID_None
    errStat = ErrID_None
    errMsg  = ''
    ! Unit conversions
@@ -310,9 +326,9 @@ subroutine Dvr_SetParameters(p, errStat, errMsg)
    ! TODO KinVisc based on Re and InvlowVel might not be ideal.
    p%KinVisc = p%InflowVel * p%chord/ p%Re
    p%FldDens =1.225 ! TODO
-   print*,'Re     ',p%Re
-   print*,'KinVisc',p%KinVisc
-   print*,'FldDens',p%FldDens
+   print*,'    Re     ',p%Re
+   print*,'    KinVisc',p%KinVisc
+   print*,'    FldDens',p%FldDens
 
    if ( p%SimMod == 1 ) then
       ! Using the frequency and NCycles, determine how long the simulation needs to run
@@ -322,7 +338,7 @@ subroutine Dvr_SetParameters(p, errStat, errMsg)
       
    else if ( p%SimMod == 2 ) then
       ! Read time-series data file with columns:( time,  Angle-of-attack, Vrel, omega )
-      call ReadTimeSeriesData( p%InputsFile, p%numSteps, p%timeArr, p%AOAarr, p%Uarr, p%OmegaArr, errStat, errMsg );
+      call ReadTimeSeriesData( p%InputsFile, p%numSteps, p%timeArr, p%AOAarr, p%Uarr, p%OmegaArr, errStat2, errMsg2 );
       p%dt = (p%timeArr(p%numSteps) - p%timeArr(1)) / (p%numSteps-1)
       p%numSteps = p%numSteps-NumInp + 1
 
@@ -333,11 +349,11 @@ subroutine Dvr_SetParameters(p, errStat, errMsg)
 
       if (p%InflowMod==InflowMod_File) then
          ! Read inflow file
-         print*,'Reading inflow file not implemented'
-         STOP
+         call ReadDelimFile(p%InflowFile, 3, p%vU0, errStat2, errMsg2);
       endif
 
    endif
+   call setErrStat(errStat2, errMsg2, errStat, errMsg, 'Dvr_SetParameters')
 end subroutine Dvr_SetParameters
 
 !--------------------------------------------------------------------------------------------------------------
@@ -363,12 +379,12 @@ subroutine ReadTimeSeriesData( FileName, nSimSteps, timeArr, AOAarr, Uarr, Omega
    ErrMsg      = ''
    nSimSteps   = 0 ! allocate here in case errors occur
    
-   call WrScr( '  Opening UnsteadyAero time-series input file:  '//trim(FileName) )
+   call WrScr( ' Opening UnsteadyAero time-series input file: '//trim(FileName) )
    call GetNewUnit( UnIn )   
    call OpenFInpFile( UnIn, FileName, errStat2, errMsg2 ); if(Failed()) return
 
    ! --- Determine how many lines of data are in the file
-   ! TODO use a more generic routine. For instane SubDyn has ReadDelimFile and line_count, which should be placed in NWTC_Lib
+   ! TODO use a more generic routine such as ReadDelimFile in NWTC_Lib
    do i=1,hdrlines
       call ReadCom( UnIn, FileName, '  UnsteadyAero time-series input file header line 1', errStat2, errMsg2 ); if(Failed()) return
    enddo
@@ -544,15 +560,15 @@ contains
 end subroutine Init_AFI  
 !--------------------------------------------------------------------------------------------------------------
 !> Set Inflow inputs
-subroutine setInflow(t, p, U0)
-   real(DbKi),                    intent(in) :: t
-   type(Dvr_Parameters),          intent(in) :: p
-   real(ReKi), dimension(:)                  :: U0
+subroutine setInflow(t, p, U0, m)
+   real(DbKi),               intent(in)    :: t
+   type(Dvr_Parameters),     intent(in)    :: p
+   type(Dvr_Misc      ),     intent(inout) :: m
+   real(ReKi), dimension(:), intent(out)   :: U0
    if      (p%InflowMod == InflowMod_Cst) then
       U0(:) = p%Inflow
    else if (p%InflowMod == InflowMod_File) then
-      print*,'File inflow not Implemented'
-      STOP
+      call interpTimeValue(p%vU0, t, m%iU0Last, U0(:))
    else
       print*,'Should never happen'
       STOP
@@ -640,7 +656,7 @@ subroutine AeroKinetics(U0, q, qd, C_dyn, p, m)
    CP = cos(m%phi_Q)
    m%FxA   =  m%L * CP + m%D * SP
    m%FyA   = -m%L * SP + m%D * CP
-   ! Tau A version 1
+   ! Tau A version 1 - Positive about "z"
    m%tau_A = m%tau_Q 
    m%tau_A = m%tau_A - m%FxA * (- p%Vec_AQ(1) * ST + p%Vec_AQ(2) * CT) 
    m%tau_A = m%tau_A + m%FyA * (  p%Vec_AQ(1) * CT + p%Vec_AQ(2) * ST) 
@@ -653,9 +669,9 @@ subroutine AeroKinetics(U0, q, qd, C_dyn, p, m)
    !print*,'tau_A', m%tau_A, tau_A2
 
    ! Scaled loads TODO 
-   m%GF(1) = m%FxA    * p%GFScaling(1)
-   m%GF(2) = m%FyA    * p%GFScaling(2)
-   m%GF(3) = m%tau_A  * p%GFScaling(3)
+   m%GF(1) =  m%FxA    * p%GFScaling(1)
+   m%GF(2) =  m%FyA    * p%GFScaling(2)
+   m%GF(3) = -m%tau_A  * p%GFScaling(3) ! theta_t is negative about z
 
 end subroutine AeroKinetics
 !----------------------------------------------------------------------------------------------------  
@@ -795,10 +811,10 @@ subroutine Dvr_EndSim(dvr, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ''
    ! Close the output file
-   if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtAscii) then
+   if (out%fileFmt==idFmt_Both .or. out%fileFmt == idFmt_Ascii) then
       if (out%unOutFile > 0) close(out%unOutFile)
    endif
-   if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtBinary) then
+   if (out%fileFmt==idFmt_Both .or. out%fileFmt == idFmt_Binary) then
       call WrScr(' Writing output file: '//trim(out%Root)//'.outb')
       call WrBinFAST(trim(out%Root)//'.outb', FileFmtID_ChanLen_In, 'AeroDynDriver', out%WriteOutputHdr, out%WriteOutputUnt, (/0.0_DbKi, dvr%p%dt/), out%storage(:,:), errStat2, errMsg2)
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
@@ -870,7 +886,7 @@ subroutine Dvr_InitializeOutputs(out, numSteps, errStat, errMsg)
    out%outLine=0.0_ReKi
 ! 
 !       ! --- Ascii
-!       if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtAscii) then
+!       if (out%fileFmt==idFmt_Both .or. out%fileFmt == idFmt_Ascii) then
 ! 
 !          ! compute the width of the column output
 !          numSpaces = out%ActualChanLen ! the size of column produced by OutFmt
@@ -923,7 +939,7 @@ subroutine Dvr_InitializeOutputs(out, numSteps, errStat, errMsg)
 !       endif
 ! 
       ! --- Binary
-      if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtBinary) then
+      if (out%fileFmt==idFmt_Both .or. out%fileFmt == idFmt_Binary) then
          call AllocAry(out%storage, numOuts-1, numSteps, 'storage', errStat, errMsg)
          out%storage= myNaN !0.0_ReKi ! Alternative: myNaN
       endif
@@ -1049,7 +1065,7 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, errStat, errMsg)
    ! UA Outputs
    out%outLine(nDV+nLD+1:nDV+nLD+nUA) = dvr%UA_y%WriteOutput(1:nUA)
 
-   !if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtAscii) then
+   !if (out%fileFmt==idFmt_Both .or. out%fileFmt == idFmt_Ascii) then
    !   ! ASCII
    !   ! time
    !   write( tmpStr, out%Fmt_t ) t  ! '(F15.4)'
@@ -1058,7 +1074,7 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, errStat, errMsg)
    !   ! write a new line (advance to the next line)
    !   write(out%unOutFile,'()')
    !endif
-   if (out%fileFmt==idFmtBoth .or. out%fileFmt == idFmtBinary) then
+   if (out%fileFmt==idFmt_Both .or. out%fileFmt == idFmt_Binary) then
       ! Store for binary
       out%storage(:, nt) = out%outLine(:)
       !out%storage(1:nDV+nAD+nIW, nt) = out%outLine(1:nDV+nAD+nIW)
