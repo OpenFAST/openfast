@@ -113,9 +113,7 @@ program UnsteadyAero_Driver
 
    ! --- Driver Outputs
    dvr%out%Root = dvr%p%OutRootName
-   if ( dvr%p%SimMod == 3 ) then
-      call Dvr_InitializeDriverOutputs(dvr, dvr%out, errStat, errMsg); call checkError()
-   endif
+   call Dvr_InitializeDriverOutputs(dvr, dvr%out, errStat, errMsg); call checkError()
 
    i = 1 ! nodes per blade
    j = 1 ! number of blades
@@ -150,10 +148,9 @@ program UnsteadyAero_Driver
    endif
 
    ! --- Time marching loop
+   call Dvr_InitializeOutputs(dvr%out, dvr%p%numSteps, errStat, errMsg)
 
    if ( dvr%p%SimMod == 3 ) then
-
-      call Dvr_InitializeOutputs(dvr%out, dvr%p%numSteps, errStat, errMsg)
 
       ! --- Time marching loop
       call WrScr(' Aeroelastic simulation - TMax = '//trim(num2lstr(dvr%p%numSteps*dvr%p%dt)))
@@ -224,8 +221,6 @@ program UnsteadyAero_Driver
          !call UA_UpdateStates(i, j, t, n, dvr%UA_u, dvr%uTimes, dvr%UA_p, dvr%UA_x, dvr%UA_xd, dvr%UA_OtherState, dvr%AFI_Params(dvr%AFIndx(i,j)), dvr%UA_m, errStat, errMsg ); call checkError()
       end do
 
-      call Dvr_EndSim(dvr, errStat, errMsg)
-
    else
       ! --- Time marching loop
       call WrScr(' UA time simulation - TMax = '//trim(num2lstr(dvr%p%numSteps*dvr%p%dt)))
@@ -249,6 +244,8 @@ program UnsteadyAero_Driver
                
          ! Generate file outputs
          call UA_WriteOutputToFile(t, dvr%UA_p, dvr%UA_y)
+         ! Write/Store outputs 
+         call Dvr_WriteOutputs(n, t, dvr, dvr%out, errStat, errMsg); call checkError()
          
          ! Prepare states for next time step
          call UA_UpdateStates(i, j, t, n, dvr%UA_u, dvr%uTimes, dvr%UA_p, dvr%UA_x, dvr%UA_xd, dvr%UA_OtherState, dvr%AFI_Params(dvr%AFIndx(i,j)), dvr%UA_m, errStat, errMsg ); call checkError()
@@ -256,6 +253,7 @@ program UnsteadyAero_Driver
       end do
    endif
    
+   call Dvr_EndSim(dvr, errStat, errMsg)
    ! --- Exit
    call Cleanup()
    call NormStop()

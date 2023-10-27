@@ -92,7 +92,7 @@ module UA_Dvr_Subs
       integer(intki)                                 :: unOutFile = -1        !< unit number for writing output file
       !integer(intki)                                :: actualchanlen         !< actual length of channels written to text file (less than or equal to chanlen) [-]
       integer(intki)                                :: ny                     !< total number of outputs for the driver 
-      integer(intki)                                :: ny_dvr                 !< number of outputs for the driver (without UA and LD)
+      integer(intki)                                :: ny_dvr                 !< number of outputs for the driver (without UA and LD, and Time)
       integer(intki)                                :: ny_UA                  !< number of outputs for UA
       integer(intki)                                :: ny_LD                  !< number of outputs for LD
       !character(20)                                 :: fmt_t                 !< format specifier for time channel [-]
@@ -287,6 +287,7 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
 
    ! --- Triggers
    call GetRoot(FileName, InitInp%OutRootName) ! OutRootName is inferred from current filename.
+   InitInp%OutRootName=trim(InitInp%OutRootName)//'.UA' ! For backward compatibility
    !if (PathIsRelative(InitInp%OutRootName)) InitInp%OutRootName = TRIM(PriPath)//TRIM(InitInp%OutRootName)
    if (PathIsRelative(InitInp%Airfoil1))    InitInp%Airfoil1 = TRIM(PriPath)//TRIM(InitInp%Airfoil1)
    if (PathIsRelative(InitInp%AeroTSFile   )) InitInp%AeroTSFile   = TRIM(PriPath)//TRIM(InitInp%AeroTSFile  )
@@ -528,7 +529,6 @@ subroutine AeroKinematics(U0, q, qd, p, m)
    real(ReKi), parameter :: W(2) =0 ! Induced velocities
    real(ReKi) :: ST, CT
 
-
    ! Full twist
    m%twist_full = q(3) + p%Twist ! + Pitch if a controller is added
    ST = sin(m%twist_full)
@@ -733,7 +733,7 @@ subroutine Dvr_EndSim(dvr, errStat, errMsg)
    endif
    if (out%fileFmt==idFmt_Both .or. out%fileFmt == idFmt_Binary) then
       call WrScr(' Writing output file: '//trim(out%Root)//'.outb')
-      call WrBinFAST(trim(out%Root)//'.outb', FileFmtID_ChanLen_In, 'AeroDynDriver', out%WriteOutputHdr, out%WriteOutputUnt, (/0.0_DbKi, dvr%p%dt/), out%storage(:,:), errStat2, errMsg2)
+      call WrBinFAST(trim(out%Root)//'.out', FileFmtID_ChanLen_In, 'AeroDynDriver', out%WriteOutputHdr, out%WriteOutputUnt, (/0.0_DbKi, dvr%p%dt/), out%storage(:,:), errStat2, errMsg2)
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
    endif
 end subroutine Dvr_EndSim
@@ -874,9 +874,14 @@ subroutine Dvr_InitializeDriverOutputs(dvr, out, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ''
 
-   out%ny_dvr = 27 ! Driver only
    out%ny_UA = size(dvr%UA_InitOutData%WriteOutputHdr)
-   out%ny_LD = size(dvr%LD_InitOutData%WriteOutputHdr)
+   if (dvr%p%SimMod==3) then
+      out%ny_dvr = 27 ! Driver only ! TODO
+      out%ny_LD = size(dvr%LD_InitOutData%WriteOutputHdr)
+   else
+      out%ny_dvr = 0 
+      out%ny_LD = 0
+   endif
 
 
    ! --- Allocate driver-level outputs
@@ -885,6 +890,8 @@ subroutine Dvr_InitializeDriverOutputs(dvr, out, errStat, errMsg)
 
    j=1
    out%WriteOutputHdr(j) = 'Time'        ; out%WriteOutputUnt(j) = '(s)'  ; j=j+1
+   if (dvr%p%SimMod==3) then
+   ! TODO SIMMOD HARMONIZATION
    ! Driver Variables
    out%WriteOutputHdr(j) = 'VUndx'           ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
    out%WriteOutputHdr(j) = 'VUndy'           ; out%WriteOutputUnt(j) = '(m/s)'  ; j=j+1
@@ -915,6 +922,7 @@ subroutine Dvr_InitializeDriverOutputs(dvr, out, errStat, errMsg)
    out%WriteOutputHdr(j) = 'GFM'             ; out%WriteOutputUnt(j) = '(Nm/m)'  ; j=j+1
    ! Dynamics 
    call concatOutputHeaders(out%WriteOutputHdr, out%WriteOutputUnt, dvr%LD_InitOutData%WriteOutputHdr, dvr%LD_InitOutData%WriteOutputUnt, errStat2, errMsg2)
+   endif
    ! UA
    call concatOutputHeaders(out%WriteOutputHdr, out%WriteOutputUnt, dvr%UA_InitOutData%WriteOutputHdr, dvr%UA_InitOutData%WriteOutputUnt, errStat2, errMsg2)
 
@@ -950,6 +958,8 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, errStat, errMsg)
    nUA = out%ny_UA
    ! Driver outputs
    j = 1 
+   if (dvr%p%SimMod==3) then
+   ! TODO harmonization
    out%outLine(j) = dvr%U0(1, 1)             ; j=j+1  ! Ux
    out%outLine(j) = dvr%U0(1, 2)             ; j=j+1  ! Uy
    out%outLine(j) = dvr%m%Vst_Q(1)           ; j=j+1  ! VSTx_Q
@@ -979,6 +989,7 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, errStat, errMsg)
    out%outLine(j) = dvr%m%GF(3)              ; j=j+1  ! GFM
    ! LD Outputs
    out%outLine(nDV+1:nDV+nLD) = dvr%LD_y%WriteOutput(1:nLD)
+   endif
    ! UA Outputs
    out%outLine(nDV+nLD+1:nDV+nLD+nUA) = dvr%UA_y%WriteOutput(1:nUA)
 
