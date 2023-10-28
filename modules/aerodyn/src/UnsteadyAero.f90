@@ -760,6 +760,9 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
    else if (p%UAMod==UA_OYE) then
       UA_NumLinStates = 1
       p%lin_nx = p%numBlades*p%nNodesPerBlade*UA_NumLinStates ! continuous state per node per blade, but stored at position 4
+   else if (p%UAMod==UA_None) then
+      p%lin_nx = 0
+      UA_NumLinStates = 0
    else
       p%lin_nx = 0
       UA_NumLinStates = 0
@@ -1179,7 +1182,9 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
    endif
 
       ! Allocate and set the InitOut data
-   if (p%UAMod == UA_HGM .or. p%UAMod == UA_OYE) then
+   if (p%UAMod == UA_None) then
+      p%NumOuts = 11
+   elseif (p%UAMod == UA_HGM .or. p%UAMod == UA_OYE) then
       p%NumOuts = 20
    elseif(p%UAMod == UA_HGMV) then
       p%NumOuts = 21
@@ -1228,7 +1233,20 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
          InitOut%WriteOutputUnt(iOffset+ 6)  ='(-)'
          InitOut%WriteOutputUnt(iOffset+ 7)  ='(-)'
          
-         if (p%UAmod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
+         if (p%UAmod == UA_None) then
+            
+            InitOut%WriteOutputHdr(iOffset+ 8)  = trim(chanPrefix)//'omega'
+            InitOut%WriteOutputHdr(iOffset+ 9)  = trim(chanPrefix)//'alphaE'
+            InitOut%WriteOutputHdr(iOffset+10)  = trim(chanPrefix)//'Tu'
+            InitOut%WriteOutputHdr(iOffset+11)  = trim(chanPrefix)//'alpha_34'
+
+            InitOut%WriteOutputUnt(iOffset+ 8)  = '(deg/sec)'
+            InitOut%WriteOutputUnt(iOffset+ 9)  = '(deg)'
+            InitOut%WriteOutputUnt(iOffset+10)  = '(s)'
+            InitOut%WriteOutputUnt(iOffset+11)  = '(deg)'
+
+
+         elseif (p%UAmod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
             
             InitOut%WriteOutputHdr(iOffset+ 8)  = trim(chanPrefix)//'omega'
             InitOut%WriteOutputHdr(iOffset+ 9)  = trim(chanPrefix)//'alphaE'
@@ -1307,7 +1325,7 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
             InitOut%WriteOutputUnt(iOffset+25)  = '(m/s)'
             InitOut%WriteOutputUnt(iOffset+26)  = '(m/s)'
             
-         else
+         else if (p%UAmod == UA_Baseline .or. p%UAMod == UA_Gonzalez .or. p%UAMod == UA_MinnemaPierce) then
 
             InitOut%WriteOutputHdr(iOffset+ 8)  = trim(chanPrefix)//'Cn_aq_circ'
             InitOut%WriteOutputHdr(iOffset+ 9)  = trim(chanPrefix)//'Cn_aq_nc'
@@ -1388,6 +1406,8 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
             InitOut%WriteOutputUnt(iOffset+44) ='(-)'
             InitOut%WriteOutputUnt(iOffset+45)  ='(deg)'
 
+         else
+            call SetErrStat( ErrID_Fatal, 'Programming error UAmod case not accounted for.', ErrStat, ErrMsg, RoutineName ); return
          end if
          
       end do
@@ -1434,14 +1454,15 @@ subroutine UA_ValidateInput(InitInp, ErrStat, ErrMsg)
    type(UA_InitInputType),       intent(in   )  :: InitInp     ! Input data for initialization routine
    integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   integer, parameter :: UA_VALID(7) = (/UA_None, UA_Gonzalez, UA_MinnemaPierce, UA_HGM ,UA_HGMV, UA_Oye, UA_BV/)
 
    character(*), parameter                      :: RoutineName = 'UA_ValidateInput'
    
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   if (InitInp%UAMod < UA_Gonzalez .or. InitInp%UAMod > UA_BV ) call SetErrStat( ErrID_Fatal, &
-      "In this version, UAMod must be 2 (Gonzalez's variant), 3 (Minnema/Pierce variant), 4 (continuous HGM model), 5 (HGM with vortex), &
+   if (.not.(any(InitInp%UAMod==UA_VALID))) call SetErrStat( ErrID_Fatal, &
+      "In this version, UAMod must be 0 (None), 2 (Gonzalez's variant), 3 (Minnema/Pierce variant), 4 (continuous HGM model), 5 (HGM with vortex), &
       &6 (Oye), 7 (Boing-Vertol)", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
       
    if (.not. InitInp%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
@@ -1631,8 +1652,10 @@ subroutine UA_TurnOff_param(p, AFInfo, ErrStat, ErrMsg)
       end if
    end do
       
+   if (p%UAMod == UA_None) then
+      ! pass
    
-   if (p%UAMod == UA_HGM .or. p%UAMod == UA_OYE) then
+   else if (p%UAMod == UA_HGM .or. p%UAMod == UA_OYE) then
       ! unsteady aerodynamics will be turned off if Cl,alpha = 0
       do j=1, AFInfo%NumTabs
          if ( EqualRealNos(AFInfo%Table(j)%UA_BL%C_lalpha, 0.0_ReKi) ) then
@@ -2288,6 +2311,7 @@ subroutine UA_UpdateStates( i, j, t, n, u, uTimes, p, x, xd, OtherState, AFInfo,
          
    !BJJ: u%u == 0 seems to be the root cause of all sorts of numerical problems....
 
+   if (p%UAMod == UA_None) return ! we don't have any states to update here
       
    if (p%UA_off_forGood(i,j)) return   ! we don't have any states to update here
    
@@ -3355,8 +3379,21 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
    call UA_fixInputs(u_in, u, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
    k = abs(u%omega * p%c(i, j) / (2.0_ReKi* u%u))
-   
-   if (  p%UA_off_forGood(i,j) .or. (OtherState%FirstPass(i, j) .and. p%UAMod < UA_HGM) ) then ! note: if u%U isn't zero because we've called UA_fixInputs
+
+   if ( p%UAMod == UA_None)  then
+
+      ! Compute steady aero using alpha 34 to be consistent with most UA models
+      Tu = Get_Tu(u%u, p%c(i,j))
+      alpha_34 = Get_Alpha34(u%v_ac, u%omega, p%d_34_to_ac*p%c(i,j))
+      call AFI_ComputeAirfoilCoefs( alpha_34, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
+      y%Cl = AFI_interp%Cl
+      y%Cd = AFI_interp%Cd
+      y%Cm = AFI_interp%Cm
+      y%Cn = y%Cl*cos(u%alpha) + y%Cd*sin(u%alpha)
+      y%Cc = y%Cl*sin(u%alpha) - y%Cd*cos(u%alpha)
+      if (AFInfo%ColCm == 0) y%Cm = 0.0_ReKi
+
+   else if (  p%UA_off_forGood(i,j) .or. (OtherState%FirstPass(i, j) .and. p%UAMod < UA_HGM) ) then ! note: if u%U isn't zero because we've called UA_fixInputs
         
       misc%weight(i,j) = 0.0
       
@@ -3471,7 +3508,8 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
 
          y%Cn = y%Cl*cos(u%alpha) + y%Cd*sin(u%alpha)
          y%Cc = y%Cl*sin(u%alpha) - y%Cd*cos(u%alpha)
-      else
+
+      elseif (p%UAMod == UA_HGMV) then
       
          ! limit x5?:
          x5 = x_in%x(5)
@@ -3499,6 +3537,9 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
 !            alphaF = x_in%x(3) / BL_p%c_lalpha + BL_p%alpha0
             y%Cm = AFI_interp%Cm + cn_circ * delta_c_mf_primeprime - 0.0_ReKi * piBy2 * Tu * u%omega - 0.25_ReKi*(1.0_ReKi - cos(pi * tV_ratio ))*x5
          end if
+
+      else
+         call SetErrStat(ErrID_Fatal, "Programming error, UAMod continuous model not accounted for", ErrStat, ErrMsg, RoutineName)
       
       end if
       
@@ -3506,7 +3547,7 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
       call UA_BlendSteady(u, p, AFInfo, y, misc%FirstWarn_UA_off, misc%weight(i,j), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
-   else
+   elseif (p%UAMod == UA_Baseline .or. p%UAMod == UA_Gonzalez .or. p%UAMod == UA_MinnemaPierce) then
       ! --- CalcOutput Beddoes-Leishman type models
       
       M           = u%U / p%a_s
@@ -3654,6 +3695,9 @@ subroutine UA_CalcOutput( i, j, t, u_in, p, x, xd, OtherState, AFInfo, y, misc, 
       call UA_BlendSteady(u, p, AFInfo, y, misc%FirstWarn_UA_off, misc%weight(i,j), ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
+   else
+      call SetErrStat(ErrID_Fatal, "Programming error, UAMod not accounted for", ErrStat, ErrMsg, RoutineName)
+
    end if ! Switch on UAMod
 
    if (p%UA_OUTS>0) then
@@ -3675,8 +3719,14 @@ contains
       y%WriteOutput(iOffset+ 5)    = y%Cl
       y%WriteOutput(iOffset+ 6)    = y%Cd
       y%WriteOutput(iOffset+ 7)    = y%Cm
+
+      if (p%UAMod == UA_None) then
+         y%WriteOutput(iOffset+ 8)    = u%omega*R2D
+         y%WriteOutput(iOffset+ 9)    = alpha_34*R2D
+         y%WriteOutput(iOffset+10)    = Tu
+         y%WriteOutput(iOffset+11)    = alpha_34*R2D
    
-      if (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
+      elseif (p%UAMod == UA_HGM .or. p%UAMod == UA_HGMV .or. p%UAMod == UA_OYE) then
          y%WriteOutput(iOffset+ 8)    = u%omega*R2D
          y%WriteOutput(iOffset+ 9)    = alphaE*R2D
          y%WriteOutput(iOffset+10)    = Tu
