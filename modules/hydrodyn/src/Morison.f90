@@ -2324,7 +2324,7 @@ subroutine VisMeshSetup(u,p,y,m,InitOut,ErrStat,ErrMsg)
       Pos1=u%Mesh%Position(:,p%Members(iMem)%NodeIndx(1))                              ! start node position of member
       Pos2=u%Mesh%Position(:,p%Members(iMem)%NodeIndx(size(p%Members(iMem)%NodeIndx))) ! end   node position of member
       Theta(1) = 0.0_R8Ki                                                        ! roll (assumed since insufficient info)
-      Theta(2) = acos(real((Pos2(3)-Pos1(3))/norm2(Pos2-Pos1),R8Ki))             ! pitch
+      Theta(2) = acos(real((Pos2(3)-Pos1(3))/TwoNorm(Pos2-Pos1),R8Ki))           ! pitch
       Theta(3) = atan2(real(Pos2(2)-Pos1(2),R8Ki),real(Pos2(1)-Pos1(1),R8Ki))    ! yaw
       MemberOrient=EulerConstructZYX(Theta)  ! yaw-pitch-roll sequence
 
@@ -2867,7 +2867,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   FSPt = (/posMid(1),posMid(2),ZetaMid/) ! Reference point on the free surface
                ELSE
-                  FSPt = (/posMid(1),posMid(2),0.0/)
+                  FSPt = (/posMid(1),posMid(2),0.0_ReKi/)
                   n_hat = (/0.0,0.0,1.0/)
                END IF    
                CALL GetSectionUnitVectors( k_hat, y_hat, z_hat )
@@ -3485,7 +3485,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                FSPt = (/pos1(1),pos1(2),Zeta1/) ! Reference point on the free surface
             ELSE
-               FSPt = (/pos1(1),pos1(2),0.0/)
+               FSPt = (/pos1(1),pos1(2),0.0_ReKi/)
                n_hat = (/0.0,0.0,1.0/)
             END IF
             CALL GetSectionUnitVectors( k_hat1, y_hat, z_hat )
@@ -3506,7 +3506,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                FSPt = (/pos2(1),pos2(2),Zeta2/) ! Reference point on the free surface
             ELSE
-               FSPt = (/pos2(1),pos2(2),0.0/)
+               FSPt = (/pos2(1),pos2(2),0.0_ReKi/)
                n_hat = (/0.0,0.0,1.0/)
             END IF
             CALL GetSectionUnitVectors( k_hat2, y_hat, z_hat )
@@ -3528,7 +3528,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                FSPt = (/pos2(1),pos2(2),Zeta2/) ! Reference point on the free surface
             ELSE
-               FSPt = (/pos2(1),pos2(2),0.0/)
+               FSPt = (/pos2(1),pos2(2),0.0_ReKi/)
                n_hat = (/0.0,0.0,1.0/)
             END IF
             CALL GetSectionUnitVectors( k_hat2, y_hat, z_hat )
@@ -3696,7 +3696,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       IF ( ABS(k(3)) > 0.999999_ReKi ) THEN ! k is effectively vertical
          y = (/0.0,1.0,0.0/)
       ELSE
-         y = (/-k(2),k(1),0.0/)
+         y = (/-k(2),k(1),0.0_ReKi/)
          y = y / SQRT(Dot_Product(y,y))      
       ENDIF
       z = cross_product(k,y)

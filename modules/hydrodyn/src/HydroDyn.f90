@@ -143,7 +143,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       ErrStat = ErrID_None         
       ErrMsg  = ""               
       p%UnOutFile = -1 !bjj: this was being written to the screen when I had an error in my HD input file, so I'm going to initialize here.
-      p%PointsToSeaState = .true.  ! this should be true unless we are initializing from restart (in a different driver/routine)
       
 #ifdef BETA_BUILD
    CALL DispBetaNotice( "This is a beta version of HydroDyn and is for testing purposes only."//NewLine//"This version includes user waves, WaveMod=6 and the ability to write example user waves." )
@@ -952,8 +951,6 @@ SUBROUTINE HydroDyn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
 
          ! Destroy the parameter data: (ignore errors)
-      ! Need to nullify pointers so that SeaState module data is not deallocated by HD (i.e., use DEALLOCATEpointers=.false. when it points to SeaState data)
-      ! on restart, the data is a separate copy of the SeaState module data, hence the PointsToSeaState parameter
       CALL HydroDyn_DestroyParam( p, ErrStat2, ErrMsg2 )
 
 

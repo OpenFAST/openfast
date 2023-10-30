@@ -93,8 +93,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth from the driver; may be overwritten                         [m]
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Mean sea level to still water level from the driver; may be overwritten [m]
     REAL(DbKi)  :: TMax = 0.0_R8Ki      !< Supplied by Driver:  The total simulation time [(sec)]
-    REAL(ReKi)  :: PtfmLocationX = 0.0_ReKi      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
-    REAL(ReKi)  :: PtfmLocationY = 0.0_ReKi      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
     INTEGER(IntKi)  :: NStepWave = 0      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0      !< NStepWave / 2 [-]
@@ -215,7 +213,6 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
     INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
-    LOGICAL  :: PointsToSeaState = .TRUE.      !< Flag that determines if the data contains pointers to SeaState module or if new copies (from restart) [-]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
   END TYPE HydroDyn_ParameterType
 ! =======================
@@ -906,8 +903,6 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
    DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
    DstInitInputData%TMax = SrcInitInputData%TMax
-   DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
-   DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
    DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
    DstInitInputData%NStepWave = SrcInitInputData%NStepWave
    DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
@@ -991,8 +986,6 @@ subroutine HydroDyn_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, InData%MSL2SWL)
    call RegPack(Buf, InData%TMax)
-   call RegPack(Buf, InData%PtfmLocationX)
-   call RegPack(Buf, InData%PtfmLocationY)
    call RegPack(Buf, InData%VisMeshes)
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
@@ -1061,10 +1054,6 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%MSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%TMax)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%PtfmLocationX)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%PtfmLocationY)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%VisMeshes)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2350,7 +2339,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
       DstParamData%dx = SrcParamData%dx
    end if
    DstParamData%Jac_ny = SrcParamData%Jac_ny
-   DstParamData%PointsToSeaState = SrcParamData%PointsToSeaState
    DstParamData%VisMeshes = SrcParamData%VisMeshes
 end subroutine
 
@@ -2518,7 +2506,6 @@ subroutine HydroDyn_PackParam(Buf, Indata)
       call RegPack(Buf, InData%dx)
    end if
    call RegPack(Buf, InData%Jac_ny)
-   call RegPack(Buf, InData%PointsToSeaState)
    call RegPack(Buf, InData%VisMeshes)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -2743,8 +2730,6 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    call RegUnpack(Buf, OutData%Jac_ny)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%PointsToSeaState)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%VisMeshes)
    if (RegCheckErr(Buf, RoutineName)) return

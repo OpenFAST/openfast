@@ -353,6 +353,12 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C,                                      
    SeaSt%InitInp%defMSL2SWL      = REAL(defMSL2SWL_C, ReKi)    ! use values from SeaState
    SeaSt%InitInp%TMax            = REAL(TMax_C,       DbKi)
 
+   ! Platform reference position
+   !     This is only specified as an (X,Y) position (no Z).
+   SeaSt%InitInp%PtfmLocationX         = REAL(PtfmRefPtPositionX_C, ReKi)
+   SeaSt%InitInp%PtfmLocationY         = REAL(PtfmRefPtPositionY_C, ReKi)
+
+   
    ! Wave elevation output
    !     Wave elevations can be exported for a set of points (grid or any other layout).
    !     This feature is used only in the driver codes for exporting for visualization
@@ -427,12 +433,6 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C,                                      
    HD%InitInp%MCFD           =  SeaSt%InitOutData%MCFD
 
    if(associated(SeaSt%InitOutData%WaveField ))    HD%InitInp%WaveField      => SeaSt%InitOutData%WaveField
-
-   ! Platform reference position
-   !     The HD model uses this for building the moddel.  This is only specified as an (X,Y)
-   !     position (no Z).
-   HD%InitInp%PtfmLocationX         = REAL(PtfmRefPtPositionX_C, ReKi)
-   HD%InitInp%PtfmLocationY         = REAL(PtfmRefPtPositionY_C, ReKi)
 
 
    !-------------------------------------------------------------

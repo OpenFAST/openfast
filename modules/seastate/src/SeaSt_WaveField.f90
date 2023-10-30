@@ -85,7 +85,7 @@ FUNCTION WaveField_GetNodeTotalWaveElev( WaveField, Time, pos, ErrStat, ErrMsg )
 
    REAL(SiKi)                       :: WaveField_GetNodeTotalWaveElev
    REAL(SiKi)                       :: Zeta1, Zeta2
-   LOGICAL                          :: FirstWarn_Clamp
+   !LOGICAL                          :: FirstWarn_Clamp
    CHARACTER(*),    PARAMETER       :: RoutineName = 'WaveField_GetNodeTotalWaveElev'
    INTEGER(IntKi)                   :: errStat2
    CHARACTER(ErrMsgLen)             :: errMsg2
@@ -118,7 +118,7 @@ SUBROUTINE WaveField_GetNodeWaveNormal( WaveField, Time, pos, r, n, ErrStat, Err
    ErrStat   = ErrID_None
    ErrMsg    = ""
 
-   r1 = MAX(r,1.0e-6) ! In case r is zero
+   r1 = MAX(r,real(1.0e-6,ReKi)) ! In case r is zero
 
    ZetaP = WaveField_GetNodeTotalWaveElev( WaveField, Time, (/pos(1)+r1,pos(2)/), ErrStat2, ErrMsg2 )
      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
