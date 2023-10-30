@@ -2358,7 +2358,7 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
       
 END SUBROUTINE Get_1Spsd_and_WaveElevC0
 !------------------------------------------------------------------------------------------------------------------------
-!> update InitOut%WaveElevC0; call InitFFT before calling this routine!
+!> update WaveField%WaveElevC0; call InitFFT before calling this routine!
 SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddArr, CosWaveDir, SinWaveDir, FFT_Data, ErrStat, ErrMsg)
 
    TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp                                       ! Input data for initialization routine

@@ -85,7 +85,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  Waves_InitOutputType  =======
   TYPE, PUBLIC :: Waves_InitOutputType
-    REAL(SiKi) , DIMENSION(:,:), POINTER  :: WaveElevC0 => NULL()      !< Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part [(meters)]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevC      !< Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part [(meters)]
     REAL(SiKi) , DIMENSION(:), POINTER  :: WaveDirArr => NULL()      !< Wave direction array.  Each frequency has a unique direction of WaveNDir > 1 [(degrees)]
     REAL(SiKi)  :: WaveDirMin = 0.0_R4Ki      !< Minimum wave direction. [(degrees)]
@@ -501,7 +500,6 @@ subroutine Waves_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    character(*), parameter        :: RoutineName = 'Waves_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   DstInitOutputData%WaveElevC0 => SrcInitOutputData%WaveElevC0
    if (allocated(SrcInitOutputData%WaveElevC)) then
       LB(1:3) = lbound(SrcInitOutputData%WaveElevC)
       UB(1:3) = ubound(SrcInitOutputData%WaveElevC)
@@ -553,7 +551,6 @@ subroutine Waves_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Waves_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   nullify(InitOutputData%WaveElevC0)
    if (allocated(InitOutputData%WaveElevC)) then
       deallocate(InitOutputData%WaveElevC)
    end if
@@ -578,14 +575,6 @@ subroutine Waves_PackInitOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Waves_PackInitOutput'
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, associated(InData%WaveElevC0))
-   if (associated(InData%WaveElevC0)) then
-      call RegPackBounds(Buf, 2, lbound(InData%WaveElevC0), ubound(InData%WaveElevC0))
-      call RegPackPointer(Buf, c_loc(InData%WaveElevC0), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%WaveElevC0)
-      end if
-   end if
    call RegPack(Buf, allocated(InData%WaveElevC))
    if (allocated(InData%WaveElevC)) then
       call RegPackBounds(Buf, 3, lbound(InData%WaveElevC), ubound(InData%WaveElevC))
@@ -697,30 +686,6 @@ subroutine Waves_UnPackInitOutput(Buf, OutData)
    integer(IntKi)  :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
-   if (associated(OutData%WaveElevC0)) deallocate(OutData%WaveElevC0)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 2, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%WaveElevC0, UB(1:2)-LB(1:2))
-         OutData%WaveElevC0(LB(1):,LB(2):) => OutData%WaveElevC0
-      else
-         allocate(OutData%WaveElevC0(LB(1):UB(1),LB(2):UB(2)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElevC0.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%WaveElevC0)
-         call RegUnpack(Buf, OutData%WaveElevC0)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%WaveElevC0 => null()
-   end if
    if (allocated(OutData%WaveElevC)) deallocate(OutData%WaveElevC)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return

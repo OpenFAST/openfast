@@ -230,7 +230,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%PWaveAcc0    => p%WaveField%PWaveAcc0
       p%PWaveDynP0   => p%WaveField%PWaveDynP0
       p%WaveAccMCF   => p%WaveField%WaveAccMCF
-      p%WaveElevC0   => p%WaveField%WaveElevC0
       p%WaveDirArr   => p%WaveField%WaveDirArr
       p%PWaveAccMCF0 => p%WaveField%PWaveAccMCF0
     
@@ -294,7 +293,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
    
                ! assign pointer arrays to init input for Waves2 (save some space)
           
-            InputFileData%Waves2%WaveElevC0 => Waves_InitOut%WaveElevC0
             InputFileData%Waves2%WaveDirArr => Waves_InitOut%WaveDirArr
 
             CALL Waves2_Init(InputFileData%Waves2, p%Waves2, Waves2_InitOut, p%WaveField, ErrStat2, ErrMsg2 )
@@ -517,7 +515,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InitOut%PWaveAcc0    => p%WaveField%PWaveAcc0                       ! For Morison
       InitOut%PWaveVel0    => p%WaveField%PWaveVel0                       ! For Morison
       InitOut%WaveAccMCF   => p%WaveField%WaveAccMCF                      ! For Morison (MacCamy-Fuchs)
-      InitOut%WaveElevC0   => p%WaveField%WaveElevC0                      ! For WAMIT and WAMIT2,  FIT
       InitOut%WaveDirArr   => p%WaveField%WaveDirArr                      ! For WAMIT and WAMIT2
       InitOut%PWaveAccMCF0 => p%WaveField%PWaveAccMCF0                    ! For Morison (MacCamy-Fuchs)
       InitOut%WaveElevC    => p%WaveField%WaveElevC                       ! For WAMIT
