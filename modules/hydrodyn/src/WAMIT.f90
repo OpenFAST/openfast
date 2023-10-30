@@ -931,13 +931,6 @@ end if
                IF (ASSOCIATED(InitInp%WaveElev1)) SS_Exctn_InitInp%WaveElev1 => InitInp%WaveElev1
 !TODO: Verify what happens within SS_Exctn when we have no waves. 
                
-                  ! We need the WaveTime array to stay intact for use in other modules, so we will make a copy instead of moving the allocation
-               !ALLOCATE ( SS_Exctn_InitInp%WaveTime (0:InitInp%NStepWave) , STAT=ErrStat2 )
-               !IF ( ErrStat2 /= 0 )  THEN
-               !   CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the SS_Exctn_InitInp%WaveTime array.', ErrStat, ErrMsg, RoutineName)
-               !   CALL Cleanup()
-               !   RETURN            
-               !END IF
                SS_Exctn_InitInp%WaveTime => InitInp%WaveTime 
                
                call SS_Exc_Init(SS_Exctn_InitInp, m%SS_Exctn_u, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn, z%SS_Exctn, OtherState%SS_Exctn, &

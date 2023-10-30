@@ -95,7 +95,6 @@ typedef   ^                  ^                 SiKi                 PWaveVel0   
 typedef   ^                  ^                      SiKi                     WaveElev1         {*}{*}{*}  -      -  "First order wave elevation"        -
 typedef   ^                  ^                      SiKi                     WaveElev2         {*}{*}{*}  -      -  "Second order wave elevation"        -
 typedef   ^                  ^                 SiKi                 WaveElev0         {*}      -        -        "Instantaneous elevation time-series of incident waves at the platform reference point" (meters)
-typedef     ^                 ^                 SiKi                 WaveTime          {*}      -        -        "Simulation times at which the instantaneous elevation of, velocity of, acceleration of, and loads associated with the incident waves are determined" (sec)
 typedef     ^                 ^                 SiKi                 RhoXg             -        -        -        "= WtrDens*Gravity" -
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
@@ -144,7 +143,6 @@ typedef   ^                  ^                      SeaSt_Interp_MiscVarType    
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
 typedef   ^                  ParameterType          Waves2_ParameterType     Waves2            -       -      -  "Parameter data for the Waves2 module"  -
-typedef   ^                  ^                      SiKi                     WaveTime          {*}     -      -  "Array of time samples, (sec)"        -
 typedef   ^                  ^                      DbKi                     WaveDT            -       -      -  "Wave DT" sec
 typedef   ^                  ^                      INTEGER                  NGridPts          -       -      -  "Number of data points in the wave kinematics grid"        -
 typedef   ^                  ^                      INTEGER                  NGrid             3       -      -  "Number of grid entries in x, y, and z"

@@ -45,7 +45,6 @@ IMPLICIT NONE
     LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
     REAL(SiKi) , DIMENSION(:), POINTER  :: WaveDirArr => NULL()      !< Wave direction array.  Each frequency has a unique direction of WaveNDir > 1 [(degrees)]
     REAL(SiKi) , DIMENSION(:,:), POINTER  :: WaveElevC0 => NULL()      !< Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part [(meters)]
-    REAL(SiKi) , DIMENSION(:), POINTER  :: WaveTime => NULL()      !< Simulation times at which the instantaneous second order loads associated with the incident waves are determined [sec]
     INTEGER(IntKi) , DIMENSION(1:3)  :: nGrid = 0_IntKi      !< Grid dimensions [-]
     INTEGER(IntKi)  :: NWaveElevGrid = 0_IntKi      !< Number of grid points where the incident wave elevations can be output [-]
     INTEGER(IntKi)  :: NWaveKinGrid = 0_IntKi      !< Number of grid points where the incident wave kinematics will be computed [-]
@@ -100,7 +99,6 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    DstInitInputData%WaveMultiDir = SrcInitInputData%WaveMultiDir
    DstInitInputData%WaveDirArr => SrcInitInputData%WaveDirArr
    DstInitInputData%WaveElevC0 => SrcInitInputData%WaveElevC0
-   DstInitInputData%WaveTime => SrcInitInputData%WaveTime
    DstInitInputData%nGrid = SrcInitInputData%nGrid
    DstInitInputData%NWaveElevGrid = SrcInitInputData%NWaveElevGrid
    DstInitInputData%NWaveKinGrid = SrcInitInputData%NWaveKinGrid
@@ -157,7 +155,6 @@ subroutine Waves2_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    ErrMsg  = ''
    nullify(InitInputData%WaveDirArr)
    nullify(InitInputData%WaveElevC0)
-   nullify(InitInputData%WaveTime)
    if (allocated(InitInputData%WaveKinGridxi)) then
       deallocate(InitInputData%WaveKinGridxi)
    end if
@@ -197,14 +194,6 @@ subroutine Waves2_PackInitInput(Buf, Indata)
       call RegPackPointer(Buf, c_loc(InData%WaveElevC0), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%WaveElevC0)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%WaveTime))
-   if (associated(InData%WaveTime)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveTime), ubound(InData%WaveTime))
-      call RegPackPointer(Buf, c_loc(InData%WaveTime), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%WaveTime)
       end if
    end if
    call RegPack(Buf, InData%nGrid)
@@ -307,30 +296,6 @@ subroutine Waves2_UnPackInitInput(Buf, OutData)
       end if
    else
       OutData%WaveElevC0 => null()
-   end if
-   if (associated(OutData%WaveTime)) deallocate(OutData%WaveTime)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%WaveTime, UB(1:1)-LB(1:1))
-         OutData%WaveTime(LB(1):) => OutData%WaveTime
-      else
-         allocate(OutData%WaveTime(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveTime.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%WaveTime)
-         call RegUnpack(Buf, OutData%WaveTime)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%WaveTime => null()
    end if
    call RegUnpack(Buf, OutData%nGrid)
    if (RegCheckErr(Buf, RoutineName)) return

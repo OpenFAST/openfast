@@ -192,7 +192,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: totalStates = 0_IntKi      !< Number of excitation and radiation states for all WAMIT bodies [-]
     INTEGER(IntKi)  :: totalExctnStates = 0_IntKi      !< Number of excitation states for all WAMIT bodies [-]
     INTEGER(IntKi)  :: totalRdtnStates = 0_IntKi      !< Number of radiation states for all WAMIT bodies [-]
-    REAL(SiKi) , DIMENSION(:), POINTER  :: WaveTime => NULL()      !< Array of time samples, (sec) [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Number of data points in the wave kinematics arrays [-]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [(m)]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AddF0      !< Additional pre-load forces and moments (N,N,N,N-m,N-m,N-m) [-]
@@ -214,6 +213,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
     INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
+    TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
   END TYPE HydroDyn_ParameterType
 ! =======================
 ! =========  HydroDyn_InputType  =======
@@ -2226,7 +2226,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    DstParamData%totalStates = SrcParamData%totalStates
    DstParamData%totalExctnStates = SrcParamData%totalExctnStates
    DstParamData%totalRdtnStates = SrcParamData%totalRdtnStates
-   DstParamData%WaveTime => SrcParamData%WaveTime
    DstParamData%NStepWave = SrcParamData%NStepWave
    DstParamData%WtrDpth = SrcParamData%WtrDpth
    if (allocated(SrcParamData%AddF0)) then
@@ -2340,6 +2339,7 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    end if
    DstParamData%Jac_ny = SrcParamData%Jac_ny
    DstParamData%VisMeshes = SrcParamData%VisMeshes
+   DstParamData%WaveField => SrcParamData%WaveField
 end subroutine
 
 subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -2373,7 +2373,6 @@ subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
    end if
    call Morison_DestroyParam(ParamData%Morison, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   nullify(ParamData%WaveTime)
    if (allocated(ParamData%AddF0)) then
       deallocate(ParamData%AddF0)
    end if
@@ -2404,6 +2403,7 @@ subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%dx)) then
       deallocate(ParamData%dx)
    end if
+   nullify(ParamData%WaveField)
 end subroutine
 
 subroutine HydroDyn_PackParam(Buf, Indata)
@@ -2442,14 +2442,6 @@ subroutine HydroDyn_PackParam(Buf, Indata)
    call RegPack(Buf, InData%totalStates)
    call RegPack(Buf, InData%totalExctnStates)
    call RegPack(Buf, InData%totalRdtnStates)
-   call RegPack(Buf, associated(InData%WaveTime))
-   if (associated(InData%WaveTime)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveTime), ubound(InData%WaveTime))
-      call RegPackPointer(Buf, c_loc(InData%WaveTime), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%WaveTime)
-      end if
-   end if
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, allocated(InData%AddF0))
@@ -2507,6 +2499,13 @@ subroutine HydroDyn_PackParam(Buf, Indata)
    end if
    call RegPack(Buf, InData%Jac_ny)
    call RegPack(Buf, InData%VisMeshes)
+   call RegPack(Buf, associated(InData%WaveField))
+   if (associated(InData%WaveField)) then
+      call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
+      if (.not. PtrInIndex) then
+         call SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, InData%WaveField) 
+      end if
+   end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -2570,30 +2569,6 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%totalRdtnStates)
    if (RegCheckErr(Buf, RoutineName)) return
-   if (associated(OutData%WaveTime)) deallocate(OutData%WaveTime)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%WaveTime, UB(1:1)-LB(1:1))
-         OutData%WaveTime(LB(1):) => OutData%WaveTime
-      else
-         allocate(OutData%WaveTime(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveTime.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%WaveTime)
-         call RegUnpack(Buf, OutData%WaveTime)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%WaveTime => null()
-   end if
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WtrDpth)
@@ -2733,6 +2708,26 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%VisMeshes)
    if (RegCheckErr(Buf, RoutineName)) return
+   if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
+   call RegUnpack(Buf, IsAllocAssoc)
+   if (RegCheckErr(Buf, RoutineName)) return
+   if (IsAllocAssoc) then
+      call RegUnpackPointer(Buf, Ptr, PtrIdx)
+      if (RegCheckErr(Buf, RoutineName)) return
+      if (c_associated(Ptr)) then
+         call c_f_pointer(Ptr, OutData%WaveField)
+      else
+         allocate(OutData%WaveField,stat=stat)
+         if (stat /= 0) then 
+            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveField.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
+            return
+         end if
+         Buf%Pointers(PtrIdx) = c_loc(OutData%WaveField)
+         call SeaSt_WaveField_UnpackSeaSt_WaveFieldType(Buf, OutData%WaveField) ! WaveField 
+      end if
+   else
+      OutData%WaveField => null()
+   end if
 end subroutine
 
 subroutine HydroDyn_CopyInput(SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg)

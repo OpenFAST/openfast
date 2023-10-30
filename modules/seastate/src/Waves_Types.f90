@@ -102,7 +102,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: PWaveVel0 => NULL()      !< Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), at each of the NWaveKinGrid points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) [(m/s)]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev => NULL()      !< Instantaneous elevation time-series of incident waves at each of the  XY grid points [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Instantaneous elevation time-series of incident waves at the platform reference point [(meters)]
-    REAL(SiKi) , DIMENSION(:), POINTER  :: WaveTime => NULL()      !< Simulation times at which the instantaneous elevation of, velocity of, acceleration of, and loads associated with the incident waves are determined [(sec)]
     REAL(DbKi)  :: WaveTMax = 0.0_R8Ki      !< Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT [(sec)]
     REAL(SiKi)  :: RhoXg = 0.0_R4Ki      !< = WtrDens*Gravity [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
@@ -541,7 +540,6 @@ subroutine Waves_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
       end if
       DstInitOutputData%WaveElev0 = SrcInitOutputData%WaveElev0
    end if
-   DstInitOutputData%WaveTime => SrcInitOutputData%WaveTime
    DstInitOutputData%WaveTMax = SrcInitOutputData%WaveTMax
    DstInitOutputData%RhoXg = SrcInitOutputData%RhoXg
    DstInitOutputData%NStepWave = SrcInitOutputData%NStepWave
@@ -572,7 +570,6 @@ subroutine Waves_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%WaveElev0)) then
       deallocate(InitOutputData%WaveElev0)
    end if
-   nullify(InitOutputData%WaveTime)
 end subroutine
 
 subroutine Waves_PackInitOutput(Buf, Indata)
@@ -682,14 +679,6 @@ subroutine Waves_PackInitOutput(Buf, Indata)
    if (allocated(InData%WaveElev0)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveElev0), ubound(InData%WaveElev0))
       call RegPack(Buf, InData%WaveElev0)
-   end if
-   call RegPack(Buf, associated(InData%WaveTime))
-   if (associated(InData%WaveTime)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveTime), ubound(InData%WaveTime))
-      call RegPackPointer(Buf, c_loc(InData%WaveTime), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%WaveTime)
-      end if
    end if
    call RegPack(Buf, InData%WaveTMax)
    call RegPack(Buf, InData%RhoXg)
@@ -1007,30 +996,6 @@ subroutine Waves_UnPackInitOutput(Buf, OutData)
       end if
       call RegUnpack(Buf, OutData%WaveElev0)
       if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (associated(OutData%WaveTime)) deallocate(OutData%WaveTime)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%WaveTime, UB(1:1)-LB(1:1))
-         OutData%WaveTime(LB(1):) => OutData%WaveTime
-      else
-         allocate(OutData%WaveTime(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveTime.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%WaveTime)
-         call RegUnpack(Buf, OutData%WaveTime)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%WaveTime => null()
    end if
    call RegUnpack(Buf, OutData%WaveTMax)
    if (RegCheckErr(Buf, RoutineName)) return

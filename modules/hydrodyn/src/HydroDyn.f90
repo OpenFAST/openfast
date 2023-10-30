@@ -273,8 +273,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          ! Copy Waves initialization output into the initialization input type for the WAMIT module
       !p%NWaveElev    = InputFileData%Waves%NWaveElev  
       p%NStepWave    = InitInp%NStepWave
-      
-      p%WaveTime =>  InitInp%WaveField%WaveTime
+      p%WaveField    =>  InitInp%WaveField
 
       m%LastIndWave = 1
 
@@ -370,7 +369,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             ! CALL MOVE_ALLOC( InitInp%WaveElevC, InputFileData%WAMIT%WaveElevC )
                 ! Temporarily move arrays to init input for WAMIT (save some space)
             
-            InputFileData%WAMIT%WaveTime   => InitInp%WaveField%WaveTime
+            InputFileData%WAMIT%WaveTime   => p%WaveField%WaveTime
             InputFileData%WAMIT%WaveElev0  => InitInp%WaveField%WaveElev0
             InputFileData%WAMIT%WaveElevC  => InitInp%WaveField%WaveElevC
             InputFileData%WAMIT%WaveElevC0 => InitInp%WaveField%WaveElevC0            
@@ -442,7 +441,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                p%WAMIT2used   = .TRUE.
 
                   ! init input for WAMIT2 pointers to save space
-               !InputFileData%WAMIT2%WaveTime   => InitInp%WaveTime     ! This isn't actually used within WAMIT2  GJH 9/30/2021
                InputFileData%WAMIT2%WaveElevC0 => InitInp%WaveField%WaveElevC0
                InputFileData%WAMIT2%WaveDirArr => InitInp%WaveField%WaveDirArr
 
@@ -1300,7 +1298,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
                      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
                         if ( ErrStat >= AbortErrLev ) return
 
-                  call WAMIT_CalcOutput( Time, p%WaveTime, m%u_WAMIT(1), p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1),  &
+                  call WAMIT_CalcOutput( Time, p%WaveField%WaveTime, m%u_WAMIT(1), p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1),  &
                                           z%WAMIT, OtherState%WAMIT(1), y%WAMIT(1), m%WAMIT(1), ErrStat2, ErrMsg2 )
                      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
                   do iBody=1,p%NBody
@@ -1321,7 +1319,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
                      m%u_WAMIT(iBody)%Mesh%TranslationAcc (:,1)  = u%WAMITMesh%TranslationAcc (:,iBody)
                      m%u_WAMIT(iBody)%Mesh%RotationAcc    (:,1)  = u%WAMITMesh%RotationAcc    (:,iBody)
 
-                     call WAMIT_CalcOutput( Time, p%WaveTime, m%u_WAMIT(iBody), p%WAMIT(iBody), x%WAMIT(iBody), xd%WAMIT(iBody),  &
+                     call WAMIT_CalcOutput( Time, p%WaveField%WaveTime, m%u_WAMIT(iBody), p%WAMIT(iBody), x%WAMIT(iBody), xd%WAMIT(iBody),  &
                                           z%WAMIT, OtherState%WAMIT(iBody), y%WAMIT(iBody), m%WAMIT(iBody), ErrStat2, ErrMsg2 )
                         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
                      y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT(iBody)%Mesh%Force (:,1)
@@ -1342,7 +1340,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
          if (p%WAMIT2used) then
 
             if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then
-               call WAMIT2_CalcOutput( Time, p%WaveTime, p%WAMIT2(1), y%WAMIT2(1), m%WAMIT2(1), ErrStat2, ErrMsg2 )
+               call WAMIT2_CalcOutput( Time, p%WaveField%WaveTime, p%WAMIT2(1), y%WAMIT2(1), m%WAMIT2(1), ErrStat2, ErrMsg2 )
                   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
                do iBody=1,p%NBody
                   y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT2(1)%Mesh%Force (:,iBody)
@@ -1353,7 +1351,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
             else
                do iBody=1,p%NBody
 
-                  call WAMIT2_CalcOutput( Time, p%WaveTime, p%WAMIT2(iBody), y%WAMIT2(iBody), m%WAMIT2(iBody), ErrStat2, ErrMsg2 )
+                  call WAMIT2_CalcOutput( Time, p%WaveField%WaveTime, p%WAMIT2(iBody), y%WAMIT2(iBody), m%WAMIT2(iBody), ErrStat2, ErrMsg2 )
                      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
                   y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT2(iBody)%Mesh%Force (:,1)
                   y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT2(iBody)%Mesh%Moment(:,1)

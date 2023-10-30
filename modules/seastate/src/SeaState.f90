@@ -222,7 +222,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! note that we DO NOT RETURN on error until AFTER the pointers modified, below
       
       ! Copy Waves_InitOut pointer information before calling cleanup (to avoid memory problems):
-      p%WaveTime     => p%WaveField%WaveTime
       p%WaveElev1    => p%WaveField%WaveElev1
       p%WaveVel      => p%WaveField%WaveVel
       p%WaveAcc      => p%WaveField%WaveAcc
@@ -295,7 +294,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
    
                ! assign pointer arrays to init input for Waves2 (save some space)
           
-            InputFileData%Waves2%WaveTime => p%WaveTime
             InputFileData%Waves2%WaveElevC0 => Waves_InitOut%WaveElevC0
             InputFileData%Waves2%WaveDirArr => Waves_InitOut%WaveDirArr
 
@@ -519,7 +517,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InitOut%PWaveAcc0    => p%WaveField%PWaveAcc0                       ! For Morison
       InitOut%PWaveVel0    => p%WaveField%PWaveVel0                       ! For Morison
       InitOut%WaveAccMCF   => p%WaveField%WaveAccMCF                      ! For Morison (MacCamy-Fuchs)
-      InitOut%WaveTime     => p%WaveField%WaveTime                        ! For Morison, and WAMIT for use in SS_Excitation
       InitOut%WaveElevC0   => p%WaveField%WaveElevC0                      ! For WAMIT and WAMIT2,  FIT
       InitOut%WaveDirArr   => p%WaveField%WaveDirArr                      ! For WAMIT and WAMIT2
       InitOut%PWaveAccMCF0 => p%WaveField%PWaveAccMCF0                    ! For Morison (MacCamy-Fuchs)
@@ -555,7 +552,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%WaveField%MSL2SWL      =  InitOut%MSL2SWL
       p%WaveField%EffWtrDpth   =  p%EffWtrDpth                   ! Effective water depth measured from the SWL
       p%WaveField%WaveStMod    =  p%WaveStMod
-      ! p%WaveField%WaveTime     => Waves_InitOut%WaveTime
       ! p%WaveField%WaveElev1    => Waves_InitOut%WaveElev
       ! p%WaveField%WaveVel      => Waves_InitOut%WaveVel
       ! p%WaveField%WaveAcc      => Waves_InitOut%WaveAcc
@@ -584,7 +580,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          else if ( InitInp%WrWvKinMod == 1 ) then
             call SeaStOut_WriteWaveElev0(InitInp%OutRootname, p%NStepWave, &
                p%NGrid, InitOut%WaveElev1, InitOut%WaveElev2, &
-               InitOut%WaveTime, ErrStat, ErrMsg ) 
+               p%WaveField%WaveTime, ErrStat, ErrMsg ) 
          end if
          
       end if
@@ -601,17 +597,17 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
             RETURN
          end if
 
-         do it = 1,size(p%WaveTime)
+         do it = 1,size(p%WaveField%WaveTime)
             do i = 1, size(InitOut%WaveElevSeries,DIM=2)
-               InitOut%WaveElevSeries(it,i) = SeaSt_Interp_3D( real(p%WaveTime(it),DbKi), real(InitInp%WaveElevXY(:,i),ReKi), p%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+               InitOut%WaveElevSeries(it,i) = SeaSt_Interp_3D( real(p%WaveField%WaveTime(it),DbKi), real(InitInp%WaveElevXY(:,i),ReKi), p%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             end do
          end do
          
          if (associated(p%WaveElev2)) then
-            do it = 1,size(p%WaveTime)
+            do it = 1,size(p%WaveField%WaveTime)
                do i = 1, size(InitOut%WaveElevSeries,DIM=2)
-                  TmpElev = SeaSt_Interp_3D( real(p%WaveTime(it),DbKi), real(InitInp%WaveElevXY(:,i),ReKi), p%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+                  TmpElev = SeaSt_Interp_3D( real(p%WaveField%WaveTime(it),DbKi), real(InitInp%WaveElevXY(:,i),ReKi), p%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   InitOut%WaveElevSeries(it,i) =  InitOut%WaveElevSeries(it,i) + TmpElev
                end do

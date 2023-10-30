@@ -40,7 +40,7 @@ MODULE UserWaves
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Initial_InitOut_Arrays(InitOut, WaveField, InitInp, WaveDT, ErrStat, ErrMsg)
    TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut     ! Initialization output data
-   TYPE(SeaSt_WaveFieldType),           INTENT(INOUT)  :: WaveField
+   TYPE(SeaSt_WaveFieldType),       INTENT(INOUT)  :: WaveField
    TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp     ! Initialization input data
    REAL(DbKi),                      INTENT(IN   )  :: WaveDT      ! Value of wave dt, used for filling WaveTime
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation

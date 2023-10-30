@@ -6525,7 +6525,7 @@ SUBROUTINE WrVTK_WaveElev(t_global, p_FAST, y_FAST, SeaSt)
 
       ! I'm not going to interpolate in time; I'm just going to get the index of the closest wave time value
       t = REAL(t_global,SiKi)
-      call GetWaveElevIndx( t, SeaSt%p%WaveTime, y_FAST%VTK_LastWaveIndx )
+      call GetWaveElevIndx( t, SeaSt%p%WaveField%WaveTime, y_FAST%VTK_LastWaveIndx )
 
       n = 1
       do ix=1,p_FAST%VTK_surface%NWaveElevPts(1)

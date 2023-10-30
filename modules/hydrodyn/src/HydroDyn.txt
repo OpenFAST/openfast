@@ -173,7 +173,6 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  totalStates                     -          -          -         "Number of excitation and radiation states for all WAMIT bodies"        -
 typedef   ^                            ^                             INTEGER                  totalExctnStates                -          -          -         "Number of excitation states for all WAMIT bodies"        -
 typedef   ^                            ^                             INTEGER                  totalRdtnStates                 -          -          -         "Number of radiation states for all WAMIT bodies"        -
-typedef   ^                            ^                             SiKi                     WaveTime                       {*}         -          -         "Array of time samples, (sec)"        -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -          -         "Number of data points in the wave kinematics arrays"        -
 typedef   ^                            ^                             ReKi                     WtrDpth                         -          -          -         "Water depth"    (m)
 typedef   ^                            ^                             ReKi                     AddF0                       {:}{:}         -          -         "Additional pre-load forces and moments (N,N,N,N-m,N-m,N-m)"    -
@@ -195,6 +194,7 @@ typedef	 ^	                           ^                             R8Ki	       
 typedef	 ^	                           ^                             R8Ki	                  dx	                         {:}	     -	        -	      "vector that determines size of perturbation for x (continuous states)" -
 typedef	 ^	                           ^                             Integer	              Jac_ny	                      -	         -	        -	      "number of outputs in jacobian matrix"	-
 typedef   ^                            ^                             logical                  VisMeshes                       -       .false.       -         "Output visualization meshes" -
+typedef     ^                          ^                     SeaSt_WaveFieldType             *WaveField                       -        -            -         "Pointer to SeaState wave field" -
 #
 #
 # ..... Inputs ....................................................................................................................
