@@ -1143,7 +1143,7 @@ END SUBROUTINE WAMIT2_Init
                      !        need to account for any offset in the location of the WAMIT body (this term vanishes).
                      ! First get the wave amplitude -- must be reconstructed from the WaveElevC0 array.  First index is the real (1) or
                      ! imaginary (2) part.  Divide by NStepWave2 to remove the built in normalization in WaveElevC0.
-                  aWaveElevC = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
+                  aWaveElevC = CMPLX( InitInp%WaveField%WaveElevC0(1,J), InitInp%WaveField%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
 
                      ! Calculate the frequency
                   Omega1 = J * InitInp%WaveDOmega
@@ -1161,7 +1161,7 @@ END SUBROUTINE WAMIT2_Init
                      IF ( MnDriftData%DataIs3D ) THEN
 
                            ! Set the (omega1,beta1,beta2) point we are looking for. (angles in degrees here)
-                        Coord3 = (/ REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+                        Coord3 = (/ REAL(Omega1,SiKi), InitInp%WaveField%WaveDirArr(J), InitInp%WaveField%WaveDirArr(J) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                         Coord3(2) = Coord3(2) - RotateZdegOffset
@@ -1175,7 +1175,7 @@ END SUBROUTINE WAMIT2_Init
                      ELSE
 
                            ! Set the (omega1,omega2,beta1,beta2) point we are looking for. (angles in degrees here)
-                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveField%WaveDirArr(J), InitInp%WaveField%WaveDirArr(J) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                         Coord4(3) = Coord4(3) - RotateZdegOffset
@@ -1713,7 +1713,7 @@ END SUBROUTINE WAMIT2_Init
 
                      ! First get the wave amplitude -- must be reconstructed from the WaveElevC array.  First index is the real (1) or
                      ! imaginary (2) part.  Divide by NStepWave2 so that the wave amplitude is of the same form as the paper.
-                  aWaveElevC = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
+                  aWaveElevC = CMPLX( InitInp%WaveField%WaveElevC0(1,J), InitInp%WaveField%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
 
                      ! Calculate the frequency
                   Omega1 = J * InitInp%WaveDOmega
@@ -1726,7 +1726,7 @@ END SUBROUTINE WAMIT2_Init
                      IF ( NewmanAppData%DataIs3D ) THEN
 
                            ! Set the (omega1,beta1,beta2) point we are looking for.
-                        Coord3 = (/ REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+                        Coord3 = (/ REAL(Omega1,SiKi), InitInp%WaveField%WaveDirArr(J), InitInp%WaveField%WaveDirArr(J) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                         Coord3(2) = Coord3(2) - RotateZdegOffset
@@ -1739,7 +1739,7 @@ END SUBROUTINE WAMIT2_Init
                      ELSE
 
                            ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveField%WaveDirArr(J), InitInp%WaveField%WaveDirArr(J) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                         Coord4(3) = Coord4(3) - RotateZdegOffset
@@ -1828,7 +1828,7 @@ END SUBROUTINE WAMIT2_Init
                !        direction associated with it through the equal energy approach used in multidirectional waves.
 
                WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
-               TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(J)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(J)*D2R) )
+               TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(J)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(J)*D2R) )
                PhaseShiftXY = CMPLX( cos(TmpReal1), -sin(TmpReal1) )
 
                ! Apply the phase shift
@@ -2266,11 +2266,11 @@ END SUBROUTINE WAMIT2_Init
                         Omega2 = K * InitInp%WaveDOmega              ! the nth frequency
 
                            ! Find the Wave amplitudes 1 and 2
-                        aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,J+K), InitInp%WaveElevC0(2,J+K), SiKi)  / InitInp%NStepWave2
-                        aWaveElevC2 = CMPLX( InitInp%WaveElevC0(1,K),   InitInp%WaveElevC0(2,K),   SiKi)  / InitInp%NStepWave2
+                        aWaveElevC1 = CMPLX( InitInp%WaveField%WaveElevC0(1,J+K), InitInp%WaveField%WaveElevC0(2,J+K), SiKi)  / InitInp%NStepWave2
+                        aWaveElevC2 = CMPLX( InitInp%WaveField%WaveElevC0(1,K),   InitInp%WaveField%WaveElevC0(2,K),   SiKi)  / InitInp%NStepWave2
 
                            ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveDirArr(J+K), InitInp%WaveDirArr(K) /)
+                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveField%WaveDirArr(J+K), InitInp%WaveField%WaveDirArr(K) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                         Coord4(3) = Coord4(3) - RotateZdegOffset
@@ -2298,8 +2298,8 @@ END SUBROUTINE WAMIT2_Init
 
                            WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
                            WaveNmbr2   = WaveNumber ( REAL(Omega2,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
-                           TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(J+K)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(J+K)*D2R) )
-                           TmpReal2    = WaveNmbr2 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(K)*D2R)   + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(K)*D2R)   )
+                           TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(J+K)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(J+K)*D2R) )
+                           TmpReal2    = WaveNmbr2 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(K)*D2R)   + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(K)*D2R)   )
 
                            ! Set the phase shift for the set of difference frequencies
                            PhaseShiftXY = CMPLX( cos(TmpReal1 - TmpReal2), -sin(TmpReal1 - TmpReal2) )
@@ -2760,10 +2760,10 @@ END SUBROUTINE WAMIT2_Init
 
 
                         ! Find the wave amplitude at frequency omega
-                     aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J), SiKi )  / InitInp%NStepWave2
+                     aWaveElevC1 = CMPLX( InitInp%WaveField%WaveElevC0(1,J), InitInp%WaveField%WaveElevC0(2,J), SiKi )  / InitInp%NStepWave2
 
                         ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                     Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+                     Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveField%WaveDirArr(J), InitInp%WaveField%WaveDirArr(J) /)
 
                         ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                      Coord4(3) = Coord4(3) - RotateZdegOffset
@@ -2791,7 +2791,7 @@ END SUBROUTINE WAMIT2_Init
                         !        direction associated with it through the equal energy approach used in multidirectional waves.
 
                         WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
-                        TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(J)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(J)*D2R) )
+                        TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(J)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(J)*D2R) )
 
                         ! Set the phase shift for the set of sum frequencies
                         PhaseShiftXY = CMPLX( cos(TmpReal1 + TmpReal1), -sin(TmpReal1 + TmpReal1) )
@@ -2873,11 +2873,11 @@ END SUBROUTINE WAMIT2_Init
                         Omega2 = (J-K) * InitInp%WaveDOmega
 
                            ! Find the wave amplitude at frequency omega.  Remove the NStepWave2 normalization built into WaveElevC0 from Waves module
-                        aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,  K), InitInp%WaveElevC0(2,  K), SiKi )    / InitInp%NStepWave2
-                        aWaveElevC2 = CMPLX( InitInp%WaveElevC0(1,J-K), InitInp%WaveElevC0(2,J-K), SiKi )    / InitInp%NStepWave2
+                        aWaveElevC1 = CMPLX( InitInp%WaveField%WaveElevC0(1,  K), InitInp%WaveField%WaveElevC0(2,  K), SiKi )    / InitInp%NStepWave2
+                        aWaveElevC2 = CMPLX( InitInp%WaveField%WaveElevC0(1,J-K), InitInp%WaveField%WaveElevC0(2,J-K), SiKi )    / InitInp%NStepWave2
 
                            ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveDirArr(K), InitInp%WaveDirArr(J-K) /)
+                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveField%WaveDirArr(K), InitInp%WaveField%WaveDirArr(J-K) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
                         Coord4(3) = Coord4(3) - RotateZdegOffset
@@ -2905,8 +2905,8 @@ END SUBROUTINE WAMIT2_Init
 
                            WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
                            WaveNmbr2   = WaveNumber ( REAL(Omega2,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
-                           TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(K)*D2R)   + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(K)*D2R)   )
-                           TmpReal2    = WaveNmbr2 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(J-K)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(J-K)*D2R) )
+                           TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(K)*D2R)   + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(K)*D2R)   )
+                           TmpReal2    = WaveNmbr2 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(J-K)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(J-K)*D2R) )
 
                            ! Set the phase shift for the set of sum frequencies
                            PhaseShiftXY = CMPLX( cos(TmpReal1 + TmpReal2), -sin(TmpReal1 + TmpReal2) )
@@ -3319,11 +3319,11 @@ END SUBROUTINE WAMIT2_Init
 
          !> 1. Check that WaveElevC0 is a 2x(NStepWave2+1) sized array (0 index start)
 
-      IF ( SIZE( InitInp%WaveElevC0, 2 ) /= (InitInp%NStepWave2 + 1) ) THEN    ! Expect a 2x(0:NStepWave2) array
+      IF ( SIZE( InitInp%WaveField%WaveElevC0, 2 ) /= (InitInp%NStepWave2 + 1) ) THEN    ! Expect a 2x(0:NStepWave2) array
          CALL SetErrStat( ErrID_Fatal, ' Programming error in call to WAMIT2_Init:'//NewLine// &
                      '        --> Expected array for WaveElevC0 to be of size 2x'//TRIM(Num2LStr(InitInp%NStepWave2 + 1))// &
                      ' (2x(NStepWave2+1)), but instead received array of size '// &
-                     TRIM(Num2LStr(SIZE(InitInp%WaveElevC0,1)))//'x'//TRIM(Num2LStr(SIZE(InitInp%WaveElevC0,2)))//'.', ErrStat, ErrMsg, RoutineName)
+                     TRIM(Num2LStr(SIZE(InitInp%WaveField%WaveElevC0,1)))//'x'//TRIM(Num2LStr(SIZE(InitInp%WaveField%WaveElevC0,2)))//'.', ErrStat, ErrMsg, RoutineName)
          RETURN
       END IF
 

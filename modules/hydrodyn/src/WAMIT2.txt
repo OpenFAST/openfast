@@ -13,6 +13,7 @@
 # ...... Include files (definitions from NWTC Library) ............................................................................
 # make sure that the file name does not have any trailing white spaces!
 include   Registry_NWTC_Library.txt
+usefrom   SeaSt_WaveField.txt
 
 param       WAMIT2/WAMIT2     unused            INTEGER              MaxWAMIT2Outputs  -        6       -        ""    -
 
@@ -35,14 +36,13 @@ typedef     ^                 ^                 ReKi                 WtrDens    
 typedef     ^                 ^                 ReKi                 Gravity           -        -        -        "Supplied by Driver:  Gravitational acceleration"  (m/s^2)
 typedef     ^                 ^                 ReKi                 WtrDpth           -        -        -        "Water depth (positive-valued)"    (m)
 
-typedef     ^                 ^                 SiKi                 WaveElevC0        {*}{*}   -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part (points to SeaState module data)"   (meters)
 typedef     ^                 ^                 SiKi                 WaveDir           -        -        -        "Mean incident wave propagation heading direction"    (degrees)
 typedef     ^                 ^                 LOGICAL              WaveMultiDir      -        -        -        "Indicates the waves are multidirectional -- set by HydroDyn_Input"  -
-typedef     ^                 ^                 SiKi                 WaveDirArr        {*}      -        -        "Wave direction assigned to each frequency (points to SeaState module data)"    (degrees)
 typedef     ^                 ^                 SiKi                 WaveDirMin        -        -        -        "Minimum wave direction from Waves module"    -
 typedef     ^                 ^                 SiKi                 WaveDirMax        -        -        -        "Maximum wave direction from Waves module"    -
 
 typedef     ^                 ^                 INTEGER              WaveMod           -        -        -        "The wave model to use.  This is for error checking -- ideally this would be done in the main calling routine, not here." -
+typedef    ^                  ^                 SeaSt_WaveFieldType *WaveField         -        -        -        "Pointer to wave field"
 
 #[note: only one of MnDriff / NewmanApp / DiffQTF can be non-zero
 typedef     ^                 ^                 INTEGER              MnDrift           -        -        -        "Calculate the mean drift force {0: no mean drift; [7,8,9,10,11, or 12]: WAMIT file to use}"    -

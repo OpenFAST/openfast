@@ -369,11 +369,9 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             ! CALL MOVE_ALLOC( InitInp%WaveElevC, InputFileData%WAMIT%WaveElevC )
                 ! Temporarily move arrays to init input for WAMIT (save some space)
             
-            InputFileData%WAMIT%WaveTime   => p%WaveField%WaveTime
             InputFileData%WAMIT%WaveElev0  => InitInp%WaveField%WaveElev0
             InputFileData%WAMIT%WaveElevC  => InitInp%WaveField%WaveElevC
-            InputFileData%WAMIT%WaveElevC0 => InitInp%WaveField%WaveElevC0            
-            InputFileData%WAMIT%WaveDirArr => InitInp%WaveField%WaveDirArr
+            InputFileData%WAMIT%WaveField  => InitInp%WaveField
             
             ! InputFileData%WAMIT%seast_interp_p = InitInp%WaveField%seast_interp_p
             CALL SeaSt_Interp_CopyParam(InitInp%WaveField%seast_interp_p, InputFileData%WAMIT%seast_interp_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -440,11 +438,9 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   ! Flag required for indicating when to try using arrays that are allocated
                p%WAMIT2used   = .TRUE.
 
-                  ! init input for WAMIT2 pointers to save space
-               InputFileData%WAMIT2%WaveElevC0 => InitInp%WaveField%WaveElevC0
-               InputFileData%WAMIT2%WaveDirArr => InitInp%WaveField%WaveDirArr
-
                   ! Copy Waves initialization output into the initialization input type for the WAMIT module
+               InputFileData%WAMIT2%WaveField  => InitInp%WaveField
+               
                InputFileData%WAMIT2%RhoXg       = InitInp%RhoXg
                InputFileData%WAMIT2%NStepWave   = InitInp%NStepWave
                InputFileData%WAMIT2%NStepWave2  = InitInp%NStepWave2

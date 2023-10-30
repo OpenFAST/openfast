@@ -931,7 +931,7 @@ end if
                IF (ASSOCIATED(InitInp%WaveElev1)) SS_Exctn_InitInp%WaveElev1 => InitInp%WaveElev1
 !TODO: Verify what happens within SS_Exctn when we have no waves. 
                
-               SS_Exctn_InitInp%WaveTime => InitInp%WaveTime 
+               SS_Exctn_InitInp%WaveTime => InitInp%WaveField%WaveTime 
                
                call SS_Exc_Init(SS_Exctn_InitInp, m%SS_Exctn_u, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn, z%SS_Exctn, OtherState%SS_Exctn, &
                                       m%SS_Exctn_y, m%SS_Exctn, Interval_Sub, SS_Exctn_InitOut, ErrStat2, ErrMsg2)
@@ -1079,14 +1079,14 @@ end if
 
                   DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments
                      TmpCoord(1) = Omega
-                     TmpCoord(2) = InitInp%WaveDirArr(I)
+                     TmpCoord(2) = InitInp%WaveField%WaveDirArr(I)
                      CALL WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,J), HdroFreq, HdroWvDir, LastInd2, WaveExctnC(I,J), ErrStat2, ErrMsg2 )
                      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                      IF ( ErrStat >= AbortErrLev ) THEN
                         CALL Cleanup()
                         RETURN
                      END IF
-                     WaveExctnC(I,J) = WaveExctnC(I,J) * CMPLX(InitInp%WaveElevC0(1,I), InitInp%WaveElevC0(2,I))
+                     WaveExctnC(I,J) = WaveExctnC(I,J) * CMPLX(InitInp%WaveField%WaveElevC0(1,I), InitInp%WaveField%WaveElevC0(2,I))
                   
                   END DO                ! J - All wave excitation forces and moments
 
@@ -1133,7 +1133,7 @@ end if
 
                   DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments
                      TmpCoord(1) = Omega
-                     TmpCoord(2) = InitInp%WaveDirArr(I)
+                     TmpCoord(2) = InitInp%WaveField%WaveDirArr(I)
                      CALL WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,J), HdroFreq, HdroWvDir, LastInd2, WaveExctnC(I,J), ErrStat2, ErrMsg2 )
                      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                      IF ( ErrStat >= AbortErrLev ) THEN
@@ -1253,7 +1253,7 @@ end if
                               TmpIm = -sin(tmpAngle)
                               Fxy   = CMPLX( TmpRe, TmpIm )
 
-                              tmpComplexArr(I) = Fxy*CMPLX(InitInp%WaveElevC0(1,I), InitInp%WaveElevC0(2,I))
+                              tmpComplexArr(I) = Fxy*CMPLX(InitInp%WaveField%WaveElevC0(1,I), InitInp%WaveField%WaveElevC0(2,I))
                           
 
                            end do
@@ -1299,7 +1299,7 @@ end if
                   !   CALL Cleanup()
                   !   RETURN            
                   !END IF
-               SS_Exctn_InitInp%WaveTime => InitInp%WaveTime 
+               SS_Exctn_InitInp%WaveTime => InitInp%WaveField%WaveTime 
                   
       
                

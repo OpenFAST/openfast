@@ -17,6 +17,7 @@ usefrom   Conv_Radiation.txt
 usefrom   SS_Radiation.txt
 usefrom   SS_Excitation.txt
 usefrom   SeaState_Interp.txt
+usefrom   SeaSt_WaveField.txt
 
 typedef   WAMIT/WAMIT                  InitInputType                 INTEGER                  NBody                           -          -        -         "[>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]" -
 typedef   ^                            ^                             INTEGER                  NBodyMod                        -          -        -         "Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]" -
@@ -45,15 +46,14 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             ReKi                     WaveDOmega                      -          -        -         ""    -
 typedef   ^                            ^                             SiKi                     WaveElev0                      {*}         -        -         "Wave elevation time history at origin (needed for SS_Excitation module)" m
 typedef   ^                            ^                             SiKi                     WaveElev1                {*}{*}{*}         -        -         "First order wave elevation (points to SeaState module data)"        -
-typedef   ^                            ^                             SiKi                     WaveElevC0                      {*}{*}     -        -         "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part (points to SeaState module data)"   (meters)
 typedef   ^                            ^                             SiKi                     WaveElevC                      {*}{*}{*}   -        -         "Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part"   (meters)
-typedef   ^                            ^                             SiKi                     WaveTime                        {*}        -        -         "(points to SeaState module data)"    -
 typedef   ^                            ^                             INTEGER                  WaveMod                         -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     WtrDens                         -          -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveDirArr                      {*}        -        -         "Array of wave directions (one per frequency) from the Waves module (points to SeaState module data)"    -
 typedef   ^                            ^                             SiKi                     WaveDirMin                      -          -        -         "Minimum wave direction from Waves module"    -
 typedef   ^                            ^                             SiKi                     WaveDirMax                      -          -        -         "Maximum wave direction from Waves module"    -
-typedef     ^                 ^                 SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
+typedef   ^                            ^                 SeaSt_Interp_ParameterType           SeaSt_Interp_p                  -          -        -         "parameter information from the SeaState Interpolation module"   -
+typedef   ^                            ^                 SeaSt_WaveFieldType                 *WaveField                       -          -        -         "Pointer to wave field"
+
 #
 #
 # Define outputs from the initialization routine here:
