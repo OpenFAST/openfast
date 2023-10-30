@@ -230,7 +230,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%PWaveAcc0    => p%WaveField%PWaveAcc0
       p%PWaveDynP0   => p%WaveField%PWaveDynP0
       p%WaveAccMCF   => p%WaveField%WaveAccMCF
-      p%WaveDirArr   => p%WaveField%WaveDirArr
       p%PWaveAccMCF0 => p%WaveField%PWaveAccMCF0
     
       ! check error (must be done AFTER moving pointers to parameters)
@@ -288,15 +287,8 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
             InputFileData%Waves2%NStepWave2  = Waves_InitOut%NStepWave2
             InputFileData%Waves2%WaveDOmega  = Waves_InitOut%WaveDOmega
                                                 
-               ! Copy the WaveElevXY data in from the SeaState InputFileData
-           ! IF (ALLOCATED(tmpWaveElevXY)) CALL MOVE_ALLOC(tmpWaveElevXY, InputFileData%Waves2%WaveElevXY) 
-   
-               ! assign pointer arrays to init input for Waves2 (save some space)
-          
-            InputFileData%Waves2%WaveDirArr => Waves_InitOut%WaveDirArr
-
             CALL Waves2_Init(InputFileData%Waves2, p%Waves2, Waves2_InitOut, p%WaveField, ErrStat2, ErrMsg2 )
-            p%WaveElev2 => p%WaveField%WaveElev2 ! do this before calling cleanup() so that pointers get deallocated properly            
+            p%WaveElev2 => p%WaveField%WaveElev2 ! do this before calling cleanup() so that pointers get deallocated properly
 
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
@@ -515,7 +507,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InitOut%PWaveAcc0    => p%WaveField%PWaveAcc0                       ! For Morison
       InitOut%PWaveVel0    => p%WaveField%PWaveVel0                       ! For Morison
       InitOut%WaveAccMCF   => p%WaveField%WaveAccMCF                      ! For Morison (MacCamy-Fuchs)
-      InitOut%WaveDirArr   => p%WaveField%WaveDirArr                      ! For WAMIT and WAMIT2
       InitOut%PWaveAccMCF0 => p%WaveField%PWaveAccMCF0                    ! For Morison (MacCamy-Fuchs)
       InitOut%WaveElevC    => p%WaveField%WaveElevC                       ! For WAMIT
       InitOut%WaveElev0    => p%WaveField%WaveElev0 

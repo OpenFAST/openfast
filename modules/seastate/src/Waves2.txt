@@ -29,7 +29,6 @@ typedef     ^                 ^                 SiKi                 WaveDOmega 
 typedef     ^                 ^                 INTEGER              WaveStMod         -        -        -        "Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching}"   -
 
 typedef     ^                 ^                 LOGICAL              WaveMultiDir      -        -        -        "Indicates the waves are multidirectional -- set by HydroDyn_Input"  -
-typedef     ^                 ^                 SiKi                 WaveDirArr        {*}      -        -        "Wave direction array.  Each frequency has a unique direction of WaveNDir > 1" (degrees)
 
 typedef     ^                 ^                 integer              nGrid             3        -        -        "Grid dimensions"
 typedef     ^                 ^                 INTEGER              NWaveElevGrid     -        -        -        "Number of grid points where the incident wave elevations can be output"  -

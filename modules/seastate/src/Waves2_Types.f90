@@ -43,7 +43,6 @@ IMPLICIT NONE
     REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
     INTEGER(IntKi)  :: WaveStMod = 0_IntKi      !< Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} [-]
     LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
-    REAL(SiKi) , DIMENSION(:), POINTER  :: WaveDirArr => NULL()      !< Wave direction array.  Each frequency has a unique direction of WaveNDir > 1 [(degrees)]
     INTEGER(IntKi) , DIMENSION(1:3)  :: nGrid = 0_IntKi      !< Grid dimensions [-]
     INTEGER(IntKi)  :: NWaveElevGrid = 0_IntKi      !< Number of grid points where the incident wave elevations can be output [-]
     INTEGER(IntKi)  :: NWaveKinGrid = 0_IntKi      !< Number of grid points where the incident wave kinematics will be computed [-]
@@ -96,7 +95,6 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    DstInitInputData%WaveDOmega = SrcInitInputData%WaveDOmega
    DstInitInputData%WaveStMod = SrcInitInputData%WaveStMod
    DstInitInputData%WaveMultiDir = SrcInitInputData%WaveMultiDir
-   DstInitInputData%WaveDirArr => SrcInitInputData%WaveDirArr
    DstInitInputData%nGrid = SrcInitInputData%nGrid
    DstInitInputData%NWaveElevGrid = SrcInitInputData%NWaveElevGrid
    DstInitInputData%NWaveKinGrid = SrcInitInputData%NWaveKinGrid
@@ -151,7 +149,6 @@ subroutine Waves2_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Waves2_DestroyInitInput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   nullify(InitInputData%WaveDirArr)
    if (allocated(InitInputData%WaveKinGridxi)) then
       deallocate(InitInputData%WaveKinGridxi)
    end if
@@ -167,7 +164,6 @@ subroutine Waves2_PackInitInput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Waves2_InitInputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Waves2_PackInitInput'
-   logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%Gravity)
    call RegPack(Buf, InData%WtrDens)
@@ -177,14 +173,6 @@ subroutine Waves2_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%WaveDOmega)
    call RegPack(Buf, InData%WaveStMod)
    call RegPack(Buf, InData%WaveMultiDir)
-   call RegPack(Buf, associated(InData%WaveDirArr))
-   if (associated(InData%WaveDirArr)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveDirArr), ubound(InData%WaveDirArr))
-      call RegPackPointer(Buf, c_loc(InData%WaveDirArr), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%WaveDirArr)
-      end if
-   end if
    call RegPack(Buf, InData%nGrid)
    call RegPack(Buf, InData%NWaveElevGrid)
    call RegPack(Buf, InData%NWaveKinGrid)
@@ -219,8 +207,6 @@ subroutine Waves2_UnPackInitInput(Buf, OutData)
    integer(IntKi)  :: LB(1), UB(1)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    call RegUnpack(Buf, OutData%Gravity)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -238,30 +224,6 @@ subroutine Waves2_UnPackInitInput(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveMultiDir)
    if (RegCheckErr(Buf, RoutineName)) return
-   if (associated(OutData%WaveDirArr)) deallocate(OutData%WaveDirArr)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%WaveDirArr, UB(1:1)-LB(1:1))
-         OutData%WaveDirArr(LB(1):) => OutData%WaveDirArr
-      else
-         allocate(OutData%WaveDirArr(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveDirArr.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%WaveDirArr)
-         call RegUnpack(Buf, OutData%WaveDirArr)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%WaveDirArr => null()
-   end if
    call RegUnpack(Buf, OutData%nGrid)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NWaveElevGrid)
