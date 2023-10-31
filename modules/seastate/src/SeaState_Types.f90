@@ -103,7 +103,6 @@ IMPLICIT NONE
     REAL(SiKi)  :: WaveDir = 0.0_R4Ki      !< Incident wave propagation heading direction [(degrees)]
     LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
     REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
-    REAL(SiKi) , DIMENSION(:), POINTER  :: WaveElev0 => NULL()      !< Instantaneous elevation time-series of incident waves at the platform reference point [(meters)]
     REAL(SiKi)  :: RhoXg = 0.0_R4Ki      !< = WtrDens*Gravity [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
@@ -722,7 +721,6 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    DstInitOutputData%WaveDir = SrcInitOutputData%WaveDir
    DstInitOutputData%WaveMultiDir = SrcInitOutputData%WaveMultiDir
    DstInitOutputData%WaveDOmega = SrcInitOutputData%WaveDOmega
-   DstInitOutputData%WaveElev0 => SrcInitOutputData%WaveElev0
    DstInitOutputData%RhoXg = SrcInitOutputData%RhoXg
    DstInitOutputData%NStepWave = SrcInitOutputData%NStepWave
    DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
@@ -773,7 +771,6 @@ subroutine SeaSt_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    call NWTC_Library_DestroyProgDesc(InitOutputData%Ver, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(InitOutputData%WaveElevC)
-   nullify(InitOutputData%WaveElev0)
    call SeaSt_Interp_DestroyParam(InitOutputData%SeaSt_Interp_p, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InitOutputData%WaveElevSeries)) then
@@ -816,14 +813,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
    call RegPack(Buf, InData%WaveDir)
    call RegPack(Buf, InData%WaveMultiDir)
    call RegPack(Buf, InData%WaveDOmega)
-   call RegPack(Buf, associated(InData%WaveElev0))
-   if (associated(InData%WaveElev0)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveElev0), ubound(InData%WaveElev0))
-      call RegPackPointer(Buf, c_loc(InData%WaveElev0), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%WaveElev0)
-      end if
-   end if
    call RegPack(Buf, InData%RhoXg)
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
@@ -935,30 +924,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
-   if (associated(OutData%WaveElev0)) deallocate(OutData%WaveElev0)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%WaveElev0, UB(1:1)-LB(1:1))
-         OutData%WaveElev0(LB(1):) => OutData%WaveElev0
-      else
-         allocate(OutData%WaveElev0(LB(1):UB(1)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElev0.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%WaveElev0)
-         call RegUnpack(Buf, OutData%WaveElev0)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%WaveElev0 => null()
-   end if
    call RegUnpack(Buf, OutData%RhoXg)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NStepWave)

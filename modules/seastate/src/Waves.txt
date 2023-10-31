@@ -73,7 +73,6 @@ typedef     ^                 ^                 SiKi                 WaveDirMax 
 typedef     ^                 ^                 INTEGER              WaveNDir          -        -        -        "Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module]"     (-)
 typedef     ^                 ^                 SiKi                 WaveDOmega        -        -        -        "Frequency step for incident wave calculations" (rad/s)
 typedef     ^                 ^                 SiKi                 WaveElev          {*}{*}{*}   -        -        "Instantaneous elevation time-series of incident waves at each of the  XY grid points" (meters)
-typedef     ^                 ^                 SiKi                 WaveElev0         {:}      -        -        "Instantaneous elevation time-series of incident waves at the platform reference point" (meters)
 typedef     ^                 ^                 DbKi                 WaveTMax          -        -        -        "Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT"  (sec)
 typedef     ^                 ^                 SiKi                 RhoXg             -        -        -        "= WtrDens*Gravity" -
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -

@@ -275,25 +275,11 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       
          ! Allocate Wave-elevation related arrays
       p%NStepWave = InitInp%NStepWave
-      !allocate ( p%WaveElev0(0:p%NStepWave) , STAT=ErrStat2 )
-      !IF (ErrStat2 /= 0) THEN
-      !   CALL SetErrStat(ErrID_Fatal,'Error allocating p%WaveElev0 array',ErrStat,ErrMsg,'SS_Exc_Init')
-      !end if
-      !allocate ( p%WaveTime (0:p%NStepWave) , STAT=ErrStat2 )
-      !IF (ErrStat2 /= 0) THEN
-      !   CALL SetErrStat(ErrID_Fatal,'Error allocating p%WaveTime array',ErrStat,ErrMsg,'SS_Exc_Init')
-      !end if
-      !
-      !IF (ErrStat >= AbortErrLev) THEN
-      !   CALL CleanUp()
-      !   RETURN
-      !END IF
       p%SeaSt_Interp_p = InitInp%SeaSt_Interp_p
       p%ExctnDisp =  InitInp%ExctnDisp
       p%WaveTime  => InitInp%WaveTime  
       p%ExctnDisp = InitInp%ExctnDisp
       if (p%ExctnDisp == 0) then
-         ! call MOVE_ALLOC(InitInp%WaveElev0, p%WaveElev0)
          p%WaveElev0 => InitInp%WaveElev0
       else
          p%WaveElev1 => InitInp%WaveElev1
