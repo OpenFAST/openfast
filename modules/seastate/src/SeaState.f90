@@ -221,8 +221,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       CALL Waves_Init(InputFileData%Waves, Waves_InitOut, p%WaveField, ErrStat2, ErrMsg2 ) 
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! note that we DO NOT RETURN on error until AFTER the pointers modified, below
       
-      ! Copy Waves_InitOut pointer information before calling cleanup (to avoid memory problems):
-      p%WaveVel      => p%WaveField%WaveVel
     
       ! check error (must be done AFTER moving pointers to parameters)
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -387,7 +385,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       
       ! Copy Waves InitOut data to SeaState InitOut
          ! ... pointer data: 
-      InitOut%WaveVel      => p%WaveField%WaveVel                         ! For Morison
       InitOut%WaveElevC    => p%WaveField%WaveElevC                       ! For WAMIT
       InitOut%WaveElev0    => p%WaveField%WaveElev0 
 
@@ -420,7 +417,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%WaveField%MSL2SWL      =  InitOut%MSL2SWL
       p%WaveField%EffWtrDpth   =  p%EffWtrDpth                   ! Effective water depth measured from the SWL
       p%WaveField%WaveStMod    =  p%WaveStMod
-      ! p%WaveField%WaveVel      => Waves_InitOut%WaveVel
       ! p%WaveField%PWaveDynP0   => Waves_InitOut%PWaveDynP0
       ! p%WaveField%PWaveAccMCF0 => Waves_InitOut%PWaveAccMCF0
 
