@@ -345,11 +345,11 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ! These three come directly from processing the inputs, and so will exist even if not using Morison elements:
       InitOut%WtrDens    = InputFileData%Waves%WtrDens
       InitOut%WtrDpth    = InputFileData%Waves%WtrDpth - InputFileData%MSL2SWL
-      InitOut%EffWtrDpth = InputFileData%Waves%WtrDpth
+      p%WaveField%EffWtrDpth = InputFileData%Waves%WtrDpth  ! Effective water depth measured from the SWL  ! bjj: does WtrDpth change later? Because otherwise EffWtrDpth is the same as WtrDpth
+      
       InitOut%MSL2SWL    = InputFileData%MSL2SWL      
       p%WaveStMod        = InputFileData%Waves%WaveStMod
       p%WtrDpth          = InitOut%WtrDpth  
-      p%EffWtrDpth       = InitOut%EffWtrDpth
       
       InitOut%WaveMultiDir = InputFileData%Waves%WaveMultiDir
       InitOut%MCFD    = InputFileData%Waves%MCFD
@@ -412,7 +412,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
       ! Build WaveField
       p%WaveField%MSL2SWL      =  InitOut%MSL2SWL
-      p%WaveField%EffWtrDpth   =  p%EffWtrDpth                   ! Effective water depth measured from the SWL
       p%WaveField%WaveStMod    =  p%WaveStMod
       ! p%WaveField%PWaveDynP0   => Waves_InitOut%PWaveDynP0
       ! p%WaveField%PWaveAccMCF0 => Waves_InitOut%PWaveAccMCF0
