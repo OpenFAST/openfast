@@ -223,7 +223,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       
       ! Copy Waves_InitOut pointer information before calling cleanup (to avoid memory problems):
       p%WaveVel      => p%WaveField%WaveVel
-      p%WaveAcc      => p%WaveField%WaveAcc
     
       ! check error (must be done AFTER moving pointers to parameters)
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -388,7 +387,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       
       ! Copy Waves InitOut data to SeaState InitOut
          ! ... pointer data: 
-      InitOut%WaveAcc      => p%WaveField%WaveAcc                         ! For Morison
       InitOut%WaveVel      => p%WaveField%WaveVel                         ! For Morison
       InitOut%WaveElevC    => p%WaveField%WaveElevC                       ! For WAMIT
       InitOut%WaveElev0    => p%WaveField%WaveElev0 
@@ -423,7 +421,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%WaveField%EffWtrDpth   =  p%EffWtrDpth                   ! Effective water depth measured from the SWL
       p%WaveField%WaveStMod    =  p%WaveStMod
       ! p%WaveField%WaveVel      => Waves_InitOut%WaveVel
-      ! p%WaveField%WaveAcc      => Waves_InitOut%WaveAcc
       ! p%WaveField%PWaveDynP0   => Waves_InitOut%PWaveDynP0
       ! p%WaveField%PWaveAccMCF0 => Waves_InitOut%PWaveAccMCF0
 
