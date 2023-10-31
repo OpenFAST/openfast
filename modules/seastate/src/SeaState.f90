@@ -228,7 +228,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%PWaveVel0    => p%WaveField%PWaveVel0
       p%PWaveAcc0    => p%WaveField%PWaveAcc0
       p%PWaveDynP0   => p%WaveField%PWaveDynP0
-      p%WaveAccMCF   => p%WaveField%WaveAccMCF
     
       ! check error (must be done AFTER moving pointers to parameters)
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -414,7 +413,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InitOut%PWaveDynP0   => p%WaveField%PWaveDynP0                      ! For Morison
       InitOut%PWaveAcc0    => p%WaveField%PWaveAcc0                       ! For Morison
       InitOut%PWaveVel0    => p%WaveField%PWaveVel0                       ! For Morison
-      InitOut%WaveAccMCF   => p%WaveField%WaveAccMCF                      ! For Morison (MacCamy-Fuchs)
       InitOut%WaveElevC    => p%WaveField%WaveElevC                       ! For WAMIT
       InitOut%WaveElev0    => p%WaveField%WaveElev0 
 
@@ -453,7 +451,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ! p%WaveField%PWaveVel0    => Waves_InitOut%PWaveVel0
       ! p%WaveField%PWaveAcc0    => Waves_InitOut%PWaveAcc0
       ! p%WaveField%PWaveDynP0   => Waves_InitOut%PWaveDynP0
-      ! p%WaveField%WaveAccMCF   => Waves_InitOut%WaveAccMCF
       ! p%WaveField%PWaveAccMCF0 => Waves_InitOut%PWaveAccMCF0
 
       ! CALL SeaSt_WaveField_CopySeaSt_WaveFieldType( p%WaveField, InitOut%WaveField, MESH_NEWCOPY, ErrStat2, ErrMsg2) 
