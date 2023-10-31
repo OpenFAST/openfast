@@ -1340,7 +1340,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       !   mean sea level, the wave kinematics are zero:
 
    !   InitOut%PWaveDynP0(:,:,:,:)   = 0.0
-   !   InitOut%PWaveVel0 (:,:,:,:,:) = 0.0
    !   InitOut%PWaveAcc0 (:,:,:,:,:) = 0.0
 
       primeCount = 1

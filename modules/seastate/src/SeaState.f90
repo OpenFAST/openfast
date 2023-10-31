@@ -225,7 +225,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%WaveElev1    => p%WaveField%WaveElev1
       p%WaveVel      => p%WaveField%WaveVel
       p%WaveAcc      => p%WaveField%WaveAcc
-      p%PWaveVel0    => p%WaveField%PWaveVel0
       p%PWaveAcc0    => p%WaveField%PWaveAcc0
       p%PWaveDynP0   => p%WaveField%PWaveDynP0
     
@@ -412,7 +411,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InitOut%WaveVel      => p%WaveField%WaveVel                         ! For Morison
       InitOut%PWaveDynP0   => p%WaveField%PWaveDynP0                      ! For Morison
       InitOut%PWaveAcc0    => p%WaveField%PWaveAcc0                       ! For Morison
-      InitOut%PWaveVel0    => p%WaveField%PWaveVel0                       ! For Morison
       InitOut%WaveElevC    => p%WaveField%WaveElevC                       ! For WAMIT
       InitOut%WaveElev0    => p%WaveField%WaveElev0 
 
@@ -448,7 +446,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ! p%WaveField%WaveElev1    => Waves_InitOut%WaveElev
       ! p%WaveField%WaveVel      => Waves_InitOut%WaveVel
       ! p%WaveField%WaveAcc      => Waves_InitOut%WaveAcc
-      ! p%WaveField%PWaveVel0    => Waves_InitOut%PWaveVel0
       ! p%WaveField%PWaveAcc0    => Waves_InitOut%PWaveAcc0
       ! p%WaveField%PWaveDynP0   => Waves_InitOut%PWaveDynP0
       ! p%WaveField%PWaveAccMCF0 => Waves_InitOut%PWaveAccMCF0
