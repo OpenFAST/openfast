@@ -232,13 +232,14 @@ MODULE SeaState_Output
 CONTAINS
 
 !====================================================================================================
-SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, NStepWave, WaveDT, X_HalfWidth, Y_HalfWidth, &
+SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, WaveField, NStepWave, WaveDT, X_HalfWidth, Y_HalfWidth, &
                                      Z_Depth, deltaGrid, NGrid, WaveElev1, WaveElev2, &
-                                     WaveVel, WaveAcc, WaveDynP, ErrStat, ErrMsg )
+                                     WaveVel, WaveAcc, ErrStat, ErrMsg )
 
       ! Passed variables
    CHARACTER(*),                  INTENT( IN    )   :: Rootname             ! filename including full path, minus any file extension.
    TYPE(ProgDesc),                INTENT( IN    )   :: SeaSt_Prog           ! the name/version/date of the SeaState program
+   TYPE(SeaSt_WaveFieldType),     INTENT( IN    )   :: WaveField            !< WaveFieldType
    INTEGER,                       INTENT( IN    )   :: NStepWave            ! Number of time steps for the wave kinematics arrays
    real(DbKi),                    intent( in    )   :: WaveDT
    real(ReKi),                    intent( in    )   :: X_HalfWidth
@@ -250,7 +251,6 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, NStepWave, WaveDT, X_
    REAL(SiKi), pointer,           INTENT( IN    )   :: WaveElev2 (:,:,: )     ! Instantaneous wave elevations at requested locations - 2nd order
    REAL(SiKi), pointer,           INTENT( IN    )   :: WaveVel (:,:,:,:,:)     ! The wave velocities (time,node,component)
    REAL(SiKi), pointer,           INTENT( IN    )   :: WaveAcc (:,:,:,:,:)     ! The wave accelerations (time,node,component)
-   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveDynP(:,:,:,:)       ! The wave dynamic pressure (time,node)
    INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
       
@@ -319,7 +319,7 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, NStepWave, WaveDT, X_
                      CASE (6)              
                         WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc (m,i,j,k,3) 
                      CASE (7)              
-                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveDynP(m,i,j,k  )  
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveDynP(m,i,j,k  )  
                   END SELECT
             !END IF
                END DO  ! for i

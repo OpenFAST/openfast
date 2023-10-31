@@ -225,7 +225,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%WaveElev1    => p%WaveField%WaveElev1
       p%WaveVel      => p%WaveField%WaveVel
       p%WaveAcc      => p%WaveField%WaveAcc
-      p%WaveDynP     => p%WaveField%WaveDynP
       p%PWaveVel0    => p%WaveField%PWaveVel0
       p%PWaveAcc0    => p%WaveField%PWaveAcc0
       p%PWaveDynP0   => p%WaveField%PWaveDynP0
@@ -313,64 +312,18 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
           ! Difference frequency results
             IF ( p%Waves2%WvDiffQTFF ) THEN
 
-                  ! Dynamic pressure -- difference frequency terms
-               IF ( SIZE(p%WaveDynP,DIM=1) /= SIZE(Waves2_InitOut%WaveDynP2D,DIM=1) .OR. &
-                    SIZE(p%WaveDynP,DIM=2) /= SIZE(Waves2_InitOut%WaveDynP2D,DIM=2).OR. &
-                    SIZE(p%WaveDynP,DIM=3) /= SIZE(Waves2_InitOut%WaveDynP2D,DIM=3).OR. &
-                    SIZE(p%WaveDynP,DIM=4) /= SIZE(Waves2_InitOut%WaveDynP2D,DIM=4)) THEN
-                  CALL SetErrStat(ErrID_Fatal, &
-                     ' WaveDynP arrays for first and second order wave elevations are of different sizes.  '//NewLine// &
-                     'Waves: '// TRIM(Num2LStr(SIZE(p%WaveDynP,DIM=1)))//'x'//          &
-                                    TRIM(Num2LStr(SIZE(p%WaveDynP,DIM=2)))//'x'//          &
-                                    TRIM(Num2LStr(SIZE(p%WaveDynP,DIM=3)))//'x'//          &
-                                    TRIM(Num2LStr(SIZE(p%WaveDynP,DIM=4)))//NewLine//      &
-                     'Waves2:   '// TRIM(Num2LStr(SIZE(Waves2_InitOut%WaveDynP2D,DIM=1)))//'x'//            &
-                                    TRIM(Num2LStr(SIZE(Waves2_InitOut%WaveDynP2D,DIM=2)))//'x'//            &
-                                    TRIM(Num2LStr(SIZE(Waves2_InitOut%WaveDynP2D,DIM=3)))//'x'//            &
-                                    TRIM(Num2LStr(SIZE(Waves2_InitOut%WaveDynP2D,DIM=4))),                  &
-                     ErrStat,ErrMsg,RoutineName)
-                  CALL CleanUp()
-                  RETURN
-               ELSE
-                  p%WaveField%WaveDynP = p%WaveField%WaveDynP + Waves2_InitOut%WaveDynP2D
-                  !IF (InputFileData%Waves%WaveStMod > 0 ) WaveDynP0 = WaveDynP0 + WaveDynP2D0
-               ENDIF
+                     ! Dynamic pressure -- difference frequency terms
+               CALL AddArrays_4D(p%WaveField%WaveDynP, Waves2_InitOut%WaveDynP2D,'WaveDynP', ErrStat2, ErrMsg2)  ! WaveDynP = WaveDynP + WaveDynP2D
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
                   ! Particle velocity -- difference frequency terms
-               IF ( SIZE(p%WaveVel,DIM=1) /= SIZE(Waves2_InitOut%WaveVel2D,DIM=1) .OR. &
-                    SIZE(p%WaveVel,DIM=2) /= SIZE(Waves2_InitOut%WaveVel2D,DIM=2) .OR. &
-                    SIZE(p%WaveVel,DIM=3) /= SIZE(Waves2_InitOut%WaveVel2D,DIM=3) .OR. &
-                    SIZE(p%WaveVel,DIM=4) /= SIZE(Waves2_InitOut%WaveVel2D,DIM=4) .OR. &
-                    SIZE(p%WaveVel,DIM=5) /= SIZE(Waves2_InitOut%WaveVel2D,DIM=5)) THEN
-                  CALL SetErrStat(ErrID_Fatal, &
-                     ' WaveVel arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,RoutineName)
-                  CALL CleanUp()
-                  RETURN
-               ELSE
-                  p%WaveField%WaveVel = p%WaveField%WaveVel + Waves2_InitOut%WaveVel2D
-                  !IF (InputFileData%Waves%WaveStMod > 0 ) WaveVel0 = WaveVel0 + WaveVel2D0
-               ENDIF
-
+               CALL AddArrays_5D(p%WaveField%WaveVel, Waves2_InitOut%WaveVel2D,'WaveVel', ErrStat2, ErrMsg2)  ! WaveVel = WaveVel + WaveVel2D
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
                   ! Particle acceleration -- difference frequency terms
-               IF ( SIZE(p%WaveAcc,DIM=1) /= SIZE(Waves2_InitOut%WaveAcc2D,DIM=1) .OR. &
-                    SIZE(p%WaveAcc,DIM=2) /= SIZE(Waves2_InitOut%WaveAcc2D,DIM=2) .OR. &
-                    SIZE(p%WaveAcc,DIM=3) /= SIZE(Waves2_InitOut%WaveAcc2D,DIM=3) .OR. &
-                    SIZE(p%WaveAcc,DIM=4) /= SIZE(Waves2_InitOut%WaveAcc2D,DIM=4) .OR. &
-                    SIZE(p%WaveAcc,DIM=5) /= SIZE(Waves2_InitOut%WaveAcc2D,DIM=5)) THEN
-                  CALL SetErrStat(ErrID_Fatal, &
-                     ' WaveAcc arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,RoutineName)
-                  CALL CleanUp()
-                  RETURN
-               ELSE
-                  p%WaveField%WaveAcc = p%WaveField%WaveAcc + Waves2_InitOut%WaveAcc2D
-                  !IF (InputFileData%Waves%WaveStMod > 0 ) WaveAcc0 = WaveAcc0 + WaveAcc2D0
-                  ! MacCamy-Fuchs scaled acceleration should not contain second-order contributions
-                  !IF (InputFileData%Waves%MCFD > 0) THEN
-                  !   p%WaveAccMCF = p%WaveAccMCF + Waves2_InitOut%WaveAcc2D
-                  !END IF
-                  
-               ENDIF
+               CALL AddArrays_5D(p%WaveField%WaveAcc, Waves2_InitOut%WaveAcc2D,'WaveAcc', ErrStat2, ErrMsg2)  ! WaveAcc = WaveAcc + WaveAcc2D
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
 
             ENDIF ! second order wave kinematics difference frequency results
 
@@ -378,63 +331,20 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
             IF ( p%Waves2%WvSumQTFF ) THEN
 
                   ! Dynamic pressure -- sum frequency terms
-               IF ( SIZE(p%WaveDynP,DIM=1) /= SIZE(Waves2_InitOut%WaveDynP2S,DIM=1) .OR. &
-                    SIZE(p%WaveDynP,DIM=2) /= SIZE(Waves2_InitOut%WaveDynP2S,DIM=2) .OR. &
-                    SIZE(p%WaveDynP,DIM=3) /= SIZE(Waves2_InitOut%WaveDynP2S,DIM=3) .OR. &
-                    SIZE(p%WaveDynP,DIM=4) /= SIZE(Waves2_InitOut%WaveDynP2S,DIM=4)) THEN
-                  CALL SetErrStat(ErrID_Fatal, &
-                     ' WaveDynP arrays for first and second order wave elevations are of different sizes.  '//NewLine// &
-                     'Waves: '// TRIM(Num2LStr(SIZE(p%WaveDynP,DIM=1)))//'x'//          &
-                                    TRIM(Num2LStr(SIZE(p%WaveDynP,DIM=2)))//'x'//          &
-                                    TRIM(Num2LStr(SIZE(p%WaveDynP,DIM=3)))//'x'//          &
-                                    TRIM(Num2LStr(SIZE(p%WaveDynP,DIM=4)))//NewLine//      &
-                     'Waves2:   '// TRIM(Num2LStr(SIZE(Waves2_InitOut%WaveDynP2D,DIM=1)))//'x'//            &
-                                    TRIM(Num2LStr(SIZE(Waves2_InitOut%WaveDynP2D,DIM=2)))//'x'//            &
-                                    TRIM(Num2LStr(SIZE(Waves2_InitOut%WaveDynP2D,DIM=3)))//'x'//            &
-                                    TRIM(Num2LStr(SIZE(Waves2_InitOut%WaveDynP2D,DIM=4))),                  &
-                     ErrStat,ErrMsg,RoutineName)
-                  CALL CleanUp()
-                  RETURN
-               ELSE
-                  p%WaveField%WaveDynP = p%WaveField%WaveDynP + Waves2_InitOut%WaveDynP2S
-                  !IF (InputFileData%Waves%WaveStMod > 0 ) WaveDynP0 = WaveDynP0 + WaveDynP2S0
-               ENDIF
+               CALL AddArrays_4D(p%WaveField%WaveDynP, Waves2_InitOut%WaveDynP2S,'WaveDynP', ErrStat2, ErrMsg2)  ! WaveDynP = WaveDynP + WaveDynP2S
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
                   ! Particle velocity -- sum frequency terms
-               IF ( SIZE(p%WaveVel,DIM=1) /= SIZE(Waves2_InitOut%WaveVel2S,DIM=1) .OR. &
-                    SIZE(p%WaveVel,DIM=2) /= SIZE(Waves2_InitOut%WaveVel2S,DIM=2) .OR. &
-                    SIZE(p%WaveVel,DIM=3) /= SIZE(Waves2_InitOut%WaveVel2S,DIM=3) .OR. &
-                    SIZE(p%WaveVel,DIM=4) /= SIZE(Waves2_InitOut%WaveVel2S,DIM=4) .OR. &
-                    SIZE(p%WaveVel,DIM=5) /= SIZE(Waves2_InitOut%WaveVel2S,DIM=5)) THEN
-                  CALL SetErrStat(ErrID_Fatal, &
-                     ' WaveVel arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,RoutineName)
-                  CALL CleanUp()
-                  RETURN
-               ELSE
-                  p%WaveField%WaveVel = p%WaveField%WaveVel + Waves2_InitOut%WaveVel2S
-                  !IF (InputFileData%Waves%WaveStMod > 0 ) WaveVel0 = WaveVel0 + WaveVel2S0
-               ENDIF
+               CALL AddArrays_5D(p%WaveField%WaveVel, Waves2_InitOut%WaveVel2S,'WaveVel', ErrStat2, ErrMsg2)  ! WaveVel = WaveVel + WaveVel2S
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-                  ! Particle velocity -- sum frequency terms
-               IF ( SIZE(p%WaveAcc,DIM=1) /= SIZE(Waves2_InitOut%WaveAcc2S,DIM=1) .OR. &
-                    SIZE(p%WaveAcc,DIM=2) /= SIZE(Waves2_InitOut%WaveAcc2S,DIM=2) .OR. &
-                    SIZE(p%WaveAcc,DIM=3) /= SIZE(Waves2_InitOut%WaveAcc2S,DIM=3) .OR. &
-                    SIZE(p%WaveAcc,DIM=4) /= SIZE(Waves2_InitOut%WaveAcc2S,DIM=4) .OR. &
-                    SIZE(p%WaveAcc,DIM=5) /= SIZE(Waves2_InitOut%WaveAcc2S,DIM=5)) THEN
-                  CALL SetErrStat(ErrID_Fatal, &
-                     ' WaveAcc arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,RoutineName)
-                  CALL CleanUp()
-                  RETURN
-               ELSE
-                  p%WaveField%WaveAcc = p%WaveField%WaveAcc + Waves2_InitOut%WaveAcc2S
-                  !IF (InputFileData%Waves%WaveStMod > 0 ) WaveAcc0 = WaveAcc0 + WaveAcc2S0
-                  ! MacCamy-Fuchs scaled accleration should not contain second-order contributions
-                  !IF (InputFileData%Waves%MCFD > 0) THEN
-                  !   p%WaveAccMCF = p%WaveAccMCF + Waves2_InitOut%WaveAcc2S
-                  !END IF
-               ENDIF
+                  ! Particle acceleration -- sum frequency terms
+                  ! Note: MacCamy-Fuchs scaled accleration should not contain second-order contributions
+               CALL AddArrays_5D(p%WaveField%WaveAcc, Waves2_InitOut%WaveAcc2S,'WaveAcc', ErrStat2, ErrMsg2)  ! WaveAcc = WaveAcc + WaveAcc2S
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
             ENDIF ! second order wave kinematics sum frequency results
+            
          ELSE
                   ! these need to be set to zero since we don't have a UseWaves2 flag:
                InputFileData%Waves2%NWaveElevGrid  = 0
@@ -500,7 +410,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ! Copy Waves InitOut data to SeaState InitOut
          ! ... pointer data: 
       InitOut%WaveElev1    => p%WaveField%WaveElev1
-      InitOut%WaveDynP     => p%WaveField%WaveDynP                        ! For Morison
       InitOut%WaveAcc      => p%WaveField%WaveAcc                         ! For Morison
       InitOut%WaveVel      => p%WaveField%WaveVel                         ! For Morison
       InitOut%PWaveDynP0   => p%WaveField%PWaveDynP0                      ! For Morison
@@ -543,7 +452,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ! p%WaveField%WaveElev1    => Waves_InitOut%WaveElev
       ! p%WaveField%WaveVel      => Waves_InitOut%WaveVel
       ! p%WaveField%WaveAcc      => Waves_InitOut%WaveAcc
-      ! p%WaveField%WaveDynP     => Waves_InitOut%WaveDynP
       ! p%WaveField%PWaveVel0    => Waves_InitOut%PWaveVel0
       ! p%WaveField%PWaveAcc0    => Waves_InitOut%PWaveAcc0
       ! p%WaveField%PWaveDynP0   => Waves_InitOut%PWaveDynP0
@@ -562,13 +470,15 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          ! Write Wave Kinematics?
       if ( InputFileData%Waves%WaveMod /= 6 ) then
          if ( InitInp%WrWvKinMod == 2 ) then
-            call SeaStOut_WriteWvKinFiles( InitInp%OutRootname, SeaSt_ProgDesc, p%NStepWave, p%WaveDT, p%X_HalfWidth, p%Y_HalfWidth, &
+            call SeaStOut_WriteWvKinFiles( InitInp%OutRootname, SeaSt_ProgDesc, p%WaveField, p%NStepWave, p%WaveDT, p%X_HalfWidth, p%Y_HalfWidth, &
                p%Z_Depth, p%deltaGrid, p%NGrid, InitOut%WaveElev1, InitOut%WaveElev2, &
-               InitOut%WaveVel, InitOut%WaveAcc, InitOut%WaveDynP, ErrStat, ErrMsg )   
+               InitOut%WaveVel, InitOut%WaveAcc, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          else if ( InitInp%WrWvKinMod == 1 ) then
             call SeaStOut_WriteWaveElev0(InitInp%OutRootname, p%NStepWave, &
                p%NGrid, InitOut%WaveElev1, InitOut%WaveElev2, &
-               p%WaveField%WaveTime, ErrStat, ErrMsg ) 
+               p%WaveField%WaveTime, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          end if
          
       end if
@@ -666,9 +576,73 @@ CONTAINS
 
    END SUBROUTINE CleanUp
 !................................
+
 END SUBROUTINE SeaSt_Init
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE AddArrays_4D(Array1, Array2, ArrayName, ErrStat, ErrMsg)
+   REAL(SiKi),                      INTENT(INOUT)  :: Array1(:,:,:,:)
+   REAL(SiKi),                      INTENT(IN   )  :: Array2(:,:,:,:)
+   CHARACTER(*),                    INTENT(IN   )  :: ArrayName
+   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat           !< Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+   
 
+   IF ( SIZE(Array1,DIM=1) /= SIZE(Array2,DIM=1) .OR. &
+        SIZE(Array1,DIM=2) /= SIZE(Array2,DIM=2) .OR. &
+        SIZE(Array1,DIM=3) /= SIZE(Array2,DIM=3) .OR. &
+        SIZE(Array1,DIM=4) /= SIZE(Array2,DIM=4)) THEN
+                    
+      ErrStat = ErrID_Fatal
+      ErrMsg = TRIM(ArrayName)//' arrays for first and second order wave elevations are of different sizes:  '//NewLine// &
+               'Waves:  '// TRIM(Num2LStr(SIZE(Array1,DIM=1)))//'x'//          &
+                            TRIM(Num2LStr(SIZE(Array1,DIM=2)))//'x'//          &
+                            TRIM(Num2LStr(SIZE(Array1,DIM=3)))//'x'//          &
+                            TRIM(Num2LStr(SIZE(Array1,DIM=4)))//NewLine//      &
+               'Waves2: '// TRIM(Num2LStr(SIZE(Array2,DIM=1)))//'x'//          &
+                            TRIM(Num2LStr(SIZE(Array2,DIM=2)))//'x'//          &
+                            TRIM(Num2LStr(SIZE(Array2,DIM=3)))//'x'//          &
+                            TRIM(Num2LStr(SIZE(Array2,DIM=4)))
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg = ""
+      Array1 = Array1 + Array2
+   ENDIF
+   
+END SUBROUTINE AddArrays_4D
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE AddArrays_5D(Array1, Array2, ArrayName, ErrStat, ErrMsg)
+   REAL(SiKi),                      INTENT(INOUT)  :: Array1(:,:,:,:,:)
+   REAL(SiKi),                      INTENT(IN   )  :: Array2(:,:,:,:,:)
+   CHARACTER(*),                    INTENT(IN   )  :: ArrayName
+   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat           !< Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
+   
 
+   IF ( SIZE(Array1,DIM=1) /= SIZE(Array2,DIM=1) .OR. &
+        SIZE(Array1,DIM=2) /= SIZE(Array2,DIM=2) .OR. &
+        SIZE(Array1,DIM=3) /= SIZE(Array2,DIM=3) .OR. &
+        SIZE(Array1,DIM=3) /= SIZE(Array2,DIM=4) .OR. &
+        SIZE(Array1,DIM=4) /= SIZE(Array2,DIM=5)) THEN
+                    
+      ErrStat = ErrID_Fatal
+      ErrMsg = TRIM(ArrayName)//' arrays for first and second order wave elevations are of different sizes: '//NewLine// &
+               'Waves:  '// TRIM(Num2LStr(SIZE(Array1,DIM=1)))//'x'//          &
+                            TRIM(Num2LStr(SIZE(Array1,DIM=2)))//'x'//          &
+                            TRIM(Num2LStr(SIZE(Array1,DIM=3)))//'x'//          &
+                            TRIM(Num2LStr(SIZE(Array1,DIM=4)))//'x'//          &
+                            TRIM(Num2LStr(SIZE(Array1,DIM=5)))//NewLine//      &
+               'Waves2: '// TRIM(Num2LStr(SIZE(Array2,DIM=1)))//'x'//          &
+                            TRIM(Num2LStr(SIZE(Array2,DIM=2)))//'x'//          &
+                            TRIM(Num2LStr(SIZE(Array2,DIM=3)))//'x'//          &
+                            TRIM(Num2LStr(SIZE(Array2,DIM=4)))//'x'//          &
+                            TRIM(Num2LStr(SIZE(Array2,DIM=5)))
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg = ""
+      Array1 = Array1 + Array2
+   ENDIF
+   
+END SUBROUTINE AddArrays_5D
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 SUBROUTINE SeaSt_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
