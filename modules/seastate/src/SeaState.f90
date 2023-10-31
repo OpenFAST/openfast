@@ -222,7 +222,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! note that we DO NOT RETURN on error until AFTER the pointers modified, below
       
       ! Copy Waves_InitOut pointer information before calling cleanup (to avoid memory problems):
-      p%WaveElev1    => p%WaveField%WaveElev1
       p%WaveVel      => p%WaveField%WaveVel
       p%WaveAcc      => p%WaveField%WaveAcc
     
@@ -282,41 +281,26 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
             InputFileData%Waves2%WaveDOmega  = Waves_InitOut%WaveDOmega
                                                 
             CALL Waves2_Init(InputFileData%Waves2, p%Waves2, Waves2_InitOut, p%WaveField, ErrStat2, ErrMsg2 )
-            p%WaveElev2 => p%WaveField%WaveElev2 ! do this before calling cleanup() so that pointers get deallocated properly
-
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
                RETURN
             END IF
 
-            ! If we calculated wave elevations, it is now stored in p%WaveElev.  So we need to add the corrections.
-            IF (InputFileData%Waves2%NWaveElevGrid > 0 ) THEN
-                  ! Make sure the sizes of the two resulting arrays are identical...
-               IF ( SIZE(p%WaveElev1,DIM=1) /= SIZE(p%WaveElev2,DIM=1) .OR. &
-                    SIZE(p%WaveElev1,DIM=2) /= SIZE(p%WaveElev2,DIM=2)) THEN
-                  CALL SetErrStat(ErrID_Fatal,' WaveElev(NWaveElev) arrays for first and second order wave elevations are of different sizes.',ErrStat,ErrMsg,RoutineName)
-                  CALL CleanUp()
-                  RETURN
-               ELSE
-                  InitOut%WaveElev2 =>  p%WaveElev2   
-               ENDIF
-            ENDIF
-   
             ! The acceleration, velocity, and dynamic pressures will get added to the parts passed to the morrison module later...
           ! Difference frequency results
             IF ( p%Waves2%WvDiffQTFF ) THEN
 
                      ! Dynamic pressure -- difference frequency terms
-               CALL AddArrays_4D(p%WaveField%WaveDynP, Waves2_InitOut%WaveDynP2D,'WaveDynP', ErrStat2, ErrMsg2)  ! WaveDynP = WaveDynP + WaveDynP2D
+               CALL AddArrays_4D(p%WaveField%WaveDynP, Waves2_InitOut%WaveDynP2D,'WaveDynP_D', ErrStat2, ErrMsg2)  ! WaveDynP = WaveDynP + WaveDynP2D
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
                   ! Particle velocity -- difference frequency terms
-               CALL AddArrays_5D(p%WaveField%WaveVel, Waves2_InitOut%WaveVel2D,'WaveVel', ErrStat2, ErrMsg2)  ! WaveVel = WaveVel + WaveVel2D
+               CALL AddArrays_5D(p%WaveField%WaveVel, Waves2_InitOut%WaveVel2D,'WaveVel_D', ErrStat2, ErrMsg2)  ! WaveVel = WaveVel + WaveVel2D
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
                   ! Particle acceleration -- difference frequency terms
-               CALL AddArrays_5D(p%WaveField%WaveAcc, Waves2_InitOut%WaveAcc2D,'WaveAcc', ErrStat2, ErrMsg2)  ! WaveAcc = WaveAcc + WaveAcc2D
+               CALL AddArrays_5D(p%WaveField%WaveAcc, Waves2_InitOut%WaveAcc2D,'WaveAcc_D', ErrStat2, ErrMsg2)  ! WaveAcc = WaveAcc + WaveAcc2D
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
 
@@ -326,16 +310,16 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
             IF ( p%Waves2%WvSumQTFF ) THEN
 
                   ! Dynamic pressure -- sum frequency terms
-               CALL AddArrays_4D(p%WaveField%WaveDynP, Waves2_InitOut%WaveDynP2S,'WaveDynP', ErrStat2, ErrMsg2)  ! WaveDynP = WaveDynP + WaveDynP2S
+               CALL AddArrays_4D(p%WaveField%WaveDynP, Waves2_InitOut%WaveDynP2S,'WaveDynP_S', ErrStat2, ErrMsg2)  ! WaveDynP = WaveDynP + WaveDynP2S
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
                   ! Particle velocity -- sum frequency terms
-               CALL AddArrays_5D(p%WaveField%WaveVel, Waves2_InitOut%WaveVel2S,'WaveVel', ErrStat2, ErrMsg2)  ! WaveVel = WaveVel + WaveVel2S
+               CALL AddArrays_5D(p%WaveField%WaveVel, Waves2_InitOut%WaveVel2S,'WaveVel_S', ErrStat2, ErrMsg2)  ! WaveVel = WaveVel + WaveVel2S
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
                   ! Particle acceleration -- sum frequency terms
                   ! Note: MacCamy-Fuchs scaled accleration should not contain second-order contributions
-               CALL AddArrays_5D(p%WaveField%WaveAcc, Waves2_InitOut%WaveAcc2S,'WaveAcc', ErrStat2, ErrMsg2)  ! WaveAcc = WaveAcc + WaveAcc2S
+               CALL AddArrays_5D(p%WaveField%WaveAcc, Waves2_InitOut%WaveAcc2S,'WaveAcc_S', ErrStat2, ErrMsg2)  ! WaveAcc = WaveAcc + WaveAcc2S
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
             ENDIF ! second order wave kinematics sum frequency results
@@ -404,7 +388,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       
       ! Copy Waves InitOut data to SeaState InitOut
          ! ... pointer data: 
-      InitOut%WaveElev1    => p%WaveField%WaveElev1
       InitOut%WaveAcc      => p%WaveField%WaveAcc                         ! For Morison
       InitOut%WaveVel      => p%WaveField%WaveVel                         ! For Morison
       InitOut%WaveElevC    => p%WaveField%WaveElevC                       ! For WAMIT
@@ -439,7 +422,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%WaveField%MSL2SWL      =  InitOut%MSL2SWL
       p%WaveField%EffWtrDpth   =  p%EffWtrDpth                   ! Effective water depth measured from the SWL
       p%WaveField%WaveStMod    =  p%WaveStMod
-      ! p%WaveField%WaveElev1    => Waves_InitOut%WaveElev
       ! p%WaveField%WaveVel      => Waves_InitOut%WaveVel
       ! p%WaveField%WaveAcc      => Waves_InitOut%WaveAcc
       ! p%WaveField%PWaveDynP0   => Waves_InitOut%PWaveDynP0
@@ -458,12 +440,11 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       if ( InputFileData%Waves%WaveMod /= 6 ) then
          if ( InitInp%WrWvKinMod == 2 ) then
             call SeaStOut_WriteWvKinFiles( InitInp%OutRootname, SeaSt_ProgDesc, p%WaveField, p%NStepWave, p%WaveDT, p%X_HalfWidth, p%Y_HalfWidth, &
-               p%Z_Depth, p%deltaGrid, p%NGrid, InitOut%WaveElev1, InitOut%WaveElev2, &
-               InitOut%WaveVel, InitOut%WaveAcc, ErrStat2, ErrMsg2 )
+               p%Z_Depth, p%deltaGrid, p%NGrid, ErrStat2, ErrMsg2 )
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          else if ( InitInp%WrWvKinMod == 1 ) then
             call SeaStOut_WriteWaveElev0(InitInp%OutRootname, p%NStepWave, &
-               p%NGrid, InitOut%WaveElev1, InitOut%WaveElev2, &
+               p%NGrid, p%WaveField%WaveElev1, p%WaveField%WaveElev2, &
                p%WaveField%WaveTime, ErrStat2, ErrMsg2 )
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          end if
@@ -484,15 +465,15 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
          do it = 1,size(p%WaveField%WaveTime)
             do i = 1, size(InitOut%WaveElevSeries,DIM=2)
-               InitOut%WaveElevSeries(it,i) = SeaSt_Interp_3D( real(p%WaveField%WaveTime(it),DbKi), real(InitInp%WaveElevXY(:,i),ReKi), p%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+               InitOut%WaveElevSeries(it,i) = SeaSt_Interp_3D( real(p%WaveField%WaveTime(it),DbKi), real(InitInp%WaveElevXY(:,i),ReKi), p%WaveField%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             end do
          end do
          
-         if (associated(p%WaveElev2)) then
+         if (allocated(p%WaveField%WaveElev2)) then
             do it = 1,size(p%WaveField%WaveTime)
                do i = 1, size(InitOut%WaveElevSeries,DIM=2)
-                  TmpElev = SeaSt_Interp_3D( real(p%WaveField%WaveTime(it),DbKi), real(InitInp%WaveElevXY(:,i),ReKi), p%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+                  TmpElev = SeaSt_Interp_3D( real(p%WaveField%WaveTime(it),DbKi), real(InitInp%WaveElevXY(:,i),ReKi), p%WaveField%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   InitOut%WaveElevSeries(it,i) =  InitOut%WaveElevSeries(it,i) + TmpElev
                end do
@@ -573,6 +554,8 @@ SUBROUTINE AddArrays_4D(Array1, Array2, ArrayName, ErrStat, ErrMsg)
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat           !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
    
+   ErrStat = ErrID_None
+   ErrMsg = ""
 
    IF ( SIZE(Array1,DIM=1) /= SIZE(Array2,DIM=1) .OR. &
         SIZE(Array1,DIM=2) /= SIZE(Array2,DIM=2) .OR. &
@@ -590,8 +573,6 @@ SUBROUTINE AddArrays_4D(Array1, Array2, ArrayName, ErrStat, ErrMsg)
                             TRIM(Num2LStr(SIZE(Array2,DIM=3)))//'x'//          &
                             TRIM(Num2LStr(SIZE(Array2,DIM=4)))
    ELSE
-      ErrStat = ErrID_None
-      ErrMsg = ""
       Array1 = Array1 + Array2
    ENDIF
    

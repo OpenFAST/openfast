@@ -411,10 +411,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
          RETURN
       END IF
 
-      !InitOut%WaveElev2 => WaveField%WaveElev2
-
          !Initialize the output arrays to zero.  We will only fill it in for the points we calculate.
-      WaveField%WaveElev2    =  0.0_SiKi
+      WaveField%WaveElev2  =  0.0_SiKi
       InitOut%WaveVel2D    =  0.0_SiKi
       InitOut%WaveAcc2D    =  0.0_SiKi
       InitOut%WaveDynP2D   =  0.0_SiKi

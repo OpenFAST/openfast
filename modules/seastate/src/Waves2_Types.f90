@@ -65,7 +65,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: WaveDynP2S      !< Instantaneous 2nd-order sum        frequency correction for the dynamic pressure of incident waves                                                              , at each of the NWaveKinGrid points where the incident wave kinematics will be computed [(N/m^2)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveVel2D      !< Instantaneous 2nd-order difference frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKinGrid points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) [(m/s)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveVel2S      !< Instantaneous 2nd-order sum        frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKinGrid points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) [(m/s)]
-    REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev2 => NULL()      !< Instantaneous elevation time-series of incident waves at each of the NWaveElevGrid points where the incident wave elevations can be output [(meters)]
   END TYPE Waves2_InitOutputType
 ! =======================
 ! =========  Waves2_ParameterType  =======
@@ -369,7 +368,6 @@ subroutine Waves2_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode,
       end if
       DstInitOutputData%WaveVel2S = SrcInitOutputData%WaveVel2S
    end if
-   DstInitOutputData%WaveElev2 => SrcInitOutputData%WaveElev2
 end subroutine
 
 subroutine Waves2_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -397,14 +395,12 @@ subroutine Waves2_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    if (allocated(InitOutputData%WaveVel2S)) then
       deallocate(InitOutputData%WaveVel2S)
    end if
-   nullify(InitOutputData%WaveElev2)
 end subroutine
 
 subroutine Waves2_PackInitOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Waves2_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Waves2_PackInitOutput'
-   logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, allocated(InData%WaveAcc2D))
    if (allocated(InData%WaveAcc2D)) then
@@ -436,14 +432,6 @@ subroutine Waves2_PackInitOutput(Buf, Indata)
       call RegPackBounds(Buf, 5, lbound(InData%WaveVel2S), ubound(InData%WaveVel2S))
       call RegPack(Buf, InData%WaveVel2S)
    end if
-   call RegPack(Buf, associated(InData%WaveElev2))
-   if (associated(InData%WaveElev2)) then
-      call RegPackBounds(Buf, 3, lbound(InData%WaveElev2), ubound(InData%WaveElev2))
-      call RegPackPointer(Buf, c_loc(InData%WaveElev2), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%WaveElev2)
-      end if
-   end if
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -454,8 +442,6 @@ subroutine Waves2_UnPackInitOutput(Buf, OutData)
    integer(IntKi)  :: LB(5), UB(5)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    if (allocated(OutData%WaveAcc2D)) deallocate(OutData%WaveAcc2D)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -540,30 +526,6 @@ subroutine Waves2_UnPackInitOutput(Buf, OutData)
       end if
       call RegUnpack(Buf, OutData%WaveVel2S)
       if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (associated(OutData%WaveElev2)) deallocate(OutData%WaveElev2)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%WaveElev2, UB(1:3)-LB(1:3))
-         OutData%WaveElev2(LB(1):,LB(2):,LB(3):) => OutData%WaveElev2
-      else
-         allocate(OutData%WaveElev2(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElev2.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%WaveElev2)
-         call RegUnpack(Buf, OutData%WaveElev2)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%WaveElev2 => null()
    end if
 end subroutine
 

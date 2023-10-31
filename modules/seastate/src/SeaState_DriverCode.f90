@@ -624,8 +624,6 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, SeaStateInitInp, SeaStateInitOut, S
 
    ErrMsg      = ""
    ErrStat     = ErrID_None
-   ErrMsgTmp   = ""
-   ErrStatTmp  = ErrID_None
 
 
       ! If we calculated the wave elevation at a set of coordinates for use with making movies, put it into an output file
@@ -637,12 +635,12 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, SeaStateInitInp, SeaStateInitOut, S
       if ( ErrStat >= AbortErrLev ) return
    end if
 
-   if (associated(SeaState_p%WaveElev2)) then
-      maxWaveVal = MAXVAL(SeaState_p%WaveElev1+SeaState_p%WaveElev2)
-      minWaveVal = MINVAL(SeaState_p%WaveElev1+SeaState_p%WaveElev2)
+   if (allocated(SeaState_p%WaveField%WaveElev2)) then
+      maxWaveVal = MAXVAL(SeaState_p%WaveField%WaveElev1 + SeaState_p%WaveField%WaveElev2)
+      minWaveVal = MINVAL(SeaState_p%WaveField%WaveElev1 + SeaState_p%WaveField%WaveElev2)
    else
-      maxWaveVal = MAXVAL(SeaState_p%WaveElev1)
-      minWaveVal = MINVAL(SeaState_p%WaveElev1)
+      maxWaveVal = MAXVAL(SeaState_p%WaveField%WaveElev1)
+      minWaveVal = MINVAL(SeaState_p%WaveField%WaveElev1)
    end if
    
       ! Write some useful header information
@@ -673,10 +671,10 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, SeaStateInitInp, SeaStateInitOut, S
          xpos = -SeaState_p%deltaGrid(1)*(SeaState_p%NGrid(1)-1)/2.0 + (J-1)*SeaState_p%deltaGrid(1)
          do k=1, SeaState_p%NGrid(2)
             ypos = -SeaState_p%deltaGrid(2)*(SeaState_p%NGrid(2)-1)/2.0 + (K-1)*SeaState_p%deltaGrid(2) 
-            if (associated(SeaState_p%WaveElev2)) then
-               WaveElev =  SeaState_p%WaveElev1(I,J,K) + SeaState_p%WaveElev2(I,J,K)
+            if (allocated(SeaState_p%WaveField%WaveElev2)) then
+               WaveElev =  SeaState_p%WaveField%WaveElev1(I,J,K) + SeaState_p%WaveField%WaveElev2(I,J,K)
             else
-               WaveElev =  SeaState_p%WaveElev1(I,J,K)
+               WaveElev =  SeaState_p%WaveField%WaveElev1(I,J,K)
             end if
             write (WaveElevFileUn,WaveElevFmt, IOSTAT=ErrStatTmp ) xpos, ypos, WaveElev
          end do       

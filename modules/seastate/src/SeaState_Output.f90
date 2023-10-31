@@ -233,8 +233,7 @@ CONTAINS
 
 !====================================================================================================
 SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, WaveField, NStepWave, WaveDT, X_HalfWidth, Y_HalfWidth, &
-                                     Z_Depth, deltaGrid, NGrid, WaveElev1, WaveElev2, &
-                                     WaveVel, WaveAcc, ErrStat, ErrMsg )
+                                     Z_Depth, deltaGrid, NGrid, ErrStat, ErrMsg )
 
       ! Passed variables
    CHARACTER(*),                  INTENT( IN    )   :: Rootname             ! filename including full path, minus any file extension.
@@ -247,10 +246,6 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, WaveField, NStepWave,
    real(ReKi),                    intent( in    )   :: Z_Depth
    real(ReKi),                    intent( in    )   :: deltaGrid(3)
    INTEGER,                       INTENT( IN    )   :: NGrid(3)             ! Number of grid points for the wave kinematics arrays
-   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveElev1 (:,:,: )     ! Instantaneous wave elevations at requested locations - 1st order
-   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveElev2 (:,:,: )     ! Instantaneous wave elevations at requested locations - 2nd order
-   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveVel (:,:,:,:,:)     ! The wave velocities (time,node,component)
-   REAL(SiKi), pointer,           INTENT( IN    )   :: WaveAcc (:,:,:,:,:)     ! The wave accelerations (time,node,component)
    INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
       
@@ -307,17 +302,17 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, WaveField, NStepWave,
                   
                   SELECT CASE (iFile)
                      CASE (1)              
-                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel (m,i,j,k,1)  
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveVel (m,i,j,k,1)  
                      CASE (2)              
-                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel (m,i,j,k,2)  
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveVel (m,i,j,k,2)  
                      CASE (3)              
-                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel (m,i,j,k,3)  
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveVel (m,i,j,k,3)  
                      CASE (4)              
-                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc (m,i,j,k,1) 
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveAcc (m,i,j,k,1) 
                      CASE (5)              
-                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc (m,i,j,k,2) 
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveAcc (m,i,j,k,2) 
                      CASE (6)              
-                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc (m,i,j,k,3) 
+                        WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveAcc (m,i,j,k,3) 
                      CASE (7)              
                         WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveDynP(m,i,j,k  )  
                   END SELECT
@@ -352,10 +347,10 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, WaveField, NStepWave,
    DO m= 0,NStepWave
       do j = 1, NGrid(2)
          do i = 1, NGrid(1)   
-            if ( associated(WaveElev2) ) then
-               WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveElev1(m,i,j) + WaveElev2(m,i,j)
+            if ( allocated(WaveField%WaveElev2) ) then
+               WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveElev1(m,i,j) + WaveField%WaveElev2(m,i,j)
             else
-               WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveElev1(m,i,j)
+               WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveField%WaveElev1(m,i,j)
             end if
          end do
          WRITE (UnWv,'()', IOSTAT=ErrStat)          ! write the line return 
