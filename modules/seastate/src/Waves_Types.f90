@@ -92,7 +92,6 @@ IMPLICIT NONE
     REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveAcc => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKinGrid points where the incident wave kinematics will be computed [(m/s^2)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveVel => NULL()      !< Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKinGrid points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) [(m/s)]
-    REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: PWaveAcc0 => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), at each of the NWaveKinGrid points where the incident wave kinematics will be computed [(m/s^2)]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev => NULL()      !< Instantaneous elevation time-series of incident waves at each of the  XY grid points [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Instantaneous elevation time-series of incident waves at the platform reference point [(meters)]
     REAL(DbKi)  :: WaveTMax = 0.0_R8Ki      !< Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT [(sec)]
@@ -512,7 +511,6 @@ subroutine Waves_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    DstInitOutputData%WaveDOmega = SrcInitOutputData%WaveDOmega
    DstInitOutputData%WaveAcc => SrcInitOutputData%WaveAcc
    DstInitOutputData%WaveVel => SrcInitOutputData%WaveVel
-   DstInitOutputData%PWaveAcc0 => SrcInitOutputData%PWaveAcc0
    DstInitOutputData%WaveElev => SrcInitOutputData%WaveElev
    if (allocated(SrcInitOutputData%WaveElev0)) then
       LB(1:1) = lbound(SrcInitOutputData%WaveElev0)
@@ -544,7 +542,6 @@ subroutine Waves_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    end if
    nullify(InitOutputData%WaveAcc)
    nullify(InitOutputData%WaveVel)
-   nullify(InitOutputData%PWaveAcc0)
    nullify(InitOutputData%WaveElev)
    if (allocated(InitOutputData%WaveElev0)) then
       deallocate(InitOutputData%WaveElev0)
@@ -580,14 +577,6 @@ subroutine Waves_PackInitOutput(Buf, Indata)
       call RegPackPointer(Buf, c_loc(InData%WaveVel), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%WaveVel)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%PWaveAcc0))
-   if (associated(InData%PWaveAcc0)) then
-      call RegPackBounds(Buf, 4, lbound(InData%PWaveAcc0), ubound(InData%PWaveAcc0))
-      call RegPackPointer(Buf, c_loc(InData%PWaveAcc0), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%PWaveAcc0)
       end if
    end if
    call RegPack(Buf, associated(InData%WaveElev))
@@ -689,30 +678,6 @@ subroutine Waves_UnPackInitOutput(Buf, OutData)
       end if
    else
       OutData%WaveVel => null()
-   end if
-   if (associated(OutData%PWaveAcc0)) deallocate(OutData%PWaveAcc0)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 4, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%PWaveAcc0, UB(1:4)-LB(1:4))
-         OutData%PWaveAcc0(LB(1):,LB(2):,LB(3):,LB(4):) => OutData%PWaveAcc0
-      else
-         allocate(OutData%PWaveAcc0(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PWaveAcc0.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%PWaveAcc0)
-         call RegUnpack(Buf, OutData%PWaveAcc0)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%PWaveAcc0 => null()
    end if
    if (associated(OutData%WaveElev)) deallocate(OutData%WaveElev)
    call RegUnpack(Buf, IsAllocAssoc)

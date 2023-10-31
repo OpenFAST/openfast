@@ -105,7 +105,6 @@ IMPLICIT NONE
     REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveAcc => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed [(m/s^2)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveVel => NULL()      !< Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin (grid) points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) [(m/s)]
-    REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: PWaveAcc0 => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), at each of the NWaveKin (grid) points where the incident wave kinematics will be computed [(m/s^2)]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev1 => NULL()      !< First order wave elevation [-]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev2 => NULL()      !< Second order wave elevation [-]
     REAL(SiKi) , DIMENSION(:), POINTER  :: WaveElev0 => NULL()      !< Instantaneous elevation time-series of incident waves at the platform reference point [(meters)]
@@ -173,7 +172,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev1 => NULL()      !< First order wave elevation [-]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev2 => NULL()      !< Second order wave elevation [-]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveAcc => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin points where the incident wave kinematics will be computed [(m/s^2)]
-    REAL(SiKi) , DIMENSION(:,:,:,:), POINTER  :: PWaveAcc0 => NULL()      !< Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at the location (xi,yi,0), at each of the NWaveKin points where the incident wave kinematics will be computed [(m/s^2)]
     REAL(SiKi) , DIMENSION(:,:,:,:,:), POINTER  :: WaveVel => NULL()      !< Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, accounting for stretching, at each of the NWaveKin points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) [(m/s)]
     INTEGER(IntKi)  :: NWaveKin = 0_IntKi      !< Number of points where the incident wave kinematics can be output [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinxi      !< xi-coordinates for points where the incident wave kinematics can be output; these are relative to the mean sea level [(meters)]
@@ -734,7 +732,6 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    DstInitOutputData%WaveDOmega = SrcInitOutputData%WaveDOmega
    DstInitOutputData%WaveAcc => SrcInitOutputData%WaveAcc
    DstInitOutputData%WaveVel => SrcInitOutputData%WaveVel
-   DstInitOutputData%PWaveAcc0 => SrcInitOutputData%PWaveAcc0
    DstInitOutputData%WaveElev1 => SrcInitOutputData%WaveElev1
    DstInitOutputData%WaveElev2 => SrcInitOutputData%WaveElev2
    DstInitOutputData%WaveElev0 => SrcInitOutputData%WaveElev0
@@ -790,7 +787,6 @@ subroutine SeaSt_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    nullify(InitOutputData%WaveElevC)
    nullify(InitOutputData%WaveAcc)
    nullify(InitOutputData%WaveVel)
-   nullify(InitOutputData%PWaveAcc0)
    nullify(InitOutputData%WaveElev1)
    nullify(InitOutputData%WaveElev2)
    nullify(InitOutputData%WaveElev0)
@@ -850,14 +846,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       call RegPackPointer(Buf, c_loc(InData%WaveVel), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%WaveVel)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%PWaveAcc0))
-   if (associated(InData%PWaveAcc0)) then
-      call RegPackBounds(Buf, 4, lbound(InData%PWaveAcc0), ubound(InData%PWaveAcc0))
-      call RegPackPointer(Buf, c_loc(InData%PWaveAcc0), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%PWaveAcc0)
       end if
    end if
    call RegPack(Buf, associated(InData%WaveElev1))
@@ -1042,30 +1030,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
       end if
    else
       OutData%WaveVel => null()
-   end if
-   if (associated(OutData%PWaveAcc0)) deallocate(OutData%PWaveAcc0)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 4, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%PWaveAcc0, UB(1:4)-LB(1:4))
-         OutData%PWaveAcc0(LB(1):,LB(2):,LB(3):,LB(4):) => OutData%PWaveAcc0
-      else
-         allocate(OutData%PWaveAcc0(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PWaveAcc0.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%PWaveAcc0)
-         call RegUnpack(Buf, OutData%PWaveAcc0)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%PWaveAcc0 => null()
    end if
    if (associated(OutData%WaveElev1)) deallocate(OutData%WaveElev1)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -1470,7 +1434,6 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    DstParamData%WaveElev1 => SrcParamData%WaveElev1
    DstParamData%WaveElev2 => SrcParamData%WaveElev2
    DstParamData%WaveAcc => SrcParamData%WaveAcc
-   DstParamData%PWaveAcc0 => SrcParamData%PWaveAcc0
    DstParamData%WaveVel => SrcParamData%WaveVel
    DstParamData%NWaveKin = SrcParamData%NWaveKin
    if (allocated(SrcParamData%WaveKinxi)) then
@@ -1575,7 +1538,6 @@ subroutine SeaSt_DestroyParam(ParamData, ErrStat, ErrMsg)
    nullify(ParamData%WaveElev1)
    nullify(ParamData%WaveElev2)
    nullify(ParamData%WaveAcc)
-   nullify(ParamData%PWaveAcc0)
    nullify(ParamData%WaveVel)
    if (allocated(ParamData%WaveKinxi)) then
       deallocate(ParamData%WaveKinxi)
@@ -1655,14 +1617,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
       call RegPackPointer(Buf, c_loc(InData%WaveAcc), PtrInIndex)
       if (.not. PtrInIndex) then
          call RegPack(Buf, InData%WaveAcc)
-      end if
-   end if
-   call RegPack(Buf, associated(InData%PWaveAcc0))
-   if (associated(InData%PWaveAcc0)) then
-      call RegPackBounds(Buf, 4, lbound(InData%PWaveAcc0), ubound(InData%PWaveAcc0))
-      call RegPackPointer(Buf, c_loc(InData%PWaveAcc0), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%PWaveAcc0)
       end if
    end if
    call RegPack(Buf, associated(InData%WaveVel))
@@ -1849,30 +1803,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
       end if
    else
       OutData%WaveAcc => null()
-   end if
-   if (associated(OutData%PWaveAcc0)) deallocate(OutData%PWaveAcc0)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 4, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%PWaveAcc0, UB(1:4)-LB(1:4))
-         OutData%PWaveAcc0(LB(1):,LB(2):,LB(3):,LB(4):) => OutData%PWaveAcc0
-      else
-         allocate(OutData%PWaveAcc0(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3),LB(4):UB(4)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%PWaveAcc0.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%PWaveAcc0)
-         call RegUnpack(Buf, OutData%PWaveAcc0)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%PWaveAcc0 => null()
    end if
    if (associated(OutData%WaveVel)) deallocate(OutData%WaveVel)
    call RegUnpack(Buf, IsAllocAssoc)
