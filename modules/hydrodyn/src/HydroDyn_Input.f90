@@ -1140,7 +1140,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       ! WtrDpth - Water depth
    
    ! First adjust water depth based on MSL2SWL values
-   InputFileData%Morison%WtrDpth = InputFileData%Morison%WtrDpth + InputFileData%Morison%MSL2SWL
+   InputFileData%Morison%WtrDpth = InputFileData%Morison%WtrDpth + InitInp%WaveField%MSL2SWL
    
    IF ( InputFileData%Morison%WtrDpth <= 0.0 )  THEN
       CALL SetErrStat( ErrID_Fatal,'WtrDpth must be greater than zero.',ErrStat,ErrMsg,RoutineName)
@@ -1151,15 +1151,10 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       ! MSL2SWL - Mean sea level to still water level
    
 
-   IF ( InputFileData%PotMod == 1 .AND. .NOT. EqualRealNos(InputFileData%Morison%MSL2SWL, 0.0_ReKi) ) THEN
+   IF ( InputFileData%PotMod == 1 .AND. .NOT. EqualRealNos(InitInp%WaveField%MSL2SWL, 0.0_ReKi) ) THEN
       CALL SetErrStat( ErrID_Fatal,'SeaState MSL2SWL must be 0 when PotMod = 1 (WAMIT).',ErrStat,ErrMsg,RoutineName)        
       RETURN
    END IF
-   IF ( InputFileData%PotMod == 1 .AND. .NOT. EqualRealNos(InputFileData%Morison%MSL2SWL, 0.0_ReKi) ) THEN
-      CALL SetErrStat( ErrID_Fatal,'HydroDyn MSL2SWL must be 0 when PotMod = 1 (WAMIT).',ErrStat,ErrMsg,RoutineName)        
-      RETURN
-   END IF
-     
    
 
       ! WaveMod - Wave kinematics model switch. -- Check that actual data was passed in from SeaState.  If none exists, then set WaveMod=0 and warn
@@ -2437,7 +2432,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       InputFileData%Morison%Gravity    = InitInp%Gravity
 
          ! Process the input geometry and generate the simulation mesh representation
-      call Morison_GenerateSimulationNodes( InputFileData%Morison%MSL2SWL, InputFileData%Morison%NJoints, InputFileData%Morison%InpJoints, InputFileData%Morison%NMembers, InputFileData%Morison%InpMembers, InputFileData%Morison%NNodes, InputFileData%Morison%Nodes, errStat2, errMsg2 )
+      call Morison_GenerateSimulationNodes( InitInp%WaveField%MSL2SWL, InputFileData%Morison%NJoints, InputFileData%Morison%InpJoints, InputFileData%Morison%NMembers, InputFileData%Morison%InpMembers, InputFileData%Morison%NNodes, InputFileData%Morison%Nodes, errStat2, errMsg2 )
       !CALL Morison_ProcessMorisonGeometry( InputFileData%Morison, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF ( ErrStat >= AbortErrLev ) RETURN

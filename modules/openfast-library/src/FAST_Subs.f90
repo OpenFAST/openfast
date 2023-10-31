@@ -876,7 +876,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_HD%Gravity       = p_FAST%Gravity
       Init%InData_HD%WtrDens       = Init%OutData_SeaSt%WtrDens
       Init%InData_HD%WtrDpth       = Init%OutData_SeaSt%WtrDpth
-      Init%InData_HD%MSL2SWL       = Init%OutData_SeaSt%MSL2SWL
       Init%InData_HD%UseInputFile  = .TRUE.
       Init%InData_HD%InputFile     = p_FAST%HydroFile
       Init%InData_HD%OutRootName   = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_HD))
@@ -1240,7 +1239,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_IceF%InputFile     = p_FAST%IceFile
       Init%InData_IceF%RootName      = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_IceF))
       Init%InData_IceF%simLength     = p_FAST%TMax  !bjj: IceFloe stores this as single-precision (ReKi) TMax is DbKi
-      Init%InData_IceF%MSL2SWL       = Init%OutData_SeaSt%MSL2SWL
+      Init%InData_IceF%MSL2SWL       = Init%OutData_SeaSt%WaveField%MSL2SWL
       Init%InData_IceF%gravity       = p_FAST%Gravity
       
       CALL IceFloe_Init( Init%InData_IceF, IceF%Input(1), IceF%p,  IceF%x(STATE_CURR), IceF%xd(STATE_CURR), IceF%z(STATE_CURR), &

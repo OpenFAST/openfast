@@ -189,7 +189,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       
       InputFileData%Morison%WtrDens = InitInp%WtrDens
       InputFileData%Morison%WtrDpth = InitInp%WtrDpth
-      InputFileData%Morison%MSL2SWL = InitInp%MSL2SWL
    
          
       

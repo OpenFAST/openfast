@@ -324,7 +324,6 @@ subroutine SetHD_InitInputs()
    ! Data from InitOutData_SeaSt:
    InitInData_HD%WtrDens      = InitOutData_SeaSt%WtrDens
    InitInData_HD%WtrDpth      = InitOutData_SeaSt%WtrDpth
-   InitInData_HD%MSL2SWL      = InitOutData_SeaSt%MSL2SWL
    InitInData_HD%NStepWave    = InitOutData_SeaSt%NStepWave
    InitInData_HD%NStepWave2   = InitOutData_SeaSt%NStepWave2
    InitInData_HD%RhoXg        = InitOutData_SeaSt%RhoXg

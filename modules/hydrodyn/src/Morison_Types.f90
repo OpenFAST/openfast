@@ -290,7 +290,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity (scalar, positive-valued) [m/s^2]
     REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density [kg/m^3]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth (positive-valued) [m]
-    REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Mean Sea Level to Still Water Level offset [m]
     INTEGER(IntKi)  :: WaveDisp = 0_IntKi      !< Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position)  [-]
     INTEGER(IntKi)  :: AMMod = 0_IntKi      !< Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState] [-]
     INTEGER(IntKi)  :: NJoints = 0_IntKi      !< Number of user-specified joints [-]
@@ -401,7 +400,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity (scalar, positive-valued) [m/s^2]
     REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density [kg/m^3]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth (positive-valued) [m]
-    REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Mean Sea Level to Still Water Level offset [m]
     INTEGER(IntKi)  :: WaveDisp = 0_IntKi      !< Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position)  [-]
     INTEGER(IntKi)  :: AMMod = 0_IntKi      !< Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState] [-]
     INTEGER(IntKi)  :: NMembers = 0_IntKi      !< number of members [-]
@@ -3502,7 +3500,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%WtrDens = SrcInitInputData%WtrDens
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
-   DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
    DstInitInputData%WaveDisp = SrcInitInputData%WaveDisp
    DstInitInputData%AMMod = SrcInitInputData%AMMod
    DstInitInputData%NJoints = SrcInitInputData%NJoints
@@ -3857,7 +3854,6 @@ subroutine Morison_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%Gravity)
    call RegPack(Buf, InData%WtrDens)
    call RegPack(Buf, InData%WtrDpth)
-   call RegPack(Buf, InData%MSL2SWL)
    call RegPack(Buf, InData%WaveDisp)
    call RegPack(Buf, InData%AMMod)
    call RegPack(Buf, InData%NJoints)
@@ -4024,8 +4020,6 @@ subroutine Morison_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%WtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%MSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDisp)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5405,7 +5399,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    DstParamData%Gravity = SrcParamData%Gravity
    DstParamData%WtrDens = SrcParamData%WtrDens
    DstParamData%WtrDpth = SrcParamData%WtrDpth
-   DstParamData%MSL2SWL = SrcParamData%MSL2SWL
    DstParamData%WaveDisp = SrcParamData%WaveDisp
    DstParamData%AMMod = SrcParamData%AMMod
    DstParamData%NMembers = SrcParamData%NMembers
@@ -5696,7 +5689,6 @@ subroutine Morison_PackParam(Buf, Indata)
    call RegPack(Buf, InData%Gravity)
    call RegPack(Buf, InData%WtrDens)
    call RegPack(Buf, InData%WtrDpth)
-   call RegPack(Buf, InData%MSL2SWL)
    call RegPack(Buf, InData%WaveDisp)
    call RegPack(Buf, InData%AMMod)
    call RegPack(Buf, InData%NMembers)
@@ -5822,8 +5814,6 @@ subroutine Morison_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%WtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%MSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDisp)
    if (RegCheckErr(Buf, RoutineName)) return

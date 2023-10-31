@@ -1484,7 +1484,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
    ! These are all per node and not done here, yet
    
    do i = 1, member%NElements+1
-      call SetNodeMG( InitInp%NMGDepths, InitInp%MGDepths, InitInp%Nodes(member%NodeIndx(i)), InitInp%MSL2SWL, member%tMG(i), member%MGDensity(i) )
+      call SetNodeMG( InitInp%NMGDepths, InitInp%MGDepths, InitInp%Nodes(member%NodeIndx(i)), MSL2SWL, member%tMG(i), member%MGDensity(i) )
    end do
 
    member%R(  1)   = propSet1%PropD / 2.0            
@@ -1545,7 +1545,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
    member%MmbrFilledIDIndx = MmbrFilledIDIndx ! Set this to the parameter version of this member data
    if ( MmbrFilledIDIndx > 0 ) then    
       member%FillDens     =  InitInp%FilledGroups(MmbrFilledIDIndx)%FillDens
-      member%FillFSLoc    =  InitInp%FilledGroups(MmbrFilledIDIndx)%FillFSLoc - InitInp%MSL2SWL
+      member%FillFSLoc    =  InitInp%FilledGroups(MmbrFilledIDIndx)%FillFSLoc - MSL2SWL
        if (member%FillFSLoc >= Zb) then
          member%z_overfill = member%FillFSLoc - Zb
          member%l_fill = member%RefLength
@@ -1869,7 +1869,7 @@ subroutine SetupMembers( InitInp, p, m, errStat, errMsg )
             prop2Indx = InitInp%InpMembers(I)%MPropSetID2Indx
       end if
       ! Now populate the various member data arrays using the HydroDyn input file data
-      call SetMemberProperties( InitInp%MSL2SWL, InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MPropSets(prop1Indx), InitInp%MPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) 
+      call SetMemberProperties( p%WaveField%MSL2SWL, InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MPropSets(prop1Indx), InitInp%MPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) 
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'SetupMembers')
       if (ErrStat >= AbortErrLev) return
    end do
@@ -1929,7 +1929,6 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%NStepWave  = InitInp%NStepWave
    p%NumOuts    = InitInp%NumOuts
    p%NMOutputs  = InitInp%NMOutputs                       ! Number of members to output [ >=0 and <10]
-   p%MSL2SWL    = InitInp%MSL2SWL
    p%WaveDisp   = InitInp%WaveDisp
    p%AMMod      = InitInp%AMMod
    p%WaveStMod  = InitInp%WaveStMod
@@ -1982,7 +1981,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
   
       ! Redundant work (these are already assigned to the member data arrays, 
       ! but is needed on the joint data because we report the tMG, and MGDensity at each Joint node in the Summary File
-      call SetNodeMG( InitInp%NMGDepths, InitInp%MGDepths, InitInp%Nodes(i), InitInp%MSL2SWL, InitInp%Nodes(i)%tMG, InitInp%Nodes(i)%MGDensity )
+      call SetNodeMG( InitInp%NMGDepths, InitInp%MGDepths, InitInp%Nodes(i), p%WaveField%MSL2SWL, InitInp%Nodes(i)%tMG, InitInp%Nodes(i)%MGDensity )
    end do
 
    ! allocate and copy in node-based load and hydrodynamic arrays
@@ -2014,7 +2013,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    DO I=1,p%NNodes
    ! This needs to change so that the Position is relative to MSL NOT SWL:
       pos = InitInp%Nodes(I)%Position
-      pos(3) = pos(3) + InitInp%MSL2SWL
+      pos(3) = pos(3) + p%WaveField%MSL2SWL
          ! Create the node on the mesh 
       CALL MeshPositionNode (u%Mesh                &
                         , i                        &      
@@ -2126,7 +2125,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       tMG       = -999.0
       An_drag   = 0.0
       
-      IF ( (InitInp%InpJoints(i)%Position(3)-p%MSL2SWL) >= -p%WtrDpth ) THEN
+      IF ( (InitInp%InpJoints(i)%Position(3)-p%WaveField%MSL2SWL) >= -p%WtrDpth ) THEN
    
          ! loop through each member attached to the joint, getting the radius of its appropriate end
          DO J = 1, InitInp%InpJoints(I)%NConnections
@@ -2257,7 +2256,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    if ( errStat >= AbortErrLev ) return
    
       ! Write Summary information to *HydroDyn* summary file now that everything has been initialized. 
-   CALL WriteSummaryFile( InitInp%UnSum, InitInp%MSL2SWL, InitInp%NJoints, InitInp%NNodes, InitInp%Nodes, p%NMembers, p%Members, &
+   CALL WriteSummaryFile( InitInp%UnSum, p%WaveField%MSL2SWL, InitInp%NJoints, InitInp%NNodes, InitInp%Nodes, p%NMembers, p%Members, &
                           p%NumOuts, p%OutParam, p%MOutLst, p%JOutLst, u%Mesh, y%Mesh, p, m, errStat2, errMsg2 )
    call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    if ( errStat >= AbortErrLev ) return
@@ -2994,13 +2993,13 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )
 
               IF ( p%AMMod .EQ. 0_IntKi ) THEN ! Compute added-mass force up to the SWL
-                 z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL ! Undisplaced z-position of the current node
+                 z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%WaveField%MSL2SWL ! Undisplaced z-position of the current node
                  IF ( z1 > 0.0_ReKi ) THEN ! Node is above SWL undisplaced; zero added-mass force
                     f_hydro = 0.0_ReKi
                     CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_A(:, i) )
                  ELSE
                     ! Need to compute deltal_AM and h_c_AM based on the formulation without wave stretching.
-                    z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL ! Undisplaced z-position of the next node
+                    z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%WaveField%MSL2SWL ! Undisplaced z-position of the next node
                     IF ( z2 > 0.0_ReKi ) THEN ! Element i crosses the SWL
                        h = -z1 / mem%cosPhi_ref ! Length of Element i between SWL and node i, h>=0
                        deltal_AM = mem%dl/2.0 + h
@@ -3270,7 +3269,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
               Am = mem%Ca(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*mem%Ak + 2.0*mem%AxCa(i)*p%WtrDens*pi*mem%RMG(i)*mem%RMG(i)*dRdl_p*mem%kkt
               f_hydro = -matmul( Am, u%Mesh%TranslationAcc(:,mem%NodeIndx(i)) )
               IF ( p%AMMod .EQ. 0_IntKi ) THEN ! Always compute added-mass force on nodes below SWL when undisplaced
-                 z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%MSL2SWL ! Undisplaced z-position of the current node
+                 z1 = u%Mesh%Position(3, mem%NodeIndx(i)) - p%WaveField%MSL2SWL ! Undisplaced z-position of the current node
                  IF ( z1 > 0.0_ReKi ) THEN ! Node is above SWL when undisplaced; zero added-mass force
                     f_hydro = 0.0_ReKi
                     CALL LumpDistrHydroLoads( f_hydro, mem%k, deltal, h_c, m%memberLoads(im)%F_A(:, i) )
@@ -3285,7 +3284,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                     IF ( i == N+1 ) THEN
                        deltalRight = 0.0_ReKi
                     ELSE
-                       z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%MSL2SWL
+                       z2 = u%Mesh%Position(3, mem%NodeIndx(i+1)) - p%WaveField%MSL2SWL
                        IF ( z2 > 0.0_ReKi ) THEN ! Element i crosses the SWL
                           deltalRight = -z1 / mem%cosPhi_ref
                        ELSE
@@ -3564,7 +3563,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
       ! Undisplaced node position
       pos      = u%Mesh%Position
-      pos(3,:) = pos(3,:) - p%MSL2SWL ! Z position measured from the SWL
+      pos(3,:) = pos(3,:) - p%WaveField%MSL2SWL ! Z position measured from the SWL
       IF ( (p%WaveDisp /= 0) .OR. forceDisplaced ) THEN 
          ! Use displaced X and Y position
          pos(1,:) = pos(1,:) + u%Mesh%TranslationDisp(1,:)
@@ -4216,9 +4215,9 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
          pos(2) = u%Mesh%TranslationDisp(2,J) + u%Mesh%Position(2,J)
       END IF
       IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Wave stretching enabled
-         pos(3) = u%Mesh%Position(3,J) + u%Mesh%TranslationDisp(3,J) - p%MSL2SWL  ! Use the current Z location.
+         pos(3) = u%Mesh%Position(3,J) + u%Mesh%TranslationDisp(3,J) - p%WaveField%MSL2SWL  ! Use the current Z location.
       ELSE ! Wave stretching disabled
-         pos(3) = u%Mesh%Position(3,J) - p%MSL2SWL  ! We are intentionally using the undisplaced Z position of the node.
+         pos(3) = u%Mesh%Position(3,J) - p%WaveField%MSL2SWL  ! We are intentionally using the undisplaced Z position of the node.
       END IF
 
       ! Get fluid velocity at the joint

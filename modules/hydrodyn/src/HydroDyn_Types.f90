@@ -91,7 +91,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
     REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density from the driver; may be overwritten                       [(kg/m^3)]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth from the driver; may be overwritten                         [m]
-    REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Mean sea level to still water level from the driver; may be overwritten [m]
     REAL(DbKi)  :: TMax = 0.0_R8Ki      !< Supplied by Driver:  The total simulation time [(sec)]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
     INTEGER(IntKi)  :: NStepWave = 0      !< Total number of frequency components = total number of time steps in the incident wave [-]
@@ -901,7 +900,6 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%WtrDens = SrcInitInputData%WtrDens
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
-   DstInitInputData%MSL2SWL = SrcInitInputData%MSL2SWL
    DstInitInputData%TMax = SrcInitInputData%TMax
    DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
    DstInitInputData%NStepWave = SrcInitInputData%NStepWave
@@ -984,7 +982,6 @@ subroutine HydroDyn_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%Gravity)
    call RegPack(Buf, InData%WtrDens)
    call RegPack(Buf, InData%WtrDpth)
-   call RegPack(Buf, InData%MSL2SWL)
    call RegPack(Buf, InData%TMax)
    call RegPack(Buf, InData%VisMeshes)
    call RegPack(Buf, InData%NStepWave)
@@ -1050,8 +1047,6 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%WtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%MSL2SWL)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%TMax)
    if (RegCheckErr(Buf, RoutineName)) return

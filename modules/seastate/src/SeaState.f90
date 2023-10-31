@@ -347,7 +347,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InitOut%WtrDpth    = InputFileData%Waves%WtrDpth - InputFileData%MSL2SWL
       p%WaveField%EffWtrDpth = InputFileData%Waves%WtrDpth  ! Effective water depth measured from the SWL  ! bjj: does WtrDpth change later? Because otherwise EffWtrDpth is the same as WtrDpth
       
-      InitOut%MSL2SWL    = InputFileData%MSL2SWL      
+      p%WaveField%MSL2SWL = InputFileData%MSL2SWL
       p%WaveStMod        = InputFileData%Waves%WaveStMod
       p%WtrDpth          = InitOut%WtrDpth  
       
@@ -406,12 +406,10 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%WaveDir      =  InputFileData%Waves%WaveDir       ! For WAMIT for use in SS_Excitation
        ! InitOut%WtrDens      =  InputFileData%Waves%WtrDens
        ! InitOut%WtrDpth      =  InputFileData%Waves%WtrDpth
-       ! InitOut%MSL2SWL      =  InputFileData%MSL2SWL
        
        InitOut%SeaSt_Interp_p =  p%seast_interp_p
 
       ! Build WaveField
-      p%WaveField%MSL2SWL      =  InitOut%MSL2SWL
       p%WaveField%WaveStMod    =  p%WaveStMod
       ! p%WaveField%PWaveDynP0   => Waves_InitOut%PWaveDynP0
       ! p%WaveField%PWaveAccMCF0 => Waves_InitOut%PWaveAccMCF0
@@ -738,9 +736,6 @@ SUBROUTINE SeaSt_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       REAL(SiKi)                           :: zeta
       REAL(SiKi)                           :: zeta1
       REAL(SiKi)                           :: zeta2
-      REAL(SiKi)                           :: zp
-      REAL(ReKi)                           :: positionXYZp(3)
-      REAL(ReKi)                           :: positionXY0(3)
       
      INTEGER(IntKi)                        :: nodeInWater
       

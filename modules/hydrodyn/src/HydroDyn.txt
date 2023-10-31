@@ -74,7 +74,6 @@ typedef	  ^	                           ^                             Logical	   
 typedef   ^                            ^                             ReKi                     Gravity                         -          -          -         "Supplied by Driver:  Gravitational acceleration"  "(m/s^2)"
 typedef   ^                            ^                             ReKi                     WtrDens                         -          -          -         "Water density from the driver; may be overwritten                      "  "(kg/m^3)"
 typedef   ^                            ^                             ReKi                     WtrDpth                         -          -          -         "Water depth from the driver; may be overwritten                        "  "m"
-typedef   ^                            ^                             ReKi                     MSL2SWL                         -          -          -         "Mean sea level to still water level from the driver; may be overwritten"  "m"
 typedef   ^                            ^                             DbKi                     TMax                            -          -          -         "Supplied by Driver:  The total simulation time"    "(sec)"
 typedef   ^                            ^                             logical                  VisMeshes                       -       .false.       -         "Output visualization meshes" -
 #
