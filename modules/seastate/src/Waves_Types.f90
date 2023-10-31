@@ -85,7 +85,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  Waves_InitOutputType  =======
   TYPE, PUBLIC :: Waves_InitOutputType
-    REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevC      !< Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part [(meters)]
     REAL(SiKi)  :: WaveDirMin = 0.0_R4Ki      !< Minimum wave direction. [(degrees)]
     REAL(SiKi)  :: WaveDirMax = 0.0_R4Ki      !< Maximum wave direction. [(degrees)]
     INTEGER(IntKi)  :: WaveNDir = 0_IntKi      !< Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module] [(-)]
@@ -490,18 +489,6 @@ subroutine Waves_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    character(*), parameter        :: RoutineName = 'Waves_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(SrcInitOutputData%WaveElevC)) then
-      LB(1:3) = lbound(SrcInitOutputData%WaveElevC)
-      UB(1:3) = ubound(SrcInitOutputData%WaveElevC)
-      if (.not. allocated(DstInitOutputData%WaveElevC)) then
-         allocate(DstInitOutputData%WaveElevC(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%WaveElevC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitOutputData%WaveElevC = SrcInitOutputData%WaveElevC
-   end if
    DstInitOutputData%WaveDirMin = SrcInitOutputData%WaveDirMin
    DstInitOutputData%WaveDirMax = SrcInitOutputData%WaveDirMax
    DstInitOutputData%WaveNDir = SrcInitOutputData%WaveNDir
@@ -520,9 +507,6 @@ subroutine Waves_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Waves_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   if (allocated(InitOutputData%WaveElevC)) then
-      deallocate(InitOutputData%WaveElevC)
-   end if
    nullify(InitOutputData%WaveElev)
 end subroutine
 
@@ -532,11 +516,6 @@ subroutine Waves_PackInitOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Waves_PackInitOutput'
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, allocated(InData%WaveElevC))
-   if (allocated(InData%WaveElevC)) then
-      call RegPackBounds(Buf, 3, lbound(InData%WaveElevC), ubound(InData%WaveElevC))
-      call RegPack(Buf, InData%WaveElevC)
-   end if
    call RegPack(Buf, InData%WaveDirMin)
    call RegPack(Buf, InData%WaveDirMax)
    call RegPack(Buf, InData%WaveNDir)
@@ -566,20 +545,6 @@ subroutine Waves_UnPackInitOutput(Buf, OutData)
    integer(IntKi)  :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
-   if (allocated(OutData%WaveElevC)) deallocate(OutData%WaveElevC)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveElevC(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElevC.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveElevC)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
    call RegUnpack(Buf, OutData%WaveDirMin)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDirMax)

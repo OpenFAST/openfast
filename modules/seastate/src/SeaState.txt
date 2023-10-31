@@ -76,7 +76,6 @@ typedef   ^                  ^                      ReKi                     Wtr
 typedef   ^                  ^                      ReKi                     WtrDpth           -       -      -  "Water depth, this is necessary to inform glue-code what the module is using for WtrDpth (may not be the glue-code's default)"    (m)
 typedef   ^                  ^                      ReKi                     EffWtrDpth        -       -      -  "Effective water depth equal to the sum of input WtrDpth and MSL2SWL"    (m)
 typedef   ^                  ^                      ReKi                     MSL2SWL           -       -      -  "Offset between still-water level and mean sea level, this is necessary to inform glue-code what the module is using for MSL2SWL (may not be the glue-code's default)"    (m)
-typedef   ^                  ^                      SiKi                     WaveElevC         {*}{*}{*}   -        -     "Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part"   (meters)
 typedef   ^                  ^                 SiKi                 WaveDirMin        -        -        -        "Minimum wave direction."  (degrees)
 typedef   ^                  ^                 SiKi                 WaveDirMax        -        -        -        "Maximum wave direction."  (degrees)
 typedef   ^                  ^                 SiKi                 WaveDir           -        -        -        "Incident wave propagation heading direction" (degrees)

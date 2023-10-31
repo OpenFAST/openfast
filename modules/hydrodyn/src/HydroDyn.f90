@@ -364,10 +364,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             InputFileData%WAMIT%WaveDOmega   = InitInp%WaveDOmega   
 
                ! Init inputs for the SS_Excitation model (set this just in case it will be used)
-            InputFileData%WAMIT%WaveDir   =  InitInp%WaveDir
-            ! CALL MOVE_ALLOC( InitInp%WaveElevC, InputFileData%WAMIT%WaveElevC )
-                ! Temporarily move arrays to init input for WAMIT (save some space)
-            
+            InputFileData%WAMIT%WaveDir   =  InitInp%WaveDir            
             InputFileData%WAMIT%WaveElev0  => InitInp%WaveField%WaveElev0
             InputFileData%WAMIT%WaveElevC  => InitInp%WaveField%WaveElevC
             InputFileData%WAMIT%WaveField  => InitInp%WaveField

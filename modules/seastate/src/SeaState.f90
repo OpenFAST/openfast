@@ -384,9 +384,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       END IF
       
       ! Copy Waves InitOut data to SeaState InitOut
-         ! ... pointer data: 
-      InitOut%WaveElevC    => p%WaveField%WaveElevC                       ! For WAMIT
-
+      
           ! non-pointer data:
        InitOut%WaveDirMin   =  Waves_InitOut%WaveDirMin          ! For WAMIT and WAMIT2
        InitOut%WaveDirMax   =  Waves_InitOut%WaveDirMax          ! For WAMIT and WAMIT2
