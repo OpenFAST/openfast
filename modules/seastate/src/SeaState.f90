@@ -589,8 +589,8 @@ SUBROUTINE AddArrays_5D(Array1, Array2, ArrayName, ErrStat, ErrMsg)
    IF ( SIZE(Array1,DIM=1) /= SIZE(Array2,DIM=1) .OR. &
         SIZE(Array1,DIM=2) /= SIZE(Array2,DIM=2) .OR. &
         SIZE(Array1,DIM=3) /= SIZE(Array2,DIM=3) .OR. &
-        SIZE(Array1,DIM=3) /= SIZE(Array2,DIM=4) .OR. &
-        SIZE(Array1,DIM=4) /= SIZE(Array2,DIM=5)) THEN
+        SIZE(Array1,DIM=4) /= SIZE(Array2,DIM=4) .OR. &
+        SIZE(Array1,DIM=5) /= SIZE(Array2,DIM=5)) THEN
                     
       ErrStat = ErrID_Fatal
       ErrMsg = TRIM(ArrayName)//' arrays for first and second order wave elevations are of different sizes: '//NewLine// &
