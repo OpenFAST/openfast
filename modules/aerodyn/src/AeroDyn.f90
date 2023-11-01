@@ -263,21 +263,21 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! Allocate rotors data types
 
    nRotors = size(InitInp%rotors)
-   allocate(x%rotors(nRotors), xd%rotors(nRotors), z%rotors(nRotors), OtherState%rotors(nRotors), stat=errStat) 
-   if (errStat/=0) call SetErrStat( ErrID_Fatal, 'Allocating rotor states', errStat, errMsg, RoutineName )
-   allocate(u%rotors(nRotors), y%rotors(nRotors), InitOut%rotors(nRotors), InputFileData%rotors(nRotors), stat=errStat) 
-   if (errStat/=0) call SetErrStat( ErrID_Fatal, 'Allocating rotor input/outputs', errStat, errMsg, RoutineName )
-   allocate(p%rotors(nRotors), m%rotors(nRotors), stat=errStat) 
-   if (errStat/=0) call SetErrStat( ErrID_Fatal, 'Allocating rotor params/misc', errStat, errMsg, RoutineName )
-   allocate(NumBlades(nRotors), stat=errStat ) ! temp array to pass NumBlades
-   if (errStat/=0) call SetErrStat( ErrID_Fatal, 'Allocating numblades per rotor', errStat, errMsg, RoutineName )
-   allocate(AeroProjMod(nRotors), stat=errStat ) ! temp array to pass AeroProjMod
-   AeroProjMod=-1
-   if (errStat/=0) call SetErrStat( ErrID_Fatal, 'Allocating AeroProjMod per rotor', errStat, errMsg, RoutineName )
+   allocate(x%rotors(nRotors), xd%rotors(nRotors), z%rotors(nRotors), OtherState%rotors(nRotors), stat=errStat2) 
+   if (errStat2/=0) call SetErrStat( ErrID_Fatal, 'Allocating rotor states', errStat, errMsg, RoutineName )
+   allocate(u%rotors(nRotors), y%rotors(nRotors), InitOut%rotors(nRotors), InputFileData%rotors(nRotors), stat=errStat2) 
+   if (errStat2/=0) call SetErrStat( ErrID_Fatal, 'Allocating rotor input/outputs', errStat, errMsg, RoutineName )
+   allocate(p%rotors(nRotors), m%rotors(nRotors), stat=errStat2) 
+   if (errStat2/=0) call SetErrStat( ErrID_Fatal, 'Allocating rotor params/misc', errStat, errMsg, RoutineName )
+   allocate(NumBlades(nRotors), stat=errStat2 ) ! temp array to pass NumBlades
+   if (errStat2/=0) call SetErrStat( ErrID_Fatal, 'Allocating numblades per rotor', errStat, errMsg, RoutineName )
+   allocate(AeroProjMod(nRotors), stat=errStat2 ) ! temp array to pass AeroProjMod
+   if (errStat2/=0) call SetErrStat( ErrID_Fatal, 'Allocating AeroProjMod per rotor', errStat, errMsg, RoutineName )
    if (errStat/=ErrID_None) then
       call Cleanup()
       return
    end if
+   AeroProjMod=-1
 
 
 
