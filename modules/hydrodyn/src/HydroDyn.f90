@@ -144,6 +144,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       ErrMsg  = ""               
       p%UnOutFile = -1 !bjj: this was being written to the screen when I had an error in my HD input file, so I'm going to initialize here.
       
+      p%WaveField    =>  InitInp%WaveField
+      
 #ifdef BETA_BUILD
    CALL DispBetaNotice( "This is a beta version of HydroDyn and is for testing purposes only."//NewLine//"This version includes user waves, WaveMod=6 and the ability to write example user waves." )
 #endif
@@ -187,9 +189,12 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             RETURN
          END IF
       
-      InputFileData%Morison%WtrDens = InitInp%WtrDens
       InputFileData%Morison%WtrDpth = InitInp%WtrDpth
-   
+      
+      InputFileData%Morison%WaveField => InitInp%WaveField
+      InputFileData%WAMIT%WaveField   => InitInp%WaveField
+      InputFileData%WAMIT2%WaveField  => InitInp%WaveField
+
          
       
          ! Verify all the necessary initialization data. Do this at the HydroDynInput module-level 
@@ -272,7 +277,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          ! Copy Waves initialization output into the initialization input type for the WAMIT module
       !p%NWaveElev    = InputFileData%Waves%NWaveElev  
       p%NStepWave    = InitInp%NStepWave
-      p%WaveField    =>  InitInp%WaveField
 
       m%LastIndWave = 1
 
@@ -355,7 +359,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             
                 ! Copy SeaState initialization output into the initialization input type for the WAMIT module
                   
-            InputFileData%WAMIT%RhoXg        = InitInp%RhoXg
             InputFileData%WAMIT%NStepWave    = InitInp%NStepWave
             InputFileData%WAMIT%NStepWave2   = InitInp%NStepWave2
             InputFileData%WAMIT%WaveDirMin   = InitInp%WaveDirMin
@@ -418,7 +421,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                     WRITE( InputFileData%UnSum, '(A81)' ) 'Buoyancy loads from members modelled with WAMIT, summed about ( 0.0, 0.0, 0.0 )'
                     WRITE( InputFileData%UnSum, '(18x,6(2X,A20))' ) ' BuoyFxi ', ' BuoyFyi ', ' BuoyFzi ', ' BuoyMxi ', ' BuoyMyi ', ' BuoyMzi '
                     WRITE( InputFileData%UnSum, '(18x,6(2X,A20))' ) '   (N)   ', '   (N)   ', '   (N)   ', '  (N-m)  ', '  (N-m)  ', '  (N-m)  '
-                    WRITE( InputFileData%UnSum, '(A18,6(2X,ES20.6))') '  External:       ',0.0,0.0,InputFileData%WAMIT%RhoXg*InputFileData%PtfmVol0(iBody),InputFileData%WAMIT%RhoXg*InputFileData%PtfmVol0(iBody)*InputFileData%PtfmCOByt(iBody), -InputFileData%WAMIT%RhoXg*InputFileData%PtfmVol0(iBody)*InputFileData%PtfmCOBxt(iBody), 0.0   ! and the moment about Y due to the COB being offset from the WAMIT reference point
+                    WRITE( InputFileData%UnSum, '(A18,6(2X,ES20.6))') '  External:       ',0.0,0.0,p%WaveField%RhoXg*InputFileData%PtfmVol0(iBody),p%WaveField%RhoXg*InputFileData%PtfmVol0(iBody)*InputFileData%PtfmCOByt(iBody), -p%WaveField%RhoXg*InputFileData%PtfmVol0(iBody)*InputFileData%PtfmCOBxt(iBody), 0.0   ! and the moment about Y due to the COB being offset from the WAMIT reference point
                 end do
             END IF
 
@@ -434,9 +437,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                p%WAMIT2used   = .TRUE.
 
                   ! Copy Waves initialization output into the initialization input type for the WAMIT module
-               InputFileData%WAMIT2%WaveField  => InitInp%WaveField
-               
-               InputFileData%WAMIT2%RhoXg       = InitInp%RhoXg
                InputFileData%WAMIT2%NStepWave   = InitInp%NStepWave
                InputFileData%WAMIT2%NStepWave2  = InitInp%NStepWave2
                InputFileData%WAMIT2%WaveDirMin  = InitInp%WaveDirMin
@@ -531,7 +531,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                ! General
             FITInitData%InputFile      = InputFileData%PotFile
             FITInitData%Gravity        = InputFileData%Gravity
-            FITInitData%Rho            = InputFileData%Morison%WtrDens
+            FITInitData%Rho            = p%WaveField%WtrDens
             FITInitData%time_end       = InitInp%TMax
             FITInitData%dtime          = InitInp%WaveDT  ! Set the FIT module's timestep equal to the WaveDT timestep, this was checked earlier to make sure it is an integer muliple of the glue-code timestep!
                ! Waves
@@ -584,7 +584,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          ! Copy SeaState initialization output into the initialization input type for the Morison module
          InputFileData%Morison%NStepWave =  InitInp%NStepWave
          InputFileData%Morison%MCFD      =  InitInp%MCFD
-         InputFileData%Morison%WaveField => InitInp%WaveField
      
             ! Were visualization meshes requested?
          InputFileData%Morison%VisMeshes = p%VisMeshes

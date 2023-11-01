@@ -217,7 +217,6 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       ErrMsg   = ""               
       
          ! Copy Output Init data from Waves Module Init call
-         
       p%NStepWave    = InitInp%NStepWave
       p%ExctnMod     = InitInp%ExctnMod
       p%ExctnDisp    = InitInp%ExctnDisp
@@ -244,9 +243,9 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       do iBody = 1, p%NBody     
          p%F_HS_Moment_Offset(1,iBody) = 0.0_ReKi
          p%F_HS_Moment_Offset(2,iBody) = 0.0_ReKi
-         p%F_HS_Moment_Offset(3,iBody) =  InitInp%RhoXg*InitInp%PtfmVol0(iBody)                                             ! except for the hydrostatic buoyancy force from Archimede's Principle when the support platform is in its undisplaced position
-         p%F_HS_Moment_Offset(4,iBody) =  InitInp%RhoXg*InitInp%PtfmVol0(iBody)*( InitInp%PtfmCOByt(iBody) - InitInp%PtfmRefyt(iBody)  )  ! and the moment about X due to the COB being offset from the local WAMIT reference point
-         p%F_HS_Moment_Offset(5,iBody) = -InitInp%RhoXg*InitInp%PtfmVol0(iBody)*( InitInp%PtfmCOBxt(iBody) - InitInp%PtfmRefxt(iBody)  )  ! and the moment about Y due to the COB being offset from the localWAMIT reference point
+         p%F_HS_Moment_Offset(3,iBody) =  InitInp%WaveField%RhoXg*InitInp%PtfmVol0(iBody)                                             ! except for the hydrostatic buoyancy force from Archimede's Principle when the support platform is in its undisplaced position
+         p%F_HS_Moment_Offset(4,iBody) =  InitInp%WaveField%RhoXg*InitInp%PtfmVol0(iBody)*( InitInp%PtfmCOByt(iBody) - InitInp%PtfmRefyt(iBody)  )  ! and the moment about X due to the COB being offset from the local WAMIT reference point
+         p%F_HS_Moment_Offset(5,iBody) = -InitInp%WaveField%RhoXg*InitInp%PtfmVol0(iBody)*( InitInp%PtfmCOBxt(iBody) - InitInp%PtfmRefxt(iBody)  )  ! and the moment about Y due to the COB being offset from the localWAMIT reference point
          p%F_HS_Moment_Offset(6,iBody) = 0.0_ReKi
       end do 
 
@@ -260,16 +259,16 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
          !   element-by-element multiplication, instead of matrix-by-matrix
          !   multiplication:
 
-      SttcDim(1,1) = InitInp%RhoXg  *InitInp%WAMITULEN**2  ! Force-translation
-      SttcDim(1,4) = InitInp%RhoXg  *InitInp%WAMITULEN**3  ! Force-rotation/Moment-translation - Hydrostatic restoring
-      SttcDim(4,4) = InitInp%RhoXg  *InitInp%WAMITULEN**4  ! Moment-rotation
+      SttcDim(1,1) = InitInp%WaveField%RhoXg  *InitInp%WAMITULEN**2  ! Force-translation
+      SttcDim(1,4) = InitInp%WaveField%RhoXg  *InitInp%WAMITULEN**3  ! Force-rotation/Moment-translation - Hydrostatic restoring
+      SttcDim(4,4) = InitInp%WaveField%RhoXg  *InitInp%WAMITULEN**4  ! Moment-rotation
 
-      RdtnDim(1,1) = InitInp%WtrDens*InitInp%WAMITULEN**3  ! Force-translation
-      RdtnDim(1,4) = InitInp%WtrDens*InitInp%WAMITULEN**4  ! Force-rotation/Moment-translation - Hydrodynamic added mass and damping
-      RdtnDim(4,4) = InitInp%WtrDens*InitInp%WAMITULEN**5  ! Moment-rotation
+      RdtnDim(1,1) = InitInp%WaveField%WtrDens*InitInp%WAMITULEN**3  ! Force-translation
+      RdtnDim(1,4) = InitInp%WaveField%WtrDens*InitInp%WAMITULEN**4  ! Force-rotation/Moment-translation - Hydrodynamic added mass and damping
+      RdtnDim(4,4) = InitInp%WaveField%WtrDens*InitInp%WAMITULEN**5  ! Moment-rotation
 
-      DffrctDim(1) = InitInp%RhoXg  *InitInp%WAMITULEN**2  ! Force-translation - Hydrodynamic wave excitation force
-      DffrctDim(4) = InitInp%RhoXg  *InitInp%WAMITULEN**3  ! Moment-rotation
+      DffrctDim(1) = InitInp%WaveField%RhoXg  *InitInp%WAMITULEN**2  ! Force-translation - Hydrodynamic wave excitation force
+      DffrctDim(4) = InitInp%WaveField%RhoXg  *InitInp%WAMITULEN**3  ! Moment-rotation
 
       DO I = 1,3     ! Loop through all force-translation elements (rows)
 

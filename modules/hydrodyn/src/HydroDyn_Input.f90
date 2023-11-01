@@ -1129,9 +1129,9 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       !-------------------------------------------------------------------------
 
  
-      ! WtrDens - Water density.
+      ! WtrDens - Water density. ! shouldn't this be checked in SeaState instead (and omitted here?)
 
-   IF ( InputFileData%Morison%WtrDens < 0.0 )  THEN
+   IF ( InitInp%WaveField%WtrDens < 0.0 )  THEN
       CALL SetErrStat( ErrID_Fatal,'WtrDens must not be negative.',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
@@ -2222,7 +2222,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
                CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
                IF ( ErrStat >= AbortErrLev ) RETURN
          ELSE
-            InputFileData%Morison%FilledGroups(I)%FillDens = InputFileData%Morison%WtrDens
+            InputFileData%Morison%FilledGroups(I)%FillDens = InitInp%WaveField%WtrDens
          END IF
 
       END DO
@@ -2420,11 +2420,9 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    !----------------------------------------------------------
 
       ! WAMIT
-      InputFileData%WAMIT%WtrDens      = InputFileData%Morison%WtrDens
       InputFileData%WAMIT%WaveMod      = InitInp%WaveMod
       InputFileData%WAMIT%HasWAMIT     = InputFileData%PotMod == 1
       ! WAMIT2
-      InputFileData%WAMIT2%WtrDens     = InputFileData%Morison%WtrDens
       InputFileData%WAMIT2%WaveMod     = InitInp%WaveMod
       InputFileData%WAMIT2%HasWAMIT    = InputFileData%PotMod == 1
       ! Morison

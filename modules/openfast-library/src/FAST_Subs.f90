@@ -832,11 +832,32 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF  
       
-      ! Need to set up other module's InitInput data here because we will also need to clean up SeaState data and would rather not defer that cleanup
-      if ( p_FAST%CompHydro == Module_HD ) then
+   end if
+   
+   ! ........................
+   ! initialize HydroDyn
+   ! ........................
+   ALLOCATE( HD%Input( p_FAST%InterpOrder+1 ), HD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating HD%Input and HD%InputTimes.",ErrStat,ErrMsg,RoutineName)
+         CALL Cleanup()
+         RETURN
+      END IF
+
+   IF ( p_FAST%CompHydro == Module_HD ) THEN
+
+      Init%InData_HD%Gravity       = p_FAST%Gravity
+      Init%InData_HD%UseInputFile  = .TRUE.
+      Init%InData_HD%InputFile     = p_FAST%HydroFile
+      Init%InData_HD%OutRootName   = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_HD))
+      Init%InData_HD%TMax          = p_FAST%TMax
+      Init%InData_HD%Linearize     = p_FAST%Linearize
+      if (p_FAST%WrVTK /= VTK_None) Init%InData_HD%VisMeshes=.true.
+      
+      ! if ( p_FAST%CompSeaSt == Module_SeaSt ) then  ! this is always true
+         Init%InData_HD%WtrDpth        =  Init%OutData_SeaSt%WtrDpth
          Init%InData_HD%NStepWave      =  Init%OutData_SeaSt%NStepWave
          Init%InData_HD%NStepWave2     =  Init%OutData_SeaSt%NStepWave2
-         Init%InData_HD%RhoXg          =  Init%OutData_SeaSt%RhoXg
          Init%InData_HD%WaveMod        =  Init%OutData_SeaSt%WaveMod
          Init%InData_HD%WaveDirMod     =  Init%OutData_SeaSt%WaveDirMod
          Init%InData_HD%WvLowCOff      =  Init%OutData_SeaSt%WvLowCOff 
@@ -855,31 +876,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_HD%MCFD           =  Init%OutData_SeaSt%MCFD
 
          Init%InData_HD%WaveField => Init%OutData_SeaSt%WaveField
-      end if
+      ! end if
       
-   end if
-   
-   ! ........................
-   ! initialize HydroDyn
-   ! ........................
-   ALLOCATE( HD%Input( p_FAST%InterpOrder+1 ), HD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
-      IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating HD%Input and HD%InputTimes.",ErrStat,ErrMsg,RoutineName)
-         CALL Cleanup()
-         RETURN
-      END IF
-
-   IF ( p_FAST%CompHydro == Module_HD ) THEN
-
-      Init%InData_HD%Gravity       = p_FAST%Gravity
-      Init%InData_HD%WtrDens       = Init%OutData_SeaSt%WtrDens
-      Init%InData_HD%WtrDpth       = Init%OutData_SeaSt%WtrDpth
-      Init%InData_HD%UseInputFile  = .TRUE.
-      Init%InData_HD%InputFile     = p_FAST%HydroFile
-      Init%InData_HD%OutRootName   = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_HD))
-      Init%InData_HD%TMax          = p_FAST%TMax
-      Init%InData_HD%Linearize     = p_FAST%Linearize
-      if (p_FAST%WrVTK /= VTK_None) Init%InData_HD%VisMeshes=.true.
 
       CALL HydroDyn_Init( Init%InData_HD, HD%Input(1), HD%p,  HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), &
                           HD%OtherSt(STATE_CURR), HD%y, HD%m, p_FAST%dt_module( MODULE_HD ), Init%OutData_HD, ErrStat2, ErrMsg2 )
@@ -1050,7 +1048,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
 !      Init%InData_MAP%rootname          =  p_FAST%OutFileRoot        ! Output file name 
       Init%InData_MAP%gravity           =  p_FAST%Gravity    ! This need to be according to g from driver
-      Init%InData_MAP%sea_density       =  Init%OutData_SeaSt%WtrDens    ! This needs to be set according to seawater density in SeaState
+      Init%InData_MAP%sea_density       =  Init%OutData_SeaSt%WaveField%WtrDens    ! This needs to be set according to seawater density in SeaState
       Init%InData_MAP%depth             =  Init%OutData_SeaSt%WtrDpth    ! This need to be set according to the water depth in SeaState
 
    ! differences for MAP++
@@ -1103,7 +1101,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_MD%FarmSize       = 0                           ! 0 here indicates normal FAST module use of MoorDyn, for a single turbine
       Init%InData_MD%TurbineRefPos(:,1) = 0.0_DbKi                ! for normal FAST use, the global reference frame is at 0,0,0
       Init%InData_MD%g         = p_FAST%Gravity                   ! This need to be according to g used in ElastoDyn
-      Init%InData_MD%rhoW      = Init%OutData_SeaSt%WtrDens       ! This needs to be set according to seawater density in SeaState
+      Init%InData_MD%rhoW      = Init%OutData_SeaSt%WaveField%WtrDens       ! This needs to be set according to seawater density in SeaState
       Init%InData_MD%WtrDepth  = Init%OutData_SeaSt%WtrDpth       ! This need to be set according to the water depth in SeaState
       Init%InData_MD%Tmax      = p_FAST%TMax                      ! expected simulation duration (used by MoorDyn for wave kinematics preprocesing)
 
@@ -1148,7 +1146,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_FEAM%PtfmInit    = Init%OutData_ED%PlatformPos !ED%x(STATE_CURR)%QT(1:6)   ! initial position of the platform !bjj: this should come from Init%OutData_ED, not x_ED
       Init%InData_FEAM%NStepWave   = 1                          ! an arbitrary number > 0 (to set the size of the wave data, which currently contains all zero values)     
       Init%InData_FEAM%gravity     = p_FAST%Gravity     ! This need to be according to g from driver
-      Init%InData_FEAM%WtrDens     = Init%OutData_SeaSt%WtrDens     ! This needs to be set according to seawater density in SeaState
+      Init%InData_FEAM%WtrDens     = Init%OutData_SeaSt%WaveField%WtrDens     ! This needs to be set according to seawater density in SeaState
 !      Init%InData_FEAM%depth       =  Init%OutData_SeaSt%WtrDpth    ! This need to be set according to the water depth in SeaState
 
       CALL FEAM_Init( Init%InData_FEAM, FEAM%Input(1), FEAM%p,  FEAM%x(STATE_CURR), FEAM%xd(STATE_CURR), FEAM%z(STATE_CURR), &
@@ -1260,7 +1258,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_IceD%InputFile     = p_FAST%IceFile
       Init%InData_IceD%RootName      = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_IceD))//'1'     
       Init%InData_IceD%MSL2SWL       = Init%OutData_SeaSt%WaveField%MSL2SWL
-      Init%InData_IceD%WtrDens       = Init%OutData_SeaSt%WtrDens
+      Init%InData_IceD%WtrDens       = Init%OutData_SeaSt%WaveField%WtrDens
       Init%InData_IceD%gravity       = p_FAST%Gravity
       Init%InData_IceD%TMax          = p_FAST%TMax
       Init%InData_IceD%LegNum        = 1

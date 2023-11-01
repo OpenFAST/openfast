@@ -224,6 +224,8 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          
       p%WaveField%MSL2SWL    = InputFileData%MSL2SWL
       p%WaveField%WaveStMod  = InputFileData%WaveStMod
+      p%WaveField%WtrDens    = InputFileData%WtrDens     ! may have overwritten default InitInp
+      p%WaveField%RhoXg      = p%WaveField%WtrDens*InitInp%Gravity               ! For WAMIT and WAMIT2
       
 
          ! Initialize Waves module (Note that this may change InputFileData%Waves%WaveDT)
@@ -352,7 +354,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ! Define initialization-routine output here:
       InitOut%Ver = SeaSt_ProgDesc         
       ! These three come directly from processing the inputs, and so will exist even if not using Morison elements:
-      InitOut%WtrDens    = InputFileData%Waves%WtrDens
       InitOut%WtrDpth    = InputFileData%Waves%WtrDpth - InputFileData%MSL2SWL
       p%WaveField%EffWtrDpth = InputFileData%Waves%WtrDpth  ! Effective water depth measured from the SWL  ! bjj: does WtrDpth change later? Because otherwise EffWtrDpth is the same as WtrDpth
       
@@ -397,7 +398,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%WaveDirMax   =  Waves_InitOut%WaveDirMax          ! For WAMIT and WAMIT2
        InitOut%WaveDOmega   =  Waves_InitOut%WaveDOmega          ! For WAMIT and WAMIT2, FIT
        
-       InitOut%RhoXg        =  Waves_InitOut%RhoXg               ! For WAMIT and WAMIT2
        InitOut%NStepWave    =  Waves_InitOut%NStepWave           ! For WAMIT, WAMIT2, SS_Excitation, Morison
        InitOut%NStepWave2   =  Waves_InitOut%NStepWave2          ! For WAMIT and WAMIT2,  FIT
       
@@ -410,7 +410,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%WvHiCOffS    =  InputFileData%Waves2%WvHiCOffS 
        InitOut%WaveDirMod   =  InputFileData%Waves%WaveDirMod
        InitOut%WaveDir      =  InputFileData%Waves%WaveDir       ! For WAMIT for use in SS_Excitation
-       ! InitOut%WtrDens      =  InputFileData%Waves%WtrDens
        ! InitOut%WtrDpth      =  InputFileData%Waves%WtrDpth
        
       InitOut%SeaSt_Interp_p =  p%seast_interp_p

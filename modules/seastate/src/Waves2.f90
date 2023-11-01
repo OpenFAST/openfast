@@ -634,7 +634,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
                         !> Dynamic pressure
                         !> * \f$ P_{nm}^- = \rho_\mathrm{w} B_{nm}^- \omega_{\mu^-} \f$
-                     DynP_nm_minus  = REAL(InitInp%WtrDens,SiKi) * B_minus * Omega_minus
+                     DynP_nm_minus  = REAL(WaveField%WtrDens,SiKi) * B_minus * Omega_minus
 
 
 
@@ -1009,7 +1009,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
                      !> Dynamic pressure
                      !> * \f$ P_{nn}^+ = \rho_\mathrm{w} B_{nn}^+ \omega_{\mu^+} \f$
-                  DynP_nm_plus  = REAL(InitInp%WtrDens, SiKi) * B_plus * Omega_plus
+                  DynP_nm_plus  = REAL(WaveField%WtrDens, SiKi) * B_plus * Omega_plus
 
 
 
@@ -1111,7 +1111,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
                         !> Dynamic pressure
                         !> * \f$ P_{nm}^+ = \rho_\mathrm{w} B_{nm}^+ \omega_{\mu^+} \f$
-                     DynP_nm_plus  = REAL(InitInp%WtrDens,SiKi) * B_plus * Omega_plus
+                     DynP_nm_plus  = REAL(WaveField%WtrDens,SiKi) * B_plus * Omega_plus
 
 
 

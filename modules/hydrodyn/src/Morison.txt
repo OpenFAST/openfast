@@ -225,7 +225,6 @@ typedef   ^                            ^                             INTEGER    
 #   e.g.,  the name of the input file,  the file root name,etc.
 #
 typedef   ^                            InitInputType                 ReKi                     Gravity                          -          -        -         "Gravity (scalar, positive-valued)"    m/s^2
-typedef   ^                            ^                             ReKi                     WtrDens                          -          -        -         "Water density"    kg/m^3
 typedef   ^                            ^                             ReKi                     WtrDpth                          -          -        -         "Water depth (positive-valued)"    m
 typedef   ^                            ^                             INTEGER                  WaveDisp                         -          -        -         "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
 typedef   ^                            ^                             INTEGER                  AMMod                            -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]" -
@@ -335,7 +334,6 @@ typedef   ^                            ^                             MeshMapType
 #
 typedef   ^                            ParameterType                 DbKi                     DT                            -          -        -         "Time step for continuous state integration & discrete state update"  (sec)
 typedef   ^                            ^                             ReKi                     Gravity                       -          -        -         "Gravity (scalar, positive-valued)"    m/s^2
-typedef   ^                            ^                             ReKi                     WtrDens                       -          -        -         "Water density"    kg/m^3
 typedef   ^                            ^                             ReKi                     WtrDpth                       -          -        -         "Water depth (positive-valued)"    m
 typedef   ^                            ^                             INTEGER                  WaveDisp                      -          -        -         "Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) " -
 typedef   ^                            ^                             INTEGER                  AMMod                         -          -        -         "Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState]" -

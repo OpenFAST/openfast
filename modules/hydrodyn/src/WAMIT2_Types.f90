@@ -46,11 +46,9 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmRefzt      !< The zt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1; must be 0.0 if NBodyMod=2 ] [(m)]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: PtfmRefztRot      !< The rotation about zt of the body reference frame(s) from xt/yt [radians]
     REAL(ReKi)  :: WAMITULEN = 0.0_ReKi      !< WAMIT unit length scale [-]
-    REAL(ReKi)  :: RhoXg = 0.0_ReKi      !< Density * Gravity -- from the Waves module. [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
     REAL(ReKi)  :: WaveDOmega = 0.0_ReKi      !< Frequency step for incident wave calculations [(rad/s)]
-    REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density [(kg/m^3)]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth (positive-valued) [(m)]
     REAL(SiKi)  :: WaveDir = 0.0_R4Ki      !< Mean incident wave propagation heading direction [(degrees)]
@@ -169,11 +167,9 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
       DstInitInputData%PtfmRefztRot = SrcInitInputData%PtfmRefztRot
    end if
    DstInitInputData%WAMITULEN = SrcInitInputData%WAMITULEN
-   DstInitInputData%RhoXg = SrcInitInputData%RhoXg
    DstInitInputData%NStepWave = SrcInitInputData%NStepWave
    DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
    DstInitInputData%WaveDOmega = SrcInitInputData%WaveDOmega
-   DstInitInputData%WtrDens = SrcInitInputData%WtrDens
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
    DstInitInputData%WaveDir = SrcInitInputData%WaveDir
@@ -253,11 +249,9 @@ subroutine WAMIT2_PackInitInput(Buf, Indata)
       call RegPack(Buf, InData%PtfmRefztRot)
    end if
    call RegPack(Buf, InData%WAMITULEN)
-   call RegPack(Buf, InData%RhoXg)
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
    call RegPack(Buf, InData%WaveDOmega)
-   call RegPack(Buf, InData%WtrDens)
    call RegPack(Buf, InData%Gravity)
    call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, InData%WaveDir)
@@ -365,15 +359,11 @@ subroutine WAMIT2_UnPackInitInput(Buf, OutData)
    end if
    call RegUnpack(Buf, OutData%WAMITULEN)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RhoXg)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NStepWave2)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDOmega)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Gravity)
    if (RegCheckErr(Buf, RoutineName)) return

@@ -55,6 +55,8 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevC      !< Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part [(m)]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevC0      !< Fourier components of the incident wave elevation at the platform reference point. First column is the real part; second column is the imaginary part [(m)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveDirArr      !< Wave direction array. Each frequency has a unique direction of WaveNDir > 1 [(degrees)]
+    REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default) [(kg/m^3)]
+    REAL(SiKi)  :: RhoXg = 0.0_R4Ki      !< = WtrDens*Gravity [-]
   END TYPE SeaSt_WaveFieldType
 ! =======================
 CONTAINS
@@ -257,6 +259,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
       end if
       DstSeaSt_WaveFieldTypeData%WaveDirArr = SrcSeaSt_WaveFieldTypeData%WaveDirArr
    end if
+   DstSeaSt_WaveFieldTypeData%WtrDens = SrcSeaSt_WaveFieldTypeData%WtrDens
+   DstSeaSt_WaveFieldTypeData%RhoXg = SrcSeaSt_WaveFieldTypeData%RhoXg
 end subroutine
 
 subroutine SeaSt_WaveField_DestroySeaSt_WaveFieldType(SeaSt_WaveFieldTypeData, ErrStat, ErrMsg)
@@ -401,6 +405,8 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%WaveDirArr), ubound(InData%WaveDirArr))
       call RegPack(Buf, InData%WaveDirArr)
    end if
+   call RegPack(Buf, InData%WtrDens)
+   call RegPack(Buf, InData%RhoXg)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -629,6 +635,10 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveDirArr)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
+   call RegUnpack(Buf, OutData%WtrDens)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%RhoXg)
+   if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 END MODULE SeaSt_WaveField_Types
 !ENDOFREGISTRYGENERATEDFILE

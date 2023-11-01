@@ -1090,7 +1090,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
             WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*( InitInp%WaveKinGridxi(WaveKinPrimeMap(J))*CosWaveDir(I) + &
                                                          InitInp%WaveKinGridyi(WaveKinPrimeMap(J))*SinWaveDir(I) ))
 
-            WaveDynPC0 (I,J)     = InitOut%RhoXg*tmpComplex*WaveElevxiPrime0 * COSHNumOvrCOSHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
+            WaveDynPC0 (I,J)     = WaveField%RhoXg*tmpComplex*WaveElevxiPrime0 * COSHNumOvrCOSHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
 
             WaveVelC0Hxi (I,J)   = CosWaveDir(I)*OmegaArr(I)*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
             WaveVelC0Hyi (I,J)   = SinWaveDir(I)*OmegaArr(I)*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
@@ -1116,7 +1116,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
                WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*( InitInp%WaveKinGridxi(J)*CosWaveDir(I) + &
                                                             InitInp%WaveKinGridyi(J)*SinWaveDir(I) ))
                ! Partial derivatives at zi = 0
-               PWaveDynPC0BPz0 (I,J) = InitOut%RhoXg*      tmpComplex*WaveElevxiPrime0*WaveNmbr*TANH ( WaveNmbr*InitInp%WtrDpth )
+               PWaveDynPC0BPz0 (I,J) = WaveField%RhoXg*      tmpComplex*WaveElevxiPrime0*WaveNmbr*TANH ( WaveNmbr*InitInp%WtrDpth )
                PWaveVelC0HxiPz0(I,J) = CosWaveDir(I)*OmegaArr(I)*tmpComplex*WaveElevxiPrime0*WaveNmbr
                PWaveVelC0HyiPz0(I,J) = SinWaveDir(I)*OmegaArr(I)*tmpComplex*WaveElevxiPrime0*WaveNmbr
             
@@ -1651,7 +1651,6 @@ SUBROUTINE Waves_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       !InitOut%WriteOutputHdr = (/ 'Time', 'Column2' /)
       !InitOut%WriteOutputUnt = (/ '(s)',  '(-)'     /)
 
-      InitOut%RhoXg         = InitInp%WtrDens*InitInp%Gravity
 
 
 

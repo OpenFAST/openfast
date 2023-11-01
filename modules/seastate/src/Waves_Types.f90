@@ -59,7 +59,6 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:2)  :: WaveSeed = 0_IntKi      !< Random seeds of incident waves [-2147483648 to 2147483647] [-]
     REAL(DbKi)  :: WaveTMax = 0.0_R8Ki      !< Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT [(sec)]
     REAL(SiKi)  :: WaveTp = 0.0_R4Ki      !< Peak spectral period of incident waves [(sec)]
-    REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density [(kg/m^3)]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [(meters)]
     INTEGER(IntKi)  :: NWaveElevGrid = 0_IntKi      !< Number of grid points where the incident wave elevations are computed (the XY grid point locations) [-]
     INTEGER(IntKi)  :: NWaveKinGrid = 0_IntKi      !< Number of grid points where the incident wave kinematics will be computed [-]
@@ -90,7 +89,6 @@ IMPLICIT NONE
     REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev => NULL()      !< Instantaneous elevation time-series of incident waves at each of the  XY grid points [(meters)]
     REAL(DbKi)  :: WaveTMax = 0.0_R8Ki      !< Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT [(sec)]
-    REAL(SiKi)  :: RhoXg = 0.0_R4Ki      !< = WtrDens*Gravity [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
   END TYPE Waves_InitOutputType
@@ -133,7 +131,6 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%WaveSeed = SrcInitInputData%WaveSeed
    DstInitInputData%WaveTMax = SrcInitInputData%WaveTMax
    DstInitInputData%WaveTp = SrcInitInputData%WaveTp
-   DstInitInputData%WtrDens = SrcInitInputData%WtrDens
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
    DstInitInputData%NWaveElevGrid = SrcInitInputData%NWaveElevGrid
    DstInitInputData%NWaveKinGrid = SrcInitInputData%NWaveKinGrid
@@ -270,7 +267,6 @@ subroutine Waves_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%WaveSeed)
    call RegPack(Buf, InData%WaveTMax)
    call RegPack(Buf, InData%WaveTp)
-   call RegPack(Buf, InData%WtrDens)
    call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, InData%NWaveElevGrid)
    call RegPack(Buf, InData%NWaveKinGrid)
@@ -369,8 +365,6 @@ subroutine Waves_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%WaveTMax)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveTp)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -490,7 +484,6 @@ subroutine Waves_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    DstInitOutputData%WaveDOmega = SrcInitOutputData%WaveDOmega
    DstInitOutputData%WaveElev => SrcInitOutputData%WaveElev
    DstInitOutputData%WaveTMax = SrcInitOutputData%WaveTMax
-   DstInitOutputData%RhoXg = SrcInitOutputData%RhoXg
    DstInitOutputData%NStepWave = SrcInitOutputData%NStepWave
    DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
 end subroutine
@@ -524,7 +517,6 @@ subroutine Waves_PackInitOutput(Buf, Indata)
       end if
    end if
    call RegPack(Buf, InData%WaveTMax)
-   call RegPack(Buf, InData%RhoXg)
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -573,8 +565,6 @@ subroutine Waves_UnPackInitOutput(Buf, OutData)
       OutData%WaveElev => null()
    end if
    call RegUnpack(Buf, OutData%WaveTMax)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RhoXg)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return

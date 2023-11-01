@@ -36,7 +36,6 @@ IMPLICIT NONE
 ! =========  Waves2_InitInputType  =======
   TYPE, PUBLIC :: Waves2_InitInputType
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravitational acceleration [(m/s^2)]
-    REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density [(kg/m^3)]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [(meters)]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
@@ -86,7 +85,6 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstInitInputData%Gravity = SrcInitInputData%Gravity
-   DstInitInputData%WtrDens = SrcInitInputData%WtrDens
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
    DstInitInputData%NStepWave = SrcInitInputData%NStepWave
    DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
@@ -163,7 +161,6 @@ subroutine Waves2_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Waves2_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%Gravity)
-   call RegPack(Buf, InData%WtrDens)
    call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
@@ -205,8 +202,6 @@ subroutine Waves2_UnPackInitInput(Buf, OutData)
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
    call RegUnpack(Buf, OutData%Gravity)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return

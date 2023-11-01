@@ -42,7 +42,6 @@ typedef     ^                 ^                 CHARACTER(80)        WavePkShpCh
 typedef     ^                 ^                 INTEGER              WaveSeed          {2}      -        -        "Random seeds of incident waves [-2147483648 to 2147483647]"   -
 typedef     ^                 ^                 DbKi                 WaveTMax          -        -        -        "Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT"  (sec)
 typedef     ^                 ^                 SiKi                 WaveTp            -        -        -        "Peak spectral period of incident waves"  (sec)
-typedef     ^                 ^                 ReKi                 WtrDens           -        -        -        "Water density"   (kg/m^3)
 typedef     ^                 ^                 ReKi                 WtrDpth           -        -        -        "Water depth"  (meters)
 typedef     ^                 ^                 INTEGER              NWaveElevGrid     -        -        -        "Number of grid points where the incident wave elevations are computed (the XY grid point locations)"  -
 typedef     ^                 ^                 INTEGER              NWaveKinGrid      -        -        -        "Number of grid points where the incident wave kinematics will be computed"  -
@@ -72,7 +71,6 @@ typedef     ^                 InitOutputType    INTEGER              WaveNDir   
 typedef     ^                 InitOutputType    SiKi                 WaveDOmega        -        -        -        "Frequency step for incident wave calculations" (rad/s)
 typedef     ^                 InitOutputType    SiKi                 WaveElev          {*}{*}{*}   -        -        "Instantaneous elevation time-series of incident waves at each of the  XY grid points" (meters)
 typedef     ^                 InitOutputType    DbKi                 WaveTMax          -        -        -        "Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT"  (sec)
-typedef     ^                 InitOutputType    SiKi                 RhoXg             -        -        -        "= WtrDens*Gravity" -
 typedef     ^                 InitOutputType    INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
 typedef     ^                 InitOutputType    INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
 

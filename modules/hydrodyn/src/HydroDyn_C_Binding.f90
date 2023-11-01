@@ -404,7 +404,6 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C,                                      
 
    ! Values passed in
    HD%InitInp%Gravity            = REAL(Gravity_C,    ReKi)
-   HD%InitInp%WtrDens            = REAL(SeaSt%InitOutData%WtrDens, ReKi)    ! use values from SeaState
    HD%InitInp%WtrDpth            = REAL(SeaSt%InitOutData%WtrDpth, ReKi)    ! use values from SeaState
    HD%InitInp%TMax               = REAL(TMax_C,       DbKi)
 
@@ -412,7 +411,6 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C,                                      
    ! Need to set up other module's InitInput data here because we will also need to clean up SeaState data and would rather not defer that cleanup
    HD%InitInp%NStepWave      =  SeaSt%InitOutData%NStepWave
    HD%InitInp%NStepWave2     =  SeaSt%InitOutData%NStepWave2
-   HD%InitInp%RhoXg          =  SeaSt%InitOutData%RhoXg
    HD%InitInp%WaveMod        =  SeaSt%InitOutData%WaveMod
    HD%InitInp%WaveDirMod     =  SeaSt%InitOutData%WaveDirMod
    HD%InitInp%WvLowCOff      =  SeaSt%InitOutData%WvLowCOff 

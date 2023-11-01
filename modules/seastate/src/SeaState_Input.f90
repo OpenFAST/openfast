@@ -95,7 +95,7 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
    CurLine = CurLine + 1
 
       ! WtrDens - Water density.
-   call ParseVarWDefault ( FileInfo_In, CurLine, 'WtrDens', InputFileData%Waves%WtrDens, defWtrDens, ErrStat2, ErrMsg2, UnEc )
+   call ParseVarWDefault ( FileInfo_In, CurLine, 'WtrDens', InputFileData%WtrDens, defWtrDens, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WtrDpth - Water depth
@@ -536,7 +536,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
       ! WtrDens - Water density.
 
-   if ( InputFileData%Waves%WtrDens < 0.0 )  then
+   if ( InputFileData%WtrDens < 0.0 )  then
       call SetErrStat( ErrID_Fatal,'WtrDens must not be negative.',ErrStat,ErrMsg,RoutineName)
       return
    end if
@@ -1191,7 +1191,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
             ! If we are using the Waves module, the node information must be copied over.
       InputFileData%Waves2%NWaveKinGrid   = InputFileData%Waves%NWaveKinGrid                          ! Number of points where the incident wave kinematics will be computed (-)
       if ( InputFileData%Waves2%WvDiffQTFF .OR. InputFileData%Waves2%WvSumQTFF ) then
-         InputFileData%Waves2%WtrDens       = InputFileData%Waves%WtrDens
          InputFileData%Waves2%Gravity       = InitInp%Gravity
          InputFileData%Waves2%WtrDpth       = InputFileData%Waves%WtrDpth
          InputFileData%Waves2%NGrid         = p%NGrid

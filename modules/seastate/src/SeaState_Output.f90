@@ -1031,7 +1031,7 @@ SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, Waves_InitOut, ErrS
       IF (InputFileData%Waves%WaveMod /= 0 .and. InputFileData%Waves%WaveMod /= 6)  THEN
             
             WRITE( UnSum, '(1X,A61,F8.2,A4/)' )           'The Mean Sea Level to Still Water Level (MSL2SWL) Offset is :',InputFileData%MSL2SWL,' (m)'
-            WRITE( UnSum, '(1X,A15,F8.2,A8)' )            'Water Density: ', InputFileData%Waves%WtrDens, '(kg/m^3)'
+            WRITE( UnSum, '(1X,A15,F8.2,A8)' )            'Water Density: ', InputFileData%WtrDens, '(kg/m^3)'
             WRITE( UnSum, '(1X,A15,F8.2,A20,F8.2,A19)' )  'Water Depth  : ', InputFileData%Waves%WtrDpth - InputFileData%MSL2SWL, '(m) relative to MSL; ', &
                                                                              InputFileData%Waves%WtrDpth,                         '(m) relative to SWL'
             WRITE( UnSum, '(1X,A15,F8.2,A20,F8.2,A19/)' ) 'Grid Z_Depth : ', InputFileData%Z_Depth - InputFileData%MSL2SWL, '(m) relative to MSL; ', &

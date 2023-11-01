@@ -48,6 +48,7 @@ typedef   ^                  ^                      LOGICAL                  Sea
 typedef   ^                  ^                      CHARACTER(20)            OutFmt            -       -      -  "Output format for numerical results"    -
 typedef   ^                  ^                      CHARACTER(20)            OutSFmt           -       -      -  "Output format for header strings"    -
 typedef   ^                  ^                      INTEGER                  WaveStMod         -       -      -  "Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching}"   -
+typedef   ^                  ^                      ReKi                     WtrDens           -       -      -  "Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default)"    (kg/m^3)
 
 typedef   SeaState/SeaSt     InitInputType          CHARACTER(1024)          InputFile                       -          -          -         "Supplied by Driver:  full path and filename for the SeaState module"    -
 typedef   ^                  ^                      LOGICAL                  UseInputFile                    -       .TRUE.        -         "Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller"    -
@@ -73,14 +74,12 @@ typedef   ^                  ^                      Logical                  Lin
 typedef   ^                  InitOutputType         CHARACTER(ChanLen)       WriteOutputHdr    {:}     -      -  "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
 typedef   ^                  ^                      CHARACTER(ChanLen)       WriteOutputUnt    {:}     -      -  "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
 typedef   ^                  ^                      ProgDesc                 Ver               -       -      -  "Version of SeaState"
-typedef   ^                  ^                      ReKi                     WtrDens           -       -      -  "Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default)"    (kg/m^3)
 typedef   ^                  ^                      ReKi                     WtrDpth           -       -      -  "Water depth, this is necessary to inform glue-code what the module is using for WtrDpth (may not be the glue-code's default)"    (m)
 typedef   ^                  ^                 SiKi                 WaveDirMin        -        -        -        "Minimum wave direction."  (degrees)
 typedef   ^                  ^                 SiKi                 WaveDirMax        -        -        -        "Maximum wave direction."  (degrees)
 typedef   ^                  ^                 SiKi                 WaveDir           -        -        -        "Incident wave propagation heading direction" (degrees)
 typedef   ^                  ^                 LOGICAL              WaveMultiDir      -        -        -        "Indicates the waves are multidirectional -- set by HydroDyn_Input"  -
 typedef   ^                  ^                 SiKi                 WaveDOmega        -        -        -        "Frequency step for incident wave calculations" (rad/s)
-typedef     ^                 ^                 SiKi                 RhoXg             -        -        -        "= WtrDens*Gravity" -
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
 typedef     ^                 ^                 INTEGER              WaveMod           -        -        -        "Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED }" -

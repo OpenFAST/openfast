@@ -25,3 +25,5 @@ typedef     ^                ^                     SiKi                         
 typedef     ^                ^                     SiKi                          WaveElevC0      {:}{:}           -        -        "Fourier components of the incident wave elevation at the platform reference point. First column is the real part; second column is the imaginary part" (m)
 typedef     ^                ^                     SiKi                          WaveDirArr      {:}              -        -        "Wave direction array. Each frequency has a unique direction of WaveNDir > 1" (degrees)
 
+typedef     ^                ^                     ReKi                          WtrDens          -               -        -        "Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default)"    (kg/m^3)
+typedef     ^                ^                     SiKi                          RhoXg            -               -        -        "= WtrDens*Gravity" -

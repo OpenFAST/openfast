@@ -60,7 +60,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: WaveDir = 0.0_ReKi      !<  [-]
     CHARACTER(1024)  :: WAMITFile      !<  [-]
     TYPE(Conv_Rdtn_InitInputType)  :: Conv_Rdtn      !<  [-]
-    REAL(ReKi)  :: Rhoxg = 0.0_ReKi      !<  [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !<  [-]
     REAL(ReKi)  :: WaveDOmega = 0.0_ReKi      !<  [-]
@@ -68,7 +67,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev1 => NULL()      !< First order wave elevation (points to SeaState module data) [-]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElevC => NULL()      !< Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part [(meters)]
     INTEGER(IntKi)  :: WaveMod = 0_IntKi      !<  [-]
-    REAL(ReKi)  :: WtrDens = 0.0_ReKi      !<  [-]
     REAL(SiKi)  :: WaveDirMin = 0.0_R4Ki      !< Minimum wave direction from Waves module [-]
     REAL(SiKi)  :: WaveDirMax = 0.0_R4Ki      !< Maximum wave direction from Waves module [-]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
@@ -269,7 +267,6 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    call Conv_Rdtn_CopyInitInput(SrcInitInputData%Conv_Rdtn, DstInitInputData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstInitInputData%Rhoxg = SrcInitInputData%Rhoxg
    DstInitInputData%NStepWave = SrcInitInputData%NStepWave
    DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
    DstInitInputData%WaveDOmega = SrcInitInputData%WaveDOmega
@@ -277,7 +274,6 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%WaveElev1 => SrcInitInputData%WaveElev1
    DstInitInputData%WaveElevC => SrcInitInputData%WaveElevC
    DstInitInputData%WaveMod = SrcInitInputData%WaveMod
-   DstInitInputData%WtrDens = SrcInitInputData%WtrDens
    DstInitInputData%WaveDirMin = SrcInitInputData%WaveDirMin
    DstInitInputData%WaveDirMax = SrcInitInputData%WaveDirMax
    call SeaSt_Interp_CopyParam(SrcInitInputData%SeaSt_Interp_p, DstInitInputData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2)
@@ -381,7 +377,6 @@ subroutine WAMIT_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%WaveDir)
    call RegPack(Buf, InData%WAMITFile)
    call Conv_Rdtn_PackInitInput(Buf, InData%Conv_Rdtn) 
-   call RegPack(Buf, InData%Rhoxg)
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
    call RegPack(Buf, InData%WaveDOmega)
@@ -410,7 +405,6 @@ subroutine WAMIT_PackInitInput(Buf, Indata)
       end if
    end if
    call RegPack(Buf, InData%WaveMod)
-   call RegPack(Buf, InData%WtrDens)
    call RegPack(Buf, InData%WaveDirMin)
    call RegPack(Buf, InData%WaveDirMax)
    call SeaSt_Interp_PackParam(Buf, InData%SeaSt_Interp_p) 
@@ -559,8 +553,6 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%WAMITFile)
    if (RegCheckErr(Buf, RoutineName)) return
    call Conv_Rdtn_UnpackInitInput(Buf, OutData%Conv_Rdtn) ! Conv_Rdtn 
-   call RegUnpack(Buf, OutData%Rhoxg)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NStepWave2)
@@ -640,8 +632,6 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
       OutData%WaveElevC => null()
    end if
    call RegUnpack(Buf, OutData%WaveMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDirMin)
    if (RegCheckErr(Buf, RoutineName)) return

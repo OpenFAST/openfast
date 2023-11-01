@@ -89,13 +89,11 @@ IMPLICIT NONE
     CHARACTER(1024)  :: OutRootName      !< Supplied by Driver:  The name of the root file (without extension) including the full path [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
-    REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density from the driver; may be overwritten                       [(kg/m^3)]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth from the driver; may be overwritten                         [m]
     REAL(DbKi)  :: TMax = 0.0_R8Ki      !< Supplied by Driver:  The total simulation time [(sec)]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
     INTEGER(IntKi)  :: NStepWave = 0      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0      !< NStepWave / 2 [-]
-    REAL(SiKi)  :: RhoXg = 0.0_R4Ki      !< = WtrDens*Gravity [-]
     INTEGER(IntKi)  :: WaveMod = 0_IntKi      !< Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED } [-]
     INTEGER(IntKi)  :: WaveDirMod = 0_IntKi      !< Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6] [-]
     REAL(SiKi)  :: WvLowCOff = 0.0_R4Ki      !< Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
@@ -897,13 +895,11 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    DstInitInputData%OutRootName = SrcInitInputData%OutRootName
    DstInitInputData%Linearize = SrcInitInputData%Linearize
    DstInitInputData%Gravity = SrcInitInputData%Gravity
-   DstInitInputData%WtrDens = SrcInitInputData%WtrDens
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
    DstInitInputData%TMax = SrcInitInputData%TMax
    DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
    DstInitInputData%NStepWave = SrcInitInputData%NStepWave
    DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
-   DstInitInputData%RhoXg = SrcInitInputData%RhoXg
    DstInitInputData%WaveMod = SrcInitInputData%WaveMod
    DstInitInputData%WaveDirMod = SrcInitInputData%WaveDirMod
    DstInitInputData%WvLowCOff = SrcInitInputData%WvLowCOff
@@ -978,13 +974,11 @@ subroutine HydroDyn_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%OutRootName)
    call RegPack(Buf, InData%Linearize)
    call RegPack(Buf, InData%Gravity)
-   call RegPack(Buf, InData%WtrDens)
    call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, InData%TMax)
    call RegPack(Buf, InData%VisMeshes)
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
-   call RegPack(Buf, InData%RhoXg)
    call RegPack(Buf, InData%WaveMod)
    call RegPack(Buf, InData%WaveDirMod)
    call RegPack(Buf, InData%WvLowCOff)
@@ -1041,8 +1035,6 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Gravity)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WtrDens)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%TMax)
@@ -1052,8 +1044,6 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NStepWave2)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%RhoXg)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveMod)
    if (RegCheckErr(Buf, RoutineName)) return

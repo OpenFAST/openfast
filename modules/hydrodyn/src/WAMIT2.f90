@@ -3996,9 +3996,9 @@ END SUBROUTINE WAMIT2_Init
 
          IF ( Data3D%DataMask( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) ) ) THEN
             IF ( .NOT. EqualRealNos(REAL(Data3D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) ),SiKi), &
-                                    REAL(InitInp%RhoXg * InitInp%WAMITULEN**K * RawData3D(I,7)               ,SiKi)) .AND. &
+                                REAL(InitInp%WaveField%RhoXg * InitInp%WAMITULEN**K * RawData3D(I,7)               ,SiKi)) .AND. &
                  .NOT. EqualRealNos( AIMAG(Data3D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) ) ), &
-                                    REAL(InitInp%RhoXg * InitInp%WAMITULEN**K * RawData3D(I,8)               ,SiKi)) ) THEN
+                                REAL(InitInp%WaveField%RhoXg * InitInp%WAMITULEN**K * RawData3D(I,8)               ,SiKi)) ) THEN
                CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//' of '//TRIM(Filename3D)// &
                         ' contains different values for the real and imaginary part (columns 7 and 8) than was '// &
                         'given earlier in the file for the same values of wave frequency and wave direction '// &
@@ -4011,7 +4011,7 @@ END SUBROUTINE WAMIT2_Init
 
                ! Store the data after dimensionalizing
             Data3D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) ) = &
-                      REAL(InitInp%RhoXg * InitInp%WAMITULEN**K,SiKi) * CMPLX(RawData3D(I,7),RawData3D(I,8),SiKi)
+                      REAL(InitInp%WaveField%RhoXg * InitInp%WAMITULEN**K,SiKi) * CMPLX(RawData3D(I,7),RawData3D(I,8),SiKi)
 
                ! Set flag indicating that this value has been inserted.
             Data3D%DataMask( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) ) = .TRUE.
@@ -4760,9 +4760,9 @@ END SUBROUTINE WAMIT2_Init
 
          IF ( Data4D%DataMask( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) ) ) THEN
             IF ( .NOT. EqualRealNos( REAL(Data4D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) ),SiKi), &
-                                     REAL(InitInp%RhoXg * InitInp%WAMITULEN**K * RawData4D(I,8)                            ,SiKi)) .AND. &
+                                     REAL(InitInp%WaveField%RhoXg * InitInp%WAMITULEN**K * RawData4D(I,8)                            ,SiKi)) .AND. &
                  .NOT. EqualRealNos(AIMAG(Data4D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) )), &
-                                     REAL(InitInp%RhoXg * InitInp%WAMITULEN**K * RawData4D(I,9)                            ,SiKi))) THEN
+                                     REAL(InitInp%WaveField%RhoXg * InitInp%WAMITULEN**K * RawData4D(I,9)                            ,SiKi))) THEN
                CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//' of '//TRIM(Filename4D)// &
                         ' contains different values for the real and imaginary part (columns 8 and 9) than was '// &
                         'given earlier in the file for the same values of wave frequency and wave direction '// &
@@ -4775,7 +4775,7 @@ END SUBROUTINE WAMIT2_Init
 
                ! Store the data after dimensionalizing
             Data4D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) ) = &
-                      REAL(InitInp%RhoXg * InitInp%WAMITULEN**K,SiKi) * CMPLX(RawData4D(I,8),RawData4D(I,9),SiKi)
+                      REAL(InitInp%WaveField%RhoXg * InitInp%WAMITULEN**K,SiKi) * CMPLX(RawData4D(I,8),RawData4D(I,9),SiKi)
 
                ! Set flag indicating that this value has been inserted.
             Data4D%DataMask( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) ) = .TRUE.
