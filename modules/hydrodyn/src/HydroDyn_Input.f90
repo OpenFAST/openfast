@@ -1188,15 +1188,15 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface.
    IF ( InitInp%WaveMod /= 0 .AND. InputFileData%Morison%NMembers > 0 ) THEN
       IF ( InitInp%WaveMod /= 6 ) THEN 
-         IF ( ( InitInp%WaveStMod /= 0 ) .AND. ( InitInp%WaveStMod /= 1 ) .AND. &
-              ( InitInp%WaveStMod /= 2 ) .AND. ( InitInp%WaveStMod /= 3 ) ) THEN
+         IF ( ( InitInp%WaveField%WaveStMod /= 0 ) .AND. ( InitInp%WaveField%WaveStMod /= 1 ) .AND. &
+              ( InitInp%WaveField%WaveStMod /= 2 ) .AND. ( InitInp%WaveField%WaveStMod /= 3 ) ) THEN
             ErrMsg  = ' WaveStMod must be 0, 1, 2, or 3.'
             ErrStat = ErrID_Fatal
             RETURN
          END IF
       ELSE
-         IF ( ( InitInp%WaveStMod /= 0 ) .AND. ( InitInp%WaveStMod /= 1 ) .AND. &
-              ( InitInp%WaveStMod /= 3 ) ) THEN
+         IF ( ( InitInp%WaveField%WaveStMod /= 0 ) .AND. ( InitInp%WaveField%WaveStMod /= 1 ) .AND. &
+              ( InitInp%WaveField%WaveStMod /= 3 ) ) THEN
             ErrMsg  = ' WaveStMod must be 0, 1, or 3 when WaveMod = 6.'
             ErrStat = ErrID_Fatal
             RETURN

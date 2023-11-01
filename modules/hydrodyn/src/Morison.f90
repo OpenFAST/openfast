@@ -1931,7 +1931,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%NMOutputs  = InitInp%NMOutputs                       ! Number of members to output [ >=0 and <10]
    p%WaveDisp   = InitInp%WaveDisp
    p%AMMod      = InitInp%AMMod
-   p%WaveStMod  = InitInp%WaveStMod
+   p%WaveStMod  = InitInp%WaveField%WaveStMod
    p%VisMeshes  = InitInp%VisMeshes                       ! visualization mesh for morison elements
 
    ! Only compute added-mass force up to the free surface if wave stretching is enabled

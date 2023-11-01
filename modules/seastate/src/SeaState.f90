@@ -215,14 +215,23 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InputFileData%Waves%PtfmLocationY = InitInp%PtfmLocationY
       
       ! Allocate the WaveFieldType to store wave field information
-      ALLOCATE(p%WaveField)
+      ALLOCATE(p%WaveField, STAT=ErrStat2)
+      IF (ErrStat2 /=0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating WaveField.",ErrStat,ErrMsg,RoutineName)
+         CALL CleanUp()
+         RETURN
+      END IF
+         
+      p%WaveField%MSL2SWL    = InputFileData%MSL2SWL
+      p%WaveField%WaveStMod  = InputFileData%WaveStMod
+      
 
          ! Initialize Waves module (Note that this may change InputFileData%Waves%WaveDT)
       CALL Waves_Init(InputFileData%Waves, Waves_InitOut, p%WaveField, ErrStat2, ErrMsg2 ) 
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! note that we DO NOT RETURN on error until AFTER the pointers modified, below
       
     
-      ! check error (must be done AFTER moving pointers to parameters)
+      ! check error
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp()
          RETURN
@@ -347,8 +356,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InitOut%WtrDpth    = InputFileData%Waves%WtrDpth - InputFileData%MSL2SWL
       p%WaveField%EffWtrDpth = InputFileData%Waves%WtrDpth  ! Effective water depth measured from the SWL  ! bjj: does WtrDpth change later? Because otherwise EffWtrDpth is the same as WtrDpth
       
-      p%WaveField%MSL2SWL = InputFileData%MSL2SWL
-      p%WaveStMod        = InputFileData%Waves%WaveStMod
       p%WtrDpth          = InitOut%WtrDpth  
       
       InitOut%WaveMultiDir = InputFileData%Waves%WaveMultiDir
@@ -395,7 +402,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%NStepWave2   =  Waves_InitOut%NStepWave2          ! For WAMIT and WAMIT2,  FIT
       
        InitOut%WaveMod      =  InputFileData%Waves%WaveMod   
-       InitOut%WaveStMod    =  InputFileData%Waves%WaveStMod 
        InitOut%WvLowCOff    =  InputFileData%Waves%WvLowCOff 
        InitOut%WvHiCOff     =  InputFileData%Waves%WvHiCOff  
        InitOut%WvLowCOffD   =  InputFileData%Waves2%WvLowCOffD
@@ -407,14 +413,8 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        ! InitOut%WtrDens      =  InputFileData%Waves%WtrDens
        ! InitOut%WtrDpth      =  InputFileData%Waves%WtrDpth
        
-       InitOut%SeaSt_Interp_p =  p%seast_interp_p
+      InitOut%SeaSt_Interp_p =  p%seast_interp_p
 
-      ! Build WaveField
-      p%WaveField%WaveStMod    =  p%WaveStMod
-      ! p%WaveField%PWaveDynP0   => Waves_InitOut%PWaveDynP0
-      ! p%WaveField%PWaveAccMCF0 => Waves_InitOut%PWaveAccMCF0
-
-      ! CALL SeaSt_WaveField_CopySeaSt_WaveFieldType( p%WaveField, InitOut%WaveField, MESH_NEWCOPY, ErrStat2, ErrMsg2) 
       InitOut%WaveField => p%WaveField
 
       ! Tell HydroDyn if state-space wave excitation is not allowed:

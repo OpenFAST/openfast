@@ -57,7 +57,6 @@ IMPLICIT NONE
     REAL(SiKi)  :: WavePkShp = 0.0_R4Ki      !< Peak shape parameter of incident wave spectrum [1.0 for Pierson-Moskowitz] [-]
     CHARACTER(80)  :: WavePkShpChr      !< String to temporarially hold value of peak shape parameter input line [-]
     INTEGER(IntKi) , DIMENSION(1:2)  :: WaveSeed = 0_IntKi      !< Random seeds of incident waves [-2147483648 to 2147483647] [-]
-    INTEGER(IntKi)  :: WaveStMod = 0_IntKi      !< Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} [-]
     REAL(DbKi)  :: WaveTMax = 0.0_R8Ki      !< Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT [(sec)]
     REAL(SiKi)  :: WaveTp = 0.0_R4Ki      !< Peak spectral period of incident waves [(sec)]
     REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density [(kg/m^3)]
@@ -132,7 +131,6 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%WavePkShp = SrcInitInputData%WavePkShp
    DstInitInputData%WavePkShpChr = SrcInitInputData%WavePkShpChr
    DstInitInputData%WaveSeed = SrcInitInputData%WaveSeed
-   DstInitInputData%WaveStMod = SrcInitInputData%WaveStMod
    DstInitInputData%WaveTMax = SrcInitInputData%WaveTMax
    DstInitInputData%WaveTp = SrcInitInputData%WaveTp
    DstInitInputData%WtrDens = SrcInitInputData%WtrDens
@@ -270,7 +268,6 @@ subroutine Waves_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%WavePkShp)
    call RegPack(Buf, InData%WavePkShpChr)
    call RegPack(Buf, InData%WaveSeed)
-   call RegPack(Buf, InData%WaveStMod)
    call RegPack(Buf, InData%WaveTMax)
    call RegPack(Buf, InData%WaveTp)
    call RegPack(Buf, InData%WtrDens)
@@ -368,8 +365,6 @@ subroutine Waves_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%WavePkShpChr)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveSeed)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveStMod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveTMax)
    if (RegCheckErr(Buf, RoutineName)) return

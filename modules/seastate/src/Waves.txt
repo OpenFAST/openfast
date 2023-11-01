@@ -40,7 +40,6 @@ typedef     ^                 ^                 SiKi                 WavePhase  
 typedef     ^                 ^                 SiKi                 WavePkShp         -        -        -        "Peak shape parameter of incident wave spectrum [1.0 for Pierson-Moskowitz]"  -
 typedef     ^                 ^                 CHARACTER(80)        WavePkShpChr      -        -        -        "String to temporarially hold value of peak shape parameter input line" -
 typedef     ^                 ^                 INTEGER              WaveSeed          {2}      -        -        "Random seeds of incident waves [-2147483648 to 2147483647]"   -
-typedef     ^                 ^                 INTEGER              WaveStMod         -        -        -        "Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching}"   -
 typedef     ^                 ^                 DbKi                 WaveTMax          -        -        -        "Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT"  (sec)
 typedef     ^                 ^                 SiKi                 WaveTp            -        -        -        "Peak spectral period of incident waves"  (sec)
 typedef     ^                 ^                 ReKi                 WtrDens           -        -        -        "Water density"   (kg/m^3)

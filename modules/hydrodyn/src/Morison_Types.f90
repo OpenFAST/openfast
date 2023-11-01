@@ -335,7 +335,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: UnSum = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !<  [-]
-    INTEGER(IntKi)  :: WaveStMod = 0_IntKi      !<  [-]
     REAL(SiKi)  :: MCFD = 0.0_R4Ki      !< Diameter of the MacCamy-Fuchs member. [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
@@ -3721,7 +3720,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    DstInitInputData%NumOuts = SrcInitInputData%NumOuts
    DstInitInputData%UnSum = SrcInitInputData%UnSum
    DstInitInputData%NStepWave = SrcInitInputData%NStepWave
-   DstInitInputData%WaveStMod = SrcInitInputData%WaveStMod
    DstInitInputData%MCFD = SrcInitInputData%MCFD
    DstInitInputData%WaveField => SrcInitInputData%WaveField
    DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
@@ -3991,7 +3989,6 @@ subroutine Morison_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NumOuts)
    call RegPack(Buf, InData%UnSum)
    call RegPack(Buf, InData%NStepWave)
-   call RegPack(Buf, InData%WaveStMod)
    call RegPack(Buf, InData%MCFD)
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
@@ -4265,8 +4262,6 @@ subroutine Morison_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%UnSum)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveStMod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%MCFD)
    if (RegCheckErr(Buf, RoutineName)) return

@@ -153,7 +153,7 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
 
 
       ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface.
-   call ParseVar( FileInfo_In, CurLine, 'WaveStMod', InputFileData%Waves%WaveStMod, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, 'WaveStMod', InputFileData%WaveStMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WaveTMax - Analysis time for incident wave calculations.
@@ -650,48 +650,15 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
    ! All three methods of wave stretching tentatively implemented.
 
    IF ( InputFileData%Waves%WaveMod /= 0 .AND. InputFileData%Waves%WaveMod /= 6 ) THEN
-      IF ( (InputFileData%Waves%WaveStMod /= 0) .AND. (InputFileData%Waves%WaveStMod /= 1) .AND. &
-           (InputFileData%Waves%WaveStMod /= 2) .AND. (InputFileData%Waves%WaveStMod /= 3) ) THEN
+      IF ( (InputFileData%WaveStMod /= 0) .AND. (InputFileData%WaveStMod /= 1) .AND. &
+           (InputFileData%WaveStMod /= 2) .AND. (InputFileData%WaveStMod /= 3) ) THEN
          CALL SetErrStat( ErrID_Fatal,'WaveStMod must be 0, 1, 2, or 3.',ErrStat,ErrMsg,RoutineName)
          RETURN
       END IF
    ELSE ! Wave stretching is not supported when WaveMod = 0 or 6.
-      InputFileData%Waves%WaveStMod = 0_IntKi
+      InputFileData%WaveStMod = 0_IntKi
    END IF
    
-   !if ( InputFileData%Waves%WaveMod /= 6 .AND. InputFileData%Morison%NMembers > 0 .AND. InputFileData%Waves%WaveMod > 0 ) then
-   !
-   !   if ( ( InputFileData%Waves%WaveStMod /= 0 ) .AND. ( InputFileData%Waves%WaveStMod /= 1 ) .AND. &
-   !         ( InputFileData%Waves%WaveStMod /= 2 ) ) then ! (TODO: future version will support 3) .AND. ( InputFileData%Waves%WaveStMod /= 3 ) )  then
-   !      ErrMsg  = ' WaveStMod must be 0, 1, or 2.' !, or 3.'
-   !      ErrStat = ErrID_Fatal
-   !
-   !      return
-   !   end if
-   !
-   !   !if ( ( InputFileData%Waves%WaveStMod /= 3 ) .AND. ( InputFileData%Waves%WaveMod == 5 ) )  then
-   !   !   ErrMsg  = ' WaveStMod must be set to 3 when WaveMod is set to 5.'
-   !   !   ErrStat = ErrID_Fatal
-   !   !
-   !   !   return
-   !   !end if
-   !
-   !
-   !
-   !else !don't use this one
-   !
-   !      ! NOTE: Do not read in WaveStMod for floating platforms since it is
-   !      !       inconsistent to use stretching (which is a nonlinear correction) for
-   !      !       the viscous drag term in Morison's equation while not accounting for
-   !      !       stretching in the diffraction and radiation problems (according to
-   !      !       Paul Sclavounos, there are such corrections).  Instead, the viscous
-   !      !       drag term from Morison's equation is computed by integrating up to
-   !      !       the MSL, regardless of the instantaneous free surface elevation.
-   !
-   !   InputFileData%Waves%WaveStMod = 0
-   !
-   !end if
-
 
       ! WaveTMax - Analysis time for incident wave calculations.
 
@@ -1227,7 +1194,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
          InputFileData%Waves2%WtrDens       = InputFileData%Waves%WtrDens
          InputFileData%Waves2%Gravity       = InitInp%Gravity
          InputFileData%Waves2%WtrDpth       = InputFileData%Waves%WtrDpth
-         InputFileData%Waves2%WaveStMod     = InputFileData%Waves%WaveStMod
          InputFileData%Waves2%NGrid         = p%NGrid
          InputFileData%Waves2%NWaveElevGrid = InputFileData%Waves%NWaveElevGrid
 

@@ -584,7 +584,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          ! Copy SeaState initialization output into the initialization input type for the Morison module
          InputFileData%Morison%NStepWave =  InitInp%NStepWave
          InputFileData%Morison%MCFD      =  InitInp%MCFD
-         InputFileData%Morison%WaveStMod =  InitInp%WaveStMod
          InputFileData%Morison%WaveField => InitInp%WaveField
      
             ! Were visualization meshes requested?

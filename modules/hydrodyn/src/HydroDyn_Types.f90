@@ -97,7 +97,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NStepWave2 = 0      !< NStepWave / 2 [-]
     REAL(SiKi)  :: RhoXg = 0.0_R4Ki      !< = WtrDens*Gravity [-]
     INTEGER(IntKi)  :: WaveMod = 0_IntKi      !< Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED } [-]
-    INTEGER(IntKi)  :: WaveStMod = 0_IntKi      !< Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} [-]
     INTEGER(IntKi)  :: WaveDirMod = 0_IntKi      !< Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6] [-]
     REAL(SiKi)  :: WvLowCOff = 0.0_R4Ki      !< Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
     REAL(SiKi)  :: WvHiCOff = 0.0_R4Ki      !< High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
@@ -906,7 +905,6 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
    DstInitInputData%RhoXg = SrcInitInputData%RhoXg
    DstInitInputData%WaveMod = SrcInitInputData%WaveMod
-   DstInitInputData%WaveStMod = SrcInitInputData%WaveStMod
    DstInitInputData%WaveDirMod = SrcInitInputData%WaveDirMod
    DstInitInputData%WvLowCOff = SrcInitInputData%WvLowCOff
    DstInitInputData%WvHiCOff = SrcInitInputData%WvHiCOff
@@ -988,7 +986,6 @@ subroutine HydroDyn_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NStepWave2)
    call RegPack(Buf, InData%RhoXg)
    call RegPack(Buf, InData%WaveMod)
-   call RegPack(Buf, InData%WaveStMod)
    call RegPack(Buf, InData%WaveDirMod)
    call RegPack(Buf, InData%WvLowCOff)
    call RegPack(Buf, InData%WvHiCOff)
@@ -1059,8 +1056,6 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%RhoXg)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveStMod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDirMod)
    if (RegCheckErr(Buf, RoutineName)) return

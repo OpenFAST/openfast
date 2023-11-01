@@ -47,6 +47,7 @@ typedef   ^                  ^                      CHARACTER(ChanLen)       Out
 typedef   ^                  ^                      LOGICAL                  SeaStSum          -       -      -  "Generate a SeaState summary file [T/F]"    -
 typedef   ^                  ^                      CHARACTER(20)            OutFmt            -       -      -  "Output format for numerical results"    -
 typedef   ^                  ^                      CHARACTER(20)            OutSFmt           -       -      -  "Output format for header strings"    -
+typedef   ^                  ^                      INTEGER                  WaveStMod         -       -      -  "Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching}"   -
 
 typedef   SeaState/SeaSt     InitInputType          CHARACTER(1024)          InputFile                       -          -          -         "Supplied by Driver:  full path and filename for the SeaState module"    -
 typedef   ^                  ^                      LOGICAL                  UseInputFile                    -       .TRUE.        -         "Supplied by Driver:  .TRUE. if using a input file, .FALSE. if all inputs are being passed in by the caller"    -
@@ -83,7 +84,6 @@ typedef     ^                 ^                 SiKi                 RhoXg      
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
 typedef     ^                 ^                 INTEGER              WaveMod           -        -        -        "Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED }" -
-typedef     ^                 ^                 INTEGER              WaveStMod         -        -        -        "Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching}"   -
 typedef     ^                 ^                 INTEGER              WaveDirMod        -        -        -        "Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6]"   -
 typedef     ^                 ^                 SiKi                 WvLowCOff         -        -        -        "Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4]"   (rad/s)
 typedef     ^                 ^                 SiKi                 WvHiCOff          -        -        -        "High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4]"   (rad/s)
@@ -144,7 +144,6 @@ typedef   ^                  ^                      SiKi                     Wav
 typedef   ^                  ^                      SiKi                     WaveKinzi         {:}     -      -  "zi-coordinates for points where the incident wave kinematics can be output; these are relative to the mean sea level"  (meters)
 typedef   ^                  ^                      ReKi                     WtrDpth           -       -      -  "Water depth"    (m)
 typedef   ^                  ^                      DbKi                     DT                -       -      -  "Time step in seconds for integration of continuous states (if a fixed-step integrator is used) and update of discrete states"        -
-typedef   ^                  ^                      IntKi                    WaveStMod         -       -      -  "Wave stretching model" -
 typedef   ^                  ^                      OutParmType              OutParam          {:}     -      -  ""        -
 typedef   ^                  ^                      INTEGER                  NumOuts           -       -      -  "Number of SeaState module-level outputs (not the total number including sub-modules"        -
 typedef   ^                  ^                      INTEGER                  OutSwtch          -       -      -  "Output requested channels to: [1=SeaState.out 2=GlueCode.out  3=both files]"    -

@@ -41,7 +41,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
     REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
-    INTEGER(IntKi)  :: WaveStMod = 0_IntKi      !< Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} [-]
     LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
     INTEGER(IntKi) , DIMENSION(1:3)  :: nGrid = 0_IntKi      !< Grid dimensions [-]
     INTEGER(IntKi)  :: NWaveElevGrid = 0_IntKi      !< Number of grid points where the incident wave elevations can be output [-]
@@ -92,7 +91,6 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    DstInitInputData%NStepWave = SrcInitInputData%NStepWave
    DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
    DstInitInputData%WaveDOmega = SrcInitInputData%WaveDOmega
-   DstInitInputData%WaveStMod = SrcInitInputData%WaveStMod
    DstInitInputData%WaveMultiDir = SrcInitInputData%WaveMultiDir
    DstInitInputData%nGrid = SrcInitInputData%nGrid
    DstInitInputData%NWaveElevGrid = SrcInitInputData%NWaveElevGrid
@@ -170,7 +168,6 @@ subroutine Waves2_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
    call RegPack(Buf, InData%WaveDOmega)
-   call RegPack(Buf, InData%WaveStMod)
    call RegPack(Buf, InData%WaveMultiDir)
    call RegPack(Buf, InData%nGrid)
    call RegPack(Buf, InData%NWaveElevGrid)
@@ -218,8 +215,6 @@ subroutine Waves2_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%NStepWave2)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDOmega)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveStMod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveMultiDir)
    if (RegCheckErr(Buf, RoutineName)) return

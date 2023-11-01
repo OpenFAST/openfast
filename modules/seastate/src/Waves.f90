@@ -865,7 +865,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       END IF
       
       
-      IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
+      IF (WaveField%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
 
          ALLOCATE ( PWaveDynPC0BPz0   (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveDynPC0BPz0.',   ErrStat,ErrMsg,RoutineName)
@@ -1111,7 +1111,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
 
          !===================================
-         IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation wave stretching
+         IF (WaveField%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation wave stretching
             DO J = 1,InitInp%NWaveElevGrid ! Loop through all points on the SWL
                WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*( InitInp%WaveKinGridxi(J)*CosWaveDir(I) + &
                                                             InitInp%WaveKinGridyi(J)*SinWaveDir(I) ))
@@ -1230,7 +1230,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       END IF
 
       !===================================
-      IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
+      IF (WaveField%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
          DO J = 1,InitInp%NWaveElevGrid ! Loop through all points on the SWL where z-partial derivatives will be computed for extrapolated stretching
             ! FFT's of the partial derivatives
             CALL  ApplyFFT_cx (         PWaveDynP0BPz0(:,J  ),         PWaveDynPC0BPz0(:,J  ), FFT_Data, ErrStatTmp )
@@ -1401,7 +1401,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          end do
       END IF
 
-      IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
+      IF (WaveField%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
          
          primeCount = 1
          DO j = 1, InitInp%NGrid(2)  ! Loop through all points on the SWL where partial derivatives about z were computed
@@ -1489,7 +1489,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          WaveField%WaveAccMCF (InitOut%NStepWave,:,:,:,:) = WaveField%WaveAccMCF(0,:,:,:,:)
       END IF
       
-      IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
+      IF (WaveField%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
          WaveField%PWaveDynP0(InitOut%NStepWave,:,:  )    = WaveField%PWaveDynP0(0,:,:  )
          WaveField%PWaveVel0 (InitOut%NStepWave,:,:,:)    = WaveField%PWaveVel0 (0,:,:,:)
          WaveField%PWaveAcc0 (InitOut%NStepWave,:,:,:)    = WaveField%PWaveAcc0 (0,:,:,:)
