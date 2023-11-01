@@ -1259,7 +1259,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
       Init%InData_IceD%InputFile     = p_FAST%IceFile
       Init%InData_IceD%RootName      = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_IceD))//'1'     
-      Init%InData_IceD%MSL2SWL       = Init%OutData_SeaSt%MSL2SWL
+      Init%InData_IceD%MSL2SWL       = Init%OutData_SeaSt%WaveField%MSL2SWL
       Init%InData_IceD%WtrDens       = Init%OutData_SeaSt%WtrDens
       Init%InData_IceD%gravity       = p_FAST%Gravity
       Init%InData_IceD%TMax          = p_FAST%TMax
