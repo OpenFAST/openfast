@@ -1216,12 +1216,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    InputFileData%WAMIT2%WvLowCOffS  = InitInp%WvLowCOffS
    InputFileData%WAMIT2%WvHiCOffS   = InitInp%WvHiCOffS
 
-      ! Set the flag for multidirectional waves for WAMIT2 module.  It needs to know since the Newman approximation
-      ! can only use uni-directional waves.
-   InputFileData%WAMIT2%WaveMultiDir = InitInp%WaveMultiDir
-
-
-
 
        ! PotFile - Root name of potential flow files
 

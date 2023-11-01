@@ -868,10 +868,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_HD%WvHiCOffS      =  Init%OutData_SeaSt%WvHiCOffS 
          Init%InData_HD%InvalidWithSSExctn = Init%OutData_SeaSt%InvalidWithSSExctn
          
-         Init%InData_HD%WaveDirMin     =  Init%OutData_SeaSt%WaveDirMin  
-         Init%InData_HD%WaveDirMax     =  Init%OutData_SeaSt%WaveDirMax  
-         Init%InData_HD%WaveDir        =  Init%OutData_SeaSt%WaveDir     
-         Init%InData_HD%WaveMultiDir   =  Init%OutData_SeaSt%WaveMultiDir
          Init%InData_HD%WaveDOmega     =  Init%OutData_SeaSt%WaveDOmega  
          Init%InData_HD%MCFD           =  Init%OutData_SeaSt%MCFD
 

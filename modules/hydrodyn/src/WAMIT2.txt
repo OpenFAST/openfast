@@ -34,11 +34,6 @@ typedef     ^                 ^                 ReKi                 WaveDOmega 
 typedef     ^                 ^                 ReKi                 Gravity           -        -        -        "Supplied by Driver:  Gravitational acceleration"  (m/s^2)
 typedef     ^                 ^                 ReKi                 WtrDpth           -        -        -        "Water depth (positive-valued)"    (m)
 
-typedef     ^                 ^                 SiKi                 WaveDir           -        -        -        "Mean incident wave propagation heading direction"    (degrees)
-typedef     ^                 ^                 LOGICAL              WaveMultiDir      -        -        -        "Indicates the waves are multidirectional -- set by HydroDyn_Input"  -
-typedef     ^                 ^                 SiKi                 WaveDirMin        -        -        -        "Minimum wave direction from Waves module"    -
-typedef     ^                 ^                 SiKi                 WaveDirMax        -        -        -        "Maximum wave direction from Waves module"    -
-
 typedef     ^                 ^                 INTEGER              WaveMod           -        -        -        "The wave model to use.  This is for error checking -- ideally this would be done in the main calling routine, not here." -
 typedef    ^                  ^                 SeaSt_WaveFieldType *WaveField         -        -        -        "Pointer to wave field"
 

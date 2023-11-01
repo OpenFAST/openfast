@@ -185,7 +185,7 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
       if (Failed())  return;
 
       ! WaveDir - Mean wave heading direction.
-   call ParseVar( FileInfo_In, CurLine, 'WaveDir', InputFileData%Waves%WaveDir, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, 'WaveDir', InputFileData%WaveDir, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WaveDirMod -  Directional spreading function {0: None, 1: COS2S}       (-) [Used only if WaveMod=2]
@@ -674,9 +674,9 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
          call WrScr( '  Setting WaveTMax to TMax since WaveMod = 0' )
          InputFileData%Waves%WaveTMax = InitInp%TMax
       end if
-      if ( .NOT. EqualRealNos(InputFileData%Waves%WaveDir, 0.0_SiKi) ) then
+      if ( .NOT. EqualRealNos(InputFileData%WaveDir, 0.0_SiKi) ) then
          call WrScr( '  Setting WaveDir to 0.0 since WaveMod = 0' )
-         InputFileData%Waves%WaveDir = 0.0
+         InputFileData%WaveDir = 0.0
       end if
    elseif ( InputFileData%Waves%WaveMod == 5 ) then   ! User wave elevation file reading in
       if (InitInp%TMax > InputFileData%Waves%WaveTMax ) then
@@ -801,14 +801,14 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
    if ( ( InputFileData%Waves%WaveMod > 0 ) .AND. ( InputFileData%Waves%WaveMod /= 6 ) )  then   ! .TRUE if we have incident waves, but not user input wave data.
 
-      if ( ( InputFileData%Waves%WaveDir <= -180.0 ) .OR. ( InputFileData%Waves%WaveDir > 180.0 ) )  then
+      if ( ( InputFileData%WaveDir <= -180.0 ) .OR. ( InputFileData%WaveDir > 180.0 ) )  then
          call SetErrStat( ErrID_Fatal,'WaveDir must be greater than -180 and less than or equal to 180.',ErrStat,ErrMsg,RoutineName)
          return
       end if
 
    else
 
-      InputFileData%Waves%WaveDir = 0.0
+      InputFileData%WaveDir = 0.0
 
    end if
 
@@ -823,9 +823,9 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
       ! Check if we are doing multidirectional waves or not.
       ! We can only use multi directional waves on WaveMod=2,3,4
-   InputFileData%Waves%WaveMultiDir = .FALSE.         ! Set flag to false to start
+   InputFileData%WaveMultiDir = .FALSE.         ! Set flag to false to start
    if ( InputFileData%Waves%WaveMod >= 2 .AND. InputFileData%Waves%WaveMod <= 4 .AND. InputFileData%Waves%WaveDirMod == 1 ) then
-      InputFileData%Waves%WaveMultiDir = .TRUE.
+      InputFileData%WaveMultiDir = .TRUE.
    elseif ( (InputFileData%Waves%WaveMod < 2 .OR. InputFileData%Waves%WaveMod >4) .AND. InputFileData%Waves%WaveDirMod == 1 ) then
       call SetErrStat( ErrID_Warn,'WaveDirMod unused unless WaveMod == 2, 3, or 4.  Ignoring WaveDirMod.',ErrStat,ErrMsg,RoutineName)
    ENDIF
@@ -833,15 +833,15 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
       !  Check to see if the for some reason the wave direction spreading range is set to zero.  If it is,
       !  we don't have any spreading, so we will turn off the multidirectional waves.
-   if ( InputFileData%Waves%WaveMultiDir .AND. EqualRealNos( InputFileData%Waves%WaveDirRange, 0.0_SiKi ) ) then
+   if ( InputFileData%WaveMultiDir .AND. EqualRealNos( InputFileData%Waves%WaveDirRange, 0.0_SiKi ) ) then
       call SetErrStat( ErrID_Warn,' WaveDirRange set to zero, so multidirectional waves are turned off.',ErrStat,ErrMsg,RoutineName)
-      InputFileData%Waves%WaveMultiDir = .FALSE.
+      InputFileData%WaveMultiDir = .FALSE.
    ENDIF
 
 
 
       ! We check the following only if we set WaveMultiDir to true, otherwise ignore them and set them to zero
-   if ( InputFileData%Waves%WaveMultiDir ) then
+   if ( InputFileData%WaveMultiDir ) then
 
          ! Check WaveDirSpread
       if ( InputFileData%Waves%WaveDirSpread <= 0.0 ) then
@@ -990,7 +990,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
             return
          end if
 
-         InputFileData%Current%CurrSSDir = InputFileData%Waves%WaveDir
+         InputFileData%Current%CurrSSDir = InputFileData%WaveDir
 
       else                                   ! The input must have been specified numerically.
 

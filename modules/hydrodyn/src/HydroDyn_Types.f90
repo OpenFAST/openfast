@@ -105,10 +105,6 @@ IMPLICIT NONE
     LOGICAL  :: InvalidWithSSExctn = .false.      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Instantaneous elevation time-series of incident waves at the platform reference point [(meters)]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevC      !< Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part [(meters)]
-    REAL(SiKi)  :: WaveDirMin = 0.0_R4Ki      !< Minimum wave direction. [(degrees)]
-    REAL(SiKi)  :: WaveDirMax = 0.0_R4Ki      !< Maximum wave direction. [(degrees)]
-    REAL(SiKi)  :: WaveDir = 0.0_R4Ki      !< Incident wave propagation heading direction [(degrees)]
-    LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
     REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
     REAL(SiKi)  :: MCFD = 0.0_R4Ki      !< Diameter of MacCamy-Fuchs members [(meters)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
@@ -933,10 +929,6 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
       end if
       DstInitInputData%WaveElevC = SrcInitInputData%WaveElevC
    end if
-   DstInitInputData%WaveDirMin = SrcInitInputData%WaveDirMin
-   DstInitInputData%WaveDirMax = SrcInitInputData%WaveDirMax
-   DstInitInputData%WaveDir = SrcInitInputData%WaveDir
-   DstInitInputData%WaveMultiDir = SrcInitInputData%WaveMultiDir
    DstInitInputData%WaveDOmega = SrcInitInputData%WaveDOmega
    DstInitInputData%MCFD = SrcInitInputData%MCFD
    DstInitInputData%WaveField => SrcInitInputData%WaveField
@@ -998,10 +990,6 @@ subroutine HydroDyn_PackInitInput(Buf, Indata)
       call RegPackBounds(Buf, 3, lbound(InData%WaveElevC), ubound(InData%WaveElevC))
       call RegPack(Buf, InData%WaveElevC)
    end if
-   call RegPack(Buf, InData%WaveDirMin)
-   call RegPack(Buf, InData%WaveDirMax)
-   call RegPack(Buf, InData%WaveDir)
-   call RegPack(Buf, InData%WaveMultiDir)
    call RegPack(Buf, InData%WaveDOmega)
    call RegPack(Buf, InData%MCFD)
    call RegPack(Buf, associated(InData%WaveField))
@@ -1091,14 +1079,6 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveElevC)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   call RegUnpack(Buf, OutData%WaveDirMin)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDirMax)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDir)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveMultiDir)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%MCFD)

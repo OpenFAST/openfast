@@ -361,12 +361,9 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   
             InputFileData%WAMIT%NStepWave    = InitInp%NStepWave
             InputFileData%WAMIT%NStepWave2   = InitInp%NStepWave2
-            InputFileData%WAMIT%WaveDirMin   = InitInp%WaveDirMin
-            InputFileData%WAMIT%WaveDirMax   = InitInp%WaveDirMax
             InputFileData%WAMIT%WaveDOmega   = InitInp%WaveDOmega   
 
                ! Init inputs for the SS_Excitation model (set this just in case it will be used)
-            InputFileData%WAMIT%WaveDir   =  InitInp%WaveDir            
             InputFileData%WAMIT%WaveElev0  => InitInp%WaveField%WaveElev0
             InputFileData%WAMIT%WaveElevC  => InitInp%WaveField%WaveElevC
             InputFileData%WAMIT%WaveField  => InitInp%WaveField
@@ -439,8 +436,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   ! Copy Waves initialization output into the initialization input type for the WAMIT module
                InputFileData%WAMIT2%NStepWave   = InitInp%NStepWave
                InputFileData%WAMIT2%NStepWave2  = InitInp%NStepWave2
-               InputFileData%WAMIT2%WaveDirMin  = InitInp%WaveDirMin
-               InputFileData%WAMIT2%WaveDirMax  = InitInp%WaveDirMax
                InputFileData%WAMIT2%WaveDOmega  = InitInp%WaveDOmega
                InputFileData%WAMIT2%Gravity     = InitInp%Gravity
                InputFileData%WAMIT2%WtrDpth     = InputFileData%Morison%WtrDpth ! The data in InputFileData%Morison%WtrDpth was directly placed there when we parsed the HydroDyn input file
@@ -538,7 +533,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                ! Need to pre-process the incoming wave data to be compatible with FIT
             
             FITInitData%N_omega        = InitInp%NStepWave2
-            FITInitData%Wave_angle     = InitInp%WaveDir
+            FITInitData%Wave_angle     = p%WaveField%WaveDir
             
                ! allocate waves data arrays for FIT
             CALL AllocAry( FITInitData%Wave_amp, FITInitData%N_omega, "Wave_amp", ErrStat2, ErrMsg2 )

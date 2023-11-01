@@ -25,9 +25,7 @@ typedef     ^                 ^                 ReKi                 Gravity    
 typedef     ^                 ^                 integer              nGrid             3        -        -        "Grid dimensions"
 typedef     ^                 ^                 SiKi                 WvLowCOff         -        -        -        "Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4]"   (rad/s)
 typedef     ^                 ^                 SiKi                 WvHiCOff          -        -        -        "High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4]"   (rad/s)
-typedef     ^                 ^                 SiKi                 WaveDir           -        -        -        "Mean incident wave propagation heading direction"   (degrees)
 typedef     ^                 ^                 INTEGER              WaveNDir          -        -        -        "Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module]"     (-)
-typedef     ^                 ^                 LOGICAL              WaveMultiDir      -        -        -        "Indicates the waves are multidirectional -- set by HydroDyn_Input"  -
 typedef     ^                 ^                 INTEGER              WaveDirMod        -        -        -        "Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6]"   -
 typedef     ^                 ^                 SiKi                 WaveDirSpread     -        -        -        "Spreading coefficient [WaveMod=2,3,4 and WaveDirMod=1]"   -
 typedef     ^                 ^                 SiKi                 WaveDirRange      -        -        -        "Range of wave directions (full range: WaveDir +/- WaveDirRange/2) [only used if WaveMod=6]"   (degrees)
@@ -65,8 +63,6 @@ typedef     ^                 ^                 ReKi                 PtfmLocatio
 
 # Define outputs from the initialization routine here:
 #
-typedef     ^                 InitOutputType    SiKi                 WaveDirMin        -        -        -        "Minimum wave direction."  (degrees)
-typedef     ^                 InitOutputType    SiKi                 WaveDirMax        -        -        -        "Maximum wave direction."  (degrees)
 typedef     ^                 InitOutputType    INTEGER              WaveNDir          -        -        -        "Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module]"     (-)
 typedef     ^                 InitOutputType    SiKi                 WaveDOmega        -        -        -        "Frequency step for incident wave calculations" (rad/s)
 typedef     ^                 InitOutputType    SiKi                 WaveElev          {*}{*}{*}   -        -        "Instantaneous elevation time-series of incident waves at each of the  XY grid points" (meters)

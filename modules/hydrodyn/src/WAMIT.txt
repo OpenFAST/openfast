@@ -37,7 +37,6 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  ExctnDisp                       -          -        -          "0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]" -
 typedef   ^                            ^                             ReKi                     ExctnCutOff                     -          -        -          "Cutoff (corner) frequency of the low-pass time-filtered displaced position (Hz) [>0.0] " Hz
 typedef   ^                            ^                             DbKi                     RdtnTMax                        -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     WaveDir                         -          -        -         ""    -
 typedef   ^                            ^                             CHARACTER(1024)          WAMITFile                       -          -        -         ""    -
 typedef   ^                            ^                             Conv_Rdtn_InitInputType  Conv_Rdtn                       -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -        -         ""    -
@@ -47,8 +46,6 @@ typedef   ^                            ^                             SiKi       
 typedef   ^                            ^                             SiKi                     WaveElev1                {*}{*}{*}         -        -         "First order wave elevation (points to SeaState module data)"        -
 typedef   ^                            ^                             SiKi                     WaveElevC                      {*}{*}{*}   -        -         "Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part"   (meters)
 typedef   ^                            ^                             INTEGER                  WaveMod                         -          -        -         ""    -
-typedef   ^                            ^                             SiKi                     WaveDirMin                      -          -        -         "Minimum wave direction from Waves module"    -
-typedef   ^                            ^                             SiKi                     WaveDirMax                      -          -        -         "Maximum wave direction from Waves module"    -
 typedef   ^                            ^                 SeaSt_Interp_ParameterType           SeaSt_Interp_p                  -          -        -         "parameter information from the SeaState Interpolation module"   -
 typedef   ^                            ^                 SeaSt_WaveFieldType                 *WaveField                       -          -        -         "Pointer to wave field"
 

@@ -57,6 +57,10 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveDirArr      !< Wave direction array. Each frequency has a unique direction of WaveNDir > 1 [(degrees)]
     REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default) [(kg/m^3)]
     REAL(SiKi)  :: RhoXg = 0.0_R4Ki      !< = WtrDens*Gravity [-]
+    REAL(SiKi)  :: WaveDirMin = 0.0_R4Ki      !< Minimum wave direction. [(degrees)]
+    REAL(SiKi)  :: WaveDirMax = 0.0_R4Ki      !< Maximum wave direction. [(degrees)]
+    REAL(SiKi)  :: WaveDir = 0.0_R4Ki      !< Incident wave propagation heading direction [(degrees)]
+    LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
   END TYPE SeaSt_WaveFieldType
 ! =======================
 CONTAINS
@@ -261,6 +265,10 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
    end if
    DstSeaSt_WaveFieldTypeData%WtrDens = SrcSeaSt_WaveFieldTypeData%WtrDens
    DstSeaSt_WaveFieldTypeData%RhoXg = SrcSeaSt_WaveFieldTypeData%RhoXg
+   DstSeaSt_WaveFieldTypeData%WaveDirMin = SrcSeaSt_WaveFieldTypeData%WaveDirMin
+   DstSeaSt_WaveFieldTypeData%WaveDirMax = SrcSeaSt_WaveFieldTypeData%WaveDirMax
+   DstSeaSt_WaveFieldTypeData%WaveDir = SrcSeaSt_WaveFieldTypeData%WaveDir
+   DstSeaSt_WaveFieldTypeData%WaveMultiDir = SrcSeaSt_WaveFieldTypeData%WaveMultiDir
 end subroutine
 
 subroutine SeaSt_WaveField_DestroySeaSt_WaveFieldType(SeaSt_WaveFieldTypeData, ErrStat, ErrMsg)
@@ -407,6 +415,10 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, Indata)
    end if
    call RegPack(Buf, InData%WtrDens)
    call RegPack(Buf, InData%RhoXg)
+   call RegPack(Buf, InData%WaveDirMin)
+   call RegPack(Buf, InData%WaveDirMax)
+   call RegPack(Buf, InData%WaveDir)
+   call RegPack(Buf, InData%WaveMultiDir)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -638,6 +650,14 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
    call RegUnpack(Buf, OutData%WtrDens)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%RhoXg)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveDirMin)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveDirMax)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveDir)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveMultiDir)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 END MODULE SeaSt_WaveField_Types

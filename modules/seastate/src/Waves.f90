@@ -989,8 +989,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          END IF
          
          ! Store the minimum and maximum wave directions
-      InitOut%WaveDirMin   = MINVAL(WaveField%WaveDirArr)
-      InitOut%WaveDirMax   = MAXVAL(WaveField%WaveDirArr)
+      WaveField%WaveDirMin   = MINVAL(WaveField%WaveDirArr)
+      WaveField%WaveDirMax   = MAXVAL(WaveField%WaveDirArr)
          
 
       ! Set the CosWaveDir and SinWaveDir arrays
@@ -1937,9 +1937,9 @@ SUBROUTINE CalculateWaveDirection(InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          !InitOut%WaveDirArr set in UserWaveComponents_Init for WaveMod 7
          !InitOut%WaveDirArr = 0, set in Initial_InitOut_Arrays for WaveMod 0 and 6
 
-      ELSEIF(.not. InitInp%WaveMultiDir .or. InitInp%WaveNDir <= 1) THEN ! we have a single wave direction
+      ELSEIF(.not. WaveField%WaveMultiDir .or. InitInp%WaveNDir <= 1) THEN ! we have a single wave direction
       
-         WaveField%WaveDirArr = InitInp%WaveDir
+         WaveField%WaveDirArr = WaveField%WaveDir
 
       ELSE ! multi directional waves
          
@@ -1975,7 +1975,7 @@ SUBROUTINE CalculateWaveDirection(InitInp, InitOut, WaveField, ErrStat, ErrMsg )
             
 
             ! This allocates and sets WvTheta:
-         call CalculateWaveSpreading(InitInp, InitOut, WvTheta, ErrStatTmp, ErrMsgTmp)
+         call CalculateWaveSpreading(InitInp, InitOut, WaveField, WvTheta, ErrStatTmp, ErrMsgTmp)
             call SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
             if (ErrStat >= AbortErrLev) then
                call Cleanup()
@@ -2063,12 +2063,13 @@ CONTAINS
 
 END SUBROUTINE CalculateWaveDirection
 !------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE CalculateWaveSpreading(InitInp, InitOut, WvTheta, ErrStat, ErrMsg )
+SUBROUTINE CalculateWaveSpreading(InitInp, InitOut, WaveField, WvTheta, ErrStat, ErrMsg )
 ! Compute the wave direction array
 !----------------------------------------------------------------------------------------------------------------------------------
 
    TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
    TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut     !< Output data
+   TYPE(SeaSt_WaveFieldType),       INTENT(INOUT)  :: WaveField
    REAL(SiKi),         ALLOCATABLE, INTENT(  OUT)  :: WvTheta(:)  !< Final set of wave directions (degrees)
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -2168,10 +2169,10 @@ SUBROUTINE CalculateWaveSpreading(InitInp, InitOut, WvTheta, ErrStat, ErrMsg )
             !> 2. Calculate the spreading function as a function of angle.  Step through all _WvSpreadNDir_ steps.
          DO I=0,WvSpreadNDir
                ! The current angle as we step through the range
-            WvSpreadThetas(I) =  I*WvSpreadDTheta  + InitInp%WaveDir - InitInp%WaveDirRange/(2.0_SiKi)
+            WvSpreadThetas(I) =  I*WvSpreadDTheta  + WaveField%WaveDir - InitInp%WaveDirRange/(2.0_SiKi)
 
                ! Calculate the wave spreading for the current value of WvSpreadThetas
-            WvSpreadCos2SArr(I)  =  WvSpreadCos2SConst*abs( cos(Pi*(WvSpreadThetas(I)-InitInp%WaveDir)/InitInp%WaveDirRange) ) **(2*InitInp%WaveDirSpread)
+            WvSpreadCos2SArr(I)  =  WvSpreadCos2SConst*abs( cos(Pi*(WvSpreadThetas(I)-WaveField%WaveDir)/InitInp%WaveDirRange) ) **(2*InitInp%WaveDirSpread)
 
             !> 3. Calculate the integral of the spreading function up to the current angle and save it.
             !     Remember that the first element can't refer to one before it.
@@ -2322,7 +2323,7 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
                   CASE ( 3 )              ! White-noise
                         WaveS1SddArr(I) =  InitInp%WaveHs * InitInp%WaveHs / ( 16.0 * (InitInp%WvHiCOff - InitInp%WvLowCOff) )
                   CASE ( 4 )              ! User-defined spectrum (irregular) wave.
-                        CALL UserWaveSpctrm ( OmegaArr(I), InitInp%WaveDir, InitInp%DirRoot, WaveS1SddArr(I) )
+                        CALL UserWaveSpctrm ( OmegaArr(I), WaveField%WaveDir, InitInp%DirRoot, WaveS1SddArr(I) )
                ENDSELECT
          
             END IF

@@ -68,6 +68,8 @@ IMPLICIT NONE
     CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
     INTEGER(IntKi)  :: WaveStMod = 0_IntKi      !< Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} [-]
     REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default) [(kg/m^3)]
+    REAL(SiKi)  :: WaveDir = 0.0_R4Ki      !< Incident wave propagation heading direction [(degrees)]
+    LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional [-]
   END TYPE SeaSt_InputFile
 ! =======================
 ! =========  SeaSt_InitInputType  =======
@@ -96,10 +98,6 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< The is the list of all HD-related output channel unit strings (includes all sub-module channels) [-]
     TYPE(ProgDesc)  :: Ver      !< Version of SeaState [-]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth, this is necessary to inform glue-code what the module is using for WtrDpth (may not be the glue-code's default) [(m)]
-    REAL(SiKi)  :: WaveDirMin = 0.0_R4Ki      !< Minimum wave direction. [(degrees)]
-    REAL(SiKi)  :: WaveDirMax = 0.0_R4Ki      !< Maximum wave direction. [(degrees)]
-    REAL(SiKi)  :: WaveDir = 0.0_R4Ki      !< Incident wave propagation heading direction [(degrees)]
-    LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
     REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
@@ -302,6 +300,8 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
    DstInputFileData%OutSFmt = SrcInputFileData%OutSFmt
    DstInputFileData%WaveStMod = SrcInputFileData%WaveStMod
    DstInputFileData%WtrDens = SrcInputFileData%WtrDens
+   DstInputFileData%WaveDir = SrcInputFileData%WaveDir
+   DstInputFileData%WaveMultiDir = SrcInputFileData%WaveMultiDir
 end subroutine
 
 subroutine SeaSt_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
@@ -396,6 +396,8 @@ subroutine SeaSt_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%OutSFmt)
    call RegPack(Buf, InData%WaveStMod)
    call RegPack(Buf, InData%WtrDens)
+   call RegPack(Buf, InData%WaveDir)
+   call RegPack(Buf, InData%WaveMultiDir)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -531,6 +533,10 @@ subroutine SeaSt_UnPackInputFile(Buf, OutData)
    call RegUnpack(Buf, OutData%WaveStMod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WtrDens)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveDir)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveMultiDir)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -714,10 +720,6 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    DstInitOutputData%WtrDpth = SrcInitOutputData%WtrDpth
-   DstInitOutputData%WaveDirMin = SrcInitOutputData%WaveDirMin
-   DstInitOutputData%WaveDirMax = SrcInitOutputData%WaveDirMax
-   DstInitOutputData%WaveDir = SrcInitOutputData%WaveDir
-   DstInitOutputData%WaveMultiDir = SrcInitOutputData%WaveMultiDir
    DstInitOutputData%WaveDOmega = SrcInitOutputData%WaveDOmega
    DstInitOutputData%NStepWave = SrcInitOutputData%NStepWave
    DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
@@ -792,10 +794,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
    end if
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
    call RegPack(Buf, InData%WtrDpth)
-   call RegPack(Buf, InData%WaveDirMin)
-   call RegPack(Buf, InData%WaveDirMax)
-   call RegPack(Buf, InData%WaveDir)
-   call RegPack(Buf, InData%WaveMultiDir)
    call RegPack(Buf, InData%WaveDOmega)
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
@@ -865,14 +863,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    end if
    call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
    call RegUnpack(Buf, OutData%WtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDirMin)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDirMax)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDir)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveMultiDir)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return

@@ -51,10 +51,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: WaveDOmega = 0.0_ReKi      !< Frequency step for incident wave calculations [(rad/s)]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth (positive-valued) [(m)]
-    REAL(SiKi)  :: WaveDir = 0.0_R4Ki      !< Mean incident wave propagation heading direction [(degrees)]
-    LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
-    REAL(SiKi)  :: WaveDirMin = 0.0_R4Ki      !< Minimum wave direction from Waves module [-]
-    REAL(SiKi)  :: WaveDirMax = 0.0_R4Ki      !< Maximum wave direction from Waves module [-]
     INTEGER(IntKi)  :: WaveMod = 0_IntKi      !< The wave model to use.  This is for error checking -- ideally this would be done in the main calling routine, not here. [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
     INTEGER(IntKi)  :: MnDrift = 0_IntKi      !< Calculate the mean drift force {0: no mean drift; [7,8,9,10,11, or 12]: WAMIT file to use} [-]
@@ -172,10 +168,6 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    DstInitInputData%WaveDOmega = SrcInitInputData%WaveDOmega
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
-   DstInitInputData%WaveDir = SrcInitInputData%WaveDir
-   DstInitInputData%WaveMultiDir = SrcInitInputData%WaveMultiDir
-   DstInitInputData%WaveDirMin = SrcInitInputData%WaveDirMin
-   DstInitInputData%WaveDirMax = SrcInitInputData%WaveDirMax
    DstInitInputData%WaveMod = SrcInitInputData%WaveMod
    DstInitInputData%WaveField => SrcInitInputData%WaveField
    DstInitInputData%MnDrift = SrcInitInputData%MnDrift
@@ -254,10 +246,6 @@ subroutine WAMIT2_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%WaveDOmega)
    call RegPack(Buf, InData%Gravity)
    call RegPack(Buf, InData%WtrDpth)
-   call RegPack(Buf, InData%WaveDir)
-   call RegPack(Buf, InData%WaveMultiDir)
-   call RegPack(Buf, InData%WaveDirMin)
-   call RegPack(Buf, InData%WaveDirMax)
    call RegPack(Buf, InData%WaveMod)
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
@@ -368,14 +356,6 @@ subroutine WAMIT2_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%Gravity)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WtrDpth)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDir)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveMultiDir)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDirMin)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDirMax)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveMod)
    if (RegCheckErr(Buf, RoutineName)) return

@@ -93,8 +93,8 @@ SUBROUTINE Initial_InitOut_Arrays(InitOut, WaveField, InitInp, WaveDT, ErrStat, 
       WaveField%WaveDirArr = 0.0
       
       ! scalars (adjusted later, if necessary)
-      InitOut%WaveDirMin   = 0.0
-      InitOut%WaveDirMax   = 0.0
+      WaveField%WaveDirMin   = 0.0
+      WaveField%WaveDirMax   = 0.0
       InitOut%WaveNDir     = 1
       
 END SUBROUTINE Initial_InitOut_Arrays

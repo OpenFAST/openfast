@@ -919,7 +919,7 @@ end if
             else if ( p%ExctnMod == 2 ) then
                Interval_Sub                  = InitInp%Conv_Rdtn%RdtnDT
                SS_Exctn_InitInp%InputFile    = InitInp%WAMITFile    
-               SS_Exctn_InitInp%WaveDir      = InitInp%WaveDir
+               SS_Exctn_InitInp%WaveDir      = InitInp%WaveField%WaveDir
                SS_Exctn_InitInp%NStepWave    = p%NStepWave
                SS_Exctn_InitInp%NBody        = InitInp%NBody
                SS_Exctn_InitInp%PtfmRefztRot = InitInp%PtfmRefztRot 
@@ -954,7 +954,7 @@ end if
                ! NOTE: we may end up inadvertantly aborting if the wave direction crosses
                !   the -Pi / Pi boundary (-180/180 degrees).
 
-               IF ( ( InitInp%WaveDirMin < HdroWvDir(1) ) .OR. ( InitInp%WaveDirMax > HdroWvDir(NInpWvDir) ) )  THEN
+               IF ( ( InitInp%WaveField%WaveDirMin < HdroWvDir(1) ) .OR. ( InitInp%WaveField%WaveDirMax > HdroWvDir(NInpWvDir) ) )  THEN
                   ErrMsg2  = 'All Wave directions must be within the wave heading angle range available in "' &
                                  //TRIM(InitInp%WAMITFile)//'.3" (inclusive).'
                   CALL SetErrStat( ErrID_Fatal, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1215,7 +1215,7 @@ end if
             else if ( p%ExctnMod == 2 ) then
                Interval_Sub                  = InitInp%Conv_Rdtn%RdtnDT
                SS_Exctn_InitInp%InputFile    = InitInp%WAMITFile    
-               SS_Exctn_InitInp%WaveDir      = InitInp%WaveDir
+               SS_Exctn_InitInp%WaveDir      = InitInp%WaveField%WaveDir
                SS_Exctn_InitInp%NStepWave    = p%NStepWave
                SS_Exctn_InitInp%NBody        = InitInp%NBody
                SS_Exctn_InitInp%PtfmRefztRot = InitInp%PtfmRefztRot

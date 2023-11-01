@@ -421,10 +421,6 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C,                                      
    HD%InitInp%WvHiCOffS      =  SeaSt%InitOutData%WvHiCOffS 
    HD%InitInp%InvalidWithSSExctn = SeaSt%InitOutData%InvalidWithSSExctn
    
-   HD%InitInp%WaveDirMin     =  SeaSt%InitOutData%WaveDirMin  
-   HD%InitInp%WaveDirMax     =  SeaSt%InitOutData%WaveDirMax  
-   HD%InitInp%WaveDir        =  SeaSt%InitOutData%WaveDir     
-   HD%InitInp%WaveMultiDir   =  SeaSt%InitOutData%WaveMultiDir
    HD%InitInp%WaveDOmega     =  SeaSt%InitOutData%WaveDOmega  
    HD%InitInp%MCFD           =  SeaSt%InitOutData%MCFD
 

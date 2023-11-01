@@ -882,12 +882,12 @@ END SUBROUTINE WAMIT2_Init
       IF ( MnDriftData%DataIs3D ) THEN
 
             ! If we are using multidirectional waves, then we should have more than 1 wave direction in the WAMIT file.
-         IF ( InitInp%WaveMultiDir .AND. (MnDriftData%Data3D%NumWvDir1 == 1) ) THEN
+         IF ( InitInp%WaveField%WaveMultiDir .AND. (MnDriftData%Data3D%NumWvDir1 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(MnDriftData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(MnDriftData%Data3D%WvDir1(1)))//' degrees (first wave direction). '// &
                         'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
-         ELSE IF ( InitInp%WaveMultiDir .AND. (MnDriftData%Data3D%NumWvDir2 == 1) ) THEN
+         ELSE IF ( InitInp%WaveField%WaveMultiDir .AND. (MnDriftData%Data3D%NumWvDir2 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(MnDriftData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(MnDriftData%Data3D%WvDir2(1)))//' degrees (second wave direction). '// &
                         'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
@@ -898,7 +898,7 @@ END SUBROUTINE WAMIT2_Init
                ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
                ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
                ! we will issue a warning.
-            IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+            IF ( (InitInp%WaveField%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveField%WaveDirMax < -150.0_SiKi) .OR. &
                  (minval(MnDriftData%data3d%WvDir1) > 150.0_SiKi) .OR.  (maxval(MnDriftData%data3d%WvDir1) < -150.0_SiKi) .OR. &
                  (minval(MnDriftData%data3d%WvDir2) > 150.0_SiKi) .OR.  (maxval(MnDriftData%data3d%WvDir2) < -150.0_SiKi) ) THEN
                CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
@@ -908,13 +908,13 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the first wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveDirMin < MINVAL(MnDriftData%Data3D%WvDir1) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMin < MINVAL(MnDriftData%Data3D%WvDir1) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax > MAXVAL(MnDriftData%Data3D%WvDir1) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(MnDriftData%Data3D%WvDir1) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
@@ -922,13 +922,13 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the second wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveDirMin < MINVAL(MnDriftData%Data3D%WvDir2) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMin < MINVAL(MnDriftData%Data3D%WvDir2) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax > MAXVAL(MnDriftData%Data3D%WvDir2) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(MnDriftData%Data3D%WvDir2) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
@@ -938,12 +938,12 @@ END SUBROUTINE WAMIT2_Init
       ELSEIF ( MnDriftData%DataIs4D ) THEN
 
             ! If we are using multidirectional waves, then we should have more than 1 wave direction in the WAMIT file.
-         IF ( InitInp%WaveMultiDir .AND. (MnDriftData%Data4D%NumWvDir1 == 1) ) THEN
+         IF ( InitInp%WaveField%WaveMultiDir .AND. (MnDriftData%Data4D%NumWvDir1 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(MnDriftData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(MnDriftData%Data4D%WvDir1(1)))//' degrees (first wave direction). '// &
                         'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
-         ELSE IF ( InitInp%WaveMultiDir .AND. (MnDriftData%Data4D%NumWvDir2 == 1) ) THEN
+         ELSE IF ( InitInp%WaveField%WaveMultiDir .AND. (MnDriftData%Data4D%NumWvDir2 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(MnDriftData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(MnDriftData%Data4D%WvDir2(1)))//' degrees (second wave direction). '// &
                         'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
@@ -954,7 +954,7 @@ END SUBROUTINE WAMIT2_Init
                ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
                ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
                ! we will issue a warning.
-            IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+            IF ( (InitInp%WaveField%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveField%WaveDirMax < -150.0_SiKi) .OR. &
                  (MINVAL(MnDriftData%Data4D%WvDir1) > 150.0_SiKi) .OR.  (MAXVAL(MnDriftData%Data4D%WvDir1) < -150.0_SiKi) .OR. &
                  (MINVAL(MnDriftData%Data4D%WvDir2) > 150.0_SiKi) .OR.  (MAXVAL(MnDriftData%Data4D%WvDir2) < -150.0_SiKi) ) THEN
                CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
@@ -965,13 +965,13 @@ END SUBROUTINE WAMIT2_Init
                ! Now check the limits for the first wave direction
                !  --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
                !  --> FIXME: modify to allow shifting values by TwoPi before comparing
-            IF ( InitInp%WaveDirMin < MINVAL(MnDriftData%Data4D%WvDir1) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMin < MINVAL(MnDriftData%Data4D%WvDir1) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax > MAXVAL(MnDriftData%Data4D%WvDir1) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(MnDriftData%Data4D%WvDir1) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
@@ -979,13 +979,13 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the second wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveDirMin < MINVAL(MnDriftData%Data4D%WvDir2) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMin < MINVAL(MnDriftData%Data4D%WvDir2) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax > MAXVAL(MnDriftData%Data4D%WvDir2) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(MnDriftData%Data4D%WvDir2) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(MnDriftData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
@@ -1417,12 +1417,12 @@ END SUBROUTINE WAMIT2_Init
       IF ( NewmanAppData%DataIs3D ) THEN
 
             ! If we are using multidirectional waves, then we should have more than 1 wave direction in the WAMIT file.
-         IF ( InitInp%WaveMultiDir .AND. (NewmanAppData%Data3D%NumWvDir1 == 1) ) THEN
+         IF ( InitInp%WaveField%WaveMultiDir .AND. (NewmanAppData%Data3D%NumWvDir1 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(NewmanAppData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(NewmanAppData%Data3D%WvDir1(1)))//' degrees (first wave direction). '// &
                         'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
-         ELSE IF ( InitInp%WaveMultiDir .AND. (NewmanAppData%Data3D%NumWvDir2 == 1) ) THEN
+         ELSE IF ( InitInp%WaveField%WaveMultiDir .AND. (NewmanAppData%Data3D%NumWvDir2 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(NewmanAppData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(NewmanAppData%Data3D%WvDir2(1)))//' degrees (second wave direction). '// &
                         'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
@@ -1433,7 +1433,7 @@ END SUBROUTINE WAMIT2_Init
                ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
                ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
                ! we will issue a warning.
-            IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+            IF ( (InitInp%WaveField%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveField%WaveDirMax < -150.0_SiKi) .OR. &
                  (minval(NewmanAppData%data3d%WvDir1) > 150.0_SiKi) .OR.  (maxval(NewmanAppData%data3d%WvDir1) < -150.0_SiKi) .OR. &
                  (minval(NewmanAppData%data3d%WvDir2) > 150.0_SiKi) .OR.  (maxval(NewmanAppData%data3d%WvDir2) < -150.0_SiKi) ) THEN
                CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
@@ -1443,13 +1443,13 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the first wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveDirMin < MINVAL(NewmanAppData%Data3D%WvDir1) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMin < MINVAL(NewmanAppData%Data3D%WvDir1) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax > MAXVAL(NewmanAppData%Data3D%WvDir1) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(NewmanAppData%Data3D%WvDir1) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
            ENDIF
@@ -1457,13 +1457,13 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the second wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveDirMin < MINVAL(NewmanAppData%Data3D%WvDir2) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMin < MINVAL(NewmanAppData%Data3D%WvDir2) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax > MAXVAL(NewmanAppData%Data3D%WvDir2) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(NewmanAppData%Data3D%WvDir2) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
@@ -1473,12 +1473,12 @@ END SUBROUTINE WAMIT2_Init
       ELSEIF ( NewmanAppData%DataIs4D ) THEN
 
             ! If we are using multidirectional waves, then we should have more than 1 wave direction in the WAMIT file.
-         IF ( InitInp%WaveMultiDir .AND. (NewmanAppData%Data4D%NumWvDir1 == 1) ) THEN
+         IF ( InitInp%WaveField%WaveMultiDir .AND. (NewmanAppData%Data4D%NumWvDir1 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(NewmanAppData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(NewmanAppData%Data4D%WvDir1(1)))//' degrees (first wave direction). '// &
                         'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                         ErrStat,ErrMsg,RoutineName)
-         ELSE IF ( InitInp%WaveMultiDir .AND. (NewmanAppData%Data4D%NumWvDir2 == 1) ) THEN
+         ELSE IF ( InitInp%WaveField%WaveMultiDir .AND. (NewmanAppData%Data4D%NumWvDir2 == 1) ) THEN
             CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(NewmanAppData%Filename)//' only contains one wave '// &
                         'direction at '//TRIM(Num2LStr(NewmanAppData%Data4D%WvDir2(1)))//' degrees (second wave direction). '// &
                         'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
@@ -1489,7 +1489,7 @@ END SUBROUTINE WAMIT2_Init
                ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
                ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
                ! we will issue a warning.
-            IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+            IF ( (InitInp%WaveField%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveField%WaveDirMax < -150.0_SiKi) .OR. &
                  (MINVAL(NewmanAppData%Data4D%WvDir1) > 150.0_SiKi) .OR.  (MAXVAL(NewmanAppData%Data4D%WvDir1) < -150.0_SiKi) .OR. &
                  (MINVAL(NewmanAppData%Data4D%WvDir2) > 150.0_SiKi) .OR.  (MAXVAL(NewmanAppData%Data4D%WvDir2) < -150.0_SiKi) ) THEN
                CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
@@ -1500,13 +1500,13 @@ END SUBROUTINE WAMIT2_Init
                ! Now check the limits for the first wave direction
                !  --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
                !  --> FIXME: modify to allow shifting values by TwoPi before comparing
-            IF ( InitInp%WaveDirMin < MINVAL(NewmanAppData%Data4D%WvDir1) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMin < MINVAL(NewmanAppData%Data4D%WvDir1) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax > MAXVAL(NewmanAppData%Data4D%WvDir1) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(NewmanAppData%Data4D%WvDir1) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the first wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
@@ -1514,13 +1514,13 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now check the limits for the second wave direction
                !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-            IF ( InitInp%WaveDirMin < MINVAL(NewmanAppData%Data4D%WvDir2) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMin < MINVAL(NewmanAppData%Data4D%WvDir2) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
-            IF ( InitInp%WaveDirMax > MAXVAL(NewmanAppData%Data4D%WvDir2) ) THEN
-               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+            IF ( InitInp%WaveField%WaveDirMax > MAXVAL(NewmanAppData%Data4D%WvDir2) ) THEN
+               CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                      'found in the WAMIT data file '//TRIM(NewmanAppData%Filename)//' for the second wave direction.', &
                      ErrStat, ErrMsg, RoutineName)
             ENDIF
@@ -2067,12 +2067,12 @@ END SUBROUTINE WAMIT2_Init
 
 
          ! If we are using multidirectional waves, then we should have more than 1 wave direction in the WAMIT file.
-      IF ( InitInp%WaveMultiDir .AND. (DiffQTFData%Data4D%NumWvDir1 == 1) ) THEN
+      IF ( InitInp%WaveField%WaveMultiDir .AND. (DiffQTFData%Data4D%NumWvDir1 == 1) ) THEN
          CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(DiffQTFData%Filename)//' only contains one wave '// &
                      'direction at '//TRIM(Num2LStr(DiffQTFData%Data4D%WvDir1(1)))//' degrees (first wave direction). '// &
                      'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                      ErrStat,ErrMsg,RoutineName)
-      ELSE IF ( InitInp%WaveMultiDir .AND. (DiffQTFData%Data4D%NumWvDir2 == 1) ) THEN
+      ELSE IF ( InitInp%WaveField%WaveMultiDir .AND. (DiffQTFData%Data4D%NumWvDir2 == 1) ) THEN
          CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(DiffQTFData%Filename)//' only contains one wave '// &
                      'direction at '//TRIM(Num2LStr(DiffQTFData%Data4D%WvDir2(1)))//' degrees (second wave direction). '// &
                      'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
@@ -2083,7 +2083,7 @@ END SUBROUTINE WAMIT2_Init
             ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
             ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
             ! we will issue a warning.
-         IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+         IF ( (InitInp%WaveField%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveField%WaveDirMax < -150.0_SiKi) .OR. &
               (MINVAL(DiffQTFData%Data4D%WvDir1) > 150.0_SiKi) .OR.  (MAXVAL(DiffQTFData%Data4D%WvDir1) < -150.0_SiKi) .OR. &
               (MINVAL(DiffQTFData%Data4D%WvDir2) > 150.0_SiKi) .OR.  (MAXVAL(DiffQTFData%Data4D%WvDir2) < -150.0_SiKi) ) THEN
             CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
@@ -2094,13 +2094,13 @@ END SUBROUTINE WAMIT2_Init
             ! Now check the limits for the first wave direction
             !  --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
             !  --> FIXME: modify to allow shifting values by TwoPi before comparing
-         IF ( InitInp%WaveDirMin < MINVAL(DiffQTFData%Data4D%WvDir1) ) THEN
-            CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+         IF ( InitInp%WaveField%WaveDirMin < MINVAL(DiffQTFData%Data4D%WvDir1) ) THEN
+            CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                   'found in the WAMIT data file '//TRIM(DiffQTFData%Filename)//' for the first wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
-         IF ( InitInp%WaveDirMax > MAXVAL(DiffQTFData%Data4D%WvDir1) ) THEN
-            CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+         IF ( InitInp%WaveField%WaveDirMax > MAXVAL(DiffQTFData%Data4D%WvDir1) ) THEN
+            CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                   'found in the WAMIT data file '//TRIM(DiffQTFData%Filename)//' for the first wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
@@ -2108,13 +2108,13 @@ END SUBROUTINE WAMIT2_Init
 
             ! Now check the limits for the second wave direction
             !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-         IF ( InitInp%WaveDirMin < MINVAL(DiffQTFData%Data4D%WvDir2) ) THEN
-            CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+         IF ( InitInp%WaveField%WaveDirMin < MINVAL(DiffQTFData%Data4D%WvDir2) ) THEN
+            CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                   'found in the WAMIT data file '//TRIM(DiffQTFData%Filename)//' for the second wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
-         IF ( InitInp%WaveDirMax > MAXVAL(DiffQTFData%Data4D%WvDir2) ) THEN
-            CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+         IF ( InitInp%WaveField%WaveDirMax > MAXVAL(DiffQTFData%Data4D%WvDir2) ) THEN
+            CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                   'found in the WAMIT data file '//TRIM(DiffQTFData%Filename)//' for the second wave direction.', &
                     ErrStat, ErrMsg, RoutineName)
          ENDIF
@@ -2573,12 +2573,12 @@ END SUBROUTINE WAMIT2_Init
 
 
          ! If we are using multidirectional waves, then we should have more than 1 wave direction in the WAMIT file.
-      IF ( InitInp%WaveMultiDir .AND. (SumQTFData%Data4D%NumWvDir1 == 1) ) THEN
+      IF ( InitInp%WaveField%WaveMultiDir .AND. (SumQTFData%Data4D%NumWvDir1 == 1) ) THEN
          CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(SumQTFData%Filename)//' only contains one wave '// &
                      'direction at '//TRIM(Num2LStr(SumQTFData%Data4D%WvDir1(1)))//' degrees (first wave direction). '// &
                      'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
                      ErrStat,ErrMsg,RoutineName)
-      ELSE IF ( InitInp%WaveMultiDir .AND. (SumQTFData%Data4D%NumWvDir2 == 1) ) THEN
+      ELSE IF ( InitInp%WaveField%WaveMultiDir .AND. (SumQTFData%Data4D%NumWvDir2 == 1) ) THEN
          CALL SetErrStat( ErrID_Fatal,' WAMIT output file '//TRIM(SumQTFData%Filename)//' only contains one wave '// &
                      'direction at '//TRIM(Num2LStr(SumQTFData%Data4D%WvDir2(1)))//' degrees (second wave direction). '// &
                      'It cannot be used with multidirectional waves.  Set WaveDirMod to 0 to use this file.', &
@@ -2589,7 +2589,7 @@ END SUBROUTINE WAMIT2_Init
             ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
             ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
             ! we will issue a warning.
-         IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+         IF ( (InitInp%WaveField%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveField%WaveDirMax < -150.0_SiKi) .OR. &
               (MINVAL(SumQTFData%Data4D%WvDir1) > 150.0_SiKi) .OR.  (MAXVAL(SumQTFData%Data4D%WvDir1) < -150.0_SiKi) .OR. &
               (MINVAL(SumQTFData%Data4D%WvDir2) > 150.0_SiKi) .OR.  (MAXVAL(SumQTFData%Data4D%WvDir2) < -150.0_SiKi) ) THEN
             CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
@@ -2600,13 +2600,13 @@ END SUBROUTINE WAMIT2_Init
             ! Now check the limits for the first wave direction
             !  --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
             !  --> FIXME: modify to allow shifting values by TwoPi before comparing
-         IF ( InitInp%WaveDirMin < MINVAL(SumQTFData%Data4D%WvDir1) ) THEN
-            CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+         IF ( InitInp%WaveField%WaveDirMin < MINVAL(SumQTFData%Data4D%WvDir1) ) THEN
+            CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                   'found in the WAMIT data file '//TRIM(SumQTFData%Filename)//' for the first wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
-         IF ( InitInp%WaveDirMax > MAXVAL(SumQTFData%Data4D%WvDir1) ) THEN
-            CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+         IF ( InitInp%WaveField%WaveDirMax > MAXVAL(SumQTFData%Data4D%WvDir1) ) THEN
+            CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                   'found in the WAMIT data file '//TRIM(SumQTFData%Filename)//' for the first wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
@@ -2614,13 +2614,13 @@ END SUBROUTINE WAMIT2_Init
 
             ! Now check the limits for the second wave direction
             !   --> FIXME: sometime fix this to handle the above case.  See Known Issue #1 at top of file.
-         IF ( InitInp%WaveDirMin < MINVAL(SumQTFData%Data4D%WvDir2) ) THEN
-            CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMin))//' is not'//&
+         IF ( InitInp%WaveField%WaveDirMin < MINVAL(SumQTFData%Data4D%WvDir2) ) THEN
+            CALL SetErrStat( ErrID_Fatal,' Minimum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMin))//' is not'//&
                   'found in the WAMIT data file '//TRIM(SumQTFData%Filename)//' for the second wave direction.', &
                   ErrStat, ErrMsg, RoutineName)
          ENDIF
-         IF ( InitInp%WaveDirMax > MAXVAL(SumQTFData%Data4D%WvDir2) ) THEN
-            CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveDirMax))//' is not'//&
+         IF ( InitInp%WaveField%WaveDirMax > MAXVAL(SumQTFData%Data4D%WvDir2) ) THEN
+            CALL SetErrStat( ErrID_Fatal,' Maximum wave direction required of '//TRIM(Num2LStr(InitInp%WaveField%WaveDirMax))//' is not'//&
                   'found in the WAMIT data file '//TRIM(SumQTFData%Filename)//' for the second wave direction.', &
                     ErrStat, ErrMsg, RoutineName)
          ENDIF

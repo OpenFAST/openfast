@@ -42,9 +42,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:3)  :: nGrid = 0_IntKi      !< Grid dimensions [-]
     REAL(SiKi)  :: WvLowCOff = 0.0_R4Ki      !< Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
     REAL(SiKi)  :: WvHiCOff = 0.0_R4Ki      !< High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
-    REAL(SiKi)  :: WaveDir = 0.0_R4Ki      !< Mean incident wave propagation heading direction [(degrees)]
     INTEGER(IntKi)  :: WaveNDir = 0_IntKi      !< Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module] [(-)]
-    LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
     INTEGER(IntKi)  :: WaveDirMod = 0_IntKi      !< Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6] [-]
     REAL(SiKi)  :: WaveDirSpread = 0.0_R4Ki      !< Spreading coefficient [WaveMod=2,3,4 and WaveDirMod=1] [-]
     REAL(SiKi)  :: WaveDirRange = 0.0_R4Ki      !< Range of wave directions (full range: WaveDir +/- WaveDirRange/2) [only used if WaveMod=6] [(degrees)]
@@ -83,8 +81,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  Waves_InitOutputType  =======
   TYPE, PUBLIC :: Waves_InitOutputType
-    REAL(SiKi)  :: WaveDirMin = 0.0_R4Ki      !< Minimum wave direction. [(degrees)]
-    REAL(SiKi)  :: WaveDirMax = 0.0_R4Ki      !< Maximum wave direction. [(degrees)]
     INTEGER(IntKi)  :: WaveNDir = 0_IntKi      !< Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module] [(-)]
     REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
     REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev => NULL()      !< Instantaneous elevation time-series of incident waves at each of the  XY grid points [(meters)]
@@ -114,9 +110,7 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%nGrid = SrcInitInputData%nGrid
    DstInitInputData%WvLowCOff = SrcInitInputData%WvLowCOff
    DstInitInputData%WvHiCOff = SrcInitInputData%WvHiCOff
-   DstInitInputData%WaveDir = SrcInitInputData%WaveDir
    DstInitInputData%WaveNDir = SrcInitInputData%WaveNDir
-   DstInitInputData%WaveMultiDir = SrcInitInputData%WaveMultiDir
    DstInitInputData%WaveDirMod = SrcInitInputData%WaveDirMod
    DstInitInputData%WaveDirSpread = SrcInitInputData%WaveDirSpread
    DstInitInputData%WaveDirRange = SrcInitInputData%WaveDirRange
@@ -250,9 +244,7 @@ subroutine Waves_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%nGrid)
    call RegPack(Buf, InData%WvLowCOff)
    call RegPack(Buf, InData%WvHiCOff)
-   call RegPack(Buf, InData%WaveDir)
    call RegPack(Buf, InData%WaveNDir)
-   call RegPack(Buf, InData%WaveMultiDir)
    call RegPack(Buf, InData%WaveDirMod)
    call RegPack(Buf, InData%WaveDirSpread)
    call RegPack(Buf, InData%WaveDirRange)
@@ -332,11 +324,7 @@ subroutine Waves_UnPackInitInput(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WvHiCOff)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDir)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveNDir)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveMultiDir)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDirMod)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -478,8 +466,6 @@ subroutine Waves_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    character(*), parameter        :: RoutineName = 'Waves_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   DstInitOutputData%WaveDirMin = SrcInitOutputData%WaveDirMin
-   DstInitOutputData%WaveDirMax = SrcInitOutputData%WaveDirMax
    DstInitOutputData%WaveNDir = SrcInitOutputData%WaveNDir
    DstInitOutputData%WaveDOmega = SrcInitOutputData%WaveDOmega
    DstInitOutputData%WaveElev => SrcInitOutputData%WaveElev
@@ -504,8 +490,6 @@ subroutine Waves_PackInitOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Waves_PackInitOutput'
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%WaveDirMin)
-   call RegPack(Buf, InData%WaveDirMax)
    call RegPack(Buf, InData%WaveNDir)
    call RegPack(Buf, InData%WaveDOmega)
    call RegPack(Buf, associated(InData%WaveElev))
@@ -532,10 +516,6 @@ subroutine Waves_UnPackInitOutput(Buf, OutData)
    integer(IntKi)  :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%WaveDirMin)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDirMax)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveNDir)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDOmega)

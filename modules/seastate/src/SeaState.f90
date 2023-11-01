@@ -222,11 +222,12 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          RETURN
       END IF
          
-      p%WaveField%MSL2SWL    = InputFileData%MSL2SWL
-      p%WaveField%WaveStMod  = InputFileData%WaveStMod
-      p%WaveField%WtrDens    = InputFileData%WtrDens     ! may have overwritten default InitInp
-      p%WaveField%RhoXg      = p%WaveField%WtrDens*InitInp%Gravity               ! For WAMIT and WAMIT2
-      
+      p%WaveField%MSL2SWL      = InputFileData%MSL2SWL
+      p%WaveField%WaveStMod    = InputFileData%WaveStMod
+      p%WaveField%WtrDens      = InputFileData%WtrDens     ! may have overwritten default InitInp
+      p%WaveField%RhoXg        = p%WaveField%WtrDens*InitInp%Gravity               ! For WAMIT and WAMIT2
+      p%WaveField%WaveDir      = InputFileData%WaveDir
+      p%WaveField%WaveMultiDir = InputFileData%WaveMultiDir
 
          ! Initialize Waves module (Note that this may change InputFileData%Waves%WaveDT)
       CALL Waves_Init(InputFileData%Waves, Waves_InitOut, p%WaveField, ErrStat2, ErrMsg2 ) 
@@ -359,7 +360,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       
       p%WtrDpth          = InitOut%WtrDpth  
       
-      InitOut%WaveMultiDir = InputFileData%Waves%WaveMultiDir
       InitOut%MCFD    = InputFileData%Waves%MCFD
  
       CALL SeaStOut_Init( SeaSt_ProgDesc, InitInp%OutRootName, InputFileData, y,  p, m, InitOut, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -394,8 +394,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ! Copy Waves InitOut data to SeaState InitOut
       
           ! non-pointer data:
-       InitOut%WaveDirMin   =  Waves_InitOut%WaveDirMin          ! For WAMIT and WAMIT2
-       InitOut%WaveDirMax   =  Waves_InitOut%WaveDirMax          ! For WAMIT and WAMIT2
        InitOut%WaveDOmega   =  Waves_InitOut%WaveDOmega          ! For WAMIT and WAMIT2, FIT
        
        InitOut%NStepWave    =  Waves_InitOut%NStepWave           ! For WAMIT, WAMIT2, SS_Excitation, Morison
@@ -409,11 +407,10 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%WvLowCOffS   =  InputFileData%Waves2%WvLowCOffS
        InitOut%WvHiCOffS    =  InputFileData%Waves2%WvHiCOffS 
        InitOut%WaveDirMod   =  InputFileData%Waves%WaveDirMod
-       InitOut%WaveDir      =  InputFileData%Waves%WaveDir       ! For WAMIT for use in SS_Excitation
        ! InitOut%WtrDpth      =  InputFileData%Waves%WtrDpth
        
       InitOut%SeaSt_Interp_p =  p%seast_interp_p
-
+      
       InitOut%WaveField => p%WaveField
 
       ! Tell HydroDyn if state-space wave excitation is not allowed:

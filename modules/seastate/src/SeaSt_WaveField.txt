@@ -27,3 +27,7 @@ typedef     ^                ^                     SiKi                         
 
 typedef     ^                ^                     ReKi                          WtrDens          -               -        -        "Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default)"    (kg/m^3)
 typedef     ^                ^                     SiKi                          RhoXg            -               -        -        "= WtrDens*Gravity" -
+typedef     ^                ^                     SiKi                          WaveDirMin       -               -        -        "Minimum wave direction."  (degrees)
+typedef     ^                ^                     SiKi                          WaveDirMax       -               -        -        "Maximum wave direction."  (degrees)
+typedef     ^                ^                     SiKi                          WaveDir          -               -        -        "Incident wave propagation heading direction" (degrees)
+typedef     ^                ^                     LOGICAL                       WaveMultiDir     -               -        -        "Indicates the waves are multidirectional -- set by HydroDyn_Input"  -
