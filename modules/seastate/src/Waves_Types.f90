@@ -83,7 +83,6 @@ IMPLICIT NONE
   TYPE, PUBLIC :: Waves_InitOutputType
     INTEGER(IntKi)  :: WaveNDir = 0_IntKi      !< Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module] [(-)]
     REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
-    REAL(SiKi) , DIMENSION(:,:,:), POINTER  :: WaveElev => NULL()      !< Instantaneous elevation time-series of incident waves at each of the  XY grid points [(meters)]
     REAL(DbKi)  :: WaveTMax = 0.0_R8Ki      !< Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT [(sec)]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
@@ -461,14 +460,11 @@ subroutine Waves_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(3), UB(3)
-   integer(IntKi)                 :: ErrStat2
    character(*), parameter        :: RoutineName = 'Waves_CopyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstInitOutputData%WaveNDir = SrcInitOutputData%WaveNDir
    DstInitOutputData%WaveDOmega = SrcInitOutputData%WaveDOmega
-   DstInitOutputData%WaveElev => SrcInitOutputData%WaveElev
    DstInitOutputData%WaveTMax = SrcInitOutputData%WaveTMax
    DstInitOutputData%NStepWave = SrcInitOutputData%NStepWave
    DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
@@ -481,25 +477,15 @@ subroutine Waves_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'Waves_DestroyInitOutput'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   nullify(InitOutputData%WaveElev)
 end subroutine
 
 subroutine Waves_PackInitOutput(Buf, Indata)
    type(PackBuffer), intent(inout) :: Buf
    type(Waves_InitOutputType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'Waves_PackInitOutput'
-   logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%WaveNDir)
    call RegPack(Buf, InData%WaveDOmega)
-   call RegPack(Buf, associated(InData%WaveElev))
-   if (associated(InData%WaveElev)) then
-      call RegPackBounds(Buf, 3, lbound(InData%WaveElev), ubound(InData%WaveElev))
-      call RegPackPointer(Buf, c_loc(InData%WaveElev), PtrInIndex)
-      if (.not. PtrInIndex) then
-         call RegPack(Buf, InData%WaveElev)
-      end if
-   end if
    call RegPack(Buf, InData%WaveTMax)
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
@@ -510,40 +496,11 @@ subroutine Waves_UnPackInitOutput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(Waves_InitOutputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'Waves_UnPackInitOutput'
-   integer(IntKi)  :: LB(3), UB(3)
-   integer(IntKi)  :: stat
-   logical         :: IsAllocAssoc
-   integer(IntKi)  :: PtrIdx
-   type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    call RegUnpack(Buf, OutData%WaveNDir)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
-   if (associated(OutData%WaveElev)) deallocate(OutData%WaveElev)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      call RegUnpackPointer(Buf, Ptr, PtrIdx)
-      if (RegCheckErr(Buf, RoutineName)) return
-      if (c_associated(Ptr)) then
-         call c_f_pointer(Ptr, OutData%WaveElev, UB(1:3)-LB(1:3))
-         OutData%WaveElev(LB(1):,LB(2):,LB(3):) => OutData%WaveElev
-      else
-         allocate(OutData%WaveElev(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
-         if (stat /= 0) then 
-            call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElev.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-            return
-         end if
-         Buf%Pointers(PtrIdx) = c_loc(OutData%WaveElev)
-         call RegUnpack(Buf, OutData%WaveElev)
-         if (RegCheckErr(Buf, RoutineName)) return
-      end if
-   else
-      OutData%WaveElev => null()
-   end if
    call RegUnpack(Buf, OutData%WaveTMax)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NStepWave)

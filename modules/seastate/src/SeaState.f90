@@ -127,9 +127,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       m%SeaSt_Interp_m%FirstWarn_Clamp = .true.
 
       
-#ifdef BETA_BUILD
-   CALL DispBetaNotice( "This is a beta version of SeaState and is for testing purposes only."//NewLine//"This version includes user waves, WaveMod=6 and the ability to write example user waves." )
-#endif
       
          ! Initialize the NWTC Subroutine Library
          
