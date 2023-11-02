@@ -24,7 +24,8 @@ typedef   MoorDyn/MD  InitInputType    ReKi               g              -   -99
 typedef   ^           ^                ReKi               rhoW           -   -999.9 -   "sea density"        "[kg/m^3]"
 typedef   ^           ^                ReKi               WtrDepth       -   -999.9 -   "depth of water"     "[m]"
 typedef   ^           ^                ReKi               PtfmInit      {:}{:} -    -   "initial position of platform(s) shape: 6, nTurbines"     -
-typedef   ^           ^                IntKi              FarmSize       -    0     -   "Indicates normal FAST module mode if 0, FAST.Farm coupled mode and =nTurbines if >0"     -
+typedef   ^           ^                IntKi              FarmSize       -    0     -   "Indicates normal FAST module mode if 0, FAST.Farm coupled mode and =nTurbines if >0, standalone mode if -1"     -
+typedef   ^           ^                IntKi              Standalone     -    0     -   "Indicates MoorDyn run as standalone code if 1, coupled if 0"     -
 typedef   ^           ^                ReKi               TurbineRefPos {:}{:} -    -   "reference position of turbines in farm, shape: 3, nTurbines"     -
 typedef   ^           ^                ReKi               Tmax           -     -    -   "simulation duration" "[s]"
 typedef   ^           ^                CHARACTER(1024)    FileName       -   ""     -   "MoorDyn input file"
@@ -148,7 +149,7 @@ typedef  ^            ^                DbKi               M              {3}{3} 
 typedef  ^            MD_Rod           IntKi              IdNum         -        -  -   "integer identifier of this Line"
 typedef  ^            ^                CHARACTER(10)      type          -        -  -   "type of Rod.  should match one of RodProp names"
 typedef  ^            ^                IntKi              PropsIdNum    -        -  -   "the IdNum of the associated rod properties"     -
-typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=fixed, 1=vessel, 2=point"
+typedef  ^            ^                IntKi              typeNum        -       -  -   "integer identifying the type.  0=fixed, 1=vessel, 2=point, -1=coupledpinned"
 typedef  ^            ^                IntKi              AttachedA      {10}    -  -   "list of IdNums of lines attached to end A"
 typedef  ^            ^                IntKi              AttachedB      {10}    -  -   "list of IdNums of lines attached to end B"
 typedef  ^            ^                IntKi              TopA           {10}    -  -   "list of ints specifying whether each line is attached at 1 = top/fairlead(end B), 0 = bottom/anchor(end A)"

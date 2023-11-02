@@ -491,8 +491,7 @@ CONTAINS
       ELSE                            ! pinned rod, 6 states (rotational only)
       
          ! account for moment in response to end A acceleration due to inertial coupling (off-diagonal sub-matrix terms)
-         !Fnet(4:6) = Fnet(4:6) - MATMUL(M_out(4:6,1:3), Rod%a6(1:3))  ! <<<check that it's the right submatrix <<<
-         Fnet(4:6) = Fnet(4:6) - MATMUL(M_out(1:3,4:6), Rod%a6(1:3))  ! <<< THIS order is stable. Weird. <<<
+         Fnet(4:6) = Fnet(4:6) - MATMUL(M_out(4:6,1:3), Rod%a6(1:3))  
          ! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the above line seems to be causing the stability problems for USFLOWT! <<<<
          
          ! solve for accelerations in [M]{a}={f} using LU decomposition
@@ -1022,8 +1021,8 @@ CONTAINS
       ! pinned coupled rod      
       else if (Rod%typeNum == -1) then                     
          ! inertial loads ... from input translational ... and solved rotational ... acceleration
-         F6_iner(4:6)  = -MATMUL(Rod%M6net(1:3,1:3), Rod%a6(1:3)) - MATMUL(Rod%M6net(1:3,4:6), Rod%a6(4:6))
-         Fnet_out(1:3) = Rod%F6net(1:3) + F6_iner(4:6)     ! add translational inertial loads
+         F6_iner(1:3)  = -MATMUL(Rod%M6net(1:3,1:3), Rod%a6(1:3)) - MATMUL(Rod%M6net(1:3,4:6), Rod%a6(4:6))
+         Fnet_out(1:3) = Rod%F6net(1:3) + F6_iner(1:3)     ! add translational inertial loads
          Fnet_out(4:6) = 0.0_DbKi
       else
          print *, "ERROR, Rod_GetCoupledForce called for wrong (non-coupled) rod type!"

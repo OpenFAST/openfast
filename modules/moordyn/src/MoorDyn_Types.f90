@@ -48,6 +48,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: WtrDepth = -999.9      !< depth of water [[m]]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PtfmInit      !< initial position of platform(s) shape: 6, nTurbines [-]
     INTEGER(IntKi)  :: FarmSize = 0      !< Indicates normal FAST module mode if 0, FAST.Farm coupled mode and =nTurbines if >0 [-]
+    INTEGER(IntKi)  :: Standalone = 0      !< Indicates MoorDyn run as standalone code if 1, coupled if 0, standalone mode if -1 [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: TurbineRefPos      !< reference position of turbines in farm, shape: 3, nTurbines [-]
     REAL(ReKi)  :: Tmax      !< simulation duration [[s]]
     CHARACTER(1024)  :: FileName      !< MoorDyn input file [-]
@@ -459,6 +460,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: dxIdx_map2_xStateIdx      !< Mapping array from index of dX array to corresponding state index [-]
     LOGICAL  :: VisMeshes      !< Using visualization meshes as requested by glue code [-]
     TYPE(VisDiam) , DIMENSION(:), ALLOCATABLE  :: VisRodsDiam      !< Diameters for visualization of rods [-]
+    INTEGER(IntKi)  :: Standalone      !< Indicates MoorDyn run as standalone code if 1, coupled if 0 [-]
   END TYPE MD_ParameterType
 ! =======================
 ! =========  MD_InputType  =======
