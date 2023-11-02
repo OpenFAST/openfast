@@ -428,6 +428,7 @@ typedef   ^       ^                    Integer      Jac_nx              -       
 typedef   ^       ^                    Integer      dxIdx_map2_xStateIdx {:}        -  -   "Mapping array from index of dX array to corresponding state index" -
 typedef   ^       ^                    Logical      VisMeshes           -           -  -   "Using visualization meshes as requested by glue code" -
 typedef   ^       ^                    VisDiam      VisRodsDiam        {:}          -  -   "Diameters for visualization of rods" -
+typedef   ^       ^                    IntKi        Standalone          -           -  -   "Indicates MoorDyn run as standalone code if 1, coupled if 0" - 
 
 
 # ============================== Inputs ============================================================================================================================================
