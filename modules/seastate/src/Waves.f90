@@ -2240,7 +2240,7 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
          DO I = 0,InitOut%NStepWave2
          
             ! Apply limits to the existing WaveElevC0 arrays if outside frequency range
-            IF ( OmegaArr(I) < InitInp%WvLowCOff .OR. OmegaArr(I) > InitInp%WvHiCOff )  THEN
+            IF ( OmegaArr(I) < WaveField%WvLowCOff .OR. OmegaArr(I) > WaveField%WvHiCOff )  THEN
                WaveField%WaveElevC0(:,I) = 0.0_SiKi
             ENDIF
             
@@ -2307,7 +2307,7 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
       
          DO I = 0,InitOut%NStepWave2
 
-            IF ( OmegaArr(I) < InitInp%WvLowCOff .OR. OmegaArr(I) > InitInp%WvHiCOff )  THEN ! .TRUE. if OmegaArr(I) is above or below the cut-off frequency
+            IF ( OmegaArr(I) < WaveField%WvLowCOff .OR. OmegaArr(I) > WaveField%WvHiCOff )  THEN ! .TRUE. if OmegaArr(I) is above or below the cut-off frequency
                !  Zero-out the wave spectrum above the cut-off frequency.  We must cut-off the frequency in order to
                !  void nonphysical wave forces.  Waves that have wavelengths much smaller than the platform diameter
                !  (high frequency) do not contribute to the net force because regions of positive and negative
@@ -2321,7 +2321,7 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
                   CASE ( 2 )              ! JONSWAP/Pierson-Moskowitz spectrum (irregular) wave.
                         WaveS1SddArr(I) = JONSWAP ( OmegaArr(I), InitInp%WaveHs, InitInp%WaveTp, InitInp%WavePkShp )
                   CASE ( 3 )              ! White-noise
-                        WaveS1SddArr(I) =  InitInp%WaveHs * InitInp%WaveHs / ( 16.0 * (InitInp%WvHiCOff - InitInp%WvLowCOff) )
+                        WaveS1SddArr(I) =  InitInp%WaveHs * InitInp%WaveHs / ( 16.0 * (WaveField%WvHiCOff - WaveField%WvLowCOff) )
                   CASE ( 4 )              ! User-defined spectrum (irregular) wave.
                         CALL UserWaveSpctrm ( OmegaArr(I), WaveField%WaveDir, InitInp%DirRoot, WaveS1SddArr(I) )
                ENDSELECT

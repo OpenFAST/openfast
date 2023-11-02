@@ -62,6 +62,8 @@ IMPLICIT NONE
     REAL(SiKi)  :: WaveDir = 0.0_R4Ki      !< Incident wave propagation heading direction [(degrees)]
     LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
     REAL(SiKi)  :: MCFD = 0.0_R4Ki      !< Diameter of members that will use the MacCamy-Fuchs diffraction model [-]
+    REAL(SiKi)  :: WvLowCOff = 0.0_R4Ki      !< Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
+    REAL(SiKi)  :: WvHiCOff = 0.0_R4Ki      !< High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
   END TYPE SeaSt_WaveFieldType
 ! =======================
 CONTAINS
@@ -271,6 +273,8 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
    DstSeaSt_WaveFieldTypeData%WaveDir = SrcSeaSt_WaveFieldTypeData%WaveDir
    DstSeaSt_WaveFieldTypeData%WaveMultiDir = SrcSeaSt_WaveFieldTypeData%WaveMultiDir
    DstSeaSt_WaveFieldTypeData%MCFD = SrcSeaSt_WaveFieldTypeData%MCFD
+   DstSeaSt_WaveFieldTypeData%WvLowCOff = SrcSeaSt_WaveFieldTypeData%WvLowCOff
+   DstSeaSt_WaveFieldTypeData%WvHiCOff = SrcSeaSt_WaveFieldTypeData%WvHiCOff
 end subroutine
 
 subroutine SeaSt_WaveField_DestroySeaSt_WaveFieldType(SeaSt_WaveFieldTypeData, ErrStat, ErrMsg)
@@ -422,6 +426,8 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, Indata)
    call RegPack(Buf, InData%WaveDir)
    call RegPack(Buf, InData%WaveMultiDir)
    call RegPack(Buf, InData%MCFD)
+   call RegPack(Buf, InData%WvLowCOff)
+   call RegPack(Buf, InData%WvHiCOff)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -663,6 +669,10 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
    call RegUnpack(Buf, OutData%WaveMultiDir)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%MCFD)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvLowCOff)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvHiCOff)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 END MODULE SeaSt_WaveField_Types

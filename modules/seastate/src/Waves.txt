@@ -23,8 +23,6 @@ typedef     ^                 ^                 CHARACTER(1024)      DirRoot    
 typedef     ^                 ^                 CHARACTER(1024)      WvKinFile          -        -        -       "The root name of user input wave kinematics files" -
 typedef     ^                 ^                 ReKi                 Gravity           -        -        -        "Gravitational acceleration"  (m/s^2)
 typedef     ^                 ^                 integer              nGrid             3        -        -        "Grid dimensions"
-typedef     ^                 ^                 SiKi                 WvLowCOff         -        -        -        "Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4]"   (rad/s)
-typedef     ^                 ^                 SiKi                 WvHiCOff          -        -        -        "High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4]"   (rad/s)
 typedef     ^                 ^                 INTEGER              WaveNDir          -        -        -        "Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module]"     (-)
 typedef     ^                 ^                 INTEGER              WaveDirMod        -        -        -        "Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6]"   -
 typedef     ^                 ^                 SiKi                 WaveDirSpread     -        -        -        "Spreading coefficient [WaveMod=2,3,4 and WaveDirMod=1]"   -

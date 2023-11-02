@@ -40,8 +40,6 @@ IMPLICIT NONE
     CHARACTER(1024)  :: WvKinFile      !< The root name of user input wave kinematics files [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravitational acceleration [(m/s^2)]
     INTEGER(IntKi) , DIMENSION(1:3)  :: nGrid = 0_IntKi      !< Grid dimensions [-]
-    REAL(SiKi)  :: WvLowCOff = 0.0_R4Ki      !< Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
-    REAL(SiKi)  :: WvHiCOff = 0.0_R4Ki      !< High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
     INTEGER(IntKi)  :: WaveNDir = 0_IntKi      !< Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module] [(-)]
     INTEGER(IntKi)  :: WaveDirMod = 0_IntKi      !< Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6] [-]
     REAL(SiKi)  :: WaveDirSpread = 0.0_R4Ki      !< Spreading coefficient [WaveMod=2,3,4 and WaveDirMod=1] [-]
@@ -106,8 +104,6 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%WvKinFile = SrcInitInputData%WvKinFile
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%nGrid = SrcInitInputData%nGrid
-   DstInitInputData%WvLowCOff = SrcInitInputData%WvLowCOff
-   DstInitInputData%WvHiCOff = SrcInitInputData%WvHiCOff
    DstInitInputData%WaveNDir = SrcInitInputData%WaveNDir
    DstInitInputData%WaveDirMod = SrcInitInputData%WaveDirMod
    DstInitInputData%WaveDirSpread = SrcInitInputData%WaveDirSpread
@@ -239,8 +235,6 @@ subroutine Waves_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%WvKinFile)
    call RegPack(Buf, InData%Gravity)
    call RegPack(Buf, InData%nGrid)
-   call RegPack(Buf, InData%WvLowCOff)
-   call RegPack(Buf, InData%WvHiCOff)
    call RegPack(Buf, InData%WaveNDir)
    call RegPack(Buf, InData%WaveDirMod)
    call RegPack(Buf, InData%WaveDirSpread)
@@ -315,10 +309,6 @@ subroutine Waves_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%Gravity)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%nGrid)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvLowCOff)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvHiCOff)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveNDir)
    if (RegCheckErr(Buf, RoutineName)) return

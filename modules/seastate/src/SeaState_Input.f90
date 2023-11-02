@@ -177,11 +177,11 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
       if (Failed())  return;
 
       ! WvLowCOff - Low Cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s).
-   call ParseVar( FileInfo_In, CurLine, 'WvLowCOff', InputFileData%Waves%WvLowCOff, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, 'WvLowCOff', InputFileData%WvLowCOff, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
      ! WvHiCOff - High Cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s).
-   call ParseVar( FileInfo_In, CurLine, 'WvHiCOff', InputFileData%Waves%WvHiCOff, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, 'WvHiCOff', InputFileData%WvHiCOff, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WaveDir - Mean wave heading direction.
@@ -774,24 +774,24 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
       ! WvLowCOff and WvHiCOff - Wave Cut-off frequency
 
-   if ( InputFileData%Waves%WvLowCOff < 0 ) then
+   if ( InputFileData%WvLowCOff < 0 ) then
       call SetErrStat( ErrID_Fatal,'WvLowCOff must be greater than or equal to zero.',ErrStat,ErrMsg,RoutineName)
       return
    end if
 
       ! Threshold upper cut-off based on sampling rate
    if ( EqualRealNos(InputFileData%Waves%WaveDT, 0.0_DbKi) ) then
-      InputFileData%Waves%WvHiCOff = 10000.0;  ! This is not going to be used because WaveDT is zero.
+      InputFileData%WvHiCOff = 10000.0;  ! This is not going to be used because WaveDT is zero.
    else
       TmpFreq = REAL( Pi/InputFileData%Waves%WaveDT,SiKi)
-      if ( InputFileData%Waves%WvHiCOff > TmpFreq ) then
-         InputFileData%Waves%WvHiCOff =  TmpFreq
+      if ( InputFileData%WvHiCOff > TmpFreq ) then
+         InputFileData%WvHiCOff =  TmpFreq
          call SetErrStat( ErrID_Info,'WvLowCOff adjusted to '//trim(num2lstr(TmpFreq))//' rad/s, based on WaveDT.',ErrStat,ErrMsg,RoutineName)
       end if
    end if
 
    if (InputFileData%Waves%WaveMod > 2 .and. InputFileData%Waves%WaveMod /= 6) then
-      if ( InputFileData%Waves%WvLowCOff >= InputFileData%Waves%WvHiCOff ) then
+      if ( InputFileData%WvLowCOff >= InputFileData%WvHiCOff ) then
          call SetErrSTat( ErrID_Fatal,'WvLowCOff must be less than WvHiCOff.',ErrStat,ErrMsg,RoutineName)
          return
       end if

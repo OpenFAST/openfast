@@ -1205,10 +1205,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    END IF
 
    
-        ! Copy over the first order frequency limits to the WAMIT2 module which needs them.
-   InputFileData%WAMIT2%WvLowCOff  = InitInp%WvLowCOff
-   InputFileData%WAMIT2%WvHiCOff   = InitInp%WvHiCOff
-
 
         ! Copy over the 2nd order limits to the WAMIT2 module which needs them.
    InputFileData%WAMIT2%WvLowCOffD  = InitInp%WvLowCOffD

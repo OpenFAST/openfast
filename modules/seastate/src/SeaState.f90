@@ -227,6 +227,9 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%WaveField%WaveMultiDir = InputFileData%WaveMultiDir
       p%WaveField%MCFD         = InputFileData%MCFD
 
+      p%WaveField%WvLowCOff    =  InputFileData%WvLowCOff
+      p%WaveField%WvHiCOff     =  InputFileData%WvHiCOff
+      
          ! Initialize Waves module (Note that this may change InputFileData%Waves%WaveDT)
       CALL Waves_Init(InputFileData%Waves, Waves_InitOut, p%WaveField, ErrStat2, ErrMsg2 ) 
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! note that we DO NOT RETURN on error until AFTER the pointers modified, below
@@ -397,8 +400,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%NStepWave2   =  Waves_InitOut%NStepWave2          ! For WAMIT and WAMIT2,  FIT
       
        InitOut%WaveMod      =  InputFileData%Waves%WaveMod   
-       InitOut%WvLowCOff    =  InputFileData%Waves%WvLowCOff 
-       InitOut%WvHiCOff     =  InputFileData%Waves%WvHiCOff  
        InitOut%WvLowCOffD   =  InputFileData%Waves2%WvLowCOffD
        InitOut%WvHiCOffD    =  InputFileData%Waves2%WvHiCOffD 
        InitOut%WvLowCOffS   =  InputFileData%Waves2%WvLowCOffS

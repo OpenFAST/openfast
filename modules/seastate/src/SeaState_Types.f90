@@ -71,6 +71,8 @@ IMPLICIT NONE
     REAL(SiKi)  :: WaveDir = 0.0_R4Ki      !< Incident wave propagation heading direction [(degrees)]
     LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional [-]
     REAL(SiKi)  :: MCFD = 0.0_R4Ki      !< Diameter of members that will use the MacCamy-Fuchs diffraction model [-]
+    REAL(SiKi)  :: WvLowCOff = 0.0_R4Ki      !< Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
+    REAL(SiKi)  :: WvHiCOff = 0.0_R4Ki      !< High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
   END TYPE SeaSt_InputFile
 ! =======================
 ! =========  SeaSt_InitInputType  =======
@@ -104,8 +106,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
     INTEGER(IntKi)  :: WaveMod = 0_IntKi      !< Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED } [-]
     INTEGER(IntKi)  :: WaveDirMod = 0_IntKi      !< Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6] [-]
-    REAL(SiKi)  :: WvLowCOff = 0.0_R4Ki      !< Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
-    REAL(SiKi)  :: WvHiCOff = 0.0_R4Ki      !< High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
     REAL(SiKi)  :: WvLowCOffD = 0.0_R4Ki      !< Minimum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
     REAL(SiKi)  :: WvHiCOffD = 0.0_R4Ki      !< Maximum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
     REAL(SiKi)  :: WvLowCOffS = 0.0_R4Ki      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
@@ -304,6 +304,8 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
    DstInputFileData%WaveDir = SrcInputFileData%WaveDir
    DstInputFileData%WaveMultiDir = SrcInputFileData%WaveMultiDir
    DstInputFileData%MCFD = SrcInputFileData%MCFD
+   DstInputFileData%WvLowCOff = SrcInputFileData%WvLowCOff
+   DstInputFileData%WvHiCOff = SrcInputFileData%WvHiCOff
 end subroutine
 
 subroutine SeaSt_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
@@ -401,6 +403,8 @@ subroutine SeaSt_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%WaveDir)
    call RegPack(Buf, InData%WaveMultiDir)
    call RegPack(Buf, InData%MCFD)
+   call RegPack(Buf, InData%WvLowCOff)
+   call RegPack(Buf, InData%WvHiCOff)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -542,6 +546,10 @@ subroutine SeaSt_UnPackInputFile(Buf, OutData)
    call RegUnpack(Buf, OutData%WaveMultiDir)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%MCFD)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvLowCOff)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvHiCOff)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -730,8 +738,6 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
    DstInitOutputData%WaveMod = SrcInitOutputData%WaveMod
    DstInitOutputData%WaveDirMod = SrcInitOutputData%WaveDirMod
-   DstInitOutputData%WvLowCOff = SrcInitOutputData%WvLowCOff
-   DstInitOutputData%WvHiCOff = SrcInitOutputData%WvHiCOff
    DstInitOutputData%WvLowCOffD = SrcInitOutputData%WvLowCOffD
    DstInitOutputData%WvHiCOffD = SrcInitOutputData%WvHiCOffD
    DstInitOutputData%WvLowCOffS = SrcInitOutputData%WvLowCOffS
@@ -804,8 +810,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
    call RegPack(Buf, InData%NStepWave2)
    call RegPack(Buf, InData%WaveMod)
    call RegPack(Buf, InData%WaveDirMod)
-   call RegPack(Buf, InData%WvLowCOff)
-   call RegPack(Buf, InData%WvHiCOff)
    call RegPack(Buf, InData%WvLowCOffD)
    call RegPack(Buf, InData%WvHiCOffD)
    call RegPack(Buf, InData%WvLowCOffS)
@@ -878,10 +882,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    call RegUnpack(Buf, OutData%WaveMod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDirMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvLowCOff)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvHiCOff)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WvLowCOffD)
    if (RegCheckErr(Buf, RoutineName)) return

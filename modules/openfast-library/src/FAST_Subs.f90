@@ -860,8 +860,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_HD%NStepWave2     =  Init%OutData_SeaSt%NStepWave2
          Init%InData_HD%WaveMod        =  Init%OutData_SeaSt%WaveMod
          Init%InData_HD%WaveDirMod     =  Init%OutData_SeaSt%WaveDirMod
-         Init%InData_HD%WvLowCOff      =  Init%OutData_SeaSt%WvLowCOff 
-         Init%InData_HD%WvHiCOff       =  Init%OutData_SeaSt%WvHiCOff  
          Init%InData_HD%WvLowCOffD     =  Init%OutData_SeaSt%WvLowCOffD
          Init%InData_HD%WvHiCOffD      =  Init%OutData_SeaSt%WvHiCOffD 
          Init%InData_HD%WvLowCOffS     =  Init%OutData_SeaSt%WvLowCOffS

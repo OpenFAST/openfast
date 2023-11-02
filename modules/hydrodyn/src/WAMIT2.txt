@@ -46,8 +46,7 @@ typedef     ^                 ^                 LOGICAL              MnDriftF   
 typedef     ^                 ^                 LOGICAL              NewmanAppF        -        -        -        "Flag indicating Newman approximation should be calculated"    -
 typedef     ^                 ^                 LOGICAL              DiffQTFF          -        -        -        "Flag indicating the full difference QTF should be calculated" -
 typedef     ^                 ^                 LOGICAL              SumQTFF           -        -        -        "Flag indicating the full    sum     QTF should be calculated" -
-typedef     ^                 ^                 ReKi                 WvLowCOff         -        -        -        "Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4]"   (rad/s)
-typedef     ^                 ^                 ReKi                 WvHiCOff          -        -        -        "High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4]"   (rad/s)
+
 typedef     ^                 ^                 ReKi                 WvLowCOffD        -        -        -        "Minimum frequency used in the difference methods [Ignored if all difference methods = 0]"   (rad/s)
 typedef     ^                 ^                 ReKi                 WvHiCOffD         -        -        -        "Maximum frequency used in the difference methods [Ignored if all difference methods = 0]"   (rad/s)
 typedef     ^                 ^                 ReKi                 WvLowCOffS        -        -        -        "Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)

@@ -34,7 +34,6 @@ MODULE WAMIT_Types
 USE Conv_Radiation_Types
 USE SS_Radiation_Types
 USE SS_Excitation_Types
-USE SeaSt_WaveField_Types
 USE NWTC_Library
 IMPLICIT NONE
 ! =========  WAMIT_InitInputType  =======
