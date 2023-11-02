@@ -88,7 +88,6 @@ typedef     ^                          ^                             SiKi       
 typedef     ^                          ^                             SiKi                     WvHiCOffS                       -        -        -        "Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
 typedef     ^                          ^                             LOGICAL                  InvalidWithSSExctn              -       -        -        "Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
 typedef     ^                          ^                             SiKi                     WaveDOmega                      -        -        -        "Frequency step for incident wave calculations" (rad/s)
-typedef     ^                          ^                             SiKi                     MCFD                            -        -        -        "Diameter of MacCamy-Fuchs members" (meters)
 typedef     ^                          ^                     SeaSt_WaveFieldType             *WaveField                       -        -        -        "Pointer to SeaState wave field" -
 #
 #

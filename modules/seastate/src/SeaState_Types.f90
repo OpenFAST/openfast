@@ -70,6 +70,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default) [(kg/m^3)]
     REAL(SiKi)  :: WaveDir = 0.0_R4Ki      !< Incident wave propagation heading direction [(degrees)]
     LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional [-]
+    REAL(SiKi)  :: MCFD = 0.0_R4Ki      !< Diameter of members that will use the MacCamy-Fuchs diffraction model [-]
   END TYPE SeaSt_InputFile
 ! =======================
 ! =========  SeaSt_InitInputType  =======
@@ -302,6 +303,7 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
    DstInputFileData%WtrDens = SrcInputFileData%WtrDens
    DstInputFileData%WaveDir = SrcInputFileData%WaveDir
    DstInputFileData%WaveMultiDir = SrcInputFileData%WaveMultiDir
+   DstInputFileData%MCFD = SrcInputFileData%MCFD
 end subroutine
 
 subroutine SeaSt_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
@@ -398,6 +400,7 @@ subroutine SeaSt_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%WtrDens)
    call RegPack(Buf, InData%WaveDir)
    call RegPack(Buf, InData%WaveMultiDir)
+   call RegPack(Buf, InData%MCFD)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -537,6 +540,8 @@ subroutine SeaSt_UnPackInputFile(Buf, OutData)
    call RegUnpack(Buf, OutData%WaveDir)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveMultiDir)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%MCFD)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 

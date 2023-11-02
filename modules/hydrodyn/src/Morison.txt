@@ -271,7 +271,6 @@ typedef   ^                            ^                             CHARACTER(C
 typedef   ^                            ^                             INTEGER                  NumOuts                          -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  UnSum                            -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave                        -          -        -         ""    -
-typedef   ^                            ^                             SiKi                     MCFD                             -          -        -         "Diameter of the MacCamy-Fuchs member."    -
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                        -          -        -         "Pointer to SeaState wave field" -
 typedef   ^                            ^                             logical                  VisMeshes                         -      .false.     -         "Output visualization meshes" -
 #

@@ -56,7 +56,6 @@ typedef     ^                 ^                 SiKi                 CrestHmax  
 typedef     ^                 ^                 SiKi                 CrestTime         -        -        -        "time of the wave crest" sec
 typedef     ^                 ^                 SiKi                 CrestXi           -        -        -        "xi-coordinate for the wave crest" m
 typedef     ^                 ^                 SiKi                 CrestYi           -        -        -        "yi-coordinate for the wave crest" m
-typedef     ^                 ^                 SiKi                 MCFD              -        -        -        "Diameter of members that will use the MacCamy-Fuchs diffraction model"
 typedef     ^                 ^                 INTEGER              WaveFieldMod      -        -        -        "Wave field handling (-) (switch) 0: use individual SeaState inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin"   -
 typedef     ^                 ^                 ReKi                 PtfmLocationX     -        -        -        "Supplied by Driver:  X coordinate of platform location in the wave field"    "m"
 typedef     ^                 ^                 ReKi                 PtfmLocationY     -        -        -        "Supplied by Driver:  Y coordinate of platform location in the wave field"    "m"

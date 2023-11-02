@@ -373,11 +373,11 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
    CurLine = CurLine + 1
 
       ! MacCamy-Fuchs member radius
-   call ParseVar( FileInfo_In, CurLine, 'MCFD', InputFileData%Waves%MCFD, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, 'MCFD', InputFileData%MCFD, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
    IF ( InputFileData%Waves%WaveModChr == '0' .OR. InputFileData%Waves%WaveModChr == '6' ) THEN
-      IF ( InputFileData%Waves%MCFD > 0.0_SiKi ) THEN
+      IF ( InputFileData%MCFD > 0.0_SiKi ) THEN
          CALL SetErrStat( ErrID_Fatal,' The MacCamy-Fuchs diffraction model is not compatible with WaveMod = 0 or 6. Need to set MCFD to 0.',ErrStat,ErrMsg,RoutineName)
          RETURN
       END IF

@@ -840,7 +840,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc0V.',         ErrStat,ErrMsg,RoutineName)
       
       
-      IF (InitInp%MCFD > 0.0_SiKi) THEN ! MacCamy-Fuchs model
+      IF (WaveField%MCFD > 0.0_SiKi) THEN ! MacCamy-Fuchs model
        
          ALLOCATE ( WaveAccC0HxiMCF(0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAccC0HxiMCF.',      ErrStat,ErrMsg,RoutineName)
@@ -918,7 +918,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          ALLOCATE ( WaveField%PWaveAcc0  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),3), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveField%PWaveAcc0.',  ErrStat,ErrMsg,RoutineName)
          
-         IF (InitInp%MCFD > 0.0_ReKi) THEN ! MacCamy-Fuchs model
+         IF (WaveField%MCFD > 0.0_ReKi) THEN ! MacCamy-Fuchs model
          
             ALLOCATE ( PWaveAccC0HxiMCFPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
             IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HxiMCFPz0.',  ErrStat,ErrMsg,RoutineName)
@@ -1073,8 +1073,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
       ! Wavenumber-dependent acceleration scaling for MacCamy-Fuchs model
       MCFC = 0.0_ReKi
-      IF (InitInp%MCFD > 0.0_SiKi .AND. I>0_IntKi) THEN
-         ka = 0.5_ReKi * WaveNmbr * InitInp%MCFD
+      IF (WaveField%MCFD > 0.0_SiKi .AND. I>0_IntKi) THEN
+         ka = 0.5_ReKi * WaveNmbr * WaveField%MCFD
          JPrime = BESSEL_JN(1,ka) / ka - BESSEL_JN(2,ka)
          YPrime = BESSEL_YN(1,ka) / ka - BESSEL_YN(2,ka)
          HPrime = SQRT(JPrime*JPrime + YPrime*YPrime)
@@ -1101,7 +1101,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
             WaveAccC0Hyi (I,J)   = ImagOmega*        WaveVelC0Hyi (I,J)
             WaveAccC0V (I,J)     = ImagOmega*        WaveVelC0V   (I,J)
 
-            IF (InitInp%MCFD > 0.0_SiKi) THEN
+            IF (WaveField%MCFD > 0.0_SiKi) THEN
                WaveAccC0HxiMCF(I,J) = WaveAccC0Hxi(I,J) * MCFC
                WaveAccC0HyiMCF(I,J) = WaveAccC0Hyi(I,J) * MCFC
                WaveAccC0VMCF(I,J)   = WaveAccC0V(I,J)   * MCFC
@@ -1131,7 +1131,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
                PWaveAccC0VPz0  (I,J) =           ImagOmega*PWaveVelC0VPz0  (I,J)
                
                
-               IF (InitInp%MCFD > 0.0_SiKi) THEN
+               IF (WaveField%MCFD > 0.0_SiKi) THEN
                   PWaveAccC0HxiMCFPz0(I,J) = PWaveAccC0HxiPz0(I,J) * MCFC
                   PWaveAccC0HyiMCFPz0(I,J) = PWaveAccC0HyiPz0(I,J) * MCFC
                   PWaveAccC0VMCFPz0(I,J)   = PWaveAccC0VPz0(I,J)   * MCFC
@@ -1211,7 +1211,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
       END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
 
-      IF (InitInp%MCFD > 0.0_SiKi) THEN
+      IF (WaveField%MCFD > 0.0_SiKi) THEN
          DO J = 1,NWaveKin0Prime ! Loop through all points where the incident wave kinematics will be computed without stretching
             CALL ApplyFFT_cx (          WaveAcc0HxiMCF  (:,J),          WaveAccC0HxiMCF  (:,J), FFT_Data, ErrStatTmp )
             CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveAcc0HxiMCF.',      ErrStat,ErrMsg,RoutineName)
@@ -1261,7 +1261,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       
          END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
          
-         IF (InitInp%MCFD > 0.0_SiKi) THEN ! MacCamy-Fuchs scaled acceleration field
+         IF (WaveField%MCFD > 0.0_SiKi) THEN ! MacCamy-Fuchs scaled acceleration field
             DO J = 1,InitInp%NWaveElevGrid
       
                CALL  ApplyFFT_cx (         PWaveAcc0HxiMCFPz0 (:,J  ),       PWaveAccC0HxiMCFPz0(:,J  ),FFT_Data, ErrStatTmp )
@@ -1378,7 +1378,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       end do
 
       ! MacCamy-Fuchs scaled fluid acceleration
-      IF (InitInp%MCFD > 0.0_SiKi) THEN
+      IF (WaveField%MCFD > 0.0_SiKi) THEN
          primeCount = 1
          count = 1
          do k = 1, InitInp%NGrid(3)
@@ -1417,7 +1417,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
             END DO
          END DO
          
-         IF (InitInp%MCFD > 0.0_SiKi) THEN
+         IF (WaveField%MCFD > 0.0_SiKi) THEN
             primeCount = 1
             DO j = 1, InitInp%NGrid(2)  ! Loop through all points on the SWL where partial derivatives about z were computed
                DO i = 1, InitInp%NGrid(1)
@@ -1485,7 +1485,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       WaveField%WaveDynP  (InitOut%NStepWave,:,:,:  )  = WaveField%WaveDynP  (0,:,:,:  )
       WaveField%WaveVel   (InitOut%NStepWave,:,:,:,:)  = WaveField%WaveVel   (0,:,:,:,:)
       WaveField%WaveAcc   (InitOut%NStepWave,:,:,:,:)  = WaveField%WaveAcc   (0,:,:,:,:)
-      IF (InitInp%MCFD > 0.0_SiKi) THEN
+      IF (WaveField%MCFD > 0.0_SiKi) THEN
          WaveField%WaveAccMCF (InitOut%NStepWave,:,:,:,:) = WaveField%WaveAccMCF(0,:,:,:,:)
       END IF
       
@@ -1493,7 +1493,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          WaveField%PWaveDynP0(InitOut%NStepWave,:,:  )    = WaveField%PWaveDynP0(0,:,:  )
          WaveField%PWaveVel0 (InitOut%NStepWave,:,:,:)    = WaveField%PWaveVel0 (0,:,:,:)
          WaveField%PWaveAcc0 (InitOut%NStepWave,:,:,:)    = WaveField%PWaveAcc0 (0,:,:,:)
-         IF (InitInp%MCFD > 0.0_SiKi) THEN
+         IF (WaveField%MCFD > 0.0_SiKi) THEN
             WaveField%PWaveAccMCF0 (InitOut%NStepWave,:,:,:) = WaveField%PWaveAccMCF0(0,:,:,:)
          END IF
       END IF

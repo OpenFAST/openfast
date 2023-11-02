@@ -337,7 +337,6 @@ subroutine SetHD_InitInputs()
    InitInData_HD%InvalidWithSSExctn     =  InitOutData_SeaSt%InvalidWithSSExctn
    
    InitInData_HD%WaveDOmega     =  InitOutData_SeaSt%WaveDOmega  
-   InitInData_HD%MCFD           =  InitOutData_SeaSt%MCFD
 
    InitInData_HD%WaveField => InitOutData_SeaSt%WaveField
 

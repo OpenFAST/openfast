@@ -104,7 +104,6 @@ IMPLICIT NONE
     REAL(SiKi)  :: WvHiCOffS = 0.0_R4Ki      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
     LOGICAL  :: InvalidWithSSExctn = .false.      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
     REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
-    REAL(SiKi)  :: MCFD = 0.0_R4Ki      !< Diameter of MacCamy-Fuchs members [(meters)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
   END TYPE HydroDyn_InitInputType
 ! =======================
@@ -904,7 +903,6 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    DstInitInputData%WvHiCOffS = SrcInitInputData%WvHiCOffS
    DstInitInputData%InvalidWithSSExctn = SrcInitInputData%InvalidWithSSExctn
    DstInitInputData%WaveDOmega = SrcInitInputData%WaveDOmega
-   DstInitInputData%MCFD = SrcInitInputData%MCFD
    DstInitInputData%WaveField => SrcInitInputData%WaveField
 end subroutine
 
@@ -949,7 +947,6 @@ subroutine HydroDyn_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%WvHiCOffS)
    call RegPack(Buf, InData%InvalidWithSSExctn)
    call RegPack(Buf, InData%WaveDOmega)
-   call RegPack(Buf, InData%MCFD)
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
       call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
@@ -1010,8 +1007,6 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%InvalidWithSSExctn)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDOmega)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%MCFD)
    if (RegCheckErr(Buf, RoutineName)) return
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
    call RegUnpack(Buf, IsAllocAssoc)

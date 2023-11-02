@@ -1528,14 +1528,14 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
       END IF
       ! Check radius
       DO i = 1, member%NElements+1
-         IF ( (member%RMG(i) .GT. 1.1_ReKi*REAL(0.5_SiKi*InitInp%MCFD)) .OR. (member%RMG(i) .LT. 0.9_ReKi*REAL(0.5_SiKi*InitInp%MCFD)) ) THEN
+         IF ( (member%RMG(i) .GT. 1.1_ReKi*REAL(0.5_SiKi*InitInp%WaveField%MCFD)) .OR. (member%RMG(i) .LT. 0.9_ReKi*REAL(0.5_SiKi*InitInp%WaveField%MCFD)) ) THEN
             ! Error because MacCamy-Fuchs members must have a diameter within +/-10% of MCFD specified in seastate.
             CALL SetErrStat(ErrID_Fatal, 'MacCamy-Fuchs members must have a diameter within +/-10% of MCFD specified in the SeaState input file.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
             RETURN
          END IF
       END DO
       ! Check draft-to-radius ratio
-      IF ( (-InitInp%Nodes(member%NodeIndx(1))%Position(3)) < 0.5_SiKi*InitInp%MCFD ) THEN
+      IF ( (-InitInp%Nodes(member%NodeIndx(1))%Position(3)) < 0.5_SiKi*InitInp%WaveField%MCFD ) THEN
          CALL SetErrStat(ErrID_Fatal, 'Initial draft of MacCamy-Fuchs members should be at least as large as their radius.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
          RETURN
       END IF

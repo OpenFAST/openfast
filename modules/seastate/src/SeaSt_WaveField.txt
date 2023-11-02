@@ -31,3 +31,4 @@ typedef     ^                ^                     SiKi                         
 typedef     ^                ^                     SiKi                          WaveDirMax       -               -        -        "Maximum wave direction."  (degrees)
 typedef     ^                ^                     SiKi                          WaveDir          -               -        -        "Incident wave propagation heading direction" (degrees)
 typedef     ^                ^                     LOGICAL                       WaveMultiDir     -               -        -        "Indicates the waves are multidirectional -- set by HydroDyn_Input"  -
+typedef     ^                ^                     SiKi                          MCFD             -               -        -        "Diameter of members that will use the MacCamy-Fuchs diffraction model"

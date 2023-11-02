@@ -73,7 +73,6 @@ IMPLICIT NONE
     REAL(SiKi)  :: CrestTime = 0.0_R4Ki      !< time of the wave crest [sec]
     REAL(SiKi)  :: CrestXi = 0.0_R4Ki      !< xi-coordinate for the wave crest [m]
     REAL(SiKi)  :: CrestYi = 0.0_R4Ki      !< yi-coordinate for the wave crest [m]
-    REAL(SiKi)  :: MCFD = 0.0_R4Ki      !< Diameter of members that will use the MacCamy-Fuchs diffraction model [-]
     INTEGER(IntKi)  :: WaveFieldMod = 0_IntKi      !< Wave field handling (-) (switch) 0: use individual SeaState inputs without adjustment, 1: adjust wave phases based on turbine offsets from farm origin [-]
     REAL(ReKi)  :: PtfmLocationX = 0.0_ReKi      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
     REAL(ReKi)  :: PtfmLocationY = 0.0_ReKi      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
@@ -197,7 +196,6 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%CrestTime = SrcInitInputData%CrestTime
    DstInitInputData%CrestXi = SrcInitInputData%CrestXi
    DstInitInputData%CrestYi = SrcInitInputData%CrestYi
-   DstInitInputData%MCFD = SrcInitInputData%MCFD
    DstInitInputData%WaveFieldMod = SrcInitInputData%WaveFieldMod
    DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
    DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
@@ -294,7 +292,6 @@ subroutine Waves_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%CrestTime)
    call RegPack(Buf, InData%CrestXi)
    call RegPack(Buf, InData%CrestYi)
-   call RegPack(Buf, InData%MCFD)
    call RegPack(Buf, InData%WaveFieldMod)
    call RegPack(Buf, InData%PtfmLocationX)
    call RegPack(Buf, InData%PtfmLocationY)
@@ -443,8 +440,6 @@ subroutine Waves_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%CrestXi)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%CrestYi)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%MCFD)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveFieldMod)
    if (RegCheckErr(Buf, RoutineName)) return

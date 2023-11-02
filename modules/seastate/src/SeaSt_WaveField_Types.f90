@@ -61,6 +61,7 @@ IMPLICIT NONE
     REAL(SiKi)  :: WaveDirMax = 0.0_R4Ki      !< Maximum wave direction. [(degrees)]
     REAL(SiKi)  :: WaveDir = 0.0_R4Ki      !< Incident wave propagation heading direction [(degrees)]
     LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
+    REAL(SiKi)  :: MCFD = 0.0_R4Ki      !< Diameter of members that will use the MacCamy-Fuchs diffraction model [-]
   END TYPE SeaSt_WaveFieldType
 ! =======================
 CONTAINS
@@ -269,6 +270,7 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
    DstSeaSt_WaveFieldTypeData%WaveDirMax = SrcSeaSt_WaveFieldTypeData%WaveDirMax
    DstSeaSt_WaveFieldTypeData%WaveDir = SrcSeaSt_WaveFieldTypeData%WaveDir
    DstSeaSt_WaveFieldTypeData%WaveMultiDir = SrcSeaSt_WaveFieldTypeData%WaveMultiDir
+   DstSeaSt_WaveFieldTypeData%MCFD = SrcSeaSt_WaveFieldTypeData%MCFD
 end subroutine
 
 subroutine SeaSt_WaveField_DestroySeaSt_WaveFieldType(SeaSt_WaveFieldTypeData, ErrStat, ErrMsg)
@@ -419,6 +421,7 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, Indata)
    call RegPack(Buf, InData%WaveDirMax)
    call RegPack(Buf, InData%WaveDir)
    call RegPack(Buf, InData%WaveMultiDir)
+   call RegPack(Buf, InData%MCFD)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -658,6 +661,8 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
    call RegUnpack(Buf, OutData%WaveDir)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveMultiDir)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%MCFD)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 END MODULE SeaSt_WaveField_Types

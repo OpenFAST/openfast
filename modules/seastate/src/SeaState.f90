@@ -225,6 +225,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%WaveField%RhoXg        = p%WaveField%WtrDens*InitInp%Gravity               ! For WAMIT and WAMIT2
       p%WaveField%WaveDir      = InputFileData%WaveDir
       p%WaveField%WaveMultiDir = InputFileData%WaveMultiDir
+      p%WaveField%MCFD         = InputFileData%MCFD
 
          ! Initialize Waves module (Note that this may change InputFileData%Waves%WaveDT)
       CALL Waves_Init(InputFileData%Waves, Waves_InitOut, p%WaveField, ErrStat2, ErrMsg2 ) 
@@ -357,7 +358,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       
       p%WtrDpth          = InitOut%WtrDpth  
       
-      InitOut%MCFD    = InputFileData%Waves%MCFD
  
       CALL SeaStOut_Init( SeaSt_ProgDesc, InitInp%OutRootName, InputFileData, y,  p, m, InitOut, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
