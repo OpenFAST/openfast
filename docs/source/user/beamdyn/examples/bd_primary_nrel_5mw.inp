@@ -78,7 +78,7 @@ True          RotStates        - Orient states in the rotating frame during line
 ---------------------- PITCH ACTUATOR PARAMETERS -------------------------------
 False         UsePitchAct - Whether a pitch actuator should be used (flag)
         200   PitchJ      - Pitch actuator inertia (kg-m^2) [used only when UsePitchAct is true]
-      2E+07   PitchK      - Pitch actuator stiffness (kg-m^2/s^2) [used only when UsePitchAct is true]
+   20000000   PitchK      - Pitch actuator stiffness (kg-m^2/s^2) [used only when UsePitchAct is true]
      500000   PitchC      - Pitch actuator damping (kg-m^2/s) [used only when UsePitchAct is true]
 ---------------------- OUTPUTS -------------------------------------------------
 True          SumPrint       - Print summary data to "<RootName>.sum" (flag)
@@ -92,17 +92,18 @@ True          SumPrint       - Print summary data to "<RootName>.sum" (flag)
 "N1Mxl,N1Myl,N1Mzl"          
 "TipTDxr, TipTDyr, TipTDzr"  
 "TipRDxr, TipRDyr, TipRDzr"  
-END of input file (the word "END" must appear in the first 3 columns of the last OutList line)
+END of OutList section (the word "END" must appear in the first 3 columns of the last OutList line)
 ====== Outputs for all blade stations (same ending as above for B1N1.... =========================== (optional section)
-   "All"          BldNd_BlOutNd       - Future feature will allow selecting a portion of the nodes to output.  Not implemented yet. (-)
+"All"         BldNd_BlOutNd       - Future feature will allow selecting a portion of the nodes to output.  Not implemented yet. (-)
                   OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
-"TDxr, TDyr, TDzr"
-"TVxr, TVyr, TVzr"
-"TAxr, TAyr, TAzr"
-"RDxr, RDyr, RDzr"
-"RVxr, RVyr, RVzr"
-"RAxr, RAyr, RAzr"
-"Fxr, Fyr, Fzr"
+"TDxr, TDyr, TDzr"           
+"TVxr, TVyr, TVzr"           
+"TAxr, TAyr, TAzr"           
+"RDxr, RDyr, RDzr"           
+"RVxr, RVyr, RVzr"           
+"RAxr, RAyr, RAzr"           
+"Fxr, Fyr, Fzr"              
 "TipTDxr, TipTDyr, TipTDzr"  
 "TipRDxr, TipRDyr, TipRDzr"  
-END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+END (the word "END" must appear in the first 3 columns of this last OutList line in the optional nodal output section)
+--------------------------------------------------------------------------------

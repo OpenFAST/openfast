@@ -44,6 +44,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: Gravity      !< Gravitational acceleration [m/s^2]
     INTEGER(IntKi)  :: MHK      !< MHK turbine type switch [-]
     REAL(ReKi)  :: WtrDpth      !< Water depth [m]
+    LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if ElastoDyn is computing aero maps (true) or running a normal simulation (false) [-]
+    REAL(ReKi)  :: RotSpeed      !< Rotor speed used when ElastoDyn is computing aero maps [rad/s]
   END TYPE ED_InitInputType
 ! =======================
 ! =========  ED_InitOutputType  =======
@@ -75,6 +77,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: DerivOrder_x      !< Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: RotFrame_u      !< Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame [-]
     LOGICAL , DIMENSION(:), ALLOCATABLE  :: IsLoad_u      !< Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) [-]
+    INTEGER(IntKi)  :: GearBox_index      !< Index to gearbox rotation in state array (for steady-state calculations) [-]
   END TYPE ED_InitOutputType
 ! =======================
 ! =========  BladeInputData  =======
@@ -752,6 +755,12 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
     INTEGER(IntKi)  :: Jac_ny      !< number of outputs in jacobian matrix [-]
+    LOGICAL  :: CompAeroMaps      !< number of outputs in jacobian matrix [-]
+    INTEGER(IntKi)  :: NumExtendedInputs      !< number of extended inputs for linearization [-]
+    INTEGER(IntKi)  :: NumBl_Lin      !< number of blades in the jacobian [-]
+    INTEGER(IntKi)  :: NActvVelDOF_Lin      !< number of velocity states in the jacobian [-]
+    INTEGER(IntKi)  :: NActvDOF_Lin      !< number of active DOFs to use in the jacobian [-]
+    INTEGER(IntKi)  :: NActvDOF_Stride      !< stride for active DOFs to use in the jacobian [-]
   END TYPE ED_ParameterType
 ! =======================
 ! =========  ED_InputType  =======
@@ -841,6 +850,8 @@ CONTAINS
     DstInitInputData%Gravity = SrcInitInputData%Gravity
     DstInitInputData%MHK = SrcInitInputData%MHK
     DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
+    DstInitInputData%CompAeroMaps = SrcInitInputData%CompAeroMaps
+    DstInitInputData%RotSpeed = SrcInitInputData%RotSpeed
  END SUBROUTINE ED_CopyInitInput
 
  SUBROUTINE ED_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -909,6 +920,8 @@ CONTAINS
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
       Int_BufSz  = Int_BufSz  + 1  ! MHK
       Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
+      Int_BufSz  = Int_BufSz  + 1  ! CompAeroMaps
+      Re_BufSz   = Re_BufSz   + 1  ! RotSpeed
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -957,6 +970,10 @@ CONTAINS
     IntKiBuf(Int_Xferred) = InData%MHK
     Int_Xferred = Int_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%WtrDpth
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%CompAeroMaps, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%RotSpeed
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ED_PackInitInput
 
@@ -1012,6 +1029,10 @@ CONTAINS
     OutData%MHK = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%WtrDpth = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%CompAeroMaps = TRANSFER(IntKiBuf(Int_Xferred), OutData%CompAeroMaps)
+    Int_Xferred = Int_Xferred + 1
+    OutData%RotSpeed = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
  END SUBROUTINE ED_UnPackInitInput
 
@@ -1203,6 +1224,7 @@ IF (ALLOCATED(SrcInitOutputData%IsLoad_u)) THEN
   END IF
     DstInitOutputData%IsLoad_u = SrcInitOutputData%IsLoad_u
 ENDIF
+    DstInitOutputData%GearBox_index = SrcInitOutputData%GearBox_index
  END SUBROUTINE ED_CopyInitOutput
 
  SUBROUTINE ED_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -1400,6 +1422,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! IsLoad_u upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%IsLoad_u)  ! IsLoad_u
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! GearBox_index
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1700,6 +1723,8 @@ ENDIF
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
+    IntKiBuf(Int_Xferred) = InData%GearBox_index
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ED_PackInitOutput
 
  SUBROUTINE ED_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2068,6 +2093,8 @@ ENDIF
         Int_Xferred = Int_Xferred + 1
       END DO
   END IF
+    OutData%GearBox_index = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ED_UnPackInitOutput
 
  SUBROUTINE ED_CopyBladeInputData( SrcBladeInputDataData, DstBladeInputDataData, CtrlCode, ErrStat, ErrMsg )
@@ -16436,6 +16463,12 @@ IF (ALLOCATED(SrcParamData%dx)) THEN
     DstParamData%dx = SrcParamData%dx
 ENDIF
     DstParamData%Jac_ny = SrcParamData%Jac_ny
+    DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
+    DstParamData%NumExtendedInputs = SrcParamData%NumExtendedInputs
+    DstParamData%NumBl_Lin = SrcParamData%NumBl_Lin
+    DstParamData%NActvVelDOF_Lin = SrcParamData%NActvVelDOF_Lin
+    DstParamData%NActvDOF_Lin = SrcParamData%NActvDOF_Lin
+    DstParamData%NActvDOF_Stride = SrcParamData%NActvDOF_Stride
  END SUBROUTINE ED_CopyParam
 
  SUBROUTINE ED_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
@@ -17183,6 +17216,12 @@ ENDIF
       Db_BufSz   = Db_BufSz   + SIZE(InData%dx)  ! dx
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! Jac_ny
+      Int_BufSz  = Int_BufSz  + 1  ! CompAeroMaps
+      Int_BufSz  = Int_BufSz  + 1  ! NumExtendedInputs
+      Int_BufSz  = Int_BufSz  + 1  ! NumBl_Lin
+      Int_BufSz  = Int_BufSz  + 1  ! NActvVelDOF_Lin
+      Int_BufSz  = Int_BufSz  + 1  ! NActvDOF_Lin
+      Int_BufSz  = Int_BufSz  + 1  ! NActvDOF_Stride
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -18742,6 +18781,18 @@ ENDIF
       END DO
   END IF
     IntKiBuf(Int_Xferred) = InData%Jac_ny
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%CompAeroMaps, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumExtendedInputs
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumBl_Lin
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NActvVelDOF_Lin
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NActvDOF_Lin
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NActvDOF_Stride
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ED_PackParam
 
@@ -20550,6 +20601,18 @@ ENDIF
       END DO
   END IF
     OutData%Jac_ny = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%CompAeroMaps = TRANSFER(IntKiBuf(Int_Xferred), OutData%CompAeroMaps)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NumExtendedInputs = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NumBl_Lin = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NActvVelDOF_Lin = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NActvDOF_Lin = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NActvDOF_Stride = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE ED_UnPackParam
 

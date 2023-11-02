@@ -81,6 +81,11 @@ MODULE NWTC_Library
 #endif
 
     IMPLICIT  NONE
+    
+    INTEGER, PARAMETER ::MHK_None = 0
+    INTEGER, PARAMETER ::MHK_FixedBottom = 1
+    INTEGER, PARAMETER ::MHK_Floating = 2
+
 
     CONTAINS
 

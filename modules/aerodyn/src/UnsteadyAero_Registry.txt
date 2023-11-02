@@ -161,6 +161,7 @@ typedef   ^                            OtherStateType                ReKi       
 typedef   ^                            OtherStateType                ReKi                     sigma3                          {:}{:}        -         -        "multiplier for T_V"   -
 typedef   ^                            OtherStateType                IntKi                    n                               {:}{:}        -         -        "counter for continuous state integration"   -
 typedef   ^                            OtherStateType                UA_ContinuousStateType   xdot                            4             -         -        "history states for continuous state integration"   -
+typedef   ^                            OtherStateType                UA_ContinuousStateType   xHistory                        4             -         -        "history states for continuous state integration"   -
 typedef   ^                            OtherStateType                ReKi                     t_vortexBegin                   {:}{:}        -         -        "HGMV model: simulation time when vortex lift term became active"   s
 typedef   ^                            OtherStateType                ReKi                     SignOfOmega                     {:}{:}        -         -        "HGMV model: sign of omega when vortex lift term became active "   s
 typedef   ^                            OtherStateType                LOGICAL                  PositivePressure                {:}{:}        -         -        "HGMV model: logical flag indicating if the vortex lift became active because of positive pressure (or negative)"   -
@@ -202,6 +203,8 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             Logical                  ShedEffect                      -             -         -        "Include the effect of shed vorticity. If False, the input alpha is assumed to already contain this effect (e.g. vortex methods)"        -
 typedef   ^                            ParameterType                 IntKi                    lin_nx                          -             0         -        "Number of continuous states for linearization"            -
 typedef   ^                            ^                             LOGICAL                  UA_off_forGood                  {:}{:}        -         -        "logical flag indicating if UA is off for good"   -
+typedef   ^                            ^                             INTEGER                  lin_xIndx                       {:}{:}        -         -        "array to indicate which state to perturb for UA"   -
+typedef   ^                            ^                             R8Ki                     dx                              {5}           -         -        "array to indicate size of state perturbations"   -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:

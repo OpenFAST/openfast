@@ -323,7 +323,7 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
 
       ! Set the root rotation DCM relative to the reference.
       ! NOTE: the orientations used in this routine are DCM's.  These are directly from the mesh.
-   call LAPACK_DGEMM('T', 'N', 1.0_BDKi, m%u2%RootMotion%Orientation(:,:,1), m%u2%RootMotion%RefOrientation(:,:,1), 0.0_BDKi, RootRelOrient,   ErrStat2, ErrMsg2 )
+   call LAPACK_GEMM('T', 'N', 1.0_BDKi, m%u2%RootMotion%Orientation(:,:,1), m%u2%RootMotion%RefOrientation(:,:,1), 0.0_BDKi, RootRelOrient,   ErrStat2, ErrMsg2 )
 
 
       ! Loop over the channel sets
@@ -407,8 +407,8 @@ SUBROUTINE Calc_WriteBldNdOutput( p, OtherState, m, y, ErrStat, ErrMsg )
                   !-------------------------
 !FIXME: we are not trapping errors here.  Do we need to?
                   ! Sectional angular/rotational deflection Wiener-Milenkovic parameter (relative to the undeflected orientation) expressed in r
-                  call LAPACK_DGEMM('N', 'T', 1.0_BDKi, y%BldMotion%RefOrientation(:,:,idx_node), RootRelOrient,   0.0_BDKi, Tmp33b, ErrStat2, ErrMsg2 )
-                  call LAPACK_DGEMM('T', 'N', 1.0_BDKi, y%BldMotion%Orientation(   :,:,idx_node), Tmp33b,          0.0_BDKi, Tmp33a,   ErrStat2, ErrMsg2 )
+                  call LAPACK_GEMM('N', 'T', 1.0_BDKi, y%BldMotion%RefOrientation(:,:,idx_node), RootRelOrient,   0.0_BDKi, Tmp33b, ErrStat2, ErrMsg2 )
+                  call LAPACK_GEMM('T', 'N', 1.0_BDKi, y%BldMotion%Orientation(   :,:,idx_node), Tmp33b,          0.0_BDKi, Tmp33a,   ErrStat2, ErrMsg2 )
                   call BD_CrvExtractCrv(Tmp33a,temp_vec2, ErrStat2, ErrMsg2) ! temp_vec2 = the Wiener-Milenkovic parameters of the node's angular/rotational defelctions
                   WM_ParamRD = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_vec2)    ! Rotate the parameters to the correct coordinate system for output
 

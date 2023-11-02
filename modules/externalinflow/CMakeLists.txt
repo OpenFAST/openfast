@@ -15,20 +15,24 @@
 #
 
 if (GENERATE_TYPES)
-  generate_f90_types(src/OpenFOAM_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/OpenFOAM_Types.f90 -ccode)
+  generate_f90_types(src/ExternalInflow_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/ExternalInflow_Types.f90 -ccode)
 endif()
 
-add_library(foamtypeslib STATIC src/OpenFOAM_Types.f90)
-target_link_libraries(foamtypeslib nwtclibs)
+add_library(extinflowtypeslib STATIC
+  src/ExternalInflow_Types.f90
+)
+target_link_libraries(extinflowtypeslib nwtclibs)
 
-add_library(foamfastlib STATIC src/OpenFOAM.f90)
-target_link_libraries(foamfastlib openfast_prelib)
-target_include_directories(foamfastlib PUBLIC 
+add_library(extinflowlib STATIC
+  src/ExternalInflow.f90
+)
+target_link_libraries(extinflowlib openfast_prelib)
+target_include_directories(extinflowlib PUBLIC 
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>  
 )
-set_target_properties(foamfastlib PROPERTIES PUBLIC_HEADER src/OpenFOAM_Types.h)
+set_target_properties(extinflowlib PROPERTIES PUBLIC_HEADER src/ExternalInflow_Types.h)
 
-install(TARGETS foamtypeslib foamfastlib
+install(TARGETS extinflowtypeslib extinflowlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   ARCHIVE DESTINATION lib

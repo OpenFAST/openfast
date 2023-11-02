@@ -1023,7 +1023,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
       if (wt%BasicHAWTFormat) then
          ! --- Basic Geometry
          call ParseAry(FileInfo_In, CurLine, 'baseOriginInit'//sWT , wt%originInit , 3 , errStat2, errMsg2 , unEc); if(Failed()) return
-         if ( dvr%MHK == 1 ) then
+         if ( dvr%MHK == MHK_FixedBottom ) then
             wt%originInit(3) = wt%originInit(3) - dvr%WtrDpth
          end if
          call ParseVar(FileInfo_In, CurLine, 'numBlades'//sWT      , wt%numBlades      , errStat2, errMsg2 , unEc); if(Failed()) return
@@ -1061,7 +1061,7 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          ! --- Advanced geometry
          ! Rotor origin and orientation
          call ParseAry(FileInfo_In, CurLine, 'baseOriginInit'//sWT     , wt%originInit, 3         , errStat2, errMsg2, unEc); if(Failed()) return
-         if ( dvr%MHK == 1 ) then
+         if ( dvr%MHK == MHK_FixedBottom ) then
             wt%originInit(3) = wt%originInit(3) - dvr%WtrDpth
          end if
          call ParseAry(FileInfo_In, CurLine, 'baseOrientationInit'//sWT, wt%orientationInit, 3    , errStat2, errMsg2, unEc); if(Failed()) return
@@ -1347,7 +1347,7 @@ subroutine ValidateInputs(dvr, errStat, errMsg)
    ! Turbine Data:
    !if ( dvr%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", errStat, ErrMsg, RoutineName)
       ! Combined-Case Analysis:
-   if (dvr%MHK /= 0 .and. dvr%MHK /= 1 .and. dvr%MHK /= 2) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
+   if (dvr%MHK /= MHK_None .and. dvr%MHK /= MHK_FixedBottom .and. dvr%MHK /= MHK_Floating) call SetErrStat(ErrID_Fatal, 'MHK switch must be 0, 1, or 2.', ErrStat, ErrMsg, RoutineName)
    
    if (dvr%DT < epsilon(0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'dT must be larger than 0.',errStat, errMsg,RoutineName)
    if (Check(.not.(ANY((/0,1/) == dvr%IW_InitInp%compInflow) ), 'CompInflow needs to be 0 or 1')) return
@@ -2227,6 +2227,7 @@ subroutine userHubMotion(nt, iWT, dvr, ADI, FED, arr, azimuth, rotSpeed, rotAcc,
    alphaTq = min(max(alphaTq, 0._ReKi), 1.0_ReKi) ! Bounding value
 
    ! --- Rotor torque
+   !bjj: note: WriteOutput isn't always computed when AD_CalcOutput is called (though it appears to be okay in AeroDyn_Inflow.f90); be careful that AllOuts( RtAeroMxh ) is up to date.
    rotTorque = ADI%m%AD%rotors(iWT)%AllOuts( RtAeroMxh )
    ! Optional filtering of input torque
    rotTorque_filt = ( 1.0 - alphaTq )*rotTorque + alphaTq*rotTorque_filt_prev

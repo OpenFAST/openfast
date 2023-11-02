@@ -282,10 +282,6 @@ structure::
       1.0   2.0   3.0   4.0   5.0   6.0    uMorisonInSteady       - input displacements and rotations for the morison elements (m, rads)
       7.0   8.0   9.0  10.0  11.0  12.0    uDotMorisonInSteady    - input translational and rotational velocities for the morison elements (m/s, rads/s)
       13.0 14.0  15.0  16.0  17.0  18.0    uDotDotMorisonInSteady - input translational and rotational acccelerations for the morison elements (m/s^2, rads/s^2)
-      ---------------------- Waves multipoint elevation output -------------------------------                                                                                                                
-      TRUE             WaveElevSeriesFlag  - T/F flag to calculate the wave elevation field (for movies)
-      5.0   5.0        WaveElevDX WaveElevDY  - WaveElevSeries spacing -- WaveElevDX WaveElevDY
-      3   3            WaveElevNX WaveElevNY  - WaveElevSeries points -- WaveElevNX WaveElevNY
       END of driver input file
 
 .. _hd-output-channels:

@@ -20,7 +20,7 @@
 !    
 !**********************************************************************************************************************************
 MODULE SS_Excitation
-
+   USE SeaState_Interp
    USE SS_Excitation_Types   
    USE NWTC_Library
       
@@ -77,7 +77,49 @@ subroutine TransformStateSpaceMatrices( NBody, RotZ, C )
    end do
 
 end subroutine TransformStateSpaceMatrices
+
+function GetWaveElevation ( time, u_in, t_in, p, m, ErrStat, ErrMsg )
+    real(DbKi),                       intent(in)     :: time
+    TYPE(SS_Exc_InputType),           INTENT(IN)     :: u_in(:) ! Input at t1 > t2 > t3
+    real(DbKi),                       intent(in)     :: t_in(:)
+    TYPE(SS_Exc_ParameterType),       INTENT(in)     :: p           !< Parameters      
+    TYPE(SS_Exc_MiscVarType),         INTENT(inout)  :: m           !< Initial misc/optimization variables            
+    INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+    CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+    
+    real(SiKi)                                     :: GetWaveElevation(p%NBody)
+    TYPE(SS_Exc_InputType)                         :: u_out  ! extra_interp result
+    integer                                        :: iBody
+    character(ErrMsgLen)                           :: ErrMsg2
+    integer(IntKi)                                 :: ErrStat2
+    character(*), parameter                        :: RoutineName = 'GetWaveElevation'
+    
+    
+       ! Initialize ErrStat   
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
    
+   if (p%ExctnDisp == 0) then
+      GetWaveElevation = InterpWrappedStpReal ( real(time, SiKi), p%WaveTime(:), p%WaveElev0(:), m%LastIndWave, p%NStepWave + 1 ) 
+   else
+      
+      call SS_Exc_CopyInput(u_in(1), u_out, MESH_NEWCOPY, ErrStat2, ErrMsg2 ) ! allocates arrays so that SS_Exc_Input_ExtrapInterp will work
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      
+      call SS_Exc_Input_ExtrapInterp(u_in, t_in, u_out, time, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      
+      do iBody = 1, p%NBody  
+         GetWaveElevation(iBody) = SeaSt_Interp_3D( time, u_out%PtfmPos(1:2,iBody), p%WaveElev1, p%SeaSt_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end do
+
+      call SS_Exc_DestroyInput(u_out, ErrStat2, ErrMsg2 )
+      
+   end if
+   
+end function GetWaveElevation
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps. 
 !! The parameters are set here and not changed during the simulation.
@@ -85,7 +127,7 @@ end subroutine TransformStateSpaceMatrices
 SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-    TYPE(SS_Exc_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
+    TYPE(SS_Exc_InitInputType),       INTENT(INOUT)  :: InitInp     !< Input data for initialization routine
     TYPE(SS_Exc_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
     TYPE(SS_Exc_ParameterType),       INTENT(  OUT)  :: p           !< Parameters      
     TYPE(SS_Exc_ContinuousStateType), INTENT(  OUT)  :: x           !< Initial continuous states
@@ -119,13 +161,13 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     ! Initialize ErrStat   
     ErrStat = ErrID_None
     ErrMsg  = ""
-      
-    u%DummyInput = 0.0_ReKi
+    Allocate(u%PtfmPos(3,InitInp%NBody), Stat= ErrStat)  
+    u%PtfmPos = 0.0_ReKi
       
     UnSS  = -1
-    p%numStates     =  0
-    p%NBody = InitInp%NBody  ! Number of WAMIT bodies: =1 if WAMIT is using NBodyMod > 1,  >=1 if NBodyMod=1
-  
+    p%numStates = 0
+    p%NBody     = InitInp%NBody  ! Number of WAMIT bodies: =1 if WAMIT is using NBodyMod > 1,  >=1 if NBodyMod=1
+   
     ! Open the .ss input file!
     CALL GetNewUnit( UnSS )
     CALL OpenFInpFile ( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', ErrStat2, ErrMsg2 )  ! Open file.
@@ -152,7 +194,8 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             
     CALL ReadVar( UnSS,TRIM(InitInp%InputFile)//'.ssexctn', p%numStates, 'p%numStates', 'Number of states',ErrStat2, ErrMsg2) ! Reads in the third line, containing the number of states
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
-            
+   
+   call AllocAry( p%spdof, 6*p%NBody, 'p%spdof', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')         
    CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ssexctn', p%spDOF, 6*p%NBody, 'p%spDOF', 'States per DOF',ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
           
@@ -232,22 +275,28 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       
          ! Allocate Wave-elevation related arrays
       p%NStepWave = InitInp%NStepWave
-      allocate ( p%WaveElev0(0:p%NStepWave) , STAT=ErrStat2 )
-      IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,'Error allocating p%WaveElev0 array',ErrStat,ErrMsg,'SS_Exc_Init')
+      !allocate ( p%WaveElev0(0:p%NStepWave) , STAT=ErrStat2 )
+      !IF (ErrStat2 /= 0) THEN
+      !   CALL SetErrStat(ErrID_Fatal,'Error allocating p%WaveElev0 array',ErrStat,ErrMsg,'SS_Exc_Init')
+      !end if
+      !allocate ( p%WaveTime (0:p%NStepWave) , STAT=ErrStat2 )
+      !IF (ErrStat2 /= 0) THEN
+      !   CALL SetErrStat(ErrID_Fatal,'Error allocating p%WaveTime array',ErrStat,ErrMsg,'SS_Exc_Init')
+      !end if
+      !
+      !IF (ErrStat >= AbortErrLev) THEN
+      !   CALL CleanUp()
+      !   RETURN
+      !END IF
+      p%SeaSt_Interp_p = InitInp%SeaSt_Interp_p
+      p%ExctnDisp =  InitInp%ExctnDisp
+      p%WaveTime  => InitInp%WaveTime  
+      p%ExctnDisp = InitInp%ExctnDisp
+      if (p%ExctnDisp == 0) then
+         call MOVE_ALLOC(InitInp%WaveElev0, p%WaveElev0)
+      else
+         p%WaveElev1 => InitInp%WaveElev1
       end if
-      allocate ( p%WaveTime (0:p%NStepWave) , STAT=ErrStat2 )
-      IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,'Error allocating p%WaveTime array',ErrStat,ErrMsg,'SS_Exc_Init')
-      end if
-      
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-      
-      p%WaveTime  = InitInp%WaveTime  
-      p%WaveElev0 = InitInp%WaveElev0
       
       
     ! Define initial system states here:
@@ -304,7 +353,7 @@ CONTAINS
        
 END SUBROUTINE SS_Exc_Init
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine is called at the end of the simulation.
+!> This routine is called at the end of the simulation. It does NOT deallocate pointers to SeaState data.
 SUBROUTINE SS_Exc_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -320,7 +369,6 @@ SUBROUTINE SS_Exc_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
-
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
@@ -330,28 +378,28 @@ SUBROUTINE SS_Exc_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! Place any last minute operations or calculations here:
          ! Destroy the input data:
          
-      CALL SS_Exc_DestroyInput( u, ErrStat, ErrMsg )
+      CALL SS_Exc_DestroyInput( u, ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
 
 
-         ! Destroy the parameter data:
-         
-      CALL SS_Exc_DestroyParam( p, ErrStat, ErrMsg )
+         ! Destroy the parameter data, but don't deallocate SeaState data:
+        ! **** Note, this is called only from the SS Excitation driver code, so there should not be any issues with pointers on restart***
+      CALL SS_Exc_DestroyParam( p, ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
 
 
          ! Destroy the state data:
          
-      CALL SS_Exc_DestroyContState(   x,           ErrStat, ErrMsg )
-      CALL SS_Exc_DestroyDiscState(   xd,          ErrStat, ErrMsg )
-      CALL SS_Exc_DestroyConstrState( z,           ErrStat, ErrMsg )
-      CALL SS_Exc_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
+      CALL SS_Exc_DestroyContState(   x,           ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
+      CALL SS_Exc_DestroyDiscState(   xd,          ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
+      CALL SS_Exc_DestroyConstrState( z,           ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
+      CALL SS_Exc_DestroyOtherState(  OtherState,  ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
          
          ! Destroy misc vars:
-      CALL SS_Exc_DestroyMisc(  m,  ErrStat, ErrMsg )
+      CALL SS_Exc_DestroyMisc(  m,  ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
       
       
          ! Destroy the output data:
          
-      CALL SS_Exc_DestroyOutput( y, ErrStat, ErrMsg )
+      CALL SS_Exc_DestroyOutput( y, ErrStat, ErrMsg, DEALLOCATEpointers=.false. )
 
 
       
@@ -387,15 +435,15 @@ SUBROUTINE SS_Exc_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherStat
          
       CASE (1) ! RK4
       
-         CALL SS_Exc_RK4( t, n, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+         CALL SS_Exc_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
          
       CASE (2) ! AB4
       
-         CALL SS_Exc_AB4( t, n, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+         CALL SS_Exc_AB4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
       
       CASE (3) ! ABM4
       
-         CALL SS_Exc_ABM4( t, n, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+         CALL SS_Exc_ABM4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
          
       CASE DEFAULT  !bjj: we already checked this at initialization, but for completeness:
          
@@ -446,7 +494,7 @@ SUBROUTINE SS_Exc_CalcContStateDeriv( Time, waveElev0, p, x, xd, z, OtherState, 
 !..................................................................................................................................
    
       REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds
-      REAL(SiKi),                        INTENT(IN   )  :: waveElev0   !< Wave elevation at origin at time: Time (m)                  
+      REAL(SiKi),                        INTENT(IN   )  :: waveElev0(:)   !< Wave elevation at origin at time: Time (m)                  
       TYPE(SS_Exc_ParameterType),        INTENT(IN   )  :: p           !< Parameters                             
       TYPE(SS_Exc_ContinuousStateType),  INTENT(IN   )  :: x           !< Continuous states at Time
       TYPE(SS_Exc_DiscreteStateType),    INTENT(IN   )  :: xd          !< Discrete states at Time
@@ -457,6 +505,8 @@ SUBROUTINE SS_Exc_CalcContStateDeriv( Time, waveElev0, p, x, xd, z, OtherState, 
       INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation     
       CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    
+      real(SiKi)  :: Bwave(p%numStates)
+      integer(IntKi) :: i, iBody, spbody, count, iStart
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
@@ -470,8 +520,21 @@ SUBROUTINE SS_Exc_CalcContStateDeriv( Time, waveElev0, p, x, xd, z, OtherState, 
       
       !Calc dxdt of a state space system
       ! [dxdt] = [A]*[xr]+B*[q]
+      spbody = 0
+      count = 1
+      iStart = 1
+      do iBody=1,p%NBody
+         spbody = 0
+         do i = 1,6   
+          spbody = spbody + p%spdof(count)
+          count = count + 1
+         end do
+         
+         Bwave(iStart:iStart+spbody-1) = p%B(iStart:iStart+spbody-1)*waveElev0(iBody)
+         iStart = iStart + spBody
+      end do
       
-      dxdt%x =matmul(p%A,x%x) +  p%B * waveElev0
+      dxdt%x =matmul(p%A,x%x) +  Bwave
         
 END SUBROUTINE SS_Exc_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -549,12 +612,13 @@ END SUBROUTINE SS_Exc_CalcConstrStateResidual
 !!   Runge-Kutta." �16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
 !!   Cambridge University Press, pp. 704-716, 1992.
 !!
-SUBROUTINE SS_Exc_RK4( t, n, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+SUBROUTINE SS_Exc_RK4( t, n, Inputs, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       REAL(DbKi),                       INTENT(IN   )  :: t           !< Current simulation time in seconds
       INTEGER(IntKi),                   INTENT(IN   )  :: n           !< time step number
       REAL(DbKi),                       INTENT(IN   )  :: utimes(:)   !< times of input
+      TYPE(SS_Exc_InputType),           INTENT(INOUT)  :: Inputs(:)       !< Inputs at InputTimes
       TYPE(SS_Exc_ParameterType),       INTENT(IN   )  :: p           !< Parameters
       TYPE(SS_Exc_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
       TYPE(SS_Exc_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
@@ -572,7 +636,7 @@ SUBROUTINE SS_Exc_RK4( t, n, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       TYPE(SS_Exc_ContinuousStateType)                 :: k3          ! RK4 constant; see above 
       TYPE(SS_Exc_ContinuousStateType)                 :: k4          ! RK4 constant; see above 
       TYPE(SS_Exc_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
-      real(SiKi)                                       :: waveElev0   ! interpolated value of the wave elevation at the origin
+      real(SiKi)                                       :: waveElev0(p%NBody)   ! interpolated value of the wave elevation at the origin
       INTEGER(IntKi)                                   :: ErrStat2    ! local error status
       CHARACTER(ErrMsgLen)                             :: ErrMsg2     ! local error message (ErrMsg)
       
@@ -594,8 +658,11 @@ SUBROUTINE SS_Exc_RK4( t, n, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
          IF ( ErrStat >= AbortErrLev ) RETURN
                      
       ! find waveElev0 for time, t+p%Tc
-      
-      waveElev0 = InterpWrappedStpReal ( REAL(t+p%Tc, SiKi), p%WaveTime(:), p%WaveElev0(:), m%LastIndWave, p%NStepWave + 1 )        
+      !TODO: Replace with function call which extracts the correct form of wave elevation based on ExctnDisp, etc.
+      waveElev0 = GetWaveElevation( t+p%Tc, Inputs, utimes, p, m, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+      !waveElev0 = InterpWrappedStpReal ( REAL(t+p%Tc, SiKi), p%WaveTime(:), p%WaveElev0(:), m%LastIndWave, p%NStepWave + 1 )        
       ! find xdot at t
       CALL SS_Exc_CalcContStateDeriv( t, waveElev0, p, x, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
@@ -605,7 +672,11 @@ SUBROUTINE SS_Exc_RK4( t, n, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       x_tmp%x  = x%x  + 0.5 * k1%x
 
       ! find waveElev0 for time, t + p%Tc + dt/2
-      waveElev0 = InterpWrappedStpReal ( REAL(t+p%Tc+p%DT/2.0, SiKi), p%WaveTime(:), p%WaveElev0(:), m%LastIndWave, p%NStepWave + 1 ) 
+      !TODO: Replace with function call which extracts the correct form of wave elevation based on ExctnDisp, etc.
+      waveElev0 = GetWaveElevation( t+p%Tc+p%DT/2.0, Inputs, utimes, p, m, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+      !waveElev0 = InterpWrappedStpReal ( REAL(t+p%Tc+p%DT/2.0, SiKi), p%WaveTime(:), p%WaveElev0(:), m%LastIndWave, p%NStepWave + 1 ) 
 
       ! find xdot at t  + dt/2
       CALL SS_Exc_CalcContStateDeriv( t + 0.5*p%dt, waveElev0, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
@@ -624,7 +695,11 @@ SUBROUTINE SS_Exc_RK4( t, n, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       x_tmp%x  = x%x  + k3%x
 
       ! find waveElev0 for time, (t + p%Tc + dt)
-      waveElev0 = InterpWrappedStpReal ( REAL(t+p%Tc+p%DT, SiKi), p%WaveTime(:), p%WaveElev0(:), m%LastIndWave, p%NStepWave + 1 )   
+      !TODO: Replace with function call which extracts the correct form of wave elevation based on ExctnDisp, etc.
+      waveElev0 = GetWaveElevation( t+p%Tc+p%DT, Inputs, utimes, p, m, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+      !waveElev0 = InterpWrappedStpReal ( REAL(t+p%Tc+p%DT, SiKi), p%WaveTime(:), p%WaveElev0(:), m%LastIndWave, p%NStepWave + 1 )   
       
 
       ! find xdot at t + dt
@@ -708,12 +783,13 @@ END SUBROUTINE SS_Exc_RK4
 !!
 !!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
 !!
-SUBROUTINE SS_Exc_AB4( t, n, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+SUBROUTINE SS_Exc_AB4( t, n, Inputs, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       REAL(DbKi),                         INTENT(IN   )  :: t           !< Current simulation time in seconds
       INTEGER(IntKi),                     INTENT(IN   )  :: n           !< time step number
       REAL(DbKi),                         INTENT(IN   )  :: utimes(:)   !< times of input
+      TYPE(SS_Exc_InputType),             INTENT(INOUT)  :: Inputs(:)       !< Inputs at InputTimes
       TYPE(SS_Exc_ParameterType),         INTENT(IN   )  :: p           !< Parameters
       TYPE(SS_Exc_ContinuousStateType),   INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
       TYPE(SS_Exc_DiscreteStateType),     INTENT(IN   )  :: xd          !< Discrete states at t
@@ -726,7 +802,7 @@ SUBROUTINE SS_Exc_AB4( t, n, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
 
       ! local variables
 
-      real(SiKi)                                         :: waveElev0   
+      real(SiKi)                                         :: waveElev0(p%NBody)   
       INTEGER(IntKi)                                     :: ErrStat2    ! local error status
       CHARACTER(ErrMsgLen)                               :: ErrMsg2     ! local error message (ErrMsg)
 
@@ -761,7 +837,11 @@ SUBROUTINE SS_Exc_AB4( t, n, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       endif        
 
       ! find waveElev at  t + Tc
-      waveElev0 = InterpWrappedStpReal ( REAL(t+p%Tc, SiKi), p%WaveTime(:), p%WaveElev0(:), m%LastIndWave, p%NStepWave + 1 ) 
+      !TODO: Replace with function call which extracts the correct form of wave elevation based on ExctnDisp, etc.
+      waveElev0 = GetWaveElevation( t+p%Tc, Inputs, utimes, p, m, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+      !waveElev0 = InterpWrappedStpReal ( REAL(t+p%Tc, SiKi), p%WaveTime(:), p%WaveElev0(:), m%LastIndWave, p%NStepWave + 1 ) 
          
       CALL SS_Exc_CalcContStateDeriv( t, waveElev0, p, x, xd, z, OtherState, m, OtherState%xdot ( 1 ), ErrStat2, ErrMsg2 ) ! initializes OtherState%xdot ( 1 )
          CALL CheckError(ErrStat2,ErrMsg2)
@@ -770,7 +850,7 @@ SUBROUTINE SS_Exc_AB4( t, n, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
                                                     
       if (n .le. 2) then
                                                
-         CALL SS_Exc_RK4(t, n, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
+         CALL SS_Exc_RK4(t, n, Inputs, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -836,12 +916,13 @@ END SUBROUTINE SS_Exc_AB4
 !!  or
 !!
 !!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
-SUBROUTINE SS_Exc_ABM4( t, n, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+SUBROUTINE SS_Exc_ABM4( t, n, Inputs, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       REAL(DbKi),                         INTENT(IN   )  :: t           !< Current simulation time in seconds
       INTEGER(IntKi),                     INTENT(IN   )  :: n           !< time step number
       REAL(DbKi),                         INTENT(IN   )  :: utimes(:)   !< times of input
+      TYPE(SS_Exc_InputType),             INTENT(INOUT)  :: Inputs(:)       !< Inputs at InputTimes
       TYPE(SS_Exc_ParameterType),         INTENT(IN   )  :: p           !< Parameters
       TYPE(SS_Exc_ContinuousStateType),   INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
       TYPE(SS_Exc_DiscreteStateType),     INTENT(IN   )  :: xd          !< Discrete states at t
@@ -855,7 +936,7 @@ SUBROUTINE SS_Exc_ABM4( t, n, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMs
 
       TYPE(SS_Exc_ContinuousStateType)                   :: x_pred      ! Continuous states at t
       TYPE(SS_Exc_ContinuousStateType)                   :: xdot_pred   ! Derivative of continuous states at t
-      real(SiKi)                                         :: waveElev0
+      real(SiKi)                                         :: waveElev0(p%NBody)
       INTEGER(IntKi)                                     :: ErrStat2    ! local error status
       CHARACTER(ErrMsgLen)                               :: ErrMsg2     ! local error message (ErrMsg)
       
@@ -869,13 +950,16 @@ SUBROUTINE SS_Exc_ABM4( t, n, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMs
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
-      CALL SS_Exc_AB4( t, n, utimes, p, x_pred, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
+      CALL SS_Exc_AB4( t, n, Inputs, utimes, p, x_pred, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
       if (n .gt. 2_IntKi) then
-
-         waveElev0 = InterpWrappedStpReal ( REAL(t+p%Tc+p%DT, SiKi), p%WaveTime(:), p%WaveElev0(:), m%LastIndWave, p%NStepWave + 1 ) 
+      !TODO: Replace with function call which extracts the correct form of wave elevation based on ExctnDisp, etc.
+         waveElev0 = GetWaveElevation( t+p%Tc+p%DT, Inputs, utimes, p, m, ErrStat2, ErrMsg2 )
+         CALL CheckError(ErrStat2,ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+         !waveElev0 = InterpWrappedStpReal ( REAL(t+p%Tc+p%DT, SiKi), p%WaveTime(:), p%WaveElev0(:), m%LastIndWave, p%NStepWave + 1 ) 
          CALL SS_Exc_CalcContStateDeriv(t + p%dt, waveElev0, p, x_pred, xd, z, OtherState, m, xdot_pred, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN

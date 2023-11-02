@@ -190,6 +190,7 @@ set(OPENFAST_MODULES
   elastodyn
   beamdyn
   subdyn
+  seastate
   hydrodyn
   orcaflex-interface
   extptfm
@@ -202,7 +203,7 @@ set(OPENFAST_MODULES
   map
   turbsim
   supercontroller
-  openfoam
+  externalinflow
   openfast-library
 )
 

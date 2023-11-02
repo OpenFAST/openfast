@@ -57,7 +57,7 @@ FUNCTION GetVersion(ThisProgVer, Cmpl4SFun, Cmpl4LV)
 
    CHARACTER(200)                  :: git_commit
 
-   GetVersion = TRIM(GetNVD(ThisProgVer))//', compiled'
+   GetVersion = TRIM(GetNVD(ThisProgVer))//', compiled on '//__DATE__//' at '//__TIME__
 
    if (present(Cmpl4SFun)) then
       IF ( Cmpl4SFun )  THEN     ! FAST has been compiled as an S-Function for Simulink
@@ -267,6 +267,16 @@ END FUNCTION GetVersion
                RETURN
          END IF
 
+      CASE ('STEADYSTATE')
+         IF ( SecondArgumentSet .AND. .NOT. FirstArgumentSet ) THEN
+            Arg1 = Arg2
+         END IF
+         IF ( .NOT. FirstArgumentSet .AND. .NOT. SecondArgumentSet ) THEN
+            CALL INVALID_SYNTAX( 'the steady-state capability requires at least one argument: <steadystate_input_file> -steadystate' )
+            CALL CLEANUP()
+               RETURN
+         END IF
+
       CASE DEFAULT
          CALL INVALID_SYNTAX( 'unknown command-line argument given: '//TRIM(FlagIter) )
          CALL CLEANUP()
@@ -303,7 +313,7 @@ END FUNCTION GetVersion
       SUBROUTINE GET_COMMAND_LINE_ARG(ArgIndex, ArgGiven)
 
          INTEGER, INTENT(IN) :: ArgIndex           !< Index location of the argument to get.
-         CHARACTER(1024), INTENT(OUT) :: ArgGiven  !< The gotten command-line argument.
+         CHARACTER(*), INTENT(OUT) :: ArgGiven  !< The gotten command-line argument.
          INTEGER :: Error                          !< Indicates if there was an error getting an argument.
 
          CALL GET_COMMAND_ARGUMENT( ArgIndex, ArgGiven, STATUS=Error )

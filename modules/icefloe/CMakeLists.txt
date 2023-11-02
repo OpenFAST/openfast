@@ -18,7 +18,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/interfaces/FAST/IceFloe_FASTRegistry.inp ${CMAKE_CURRENT_LIST_DIR}/src/icefloe/IceFloe_Types.f90)
 endif()
 
-add_library(icefloelib 
+add_library(icefloelib STATIC
   src/icefloe/IceFlexBase.F90
   src/icefloe/IceFlexIEC.f90
   src/icefloe/IceFlexISO.f90

@@ -26,6 +26,8 @@ typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing out
 typedef ^   InitInputType   ReKi Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 typedef ^   InitInputType   IntKi MHK     -   -   -   "MHK turbine type switch"   -
 typedef ^   InitInputType   ReKi WtrDpth -  -   -    "Water depth" m
+typedef	^	InitInputType	LOGICAL	CompAeroMaps	-	.FALSE.	-	"flag to determine if ElastoDyn is computing aero maps (true) or running a normal simulation (false)"	-
+typedef	^	InitInputType	ReKi	RotSpeed	-	-	-	"Rotor speed used when ElastoDyn is computing aero maps"	"rad/s"
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
@@ -55,6 +57,7 @@ typedef	^	InitOutputType	LOGICAL	RotFrame_x	{:}	-	-	"Flag that tells FAST/MBC3 i
 typedef	^	InitOutputType	IntKi	DerivOrder_x {:}	-	-	"Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization"	-
 typedef	^	InitOutputType	LOGICAL	RotFrame_u	{:}	-	-	"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
 typedef	^	InitOutputType	LOGICAL	IsLoad_u	{:}	-	-	"Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+typedef	^	InitOutputType	IntKi	GearBox_index	-	-	-	"Index to gearbox rotation in state array (for steady-state calculations)"   -
 
 # ..... Blade Input file data ...........................................................................................................
 typedef	ElastoDyn/ED	BladeInputData	IntKi	NBlInpSt	-	-	-	"Number of blade input stations"	-
@@ -748,6 +751,12 @@ typedef	^	ParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack 
 typedef	^	ParameterType	R8Ki	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
 typedef	^	ParameterType	R8Ki	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"
 typedef	^	ParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
+typedef	^	ParameterType	Logical	CompAeroMaps	-	-	-	"number of outputs in jacobian matrix"	-
+typedef	^	ParameterType	Integer	NumExtendedInputs	-	-	-	"number of extended inputs for linearization"	-
+typedef	^	ParameterType	Integer	NumBl_Lin	-	-	-	"number of blades in the jacobian"	-
+typedef	^	ParameterType	Integer	NActvVelDOF_Lin	-	-	-	"number of velocity states in the jacobian"	-
+typedef	^	ParameterType	Integer	NActvDOF_Lin	-	-	-	"number of active DOFs to use in the jacobian"	-
+typedef	^	ParameterType	Integer	NActvDOF_Stride	-	-	-	"stride for active DOFs to use in the jacobian"	-
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:

@@ -404,7 +404,7 @@ MODULE MAP
     CHARACTER(KIND=C_CHAR), DIMENSION(1024)         :: message_from_MAP
     
     INTEGER(IntKi)                                  :: ErrStat2     ! Error status of the operation
-    CHARACTER(1024)                                 :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
+    CHARACTER(ErrMsgLen)                            :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
     CHARACTER(*), PARAMETER                         :: RoutineName = 'MAP_Restart'
     
         
@@ -517,7 +517,7 @@ MODULE MAP
     CHARACTER(KIND=C_CHAR), DIMENSION(1024)         :: message_from_MAP
     
     INTEGER(IntKi)                                  :: ErrStat2     ! Error status of the operation
-    CHARACTER(1024)                                 :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
+    CHARACTER(ErrMsgLen)                            :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
     CHARACTER(*), PARAMETER                         :: RoutineName = 'MAP_Init'
     
     INTEGER(IntKi)                                  :: i
@@ -722,7 +722,7 @@ IF (ErrStat >= AbortErrLev) RETURN
     TYPE(MAP_InputType)                             :: u_interp    ! Inputs at t
     
     INTEGER(IntKi)                                  :: ErrStat2     ! Error status of the operation
-    CHARACTER(1024)                                 :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
+    CHARACTER(ErrMsgLen)                            :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
     CHARACTER(*), PARAMETER                         :: RoutineName = 'MAP_UpdateStates'
     
     ErrStat = ErrID_None
@@ -796,7 +796,7 @@ IF (ErrStat >= AbortErrLev) RETURN
     integer                                         :: i     
     
     INTEGER(IntKi)                                  :: ErrStat2     ! Error status of the operation
-    CHARACTER(1024)                                 :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
+    CHARACTER(ErrMsgLen)                            :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
     CHARACTER(*), PARAMETER                         :: RoutineName = 'MAP_CalcOutput'
     
     
@@ -859,7 +859,7 @@ IF (ErrStat >= AbortErrLev) RETURN
 !    INTEGER(IntKi)                                  :: i=0 
             
     INTEGER(IntKi)                                  :: ErrStat2     ! Error status of the operation
-    CHARACTER(1024)                                 :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
+    CHARACTER(ErrMsgLen)                            :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
     CHARACTER(*), PARAMETER                         :: RoutineName = 'MAP_End'
             
     
@@ -920,7 +920,7 @@ IF (ErrStat >= AbortErrLev) RETURN
     CHARACTER(255)                         :: line
    
     INTEGER                                :: Un
-    CHARACTER(1024)                        :: ErrMsg
+    CHARACTER(ErrMsgLen)                   :: ErrMsg
     CHARACTER(*), PARAMETER                :: RoutineName = 'map_read_input_file_contents'
                                                                                                  
     ErrStat = ErrID_None  
@@ -1495,22 +1495,6 @@ SUBROUTINE MAP_GetOP( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg, u_op, y
 END SUBROUTINE MAP_GetOP   
 
  !==========================================================================================================
-
-  ! ==========   MAP_ERROR   ======     <-------------------------------------------------------------------+
-  !                                                                                              !          |
-  ! this is different from MAP_ERROR_CHECKER. MAP_ERROR check internal fortran errors, whereas
-  ! the former checks errors in the MAP DLL.
-  SUBROUTINE MAP_ERROR(ErrMsg, ErrStat, string)
-    CHARACTER(1024), INTENT(INOUT) :: ErrMsg 
-    INTEGER(IntKi),  INTENT(INOUT) :: ErrStat 
-    CHARACTER(*),    INTENT(IN   ) :: string    
-
-    IF (ErrStat.NE.ErrID_None) THEN
-       ErrMsg = TRIM(ErrMsg)//string
-    END IF
-  END SUBROUTINE  MAP_ERROR                                                                         !   -------+
-  !==========================================================================================================
-
    
   ! ==========   MAP_ERROR_CHECKER   ======     <-----------------------------------------------------------+
   !                                                                                              !          |
