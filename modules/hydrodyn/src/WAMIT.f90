@@ -919,18 +919,13 @@ end if
             else if ( p%ExctnMod == 2 ) then
                Interval_Sub                  = InitInp%Conv_Rdtn%RdtnDT
                SS_Exctn_InitInp%InputFile    = InitInp%WAMITFile    
-               SS_Exctn_InitInp%WaveDir      = InitInp%WaveField%WaveDir
                SS_Exctn_InitInp%NStepWave    = p%NStepWave
                SS_Exctn_InitInp%NBody        = InitInp%NBody
                SS_Exctn_InitInp%PtfmRefztRot = InitInp%PtfmRefztRot 
                SS_Exctn_InitInp%ExctnDisp    = InitInp%ExctnDisp
                
-                  ! No other modules need this WaveElev0 array so we will simply move the allocation over to the SS_Exctn module
-               IF (ASSOCIATED(InitInp%WaveElev0)) SS_Exctn_InitInp%WaveElev0 => InitInp%WaveElev0
-               IF (ASSOCIATED(InitInp%WaveElev1)) SS_Exctn_InitInp%WaveElev1 => InitInp%WaveElev1
 !TODO: Verify what happens within SS_Exctn when we have no waves. 
-               
-               SS_Exctn_InitInp%WaveTime => InitInp%WaveField%WaveTime 
+               SS_Exctn_InitInp%WaveField => InitInp%WaveField
                
                call SS_Exc_Init(SS_Exctn_InitInp, m%SS_Exctn_u, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn, z%SS_Exctn, OtherState%SS_Exctn, &
                                       m%SS_Exctn_y, m%SS_Exctn, Interval_Sub, SS_Exctn_InitOut, ErrStat2, ErrMsg2)
@@ -1140,7 +1135,7 @@ end if
                         RETURN
                      END IF
                      do iGrid = 1, p%SeaSt_Interp_p%n(2)*p%SeaSt_Interp_p%n(3)
-                        WaveExctnCGrid(I,iGrid,J) = WaveExctnC(I,J) * CMPLX(InitInp%WaveElevC(1,I,iGrid), InitInp%WaveElevC(2,I,iGrid))                        
+                        WaveExctnCGrid(I,iGrid,J) = WaveExctnC(I,J) * CMPLX(InitInp%WaveField%WaveElevC(1,I,iGrid), InitInp%WaveField%WaveElevC(2,I,iGrid))
                      end do
                   END DO                ! J - All wave excitation forces and moments
                END DO                ! I - The positive frequency components (including zero) of the discrete Fourier transform
@@ -1181,56 +1176,23 @@ end if
             end if
             
 
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      ! Dump the HdroFreq variable to a file for debugging
-      ! Open and write header info to the HydroDyn Output File
-      !CALL OpenFOutFile ( 66, 'C:\Dev\NREL_SVN\HydroDyn\branches\HydroDyn_Modularization\Samples\NRELOffshrBsline5MW_OC3Hywind\HdroFreq_HD.txt', ErrStat   )  ! Open motion file.
-      !DO K = 1, NInpFreq
-      !   WRITE ( 66, '(2(e20.9))', IOSTAT = ErrStat) REAL(K), HdroFreq(K)
-      !END DO
-      !CLOSE ( 66 )
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      ! Dump the WaveElevCO variable to a file for debugging
-      ! Open and write header info to the HydroDyn Output File
-      !CALL OpenFOutFile ( 66, 'C:\Dev\NREL_SVN\HydroDyn\branches\HydroDyn_Modularization\Samples\NRELOffshrBsline5MW_OC3Hywind\WaveElevC0_HD.txt', ErrStat   )  ! Open motion file.
-      !DO K = 0, InitInp%NStepWave2
-      !   WRITE ( 66, '(2(e20.9))', IOSTAT = ErrStat) REAL(K), REAL(InitInp%WaveElevC0(K))
-      !END DO
-      !CLOSE ( 66 )
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      ! Dump the WaveExctnC variable to a file for debugging
-      ! Open and write header info to the HydroDyn Output File
-      !CALL OpenFOutFile ( 66, 'C:\Dev\NREL_SVN\HydroDyn\branches\HydroDyn_Modularization\Samples\NRELOffshrBsline5MW_OC3Hywind\WaveExctnC_HD.txt', ErrStat   )  ! Open motion file.
-      !DO K = 0, InitInp%NStepWave2 
-      !   WRITE ( 66, '(7(e20.9))', IOSTAT = ErrStat) REAL(K), REAL(WaveExctnC(K,:))
-      !END DO
-      !CLOSE ( 66 )
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-              
             else if ( p%ExctnMod == 2 ) then
                Interval_Sub                  = InitInp%Conv_Rdtn%RdtnDT
                SS_Exctn_InitInp%InputFile    = InitInp%WAMITFile    
-               SS_Exctn_InitInp%WaveDir      = InitInp%WaveField%WaveDir
                SS_Exctn_InitInp%NStepWave    = p%NStepWave
                SS_Exctn_InitInp%NBody        = InitInp%NBody
                SS_Exctn_InitInp%PtfmRefztRot = InitInp%PtfmRefztRot
                SS_Exctn_InitInp%SeaSt_Interp_p = InitInp%SeaSt_Interp_p
                SS_Exctn_InitInp%ExctnDisp    = InitInp%ExctnDisp
+
+               SS_Exctn_InitInp%WaveField => InitInp%WaveField
+
                ! We have been passed a pointer to WaveElev0 for use by the State Space excitation module.
                ! If the special case shown below is not used, then the state space model simply uses WaveElev0, as is.
                ! however, if we are using the special case, then WaveElev0 will be modified.  This is okay, because no one else
                ! is using WaveElev0 data
                if (p%ExctnDisp == 0 ) then
-                  if (associated(InitInp%WaveElev0)) then
-                  
-                     ! No other modules need this WaveElev0 array so we will simply move the allocation over to the SS_Exctn module
-                    ! call MOVE_ALLOC(InitInp%WaveElev0, SS_Exctn_InitInp%WaveElev0) 
-                     SS_Exctn_InitInp%WaveElev0 => InitInp%WaveElev0
+                  if (allocated(SS_Exctn_InitInp%WaveField%WaveElev0)) then !NOTE THIS OVERWRITES THE WAVEFIELD WaveElev0 data
                
                      ! Handle special case when NBodyMod=2 and (PtfmRefxt /= 0 or PtfmRefyt /= 0)  : Need to phase shift the wave elevation data for the offset body
                      if ( p%NBodyMod==2 .and. (InitInp%PtfmRefxt(1) /= 0 .or. InitInp%PtfmRefyt(1) /= 0) ) then
@@ -1269,7 +1231,8 @@ end if
                         END IF
       
                            ! We'll need the following for wave stretching once we implement it.
-                        CALL ApplyFFT_cx (  SS_Exctn_InitInp%WaveElev0(0:InitInp%NStepWave-1),  tmpComplexArr(:  ), FFT_Data, ErrStat2 )
+                        ! NOTE THIS IS OVERWRITING THE WAVEFIELD WaveElev0 PARAMETER DATA
+                        CALL ApplyFFT_cx (  SS_Exctn_InitInp%WaveField%WaveElev0(0:InitInp%NStepWave-1),  tmpComplexArr(:  ), FFT_Data, ErrStat2 )
                         CALL SetErrStat(ErrStat2,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,RoutineName)
                         IF ( ErrStat >= AbortErrLev ) THEN
                            CALL CleanUp()
@@ -1286,20 +1249,9 @@ end if
                      end if 
                   else
                      !TODO: Error message because we need WaveElev0 for ExctnDisp=0
+                     call SetErrStat( ErrID_Severe, 'SS Excitation does not contain WaveElev0 data.', ErrStat, ErrMsg, RoutineName )
                   end if
-               else
-                     SS_Exctn_InitInp%WaveElev1 => InitInp%WaveElev1
                end if
-                  
-                     ! We need the WaveTime array to stay intact for use in other modules, so we will make a copy instead of moving the allocation
-                  !ALLOCATE ( SS_Exctn_InitInp%WaveTime (0:InitInp%NStepWave) , STAT=ErrStat2 )
-                  !IF ( ErrStat2 /= 0 )  THEN
-                  !   CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the SS_Exctn_InitInp%WaveTime array.', ErrStat, ErrMsg, RoutineName)
-                  !   CALL Cleanup()
-                  !   RETURN            
-                  !END IF
-               SS_Exctn_InitInp%WaveTime => InitInp%WaveField%WaveTime 
-                  
       
                
                call SS_Exc_Init(SS_Exctn_InitInp, m%SS_Exctn_u, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn, z%SS_Exctn, OtherState%SS_Exctn, &

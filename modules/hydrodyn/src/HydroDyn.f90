@@ -284,6 +284,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             ! Is there a WAMIT body? 
          
          IF ( InputFileData%PotMod == 1 ) THEN
+            InputFileData%WAMIT%WaveField  => InitInp%WaveField
+            
             p%nWAMITObj              = InputFileData%nWAMITObj      ! All the data for the various WAMIT bodies are stored in a single WAMIT file
             p%vecMultiplier          = InputFileData%vecMultiplier  ! Multiply all vectors and matrices row/column lengths by NBody
             InputFileData%WAMIT%NBodyMod = InputFileData%NBodyMod
@@ -291,7 +293,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             InputFileData%WAMIT%WtrDpth  = InputFileData%Morison%WtrDpth ! The data in InputFileData%Morison%WtrDpth was directly placed there when we parsed the HydroDyn input file
             p%NBody                  = InputFileData%NBody
             p%NBodyMod               = InputFileData%NBodyMod
-            InputFileData%WAMIT%WaveElev1 => InitInp%WaveField%WaveElev1
             call AllocAry( m%F_PtfmAdd, 6*InputFileData%NBody, "m%F_PtfmAdd", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             call AllocAry( m%F_Waves  , 6*InputFileData%NBody, "m%F_Waves"  , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             
@@ -363,11 +364,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             InputFileData%WAMIT%NStepWave2   = InitInp%NStepWave2
             InputFileData%WAMIT%WaveDOmega   = InitInp%WaveDOmega   
 
-               ! Init inputs for the SS_Excitation model (set this just in case it will be used)
-            InputFileData%WAMIT%WaveElev0  => InitInp%WaveField%WaveElev0
-            InputFileData%WAMIT%WaveElevC  => InitInp%WaveField%WaveElevC
-            InputFileData%WAMIT%WaveField  => InitInp%WaveField
-            
             ! InputFileData%WAMIT%seast_interp_p = InitInp%WaveField%seast_interp_p
             CALL SeaSt_Interp_CopyParam(InitInp%WaveField%seast_interp_p, InputFileData%WAMIT%seast_interp_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -2808,7 +2804,7 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       call PackMotionMesh(u%PRPMesh, u_op, index, FieldMask=Mask) 
       
          ! extended input:
-      u_op(index) = 0.0_R8Ki !u%WaveElev0
+      u_op(index) = 0.0_R8Ki
           
       
    END IF

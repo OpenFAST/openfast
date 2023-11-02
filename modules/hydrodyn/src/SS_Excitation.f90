@@ -101,7 +101,7 @@ function GetWaveElevation ( time, u_in, t_in, p, m, ErrStat, ErrMsg )
 
    
    if (p%ExctnDisp == 0) then
-      GetWaveElevation = InterpWrappedStpReal ( real(time, SiKi), p%WaveTime(:), p%WaveElev0(:), m%LastIndWave, p%NStepWave + 1 ) 
+      GetWaveElevation = InterpWrappedStpReal ( real(time, SiKi), p%WaveField%WaveTime, p%WaveField%WaveElev0, m%LastIndWave, p%NStepWave + 1 ) 
    else
       
       call SS_Exc_CopyInput(u_in(1), u_out, MESH_NEWCOPY, ErrStat2, ErrMsg2 ) ! allocates arrays so that SS_Exc_Input_ExtrapInterp will work
@@ -111,7 +111,7 @@ function GetWaveElevation ( time, u_in, t_in, p, m, ErrStat, ErrMsg )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
       do iBody = 1, p%NBody  
-         GetWaveElevation(iBody) = SeaSt_Interp_3D( time, u_out%PtfmPos(1:2,iBody), p%WaveElev1, p%SeaSt_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+         GetWaveElevation(iBody) = SeaSt_Interp_3D( time, u_out%PtfmPos(1:2,iBody), p%WaveField%WaveElev1, p%SeaSt_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
 
@@ -153,10 +153,12 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     INTEGER                                :: Nlines                               ! Number of lines in the input file, used to determine N
     INTEGER                                :: UnSS                                 ! I/O unit number for the WAMIT output file with the .ss extension; this file contains the state-space matrices.
     INTEGER                                :: Sttus                                ! Error in reading .ssexctn file
-    real(ReKi)                             :: WaveDir                              ! Temp wave direction angle (deg)
+    real(SiKi)                             :: WaveDir                              ! Temp wave direction angle (deg)
     character(3)                           :: bodystr
     integer                                :: ErrStat2
     character(ErrMsgLen)                   :: ErrMsg2
+    character(1024)                        :: InFile
+    character(*), parameter                :: RoutineName = 'SS_Exc_Init'
     
     ! Initialize ErrStat   
     ErrStat = ErrID_None
@@ -166,12 +168,21 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       
     UnSS  = -1
     p%numStates = 0
+    
+      ! Set wave field data and parameters from InitInp:
+    p%NStepWave = InitInp%NStepWave
+    p%SeaSt_Interp_p = InitInp%SeaSt_Interp_p
+    p%WaveField => InitInp%WaveField
+      
+    p%ExctnDisp =  InitInp%ExctnDisp
     p%NBody     = InitInp%NBody  ! Number of WAMIT bodies: =1 if WAMIT is using NBodyMod > 1,  >=1 if NBodyMod=1
+    
    
     ! Open the .ss input file!
+    InFile = TRIM(InitInp%InputFile)//'.ssexctn'
     CALL GetNewUnit( UnSS )
-    CALL OpenFInpFile ( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', ErrStat2, ErrMsg2 )  ! Open file.
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
+    CALL OpenFInpFile ( UnSS, TRIM(InFile), ErrStat2, ErrMsg2 )  ! Open file.
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
          RETURN
@@ -180,24 +191,24 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     ! Determine the number of states and size of the matrices
     Nlines = 1
     
-    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', 'Header',ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')    
+    CALL ReadCom ( UnSS, InFile, 'Header',ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)    
    
-    CALL ReadVar( UnSS,TRIM(InitInp%InputFile)//'.ssexctn', WaveDir, 'WaveDir', 'Wave direction (deg)',ErrStat2, ErrMsg2) ! Reads in the second line, containing the wave direction
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
+    CALL ReadVar( UnSS,InFile, WaveDir, 'WaveDir', 'Wave direction (deg)',ErrStat2, ErrMsg2) ! Reads in the second line, containing the wave direction
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
    ! Check that excitation state-space file Beta angle (in degrees) matches the HydroDyn input file angle
-   if ( .not. EqualRealNos(InitInp%WaveDir, WaveDir) ) call SetErrStat(ErrID_FATAL,'HydroDyn Wave direction does not match the wave excitation wave direction',ErrStat,ErrMsg,'SS_Exc_Init')
+   if ( .not. EqualRealNos(InitInp%WaveField%WaveDir, WaveDir) ) call SetErrStat(ErrID_FATAL,'HydroDyn Wave direction does not match the wave excitation wave direction',ErrStat,ErrMsg,RoutineName)
 
-   CALL ReadVar( UnSS,TRIM(InitInp%InputFile)//'.ssexctn', p%Tc, 'p%Tc', 'Time offset (s)',ErrStat2, ErrMsg2) ! Reads in the third line, containing the number of states
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
+   CALL ReadVar( UnSS,InFile, p%Tc, 'p%Tc', 'Time offset (s)',ErrStat2, ErrMsg2) ! Reads in the third line, containing the number of states
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             
-    CALL ReadVar( UnSS,TRIM(InitInp%InputFile)//'.ssexctn', p%numStates, 'p%numStates', 'Number of states',ErrStat2, ErrMsg2) ! Reads in the third line, containing the number of states
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
+    CALL ReadVar( UnSS,InFile, p%numStates, 'p%numStates', 'Number of states',ErrStat2, ErrMsg2) ! Reads in the third line, containing the number of states
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
-   call AllocAry( p%spdof, 6*p%NBody, 'p%spdof', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')         
-   CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ssexctn', p%spDOF, 6*p%NBody, 'p%spDOF', 'States per DOF',ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
+   call AllocAry( p%spdof, 6*p%NBody, 'p%spdof', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)         
+   CALL ReadAry( UnSS,InFile, p%spDOF, 6*p%NBody, 'p%spDOF', 'States per DOF',ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
           
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -205,7 +216,7 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       END IF
       
     DO !Loop through all the lines of the file
-        CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', 'Header',Sttus,ErrMsg2  )! Reads the first entire line (Title header)
+        CALL ReadCom ( UnSS, InFile, 'Header',Sttus,ErrMsg2  )! Reads the first entire line (Title header)
         IF ( Sttus == ErrID_None )  THEN ! .TRUE. when data is read in successfully                    
             Nlines=Nlines+1                    
         ELSE !We must have reached the end of the file
@@ -217,7 +228,7 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     
     !Verifications on the input file
     IF ( ( Nlines - 6*p%NBody ) / 2 /= p%numStates) THEN
-      CALL SetErrStat(ErrID_Severe,'Error in the input file .ssexctn: The size of the matrices does not correspond to the number of states!',ErrStat,ErrMsg,'SS_Exc_Init')
+      CALL SetErrStat(ErrID_Severe,'Error in the input file .ssexctn: The size of the matrices does not correspond to the number of states!',ErrStat,ErrMsg,RoutineName)
     END IF
         
     
@@ -228,9 +239,9 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     
     ! Now we can allocate the temporary matrices A, B and C
     
-    CALL AllocAry( p%A, p%numStates,    p%numStates,    'p%A', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
-    CALL AllocAry( p%B, p%numStates,                    'p%B', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
-    CALL AllocAry( p%C,   6*p%NBody,    p%numStates,    'p%C', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
+    CALL AllocAry( p%A, p%numStates,    p%numStates,    'p%A', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+    CALL AllocAry( p%B, p%numStates,                    'p%B', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+    CALL AllocAry( p%C,   6*p%NBody,    p%numStates,    'p%C', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
     
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -241,25 +252,25 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     REWIND (UNIT=UnSS)   ! REWIND the file so we can read it in a second time.
 
     ! Skip the first 4 lines:  (NOTE: no error handling here because we would have caught it the first time through)
-    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', 'Header', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
-    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', 'Wave direction (deg)', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
-    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', 'Time offset (s)', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
-    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', 'Number of Excitation States', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
-    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', 'Number of states per dofs', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)   
+    CALL ReadCom ( UnSS, InFile, 'Header', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
+    CALL ReadCom ( UnSS, InFile, 'Wave direction (deg)', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
+    CALL ReadCom ( UnSS, InFile, 'Time offset (s)', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
+    CALL ReadCom ( UnSS, InFile, 'Number of Excitation States', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
+    CALL ReadCom ( UnSS, InFile, 'Number of states per dofs', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)   
     
     DO I = 1,p%numStates !Read A MatriX
-        CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ssexctn', p%A(I,:), p%numStates, 'p%A', 'A_Matrix',ErrStat2, ErrMsg2)
-          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
+        CALL ReadAry( UnSS,InFile, p%A(I,:), p%numStates, 'p%A', 'A_Matrix',ErrStat2, ErrMsg2)
+          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
     END DO
     
     DO I = 1,p%numStates !Read B Matrix
-        CALL ReadVar( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', p%B(I), 'p%B', 'B_Matrix',ErrStat2, ErrMsg2) 
-          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
+        CALL ReadVar( UnSS, InFile, p%B(I), 'p%B', 'B_Matrix',ErrStat2, ErrMsg2) 
+          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
     END DO
     
    DO I = 1,6*p%NBody !Read C Matrix
-      CALL ReadAry( UnSS, TRIM(InitInp%InputFile)//'.ssexctn', p%C(I,:), p%numStates, 'p%C', 'C_Matrix',ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
+      CALL ReadAry( UnSS, InFile, p%C(I,:), p%numStates, 'p%C', 'C_Matrix',ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    END DO 
    CLOSE ( UnSS ) !Close .ss input file
    UnSS = -1        ! Indicate the file is closed
@@ -273,21 +284,10 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          
       p%DT  = Interval
       
-         ! Allocate Wave-elevation related arrays
-      p%NStepWave = InitInp%NStepWave
-      p%SeaSt_Interp_p = InitInp%SeaSt_Interp_p
-      p%ExctnDisp =  InitInp%ExctnDisp
-      p%WaveTime  => InitInp%WaveTime  
-      p%ExctnDisp = InitInp%ExctnDisp
-      if (p%ExctnDisp == 0) then
-         p%WaveElev0 => InitInp%WaveElev0
-      else
-         p%WaveElev1 => InitInp%WaveElev1
-      end if
       
       
     ! Define initial system states here:
-    CALL AllocAry( x%x, p%numStates,  'x%x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')      
+    CALL AllocAry( x%x, p%numStates,  'x%x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
          RETURN
@@ -300,7 +300,7 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       
     ! Define other States: 
       DO I=1,SIZE(OtherState%xdot)
-         CALL SS_Exc_CopyContState( x, OtherState%xdot(i), MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')
+         CALL SS_Exc_CopyContState( x, OtherState%xdot(i), MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       END DO
       OtherState%n = -1
 
@@ -311,17 +311,17 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
    ! no inputs
 
    ! Define system output initializations (set up mesh) here:
-   call AllocAry( y%y, p%NBody*6,  'y%y', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Exc_Init')        
+   call AllocAry( y%y, p%NBody*6,  'y%y', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)        
    y%y = 0  
-   call AllocAry( y%WriteOutput, 6*p%NBody+1, 'y%WriteOutput', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
+   call AllocAry( y%WriteOutput, 6*p%NBody+1, 'y%WriteOutput', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    y%WriteOutput = 0
       
          
    ! Define initialization-routine output here:
    
    !  For OpenFAST, these outputs are attached (via HydroDyn) to the Radiation Force/Moment channels within HydroDyn
-   call AllocAry( InitOut%WriteOutputHdr, 6*p%NBody+1, 'InitOut%WriteOutputHdr', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')
-   call AllocAry( InitOut%WriteOutputUnt, 6*p%NBody+1, 'InitOut%WriteOutputUnt', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')   
+   call AllocAry( InitOut%WriteOutputHdr, 6*p%NBody+1, 'InitOut%WriteOutputHdr', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( InitOut%WriteOutputUnt, 6*p%NBody+1, 'InitOut%WriteOutputUnt', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)   
    InitOut%WriteOutputHdr(1) = 'Time'
    InitOut%WriteOutputUnt(1) = '(s) '
    do i = 1, p%NBody

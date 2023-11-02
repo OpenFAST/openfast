@@ -103,8 +103,6 @@ IMPLICIT NONE
     REAL(SiKi)  :: WvLowCOffS = 0.0_R4Ki      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
     REAL(SiKi)  :: WvHiCOffS = 0.0_R4Ki      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
     LOGICAL  :: InvalidWithSSExctn = .false.      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Instantaneous elevation time-series of incident waves at the platform reference point [(meters)]
-    REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElevC      !< Discrete Fourier transform of the instantaneous elevation of incident waves at all grid points.  First column is real part, second column is imaginary part [(meters)]
     REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
     REAL(SiKi)  :: MCFD = 0.0_R4Ki      !< Diameter of MacCamy-Fuchs members [(meters)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
@@ -877,7 +875,7 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    integer(IntKi),  intent(in   ) :: CtrlCode
    integer(IntKi),  intent(  out) :: ErrStat
    character(*),    intent(  out) :: ErrMsg
-   integer(IntKi)                 :: LB(3), UB(3)
+   integer(IntKi)                 :: LB(0), UB(0)
    integer(IntKi)                 :: ErrStat2
    character(ErrMsgLen)           :: ErrMsg2
    character(*), parameter        :: RoutineName = 'HydroDyn_CopyInitInput'
@@ -905,30 +903,6 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    DstInitInputData%WvLowCOffS = SrcInitInputData%WvLowCOffS
    DstInitInputData%WvHiCOffS = SrcInitInputData%WvHiCOffS
    DstInitInputData%InvalidWithSSExctn = SrcInitInputData%InvalidWithSSExctn
-   if (allocated(SrcInitInputData%WaveElev0)) then
-      LB(1:1) = lbound(SrcInitInputData%WaveElev0)
-      UB(1:1) = ubound(SrcInitInputData%WaveElev0)
-      if (.not. allocated(DstInitInputData%WaveElev0)) then
-         allocate(DstInitInputData%WaveElev0(LB(1):UB(1)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveElev0.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%WaveElev0 = SrcInitInputData%WaveElev0
-   end if
-   if (allocated(SrcInitInputData%WaveElevC)) then
-      LB(1:3) = lbound(SrcInitInputData%WaveElevC)
-      UB(1:3) = ubound(SrcInitInputData%WaveElevC)
-      if (.not. allocated(DstInitInputData%WaveElevC)) then
-         allocate(DstInitInputData%WaveElevC(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)), stat=ErrStat2)
-         if (ErrStat2 /= 0) then
-            call SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%WaveElevC.', ErrStat, ErrMsg, RoutineName)
-            return
-         end if
-      end if
-      DstInitInputData%WaveElevC = SrcInitInputData%WaveElevC
-   end if
    DstInitInputData%WaveDOmega = SrcInitInputData%WaveDOmega
    DstInitInputData%MCFD = SrcInitInputData%MCFD
    DstInitInputData%WaveField => SrcInitInputData%WaveField
@@ -945,12 +919,6 @@ subroutine HydroDyn_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    ErrMsg  = ''
    call NWTC_Library_DestroyFileInfoType(InitInputData%PassedFileData, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (allocated(InitInputData%WaveElev0)) then
-      deallocate(InitInputData%WaveElev0)
-   end if
-   if (allocated(InitInputData%WaveElevC)) then
-      deallocate(InitInputData%WaveElevC)
-   end if
    nullify(InitInputData%WaveField)
 end subroutine
 
@@ -980,16 +948,6 @@ subroutine HydroDyn_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%WvLowCOffS)
    call RegPack(Buf, InData%WvHiCOffS)
    call RegPack(Buf, InData%InvalidWithSSExctn)
-   call RegPack(Buf, allocated(InData%WaveElev0))
-   if (allocated(InData%WaveElev0)) then
-      call RegPackBounds(Buf, 1, lbound(InData%WaveElev0), ubound(InData%WaveElev0))
-      call RegPack(Buf, InData%WaveElev0)
-   end if
-   call RegPack(Buf, allocated(InData%WaveElevC))
-   if (allocated(InData%WaveElevC)) then
-      call RegPackBounds(Buf, 3, lbound(InData%WaveElevC), ubound(InData%WaveElevC))
-      call RegPack(Buf, InData%WaveElevC)
-   end if
    call RegPack(Buf, InData%WaveDOmega)
    call RegPack(Buf, InData%MCFD)
    call RegPack(Buf, associated(InData%WaveField))
@@ -1006,7 +964,7 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
    type(PackBuffer), intent(inout)    :: Buf
    type(HydroDyn_InitInputType), intent(inout) :: OutData
    character(*), parameter            :: RoutineName = 'HydroDyn_UnPackInitInput'
-   integer(IntKi)  :: LB(3), UB(3)
+   integer(IntKi)  :: LB(0), UB(0)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    integer(IntKi)  :: PtrIdx
@@ -1051,34 +1009,6 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%InvalidWithSSExctn)
    if (RegCheckErr(Buf, RoutineName)) return
-   if (allocated(OutData%WaveElev0)) deallocate(OutData%WaveElev0)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 1, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveElev0(LB(1):UB(1)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElev0.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveElev0)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
-   if (allocated(OutData%WaveElevC)) deallocate(OutData%WaveElevC)
-   call RegUnpack(Buf, IsAllocAssoc)
-   if (RegCheckErr(Buf, RoutineName)) return
-   if (IsAllocAssoc) then
-      call RegUnpackBounds(Buf, 3, LB, UB)
-      if (RegCheckErr(Buf, RoutineName)) return
-      allocate(OutData%WaveElevC(LB(1):UB(1),LB(2):UB(2),LB(3):UB(3)),stat=stat)
-      if (stat /= 0) then 
-         call SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElevC.', Buf%ErrStat, Buf%ErrMsg, RoutineName)
-         return
-      end if
-      call RegUnpack(Buf, OutData%WaveElevC)
-      if (RegCheckErr(Buf, RoutineName)) return
-   end if
    call RegUnpack(Buf, OutData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%MCFD)

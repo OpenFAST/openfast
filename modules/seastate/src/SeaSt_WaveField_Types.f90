@@ -45,7 +45,7 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: PWaveAcc0      !< Partial derivative of incident wave acceleration in the vertical direction at the still water level [(m/s^2/m)]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: PWaveAccMCF0      !< Partial derivative of scaled wave acceleration in the vertical direction at the still water level for MacCamy-Fuchs members [(m/s^2/m)]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: PWaveVel0      !< Partial derivative of incident wave velocity in the vertical direction at the still water level [(m/s/m)]
-    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Instantaneous elevation time-series of incident waves at the platform reference point [(m)]
+    REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElev0      !< Instantaneous elevation time-series of incident waves at the platform reference point (NOTE THAT THIS CAN GET MODIFIED IN WAMIT) [(m)]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElev1      !< First order wave elevation [(m)]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveElev2      !< Second order wave elevation [(m)]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< Parameter information from the SeaState Interpolation module [(-)]
