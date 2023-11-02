@@ -229,6 +229,10 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
       p%WaveField%WvLowCOff    =  InputFileData%WvLowCOff
       p%WaveField%WvHiCOff     =  InputFileData%WvHiCOff
+      p%WaveField%WvLowCOffD   =  InputFileData%WvLowCOffD
+      p%WaveField%WvHiCOffD    =  InputFileData%WvHiCOffD
+      p%WaveField%WvLowCOffS   =  InputFileData%WvLowCOffS
+      p%WaveField%WvHiCOffS    =  InputFileData%WvHiCOffS
       
          ! Initialize Waves module (Note that this may change InputFileData%Waves%WaveDT)
       CALL Waves_Init(InputFileData%Waves, Waves_InitOut, p%WaveField, ErrStat2, ErrMsg2 ) 
@@ -400,10 +404,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%NStepWave2   =  Waves_InitOut%NStepWave2          ! For WAMIT and WAMIT2,  FIT
       
        InitOut%WaveMod      =  InputFileData%Waves%WaveMod   
-       InitOut%WvLowCOffD   =  InputFileData%Waves2%WvLowCOffD
-       InitOut%WvHiCOffD    =  InputFileData%Waves2%WvHiCOffD 
-       InitOut%WvLowCOffS   =  InputFileData%Waves2%WvLowCOffS
-       InitOut%WvHiCOffS    =  InputFileData%Waves2%WvHiCOffS 
        InitOut%WaveDirMod   =  InputFileData%Waves%WaveDirMod
        ! InitOut%WtrDpth      =  InputFileData%Waves%WtrDpth
        

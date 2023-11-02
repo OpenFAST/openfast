@@ -61,10 +61,6 @@ IMPLICIT NONE
     LOGICAL  :: NewmanAppF = .false.      !< Flag indicating Newman approximation should be calculated [-]
     LOGICAL  :: DiffQTFF = .false.      !< Flag indicating the full difference QTF should be calculated [-]
     LOGICAL  :: SumQTFF = .false.      !< Flag indicating the full    sum     QTF should be calculated [-]
-    REAL(ReKi)  :: WvLowCOffD = 0.0_ReKi      !< Minimum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
-    REAL(ReKi)  :: WvHiCOffD = 0.0_ReKi      !< Maximum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
-    REAL(ReKi)  :: WvLowCOffS = 0.0_ReKi      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
-    REAL(ReKi)  :: WvHiCOffS = 0.0_ReKi      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
   END TYPE WAMIT2_InitInputType
 ! =======================
 ! =========  WAMIT2_MiscVarType  =======
@@ -176,10 +172,6 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    DstInitInputData%NewmanAppF = SrcInitInputData%NewmanAppF
    DstInitInputData%DiffQTFF = SrcInitInputData%DiffQTFF
    DstInitInputData%SumQTFF = SrcInitInputData%SumQTFF
-   DstInitInputData%WvLowCOffD = SrcInitInputData%WvLowCOffD
-   DstInitInputData%WvHiCOffD = SrcInitInputData%WvHiCOffD
-   DstInitInputData%WvLowCOffS = SrcInitInputData%WvLowCOffS
-   DstInitInputData%WvHiCOffS = SrcInitInputData%WvHiCOffS
 end subroutine
 
 subroutine WAMIT2_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -258,10 +250,6 @@ subroutine WAMIT2_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NewmanAppF)
    call RegPack(Buf, InData%DiffQTFF)
    call RegPack(Buf, InData%SumQTFF)
-   call RegPack(Buf, InData%WvLowCOffD)
-   call RegPack(Buf, InData%WvHiCOffD)
-   call RegPack(Buf, InData%WvLowCOffS)
-   call RegPack(Buf, InData%WvHiCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -388,14 +376,6 @@ subroutine WAMIT2_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%DiffQTFF)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%SumQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvLowCOffD)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvHiCOffD)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvLowCOffS)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvHiCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 

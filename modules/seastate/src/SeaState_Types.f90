@@ -73,6 +73,10 @@ IMPLICIT NONE
     REAL(SiKi)  :: MCFD = 0.0_R4Ki      !< Diameter of members that will use the MacCamy-Fuchs diffraction model [-]
     REAL(SiKi)  :: WvLowCOff = 0.0_R4Ki      !< Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
     REAL(SiKi)  :: WvHiCOff = 0.0_R4Ki      !< High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
+    REAL(SiKi)  :: WvLowCOffD = 0.0_R4Ki      !< Minimum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
+    REAL(SiKi)  :: WvHiCOffD = 0.0_R4Ki      !< Maximum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
+    REAL(SiKi)  :: WvLowCOffS = 0.0_R4Ki      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
+    REAL(SiKi)  :: WvHiCOffS = 0.0_R4Ki      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
   END TYPE SeaSt_InputFile
 ! =======================
 ! =========  SeaSt_InitInputType  =======
@@ -106,10 +110,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
     INTEGER(IntKi)  :: WaveMod = 0_IntKi      !< Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED } [-]
     INTEGER(IntKi)  :: WaveDirMod = 0_IntKi      !< Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6] [-]
-    REAL(SiKi)  :: WvLowCOffD = 0.0_R4Ki      !< Minimum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
-    REAL(SiKi)  :: WvHiCOffD = 0.0_R4Ki      !< Maximum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
-    REAL(SiKi)  :: WvLowCOffS = 0.0_R4Ki      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
-    REAL(SiKi)  :: WvHiCOffS = 0.0_R4Ki      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
     LOGICAL  :: InvalidWithSSExctn = .false.      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
     REAL(SiKi)  :: MCFD = 0.0_R4Ki      !< Diameter of MacCamy-Fuchs member [(meters)]
@@ -306,6 +306,10 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
    DstInputFileData%MCFD = SrcInputFileData%MCFD
    DstInputFileData%WvLowCOff = SrcInputFileData%WvLowCOff
    DstInputFileData%WvHiCOff = SrcInputFileData%WvHiCOff
+   DstInputFileData%WvLowCOffD = SrcInputFileData%WvLowCOffD
+   DstInputFileData%WvHiCOffD = SrcInputFileData%WvHiCOffD
+   DstInputFileData%WvLowCOffS = SrcInputFileData%WvLowCOffS
+   DstInputFileData%WvHiCOffS = SrcInputFileData%WvHiCOffS
 end subroutine
 
 subroutine SeaSt_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
@@ -405,6 +409,10 @@ subroutine SeaSt_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%MCFD)
    call RegPack(Buf, InData%WvLowCOff)
    call RegPack(Buf, InData%WvHiCOff)
+   call RegPack(Buf, InData%WvLowCOffD)
+   call RegPack(Buf, InData%WvHiCOffD)
+   call RegPack(Buf, InData%WvLowCOffS)
+   call RegPack(Buf, InData%WvHiCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -550,6 +558,14 @@ subroutine SeaSt_UnPackInputFile(Buf, OutData)
    call RegUnpack(Buf, OutData%WvLowCOff)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WvHiCOff)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvLowCOffD)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvHiCOffD)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvLowCOffS)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvHiCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -738,10 +754,6 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
    DstInitOutputData%WaveMod = SrcInitOutputData%WaveMod
    DstInitOutputData%WaveDirMod = SrcInitOutputData%WaveDirMod
-   DstInitOutputData%WvLowCOffD = SrcInitOutputData%WvLowCOffD
-   DstInitOutputData%WvHiCOffD = SrcInitOutputData%WvHiCOffD
-   DstInitOutputData%WvLowCOffS = SrcInitOutputData%WvLowCOffS
-   DstInitOutputData%WvHiCOffS = SrcInitOutputData%WvHiCOffS
    DstInitOutputData%InvalidWithSSExctn = SrcInitOutputData%InvalidWithSSExctn
    call SeaSt_Interp_CopyParam(SrcInitOutputData%SeaSt_Interp_p, DstInitOutputData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -810,10 +822,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
    call RegPack(Buf, InData%NStepWave2)
    call RegPack(Buf, InData%WaveMod)
    call RegPack(Buf, InData%WaveDirMod)
-   call RegPack(Buf, InData%WvLowCOffD)
-   call RegPack(Buf, InData%WvHiCOffD)
-   call RegPack(Buf, InData%WvLowCOffS)
-   call RegPack(Buf, InData%WvHiCOffS)
    call RegPack(Buf, InData%InvalidWithSSExctn)
    call SeaSt_Interp_PackParam(Buf, InData%SeaSt_Interp_p) 
    call RegPack(Buf, InData%MCFD)
@@ -882,14 +890,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    call RegUnpack(Buf, OutData%WaveMod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDirMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvLowCOffD)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvHiCOffD)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvLowCOffS)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvHiCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%InvalidWithSSExctn)
    if (RegCheckErr(Buf, RoutineName)) return

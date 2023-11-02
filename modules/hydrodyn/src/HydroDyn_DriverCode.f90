@@ -327,10 +327,6 @@ subroutine SetHD_InitInputs()
    InitInData_HD%NStepWave2   = InitOutData_SeaSt%NStepWave2
    InitInData_HD%WaveMod      = InitOutData_SeaSt%WaveMod
    InitInData_HD%WaveDirMod   = InitOutData_SeaSt%WaveDirMod
-   InitInData_HD%WvLowCOffD   = InitOutData_SeaSt%WvLowCOffD
-   InitInData_HD%WvHiCOffD    = InitOutData_SeaSt%WvHiCOffD 
-   InitInData_HD%WvLowCOffS   = InitOutData_SeaSt%WvLowCOffS
-   InitInData_HD%WvHiCOffS    = InitOutData_SeaSt%WvHiCOffS
    
    InitInData_HD%InvalidWithSSExctn     =  InitOutData_SeaSt%InvalidWithSSExctn
    

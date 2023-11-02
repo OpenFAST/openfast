@@ -813,7 +813,7 @@ END SUBROUTINE WAMIT2_Init
          !> 1. Check the data to see if low cutoff on the difference frequency is 0.  If it is above zero, that implies no mean drift
          !!    term since \f$ \omega_1=\omega_2 \f$
 
-      IF ( InitInp%WvLowCOffD > 0.0_SiKi )  THEN
+      IF ( InitInp%WaveField%WvLowCOffD > 0.0_SiKi )  THEN
          CALL SetErrStat( ErrID_Warn, ' WvLowCOffD > 0.0, so no mean drift term is calculated (the mean drift uses only the equal '//&
                         'frequency terms of the QTF).  Setting the mean drift force to 0.',ErrStat,ErrMsg,RoutineName)
          RETURN
@@ -828,7 +828,7 @@ END SUBROUTINE WAMIT2_Init
       IF ( MnDriftData%DataIs3D ) THEN
 
             ! Check the low frequency cutoff
-         IF ( MINVAL( MnDriftData%Data3D%WvFreq1 ) > InitInp%WvLowCOffD ) THEN
+         IF ( MINVAL( MnDriftData%Data3D%WvFreq1 ) > InitInp%WaveField%WvLowCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(MnDriftData%Data3D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(MnDriftData%Filename)// &
                            ' is above the low frequency cutoff set by WvLowCOffD.',ErrStat,ErrMsg,RoutineName)
@@ -836,7 +836,7 @@ END SUBROUTINE WAMIT2_Init
 
             ! Check the high frequency cutoff -- using the Difference high frequency cutoff.  The first order high frequency
             ! cutoff is typically too high for this in most cases.
-         IF ( (MAXVAL(MnDriftData%Data3D%WvFreq1 ) < InitInp%WvHiCOffD) ) THEN
+         IF ( (MAXVAL(MnDriftData%Data3D%WvFreq1 ) < InitInp%WaveField%WvHiCOffD) ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(MnDriftData%Data3D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(MnDriftData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOffD.',ErrStat,ErrMsg,RoutineName)
@@ -845,12 +845,12 @@ END SUBROUTINE WAMIT2_Init
       ELSE IF ( MnDriftData%DataIs4D ) THEN   ! only check if not 3D data. If there is 3D data, we default to using it for calculations
 
              ! Check the low frequency cutoff
-         IF ( MINVAL( MnDriftData%Data4D%WvFreq1 ) > InitInp%WvLowCOffD ) THEN
+         IF ( MINVAL( MnDriftData%Data4D%WvFreq1 ) > InitInp%WaveField%WvLowCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(MnDriftData%Data4D%WvFreq1)))// &
                            ' rad/s first wave period) data in '//TRIM(MnDriftData%Filename)// &
                            ' is above the low frequency cutoff set by WvLowCOffD.',ErrStat,ErrMsg,RoutineName)
          ENDIF
-         IF ( MINVAL( MnDriftData%Data4D%WvFreq2 ) > InitInp%WaveField%WvLowCOff ) THEN
+         IF ( MINVAL( MnDriftData%Data4D%WvFreq2 ) > InitInp%WaveField%WvLowCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(MnDriftData%Data4D%WvFreq2)))// &
                            ' rad/s for second wave period) data in '//TRIM(MnDriftData%Filename)// &
                            ' is above the low frequency cutoff set by WvLowCOffD.',ErrStat,ErrMsg,RoutineName)
@@ -858,12 +858,12 @@ END SUBROUTINE WAMIT2_Init
 
             ! Check the high frequency cutoff -- using the Difference high frequency cutoff.  The first order high frequency
             ! cutoff is typically too high for this in most cases.
-         IF ( (MAXVAL(MnDriftData%Data4D%WvFreq1) < InitInp%WvHiCOffD) ) THEN
+         IF ( (MAXVAL(MnDriftData%Data4D%WvFreq1) < InitInp%WaveField%WvHiCOffD) ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(MnDriftData%Data4D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(MnDriftData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOffD.',ErrStat,ErrMsg,RoutineName)
          ENDIF
-         IF ( (MAXVAL(MnDriftData%Data4D%WvFreq2) < InitInp%WvHiCOffD) ) THEN
+         IF ( (MAXVAL(MnDriftData%Data4D%WvFreq2) < InitInp%WaveField%WvHiCOffD) ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(MnDriftData%Data4D%WvFreq1)))// &
                            ' rad/s second wave period) data in '//TRIM(MnDriftData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOffD.',ErrStat,ErrMsg,RoutineName)
@@ -2028,13 +2028,13 @@ END SUBROUTINE WAMIT2_Init
       IF ( DiffQTFData%DataIs4D ) THEN   ! We must have a 4D data set
 
              ! Check the low frequency cutoff
-         IF ( MINVAL( DiffQTFData%Data4D%WvFreq1 ) > InitInp%WvLowCOffD ) THEN
+         IF ( MINVAL( DiffQTFData%Data4D%WvFreq1 ) > InitInp%WaveField%WvLowCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(DiffQTFData%Data4D%WvFreq1)))// &
                            ' rad/s first wave period) data in '//TRIM(DiffQTFData%Filename)// &
                            ' is above the low frequency cutoff set by WvLowCOffD.', &
                            ErrStat,ErrMsg,RoutineName)
          ENDIF
-         IF ( MINVAL( DiffQTFData%Data4D%WvFreq2 ) > InitInp%WvLowCOffD ) THEN
+         IF ( MINVAL( DiffQTFData%Data4D%WvFreq2 ) > InitInp%WaveField%WvLowCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(DiffQTFData%Data4D%WvFreq2)))// &
                            ' rad/s for second wave period) data in '//TRIM(DiffQTFData%Filename)// &
                            ' is above the low frequency cutoff set by WvLowCOffD.', &
@@ -2043,13 +2043,13 @@ END SUBROUTINE WAMIT2_Init
 
             ! Check the high frequency cutoff -- using the Difference high frequency cutoff.  The first order high frequency
             ! cutoff is typically too high for this in most cases.
-         IF ( MAXVAL(DiffQTFData%Data4D%WvFreq1) < InitInp%WvHiCOffD ) THEN
+         IF ( MAXVAL(DiffQTFData%Data4D%WvFreq1) < InitInp%WaveField%WvHiCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(DiffQTFData%Data4D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(DiffQTFData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOffD.', &
                            ErrStat,ErrMsg,RoutineName)
          ENDIF
-         IF ( MAXVAL(DiffQTFData%Data4D%WvFreq2) < InitInp%WvHiCOffD ) THEN
+         IF ( MAXVAL(DiffQTFData%Data4D%WvFreq2) < InitInp%WaveField%WvHiCOffD ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(DiffQTFData%Data4D%WvFreq1)))// &
                            ' rad/s second wave period) data in '//TRIM(DiffQTFData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOffD.', &
@@ -2252,7 +2252,7 @@ END SUBROUTINE WAMIT2_Init
 
 
                      ! Only perform calculations if the difference frequency is in the right range
-                  IF ( (OmegaDiff >= InitInp%WvLowCOffD) .AND. (OmegaDiff <= InitInp%WvHiCOffD) ) THEN
+                  IF ( (OmegaDiff >= InitInp%WaveField%WvLowCOffD) .AND. (OmegaDiff <= InitInp%WaveField%WvHiCOffD) ) THEN
 
                         ! Set the \f$ H^- \f$ term to zero before we start
                      TmpHMinusC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
@@ -2534,13 +2534,13 @@ END SUBROUTINE WAMIT2_Init
       IF ( SumQTFData%DataIs4D ) THEN   ! We must have a 4D data set
 
              ! Check the low frequency cutoff
-         IF ( MINVAL( SumQTFData%Data4D%WvFreq1 ) > InitInp%WvLowCOffS ) THEN
+         IF ( MINVAL( SumQTFData%Data4D%WvFreq1 ) > InitInp%WaveField%WvLowCOffS ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(SumQTFData%Data4D%WvFreq1)))// &
                            ' rad/s first wave period) data in '//TRIM(SumQTFData%Filename)// &
                            ' is above the low frequency cutoff set by WvLowCOffS.', &
                            ErrStat,ErrMsg,RoutineName)
          ENDIF
-         IF ( MINVAL( SumQTFData%Data4D%WvFreq2 ) > InitInp%WvLowCOffS ) THEN
+         IF ( MINVAL( SumQTFData%Data4D%WvFreq2 ) > InitInp%WaveField%WvLowCOffS ) THEN
             CALL SetErrStat( ErrID_Fatal,' The lowest frequency ( '//TRIM(Num2LStr(MINVAL(SumQTFData%Data4D%WvFreq2)))// &
                            ' rad/s for second wave period) data in '//TRIM(SumQTFData%Filename)// &
                            ' is above the low frequency cutoff set by WvLowCOffS.', &
@@ -2549,13 +2549,13 @@ END SUBROUTINE WAMIT2_Init
 
             ! Check the high frequency cutoff -- using the Difference high frequency cutoff.  The first order high frequency
             ! cutoff is typically too high for this in most cases.
-         IF ( MAXVAL(SumQTFData%Data4D%WvFreq1) < InitInp%WvHiCOffS ) THEN
+         IF ( MAXVAL(SumQTFData%Data4D%WvFreq1) < InitInp%WaveField%WvHiCOffS ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(SumQTFData%Data4D%WvFreq1)))// &
                            ' rad/s for first wave period) data in '//TRIM(SumQTFData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOffS.', &
                            ErrStat,ErrMsg,RoutineName)
          ENDIF
-         IF ( MAXVAL(SumQTFData%Data4D%WvFreq2) < InitInp%WvHiCOffS ) THEN
+         IF ( MAXVAL(SumQTFData%Data4D%WvFreq2) < InitInp%WaveField%WvHiCOffS ) THEN
             CALL SetErrStat( ErrID_Fatal,' The highest frequency ( '//TRIM(Num2LStr(MAXVAL(SumQTFData%Data4D%WvFreq1)))// &
                            ' rad/s second wave period) data in '//TRIM(SumQTFData%Filename)// &
                            ' is below the high frequency cutoff set by WvHiCOffS.', &
@@ -2756,7 +2756,7 @@ END SUBROUTINE WAMIT2_Init
                   OmegaSum = 2.0_SiKi * Omega1           ! the sum frequency
 
                      ! Only perform calculations if the difference frequency is in the right range
-                  IF ( (OmegaSum >= InitInp%WvLowCOffS) .AND. (OmegaSum <= InitInp%WvHiCOffS) ) THEN
+                  IF ( (OmegaSum >= InitInp%WaveField%WvLowCOffS) .AND. (OmegaSum <= InitInp%WaveField%WvHiCOffS) ) THEN
 
 
                         ! Find the wave amplitude at frequency omega
@@ -2857,7 +2857,7 @@ END SUBROUTINE WAMIT2_Init
 
 
                      ! Only perform calculations if the difference frequency is in the right range
-                  IF ( (OmegaSum >= InitInp%WvLowCOffS) .AND. (OmegaSum <= InitInp%WvHiCOffS) ) THEN
+                  IF ( (OmegaSum >= InitInp%WaveField%WvLowCOffS) .AND. (OmegaSum <= InitInp%WaveField%WvHiCOffS) ) THEN
 
                      !> Now do the inner sum.  We are going to perform a sum up to the maximum frequency that we
                      !! can support (Nyquist frequency) for the given WaveDOmega and NStepWave2 (WaveOmegaMax =
@@ -3195,39 +3195,6 @@ END SUBROUTINE WAMIT2_Init
                   '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
       END IF
       IF ( ErrStat >= AbortErrLev ) RETURN
-
-
-         !--------------------------------------------------------------------------------
-         !> ### Check the Min and Max frequencies for the full QTF cases
-         !!
-         !!  -- these checks are performed based on the DiffQTFF and SumQTFF flags
-         !--------------------------------------------------------------------------------
-
-
-         !> 1. Check that the min / max diff frequencies make sense if using DiffQTF
-
-      IF ( InitInp%DiffQTFF .eqv. .TRUE. ) THEN
-         IF ( ( InitInp%WvHiCOffD < InitInp%WvLowCOffD ) .OR. ( InitInp%WvLowCOffD < 0.0 ) ) THEN
-            CALL SetErrStat( ErrID_Fatal, ' Programming Error in call to WAMIT2_Init: '//NewLine// &
-                  '           WvHiCOffD must be larger than WvLowCOffD. Both must be positive.'// &
-                  '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
-            RETURN
-         END IF
-      END IF
-
-
-         !> 2. Check that the min / max diff frequencies make sense if using SumQTF
-
-      IF ( InitInp%SumQTFF .eqv. .TRUE. ) THEN
-         IF ( ( InitInp%WvHiCOffS < InitInp%WvLowCOffS ) .OR. ( InitInp%WvLowCOffS < 0.0 ) ) THEN
-            CALL SetErrStat( ErrID_Fatal, ' Programming Error in call to WAMIT2_Init: '//NewLine// &
-                  '           WvHiCOffS must be larger than WvLowCOffS. Both must be positive.'// &
-                  '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
-            RETURN
-         END IF
-      END IF
-
-
 
          !--------------------------------------------------------------------------------
          !> ### Assemble the names of the WAMIT data files we are using and verify existence

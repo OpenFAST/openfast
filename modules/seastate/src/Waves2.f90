@@ -197,48 +197,6 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
       ErrMsgTmp   = ""
 
 
-      !-----------------------------------------------------------------------------
-      !> Before attempting to do any real calculations, we first check what was
-      !! passed in through _InitInp_ to make sure it makes sense.  That routine will
-      !! then copy over the relevant information that should be kept in parameters
-      !! (_p_).
-      !!
-      !! _InitInp_ will also check the flags, existence of files, and set flags
-      !! accordingly.
-      !-----------------------------------------------------------------------------
-
-
-      !--------------------------------------------------------------------------------
-      ! Check the Min and Max frequencies for the full QTF cases
-      !  -- these checks are performed based on the DiffQTFF and SumQTFF flags
-      !--------------------------------------------------------------------------------
-
-         ! 1. Check that the min / max diff frequencies make sense if using DiffQTF
-
-      IF ( InitInp%WvDiffQTFF .eqv. .TRUE. ) THEN
-         IF ( ( InitInp%WvHiCOffD < InitInp%WvLowCOffD ) .OR. ( InitInp%WvLowCOffD < 0.0 ) ) THEN
-            CALL SetErrStat( ErrID_Fatal, ' Programming Error in call to Waves2_Init: '//NewLine// &
-                  '           WvHiCOffD must be larger than WvLowCOffD. Both must be positive.'// &
-                  '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
-            CALL CleanUp()
-            RETURN
-         END IF
-      END IF
-
-
-         ! 2. Check that the min / max diff frequencies make sense if using SumQTF
-
-      IF ( InitInp%WvSumQTFF .eqv. .TRUE. ) THEN
-         IF ( ( InitInp%WvHiCOffS < InitInp%WvLowCOffS ) .OR. ( InitInp%WvLowCOffS < 0.0 ) ) THEN
-            CALL SetErrStat( ErrID_Fatal, ' Programming Error in call to Waves2_Init: '//NewLine// &
-                  '           WvHiCOffS must be larger than WvLowCOffS. Both must be positive.'// &
-                  '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, RoutineName)
-            CALL CleanUp
-            RETURN
-         END IF
-      END IF
-
-
 
       !--------------------------------------------------------------------------------
       ! Check the size of arrays that were passed in containing the wave info
@@ -582,7 +540,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                   !> * \f$ \omega^- = \mu^- \Delta \omega \f$
                Omega_minus =  mu_minus * InitInp%WaveDOmega
 
-               IF ( Omega_minus >= InitInp%WvLowCOffD .AND. Omega_minus <= InitInp%WvHiCOffD ) THEN
+               IF ( Omega_minus >= WaveField%WvLowCOffD .AND. Omega_minus <= WaveField%WvHiCOffD ) THEN
 
                      ! The inner \f$ m \f$ loop for calculating the \f$ H_{\mu^-} \f$ terms at each frequency.
                   DO m=1,InitInp%NStepWave2-mu_minus
@@ -965,7 +923,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                mu_plus     =  2 * n
                Omega_plus  =  2.0_SiKi * Omega_n
 
-               IF ( Omega_plus >= InitInp%WvLowCOffS .AND. Omega_plus <= InitInp%WvHiCOffS ) THEN
+               IF ( Omega_plus >= WaveField%WvLowCOffS .AND. Omega_plus <= WaveField%WvHiCOffS ) THEN
                   k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
                   k_nm        =  k_nm_plus( n, n, k_n, k_n )
 
@@ -1060,7 +1018,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                   !> * \f$ \omega^+ = \mu^+ \Delta \omega \f$
                Omega_plus =  mu_plus * InitInp%WaveDOmega
 
-               IF ( Omega_plus >= InitInp%WvLowCOffS .AND. Omega_plus <= InitInp%WvHiCOffS ) THEN
+               IF ( Omega_plus >= WaveField%WvLowCOffS .AND. Omega_plus <= WaveField%WvHiCOffS ) THEN
                      ! The inner \f$ m \f$ loop for calculating the \f$ H_{\mu^+} \f$ terms at each frequency.
                   DO m=1,FLOOR( REAL(mu_plus - 1) / 2.0_SiKi )
                         ! Calculate the value of the n index from \f$ \mu^+ = n + m \f$.  Calculate corresponding wavenumbers and frequencies.
@@ -1358,7 +1316,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                !> * \f$ \omega^- = \mu^- \Delta \omega \f$
             Omega_minus =  mu_minus * InitInp%WaveDOmega
 
-            IF ( Omega_minus >= InitInp%WvLowCOffD .AND. Omega_minus <= InitInp%WvHiCOffD ) THEN
+            IF ( Omega_minus >= WaveField%WvLowCOffD .AND. Omega_minus <= WaveField%WvHiCOffD ) THEN
 
                   ! The inner \f$ m \f$ loop for calculating the \f$ H_{\mu^-} \f$ terms at each frequency.
                DO m=1,InitInp%NStepWave2-mu_minus
@@ -1492,7 +1450,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
             mu_plus     =  2 * n
             Omega_plus  =  2.0_SiKi * Omega_n
 
-            IF ( Omega_plus >= InitInp%WvLowCOffS .AND. Omega_plus <= InitInp%WvHiCOffS ) THEN
+            IF ( Omega_plus >= WaveField%WvLowCOffS .AND. Omega_plus <= WaveField%WvHiCOffS ) THEN
                k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
                R_n         =  k_n * tanh( k_n * InitInp%WtrDpth )
                D_plus      =  TransFuncD_plus(n,n,k_n,k_n,R_n,R_n)
@@ -1551,7 +1509,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                !> * \f$ \omega^+ = \mu^+ \Delta \omega \f$
             Omega_plus =  mu_plus * InitInp%WaveDOmega
 
-            IF ( Omega_plus >= InitInp%WvLowCOffS .AND. Omega_plus <= InitInp%WvHiCOffS ) THEN
+            IF ( Omega_plus >= WaveField%WvLowCOffS .AND. Omega_plus <= WaveField%WvHiCOffS ) THEN
 
                   ! The inner \f$ m \f$ loop for calculating the \f$ H_{\mu^+} \f$ terms at each frequency.
                DO m=1,FLOOR( REAL(mu_plus - 1) / 2.0_SiKi )

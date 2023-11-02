@@ -273,19 +273,19 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
       if (Failed())  return;
 
       ! WvLowCOffD   -- Minimum frequency used in the difference methods (rad/s)              [Only used if DiffQTF /= 0]
-   call ParseVar( FileInfo_In, CurLine, 'WvLowCOffD', InputFileData%Waves2%WvLowCOffD, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, 'WvLowCOffD', InputFileData%WvLowCOffD, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WvHiCOffD   -- Maximum frequency used in the difference methods  (rad/s)              [Only used if DiffQTF /= 0]
-   call ParseVar( FileInfo_In, CurLine, 'WvHiCOffD', InputFileData%Waves2%WvHiCOffD, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, 'WvHiCOffD', InputFileData%WvHiCOffD, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WvLowCOffS   -- Minimum frequency used in the        sum-QTF     (rad/s)              [Only used if  SumQTF /= 0]
-   call ParseVar( FileInfo_In, CurLine, 'WvLowCOffS', InputFileData%Waves2%WvLowCOffS, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, 'WvLowCOffS', InputFileData%WvLowCOffS, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WvHiCOffS   -- Maximum frequency used in the        sum-QTF      (rad/s)              [Only used if  SumQTF /= 0]
-   call ParseVar( FileInfo_In, CurLine, 'WvHiCOffS', InputFileData%Waves2%WvHiCOffS, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, 'WvHiCOffS', InputFileData%WvHiCOffS, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
    !-------------------------------------------------------------------------------------------------
@@ -918,13 +918,13 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       ! Difference frequency cutoffs
 
       ! WvLowCOffD and WvHiCOffD - Wave Cut-off frequency
-   if ( InputFileData%Waves2%WvLowCOffD < 0 ) then
+   if ( InputFileData%WvLowCOffD < 0 ) then
       call SetErrStat( ErrID_Fatal,'WvLowCOffD must be greater than or equal to zero.',ErrStat,ErrMsg,RoutineName)
       return
    end if
 
       ! Check that the order given makes sense.
-   if ( InputFileData%Waves2%WvLowCOffD >= InputFileData%Waves2%WvHiCOffD ) then
+   if ( InputFileData%WvLowCOffD >= InputFileData%WvHiCOffD ) then
       call SetErrStat( ErrID_Fatal,'WvLowCOffD must be less than WvHiCOffD.',ErrStat,ErrMsg,RoutineName)
       return
    end if
@@ -933,13 +933,13 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       ! Sum frequency cutoffs
 
       ! WvLowCOffS and WvHiCOffD - Wave Cut-off frequency
-   if ( InputFileData%Waves2%WvLowCOffS < 0 ) then
+   if ( InputFileData%WvLowCOffS < 0 ) then
       call SetErrStat( ErrID_Fatal,'WvLowCOffS must be greater than or equal to zero.',ErrStat,ErrMsg,RoutineName)
       return
    end if
 
       ! Check that the order given makes sense.
-   if ( InputFileData%Waves2%WvLowCOffS >= InputFileData%Waves2%WvHiCOffS ) then
+   if ( InputFileData%WvLowCOffS >= InputFileData%WvHiCOffS ) then
       call SetErrStat( ErrID_Fatal,'WvLowCOffS must be less than WvHiCOffS.',ErrStat,ErrMsg,RoutineName)
       return
    end if

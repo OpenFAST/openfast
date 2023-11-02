@@ -49,10 +49,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinGridzi      !< zi-coordinates for grid points where the incident wave kinematics will be computed; these are relative to the mean sea level [(meters)]
     LOGICAL  :: WvDiffQTFF = .false.      !< Full difference QTF second order forces flag [(-)]
     LOGICAL  :: WvSumQTFF = .false.      !< Full sum QTF second order forces flag [(-)]
-    REAL(SiKi)  :: WvLowCOffD = 0.0_R4Ki      !< Minimum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
-    REAL(SiKi)  :: WvHiCOffD = 0.0_R4Ki      !< Maximum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
-    REAL(SiKi)  :: WvLowCOffS = 0.0_R4Ki      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
-    REAL(SiKi)  :: WvHiCOffS = 0.0_R4Ki      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
   END TYPE Waves2_InitInputType
 ! =======================
 ! =========  Waves2_InitOutputType  =======
@@ -131,10 +127,6 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    end if
    DstInitInputData%WvDiffQTFF = SrcInitInputData%WvDiffQTFF
    DstInitInputData%WvSumQTFF = SrcInitInputData%WvSumQTFF
-   DstInitInputData%WvLowCOffD = SrcInitInputData%WvLowCOffD
-   DstInitInputData%WvHiCOffD = SrcInitInputData%WvHiCOffD
-   DstInitInputData%WvLowCOffS = SrcInitInputData%WvLowCOffS
-   DstInitInputData%WvHiCOffS = SrcInitInputData%WvHiCOffS
 end subroutine
 
 subroutine Waves2_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
@@ -186,10 +178,6 @@ subroutine Waves2_PackInitInput(Buf, Indata)
    end if
    call RegPack(Buf, InData%WvDiffQTFF)
    call RegPack(Buf, InData%WvSumQTFF)
-   call RegPack(Buf, InData%WvLowCOffD)
-   call RegPack(Buf, InData%WvHiCOffD)
-   call RegPack(Buf, InData%WvLowCOffS)
-   call RegPack(Buf, InData%WvHiCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -264,14 +252,6 @@ subroutine Waves2_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%WvDiffQTFF)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WvSumQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvLowCOffD)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvHiCOffD)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvLowCOffS)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvHiCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 

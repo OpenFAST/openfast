@@ -1204,14 +1204,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       END IF
    END IF
 
-   
-
-        ! Copy over the 2nd order limits to the WAMIT2 module which needs them.
-   InputFileData%WAMIT2%WvLowCOffD  = InitInp%WvLowCOffD
-   InputFileData%WAMIT2%WvHiCOffD   = InitInp%WvHiCOffD
-   InputFileData%WAMIT2%WvLowCOffS  = InitInp%WvLowCOffS
-   InputFileData%WAMIT2%WvHiCOffS   = InitInp%WvHiCOffS
-
 
        ! PotFile - Root name of potential flow files
 
@@ -1452,29 +1444,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       RETURN
    END IF
 
-
-      ! Check that the min / max diff frequencies make sense if using any DiffQTF method
-   IF ( InputFileData%WAMIT2%DiffQTF /= 0 .OR. InputFileData%WAMIT2%MnDrift /= 0 .OR. InputFileData%WAMIT2%NewmanApp /=0 ) THEN
-      IF ( ( InputFileData%WAMIT2%WvHiCOffD < InputFileData%WAMIT2%WvLowCOffD ) .OR. ( InputFileData%WAMIT2%WvLowCOffD < 0.0 ) ) THEN
-         CALL SetErrStat( ErrID_Fatal,'WvHiCOffD must be larger than WvLowCOffD. Both must be positive.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-   ELSE  ! set to zero since we don't need them
-      InputFileData%WAMIT2%WvLowCOffD  = 0.0
-      InputFileData%WAMIT2%WvHiCOffD  = 0.0
-   END IF
-
-
-      ! Check that the min / max diff frequencies make sense if using SumQTF
-   IF ( InputFileData%WAMIT2%SumQTF /= 0 ) THEN
-      IF ( ( InputFileData%WAMIT2%WvHiCOffS < InputFileData%WAMIT2%WvLowCOffS ) .OR. ( InputFileData%WAMIT2%WvLowCOffS < 0.0 ) ) THEN
-         CALL SetErrStat( ErrID_Fatal,'WvHiCOffS must be larger than WvLowCOffS. Both must be positive.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-   ELSE  ! set to zero since we don't need them
-      InputFileData%WAMIT2%WvLowCOffS  = 0.0
-      InputFileData%WAMIT2%WvHiCOffS  = 0.0
-   END IF
 
 
       ! now that it has been established that the input parameters for second order are good, we check to make sure that the WAMIT files actually exist.

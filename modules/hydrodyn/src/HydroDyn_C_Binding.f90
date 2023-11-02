@@ -413,10 +413,6 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C,                                      
    HD%InitInp%NStepWave2     =  SeaSt%InitOutData%NStepWave2
    HD%InitInp%WaveMod        =  SeaSt%InitOutData%WaveMod
    HD%InitInp%WaveDirMod     =  SeaSt%InitOutData%WaveDirMod
-   HD%InitInp%WvLowCOffD     =  SeaSt%InitOutData%WvLowCOffD
-   HD%InitInp%WvHiCOffD      =  SeaSt%InitOutData%WvHiCOffD 
-   HD%InitInp%WvLowCOffS     =  SeaSt%InitOutData%WvLowCOffS
-   HD%InitInp%WvHiCOffS      =  SeaSt%InitOutData%WvHiCOffS 
    HD%InitInp%InvalidWithSSExctn = SeaSt%InitOutData%InvalidWithSSExctn
    
    HD%InitInp%WaveDOmega     =  SeaSt%InitOutData%WaveDOmega  

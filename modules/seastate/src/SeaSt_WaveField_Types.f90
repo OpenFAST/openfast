@@ -64,6 +64,10 @@ IMPLICIT NONE
     REAL(SiKi)  :: MCFD = 0.0_R4Ki      !< Diameter of members that will use the MacCamy-Fuchs diffraction model [-]
     REAL(SiKi)  :: WvLowCOff = 0.0_R4Ki      !< Low cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
     REAL(SiKi)  :: WvHiCOff = 0.0_R4Ki      !< High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed.  [used only when WaveMod=2,3,4] [(rad/s)]
+    REAL(SiKi)  :: WvLowCOffD = 0.0_R4Ki      !< Minimum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
+    REAL(SiKi)  :: WvHiCOffD = 0.0_R4Ki      !< Maximum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
+    REAL(SiKi)  :: WvLowCOffS = 0.0_R4Ki      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
+    REAL(SiKi)  :: WvHiCOffS = 0.0_R4Ki      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
   END TYPE SeaSt_WaveFieldType
 ! =======================
 CONTAINS
@@ -275,6 +279,10 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
    DstSeaSt_WaveFieldTypeData%MCFD = SrcSeaSt_WaveFieldTypeData%MCFD
    DstSeaSt_WaveFieldTypeData%WvLowCOff = SrcSeaSt_WaveFieldTypeData%WvLowCOff
    DstSeaSt_WaveFieldTypeData%WvHiCOff = SrcSeaSt_WaveFieldTypeData%WvHiCOff
+   DstSeaSt_WaveFieldTypeData%WvLowCOffD = SrcSeaSt_WaveFieldTypeData%WvLowCOffD
+   DstSeaSt_WaveFieldTypeData%WvHiCOffD = SrcSeaSt_WaveFieldTypeData%WvHiCOffD
+   DstSeaSt_WaveFieldTypeData%WvLowCOffS = SrcSeaSt_WaveFieldTypeData%WvLowCOffS
+   DstSeaSt_WaveFieldTypeData%WvHiCOffS = SrcSeaSt_WaveFieldTypeData%WvHiCOffS
 end subroutine
 
 subroutine SeaSt_WaveField_DestroySeaSt_WaveFieldType(SeaSt_WaveFieldTypeData, ErrStat, ErrMsg)
@@ -428,6 +436,10 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, Indata)
    call RegPack(Buf, InData%MCFD)
    call RegPack(Buf, InData%WvLowCOff)
    call RegPack(Buf, InData%WvHiCOff)
+   call RegPack(Buf, InData%WvLowCOffD)
+   call RegPack(Buf, InData%WvHiCOffD)
+   call RegPack(Buf, InData%WvLowCOffS)
+   call RegPack(Buf, InData%WvHiCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -673,6 +685,14 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
    call RegUnpack(Buf, OutData%WvLowCOff)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WvHiCOff)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvLowCOffD)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvHiCOffD)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvLowCOffS)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WvHiCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 END MODULE SeaSt_WaveField_Types
