@@ -172,15 +172,14 @@ PROGRAM MoorDyn_Driver
    ! do OpenFAST vs FAST.Farm related setup
       
    MD_InitInp%FarmSize                = drvrInitInp%FarmSize
-   IF (MD_InitInp%FarmSize < 0) THEN
-      MD_InitInp%Standalone = 1
-   ELSE
-      MD_InitInp%Standalone = 0
-   ENDIF
    
+   MD_InitInp%Standalone = 0
    if (drvrInitInp%FarmSize > 0) then   ! Check if this MoorDyn instance is being run from FAST.Farm (indicated by FarmSize > 0)
       nTurbines = drvrInitInp%FarmSize
-   else    ! FarmSize==0 indicates normal, FAST module mode
+   else if (drvrInitInp%FarmSize < 0) then    ! FarmSize<0 indicates standalone mode
+      MD_InitInp%Standalone = 1
+      nTurbines = 1 ! to keep routines happy
+   else ! FarmSize==0 indicates normal, FAST module mode
       nTurbines = 1  ! if a regular FAST module mode, we treat it like a nTurbine=1 farm case
    end if
    
@@ -589,7 +588,7 @@ PROGRAM MoorDyn_Driver
       MD_uTimes(2) = MD_uTimes(1) - dtC 
       !MD_uTimes(3) = MD_uTimes(2) - dtC
 
-      ! update coupled object kinematics iff we're reading input time series
+      ! update coupled object kinematics if we're reading input time series
       if (drvrInitInp%InputsMod == 1 ) then
          
          DO iTurb = 1, MD_p%nTurbines
