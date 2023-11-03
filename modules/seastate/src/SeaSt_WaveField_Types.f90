@@ -68,6 +68,7 @@ IMPLICIT NONE
     REAL(SiKi)  :: WvHiCOffD = 0.0_R4Ki      !< Maximum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
     REAL(SiKi)  :: WvLowCOffS = 0.0_R4Ki      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
     REAL(SiKi)  :: WvHiCOffS = 0.0_R4Ki      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
+    REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
   END TYPE SeaSt_WaveFieldType
 ! =======================
 CONTAINS
@@ -283,6 +284,7 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
    DstSeaSt_WaveFieldTypeData%WvHiCOffD = SrcSeaSt_WaveFieldTypeData%WvHiCOffD
    DstSeaSt_WaveFieldTypeData%WvLowCOffS = SrcSeaSt_WaveFieldTypeData%WvLowCOffS
    DstSeaSt_WaveFieldTypeData%WvHiCOffS = SrcSeaSt_WaveFieldTypeData%WvHiCOffS
+   DstSeaSt_WaveFieldTypeData%WaveDOmega = SrcSeaSt_WaveFieldTypeData%WaveDOmega
 end subroutine
 
 subroutine SeaSt_WaveField_DestroySeaSt_WaveFieldType(SeaSt_WaveFieldTypeData, ErrStat, ErrMsg)
@@ -440,6 +442,7 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, Indata)
    call RegPack(Buf, InData%WvHiCOffD)
    call RegPack(Buf, InData%WvLowCOffS)
    call RegPack(Buf, InData%WvHiCOffS)
+   call RegPack(Buf, InData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -693,6 +696,8 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
    call RegUnpack(Buf, OutData%WvLowCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WvHiCOffS)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 END MODULE SeaSt_WaveField_Types

@@ -23,7 +23,6 @@ typedef     ^                 ^                 ReKi                 WtrDpth    
 
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave"    -
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2"                                       -
-typedef     ^                 ^                 SiKi                 WaveDOmega        -        -        -        "Frequency step for incident wave calculations"       (rad/s)
 
 typedef     ^                 ^                 LOGICAL              WaveMultiDir      -        -        -        "Indicates the waves are multidirectional -- set by HydroDyn_Input"  -
 

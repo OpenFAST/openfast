@@ -1065,7 +1065,7 @@ end if
 
                      ! Compute the frequency of this component:
 
-                  Omega = I*InitInp%WaveDOmega
+                  Omega = I*InitInp%WaveField%WaveDOmega
            
 
                      ! Compute the discrete Fourier transform of the instantaneous value of the
@@ -1120,7 +1120,7 @@ end if
 
                      ! Compute the frequency of this component:
 
-                  Omega = I*InitInp%WaveDOmega
+                  Omega = I*InitInp%WaveField%WaveDOmega
                
                      ! Compute the discrete Fourier transform of the instantaneous value of the
                      !   total excitation force on the support platfrom from incident waves:
@@ -1206,7 +1206,7 @@ end if
 
                         ! Compute the frequency of this component:
 
-                              Omega = I*InitInp%WaveDOmega
+                              Omega = I*InitInp%WaveField%WaveDOmega
                                  ! Fxy = exp(-j * k(w) * ( X*cos(Beta(w)) + Y*sin(Beta(w)) )
                               WaveNmbr   = WaveNumber ( Omega, InitInp%Gravity, InitInp%WtrDpth )
                               tmpAngle   = WaveNmbr * ( InitInp%PtfmRefxt(1)*cos(HdroWvDir(J)*D2R) + InitInp%PtfmRefyt(1)*sin(HdroWvDir(J)*D2R) )

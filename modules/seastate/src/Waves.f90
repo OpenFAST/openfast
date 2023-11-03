@@ -574,7 +574,7 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       InitOut%NStepWave  = 2                ! We must have at least two elements in order to interpolate later on
       InitOut%NStepWave2 = 1
       InitOut%WaveTMax   = InitInp%WaveTMax ! bjj added this... I don't think it was set anywhere for this wavemod.
-      InitOut%WaveDOmega = 0.0
+      WaveField%WaveDOmega = 0.0
       
       ! >>> Allocate and initialize (set to 0) InitOut arrays
       call Initial_InitOut_Arrays(InitOut, WaveField, InitInp, 1.0_DbKi, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
@@ -784,7 +784,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
          InitOut%NStepWave2   = InitOut%NStepWave/2                                       ! Update the value of NStepWave2 based on the value needed for NStepWave.
          InitOut%WaveTMax     = InitOut%NStepWave*InitInp%WaveDT                          ! Update the value of WaveTMax   based on the value needed for NStepWave.
-         InitOut%WaveDOmega   = TwoPi/InitOut%WaveTMax                                    ! Compute the frequency step for incident wave calculations.
+         WaveField%WaveDOmega   = TwoPi/InitOut%WaveTMax                                    ! Compute the frequency step for incident wave calculations.
       
          ! >>> Allocate and initialize (set to 0) InitOut arrays
          call Initial_InitOut_Arrays(InitOut, WaveField, InitInp, InitInp%WaveDT, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
@@ -974,7 +974,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       ! Compute the positive-frequency components (including zero) of the discrete
       !   Fourier transforms of the wave kinematics:
       DO I = 0,InitOut%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
-          OmegaArr(I) = I*InitOut%WaveDOmega
+          OmegaArr(I) = I*WaveField%WaveDOmega
       END DO
 
       call Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddArr)
@@ -2252,7 +2252,7 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
       END IF
    
    
-      I_WaveTp  = NINT ( TwoPi/(InitOut%WaveDOmega*InitInp%WaveTp) )        ! Compute the index of the frequency component nearest to WaveTp. Note, we don't check if it's a valid index into the arrays
+      I_WaveTp  = NINT ( TwoPi/(WaveField%WaveDOmega*InitInp%WaveTp) )        ! Compute the index of the frequency component nearest to WaveTp. Note, we don't check if it's a valid index into the arrays
    
       ! Compute the discrete Fourier transform of the realization of a White
       !   Gaussian Noise (WGN) time series process with unit variance:
@@ -2300,7 +2300,7 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
               WGNC(I_WaveTp)         = WGNC(I_WaveTp) * ( SQRT(2.0_SiKi) / ABS(WGNC(I_WaveTp)) )
               
                ! Plane progressive (regular) wave; the wave spectrum is an impulse function centered on frequency component closest to WaveTp.              
-              WaveS1SddArr(I_WaveTp) = 0.5_SiKi * (InitInp%WaveHs/2.0_SiKi)**2 / InitOut%WaveDOmega
+              WaveS1SddArr(I_WaveTp) = 0.5_SiKi * (InitInp%WaveHs/2.0_SiKi)**2 / WaveField%WaveDOmega
               
          END IF
       ELSE
@@ -2407,16 +2407,16 @@ SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddA
       ! Modify the wave components to implement the constrained wave
    
       ! Compute the relevant sums
-      m0                   = InitOut%WaveDOmega * SUM(WaveS1SddArr)
-      m2                   = InitOut%WaveDOmega * SUM(WaveS1SddArr*OmegaArr*OmegaArr)
+      m0                   = WaveField%WaveDOmega * SUM(WaveS1SddArr)
+      m2                   = WaveField%WaveDOmega * SUM(WaveS1SddArr*OmegaArr*OmegaArr)
       WaveElevC0ReSum      = SUM(WaveField%WaveElevC0(1,:))/m0
       WaveElevC0ImOmegaSum = SUM(WaveField%WaveElevC0(2,:) * OmegaArr)/m2
       ! Apply the part of the modification that is independent from the crest elevation
-      WaveField%WaveElevC0(1,:) = WaveField%WaveElevC0(1,:) - WaveElevC0ReSum                 * WaveS1SddArr * InitOut%WaveDOmega
-      WaveField%WaveElevC0(2,:) = WaveField%WaveElevC0(2,:) - WaveElevC0ImOmegaSum * OmegaArr * WaveS1SddArr * InitOut%WaveDOmega
+      WaveField%WaveElevC0(1,:) = WaveField%WaveElevC0(1,:) - WaveElevC0ReSum                 * WaveS1SddArr * WaveField%WaveDOmega
+      WaveField%WaveElevC0(2,:) = WaveField%WaveElevC0(2,:) - WaveElevC0ImOmegaSum * OmegaArr * WaveS1SddArr * WaveField%WaveDOmega
 
       Crest = 0.5_SiKi * InitInp%CrestHmax ! Set crest elevation to half of crest height
-      tmpArr = InitOut%NStepWave2/m0 * InitOut%WaveDOmega * WaveS1SddArr
+      tmpArr = InitOut%NStepWave2/m0 * WaveField%WaveDOmega * WaveS1SddArr
         
       IF (InitInp%ConstWaveMod == 1) THEN  ! Crest elevation prescribed
       

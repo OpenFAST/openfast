@@ -48,7 +48,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: WAMITULEN = 0.0_ReKi      !< WAMIT unit length scale [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
-    REAL(ReKi)  :: WaveDOmega = 0.0_ReKi      !< Frequency step for incident wave calculations [(rad/s)]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth (positive-valued) [(m)]
     INTEGER(IntKi)  :: WaveMod = 0_IntKi      !< The wave model to use.  This is for error checking -- ideally this would be done in the main calling routine, not here. [-]
@@ -159,7 +158,6 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    DstInitInputData%WAMITULEN = SrcInitInputData%WAMITULEN
    DstInitInputData%NStepWave = SrcInitInputData%NStepWave
    DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
-   DstInitInputData%WaveDOmega = SrcInitInputData%WaveDOmega
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
    DstInitInputData%WaveMod = SrcInitInputData%WaveMod
@@ -231,7 +229,6 @@ subroutine WAMIT2_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%WAMITULEN)
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
-   call RegPack(Buf, InData%WaveDOmega)
    call RegPack(Buf, InData%Gravity)
    call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, InData%WaveMod)
@@ -332,8 +329,6 @@ subroutine WAMIT2_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NStepWave2)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Gravity)
    if (RegCheckErr(Buf, RoutineName)) return

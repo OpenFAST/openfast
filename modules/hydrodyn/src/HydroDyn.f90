@@ -362,7 +362,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   
             InputFileData%WAMIT%NStepWave    = InitInp%NStepWave
             InputFileData%WAMIT%NStepWave2   = InitInp%NStepWave2
-            InputFileData%WAMIT%WaveDOmega   = InitInp%WaveDOmega   
 
             ! InputFileData%WAMIT%seast_interp_p = InitInp%WaveField%seast_interp_p
             CALL SeaSt_Interp_CopyParam(InitInp%WaveField%seast_interp_p, InputFileData%WAMIT%seast_interp_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -432,7 +431,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   ! Copy Waves initialization output into the initialization input type for the WAMIT module
                InputFileData%WAMIT2%NStepWave   = InitInp%NStepWave
                InputFileData%WAMIT2%NStepWave2  = InitInp%NStepWave2
-               InputFileData%WAMIT2%WaveDOmega  = InitInp%WaveDOmega
                InputFileData%WAMIT2%Gravity     = InitInp%Gravity
                InputFileData%WAMIT2%WtrDpth     = InputFileData%Morison%WtrDpth ! The data in InputFileData%Morison%WtrDpth was directly placed there when we parsed the HydroDyn input file
 
@@ -546,14 +544,14 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                END IF
                
                ! Populate wave arrays (Need to double chech this part. It doesn't look right!)
-            Np = 2*(InitInp%WaveDOmega + 1)
+            Np = 2*(InitInp%WaveField%WaveDOmega + 1)
             DO I = 1 , InitInp%NStepWave2
                
                dftreal        = InitInp%WaveField%WaveElevC0( 1, ABS(I ) )
                dftimag        = InitInp%WaveField%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
                FITInitData%Wave_amp   (I) = sqrt( dftreal**2 + dftimag**2 )  * 2.0 / Np
-               FITInitData%Wave_omega (I) = I*InitInp%WaveDOmega
-               FITInitData%Wave_number(I) = I*InitInp%WaveDOmega**2. / InputFileData%Gravity
+               FITInitData%Wave_omega (I) = I*InitInp%WaveField%WaveDOmega
+               FITInitData%Wave_number(I) = I*InitInp%WaveField%WaveDOmega**2. / InputFileData%Gravity
                FITInitData%Wave_phase (I) = atan2( dftimag, dftreal ) 
               
             END DO         

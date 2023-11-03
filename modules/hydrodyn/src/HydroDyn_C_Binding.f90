@@ -414,8 +414,6 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C,                                      
    HD%InitInp%WaveMod        =  SeaSt%InitOutData%WaveMod
    HD%InitInp%WaveDirMod     =  SeaSt%InitOutData%WaveDirMod
    HD%InitInp%InvalidWithSSExctn = SeaSt%InitOutData%InvalidWithSSExctn
-   
-   HD%InitInp%WaveDOmega     =  SeaSt%InitOutData%WaveDOmega  
 
    HD%InitInp%WaveField      => SeaSt%InitOutData%WaveField ! can be set regardless of association(); if not associated, HD shouldn't work
 

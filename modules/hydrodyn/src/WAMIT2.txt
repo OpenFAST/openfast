@@ -30,7 +30,6 @@ typedef     ^                 ^                 R8Ki                 PtfmRefztRo
 typedef     ^                 ^                 ReKi                 WAMITULEN         -        -        -        "WAMIT unit length scale"    -
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave"    -
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2"                                       -
-typedef     ^                 ^                 ReKi                 WaveDOmega        -        -        -        "Frequency step for incident wave calculations"       (rad/s)
 typedef     ^                 ^                 ReKi                 Gravity           -        -        -        "Supplied by Driver:  Gravitational acceleration"  (m/s^2)
 typedef     ^                 ^                 ReKi                 WtrDpth           -        -        -        "Water depth (positive-valued)"    (m)
 

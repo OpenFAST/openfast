@@ -41,7 +41,6 @@ typedef   ^                            ^                             CHARACTER(1
 typedef   ^                            ^                             Conv_Rdtn_InitInputType  Conv_Rdtn                       -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave2                      -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     WaveDOmega                      -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  WaveMod                         -          -        -         ""    -
 typedef   ^                            ^                 SeaSt_Interp_ParameterType           SeaSt_Interp_p                  -          -        -         "parameter information from the SeaState Interpolation module"   -
 typedef   ^                            ^                 SeaSt_WaveFieldType                 *WaveField                       -          -        -         "Pointer to wave field"

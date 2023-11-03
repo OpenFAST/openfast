@@ -233,6 +233,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%WaveField%WvHiCOffD    =  InputFileData%WvHiCOffD
       p%WaveField%WvLowCOffS   =  InputFileData%WvLowCOffS
       p%WaveField%WvHiCOffS    =  InputFileData%WvHiCOffS
+      p%WaveField%WaveDOmega   =  InputFileData%WaveDOmega          ! For WAMIT and WAMIT2, FIT
       
          ! Initialize Waves module (Note that this may change InputFileData%Waves%WaveDT)
       CALL Waves_Init(InputFileData%Waves, Waves_InitOut, p%WaveField, ErrStat2, ErrMsg2 ) 
@@ -292,7 +293,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
                ! Set a few things from the Waves module output
             InputFileData%Waves2%NStepWave   = Waves_InitOut%NStepWave
             InputFileData%Waves2%NStepWave2  = Waves_InitOut%NStepWave2
-            InputFileData%Waves2%WaveDOmega  = Waves_InitOut%WaveDOmega
                                                 
             CALL Waves2_Init(InputFileData%Waves2, p%Waves2, Waves2_InitOut, p%WaveField, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -398,7 +398,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ! Copy Waves InitOut data to SeaState InitOut
       
           ! non-pointer data:
-       InitOut%WaveDOmega   =  Waves_InitOut%WaveDOmega          ! For WAMIT and WAMIT2, FIT
        
        InitOut%NStepWave    =  Waves_InitOut%NStepWave           ! For WAMIT, WAMIT2, SS_Excitation, Morison
        InitOut%NStepWave2   =  Waves_InitOut%NStepWave2          ! For WAMIT and WAMIT2,  FIT

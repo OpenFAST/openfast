@@ -861,8 +861,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          Init%InData_HD%WaveMod        =  Init%OutData_SeaSt%WaveMod
          Init%InData_HD%WaveDirMod     =  Init%OutData_SeaSt%WaveDirMod
          Init%InData_HD%InvalidWithSSExctn = Init%OutData_SeaSt%InvalidWithSSExctn
-         
-         Init%InData_HD%WaveDOmega     =  Init%OutData_SeaSt%WaveDOmega  
 
          Init%InData_HD%WaveField => Init%OutData_SeaSt%WaveField
       ! end if

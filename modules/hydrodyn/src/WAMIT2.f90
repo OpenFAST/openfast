@@ -1146,7 +1146,7 @@ END SUBROUTINE WAMIT2_Init
                   aWaveElevC = CMPLX( InitInp%WaveField%WaveElevC0(1,J), InitInp%WaveField%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
 
                      ! Calculate the frequency
-                  Omega1 = J * InitInp%WaveDOmega
+                  Omega1 = J * InitInp%WaveField%WaveDOmega
 
 
                      ! Only get a QTF value if within the range of frequencies we have wave amplitudes for (first order cutoffs).  This
@@ -1716,7 +1716,7 @@ END SUBROUTINE WAMIT2_Init
                   aWaveElevC = CMPLX( InitInp%WaveField%WaveElevC0(1,J), InitInp%WaveField%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
 
                      ! Calculate the frequency
-                  Omega1 = J * InitInp%WaveDOmega
+                  Omega1 = J * InitInp%WaveField%WaveDOmega
 
 
                      ! Only get a QTF value if within the range of frequencies between the cutoffs for the difference frequency
@@ -1816,7 +1816,7 @@ END SUBROUTINE WAMIT2_Init
          DO J=1,InitInp%NStepWave2
 
                ! Frequency
-            Omega1 = J * InitInp%WaveDOmega
+            Omega1 = J * InitInp%WaveField%WaveDOmega
 
             !> Phase shift due to offset in location, only for NBodyMod==2
             if (p%NBodyMod == 2) then
@@ -2248,7 +2248,7 @@ END SUBROUTINE WAMIT2_Init
                DO J=1,InitInp%NStepWave2-1
 
                      ! Calculate the frequency  -- This is the difference frequency.
-                  OmegaDiff = J * InitInp%WaveDOmega
+                  OmegaDiff = J * InitInp%WaveField%WaveDOmega
 
 
                      ! Only perform calculations if the difference frequency is in the right range
@@ -2262,8 +2262,8 @@ END SUBROUTINE WAMIT2_Init
                      DO K=1,InitInp%NStepWave2-J        ! note the funny upper limit.  This is because we are doing a summation on a triangular area.
 
                            ! set the two frequencies that the difference frequency comes from
-                        Omega1 = (J + K) * InitInp%WaveDOmega        ! the mth frequency -- \mu^- + n = m
-                        Omega2 = K * InitInp%WaveDOmega              ! the nth frequency
+                        Omega1 = (J + K) * InitInp%WaveField%WaveDOmega        ! the mth frequency -- \mu^- + n = m
+                        Omega2 = K * InitInp%WaveField%WaveDOmega              ! the nth frequency
 
                            ! Find the Wave amplitudes 1 and 2
                         aWaveElevC1 = CMPLX( InitInp%WaveField%WaveElevC0(1,J+K), InitInp%WaveField%WaveElevC0(2,J+K), SiKi)  / InitInp%NStepWave2
@@ -2752,7 +2752,7 @@ END SUBROUTINE WAMIT2_Init
                DO J=1,FLOOR(REAL(InitInp%NStepWave2-1)/2.0_SiKi)
 
                      ! The frequency
-                  Omega1   = REAL(J,ReKi) * InitInp%WaveDOmega
+                  Omega1   = REAL(J,ReKi) * InitInp%WaveField%WaveDOmega
                   OmegaSum = 2.0_SiKi * Omega1           ! the sum frequency
 
                      ! Only perform calculations if the difference frequency is in the right range
@@ -2832,11 +2832,11 @@ END SUBROUTINE WAMIT2_Init
                   ! so, we don't need a really small WaveDT
 
          !This section has been removed since it is kind of annoying.
-         !      IF ( InitInp%WvHiCOffS > InitInp%NStepWave2*InitInp%WaveDOmega ) THEN
+         !      IF ( InitInp%WvHiCOffS > InitInp%NStepWave2*InitInp%WaveField%WaveDOmega ) THEN
          !         CALL SetErrStat( ErrID_Warn,' The high frequency cutoff for second order wave forces, WvHiCOffS, '// &
          !                  'is larger than the Nyquist frequency for the given time step of WaveDT. The Nyquist frequency '// &
          !                  '(highest frequency) that can be computed is OmegaMax = PI/WaveDT = '// &
-         !                  TRIM(Num2LStr(InitInp%NStepWave2*InitInp%WaveDOmega))// &
+         !                  TRIM(Num2LStr(InitInp%NStepWave2*InitInp%WaveField%WaveDOmega))// &
          !                  ' radians/second.  If you need those frequencies, decrease WaveDT.  For reference, 2*PI '// &
          !                  'radians/second corresponds to a wavelength of ~1 meter.',&
          !                  ErrStat,ErrMsg,RoutineName)
@@ -2848,7 +2848,7 @@ END SUBROUTINE WAMIT2_Init
                DO J=1,InitInp%NStepWave2
 
                      ! Calculate the frequency  -- This is the sum frequency.
-                  OmegaSum = J * InitInp%WaveDOmega
+                  OmegaSum = J * InitInp%WaveField%WaveDOmega
 
 
 
@@ -2869,8 +2869,8 @@ END SUBROUTINE WAMIT2_Init
                      DO K=0,FLOOR(Real(J-1)/2.0_SiKi)
 
                            ! Calculate the frequency pair
-                        Omega1 =    K  * InitInp%WaveDOmega
-                        Omega2 = (J-K) * InitInp%WaveDOmega
+                        Omega1 =    K  * InitInp%WaveField%WaveDOmega
+                        Omega2 = (J-K) * InitInp%WaveField%WaveDOmega
 
                            ! Find the wave amplitude at frequency omega.  Remove the NStepWave2 normalization built into WaveElevC0 from Waves module
                         aWaveElevC1 = CMPLX( InitInp%WaveField%WaveElevC0(1,  K), InitInp%WaveField%WaveElevC0(2,  K), SiKi )    / InitInp%NStepWave2

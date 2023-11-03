@@ -97,7 +97,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WaveMod = 0_IntKi      !< Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED } [-]
     INTEGER(IntKi)  :: WaveDirMod = 0_IntKi      !< Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6] [-]
     LOGICAL  :: InvalidWithSSExctn = .false.      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
-    REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
   END TYPE HydroDyn_InitInputType
 ! =======================
@@ -890,7 +889,6 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    DstInitInputData%WaveMod = SrcInitInputData%WaveMod
    DstInitInputData%WaveDirMod = SrcInitInputData%WaveDirMod
    DstInitInputData%InvalidWithSSExctn = SrcInitInputData%InvalidWithSSExctn
-   DstInitInputData%WaveDOmega = SrcInitInputData%WaveDOmega
    DstInitInputData%WaveField => SrcInitInputData%WaveField
 end subroutine
 
@@ -928,7 +926,6 @@ subroutine HydroDyn_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%WaveMod)
    call RegPack(Buf, InData%WaveDirMod)
    call RegPack(Buf, InData%InvalidWithSSExctn)
-   call RegPack(Buf, InData%WaveDOmega)
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
       call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
@@ -975,8 +972,6 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%WaveDirMod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%InvalidWithSSExctn)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
    call RegUnpack(Buf, IsAllocAssoc)

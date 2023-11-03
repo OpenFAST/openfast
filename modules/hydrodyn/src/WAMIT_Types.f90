@@ -60,7 +60,6 @@ IMPLICIT NONE
     TYPE(Conv_Rdtn_InitInputType)  :: Conv_Rdtn      !<  [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !<  [-]
-    REAL(ReKi)  :: WaveDOmega = 0.0_ReKi      !<  [-]
     INTEGER(IntKi)  :: WaveMod = 0_IntKi      !<  [-]
     TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
@@ -261,7 +260,6 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    if (ErrStat >= AbortErrLev) return
    DstInitInputData%NStepWave = SrcInitInputData%NStepWave
    DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
-   DstInitInputData%WaveDOmega = SrcInitInputData%WaveDOmega
    DstInitInputData%WaveMod = SrcInitInputData%WaveMod
    call SeaSt_Interp_CopyParam(SrcInitInputData%SeaSt_Interp_p, DstInitInputData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -362,7 +360,6 @@ subroutine WAMIT_PackInitInput(Buf, Indata)
    call Conv_Rdtn_PackInitInput(Buf, InData%Conv_Rdtn) 
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
-   call RegPack(Buf, InData%WaveDOmega)
    call RegPack(Buf, InData%WaveMod)
    call SeaSt_Interp_PackParam(Buf, InData%SeaSt_Interp_p) 
    call RegPack(Buf, associated(InData%WaveField))
@@ -511,8 +508,6 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NStepWave2)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveMod)
    if (RegCheckErr(Buf, RoutineName)) return

@@ -538,7 +538,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
                   ! The frequency we are dealing with
                   !> * \f$ \omega^- = \mu^- \Delta \omega \f$
-               Omega_minus =  mu_minus * InitInp%WaveDOmega
+               Omega_minus =  mu_minus * WaveField%WaveDOmega
 
                IF ( Omega_minus >= WaveField%WvLowCOffD .AND. Omega_minus <= WaveField%WvHiCOffD ) THEN
 
@@ -546,8 +546,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                   DO m=1,InitInp%NStepWave2-mu_minus
                         ! Calculate the value of the n index from \f$ \mu^- = n - m \f$.  Calculate corresponding wavenumbers and frequencies.
                      n           =  mu_minus + m
-                     Omega_n     =  n * InitInp%WaveDOmega
-                     Omega_m     =  m * InitInp%WaveDOmega
+                     Omega_n     =  n * WaveField%WaveDOmega
+                     Omega_m     =  m * WaveField%WaveDOmega
                      k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
                      k_m         =  WaveNumber( Omega_m, InitInp%Gravity, InitInp%WtrDpth )
                      k_nm        =  k_nm_minus( n, m, k_n, k_m )
@@ -916,7 +916,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                ! an odd number
             DO n=1,FLOOR( REAL(InitInp%NStepWave2-1) / 2.0_SiKi )   ! Only
 
-               Omega_n  =  n * InitInp%WaveDOmega
+               Omega_n  =  n * WaveField%WaveDOmega
 
                ! The frequency we are dealing with
                !> * \f$ \omega^+ = \mu^+ \Delta \omega = 2 \omega_n \f$
@@ -1016,15 +1016,15 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
                   ! The frequency we are dealing with
                   !> * \f$ \omega^+ = \mu^+ \Delta \omega \f$
-               Omega_plus =  mu_plus * InitInp%WaveDOmega
+               Omega_plus =  mu_plus * WaveField%WaveDOmega
 
                IF ( Omega_plus >= WaveField%WvLowCOffS .AND. Omega_plus <= WaveField%WvHiCOffS ) THEN
                      ! The inner \f$ m \f$ loop for calculating the \f$ H_{\mu^+} \f$ terms at each frequency.
                   DO m=1,FLOOR( REAL(mu_plus - 1) / 2.0_SiKi )
                         ! Calculate the value of the n index from \f$ \mu^+ = n + m \f$.  Calculate corresponding wavenumbers and frequencies.
                      n           =  mu_plus - m
-                     Omega_n     =  n * InitInp%WaveDOmega
-                     Omega_m     =  m * InitInp%WaveDOmega
+                     Omega_n     =  n * WaveField%WaveDOmega
+                     Omega_m     =  m * WaveField%WaveDOmega
                      k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
                      k_m         =  WaveNumber( Omega_m, InitInp%Gravity, InitInp%WtrDpth )
                      k_nm        =  k_nm_plus( n, m, k_n, k_m )
@@ -1314,7 +1314,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
                ! The frequency we are dealing with
                !> * \f$ \omega^- = \mu^- \Delta \omega \f$
-            Omega_minus =  mu_minus * InitInp%WaveDOmega
+            Omega_minus =  mu_minus * WaveField%WaveDOmega
 
             IF ( Omega_minus >= WaveField%WvLowCOffD .AND. Omega_minus <= WaveField%WvHiCOffD ) THEN
 
@@ -1322,8 +1322,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                DO m=1,InitInp%NStepWave2-mu_minus
                      ! Calculate the value of the n index from \f$ \mu^- = n - m \f$.  Calculate corresponding wavenumbers and frequencies.
                   n           =  mu_minus + m
-                  Omega_n     =  n * InitInp%WaveDOmega
-                  Omega_m     =  m * InitInp%WaveDOmega
+                  Omega_n     =  n * WaveField%WaveDOmega
+                  Omega_m     =  m * WaveField%WaveDOmega
                   k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
                   k_m         =  WaveNumber( Omega_m, InitInp%Gravity, InitInp%WtrDpth )
                   R_n         =  k_n * tanh( k_n * InitInp%WtrDpth )
@@ -1443,7 +1443,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
          DO n=1,FLOOR( REAL(InitInp%NStepWave2-1) / 2.0_SiKi )   ! Only
 
-            Omega_n  =  n * InitInp%WaveDOmega
+            Omega_n  =  n * WaveField%WaveDOmega
 
             ! The frequency we are dealing with
             !> * \f$ \omega^+ = \mu^+ \Delta \omega = 2 \omega_n \f$
@@ -1507,7 +1507,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
                ! The frequency we are dealing with
                !> * \f$ \omega^+ = \mu^+ \Delta \omega \f$
-            Omega_plus =  mu_plus * InitInp%WaveDOmega
+            Omega_plus =  mu_plus * WaveField%WaveDOmega
 
             IF ( Omega_plus >= WaveField%WvLowCOffS .AND. Omega_plus <= WaveField%WvHiCOffS ) THEN
 
@@ -1515,8 +1515,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                DO m=1,FLOOR( REAL(mu_plus - 1) / 2.0_SiKi )
                      ! Calculate the value of the n index from \f$ \mu^+ = n + m \f$.  Calculate corresponding wavenumbers and frequencies.
                   n           =  mu_plus - m
-                  Omega_n     =  n * InitInp%WaveDOmega
-                  Omega_m     =  m * InitInp%WaveDOmega
+                  Omega_n     =  n * WaveField%WaveDOmega
+                  Omega_m     =  m * WaveField%WaveDOmega
                   k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
                   k_m         =  WaveNumber( Omega_m, InitInp%Gravity, InitInp%WtrDpth )
                   R_n         =  k_n * tanh( k_n * InitInp%WtrDpth )
@@ -1629,8 +1629,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
          ELSE
 
                ! Frequencies
-            Omega_n     =  n * InitInp%WaveDOmega
-            Omega_m     =  m * InitInp%WaveDOmega
+            Omega_n     =  n * WaveField%WaveDOmega
+            Omega_m     =  m * WaveField%WaveDOmega
 
                ! Wavenumbers
             k_nm        =  k_nm_minus( n,m,k_n,k_m )
@@ -1691,8 +1691,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
          ELSE
 
                ! Frequencies
-            Omega_n     =  n * InitInp%WaveDOmega
-            Omega_m     =  m * InitInp%WaveDOmega
+            Omega_n     =  n * WaveField%WaveDOmega
+            Omega_m     =  m * WaveField%WaveDOmega
 
                ! Wavenumbers
             k_nm        =  k_nm_plus( n,m,k_n,k_m )

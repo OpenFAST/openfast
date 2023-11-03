@@ -1097,8 +1097,8 @@ SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, Waves_InitOut, ErrS
 
          ! Write the data
          DO I = -1*Waves_InitOut%NStepWave2+1,Waves_InitOut%NStepWave2
-            WaveNmbr   = WaveNumber ( I*Waves_InitOut%WaveDOmega, InitInp%Gravity, InputFileData%Waves%WtrDpth )
-            WRITE( UnSum, '(1X,I10,2X,ES14.5,2X,ES14.5,2X,ES14.5,2X,ES14.5,7X,ES14.5)' ) I, WaveNmbr, I*Waves_InitOut%WaveDOmega, &
+            WaveNmbr   = WaveNumber ( I*p%WaveField%WaveDOmega, InitInp%Gravity, InputFileData%Waves%WtrDpth )
+            WRITE( UnSum, '(1X,I10,2X,ES14.5,2X,ES14.5,2X,ES14.5,2X,ES14.5,7X,ES14.5)' ) I, WaveNmbr, I*p%WaveField%WaveDOmega, &
                      p%WaveField%WaveDirArr(ABS(I)),  p%WaveField%WaveElevC0( 1,ABS(I ) ) ,   p%WaveField%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
          END DO
       END IF

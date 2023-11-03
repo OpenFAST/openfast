@@ -333,7 +333,7 @@ SUBROUTINE UserWaveElevations_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMs
    InitOut%NStepWave  = 2*PSF ( InitOut%NStepWave2, 9 )                                      !   greater or equal to WaveTMax/WaveDT to ensure that the FFT is efficient.
    InitOut%NStepWave2 = InitOut%NStepWave/2                                                  ! Update the value of NStepWave2 based on the value needed for NStepWave.
    InitOut%WaveTMax   = InitOut%NStepWave*InitInp%WaveDT                                     ! Update the value of WaveTMax   based on the value needed for NStepWave.
-   InitOut%WaveDOmega = TwoPi/InitInp%WaveTMax                                               ! Compute the frequency step for incident wave calculations.
+   WaveField%WaveDOmega = TwoPi/InitInp%WaveTMax                                               ! Compute the frequency step for incident wave calculations.
    
    ! >>> Allocate and initialize (set to 0) InitOut arrays
    call Initial_InitOut_Arrays(InitOut, WaveField, InitInp, InitInp%WaveDT, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
@@ -467,7 +467,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
    InitOut%NStepWave2 = InitOut%NStepWave/2
    InitOut%WaveTMax   = InitInp%WaveTMax  ! bjj added this
-   InitOut%WaveDOmega = TwoPi/InitInp%WaveTMax ! bjj added this
+   WaveField%WaveDOmega = TwoPi/InitInp%WaveTMax ! bjj added this
    
    ! >>> Allocate and initialize (set to 0) InitOut arrays
    call Initial_InitOut_Arrays(InitOut, WaveField, InitInp, InitInp%WaveDT, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
@@ -650,11 +650,11 @@ END SUBROUTINE UserWaves_Init
 
 !-----------------------------------------------------------------------------------------------------------------------
 !> This subroutine reads in the wave components from a file and reconstructs the frequency information.
-SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
+SUBROUTINE WaveComp_ReadFile ( InitInp, WaveDOmega, WaveCompData, ErrStat, ErrMsg )
 
    IMPLICIT NONE
    TYPE(Waves_InitInputType),       INTENT(INOUT)  :: InitInp              !< Input data for initialization routine
-   TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut              !< Output data for initialization routine
+   REAL(SiKi),                      INTENT(INOUT)  :: WaveDOmega           !< wave field data
    TYPE(WaveCompInputDataFile),     INTENT(  OUT)  :: WaveCompData         !< Wave component file data
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat              !< Error Status at return
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None
@@ -762,7 +762,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
    END IF
 
    ! Compute the frequency step for incident wave calculations.
-   InitOut%WaveDOmega = TwoPi/InitInp%WaveTMax 
+   WaveDOmega = TwoPi/InitInp%WaveTMax 
 
    !--------------------------------------------------
    ! Read in the data
@@ -820,7 +820,7 @@ SUBROUTINE WaveComp_ReadFile ( InitInp, InitOut, WaveCompData, ErrStat, ErrMsg )
       END IF
       
       ! Check if the frequency is valid
-      OmegaRatio = WaveAngFreq/InitOut%WaveDOmega
+      OmegaRatio = WaveAngFreq/WaveDOmega
       IF (ABS(OmegaRatio - REAL(NINT(OmegaRatio),SiKi))>WaveDOmega_RelTol) THEN
           CALL SetErrStat( ErrID_Fatal, 'The wave frequency on line number '//TRIM(Num2LStr(I))//' is not an integer multiple of the frequency resolution given by 1/WaveTMax.', ErrStat, ErrMsg, RoutineName )
           CALL CleanUpError() 
@@ -899,8 +899,8 @@ SUBROUTINE UserWaveComponents_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMs
       ! Statement to user
       CALL WrScr1 ( ' Reading in wave component data from wave kinematics files with root name "'//TRIM(InitInp%WvKinFile)//'".' )
       
-      ! Read in the wave component data
-      CALL WaveComp_ReadFile (InitInp, InitOut, WaveCompData, ErrStatTmp, ErrMsgTmp )
+      ! Read in the wave component data ! NOTE THAT THIS OVERWRITES InitInp%WaveTMax
+      CALL WaveComp_ReadFile (InitInp, WaveField%WaveDOmega, WaveCompData, ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp()
@@ -911,8 +911,8 @@ SUBROUTINE UserWaveComponents_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMs
       MaxWaveAngFreq     = MAXVAL(WaveCompData%WaveAngFreq)
       ! NStepWave2 should be large enough to accommodate the highest user frequency component and 
       ! produce a time step no larger than the user WaveDT.
-      InitOut%NStepWave2 = MAX( NINT(MaxWaveAngFreq / InitOut%WaveDOmega) + 1_IntKi, & 
-                                CEILING(TwoPi/(InitInp%WaveDt*InitOut%WaveDOmega)) )
+      InitOut%NStepWave2 = MAX( NINT(MaxWaveAngFreq / WaveField%WaveDOmega) + 1_IntKi, & 
+                                CEILING(TwoPi/(InitInp%WaveDt*WaveField%WaveDOmega)) )
       InitOut%NStepWave2 = PSF ( InitOut%NStepWave2, 9 )                         ! Make sure NStepWave2 is a product of small factors (PSF) greater or equal to what's required by the user input 
       InitOut%NStepWave  = InitOut%NStepWave2 * 2_IntKi                          ! NStepWave is guaranteed to be even
       InitOut%WaveTMax   = InitInp%WaveTMax                                      ! Copy over WaveTMax.
@@ -944,7 +944,7 @@ SUBROUTINE UserWaveComponents_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMs
 
       ! Copy the wave frequency component information to the InitOut%WaveElevC0 array
       DO I=1,WaveCompData%NCompWave
-         J = NINT(WaveCompData%WaveAngFreq(I)/InitOut%WaveDOmega)
+         J = NINT(WaveCompData%WaveAngFreq(I)/WaveField%WaveDOmega)
          IF ( .NOT. IsSpecified(J) ) THEN
             IsSpecified(J) = .TRUE.
             WaveField%WaveElevC0(1,J) = WaveCompData%WaveAmp(I) * COS(WaveCompData%WavePhase(I)) * InitOut%NStepWave2

@@ -79,7 +79,6 @@ IMPLICIT NONE
 ! =========  Waves_InitOutputType  =======
   TYPE, PUBLIC :: Waves_InitOutputType
     INTEGER(IntKi)  :: WaveNDir = 0_IntKi      !< Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module] [(-)]
-    REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
     REAL(DbKi)  :: WaveTMax = 0.0_R8Ki      !< Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT [(sec)]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
@@ -449,7 +448,6 @@ subroutine Waves_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstInitOutputData%WaveNDir = SrcInitOutputData%WaveNDir
-   DstInitOutputData%WaveDOmega = SrcInitOutputData%WaveDOmega
    DstInitOutputData%WaveTMax = SrcInitOutputData%WaveTMax
    DstInitOutputData%NStepWave = SrcInitOutputData%NStepWave
    DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
@@ -470,7 +468,6 @@ subroutine Waves_PackInitOutput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Waves_PackInitOutput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%WaveNDir)
-   call RegPack(Buf, InData%WaveDOmega)
    call RegPack(Buf, InData%WaveTMax)
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
@@ -483,8 +480,6 @@ subroutine Waves_UnPackInitOutput(Buf, OutData)
    character(*), parameter            :: RoutineName = 'Waves_UnPackInitOutput'
    if (Buf%ErrStat /= ErrID_None) return
    call RegUnpack(Buf, OutData%WaveNDir)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveTMax)
    if (RegCheckErr(Buf, RoutineName)) return
