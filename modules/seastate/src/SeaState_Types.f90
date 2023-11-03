@@ -68,6 +68,7 @@ IMPLICIT NONE
     CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
     INTEGER(IntKi)  :: WaveStMod = 0_IntKi      !< Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} [-]
     REAL(ReKi)  :: WtrDens = 0.0_ReKi      !< Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default) [(kg/m^3)]
+    INTEGER(IntKi)  :: WaveDirMod = 0_IntKi      !< Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6] [-]
     REAL(SiKi)  :: WaveDir = 0.0_R4Ki      !< Incident wave propagation heading direction [(degrees)]
     LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional [-]
     REAL(SiKi)  :: MCFD = 0.0_R4Ki      !< Diameter of members that will use the MacCamy-Fuchs diffraction model [-]
@@ -300,6 +301,7 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
    DstInputFileData%OutSFmt = SrcInputFileData%OutSFmt
    DstInputFileData%WaveStMod = SrcInputFileData%WaveStMod
    DstInputFileData%WtrDens = SrcInputFileData%WtrDens
+   DstInputFileData%WaveDirMod = SrcInputFileData%WaveDirMod
    DstInputFileData%WaveDir = SrcInputFileData%WaveDir
    DstInputFileData%WaveMultiDir = SrcInputFileData%WaveMultiDir
    DstInputFileData%MCFD = SrcInputFileData%MCFD
@@ -404,6 +406,7 @@ subroutine SeaSt_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%OutSFmt)
    call RegPack(Buf, InData%WaveStMod)
    call RegPack(Buf, InData%WtrDens)
+   call RegPack(Buf, InData%WaveDirMod)
    call RegPack(Buf, InData%WaveDir)
    call RegPack(Buf, InData%WaveMultiDir)
    call RegPack(Buf, InData%MCFD)
@@ -549,6 +552,8 @@ subroutine SeaSt_UnPackInputFile(Buf, OutData)
    call RegUnpack(Buf, OutData%WaveStMod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WtrDens)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveDirMod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDir)
    if (RegCheckErr(Buf, RoutineName)) return

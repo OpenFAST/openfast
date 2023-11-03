@@ -41,7 +41,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravitational acceleration [(m/s^2)]
     INTEGER(IntKi) , DIMENSION(1:3)  :: nGrid = 0_IntKi      !< Grid dimensions [-]
     INTEGER(IntKi)  :: WaveNDir = 0_IntKi      !< Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module] [(-)]
-    INTEGER(IntKi)  :: WaveDirMod = 0_IntKi      !< Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6] [-]
     REAL(SiKi)  :: WaveDirSpread = 0.0_R4Ki      !< Spreading coefficient [WaveMod=2,3,4 and WaveDirMod=1] [-]
     REAL(SiKi)  :: WaveDirRange = 0.0_R4Ki      !< Range of wave directions (full range: WaveDir +/- WaveDirRange/2) [only used if WaveMod=6] [(degrees)]
     REAL(DbKi)  :: WaveDT = 0.0_R8Ki      !< Time step for incident wave calculations [(sec)]
@@ -104,7 +103,6 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%nGrid = SrcInitInputData%nGrid
    DstInitInputData%WaveNDir = SrcInitInputData%WaveNDir
-   DstInitInputData%WaveDirMod = SrcInitInputData%WaveDirMod
    DstInitInputData%WaveDirSpread = SrcInitInputData%WaveDirSpread
    DstInitInputData%WaveDirRange = SrcInitInputData%WaveDirRange
    DstInitInputData%WaveDT = SrcInitInputData%WaveDT
@@ -235,7 +233,6 @@ subroutine Waves_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%Gravity)
    call RegPack(Buf, InData%nGrid)
    call RegPack(Buf, InData%WaveNDir)
-   call RegPack(Buf, InData%WaveDirMod)
    call RegPack(Buf, InData%WaveDirSpread)
    call RegPack(Buf, InData%WaveDirRange)
    call RegPack(Buf, InData%WaveDT)
@@ -310,8 +307,6 @@ subroutine Waves_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%nGrid)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveNDir)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveDirMod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDirSpread)
    if (RegCheckErr(Buf, RoutineName)) return

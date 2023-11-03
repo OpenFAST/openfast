@@ -24,7 +24,6 @@ typedef     ^                 ^                 CHARACTER(1024)      WvKinFile  
 typedef     ^                 ^                 ReKi                 Gravity           -        -        -        "Gravitational acceleration"  (m/s^2)
 typedef     ^                 ^                 integer              nGrid             3        -        -        "Grid dimensions"
 typedef     ^                 ^                 INTEGER              WaveNDir          -        -        -        "Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module]"     (-)
-typedef     ^                 ^                 INTEGER              WaveDirMod        -        -        -        "Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6]"   -
 typedef     ^                 ^                 SiKi                 WaveDirSpread     -        -        -        "Spreading coefficient [WaveMod=2,3,4 and WaveDirMod=1]"   -
 typedef     ^                 ^                 SiKi                 WaveDirRange      -        -        -        "Range of wave directions (full range: WaveDir +/- WaveDirRange/2) [only used if WaveMod=6]"   (degrees)
 typedef     ^                 ^                 DbKi                 WaveDT            -        -        -        "Time step for incident wave calculations"   (sec)

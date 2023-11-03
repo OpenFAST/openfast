@@ -49,6 +49,7 @@ typedef     ^                 ^                 CHARACTER(20)            OutFmt 
 typedef     ^                 ^                 CHARACTER(20)            OutSFmt           -        -        -  "Output format for header strings"    -
 typedef     ^                 ^                 INTEGER                  WaveStMod         -        -        -  "Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching}"   -
 typedef     ^                 ^                 ReKi                     WtrDens           -        -        -  "Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default)"    (kg/m^3)
+typedef     ^                 ^                 INTEGER                  WaveDirMod        -        -        -  "Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6]"   -
 typedef     ^                 ^                 SiKi                     WaveDir           -        -        -  "Incident wave propagation heading direction" (degrees)
 typedef     ^                 ^                 LOGICAL                  WaveMultiDir      -        -        -  "Indicates the waves are multidirectional"  -
 typedef     ^                 ^                 SiKi                     MCFD              -        -        -  "Diameter of members that will use the MacCamy-Fuchs diffraction model"

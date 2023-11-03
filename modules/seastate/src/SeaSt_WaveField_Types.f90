@@ -34,6 +34,8 @@ MODULE SeaSt_WaveField_Types
 USE SeaState_Interp_Types
 USE NWTC_Library
 IMPLICIT NONE
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_None = 0      ! WaveDirMod = 0 [Directional spreading function is NONE] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_COS2S = 1      ! WaveDirMod = 1 [Directional spreading function is COS2S] [-]
 ! =========  SeaSt_WaveFieldType  =======
   TYPE, PUBLIC :: SeaSt_WaveFieldType
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveTime      !< Time array [(s)]

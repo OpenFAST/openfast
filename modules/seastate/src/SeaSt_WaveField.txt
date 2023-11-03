@@ -2,6 +2,10 @@
 # Data structures for representing wave fields.
 #
 usefrom SeaState_Interp.txt
+
+param     SeaSt_WaveField      -                INTEGER             WaveDirMod_None      -        0   -   "WaveDirMod = 0 [Directional spreading function is NONE]" -
+param     SeaSt_WaveField      -                INTEGER             WaveDirMod_COS2S     -        1   -   "WaveDirMod = 1 [Directional spreading function is COS2S]" -
+
 #---------------------------------------------------------------------------------------------------------------------------------------------------------
 #<Key Word> <Module>         <TypeName>            <FieldType>                   <FieldName>     <Dims>           <Ctrl>   <DNA ME> <Description> <Units>
 #---------------------------------------------------------------------------------------------------------------------------------------------------------

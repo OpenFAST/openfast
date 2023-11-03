@@ -189,7 +189,7 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
       if (Failed())  return;
 
       ! WaveDirMod -  Directional spreading function {0: None, 1: COS2S}       (-) [Used only if WaveMod=2]
-   call ParseVar( FileInfo_In, CurLine, 'WaveDirMod', InputFileData%Waves%WaveDirMod, ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, 'WaveDirMod', InputFileData%WaveDirMod, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! WaveDirSpread -  Spreading coefficient [only used if WaveMod=2 and WaveDirMod=1]
@@ -816,7 +816,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       ! Multi-directional waves
 
       ! Check the WaveDirMod value
-   if ( InputFileData%Waves%WaveDirMod < 0 .OR. InputFileData%Waves%WaveDirMod > 1 ) then
+   if ( InputFileData%WaveDirMod /= WaveDirMod_None .AND. InputFileData%WaveDirMod /= WaveDirMod_COS2S ) then
       call SetErrStat( ErrID_Fatal,'WaveDirMod must be either 0 (No spreading) or 1 (COS2S spreading function)',ErrStat,ErrMsg,RoutineName)
       return
    end if
@@ -824,9 +824,9 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       ! Check if we are doing multidirectional waves or not.
       ! We can only use multi directional waves on WaveMod=2,3,4
    InputFileData%WaveMultiDir = .FALSE.         ! Set flag to false to start
-   if ( InputFileData%Waves%WaveMod >= 2 .AND. InputFileData%Waves%WaveMod <= 4 .AND. InputFileData%Waves%WaveDirMod == 1 ) then
+   if ( InputFileData%Waves%WaveMod >= 2 .AND. InputFileData%Waves%WaveMod <= 4 .AND. InputFileData%WaveDirMod == WaveDirMod_COS2S ) then
       InputFileData%WaveMultiDir = .TRUE.
-   elseif ( (InputFileData%Waves%WaveMod < 2 .OR. InputFileData%Waves%WaveMod >4) .AND. InputFileData%Waves%WaveDirMod == 1 ) then
+   elseif ( (InputFileData%Waves%WaveMod < 2 .OR. InputFileData%Waves%WaveMod >4) .AND. InputFileData%WaveDirMod == WaveDirMod_COS2S ) then
       call SetErrStat( ErrID_Warn,'WaveDirMod unused unless WaveMod == 2, 3, or 4.  Ignoring WaveDirMod.',ErrStat,ErrMsg,RoutineName)
    ENDIF
 
