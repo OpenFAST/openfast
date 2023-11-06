@@ -288,7 +288,6 @@ IMPLICIT NONE
 ! =========  Morison_InitInputType  =======
   TYPE, PUBLIC :: Morison_InitInputType
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity (scalar, positive-valued) [m/s^2]
-    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth (positive-valued) [m]
     INTEGER(IntKi)  :: WaveDisp = 0_IntKi      !< Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position)  [-]
     INTEGER(IntKi)  :: AMMod = 0_IntKi      !< Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState] [-]
     INTEGER(IntKi)  :: NJoints = 0_IntKi      !< Number of user-specified joints [-]
@@ -396,7 +395,6 @@ IMPLICIT NONE
   TYPE, PUBLIC :: Morison_ParameterType
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [(sec)]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravity (scalar, positive-valued) [m/s^2]
-    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth (positive-valued) [m]
     INTEGER(IntKi)  :: WaveDisp = 0_IntKi      !< Method of computing Wave Kinematics. (0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position)  [-]
     INTEGER(IntKi)  :: AMMod = 0_IntKi      !< Method of computing distributed added-mass force. (0: Only and always on nodes below SWL at the undisplaced position. 1: Up to the instantaneous free surface) [overwrite to 0 when WaveMod = 0 or 6 or when WaveStMod = 0 in SeaState] [-]
     INTEGER(IntKi)  :: NMembers = 0_IntKi      !< number of members [-]
@@ -3495,7 +3493,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstInitInputData%Gravity = SrcInitInputData%Gravity
-   DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
    DstInitInputData%WaveDisp = SrcInitInputData%WaveDisp
    DstInitInputData%AMMod = SrcInitInputData%AMMod
    DstInitInputData%NJoints = SrcInitInputData%NJoints
@@ -3846,7 +3843,6 @@ subroutine Morison_PackInitInput(Buf, Indata)
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%Gravity)
-   call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, InData%WaveDisp)
    call RegPack(Buf, InData%AMMod)
    call RegPack(Buf, InData%NJoints)
@@ -4007,8 +4003,6 @@ subroutine Morison_UnPackInitInput(Buf, OutData)
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
    call RegUnpack(Buf, OutData%Gravity)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDisp)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5389,7 +5383,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
    ErrMsg  = ''
    DstParamData%DT = SrcParamData%DT
    DstParamData%Gravity = SrcParamData%Gravity
-   DstParamData%WtrDpth = SrcParamData%WtrDpth
    DstParamData%WaveDisp = SrcParamData%WaveDisp
    DstParamData%AMMod = SrcParamData%AMMod
    DstParamData%NMembers = SrcParamData%NMembers
@@ -5678,7 +5671,6 @@ subroutine Morison_PackParam(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%DT)
    call RegPack(Buf, InData%Gravity)
-   call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, InData%WaveDisp)
    call RegPack(Buf, InData%AMMod)
    call RegPack(Buf, InData%NMembers)
@@ -5800,8 +5792,6 @@ subroutine Morison_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%DT)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Gravity)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDisp)
    if (RegCheckErr(Buf, RoutineName)) return

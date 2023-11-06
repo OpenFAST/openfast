@@ -41,7 +41,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
     INTEGER(IntKi)  :: NBodyMod = 0_IntKi      !< Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1] [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
-    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth (positive-valued) [m]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmVol0      !<  [-]
     LOGICAL  :: HasWAMIT = .false.      !< .TRUE. if using WAMIT model, .FALSE. otherwise [-]
     REAL(ReKi)  :: WAMITULEN = 0.0_ReKi      !<  [-]
@@ -161,7 +160,6 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%NBody = SrcInitInputData%NBody
    DstInitInputData%NBodyMod = SrcInitInputData%NBodyMod
    DstInitInputData%Gravity = SrcInitInputData%Gravity
-   DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
    if (allocated(SrcInitInputData%PtfmVol0)) then
       LB(1:1) = lbound(SrcInitInputData%PtfmVol0)
       UB(1:1) = ubound(SrcInitInputData%PtfmVol0)
@@ -307,7 +305,6 @@ subroutine WAMIT_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%NBody)
    call RegPack(Buf, InData%NBodyMod)
    call RegPack(Buf, InData%Gravity)
-   call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, allocated(InData%PtfmVol0))
    if (allocated(InData%PtfmVol0)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmVol0), ubound(InData%PtfmVol0))
@@ -380,8 +377,6 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%NBodyMod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Gravity)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%PtfmVol0)) deallocate(OutData%PtfmVol0)
    call RegUnpack(Buf, IsAllocAssoc)

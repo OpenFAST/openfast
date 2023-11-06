@@ -31,7 +31,6 @@ typedef     ^                 ^                 ReKi                 WAMITULEN  
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave"    -
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2"                                       -
 typedef     ^                 ^                 ReKi                 Gravity           -        -        -        "Supplied by Driver:  Gravitational acceleration"  (m/s^2)
-typedef     ^                 ^                 ReKi                 WtrDpth           -        -        -        "Water depth (positive-valued)"    (m)
 
 typedef     ^                 ^                 INTEGER              WaveMod           -        -        -        "The wave model to use.  This is for error checking -- ideally this would be done in the main calling routine, not here." -
 typedef    ^                  ^                 SeaSt_WaveFieldType *WaveField         -        -        -        "Pointer to wave field"

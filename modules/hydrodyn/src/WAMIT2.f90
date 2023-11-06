@@ -1827,7 +1827,7 @@ END SUBROUTINE WAMIT2_Init
                !        of above is mathematically equivalent, but only because each frequency has only one wave
                !        direction associated with it through the equal energy approach used in multidirectional waves.
 
-               WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
+               WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WaveField%EffWtrDpth )    ! SiKi returned
                TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(J)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(J)*D2R) )
                PhaseShiftXY = CMPLX( cos(TmpReal1), -sin(TmpReal1) )
 
@@ -2296,8 +2296,8 @@ END SUBROUTINE WAMIT2_Init
                            !        of above is mathematically equivalent, but only because each frequency has only one wave
                            !        direction associated with it through the equal energy approach used in multidirectional waves.
 
-                           WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
-                           WaveNmbr2   = WaveNumber ( REAL(Omega2,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
+                           WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WaveField%EffWtrDpth )    ! SiKi returned
+                           WaveNmbr2   = WaveNumber ( REAL(Omega2,SiKi), InitInp%Gravity, InitInp%WaveField%EffWtrDpth )    ! SiKi returned
                            TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(J+K)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(J+K)*D2R) )
                            TmpReal2    = WaveNmbr2 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(K)*D2R)   + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(K)*D2R)   )
 
@@ -2790,7 +2790,7 @@ END SUBROUTINE WAMIT2_Init
                         !        of above is mathematically equivalent, but only because each frequency has only one wave
                         !        direction associated with it through the equal energy approach used in multidirectional waves.
 
-                        WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
+                        WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WaveField%EffWtrDpth )    ! SiKi returned
                         TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(J)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(J)*D2R) )
 
                         ! Set the phase shift for the set of sum frequencies
@@ -2903,8 +2903,8 @@ END SUBROUTINE WAMIT2_Init
                            !        of above is mathematically equivalent, but only because each frequency has only one wave
                            !        direction associated with it through the equal energy approach used in multidirectional waves.
 
-                           WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
-                           WaveNmbr2   = WaveNumber ( REAL(Omega2,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
+                           WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WaveField%EffWtrDpth )    ! SiKi returned
+                           WaveNmbr2   = WaveNumber ( REAL(Omega2,SiKi), InitInp%Gravity, InitInp%WaveField%EffWtrDpth )    ! SiKi returned
                            TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(K)*D2R)   + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(K)*D2R)   )
                            TmpReal2    = WaveNmbr2 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveField%WaveDirArr(J-K)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveField%WaveDirArr(J-K)*D2R) )
 

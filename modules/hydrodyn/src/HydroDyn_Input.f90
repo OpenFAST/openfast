@@ -1128,29 +1128,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       ! Check environmental conditions
       !-------------------------------------------------------------------------
 
- 
-      ! WtrDens - Water density. ! shouldn't this be checked in SeaState instead (and omitted here?)
-
-   IF ( InitInp%WaveField%WtrDens < 0.0 )  THEN
-      CALL SetErrStat( ErrID_Fatal,'WtrDens must not be negative.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-
-
-      ! WtrDpth - Water depth
-   
-   ! First adjust water depth based on MSL2SWL values
-   InputFileData%Morison%WtrDpth = InputFileData%Morison%WtrDpth + InitInp%WaveField%MSL2SWL
-   
-   IF ( InputFileData%Morison%WtrDpth <= 0.0 )  THEN
-      CALL SetErrStat( ErrID_Fatal,'WtrDpth must be greater than zero.',ErrStat,ErrMsg,RoutineName)
-      RETURN
-   END IF
-
-
       ! MSL2SWL - Mean sea level to still water level
-   
-
    IF ( InputFileData%PotMod == 1 .AND. .NOT. EqualRealNos(InitInp%WaveField%MSL2SWL, 0.0_ReKi) ) THEN
       CALL SetErrStat( ErrID_Fatal,'SeaState MSL2SWL must be 0 when PotMod = 1 (WAMIT).',ErrStat,ErrMsg,RoutineName)        
       RETURN

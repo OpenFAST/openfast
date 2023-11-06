@@ -1441,7 +1441,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
    character(*),                 intent (  out)  :: errMsg               ! Error message if errStat /= ErrID_None
 
    integer(IntKi) :: N, i
-   real(ReKi)     :: WtrDepth,s, dl
+   real(ReKi)     :: s, dl
    real(ReKi)     :: vec(3)
    real(ReKi)     :: memLength 
    real(ReKi)     :: Za 
@@ -1461,7 +1461,6 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
    errStat = ErrID_None
    errMSg  = ''
    
-   WtrDepth = InitInp%WtrDpth
    N  = member%NElements
    dl = member%dl
    
@@ -1557,7 +1556,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
          member%l_fill = 0.0_ReKi
       else
          member%z_overfill =0
-         if ( Zb <= -InitInp%WtrDpth ) then
+         if ( Zb <= -InitInp%WaveField%EffWtrDpth ) then
             member%memfloodstatus = 0  ! member fully buried in seabed
             member%l_fill = 0
          else
@@ -1585,7 +1584,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
             call SetErrStat(ErrID_Fatal, 'The lower end-plate of a member must not cross the water plane.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
          end if
       end if
-      if ( ( Za < -WtrDepth .and. Zb >= -WtrDepth ) .and. ( phi > 10.0*d2r .or. abs((member%RMG(N+1) - member%RMG(1))/member%RefLength)>0.1 ) ) then
+      if ( ( Za < -InitInp%WaveField%EffWtrDpth .and. Zb >= -InitInp%WaveField%EffWtrDpth ) .and. ( phi > 10.0*d2r .or. abs((member%RMG(N+1) - member%RMG(1))/member%RefLength)>0.1 ) ) then
          call SetErrStat(ErrID_Fatal, 'A member which crosses the seabed must not be inclined more than 10 degrees from vertical or have a taper larger than 0.1.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )   
       end if
       
@@ -1596,20 +1595,20 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
    member%h_floor = 0.0_ReKi
    member%i_floor = member%NElements+1  ! Default to entire member is below the seabed
    member%doEndBuoyancy = .false.
-   if (Za < -WtrDepth) then
+   if (Za < -InitInp%WaveField%EffWtrDpth) then
       do i= 2, member%NElements+1
          Za = InitInp%Nodes(member%NodeIndx(i))%Position(3)
-         if (Za > -WtrDepth) then            ! find the lowest node above the seabed
+         if (Za > -InitInp%WaveField%EffWtrDpth) then            ! find the lowest node above the seabed
             
             if (cosPhi < 0.173648178 ) then ! phi > 80 degrees and member is seabed crossing
                call SetErrStat(ErrID_Fatal, 'A seabed crossing member must have an inclination angle of <= 80 degrees from vertical.  This is not true for Member ID '//trim(num2lstr(member%MemberID)), errStat, errMsg, 'SetMemberProperties' )
             end if
             
-            member%h_floor = (-WtrDepth-Za)/cosPhi  ! get the distance from the node to the seabed along the member axis (negative value)
+            member%h_floor = (-InitInp%WaveField%EffWtrDpth-Za)/cosPhi  ! get the distance from the node to the seabed along the member axis (negative value)
             member%i_floor = i-1                    ! record the number of the element that pierces the seabed
             member%doEndBuoyancy = .true.
             exit
-         else if ( EqualRealNos(Za, -WtrDepth ) ) then
+         else if ( EqualRealNos(Za, -InitInp%WaveField%EffWtrDpth ) ) then
             member%doEndBuoyancy = .true.
          end if
       end do
@@ -1714,7 +1713,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
       ! Determine volumes to add to Non-WAMIT modeled members, etc.
       if (.not. member%PropPot) then
          
-         if (Zb < -WtrDepth) then
+         if (Zb < -InitInp%WaveField%EffWtrDpth) then
             ! fully buried element, do not add these volume contributions to totals
          else if (0.0 >= Zb) then   ! Bug fix per OpenFAST issue #844   GJH 2/3/2022
             ! fully submerged elements.  
@@ -1747,7 +1746,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
 
       li = dl*(i-1)
       ! fully buried element
-      if (Zb < -WtrDepth) then
+      if (Zb < -InitInp%WaveField%EffWtrDpth) then
          member%floodstatus(i) = 0
       
       ! fully filled elements 
@@ -1921,7 +1920,6 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    
    ! Define parameters here:  
    p%DT         = Interval
-   p%WtrDpth    = InitInp%WtrDpth
    p%Gravity    = InitInp%Gravity
    p%NNodes     = InitInp%NNodes
    p%NJoints    = InitInp%NJoints
@@ -2123,7 +2121,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       tMG       = -999.0
       An_drag   = 0.0
       
-      IF ( (InitInp%InpJoints(i)%Position(3)-p%WaveField%MSL2SWL) >= -p%WtrDpth ) THEN
+      IF ( (InitInp%InpJoints(i)%Position(3)-p%WaveField%MSL2SWL) >= -InitInp%WaveField%EffWtrDpth ) THEN !bjj: ask Lu if this is correct. I wonder if this check is supposed to be against WtrDpth
    
          ! loop through each member attached to the joint, getting the radius of its appropriate end
          DO J = 1, InitInp%InpJoints(I)%NConnections
@@ -2216,7 +2214,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
          p%I_MG_End(:,:,i) = MatMul( MatMul(R_I, Irl_mat), Transpose(R_I) ) ! final moment of inertia matrix for node
          
 
-      END IF  ! InitInp%InpJoints(i)%Position(3) >= -p%WtrDpth
+      END IF  ! InitInp%InpJoints(i)%Position(3) >= -WtrDpth
    
       p%DragMod_End   (i) = InitInp%Nodes(i)%JAxFDMod
       IF ( InitInp%Nodes(i)%JAxVnCOff .LE. 0.0_ReKi) THEN

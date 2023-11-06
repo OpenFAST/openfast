@@ -1023,7 +1023,7 @@ end if
                   do J = 1, NInpWvDir  
                      do I = 1, NInpFreq
                            ! Fxy = exp(-j * k(w) * ( X*cos(Beta(w)) + Y*sin(Beta(w)) )
-                        WaveNmbr   = WaveNumber ( HdroFreq(I), InitInp%Gravity, InitInp%WtrDpth )
+                        WaveNmbr   = WaveNumber ( HdroFreq(I), InitInp%Gravity, InitInp%WaveField%EffWtrDpth )
                         tmpAngle   = WaveNmbr * ( InitInp%PtfmRefxt(1)*cos(HdroWvDir(J)*D2R) + InitInp%PtfmRefyt(1)*sin(HdroWvDir(J)*D2R) )
                         TmpRe =  cos(tmpAngle)
                         TmpIm = -sin(tmpAngle)
@@ -1208,7 +1208,7 @@ end if
 
                               Omega = I*p%WaveField%WaveDOmega
                                  ! Fxy = exp(-j * k(w) * ( X*cos(Beta(w)) + Y*sin(Beta(w)) )
-                              WaveNmbr   = WaveNumber ( Omega, InitInp%Gravity, InitInp%WtrDpth )
+                              WaveNmbr   = WaveNumber ( Omega, InitInp%Gravity, InitInp%WaveField%EffWtrDpth )
                               tmpAngle   = WaveNmbr * ( InitInp%PtfmRefxt(1)*cos(HdroWvDir(J)*D2R) + InitInp%PtfmRefyt(1)*sin(HdroWvDir(J)*D2R) )
                               TmpRe =  cos(tmpAngle)
                               TmpIm = -sin(tmpAngle)
