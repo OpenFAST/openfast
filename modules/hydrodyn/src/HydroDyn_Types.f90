@@ -95,6 +95,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: TMax = 0.0_R8Ki      !< Supplied by Driver:  The total simulation time [(sec)]
     REAL(ReKi)  :: PtfmLocationX = 0.0_ReKi      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
     REAL(ReKi)  :: PtfmLocationY = 0.0_ReKi      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
+    LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
     INTEGER(IntKi)  :: NStepWave = 0      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0      !< NStepWave / 2 [-]
     REAL(SiKi)  :: RhoXg = 0.0_R4Ki      !< = WtrDens*Gravity [-]
@@ -215,6 +216,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: dx      !< vector that determines size of perturbation for x (continuous states) [-]
     INTEGER(IntKi)  :: Jac_ny = 0_IntKi      !< number of outputs in jacobian matrix [-]
     LOGICAL  :: PointsToSeaState = .TRUE.      !< Flag that determines if the data contains pointers to SeaState module or if new copies (from restart) [-]
+    LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
   END TYPE HydroDyn_ParameterType
 ! =======================
 ! =========  HydroDyn_InputType  =======
@@ -906,6 +908,7 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    DstInitInputData%TMax = SrcInitInputData%TMax
    DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
    DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
+   DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
    DstInitInputData%NStepWave = SrcInitInputData%NStepWave
    DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
    DstInitInputData%RhoXg = SrcInitInputData%RhoXg
@@ -990,6 +993,7 @@ subroutine HydroDyn_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%TMax)
    call RegPack(Buf, InData%PtfmLocationX)
    call RegPack(Buf, InData%PtfmLocationY)
+   call RegPack(Buf, InData%VisMeshes)
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
    call RegPack(Buf, InData%RhoXg)
@@ -1061,6 +1065,8 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%PtfmLocationX)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%PtfmLocationY)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%VisMeshes)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2345,6 +2351,7 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    end if
    DstParamData%Jac_ny = SrcParamData%Jac_ny
    DstParamData%PointsToSeaState = SrcParamData%PointsToSeaState
+   DstParamData%VisMeshes = SrcParamData%VisMeshes
 end subroutine
 
 subroutine HydroDyn_DestroyParam(ParamData, ErrStat, ErrMsg)
@@ -2512,6 +2519,7 @@ subroutine HydroDyn_PackParam(Buf, Indata)
    end if
    call RegPack(Buf, InData%Jac_ny)
    call RegPack(Buf, InData%PointsToSeaState)
+   call RegPack(Buf, InData%VisMeshes)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -2737,6 +2745,8 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%Jac_ny)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%PointsToSeaState)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%VisMeshes)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
