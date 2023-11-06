@@ -37,7 +37,6 @@ typedef     ^                 ^                 CHARACTER(80)        WavePkShpCh
 typedef     ^                 ^                 INTEGER              WaveSeed          {2}      -        -        "Random seeds of incident waves [-2147483648 to 2147483647]"   -
 typedef     ^                 ^                 DbKi                 WaveTMax          -        -        -        "Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT"  (sec)
 typedef     ^                 ^                 SiKi                 WaveTp            -        -        -        "Peak spectral period of incident waves"  (sec)
-typedef     ^                 ^                 ReKi                 WtrDpth           -        -        -        "Water depth"  (meters)
 typedef     ^                 ^                 INTEGER              NWaveElevGrid     -        -        -        "Number of grid points where the incident wave elevations are computed (the XY grid point locations)"  -
 typedef     ^                 ^                 INTEGER              NWaveKinGrid      -        -        -        "Number of grid points where the incident wave kinematics will be computed"  -
 typedef     ^                 ^                 SiKi                 WaveKinGridxi     {:}      -        -        "xi-coordinates for grid points where the incident wave kinematics will be computed (grid points); these are relative to the mean sea level"  (meters)

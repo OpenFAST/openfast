@@ -1030,12 +1030,12 @@ SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, Waves_InitOut, ErrS
       WRITE( UnSum, '(A/)') trim(GetVersion(SeaSt_ProgDesc))
       IF (InputFileData%Waves%WaveMod /= 0 .and. InputFileData%Waves%WaveMod /= 6)  THEN
             
-            WRITE( UnSum, '(1X,A61,F8.2,A4/)' )           'The Mean Sea Level to Still Water Level (MSL2SWL) Offset is :',InputFileData%MSL2SWL,' (m)'
-            WRITE( UnSum, '(1X,A15,F8.2,A8)' )            'Water Density: ', InputFileData%WtrDens, '(kg/m^3)'
-            WRITE( UnSum, '(1X,A15,F8.2,A20,F8.2,A19)' )  'Water Depth  : ', InputFileData%Waves%WtrDpth - InputFileData%MSL2SWL, '(m) relative to MSL; ', &
-                                                                             InputFileData%Waves%WtrDpth,                         '(m) relative to SWL'
-            WRITE( UnSum, '(1X,A15,F8.2,A20,F8.2,A19/)' ) 'Grid Z_Depth : ', InputFileData%Z_Depth - InputFileData%MSL2SWL, '(m) relative to MSL; ', &
-                                                                             InputFileData%Z_Depth,                         '(m) relative to SWL'
+            WRITE( UnSum, '(1X,A61,F8.2,A4/)' )           'The Mean Sea Level to Still Water Level (MSL2SWL) Offset is :',p%WaveField%MSL2SWL,' (m)'
+            WRITE( UnSum, '(1X,A15,F8.2,A8)' )            'Water Density: ', p%WaveField%WtrDens,                         '(kg/m^3)'
+            WRITE( UnSum, '(1X,A15,F8.2,A20,F8.2,A19)' )  'Water Depth  : ', p%WaveField%WtrDpth,                         '(m) relative to MSL; ', &
+                                                                             p%WaveField%EffWtrDpth,                      '(m) relative to SWL'
+            WRITE( UnSum, '(1X,A15,F8.2,A20,F8.2,A19/)' ) 'Grid Z_Depth : ', InputFileData%Z_Depth - p%WaveField%MSL2SWL, '(m) relative to MSL; ', &
+                                                                             InputFileData%Z_Depth,                       '(m) relative to SWL'
       end if
       
       Frmt  = '(1X,ES18.4e2,2x,ES18.4e2,2x,ES18.4e2,2x,ES18.4e2)'
@@ -1045,7 +1045,7 @@ SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, Waves_InitOut, ErrS
       WRITE( UnSum, '(1X,A78)' )   '            Xi                  Yi  Zi relative to MSL  Z  relative to SWL'
       do i= 1, p%NGridPts
          ! NOTE: The Waves%WaveKinxi, yi, zi arrays hold all the grid point locations
-         WRITE(UnSum,Frmt)   InputFileData%Waves%WaveKinGridxi(i),  InputFileData%Waves%WaveKinGridyi(i),  InputFileData%Waves%WaveKinGridzi(i) + InputFileData%MSL2SWL,  InputFileData%Waves%WaveKinGridzi(i)
+         WRITE(UnSum,Frmt)   InputFileData%Waves%WaveKinGridxi(i),  InputFileData%Waves%WaveKinGridyi(i),  InputFileData%Waves%WaveKinGridzi(i) + p%WaveField%MSL2SWL,  InputFileData%Waves%WaveKinGridzi(i)
       end do
  
       !   ! Write User-requested Wave Kinematics locations
@@ -1057,7 +1057,7 @@ SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, Waves_InitOut, ErrS
          Frmt  = '(1X,I5, 2X,ES18.4e2,2x,ES18.4e2,2x,ES18.4e2,2x,ES18.4e2)'
          do i= 1, p%NWaveKin
             ! NOTE: The InputFileData%WaveKinxi, yi, zi arrays hold the User-request kinematics output locations
-            WRITE(UnSum,Frmt)   i, p%WaveKinxi(i),  p%WaveKinyi(i),  p%WaveKinzi(i) + InputFileData%MSL2SWL,  p%WaveKinzi(i)
+            WRITE(UnSum,Frmt)   i, p%WaveKinxi(i),  p%WaveKinyi(i),  p%WaveKinzi(i) + p%WaveField%MSL2SWL,  p%WaveKinzi(i)
          end do
                
       else
@@ -1097,7 +1097,7 @@ SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, Waves_InitOut, ErrS
 
          ! Write the data
          DO I = -1*Waves_InitOut%NStepWave2+1,Waves_InitOut%NStepWave2
-            WaveNmbr   = WaveNumber ( I*p%WaveField%WaveDOmega, InitInp%Gravity, InputFileData%Waves%WtrDpth )
+            WaveNmbr   = WaveNumber ( I*p%WaveField%WaveDOmega, InitInp%Gravity, p%WaveField%EffWtrDpth )
             WRITE( UnSum, '(1X,I10,2X,ES14.5,2X,ES14.5,2X,ES14.5,2X,ES14.5,7X,ES14.5)' ) I, WaveNmbr, I*p%WaveField%WaveDOmega, &
                      p%WaveField%WaveDirArr(ABS(I)),  p%WaveField%WaveElevC0( 1,ABS(I ) ) ,   p%WaveField%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
          END DO

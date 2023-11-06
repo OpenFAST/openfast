@@ -54,7 +54,6 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:2)  :: WaveSeed = 0_IntKi      !< Random seeds of incident waves [-2147483648 to 2147483647] [-]
     REAL(DbKi)  :: WaveTMax = 0.0_R8Ki      !< Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT [(sec)]
     REAL(SiKi)  :: WaveTp = 0.0_R4Ki      !< Peak spectral period of incident waves [(sec)]
-    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [(meters)]
     INTEGER(IntKi)  :: NWaveElevGrid = 0_IntKi      !< Number of grid points where the incident wave elevations are computed (the XY grid point locations) [-]
     INTEGER(IntKi)  :: NWaveKinGrid = 0_IntKi      !< Number of grid points where the incident wave kinematics will be computed [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinGridxi      !< xi-coordinates for grid points where the incident wave kinematics will be computed (grid points); these are relative to the mean sea level [(meters)]
@@ -116,7 +115,6 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%WaveSeed = SrcInitInputData%WaveSeed
    DstInitInputData%WaveTMax = SrcInitInputData%WaveTMax
    DstInitInputData%WaveTp = SrcInitInputData%WaveTp
-   DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
    DstInitInputData%NWaveElevGrid = SrcInitInputData%NWaveElevGrid
    DstInitInputData%NWaveKinGrid = SrcInitInputData%NWaveKinGrid
    if (allocated(SrcInitInputData%WaveKinGridxi)) then
@@ -246,7 +244,6 @@ subroutine Waves_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%WaveSeed)
    call RegPack(Buf, InData%WaveTMax)
    call RegPack(Buf, InData%WaveTp)
-   call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, InData%NWaveElevGrid)
    call RegPack(Buf, InData%NWaveKinGrid)
    call RegPack(Buf, allocated(InData%WaveKinGridxi))
@@ -333,8 +330,6 @@ subroutine Waves_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%WaveTMax)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveTp)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NWaveElevGrid)
    if (RegCheckErr(Buf, RoutineName)) return

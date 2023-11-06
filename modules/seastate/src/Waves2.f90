@@ -273,14 +273,14 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
          ! Since we have no stretching, NWaveKin0Prime and WaveKinzi0Prime(:) are
          !   equal to the number of, and the zi-coordinates for, the points in the
-         !   WaveKinGridzi(:) array between, and including, -WtrDpth and 0.0.
+         !   WaveKinGridzi(:) array between, and including, -EffWtrDpth and 0.0.
 
          ! Determine NWaveKin0Prime here:
 
          NWaveKin0Prime = 0
          DO J = 1,InitInp%NWaveKinGrid   ! Loop through all mesh points  where the incident wave kinematics will be computed
-               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
-            IF (    InitInp%WaveKinGridzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
+               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and EffWtrDpth have already been adjusted using MSL2SWL
+            IF (    InitInp%WaveKinGridzi(J) >= -WaveField%EffWtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
                NWaveKin0Prime = NWaveKin0Prime + 1
             END IF
          END DO                ! J - All Morison nodes where the incident wave kinematics will be computed
@@ -304,8 +304,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
          I = 1
 
          DO J = 1,InitInp%NWaveKinGrid ! Loop through all points where the incident wave kinematics will be computed without stretching
-               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
-            IF (    InitInp%WaveKinGridzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
+               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and EffWtrDpth have already been adjusted using MSL2SWL
+            IF (    InitInp%WaveKinGridzi(J) >= -WaveField%EffWtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
 
                WaveKinzi0Prime(I) =  InitInp%WaveKinGridzi(J)
                WaveKinPrimeMap(I) =  J
@@ -548,8 +548,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                      n           =  mu_minus + m
                      Omega_n     =  n * WaveField%WaveDOmega
                      Omega_m     =  m * WaveField%WaveDOmega
-                     k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
-                     k_m         =  WaveNumber( Omega_m, InitInp%Gravity, InitInp%WtrDpth )
+                     k_n         =  WaveNumber( Omega_n, InitInp%Gravity, WaveField%EffWtrDpth )
+                     k_m         =  WaveNumber( Omega_m, InitInp%Gravity, WaveField%EffWtrDpth )
                      k_nm        =  k_nm_minus( n, m, k_n, k_m )
 
 
@@ -573,7 +573,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
 
                         !> Calculate \f$ U^- \f$ terms for the velocity calculations (\f$B^-\f$ provided by waves2::transfuncb_minus)
-                        ! NOTE: InitInp%WtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
+                        ! NOTE: WaveField%EffWtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
                         !> * \f$ _x{U}_{nm}^- = B_{nm}^- \left(k_n \cos \theta_n - k_m \cos \theta_m \right) \f$
                      Ux_nm_minus = B_minus * ( k_n * COS( D2R_S*WaveField%WaveDirArr(n) ) - k_m * COS( D2R_S*WaveField%WaveDirArr(m) ) )
 
@@ -581,7 +581,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                      Uy_nm_minus = B_minus * ( k_n * SIN( D2R_S*WaveField%WaveDirArr(n) ) - k_m * SIN( D2R_S*WaveField%WaveDirArr(m) ) )
 
                         !> * \f$ _z{U}_{nm}^- = \imath B_{nm}^- k_{nm} \tanh \left( k_{nm} ( h + z ) \right) \f$
-                     Uz_nm_minus = ImagNmbr * B_minus * k_nm * tanh( k_nm * ( InitInp%WtrDpth + WaveKinzi0Prime(I) ) )
+                     Uz_nm_minus = ImagNmbr * B_minus * k_nm * tanh( k_nm * ( WaveField%EffWtrDpth + WaveKinzi0Prime(I) ) )
 
 
                         !> Acceleration calculations
@@ -924,7 +924,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                Omega_plus  =  2.0_SiKi * Omega_n
 
                IF ( Omega_plus >= WaveField%WvLowCOffS .AND. Omega_plus <= WaveField%WvHiCOffS ) THEN
-                  k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
+                  k_n         =  WaveNumber( Omega_n, InitInp%Gravity, WaveField%EffWtrDpth )
                   k_nm        =  k_nm_plus( n, n, k_n, k_n )
 
 
@@ -948,7 +948,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
 
                      !> Calculate \f$ U^+ \f$ terms for the velocity calculations (\f$B^+\f$ provided by waves2::transfuncb_plus)
-                     ! NOTE: InitInp%WtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
+                     ! NOTE: WaveField%EffWtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
                      !> * \f$ _x{U}_{nn}^+ = B_{nn}^+ 2 k_n \cos \theta_n \f$
                   Ux_nm_plus = B_plus * 2.0_SiKi * k_n * COS( D2R_S*WaveField%WaveDirArr(n) )
 
@@ -956,7 +956,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                   Uy_nm_plus = B_plus * 2.0_SiKi * k_n * SIN( D2R_S*WaveField%WaveDirArr(n) )
 
                      !> * \f$ _z{U}_{nn}^+ = \imath B_{nn}^+ k_{nn} \tanh \left( k_{nn} ( h + z ) \right) \f$
-                  Uz_nm_plus = ImagNmbr * B_plus * k_nm * tanh( k_nm * ( InitInp%WtrDpth + WaveKinzi0Prime(I) ) )
+                  Uz_nm_plus = ImagNmbr * B_plus * k_nm * tanh( k_nm * ( WaveField%EffWtrDpth + WaveKinzi0Prime(I) ) )
 
 
                      !> Acceleration calculations
@@ -1025,8 +1025,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                      n           =  mu_plus - m
                      Omega_n     =  n * WaveField%WaveDOmega
                      Omega_m     =  m * WaveField%WaveDOmega
-                     k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
-                     k_m         =  WaveNumber( Omega_m, InitInp%Gravity, InitInp%WtrDpth )
+                     k_n         =  WaveNumber( Omega_n, InitInp%Gravity, WaveField%EffWtrDpth )
+                     k_m         =  WaveNumber( Omega_m, InitInp%Gravity, WaveField%EffWtrDpth )
                      k_nm        =  k_nm_plus( n, m, k_n, k_m )
 
 
@@ -1050,7 +1050,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
 
                         !> Calculate \f$ U^+ \f$ terms for the velocity calculations (\f$B^+\f$ provided by waves2::transfuncb_plus)
-                        ! NOTE: InitInp%WtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
+                        ! NOTE: WaveField%EffWtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
                         !> * \f$ _x{U}_{nm}^+ = B_{nm}^+ \left(k_n \cos \theta_n + k_m \cos \theta_m \right) \f$
                      Ux_nm_plus = B_plus * ( k_n * COS( D2R_S*WaveField%WaveDirArr(n) ) + k_m * COS( D2R_S*WaveField%WaveDirArr(m) ) )
 
@@ -1058,7 +1058,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                      Uy_nm_plus = B_plus * ( k_n * SIN( D2R_S*WaveField%WaveDirArr(n) ) + k_m * SIN( D2R_S*WaveField%WaveDirArr(m) ) )
 
                         !> * \f$ _z{U}_{nm}^+ = \imath B_{nm}^+ k_{nm} \tanh \left( k_{nm} ( h + z ) \right) \f$
-                     Uz_nm_plus = ImagNmbr * B_plus * k_nm * tanh( k_nm * ( InitInp%WtrDpth + WaveKinzi0Prime(I) ) )
+                     Uz_nm_plus = ImagNmbr * B_plus * k_nm * tanh( k_nm * ( WaveField%EffWtrDpth + WaveKinzi0Prime(I) ) )
 
 
                         !> Acceleration calculations
@@ -1324,10 +1324,10 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                   n           =  mu_minus + m
                   Omega_n     =  n * WaveField%WaveDOmega
                   Omega_m     =  m * WaveField%WaveDOmega
-                  k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
-                  k_m         =  WaveNumber( Omega_m, InitInp%Gravity, InitInp%WtrDpth )
-                  R_n         =  k_n * tanh( k_n * InitInp%WtrDpth )
-                  R_m         =  k_m * tanh( k_m * InitInp%WtrDpth )
+                  k_n         =  WaveNumber( Omega_n, InitInp%Gravity, WaveField%EffWtrDpth )
+                  k_m         =  WaveNumber( Omega_m, InitInp%Gravity, WaveField%EffWtrDpth )
+                  R_n         =  k_n * tanh( k_n * WaveField%EffWtrDpth )
+                  R_m         =  k_m * tanh( k_m * WaveField%EffWtrDpth )
                   D_minus     =  TransFuncD_minus(n,m,k_n,k_m,R_n,R_m)
 
                      !> Calculate the value of 
@@ -1451,8 +1451,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
             Omega_plus  =  2.0_SiKi * Omega_n
 
             IF ( Omega_plus >= WaveField%WvLowCOffS .AND. Omega_plus <= WaveField%WvHiCOffS ) THEN
-               k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
-               R_n         =  k_n * tanh( k_n * InitInp%WtrDpth )
+               k_n         =  WaveNumber( Omega_n, InitInp%Gravity, WaveField%EffWtrDpth )
+               R_n         =  k_n * tanh( k_n * WaveField%EffWtrDpth )
                D_plus      =  TransFuncD_plus(n,n,k_n,k_n,R_n,R_n)
 
                   !> Calculate the value of 
@@ -1517,10 +1517,10 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
                   n           =  mu_plus - m
                   Omega_n     =  n * WaveField%WaveDOmega
                   Omega_m     =  m * WaveField%WaveDOmega
-                  k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
-                  k_m         =  WaveNumber( Omega_m, InitInp%Gravity, InitInp%WtrDpth )
-                  R_n         =  k_n * tanh( k_n * InitInp%WtrDpth )
-                  R_m         =  k_m * tanh( k_m * InitInp%WtrDpth )
+                  k_n         =  WaveNumber( Omega_n, InitInp%Gravity, WaveField%EffWtrDpth )
+                  k_m         =  WaveNumber( Omega_m, InitInp%Gravity, WaveField%EffWtrDpth )
+                  R_n         =  k_n * tanh( k_n * WaveField%EffWtrDpth )
+                  R_m         =  k_m * tanh( k_m * WaveField%EffWtrDpth )
                   D_plus      =  TransFuncD_plus(n,m,k_n,k_m,R_n,R_m)
 
                      !> Calculate the value of 
@@ -1636,8 +1636,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
             k_nm        =  k_nm_minus( n,m,k_n,k_m )
 
                ! Effect of depth scaling
-            R_n         =  k_n * tanh( k_n * InitInp%WtrDpth )
-            R_m         =  k_m * tanh( k_m * InitInp%WtrDpth )
+            R_n         =  k_n * tanh( k_n * WaveField%EffWtrDpth )
+            R_m         =  k_m * tanh( k_m * WaveField%EffWtrDpth )
 
                ! Transfer function D_minus
             D_minus     =  TransFuncD_minus(n,m,k_n,k_m,R_n,R_m)
@@ -1645,7 +1645,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
                ! Calculation of B_minus
             TransFuncB_minus  =  REAL(InitInp%Gravity*InitInp%Gravity,SiKi) / ( 4.0_SiKi * Omega_n * Omega_m ) &          
-                                 * COSHNumOvrCOSHDen(k_nm, REAL(InitInp%WtrDpth,SiKi), z)  * D_minus / ( Omega_n - Omega_m )
+                                 * COSHNumOvrCOSHDen(k_nm, REAL(WaveField%EffWtrDpth,SiKi), z)  * D_minus / ( Omega_n - Omega_m )
 
 
          ENDIF
@@ -1698,15 +1698,15 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
             k_nm        =  k_nm_plus( n,m,k_n,k_m )
 
                ! Effect of depth scaling
-            R_n         =  k_n * tanh( k_n * InitInp%WtrDpth )
-            R_m         =  k_m * tanh( k_m * InitInp%WtrDpth )
+            R_n         =  k_n * tanh( k_n * WaveField%EffWtrDpth )
+            R_m         =  k_m * tanh( k_m * WaveField%EffWtrDpth )
 
                ! Transfer function D_plus
             D_plus     =  TransFuncD_plus(n,m,k_n,k_m,R_n,R_m)
 
                ! Calculation of B_plus
             TransFuncB_plus  =  REAL(InitInp%Gravity*InitInp%Gravity,SiKi) / ( 4.0_SiKi * Omega_n * Omega_m ) &
-                                 * COSHNumOvrCOSHDen(k_nm, REAL(InitInp%WtrDpth,SiKi), z)  * D_plus / ( Omega_n + Omega_m )
+                                 * COSHNumOvrCOSHDen(k_nm, REAL(WaveField%EffWtrDpth,SiKi), z)  * D_plus / ( Omega_n + Omega_m )
 
 
          ENDIF
@@ -1824,7 +1824,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
             Num2  = 2*SqrtRnMinusRm*SqrtRnMinusRm*( k_n * k_m * COS( D2R_S*WaveField%WaveDirArr(n) - D2R_S*WaveField%WaveDirArr(m) ) + R_n*R_m )
 
                ! Calculate the denominator
-            Den   = SqrtRnMinusRm*SqrtRnMinusRm - k_nm * tanh( k_nm * InitInp%WtrDpth )
+            Den   = SqrtRnMinusRm*SqrtRnMinusRm - k_nm * tanh( k_nm * WaveField%EffWtrDpth )
 
             TransFuncD_minus  = (Num1+Num2) / Den
 
@@ -1888,7 +1888,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
          Num2  = 2*SqrtRnPlusRm*SqrtRnPlusRm*( k_n * k_m * COS( D2R_S*WaveField%WaveDirArr(n) - D2R_S*WaveField%WaveDirArr(m) ) - R_n*R_m )
 
             ! Calculate the denominator
-         Den   = SqrtRnPlusRm*SqrtRnPlusRm - k_nm * tanh( k_nm * InitInp%WtrDpth )
+         Den   = SqrtRnPlusRm*SqrtRnPlusRm - k_nm * tanh( k_nm * WaveField%EffWtrDpth )
 
          TransFuncD_plus  = (Num1+Num2) / Den
 

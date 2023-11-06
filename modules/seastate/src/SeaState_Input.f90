@@ -533,20 +533,13 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
 
       ! WtrDens - Water density.
-
    if ( InputFileData%WtrDens < 0.0 )  then
       call SetErrStat( ErrID_Fatal,'WtrDens must not be negative.',ErrStat,ErrMsg,RoutineName)
       return
    end if
 
-
       ! WtrDpth - Water depth
-
-   ! First adjust water depth based on MSL2SWL values
-   InputFileData%Waves%WtrDpth = InputFileData%WtrDpth + InputFileData%MSL2SWL
-   
-
-   if ( InputFileData%Waves%WtrDpth <= 0.0 )  then
+   if ( InputFileData%WtrDpth + InputFileData%MSL2SWL <= 0.0 )  then
       call SetErrStat( ErrID_Fatal,'WtrDpth + MSL2SWL must be greater than zero.',ErrStat,ErrMsg,RoutineName)
       return
    end if
@@ -564,8 +557,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
    end if
 
        ! Z_Depth - Depth of the domain the Z direction (m)
-
-   if ( ( InputFileData%Z_Depth <= 0.0_ReKi ) .or. ( InputFileData%Z_Depth > InputFileData%Waves%WtrDpth ) ) then
+   if ( ( InputFileData%Z_Depth <= 0.0_ReKi ) .or. ( InputFileData%Z_Depth > InputFileData%WtrDpth + InputFileData%MSL2SWL ) ) then
       call SetErrStat( ErrID_Fatal,'Z_Depth must be greater than zero and less than or equal to the WtrDpth + MSL2SWL.',ErrStat,ErrMsg,RoutineName)
       return
    end if
@@ -1119,7 +1111,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
       ! Current
          ! For wave kinematic calculations, the effective water depth is the user input water depth (positive valued) + MSL2SWL (positive when SWL is above MSL).
-      InputFileData%Current%WtrDpth    = InputFileData%Waves%WtrDpth ! already adjusted for the MSL2SWL.
+      InputFileData%Current%EffWtrDpth  = InputFileData%WtrDpth + InputFileData%MSL2SWL ! adjusted for the MSL2SWL.
 
 
       ! Waves
@@ -1191,7 +1183,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       InputFileData%Waves2%NWaveKinGrid   = InputFileData%Waves%NWaveKinGrid                          ! Number of points where the incident wave kinematics will be computed (-)
       if ( InputFileData%Waves2%WvDiffQTFF .OR. InputFileData%Waves2%WvSumQTFF ) then
          InputFileData%Waves2%Gravity       = InitInp%Gravity
-         InputFileData%Waves2%WtrDpth       = InputFileData%Waves%WtrDpth
          InputFileData%Waves2%NGrid         = p%NGrid
          InputFileData%Waves2%NWaveElevGrid = InputFileData%Waves%NWaveElevGrid
 

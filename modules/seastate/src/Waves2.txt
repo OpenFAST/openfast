@@ -19,7 +19,6 @@ include  Registry_NWTC_Library.txt
 #   e.g.,  the name of the input file,  the file root name,etc.
 #
 typedef     Waves2/Waves2     InitInputType     ReKi                 Gravity           -        -        -        "Gravitational acceleration"  (m/s^2)
-typedef     ^                 ^                 ReKi                 WtrDpth           -        -        -        "Water depth"  (meters)
 
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave"    -
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2"                                       -

@@ -711,8 +711,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
          NWaveKin0Prime = 0
          DO J = 1,InitInp%NWaveKinGrid   ! Loop through all mesh points  where the incident wave kinematics will be computed
-               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
-           IF (    InitInp%WaveKinGridzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
+               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and EffWtrDpth have already been adjusted using MSL2SWL
+           IF (    InitInp%WaveKinGridzi(J) >= -WaveField%EffWtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
                NWaveKin0Prime = NWaveKin0Prime + 1
            END IF
          END DO                ! J - All Morison nodes where the incident wave kinematics will be computed
@@ -736,8 +736,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          I = 1
 
          DO J = 1,InitInp%NWaveKinGrid ! Loop through all points where the incident wave kinematics will be computed without stretching
-               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
-            IF (    InitInp%WaveKinGridzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
+               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and EffWtrDpth have already been adjusted using MSL2SWL
+            IF (    InitInp%WaveKinGridzi(J) >= -WaveField%EffWtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
 
                WaveKinzi0Prime(I) =  InitInp%WaveKinGridzi(J)
                WaveKinPrimeMap(I) =  J
@@ -1036,7 +1036,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
             tmpComplex  = CMPLX(  WaveField%WaveElevC0(1,I),   WaveField%WaveElevC0(2,I))
             
             ! some redundant calculations with later, but insignificant
-            WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, InitInp%WtrDpth )
+            WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, WaveField%EffWtrDpth )
             
             ! apply the phase shift
             tmpComplex = tmpComplex * EXP( -ImagNmbr*WaveNmbr*( InitInp%PtfmLocationX*CosWaveDir(I) + InitInp%PtfmLocationY*SinWaveDir(I) ))
@@ -1069,7 +1069,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
       ! Compute the wavenumber:
 
-         WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, InitInp%WtrDpth )
+         WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, WaveField%EffWtrDpth )
 
       ! Wavenumber-dependent acceleration scaling for MacCamy-Fuchs model
       MCFC = 0.0_ReKi
@@ -1090,12 +1090,12 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
             WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*( InitInp%WaveKinGridxi(WaveKinPrimeMap(J))*CosWaveDir(I) + &
                                                          InitInp%WaveKinGridyi(WaveKinPrimeMap(J))*SinWaveDir(I) ))
 
-            WaveDynPC0 (I,J)     = WaveField%RhoXg*tmpComplex*WaveElevxiPrime0 * COSHNumOvrCOSHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
+            WaveDynPC0 (I,J)     = WaveField%RhoXg*tmpComplex*WaveElevxiPrime0 * COSHNumOvrCOSHDen ( WaveNmbr, WaveField%EffWtrDpth, WaveKinzi0Prime(J) )
 
-            WaveVelC0Hxi (I,J)   = CosWaveDir(I)*OmegaArr(I)*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
-            WaveVelC0Hyi (I,J)   = SinWaveDir(I)*OmegaArr(I)*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
+            WaveVelC0Hxi (I,J)   = CosWaveDir(I)*OmegaArr(I)*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, WaveField%EffWtrDpth, WaveKinzi0Prime(J) )
+            WaveVelC0Hyi (I,J)   = SinWaveDir(I)*OmegaArr(I)*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, WaveField%EffWtrDpth, WaveKinzi0Prime(J) )
 
-            WaveVelC0V (I,J)     = ImagOmega*tmpComplex* WaveElevxiPrime0 * SINHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
+            WaveVelC0V (I,J)     = ImagOmega*tmpComplex* WaveElevxiPrime0 * SINHNumOvrSINHDen ( WaveNmbr, WaveField%EffWtrDpth, WaveKinzi0Prime(J) )
             WaveAccC0Hxi (I,J)   = ImagOmega*        WaveVelC0Hxi (I,J)
 
             WaveAccC0Hyi (I,J)   = ImagOmega*        WaveVelC0Hyi (I,J)
@@ -1116,14 +1116,14 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
                WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*( InitInp%WaveKinGridxi(J)*CosWaveDir(I) + &
                                                             InitInp%WaveKinGridyi(J)*SinWaveDir(I) ))
                ! Partial derivatives at zi = 0
-               PWaveDynPC0BPz0 (I,J) = WaveField%RhoXg*      tmpComplex*WaveElevxiPrime0*WaveNmbr*TANH ( WaveNmbr*InitInp%WtrDpth )
+               PWaveDynPC0BPz0 (I,J) = WaveField%RhoXg*      tmpComplex*WaveElevxiPrime0*WaveNmbr*TANH ( WaveNmbr*WaveField%EffWtrDpth )
                PWaveVelC0HxiPz0(I,J) = CosWaveDir(I)*OmegaArr(I)*tmpComplex*WaveElevxiPrime0*WaveNmbr
                PWaveVelC0HyiPz0(I,J) = SinWaveDir(I)*OmegaArr(I)*tmpComplex*WaveElevxiPrime0*WaveNmbr
             
                IF (I == 0_IntKi) THEN ! Zero frequency component - Need to avoid division by zero.
                  PWaveVelC0VPz0  (I,J) =         0.0_ReKi
                ELSE
-                 PWaveVelC0VPz0  (I,J) =         ImagOmega*tmpComplex*WaveElevxiPrime0*WaveNmbr/TANH ( WaveNmbr*InitInp%WtrDpth )
+                 PWaveVelC0VPz0  (I,J) =         ImagOmega*tmpComplex*WaveElevxiPrime0*WaveNmbr/TANH ( WaveNmbr*WaveField%EffWtrDpth )
                END IF
             
                PWaveAccC0HxiPz0(I,J) =           ImagOmega*PWaveVelC0HxiPz0(I,J)
@@ -1352,9 +1352,9 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
              !  jj = mod( (count-1) /InitInp%NGrid(1), InitInp%NGrid(2) ) + 1
              !  kk = (count-1) / (InitInp%NGrid(1)*InitInp%NGrid(2)) + 1
 
-               IF (   ( InitInp%WaveKinGridzi(count) < -InitInp%WtrDpth ) .OR. ( InitInp%WaveKinGridzi(count) > 0.0 ) ) THEN
+               IF (   ( InitInp%WaveKinGridzi(count) < -WaveField%EffWtrDpth ) .OR. ( InitInp%WaveKinGridzi(count) > 0.0 ) ) THEN
                   ! .TRUE. if the elevation of the point defined by WaveKinGridzi(J) lies below the seabed or above mean sea level (exclusive)
-                  ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
+                  ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and EffWtrDpth have already been adjusted using MSL2SWL
 
                   WaveField%WaveDynP(:,i,j,k  )  = 0.0
                   WaveField%WaveVel (:,i,j,k,:)  = 0.0
@@ -1384,9 +1384,9 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          do k = 1, InitInp%NGrid(3)
             do j = 1, InitInp%NGrid(2)
                do i = 1, InitInp%NGrid(1)
-                  IF (   ( InitInp%WaveKinGridzi(count) < -InitInp%WtrDpth ) .OR. ( InitInp%WaveKinGridzi(count) > 0.0 ) ) THEN
+                  IF (   ( InitInp%WaveKinGridzi(count) < -WaveField%EffWtrDpth ) .OR. ( InitInp%WaveKinGridzi(count) > 0.0 ) ) THEN
                      ! .TRUE. if the elevation of the point defined by WaveKinGridzi(J) lies below the seabed or above mean sea level (exclusive)
-                     ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
+                     ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and EffWtrDpth have already been adjusted using MSL2SWL
                      WaveField%WaveAccMCF(:,i,j,k,:)  = 0.0
                   ELSE
                      ! The elevation of the point defined by WaveKinGridzi(J) must lie between the seabed and the mean sea level (inclusive)
@@ -1528,7 +1528,7 @@ CONTAINS
          ! Loop through the positive frequency components (including zero).
       DO I = 0,InitOut%NStepWave2
 
-         WaveNmbr          = WaveNumber ( OmegaArr(I), InitInp%Gravity, InitInp%WtrDpth )
+         WaveNmbr          = WaveNumber ( OmegaArr(I), InitInp%Gravity, WaveField%EffWtrDpth )
          tmpComplexArr(I)  =  CMPLX(  WaveField%WaveElevC0(1,I),   WaveField%WaveElevC0(2,I))   *          &
                                       EXP( -ImagNmbr*WaveNmbr*(  Xcoord*CosWaveDir(I)+    &
                                                                  Ycoord*SinWaveDir(I) )   )
@@ -2470,7 +2470,7 @@ SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddA
       
       ! Modify the wave phase so that the crest shows up at the right place and the right time
       DO I = 1,InitOut%NStepWave2-1
-         WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, InitInp%WtrDpth )
+         WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, WaveField%EffWtrDpth )
          ConstWavePhase = WaveNmbr*(CosWaveDir(I)*InitInp%CrestXi  + &
                                     SinWaveDir(I)*InitInp%CrestYi) - &
                                     OmegaArr(I)*InitInp%CrestTime

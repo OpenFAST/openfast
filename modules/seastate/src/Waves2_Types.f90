@@ -36,7 +36,6 @@ IMPLICIT NONE
 ! =========  Waves2_InitInputType  =======
   TYPE, PUBLIC :: Waves2_InitInputType
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Gravitational acceleration [(m/s^2)]
-    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [(meters)]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
     LOGICAL  :: WaveMultiDir = .false.      !< Indicates the waves are multidirectional -- set by HydroDyn_Input [-]
@@ -80,7 +79,6 @@ subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    ErrStat = ErrID_None
    ErrMsg  = ''
    DstInitInputData%Gravity = SrcInitInputData%Gravity
-   DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
    DstInitInputData%NStepWave = SrcInitInputData%NStepWave
    DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
    DstInitInputData%WaveMultiDir = SrcInitInputData%WaveMultiDir
@@ -151,7 +149,6 @@ subroutine Waves2_PackInitInput(Buf, Indata)
    character(*), parameter         :: RoutineName = 'Waves2_PackInitInput'
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%Gravity)
-   call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
    call RegPack(Buf, InData%WaveMultiDir)
@@ -187,8 +184,6 @@ subroutine Waves2_UnPackInitInput(Buf, OutData)
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
    call RegUnpack(Buf, OutData%Gravity)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
