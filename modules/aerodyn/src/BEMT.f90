@@ -1281,7 +1281,8 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
    ! calculate inductions using BEMT, applying the DBEMT, and/or skewed wake corrections as applicable:
    ! NOTE that we don't use the DBEMT inputs when calling its CalcOutput routine, so we'll skip calculating them here
    !............................................
-   call BEMT_CalcOutput_Inductions( InputIndex, t, .false., .true., y%phi, u, p, x, xd, z, OtherState, AFInfo, y%axInduction, y%tanInduction, y%chi, m, errStat, errMsg )
+   call BEMT_CalcOutput_Inductions( InputIndex, t, .false., .true., y%phi, u, p, x, xd, z, OtherState, AFInfo, y%axInduction, y%tanInduction, y%chi, m, errStat, errMsg,&
+         y%axInduction_qs, y%tanInduction_qs, y%k, y%k_p, y%F)
    
    !............................................
    ! update phi if necessary (consistent with inductions) and calculate inputs to UA (EVEN if UA isn't used, because we use the inputs later):

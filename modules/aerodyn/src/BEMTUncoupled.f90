@@ -493,13 +493,13 @@ subroutine ApplySkewedWakeCorrection(BEM_Mod, SkewMod, yawCorrFactor, F, azimuth
       
       !bjj: modified 22-Sep-2015: RRD recommends 32 instead of 64 in the denominator (like AD14)
    ! TODO TODO TODO
-   ! ADLEG:
-   !if(BEM_Mod==BEMMod_2D) then
-   yawCorr = ( yawCorrFactor * yawCorr_tan * (tipRatio) * sin(azimuth) ) ! bjj: note that when chi gets close to +/-pi this blows up
-   !else
-   !   ! ADENV:
-   !   yawCorr = ( yawCorrFactor * F * yawCorr_tan * (tipRatio) * cos(azimuth-azimuthOffset) ) ! bjj: note that when chi gets close to +/-pi this blows up
-   !endif
+   if(BEM_Mod==BEMMod_2D) then
+      ! ADLEG:
+      yawCorr = ( yawCorrFactor * yawCorr_tan * (tipRatio) * sin(azimuth) ) ! bjj: note that when chi gets close to +/-pi this blows up
+   else
+      ! ADENV:
+      yawCorr = ( yawCorrFactor * F * yawCorr_tan * (tipRatio) * cos(azimuth-azimuthOffset) ) ! bjj: note that when chi gets close to +/-pi this blows up
+   endif
       
    a = a * (1.0 +  yawCorr)
    

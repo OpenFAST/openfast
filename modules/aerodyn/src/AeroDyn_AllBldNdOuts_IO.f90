@@ -610,7 +610,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
                END DO
             endif
 
-                  
+
             ! AoA, pitch+twist angle, inflow angle, and curvature angle
          CASE ( BldNd_Alpha )
             if (p_AD%WakeMod /= WakeMod_FVW) then
