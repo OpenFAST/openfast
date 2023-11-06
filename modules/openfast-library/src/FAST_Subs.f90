@@ -855,7 +855,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       if (p_FAST%WrVTK /= VTK_None) Init%InData_HD%VisMeshes=.true.
       
       ! if ( p_FAST%CompSeaSt == Module_SeaSt ) then  ! this is always true
-         Init%InData_HD%WtrDpth        =  Init%OutData_SeaSt%WtrDpth
          Init%InData_HD%NStepWave      =  Init%OutData_SeaSt%NStepWave
          Init%InData_HD%NStepWave2     =  Init%OutData_SeaSt%NStepWave2
          Init%InData_HD%WaveMod        =  Init%OutData_SeaSt%WaveMod
@@ -917,7 +916,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    IF ( p_FAST%CompSub == Module_SD ) THEN
 
       IF ( p_FAST%CompHydro == Module_HD ) THEN
-         Init%InData_SD%WtrDpth = Init%OutData_SeaSt%WtrDpth
+         Init%InData_SD%WtrDpth = Init%OutData_SeaSt%WaveField%WtrDpth
       ELSE
          Init%InData_SD%WtrDpth = 0.0_ReKi
       END IF
@@ -1035,12 +1034,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 !      Init%InData_MAP%rootname          =  p_FAST%OutFileRoot        ! Output file name 
       Init%InData_MAP%gravity           =  p_FAST%Gravity    ! This need to be according to g from driver
       Init%InData_MAP%sea_density       =  Init%OutData_SeaSt%WaveField%WtrDens    ! This needs to be set according to seawater density in SeaState
-      Init%InData_MAP%depth             =  Init%OutData_SeaSt%WtrDpth    ! This need to be set according to the water depth in SeaState
 
    ! differences for MAP++
       Init%InData_MAP%file_name         =  p_FAST%MooringFile        ! This needs to be set according to what is in the FAST input file.
       Init%InData_MAP%summary_file_name =  TRIM(p_FAST%OutFileRoot)//'.MAP.sum'        ! Output file name
-      Init%InData_MAP%depth             = -Init%OutData_SeaSt%WtrDpth    ! This need to be set according to the water depth in SeaState
+      Init%InData_MAP%depth             = -Init%OutData_SeaSt%WaveField%WtrDpth    ! This need to be set according to the water depth in SeaState
 
       Init%InData_MAP%LinInitInp%Linearize = p_FAST%Linearize
 
@@ -1088,7 +1086,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       Init%InData_MD%TurbineRefPos(:,1) = 0.0_DbKi                ! for normal FAST use, the global reference frame is at 0,0,0
       Init%InData_MD%g         = p_FAST%Gravity                   ! This need to be according to g used in ElastoDyn
       Init%InData_MD%rhoW      = Init%OutData_SeaSt%WaveField%WtrDens       ! This needs to be set according to seawater density in SeaState
-      Init%InData_MD%WtrDepth  = Init%OutData_SeaSt%WtrDpth       ! This need to be set according to the water depth in SeaState
+      Init%InData_MD%WtrDepth  = Init%OutData_SeaSt%WaveField%WtrDpth       ! This need to be set according to the water depth in SeaState
       Init%InData_MD%Tmax      = p_FAST%TMax                      ! expected simulation duration (used by MoorDyn for wave kinematics preprocesing)
 
       Init%InData_MD%Linearize = p_FAST%Linearize

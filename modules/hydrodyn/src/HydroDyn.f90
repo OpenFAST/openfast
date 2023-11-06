@@ -189,7 +189,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             RETURN
          END IF
       
-      InputFileData%Morison%WtrDpth = InitInp%WtrDpth
+      InputFileData%Morison%WtrDpth = InitInp%WaveField%WtrDpth
       
       InputFileData%Morison%WaveField => InitInp%WaveField
       InputFileData%WAMIT%WaveField   => InitInp%WaveField
@@ -824,7 +824,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       p%OutFmt        = InputFileData%OutFmt
       p%OutSFmt       = InputFileData%OutSFmt
       p%NumOuts       = InputFileData%NumOuts
-      p%WtrDpth       = InputFileData%Morison%WtrDpth
 
 
       CALL HDOUT_Init( HydroDyn_ProgDesc, InitInp%OutRootName, InputFileData, y,  p, m, InitOut, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -2423,7 +2422,7 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
   
    
-   perturb_t = 0.02_ReKi*D2R * max(p%WtrDpth,1.0_ReKi) ! translation input scaling  
+   perturb_t = 0.02_ReKi*D2R * max(p%WaveField%EffWtrDpth,1.0_ReKi) ! translation input scaling  
    perturb   = 2*D2R                 ! rotational input scaling
    
    index = 0

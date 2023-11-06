@@ -404,7 +404,6 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C,                                      
 
    ! Values passed in
    HD%InitInp%Gravity            = REAL(Gravity_C,    ReKi)
-   HD%InitInp%WtrDpth            = REAL(SeaSt%InitOutData%WtrDpth, ReKi)    ! use values from SeaState
    HD%InitInp%TMax               = REAL(TMax_C,       DbKi)
 
    ! Transfer data from SeaState
@@ -682,7 +681,7 @@ CONTAINS
       real(ReKi)                             :: tmpZpos     !< temporary z-position
       ErrStat3 = ErrID_None
       ErrMsg3  = ""
-      tmpZpos=-0.001_ReKi*abs(HD%p%WtrDpth)                    ! Initial comparison value close to surface
+      tmpZpos=-0.001_ReKi*abs(HD%p%WaveField%EffWtrDpth)                    ! Initial comparison value close to surface
       if ( NumNodePts == 1 .and. HD%u(1)%Morison%Mesh%Committed ) then
          do i=1,HD%u(1)%Morison%Mesh%Nnodes
             ! Find lowest Morison node
@@ -690,7 +689,7 @@ CONTAINS
                tmpZpos = HD%u(1)%Morison%Mesh%Position(3,i)
             endif
          enddo
-         if (tmpZpos < -abs(HD%p%WtrDpth)*0.9_ReKi) then       ! within 10% of the seafloor
+         if (tmpZpos < -abs(HD%p%WaveField%EffWtrDpth)*0.9_ReKi) then       ! within 10% of the seafloor
             ErrStat3 = ErrID_Severe
             ErrMsg3  = "Inconsistent model"//NewLine//"   -- Single library input node for simulating rigid floating structure."//  &
                         NewLine//"   -- Lowest Morison node is is in lowest 10% of water depth indicating fixed bottom structure from HydroDyn."// &

@@ -211,29 +211,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InputFileData%Waves%PtfmLocationX = InitInp%PtfmLocationX
       InputFileData%Waves%PtfmLocationY = InitInp%PtfmLocationY
       
-      ! Allocate the WaveFieldType to store wave field information
-      ALLOCATE(p%WaveField, STAT=ErrStat2)
-      IF (ErrStat2 /=0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating WaveField.",ErrStat,ErrMsg,RoutineName)
-         CALL CleanUp()
-         RETURN
-      END IF
-         
-      p%WaveField%MSL2SWL      = InputFileData%MSL2SWL
-      p%WaveField%WaveStMod    = InputFileData%WaveStMod
-      p%WaveField%WtrDens      = InputFileData%WtrDens     ! may have overwritten default InitInp
-      p%WaveField%RhoXg        = p%WaveField%WtrDens*InitInp%Gravity               ! For WAMIT and WAMIT2
-      p%WaveField%WaveDir      = InputFileData%WaveDir
-      p%WaveField%WaveMultiDir = InputFileData%WaveMultiDir
-      p%WaveField%MCFD         = InputFileData%MCFD
-
-      p%WaveField%WvLowCOff    =  InputFileData%WvLowCOff
-      p%WaveField%WvHiCOff     =  InputFileData%WvHiCOff
-      p%WaveField%WvLowCOffD   =  InputFileData%WvLowCOffD
-      p%WaveField%WvHiCOffD    =  InputFileData%WvHiCOffD
-      p%WaveField%WvLowCOffS   =  InputFileData%WvLowCOffS
-      p%WaveField%WvHiCOffS    =  InputFileData%WvHiCOffS
-      p%WaveField%WaveDOmega   =  InputFileData%WaveDOmega          ! For WAMIT and WAMIT2, FIT
       
          ! Initialize Waves module (Note that this may change InputFileData%Waves%WaveDT)
       CALL Waves_Init(InputFileData%Waves, Waves_InitOut, p%WaveField, ErrStat2, ErrMsg2 ) 
@@ -360,11 +337,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ! Define initialization-routine output here:
       InitOut%Ver = SeaSt_ProgDesc         
       ! These three come directly from processing the inputs, and so will exist even if not using Morison elements:
-      InitOut%WtrDpth    = InputFileData%Waves%WtrDpth - InputFileData%MSL2SWL
-      p%WaveField%EffWtrDpth = InputFileData%Waves%WtrDpth  ! Effective water depth measured from the SWL  ! bjj: does WtrDpth change later? Because otherwise EffWtrDpth is the same as WtrDpth
-      
-      p%WtrDpth          = InitOut%WtrDpth  
-      
  
       CALL SeaStOut_Init( SeaSt_ProgDesc, InitInp%OutRootName, InputFileData, y,  p, m, InitOut, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -387,8 +359,8 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       SeaSt_Interp_InitInp%pZero(3) = -InputFileData%Y_HalfWidth
       SeaSt_Interp_InitInp%pZero(4) = -InputFileData%Z_Depth  ! zi
       SeaSt_Interp_InitInp%Z_Depth  = InputFileData%Z_Depth
-      call SeaSt_Interp_Init(SeaSt_Interp_InitInp, p%seast_interp_p,  ErrStat2, ErrMsg2)
-      CALL SeaSt_Interp_CopyParam( p%seast_interp_p, p%WaveField%seast_interp_p, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+      call SeaSt_Interp_Init(SeaSt_Interp_InitInp, p%WaveField%seast_interp_p,  ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       IF ( p%OutSwtch == 1 ) THEN ! Only HD-level output writing
          ! HACK  WE can tell FAST not to write any HD outputs by simply deallocating the WriteOutputHdr array!
@@ -403,10 +375,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        InitOut%NStepWave2   =  Waves_InitOut%NStepWave2          ! For WAMIT and WAMIT2,  FIT
       
        InitOut%WaveMod      =  InputFileData%Waves%WaveMod   
-       ! InitOut%WtrDpth      =  InputFileData%Waves%WtrDpth
        
-      InitOut%SeaSt_Interp_p =  p%seast_interp_p
-      
       InitOut%WaveField => p%WaveField
 
       ! Tell HydroDyn if state-space wave excitation is not allowed:
@@ -444,7 +413,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
          do it = 1,size(p%WaveField%WaveTime)
             do i = 1, size(InitOut%WaveElevSeries,DIM=2)
-               InitOut%WaveElevSeries(it,i) = SeaSt_Interp_3D( real(p%WaveField%WaveTime(it),DbKi), real(InitInp%WaveElevXY(:,i),ReKi), p%WaveField%WaveElev1, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+               InitOut%WaveElevSeries(it,i) = SeaSt_Interp_3D( real(p%WaveField%WaveTime(it),DbKi), real(InitInp%WaveElevXY(:,i),ReKi), p%WaveField%WaveElev1, p%WaveField%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             end do
          end do
@@ -452,7 +421,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          if (allocated(p%WaveField%WaveElev2)) then
             do it = 1,size(p%WaveField%WaveTime)
                do i = 1, size(InitOut%WaveElevSeries,DIM=2)
-                  TmpElev = SeaSt_Interp_3D( real(p%WaveField%WaveTime(it),DbKi), real(InitInp%WaveElevXY(:,i),ReKi), p%WaveField%WaveElev2, p%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+                  TmpElev = SeaSt_Interp_3D( real(p%WaveField%WaveTime(it),DbKi), real(InitInp%WaveElevXY(:,i),ReKi), p%WaveField%WaveElev2, p%WaveField%seast_interp_p, m%seast_interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
                      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   InitOut%WaveElevSeries(it,i) =  InitOut%WaveElevSeries(it,i) + TmpElev
                end do
@@ -510,10 +479,6 @@ CONTAINS
       if (allocated(tmpWaveKinzi ))    deallocate(tmpWaveKinzi )
       if (allocated(tmpWaveElevxi))    deallocate(tmpWaveElevxi)
       if (allocated(tmpWaveElevyi))    deallocate(tmpWaveElevyi)
-    !  if (allocated(WaveElevSt   ))    deallocate(WaveElevSt   )
-    !  if (allocated(WaveVel0     ))    deallocate(WaveVel0     )
-    !  if (allocated(WaveAcc0     ))    deallocate(WaveAcc0     )
-    !  if (allocated(WaveDynP0    ))    deallocate(WaveDynP0    )
       if (allocated(WaveVel2S0   ))    deallocate(WaveVel2S0   )
       if (allocated(WaveAcc2S0   ))    deallocate(WaveAcc2S0   )
       if (allocated(WaveDynP2S0  ))    deallocate(WaveDynP2S0  )

@@ -49,7 +49,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AddCLin      !< Additional stiffness matrix [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AddBLin      !< Additional linear damping matrix [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AddBQuad      !< Additional quadratic damping (drag) matrix [-]
-    TYPE(SeaSt_InitInputType)  :: SeaState      !< Initialization data for SeaState module [-]
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: PotFile      !< The name of the root potential flow file (without extension for WAMIT, complete name for FIT) [-]
     INTEGER(IntKi)  :: nWAMITObj = 0_IntKi      !< number of WAMIT input files.  If NBodyMod = 1 then nPotFiles will be 1 even if NBody > 1 [-]
     INTEGER(IntKi)  :: vecMultiplier = 0_IntKi      !< multiplier for the WAMIT vectors and matrices.  If NBodyMod=1 then this = NBody, else 1 [-]
@@ -89,7 +88,6 @@ IMPLICIT NONE
     CHARACTER(1024)  :: OutRootName      !< Supplied by Driver:  The name of the root file (without extension) including the full path [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
-    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth from the driver; may be overwritten                         [m]
     REAL(DbKi)  :: TMax = 0.0_R8Ki      !< Supplied by Driver:  The total simulation time [(sec)]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
     INTEGER(IntKi)  :: NStepWave = 0      !< Total number of frequency components = total number of time steps in the incident wave [-]
@@ -174,7 +172,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: totalExctnStates = 0_IntKi      !< Number of excitation states for all WAMIT bodies [-]
     INTEGER(IntKi)  :: totalRdtnStates = 0_IntKi      !< Number of radiation states for all WAMIT bodies [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Number of data points in the wave kinematics arrays [-]
-    REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [(m)]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AddF0      !< Additional pre-load forces and moments (N,N,N,N-m,N-m,N-m) [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AddCLin      !< Additional stiffness matrix [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AddBLin      !< Additional linear damping matrix [-]
@@ -276,9 +273,6 @@ subroutine HydroDyn_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, 
       end if
       DstInputFileData%AddBQuad = SrcInputFileData%AddBQuad
    end if
-   call SeaSt_CopyInitInput(SrcInputFileData%SeaState, DstInputFileData%SeaState, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    if (allocated(SrcInputFileData%PotFile)) then
       LB(1:1) = lbound(SrcInputFileData%PotFile)
       UB(1:1) = ubound(SrcInputFileData%PotFile)
@@ -458,8 +452,6 @@ subroutine HydroDyn_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
    if (allocated(InputFileData%AddBQuad)) then
       deallocate(InputFileData%AddBQuad)
    end if
-   call SeaSt_DestroyInitInput(InputFileData%SeaState, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(InputFileData%PotFile)) then
       deallocate(InputFileData%PotFile)
    end if
@@ -527,7 +519,6 @@ subroutine HydroDyn_PackInputFile(Buf, Indata)
       call RegPackBounds(Buf, 3, lbound(InData%AddBQuad), ubound(InData%AddBQuad))
       call RegPack(Buf, InData%AddBQuad)
    end if
-   call SeaSt_PackInitInput(Buf, InData%SeaState) 
    call RegPack(Buf, allocated(InData%PotFile))
    if (allocated(InData%PotFile)) then
       call RegPackBounds(Buf, 1, lbound(InData%PotFile), ubound(InData%PotFile))
@@ -670,7 +661,6 @@ subroutine HydroDyn_UnPackInputFile(Buf, OutData)
       call RegUnpack(Buf, OutData%AddBQuad)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   call SeaSt_UnpackInitInput(Buf, OutData%SeaState) ! SeaState 
    if (allocated(OutData%PotFile)) deallocate(OutData%PotFile)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -880,7 +870,6 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    DstInitInputData%OutRootName = SrcInitInputData%OutRootName
    DstInitInputData%Linearize = SrcInitInputData%Linearize
    DstInitInputData%Gravity = SrcInitInputData%Gravity
-   DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
    DstInitInputData%TMax = SrcInitInputData%TMax
    DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
    DstInitInputData%NStepWave = SrcInitInputData%NStepWave
@@ -916,7 +905,6 @@ subroutine HydroDyn_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%OutRootName)
    call RegPack(Buf, InData%Linearize)
    call RegPack(Buf, InData%Gravity)
-   call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, InData%TMax)
    call RegPack(Buf, InData%VisMeshes)
    call RegPack(Buf, InData%NStepWave)
@@ -953,8 +941,6 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%Linearize)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Gravity)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%TMax)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2072,7 +2058,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    DstParamData%totalExctnStates = SrcParamData%totalExctnStates
    DstParamData%totalRdtnStates = SrcParamData%totalRdtnStates
    DstParamData%NStepWave = SrcParamData%NStepWave
-   DstParamData%WtrDpth = SrcParamData%WtrDpth
    if (allocated(SrcParamData%AddF0)) then
       LB(1:2) = lbound(SrcParamData%AddF0)
       UB(1:2) = ubound(SrcParamData%AddF0)
@@ -2288,7 +2273,6 @@ subroutine HydroDyn_PackParam(Buf, Indata)
    call RegPack(Buf, InData%totalExctnStates)
    call RegPack(Buf, InData%totalRdtnStates)
    call RegPack(Buf, InData%NStepWave)
-   call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, allocated(InData%AddF0))
    if (allocated(InData%AddF0)) then
       call RegPackBounds(Buf, 2, lbound(InData%AddF0), ubound(InData%AddF0))
@@ -2415,8 +2399,6 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%totalRdtnStates)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%AddF0)) deallocate(OutData%AddF0)
    call RegUnpack(Buf, IsAllocAssoc)

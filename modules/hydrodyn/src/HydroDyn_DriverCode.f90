@@ -322,7 +322,6 @@ subroutine SetHD_InitInputs()
    InitInData_HD%Linearize    = drvrData%Linearize
    
    ! Data from InitOutData_SeaSt:
-   InitInData_HD%WtrDpth      = InitOutData_SeaSt%WtrDpth
    InitInData_HD%NStepWave    = InitOutData_SeaSt%NStepWave
    InitInData_HD%NStepWave2   = InitOutData_SeaSt%NStepWave2
    InitInData_HD%WaveMod      = InitOutData_SeaSt%WaveMod

@@ -35,7 +35,6 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     AddCLin                         {:}{:}{:}   -          -         "Additional stiffness matrix"    -
 typedef   ^                            ^                             ReKi                     AddBLin                         {:}{:}{:}   -          -         "Additional linear damping matrix"    -
 typedef   ^                            ^                             ReKi                     AddBQuad                        {:}{:}{:}   -          -         "Additional quadratic damping (drag) matrix"    -
-typedef   ^                            ^                             SeaSt_InitInputType   SeaState                         -          -          -         "Initialization data for SeaState module"    -
 typedef   ^                            ^                             CHARACTER(1024)          PotFile                         {:}        -          -         "The name of the root potential flow file (without extension for WAMIT, complete name for FIT)"    -
 typedef   ^                            ^                             INTEGER                  nWAMITObj                       -          -          -         "number of WAMIT input files.  If NBodyMod = 1 then nPotFiles will be 1 even if NBody > 1" -
 typedef   ^                            ^                             INTEGER                  vecMultiplier                   -          -          -         "multiplier for the WAMIT vectors and matrices.  If NBodyMod=1 then this = NBody, else 1" -
@@ -72,7 +71,6 @@ typedef   ^                            ^                             FileInfoTyp
 typedef   ^                            ^                             CHARACTER(1024)          OutRootName                     -          -          -         "Supplied by Driver:  The name of the root file (without extension) including the full path"    -
 typedef	  ^	                           ^                             Logical	              Linearize                       -       .FALSE.       -         "Flag that tells this module if the glue code wants to linearize."	-
 typedef   ^                            ^                             ReKi                     Gravity                         -          -          -         "Supplied by Driver:  Gravitational acceleration"  "(m/s^2)"
-typedef   ^                            ^                             ReKi                     WtrDpth                         -          -          -         "Water depth from the driver; may be overwritten                        "  "m"
 typedef   ^                            ^                             DbKi                     TMax                            -          -          -         "Supplied by Driver:  The total simulation time"    "(sec)"
 typedef   ^                            ^                             logical                  VisMeshes                       -       .false.       -         "Output visualization meshes" -
 #
@@ -156,7 +154,6 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  totalExctnStates                -          -          -         "Number of excitation states for all WAMIT bodies"        -
 typedef   ^                            ^                             INTEGER                  totalRdtnStates                 -          -          -         "Number of radiation states for all WAMIT bodies"        -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -          -         "Number of data points in the wave kinematics arrays"        -
-typedef   ^                            ^                             ReKi                     WtrDpth                         -          -          -         "Water depth"    (m)
 typedef   ^                            ^                             ReKi                     AddF0                       {:}{:}         -          -         "Additional pre-load forces and moments (N,N,N,N-m,N-m,N-m)"    -
 typedef   ^                            ^                             ReKi                     AddCLin                     {:}{:}{:}      -          -         "Additional stiffness matrix"    -
 typedef   ^                            ^                             ReKi                     AddBLin                     {:}{:}{:}      -          -         "Additional linear damping matrix"    -

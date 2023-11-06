@@ -48,6 +48,7 @@ typedef     ^                 ^                 LOGICAL                  SeaStSu
 typedef     ^                 ^                 CHARACTER(20)            OutFmt            -        -        -  "Output format for numerical results"    -
 typedef     ^                 ^                 CHARACTER(20)            OutSFmt           -        -        -  "Output format for header strings"    -
 typedef     ^                 ^                 INTEGER                  WaveStMod         -        -        -  "Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching}"   -
+typedef     ^                 ^                 ReKi                     WtrDpth           -        -        -  "Water depth, this is necessary to inform glue-code what the module is using for WtrDpth (may not be the glue-code's default)"    (m)
 typedef     ^                 ^                 ReKi                     WtrDens           -        -        -  "Water density, this is necessary to inform glue-code what the module is using for WtrDens (may not be the glue-code's default)"    (kg/m^3)
 typedef     ^                 ^                 INTEGER                  WaveDirMod        -        -        -  "Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6]"   -
 typedef     ^                 ^                 SiKi                     WaveDir           -        -        -  "Incident wave propagation heading direction" (degrees)
@@ -86,13 +87,10 @@ typedef   ^                  ^                      Logical                  Lin
 typedef   ^                  InitOutputType         CHARACTER(ChanLen)       WriteOutputHdr    {:}     -      -  "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
 typedef   ^                  ^                      CHARACTER(ChanLen)       WriteOutputUnt    {:}     -      -  "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
 typedef   ^                  ^                      ProgDesc                 Ver               -       -      -  "Version of SeaState"
-typedef   ^                  ^                      ReKi                     WtrDpth           -       -      -  "Water depth, this is necessary to inform glue-code what the module is using for WtrDpth (may not be the glue-code's default)"    (m)
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
 typedef     ^                 ^                 INTEGER              WaveMod           -        -        -        "Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED }" -
-typedef     ^                 ^                 INTEGER              WaveDirMod        -        -        -        "Directional wave spreading function {0: none, 1: COS2S} [only used if WaveMod=6]"   -
 typedef     ^                 ^                 LOGICAL              InvalidWithSSExctn -       -        -        "Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
-typedef   ^                  ^      SeaSt_Interp_ParameterType       SeaSt_Interp_p     -       -        -        "parameter information from the SeaState Interpolation module"   -
 typedef   ^                  ^                  SiKi                 WaveElevSeries     {:}{:}  -        -        "Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second dimension is XY point number corresponding to second dimension of WaveElevXY." (m)
 typedef   ^                  ^             SeaSt_WaveFieldType      *WaveField          -       -        -        "Pointer to wave field"
 #                            
@@ -141,7 +139,6 @@ typedef   ^                  ^                      INTEGER                  NWa
 typedef   ^                  ^                      SiKi                     WaveKinxi         {:}     -      -  "xi-coordinates for points where the incident wave kinematics can be output; these are relative to the mean sea level"  (meters)
 typedef   ^                  ^                      SiKi                     WaveKinyi         {:}     -      -  "yi-coordinates for points where the incident wave kinematics can be output; these are relative to the mean sea level"  (meters)
 typedef   ^                  ^                      SiKi                     WaveKinzi         {:}     -      -  "zi-coordinates for points where the incident wave kinematics can be output; these are relative to the mean sea level"  (meters)
-typedef   ^                  ^                      ReKi                     WtrDpth           -       -      -  "Water depth"    (m)
 typedef   ^                  ^                      DbKi                     DT                -       -      -  "Time step in seconds for integration of continuous states (if a fixed-step integrator is used) and update of discrete states"        -
 typedef   ^                  ^                      OutParmType              OutParam          {:}     -      -  ""        -
 typedef   ^                  ^                      INTEGER                  NumOuts           -       -      -  "Number of SeaState module-level outputs (not the total number including sub-modules"        -
@@ -151,7 +148,6 @@ typedef   ^                  ^                      CHARACTER(20)            Out
 typedef   ^                  ^                      CHARACTER(1)             Delim             -       -      -  "Delimiter string for outputs, defaults to space"        -
 typedef   ^                  ^                      INTEGER                  UnOutFile         -       -      -  "File unit for the SeaState outputs"        -
 typedef   ^                  ^                      INTEGER                  OutDec            -       -      -  "Write every OutDec time steps"  -
-typedef   ^                  ^                      SeaSt_Interp_ParameterType       SeaSt_Interp_p           -       -      -  "parameter information from the SeaState Interpolation module"   -
 typedef   ^                  ^                      SeaSt_WaveFieldType     &WaveField         -       -      -  "Wave field"
 #
 #

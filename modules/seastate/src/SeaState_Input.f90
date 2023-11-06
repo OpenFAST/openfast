@@ -99,7 +99,7 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
       if (Failed())  return;
 
       ! WtrDpth - Water depth
-   call ParseVarWDefault ( FileInfo_In, CurLine, 'WtrDpth', InputFileData%Waves%WtrDpth, defWtrDpth, ErrStat2, ErrMsg2, UnEc )
+   call ParseVarWDefault ( FileInfo_In, CurLine, 'WtrDpth', InputFileData%WtrDpth, defWtrDpth, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! MSL2SWL
@@ -121,7 +121,7 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
       if (Failed())  return;
 
       ! Z_Depth - Depth of the domain the Z direction.
-   call ParseVarWDefault ( FileInfo_In, CurLine, 'Z_Depth', InputFileData%Z_Depth, defWtrDpth+InputFileData%MSL2SWL, ErrStat2, ErrMsg2, UnEc )
+   call ParseVarWDefault ( FileInfo_In, CurLine, 'Z_Depth', InputFileData%Z_Depth, defWtrDpth+InputFileData%MSL2SWL, ErrStat2, ErrMsg2, UnEc ) !bjj: wouldn't the default be better with InputFileData%WtrDpth + InputFileData%MSL2SWL since we may have specified a WtrDpth already?
       if (Failed())  return;
 
       ! NX - Number of nodes in half of the X-direction domain.
@@ -524,14 +524,12 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       ! Initialize ErrStat
 
    ErrStat = ErrID_None
-   ErrStat2 = ErrID_None
    ErrMsg  = ""
-   ErrMsg2  = ""
 
 
-      !-------------------------------------------------------------------------
-      ! Check environmental conditions
-      !-------------------------------------------------------------------------
+   !-------------------------------------------------------------------------
+   ! Check environmental conditions
+   !-------------------------------------------------------------------------
 
 
       ! WtrDens - Water density.
@@ -545,7 +543,8 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       ! WtrDpth - Water depth
 
    ! First adjust water depth based on MSL2SWL values
-   InputFileData%Waves%WtrDpth = InputFileData%Waves%WtrDpth + InputFileData%MSL2SWL
+   InputFileData%Waves%WtrDpth = InputFileData%WtrDpth + InputFileData%MSL2SWL
+   
 
    if ( InputFileData%Waves%WtrDpth <= 0.0 )  then
       call SetErrStat( ErrID_Fatal,'WtrDpth + MSL2SWL must be greater than zero.',ErrStat,ErrMsg,RoutineName)
@@ -1206,6 +1205,36 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
          InputFileData%Waves2%WaveKinGridzi  = InputFileData%Waves%WaveKinGridzi
       ENDIF
 
+      
+   !------------------------------------------------------------
+   ! Allocate the WaveFieldType to store wave field information
+   !------------------------------------------------------------
+   ALLOCATE(p%WaveField, STAT=ErrStat2)
+   IF (ErrStat2 /=0) THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating WaveField.",ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
+         
+   p%WaveField%WtrDpth      = InputFileData%WtrDpth
+   p%WaveField%MSL2SWL      = InputFileData%MSL2SWL
+   p%WaveField%EffWtrDpth   = InputFileData%WtrDpth + InputFileData%MSL2SWL
+   
+   p%WaveField%WaveStMod    = InputFileData%WaveStMod
+   p%WaveField%WtrDens      = InputFileData%WtrDens     ! may have overwritten default InitInp
+   p%WaveField%RhoXg        = p%WaveField%WtrDens*InitInp%Gravity               ! For WAMIT and WAMIT2
+   p%WaveField%WaveDir      = InputFileData%WaveDir
+   p%WaveField%WaveMultiDir = InputFileData%WaveMultiDir
+   p%WaveField%MCFD         = InputFileData%MCFD
+
+   p%WaveField%WvLowCOff    =  InputFileData%WvLowCOff
+   p%WaveField%WvHiCOff     =  InputFileData%WvHiCOff
+   p%WaveField%WvLowCOffD   =  InputFileData%WvLowCOffD
+   p%WaveField%WvHiCOffD    =  InputFileData%WvHiCOffD
+   p%WaveField%WvLowCOffS   =  InputFileData%WvLowCOffS
+   p%WaveField%WvHiCOffS    =  InputFileData%WvHiCOffS
+   p%WaveField%WaveDOmega   =  InputFileData%WaveDOmega          ! For WAMIT and WAMIT2, FIT
+   
+      
 end subroutine SeaStateInput_ProcessInitData
 
 end module SeaState_Input

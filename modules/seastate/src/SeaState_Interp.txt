@@ -33,10 +33,10 @@ typedef    ^                              MiscVarType       logical      FirstWa
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef  ^                    ParameterType       IntKi     n      4     -     -     "number of evenly-spaced grid points in the t, x, y, and z directions"      -
-typedef  ^                    ParameterType       ReKi      delta  4     -     -     "size between 2 consecutive grid points in each grid direction"            "s,m,m,m"
-typedef  ^                    ParameterType       ReKi      pZero  4     -     -     "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))" "m"
-typedef  ^                    ParameterType       ReKi      Z_Depth - - - "grid depth" m
+typedef  ^                    ParameterType       IntKi     n           4     -     -     "number of evenly-spaced grid points in the t, x, y, and z directions"      -
+typedef  ^                    ParameterType       ReKi      delta       4     -     -     "size between 2 consecutive grid points in each grid direction"            "s,m,m,m"
+typedef  ^                    ParameterType       ReKi      pZero       4     -     -     "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))" "m"
+typedef  ^                    ParameterType       ReKi      Z_Depth     -     -     -     "grid depth" m
 
 
 
