@@ -363,10 +363,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             InputFileData%WAMIT%NStepWave    = InitInp%NStepWave
             InputFileData%WAMIT%NStepWave2   = InitInp%NStepWave2
 
-            ! InputFileData%WAMIT%seast_interp_p = InitInp%WaveField%seast_interp_p
-            CALL SeaSt_Interp_CopyParam(InitInp%WaveField%seast_interp_p, InputFileData%WAMIT%seast_interp_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-              CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-               
             CALL WAMIT_Init(InputFileData%WAMIT, m%u_WAMIT(1), p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1), z%WAMIT, OtherState%WAMIT(1), &
                                     y%WAMIT(1), m%WAMIT(1), Interval, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)

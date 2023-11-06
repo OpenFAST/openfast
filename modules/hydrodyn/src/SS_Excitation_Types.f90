@@ -42,7 +42,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: ExctnDisp = 0_IntKi      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Number of timesteps in the WaveTime array [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: PtfmRefztRot      !< The rotation about zt of the body reference frame(s) from xt/yt [radians]
-    TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
   END TYPE SS_Exc_InitInputType
 ! =======================
@@ -91,7 +90,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C      !< C matrix [-]
     INTEGER(IntKi)  :: numStates = 0      !< Number of states [-]
     REAL(DbKi)  :: Tc = 0.0_R8Ki      !< Time shift [s]
-    TYPE(SeaSt_Interp_ParameterType)  :: SeaSt_Interp_p      !< parameter information from the SeaState Interpolation module [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
   END TYPE SS_Exc_ParameterType
 ! =======================
@@ -136,9 +134,6 @@ subroutine SS_Exc_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
       end if
       DstInitInputData%PtfmRefztRot = SrcInitInputData%PtfmRefztRot
    end if
-   call SeaSt_Interp_CopyParam(SrcInitInputData%SeaSt_Interp_p, DstInitInputData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    DstInitInputData%WaveField => SrcInitInputData%WaveField
 end subroutine
 
@@ -154,8 +149,6 @@ subroutine SS_Exc_DestroyInitInput(InitInputData, ErrStat, ErrMsg)
    if (allocated(InitInputData%PtfmRefztRot)) then
       deallocate(InitInputData%PtfmRefztRot)
    end if
-   call SeaSt_Interp_DestroyParam(InitInputData%SeaSt_Interp_p, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(InitInputData%WaveField)
 end subroutine
 
@@ -174,7 +167,6 @@ subroutine SS_Exc_PackInitInput(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%PtfmRefztRot), ubound(InData%PtfmRefztRot))
       call RegPack(Buf, InData%PtfmRefztRot)
    end if
-   call SeaSt_Interp_PackParam(Buf, InData%SeaSt_Interp_p) 
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
       call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
@@ -217,7 +209,6 @@ subroutine SS_Exc_UnPackInitInput(Buf, OutData)
       call RegUnpack(Buf, OutData%PtfmRefztRot)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   call SeaSt_Interp_UnpackParam(Buf, OutData%SeaSt_Interp_p) ! SeaSt_Interp_p 
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -690,9 +681,6 @@ subroutine SS_Exc_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
    end if
    DstParamData%numStates = SrcParamData%numStates
    DstParamData%Tc = SrcParamData%Tc
-   call SeaSt_Interp_CopyParam(SrcParamData%SeaSt_Interp_p, DstParamData%SeaSt_Interp_p, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    DstParamData%WaveField => SrcParamData%WaveField
 end subroutine
 
@@ -717,8 +705,6 @@ subroutine SS_Exc_DestroyParam(ParamData, ErrStat, ErrMsg)
    if (allocated(ParamData%C)) then
       deallocate(ParamData%C)
    end if
-   call SeaSt_Interp_DestroyParam(ParamData%SeaSt_Interp_p, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    nullify(ParamData%WaveField)
 end subroutine
 
@@ -754,7 +740,6 @@ subroutine SS_Exc_PackParam(Buf, Indata)
    end if
    call RegPack(Buf, InData%numStates)
    call RegPack(Buf, InData%Tc)
-   call SeaSt_Interp_PackParam(Buf, InData%SeaSt_Interp_p) 
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
       call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
@@ -843,7 +828,6 @@ subroutine SS_Exc_UnPackParam(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Tc)
    if (RegCheckErr(Buf, RoutineName)) return
-   call SeaSt_Interp_UnpackParam(Buf, OutData%SeaSt_Interp_p) ! SeaSt_Interp_p 
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return

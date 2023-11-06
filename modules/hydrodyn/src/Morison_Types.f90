@@ -389,6 +389,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: V_rel_n_HiPass      !< High-pass filtered normal relative flow velocity at joints [m/s]
     INTEGER(IntKi)  :: LastIndWave = 0_IntKi      !< Last time index used in the wave kinematics arrays [-]
     TYPE(MeshMapType)  :: VisMeshMap      !< Mesh mapping for visualization mesh [-]
+    TYPE(SeaSt_Interp_MiscVarType)  :: SeaSt_Interp_m      !< misc var information from the SeaState Interpolation module [-]
   END TYPE Morison_MiscVarType
 ! =======================
 ! =========  Morison_ParameterType  =======
@@ -4872,6 +4873,9 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
    call NWTC_Library_CopyMeshMapType(SrcMiscData%VisMeshMap, DstMiscData%VisMeshMap, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   call SeaSt_Interp_CopyMisc(SrcMiscData%SeaSt_Interp_m, DstMiscData%SeaSt_Interp_m, CtrlCode, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 end subroutine
 
 subroutine Morison_DestroyMisc(MiscData, ErrStat, ErrMsg)
@@ -4952,6 +4956,8 @@ subroutine Morison_DestroyMisc(MiscData, ErrStat, ErrMsg)
       deallocate(MiscData%V_rel_n_HiPass)
    end if
    call NWTC_Library_DestroyMeshMapType(MiscData%VisMeshMap, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call SeaSt_Interp_DestroyMisc(MiscData%SeaSt_Interp_m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 end subroutine
 
@@ -5068,6 +5074,7 @@ subroutine Morison_PackMisc(Buf, Indata)
    end if
    call RegPack(Buf, InData%LastIndWave)
    call NWTC_Library_PackMeshMapType(Buf, InData%VisMeshMap) 
+   call SeaSt_Interp_PackMisc(Buf, InData%SeaSt_Interp_m) 
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -5364,6 +5371,7 @@ subroutine Morison_UnPackMisc(Buf, OutData)
    call RegUnpack(Buf, OutData%LastIndWave)
    if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_UnpackMeshMapType(Buf, OutData%VisMeshMap) ! VisMeshMap 
+   call SeaSt_Interp_UnpackMisc(Buf, OutData%SeaSt_Interp_m) ! SeaSt_Interp_m 
 end subroutine
 
 subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)

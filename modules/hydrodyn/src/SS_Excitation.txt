@@ -22,7 +22,6 @@ typedef ^                      ^                   IntKi                        
 typedef ^                      ^                   IntKi                        ExctnDisp        -  - -   "0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]" -
 typedef ^                      ^                   INTEGER                      NStepWave        -  - -   "Number of timesteps in the WaveTime array" -
 typedef ^                      ^                   R8Ki                         PtfmRefztRot    {:} - -   "The rotation about zt of the body reference frame(s) from xt/yt" radians 
-typedef ^                      ^            SeaSt_Interp_ParameterType       SeaSt_Interp_p     -  - -    "parameter information from the SeaState Interpolation module"   -
 typedef ^                      ^                   SeaSt_WaveFieldType         *WaveField       -  - -    "Pointer to SeaState wave field" -
 
 
@@ -63,7 +62,6 @@ typedef ^                      ^                   ReKi                         
 typedef ^                      ^                   ReKi                         C               {:}{:} - -   "C matrix" -
 typedef ^                      ^                   INTEGER                      numStates        -     0 -   "Number of states" -
 typedef ^                      ^                   DbKi                         Tc               -     - -   "Time shift" s
-typedef     ^                 ^                 SeaSt_Interp_ParameterType      SeaSt_Interp_p   -  -     -  "parameter information from the SeaState Interpolation module"   -
 typedef ^                      ^                   SeaSt_WaveFieldType         *WaveField       -   -   -    "Pointer to SeaState wave field" -
 
 # ..... Inputs .............................

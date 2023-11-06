@@ -42,8 +42,7 @@ typedef   ^                            ^                             Conv_Rdtn_I
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave2                      -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  WaveMod                         -          -        -         ""    -
-typedef   ^                            ^                 SeaSt_Interp_ParameterType           SeaSt_Interp_p                  -          -        -         "parameter information from the SeaState Interpolation module"   -
-typedef   ^                            ^                 SeaSt_WaveFieldType                 *WaveField                       -          -        -         "Pointer to wave field"
+typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                       -          -        -         "Pointer to wave field"
 
 #
 #
@@ -121,7 +120,7 @@ typedef   ^                            ^                             Conv_Rdtn_P
 typedef   ^                            ^                             SS_Rad_ParameterType     SS_Rdtn                  -          -         -         ""        -
 typedef   ^                            ^                             SS_Exc_ParameterType     SS_Exctn                 -          -         -         ""        -
 typedef   ^                            ^                             DbKi                     DT                       -          -         -         ""        -
-typedef     ^                 ^                 SeaSt_Interp_ParameterType                    SeaSt_Interp_p           -          -         -         "parameter information from the SeaState Interpolation module"   -
+typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                -          -        -         "Pointer to wave field"
 #
 #
 # ..... Inputs ....................................................................................................................

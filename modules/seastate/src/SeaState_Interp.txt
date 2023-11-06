@@ -24,11 +24,11 @@ typedef  ^                             InitOutputType       ProgDesc  Ver    -  
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef    ^                              MiscVarType       SiKi         N3D         {8} - -  "this is the 3-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field" -
-typedef    ^                              MiscVarType       SiKi         N4D         {16} - -  "this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field" -
-typedef    ^                              MiscVarType       integer      Indx_Lo    4 - -  "this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field" -
-typedef    ^                              MiscVarType       integer      Indx_Hi    4 - -  "this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field" -
-typedef    ^                              MiscVarType       logical      FirstWarn_Clamp -  .true.  - "used to avoid too many 'Position has been clamped to the grid boundary' warning messages " -
+typedef    ^                              MiscVarType       SiKi         N3D           {8}     -    -  "this is the weighting function for 3-d velocity field" -
+typedef    ^                              MiscVarType       SiKi         N4D           {16}    -    -  "this is the weighting function for 4-d velocity field" -
+typedef    ^                              MiscVarType       integer      Indx_Lo         4     -    -  "this is the index into the 4-d velocity field for each wave component" -
+typedef    ^                              MiscVarType       integer      Indx_Hi         4     -    -  "this is the index into the 4-d velocity field for each wave component" -
+typedef    ^                              MiscVarType       logical      FirstWarn_Clamp -  .true.  -  "used to avoid too many 'Position has been clamped to the grid boundary' warning messages " -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:

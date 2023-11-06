@@ -111,7 +111,7 @@ function GetWaveElevation ( time, u_in, t_in, p, m, ErrStat, ErrMsg )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
       do iBody = 1, p%NBody  
-         GetWaveElevation(iBody) = SeaSt_Interp_3D( time, u_out%PtfmPos(1:2,iBody), p%WaveField%WaveElev1, p%SeaSt_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
+         GetWaveElevation(iBody) = SeaSt_Interp_3D( time, u_out%PtfmPos(1:2,iBody), p%WaveField%WaveElev1, p%WaveField%SeaSt_interp_p, m%SeaSt_Interp_m%FirstWarn_Clamp, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end do
 
@@ -171,7 +171,6 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     
       ! Set wave field data and parameters from InitInp:
     p%NStepWave = InitInp%NStepWave
-    p%SeaSt_Interp_p = InitInp%SeaSt_Interp_p
     p%WaveField => InitInp%WaveField
       
     p%ExctnDisp =  InitInp%ExctnDisp
