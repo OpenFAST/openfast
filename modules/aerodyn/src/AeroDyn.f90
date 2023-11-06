@@ -4298,6 +4298,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
    integer(IntKi)                                :: ErrStat2
    character(ErrMsgLen)                          :: ErrMsg2
    character(*), parameter                       :: RoutineName = 'Init_BEMTmodule'
+   character(1024) :: Label
 
    ! note here that each blade is required to have the same number of nodes
    
@@ -4439,15 +4440,47 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
    else if (p%AeroBEM_Mod== BEMMod_3D_MomCorr) then
          InitInp%BEM_Mod  = BEMMod_3D
          InitInp%MomentumCorr = .TRUE. 
+   else if (p%AeroBEM_Mod== BEMMod_3D_MomCorr_SA) then
+         InitInp%BEM_Mod  = BEMMod_3D
+         InitInp%MomentumCorr = .TRUE. 
+         ! HACK
+         p_AD%SectAvg        = .TRUE.
+         !p_AD%SA_PsiBwd      = -30*D2R
+         !p_AD%SA_PsiFwd      = 30*D2R
+         !p_AD%SA_nPerSec     = 5
+
    endif
    p%AeroBEM_Mod = InitInp%BEM_Mod ! Very important, for consistency
    ! 
 
-   if (InitInp%MomentumCorr) then
-      call WrScr('   AeroDyn: projMod: '//trim(num2lstr(p%AeroProjMod))//', BEM_Mod:'//trim(num2lstr(InitInp%BEM_Mod))//', Momentum Correction')
-   else 
-      call WrScr('   AeroDyn: projMod: '//trim(num2lstr(p%AeroProjMod))//', BEM_Mod:'//trim(num2lstr(InitInp%BEM_Mod)))
+   ! --- Print BEM formulation to screen
+   Label = ''
+   if (p%AeroProjMod==APM_BEM_NoSweepPitchTwist) then
+      Label='Projection: legacy (NoSweepPitchTwist)'
+   elseif (p%AeroProjMod==APM_BEM_Polar) then
+      Label='Projection: Polar'
+   elseif (p%AeroProjMod==APM_LiftingLine) then
+      Label='Projection: Lifting Line'
+   else
+      print*,'Invalid projection method'
+      STOP
    endif
+   if (InitInp%BEM_Mod==BEMMod_2D) then
+      Label = trim(Label)//', BEM: legacy (2D)'
+   elseif (InitInp%BEM_Mod==BEMMod_3D) then
+      Label = trim(Label)//', BEM: 3D'
+   else
+      print*,'Invalid BEM method'
+      STOP
+   endif
+   if (InitInp%MomentumCorr) then
+      Label = trim(Label)//', MomentumCorrection'
+   endif
+   if (p_AD%SectAvg) then
+      Label = trim(Label)//', Sector Average'
+   endif
+   call WrScr('   '//trim(Label))
+
       ! remove the ".AD" from the RootName
    k = len_trim(InitInp%RootName)
    if (k>3) then

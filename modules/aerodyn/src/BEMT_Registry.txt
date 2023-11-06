@@ -25,6 +25,7 @@ param     BEMT/BEMT                   -                              INTEGER    
 param     BEMT/BEMT                   -                              INTEGER                 BEMMod_2D                   -      0     -   "2D BEM assuming Cx, Cy, phi, L, D are in the same plane" -
 param     BEMT/BEMT                   -                              INTEGER                 BEMMod_3D                   -      2     -   "3D BEM assuming a momentum balance system, and an airfoil system" -
 param     BEMT/BEMT                   -                              INTEGER                 BEMMod_3D_MomCorr           -      250   -   "3D BEM - Momentum Correction" 
+param     BEMT/BEMT                   -                              INTEGER                 BEMMod_3D_MomCorr_SA        -      500   -   "3D BEM - Shear sector average" 
 
 #
 #
