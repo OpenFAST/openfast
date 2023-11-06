@@ -90,6 +90,21 @@ real(ReKi) function ComputePhiWithInduction( Vx, Vy, a, aprime, cantAngle, xVelC
    
 end function ComputePhiWithInduction
  
+subroutine ComputePhiFromInductions(u, p, phi, axInduction, tanInduction)
+   type(BEMT_InputType),         intent(in   ) :: u
+   type(BEMT_ParameterType),     intent(in   ) :: p
+   real(ReKi),                   intent(inout) :: phi(:,:)
+   real(ReKi),                   intent(in   ) :: axInduction(:,:)
+   real(ReKi),                   intent(in   ) :: tanInduction(:,:)
+   integer(IntKi)                              :: i, j
+   do j = 1,p%numBlades ! Loop through all blades
+      do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
+         phi(i,j) = ComputePhiWithInduction( u%Vx(i,j), u%Vy(i,j),  axInduction(i,j), tanInduction(i,j), u%cantAngle(i,j), u%xVelCorr(i,j) )
+      enddo             ! I - Blade nodes / elements
+   enddo          ! J - All blades
+end subroutine ComputePhiFromInductions
+
+ 
 !----------------------------------------------------------------------------------------------------------------------------------   
 subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMsg )
 ! This routine is called from BEMT_Init.
@@ -175,7 +190,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    p%MomentumCorr   = InitInp%MomentumCorr
    p%BEM_Mod        = InitInp%BEM_Mod
    !call WrScr('>>>> BEM_Mod '//trim(num2lstr(p%BEM_Mod)))
-   if ((p%BEM_Mod/=BEMMod_2D .and. p%BEM_Mod/=BEMMod_3D )) then
+   if (.not.(ANY( p%BEM_Mod == (/BEMMod_2D, BEMMod_3D/)))) then
       call SetErrStat( ErrID_Fatal, 'BEM_Mod needs to be 0 or 2 for now', errStat, errMsg, RoutineName )
       return
    endif

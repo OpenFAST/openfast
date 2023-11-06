@@ -504,7 +504,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
             InitInp%AD%rotors(iWT)%AeroProjMod = wt%projMod
          endif
          InitInp%AD%rotors(iWT)%AeroBEM_Mod = wt%BEM_Mod
-         !call WrScr('   Driver:  projMod: '//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroProjMod))//', BEM_Mod:'//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroBEM_Mod)))
+         call WrScr('   Driver:  projMod: '//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroProjMod))//', BEM_Mod:'//trim(num2lstr(InitInp%AD%rotors(iWT)%AeroBEM_Mod)))
          InitInp%AD%rotors(iWT)%HubPosition    = y_ED%HubPtMotion%Position(:,1)
          InitInp%AD%rotors(iWT)%HubOrientation = y_ED%HubPtMotion%RefOrientation(:,:,1)
          InitInp%AD%rotors(iWT)%NacellePosition    = y_ED%NacelleMotion%Position(:,1)
@@ -1012,6 +1012,9 @@ subroutine Dvr_ReadInputFile(fileName, dvr, errStat, errMsg )
          wt%BEM_Mod = -1
       else
          call ParseVar(FileInfo_In, CurLine, 'BEM_Mod'//sWT    , wt%BEM_Mod     , errStat2, errMsg2, unEc); if(Failed()) return
+        ! call WrScr('>>> Driver: ProjMod and BEM_Mod are present in AeroDyn driver input file. ProjMod: '//trim(num2lstr(wt%projMod))//' BEM_Mod: '//trim(num2lstr(wt%BEM_Mod)))
+         print*,'>>> Driver:  ProjMod, BEM_Mod:',wt%ProjMod, wt%BEM_Mod
+
       endif
       call ParseVar(FileInfo_In, CurLine, 'BasicHAWTFormat'//sWT    , wt%basicHAWTFormat       , errStat2, errMsg2, unEc); if(Failed()) return
 

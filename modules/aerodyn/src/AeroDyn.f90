@@ -374,9 +374,14 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! set the rest of the parameters
    p%SkewMod = InputFileData%SkewMod
    do iR = 1, nRotors
-      !p%rotors(iR)%AeroProjMod = InitInp%rotors(iR)%AeroProjMod
-      p%rotors(iR)%AeroProjMod = AeroProjMod(iR)
+      p%rotors(iR)%AeroProjMod = InitInp%rotors(iR)%AeroProjMod
+      !p%rotors(iR)%AeroProjMod = AeroProjMod(iR)
       p%rotors(iR)%AeroBEM_Mod = InitInp%rotors(iR)%AeroBEM_Mod
+      call WrScr('   AeroDyn: projMod: '//trim(num2lstr(p%rotors(iR)%AeroProjMod))//', BEM_Mod:'//trim(num2lstr(p%rotors(iR)%AeroBEM_Mod)))      
+      if (AeroProjMod(iR) == APM_BEM_Polar .and. InputFileData%WakeMod==WakeMod_FVW) then
+         call WrScr('AeroProj cannot be 2 (somehow) when using OLAF - Aborting')
+         STOP
+      endif
       call SetParameters( InitInp, InputFileData, InputFileData%rotors(iR), p%rotors(iR), p, ErrStat2, ErrMsg2 )
       if (Failed()) return;
    enddo
@@ -3545,7 +3550,7 @@ subroutine SetOutputsFromBEMT( p, u, m, y )
    real(reki)                              :: c                      ! local chord length 
    real(reki)                              :: aoa                    ! local angle of attack 
    real(reki)                              :: Cl,Cd,Cm               ! local airfoil lift, drag and pitching moment coefficients 
-   real(reki)                              :: Cn,Ct                  ! local airfoil normal and tangential force coefficients 
+   real(reki)                              :: Cxa,Cya                ! local airfoil normal and tangential force coefficients 
    
   
    do k=1,p%NumBlades
@@ -3556,14 +3561,14 @@ subroutine SetOutputsFromBEMT( p, u, m, y )
          Cl  = m%BEMT_y%cl(j,k)
          Cd  = m%BEMT_y%cd(j,k)
          Cm  = m%BEMT_y%cm(j,k)
-         Cn  =  Cl*cos(aoa) + Cd*sin(aoa)
-         Ct  = -Cl*sin(aoa) + Cd*cos(aoa) ! NOTE: this is not Ct but Cy_a (y_a going towards the TE)
+         Cxa =  Cl*cos(aoa) + Cd*sin(aoa)
+         Cya = -Cl*sin(aoa) + Cd*cos(aoa)
 
          ! Dimensionalize the aero forces and moment
          q = 0.5 * p%airDens * m%BEMT_y%Vrel(j,k)**2              ! dynamic pressure of the jth node in the kth blade
          c = p%BEMT%chord(j,k)
-         forceAirfoil(1)  = Cn * q * c
-         forceAirfoil(2)  = Ct * q * c
+         forceAirfoil(1)  = Cxa * q * c
+         forceAirfoil(2)  = Cya * q * c
          forceAirfoil(3)  = 0.0_reki
          momentAirfoil(1) = 0.0_reki
          momentAirfoil(2) = 0.0_reki
@@ -4429,9 +4434,18 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
          InitInp%BEM_Mod    = -1
          call SetErrStat(ErrID_Fatal, "AeroProjMod needs to be 1 or 2 when used with BEM", ErrStat, ErrMsg, RoutineName)   
       endif
+   else if (p%AeroBEM_Mod== BEMMod_3D_MomCorr) then
+         InitInp%BEM_Mod  = BEMMod_3D
+         InitInp%MomentumCorr = .TRUE. 
    endif
    p%AeroBEM_Mod = InitInp%BEM_Mod ! Very important, for consistency
-   !call WrScr('   AeroDyn: projMod: '//trim(num2lstr(p%AeroProjMod))//', BEM_Mod:'//trim(num2lstr(InitInp%BEM_Mod)))
+   ! 
+
+   if (InitInp%MomentumCorr) then
+      call WrScr('   AeroDyn: projMod: '//trim(num2lstr(p%AeroProjMod))//', BEM_Mod:'//trim(num2lstr(InitInp%BEM_Mod))//', Momentum Correction')
+   else 
+      call WrScr('   AeroDyn: projMod: '//trim(num2lstr(p%AeroProjMod))//', BEM_Mod:'//trim(num2lstr(InitInp%BEM_Mod)))
+   endif
       ! remove the ".AD" from the RootName
    k = len_trim(InitInp%RootName)
    if (k>3) then
