@@ -410,7 +410,6 @@ SUBROUTINE HydroDyn_C_Init( OutRootName_C,                                      
    ! Need to set up other module's InitInput data here because we will also need to clean up SeaState data and would rather not defer that cleanup
    HD%InitInp%NStepWave      =  SeaSt%InitOutData%NStepWave
    HD%InitInp%NStepWave2     =  SeaSt%InitOutData%NStepWave2
-   HD%InitInp%WaveMod        =  SeaSt%InitOutData%WaveMod
    HD%InitInp%InvalidWithSSExctn = SeaSt%InitOutData%InvalidWithSSExctn
 
    HD%InitInp%WaveField      => SeaSt%InitOutData%WaveField ! can be set regardless of association(); if not associated, HD shouldn't work

@@ -61,6 +61,8 @@ typedef     ^                 ^                 SiKi                     WvHiCOf
 typedef     ^                 ^                 SiKi                     WvLowCOffS        -        -        -  "Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
 typedef     ^                 ^                 SiKi                     WvHiCOffS         -        -        -  "Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
 typedef     ^                 ^                 SiKi                     WaveDOmega        -        -        -  "Frequency step for incident wave calculations" (rad/s)
+typedef     ^                 ^                 INTEGER                  WaveMod           -        -        -  "Incident wave kinematics model: See valid values in SeaSt_WaveField module parameters." -
+typedef     ^                 ^                 CHARACTER(80)            WaveModChr        -        -        -  "String to temporarially hold the value of the wave kinematics input line"
 
 
 typedef   SeaState/SeaSt     InitInputType          CHARACTER(1024)          InputFile                       -          -          -         "Supplied by Driver:  full path and filename for the SeaState module"    -
@@ -89,7 +91,6 @@ typedef   ^                  ^                      CHARACTER(ChanLen)       Wri
 typedef   ^                  ^                      ProgDesc                 Ver               -       -      -  "Version of SeaState"
 typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
 typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
-typedef     ^                 ^                 INTEGER              WaveMod           -        -        -        "Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED }" -
 typedef     ^                 ^                 LOGICAL              InvalidWithSSExctn -       -        -        "Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
 typedef   ^                  ^                  SiKi                 WaveElevSeries     {:}{:}  -        -        "Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second dimension is XY point number corresponding to second dimension of WaveElevXY." (m)
 typedef   ^                  ^             SeaSt_WaveFieldType      *WaveField          -       -        -        "Pointer to wave field"

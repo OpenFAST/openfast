@@ -45,8 +45,6 @@ IMPLICIT NONE
     REAL(SiKi)  :: WaveDirRange = 0.0_R4Ki      !< Range of wave directions (full range: WaveDir +/- WaveDirRange/2) [only used if WaveMod=6] [(degrees)]
     REAL(DbKi)  :: WaveDT = 0.0_R8Ki      !< Time step for incident wave calculations [(sec)]
     REAL(SiKi)  :: WaveHs = 0.0_R4Ki      !< Significant wave height of incident waves [(meters)]
-    INTEGER(IntKi)  :: WaveMod = 0_IntKi      !< Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED } [-]
-    CHARACTER(80)  :: WaveModChr      !< String to temporarially hold the value of the wave kinematics input line [-]
     LOGICAL  :: WaveNDAmp = .false.      !< Flag for normally-distributed amplitudes in incident waves spectrum [flag] [-]
     REAL(SiKi)  :: WavePhase = 0.0_R4Ki      !< Specified phase for regular waves [(radians)]
     REAL(SiKi)  :: WavePkShp = 0.0_R4Ki      !< Peak shape parameter of incident wave spectrum [1.0 for Pierson-Moskowitz] [-]
@@ -106,8 +104,6 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%WaveDirRange = SrcInitInputData%WaveDirRange
    DstInitInputData%WaveDT = SrcInitInputData%WaveDT
    DstInitInputData%WaveHs = SrcInitInputData%WaveHs
-   DstInitInputData%WaveMod = SrcInitInputData%WaveMod
-   DstInitInputData%WaveModChr = SrcInitInputData%WaveModChr
    DstInitInputData%WaveNDAmp = SrcInitInputData%WaveNDAmp
    DstInitInputData%WavePhase = SrcInitInputData%WavePhase
    DstInitInputData%WavePkShp = SrcInitInputData%WavePkShp
@@ -235,8 +231,6 @@ subroutine Waves_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%WaveDirRange)
    call RegPack(Buf, InData%WaveDT)
    call RegPack(Buf, InData%WaveHs)
-   call RegPack(Buf, InData%WaveMod)
-   call RegPack(Buf, InData%WaveModChr)
    call RegPack(Buf, InData%WaveNDAmp)
    call RegPack(Buf, InData%WavePhase)
    call RegPack(Buf, InData%WavePkShp)
@@ -312,10 +306,6 @@ subroutine Waves_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%WaveDT)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveHs)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveModChr)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveNDAmp)
    if (RegCheckErr(Buf, RoutineName)) return

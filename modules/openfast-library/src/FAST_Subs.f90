@@ -857,7 +857,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       ! if ( p_FAST%CompSeaSt == Module_SeaSt ) then  ! this is always true
          Init%InData_HD%NStepWave      =  Init%OutData_SeaSt%NStepWave
          Init%InData_HD%NStepWave2     =  Init%OutData_SeaSt%NStepWave2
-         Init%InData_HD%WaveMod        =  Init%OutData_SeaSt%WaveMod
          Init%InData_HD%InvalidWithSSExctn = Init%OutData_SeaSt%InvalidWithSSExctn
 
          Init%InData_HD%WaveField => Init%OutData_SeaSt%WaveField

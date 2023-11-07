@@ -59,7 +59,6 @@ IMPLICIT NONE
     TYPE(Conv_Rdtn_InitInputType)  :: Conv_Rdtn      !<  [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !<  [-]
-    INTEGER(IntKi)  :: WaveMod = 0_IntKi      !<  [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
   END TYPE WAMIT_InitInputType
 ! =======================
@@ -257,7 +256,6 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    if (ErrStat >= AbortErrLev) return
    DstInitInputData%NStepWave = SrcInitInputData%NStepWave
    DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
-   DstInitInputData%WaveMod = SrcInitInputData%WaveMod
    DstInitInputData%WaveField => SrcInitInputData%WaveField
 end subroutine
 
@@ -351,7 +349,6 @@ subroutine WAMIT_PackInitInput(Buf, Indata)
    call Conv_Rdtn_PackInitInput(Buf, InData%Conv_Rdtn) 
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
-   call RegPack(Buf, InData%WaveMod)
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
       call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
@@ -496,8 +493,6 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NStepWave2)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveMod)
    if (RegCheckErr(Buf, RoutineName)) return
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
    call RegUnpack(Buf, IsAllocAssoc)

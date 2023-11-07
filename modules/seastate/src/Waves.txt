@@ -28,8 +28,6 @@ typedef     ^                 ^                 SiKi                 WaveDirSpre
 typedef     ^                 ^                 SiKi                 WaveDirRange      -        -        -        "Range of wave directions (full range: WaveDir +/- WaveDirRange/2) [only used if WaveMod=6]"   (degrees)
 typedef     ^                 ^                 DbKi                 WaveDT            -        -        -        "Time step for incident wave calculations"   (sec)
 typedef     ^                 ^                 SiKi                 WaveHs            -        -        -        "Significant wave height of incident waves"  (meters)
-typedef     ^                 ^                 INTEGER              WaveMod           -        -        -        "Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED }" -
-typedef     ^                 ^                 CHARACTER(80)        WaveModChr        -        -        -        "String to temporarially hold the value of the wave kinematics input line"
 typedef     ^                 ^                 LOGICAL              WaveNDAmp         -        -        -        "Flag for normally-distributed amplitudes in incident waves spectrum [flag]"  -
 typedef     ^                 ^                 SiKi                 WavePhase         -        -        -        "Specified phase for regular waves"    (radians)
 typedef     ^                 ^                 SiKi                 WavePkShp         -        -        -        "Peak shape parameter of incident wave spectrum [1.0 for Pierson-Moskowitz]"  -

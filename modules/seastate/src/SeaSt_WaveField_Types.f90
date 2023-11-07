@@ -36,6 +36,15 @@ USE NWTC_Library
 IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_None = 0      ! WaveDirMod = 0 [Directional spreading function is NONE] [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveDirMod_COS2S = 1      ! WaveDirMod = 1 [Directional spreading function is COS2S] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_None = 0      ! WaveMod = 0   [Incident wave kinematics model: NONE (still water)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_Regular = 1      ! WaveMod = 1   [Incident wave kinematics model: Regular (periodic)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_RegularUsrPh = 10      ! WaveMod = 1P# [Incident wave kinematics model: Regular (user specified phase)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_JONSWAP = 2      ! WaveMod = 2   [Incident wave kinematics model: JONSWAP/Pierson-Moskowitz spectrum (irregular)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_WhiteNoise = 3      ! WaveMod = 3   [Incident wave kinematics model: White noise spectrum (irregular)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserSpctrm = 4      ! WaveMod = 4   [Incident wave kinematics model: user-defined spectrum from routine UserWaveSpctrm (irregular)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtElev = 5      ! WaveMod = 5   [Incident wave kinematics model: Externally generated wave-elevation time series] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_ExtFull = 6      ! WaveMod = 6   [Incident wave kinematics model: Externally generated full wave-kinematics time series (invalid for PotMod/=0)] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: WaveMod_UserFreq = 7      ! WaveMod = 7   [Incident wave kinematics model: user-defined wave frequency components] [-]
 ! =========  SeaSt_WaveFieldType  =======
   TYPE, PUBLIC :: SeaSt_WaveFieldType
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveTime      !< Time array [(s)]
@@ -72,6 +81,7 @@ IMPLICIT NONE
     REAL(SiKi)  :: WvLowCOffS = 0.0_R4Ki      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
     REAL(SiKi)  :: WvHiCOffS = 0.0_R4Ki      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
     REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
+    INTEGER(IntKi)  :: WaveMod = 0_IntKi      !< Incident wave kinematics model: See valid values in SeaSt_WaveField module parameters. [-]
   END TYPE SeaSt_WaveFieldType
 ! =======================
 CONTAINS
@@ -289,6 +299,7 @@ subroutine SeaSt_WaveField_CopySeaSt_WaveFieldType(SrcSeaSt_WaveFieldTypeData, D
    DstSeaSt_WaveFieldTypeData%WvLowCOffS = SrcSeaSt_WaveFieldTypeData%WvLowCOffS
    DstSeaSt_WaveFieldTypeData%WvHiCOffS = SrcSeaSt_WaveFieldTypeData%WvHiCOffS
    DstSeaSt_WaveFieldTypeData%WaveDOmega = SrcSeaSt_WaveFieldTypeData%WaveDOmega
+   DstSeaSt_WaveFieldTypeData%WaveMod = SrcSeaSt_WaveFieldTypeData%WaveMod
 end subroutine
 
 subroutine SeaSt_WaveField_DestroySeaSt_WaveFieldType(SeaSt_WaveFieldTypeData, ErrStat, ErrMsg)
@@ -448,6 +459,7 @@ subroutine SeaSt_WaveField_PackSeaSt_WaveFieldType(Buf, Indata)
    call RegPack(Buf, InData%WvLowCOffS)
    call RegPack(Buf, InData%WvHiCOffS)
    call RegPack(Buf, InData%WaveDOmega)
+   call RegPack(Buf, InData%WaveMod)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -705,6 +717,8 @@ subroutine SeaSt_WaveField_UnPackSeaSt_WaveFieldType(Buf, OutData)
    call RegUnpack(Buf, OutData%WvHiCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDOmega)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveMod)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 END MODULE SeaSt_WaveField_Types

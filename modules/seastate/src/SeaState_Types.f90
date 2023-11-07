@@ -80,6 +80,8 @@ IMPLICIT NONE
     REAL(SiKi)  :: WvLowCOffS = 0.0_R4Ki      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
     REAL(SiKi)  :: WvHiCOffS = 0.0_R4Ki      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
     REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
+    INTEGER(IntKi)  :: WaveMod = 0_IntKi      !< Incident wave kinematics model: See valid values in SeaSt_WaveField module parameters. [-]
+    CHARACTER(80)  :: WaveModChr      !< String to temporarially hold the value of the wave kinematics input line [-]
   END TYPE SeaSt_InputFile
 ! =======================
 ! =========  SeaSt_InitInputType  =======
@@ -109,7 +111,6 @@ IMPLICIT NONE
     TYPE(ProgDesc)  :: Ver      !< Version of SeaState [-]
     INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
     INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
-    INTEGER(IntKi)  :: WaveMod = 0_IntKi      !< Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED } [-]
     LOGICAL  :: InvalidWithSSExctn = .false.      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevSeries      !< Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second dimension is XY point number corresponding to second dimension of WaveElevXY. [(m)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
@@ -309,6 +310,8 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
    DstInputFileData%WvLowCOffS = SrcInputFileData%WvLowCOffS
    DstInputFileData%WvHiCOffS = SrcInputFileData%WvHiCOffS
    DstInputFileData%WaveDOmega = SrcInputFileData%WaveDOmega
+   DstInputFileData%WaveMod = SrcInputFileData%WaveMod
+   DstInputFileData%WaveModChr = SrcInputFileData%WaveModChr
 end subroutine
 
 subroutine SeaSt_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
@@ -415,6 +418,8 @@ subroutine SeaSt_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%WvLowCOffS)
    call RegPack(Buf, InData%WvHiCOffS)
    call RegPack(Buf, InData%WaveDOmega)
+   call RegPack(Buf, InData%WaveMod)
+   call RegPack(Buf, InData%WaveModChr)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -574,6 +579,10 @@ subroutine SeaSt_UnPackInputFile(Buf, OutData)
    call RegUnpack(Buf, OutData%WvHiCOffS)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveDOmega)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveMod)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%WaveModChr)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -758,7 +767,6 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    if (ErrStat >= AbortErrLev) return
    DstInitOutputData%NStepWave = SrcInitOutputData%NStepWave
    DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
-   DstInitOutputData%WaveMod = SrcInitOutputData%WaveMod
    DstInitOutputData%InvalidWithSSExctn = SrcInitOutputData%InvalidWithSSExctn
    if (allocated(SrcInitOutputData%WaveElevSeries)) then
       LB(1:2) = lbound(SrcInitOutputData%WaveElevSeries)
@@ -817,7 +825,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
    call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NStepWave2)
-   call RegPack(Buf, InData%WaveMod)
    call RegPack(Buf, InData%InvalidWithSSExctn)
    call RegPack(Buf, allocated(InData%WaveElevSeries))
    if (allocated(InData%WaveElevSeries)) then
@@ -876,8 +883,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
    call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NStepWave2)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveMod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%InvalidWithSSExctn)
    if (RegCheckErr(Buf, RoutineName)) return

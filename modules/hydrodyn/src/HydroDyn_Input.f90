@@ -1127,6 +1127,10 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       !-------------------------------------------------------------------------
       ! Check environmental conditions
       !-------------------------------------------------------------------------
+   if (.not. associated(InitInp%WaveField) .or. InitInp%NStepWave == 0) then
+      call SetErrStat( ErrID_Fatal,' No SeaState information available.',ErrStat,ErrMsg,RoutineName)
+      return
+   endif
 
       ! MSL2SWL - Mean sea level to still water level
    IF ( InputFileData%PotMod == 1 .AND. .NOT. EqualRealNos(InitInp%WaveField%MSL2SWL, 0.0_ReKi) ) THEN
@@ -1135,14 +1139,9 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    END IF
    
 
-      ! WaveMod - Wave kinematics model switch. -- Check that actual data was passed in from SeaState.  If none exists, then set WaveMod=0 and warn
-   if (.not. associated(InitInp%WaveField) .or. InitInp%NStepWave == 0) then
-      call SetErrStat( ErrID_Fatal,' No SeaState wave information available.  Setting WaveMod=0.',ErrStat,ErrMsg,RoutineName)
-      return
-   endif
-
-   IF ( InputFileData%PotMod > 0 .and. InitInp%WaveMod == 6 ) THEN
-         CALL SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, 4, or 5 when PotMod is not 0',ErrStat,ErrMsg,RoutineName)
+      ! WaveMod - Wave kinematics model switch.
+   IF ( InputFileData%PotMod > 0 .and. InitInp%WaveField%WaveMod == WaveMod_ExtFull ) THEN
+         CALL SetErrStat( ErrID_Fatal,'WaveMod cannot be 6 when PotMod is not 0.',ErrStat,ErrMsg,RoutineName)
          RETURN
    END IF
 
@@ -1150,9 +1149,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    ! LIN-TODO:
    !errors if:
    !if (                                                                   &
-   !     (WaveModIn /= 0)                                             .or. &
-   !     (InputFileData%Waves2%WvDiffQTFF /= .false.)                       .or. &
-   !     (InputFileData%Waves2%WvSumQTFF /= .false.)                        .or. &
    !     (InputFileData%PotMod /= 0 .or. InputFileData%PotMod /=1)                .or. &
    !     (InputFileData%WAMIT%ExctnMod /=0 .or. InputFileData%WAMIT%ExctnMod /=2) .or. &
    !     (InputFileData%WAMIT%RdtnMod  /=0 .or. InputFileData%WAMIT%RdtnMod  /=2) .or. &
@@ -1164,8 +1160,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
         
    
    ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface.
-   IF ( InitInp%WaveMod /= 0 .AND. InputFileData%Morison%NMembers > 0 ) THEN
-      IF ( InitInp%WaveMod /= 6 ) THEN 
+   IF ( InitInp%WaveField%WaveMod /= WaveMod_None .AND. InputFileData%Morison%NMembers > 0 ) THEN
+      IF ( InitInp%WaveField%WaveMod /= WaveMod_ExtFull ) THEN 
          IF ( ( InitInp%WaveField%WaveStMod /= 0 ) .AND. ( InitInp%WaveField%WaveStMod /= 1 ) .AND. &
               ( InitInp%WaveField%WaveStMod /= 2 ) .AND. ( InitInp%WaveField%WaveStMod /= 3 ) ) THEN
             ErrMsg  = ' WaveStMod must be 0, 1, 2, or 3.'
@@ -1236,7 +1232,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    END IF
    
       ! ExctnDisp - Method of computing Wave Excitation
-   if ( InputFileData%PotMod /= 1 .or. InputFileData%WAMIT%ExctnMod == 0 .or. InitInp%WaveMod == 0) then
+   if ( InputFileData%PotMod /= 1 .or. InputFileData%WAMIT%ExctnMod == 0 .or. InitInp%WaveField%WaveMod == WaveMod_None) then
       InputFileData%WAMIT%ExctnDisp    = 0  !Force ExctnDisp = 0, so that the Grid of Wave Excitation forces is not computed (saves time and memory)
    end if
    
@@ -1485,7 +1481,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    if ( (InputFileData%WAMIT%ExctnMod == 2) ) then
 
       if ( InitInp%InvalidWithSSExctn ) then
-         call SetErrStat( ErrID_Fatal, 'Given SeaState conditions cannot be used with state-space wave excitations. In SeaState, set WaveMod to 0, 1, 1P#, 2, 3, 4, or 5; WaveDirMod=0; WvDiffQTF=FALSE; and WvSumQTF=FALSE. Or in HydroDyn set ExctnMod to 0 or 1.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, 'Given SeaState conditions cannot be used with state-space wave excitations. In SeaState, WaveMod cannot be 6; WaveDirMod must be 0; WvDiffQTF must be FALSE; and WvSumQTF must be FALSE. Or in HydroDyn set ExctnMod to 0 or 1.', ErrStat, ErrMsg, RoutineName )
       end if
       
 
@@ -2357,10 +2353,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    !----------------------------------------------------------
 
       ! WAMIT
-      InputFileData%WAMIT%WaveMod      = InitInp%WaveMod
       InputFileData%WAMIT%HasWAMIT     = InputFileData%PotMod == 1
       ! WAMIT2
-      InputFileData%WAMIT2%WaveMod     = InitInp%WaveMod
       InputFileData%WAMIT2%HasWAMIT    = InputFileData%PotMod == 1
       ! Morison
       InputFileData%Morison%UnSum      = InputFileData%UnSum

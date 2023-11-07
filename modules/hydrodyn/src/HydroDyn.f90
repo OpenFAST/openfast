@@ -145,10 +145,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       p%UnOutFile = -1 !bjj: this was being written to the screen when I had an error in my HD input file, so I'm going to initialize here.
       
       p%WaveField    =>  InitInp%WaveField
-      
-#ifdef BETA_BUILD
-   CALL DispBetaNotice( "This is a beta version of HydroDyn and is for testing purposes only."//NewLine//"This version includes user waves, WaveMod=6 and the ability to write example user waves." )
-#endif
+
       
          ! Initialize the NWTC Subroutine Library
          

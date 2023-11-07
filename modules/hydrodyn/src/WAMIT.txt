@@ -40,7 +40,6 @@ typedef   ^                            ^                             CHARACTER(1
 typedef   ^                            ^                             Conv_Rdtn_InitInputType  Conv_Rdtn                       -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave2                      -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  WaveMod                         -          -        -         ""    -
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                       -          -        -         "Pointer to wave field"
 
 #

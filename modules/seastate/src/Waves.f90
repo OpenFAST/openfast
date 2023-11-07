@@ -570,7 +570,7 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
    ! Initialize everything to zero:
 
-      !>>>>>> COMPUTE INITOUT SCALARS InitOut%NStepWave, InitOut%NStepWave2, InitOut%WaveTMax, and InitOut%WaveDOmega for WAVEMOD = 0
+      !>>>>>> COMPUTE INITOUT SCALARS InitOut%NStepWave, InitOut%NStepWave2, InitOut%WaveTMax, and InitOut%WaveDOmega for WAVEMOD = 0 (WaveMod_None)
       InitOut%NStepWave  = 2                ! We must have at least two elements in order to interpolate later on
       InitOut%NStepWave2 = 1
       InitOut%WaveTMax   = InitInp%WaveTMax ! bjj added this... I don't think it was set anywhere for this wavemod.
@@ -773,9 +773,9 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       !>>>>>> COMPUTE INITOUT SCALARS InitOut%NStepWave, InitOut%NStepWave2, InitOut%WaveTMax, and InitOut%WaveDOmega for WAVEMOD = 1,2,3,4,10 (5 and 7 also call this routine, but have been set already)
       ! NOTE:  For WaveMod = 5, NStepWave and several other things were already set in the UserWaveElevations_Init routine
       !        using file information (an FFT was performed there, so the information was needed before now).
-      !        Same with WaveMod = 7. With WaveMod = 7, WaveDirArr is also populated in UserWaveComponents_Init routine. 
+      !        Same with WaveMod = 7 (WaveMod_UserFreq). With WaveMod = 7, WaveDirArr is also populated in UserWaveComponents_Init routine. 
       !        Need to make sure the wave-direction in formation is not overwritten later. 
-      IF (InitInp%WaveMod /= 5 .AND. InitInp%WaveMod /= 7) THEN
+      IF (WaveField%WaveMod /= WaveMod_ExtElev .AND. WaveField%WaveMod /= WaveMod_UserFreq) THEN
          InitOut%NStepWave    = CEILING ( InitInp%WaveTMax/InitInp%WaveDT )               ! Set NStepWave to an even integer ...
          IF ( MOD(InitOut%NStepWave,2) == 1 )  InitOut%NStepWave = InitOut%NStepWave + 1  !   ... larger or equal to WaveTMax/WaveDT.
          
@@ -1010,7 +1010,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       !=== Constrained New Waves ===
       ! Modify the wave components to implement the constrained wave
       ! Only do this if WaveMod = 2 (JONSWAP/Pierson-Moskowitz Spectrum) and ConstWaveMod > 0
-      IF ( InitInp%WaveMod == 2 .AND. InitInp%ConstWaveMod > 0) THEN
+      IF ( WaveField%WaveMod == WaveMod_JONSWAP .AND. InitInp%ConstWaveMod > 0) THEN
          ! adjust InitOut%WaveElevC0 for constrained wave:
          call ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddArr, CosWaveDir, SinWaveDir, FFT_Data, ErrStatTmp, ErrMsgTmp)
             call SetErrStat(ErrStatTmp,ErrMsgTmp, ErrStat,ErrMsg,RoutineName)
@@ -1628,10 +1628,6 @@ SUBROUTINE Waves_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          ! Local Variables:
       INTEGER(IntKi)                                  :: ErrStatTmp  ! Temporary error status for processing
       CHARACTER(ErrMsgLen)                            :: ErrMsgTmp   ! Temporary error message for procesing
-!      REAL(ReKi), ALLOCATABLE                         :: tmpWaveKinzi(:)
-
-!      TYPE(FFT_DataType)           :: FFT_Data                                        ! the instance of the FFT module we're using
-
 
 
          ! Initialize ErrStat
@@ -1648,19 +1644,14 @@ SUBROUTINE Waves_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
          ! Define initialization-routine output here:
 
-      !InitOut%WriteOutputHdr = (/ 'Time', 'Column2' /)
-      !InitOut%WriteOutputUnt = (/ '(s)',  '(-)'     /)
-
-
-
 
 
             ! Initialize the variables associated with the incident wave:
 
-      SELECT CASE ( InitInp%WaveMod ) ! Which incident wave kinematics model are we using?
+      SELECT CASE ( WaveField%WaveMod ) ! Which incident wave kinematics model are we using?
 
 
-      CASE ( 0 )              ! None=still water.
+      CASE ( WaveMod_None )              ! None=still water.
 
          CALL StillWaterWaves_Init( InitInp, InitOut, WaveField, ErrStatTmp, ErrMsgTmp )
          CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
@@ -1668,7 +1659,7 @@ SUBROUTINE Waves_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
 
 
-      CASE ( 1, 2, 3, 4, 10 )       ! 1, 10: Plane progressive (regular) wave, 2: JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, 3: white-noise, or 4: user-defined spectrum (irregular) wave.
+      CASE ( WaveMod_Regular, WaveMod_JONSWAP, WaveMod_WhiteNoise, WaveMod_UserSpctrm, WaveMod_RegularUsrPh )       ! 1, 10: Plane progressive (regular) wave, 2: JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, 3: white-noise, or 4: user-defined spectrum (irregular) wave.
 
             ! Now call the init with all the zi locations for the Morrison member nodes
          CALL VariousWaves_Init( InitInp, InitOut, WaveField, ErrStatTmp, ErrMsgTmp )
@@ -1676,7 +1667,7 @@ SUBROUTINE Waves_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
             IF ( ErrStat >= AbortErrLev ) RETURN
 
 
-      CASE ( 5 )              ! User-supplied wave elevation time history; HD derives full wave kinematics from this elevation time series data.
+      CASE ( WaveMod_ExtElev )              ! User-supplied wave elevation time history; HD derives full wave kinematics from this elevation time series data.
 
             ! Get the wave frequency information from the file (by FFT of the elevation)
          CALL UserWaveElevations_Init( InitInp, InitOut, WaveField, ErrStatTmp, ErrMsgTmp )
@@ -1689,13 +1680,13 @@ SUBROUTINE Waves_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          IF ( ErrStat >= AbortErrLev ) RETURN
 
 
-      CASE ( 6 )              ! User-supplied wave kinematics data.
+      CASE ( WaveMod_ExtFull )              ! User-supplied wave kinematics data.
 
          CALL UserWaves_Init( InitInp, InitOut, WaveField, ErrStatTmp, ErrMsgTmp )
          CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
          IF ( ErrStat >= AbortErrLev ) RETURN
          
-      CASE ( 7 )
+      CASE ( WaveMod_UserFreq )
          
          ! Get the wave frequency information from the file (by reading in wave frequency components)
          CALL UserWaveComponents_Init( InitInp, InitOut, WaveField, ErrStatTmp, ErrMsgTmp )
@@ -1931,11 +1922,11 @@ SUBROUTINE CalculateWaveDirection(InitInp, InitOut, WaveField, ErrStat, ErrMsg )
    ErrMsg  = ""
 
 
-      IF (InitInp%WaveMod == 7) THEN ! wavemod 0 and 6 aren't called from this routine, but they fall into this case, too
+      IF (WaveField%WaveMod == WaveMod_UserFreq) THEN ! wavemod 0 (WaveMod_None) and 6 (WaveMod_ExtFull) aren't called from this routine, but they fall into this case, too
 
          RETURN
          !InitOut%WaveDirArr set in UserWaveComponents_Init for WaveMod 7
-         !InitOut%WaveDirArr = 0, set in Initial_InitOut_Arrays for WaveMod 0 and 6
+         !InitOut%WaveDirArr = 0, set in Initial_InitOut_Arrays for WaveMod 0 and 6 (WaveMod_ExtFull)
 
       ELSEIF(.not. WaveField%WaveMultiDir .or. InitInp%WaveNDir <= 1) THEN ! we have a single wave direction
       
@@ -2235,7 +2226,7 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
    REAL(SiKi)                                      :: WaveS2Sdd                                     ! Two-sided power spectral density of the wave spectrum per unit time for the current frequency component (m^2/(rad/s))
    
    
-      IF ( InitInp%WaveMod == 5 .OR. InitInp%WaveMod == 7) THEN    ! Wave elevation or frequency component data read in
+      IF ( WaveField%WaveMod == WaveMod_ExtElev .OR. WaveField%WaveMod == WaveMod_UserFreq) THEN    ! Wave elevation or frequency component data read in (5 or 7)
    
          DO I = 0,InitOut%NStepWave2
          
@@ -2268,8 +2259,8 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
       WGNC(1)                  = (0.0,0.0)
       WGNC(InitOut%NStepWave2) = (0.0,0.0)
       
-      IF ( InitInp%WaveMod == 10 )  THEN                     ! .TRUE. for plane progressive (regular) waves with a specified phase
-         DO I = 0,InitOut%NStepWave2-1                       ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
+      IF ( WaveField%WaveMod == WaveMod_RegularUsrPh )  THEN                     ! .TRUE. for plane progressive (regular) waves with a specified phase
+         DO I = 0,InitOut%NStepWave2-1                           ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
             IF (I==1) CYCLE
             
             WGNC(I) = BoxMuller ( InitInp%RNG%pRNG, InitInp%WaveNDAmp, InitInp%WavePhase )
@@ -2286,7 +2277,7 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
       ! For (WaveMod=1 plane progressive (regular); and WaveMod=10 plane progressive (regular) waves with a specified phase)
       ! adjust WGNC and set PSD at specified frequency
       !------------------------------------
-      IF (InitInp%WaveMod == 10 .or. InitInp%WaveMod == 1) THEN
+      IF (WaveField%WaveMod == WaveMod_RegularUsrPh .or. WaveField%WaveMod == WaveMod_Regular) THEN !10 or 1
          WaveS1SddArr = 0.0
          
          IF (I_WaveTp < InitOut%NStepWave2 .and. (I_WaveTp > 1 .or. I_WaveTp == 0) ) THEN
@@ -2317,12 +2308,12 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
                
             ELSE
             
-               SELECT CASE ( InitInp%WaveMod ) ! Which incident wave kinematics model are we using?
-                  CASE ( 2 )              ! JONSWAP/Pierson-Moskowitz spectrum (irregular) wave.
+               SELECT CASE ( WaveField%WaveMod ) ! Which incident wave kinematics model are we using?
+                  CASE ( WaveMod_JONSWAP )                 ! JONSWAP/Pierson-Moskowitz spectrum (irregular) wave.
                         WaveS1SddArr(I) = JONSWAP ( OmegaArr(I), InitInp%WaveHs, InitInp%WaveTp, InitInp%WavePkShp )
-                  CASE ( 3 )              ! White-noise
+                  CASE ( WaveMod_WhiteNoise )              ! White-noise
                         WaveS1SddArr(I) =  InitInp%WaveHs * InitInp%WaveHs / ( 16.0 * (WaveField%WvHiCOff - WaveField%WvLowCOff) )
-                  CASE ( 4 )              ! User-defined spectrum (irregular) wave.
+                  CASE ( WaveMod_UserSpctrm )              ! User-defined spectrum (irregular) wave.
                         CALL UserWaveSpctrm ( OmegaArr(I), WaveField%WaveDir, InitInp%DirRoot, WaveS1SddArr(I) )
                ENDSELECT
          

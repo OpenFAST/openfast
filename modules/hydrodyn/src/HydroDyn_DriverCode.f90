@@ -324,7 +324,6 @@ subroutine SetHD_InitInputs()
    ! Data from InitOutData_SeaSt:
    InitInData_HD%NStepWave    = InitOutData_SeaSt%NStepWave
    InitInData_HD%NStepWave2   = InitOutData_SeaSt%NStepWave2
-   InitInData_HD%WaveMod      = InitOutData_SeaSt%WaveMod
    
    InitInData_HD%InvalidWithSSExctn     =  InitOutData_SeaSt%InvalidWithSSExctn
 

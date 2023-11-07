@@ -259,7 +259,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       m%LastIndWave = 1
 
       
-      IF ( InputFileData%Waves%WaveMod /= 6 ) THEN
+      IF ( InputFileData%WaveMod /= WaveMod_ExtFull ) THEN
    
             !----------------------------------
             ! Initialize Waves2 module
@@ -325,7 +325,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          ENDIF ! InputFileData%Waves2%WvDiffQTFF .OR. InputFileData%Waves2%WvSumQTFF 
    
    
-      END IF  ! Check for WaveMod = 6
+      END IF  ! Check for WaveMod = 6 (WaveMod_ExtFull)
 
          ! Create the Output file if requested      
       p%OutSwtch      = InputFileData%OutSwtch 
@@ -373,19 +373,17 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
        
        InitOut%NStepWave    =  Waves_InitOut%NStepWave           ! For WAMIT, WAMIT2, SS_Excitation, Morison
        InitOut%NStepWave2   =  Waves_InitOut%NStepWave2          ! For WAMIT and WAMIT2,  FIT
-      
-       InitOut%WaveMod      =  InputFileData%Waves%WaveMod   
        
       InitOut%WaveField => p%WaveField
 
       ! Tell HydroDyn if state-space wave excitation is not allowed:
-       InitOut%InvalidWithSSExctn = InputFileData%Waves%WaveMod == 6     .or. & !call SetErrStat( ErrID_Fatal, 'Externally generated full wave-kinematics time series cannot be used with state-space wave excitations. Set WaveMod 0, 1, 1P#, 2, 3, 4, or 5.', ErrStat, ErrMsg, RoutineName )
+       InitOut%InvalidWithSSExctn = InputFileData%WaveMod == WaveMod_ExtFull  .or. & !call SetErrStat( ErrID_Fatal, 'Externally generated full wave-kinematics time series cannot be used with state-space wave excitations. Set WaveMod 0, 1, 1P#, 2, 3, 4, or 5.', ErrStat, ErrMsg, RoutineName )
                                     InputFileData%WaveDirMod /= WaveDirMod_None   .or. & !call SetErrStat( ErrID_Fatal, 'Directional spreading cannot be used with state-space wave excitations. Set WaveDirMod=0.', ErrStat, ErrMsg, RoutineName )
                                     InputFileData%Waves2%WvDiffQTFF      .or. & !call SetErrStat( ErrID_Fatal, 'Cannot use full difference-frequency 2nd-order wave kinematics with state-space wave excitations. Set WvDiffQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
                                     InputFileData%Waves2%WvSumQTFF              !call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency 2nd-order wave kinematics with state-space wave excitations. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
       
          ! Write Wave Kinematics?
-      if ( InputFileData%Waves%WaveMod /= 6 ) then
+      if ( InputFileData%WaveMod /= WaveMod_ExtFull ) then
          if ( InitInp%WrWvKinMod == 2 ) then
             call SeaStOut_WriteWvKinFiles( InitInp%OutRootname, SeaSt_ProgDesc, p%WaveField, p%NStepWave, p%WaveDT, p%X_HalfWidth, p%Y_HalfWidth, &
                p%Z_Depth, p%deltaGrid, p%NGrid, ErrStat2, ErrMsg2 )
@@ -433,14 +431,14 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       
       
       IF ( InitInp%hasIce ) THEN
-         IF ((InputFileData%Waves%WaveMod /= 0) .OR. (InputFileData%Current%CurrMod /= 0) ) THEN
+         IF ((InputFileData%WaveMod /= WaveMod_None) .OR. (InputFileData%Current%CurrMod /= 0) ) THEN
             CALL SetErrStat(ErrID_Fatal,'Waves and Current must be turned off in SeaState when ice loading is computed. Set WaveMod=0 and CurrMod=0.',ErrStat,ErrMsg,RoutineName)
          END IF
       END IF
 
       if (InitInp%Linearize) then
       
-         if ( InputFileData%Waves%WaveMod /= 0 ) then
+         if ( InputFileData%WaveMod /= WaveMod_None ) then
             call SetErrStat( ErrID_Fatal, 'Still water conditions must be used for linearization. Set WaveMod=0.', ErrStat, ErrMsg, RoutineName )
          end if
       

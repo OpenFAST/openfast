@@ -902,8 +902,9 @@ end if
       else
            ! Initialize the variables associated with the incident wave:
 
-         SELECT CASE ( InitInp%WaveMod ) ! Which incident wave kinematics model are we using?
-         CASE ( 0 )  ! No waves, NOTE: for this case we are forcing ExctnDisp = 0, so only p%WaveExctn needs to be allocated, not p%WaveExctnGrid
+         SELECT CASE ( InitInp%WaveField%WaveMod ) ! Which incident wave kinematics model are we using?
+         
+         CASE ( WaveMod_None )  ! No waves, NOTE: for this case we are forcing ExctnDisp = 0, so only p%WaveExctn needs to be allocated, not p%WaveExctnGrid
             if ( p%ExctnMod == 1 ) then
 
                   ! Initialize everything to zero:
@@ -937,7 +938,14 @@ end if
                      return
                   end if   
             end if
-         CASE ( 1, 2, 3, 4, 5, 7, 10 )    ! Plane progressive (regular) wave, JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, white-noise wave,  or user-defined spectrum (irregular) wave.
+            
+         CASE ( WaveMod_ExtFull )              ! User wave data.
+
+            CALL SetErrStat( ErrID_Fatal, 'User input wave data not applicable for floating platforms.', ErrStat, ErrMsg, RoutineName)
+            CALL Cleanup()
+            RETURN
+
+         CASE DEFAULT ! remaining cases: ( 1, 2, 3, 4, 5, 7, 10 )    ! Plane progressive (regular) wave, JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, white-noise wave,  or user-defined spectrum (irregular) wave.
 
 
             if ( p%ExctnMod == 1 ) then
@@ -1274,12 +1282,6 @@ end if
                END IF
                xd%BdyPosFilt = 0.0_ReKi
             END IF
-
-         CASE ( 6 )              ! User wave data.
-
-            CALL SetErrStat( ErrID_Fatal, 'User input wave data not applicable for floating platforms.', ErrStat, ErrMsg, RoutineName)
-            CALL Cleanup()
-            RETURN
 
          ENDSELECT   
       end if

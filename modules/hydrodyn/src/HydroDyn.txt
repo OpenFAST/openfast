@@ -76,7 +76,6 @@ typedef   ^                            ^                             logical    
 #
 typedef     ^                          ^                             INTEGER                  NStepWave                       -        0        -        "Total number of frequency components = total number of time steps in the incident wave" -
 typedef     ^                          ^                             INTEGER                  NStepWave2                      -        0        -        "NStepWave / 2" -
-typedef     ^                          ^                             INTEGER                  WaveMod                         -        -        -        "Incident wave kinematics model {0: none=still water, 1: plane progressive (regular), 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: white-noise spectrum, 4: user-defind spectrum from routine UserWaveSpctrm (irregular), 5: GH BLADED }" -
 
 typedef     ^                          ^                             LOGICAL                  InvalidWithSSExctn              -       -        -        "Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
 typedef     ^                          ^                     SeaSt_WaveFieldType             *WaveField                       -        -        -        "Pointer to SeaState wave field" -
