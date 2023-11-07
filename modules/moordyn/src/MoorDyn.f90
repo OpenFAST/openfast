@@ -773,7 +773,7 @@ CONTAINS
                   else
                      CALL SetErrStat( ErrID_Fatal, 'Body '//trim(Num2LStr(l))//' CG entry (col 10) must have 1 or 3 numbers.' , ErrStat, ErrMsg, RoutineName )
                   end if
-                  ! process mements of inertia
+                  ! process moments of inertia
                   CALL SplitByBars(tempString3, N, tempStrings)
                   if (N == 1) then                                   ! if only one entry, use it for all directions
                      READ(tempString3, *) m%BodyList(l)%BodyI(1)
@@ -839,6 +839,20 @@ CONTAINS
                      m%CpldBodyIs(p%nCpldBodies(1),1) = l
 
                      ! body initial position due to coupling will be adjusted later
+
+                  else if ((let1 == "VESSELPINNED") .or. (let1 == "VESPIN") .or. (let1 == "COUPLEDPINNED") .or. (let1 == "CPLDPIN")) then  ! if a pinned coupled body, add to list and add 
+                     m%BodyList(l)%typeNum = 2
+                     
+                     p%nCpldBodies(1)=p%nCpldBodies(1)+1  ! add
+                     p%nFreeBodies   =p%nFreeBodies+1     ! add this pinned body to the free list because it is half free
+                     
+                     m%BodyStateIs1(p%nFreeBodies) = Nx+1
+                     m%BodyStateIsN(p%nFreeBodies) = Nx+6
+                     Nx = Nx + 6                                               ! add 6 state variables for each pinned body
+                     
+                     m%CpldBodyIs(p%nCpldBodies(1),1) = l
+                     m%FreeBodyIs(p%nFreeBodies) = l
+                   
                      
                   ! TODO: add option for body coupling to different turbines in FAST.Farm  <<<
                      
@@ -1010,7 +1024,7 @@ CONTAINS
                    
                   ! TODO: add option for body coupling to different turbines in FAST.Farm <<<
                    
-                  else if ((let1 == "CONNECT") .or. (let1 == "CON") .or. (let1 == "FREE")) then
+                  else if ((let1 == "ROD") .or. (let1 == "R") .or. (let1 == "FREE")) then
                      m%RodList(l)%typeNum = 0
                      
                      p%nFreeRods=p%nFreeRods+1 
@@ -1949,7 +1963,7 @@ CONTAINS
       ! >>> maybe this should be skipped <<<<
 
       
-       ! Go through Bodys and write the coordinates to the state vector
+       ! Go through free Bodys (including pinned) and write the coordinates to the state vector
       DO l = 1,p%nFreeBodies
          CALL Body_Initialize(m%BodyList(m%FreeBodyIs(l)), x%states(m%BodyStateIs1(l) : m%BodyStateIsN(l)), m)
       END DO
@@ -2972,8 +2986,8 @@ CONTAINS
       DO iTurb = 1,p%nTurbines
          DO l = 1,p%nCpldPoints(iTurb)
          
-    !        >>>>>>>> here we should pass along accelerations and include inertial loads in the calculation!!! <<<??
-    !               in other words are the below good enough or do I need to call _getCoupledFOrce??
+            !        >>>>>>>> here we should pass along accelerations and include inertial loads in the calculation!!! <<<??
+            !               in other words are the below good enough or do I need to call _getCoupledFOrce??
          
             CALL Point_DoRHS(m%PointList(m%CpldPointIs(l,iTurb)), m, p)
          END DO
@@ -2986,7 +3000,9 @@ CONTAINS
          END DO
          
          DO l = 1,p%nCpldBodies(iTurb)
-            CALL Body_DoRHS(m%BodyList(m%CpldBodyIs(l,iTurb)), m, p)
+            IF (m%BodyList(m%CpldBodyIs(l,iTurb))%typeNum /= -1) THEN ! For a coupled pinned body, Body_GetStateDeriv already calls doRHS 
+               CALL Body_DoRHS(m%BodyList(m%CpldBodyIs(l,iTurb)), m, p)
+            ENDIF
          END DO
       end do
 
@@ -3810,27 +3826,39 @@ contains
       idx = 0
       ! Free bodies
       DO l = 1,p%nFreeBodies                 ! Body m%BodyList(m%FreeBodyIs(l))
-         p%dx(idx+1:idx+3) = dl_slack_min    ! body displacement [m]
-         p%dx(idx+4:idx+6) = 0.02            ! body rotation [rad]
-         ! corresponds to state indices: (m%BodyStateIs1(l)+6:m%BodyStateIs1(l)+11)
-         InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Px, m'
-         InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Py, m'
-         InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Pz, m'
-         InitOut%LinNames_x(idx+4) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_x, rad'
-         InitOut%LinNames_x(idx+5) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_y, rad'
-         InitOut%LinNames_x(idx+6) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_z, rad'
-         p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+6         ! x%state index for Px
-         p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+7         ! x%state index for Py
-         p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+8         ! x%state index for Pz
-         p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+9         ! x%state index for rot_x
-         p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+10        ! x%state index for rot_y
-         p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+11        ! x%state index for rot_z
-         idx = idx + 6
+         if (m%BodyList(m%FreeBodyIs(l))%typeNum == 2) then ! Coupled pinned body
+            p%dx(idx+4:idx+6) = 0.02            ! body rotation [rad]
+            ! corresponds to state indices: (m%BodyStateIs1(l)+6:m%BodyStateIs1(l)+8)
+            InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_x, rad'
+            InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_y, rad'
+            InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_z, rad'
+            p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+3         ! x%state index for rot_x
+            p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+4        ! x%state index for rot_y
+            p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+5        ! x%state index for rot_z
+            idx = idx + 3
+         else ! free body
+            p%dx(idx+1:idx+3) = dl_slack_min    ! body displacement [m]
+            p%dx(idx+4:idx+6) = 0.02            ! body rotation [rad]
+            ! corresponds to state indices: (m%BodyStateIs1(l)+6:m%BodyStateIs1(l)+11)
+            InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Px, m'
+            InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Py, m'
+            InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Pz, m'
+            InitOut%LinNames_x(idx+4) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_x, rad'
+            InitOut%LinNames_x(idx+5) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_y, rad'
+            InitOut%LinNames_x(idx+6) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' rot_z, rad'
+            p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+6         ! x%state index for Px
+            p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+7         ! x%state index for Py
+            p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+8         ! x%state index for Pz
+            p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+9         ! x%state index for rot_x
+            p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+10        ! x%state index for rot_y
+            p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+11        ! x%state index for rot_z
+            idx = idx + 6
+         endif
       END DO      
 
       ! Rods
       DO l = 1,p%nFreeRods                   ! Rod m%RodList(m%FreeRodIs(l))
-         if (m%RodList(m%FreeRodIs(l))%typeNum == 1) then  ! pinned rod
+         if (abs(m%RodList(m%FreeRodIs(l))%typeNum) == 1) then  ! pinned rod
             p%dx(idx+1:idx+3) = 0.02         ! rod rotation [rad]
             ! corresponds to state indices: (m%RodStateIs1(l)+3:m%RodStateIs1(l)+5)
             InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' rot_x, rad'
@@ -3894,27 +3922,39 @@ contains
       !-----------------
       ! Free bodies
       DO l = 1,p%nFreeBodies                 ! Body m%BodyList(m%FreeBodyIs(l))
-         ! corresponds to state indices: (m%BodyStateIs1(l):m%BodyStateIs1(l)+5)
-         p%dx(idx+1:idx+3) = 0.1             ! body translational velocity [m/s]
-         p%dx(idx+4:idx+6) = 0.1             ! body rotational velocity [rad/s]
-         InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vx, m/s'
-         InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vy, m/s'
-         InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vz, m/s'
-         InitOut%LinNames_x(idx+4) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_x, rad/s'
-         InitOut%LinNames_x(idx+5) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_y, rad/s'
-         InitOut%LinNames_x(idx+6) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_z, rad/s'
-         p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+0         ! x%state index for Rx
-         p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+1         ! x%state index for Ry
-         p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+2         ! x%state index for Rz
-         p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+3         ! x%state index for omega_x
-         p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+4         ! x%state index for omega_y
-         p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+5         ! x%state index for omega_z
-         idx = idx + 6
+         if (m%BodyList(m%FreeBodyIs(l))%typeNum == 2) then ! Coupled pinned body
+            ! corresponds to state indices: (m%BodyStateIs1(l):m%BodyStateIs1(l)+5)
+            p%dx(idx+1:idx+3) = 0.1             ! body rotational velocity [rad/s]
+            InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_x, rad/s'
+            InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_y, rad/s'
+            InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_z, rad/s'
+            p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+0         ! x%state index for omega_x
+            p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+1         ! x%state index for omega_y
+            p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+2         ! x%state index for omega_z
+            idx = idx + 3
+         else  !Free body
+            ! corresponds to state indices: (m%BodyStateIs1(l):m%BodyStateIs1(l)+5)
+            p%dx(idx+1:idx+3) = 0.1             ! body translational velocity [m/s]
+            p%dx(idx+4:idx+6) = 0.1             ! body rotational velocity [rad/s]
+            InitOut%LinNames_x(idx+1) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vx, m/s'
+            InitOut%LinNames_x(idx+2) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vy, m/s'
+            InitOut%LinNames_x(idx+3) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' Vz, m/s'
+            InitOut%LinNames_x(idx+4) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_x, rad/s'
+            InitOut%LinNames_x(idx+5) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_y, rad/s'
+            InitOut%LinNames_x(idx+6) = 'Body '//trim(num2lstr(m%FreeBodyIs(l)))//' omega_z, rad/s'
+            p%dxIdx_map2_xStateIdx(idx+1) = m%BodyStateIs1(l)+0         ! x%state index for Rx
+            p%dxIdx_map2_xStateIdx(idx+2) = m%BodyStateIs1(l)+1         ! x%state index for Ry
+            p%dxIdx_map2_xStateIdx(idx+3) = m%BodyStateIs1(l)+2         ! x%state index for Rz
+            p%dxIdx_map2_xStateIdx(idx+4) = m%BodyStateIs1(l)+3         ! x%state index for omega_x
+            p%dxIdx_map2_xStateIdx(idx+5) = m%BodyStateIs1(l)+4         ! x%state index for omega_y
+            p%dxIdx_map2_xStateIdx(idx+6) = m%BodyStateIs1(l)+5         ! x%state index for omega_z
+            idx = idx + 6
+         endif
       END DO      
 
       ! Rods
       DO l = 1,p%nFreeRods                   ! Rod m%RodList(m%FreeRodIs(l))
-         if (m%RodList(m%FreeRodIs(l))%typeNum == 1) then ! pinned rod
+         if (abs(m%RodList(m%FreeRodIs(l))%typeNum) == 1) then ! pinned rod
             ! corresponds to state indices: (m%RodStateIs1(l):m%RodStateIs1(l)+2)
             p%dx(idx+1:idx+3) = 0.1          ! body rotational velocity [rad/s]
             InitOut%LinNames_x(idx+1) = 'Rod '//trim(num2lstr(m%FreeRodIs(l)))//' omega_x, rad/s'
