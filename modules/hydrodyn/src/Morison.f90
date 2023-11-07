@@ -503,11 +503,10 @@ SUBROUTINE FloodedBallastPartSegment(R1, R2, L, rho, V, m, h_c, Il, Ir)
 
 END SUBROUTINE FloodedBallastPartSegment
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, numJoints, numNodes, nodes, numMembers, members, &
+SUBROUTINE WriteSummaryFile( UnSum, numJoints, numNodes, nodes, numMembers, members, &
                              NOutputs, OutParam, MOutLst, JOutLst, uMesh, yMesh, p, m, errStat, errMsg ) 
                              
    INTEGER,                               INTENT ( IN    )  :: UnSum
-   REAL(ReKi),                            INTENT ( IN    )  :: MSL2SWL
    INTEGER,                               INTENT ( IN    )  :: numJoints
    INTEGER,                               INTENT ( IN    )  :: numNodes
    TYPE(Morison_NodeType),   ALLOCATABLE, INTENT ( IN    )  :: nodes(:)  
@@ -681,7 +680,7 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, numJoints, numNodes, nodes, numMemb
       
       DO J = 1, yMesh%Nnodes
          
-         if ( yMesh%Position(3,J) <= MSL2SWL ) then  ! need to check relative to MSL2SWL offset because the Mesh Positons are relative to MSL
+         if ( yMesh%Position(3,J) <= p%WaveField%MSL2SWL ) then  ! need to check relative to MSL2SWL offset because the Mesh Positons are relative to MSL
             
             if (J <= numJoints) then
                ptLoad = F_B(:,J) + m%F_B_end(:,J)
@@ -789,7 +788,7 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, numJoints, numNodes, nodes, numMemb
       do I = 1,numJoints   
          ! need to add MSL2SWL offset from this because the Positons are relative to SWL, but we should report them relative to MSL here
          pos = nodes(i)%Position
-         pos(3) = pos(3) + MSL2SWL
+         pos(3) = pos(3) + p%WaveField%MSL2SWL
          write( UnSum, '(1X,I5,(2X,A10),3(2X,F10.4),2(2X,A10),2(2X,ES10.3),10(2X,A10),3(2X,ES10.3))' ) i,'    -     ', pos, '    -     ',  '    -     ',  nodes(i)%tMG,  nodes(i)%MGdensity,  '    -     ',  '    -     ',  '    -     ', '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  '    -     ',  nodes(i)%JAxCd,  nodes(i)%JAxCa, nodes(i)%JAxCp
       end do
       c = numJoints
@@ -803,7 +802,7 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, numJoints, numNodes, nodes, numMemb
             end if
             ! need to add MSL2SWL offset from this because the Positons are relative to SWL, but we should report them relative to MSL here
             pos = nodes(c)%Position
-            pos(3) = pos(3) + MSL2SWL
+            pos(3) = pos(3) + p%WaveField%MSL2SWL
             if (members(j)%flipped) then
                II=members(j)%NElements+2-I
             else
@@ -903,9 +902,9 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, numJoints, numNodes, nodes, numMemb
             node2 = nodes(mem%NodeIndx(mem%NElements+1))
             ! need to add MSL2SWL offset from this because the Positons are relative to SWL, but we should report them relative to MSL here
             pos = node1%Position
-            pos(3) = pos(3) + MSL2SWL
+            pos(3) = pos(3) + p%WaveField%MSL2SWL
             pos2 = node2%Position
-            pos2(3) = pos2(3) + MSL2SWL
+            pos2(3) = pos2(3) + p%WaveField%MSL2SWL
             outLoc    = pos*(1-s) + pos2*s
             WRITE( UnSum, '(1X,A10,3(2x,F10.4),2x,I10,7(2x,F10.4))' ) OutParam(I)%Name, outLoc,  MOutLst(mbrIndx)%MemberID, pos,pos2, s
          END IF
@@ -931,7 +930,7 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, numJoints, numNodes, nodes, numMemb
             m1 = JOutLst(nodeIndx)%JointIDIndx 
             ! need to add MSL2SWL offset from this because the Positons are relative to SWL, but we should report them relative to MSL here
             pos = nodes(m1)%Position
-            pos(3) = pos(3) + MSL2SWL
+            pos(3) = pos(3) + p%WaveField%MSL2SWL
             WRITE( UnSum, '(1X,A10,3(2x,F10.4),2x,I10)' ) OutParam(I)%Name, pos, JOutLst(nodeIndx)%JointID
             
          END IF
@@ -1427,8 +1426,7 @@ subroutine FlipMemberNodeData( member, nodes, doSwap)
    
 end subroutine FlipMemberNodeData
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrFilledIDIndx, propSet1, propSet2, InitInp, errStat, errMsg )
-   real(ReKi),                   intent (in   )  :: MSL2SWL
+subroutine SetMemberProperties( gravity, member, MCoefMod, MmbrCoefIDIndx, MmbrFilledIDIndx, propSet1, propSet2, InitInp, errStat, errMsg )
    real(ReKi),                   intent (in   )  :: gravity
    type(Morison_MemberType),     intent (inout)  :: member
    integer(IntKi),               intent (in   )  :: MCoefMod
@@ -1483,7 +1481,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
    ! These are all per node and not done here, yet
    
    do i = 1, member%NElements+1
-      call SetNodeMG( InitInp%NMGDepths, InitInp%MGDepths, InitInp%Nodes(member%NodeIndx(i)), MSL2SWL, member%tMG(i), member%MGDensity(i) )
+      call SetNodeMG( InitInp%NMGDepths, InitInp%MGDepths, InitInp%Nodes(member%NodeIndx(i)), InitInp%WaveField%MSL2SWL, member%tMG(i), member%MGDensity(i) )
    end do
 
    member%R(  1)   = propSet1%PropD / 2.0            
@@ -1499,7 +1497,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
       member%RMG(i) =  member%R(i) + member%tMG(i)
    end do
 
-   call SetExternalHydroCoefs(  MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplCd, InitInp%SimplCdMG, InitInp%SimplCa, InitInp%SimplCaMG, InitInp%SimplCp, &
+   call SetExternalHydroCoefs(  InitInp%WaveField%MSL2SWL, MCoefMod, MmbrCoefIDIndx, InitInp%SimplCd, InitInp%SimplCdMG, InitInp%SimplCa, InitInp%SimplCaMG, InitInp%SimplCp, &
                                    InitInp%SimplCpMG, InitInp%SimplAxCd, InitInp%SimplAxCdMG, InitInp%SimplAxCa, InitInp%SimplAxCaMG, InitInp%SimplAxCp, InitInp%SimplAxCpMG, &
                                    InitInp%SimplCb, InitInp%SimplCbMG, InitInp%SimplMCF, & 
                                    InitInp%CoefMembers, InitInp%NCoefDpth, InitInp%CoefDpths, InitInp%Nodes, member )
@@ -1544,7 +1542,7 @@ subroutine SetMemberProperties( MSL2SWL, gravity, member, MCoefMod, MmbrCoefIDIn
    member%MmbrFilledIDIndx = MmbrFilledIDIndx ! Set this to the parameter version of this member data
    if ( MmbrFilledIDIndx > 0 ) then    
       member%FillDens     =  InitInp%FilledGroups(MmbrFilledIDIndx)%FillDens
-      member%FillFSLoc    =  InitInp%FilledGroups(MmbrFilledIDIndx)%FillFSLoc - MSL2SWL
+      member%FillFSLoc    =  InitInp%FilledGroups(MmbrFilledIDIndx)%FillFSLoc - InitInp%WaveField%MSL2SWL
        if (member%FillFSLoc >= Zb) then
          member%z_overfill = member%FillFSLoc - Zb
          member%l_fill = member%RefLength
@@ -1868,7 +1866,7 @@ subroutine SetupMembers( InitInp, p, m, errStat, errMsg )
             prop2Indx = InitInp%InpMembers(I)%MPropSetID2Indx
       end if
       ! Now populate the various member data arrays using the HydroDyn input file data
-      call SetMemberProperties( p%WaveField%MSL2SWL, InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MPropSets(prop1Indx), InitInp%MPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) 
+      call SetMemberProperties( InitInp%Gravity, p%Members(i), InitInp%InpMembers(i)%MCoefMod, InitInp%InpMembers(i)%MmbrCoefIDIndx, InitInp%InpMembers(i)%MmbrFilledIDIndx, InitInp%MPropSets(prop1Indx), InitInp%MPropSets(prop2Indx), InitInp, errStat2, errMsg2 ) 
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'SetupMembers')
       if (ErrStat >= AbortErrLev) return
    end do
@@ -2252,7 +2250,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    if ( errStat >= AbortErrLev ) return
    
       ! Write Summary information to *HydroDyn* summary file now that everything has been initialized. 
-   CALL WriteSummaryFile( InitInp%UnSum, p%WaveField%MSL2SWL, InitInp%NJoints, InitInp%NNodes, InitInp%Nodes, p%NMembers, p%Members, &
+   CALL WriteSummaryFile( InitInp%UnSum, InitInp%NJoints, InitInp%NNodes, InitInp%Nodes, p%NMembers, p%Members, &
                           p%NumOuts, p%OutParam, p%MOutLst, p%JOutLst, u%Mesh, y%Mesh, p, m, errStat2, errMsg2 )
    call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    if ( errStat >= AbortErrLev ) return
