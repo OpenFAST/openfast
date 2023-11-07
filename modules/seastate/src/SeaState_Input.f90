@@ -203,9 +203,8 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
 
 
       ! WaveSeed(1)
-   call ParseVar( FileInfo_In, CurLine, 'WaveSeed(1)', InputFileData%Waves%WaveSeed(1), ErrStat2, ErrMsg2, UnEc )
+   call ParseVar( FileInfo_In, CurLine, 'WaveSeed(1)', InputFileData%Waves%RNG%RandSeed(1), ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
-   InputFileData%Waves%RNG%RandSeed(1) = InputFileData%Waves%WaveSeed(1)
 
       !WaveSeed(2)
    call ParseVar( FileInfo_In, CurLine, 'WaveSeed(2)', Line, ErrStat2, ErrMsg2, UnEc )    ! Read into a string and then parse
@@ -219,14 +218,11 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
       if (Failed())  return;
    endif
 
-   read (Line,*,IOSTAT=ErrStat2) InputFileData%Waves%WaveSeed(2)
+   read (Line,*,IOSTAT=ErrStat2) InputFileData%Waves%RNG%RandSeed(2)
 
    if (ErrStat2 == 0) then ! the user entered a number
-      InputFileData%Waves%RNG%RandSeed(2) = InputFileData%Waves%WaveSeed(2)
-      
       InputFileData%Waves%RNG%RNG_type = "NORMAL"
       InputFileData%Waves%RNG%pRNG = pRNG_INTRINSIC
-
    else
       InputFileData%Waves%RNG%RandSeed(2) = 0
 
@@ -832,12 +828,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       InputFileData%Waves%WaveDirRange    = PiBy2     ! This is so that the constant C=1 in the COS2S function (it shouldn't get called, but in case it does)
       InputFileData%Waves%WaveDirSpread   = 0.0
 
-   end if
-
-
-       ! WaveSeed(1), !WaveSeed(2)
-   if ( InputFileData%WaveMod == WaveMod_None .or. InputFileData%WaveMod == WaveMod_ExtElev .or. InputFileData%WaveMod == WaveMod_RegularUsrPh ) then !bjj: what about WaveMod_ExtFull and/or WaveMod_UserFreq
-         InputFileData%Waves%WaveSeed(I) = 0
    end if
 
 

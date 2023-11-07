@@ -49,7 +49,6 @@ IMPLICIT NONE
     REAL(SiKi)  :: WavePhase = 0.0_R4Ki      !< Specified phase for regular waves [(radians)]
     REAL(SiKi)  :: WavePkShp = 0.0_R4Ki      !< Peak shape parameter of incident wave spectrum [1.0 for Pierson-Moskowitz] [-]
     CHARACTER(80)  :: WavePkShpChr      !< String to temporarially hold value of peak shape parameter input line [-]
-    INTEGER(IntKi) , DIMENSION(1:2)  :: WaveSeed = 0_IntKi      !< Random seeds of incident waves [-2147483648 to 2147483647] [-]
     REAL(DbKi)  :: WaveTMax = 0.0_R8Ki      !< Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT [(sec)]
     REAL(SiKi)  :: WaveTp = 0.0_R4Ki      !< Peak spectral period of incident waves [(sec)]
     INTEGER(IntKi)  :: NWaveElevGrid = 0_IntKi      !< Number of grid points where the incident wave elevations are computed (the XY grid point locations) [-]
@@ -108,7 +107,6 @@ subroutine Waves_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    DstInitInputData%WavePhase = SrcInitInputData%WavePhase
    DstInitInputData%WavePkShp = SrcInitInputData%WavePkShp
    DstInitInputData%WavePkShpChr = SrcInitInputData%WavePkShpChr
-   DstInitInputData%WaveSeed = SrcInitInputData%WaveSeed
    DstInitInputData%WaveTMax = SrcInitInputData%WaveTMax
    DstInitInputData%WaveTp = SrcInitInputData%WaveTp
    DstInitInputData%NWaveElevGrid = SrcInitInputData%NWaveElevGrid
@@ -235,7 +233,6 @@ subroutine Waves_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%WavePhase)
    call RegPack(Buf, InData%WavePkShp)
    call RegPack(Buf, InData%WavePkShpChr)
-   call RegPack(Buf, InData%WaveSeed)
    call RegPack(Buf, InData%WaveTMax)
    call RegPack(Buf, InData%WaveTp)
    call RegPack(Buf, InData%NWaveElevGrid)
@@ -314,8 +311,6 @@ subroutine Waves_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%WavePkShp)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WavePkShpChr)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveSeed)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveTMax)
    if (RegCheckErr(Buf, RoutineName)) return
