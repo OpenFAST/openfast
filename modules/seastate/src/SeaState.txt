@@ -124,8 +124,7 @@ typedef   ^                  ^                      SeaSt_Interp_MiscVarType    
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
-typedef   ^                  ParameterType          Waves2_ParameterType     Waves2            -       -      -  "Parameter data for the Waves2 module"  -
-typedef   ^                  ^                      DbKi                     WaveDT            -       -      -  "Wave DT" sec
+typedef   ^                  ParameterType          DbKi                     WaveDT            -       -      -  "Wave DT" sec
 typedef   ^                  ^                      INTEGER                  NGridPts          -       -      -  "Number of data points in the wave kinematics grid"        -
 typedef   ^                  ^                      INTEGER                  NGrid             3       -      -  "Number of grid entries in x, y, and z"
 typedef   ^                  ^                      ReKi                     deltaGrid         3       -      -  "delta between grid points in x, y, and theta (for z)" m,m,rad

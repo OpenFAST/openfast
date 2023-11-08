@@ -91,9 +91,8 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       TYPE(Waves_InitOutputType)             :: Waves_InitOut                       ! Initialization Outputs from the Waves submodule initialization
       TYPE(Waves2_InitOutputType)            :: Waves2_InitOut                      ! Initialization Outputs from the Waves2 submodule initialization
       TYPE(SeaSt_Interp_InitInputType)       :: SeaSt_Interp_InitInp
-!      TYPE(Waves2_InitOutputType)            :: Waves2_InitOut                      ! Initialization Outputs from the Waves2 module initialization
       TYPE(Current_InitOutputType)           :: Current_InitOut                     ! Initialization Outputs from the Current module initialization
-      INTEGER                                :: I,J,K                               ! Generic counters
+      INTEGER                                :: I                                   ! Generic counters
       INTEGER                                :: it                                  ! Generic counters
       REAL(ReKi)                             :: TmpElev                             ! temporary wave elevation
 
@@ -267,11 +266,10 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
    
    
          IF (InputFileData%Waves2%WvDiffQTFF .OR. InputFileData%Waves2%WvSumQTFF ) THEN
-               ! Set a few things from the Waves module output
+            CALL Waves2_Init(InputFileData%Waves2, Waves2_InitOut, p%WaveField, ErrStat2, ErrMsg2 )
             InputFileData%Waves2%NStepWave   = Waves_InitOut%NStepWave
             InputFileData%Waves2%NStepWave2  = Waves_InitOut%NStepWave2
                                                 
-            CALL Waves2_Init(InputFileData%Waves2, p%Waves2, Waves2_InitOut, p%WaveField, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
@@ -280,7 +278,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
             ! The acceleration, velocity, and dynamic pressures will get added to the parts passed to the morrison module later...
           ! Difference frequency results
-            IF ( p%Waves2%WvDiffQTFF ) THEN
+            IF ( InputFileData%Waves2%WvDiffQTFF ) THEN
 
                      ! Dynamic pressure -- difference frequency terms
                CALL AddArrays_4D(p%WaveField%WaveDynP, Waves2_InitOut%WaveDynP2D,'WaveDynP_D', ErrStat2, ErrMsg2)  ! WaveDynP = WaveDynP + WaveDynP2D
@@ -298,7 +296,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
             ENDIF ! second order wave kinematics difference frequency results
 
                ! Sum frequency results
-            IF ( p%Waves2%WvSumQTFF ) THEN
+            IF ( InputFileData%Waves2%WvSumQTFF ) THEN
 
                   ! Dynamic pressure -- sum frequency terms
                CALL AddArrays_4D(p%WaveField%WaveDynP, Waves2_InitOut%WaveDynP2S,'WaveDynP_S', ErrStat2, ErrMsg2)  ! WaveDynP = WaveDynP + WaveDynP2S
@@ -318,9 +316,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          ELSE
                   ! these need to be set to zero since we don't have a UseWaves2 flag:
                InputFileData%Waves2%NWaveElevGrid  = 0
-               p%Waves2%WvDiffQTFF = .FALSE.
-               p%Waves2%WvSumQTFF  = .FALSE.
-            
                
          ENDIF ! InputFileData%Waves2%WvDiffQTFF .OR. InputFileData%Waves2%WvSumQTFF 
    

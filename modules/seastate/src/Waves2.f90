@@ -59,11 +59,10 @@ CONTAINS
 !> @brief
 !!    This routine is called at the start of the simulation to perform initialization steps.
 !!    The parameters that are set here are not changed during the simulation.
-SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
+SUBROUTINE Waves2_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       TYPE(Waves2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
-      TYPE(Waves2_ParameterType),         INTENT(  OUT)  :: p                    !< Parameters
       TYPE(Waves2_InitOutputType),        INTENT(  OUT)  :: InitOut              !< Output for initialization routine
       TYPE(SeaSt_WaveFieldType),          INTENT(INOUT)  :: WaveField            !< WaveFieldType
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Error status of the operation
@@ -230,15 +229,8 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
 
       !--------------------------------------------------------------------------------
-      ! Now copy over things to parameters...
+      ! 
       !--------------------------------------------------------------------------------
-
-         ! Difference QTF
-      p%WvDiffQTFF            =  InitInp%WvDiffQTFF           ! Flag for calculation
-
-         ! Summation QTF
-      p%WvSumQTFF             =  InitInp%WvSumQTFF            ! Flag for calculation
-
 
          ! The wave elevation information in frequency space -- we need to normalize this by NStepWave2
       ALLOCATE ( WaveElevC0Norm(0:InitInp%NStepWave2) , STAT=ErrStatTmp )
@@ -426,7 +418,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
       !--------------------------------------------------------------------------------
 
 
-      IF(p%WvDiffQTFF) THEN
+      IF(InitInp%WvDiffQTFF) THEN
 
             ! Tell our nice users what is about to happen that may take a while:
          CALL WrScr ( ' Calculating second order difference frequency wave kinematics.' )
@@ -726,7 +718,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
          END IF
 
 
-      ENDIF    ! p%WvDiffQTFF
+      ENDIF    ! WvDiffQTFF
 
 
 
@@ -751,7 +743,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
       !--------------------------------------------------------------------------------
 
 
-      IF(p%WvSumQTFF) THEN
+      IF(InitInp%WvSumQTFF) THEN
 
             ! Tell our nice users what is about to happen that may take a while:
          CALL WrScr ( ' Calculating second order sum frequency wave kinematics.' )
@@ -1236,7 +1228,7 @@ SUBROUTINE Waves2_Init( InitInp, p, InitOut, WaveField, ErrStat, ErrMsg )
 
 
 
-      ENDIF    ! p%WvSumQTFF
+      ENDIF    ! WvSumQTFF
 
 
 

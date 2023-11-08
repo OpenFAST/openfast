@@ -146,7 +146,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  SeaSt_ParameterType  =======
   TYPE, PUBLIC :: SeaSt_ParameterType
-    TYPE(Waves2_ParameterType)  :: Waves2      !< Parameter data for the Waves2 module [-]
     REAL(DbKi)  :: WaveDT = 0.0_R8Ki      !< Wave DT [sec]
     INTEGER(IntKi)  :: NGridPts = 0_IntKi      !< Number of data points in the wave kinematics grid [-]
     INTEGER(IntKi) , DIMENSION(1:3)  :: NGrid = 0_IntKi      !< Number of grid entries in x, y, and z [-]
@@ -1149,9 +1148,6 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    character(*), parameter        :: RoutineName = 'SeaSt_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call Waves2_CopyParam(SrcParamData%Waves2, DstParamData%Waves2, CtrlCode, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
    DstParamData%WaveDT = SrcParamData%WaveDT
    DstParamData%NGridPts = SrcParamData%NGridPts
    DstParamData%NGrid = SrcParamData%NGrid
@@ -1271,8 +1267,6 @@ subroutine SeaSt_DestroyParam(ParamData, ErrStat, ErrMsg)
    character(*), parameter        :: RoutineName = 'SeaSt_DestroyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   call Waves2_DestroyParam(ParamData%Waves2, ErrStat2, ErrMsg2)
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (allocated(ParamData%WaveElevxi)) then
       deallocate(ParamData%WaveElevxi)
    end if
@@ -1313,7 +1307,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
    integer(IntKi)  :: LB(1), UB(1)
    logical         :: PtrInIndex
    if (Buf%ErrStat >= AbortErrLev) return
-   call Waves2_PackParam(Buf, InData%Waves2) 
    call RegPack(Buf, InData%WaveDT)
    call RegPack(Buf, InData%NGridPts)
    call RegPack(Buf, InData%NGrid)
@@ -1387,7 +1380,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    integer(IntKi)  :: PtrIdx
    type(c_ptr)     :: Ptr
    if (Buf%ErrStat /= ErrID_None) return
-   call Waves2_UnpackParam(Buf, OutData%Waves2) ! Waves2 
    call RegUnpack(Buf, OutData%WaveDT)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NGridPts)

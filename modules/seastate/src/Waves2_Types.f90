@@ -59,12 +59,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:,:,:,:), ALLOCATABLE  :: WaveVel2S      !< Instantaneous 2nd-order sum        frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKinGrid points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.) [(m/s)]
   END TYPE Waves2_InitOutputType
 ! =======================
-! =========  Waves2_ParameterType  =======
-  TYPE, PUBLIC :: Waves2_ParameterType
-    LOGICAL  :: WvDiffQTFF = .false.      !< Full difference QTF second order forces flag [(-)]
-    LOGICAL  :: WvSumQTFF = .false.      !< Full sum QTF second order forces flag [(-)]
-  END TYPE Waves2_ParameterType
-! =======================
 CONTAINS
 
 subroutine Waves2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrStat, ErrMsg)
@@ -487,49 +481,6 @@ subroutine Waves2_UnPackInitOutput(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveVel2S)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-end subroutine
-
-subroutine Waves2_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
-   type(Waves2_ParameterType), intent(in) :: SrcParamData
-   type(Waves2_ParameterType), intent(inout) :: DstParamData
-   integer(IntKi),  intent(in   ) :: CtrlCode
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'Waves2_CopyParam'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   DstParamData%WvDiffQTFF = SrcParamData%WvDiffQTFF
-   DstParamData%WvSumQTFF = SrcParamData%WvSumQTFF
-end subroutine
-
-subroutine Waves2_DestroyParam(ParamData, ErrStat, ErrMsg)
-   type(Waves2_ParameterType), intent(inout) :: ParamData
-   integer(IntKi),  intent(  out) :: ErrStat
-   character(*),    intent(  out) :: ErrMsg
-   character(*), parameter        :: RoutineName = 'Waves2_DestroyParam'
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-end subroutine
-
-subroutine Waves2_PackParam(Buf, Indata)
-   type(PackBuffer), intent(inout) :: Buf
-   type(Waves2_ParameterType), intent(in) :: InData
-   character(*), parameter         :: RoutineName = 'Waves2_PackParam'
-   if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%WvDiffQTFF)
-   call RegPack(Buf, InData%WvSumQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
-end subroutine
-
-subroutine Waves2_UnPackParam(Buf, OutData)
-   type(PackBuffer), intent(inout)    :: Buf
-   type(Waves2_ParameterType), intent(inout) :: OutData
-   character(*), parameter            :: RoutineName = 'Waves2_UnPackParam'
-   if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%WvDiffQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WvSumQTFF)
-   if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 END MODULE Waves2_Types
 !ENDOFREGISTRYGENERATEDFILE

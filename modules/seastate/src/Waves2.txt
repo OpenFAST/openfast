@@ -46,10 +46,3 @@ typedef     ^                 ^                 SiKi                 WaveVel2D  
 typedef     ^                 ^                 SiKi                 WaveVel2S         {:}{:}{:}{:}{:} -       -  "Instantaneous 2nd-order sum        frequency correction for the velocity         of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the NWaveKinGrid points where the incident wave kinematics will be computed (The values include both the velocity of incident waves and the velocity of current.)" (m/s)
 
 
-
-# ..... Parameters ................................................................................................................
-# Define parameters here:
-# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef     ^                 ParameterType     LOGICAL              WvDiffQTFF        -        -        -        "Full difference QTF second order forces flag" (-)
-typedef     ^                 ParameterType     LOGICAL              WvSumQTFF         -        -        -        "Full sum QTF second order forces flag" (-)
-
