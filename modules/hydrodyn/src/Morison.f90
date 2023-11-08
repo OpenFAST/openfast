@@ -1903,7 +1903,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    character(*), parameter                           :: RoutineName = 'Morison_Init'
 
    TYPE(Morison_MemberType) :: member      ! the current member
-   INTEGER                  :: i, j, k
+   INTEGER                  :: i, j
    REAL(ReKi)               :: v2D(3,1), pos(3)
    real(ReKi)               :: An(3), An_drag(3), Vn(3), I_n(3), sgn, Amag, Amag_drag, Vmag, Imag, Ir_MG_end, Il_MG_end, R_I(3,3), IRl_mat(3,3), tMG, MGdens
    integer(IntKi)           :: MemberEndIndx
@@ -2516,7 +2516,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    character(*), parameter                           :: RoutineName = 'Morison_CalcOutput'
       
    REAL(ReKi)                                        :: vmag, vmagf
-   INTEGER                                           :: I, J, K
+   INTEGER                                           :: I, J
    REAL(ReKi)                                        :: qdotdot(6)      ! The structural acceleration of a mesh node
       
    TYPE(Morison_MemberType) :: mem     ! the current member
@@ -2543,7 +2543,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: g     ! gravity constant
    REAL(ReKi)               :: k_hat(3), k_hat1(3), k_hat2(3) ! Elemental unit vector pointing from 1st node to 2nd node of the element
    REAL(ReKi)               :: n_hat(3)
-   REAL(ReKi)               :: alpha ! final load distribution factor for element
    REAL(ReKi)               :: Fr    !radial component of buoyant force
    REAL(ReKi)               :: Fl    !axial component of buoyant force
    REAL(ReKi)               :: Moment     !moment induced about the center of the cylinder's bottom face
@@ -2554,7 +2553,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: a_s2(3)       
    REAL(ReKi)               :: alpha_s2(3)
    REAL(ReKi)               :: omega_s2(3)
-   REAL(ReKi)               :: pos1(3), pos2(3), positionXY(2)   
+   REAL(ReKi)               :: pos1(3), pos2(3)
    REAL(ReKi)               :: Imat(3,3)
    REAL(ReKi)               :: iArm(3), iTerm(3), Ioffset, h_c, dRdl_p, dRdl_pp, f_hydro(3), Am(3,3), lstar, deltal, deltalLeft, deltalRight
    REAL(ReKi)               :: h, h_c_AM, deltal_AM
@@ -2582,7 +2581,6 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
    REAL(ReKi)               :: FAFSInt(3)
    REAL(ReKi)               :: FDynPFSInt
    REAL(ReKi)               :: vrelFSInt(3)
-   REAL(ReKi)               :: pos1Prime(3)
    REAL(ReKi)               :: FAMCFFSInt(3)
    INTEGER(IntKi)           :: MemSubStat, NumFSX
    REAL(DbKi)               :: theta1, theta2

@@ -337,7 +337,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
 !===============================================
           
-      CALL SeaStOut_WrSummaryFile(InitInp, InputFileData, p, Waves_InitOut, ErrStat2, ErrMsg2)
+      CALL SeaStOut_WrSummaryFile(InitInp, InputFileData, p, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       

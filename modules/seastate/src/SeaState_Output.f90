@@ -982,11 +982,10 @@ SUBROUTINE SeaStOut_CloseOutput ( p, ErrStat, ErrMsg )
 END SUBROUTINE SeaStOut_CloseOutput
 !====================================================================================================
 
-SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, Waves_InitOut, ErrStat, ErrMsg )
+SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, ErrStat, ErrMsg )
       TYPE(SeaSt_InitInputType),       INTENT(IN   )  :: InitInp           !< Input data for initialization routine.
       TYPE(SeaSt_InputFile)    ,       INTENT(IN   )  :: InputFileData     !< Data from input file
       TYPE(SeaSt_ParameterType),       INTENT(IN   )  :: p                 !< Parameters      
-      TYPE(Waves_InitOutputType),      INTENT(IN   )  :: Waves_InitOut     !< Initialization Outputs from the Waves submodule initialization
       INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat           !< Error status of the operation
       CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
