@@ -88,12 +88,10 @@ typedef   ^                  ^                      Logical                  Lin
 #                            
 typedef   ^                  InitOutputType         CHARACTER(ChanLen)       WriteOutputHdr    {:}     -      -  "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
 typedef   ^                  ^                      CHARACTER(ChanLen)       WriteOutputUnt    {:}     -      -  "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
-typedef   ^                  ^                      ProgDesc                 Ver               -       -      -  "Version of SeaState"
-typedef     ^                 ^                 INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
-typedef     ^                 ^                 INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
-typedef     ^                 ^                 LOGICAL              InvalidWithSSExctn -       -        -        "Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
-typedef   ^                  ^                  SiKi                 WaveElevSeries     {:}{:}  -        -        "Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second dimension is XY point number corresponding to second dimension of WaveElevXY." (m)
-typedef   ^                  ^             SeaSt_WaveFieldType      *WaveField          -       -        -        "Pointer to wave field"
+typedef   ^                  ^                      ProgDesc                 Ver                -      -      -  "Version of SeaState"
+typedef   ^                  ^                      LOGICAL                  InvalidWithSSExctn -      -      -  "Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2)" (-)
+typedef   ^                  ^                      SiKi                     WaveElevSeries    {:}{:}  -      -  "Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second dimension is XY point number corresponding to second dimension of WaveElevXY." (m)
+typedef   ^                  ^                      SeaSt_WaveFieldType     *WaveField          -      -      -  "Pointer to wave field"
 #                            
 #                            
 # ..... States ....................................................................................................................
@@ -115,10 +113,10 @@ typedef   ^                            OtherStateType                R8Ki    Unu
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef   ^                  MiscVarType            INTEGER                  Decimate          -       -      -  "The output decimation counter" -
-typedef   ^                  ^                      DbKi                     LastOutTime       -       -      -  "Last time step which was written to the output file (sec)"    -
-typedef   ^                  ^                      INTEGER                  LastIndWave       -       -      -  "The last index used in the wave kinematics arrays, used to optimize interpolation"   -
-typedef   ^                  ^                      SeaSt_Interp_MiscVarType       SeaSt_Interp_m            -       -      -  "misc var information from the SeaState Interpolation module"   -
+typedef   ^                  MiscVarType            INTEGER                        Decimate           -       -      -  "The output decimation counter" -
+typedef   ^                  ^                      DbKi                           LastOutTime        -       -      -  "Last time step which was written to the output file (sec)"    -
+typedef   ^                  ^                      INTEGER                        LastIndWave        -       -      -  "The last index used in the wave kinematics arrays, used to optimize interpolation"   -
+typedef   ^                  ^                      SeaSt_Interp_MiscVarType       SeaSt_Interp_m     -       -      -  "misc var information from the SeaState Interpolation module"   -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -131,7 +129,6 @@ typedef   ^                  ^                      ReKi                     del
 typedef   ^                  ^                      ReKi                     X_HalfWidth       -       -      -  "Half-width of the domain in the X direction" m
 typedef   ^                  ^                      ReKi                     Y_HalfWidth       -       -      -  "Half-width of the domain in the Y direction" m
 typedef   ^                  ^                      ReKi                     Z_Depth           -       -      -  "Depth of the domain the Z direction" m
-typedef   ^                  ^                      INTEGER                  NStepWave         -       -      -  "Number of user-requested data points in the wave kinematics arrays"        -
 typedef   ^                  ^                      INTEGER                  NWaveElev         -       -      -  "Number of wave elevation outputs"        -
 typedef   ^                  ^                      SiKi                     WaveElevxi        {:}     -      -  "xi-coordinates for points where the incident wave elevations can be output"  (meters)
 typedef   ^                  ^                      SiKi                     WaveElevyi        {:}     -      -  "yi-coordinates for points where the incident wave elevations can be output"  (meters)

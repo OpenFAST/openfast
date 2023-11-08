@@ -57,6 +57,4 @@ typedef     ^                 ^                 ReKi                 PtfmLocatio
 #
 typedef     ^                 InitOutputType    INTEGER              WaveNDir          -        -        -        "Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module]"     (-)
 typedef     ^                 InitOutputType    DbKi                 WaveTMax          -        -        -        "Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT"  (sec)
-typedef     ^                 InitOutputType    INTEGER              NStepWave         -        -        -        "Total number of frequency components = total number of time steps in the incident wave" -
-typedef     ^                 InitOutputType    INTEGER              NStepWave2        -        -        -        "NStepWave / 2" -
 

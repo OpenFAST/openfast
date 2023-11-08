@@ -269,10 +269,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          ! Now call each sub-module's *_Init subroutine
          ! to fully initialize each sub-module based on the necessary initialization data
 
-      
-         ! Copy Waves initialization output into the initialization input type for the WAMIT module
-      !p%NWaveElev    = InputFileData%Waves%NWaveElev  
-      p%NStepWave    = InitInp%NStepWave
 
       m%LastIndWave = 1
 
@@ -353,10 +349,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                return
             end if
             
-                ! Copy SeaState initialization output into the initialization input type for the WAMIT module
-                  
-            InputFileData%WAMIT%NStepWave    = InitInp%NStepWave
-            InputFileData%WAMIT%NStepWave2   = InitInp%NStepWave2
 
             CALL WAMIT_Init(InputFileData%WAMIT, m%u_WAMIT(1), p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1), z%WAMIT, OtherState%WAMIT(1), &
                                     y%WAMIT(1), m%WAMIT(1), Interval, ErrStat2, ErrMsg2 )
@@ -420,8 +412,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                p%WAMIT2used   = .TRUE.
 
                   ! Copy Waves initialization output into the initialization input type for the WAMIT module
-               InputFileData%WAMIT2%NStepWave   = InitInp%NStepWave
-               InputFileData%WAMIT2%NStepWave2  = InitInp%NStepWave2
                InputFileData%WAMIT2%Gravity     = InitInp%Gravity
 
                   ! Set values for all NBodyMods
@@ -516,7 +506,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                ! Waves
                ! Need to pre-process the incoming wave data to be compatible with FIT
             
-            FITInitData%N_omega        = InitInp%NStepWave2
+            FITInitData%N_omega        = p%WaveField%NStepWave2
             FITInitData%Wave_angle     = p%WaveField%WaveDir
             
                ! allocate waves data arrays for FIT
@@ -534,14 +524,14 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                END IF
                
                ! Populate wave arrays (Need to double chech this part. It doesn't look right!)
-            Np = 2*(InitInp%WaveField%WaveDOmega + 1)
-            DO I = 1 , InitInp%NStepWave2
+            Np = 2*(p%WaveField%WaveDOmega + 1)
+            DO I = 1 , p%WaveField%NStepWave2
                
-               dftreal        = InitInp%WaveField%WaveElevC0( 1, ABS(I ) )
-               dftimag        = InitInp%WaveField%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
+               dftreal        = p%WaveField%WaveElevC0( 1, ABS(I ) )
+               dftimag        = p%WaveField%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)
                FITInitData%Wave_amp   (I) = sqrt( dftreal**2 + dftimag**2 )  * 2.0 / Np
-               FITInitData%Wave_omega (I) = I*InitInp%WaveField%WaveDOmega
-               FITInitData%Wave_number(I) = I*InitInp%WaveField%WaveDOmega**2. / InputFileData%Gravity
+               FITInitData%Wave_omega (I) = I*p%WaveField%WaveDOmega
+               FITInitData%Wave_number(I) = I*p%WaveField%WaveDOmega**2. / InputFileData%Gravity
                FITInitData%Wave_phase (I) = atan2( dftimag, dftreal ) 
               
             END DO         
@@ -559,9 +549,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
    
       ! Are there Morison elements?
       IF ( InputFileData%Morison%NMembers > 0 ) THEN
-     
-         ! Copy SeaState initialization output into the initialization input type for the Morison module
-         InputFileData%Morison%NStepWave =  InitInp%NStepWave
      
             ! Were visualization meshes requested?
          InputFileData%Morison%VisMeshes = p%VisMeshes
@@ -1306,7 +1293,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
          if (p%WAMIT2used) then
 
             if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then
-               call WAMIT2_CalcOutput( Time, p%WaveField%WaveTime, p%WAMIT2(1), y%WAMIT2(1), m%WAMIT2(1), ErrStat2, ErrMsg2 )
+               call WAMIT2_CalcOutput( Time, p%WaveField, p%WAMIT2(1), y%WAMIT2(1), m%WAMIT2(1), ErrStat2, ErrMsg2 )
                   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
                do iBody=1,p%NBody
                   y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT2(1)%Mesh%Force (:,iBody)
@@ -1317,7 +1304,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
             else
                do iBody=1,p%NBody
 
-                  call WAMIT2_CalcOutput( Time, p%WaveField%WaveTime, p%WAMIT2(iBody), y%WAMIT2(iBody), m%WAMIT2(iBody), ErrStat2, ErrMsg2 )
+                  call WAMIT2_CalcOutput( Time, p%WaveField, p%WAMIT2(iBody), y%WAMIT2(iBody), m%WAMIT2(iBody), ErrStat2, ErrMsg2 )
                      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
                   y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT2(iBody)%Mesh%Force (:,1)
                   y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT2(iBody)%Mesh%Moment(:,1)

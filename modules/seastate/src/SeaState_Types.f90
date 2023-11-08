@@ -109,8 +109,6 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< The is the list of all HD-related output channel header strings (includes all sub-module channels) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< The is the list of all HD-related output channel unit strings (includes all sub-module channels) [-]
     TYPE(ProgDesc)  :: Ver      !< Version of SeaState [-]
-    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
-    INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
     LOGICAL  :: InvalidWithSSExctn = .false.      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevSeries      !< Wave elevation time-series at each of the points given by WaveElevXY.  First dimension is the timestep. Second dimension is XY point number corresponding to second dimension of WaveElevXY. [(m)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
@@ -153,7 +151,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: X_HalfWidth = 0.0_ReKi      !< Half-width of the domain in the X direction [m]
     REAL(ReKi)  :: Y_HalfWidth = 0.0_ReKi      !< Half-width of the domain in the Y direction [m]
     REAL(ReKi)  :: Z_Depth = 0.0_ReKi      !< Depth of the domain the Z direction [m]
-    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Number of user-requested data points in the wave kinematics arrays [-]
     INTEGER(IntKi)  :: NWaveElev = 0_IntKi      !< Number of wave elevation outputs [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevxi      !< xi-coordinates for points where the incident wave elevations can be output [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevyi      !< yi-coordinates for points where the incident wave elevations can be output [(meters)]
@@ -764,8 +761,6 @@ subroutine SeaSt_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    call NWTC_Library_CopyProgDesc(SrcInitOutputData%Ver, DstInitOutputData%Ver, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstInitOutputData%NStepWave = SrcInitOutputData%NStepWave
-   DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
    DstInitOutputData%InvalidWithSSExctn = SrcInitOutputData%InvalidWithSSExctn
    if (allocated(SrcInitOutputData%WaveElevSeries)) then
       LB(1:2) = lbound(SrcInitOutputData%WaveElevSeries)
@@ -822,8 +817,6 @@ subroutine SeaSt_PackInitOutput(Buf, Indata)
       call RegPack(Buf, InData%WriteOutputUnt)
    end if
    call NWTC_Library_PackProgDesc(Buf, InData%Ver) 
-   call RegPack(Buf, InData%NStepWave)
-   call RegPack(Buf, InData%NStepWave2)
    call RegPack(Buf, InData%InvalidWithSSExctn)
    call RegPack(Buf, allocated(InData%WaveElevSeries))
    if (allocated(InData%WaveElevSeries)) then
@@ -879,10 +872,6 @@ subroutine SeaSt_UnPackInitOutput(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    call NWTC_Library_UnpackProgDesc(Buf, OutData%Ver) ! Ver 
-   call RegUnpack(Buf, OutData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NStepWave2)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%InvalidWithSSExctn)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%WaveElevSeries)) deallocate(OutData%WaveElevSeries)
@@ -1155,7 +1144,6 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    DstParamData%X_HalfWidth = SrcParamData%X_HalfWidth
    DstParamData%Y_HalfWidth = SrcParamData%Y_HalfWidth
    DstParamData%Z_Depth = SrcParamData%Z_Depth
-   DstParamData%NStepWave = SrcParamData%NStepWave
    DstParamData%NWaveElev = SrcParamData%NWaveElev
    if (allocated(SrcParamData%WaveElevxi)) then
       LB(1:1) = lbound(SrcParamData%WaveElevxi)
@@ -1314,7 +1302,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
    call RegPack(Buf, InData%X_HalfWidth)
    call RegPack(Buf, InData%Y_HalfWidth)
    call RegPack(Buf, InData%Z_Depth)
-   call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NWaveElev)
    call RegPack(Buf, allocated(InData%WaveElevxi))
    if (allocated(InData%WaveElevxi)) then
@@ -1393,8 +1380,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%Y_HalfWidth)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Z_Depth)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NWaveElev)
    if (RegCheckErr(Buf, RoutineName)) return

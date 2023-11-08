@@ -38,8 +38,6 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             DbKi                     RdtnTMax                        -          -        -         ""    -
 typedef   ^                            ^                             CHARACTER(1024)          WAMITFile                       -          -        -         ""    -
 typedef   ^                            ^                             Conv_Rdtn_InitInputType  Conv_Rdtn                       -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NStepWave                       -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NStepWave2                      -          -        -         ""    -
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                       -          -        -         "Pointer to wave field"
 
 #
@@ -113,7 +111,6 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     ExctnFiltConst           -          -        -          "Low-pass time filter constant computed from ExctnCutOff"
 typedef   ^                            ^                             SiKi                     WaveExctn                {:}{:}     -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveExctnGrid            {:}{:}{:}{:}     -         -         "WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: Force component for eac WAMIT Body"        -
-typedef   ^                            ^                             INTEGER                  NStepWave                -          -         -         ""        -
 typedef   ^                            ^                             Conv_Rdtn_ParameterType  Conv_Rdtn                -          -         -         ""        -
 typedef   ^                            ^                             SS_Rad_ParameterType     SS_Rdtn                  -          -         -         ""        -
 typedef   ^                            ^                             SS_Exc_ParameterType     SS_Exctn                 -          -         -         ""        -

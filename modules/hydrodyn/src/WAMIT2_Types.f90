@@ -46,8 +46,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PtfmRefzt      !< The zt offset of the body reference point(s) from (0,0,0)  [1 to NBody; only used when PotMod=1; must be 0.0 if NBodyMod=2 ] [(m)]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: PtfmRefztRot      !< The rotation about zt of the body reference frame(s) from xt/yt [radians]
     REAL(ReKi)  :: WAMITULEN = 0.0_ReKi      !< WAMIT unit length scale [-]
-    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
-    INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
     INTEGER(IntKi)  :: MnDrift = 0_IntKi      !< Calculate the mean drift force {0: no mean drift; [7,8,9,10,11, or 12]: WAMIT file to use} [-]
@@ -68,7 +66,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  WAMIT2_ParameterType  =======
   TYPE, PUBLIC :: WAMIT2_ParameterType
-    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Number of wave time steps [-]
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
     INTEGER(IntKi)  :: NBodyMod = 0_IntKi      !< Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1] [-]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveExctn2      !< Time series of the resulting 2nd order force (first index is timestep, second index is load component) [(N)]
@@ -154,8 +151,6 @@ subroutine WAMIT2_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
       DstInitInputData%PtfmRefztRot = SrcInitInputData%PtfmRefztRot
    end if
    DstInitInputData%WAMITULEN = SrcInitInputData%WAMITULEN
-   DstInitInputData%NStepWave = SrcInitInputData%NStepWave
-   DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%WaveField => SrcInitInputData%WaveField
    DstInitInputData%MnDrift = SrcInitInputData%MnDrift
@@ -223,8 +218,6 @@ subroutine WAMIT2_PackInitInput(Buf, Indata)
       call RegPack(Buf, InData%PtfmRefztRot)
    end if
    call RegPack(Buf, InData%WAMITULEN)
-   call RegPack(Buf, InData%NStepWave)
-   call RegPack(Buf, InData%NStepWave2)
    call RegPack(Buf, InData%Gravity)
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
@@ -319,10 +312,6 @@ subroutine WAMIT2_UnPackInitInput(Buf, OutData)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
    call RegUnpack(Buf, OutData%WAMITULEN)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NStepWave2)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Gravity)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -483,7 +472,6 @@ subroutine WAMIT2_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
    character(*), parameter        :: RoutineName = 'WAMIT2_CopyParam'
    ErrStat = ErrID_None
    ErrMsg  = ''
-   DstParamData%NStepWave = SrcParamData%NStepWave
    DstParamData%NBody = SrcParamData%NBody
    DstParamData%NBodyMod = SrcParamData%NBodyMod
    if (allocated(SrcParamData%WaveExctn2)) then
@@ -525,7 +513,6 @@ subroutine WAMIT2_PackParam(Buf, Indata)
    type(WAMIT2_ParameterType), intent(in) :: InData
    character(*), parameter         :: RoutineName = 'WAMIT2_PackParam'
    if (Buf%ErrStat >= AbortErrLev) return
-   call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NBody)
    call RegPack(Buf, InData%NBodyMod)
    call RegPack(Buf, allocated(InData%WaveExctn2))
@@ -552,8 +539,6 @@ subroutine WAMIT2_UnPackParam(Buf, OutData)
    integer(IntKi)  :: stat
    logical         :: IsAllocAssoc
    if (Buf%ErrStat /= ErrID_None) return
-   call RegUnpack(Buf, OutData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NBody)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NBodyMod)

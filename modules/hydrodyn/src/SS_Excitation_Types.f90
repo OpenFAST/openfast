@@ -40,7 +40,6 @@ IMPLICIT NONE
     CHARACTER(1024)  :: InputFile      !< Name of the input file [-]
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< Number of WAMIT bodies for this State Space model [-]
     INTEGER(IntKi)  :: ExctnDisp = 0_IntKi      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
-    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Number of timesteps in the WaveTime array [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: PtfmRefztRot      !< The rotation about zt of the body reference frame(s) from xt/yt [radians]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
   END TYPE SS_Exc_InitInputType
@@ -83,7 +82,6 @@ IMPLICIT NONE
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step [s]
     INTEGER(IntKi)  :: NBody = 0_IntKi      !< Number of WAMIT bodies for this State Space model [-]
     INTEGER(IntKi)  :: ExctnDisp = 0_IntKi      !< 0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0] [-]
-    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Number of timesteps in the WaveTime array [-]
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: spDOF      !< States per DOF [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: A      !< A matrix [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: B      !< B matrix [-]
@@ -121,7 +119,6 @@ subroutine SS_Exc_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Er
    DstInitInputData%InputFile = SrcInitInputData%InputFile
    DstInitInputData%NBody = SrcInitInputData%NBody
    DstInitInputData%ExctnDisp = SrcInitInputData%ExctnDisp
-   DstInitInputData%NStepWave = SrcInitInputData%NStepWave
    if (allocated(SrcInitInputData%PtfmRefztRot)) then
       LB(1:1) = lbound(SrcInitInputData%PtfmRefztRot)
       UB(1:1) = ubound(SrcInitInputData%PtfmRefztRot)
@@ -161,7 +158,6 @@ subroutine SS_Exc_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%InputFile)
    call RegPack(Buf, InData%NBody)
    call RegPack(Buf, InData%ExctnDisp)
-   call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, allocated(InData%PtfmRefztRot))
    if (allocated(InData%PtfmRefztRot)) then
       call RegPackBounds(Buf, 1, lbound(InData%PtfmRefztRot), ubound(InData%PtfmRefztRot))
@@ -192,8 +188,6 @@ subroutine SS_Exc_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%NBody)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%ExctnDisp)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%PtfmRefztRot)) deallocate(OutData%PtfmRefztRot)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -630,7 +624,6 @@ subroutine SS_Exc_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMs
    DstParamData%DT = SrcParamData%DT
    DstParamData%NBody = SrcParamData%NBody
    DstParamData%ExctnDisp = SrcParamData%ExctnDisp
-   DstParamData%NStepWave = SrcParamData%NStepWave
    if (allocated(SrcParamData%spDOF)) then
       LB(1:1) = lbound(SrcParamData%spDOF)
       UB(1:1) = ubound(SrcParamData%spDOF)
@@ -717,7 +710,6 @@ subroutine SS_Exc_PackParam(Buf, Indata)
    call RegPack(Buf, InData%DT)
    call RegPack(Buf, InData%NBody)
    call RegPack(Buf, InData%ExctnDisp)
-   call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, allocated(InData%spDOF))
    if (allocated(InData%spDOF)) then
       call RegPackBounds(Buf, 1, lbound(InData%spDOF), ubound(InData%spDOF))
@@ -765,8 +757,6 @@ subroutine SS_Exc_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%NBody)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%ExctnDisp)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%spDOF)) deallocate(OutData%spDOF)
    call RegUnpack(Buf, IsAllocAssoc)

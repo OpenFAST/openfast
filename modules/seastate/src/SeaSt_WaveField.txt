@@ -55,3 +55,6 @@ typedef     ^                 ^                 SiKi                 WvLowCOffS 
 typedef     ^                 ^                 SiKi                 WvHiCOffS         -              -        -        "Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
 typedef     ^                 ^                 SiKi                 WaveDOmega        -              -        -        "Frequency step for incident wave calculations" (rad/s)
 typedef     ^                 ^                 INTEGER              WaveMod           -              -        -        "Incident wave kinematics model: See valid values in SeaSt_WaveField module parameters." -
+
+typedef     ^                 ^                 INTEGER              NStepWave         -              -        -        "Total number of frequency components = total number of time steps in the incident wave" -
+typedef     ^                 ^                 INTEGER              NStepWave2        -              -        -        "NStepWave / 2" -

@@ -1137,13 +1137,13 @@ END SUBROUTINE WAMIT2_Init
                END IF
 
 
-               DO J=1,InitInp%NStepWave2
+               DO J=1,InitInp%WaveField%NStepWave2
 
                      ! NOTE: since the Mean Drift only returns a static time independent average value for the drift force, we do not
                      !        need to account for any offset in the location of the WAMIT body (this term vanishes).
                      ! First get the wave amplitude -- must be reconstructed from the WaveElevC0 array.  First index is the real (1) or
                      ! imaginary (2) part.  Divide by NStepWave2 to remove the built in normalization in WaveElevC0.
-                  aWaveElevC = CMPLX( InitInp%WaveField%WaveElevC0(1,J), InitInp%WaveField%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
+                  aWaveElevC = CMPLX( InitInp%WaveField%WaveElevC0(1,J), InitInp%WaveField%WaveElevC0(2,J), SiKi) / InitInp%WaveField%NStepWave2
 
                      ! Calculate the frequency
                   Omega1 = J * InitInp%WaveField%WaveDOmega
@@ -1614,19 +1614,19 @@ END SUBROUTINE WAMIT2_Init
 
 
          ! Setup the arrays holding the Newman terms, both the complex frequency domain and real time domain pieces
-      ALLOCATE( NewmanTerm1t( 0:InitInp%NStepWave  ), STAT=ErrStatTmp )
+      ALLOCATE( NewmanTerm1t( 0:InitInp%WaveField%NStepWave  ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for calculating the first term of the Newmans '// &
                                              'approximation in the time domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( NewmanTerm2t( 0:InitInp%NStepWave  ), STAT=ErrStatTmp )
+      ALLOCATE( NewmanTerm2t( 0:InitInp%WaveField%NStepWave  ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for calculating the second term of the Newmans '// &
                                              'approximation in the time domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( NewmanTerm1C( 0:InitInp%NStepWave2, 6 ), STAT=ErrStatTmp )
+      ALLOCATE( NewmanTerm1C( 0:InitInp%WaveField%NStepWave2, 6 ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for calculating the first term of the Newmans '// &
                                              'approximation in the frequency domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( NewmanTerm2C( 0:InitInp%NStepWave2, 6 ), STAT=ErrStatTmp )
+      ALLOCATE( NewmanTerm2C( 0:InitInp%WaveField%NStepWave2, 6 ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for calculating the second term of the Newmans '// &
                                              'approximation in the frequency domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( NewmanAppForce( 0:InitInp%NStepWave, 6*p%NBody), STAT=ErrStatTmp )
+      ALLOCATE( NewmanAppForce( 0:InitInp%WaveField%NStepWave, 6*p%NBody), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the resulting Newmans '// &
                                              'approximation of the 2nd order force.',ErrStat, ErrMsg, RoutineName)
 
@@ -1650,7 +1650,7 @@ END SUBROUTINE WAMIT2_Init
 
 
          ! Initialize the FFT library
-      CALL InitCFFT ( InitInp%NStepWave, FFT_Data, .FALSE., ErrStatTmp )      ! Complex result FFT initialize
+      CALL InitCFFT ( InitInp%WaveField%NStepWave, FFT_Data, .FALSE., ErrStatTmp )      ! Complex result FFT initialize
       CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
@@ -1708,11 +1708,11 @@ END SUBROUTINE WAMIT2_Init
                END IF
 
 
-               DO J=1,InitInp%NStepWave2
+               DO J=1,InitInp%WaveField%NStepWave2
 
                      ! First get the wave amplitude -- must be reconstructed from the WaveElevC array.  First index is the real (1) or
                      ! imaginary (2) part.  Divide by NStepWave2 so that the wave amplitude is of the same form as the paper.
-                  aWaveElevC = CMPLX( InitInp%WaveField%WaveElevC0(1,J), InitInp%WaveField%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
+                  aWaveElevC = CMPLX( InitInp%WaveField%WaveElevC0(1,J), InitInp%WaveField%WaveElevC0(2,J), SiKi) / InitInp%WaveField%NStepWave2
 
                      ! Calculate the frequency
                   Omega1 = J * InitInp%WaveField%WaveDOmega
@@ -1795,7 +1795,7 @@ END SUBROUTINE WAMIT2_Init
                   ENDIF
 
 
-               ENDDO    ! J=1,InitInp%NStepWave2
+               ENDDO    ! J=1,InitInp%WaveField%NStepWave2
 
             ENDIF    ! Load component to calculate
 
@@ -1812,7 +1812,7 @@ END SUBROUTINE WAMIT2_Init
          RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
 
             ! Loop through all the frequencies
-         DO J=1,InitInp%NStepWave2
+         DO J=1,InitInp%WaveField%NStepWave2
 
                ! Frequency
             Omega1 = J * InitInp%WaveField%WaveDOmega
@@ -1846,7 +1846,7 @@ END SUBROUTINE WAMIT2_Init
             NewmanTerm2C(J,1:2) = MATMUL(RotateZMatrixT, NewmanTerm2C(J,1:2))
             NewmanTerm2C(J,4:5) = MATMUL(RotateZMatrixT, NewmanTerm2C(J,4:5))
 
-         ENDDO    ! J=1,InitInp%NStepWave2
+         ENDDO    ! J=1,InitInp%WaveField%NStepWave2
 
 
 
@@ -1888,12 +1888,12 @@ END SUBROUTINE WAMIT2_Init
 
 
                ! Now square the real part of the resulting time domain pieces and add them together to get the final force time series.
-            DO J=0,InitInp%NStepWave-1
+            DO J=0,InitInp%WaveField%NStepWave-1
                NewmanAppForce(J,Idx) = (abs(NewmanTerm1t(J)))**2 - (abs(NewmanTerm2t(J)))**2
             ENDDO
 
                ! Copy the last first term to the last so that it is cyclic
-            NewmanAppForce(InitInp%NStepWave,Idx) = NewmanAppForce(0,Idx)
+            NewmanAppForce(InitInp%WaveField%NStepWave,Idx) = NewmanAppForce(0,Idx)
 
          ENDDO ! ThisDim -- index to current dimension
 
@@ -2155,13 +2155,13 @@ END SUBROUTINE WAMIT2_Init
 
 
          ! Setup the arrays holding the DiffQTF terms, both the complex frequency domain and real time domain pieces
-      ALLOCATE( TmpDiffQTFForce( 0:InitInp%NStepWave), STAT=ErrStatTmp )
+      ALLOCATE( TmpDiffQTFForce( 0:InitInp%WaveField%NStepWave), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for one load component of the full difference '// &
                                              'QTF 2nd order force time series.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( TmpComplexArr( 0:InitInp%NStepWave2, 6), STAT=ErrStatTmp )
+      ALLOCATE( TmpComplexArr( 0:InitInp%WaveField%NStepWave2, 6), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for one load component of the full difference '// &
                                              'QTF 2nd order force in the frequency domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( DiffQTFForce( 0:InitInp%NStepWave, 6*p%NBody), STAT=ErrStatTmp )
+      ALLOCATE( DiffQTFForce( 0:InitInp%WaveField%NStepWave, 6*p%NBody), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the full difference '// &
                                              'QTF 2nd order force time series.',ErrStat, ErrMsg, RoutineName)
 
@@ -2177,7 +2177,7 @@ END SUBROUTINE WAMIT2_Init
 
 
          ! Initialize the FFT library.  Do not apply normalization.
-      CALL InitFFT ( InitInp%NStepWave, FFT_Data, .FALSE., ErrStatTmp )
+      CALL InitFFT ( InitInp%WaveField%NStepWave, FFT_Data, .FALSE., ErrStatTmp )
       CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          call cleanup()
@@ -2244,7 +2244,7 @@ END SUBROUTINE WAMIT2_Init
                TmpData4D = DiffQTFData%Data4D%DataSet(:,:,:,:,Idx)
 
                   ! Outer loop to create the TmpComplexArr
-               DO J=1,InitInp%NStepWave2-1
+               DO J=1,InitInp%WaveField%NStepWave2-1
 
                      ! Calculate the frequency  -- This is the difference frequency.
                   OmegaDiff = J * InitInp%WaveField%WaveDOmega
@@ -2258,15 +2258,15 @@ END SUBROUTINE WAMIT2_Init
 
 
                        ! Do the sum over H^-
-                     DO K=1,InitInp%NStepWave2-J        ! note the funny upper limit.  This is because we are doing a summation on a triangular area.
+                     DO K=1,InitInp%WaveField%NStepWave2-J        ! note the funny upper limit.  This is because we are doing a summation on a triangular area.
 
                            ! set the two frequencies that the difference frequency comes from
                         Omega1 = (J + K) * InitInp%WaveField%WaveDOmega        ! the mth frequency -- \mu^- + n = m
                         Omega2 = K * InitInp%WaveField%WaveDOmega              ! the nth frequency
 
                            ! Find the Wave amplitudes 1 and 2
-                        aWaveElevC1 = CMPLX( InitInp%WaveField%WaveElevC0(1,J+K), InitInp%WaveField%WaveElevC0(2,J+K), SiKi)  / InitInp%NStepWave2
-                        aWaveElevC2 = CMPLX( InitInp%WaveField%WaveElevC0(1,K),   InitInp%WaveField%WaveElevC0(2,K),   SiKi)  / InitInp%NStepWave2
+                        aWaveElevC1 = CMPLX( InitInp%WaveField%WaveElevC0(1,J+K), InitInp%WaveField%WaveElevC0(2,J+K), SiKi)  / InitInp%WaveField%NStepWave2
+                        aWaveElevC2 = CMPLX( InitInp%WaveField%WaveElevC0(1,K),   InitInp%WaveField%WaveElevC0(2,K),   SiKi)  / InitInp%WaveField%NStepWave2
 
                            ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
                         Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveField%WaveDirArr(J+K), InitInp%WaveField%WaveDirArr(K) /)
@@ -2339,13 +2339,13 @@ END SUBROUTINE WAMIT2_Init
          RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
 
             ! Loop through all the frequencies
-         DO J=1,InitInp%NStepWave2
+         DO J=1,InitInp%WaveField%NStepWave2
 
                ! Apply the rotation to get back to global frame
             TmpComplexArr(J,1:2) = MATMUL(RotateZMatrixT, TmpComplexArr(J,1:2))
             TmpComplexArr(J,4:5) = MATMUL(RotateZMatrixT, TmpComplexArr(J,4:5))
 
-         ENDDO    ! J=1,InitInp%NStepWave2
+         ENDDO    ! J=1,InitInp%WaveField%NStepWave2
 
 
 
@@ -2368,13 +2368,13 @@ END SUBROUTINE WAMIT2_Init
 
                ! Now we multiply the result by 2 and save it to the DiffQTFForce array and add the MnDrift term
                ! NOTE: phase shift and orientations on the MnDriftForce term have already been applied
-               ! NOTE: the "-1" since TmpDiffQTFForce(InitInp%NStepWave) is not set and DiffQTFForce(InitInp%NStepWave,Idx) gets overwritten
-            DO K=0,InitInp%NStepWave-1
+               ! NOTE: the "-1" since TmpDiffQTFForce(InitInp%WaveField%NStepWave) is not set and DiffQTFForce(InitInp%WaveField%NStepWave,Idx) gets overwritten
+            DO K=0,InitInp%WaveField%NStepWave-1
                DiffQTFForce(K,Idx) = 2.0_SiKi * TmpDiffQTFForce(K) + MnDriftForce(Idx)
             ENDDO
 
                ! Copy the last first term to the first so that it is cyclic
-            DiffQTFForce(InitInp%NStepWave,Idx) = DiffQTFForce(0,Idx)
+            DiffQTFForce(InitInp%WaveField%NStepWave,Idx) = DiffQTFForce(0,Idx)
 
          ENDDO ! ThisDim -- The current dimension
       ENDDO    ! IBody -- This WAMIT body
@@ -2661,19 +2661,19 @@ END SUBROUTINE WAMIT2_Init
 
 
          ! Setup the arrays holding the SumQTF terms, both the complex frequency domain and real time domain pieces
-      ALLOCATE( Term1ArrayC( 0:InitInp%NStepWave2, 6), STAT=ErrStatTmp )
+      ALLOCATE( Term1ArrayC( 0:InitInp%WaveField%NStepWave2, 6), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the first term of one load component of the full sum '// &
                                              'QTF 2nd order force in the frequency domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( Term2ArrayC( 0:InitInp%NStepWave2, 6), STAT=ErrStatTmp )
+      ALLOCATE( Term2ArrayC( 0:InitInp%WaveField%NStepWave2, 6), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the second term of one load component of the full sum '// &
                                              'QTF 2nd order force in the frequency domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( Term1Array( 0:InitInp%NStepWave), STAT=ErrStatTmp )
+      ALLOCATE( Term1Array( 0:InitInp%WaveField%NStepWave), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the first term of one load component of the full sum '// &
                                              'QTF 2nd order force in the time domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( Term2Array( 0:InitInp%NStepWave), STAT=ErrStatTmp )
+      ALLOCATE( Term2Array( 0:InitInp%WaveField%NStepWave), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the second term of one load component of the full sum '// &
                                              'QTF 2nd order force in the time domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( SumQTFForce( 0:InitInp%NStepWave, 6*p%NBody), STAT=ErrStatTmp )
+      ALLOCATE( SumQTFForce( 0:InitInp%WaveField%NStepWave, 6*p%NBody), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the full difference '// &
                                              'QTF 2nd order force time series.',ErrStat, ErrMsg, RoutineName)
 
@@ -2693,7 +2693,7 @@ END SUBROUTINE WAMIT2_Init
 
 
          ! Initialize the FFT library.  Normalization not required in this formulation.
-      CALL InitFFT ( InitInp%NStepWave, FFT_Data, .FALSE., ErrStatTmp )        ! FIXME:
+      CALL InitFFT ( InitInp%WaveField%NStepWave, FFT_Data, .FALSE., ErrStatTmp )        ! FIXME:
       CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
@@ -2748,7 +2748,7 @@ END SUBROUTINE WAMIT2_Init
                   ! The limits look a little funny.  But remember we are placing the value in the 2*J location,
                   ! so we cannot overun the end of the array, and the highest frequency must be zero.  The
                   ! floor function is just in case (NStepWave2 - 1) is an odd number
-               DO J=1,FLOOR(REAL(InitInp%NStepWave2-1)/2.0_SiKi)
+               DO J=1,FLOOR(REAL(InitInp%WaveField%NStepWave2-1)/2.0_SiKi)
 
                      ! The frequency
                   Omega1   = REAL(J,ReKi) * InitInp%WaveField%WaveDOmega
@@ -2759,7 +2759,7 @@ END SUBROUTINE WAMIT2_Init
 
 
                         ! Find the wave amplitude at frequency omega
-                     aWaveElevC1 = CMPLX( InitInp%WaveField%WaveElevC0(1,J), InitInp%WaveField%WaveElevC0(2,J), SiKi )  / InitInp%NStepWave2
+                     aWaveElevC1 = CMPLX( InitInp%WaveField%WaveElevC0(1,J), InitInp%WaveField%WaveElevC0(2,J), SiKi )  / InitInp%WaveField%NStepWave2
 
                         ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
                      Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveField%WaveDirArr(J), InitInp%WaveField%WaveDirArr(J) /)
@@ -2831,11 +2831,11 @@ END SUBROUTINE WAMIT2_Init
                   ! so, we don't need a really small WaveDT
 
          !This section has been removed since it is kind of annoying.
-         !      IF ( InitInp%WvHiCOffS > InitInp%NStepWave2*InitInp%WaveField%WaveDOmega ) THEN
+         !      IF ( InitInp%WvHiCOffS > InitInp%WaveField%NStepWave2*InitInp%WaveField%WaveDOmega ) THEN
          !         CALL SetErrStat( ErrID_Warn,' The high frequency cutoff for second order wave forces, WvHiCOffS, '// &
          !                  'is larger than the Nyquist frequency for the given time step of WaveDT. The Nyquist frequency '// &
          !                  '(highest frequency) that can be computed is OmegaMax = PI/WaveDT = '// &
-         !                  TRIM(Num2LStr(InitInp%NStepWave2*InitInp%WaveField%WaveDOmega))// &
+         !                  TRIM(Num2LStr(InitInp%WaveField%NStepWave2*InitInp%WaveField%WaveDOmega))// &
          !                  ' radians/second.  If you need those frequencies, decrease WaveDT.  For reference, 2*PI '// &
          !                  'radians/second corresponds to a wavelength of ~1 meter.',&
          !                  ErrStat,ErrMsg,RoutineName)
@@ -2844,7 +2844,7 @@ END SUBROUTINE WAMIT2_Init
 
 
                   ! Outer loop to create the Term2ArrayC. This is stepwise through the sum frequencies.
-               DO J=1,InitInp%NStepWave2
+               DO J=1,InitInp%WaveField%NStepWave2
 
                      ! Calculate the frequency  -- This is the sum frequency.
                   OmegaSum = J * InitInp%WaveField%WaveDOmega
@@ -2872,8 +2872,8 @@ END SUBROUTINE WAMIT2_Init
                         Omega2 = (J-K) * InitInp%WaveField%WaveDOmega
 
                            ! Find the wave amplitude at frequency omega.  Remove the NStepWave2 normalization built into WaveElevC0 from Waves module
-                        aWaveElevC1 = CMPLX( InitInp%WaveField%WaveElevC0(1,  K), InitInp%WaveField%WaveElevC0(2,  K), SiKi )    / InitInp%NStepWave2
-                        aWaveElevC2 = CMPLX( InitInp%WaveField%WaveElevC0(1,J-K), InitInp%WaveField%WaveElevC0(2,J-K), SiKi )    / InitInp%NStepWave2
+                        aWaveElevC1 = CMPLX( InitInp%WaveField%WaveElevC0(1,  K), InitInp%WaveField%WaveElevC0(2,  K), SiKi )    / InitInp%WaveField%NStepWave2
+                        aWaveElevC2 = CMPLX( InitInp%WaveField%WaveElevC0(1,J-K), InitInp%WaveField%WaveElevC0(2,J-K), SiKi )    / InitInp%WaveField%NStepWave2
 
                            ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
                         Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveField%WaveDirArr(K), InitInp%WaveField%WaveDirArr(J-K) /)
@@ -2939,7 +2939,7 @@ END SUBROUTINE WAMIT2_Init
          RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
 
             ! Loop through all the frequencies
-         DO J=1,InitInp%NStepWave2
+         DO J=1,InitInp%WaveField%NStepWave2
 
                ! Apply the rotation to get back to global frame -- term 1
             Term1ArrayC(J,1:2) = MATMUL(RotateZMatrixT, Term1ArrayC(J,1:2))
@@ -2949,7 +2949,7 @@ END SUBROUTINE WAMIT2_Init
             Term2ArrayC(J,1:2) = MATMUL(RotateZMatrixT, Term2ArrayC(J,1:2))
             Term2ArrayC(J,4:5) = MATMUL(RotateZMatrixT, Term2ArrayC(J,4:5))
 
-         ENDDO    ! J=1,InitInp%NStepWave2
+         ENDDO    ! J=1,InitInp%WaveField%NStepWave2
 
 
 
@@ -2979,12 +2979,12 @@ END SUBROUTINE WAMIT2_Init
             ENDIF
 
                ! Now we add the two terms together.  The 0.5 multiplier on is because the double sided FFT was used.
-            DO J=0,InitInp%NStepWave-1  !bjj: Term1Array and Term2Array don't set the last element, so we can get over-flow errors here. SumQTFForce(InitInp%NStepWave,Idx) gets overwritten later, so Idx'm setting the array bounds to be -1.
+            DO J=0,InitInp%WaveField%NStepWave-1  !bjj: Term1Array and Term2Array don't set the last element, so we can get over-flow errors here. SumQTFForce(InitInp%WaveField%NStepWave,Idx) gets overwritten later, so Idx'm setting the array bounds to be -1.
                SumQTFForce(J,Idx) = 0.5_SiKi*(REAL(Term1Array(J) + 2*Term2Array(J), SiKi))
             ENDDO
 
                ! Copy the last first term to the first so that it is cyclic
-            SumQTFForce(InitInp%NStepWave,Idx) = SumQTFForce(0,Idx)
+            SumQTFForce(InitInp%WaveField%NStepWave,Idx) = SumQTFForce(0,Idx)
 
 
          ENDDO ! ThisDim -- current dimension
@@ -3285,9 +3285,9 @@ END SUBROUTINE WAMIT2_Init
 
          !> 1. Check that WaveElevC0 is a 2x(NStepWave2+1) sized array (0 index start)
 
-      IF ( SIZE( InitInp%WaveField%WaveElevC0, 2 ) /= (InitInp%NStepWave2 + 1) ) THEN    ! Expect a 2x(0:NStepWave2) array
+      IF ( SIZE( InitInp%WaveField%WaveElevC0, 2 ) /= (InitInp%WaveField%NStepWave2 + 1) ) THEN    ! Expect a 2x(0:NStepWave2) array
          CALL SetErrStat( ErrID_Fatal, ' Programming error in call to WAMIT2_Init:'//NewLine// &
-                     '        --> Expected array for WaveElevC0 to be of size 2x'//TRIM(Num2LStr(InitInp%NStepWave2 + 1))// &
+                     '        --> Expected array for WaveElevC0 to be of size 2x'//TRIM(Num2LStr(InitInp%WaveField%NStepWave2 + 1))// &
                      ' (2x(NStepWave2+1)), but instead received array of size '// &
                      TRIM(Num2LStr(SIZE(InitInp%WaveField%WaveElevC0,1)))//'x'//TRIM(Num2LStr(SIZE(InitInp%WaveField%WaveElevC0,2)))//'.', ErrStat, ErrMsg, RoutineName)
          RETURN
@@ -3299,13 +3299,9 @@ END SUBROUTINE WAMIT2_Init
       !--------------------------------------------------------------------------------
       !> ### Now copy over things to parameters...
       !--------------------------------------------------------------------------------
-      !> 1. Wave information we need to keep
-      !--------------------------------------------------------------------------------
-      p%NStepWave = InitInp%NStepWave
-
 
       !--------------------------------------------------------------------------------
-      !> 3. WAMIT body related information
+      !> WAMIT body related information
       !--------------------------------------------------------------------------------
 
       p%NBody                 =  InitInp%NBody              ! Number of bodies WAMIT2 sees
@@ -3422,7 +3418,7 @@ END SUBROUTINE WAMIT2_Init
       !--------------------------------------------------------------------------------
 
          ! Allocate array for the WaveExtcn2.
-      ALLOCATE( p%WaveExctn2(0:InitInp%NStepWave,6*p%NBody), STAT=ErrStatTmp)
+      ALLOCATE( p%WaveExctn2(0:InitInp%WaveField%NStepWave,6*p%NBody), STAT=ErrStatTmp)
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveExctn2 to store '// &
                               'the 2nd order force data.',  ErrStat,ErrMsg,'CheckInitInp')
       IF (ErrStat >= AbortErrLev ) RETURN
@@ -5363,11 +5359,11 @@ END SUBROUTINE WAMIT2_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
-SUBROUTINE WAMIT2_CalcOutput( Time, WaveTime, p, y, m, ErrStat, ErrMsg )
+SUBROUTINE WAMIT2_CalcOutput( Time, WaveField, p, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       REAL(DbKi),                         INTENT(IN   )  :: Time           !< Current simulation time in seconds
-      real(SiKi),                         intent(in   )  :: WaveTime(:)    !< Array of wave kinematic time samples, (sec)
+      TYPE(SeaSt_WaveFieldType),          INTENT(IN   )  :: WaveField      !< Wave data
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
       TYPE(WAMIT2_OutputType),            INTENT(INOUT)  :: y              !< Outputs computed at Time (Input only so that mesh
                                                                            !!   connectivity information does not have to be recalculated)
@@ -5389,26 +5385,15 @@ SUBROUTINE WAMIT2_CalcOutput( Time, WaveTime, p, y, m, ErrStat, ErrMsg )
       ErrMsg  = ""
 
 
-
-
-         ! Abort if the wave excitation loads have not been computed yet:
-
-      IF ( .NOT. ALLOCATED ( p%WaveExctn2 ) )  THEN
-         CALL SetErrStat(ErrID_Fatal,' Routine WAMIT2_Init() must be called before routine WAMIT2_CalcOutput().',ErrStat,ErrMsg,'WAMIT2_CalcOutput')
-         RETURN
-      END IF
-
-
          ! Compute the 2nd order load contribution from incident waves:
 
       do iBody = 1, p%NBody
          indxStart = (iBody-1)*6
 
          DO I = 1,6     ! Loop through all wave excitation forces and moments
-            m%F_Waves2(indxStart+I) = InterpWrappedStpReal ( REAL(Time, SiKi), WaveTime(:), p%WaveExctn2(:,indxStart+I), &
-                                                  m%LastIndWave(IBody), p%NStepWave + 1       )
+            m%F_Waves2(indxStart+I) = InterpWrappedStpReal ( REAL(Time, SiKi), WaveField%WaveTime, p%WaveExctn2(:,indxStart+I), &
+                                                  m%LastIndWave(IBody), WaveField%NStepWave + 1       )
          END DO          ! I - All wave excitation forces and moments
-
 
 
          ! Copy results to the output point mesh

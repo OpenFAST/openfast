@@ -1921,7 +1921,6 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%Gravity    = InitInp%Gravity
    p%NNodes     = InitInp%NNodes
    p%NJoints    = InitInp%NJoints
-   p%NStepWave  = InitInp%NStepWave
    p%NumOuts    = InitInp%NumOuts
    p%NMOutputs  = InitInp%NMOutputs                       ! Number of members to output [ >=0 and <10]
    p%WaveDisp   = InitInp%WaveDisp

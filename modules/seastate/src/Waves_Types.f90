@@ -75,8 +75,6 @@ IMPLICIT NONE
   TYPE, PUBLIC :: Waves_InitOutputType
     INTEGER(IntKi)  :: WaveNDir = 0_IntKi      !< Number of wave directions [only used if WaveDirMod = 1] [Must be an odd number -- will be adjusted within the waves module] [(-)]
     REAL(DbKi)  :: WaveTMax = 0.0_R8Ki      !< Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT [(sec)]
-    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Total number of frequency components = total number of time steps in the incident wave [-]
-    INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !< NStepWave / 2 [-]
   END TYPE Waves_InitOutputType
 ! =======================
 CONTAINS
@@ -424,8 +422,6 @@ subroutine Waves_CopyInitOutput(SrcInitOutputData, DstInitOutputData, CtrlCode, 
    ErrMsg  = ''
    DstInitOutputData%WaveNDir = SrcInitOutputData%WaveNDir
    DstInitOutputData%WaveTMax = SrcInitOutputData%WaveTMax
-   DstInitOutputData%NStepWave = SrcInitOutputData%NStepWave
-   DstInitOutputData%NStepWave2 = SrcInitOutputData%NStepWave2
 end subroutine
 
 subroutine Waves_DestroyInitOutput(InitOutputData, ErrStat, ErrMsg)
@@ -444,8 +440,6 @@ subroutine Waves_PackInitOutput(Buf, Indata)
    if (Buf%ErrStat >= AbortErrLev) return
    call RegPack(Buf, InData%WaveNDir)
    call RegPack(Buf, InData%WaveTMax)
-   call RegPack(Buf, InData%NStepWave)
-   call RegPack(Buf, InData%NStepWave2)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -457,10 +451,6 @@ subroutine Waves_UnPackInitOutput(Buf, OutData)
    call RegUnpack(Buf, OutData%WaveNDir)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveTMax)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NStepWave2)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 END MODULE Waves_Types

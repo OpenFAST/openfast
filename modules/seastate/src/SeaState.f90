@@ -223,7 +223,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       END IF
     
       ! Copy Waves initialization output into the initialization input type for the WAMIT module
-      p%NStepWave    = Waves_InitOut%NStepWave
       p%WaveDT       = InputFileData%Waves%WaveDT
       
       ! Store user-requested wave elevation locations
@@ -267,9 +266,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
    
          IF (InputFileData%Waves2%WvDiffQTFF .OR. InputFileData%Waves2%WvSumQTFF ) THEN
             CALL Waves2_Init(InputFileData%Waves2, Waves2_InitOut, p%WaveField, ErrStat2, ErrMsg2 )
-            InputFileData%Waves2%NStepWave   = Waves_InitOut%NStepWave
-            InputFileData%Waves2%NStepWave2  = Waves_InitOut%NStepWave2
-                                                
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
@@ -346,8 +342,8 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
       
 
-      ! Setup the 4D grid information for the Interpolatin Module
-      SeaSt_Interp_InitInp%n        = (/p%NStepWave,p%nGrid(1),p%nGrid(2),p%nGrid(3)/)
+      ! Setup the 4D grid information for the Interpolation Module
+      SeaSt_Interp_InitInp%n        = (/p%WaveField%NStepWave,p%nGrid(1),p%nGrid(2),p%nGrid(3)/)
       SeaSt_Interp_InitInp%delta    = (/real(p%WaveDT,ReKi),p%deltaGrid(1),p%deltaGrid(2),p%deltaGrid(3)/)
       SeaSt_Interp_InitInp%pZero(1) = 0.0  !Time
       SeaSt_Interp_InitInp%pZero(2) = -InputFileData%X_HalfWidth
@@ -362,13 +358,6 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          DEALLOCATE ( InitOut%WriteOutputHdr )
       END IF
       
-      ! Copy Waves InitOut data to SeaState InitOut
-      
-          ! non-pointer data:
-       
-       InitOut%NStepWave    =  Waves_InitOut%NStepWave           ! For WAMIT, WAMIT2, SS_Excitation, Morison
-       InitOut%NStepWave2   =  Waves_InitOut%NStepWave2          ! For WAMIT and WAMIT2,  FIT
-       
       InitOut%WaveField => p%WaveField
 
       ! Tell HydroDyn if state-space wave excitation is not allowed:
@@ -380,11 +369,11 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          ! Write Wave Kinematics?
       if ( InputFileData%WaveMod /= WaveMod_ExtFull ) then
          if ( InitInp%WrWvKinMod == 2 ) then
-            call SeaStOut_WriteWvKinFiles( InitInp%OutRootname, SeaSt_ProgDesc, p%WaveField, p%NStepWave, p%WaveDT, p%X_HalfWidth, p%Y_HalfWidth, &
+            call SeaStOut_WriteWvKinFiles( InitInp%OutRootname, SeaSt_ProgDesc, p%WaveField, p%WaveDT, p%X_HalfWidth, p%Y_HalfWidth, &
                p%Z_Depth, p%deltaGrid, p%NGrid, ErrStat2, ErrMsg2 )
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          else if ( InitInp%WrWvKinMod == 1 ) then
-            call SeaStOut_WriteWaveElev0(InitInp%OutRootname, p%NStepWave, &
+            call SeaStOut_WriteWaveElev0(InitInp%OutRootname, p%WaveField%NStepWave, &
                p%NGrid, p%WaveField%WaveElev1, p%WaveField%WaveElev2, &
                p%WaveField%WaveTime, ErrStat2, ErrMsg2 )
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -397,7 +386,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
       IF (ALLOCATED(InitInp%WaveElevXY)) THEN
       ! maybe instead of getting these requested points, we just output the grid that SeaState is generated on?
-         ALLOCATE(InitOut%WaveElevSeries( 0:InitOut%NStepWave, 1:SIZE(InitInp%WaveElevXY, DIM=2)),STAT=ErrStat2)
+         ALLOCATE(InitOut%WaveElevSeries( 0:p%WaveField%NStepWave, 1:SIZE(InitInp%WaveElevXY, DIM=2)),STAT=ErrStat2)
          if (ErrStat2 /= 0) then
             CALL SetErrStat(ErrID_Fatal,"Error allocating InitOut%WaveElevSeries.",ErrStat,ErrMsg,RoutineName)
             CALL CleanUp()

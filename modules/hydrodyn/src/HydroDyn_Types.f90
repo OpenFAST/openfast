@@ -90,8 +90,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: Gravity = 0.0_ReKi      !< Supplied by Driver:  Gravitational acceleration [(m/s^2)]
     REAL(DbKi)  :: TMax = 0.0_R8Ki      !< Supplied by Driver:  The total simulation time [(sec)]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
-    INTEGER(IntKi)  :: NStepWave = 0      !< Total number of frequency components = total number of time steps in the incident wave [-]
-    INTEGER(IntKi)  :: NStepWave2 = 0      !< NStepWave / 2 [-]
     LOGICAL  :: InvalidWithSSExctn = .false.      !< Whether SeaState configuration is invalid with HydroDyn's state-space excitation (ExctnMod=2) [(-)]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
   END TYPE HydroDyn_InitInputType
@@ -170,7 +168,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: totalStates = 0_IntKi      !< Number of excitation and radiation states for all WAMIT bodies [-]
     INTEGER(IntKi)  :: totalExctnStates = 0_IntKi      !< Number of excitation states for all WAMIT bodies [-]
     INTEGER(IntKi)  :: totalRdtnStates = 0_IntKi      !< Number of radiation states for all WAMIT bodies [-]
-    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !< Number of data points in the wave kinematics arrays [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AddF0      !< Additional pre-load forces and moments (N,N,N,N-m,N-m,N-m) [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AddCLin      !< Additional stiffness matrix [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AddBLin      !< Additional linear damping matrix [-]
@@ -871,8 +868,6 @@ subroutine HydroDyn_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, 
    DstInitInputData%Gravity = SrcInitInputData%Gravity
    DstInitInputData%TMax = SrcInitInputData%TMax
    DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
-   DstInitInputData%NStepWave = SrcInitInputData%NStepWave
-   DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
    DstInitInputData%InvalidWithSSExctn = SrcInitInputData%InvalidWithSSExctn
    DstInitInputData%WaveField => SrcInitInputData%WaveField
 end subroutine
@@ -905,8 +900,6 @@ subroutine HydroDyn_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%Gravity)
    call RegPack(Buf, InData%TMax)
    call RegPack(Buf, InData%VisMeshes)
-   call RegPack(Buf, InData%NStepWave)
-   call RegPack(Buf, InData%NStepWave2)
    call RegPack(Buf, InData%InvalidWithSSExctn)
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
@@ -942,10 +935,6 @@ subroutine HydroDyn_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%TMax)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%VisMeshes)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NStepWave2)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%InvalidWithSSExctn)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2052,7 +2041,6 @@ subroutine HydroDyn_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, Err
    DstParamData%totalStates = SrcParamData%totalStates
    DstParamData%totalExctnStates = SrcParamData%totalExctnStates
    DstParamData%totalRdtnStates = SrcParamData%totalRdtnStates
-   DstParamData%NStepWave = SrcParamData%NStepWave
    if (allocated(SrcParamData%AddF0)) then
       LB(1:2) = lbound(SrcParamData%AddF0)
       UB(1:2) = ubound(SrcParamData%AddF0)
@@ -2267,7 +2255,6 @@ subroutine HydroDyn_PackParam(Buf, Indata)
    call RegPack(Buf, InData%totalStates)
    call RegPack(Buf, InData%totalExctnStates)
    call RegPack(Buf, InData%totalRdtnStates)
-   call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, allocated(InData%AddF0))
    if (allocated(InData%AddF0)) then
       call RegPackBounds(Buf, 2, lbound(InData%AddF0), ubound(InData%AddF0))
@@ -2392,8 +2379,6 @@ subroutine HydroDyn_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%totalExctnStates)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%totalRdtnStates)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%AddF0)) deallocate(OutData%AddF0)
    call RegUnpack(Buf, IsAllocAssoc)

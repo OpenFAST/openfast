@@ -20,7 +20,6 @@ usefrom   SeaSt_WaveField.txt
 typedef SS_Excitation/SS_Exc   InitInputType       CHARACTER(1024)              InputFile        -  - -   "Name of the input file" -
 typedef ^                      ^                   IntKi                        NBody            -  - -   "Number of WAMIT bodies for this State Space model" -
 typedef ^                      ^                   IntKi                        ExctnDisp        -  - -   "0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]" -
-typedef ^                      ^                   INTEGER                      NStepWave        -  - -   "Number of timesteps in the WaveTime array" -
 typedef ^                      ^                   R8Ki                         PtfmRefztRot    {:} - -   "The rotation about zt of the body reference frame(s) from xt/yt" radians 
 typedef ^                      ^                   SeaSt_WaveFieldType         *WaveField       -  - -    "Pointer to SeaState wave field" -
 
@@ -55,7 +54,6 @@ typedef   ^                      ^                 SeaSt_Interp_MiscVarType     
 typedef ^                      ParameterType       DbKi                         DT               -     - -   "Time step" s
 typedef ^                      ^                   IntKi                        NBody            -     - -   "Number of WAMIT bodies for this State Space model" -
 typedef ^                      ^                   IntKi                        ExctnDisp        -     - -   "0: use undisplaced position, 1: use displaced position, 2: use low-pass filtered displaced position) [only used when PotMod=1 and ExctnMod>0]" -
-typedef ^                      ^                   INTEGER                      NStepWave        -     - -   "Number of timesteps in the WaveTime array" -
 typedef ^                      ^                   IntKi                        spDOF           {:}    - -   "States per DOF" -
 typedef ^                      ^                   ReKi                         A               {:}{:} - -   "A matrix" -
 typedef ^                      ^                   ReKi                         B               {:}    - -   "B matrix" -

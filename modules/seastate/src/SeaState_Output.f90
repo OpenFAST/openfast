@@ -232,14 +232,13 @@ MODULE SeaState_Output
 CONTAINS
 
 !====================================================================================================
-SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, WaveField, NStepWave, WaveDT, X_HalfWidth, Y_HalfWidth, &
+SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, WaveField, WaveDT, X_HalfWidth, Y_HalfWidth, &
                                      Z_Depth, deltaGrid, NGrid, ErrStat, ErrMsg )
 
       ! Passed variables
    CHARACTER(*),                  INTENT( IN    )   :: Rootname             ! filename including full path, minus any file extension.
    TYPE(ProgDesc),                INTENT( IN    )   :: SeaSt_Prog           ! the name/version/date of the SeaState program
    TYPE(SeaSt_WaveFieldType),     INTENT( IN    )   :: WaveField            !< WaveFieldType
-   INTEGER,                       INTENT( IN    )   :: NStepWave            ! Number of time steps for the wave kinematics arrays
    real(DbKi),                    intent( in    )   :: WaveDT
    real(ReKi),                    intent( in    )   :: X_HalfWidth
    real(ReKi),                    intent( in    )   :: Y_HalfWidth
@@ -291,7 +290,7 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, WaveField, NStepWave,
       
       call WriteWvKinHeader( UnWv, iFile, Delim, SeaSt_Prog, waveDT, -z_gridPts(1), NGrid, deltaGrid )
    
-      DO m= 0,NStepWave
+      DO m= 0,WaveField%NStepWave
          DO k = 1, NGrid(3)
             do j = 1, NGrid(2)
                do i = 1, NGrid(1)
@@ -344,7 +343,7 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, WaveField, NStepWave,
   call WriteWvKinHeader( UnWv, 8, Delim, SeaSt_Prog, waveDT, -z_gridPts(1), NGrid, deltaGrid )
    
    
-   DO m= 0,NStepWave
+   DO m= 0,WaveField%NStepWave
       do j = 1, NGrid(2)
          do i = 1, NGrid(1)   
             if ( allocated(WaveField%WaveElev2) ) then
@@ -1096,7 +1095,7 @@ SUBROUTINE SeaStOut_WrSummaryFile(InitInp, InputFileData, p, Waves_InitOut, ErrS
                   '   (-)  ', '  (1/m)  ', '   (rad/s)   ', '     (deg)    ', '       (m)         ','       (m)         '
 
          ! Write the data
-         DO I = -1*Waves_InitOut%NStepWave2+1,Waves_InitOut%NStepWave2
+         DO I = -1*p%WaveField%NStepWave2+1, p%WaveField%NStepWave2
             WaveNmbr   = WaveNumber ( I*p%WaveField%WaveDOmega, InitInp%Gravity, p%WaveField%EffWtrDpth )
             WRITE( UnSum, '(1X,I10,2X,ES14.5,2X,ES14.5,2X,ES14.5,2X,ES14.5,7X,ES14.5)' ) I, WaveNmbr, I*p%WaveField%WaveDOmega, &
                      p%WaveField%WaveDirArr(ABS(I)),  p%WaveField%WaveElevC0( 1,ABS(I ) ) ,   p%WaveField%WaveElevC0( 2, ABS(I ) )*SIGN(1,I)

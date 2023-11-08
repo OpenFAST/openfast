@@ -332,7 +332,6 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< This list size needs to be the maximum # of possible outputs because of the use of ReadAry(). Use MaxMrsnOutputs [-]
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: UnSum = 0_IntKi      !<  [-]
-    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !<  [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to SeaState wave field [-]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
   END TYPE Morison_InitInputType
@@ -411,7 +410,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: DP_Const_End      !< Constant part of Joint dynamic pressure term [N]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Mass_MG_End      !< Joint marine growth mass [kg]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AM_End      !< 3x3 Joint added mass matrix, constant for all t [N]
-    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !<  [-]
     INTEGER(IntKi)  :: NMOutputs = 0_IntKi      !<  [-]
     TYPE(Morison_MOutput) , DIMENSION(:), ALLOCATABLE  :: MOutLst      !<  [-]
     INTEGER(IntKi)  :: NJOutputs = 0_IntKi      !<  [-]
@@ -3713,7 +3711,6 @@ subroutine Morison_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    end if
    DstInitInputData%NumOuts = SrcInitInputData%NumOuts
    DstInitInputData%UnSum = SrcInitInputData%UnSum
-   DstInitInputData%NStepWave = SrcInitInputData%NStepWave
    DstInitInputData%WaveField => SrcInitInputData%WaveField
    DstInitInputData%VisMeshes = SrcInitInputData%VisMeshes
 end subroutine
@@ -3979,7 +3976,6 @@ subroutine Morison_PackInitInput(Buf, Indata)
    end if
    call RegPack(Buf, InData%NumOuts)
    call RegPack(Buf, InData%UnSum)
-   call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
       call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
@@ -4246,8 +4242,6 @@ subroutine Morison_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%NumOuts)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%UnSum)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NStepWave)
    if (RegCheckErr(Buf, RoutineName)) return
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
    call RegUnpack(Buf, IsAllocAssoc)
@@ -5524,7 +5518,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       end if
       DstParamData%AM_End = SrcParamData%AM_End
    end if
-   DstParamData%NStepWave = SrcParamData%NStepWave
    DstParamData%NMOutputs = SrcParamData%NMOutputs
    if (allocated(SrcParamData%MOutLst)) then
       LB(1:1) = lbound(SrcParamData%MOutLst)
@@ -5735,7 +5728,6 @@ subroutine Morison_PackParam(Buf, Indata)
       call RegPackBounds(Buf, 3, lbound(InData%AM_End), ubound(InData%AM_End))
       call RegPack(Buf, InData%AM_End)
    end if
-   call RegPack(Buf, InData%NStepWave)
    call RegPack(Buf, InData%NMOutputs)
    call RegPack(Buf, allocated(InData%MOutLst))
    if (allocated(InData%MOutLst)) then
@@ -5958,8 +5950,6 @@ subroutine Morison_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%AM_End)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   call RegUnpack(Buf, OutData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NMOutputs)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%MOutLst)) deallocate(OutData%MOutLst)

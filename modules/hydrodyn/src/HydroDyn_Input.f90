@@ -1127,7 +1127,12 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
       !-------------------------------------------------------------------------
       ! Check environmental conditions
       !-------------------------------------------------------------------------
-   if (.not. associated(InitInp%WaveField) .or. InitInp%NStepWave == 0) then
+   if (.not. associated(InitInp%WaveField)) then
+      call SetErrStat( ErrID_Fatal,' No SeaState information available.',ErrStat,ErrMsg,RoutineName)
+      return
+   endif
+   
+   if (InitInp%WaveField%NStepWave == 0) then
       call SetErrStat( ErrID_Fatal,' No SeaState information available.',ErrStat,ErrMsg,RoutineName)
       return
    endif

@@ -101,7 +101,7 @@ function GetWaveElevation ( time, u_in, t_in, p, m, ErrStat, ErrMsg )
 
    
    if (p%ExctnDisp == 0) then
-      GetWaveElevation = InterpWrappedStpReal ( real(time, SiKi), p%WaveField%WaveTime, p%WaveField%WaveElev0, m%LastIndWave, p%NStepWave + 1 ) 
+      GetWaveElevation = InterpWrappedStpReal ( real(time, SiKi), p%WaveField%WaveTime, p%WaveField%WaveElev0, m%LastIndWave, p%WaveField%NStepWave + 1 ) 
    else
       
       call SS_Exc_CopyInput(u_in(1), u_out, MESH_NEWCOPY, ErrStat2, ErrMsg2 ) ! allocates arrays so that SS_Exc_Input_ExtrapInterp will work
@@ -170,7 +170,6 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     p%numStates = 0
     
       ! Set wave field data and parameters from InitInp:
-    p%NStepWave = InitInp%NStepWave
     p%WaveField => InitInp%WaveField
       
     p%ExctnDisp =  InitInp%ExctnDisp

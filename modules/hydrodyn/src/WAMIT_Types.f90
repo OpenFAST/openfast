@@ -57,8 +57,6 @@ IMPLICIT NONE
     REAL(DbKi)  :: RdtnTMax = 0.0_R8Ki      !<  [-]
     CHARACTER(1024)  :: WAMITFile      !<  [-]
     TYPE(Conv_Rdtn_InitInputType)  :: Conv_Rdtn      !<  [-]
-    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !<  [-]
-    INTEGER(IntKi)  :: NStepWave2 = 0_IntKi      !<  [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< Pointer to wave field [-]
   END TYPE WAMIT_InitInputType
 ! =======================
@@ -124,7 +122,6 @@ IMPLICIT NONE
     REAL(ReKi)  :: ExctnFiltConst = 0.0_ReKi      !< Low-pass time filter constant computed from ExctnCutOff [-]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveExctn      !<  [-]
     REAL(SiKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: WaveExctnGrid      !< WaveExctnGrid dimensions are: 1st: wavetime, 2nd: X, 3rd: Y, 4th: Force component for eac WAMIT Body [-]
-    INTEGER(IntKi)  :: NStepWave = 0_IntKi      !<  [-]
     TYPE(Conv_Rdtn_ParameterType)  :: Conv_Rdtn      !<  [-]
     TYPE(SS_Rad_ParameterType)  :: SS_Rdtn      !<  [-]
     TYPE(SS_Exc_ParameterType)  :: SS_Exctn      !<  [-]
@@ -254,8 +251,6 @@ subroutine WAMIT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, Err
    call Conv_Rdtn_CopyInitInput(SrcInitInputData%Conv_Rdtn, DstInitInputData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   DstInitInputData%NStepWave = SrcInitInputData%NStepWave
-   DstInitInputData%NStepWave2 = SrcInitInputData%NStepWave2
    DstInitInputData%WaveField => SrcInitInputData%WaveField
 end subroutine
 
@@ -347,8 +342,6 @@ subroutine WAMIT_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%RdtnTMax)
    call RegPack(Buf, InData%WAMITFile)
    call Conv_Rdtn_PackInitInput(Buf, InData%Conv_Rdtn) 
-   call RegPack(Buf, InData%NStepWave)
-   call RegPack(Buf, InData%NStepWave2)
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
       call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
@@ -490,10 +483,6 @@ subroutine WAMIT_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%WAMITFile)
    if (RegCheckErr(Buf, RoutineName)) return
    call Conv_Rdtn_UnpackInitInput(Buf, OutData%Conv_Rdtn) ! Conv_Rdtn 
-   call RegUnpack(Buf, OutData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%NStepWave2)
-   if (RegCheckErr(Buf, RoutineName)) return
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1126,7 +1115,6 @@ subroutine WAMIT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
       end if
       DstParamData%WaveExctnGrid = SrcParamData%WaveExctnGrid
    end if
-   DstParamData%NStepWave = SrcParamData%NStepWave
    call Conv_Rdtn_CopyParam(SrcParamData%Conv_Rdtn, DstParamData%Conv_Rdtn, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -1211,7 +1199,6 @@ subroutine WAMIT_PackParam(Buf, Indata)
       call RegPackBounds(Buf, 4, lbound(InData%WaveExctnGrid), ubound(InData%WaveExctnGrid))
       call RegPack(Buf, InData%WaveExctnGrid)
    end if
-   call RegPack(Buf, InData%NStepWave)
    call Conv_Rdtn_PackParam(Buf, InData%Conv_Rdtn) 
    call SS_Rad_PackParam(Buf, InData%SS_Rdtn) 
    call SS_Exc_PackParam(Buf, InData%SS_Exctn) 
@@ -1320,8 +1307,6 @@ subroutine WAMIT_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveExctnGrid)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   call RegUnpack(Buf, OutData%NStepWave)
-   if (RegCheckErr(Buf, RoutineName)) return
    call Conv_Rdtn_UnpackParam(Buf, OutData%Conv_Rdtn) ! Conv_Rdtn 
    call SS_Rad_UnpackParam(Buf, OutData%SS_Rdtn) ! SS_Rdtn 
    call SS_Exc_UnpackParam(Buf, OutData%SS_Exctn) ! SS_Exctn 

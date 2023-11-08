@@ -269,7 +269,6 @@ typedef   ^                            ^                             Morison_JOu
 typedef   ^                            ^                             CHARACTER(ChanLen)       OutList                          {:}        -        -         "This list size needs to be the maximum # of possible outputs because of the use of ReadAry(). Use MaxMrsnOutputs"    -
 typedef   ^                            ^                             INTEGER                  NumOuts                          -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  UnSum                            -          -        -         ""    -
-typedef   ^                            ^                             INTEGER                  NStepWave                        -          -        -         ""    -
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                        -          -        -         "Pointer to SeaState wave field" -
 typedef   ^                            ^                             logical                  VisMeshes                         -      .false.     -         "Output visualization meshes" -
 #
@@ -349,7 +348,6 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     DP_Const_End                  {:}{:}     -        -         "Constant part of Joint dynamic pressure term"   N
 typedef   ^                            ^                             ReKi                     Mass_MG_End                   {:}        -        -         "Joint marine growth mass"   kg
 typedef   ^                            ^                             ReKi                     AM_End                        {:}{:}{:}  -        -         "3x3 Joint added mass matrix, constant for all t"   N
-typedef   ^                            ^                             INTEGER                  NStepWave                     -          -        -         ""        -
 typedef   ^                            ^                             INTEGER                  NMOutputs                     -          -        -         ""        -
 typedef   ^                            ^                             Morison_MOutput          MOutLst                       {:}        -        -         ""        -
 typedef   ^                            ^                             INTEGER                  NJOutputs                     -          -        -         ""        -

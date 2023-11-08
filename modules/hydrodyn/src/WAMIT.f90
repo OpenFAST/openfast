@@ -217,7 +217,6 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, ErrS
       ErrMsg   = ""               
       
          ! Copy Output Init data from Waves Module Init call
-      p%NStepWave    = InitInp%NStepWave
       p%ExctnMod     = InitInp%ExctnMod
       p%ExctnDisp    = InitInp%ExctnDisp
       p%ExctnCutOff  = InitInp%ExctnCutOff
@@ -909,7 +908,7 @@ end if
 
                   ! Initialize everything to zero:
 
-               ALLOCATE ( p%WaveExctn (0:InitInp%NStepWave,6*p%NBody) , STAT=ErrStat2 )
+               ALLOCATE ( p%WaveExctn (0:p%WaveField%NStepWave,6*p%NBody) , STAT=ErrStat2 )
                IF ( ErrStat2 /= 0 )  THEN
                   CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctn array.', ErrStat, ErrMsg, RoutineName)
                   CALL Cleanup()
@@ -921,7 +920,6 @@ end if
             else if ( p%ExctnMod == 2 ) then
                Interval_Sub                  = InitInp%Conv_Rdtn%RdtnDT
                SS_Exctn_InitInp%InputFile    = InitInp%WAMITFile    
-               SS_Exctn_InitInp%NStepWave    = p%NStepWave
                SS_Exctn_InitInp%NBody        = InitInp%NBody
                SS_Exctn_InitInp%PtfmRefztRot = InitInp%PtfmRefztRot 
                SS_Exctn_InitInp%ExctnDisp    = InitInp%ExctnDisp
@@ -970,7 +968,7 @@ end if
                
                   ! ALLOCATE the arrays:
 
-               ALLOCATE ( WaveExctnC(0:InitInp%NStepWave2 ,6*p%NBody) , STAT=ErrStat2 )
+               ALLOCATE ( WaveExctnC(0:p%WaveField%NStepWave2 ,6*p%NBody) , STAT=ErrStat2 )
                IF ( ErrStat2 /= 0 )  THEN
                   CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctnC array.', ErrStat, ErrMsg, RoutineName)
                   CALL Cleanup()
@@ -978,20 +976,20 @@ end if
                END IF
 
                if (p%ExctnDisp > 0 ) then
-                  ALLOCATE ( WaveExctnCGrid(0:InitInp%NStepWave2 ,p%WaveField%SeaSt_Interp_p%n(2)*p%WaveField%SeaSt_Interp_p%n(3),6*p%NBody) , STAT=ErrStat2 )
+                  ALLOCATE ( WaveExctnCGrid(0:p%WaveField%NStepWave2 ,p%WaveField%SeaSt_Interp_p%n(2)*p%WaveField%SeaSt_Interp_p%n(3),6*p%NBody) , STAT=ErrStat2 )
                   IF ( ErrStat2 /= 0 )  THEN
                      CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctnC array.', ErrStat, ErrMsg, RoutineName)
                      CALL Cleanup()
                      RETURN            
                   END IF
-                  ALLOCATE ( p%WaveExctnGrid (0:InitInp%NStepWave,p%WaveField%SeaSt_Interp_p%n(2),p%WaveField%SeaSt_Interp_p%n(3), 6*p%NBody) , STAT=ErrStat2 )
+                  ALLOCATE ( p%WaveExctnGrid (0:p%WaveField%NStepWave,p%WaveField%SeaSt_Interp_p%n(2),p%WaveField%SeaSt_Interp_p%n(3), 6*p%NBody) , STAT=ErrStat2 )
                   IF ( ErrStat2 /= 0 )  THEN
                      CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctn array.', ErrStat, ErrMsg, RoutineName)
                      CALL Cleanup()
                      RETURN            
                   END IF
                else
-                  ALLOCATE ( p%WaveExctn (0:InitInp%NStepWave,6*p%NBody) , STAT=ErrStat2 )
+                  ALLOCATE ( p%WaveExctn (0:p%WaveField%NStepWave,6*p%NBody) , STAT=ErrStat2 )
                   IF ( ErrStat2 /= 0 )  THEN
                      CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctn array.', ErrStat, ErrMsg, RoutineName)
                      CALL Cleanup()
@@ -1070,7 +1068,7 @@ end if
                ! Compute the positive-frequency components (including zero) of the discrete
                !   Fourier transform of the wave excitation force:
 
-               DO I = 0,InitInp%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transform
+               DO I = 0,p%WaveField%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transform
 
                      ! Compute the frequency of this component:
 
@@ -1098,7 +1096,7 @@ end if
             ! Compute the inverse discrete Fourier transform to find the time-domain
                   !   representation of the wave excitation force:
 
-               CALL InitFFT ( InitInp%NStepWave, FFT_Data, .TRUE., ErrStat2 )
+               CALL InitFFT ( p%WaveField%NStepWave, FFT_Data, .TRUE., ErrStat2 )
                   CALL SetErrStat( ErrStat2, 'Error in call to InitFFT.', ErrStat, ErrMsg, RoutineName)
                   IF ( ErrStat >= AbortErrLev) THEN
                      CALL Cleanup()
@@ -1106,7 +1104,7 @@ end if
                   END IF
          
                DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments
-                  CALL ApplyFFT_cx ( p%WaveExctn(0:InitInp%NStepWave-1,J), WaveExctnC(:,J), FFT_Data, ErrStat2 )
+                  CALL ApplyFFT_cx ( p%WaveExctn(0:p%WaveField%NStepWave-1,J), WaveExctnC(:,J), FFT_Data, ErrStat2 )
                   CALL SetErrStat( ErrStat2, ' An error occured while applying an FFT to WaveExctnC.', ErrStat, ErrMsg, RoutineName)
                   IF ( ErrStat >= AbortErrLev) THEN
                      CALL Cleanup()
@@ -1114,7 +1112,7 @@ end if
                   END IF
             
                      ! Append first datpoint as the last as aid for repeated wave data
-                  p%WaveExctn(InitInp%NStepWave,J) = p%WaveExctn(0,J)
+                  p%WaveExctn(p%WaveField%NStepWave,J) = p%WaveExctn(0,J)
                END DO                ! J - All wave excitation forces and moments
 
                CALL ExitFFT(FFT_Data, ErrStat2)
@@ -1125,7 +1123,7 @@ end if
                   END IF
 
             else
-               DO I = 0,InitInp%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transform
+               DO I = 0,p%WaveField%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transform
 
                      ! Compute the frequency of this component:
 
@@ -1152,7 +1150,7 @@ end if
                ! Compute the inverse discrete Fourier transform to find the time-domain
                   !   representation of the wave excitation force:
 
-               CALL InitFFT ( InitInp%NStepWave, FFT_Data, .TRUE., ErrStat2 )
+               CALL InitFFT ( p%WaveField%NStepWave, FFT_Data, .TRUE., ErrStat2 )
                   CALL SetErrStat( ErrStat2, 'Error in call to InitFFT.', ErrStat, ErrMsg, RoutineName)
                   IF ( ErrStat >= AbortErrLev) THEN
                      CALL Cleanup()
@@ -1163,14 +1161,14 @@ end if
                   do iGrid = 1, p%WaveField%SeaSt_Interp_p%n(2)*p%WaveField%SeaSt_Interp_p%n(3)
                         iX = mod(iGrid-1, p%WaveField%SeaSt_Interp_p%n(2)) + 1  ! 1st n index is time
                         iY = (iGrid-1) / p%WaveField%SeaSt_Interp_p%n(2) + 1
-                        CALL ApplyFFT_cx ( p%WaveExctnGrid(0:InitInp%NStepWave-1,iX,iY,J), WaveExctnCGrid(:,iGrid,J), FFT_Data, ErrStat2 )
+                        CALL ApplyFFT_cx ( p%WaveExctnGrid(0:p%WaveField%NStepWave-1,iX,iY,J), WaveExctnCGrid(:,iGrid,J), FFT_Data, ErrStat2 )
                         CALL SetErrStat( ErrStat2, ' An error occured while applying an FFT to WaveExctnC.', ErrStat, ErrMsg, RoutineName)
                         IF ( ErrStat >= AbortErrLev) THEN
                            CALL Cleanup()
                            RETURN
                         END IF
                            ! Append first datpoint as the last as aid for repeated wave data
-                        p%WaveExctnGrid(InitInp%NStepWave,iX,iY,J) = p%WaveExctnGrid(0,iX,iY,J)
+                        p%WaveExctnGrid(p%WaveField%NStepWave,iX,iY,J) = p%WaveExctnGrid(0,iX,iY,J)
                   end do
                   
                END DO                ! J - All wave excitation forces and moments
@@ -1188,7 +1186,6 @@ end if
             else if ( p%ExctnMod == 2 ) then
                Interval_Sub                  = InitInp%Conv_Rdtn%RdtnDT
                SS_Exctn_InitInp%InputFile    = InitInp%WAMITFile    
-               SS_Exctn_InitInp%NStepWave    = p%NStepWave
                SS_Exctn_InitInp%NBody        = InitInp%NBody
                SS_Exctn_InitInp%PtfmRefztRot = InitInp%PtfmRefztRot
                SS_Exctn_InitInp%ExctnDisp    = InitInp%ExctnDisp
@@ -1210,7 +1207,7 @@ end if
                         ! Now apply the phase shift in the frequency space
 
                         do J = 1, NInpWvDir  
-                           do I = 0,InitInp%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transform
+                           do I = 0,p%WaveField%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transform
 
                         ! Compute the frequency of this component:
 
@@ -1231,7 +1228,7 @@ end if
                         ! Compute the inverse discrete Fourier transforms to find the time-domain
                         !   representations of the wave kinematics without stretching:
 
-                        CALL InitFFT ( InitInp%NStepWave, FFT_Data, .TRUE., ErrStat2 )
+                        CALL InitFFT ( p%WaveField%NStepWave, FFT_Data, .TRUE., ErrStat2 )
                         CALL SetErrStat(ErrStat2,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
                         IF ( ErrStat >= AbortErrLev ) THEN
                            CALL CleanUp()
@@ -1240,7 +1237,7 @@ end if
       
                            ! We'll need the following for wave stretching once we implement it.
                         ! NOTE THIS IS OVERWRITING THE WAVEFIELD WaveElev0 PARAMETER DATA
-                        CALL ApplyFFT_cx (  SS_Exctn_InitInp%WaveField%WaveElev0(0:InitInp%NStepWave-1),  tmpComplexArr(:  ), FFT_Data, ErrStat2 )
+                        CALL ApplyFFT_cx (  SS_Exctn_InitInp%WaveField%WaveElev0(0:p%WaveField%NStepWave-1),  tmpComplexArr(:  ), FFT_Data, ErrStat2 )
                         CALL SetErrStat(ErrStat2,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,RoutineName)
                         IF ( ErrStat >= AbortErrLev ) THEN
                            CALL CleanUp()
@@ -1827,7 +1824,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, E
          
             DO I = 1,6*p%NBody     ! Loop through all wave excitation forces and moments
                m%F_Waves1(I) = InterpWrappedStpReal ( REAL(Time, SiKi), WaveTime(:), p%WaveExctn(:,I), &
-                                                        m%LastIndWave, p%NStepWave + 1       )
+                                                        m%LastIndWave, p%WaveField%NStepWave + 1       )
             END DO          ! I - All wave excitation forces and moments
          else ! p%ExctnDisp > 0
             IF ( .NOT. allocated ( p%WaveExctnGrid ) )  THEN
