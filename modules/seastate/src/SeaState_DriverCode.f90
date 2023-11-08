@@ -652,8 +652,8 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, SeaStateInitInp, SeaStateInitOut, S
    write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## It is arranged as blocks of X,Y,Elevation at each timestep'
    write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## Each block is separated by two blank lines for use in gnuplot'
    write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# '
-   write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# WaveTMax    =  '//TRIM(Num2LStr(SeaState_p%WaveField%WaveTime(SeaState_P%NStepWave)))
-   write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# NStepWave   =  '//TRIM(Num2LStr(SeaState_p%NStepWave))
+   write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# WaveTMax    =  '//TRIM(Num2LStr(SeaState_p%WaveField%WaveTime(SeaState_p%WaveField%NStepWave)))
+   write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# NStepWave   =  '//TRIM(Num2LStr(SeaState_p%WaveField%NStepWave))
    write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridXPoints =  '//TRIM(Num2LStr(SeaState_p%NGrid(1)))
    write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridYPoints =  '//TRIM(Num2LStr(SeaState_p%NGrid(2)))
    write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridDX      =  '//TRIM(Num2LStr(SeaState_p%deltaGrid(1)))
@@ -663,7 +663,7 @@ SUBROUTINE WaveElevGrid_Output (drvrInitInp, SeaStateInitInp, SeaStateInitOut, S
    write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# '
 
       ! Timestep looping
-   do i = 0,SeaState_p%NStepWave
+   do i = 0,SeaState_p%WaveField%NStepWave
       write (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp ) NewLine
       write (WaveElevFileUn,'(A8,F10.3)', IOSTAT=ErrStatTmp ) '# Time: ',SeaState_p%WaveField%WaveTime(I)
          ! Now output the X,Y, Elev info for this timestep
