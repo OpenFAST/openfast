@@ -1125,7 +1125,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       ! Generate grid points
       p%X_HalfWidth  = InputFileData%X_HalfWidth
       p%Y_HalfWidth  = InputFileData%Y_HalfWidth
-      p%Z_Depth = InputFileData%Z_Depth
       p%deltaGrid(1) = InputFileData%X_HalfWidth/(InputFileData%NX-1)
       p%deltaGrid(2)= InputFileData%Y_HalfWidth/(InputFileData%NY-1)
       p%deltaGrid(3) = PI / ( 2*(InputFileData%NZ-1) )

@@ -150,7 +150,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:3)  :: deltaGrid = 0.0_ReKi      !< delta between grid points in x, y, and theta (for z) [m,m,rad]
     REAL(ReKi)  :: X_HalfWidth = 0.0_ReKi      !< Half-width of the domain in the X direction [m]
     REAL(ReKi)  :: Y_HalfWidth = 0.0_ReKi      !< Half-width of the domain in the Y direction [m]
-    REAL(ReKi)  :: Z_Depth = 0.0_ReKi      !< Depth of the domain the Z direction [m]
     INTEGER(IntKi)  :: NWaveElev = 0_IntKi      !< Number of wave elevation outputs [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevxi      !< xi-coordinates for points where the incident wave elevations can be output [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveElevyi      !< yi-coordinates for points where the incident wave elevations can be output [(meters)]
@@ -1143,7 +1142,6 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
    DstParamData%deltaGrid = SrcParamData%deltaGrid
    DstParamData%X_HalfWidth = SrcParamData%X_HalfWidth
    DstParamData%Y_HalfWidth = SrcParamData%Y_HalfWidth
-   DstParamData%Z_Depth = SrcParamData%Z_Depth
    DstParamData%NWaveElev = SrcParamData%NWaveElev
    if (allocated(SrcParamData%WaveElevxi)) then
       LB(1:1) = lbound(SrcParamData%WaveElevxi)
@@ -1301,7 +1299,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
    call RegPack(Buf, InData%deltaGrid)
    call RegPack(Buf, InData%X_HalfWidth)
    call RegPack(Buf, InData%Y_HalfWidth)
-   call RegPack(Buf, InData%Z_Depth)
    call RegPack(Buf, InData%NWaveElev)
    call RegPack(Buf, allocated(InData%WaveElevxi))
    if (allocated(InData%WaveElevxi)) then
@@ -1378,8 +1375,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%X_HalfWidth)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%Y_HalfWidth)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Z_Depth)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NWaveElev)
    if (RegCheckErr(Buf, RoutineName)) return

@@ -233,7 +233,7 @@ CONTAINS
 
 !====================================================================================================
 SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, WaveField, WaveDT, X_HalfWidth, Y_HalfWidth, &
-                                     Z_Depth, deltaGrid, NGrid, ErrStat, ErrMsg )
+                                     deltaGrid, NGrid, ErrStat, ErrMsg )
 
       ! Passed variables
    CHARACTER(*),                  INTENT( IN    )   :: Rootname             ! filename including full path, minus any file extension.
@@ -242,7 +242,6 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, WaveField, WaveDT, X_
    real(DbKi),                    intent( in    )   :: WaveDT
    real(ReKi),                    intent( in    )   :: X_HalfWidth
    real(ReKi),                    intent( in    )   :: Y_HalfWidth
-   real(ReKi),                    intent( in    )   :: Z_Depth
    real(ReKi),                    intent( in    )   :: deltaGrid(3)
    INTEGER,                       INTENT( IN    )   :: NGrid(3)             ! Number of grid points for the wave kinematics arrays
    INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
@@ -274,7 +273,7 @@ SUBROUTINE SeaStOut_WriteWvKinFiles( Rootname, SeaSt_Prog, WaveField, WaveDT, X_
       y_gridPts(i+1) = -Y_HalfWidth + deltaGrid(2)*i
    end do
    do i = 0, NGrid(3)-1
-      z_gridPts(i+1) =  - ( 1.0 - cos( real((NGrid(3) - 1) - i, ReKi) * deltaGrid(3) )  ) * Z_Depth
+      z_gridPts(i+1) =  - ( 1.0 - cos( real((NGrid(3) - 1) - i, ReKi) * deltaGrid(3) )  ) * WaveField%SeaSt_Interp_p%Z_Depth
    end do
    
    ! Write the increments from [0, NStepWave] even though for OpenFAST data, NStepWave = 0, but for arbitrary user data this may not be true.

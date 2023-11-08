@@ -349,7 +349,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       SeaSt_Interp_InitInp%pZero(2) = -InputFileData%X_HalfWidth
       SeaSt_Interp_InitInp%pZero(3) = -InputFileData%Y_HalfWidth
       SeaSt_Interp_InitInp%pZero(4) = -InputFileData%Z_Depth  ! zi
-      SeaSt_Interp_InitInp%Z_Depth  = InputFileData%Z_Depth
+      SeaSt_Interp_InitInp%Z_Depth  =  InputFileData%Z_Depth
       call SeaSt_Interp_Init(SeaSt_Interp_InitInp, p%WaveField%seast_interp_p,  ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
@@ -370,7 +370,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       if ( InputFileData%WaveMod /= WaveMod_ExtFull ) then
          if ( InitInp%WrWvKinMod == 2 ) then
             call SeaStOut_WriteWvKinFiles( InitInp%OutRootname, SeaSt_ProgDesc, p%WaveField, p%WaveDT, p%X_HalfWidth, p%Y_HalfWidth, &
-               p%Z_Depth, p%deltaGrid, p%NGrid, ErrStat2, ErrMsg2 )
+               p%deltaGrid, p%NGrid, ErrStat2, ErrMsg2 )
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          else if ( InitInp%WrWvKinMod == 1 ) then
             call SeaStOut_WriteWaveElev0(InitInp%OutRootname, p%WaveField%NStepWave, &
