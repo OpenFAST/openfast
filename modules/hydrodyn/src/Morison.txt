@@ -322,7 +322,6 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     F_BF_End                      {:}{:}         -         -         ""        -
 typedef   ^                            ^                             ReKi                     V_rel_n                       {:}            -         -         "Normal relative flow velocity at joints"        m/s
 typedef   ^                            ^                             ReKi                     V_rel_n_HiPass                {:}            -         -         "High-pass filtered normal relative flow velocity at joints"   m/s
-typedef   ^                            ^                             INTEGER                  LastIndWave                   -              -         -         "Last time index used in the wave kinematics arrays"   -
 typedef   ^                            ^                             MeshMapType              VisMeshMap                      -            -         -         "Mesh mapping for visualization mesh" -
 typedef   ^                            ^                         SeaSt_Interp_MiscVarType     SeaSt_Interp_m                -              -         -         "misc var information from the SeaState Interpolation module"   -
 

@@ -1764,11 +1764,10 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
 END SUBROUTINE WAMIT_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
-SUBROUTINE WAMIT_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )   
+SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )   
 !..................................................................................................................................
    
       REAL(DbKi),                      INTENT(IN   )  :: Time        !< Current simulation time in seconds
-      real(SiKi),                      intent(in   )  :: WaveTime(:) !< Array of wave kinematic time samples, (sec)
       TYPE(WAMIT_InputType),           INTENT(IN   )  :: u           !< Inputs at Time
       TYPE(WAMIT_ParameterType),       INTENT(IN   )  :: p           !< Parameters
       TYPE(WAMIT_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
@@ -1823,7 +1822,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, E
             END IF
          
             DO I = 1,6*p%NBody     ! Loop through all wave excitation forces and moments
-               m%F_Waves1(I) = InterpWrappedStpReal ( REAL(Time, SiKi), WaveTime(:), p%WaveExctn(:,I), &
+               m%F_Waves1(I) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveField%WaveTime, p%WaveExctn(:,I), &
                                                         m%LastIndWave, p%WaveField%NStepWave + 1       )
             END DO          ! I - All wave excitation forces and moments
          else ! p%ExctnDisp > 0

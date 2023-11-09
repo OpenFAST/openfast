@@ -385,7 +385,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_BF_End      !<  [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: V_rel_n      !< Normal relative flow velocity at joints [m/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: V_rel_n_HiPass      !< High-pass filtered normal relative flow velocity at joints [m/s]
-    INTEGER(IntKi)  :: LastIndWave = 0_IntKi      !< Last time index used in the wave kinematics arrays [-]
     TYPE(MeshMapType)  :: VisMeshMap      !< Mesh mapping for visualization mesh [-]
     TYPE(SeaSt_Interp_MiscVarType)  :: SeaSt_Interp_m      !< misc var information from the SeaState Interpolation module [-]
   END TYPE Morison_MiscVarType
@@ -4857,7 +4856,6 @@ subroutine Morison_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg)
       end if
       DstMiscData%V_rel_n_HiPass = SrcMiscData%V_rel_n_HiPass
    end if
-   DstMiscData%LastIndWave = SrcMiscData%LastIndWave
    call NWTC_Library_CopyMeshMapType(SrcMiscData%VisMeshMap, DstMiscData%VisMeshMap, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -5060,7 +5058,6 @@ subroutine Morison_PackMisc(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%V_rel_n_HiPass), ubound(InData%V_rel_n_HiPass))
       call RegPack(Buf, InData%V_rel_n_HiPass)
    end if
-   call RegPack(Buf, InData%LastIndWave)
    call NWTC_Library_PackMeshMapType(Buf, InData%VisMeshMap) 
    call SeaSt_Interp_PackMisc(Buf, InData%SeaSt_Interp_m) 
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5356,8 +5353,6 @@ subroutine Morison_UnPackMisc(Buf, OutData)
       call RegUnpack(Buf, OutData%V_rel_n_HiPass)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   call RegUnpack(Buf, OutData%LastIndWave)
-   if (RegCheckErr(Buf, RoutineName)) return
    call NWTC_Library_UnpackMeshMapType(Buf, OutData%VisMeshMap) ! VisMeshMap 
    call SeaSt_Interp_UnpackMisc(Buf, OutData%SeaSt_Interp_m) ! SeaSt_Interp_m 
 end subroutine

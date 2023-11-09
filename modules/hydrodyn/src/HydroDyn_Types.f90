@@ -144,7 +144,6 @@ IMPLICIT NONE
     TYPE(HD_ModuleMapType)  :: HD_MeshMap 
     INTEGER(IntKi)  :: Decimate = 0_IntKi      !< The output decimation counter [-]
     REAL(DbKi)  :: LastOutTime = 0.0_R8Ki      !< Last time step which was written to the output file (sec) [-]
-    INTEGER(IntKi)  :: LastIndWave = 0_IntKi      !< The last index used in the wave kinematics arrays, used to optimize interpolation [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_PtfmAdd      !< The total forces and moments due to additional pre-load, stiffness, and damping [-]
     REAL(ReKi) , DIMENSION(1:6)  :: F_Hydro = 0.0_ReKi      !< The total hydrodynamic forces and moments integrated about the (0,0,0) platform reference point [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: F_Waves      !< The total waves forces on a WAMIT body calculated by first and second order methods (WAMIT and WAMIT2 modules) [-]
@@ -1704,7 +1703,6 @@ subroutine HydroDyn_CopyMisc(SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg
    if (ErrStat >= AbortErrLev) return
    DstMiscData%Decimate = SrcMiscData%Decimate
    DstMiscData%LastOutTime = SrcMiscData%LastOutTime
-   DstMiscData%LastIndWave = SrcMiscData%LastIndWave
    if (allocated(SrcMiscData%F_PtfmAdd)) then
       LB(1:1) = lbound(SrcMiscData%F_PtfmAdd)
       UB(1:1) = ubound(SrcMiscData%F_PtfmAdd)
@@ -1846,7 +1844,6 @@ subroutine HydroDyn_PackMisc(Buf, Indata)
    call HydroDyn_PackHD_ModuleMapType(Buf, InData%HD_MeshMap) 
    call RegPack(Buf, InData%Decimate)
    call RegPack(Buf, InData%LastOutTime)
-   call RegPack(Buf, InData%LastIndWave)
    call RegPack(Buf, allocated(InData%F_PtfmAdd))
    if (allocated(InData%F_PtfmAdd)) then
       call RegPackBounds(Buf, 1, lbound(InData%F_PtfmAdd), ubound(InData%F_PtfmAdd))
@@ -1903,8 +1900,6 @@ subroutine HydroDyn_UnPackMisc(Buf, OutData)
    call RegUnpack(Buf, OutData%Decimate)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%LastOutTime)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%LastIndWave)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%F_PtfmAdd)) deallocate(OutData%F_PtfmAdd)
    call RegUnpack(Buf, IsAllocAssoc)

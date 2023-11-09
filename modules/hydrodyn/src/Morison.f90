@@ -2083,7 +2083,6 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
 
    z%DummyConstrState         = 0
    OtherState%DummyOtherState = 0
-   m%LastIndWave              = 1
 
    
    ! allocate and initialize joint-specific arrays   

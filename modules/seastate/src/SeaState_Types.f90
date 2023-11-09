@@ -154,7 +154,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinxi      !< xi-coordinates for points where the incident wave kinematics can be output; these are relative to the mean sea level [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinyi      !< yi-coordinates for points where the incident wave kinematics can be output; these are relative to the mean sea level [(meters)]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinzi      !< zi-coordinates for points where the incident wave kinematics can be output; these are relative to the mean sea level [(meters)]
-    REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step in seconds for integration of continuous states (if a fixed-step integrator is used) and update of discrete states [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !<  [-]
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of SeaState module-level outputs (not the total number including sub-modules [-]
     INTEGER(IntKi)  :: OutSwtch = 0_IntKi      !< Output requested channels to: [1=SeaState.out 2=GlueCode.out  3=both files] [-]
@@ -1195,7 +1194,6 @@ subroutine SeaSt_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg
       end if
       DstParamData%WaveKinzi = SrcParamData%WaveKinzi
    end if
-   DstParamData%DT = SrcParamData%DT
    if (allocated(SrcParamData%OutParam)) then
       LB(1:1) = lbound(SrcParamData%OutParam)
       UB(1:1) = ubound(SrcParamData%OutParam)
@@ -1315,7 +1313,6 @@ subroutine SeaSt_PackParam(Buf, Indata)
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinzi), ubound(InData%WaveKinzi))
       call RegPack(Buf, InData%WaveKinzi)
    end if
-   call RegPack(Buf, InData%DT)
    call RegPack(Buf, allocated(InData%OutParam))
    if (allocated(InData%OutParam)) then
       call RegPackBounds(Buf, 1, lbound(InData%OutParam), ubound(InData%OutParam))
@@ -1435,8 +1432,6 @@ subroutine SeaSt_UnPackParam(Buf, OutData)
       call RegUnpack(Buf, OutData%WaveKinzi)
       if (RegCheckErr(Buf, RoutineName)) return
    end if
-   call RegUnpack(Buf, OutData%DT)
-   if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%OutParam)) deallocate(OutData%OutParam)
    call RegUnpack(Buf, IsAllocAssoc)
    if (RegCheckErr(Buf, RoutineName)) return
