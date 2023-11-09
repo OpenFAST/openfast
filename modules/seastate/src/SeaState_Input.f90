@@ -148,7 +148,6 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
    call ParseVar( FileInfo_In, CurLine, 'WaveMod', InputFileData%WaveMod, ErrStat2, ErrMsg2, UnEc )
    if ( ErrStat2 >= AbortErrLev ) then
       ! try to read the line that just failed, as a string this time to see if it's "1P"
-      CurLine = CurLine - 1   
       call ParseVar( FileInfo_In, CurLine, 'WaveMod', Line, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return
       
