@@ -706,7 +706,7 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       TmpFreq = REAL( Pi/InputFileData%Waves%WaveDT,SiKi)
       if ( InputFileData%WvHiCOff > TmpFreq ) then
          InputFileData%WvHiCOff =  TmpFreq
-         call SetErrStat( ErrID_Info,'WvLowCOff adjusted to '//trim(num2lstr(TmpFreq))//' rad/s, based on WaveDT.',ErrStat,ErrMsg,RoutineName)
+         call SetErrStat( ErrID_Info,'WvHiCOff adjusted to '//trim(num2lstr(TmpFreq))//' rad/s, based on WaveDT.',ErrStat,ErrMsg,RoutineName)
       end if
    end if
 
