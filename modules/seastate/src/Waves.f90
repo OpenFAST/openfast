@@ -56,7 +56,7 @@ CONTAINS
 
 !=======================================================================
 
-   FUNCTION WavePkShpDefault ( Hs, Tp )
+   FUNCTION WavePkShpDefault ( WaveMod, Hs, Tp )
 
 
       ! This FUNCTION is used to return the default value of the peak shape
@@ -73,10 +73,10 @@ CONTAINS
 
 
       ! Passed Variables:
-
-   REAL(SiKi), INTENT(IN )      :: Hs                                              ! Significant wave height (meters)
-   REAL(SiKi), INTENT(IN )      :: Tp                                              ! Peak spectral period (sec)
-   REAL(SiKi)                   :: WavePkShpDefault                                ! This function = default value of the peak shape parameter of the incident wave spectrum conditioned on significant wave height and peak spectral period (-)
+   INTEGER(IntKi), INTENT(IN )      :: WaveMod
+   REAL(SiKi),     INTENT(IN )      :: Hs                                              ! Significant wave height (meters)
+   REAL(SiKi),     INTENT(IN )      :: Tp                                              ! Peak spectral period (sec)
+   REAL(SiKi)                       :: WavePkShpDefault                                ! This function = default value of the peak shape parameter of the incident wave spectrum conditioned on significant wave height and peak spectral period (-)
 
 
       ! Local Variables:
@@ -87,17 +87,32 @@ CONTAINS
 
       ! Compute the default peak shape parameter of the incident wave spectrum,
       !   conditioned on significant wave height and peak spectral period:
+   
+   if ( WaveMod == WaveMod_JONSWAP ) then
+   
+      if ( Hs <= 0.0_SiKi ) then
+      
+         WavePkShpDefault = 1.0
+         
+      else
 
-   TpOvrSqrtHs = Tp/SQRT(Hs)
+         TpOvrSqrtHs = Tp/SQRT(Hs)
 
-   IF (     TpOvrSqrtHs <= 3.6 )  THEN
-      WavePkShpDefault = 5.0
-   ELSEIF ( TpOvrSqrtHs >= 5.0 )  THEN
+         IF (     TpOvrSqrtHs <= 3.6 )  THEN
+            WavePkShpDefault = 5.0
+         ELSEIF ( TpOvrSqrtHs >= 5.0 )  THEN
+            WavePkShpDefault = 1.0
+         ELSE
+            WavePkShpDefault = EXP( 5.75 - 1.15*TpOvrSqrtHs )
+         END IF
+      end if
+
+   else
+   
       WavePkShpDefault = 1.0
-   ELSE
-      WavePkShpDefault = EXP( 5.75 - 1.15*TpOvrSqrtHs )
-   END IF
-
+      
+   end if
+   
 
 
    RETURN

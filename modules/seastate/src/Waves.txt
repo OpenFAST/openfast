@@ -31,7 +31,6 @@ typedef     ^                 ^                 SiKi                 WaveHs     
 typedef     ^                 ^                 LOGICAL              WaveNDAmp         -        -        -        "Flag for normally-distributed amplitudes in incident waves spectrum [flag]"  -
 typedef     ^                 ^                 SiKi                 WavePhase         -        -        -        "Specified phase for regular waves"    (radians)
 typedef     ^                 ^                 SiKi                 WavePkShp         -        -        -        "Peak shape parameter of incident wave spectrum [1.0 for Pierson-Moskowitz]"  -
-typedef     ^                 ^                 CHARACTER(80)        WavePkShpChr      -        -        -        "String to temporarially hold value of peak shape parameter input line" -
 typedef     ^                 ^                 DbKi                 WaveTMax          -        -        -        "Analysis time for incident wave calculations; the actual analysis time may be larger than this value in order for the maintain an effecient FFT"  (sec)
 typedef     ^                 ^                 SiKi                 WaveTp            -        -        -        "Peak spectral period of incident waves"  (sec)
 typedef     ^                 ^                 INTEGER              NWaveElevGrid     -        -        -        "Number of grid points where the incident wave elevations are computed (the XY grid point locations)"  -

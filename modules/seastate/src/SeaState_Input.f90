@@ -54,9 +54,10 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
    real(ReKi), allocatable                      :: tmpReArray(:)        ! Temporary array storage of the joint output list
    character(1)                                 :: Line1                ! The first character of an input line
    integer(IntKi)                               :: CurLine              !< Current entry in FileInfo_In%Lines array
+   integer(IntKi)                               :: IOS
    integer(IntKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
-   character(*),  parameter                     :: RoutineName = 'SeaSt_ParaseInput'
+   character(*),  parameter                     :: RoutineName = 'SeaSt_ParseInput'
 
       ! Initialize local data
    UnEc     = -1
@@ -142,9 +143,33 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
    if ( InputFileData%Echo )   write(UnEc, '(A)') trim(FileInfo_In%Lines(CurLine))    ! Write section break to echo
    CurLine = CurLine + 1
 
-      ! WaveMod - Wave kinematics model switch.
-   call ParseVar( FileInfo_In, CurLine, 'WaveMod', InputFileData%WaveModChr, ErrStat2, ErrMsg2, UnEc )
-      if (Failed())  return;
+      ! WaveMod - Wave kinematics model switch. and WavePhase (as appropriate)
+   InputFileData%Waves%WavePhase = 0.0
+   call ParseVar( FileInfo_In, CurLine, 'WaveMod', InputFileData%WaveMod, ErrStat2, ErrMsg2, UnEc )
+   if ( ErrStat2 >= AbortErrLev ) then
+      ! try to read the line that just failed, as a string this time to see if it's "1P"
+      CurLine = CurLine - 1   
+      call ParseVar( FileInfo_In, CurLine, 'WaveMod', Line, ErrStat2, ErrMsg2, UnEc )
+      if (Failed())  return
+      
+      call Conv2UC( Line )    ! Convert Line to upper case.
+      if ( Line(1:2) == '1P' )  then                     ! The user wants to specify the phase in place of a random phase
+
+         InputFileData%WaveMod   = WaveMod_RegularUsrPh                          ! Internally define WaveMod = 10 to mean regular waves with a specified (nonrandom) phase
+         
+         read (Line(3:),*,IOSTAT=IOS )  InputFileData%Waves%WavePhase
+            call CheckIOS ( IOS, "", 'WavePhase', NumType, ErrStat2, ErrMsg2 )
+            if (Failed())  return
+
+         InputFileData%Waves%WavePhase = InputFileData%Waves%WavePhase*D2R       ! Convert the phase from degrees to radians
+
+      else                                               ! The user must have specified WaveMod incorrectly.
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2 = 'WaveMod incorrectly specified in SeaState input file.'
+         if (Failed())  return
+      end if
+
+   end if
 
       ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface.
    call ParseVar( FileInfo_In, CurLine, 'WaveStMod', InputFileData%WaveStMod, ErrStat2, ErrMsg2, UnEc )
@@ -167,8 +192,10 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
       if (Failed())  return;
 
       ! WavePkShp - Peak shape parameter.
-   call ParseVar( FileInfo_In, CurLine, 'WavePkShp', InputFileData%Waves%WavePkShpChr, ErrStat2, ErrMsg2, UnEc )
+   call ParseVarWDefault(FileInfo_In, CurLine, 'WavePkShp', InputFileData%Waves%WavePkShp, &
+                          WavePkShpDefault( InputFileData%WaveMod, InputFileData%Waves%WaveHs, InputFileData%Waves%WaveTp), ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
+
 
       ! WvLowCOff - Low Cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s).
    call ParseVar( FileInfo_In, CurLine, 'WvLowCOff', InputFileData%WvLowCOff, ErrStat2, ErrMsg2, UnEc )
@@ -556,36 +583,6 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
       ! WaveMod - Wave kinematics model switch.
 
-   InputFileData%Waves%WavePhase = 0.0
-   
-   if ( LEN_TRIM(InputFileData%WaveModChr) > 1 ) then
-      call Conv2UC( InputFileData%WaveModChr )    ! Convert Line to upper case.
-
-      if ( InputFileData%WaveModChr(1:2) == '1P' )  then                     ! The user wants to specify the phase in place of a random phase
-
-         InputFileData%WaveMod   = WaveMod_RegularUsrPh                          ! Internally define WaveMod = 10 to mean regular waves with a specified (nonrandom) phase
-         
-         read (InputFileData%WaveModChr(3:),*,IOSTAT=IOS )  InputFileData%Waves%WavePhase
-            call CheckIOS ( IOS, "", 'WavePhase', NumType, ErrStat2, ErrMsg2 )
-            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-            if ( ErrStat >= AbortErrLev ) return
-
-         InputFileData%Waves%WavePhase = InputFileData%Waves%WavePhase*D2R       ! Convert the phase from degrees to radians
-
-      else                                               ! The user must have specified WaveMod incorrectly.
-         call SetErrStat( ErrID_Fatal,'WaveMod incorrectly specified',ErrStat,ErrMsg,RoutineName)
-         return
-      end if
-
-   else
-         ! The line below only works for 1 digit reads
-      read( InputFileData%WaveModChr, *, IOSTAT=IOS ) InputFileData%WaveMod
-         call CheckIOS ( IOS, "", 'WaveMod', NumType, ErrStat2, ErrMsg2 )
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         if ( ErrStat >= AbortErrLev ) return
-
-   end if ! LEN_TRIM(InputFileData%Waves%WaveModChr)
-
    SELECT CASE(InputFileData%WaveMod)
       CASE(WaveMod_None)
       CASE(WaveMod_Regular)
@@ -686,37 +683,12 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       return
    end if
 
-   
 
 
-       ! WavePkShp - Peak shape parameter.
-
-   call Conv2UC( InputFileData%Waves%WavePkShpChr )    ! Convert Line to upper case.
-
-   if ( InputFileData%WaveMod == WaveMod_JONSWAP ) then   ! .TRUE if we have JONSWAP/Pierson-Moskowitz spectrum (irregular) waves, but not GH Bladed wave data.
-
-      if ( TRIM(InputFileData%Waves%WavePkShpChr) == 'DEFAULT' )  then   ! .TRUE. when one wants to use the default value of the peak shape parameter, conditioned on significant wave height and peak spectral period.
-
-         InputFileData%Waves%WavePkShp = WavePkShpDefault ( InputFileData%Waves%WaveHs, InputFileData%Waves%WaveTp )
-
-      else                                   ! The input must have been specified numerically.
-
-         read (InputFileData%Waves%WavePkShpChr,*,IOSTAT=IOS)  InputFileData%Waves%WavePkShp
-            call CheckIOS ( IOS, "", 'WavePkShp', NumType, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if ( ErrStat >= AbortErrLev ) return
-
-         if ( ( InputFileData%Waves%WavePkShp < 1.0 ) .OR. ( InputFileData%Waves%WavePkShp > 7.0 ) )  then
-            call SetErrStat( ErrID_Fatal,'WavePkShp must be greater than or equal to 1 and less than or equal to 7.',ErrStat,ErrMsg,RoutineName)
-            return
-         end if
-
-      end if
-
-   else
-
-      InputFileData%Waves%WavePkShp = 1.0
-
+       ! WavePkShp - Peak shape parameter
+   if ( ( InputFileData%Waves%WavePkShp < 1.0 ) .OR. ( InputFileData%Waves%WavePkShp > 7.0 ) )  then
+      call SetErrStat( ErrID_Fatal,'WavePkShp must be greater than or equal to 1 and less than or equal to 7.',ErrStat,ErrMsg,RoutineName)
+      return
    end if
 
 

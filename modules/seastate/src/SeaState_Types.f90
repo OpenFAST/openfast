@@ -81,7 +81,6 @@ IMPLICIT NONE
     REAL(SiKi)  :: WvHiCOffS = 0.0_R4Ki      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
     REAL(SiKi)  :: WaveDOmega = 0.0_R4Ki      !< Frequency step for incident wave calculations [(rad/s)]
     INTEGER(IntKi)  :: WaveMod = 0_IntKi      !< Incident wave kinematics model: See valid values in SeaSt_WaveField module parameters. [-]
-    CHARACTER(80)  :: WaveModChr      !< String to temporarially hold the value of the wave kinematics input line [-]
   END TYPE SeaSt_InputFile
 ! =======================
 ! =========  SeaSt_InitInputType  =======
@@ -304,7 +303,6 @@ subroutine SeaSt_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, Err
    DstInputFileData%WvHiCOffS = SrcInputFileData%WvHiCOffS
    DstInputFileData%WaveDOmega = SrcInputFileData%WaveDOmega
    DstInputFileData%WaveMod = SrcInputFileData%WaveMod
-   DstInputFileData%WaveModChr = SrcInputFileData%WaveModChr
 end subroutine
 
 subroutine SeaSt_DestroyInputFile(InputFileData, ErrStat, ErrMsg)
@@ -412,7 +410,6 @@ subroutine SeaSt_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%WvHiCOffS)
    call RegPack(Buf, InData%WaveDOmega)
    call RegPack(Buf, InData%WaveMod)
-   call RegPack(Buf, InData%WaveModChr)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 
@@ -574,8 +571,6 @@ subroutine SeaSt_UnPackInputFile(Buf, OutData)
    call RegUnpack(Buf, OutData%WaveDOmega)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WaveMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveModChr)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
 

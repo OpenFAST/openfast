@@ -62,7 +62,6 @@ typedef     ^                 ^                 SiKi                     WvLowCO
 typedef     ^                 ^                 SiKi                     WvHiCOffS         -        -        -  "Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0]"                   (rad/s)
 typedef     ^                 ^                 SiKi                     WaveDOmega        -        -        -  "Frequency step for incident wave calculations" (rad/s)
 typedef     ^                 ^                 INTEGER                  WaveMod           -        -        -  "Incident wave kinematics model: See valid values in SeaSt_WaveField module parameters." -
-typedef     ^                 ^                 CHARACTER(80)            WaveModChr        -        -        -  "String to temporarially hold the value of the wave kinematics input line"
 
 
 typedef   SeaState/SeaSt     InitInputType          CHARACTER(1024)          InputFile                       -          -          -         "Supplied by Driver:  full path and filename for the SeaState module"    -
