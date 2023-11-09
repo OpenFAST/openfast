@@ -240,11 +240,11 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       
       ! add some warnings about requesting WriteOutput outside the SeaState domain:
       do i=1,p%NWaveKin
-         if (abs(p%WaveKinxi(i)) > p%X_HalfWidth) then
+         if (abs(p%WaveKinxi(i)) > InputFileData%X_HalfWidth) then
             CALL SetErrStat(ErrID_Warn,'Requested WaveKinxi is outside the SeaState spatial domain.', ErrStat, ErrMsg, RoutineName)
             exit
          end if
-         if (abs(p%WaveKinyi(i)) > p%Y_HalfWidth) then
+         if (abs(p%WaveKinyi(i)) > InputFileData%Y_HalfWidth) then
             CALL SetErrStat(ErrID_Warn,'Requested WaveKinyi is outside the SeaState spatial domain.', ErrStat, ErrMsg, RoutineName)
             exit
          end if
@@ -369,7 +369,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          ! Write Wave Kinematics?
       if ( InputFileData%WaveMod /= WaveMod_ExtFull ) then
          if ( InitInp%WrWvKinMod == 2 ) then
-            call SeaStOut_WriteWvKinFiles( InitInp%OutRootname, SeaSt_ProgDesc, p%WaveField, p%WaveDT, p%X_HalfWidth, p%Y_HalfWidth, &
+            call SeaStOut_WriteWvKinFiles( InitInp%OutRootname, SeaSt_ProgDesc, p%WaveField, p%WaveDT, InputFileData%X_HalfWidth, InputFileData%Y_HalfWidth, &
                p%deltaGrid, p%NGrid, ErrStat2, ErrMsg2 )
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          else if ( InitInp%WrWvKinMod == 1 ) then
