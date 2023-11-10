@@ -1305,6 +1305,9 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p%CavitCheck       = InputFileData%CavitCheck
    p%Buoyancy         = InputFileData%Buoyancy
    
+   p%NacelleDrag      = InputFileData%NacelleDrag
+   p%NacelleDims      = RotData%NacelleDims
+   p%NacelleCd        = RotData%NacelleCd
 
    if (InitInp%Linearize .and. InputFileData%WakeMod == WakeMod_BEMT) then
       p%FrozenWake = InputFileData%FrozenWake
@@ -1742,6 +1745,15 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    do iR = 1,size(p%rotors)
       if ( p%rotors(iR)%Buoyancy ) then 
          call CalcBuoyantLoads( u%rotors(iR), p%rotors(iR), m%rotors(iR), y%rotors(iR), ErrStat, ErrMsg )
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+      end if
+   end do  
+
+   ! Calculate nacelle drag loads
+   do iR = 1,size(p%rotors)
+      if ( p%rotors(iR)%NacelleDrag ) then 
+         call computeNacelleDragAnon( u%rotors(iR), p%rotors(iR), m%rotors(iR), y%rotors(iR), ErrStat, ErrMsg )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             if (ErrStat >= AbortErrLev) return
       end if
@@ -3788,6 +3800,26 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
             call SetErrStat( ErrID_Fatal, 'DBEMT requires the continuous formulation with constant tau1 for linearization. Set DBEMT_Mod=3 or set WakeMod to 0 or 1.', ErrStat, ErrMsg, RoutineName )
          end if
       end if
+
+      if (InputFileData%NacelleDrag) then
+         call SetErrStat( ErrID_Fatal, 'Nacelle drag cannot currently be used for linearization. Set NacelleDrag = false.', ErrStat, ErrMsg, RoutineName )
+      end if
+   end if
+
+
+   !..................
+   ! check for nacelle drag parameters
+   !..................
+
+   if (InputFileData%NacelleDrag) then
+      do iR = 1,size(NumBl)
+         if (any(InputFileData%rotors(iR)%NacelleDims <= 0.0_ReKi)) then
+            call SetErrStat( ErrID_Fatal, 'Nacelle dimensions must be positive numbers for drag model.', ErrStat, ErrMsg, RoutineName )
+         end if
+         if (InputFileData%rotors(iR)%NacelleCd < 0.0_ReKi) then
+            call SetErrStat( ErrID_Fatal, 'Nacelle drag coefficient should not be negative for drag model.', ErrStat, ErrMsg, RoutineName )
+         end if
+      end do
    end if
 
 contains
@@ -7422,5 +7454,111 @@ subroutine AD_SetExternalWindPositions(u_AD, o_AD, PosXYZ, node, errStat, errMsg
       enddo !j, wake points
    end if
 end subroutine AD_SetExternalWindPositions
+!-------------------------------------------------------------------------------------------------------
 
+! Temp anyonimous function
+SUBROUTINE computeNacelleDragAnon( u, p, m, y, ErrStat, ErrMsg )
+
+   TYPE(RotInputType),                             INTENT(IN   )  :: u                !< AD inputs - used for mesh node positions
+   TYPE(RotParameterType),                         INTENT(IN   )  :: p                !< Parameters
+   TYPE(RotMiscVarType),                           INTENT(INOUT)  :: m                !< Misc/optimization variables
+   TYPE(RotOutputType),                            INTENT(INOUT)  :: y                !< Outputs computed at t 
+   INTEGER(IntKi),                                 INTENT(  OUT)  :: ErrStat          !< Error status of the operation
+   CHARACTER(*),                                   INTENT(  OUT)  :: ErrMsg           !< Error message if ErrStat /= ErrID_None
+
+
+   ! Local Vars
+   REAL(ReKi)                        :: rho                   ! Air density
+   REAL(ReKi)                        :: nacelleCD             ! Nacelle Drag Coefficient 
+   REAL(ReKi), DIMENSION(3)          :: hubHeigthWindSpeed(3) ! hubHeigthWindSpeed(1), hubHeigthWindSpeed(2), and hubHeigthWindSpeed(3) and u, v, and w wind velocities at Hub height
+   REAL(ReKi), DIMENSION(3)          :: nacelleDims(3)        ! nacelleDims(1), nacelleDims(2), and nacelleDims(3) and Length(x), Width(y), and Height(z) of the Nacelle   
+   REAL(ReKi)                        :: yawAngle              ! Current Yaw Bearing (Radians)
+   REAL(ReKi), DIMENSION(3)          :: force(3)              ! Forces aligned with nacelle 
+   REAL(ReKi), DIMENSION(3)          :: moment(3)             ! placeholder
+
+   INTEGER(IntKi)                ::      Un  !< fortran output unit
+   CHARACTER(200)                                 :: DebugFileName                  ! File name for debugging file
+
+
+   rho = p%AirDens
+   nacelleCD = p%NacelleCd
+   hubHeigthWindSpeed = u%InflowOnNacelle
+   nacelleDims = p%NacelleDims
+   yawAngle = m%Yaw
+
+   force(1) = 0.0_ReKi
+   force(2) = 0.0_ReKi
+   force(3) = 0.0_ReKi
+
+   moment(1) = 0.0_ReKi
+   moment(2) = 0.0_ReKi
+   moment(3) = 0.0_ReKi
+
+   CALL computeNacelleDrag(rho,nacelleCD,hubHeigthWindSpeed,nacelleDims,yawAngle,force,moment)
+
+   ! Pass to m variable
+   m%NacDragF = force
+   m%NacDragM = moment
+
+   ! Assign buoyant loads to nacelle mesh
+   y%NacelleLoad%Force(:,1) = force
+   y%NacelleLoad%Moment(:,1) = moment
+
+
+   ! printing the meshing info
+   ! CALL GetNewUnit(Un,ErrStat2,ErrMsg2)
+   ! write(6,'("force: ",3(F10.4))'),force(:)
+   ! write(6,'("moment: ",3(F10.4))'),moment(:)
+
+
+
+END SUBROUTINE computeNacelleDragAnon
+
+!-------------------------------------------------------------------------------------------------------
+! computeNacelleDrag computes forces and moments due to nacelle drag.
+SUBROUTINE computeNacelleDrag(rho,nacelleCD,hubHeigthWindSpeed,nacelleDims,yawAngle,force,moment)
+
+   REAL(ReKi)                        , INTENT(IN   ) :: rho                   ! Air density
+   REAL(ReKi)                        , INTENT(IN   ) :: nacelleCD             ! Nacelle Drag Coefficient 
+   REAL(ReKi)                        , INTENT(IN)    :: hubHeigthWindSpeed(3) ! hubHeigthWindSpeed(1), hubHeigthWindSpeed(2), and hubHeigthWindSpeed(3) and u, v, and w wind velocities at Hub height
+   REAL(ReKi)                        , INTENT(IN)    :: nacelleDims(3)        ! nacelleDims(1), nacelleDims(2), and nacelleDims(3) and Length(x), Width(y), and Height(z) of the Nacelle   
+   REAL(ReKi)                        , INTENT(IN)    :: yawAngle              ! Current Yaw Bearing (Radians)
+   REAL(ReKi)                        , INTENT(OUT)   :: force(3)              ! Forces aligned with nacelle 
+   REAL(ReKi)                        , INTENT(OUT)   :: moment(3)             ! placeholder
+   
+   ! Local Variables
+   REAL(ReKi)                                        :: totalAngle            ! Angle between incoming wind direction and nacelle, 
+   REAL(ReKi)                                        :: area                  ! Area of the nacelle projected in the wind direction
+   REAL(ReKi)                                        :: forceMag              ! Drag force aligned with wind direction
+   Real(ReKi)                                        :: unitDiskVec(3)        ! unit vector aligned at an angle of "totalAngle" from yawed rotor disk    
+   Real(ReKi)                                        :: areaVec(3)            ! Vec containing areas of yz, xz and xy faces of the nacelle 
+   
+   totalAngle = atan2(hubHeigthWindSpeed(2),hubHeigthWindSpeed(1)) - yawAngle
+   call MPi2Pi(totalAngle)   
+   unitDiskVec(1) = abs(cos(totalAngle))
+   unitDiskVec(2) = abs(sin(totalAngle))
+   unitDiskVec(3) = 0.0_ReKi ! Can be used if the tilt is to be included.
+   
+   areaVec(1) =  nacelleDims(2)*nacelleDims(3) ! area as viewed from front (yz)
+   areaVec(2) =  nacelleDims(1)*nacelleDims(3) ! area as viewed from side  (xz)
+   areaVec(3) =  nacelleDims(1)*nacelleDims(2) ! area as viewed from top   (xy)
+   
+   ! total nacelle area projected into incoming wind direction
+   area = dot_product(areaVec, unitDiskVec)
+   
+   ! Find drag force (in global X direction)
+   forceMag = 0.5*rho*nacelleCD*(hubHeigthWindSpeed(1)**2  + hubHeigthWindSpeed(2)**2)*area
+   
+   ! Decompose along the nacelle length, width and height 
+   force = unitDiskVec*forceMag
+    
+   force(1) = sign(force(1),cos(totalAngle))
+   force(2) = sign(force(2),sin(totalAngle))   
+   
+   moment(1) = 0.0_ReKi
+   moment(2) = 0.0_ReKi
+   moment(3) = 0.0_ReKi
+   
+END SUBROUTINE computeNacelleDrag
+!----------------------------------------------------------------------------------------------------------------------------------
 END MODULE AeroDyn

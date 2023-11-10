@@ -182,6 +182,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: HubCenBx      !< Hub center of buoyancy x direction offset [m]
     REAL(ReKi)  :: VolNac      !< Nacelle volume [m^3]
     REAL(ReKi) , DIMENSION(1:3)  :: NacCenB      !< Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates [m]
+    REAL(ReKi) , DIMENSION(1:3)  :: NacelleDims      !< Length, height and width of the nacelle [m]
+    REAL(ReKi)  :: NacelleCd      !< Cd for the nacelle [(-)]
     LOGICAL  :: TFinAero = .FALSE.      !< Calculate tail fin aerodynamics model (flag) [flag]
     CHARACTER(1024)  :: TFinFile      !< Input file for tail fin aerodynamics [used only when TFinAero=True] [-]
     TYPE(TFinInputFileType)  :: TFin      !< Input file data for tail fin [-]
@@ -199,6 +201,7 @@ IMPLICIT NONE
     LOGICAL  :: FrozenWake      !< Flag that tells this module it should assume a frozen wake during linearization. [-]
     LOGICAL  :: CavitCheck      !< Flag that tells us if we want to check for cavitation [-]
     LOGICAL  :: Buoyancy      !< Include buoyancy effects? [flag]
+    LOGICAL  :: NacelleDrag      !< Include NacelleDrag effects? [flag]
     LOGICAL  :: CompAA      !< Compute AeroAcoustic noise [flag]
     CHARACTER(1024)  :: AA_InputFile      !< AeroAcoustics input file name [quoted strings]
     CHARACTER(1024) , DIMENSION(:), ALLOCATABLE  :: ADBlFile      !< AD blade file (NumBl filenames) [quoted strings]
@@ -336,6 +339,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: HubMB      !< buoyant moment at hub node [Nm]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NacFB      !< buoyant force at nacelle (tower top) node [N]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NacMB      !< buoyant moment at nacelle (tower top) node [Nm]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NacDragF      !< drag force at nacelle (tower top) node [N]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: NacDragM      !< drag moment at nacelle (tower top) node [Nm]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeRootLoad      !< meshes at blade root; used to compute an integral for mapping the output blade loads to single points (for writing to file only) [-]
     TYPE(MeshMapType) , DIMENSION(:), ALLOCATABLE  :: B_L_2_R_P      !< mapping data structure to map each bladeLoad output mesh to corresponding MiscVar%BladeRootLoad mesh [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: BladeBuoyLoadPoint      !< point mesh for lumped buoyant blade loads [-]
@@ -382,6 +387,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: HubCenBx      !< Hub center of buoyancy x direction offset [m]
     REAL(ReKi)  :: VolNac      !< Nacelle volume [m^3]
     REAL(ReKi) , DIMENSION(1:3)  :: NacCenB      !< Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates [m]
+    REAL(ReKi) , DIMENSION(1:3)  :: NacelleDims      !< Length, height and width of the nacelle [m]
+    REAL(ReKi)  :: NacelleCd      !< Nacelle cd [(-))]
     REAL(ReKi)  :: VolBl      !< Buoyancy volume of all blades [m^3]
     REAL(ReKi)  :: VolTwr      !< Buoyancy volume of the tower [m^3]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlRad      !< Matrix of equivalent blade radius at each node, used in buoyancy calculation [m]
@@ -405,6 +412,7 @@ IMPLICIT NONE
     LOGICAL  :: FrozenWake      !< Flag that tells this module it should assume a frozen wake during linearization. [-]
     LOGICAL  :: CavitCheck      !< Flag that tells us if we want to check for cavitation [-]
     LOGICAL  :: Buoyancy      !< Include buoyancy effects? [flag]
+    LOGICAL  :: NacelleDrag      !< Include NacelleDrag effects? [flag]
     INTEGER(IntKi)  :: MHK      !< MHK [flag]
     LOGICAL  :: CompAA      !< Compute AeroAcoustic noise [flag]
     REAL(ReKi)  :: AirDens      !< Air density [kg/m^3]
@@ -4635,6 +4643,8 @@ ENDIF
     DstRotInputFileData%HubCenBx = SrcRotInputFileData%HubCenBx
     DstRotInputFileData%VolNac = SrcRotInputFileData%VolNac
     DstRotInputFileData%NacCenB = SrcRotInputFileData%NacCenB
+    DstRotInputFileData%NacelleDims = SrcRotInputFileData%NacelleDims
+    DstRotInputFileData%NacelleCd = SrcRotInputFileData%NacelleCd
     DstRotInputFileData%TFinAero = SrcRotInputFileData%TFinAero
     DstRotInputFileData%TFinFile = SrcRotInputFileData%TFinFile
       CALL AD_Copytfininputfiletype( SrcRotInputFileData%TFin, DstRotInputFileData%TFin, CtrlCode, ErrStat2, ErrMsg2 )
@@ -4778,6 +4788,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! HubCenBx
       Re_BufSz   = Re_BufSz   + 1  ! VolNac
       Re_BufSz   = Re_BufSz   + SIZE(InData%NacCenB)  ! NacCenB
+      Re_BufSz   = Re_BufSz   + SIZE(InData%NacelleDims)  ! NacelleDims
+      Re_BufSz   = Re_BufSz   + 1  ! NacelleCd
       Int_BufSz  = Int_BufSz  + 1  ! TFinAero
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%TFinFile)  ! TFinFile
       Int_BufSz   = Int_BufSz + 3  ! TFin: size of buffers for each call to pack subtype
@@ -4952,6 +4964,12 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%NacCenB(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
+    DO i1 = LBOUND(InData%NacelleDims,1), UBOUND(InData%NacelleDims,1)
+      ReKiBuf(Re_Xferred) = InData%NacelleDims(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    ReKiBuf(Re_Xferred) = InData%NacelleCd
+    Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%TFinAero, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%TFinFile)
@@ -5175,6 +5193,14 @@ ENDIF
       OutData%NacCenB(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
+    i1_l = LBOUND(OutData%NacelleDims,1)
+    i1_u = UBOUND(OutData%NacelleDims,1)
+    DO i1 = LBOUND(OutData%NacelleDims,1), UBOUND(OutData%NacelleDims,1)
+      OutData%NacelleDims(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    OutData%NacelleCd = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%TFinAero = TRANSFER(IntKiBuf(Int_Xferred), OutData%TFinAero)
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%TFinFile)
@@ -5248,6 +5274,7 @@ ENDIF
     DstInputFileData%FrozenWake = SrcInputFileData%FrozenWake
     DstInputFileData%CavitCheck = SrcInputFileData%CavitCheck
     DstInputFileData%Buoyancy = SrcInputFileData%Buoyancy
+    DstInputFileData%NacelleDrag = SrcInputFileData%NacelleDrag
     DstInputFileData%CompAA = SrcInputFileData%CompAA
     DstInputFileData%AA_InputFile = SrcInputFileData%AA_InputFile
 IF (ALLOCATED(SrcInputFileData%ADBlFile)) THEN
@@ -5441,6 +5468,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! FrozenWake
       Int_BufSz  = Int_BufSz  + 1  ! CavitCheck
       Int_BufSz  = Int_BufSz  + 1  ! Buoyancy
+      Int_BufSz  = Int_BufSz  + 1  ! NacelleDrag
       Int_BufSz  = Int_BufSz  + 1  ! CompAA
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%AA_InputFile)  ! AA_InputFile
   Int_BufSz   = Int_BufSz   + 1     ! ADBlFile allocated yes/no
@@ -5571,6 +5599,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%CavitCheck, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Buoyancy, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%NacelleDrag, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%CompAA, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
@@ -5819,6 +5849,8 @@ ENDIF
     OutData%CavitCheck = TRANSFER(IntKiBuf(Int_Xferred), OutData%CavitCheck)
     Int_Xferred = Int_Xferred + 1
     OutData%Buoyancy = TRANSFER(IntKiBuf(Int_Xferred), OutData%Buoyancy)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NacelleDrag = TRANSFER(IntKiBuf(Int_Xferred), OutData%NacelleDrag)
     Int_Xferred = Int_Xferred + 1
     OutData%CompAA = TRANSFER(IntKiBuf(Int_Xferred), OutData%CompAA)
     Int_Xferred = Int_Xferred + 1
@@ -9268,6 +9300,30 @@ IF (ALLOCATED(SrcRotMiscVarTypeData%NacMB)) THEN
   END IF
     DstRotMiscVarTypeData%NacMB = SrcRotMiscVarTypeData%NacMB
 ENDIF
+IF (ALLOCATED(SrcRotMiscVarTypeData%NacDragF)) THEN
+  i1_l = LBOUND(SrcRotMiscVarTypeData%NacDragF,1)
+  i1_u = UBOUND(SrcRotMiscVarTypeData%NacDragF,1)
+  IF (.NOT. ALLOCATED(DstRotMiscVarTypeData%NacDragF)) THEN 
+    ALLOCATE(DstRotMiscVarTypeData%NacDragF(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%NacDragF.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstRotMiscVarTypeData%NacDragF = SrcRotMiscVarTypeData%NacDragF
+ENDIF
+IF (ALLOCATED(SrcRotMiscVarTypeData%NacDragM)) THEN
+  i1_l = LBOUND(SrcRotMiscVarTypeData%NacDragM,1)
+  i1_u = UBOUND(SrcRotMiscVarTypeData%NacDragM,1)
+  IF (.NOT. ALLOCATED(DstRotMiscVarTypeData%NacDragM)) THEN 
+    ALLOCATE(DstRotMiscVarTypeData%NacDragM(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstRotMiscVarTypeData%NacDragM.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstRotMiscVarTypeData%NacDragM = SrcRotMiscVarTypeData%NacDragM
+ENDIF
 IF (ALLOCATED(SrcRotMiscVarTypeData%BladeRootLoad)) THEN
   i1_l = LBOUND(SrcRotMiscVarTypeData%BladeRootLoad,1)
   i1_u = UBOUND(SrcRotMiscVarTypeData%BladeRootLoad,1)
@@ -9495,6 +9551,12 @@ IF (ALLOCATED(RotMiscVarTypeData%NacFB)) THEN
 ENDIF
 IF (ALLOCATED(RotMiscVarTypeData%NacMB)) THEN
   DEALLOCATE(RotMiscVarTypeData%NacMB)
+ENDIF
+IF (ALLOCATED(RotMiscVarTypeData%NacDragF)) THEN
+  DEALLOCATE(RotMiscVarTypeData%NacDragF)
+ENDIF
+IF (ALLOCATED(RotMiscVarTypeData%NacDragM)) THEN
+  DEALLOCATE(RotMiscVarTypeData%NacDragM)
 ENDIF
 IF (ALLOCATED(RotMiscVarTypeData%BladeRootLoad)) THEN
 DO i1 = LBOUND(RotMiscVarTypeData%BladeRootLoad,1), UBOUND(RotMiscVarTypeData%BladeRootLoad,1)
@@ -9857,6 +9919,16 @@ ENDIF
   IF ( ALLOCATED(InData%NacMB) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! NacMB upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%NacMB)  ! NacMB
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! NacDragF allocated yes/no
+  IF ( ALLOCATED(InData%NacDragF) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! NacDragF upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%NacDragF)  ! NacDragF
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! NacDragM allocated yes/no
+  IF ( ALLOCATED(InData%NacDragM) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! NacDragM upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%NacDragM)  ! NacDragM
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! BladeRootLoad allocated yes/no
   IF ( ALLOCATED(InData%BladeRootLoad) ) THEN
@@ -10834,6 +10906,36 @@ ENDIF
 
       DO i1 = LBOUND(InData%NacMB,1), UBOUND(InData%NacMB,1)
         ReKiBuf(Re_Xferred) = InData%NacMB(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%NacDragF) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%NacDragF,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%NacDragF,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%NacDragF,1), UBOUND(InData%NacDragF,1)
+        ReKiBuf(Re_Xferred) = InData%NacDragF(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%NacDragM) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%NacDragM,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%NacDragM,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%NacDragM,1), UBOUND(InData%NacDragM,1)
+        ReKiBuf(Re_Xferred) = InData%NacDragM(i1)
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
@@ -12156,6 +12258,42 @@ ENDIF
         Re_Xferred = Re_Xferred + 1
       END DO
   END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! NacDragF not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%NacDragF)) DEALLOCATE(OutData%NacDragF)
+    ALLOCATE(OutData%NacDragF(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%NacDragF.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%NacDragF,1), UBOUND(OutData%NacDragF,1)
+        OutData%NacDragF(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! NacDragM not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%NacDragM)) DEALLOCATE(OutData%NacDragM)
+    ALLOCATE(OutData%NacDragM(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%NacDragM.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%NacDragM,1), UBOUND(OutData%NacDragM,1)
+        OutData%NacDragM(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BladeRootLoad not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -13327,6 +13465,8 @@ ENDIF
     DstRotParameterTypeData%HubCenBx = SrcRotParameterTypeData%HubCenBx
     DstRotParameterTypeData%VolNac = SrcRotParameterTypeData%VolNac
     DstRotParameterTypeData%NacCenB = SrcRotParameterTypeData%NacCenB
+    DstRotParameterTypeData%NacelleDims = SrcRotParameterTypeData%NacelleDims
+    DstRotParameterTypeData%NacelleCd = SrcRotParameterTypeData%NacelleCd
     DstRotParameterTypeData%VolBl = SrcRotParameterTypeData%VolBl
     DstRotParameterTypeData%VolTwr = SrcRotParameterTypeData%VolTwr
 IF (ALLOCATED(SrcRotParameterTypeData%BlRad)) THEN
@@ -13485,6 +13625,7 @@ ENDIF
     DstRotParameterTypeData%FrozenWake = SrcRotParameterTypeData%FrozenWake
     DstRotParameterTypeData%CavitCheck = SrcRotParameterTypeData%CavitCheck
     DstRotParameterTypeData%Buoyancy = SrcRotParameterTypeData%Buoyancy
+    DstRotParameterTypeData%NacelleDrag = SrcRotParameterTypeData%NacelleDrag
     DstRotParameterTypeData%MHK = SrcRotParameterTypeData%MHK
     DstRotParameterTypeData%CompAA = SrcRotParameterTypeData%CompAA
     DstRotParameterTypeData%AirDens = SrcRotParameterTypeData%AirDens
@@ -13733,6 +13874,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! HubCenBx
       Re_BufSz   = Re_BufSz   + 1  ! VolNac
       Re_BufSz   = Re_BufSz   + SIZE(InData%NacCenB)  ! NacCenB
+      Re_BufSz   = Re_BufSz   + SIZE(InData%NacelleDims)  ! NacelleDims
+      Re_BufSz   = Re_BufSz   + 1  ! NacelleCd
       Re_BufSz   = Re_BufSz   + 1  ! VolBl
       Re_BufSz   = Re_BufSz   + 1  ! VolTwr
   Int_BufSz   = Int_BufSz   + 1     ! BlRad allocated yes/no
@@ -13833,6 +13976,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! FrozenWake
       Int_BufSz  = Int_BufSz  + 1  ! CavitCheck
       Int_BufSz  = Int_BufSz  + 1  ! Buoyancy
+      Int_BufSz  = Int_BufSz  + 1  ! NacelleDrag
       Int_BufSz  = Int_BufSz  + 1  ! MHK
       Int_BufSz  = Int_BufSz  + 1  ! CompAA
       Re_BufSz   = Re_BufSz   + 1  ! AirDens
@@ -14086,6 +14230,12 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%NacCenB(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
+    DO i1 = LBOUND(InData%NacelleDims,1), UBOUND(InData%NacelleDims,1)
+      ReKiBuf(Re_Xferred) = InData%NacelleDims(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    ReKiBuf(Re_Xferred) = InData%NacelleCd
+    Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%VolBl
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%VolTwr
@@ -14351,6 +14501,8 @@ ENDIF
     IntKiBuf(Int_Xferred) = TRANSFER(InData%CavitCheck, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Buoyancy, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%NacelleDrag, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%MHK
     Int_Xferred = Int_Xferred + 1
@@ -14716,6 +14868,14 @@ ENDIF
       OutData%NacCenB(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
+    i1_l = LBOUND(OutData%NacelleDims,1)
+    i1_u = UBOUND(OutData%NacelleDims,1)
+    DO i1 = LBOUND(OutData%NacelleDims,1), UBOUND(OutData%NacelleDims,1)
+      OutData%NacelleDims(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    OutData%NacelleCd = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
     OutData%VolBl = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%VolTwr = ReKiBuf(Re_Xferred)
@@ -15038,6 +15198,8 @@ ENDIF
     OutData%CavitCheck = TRANSFER(IntKiBuf(Int_Xferred), OutData%CavitCheck)
     Int_Xferred = Int_Xferred + 1
     OutData%Buoyancy = TRANSFER(IntKiBuf(Int_Xferred), OutData%Buoyancy)
+    Int_Xferred = Int_Xferred + 1
+    OutData%NacelleDrag = TRANSFER(IntKiBuf(Int_Xferred), OutData%NacelleDrag)
     Int_Xferred = Int_Xferred + 1
     OutData%MHK = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
