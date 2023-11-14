@@ -137,6 +137,8 @@ subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMs
    Init_UA_Data%ShedEffect      = .true. ! This should be true when coupled to BEM
    Init_UA_Data%WrSum           = InitInp%SumPrint
    
+   Init_UA_Data%UA_OUTS         = 0
+   
 end subroutine BEMT_Set_UA_InitData
 
    
