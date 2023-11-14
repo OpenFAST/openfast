@@ -1,4 +1,8 @@
 %% INSTRUCTIONS
+% This script is used to manually build a Simulink mex file which uses the openfastlib shared library (.dll, .so, .dylib).
+% If you are building OpenFAST with CMake on linux or macOS or windows, you can automatically generate the mex file
+% by specifying -DBUILD_OPENFAST_SIMULINK_API=ON when running cmake, you do not need to use this script.
+%
 % Before running this script, you must have compiled OpenFAST for Simulink to create a DLL (i.e., a shared library like .so, .dylib, .lib, etc.).
 % - If cmake was used, make sure the install directory is specified properly in the `installDir` variable below,
 %   and if using Windows, set `built_with_visualStudio` to false.
@@ -12,10 +16,9 @@
 %
 % Run `mex -setup` in Matlab to configure a C compiler if you have not already done so.
 
-
 mexname = 'FAST_SFunc'; % base name of the resulting mex file
 
-built_with_visualStudio = true; %if the libraries were built with cmake, set to false
+built_with_visualStudio = false; %if the libraries were built with cmake, set to false
 
 
 if (ispc && built_with_visualStudio)   
@@ -39,32 +42,57 @@ if (ispc && built_with_visualStudio)
 else    
 %% defaults for cmake builds:
 
-    if ( ispc ) % Windows PC
+    if ( ismac )  % Apple MacOS
+        installDir = '../../../install';
+        outDir = fullfile(installDir, 'lib');
+    elseif ( ispc ) % Windows PC
         installDir = '../../../install';
         outDir = fullfile(installDir, 'lib');
         % If there are shared libraries does it work for outDir to be the local directory?
     else
-        installDir = '/usr/local';
+        installDir = '../../../install';
         outDir = '.';
     end
 
     libDir = fullfile(installDir, 'lib');
     includeDir = fullfile(installDir, 'include');
-    libName = 'openfastlib';
+    libName = 'openfastlib_mex';
 end
 
 %% BUILD COMMAND
 fprintf( '\n----------------------------\n' );
 fprintf( 'Creating %s\n\n', [outDir filesep mexname '.' mexext] );
 
-mex('-largeArrayDims', ...
-    ... % '-v', ... %add this line for "verbose" output (for debugging)
-    ['-L' libDir], ...
-    ['-l' libName], ...
-    ['-I' includeDir], ...
-    '-I../../../modules/supercontroller/src', ... % needed for visual studio builds to find "SuperController_Types.h"
-    '-I../../../modules/openfoam/src',        ... % needed for visual studio builds to find "OpenFOAM_Types.h"
-    '-outdir', outDir, ...
-    ['COMPFLAGS=$COMPFLAGS -MT -DS_FUNCTION_NAME=' mexname], ...
-    '-output', mexname, ...
-    'FAST_SFunc.c');
+if ispc () % Windows PC
+
+    mex('-largeArrayDims', ...
+        ... % '-v', ... %add this line for "verbose" output (for debugging)
+        ['-L' libDir], ...
+        ['-l' libName], ...
+        ['-I' includeDir], ...
+        '-I../../../modules/supercontroller/src', ... % needed for visual studio builds to find "SuperController_Types.h"
+        '-I../../../modules/openfoam/src',        ... % needed for visual studio builds to find "OpenFOAM_Types.h"
+        '-outdir', outDir, ...
+        ['COMPFLAGS=$COMPFLAGS -MT -DS_FUNCTION_NAME=' mexname], ...
+        '-output', mexname, ...
+        'FAST_SFunc.c');
+
+else % mac/unix
+
+    mex('-largeArrayDims', ...
+        ... '-v', ... %add this line for "verbose" output (for debugging)
+        ['-L', libDir], ...
+        ['-l', libName], ...
+        '-lgfortran', ...
+        '-lquadmath', ...
+        '-llapack', ...
+        '-lblas', ...
+        '-ldl', ...
+        ['-I', includeDir], ...
+        '-outdir', outDir, ...
+        ['CFLAGS=$CFLAGS -DS_FUNCTION_NAME=' mexname], ...
+        ... ['CXXFLAGS=$CXXFLAGS -DS_FUNCTION_NAME=' mexname], ...
+        '-output', mexname, ...
+        'FAST_SFunc.c');
+
+end

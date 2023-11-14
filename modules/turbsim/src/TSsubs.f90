@@ -650,16 +650,9 @@ ENDIF
          DO J=max(1, p%usr%NPoints),p%grid%NPoints
             DO I=J,p%grid%NPoints   
    
-!mlb: THis is where to look for the error.
-
-!mlb                  TEMP_Y=Coef_AlphaY*p%grid%Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PY)
-!mlb                  TEMP_Z=Coef_AlphaZ*p%grid%Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PZ)
-               
-!dist_x is zero, so we ignore it here (i.e., A_X = 0)
                A_Y = Alpha(2) * (p%grid%Freq(IFreq)**rc(2)) * ((Dist_Y(Indx)/Coef_1)**qc(2)) * (z_g(Indx)**(-pc(2)))
                A_Z = Alpha(3) * (p%grid%Freq(IFreq)**rc(3)) * ((Dist_Z(Indx)/Coef_1)**qc(3)) * (z_g(Indx)**(-pc(3)))
 
-!mlb                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/U0_1HR)
                TRH(Indx)=EXP(- Coef_1 * SQRT(A_Y**2 + A_Z**2) / p%met%URef)
                
                Indx = Indx  + 1                                    
@@ -1151,8 +1144,8 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
          
          
          DO iPoint=1+p%usr%NPoints,p%grid%NPoints
-            CALL Spec_TimeSer( p, p%grid%Z(iPoint), U(iPoint), LastIndex, SSVS )            
-            S(:,iPoint,:) = SSVS*HalfDelF               
+            CALL Spec_TimeSer( p, p%grid%Z(iPoint), U(iPoint), LastIndex, SSVS )
+            S(:,iPoint,:) = SSVS*HalfDelF
          ENDDO                  
          
       CASE ( SpecModel_USRVKM )
@@ -1291,15 +1284,14 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    
       ! Calculate Total time and NumSteps.
       ! Find the product of small factors that is larger than NumSteps (prime #9 = 23).
-!bjj: I have no idea why it is necessary to be a factor of 4, so I'm removing it for now:      ! Make sure it is a multiple of 2 too.
+      ! If we are starting from user-defined points, we can subtract values to try to get it to match the values entered there.
 
    IF ( p_grid%Periodic ) THEN
       p_grid%NumSteps    = CEILING( p_grid%AnalysisTime / p_grid%TimeStep )
 
          ! make sure NumSteps is an even number and a product of small primes
       NumSteps2          = ( p_grid%NumSteps - 1 )/2 + 1
-      p_grid%NumSteps    = 2*PSF( NumSteps2 , 9 )  ! >= 2*NumSteps2 = NumSteps + 1 - MOD(NumSteps-1,2) >= NumSteps
-      !p_grid%NumSteps    = PSF( p_grid%NumSteps , 9 )  
+      p_grid%NumSteps    = 2*PSF( NumSteps2 , 9, subtract=p_usr%NPoints > 0)  ! >= 2*NumSteps2 = NumSteps + 1 - MOD(NumSteps-1,2) >= NumSteps
       
       p_grid%NumOutSteps = p_grid%NumSteps
    ELSE
@@ -1307,17 +1299,10 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
       p_grid%NumSteps    = MAX( CEILING( p_grid%AnalysisTime / p_grid%TimeStep ), p_grid%NumOutSteps )
       
          ! make sure NumSteps is an even number and a product of small primes      
-!      p_grid%NumSteps    = PSF( p_grid%NumSteps , 9 )  ! make sure it's a product of small primes
       NumSteps2          = ( p_grid%NumSteps - 1 )/2 + 1
-      p_grid%NumSteps    = 2*PSF( NumSteps2 , 9 )  ! >= 2*NumSteps2 = NumOutSteps + 1 - MOD(NumOutSteps-1,2) >= NumOutSteps
+      p_grid%NumSteps    = 2*PSF( NumSteps2 , 9, subtract=p_usr%NPoints > 0 )  ! >= 2*NumSteps2 = NumOutSteps + 1 - MOD(NumOutSteps-1,2) >= NumOutSteps
       
    END IF
-
-   !IF (p_grid%NumSteps < 2 )  THEN
-   !   CALL SetErrStat( ErrID_Fatal, 'There must be at least 2 time steps. '//&
-   !                    'Increase the usable length of the time series or decrease the time step.', ErrStat, ErrMsg, RoutineName )
-   !   RETURN
-   !END IF
    
    p_grid%NumFreq = p_grid%NumSteps / 2
    DelF           = 1.0_DbKi/( p_grid%NumSteps*p_grid%TimeStep )
@@ -1327,7 +1312,8 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
       ! IF ( .NOT. EqualRealNos( DelF, p_usr%f(1) ) .or. .not. EqualRealNos(p_grid%AnalysisTime,p_usr%f(1)*p_usr%NFreq ) .or. p_grid%NumFreq > size(p_usr%f) ) THEN
       IF ( .NOT. EqualRealNos( DelF, p_usr%DelF ) ) THEN
          CALL SetErrStat(ErrID_Fatal, 'Delta frequency in the user-input time series must be the same as the delta frequency in the simulated series. '//&
-            'Change AnalysisTime or number of rows entered in user-defined time series file.', ErrStat, ErrMsg,RoutineName)
+            'Change AnalysisTime or number of rows entered in user-defined time series file.'//NewLine//'AnalysisTime uses '//trim(num2lstr(p_grid%NumSteps))//&
+            ' steps; user-input time series uses '//trim(num2lstr(p_usr%nFreq*2))//' steps.', ErrStat, ErrMsg,RoutineName)
          RETURN
       END IF      
       
@@ -1815,7 +1801,7 @@ SUBROUTINE ScaleTimeSeries(p, V, ErrStat, ErrMsg)
          SpecModel_USRVKM, &
          SpecModel_TIDAL,  &
          SpecModel_RIVER,  &
-         SpecModel_USER  ) ! Do reynolds stress for HYDRO also.
+         SpecModel_USER    )
                
    
       CALL TimeSeriesScaling_ReynoldsStress(p, V, ErrStat, ErrMsg)
@@ -1875,7 +1861,7 @@ SUBROUTINE TimeSeriesScaling_IEC(p, V)
                
       ELSE  ! Scale each point individually
                
-         DO Indx = 1,p%grid%NPoints             
+         DO Indx = 1,p%grid%NPoints
             CGridSum  = 0.0
             CGridSum2 = 0.0
                                     
@@ -2166,7 +2152,6 @@ IF ( ANY (p%WrFile) )  THEN
    CALL GetNewUnit( UnOut )
 
    WRITE (p%US,"( // 'You have requested that the following file(s) be generated:' / )")
-!   CALL WrScr1  (   ' You have requested that the following file(s) be generated:' )
 
    IF ( p%WrFile(FileExt_BIN) )  THEN   
 
@@ -2176,7 +2161,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
       
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".bin (binary hub-height turbulence-parameter file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.bin (binary hub-height turbulence-parameter file)' )
 
    ENDIF
 
@@ -2187,7 +2171,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
       
       WRITE (p%US, "( 3X ,'"//TRIM( p%RootName)//".dat (formatted turbulence-parameter file)' )")  
-!      CALL WrScr   (  '    '//TRIM( p%RootName)//'.dat (formatted turbulence-parameter file)' )
 
    ENDIF
 
@@ -2198,7 +2181,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
       
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".hh  (AeroDyn hub-height file)' )")
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.hh  (AeroDyn hub-height file)' )
 
    ENDIF
 
@@ -2209,7 +2191,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".bts (AeroDyn/TurbSim full-field wind file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.bts (AeroDyn/TurbSim full-field wind file)' )
 
    ENDIF
 
@@ -2220,7 +2201,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".wnd (AeroDyn/BLADED full-field wnd file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.wnd (AeroDyn/BLADED full-field wnd file)' )
 
    ENDIF
    
@@ -2231,7 +2211,6 @@ IF ( ANY (p%WrFile) )  THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".twr (binary tower file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.twr (binary tower file)' )
 
    ENDIF
 
@@ -2242,18 +2221,22 @@ IF ( ANY (p%WrFile) )  THEN
       
       
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".cts (coherent turbulence time step file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.cts (coherent turbulence time step file)' )
+   ENDIF
+
+   IF ( p%WrFile(FileExt_HAWC) )  THEN
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//"-u.bin (HAWC binary full-field u-component file)' )")  
+
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//"-v.bin (HAWC binary full-field v-component file)' )")  
+
+      WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//"-w.bin (HAWC binary full-field w-component file)' )")  
    ENDIF
 
    IF ( p%WrFile(FileExt_UVW) )  THEN
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".u (formatted full-field U-component file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.u (formatted full-field U-component file)' )
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".v (formatted full-field V-component file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.v (formatted full-field V-component file)' )
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".w (formatted full-field W-component file)' )")  
-!      CALL WrScr   ( '    '//TRIM( p%RootName)//'.w (formatted full-field W-component file)' )
    ENDIF
 
 ELSE
@@ -2262,7 +2245,7 @@ ENDIF
 
    ! WARN if using a large grid and not creating ff output files
 IF ( p%grid%NumGrid_Y*p%grid%NumGrid_Z > 250 ) THEN 
-   IF (.NOT. p%WrFile(FileExt_WND) .AND. .NOT. p%WrFile(FileExt_BTS) .AND. .NOT. p%WrFile(FileExt_UVW) ) THEN
+   IF (.NOT. p%WrFile(FileExt_WND) .AND. .NOT. p%WrFile(FileExt_BTS) .AND. .NOT. p%WrFile(FileExt_HAWC) .AND. .NOT. p%WrFile(FileExt_UVW) ) THEN
    
       CALL SetErrStat( ErrID_Warn, 'You are using a large number of grid points but are not generating full-field output files.'//&
             ' The simulation will run faster if you reduce the number of points on the grid.', ErrStat, ErrMsg, RoutineName) 
@@ -2419,7 +2402,7 @@ SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
    DO iVec=1,p%usr%nComp
       DO iPoint=1,p%usr%NPoints    
 
-         work = p%usr%v(:,iPoint,iVec)
+         work = p%usr%v(1:NumSteps,iPoint,iVec)
          
             ! perform forward FFT
 

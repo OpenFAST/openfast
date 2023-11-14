@@ -71,6 +71,7 @@ MODULE NWTC_Library
          !!  (without this, it is possible [depending on the Sys*.f90 file used] that the screen output will be written to a 
          !!  file called "fort.7")
 
+    USE NWTC_Library_Types
     USE NWTC_Num  ! technically we don't need to specify this if we have ModMesh (because ModMesh USEs NWTC_Num)
     USE ModMesh
     
@@ -80,6 +81,11 @@ MODULE NWTC_Library
 #endif
 
     IMPLICIT  NONE
+    
+    INTEGER, PARAMETER ::MHK_None = 0
+    INTEGER, PARAMETER ::MHK_FixedBottom = 1
+    INTEGER, PARAMETER ::MHK_Floating = 2
+
 
     CONTAINS
 

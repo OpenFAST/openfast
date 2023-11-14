@@ -300,15 +300,27 @@ CONTAINS
     DstBladePropsTypeData%TEAngle = SrcBladePropsTypeData%TEAngle
  END SUBROUTINE AA_CopyBladePropsType
 
- SUBROUTINE AA_DestroyBladePropsType( BladePropsTypeData, ErrStat, ErrMsg )
+ SUBROUTINE AA_DestroyBladePropsType( BladePropsTypeData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AA_BladePropsType), INTENT(INOUT) :: BladePropsTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyBladePropsType'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyBladePropsType'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE AA_DestroyBladePropsType
 
  SUBROUTINE AA_PackBladePropsType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -501,15 +513,27 @@ IF (ALLOCATED(SrcInitInputData%AFInfo)) THEN
 ENDIF
  END SUBROUTINE AA_CopyInitInput
 
- SUBROUTINE AA_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE AA_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AA_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyInitInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyInitInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InitInputData%BlSpn)) THEN
   DEALLOCATE(InitInputData%BlSpn)
 ENDIF
@@ -521,7 +545,8 @@ IF (ALLOCATED(InitInputData%BlAFID)) THEN
 ENDIF
 IF (ALLOCATED(InitInputData%AFInfo)) THEN
 DO i1 = LBOUND(InitInputData%AFInfo,1), UBOUND(InitInputData%AFInfo,1)
-  CALL AFI_DestroyParam( InitInputData%AFInfo(i1), ErrStat, ErrMsg )
+  CALL AFI_DestroyParam( InitInputData%AFInfo(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InitInputData%AFInfo)
 ENDIF
@@ -1052,15 +1077,27 @@ ENDIF
     DstInitOutputData%AirDens = SrcInitOutputData%AirDens
  END SUBROUTINE AA_CopyInitOutput
 
- SUBROUTINE AA_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE AA_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AA_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyInitOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyInitOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InitOutputData%WriteOutputHdr)) THEN
   DEALLOCATE(InitOutputData%WriteOutputHdr)
 ENDIF
@@ -1085,7 +1122,8 @@ ENDIF
 IF (ALLOCATED(InitOutputData%WriteOutputUntNodes)) THEN
   DEALLOCATE(InitOutputData%WriteOutputUntNodes)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE AA_DestroyInitOutput
 
  SUBROUTINE AA_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1889,15 +1927,27 @@ ENDIF
     DstInputFileData%dy_turb_in = SrcInputFileData%dy_turb_in
  END SUBROUTINE AA_CopyInputFile
 
- SUBROUTINE AA_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
+ SUBROUTINE AA_DestroyInputFile( InputFileData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AA_InputFile), INTENT(INOUT) :: InputFileData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyInputFile'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyInputFile'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InputFileData%ObsX)) THEN
   DEALLOCATE(InputFileData%ObsX)
 ENDIF
@@ -1909,7 +1959,8 @@ IF (ALLOCATED(InputFileData%ObsZ)) THEN
 ENDIF
 IF (ALLOCATED(InputFileData%BladeProps)) THEN
 DO i1 = LBOUND(InputFileData%BladeProps,1), UBOUND(InputFileData%BladeProps,1)
-  CALL AA_Destroybladepropstype( InputFileData%BladeProps(i1), ErrStat, ErrMsg )
+  CALL AA_Destroybladepropstype( InputFileData%BladeProps(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(InputFileData%BladeProps)
 ENDIF
@@ -3051,15 +3102,27 @@ ENDIF
     DstContStateData%DummyContState = SrcContStateData%DummyContState
  END SUBROUTINE AA_CopyContState
 
- SUBROUTINE AA_DestroyContState( ContStateData, ErrStat, ErrMsg )
+ SUBROUTINE AA_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AA_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyContState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyContState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE AA_DestroyContState
 
  SUBROUTINE AA_PackContState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -3336,15 +3399,27 @@ IF (ALLOCATED(SrcDiscStateData%RegionTIDelete)) THEN
 ENDIF
  END SUBROUTINE AA_CopyDiscState
 
- SUBROUTINE AA_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
+ SUBROUTINE AA_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AA_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyDiscState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyDiscState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(DiscStateData%MeanVrel)) THEN
   DEALLOCATE(DiscStateData%MeanVrel)
 ENDIF
@@ -4040,15 +4115,27 @@ ENDIF
     DstConstrStateData%DummyConstrState = SrcConstrStateData%DummyConstrState
  END SUBROUTINE AA_CopyConstrState
 
- SUBROUTINE AA_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
+ SUBROUTINE AA_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AA_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyConstrState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyConstrState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE AA_DestroyConstrState
 
  SUBROUTINE AA_PackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -4165,15 +4252,27 @@ ENDIF
     DstOtherStateData%DummyOtherState = SrcOtherStateData%DummyOtherState
  END SUBROUTINE AA_CopyOtherState
 
- SUBROUTINE AA_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
+ SUBROUTINE AA_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AA_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyOtherState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyOtherState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE AA_DestroyOtherState
 
  SUBROUTINE AA_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -4575,15 +4674,27 @@ ENDIF
     DstMiscData%filesopen = SrcMiscData%filesopen
  END SUBROUTINE AA_CopyMisc
 
- SUBROUTINE AA_DestroyMisc( MiscData, ErrStat, ErrMsg )
+ SUBROUTINE AA_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AA_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyMisc'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyMisc'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(MiscData%AllOuts)) THEN
   DEALLOCATE(MiscData%AllOuts)
 ENDIF
@@ -6213,15 +6324,27 @@ IF (ALLOCATED(SrcParamData%AFThickGuida)) THEN
 ENDIF
  END SUBROUTINE AA_CopyParam
 
- SUBROUTINE AA_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE AA_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AA_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ParamData%rotorregionlimitsVert)) THEN
   DEALLOCATE(ParamData%rotorregionlimitsVert)
 ENDIF
@@ -6254,7 +6377,8 @@ IF (ALLOCATED(ParamData%TI_Grid_In)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%OutParam)
 ENDIF
@@ -6275,7 +6399,8 @@ IF (ALLOCATED(ParamData%BlAFID)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%AFInfo)) THEN
 DO i1 = LBOUND(ParamData%AFInfo,1), UBOUND(ParamData%AFInfo,1)
-  CALL AFI_DestroyParam( ParamData%AFInfo(i1), ErrStat, ErrMsg )
+  CALL AFI_DestroyParam( ParamData%AFInfo(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%AFInfo)
 ENDIF
@@ -8441,15 +8566,27 @@ IF (ALLOCATED(SrcInputData%Inflow)) THEN
 ENDIF
  END SUBROUTINE AA_CopyInput
 
- SUBROUTINE AA_DestroyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE AA_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AA_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InputData%RotGtoL)) THEN
   DEALLOCATE(InputData%RotGtoL)
 ENDIF
@@ -9021,15 +9158,27 @@ IF (ALLOCATED(SrcOutputData%WriteOutputNode)) THEN
 ENDIF
  END SUBROUTINE AA_CopyOutput
 
- SUBROUTINE AA_DestroyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE AA_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(AA_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'AA_DestroyOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(OutputData%SumSpecNoise)) THEN
   DEALLOCATE(OutputData%SumSpecNoise)
 ENDIF
@@ -9708,634 +9857,6 @@ ENDIF
       END DO
   END IF
  END SUBROUTINE AA_UnPackOutput
-
-
- SUBROUTINE AA_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )
-!
-! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
-! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
-!
-!  expressions below based on either
-!
-!  f(t) = a
-!  f(t) = a + b * t, or
-!  f(t) = a + b * t + c * t**2
-!
-!  where a, b and c are determined as the solution to
-!  f(t1) = u1, f(t2) = u2, f(t3) = u3  (as appropriate)
-!
-!..................................................................................................................................
-
- TYPE(AA_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
- REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
- TYPE(AA_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
- REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
-   ! local variables
- INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
- INTEGER(IntKi)                             :: ErrStat2        ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
- CHARACTER(*),    PARAMETER                 :: RoutineName = 'AA_Input_ExtrapInterp'
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
- if ( size(t) .ne. size(u)) then
-    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(u)',ErrStat,ErrMsg,RoutineName)
-    RETURN
- endif
- order = SIZE(u) - 1
- IF ( order .eq. 0 ) THEN
-   CALL AA_CopyInput(u(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 1 ) THEN
-   CALL AA_Input_ExtrapInterp1(u(1), u(2), t, u_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 2 ) THEN
-   CALL AA_Input_ExtrapInterp2(u(1), u(2), u(3), t, u_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE 
-   CALL SetErrStat(ErrID_Fatal,'size(u) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
-   RETURN
- ENDIF 
- END SUBROUTINE AA_Input_ExtrapInterp
-
-
- SUBROUTINE AA_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
-!
-! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
-! values of u (which has values associated with times in t).  Order of the interpolation is 1.
-!
-!  f(t) = a + b * t, or
-!
-!  where a and b are determined as the solution to
-!  f(t1) = u1, f(t2) = u2
-!
-!..................................................................................................................................
-
- TYPE(AA_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
- TYPE(AA_InputType), INTENT(IN)  :: u2    ! Input at t2 
- REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
- TYPE(AA_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
- REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
- INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
- CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
-   ! local variables
- REAL(DbKi)                                 :: t(2)     ! Times associated with the Inputs
- REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
- CHARACTER(*),                    PARAMETER :: RoutineName = 'AA_Input_ExtrapInterp1'
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i03    ! dim3 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i04    ! dim4 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
- INTEGER                                    :: i2    ! dim2 counter variable for arrays
- INTEGER                                    :: i3    ! dim3 counter variable for arrays
- INTEGER                                    :: i4    ! dim4 counter variable for arrays
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
-   IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
-   END IF
-
-   ScaleFactor = t_out / t(2)
-IF (ALLOCATED(u_out%RotGtoL) .AND. ALLOCATED(u1%RotGtoL)) THEN
-  DO i4 = LBOUND(u_out%RotGtoL,4),UBOUND(u_out%RotGtoL,4)
-    DO i3 = LBOUND(u_out%RotGtoL,3),UBOUND(u_out%RotGtoL,3)
-      DO i2 = LBOUND(u_out%RotGtoL,2),UBOUND(u_out%RotGtoL,2)
-        DO i1 = LBOUND(u_out%RotGtoL,1),UBOUND(u_out%RotGtoL,1)
-          b = -(u1%RotGtoL(i1,i2,i3,i4) - u2%RotGtoL(i1,i2,i3,i4))
-          u_out%RotGtoL(i1,i2,i3,i4) = u1%RotGtoL(i1,i2,i3,i4) + b * ScaleFactor
-        END DO
-      END DO
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%AeroCent_G) .AND. ALLOCATED(u1%AeroCent_G)) THEN
-  DO i3 = LBOUND(u_out%AeroCent_G,3),UBOUND(u_out%AeroCent_G,3)
-    DO i2 = LBOUND(u_out%AeroCent_G,2),UBOUND(u_out%AeroCent_G,2)
-      DO i1 = LBOUND(u_out%AeroCent_G,1),UBOUND(u_out%AeroCent_G,1)
-        b = -(u1%AeroCent_G(i1,i2,i3) - u2%AeroCent_G(i1,i2,i3))
-        u_out%AeroCent_G(i1,i2,i3) = u1%AeroCent_G(i1,i2,i3) + b * ScaleFactor
-      END DO
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%Vrel) .AND. ALLOCATED(u1%Vrel)) THEN
-  DO i2 = LBOUND(u_out%Vrel,2),UBOUND(u_out%Vrel,2)
-    DO i1 = LBOUND(u_out%Vrel,1),UBOUND(u_out%Vrel,1)
-      b = -(u1%Vrel(i1,i2) - u2%Vrel(i1,i2))
-      u_out%Vrel(i1,i2) = u1%Vrel(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%AoANoise) .AND. ALLOCATED(u1%AoANoise)) THEN
-  DO i2 = LBOUND(u_out%AoANoise,2),UBOUND(u_out%AoANoise,2)
-    DO i1 = LBOUND(u_out%AoANoise,1),UBOUND(u_out%AoANoise,1)
-      b = -(u1%AoANoise(i1,i2) - u2%AoANoise(i1,i2))
-      u_out%AoANoise(i1,i2) = u1%AoANoise(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%Inflow) .AND. ALLOCATED(u1%Inflow)) THEN
-  DO i3 = LBOUND(u_out%Inflow,3),UBOUND(u_out%Inflow,3)
-    DO i2 = LBOUND(u_out%Inflow,2),UBOUND(u_out%Inflow,2)
-      DO i1 = LBOUND(u_out%Inflow,1),UBOUND(u_out%Inflow,1)
-        b = -(u1%Inflow(i1,i2,i3) - u2%Inflow(i1,i2,i3))
-        u_out%Inflow(i1,i2,i3) = u1%Inflow(i1,i2,i3) + b * ScaleFactor
-      END DO
-    END DO
-  END DO
-END IF ! check if allocated
- END SUBROUTINE AA_Input_ExtrapInterp1
-
-
- SUBROUTINE AA_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
-!
-! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
-! values of u (which has values associated with times in t).  Order of the interpolation is 2.
-!
-!  expressions below based on either
-!
-!  f(t) = a + b * t + c * t**2
-!
-!  where a, b and c are determined as the solution to
-!  f(t1) = u1, f(t2) = u2, f(t3) = u3
-!
-!..................................................................................................................................
-
- TYPE(AA_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
- TYPE(AA_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
- TYPE(AA_InputType), INTENT(IN)  :: u3      ! Input at t3
- REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
- TYPE(AA_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
- REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
-   ! local variables
- REAL(DbKi)                                 :: t(3)      ! Times associated with the Inputs
- REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
- INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- CHARACTER(*),            PARAMETER         :: RoutineName = 'AA_Input_ExtrapInterp2'
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i03    ! dim3 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i04    ! dim4 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
- INTEGER                                    :: i2    ! dim2 counter variable for arrays
- INTEGER                                    :: i3    ! dim3 counter variable for arrays
- INTEGER                                    :: i4    ! dim4 counter variable for arrays
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
-   IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
-   ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
-   ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
-   END IF
-
-   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
-IF (ALLOCATED(u_out%RotGtoL) .AND. ALLOCATED(u1%RotGtoL)) THEN
-  DO i4 = LBOUND(u_out%RotGtoL,4),UBOUND(u_out%RotGtoL,4)
-    DO i3 = LBOUND(u_out%RotGtoL,3),UBOUND(u_out%RotGtoL,3)
-      DO i2 = LBOUND(u_out%RotGtoL,2),UBOUND(u_out%RotGtoL,2)
-        DO i1 = LBOUND(u_out%RotGtoL,1),UBOUND(u_out%RotGtoL,1)
-          b = (t(3)**2*(u1%RotGtoL(i1,i2,i3,i4) - u2%RotGtoL(i1,i2,i3,i4)) + t(2)**2*(-u1%RotGtoL(i1,i2,i3,i4) + u3%RotGtoL(i1,i2,i3,i4)))* scaleFactor
-          c = ( (t(2)-t(3))*u1%RotGtoL(i1,i2,i3,i4) + t(3)*u2%RotGtoL(i1,i2,i3,i4) - t(2)*u3%RotGtoL(i1,i2,i3,i4) ) * scaleFactor
-          u_out%RotGtoL(i1,i2,i3,i4) = u1%RotGtoL(i1,i2,i3,i4) + b  + c * t_out
-        END DO
-      END DO
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%AeroCent_G) .AND. ALLOCATED(u1%AeroCent_G)) THEN
-  DO i3 = LBOUND(u_out%AeroCent_G,3),UBOUND(u_out%AeroCent_G,3)
-    DO i2 = LBOUND(u_out%AeroCent_G,2),UBOUND(u_out%AeroCent_G,2)
-      DO i1 = LBOUND(u_out%AeroCent_G,1),UBOUND(u_out%AeroCent_G,1)
-        b = (t(3)**2*(u1%AeroCent_G(i1,i2,i3) - u2%AeroCent_G(i1,i2,i3)) + t(2)**2*(-u1%AeroCent_G(i1,i2,i3) + u3%AeroCent_G(i1,i2,i3)))* scaleFactor
-        c = ( (t(2)-t(3))*u1%AeroCent_G(i1,i2,i3) + t(3)*u2%AeroCent_G(i1,i2,i3) - t(2)*u3%AeroCent_G(i1,i2,i3) ) * scaleFactor
-        u_out%AeroCent_G(i1,i2,i3) = u1%AeroCent_G(i1,i2,i3) + b  + c * t_out
-      END DO
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%Vrel) .AND. ALLOCATED(u1%Vrel)) THEN
-  DO i2 = LBOUND(u_out%Vrel,2),UBOUND(u_out%Vrel,2)
-    DO i1 = LBOUND(u_out%Vrel,1),UBOUND(u_out%Vrel,1)
-      b = (t(3)**2*(u1%Vrel(i1,i2) - u2%Vrel(i1,i2)) + t(2)**2*(-u1%Vrel(i1,i2) + u3%Vrel(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%Vrel(i1,i2) + t(3)*u2%Vrel(i1,i2) - t(2)*u3%Vrel(i1,i2) ) * scaleFactor
-      u_out%Vrel(i1,i2) = u1%Vrel(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%AoANoise) .AND. ALLOCATED(u1%AoANoise)) THEN
-  DO i2 = LBOUND(u_out%AoANoise,2),UBOUND(u_out%AoANoise,2)
-    DO i1 = LBOUND(u_out%AoANoise,1),UBOUND(u_out%AoANoise,1)
-      b = (t(3)**2*(u1%AoANoise(i1,i2) - u2%AoANoise(i1,i2)) + t(2)**2*(-u1%AoANoise(i1,i2) + u3%AoANoise(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*u1%AoANoise(i1,i2) + t(3)*u2%AoANoise(i1,i2) - t(2)*u3%AoANoise(i1,i2) ) * scaleFactor
-      u_out%AoANoise(i1,i2) = u1%AoANoise(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(u_out%Inflow) .AND. ALLOCATED(u1%Inflow)) THEN
-  DO i3 = LBOUND(u_out%Inflow,3),UBOUND(u_out%Inflow,3)
-    DO i2 = LBOUND(u_out%Inflow,2),UBOUND(u_out%Inflow,2)
-      DO i1 = LBOUND(u_out%Inflow,1),UBOUND(u_out%Inflow,1)
-        b = (t(3)**2*(u1%Inflow(i1,i2,i3) - u2%Inflow(i1,i2,i3)) + t(2)**2*(-u1%Inflow(i1,i2,i3) + u3%Inflow(i1,i2,i3)))* scaleFactor
-        c = ( (t(2)-t(3))*u1%Inflow(i1,i2,i3) + t(3)*u2%Inflow(i1,i2,i3) - t(2)*u3%Inflow(i1,i2,i3) ) * scaleFactor
-        u_out%Inflow(i1,i2,i3) = u1%Inflow(i1,i2,i3) + b  + c * t_out
-      END DO
-    END DO
-  END DO
-END IF ! check if allocated
- END SUBROUTINE AA_Input_ExtrapInterp2
-
-
- SUBROUTINE AA_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg )
-!
-! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
-! values of y (which has values associated with times in t).  Order of the interpolation is given by the size of y
-!
-!  expressions below based on either
-!
-!  f(t) = a
-!  f(t) = a + b * t, or
-!  f(t) = a + b * t + c * t**2
-!
-!  where a, b and c are determined as the solution to
-!  f(t1) = y1, f(t2) = y2, f(t3) = y3  (as appropriate)
-!
-!..................................................................................................................................
-
- TYPE(AA_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
- REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
- TYPE(AA_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
- REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
-   ! local variables
- INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
- INTEGER(IntKi)                             :: ErrStat2        ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
- CHARACTER(*),    PARAMETER                 :: RoutineName = 'AA_Output_ExtrapInterp'
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
- if ( size(t) .ne. size(y)) then
-    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(y)',ErrStat,ErrMsg,RoutineName)
-    RETURN
- endif
- order = SIZE(y) - 1
- IF ( order .eq. 0 ) THEN
-   CALL AA_CopyOutput(y(1), y_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 1 ) THEN
-   CALL AA_Output_ExtrapInterp1(y(1), y(2), t, y_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE IF ( order .eq. 2 ) THEN
-   CALL AA_Output_ExtrapInterp2(y(1), y(2), y(3), t, y_out, t_out, ErrStat2, ErrMsg2 )
-     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
- ELSE 
-   CALL SetErrStat(ErrID_Fatal,'size(y) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
-   RETURN
- ENDIF 
- END SUBROUTINE AA_Output_ExtrapInterp
-
-
- SUBROUTINE AA_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg )
-!
-! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
-! values of y (which has values associated with times in t).  Order of the interpolation is 1.
-!
-!  f(t) = a + b * t, or
-!
-!  where a and b are determined as the solution to
-!  f(t1) = y1, f(t2) = y2
-!
-!..................................................................................................................................
-
- TYPE(AA_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
- TYPE(AA_OutputType), INTENT(IN)  :: y2    ! Output at t2 
- REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
- TYPE(AA_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
- REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
- INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
- CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
-   ! local variables
- REAL(DbKi)                                 :: t(2)     ! Times associated with the Outputs
- REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
- CHARACTER(*),                    PARAMETER :: RoutineName = 'AA_Output_ExtrapInterp1'
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i03    ! dim3 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i04    ! dim4 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
- INTEGER                                    :: i2    ! dim2 counter variable for arrays
- INTEGER                                    :: i3    ! dim3 counter variable for arrays
- INTEGER                                    :: i4    ! dim4 counter variable for arrays
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
-   IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
-   END IF
-
-   ScaleFactor = t_out / t(2)
-IF (ALLOCATED(y_out%SumSpecNoise) .AND. ALLOCATED(y1%SumSpecNoise)) THEN
-  DO i3 = LBOUND(y_out%SumSpecNoise,3),UBOUND(y_out%SumSpecNoise,3)
-    DO i2 = LBOUND(y_out%SumSpecNoise,2),UBOUND(y_out%SumSpecNoise,2)
-      DO i1 = LBOUND(y_out%SumSpecNoise,1),UBOUND(y_out%SumSpecNoise,1)
-        b = -(y1%SumSpecNoise(i1,i2,i3) - y2%SumSpecNoise(i1,i2,i3))
-        y_out%SumSpecNoise(i1,i2,i3) = y1%SumSpecNoise(i1,i2,i3) + b * ScaleFactor
-      END DO
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%SumSpecNoiseSep) .AND. ALLOCATED(y1%SumSpecNoiseSep)) THEN
-  DO i3 = LBOUND(y_out%SumSpecNoiseSep,3),UBOUND(y_out%SumSpecNoiseSep,3)
-    DO i2 = LBOUND(y_out%SumSpecNoiseSep,2),UBOUND(y_out%SumSpecNoiseSep,2)
-      DO i1 = LBOUND(y_out%SumSpecNoiseSep,1),UBOUND(y_out%SumSpecNoiseSep,1)
-        b = -(y1%SumSpecNoiseSep(i1,i2,i3) - y2%SumSpecNoiseSep(i1,i2,i3))
-        y_out%SumSpecNoiseSep(i1,i2,i3) = y1%SumSpecNoiseSep(i1,i2,i3) + b * ScaleFactor
-      END DO
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%OASPL) .AND. ALLOCATED(y1%OASPL)) THEN
-  DO i3 = LBOUND(y_out%OASPL,3),UBOUND(y_out%OASPL,3)
-    DO i2 = LBOUND(y_out%OASPL,2),UBOUND(y_out%OASPL,2)
-      DO i1 = LBOUND(y_out%OASPL,1),UBOUND(y_out%OASPL,1)
-        b = -(y1%OASPL(i1,i2,i3) - y2%OASPL(i1,i2,i3))
-        y_out%OASPL(i1,i2,i3) = y1%OASPL(i1,i2,i3) + b * ScaleFactor
-      END DO
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%OASPL_Mech) .AND. ALLOCATED(y1%OASPL_Mech)) THEN
-  DO i4 = LBOUND(y_out%OASPL_Mech,4),UBOUND(y_out%OASPL_Mech,4)
-    DO i3 = LBOUND(y_out%OASPL_Mech,3),UBOUND(y_out%OASPL_Mech,3)
-      DO i2 = LBOUND(y_out%OASPL_Mech,2),UBOUND(y_out%OASPL_Mech,2)
-        DO i1 = LBOUND(y_out%OASPL_Mech,1),UBOUND(y_out%OASPL_Mech,1)
-          b = -(y1%OASPL_Mech(i1,i2,i3,i4) - y2%OASPL_Mech(i1,i2,i3,i4))
-          y_out%OASPL_Mech(i1,i2,i3,i4) = y1%OASPL_Mech(i1,i2,i3,i4) + b * ScaleFactor
-        END DO
-      END DO
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%DirectiviOutput) .AND. ALLOCATED(y1%DirectiviOutput)) THEN
-  DO i1 = LBOUND(y_out%DirectiviOutput,1),UBOUND(y_out%DirectiviOutput,1)
-    b = -(y1%DirectiviOutput(i1) - y2%DirectiviOutput(i1))
-    y_out%DirectiviOutput(i1) = y1%DirectiviOutput(i1) + b * ScaleFactor
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%OutLECoords) .AND. ALLOCATED(y1%OutLECoords)) THEN
-  DO i4 = LBOUND(y_out%OutLECoords,4),UBOUND(y_out%OutLECoords,4)
-    DO i3 = LBOUND(y_out%OutLECoords,3),UBOUND(y_out%OutLECoords,3)
-      DO i2 = LBOUND(y_out%OutLECoords,2),UBOUND(y_out%OutLECoords,2)
-        DO i1 = LBOUND(y_out%OutLECoords,1),UBOUND(y_out%OutLECoords,1)
-          b = -(y1%OutLECoords(i1,i2,i3,i4) - y2%OutLECoords(i1,i2,i3,i4))
-          y_out%OutLECoords(i1,i2,i3,i4) = y1%OutLECoords(i1,i2,i3,i4) + b * ScaleFactor
-        END DO
-      END DO
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%PtotalFreq) .AND. ALLOCATED(y1%PtotalFreq)) THEN
-  DO i2 = LBOUND(y_out%PtotalFreq,2),UBOUND(y_out%PtotalFreq,2)
-    DO i1 = LBOUND(y_out%PtotalFreq,1),UBOUND(y_out%PtotalFreq,1)
-      b = -(y1%PtotalFreq(i1,i2) - y2%PtotalFreq(i1,i2))
-      y_out%PtotalFreq(i1,i2) = y1%PtotalFreq(i1,i2) + b * ScaleFactor
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%WriteOutputForPE) .AND. ALLOCATED(y1%WriteOutputForPE)) THEN
-  DO i1 = LBOUND(y_out%WriteOutputForPE,1),UBOUND(y_out%WriteOutputForPE,1)
-    b = -(y1%WriteOutputForPE(i1) - y2%WriteOutputForPE(i1))
-    y_out%WriteOutputForPE(i1) = y1%WriteOutputForPE(i1) + b * ScaleFactor
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
-  DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
-    b = -(y1%WriteOutput(i1) - y2%WriteOutput(i1))
-    y_out%WriteOutput(i1) = y1%WriteOutput(i1) + b * ScaleFactor
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%WriteOutputSep) .AND. ALLOCATED(y1%WriteOutputSep)) THEN
-  DO i1 = LBOUND(y_out%WriteOutputSep,1),UBOUND(y_out%WriteOutputSep,1)
-    b = -(y1%WriteOutputSep(i1) - y2%WriteOutputSep(i1))
-    y_out%WriteOutputSep(i1) = y1%WriteOutputSep(i1) + b * ScaleFactor
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%WriteOutputNode) .AND. ALLOCATED(y1%WriteOutputNode)) THEN
-  DO i1 = LBOUND(y_out%WriteOutputNode,1),UBOUND(y_out%WriteOutputNode,1)
-    b = -(y1%WriteOutputNode(i1) - y2%WriteOutputNode(i1))
-    y_out%WriteOutputNode(i1) = y1%WriteOutputNode(i1) + b * ScaleFactor
-  END DO
-END IF ! check if allocated
- END SUBROUTINE AA_Output_ExtrapInterp1
-
-
- SUBROUTINE AA_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
-!
-! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
-! values of y (which has values associated with times in t).  Order of the interpolation is 2.
-!
-!  expressions below based on either
-!
-!  f(t) = a + b * t + c * t**2
-!
-!  where a, b and c are determined as the solution to
-!  f(t1) = y1, f(t2) = y2, f(t3) = y3
-!
-!..................................................................................................................................
-
- TYPE(AA_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
- TYPE(AA_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
- TYPE(AA_OutputType), INTENT(IN)  :: y3      ! Output at t3
- REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
- TYPE(AA_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
- REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
- INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
- CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
-   ! local variables
- REAL(DbKi)                                 :: t(3)      ! Times associated with the Outputs
- REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
- INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
- INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
- CHARACTER(*),            PARAMETER         :: RoutineName = 'AA_Output_ExtrapInterp2'
- INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i02    ! dim2 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i03    ! dim3 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i04    ! dim4 level 0 counter variable for arrays of ddts
- INTEGER                                    :: i1    ! dim1 counter variable for arrays
- INTEGER                                    :: i2    ! dim2 counter variable for arrays
- INTEGER                                    :: i3    ! dim3 counter variable for arrays
- INTEGER                                    :: i4    ! dim4 counter variable for arrays
-    ! Initialize ErrStat
- ErrStat = ErrID_None
- ErrMsg  = ""
-    ! we'll subtract a constant from the times to resolve some 
-    ! numerical issues when t gets large (and to simplify the equations)
- t = tin - tin(1)
- t_out = tin_out - tin(1)
-
-   IF ( EqualRealNos( t(1), t(2) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
-   ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
-   ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
-     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
-     RETURN
-   END IF
-
-   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
-IF (ALLOCATED(y_out%SumSpecNoise) .AND. ALLOCATED(y1%SumSpecNoise)) THEN
-  DO i3 = LBOUND(y_out%SumSpecNoise,3),UBOUND(y_out%SumSpecNoise,3)
-    DO i2 = LBOUND(y_out%SumSpecNoise,2),UBOUND(y_out%SumSpecNoise,2)
-      DO i1 = LBOUND(y_out%SumSpecNoise,1),UBOUND(y_out%SumSpecNoise,1)
-        b = (t(3)**2*(y1%SumSpecNoise(i1,i2,i3) - y2%SumSpecNoise(i1,i2,i3)) + t(2)**2*(-y1%SumSpecNoise(i1,i2,i3) + y3%SumSpecNoise(i1,i2,i3)))* scaleFactor
-        c = ( (t(2)-t(3))*y1%SumSpecNoise(i1,i2,i3) + t(3)*y2%SumSpecNoise(i1,i2,i3) - t(2)*y3%SumSpecNoise(i1,i2,i3) ) * scaleFactor
-        y_out%SumSpecNoise(i1,i2,i3) = y1%SumSpecNoise(i1,i2,i3) + b  + c * t_out
-      END DO
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%SumSpecNoiseSep) .AND. ALLOCATED(y1%SumSpecNoiseSep)) THEN
-  DO i3 = LBOUND(y_out%SumSpecNoiseSep,3),UBOUND(y_out%SumSpecNoiseSep,3)
-    DO i2 = LBOUND(y_out%SumSpecNoiseSep,2),UBOUND(y_out%SumSpecNoiseSep,2)
-      DO i1 = LBOUND(y_out%SumSpecNoiseSep,1),UBOUND(y_out%SumSpecNoiseSep,1)
-        b = (t(3)**2*(y1%SumSpecNoiseSep(i1,i2,i3) - y2%SumSpecNoiseSep(i1,i2,i3)) + t(2)**2*(-y1%SumSpecNoiseSep(i1,i2,i3) + y3%SumSpecNoiseSep(i1,i2,i3)))* scaleFactor
-        c = ( (t(2)-t(3))*y1%SumSpecNoiseSep(i1,i2,i3) + t(3)*y2%SumSpecNoiseSep(i1,i2,i3) - t(2)*y3%SumSpecNoiseSep(i1,i2,i3) ) * scaleFactor
-        y_out%SumSpecNoiseSep(i1,i2,i3) = y1%SumSpecNoiseSep(i1,i2,i3) + b  + c * t_out
-      END DO
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%OASPL) .AND. ALLOCATED(y1%OASPL)) THEN
-  DO i3 = LBOUND(y_out%OASPL,3),UBOUND(y_out%OASPL,3)
-    DO i2 = LBOUND(y_out%OASPL,2),UBOUND(y_out%OASPL,2)
-      DO i1 = LBOUND(y_out%OASPL,1),UBOUND(y_out%OASPL,1)
-        b = (t(3)**2*(y1%OASPL(i1,i2,i3) - y2%OASPL(i1,i2,i3)) + t(2)**2*(-y1%OASPL(i1,i2,i3) + y3%OASPL(i1,i2,i3)))* scaleFactor
-        c = ( (t(2)-t(3))*y1%OASPL(i1,i2,i3) + t(3)*y2%OASPL(i1,i2,i3) - t(2)*y3%OASPL(i1,i2,i3) ) * scaleFactor
-        y_out%OASPL(i1,i2,i3) = y1%OASPL(i1,i2,i3) + b  + c * t_out
-      END DO
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%OASPL_Mech) .AND. ALLOCATED(y1%OASPL_Mech)) THEN
-  DO i4 = LBOUND(y_out%OASPL_Mech,4),UBOUND(y_out%OASPL_Mech,4)
-    DO i3 = LBOUND(y_out%OASPL_Mech,3),UBOUND(y_out%OASPL_Mech,3)
-      DO i2 = LBOUND(y_out%OASPL_Mech,2),UBOUND(y_out%OASPL_Mech,2)
-        DO i1 = LBOUND(y_out%OASPL_Mech,1),UBOUND(y_out%OASPL_Mech,1)
-          b = (t(3)**2*(y1%OASPL_Mech(i1,i2,i3,i4) - y2%OASPL_Mech(i1,i2,i3,i4)) + t(2)**2*(-y1%OASPL_Mech(i1,i2,i3,i4) + y3%OASPL_Mech(i1,i2,i3,i4)))* scaleFactor
-          c = ( (t(2)-t(3))*y1%OASPL_Mech(i1,i2,i3,i4) + t(3)*y2%OASPL_Mech(i1,i2,i3,i4) - t(2)*y3%OASPL_Mech(i1,i2,i3,i4) ) * scaleFactor
-          y_out%OASPL_Mech(i1,i2,i3,i4) = y1%OASPL_Mech(i1,i2,i3,i4) + b  + c * t_out
-        END DO
-      END DO
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%DirectiviOutput) .AND. ALLOCATED(y1%DirectiviOutput)) THEN
-  DO i1 = LBOUND(y_out%DirectiviOutput,1),UBOUND(y_out%DirectiviOutput,1)
-    b = (t(3)**2*(y1%DirectiviOutput(i1) - y2%DirectiviOutput(i1)) + t(2)**2*(-y1%DirectiviOutput(i1) + y3%DirectiviOutput(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*y1%DirectiviOutput(i1) + t(3)*y2%DirectiviOutput(i1) - t(2)*y3%DirectiviOutput(i1) ) * scaleFactor
-    y_out%DirectiviOutput(i1) = y1%DirectiviOutput(i1) + b  + c * t_out
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%OutLECoords) .AND. ALLOCATED(y1%OutLECoords)) THEN
-  DO i4 = LBOUND(y_out%OutLECoords,4),UBOUND(y_out%OutLECoords,4)
-    DO i3 = LBOUND(y_out%OutLECoords,3),UBOUND(y_out%OutLECoords,3)
-      DO i2 = LBOUND(y_out%OutLECoords,2),UBOUND(y_out%OutLECoords,2)
-        DO i1 = LBOUND(y_out%OutLECoords,1),UBOUND(y_out%OutLECoords,1)
-          b = (t(3)**2*(y1%OutLECoords(i1,i2,i3,i4) - y2%OutLECoords(i1,i2,i3,i4)) + t(2)**2*(-y1%OutLECoords(i1,i2,i3,i4) + y3%OutLECoords(i1,i2,i3,i4)))* scaleFactor
-          c = ( (t(2)-t(3))*y1%OutLECoords(i1,i2,i3,i4) + t(3)*y2%OutLECoords(i1,i2,i3,i4) - t(2)*y3%OutLECoords(i1,i2,i3,i4) ) * scaleFactor
-          y_out%OutLECoords(i1,i2,i3,i4) = y1%OutLECoords(i1,i2,i3,i4) + b  + c * t_out
-        END DO
-      END DO
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%PtotalFreq) .AND. ALLOCATED(y1%PtotalFreq)) THEN
-  DO i2 = LBOUND(y_out%PtotalFreq,2),UBOUND(y_out%PtotalFreq,2)
-    DO i1 = LBOUND(y_out%PtotalFreq,1),UBOUND(y_out%PtotalFreq,1)
-      b = (t(3)**2*(y1%PtotalFreq(i1,i2) - y2%PtotalFreq(i1,i2)) + t(2)**2*(-y1%PtotalFreq(i1,i2) + y3%PtotalFreq(i1,i2)))* scaleFactor
-      c = ( (t(2)-t(3))*y1%PtotalFreq(i1,i2) + t(3)*y2%PtotalFreq(i1,i2) - t(2)*y3%PtotalFreq(i1,i2) ) * scaleFactor
-      y_out%PtotalFreq(i1,i2) = y1%PtotalFreq(i1,i2) + b  + c * t_out
-    END DO
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%WriteOutputForPE) .AND. ALLOCATED(y1%WriteOutputForPE)) THEN
-  DO i1 = LBOUND(y_out%WriteOutputForPE,1),UBOUND(y_out%WriteOutputForPE,1)
-    b = (t(3)**2*(y1%WriteOutputForPE(i1) - y2%WriteOutputForPE(i1)) + t(2)**2*(-y1%WriteOutputForPE(i1) + y3%WriteOutputForPE(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*y1%WriteOutputForPE(i1) + t(3)*y2%WriteOutputForPE(i1) - t(2)*y3%WriteOutputForPE(i1) ) * scaleFactor
-    y_out%WriteOutputForPE(i1) = y1%WriteOutputForPE(i1) + b  + c * t_out
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
-  DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
-    b = (t(3)**2*(y1%WriteOutput(i1) - y2%WriteOutput(i1)) + t(2)**2*(-y1%WriteOutput(i1) + y3%WriteOutput(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*y1%WriteOutput(i1) + t(3)*y2%WriteOutput(i1) - t(2)*y3%WriteOutput(i1) ) * scaleFactor
-    y_out%WriteOutput(i1) = y1%WriteOutput(i1) + b  + c * t_out
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%WriteOutputSep) .AND. ALLOCATED(y1%WriteOutputSep)) THEN
-  DO i1 = LBOUND(y_out%WriteOutputSep,1),UBOUND(y_out%WriteOutputSep,1)
-    b = (t(3)**2*(y1%WriteOutputSep(i1) - y2%WriteOutputSep(i1)) + t(2)**2*(-y1%WriteOutputSep(i1) + y3%WriteOutputSep(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*y1%WriteOutputSep(i1) + t(3)*y2%WriteOutputSep(i1) - t(2)*y3%WriteOutputSep(i1) ) * scaleFactor
-    y_out%WriteOutputSep(i1) = y1%WriteOutputSep(i1) + b  + c * t_out
-  END DO
-END IF ! check if allocated
-IF (ALLOCATED(y_out%WriteOutputNode) .AND. ALLOCATED(y1%WriteOutputNode)) THEN
-  DO i1 = LBOUND(y_out%WriteOutputNode,1),UBOUND(y_out%WriteOutputNode,1)
-    b = (t(3)**2*(y1%WriteOutputNode(i1) - y2%WriteOutputNode(i1)) + t(2)**2*(-y1%WriteOutputNode(i1) + y3%WriteOutputNode(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*y1%WriteOutputNode(i1) + t(3)*y2%WriteOutputNode(i1) - t(2)*y3%WriteOutputNode(i1) ) * scaleFactor
-    y_out%WriteOutputNode(i1) = y1%WriteOutputNode(i1) + b  + c * t_out
-  END DO
-END IF ! check if allocated
- END SUBROUTINE AA_Output_ExtrapInterp2
 
 END MODULE AeroAcoustics_Types
 !ENDOFREGISTRYGENERATEDFILE

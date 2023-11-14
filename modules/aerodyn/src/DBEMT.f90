@@ -17,6 +17,15 @@
 ! See the License for the specific language governing permissions and
 ! limitations under the License.
 !**********************************************************************************************************************************
+!
+! References:
+!   [1] E. Branlard, B. Jonkman, G.R. Pirrung, K. Dixon, J. Jonkman (2022)
+!       Dynamic inflow and unsteady aerodynamics models for modal and stability analyses in OpenFAST, 
+!       Journal of Physics: Conference Series, doi:10.1088/1742-6596/2265/3/032044
+!   [2] R. Damiani, J.Jonkman
+!       DBEMT Theory Rev. 3
+!       Unpublished
+!
 module DBEMT
    
    use NWTC_Library   
@@ -55,14 +64,6 @@ subroutine DBEMT_ValidateInitInp(interval, InitInp, errStat, errMsg)
    errMsg  = ""
    
    if ( interval <= sqrt(epsilon(1.0_ReKi)) ) call SetErrStat( ErrID_Fatal, " The timestep size for DBEMT (interval) must be larger than sqrt(epsilon).", ErrStat, ErrMsg, RoutineName)
-   
-   !>>> remove after this feature gets tested better:
-   if (InitInp%DBEMT_Mod == DBEMT_cont_tauConst ) then
-      call SetErrStat( ErrID_Fatal, "DBEMT_Mod cannot be 3 in this version of OpenFAST.", ErrStat, ErrMsg, RoutineName )
-      return
-   end if
-   !<<<
-   
    if ( (InitInp%DBEMT_Mod .ne. DBEMT_tauConst) .and. (InitInp%DBEMT_Mod .ne. DBEMT_tauVaries) .and. (InitInp%DBEMT_Mod .ne. DBEMT_cont_tauConst)) then
       call SetErrStat( ErrID_Fatal, " DBEMT_Mod must be set to 1, 2, or 3.", ErrStat, ErrMsg, RoutineName)
    end if
@@ -216,7 +217,7 @@ subroutine DBEMT_Init( InitInp, u, p, x, OtherState, m, Interval, InitOut, ErrSt
             end if
       end do
 
-      p%lin_nx = p%numNodes*p%numBlades*4 ! vind and vind_dot
+      p%lin_nx = p%numNodes*p%numBlades*4 ! vind and vind_1
    else
       p%lin_nx = 0
    end if
@@ -249,9 +250,8 @@ subroutine DBEMT_ReInit( p, x, OtherState, m )
 
    do j=1,size(x%element,2)
       do i=1,size(x%element,1)
-         x%element(i,j)%vind     = 0.0_ReKi
-         x%element(i,j)%vind_dot = 0.0_ReKi
-         x%element(i,j)%vind_1   = 0.0_ReKi
+         x%element(i,j)%vind     = 0.0_ReKi  ! Dynamic induced velocities
+         x%element(i,j)%vind_1   = 0.0_ReKi  ! Reduced induced velocities
       end do
    end do
 
@@ -314,10 +314,10 @@ subroutine DBEMT_InitStates( i, j, u, p, x, OtherState )
       x%element(i,j)%vind(2) = u%element(i,j)%vind_s(2)
       
       if (p%DBEMT_Mod == DBEMT_cont_tauConst) then
-         x%element(i,j)%vind_dot(1) = u%element(i,j)%vind_s_dot(1)
-         x%element(i,j)%vind_dot(2) = u%element(i,j)%vind_s_dot(2)
+         x%element(i,j)%vind_1(1) = (1._ReKi - p%k_0ye)*u%element(i,j)%vind_s(1)  ! Reduced velocity. Eq. (6) from [1]
+         x%element(i,j)%vind_1(2) = (1._ReKi - p%k_0ye)*u%element(i,j)%vind_s(2)
       else
-         x%element(i,j)%vind_1(1) = u%element(i,j)%vind_s(1)
+         x%element(i,j)%vind_1(1) = u%element(i,j)%vind_s(1) ! Intermediate velocity
          x%element(i,j)%vind_1(2) = u%element(i,j)%vind_s(2)
       end if
       
@@ -329,13 +329,14 @@ end subroutine DBEMT_InitStates
 !!----------------------------------------------------------------------------------------------------------------------------------
 !> Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete and other states.
 !! Continuous, constraint, discrete, and other states are updated for t + Interval
-subroutine DBEMT_UpdateStates( i, j, t, n, u, p, x, OtherState, m, errStat, errMsg )
+subroutine DBEMT_UpdateStates( i, j, t, n, u, uTimes, p, x, OtherState, m, errStat, errMsg )
 !..................................................................................................................................
    integer(IntKi),                  intent(in   ) :: i          !< blade node counter
    integer(IntKi),                  intent(in   ) :: j          !< blade counter
    real(DbKi),                      intent(in   ) :: t          !< Current simulation time in seconds
    integer(IntKi),                  intent(in   ) :: n          !< Current simulation time step n = 0,1,...
    type(DBEMT_InputType),           intent(in   ) :: u(2)       !< Inputs at t and t+dt
+   real(DbKi),                      intent(in   ) :: uTimes(2)  ! Times associated with u(:), in seconds
    type(DBEMT_ParameterType),       intent(in   ) :: p          !< Parameters
    type(DBEMT_ContinuousStateType), intent(inout) :: x          !< Input: Continuous states at t;
                                                                 !!   Output: Continuous states at t + Interval
@@ -347,7 +348,6 @@ subroutine DBEMT_UpdateStates( i, j, t, n, u, p, x, OtherState, m, errStat, errM
    ! local variables
    real(ReKi)                                     :: A, B, C0, k_tau, C0_2 ! tau1_plus1, C_tau1, C, K1
    integer(IntKi)                                 :: indx
-   real(DbKi)                                     :: utimes(2)
    
    TYPE(DBEMT_ElementInputType)                   :: u_elem(2)        !< Inputs at utimes
    
@@ -365,9 +365,6 @@ subroutine DBEMT_UpdateStates( i, j, t, n, u, p, x, OtherState, m, errStat, errM
    call DBEMT_InitStates( i, j, u(1), p, x, OtherState )
 
    if (p%DBEMT_Mod == DBEMT_cont_tauConst) then ! continuous formulation:
-      utimes(1) = t
-      utimes(2) = t + p%dt
-      
       u_elem(1) = u(1)%element(i,j)
       u_elem(2) = u(2)%element(i,j)
       call DBEMT_ABM4( i, j, t, n, u_elem, utimes, p, x, OtherState, m, ErrStat, ErrMsg )
@@ -463,7 +460,7 @@ subroutine ComputeTau1(u, p, m, tau1, errStat, errMsg)
       
       temp   = (1.0-1.3*AxInd_disk)*Un_disk
       
-      tau1   = 1.1*u%R_disk/temp          ! Eqn. 1.2 (note that we've eliminated possibility of temp being 0)
+      tau1   = 1.1*u%R_disk/temp          ! Eq. (1) from [1] (note that we've eliminated possibility of temp being 0)
       tau1   = min(tau1, 100.0_ReKi)      ! put a limit on this time constant so it isn't unrealistically long (particularly at initialization)
       
    end if
@@ -492,8 +489,8 @@ subroutine ComputeTau2(i, j, u, p, tau1, tau2, k_tau_out)
       spanRatio = u%spanRatio
    end if
    
-   k_tau = 0.39 - 0.26*spanRatio**2                                                 ! Eqn. 1.23b
-   tau2  = k_tau*tau1                                                               ! Eqn. 1.7 or Eqn 1.23a
+   k_tau = 0.39 - 0.26*spanRatio**2
+   tau2  = k_tau*tau1               ! Eq. (1) from [1]
    
    if (present(k_tau_out) ) k_tau_out = k_tau
    
@@ -560,7 +557,8 @@ SUBROUTINE DBEMT_CalcContStateDeriv( i, j, t, u, p, x, OtherState, m, dxdt, ErrS
       ! LOCAL variables
    CHARACTER(*), PARAMETER                         :: RoutineName = 'DBEMT_CalcContStateDeriv'
    
-   REAL(ReKi)                                      :: tauConst
+   REAL(ReKi)                                      :: tau1inv
+   REAL(ReKi)                                      :: tau2inv
    REAL(ReKi)                                      :: tau1
    REAL(ReKi)                                      :: tau2
    
@@ -575,20 +573,15 @@ SUBROUTINE DBEMT_CalcContStateDeriv( i, j, t, u, p, x, OtherState, m, dxdt, ErrS
       call SetErrStat(ErrID_Fatal,"Continuous state derivatives cannot be calculated unless DBEMT_Mod is 3.",ErrStat,ErrMsg,RoutineName)
       return
    end if
-
    tau1 = p%tau1_const
-   !call ComputeTau1( u, p, m, tau1, errStat, errMsg)
    call ComputeTau2(i, j, u, p, tau1, tau2)
+   tau1inv = 1.0_ReKi/(tau1)
+   tau2inv = 1.0_ReKi/(tau2)
+   
+   ! State derivatives, Eq. (7) from [1]
+   dxdt%vind_1 = -tau1inv * x%vind_1(:)                       + (1 - p%k_0ye) * tau1inv * u%vind_s(:)
+   dxdt%vind   =  tau2inv * x%vind_1(:) - tau2inv * x%vind(:) +      p%k_0ye  * tau2inv * u%vind_s(:)
 
-   ! Implement Equation 37 from E.Branlard 16-Dec-2019 doc:
-   
-   dxdt%vind = x%vind_dot
-   
-   tauConst = -1.0_ReKi/(tau1 * tau2)
-   
-   dxdt%vind_dot = tauConst * ( x%vind(:) + (tau1 + tau2)*x%vind_dot(:) &
-                            - u%vind_s(:)  - p%k_0ye*tau1*u%vind_s_dot(:) )
-                            
 END SUBROUTINE DBEMT_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
@@ -660,11 +653,11 @@ SUBROUTINE DBEMT_RK4( i, j, t, n, u, utimes, p, x, OtherState, m, ErrStat, ErrMs
          IF ( ErrStat >= AbortErrLev ) RETURN
          
 
-      k1%vind     = p%dt * k1%vind
-      k1%vind_dot = p%dt * k1%vind_dot
+      k1%vind   = p%dt * k1%vind
+      k1%vind_1 = p%dt * k1%vind_1
   
-      x_tmp%vind     = x%element(i,j)%vind     + 0.5 * k1%vind
-      x_tmp%vind_dot = x%element(i,j)%vind_dot + 0.5 * k1%vind_dot
+      x_tmp%vind   = x%element(i,j)%vind   + 0.5 * k1%vind
+      x_tmp%vind_1 = x%element(i,j)%vind_1 + 0.5 * k1%vind_1
 
       ! interpolate u to find u_interp = u(t + dt/2)
       TPlusHalfDt = t+0.5_DbKi*p%dt
@@ -675,20 +668,20 @@ SUBROUTINE DBEMT_RK4( i, j, t, n, u, utimes, p, x, OtherState, m, ErrStat, ErrMs
       ! find xdot at t + dt/2
       CALL DBEMT_CalcContStateDeriv( i, j, TPlusHalfDt, u_interp, p, x_tmp, OtherState, m, k2, ErrStat2, ErrMsg2 )
 
-      k2%vind     = p%dt * k2%vind
-      k2%vind_dot = p%dt * k2%vind_dot
+      k2%vind   = p%dt * k2%vind
+      k2%vind_1 = p%dt * k2%vind_1
 
-      x_tmp%vind     = x%element(i,j)%vind     + 0.5 * k2%vind
-      x_tmp%vind_dot = x%element(i,j)%vind_dot + 0.5 * k2%vind_dot
+      x_tmp%vind   = x%element(i,j)%vind   + 0.5 * k2%vind
+      x_tmp%vind_1 = x%element(i,j)%vind_1 + 0.5 * k2%vind_1
 
       ! find xdot at t + dt/2 (note x_tmp has changed)
       CALL DBEMT_CalcContStateDeriv( i, j, TPlusHalfDt, u_interp, p, x_tmp, OtherState, m, k3, ErrStat2, ErrMsg2 )
 
-      k3%vind     = p%dt * k3%vind
-      k3%vind_dot = p%dt * k3%vind_dot
+      k3%vind   = p%dt * k3%vind
+      k3%vind_1 = p%dt * k3%vind_1
 
-      x_tmp%vind     = x%element(i,j)%vind     + k3%vind
-      x_tmp%vind_dot = x%element(i,j)%vind_dot + k3%vind_dot
+      x_tmp%vind   = x%element(i,j)%vind   + k3%vind
+      x_tmp%vind_1 = x%element(i,j)%vind_1 + k3%vind_1
 
       ! interpolate u to find u_interp = u(t + dt)
       TPlusDt = t + p%dt
@@ -699,11 +692,11 @@ SUBROUTINE DBEMT_RK4( i, j, t, n, u, utimes, p, x, OtherState, m, ErrStat, ErrMs
       ! find xdot at t + dt
       CALL DBEMT_CalcContStateDeriv( i, j, TPlusDt, u_interp, p, x_tmp, OtherState, m, k4, ErrStat2, ErrMsg2 )
 
-      k4%vind     = p%dt * k4%vind
-      k4%vind_dot = p%dt * k4%vind_dot
+      k4%vind   = p%dt * k4%vind
+      k4%vind_1 = p%dt * k4%vind_1
 
-      x%element(i,j)%vind     = x%element(i,j)%vind     + ( k1%vind     + 2. * k2%vind     + 2. * k3%vind     + k4%vind     ) / 6.
-      x%element(i,j)%vind_dot = x%element(i,j)%vind_dot + ( k1%vind_dot + 2. * k2%vind_dot + 2. * k3%vind_dot + k4%vind_dot ) / 6.
+      x%element(i,j)%vind   = x%element(i,j)%vind   + ( k1%vind   + 2. * k2%vind   + 2. * k3%vind   + k4%vind   ) / 6.
+      x%element(i,j)%vind_1 = x%element(i,j)%vind_1 + ( k1%vind_1 + 2. * k2%vind_1 + 2. * k3%vind_1 + k4%vind_1 ) / 6.
 
 END SUBROUTINE DBEMT_RK4
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -787,11 +780,11 @@ SUBROUTINE DBEMT_AB4( i, j, t, n, u, utimes, p, x, OtherState, m, ErrStat, ErrMs
 
       else
          
-         x%element(i,j)%vind     = x%element(i,j)%vind     + p%DT/24. * ( 55.*OtherState%xdot(1)%element(i,j)%vind     - 59.*OtherState%xdot(2)%element(i,j)%vind   &
+         x%element(i,j)%vind   = x%element(i,j)%vind   + p%DT/24. * ( 55.*OtherState%xdot(1)%element(i,j)%vind     - 59.*OtherState%xdot(2)%element(i,j)%vind   &
                                                                         + 37.*OtherState%xdot(3)%element(i,j)%vind     -  9.*OtherState%xdot(4)%element(i,j)%vind )
 
-         x%element(i,j)%vind_dot = x%element(i,j)%vind_dot + p%DT/24. * ( 55.*OtherState%xdot(1)%element(i,j)%vind_dot - 59.*OtherState%xdot(2)%element(i,j)%vind_dot  &
-                                                                        + 37.*OtherState%xdot(3)%element(i,j)%vind_dot -  9.*OtherState%xdot(4)%element(i,j)%vind_dot )
+         x%element(i,j)%vind_1 = x%element(i,j)%vind_1 + p%DT/24. * ( 55.*OtherState%xdot(1)%element(i,j)%vind_1 - 59.*OtherState%xdot(2)%element(i,j)%vind_1  &
+                                                                        + 37.*OtherState%xdot(3)%element(i,j)%vind_1 -  9.*OtherState%xdot(4)%element(i,j)%vind_1 )
 
       endif
 
@@ -869,13 +862,13 @@ SUBROUTINE DBEMT_ABM4( i, j, t, n, u, utimes, p, x, OtherState, m, ErrStat, ErrM
             IF ( ErrStat >= AbortErrLev ) RETURN
 
          
-         x%element(i,j)%vind     = x_in%vind     + p%DT/24. * ( 9. * xdot_pred%vind     + 19. * OtherState%xdot(1)%element(i,j)%vind &
+         x%element(i,j)%vind   = x_in%vind   + p%DT/24. * ( 9. * xdot_pred%vind   + 19. * OtherState%xdot(1)%element(i,j)%vind &
                                                                                         -  5. * OtherState%xdot(2)%element(i,j)%vind &
                                                                                         +  1. * OtherState%xdot(3)%element(i,j)%vind )
 
-         x%element(i,j)%vind_dot = x_in%vind_dot + p%DT/24. * ( 9. * xdot_pred%vind_dot + 19. * OtherState%xdot(1)%element(i,j)%vind_dot &
-                                                                                        -  5. * OtherState%xdot(2)%element(i,j)%vind_dot &
-                                                                                        +  1. * OtherState%xdot(3)%element(i,j)%vind_dot )
+         x%element(i,j)%vind_1 = x_in%vind_1 + p%DT/24. * ( 9. * xdot_pred%vind_1 + 19. * OtherState%xdot(1)%element(i,j)%vind_1 &
+                                                                                        -  5. * OtherState%xdot(2)%element(i,j)%vind_1 &
+                                                                                        +  1. * OtherState%xdot(3)%element(i,j)%vind_1 )
       endif
       
 END SUBROUTINE DBEMT_ABM4

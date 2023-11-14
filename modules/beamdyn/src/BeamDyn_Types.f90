@@ -53,6 +53,7 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: HubRot      !< Initial Hub direction cosine matrix [-]
     LOGICAL  :: Linearize = .FALSE.      !< Flag that tells this module if the glue code wants to linearize. [-]
     LOGICAL  :: DynamicSolve = .TRUE.      !< Use dynamic solve option.  Set to False for static solving (handled by glue code or driver code). [-]
+    LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false) [-]
   END TYPE BD_InitInputType
 ! =======================
 ! =========  BD_InitOutputType  =======
@@ -147,6 +148,9 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: xcc      !< Algorithm acceleration in GA2: (1-alpha_m)*xcc_(n+1) = (1-alpha_f)*Acc_(n+1) + alpha_f*Acc_n - alpha_m*xcc_n [-]
     LOGICAL  :: InitAcc      !< flag to determine if accerlerations have been initialized in updateStates [-]
     LOGICAL  :: RunQuasiStaticInit      !< flag to determine if quasi-static solution initialization should be run again (with load inputs) [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: GlbPos      !< Position Vector between origins of Global (moving frame) and blade frames (BD coordinates)  Follows the RootMotion mesh [-]
+    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: GlbRot      !< Rotation Tensor between Global (moving frame) and Blade frames (BD coordinates; transfers local to global).  Follows the RootMotion mesh [-]
+    REAL(R8Ki) , DIMENSION(1:3)  :: Glb_crv      !< CRV parameters of GlbRot.  Follows the RootMotion mesh [-]
   END TYPE BD_OtherStateType
 ! =======================
 ! =========  qpParam  =======
@@ -160,10 +164,11 @@ IMPLICIT NONE
     REAL(DbKi)  :: dt      !< module dt [s]
     REAL(DbKi) , DIMENSION(1:9)  :: coef      !< GA2 Coefficient [-]
     REAL(DbKi)  :: rhoinf      !< Numerical Damping Coefficient for GA2 [-]
-    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: uuN0      !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element) [-]
+    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: uuN0      !< Initial Position Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element) [-]
+    REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: twN0      !< Initial Twist of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: Stif0_QP      !< Sectional Stiffness Properties at quadrature points (6x6xqp) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: Mass0_QP      !< Sectional Mass Properties at quadrature points (6x6xqp) [-]
-    REAL(R8Ki) , DIMENSION(1:3)  :: gravity      !< Gravitational acceleration [m/s^2]
+    REAL(R8Ki) , DIMENSION(1:3)  :: gravity      !< Gravitational acceleration -- intertial frame!!! [m/s^2]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: segment_eta      !< Array stored length ratio of each segment w.r.t. member it lies in [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: member_eta      !< Array stored length ratio of each member  w.r.t. entire blade [-]
     REAL(R8Ki)  :: blade_length      !< Blade Length [-]
@@ -172,16 +177,12 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: blade_IN      !< Blade Length [-]
     REAL(R8Ki) , DIMENSION(1:6)  :: beta      !< Damping Coefficient [-]
     REAL(R8Ki)  :: tol      !< Tolerance used in stopping criterion [-]
-    REAL(R8Ki) , DIMENSION(1:3)  :: GlbPos      !< Initial Position Vector between origins of Global and blade frames (BD coordinates) [-]
-    REAL(R8Ki) , DIMENSION(1:3,1:3)  :: GlbRot      !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global) [-]
-    REAL(R8Ki) , DIMENSION(1:3)  :: Glb_crv      !< CRV parameters of GlbRot [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QPtN      !< Quadrature (QuadPt) point locations in natural frame [-1, 1] [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QPtWeight      !< Weights at each quadrature point (QuadPt) [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Shp      !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points) [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: ShpDer      !< Derivative of shape function matrix (index 1 = FE nodes; index 2=quadrature points) [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: Jacobian      !< Jacobian value at each quadrature point [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: uu0      !< Initial Disp/Rot value at quadrature point (at T=0) [-]
-    REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: rrN0      !< Initial relative rotation array, relative to root (at T=0) (index 1=rot DOF; index 2=FE nodes; index 3=element) [-]
     REAL(R8Ki) , DIMENSION(:,:,:), ALLOCATABLE  :: E10      !< Initial E10 at quadrature point [-]
     INTEGER(IntKi)  :: nodes_per_elem      !< Finite element (GLL) nodes per element [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: node_elem_idx      !< Index to first and last nodes of element in p%node_total sized arrays [-]
@@ -237,6 +238,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: Jac_nx      !< half the number of continuous states in jacobian matrix [-]
     LOGICAL  :: RotStates      !< Orient states in rotating frame during linearization? (flag) [-]
     LOGICAL  :: RelStates      !< Define states relative to root motion during linearization? (flag) [-]
+    LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if BeamDyn is computing aero maps (true) or running a normal simulation (false) [-]
   END TYPE BD_ParameterType
 ! =======================
 ! =========  BD_InputType  =======
@@ -364,17 +366,30 @@ CONTAINS
     DstInitInputData%HubRot = SrcInitInputData%HubRot
     DstInitInputData%Linearize = SrcInitInputData%Linearize
     DstInitInputData%DynamicSolve = SrcInitInputData%DynamicSolve
+    DstInitInputData%CompAeroMaps = SrcInitInputData%CompAeroMaps
  END SUBROUTINE BD_CopyInitInput
 
- SUBROUTINE BD_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE BD_DestroyInitInput( InitInputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BD_InitInputType), INTENT(INOUT) :: InitInputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyInitInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyInitInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE BD_DestroyInitInput
 
  SUBROUTINE BD_PackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -424,6 +439,7 @@ CONTAINS
       Db_BufSz   = Db_BufSz   + SIZE(InData%HubRot)  ! HubRot
       Int_BufSz  = Int_BufSz  + 1  ! Linearize
       Int_BufSz  = Int_BufSz  + 1  ! DynamicSolve
+      Int_BufSz  = Int_BufSz  + 1  ! CompAeroMaps
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -500,6 +516,8 @@ CONTAINS
     IntKiBuf(Int_Xferred) = TRANSFER(InData%Linearize, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%DynamicSolve, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%CompAeroMaps, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE BD_PackInitInput
 
@@ -604,6 +622,8 @@ CONTAINS
     OutData%Linearize = TRANSFER(IntKiBuf(Int_Xferred), OutData%Linearize)
     Int_Xferred = Int_Xferred + 1
     OutData%DynamicSolve = TRANSFER(IntKiBuf(Int_Xferred), OutData%DynamicSolve)
+    Int_Xferred = Int_Xferred + 1
+    OutData%CompAeroMaps = TRANSFER(IntKiBuf(Int_Xferred), OutData%CompAeroMaps)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE BD_UnPackInitInput
 
@@ -763,22 +783,35 @@ IF (ALLOCATED(SrcInitOutputData%DerivOrder_x)) THEN
 ENDIF
  END SUBROUTINE BD_CopyInitOutput
 
- SUBROUTINE BD_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE BD_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BD_InitOutputType), INTENT(INOUT) :: InitOutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyInitOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyInitOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InitOutputData%WriteOutputHdr)) THEN
   DEALLOCATE(InitOutputData%WriteOutputHdr)
 ENDIF
 IF (ALLOCATED(InitOutputData%WriteOutputUnt)) THEN
   DEALLOCATE(InitOutputData%WriteOutputUnt)
 ENDIF
-  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InitOutputData%kp_coordinate)) THEN
   DEALLOCATE(InitOutputData%kp_coordinate)
 ENDIF
@@ -1508,15 +1541,27 @@ ENDIF
     DstBladeInputDataData%damp_flag = SrcBladeInputDataData%damp_flag
  END SUBROUTINE BD_CopyBladeInputData
 
- SUBROUTINE BD_DestroyBladeInputData( BladeInputDataData, ErrStat, ErrMsg )
+ SUBROUTINE BD_DestroyBladeInputData( BladeInputDataData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BladeInputData), INTENT(INOUT) :: BladeInputDataData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyBladeInputData'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyBladeInputData'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(BladeInputDataData%station_eta)) THEN
   DEALLOCATE(BladeInputDataData%station_eta)
 ENDIF
@@ -1917,19 +1962,32 @@ ENDIF
     DstInputFileData%BldNd_BlOutNd_Str = SrcInputFileData%BldNd_BlOutNd_Str
  END SUBROUTINE BD_CopyInputFile
 
- SUBROUTINE BD_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
+ SUBROUTINE BD_DestroyInputFile( InputFileData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BD_InputFile), INTENT(INOUT) :: InputFileData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyInputFile'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyInputFile'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(InputFileData%kp_member)) THEN
   DEALLOCATE(InputFileData%kp_member)
 ENDIF
-  CALL BD_Destroybladeinputdata( InputFileData%InpBl, ErrStat, ErrMsg )
+  CALL BD_Destroybladeinputdata( InputFileData%InpBl, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(InputFileData%kp_coordinate)) THEN
   DEALLOCATE(InputFileData%kp_coordinate)
 ENDIF
@@ -2551,15 +2609,27 @@ IF (ALLOCATED(SrcContStateData%dqdt)) THEN
 ENDIF
  END SUBROUTINE BD_CopyContState
 
- SUBROUTINE BD_DestroyContState( ContStateData, ErrStat, ErrMsg )
+ SUBROUTINE BD_DestroyContState( ContStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BD_ContinuousStateType), INTENT(INOUT) :: ContStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyContState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyContState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ContStateData%q)) THEN
   DEALLOCATE(ContStateData%q)
 ENDIF
@@ -2776,15 +2846,27 @@ ENDIF
     DstDiscStateData%thetaPD = SrcDiscStateData%thetaPD
  END SUBROUTINE BD_CopyDiscState
 
- SUBROUTINE BD_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
+ SUBROUTINE BD_DestroyDiscState( DiscStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BD_DiscreteStateType), INTENT(INOUT) :: DiscStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyDiscState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyDiscState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE BD_DestroyDiscState
 
  SUBROUTINE BD_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -2906,15 +2988,27 @@ ENDIF
     DstConstrStateData%DummyConstrState = SrcConstrStateData%DummyConstrState
  END SUBROUTINE BD_CopyConstrState
 
- SUBROUTINE BD_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg )
+ SUBROUTINE BD_DestroyConstrState( ConstrStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BD_ConstraintStateType), INTENT(INOUT) :: ConstrStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyConstrState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyConstrState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
  END SUBROUTINE BD_DestroyConstrState
 
  SUBROUTINE BD_PackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -3060,17 +3154,32 @@ IF (ALLOCATED(SrcOtherStateData%xcc)) THEN
 ENDIF
     DstOtherStateData%InitAcc = SrcOtherStateData%InitAcc
     DstOtherStateData%RunQuasiStaticInit = SrcOtherStateData%RunQuasiStaticInit
+    DstOtherStateData%GlbPos = SrcOtherStateData%GlbPos
+    DstOtherStateData%GlbRot = SrcOtherStateData%GlbRot
+    DstOtherStateData%Glb_crv = SrcOtherStateData%Glb_crv
  END SUBROUTINE BD_CopyOtherState
 
- SUBROUTINE BD_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
+ SUBROUTINE BD_DestroyOtherState( OtherStateData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BD_OtherStateType), INTENT(INOUT) :: OtherStateData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyOtherState'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyOtherState'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(OtherStateData%acc)) THEN
   DEALLOCATE(OtherStateData%acc)
 ENDIF
@@ -3126,6 +3235,9 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! InitAcc
       Int_BufSz  = Int_BufSz  + 1  ! RunQuasiStaticInit
+      Db_BufSz   = Db_BufSz   + SIZE(InData%GlbPos)  ! GlbPos
+      Db_BufSz   = Db_BufSz   + SIZE(InData%GlbRot)  ! GlbRot
+      Db_BufSz   = Db_BufSz   + SIZE(InData%Glb_crv)  ! Glb_crv
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3197,6 +3309,20 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%RunQuasiStaticInit, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+    DO i1 = LBOUND(InData%GlbPos,1), UBOUND(InData%GlbPos,1)
+      DbKiBuf(Db_Xferred) = InData%GlbPos(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    DO i2 = LBOUND(InData%GlbRot,2), UBOUND(InData%GlbRot,2)
+      DO i1 = LBOUND(InData%GlbRot,1), UBOUND(InData%GlbRot,1)
+        DbKiBuf(Db_Xferred) = InData%GlbRot(i1,i2)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+    END DO
+    DO i1 = LBOUND(InData%Glb_crv,1), UBOUND(InData%Glb_crv,1)
+      DbKiBuf(Db_Xferred) = InData%Glb_crv(i1)
+      Db_Xferred = Db_Xferred + 1
+    END DO
  END SUBROUTINE BD_PackOtherState
 
  SUBROUTINE BD_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3277,6 +3403,28 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%RunQuasiStaticInit = TRANSFER(IntKiBuf(Int_Xferred), OutData%RunQuasiStaticInit)
     Int_Xferred = Int_Xferred + 1
+    i1_l = LBOUND(OutData%GlbPos,1)
+    i1_u = UBOUND(OutData%GlbPos,1)
+    DO i1 = LBOUND(OutData%GlbPos,1), UBOUND(OutData%GlbPos,1)
+      OutData%GlbPos(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      Db_Xferred = Db_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%GlbRot,1)
+    i1_u = UBOUND(OutData%GlbRot,1)
+    i2_l = LBOUND(OutData%GlbRot,2)
+    i2_u = UBOUND(OutData%GlbRot,2)
+    DO i2 = LBOUND(OutData%GlbRot,2), UBOUND(OutData%GlbRot,2)
+      DO i1 = LBOUND(OutData%GlbRot,1), UBOUND(OutData%GlbRot,1)
+        OutData%GlbRot(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+        Db_Xferred = Db_Xferred + 1
+      END DO
+    END DO
+    i1_l = LBOUND(OutData%Glb_crv,1)
+    i1_u = UBOUND(OutData%Glb_crv,1)
+    DO i1 = LBOUND(OutData%Glb_crv,1), UBOUND(OutData%Glb_crv,1)
+      OutData%Glb_crv(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+      Db_Xferred = Db_Xferred + 1
+    END DO
  END SUBROUTINE BD_UnPackOtherState
 
  SUBROUTINE BD_CopyqpParam( SrcqpParamData, DstqpParamData, CtrlCode, ErrStat, ErrMsg )
@@ -3328,15 +3476,27 @@ IF (ALLOCATED(SrcqpParamData%mEta)) THEN
 ENDIF
  END SUBROUTINE BD_CopyqpParam
 
- SUBROUTINE BD_DestroyqpParam( qpParamData, ErrStat, ErrMsg )
+ SUBROUTINE BD_DestroyqpParam( qpParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(qpParam), INTENT(INOUT) :: qpParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyqpParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyqpParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(qpParamData%mmm)) THEN
   DEALLOCATE(qpParamData%mmm)
 ENDIF
@@ -3583,6 +3743,20 @@ IF (ALLOCATED(SrcParamData%uuN0)) THEN
   END IF
     DstParamData%uuN0 = SrcParamData%uuN0
 ENDIF
+IF (ALLOCATED(SrcParamData%twN0)) THEN
+  i1_l = LBOUND(SrcParamData%twN0,1)
+  i1_u = UBOUND(SrcParamData%twN0,1)
+  i2_l = LBOUND(SrcParamData%twN0,2)
+  i2_u = UBOUND(SrcParamData%twN0,2)
+  IF (.NOT. ALLOCATED(DstParamData%twN0)) THEN 
+    ALLOCATE(DstParamData%twN0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%twN0.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%twN0 = SrcParamData%twN0
+ENDIF
 IF (ALLOCATED(SrcParamData%Stif0_QP)) THEN
   i1_l = LBOUND(SrcParamData%Stif0_QP,1)
   i1_u = UBOUND(SrcParamData%Stif0_QP,1)
@@ -3646,9 +3820,6 @@ ENDIF
     DstParamData%blade_IN = SrcParamData%blade_IN
     DstParamData%beta = SrcParamData%beta
     DstParamData%tol = SrcParamData%tol
-    DstParamData%GlbPos = SrcParamData%GlbPos
-    DstParamData%GlbRot = SrcParamData%GlbRot
-    DstParamData%Glb_crv = SrcParamData%Glb_crv
 IF (ALLOCATED(SrcParamData%QPtN)) THEN
   i1_l = LBOUND(SrcParamData%QPtN,1)
   i1_u = UBOUND(SrcParamData%QPtN,1)
@@ -3730,22 +3901,6 @@ IF (ALLOCATED(SrcParamData%uu0)) THEN
     END IF
   END IF
     DstParamData%uu0 = SrcParamData%uu0
-ENDIF
-IF (ALLOCATED(SrcParamData%rrN0)) THEN
-  i1_l = LBOUND(SrcParamData%rrN0,1)
-  i1_u = UBOUND(SrcParamData%rrN0,1)
-  i2_l = LBOUND(SrcParamData%rrN0,2)
-  i2_u = UBOUND(SrcParamData%rrN0,2)
-  i3_l = LBOUND(SrcParamData%rrN0,3)
-  i3_u = UBOUND(SrcParamData%rrN0,3)
-  IF (.NOT. ALLOCATED(DstParamData%rrN0)) THEN 
-    ALLOCATE(DstParamData%rrN0(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%rrN0.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstParamData%rrN0 = SrcParamData%rrN0
 ENDIF
 IF (ALLOCATED(SrcParamData%E10)) THEN
   i1_l = LBOUND(SrcParamData%E10,1)
@@ -4022,19 +4177,35 @@ ENDIF
     DstParamData%Jac_nx = SrcParamData%Jac_nx
     DstParamData%RotStates = SrcParamData%RotStates
     DstParamData%RelStates = SrcParamData%RelStates
+    DstParamData%CompAeroMaps = SrcParamData%CompAeroMaps
  END SUBROUTINE BD_CopyParam
 
- SUBROUTINE BD_DestroyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE BD_DestroyParam( ParamData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BD_ParameterType), INTENT(INOUT) :: ParamData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyParam'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyParam'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(ParamData%uuN0)) THEN
   DEALLOCATE(ParamData%uuN0)
+ENDIF
+IF (ALLOCATED(ParamData%twN0)) THEN
+  DEALLOCATE(ParamData%twN0)
 ENDIF
 IF (ALLOCATED(ParamData%Stif0_QP)) THEN
   DEALLOCATE(ParamData%Stif0_QP)
@@ -4066,9 +4237,6 @@ ENDIF
 IF (ALLOCATED(ParamData%uu0)) THEN
   DEALLOCATE(ParamData%uu0)
 ENDIF
-IF (ALLOCATED(ParamData%rrN0)) THEN
-  DEALLOCATE(ParamData%rrN0)
-ENDIF
 IF (ALLOCATED(ParamData%E10)) THEN
   DEALLOCATE(ParamData%E10)
 ENDIF
@@ -4077,7 +4245,8 @@ IF (ALLOCATED(ParamData%node_elem_idx)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%OutParam)) THEN
 DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%OutParam)
 ENDIF
@@ -4090,10 +4259,12 @@ ENDIF
 IF (ALLOCATED(ParamData%OutNd2NdElem)) THEN
   DEALLOCATE(ParamData%OutNd2NdElem)
 ENDIF
-  CALL BD_Destroyqpparam( ParamData%qp, ErrStat, ErrMsg )
+  CALL BD_Destroyqpparam( ParamData%qp, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(ParamData%BldNd_OutParam)) THEN
 DO i1 = LBOUND(ParamData%BldNd_OutParam,1), UBOUND(ParamData%BldNd_OutParam,1)
-  CALL NWTC_Library_Destroyoutparmtype( ParamData%BldNd_OutParam(i1), ErrStat, ErrMsg )
+  CALL NWTC_Library_Destroyoutparmtype( ParamData%BldNd_OutParam(i1), ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ENDDO
   DEALLOCATE(ParamData%BldNd_OutParam)
 ENDIF
@@ -4169,6 +4340,11 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*3  ! uuN0 upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%uuN0)  ! uuN0
   END IF
+  Int_BufSz   = Int_BufSz   + 1     ! twN0 allocated yes/no
+  IF ( ALLOCATED(InData%twN0) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! twN0 upper/lower bounds for each dimension
+      Db_BufSz   = Db_BufSz   + SIZE(InData%twN0)  ! twN0
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! Stif0_QP allocated yes/no
   IF ( ALLOCATED(InData%Stif0_QP) ) THEN
     Int_BufSz   = Int_BufSz   + 2*3  ! Stif0_QP upper/lower bounds for each dimension
@@ -4196,9 +4372,6 @@ ENDIF
       Db_BufSz   = Db_BufSz   + SIZE(InData%blade_IN)  ! blade_IN
       Db_BufSz   = Db_BufSz   + SIZE(InData%beta)  ! beta
       Db_BufSz   = Db_BufSz   + 1  ! tol
-      Db_BufSz   = Db_BufSz   + SIZE(InData%GlbPos)  ! GlbPos
-      Db_BufSz   = Db_BufSz   + SIZE(InData%GlbRot)  ! GlbRot
-      Db_BufSz   = Db_BufSz   + SIZE(InData%Glb_crv)  ! Glb_crv
   Int_BufSz   = Int_BufSz   + 1     ! QPtN allocated yes/no
   IF ( ALLOCATED(InData%QPtN) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! QPtN upper/lower bounds for each dimension
@@ -4228,11 +4401,6 @@ ENDIF
   IF ( ALLOCATED(InData%uu0) ) THEN
     Int_BufSz   = Int_BufSz   + 2*3  ! uu0 upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%uu0)  ! uu0
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! rrN0 allocated yes/no
-  IF ( ALLOCATED(InData%rrN0) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*3  ! rrN0 upper/lower bounds for each dimension
-      Db_BufSz   = Db_BufSz   + SIZE(InData%rrN0)  ! rrN0
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! E10 allocated yes/no
   IF ( ALLOCATED(InData%E10) ) THEN
@@ -4406,6 +4574,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! Jac_nx
       Int_BufSz  = Int_BufSz  + 1  ! RotStates
       Int_BufSz  = Int_BufSz  + 1  ! RelStates
+      Int_BufSz  = Int_BufSz  + 1  ! CompAeroMaps
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4463,6 +4632,26 @@ ENDIF
             DbKiBuf(Db_Xferred) = InData%uuN0(i1,i2,i3)
             Db_Xferred = Db_Xferred + 1
           END DO
+        END DO
+      END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%twN0) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%twN0,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%twN0,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%twN0,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%twN0,2)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i2 = LBOUND(InData%twN0,2), UBOUND(InData%twN0,2)
+        DO i1 = LBOUND(InData%twN0,1), UBOUND(InData%twN0,1)
+          DbKiBuf(Db_Xferred) = InData%twN0(i1,i2)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -4570,20 +4759,6 @@ ENDIF
     END DO
     DbKiBuf(Db_Xferred) = InData%tol
     Db_Xferred = Db_Xferred + 1
-    DO i1 = LBOUND(InData%GlbPos,1), UBOUND(InData%GlbPos,1)
-      DbKiBuf(Db_Xferred) = InData%GlbPos(i1)
-      Db_Xferred = Db_Xferred + 1
-    END DO
-    DO i2 = LBOUND(InData%GlbRot,2), UBOUND(InData%GlbRot,2)
-      DO i1 = LBOUND(InData%GlbRot,1), UBOUND(InData%GlbRot,1)
-        DbKiBuf(Db_Xferred) = InData%GlbRot(i1,i2)
-        Db_Xferred = Db_Xferred + 1
-      END DO
-    END DO
-    DO i1 = LBOUND(InData%Glb_crv,1), UBOUND(InData%Glb_crv,1)
-      DbKiBuf(Db_Xferred) = InData%Glb_crv(i1)
-      Db_Xferred = Db_Xferred + 1
-    END DO
   IF ( .NOT. ALLOCATED(InData%QPtN) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -4694,31 +4869,6 @@ ENDIF
         DO i2 = LBOUND(InData%uu0,2), UBOUND(InData%uu0,2)
           DO i1 = LBOUND(InData%uu0,1), UBOUND(InData%uu0,1)
             DbKiBuf(Db_Xferred) = InData%uu0(i1,i2,i3)
-            Db_Xferred = Db_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( .NOT. ALLOCATED(InData%rrN0) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%rrN0,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%rrN0,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%rrN0,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%rrN0,2)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%rrN0,3)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%rrN0,3)
-    Int_Xferred = Int_Xferred + 2
-
-      DO i3 = LBOUND(InData%rrN0,3), UBOUND(InData%rrN0,3)
-        DO i2 = LBOUND(InData%rrN0,2), UBOUND(InData%rrN0,2)
-          DO i1 = LBOUND(InData%rrN0,1), UBOUND(InData%rrN0,1)
-            DbKiBuf(Db_Xferred) = InData%rrN0(i1,i2,i3)
             Db_Xferred = Db_Xferred + 1
           END DO
         END DO
@@ -5215,6 +5365,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = TRANSFER(InData%RelStates, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%CompAeroMaps, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE BD_PackParam
 
  SUBROUTINE BD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -5282,6 +5434,29 @@ ENDIF
             OutData%uuN0(i1,i2,i3) = REAL(DbKiBuf(Db_Xferred), R8Ki)
             Db_Xferred = Db_Xferred + 1
           END DO
+        END DO
+      END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! twN0 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%twN0)) DEALLOCATE(OutData%twN0)
+    ALLOCATE(OutData%twN0(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%twN0.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i2 = LBOUND(OutData%twN0,2), UBOUND(OutData%twN0,2)
+        DO i1 = LBOUND(OutData%twN0,1), UBOUND(OutData%twN0,1)
+          OutData%twN0(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+          Db_Xferred = Db_Xferred + 1
         END DO
       END DO
   END IF
@@ -5411,28 +5586,6 @@ ENDIF
     END DO
     OutData%tol = REAL(DbKiBuf(Db_Xferred), R8Ki)
     Db_Xferred = Db_Xferred + 1
-    i1_l = LBOUND(OutData%GlbPos,1)
-    i1_u = UBOUND(OutData%GlbPos,1)
-    DO i1 = LBOUND(OutData%GlbPos,1), UBOUND(OutData%GlbPos,1)
-      OutData%GlbPos(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
-      Db_Xferred = Db_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%GlbRot,1)
-    i1_u = UBOUND(OutData%GlbRot,1)
-    i2_l = LBOUND(OutData%GlbRot,2)
-    i2_u = UBOUND(OutData%GlbRot,2)
-    DO i2 = LBOUND(OutData%GlbRot,2), UBOUND(OutData%GlbRot,2)
-      DO i1 = LBOUND(OutData%GlbRot,1), UBOUND(OutData%GlbRot,1)
-        OutData%GlbRot(i1,i2) = REAL(DbKiBuf(Db_Xferred), R8Ki)
-        Db_Xferred = Db_Xferred + 1
-      END DO
-    END DO
-    i1_l = LBOUND(OutData%Glb_crv,1)
-    i1_u = UBOUND(OutData%Glb_crv,1)
-    DO i1 = LBOUND(OutData%Glb_crv,1), UBOUND(OutData%Glb_crv,1)
-      OutData%Glb_crv(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
-      Db_Xferred = Db_Xferred + 1
-    END DO
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! QPtN not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -5561,34 +5714,6 @@ ENDIF
         DO i2 = LBOUND(OutData%uu0,2), UBOUND(OutData%uu0,2)
           DO i1 = LBOUND(OutData%uu0,1), UBOUND(OutData%uu0,1)
             OutData%uu0(i1,i2,i3) = REAL(DbKiBuf(Db_Xferred), R8Ki)
-            Db_Xferred = Db_Xferred + 1
-          END DO
-        END DO
-      END DO
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! rrN0 not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i3_l = IntKiBuf( Int_Xferred    )
-    i3_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%rrN0)) DEALLOCATE(OutData%rrN0)
-    ALLOCATE(OutData%rrN0(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%rrN0.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-      DO i3 = LBOUND(OutData%rrN0,3), UBOUND(OutData%rrN0,3)
-        DO i2 = LBOUND(OutData%rrN0,2), UBOUND(OutData%rrN0,2)
-          DO i1 = LBOUND(OutData%rrN0,1), UBOUND(OutData%rrN0,1)
-            OutData%rrN0(i1,i2,i3) = REAL(DbKiBuf(Db_Xferred), R8Ki)
             Db_Xferred = Db_Xferred + 1
           END DO
         END DO
@@ -6177,6 +6302,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 1
     OutData%RelStates = TRANSFER(IntKiBuf(Int_Xferred), OutData%RelStates)
     Int_Xferred = Int_Xferred + 1
+    OutData%CompAeroMaps = TRANSFER(IntKiBuf(Int_Xferred), OutData%CompAeroMaps)
+    Int_Xferred = Int_Xferred + 1
  END SUBROUTINE BD_UnPackParam
 
  SUBROUTINE BD_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
@@ -6207,19 +6334,35 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE BD_CopyInput
 
- SUBROUTINE BD_DestroyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE BD_DestroyInput( InputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BD_InputType), INTENT(INOUT) :: InputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyInput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyInput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL MeshDestroy( InputData%RootMotion, ErrStat, ErrMsg )
-  CALL MeshDestroy( InputData%PointLoad, ErrStat, ErrMsg )
-  CALL MeshDestroy( InputData%DistrLoad, ErrStat, ErrMsg )
-  CALL MeshDestroy( InputData%HubMotion, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL MeshDestroy( InputData%RootMotion, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL MeshDestroy( InputData%PointLoad, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL MeshDestroy( InputData%DistrLoad, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL MeshDestroy( InputData%HubMotion, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE BD_DestroyInput
 
  SUBROUTINE BD_PackInput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -6692,17 +6835,31 @@ IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
 ENDIF
  END SUBROUTINE BD_CopyOutput
 
- SUBROUTINE BD_DestroyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE BD_DestroyOutput( OutputData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BD_OutputType), INTENT(INOUT) :: OutputData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyOutput'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyOutput'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL MeshDestroy( OutputData%ReactionForce, ErrStat, ErrMsg )
-  CALL MeshDestroy( OutputData%BldMotion, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL MeshDestroy( OutputData%ReactionForce, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL MeshDestroy( OutputData%BldMotion, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(OutputData%WriteOutput)) THEN
   DEALLOCATE(OutputData%WriteOutput)
 ENDIF
@@ -7570,15 +7727,27 @@ IF (ALLOCATED(SrcEqMotionQPData%Yd)) THEN
 ENDIF
  END SUBROUTINE BD_CopyEqMotionQP
 
- SUBROUTINE BD_DestroyEqMotionQP( EqMotionQPData, ErrStat, ErrMsg )
+ SUBROUTINE BD_DestroyEqMotionQP( EqMotionQPData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(EqMotionQP), INTENT(INOUT) :: EqMotionQPData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyEqMotionQP'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyEqMotionQP'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
 IF (ALLOCATED(EqMotionQPData%uuu)) THEN
   DEALLOCATE(EqMotionQPData%uuu)
 ENDIF
@@ -10234,20 +10403,37 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE BD_CopyMisc
 
- SUBROUTINE BD_DestroyMisc( MiscData, ErrStat, ErrMsg )
+ SUBROUTINE BD_DestroyMisc( MiscData, ErrStat, ErrMsg, DEALLOCATEpointers )
   TYPE(BD_MiscVarType), INTENT(INOUT) :: MiscData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
-  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyMisc'
+  LOGICAL,OPTIONAL,INTENT(IN   ) :: DEALLOCATEpointers
+  
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
-! 
+  LOGICAL                        :: DEALLOCATEpointers_local
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*),    PARAMETER :: RoutineName = 'BD_DestroyMisc'
+
   ErrStat = ErrID_None
   ErrMsg  = ""
-  CALL MeshDestroy( MiscData%u_DistrLoad_at_y, ErrStat, ErrMsg )
-  CALL MeshDestroy( MiscData%y_BldMotion_at_u, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%Map_u_DistrLoad_to_y, ErrStat, ErrMsg )
-  CALL NWTC_Library_Destroymeshmaptype( MiscData%Map_y_BldMotion_to_u, ErrStat, ErrMsg )
-  CALL BD_Destroyeqmotionqp( MiscData%qp, ErrStat, ErrMsg )
+
+  IF (PRESENT(DEALLOCATEpointers)) THEN
+     DEALLOCATEpointers_local = DEALLOCATEpointers
+  ELSE
+     DEALLOCATEpointers_local = .true.
+  END IF
+  
+  CALL MeshDestroy( MiscData%u_DistrLoad_at_y, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL MeshDestroy( MiscData%y_BldMotion_at_u, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%Map_u_DistrLoad_to_y, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL NWTC_Library_Destroymeshmaptype( MiscData%Map_y_BldMotion_to_u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL BD_Destroyeqmotionqp( MiscData%qp, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 IF (ALLOCATED(MiscData%lin_A)) THEN
   DEALLOCATE(MiscData%lin_A)
 ENDIF
@@ -10338,8 +10524,10 @@ ENDIF
 IF (ALLOCATED(MiscData%LP_indx)) THEN
   DEALLOCATE(MiscData%LP_indx)
 ENDIF
-  CALL BD_DestroyInput( MiscData%u, ErrStat, ErrMsg )
-  CALL BD_DestroyInput( MiscData%u2, ErrStat, ErrMsg )
+  CALL BD_DestroyInput( MiscData%u, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+  CALL BD_DestroyInput( MiscData%u2, ErrStat2, ErrMsg2, DEALLOCATEpointers_local )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
  END SUBROUTINE BD_DestroyMisc
 
  SUBROUTINE BD_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )

@@ -41,6 +41,7 @@ vs-build/
 .vscode
 .atom
 .fortls
+.devcontainer
 # backup files
 *.asv
 ~$*.xlsx
@@ -49,3 +50,8 @@ vs-build/
 *.aux
 *.nlo
 *.log
+
+#Simulink cache files
+varcache
+*.slxc
+

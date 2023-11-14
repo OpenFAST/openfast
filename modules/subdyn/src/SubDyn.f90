@@ -28,6 +28,7 @@ Module SubDyn
    USE SubDyn_Output
    USE SubDyn_Tests
    USE SD_FEM
+   USE FEM, only: FINDLOCI
    
    IMPLICIT NONE
 
@@ -46,6 +47,7 @@ Module SubDyn
    PUBLIC :: SD_JacobianPDiscState   ! 
    PUBLIC :: SD_JacobianPConstrState ! 
    PUBLIC :: SD_GetOP                ! 
+   PUBLIC :: SD_ProgDesc
    
 CONTAINS
 
@@ -86,51 +88,76 @@ END SUBROUTINE CreateTPMeshes
 !---------------------------------------------------------------------------
 !> Create output (Y2, for motion) and input (u, for forces)meshes, based on SubDyn nodes
 !! Ordering of nodes is the same as SubDyn (used to be : I L C)
-SUBROUTINE CreateInputOutputMeshes( NNode, Nodes, inputMesh, outputMesh, ErrStat, ErrMsg )
+SUBROUTINE CreateInputOutputMeshes( NNode, Nodes, inputMesh, outputMesh, outputMesh3, ErrStat, ErrMsg )
    INTEGER(IntKi),            INTENT( IN    ) :: NNode                     !total number of nodes in the structure, used to size the array Nodes, i.e. its rows
    REAL(ReKi),                INTENT( IN    ) :: Nodes(NNode, JointsCol)
    TYPE(MeshType),            INTENT( INOUT ) :: inputMesh   ! u%LMesh
    TYPE(MeshType),            INTENT( INOUT ) :: outputMesh  ! y%Y2Mesh
+   TYPE(MeshType),            INTENT( INOUT ) :: outputMesh3 ! y%Y3Mesh, full elastic
    INTEGER(IntKi),            INTENT(   OUT ) :: ErrStat                   ! Error status of the operation
    CHARACTER(*),              INTENT(   OUT ) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
    ! Local variables
    REAL(ReKi), dimension(3) :: Point
-   INTEGER         :: I  ! generic counter variable
-   INTEGER         :: nodeIndx
+   INTEGER                  :: I             ! generic counter variable
+   INTEGER                  :: nodeIndx
+   INTEGER(IntKi)           :: ErrStat2      ! Error status of the operation
+   CHARACTER(ErrMsgLen)     :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
    
    CALL MeshCreate( BlankMesh        = inputMesh         &
                   ,IOS               = COMPONENT_INPUT   &
                   ,Nnodes            = size(Nodes,1)     &
-                  ,ErrStat           = ErrStat           &
-                  ,ErrMess           = ErrMsg            &
+                  ,ErrStat           = ErrStat2          &
+                  ,ErrMess           = ErrMsg2           &
                   ,Force             = .TRUE.            &
                   ,Moment            = .TRUE.            )
+   if(Failed()) return
 
    DO I = 1,size(Nodes,1)
       Point = Nodes(I, 2:4)
-      CALL MeshPositionNode(inputMesh, I, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
-      CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I)
+      CALL MeshPositionNode(inputMesh, I, Point, ErrStat2, ErrMsg2); IF(ErrStat2/=ErrID_None) exit
+      CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat2, ErrMsg2, I)
    ENDDO 
-   CALL MeshCommit ( inputMesh, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
+   if(Failed()) return
+
+   CALL MeshCommit ( inputMesh, ErrStat2, ErrMsg2); if(Failed()) return
          
    ! Create the Interior Points output mesh as a sibling copy of the input mesh
    CALL MeshCopy (    SrcMesh      = inputMesh              &
                      ,DestMesh     = outputMesh             &
                      ,CtrlCode     = MESH_SIBLING           &
                      ,IOS          = COMPONENT_OUTPUT       &
-                     ,ErrStat      = ErrStat                &
-                     ,ErrMess      = ErrMsg                 &
+                     ,ErrStat      = ErrStat2               &
+                     ,ErrMess      = ErrMsg2                &
                      ,TranslationDisp   = .TRUE.            &
                      ,Orientation       = .TRUE.            &
                      ,TranslationVel    = .TRUE.            &
                      ,RotationVel       = .TRUE.            &
                      ,TranslationAcc    = .TRUE.            &
                      ,RotationAcc       = .TRUE.            ) 
-   
-    ! Set the Orientation (rotational) field for the nodes based on assumed 0 (rotational) deflections
-    !Identity should mean no rotation, which is our first guess at the output -RRD
-    CALL Eye( outputMesh%Orientation, ErrStat, ErrMsg )         
-        
+   if(Failed()) return
+   ! Create the Interior Points output mesh as a sibling copy of the input mesh
+   CALL MeshCopy (    SrcMesh      = outputMesh             &
+                     ,DestMesh     = outputMesh3            &
+                     ,CtrlCode     = MESH_COUSIN            & ! Cannot do sibling (mesh can only have one sibling)
+                     ,IOS          = COMPONENT_OUTPUT       &
+                     ,ErrStat      = ErrStat2               &
+                     ,ErrMess      = ErrMsg2                &
+                     ,TranslationDisp   = .TRUE.            &
+                     ,Orientation       = .TRUE.            &
+                     ,TranslationVel    = .TRUE.            &
+                     ,RotationVel       = .TRUE.            &
+                     ,TranslationAcc    = .TRUE.            &
+                     ,RotationAcc       = .TRUE.            ) 
+   if(Failed()) return
+   ! Set the Orientation (rotational) field for the nodes based on assumed 0 (rotational) deflections
+   !Identity should mean no rotation, which is our first guess at the output -RRD
+   CALL Eye(outputMesh%Orientation , ErrStat2, ErrMsg2); if(Failed()) return
+   CALL Eye(outputMesh3%Orientation, ErrStat2, ErrMsg2); if(Failed()) return
+contains
+   logical function Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CreateInputOutputMeshes') 
+      Failed =  ErrStat >= AbortErrLev
+   end function Failed
 END SUBROUTINE CreateInputOutputMeshes
 !---------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps.
@@ -159,6 +186,12 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! local variables
    TYPE(SD_InitType)    :: Init
    TYPE(CB_MatArrays)   :: CBparams      ! CB parameters to be stored and written to summary file
+   integer(IntKi) :: nOmega
+   real(FEKi), dimension(:,:), allocatable :: Modes
+   real(FEKi), dimension(:,:), allocatable :: Modes_GY       ! Guyan modes
+   real(FEKi), dimension(:)  , allocatable :: Omega
+   real(FEKi), dimension(:)  , allocatable :: Omega_Gy       ! Frequencies of Guyan modes
+   logical, allocatable                    :: bDOF(:)        ! Mask for DOF to keep (True), or reduce (False)
    INTEGER(IntKi)       :: ErrStat2      ! Error status of the operation
    CHARACTER(ErrMsgLen) :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
    
@@ -182,6 +215,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    Init%g           = InitInput%g   
    Init%TP_RefPoint = InitInput%TP_RefPoint
    Init%SubRotateZ  = InitInput%SubRotateZ
+   Init%RootName    = InitInput%RootName
    if ((allocated(InitInput%SoilStiffness)) .and. (InitInput%SoilMesh%Initialized)) then 
       ! Soil Mesh and Stiffness
       !  SoilMesh has N points.  Correspond in order to the SoilStiffness matrices passed in
@@ -237,7 +271,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL NodeCon(Init, p, ErrStat2, ErrMsg2); if(Failed()) return
 
    !Store mapping between controllable elements and control channels, and return guess input
-   CALL ControlCableMapping(Init, u, p, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL ControlCableMapping(Init, u, p, InitOut, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Allocate DOF indices to joints and members 
    call DistributeDOF(Init, p ,ErrStat2, ErrMsg2); if(Failed()) return; 
@@ -257,8 +291,6 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! --- Prepare for control cable load, RHS
    if (size(p%CtrlElem2Channel,1)>0) then
       CALL ControlCableForceInit(p, m, ErrStat2, ErrMsg2); if(Failed()) return
-      print*,'Controlable cables are present, this feature is not ready at the glue code level.'
-      STOP
    endif
 
    ! --------------------------------------------------------------------------------
@@ -313,13 +345,37 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL CreateTPMeshes( InitInput%TP_RefPoint, u%TPMesh, y%Y1Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
    
    ! Construct the input mesh (u%LMesh, force on nodes) and output mesh (y%Y2Mesh, displacements)
-   CALL CreateInputOutputMeshes( p%nNodes, Init%Nodes, u%LMesh, y%Y2Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL CreateInputOutputMeshes( p%nNodes, Init%Nodes, u%LMesh, y%Y2Mesh, y%Y3Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
 
-   ! --- Write the summary file
-   IF ( Init%SSSum ) THEN 
-      ! note p%KBB/MBB are KBBt/MBBt
-      ! Write a summary of the SubDyn Initialization                     
-      CALL OutSummary(Init, p, m, InitInput, CBparams,  ErrStat2, ErrMsg2); if(Failed()) return
+   ! --- Eigen values of full system (for summary file output only)
+   IF ( Init%SSSum .or. p%OutFEMModes>idOutputFormatNone) THEN 
+      ! M and K are reduced matrices, but Boundary conditions are not applied, so
+      ! we set bDOF, which is true if not a fixed Boundary conditions
+      ! NOTE: we don't check for singularities/rigid body modes here
+      CALL WrScr('   Calculating Full System Modes for output files')
+      CALL AllocAry(bDOF, p%nDOF_red, 'bDOF',  ErrStat2, ErrMsg2); if(Failed()) return
+      bDOF(:)       = .true.
+      bDOF(p%ID__F) = .false.
+      nOmega = count(bDOF)
+      CALL AllocAry(Omega,             nOmega, 'Omega', ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(Modes, p%nDOF_red, nOmega, 'Modes', ErrStat2, ErrMsg2); if(Failed()) return
+      call EigenSolveWrap(Init%K, Init%M, p%nDOF_red, nOmega, .False., Modes, Omega, ErrStat2, ErrMsg2, bDOF); if(Failed()) return
+      IF (ALLOCATED(bDOF)  ) DEALLOCATE(bDOF)
+   endif
+   IF ( Init%SSSum .or. p%OutCBModes>idOutputFormatNone) THEN 
+      ! Guyan Modes 
+      CALL AllocAry(Omega_GY,                size(p%KBB,1), 'Omega_GY', ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(Modes_GY, size(p%KBB,1), size(p%KBB,1), 'Modes_GY', ErrStat2, ErrMsg2); if(Failed()) return
+      call EigenSolveWrap(real(p%KBB,FEKi), real(p%MBB,FEKi), size(p%KBB,1), size(p%KBB,1), .False., Modes_GY, Omega_GY, ErrStat2, ErrMsg2); 
+      IF (ALLOCATED(Modes_GY)  ) DEALLOCATE(Modes_GY)
+   ENDIF
+   ! Write a summary of the SubDyn Initialization                     
+   IF ( Init%SSSum) THEN 
+      CALL OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_GY, ErrStat2, ErrMsg2); if(Failed()) return
+   ENDIF
+   ! Write Modes
+   IF ( p%OutCBModes>idOutputFormatNone .or. p%OutFEMModes>idOutputFormatNone) THEN 
+      CALL OutModes  (Init, p, m, InitInput, CBparams, Modes, Omega, Omega_GY, ErrStat2, ErrMsg2); if(Failed()) return
    ENDIF 
    
    ! Initialize the outputs & Store mapping between nodes and elements  
@@ -346,6 +402,11 @@ CONTAINS
    END FUNCTION Failed
    
    SUBROUTINE CleanUp()   
+      if(allocated(bDOF ))      deallocate(bDOF)
+      if(allocated(Omega))      deallocate(Omega)
+      if(allocated(Modes))      deallocate(Modes)
+      if(allocated(Omega_GY))   deallocate(Omega_GY)
+      if(allocated(Modes_GY))   deallocate(Modes_GY)
       CALL SD_DestroyInitType(Init,   ErrStat2, ErrMsg2)
       CALL SD_DestroyCB_MatArrays(  CBparams,  ErrStat2, ErrMsg2 )  ! local variables
    END SUBROUTINE CleanUp
@@ -409,9 +470,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       !locals
       INTEGER(IntKi)               :: I          ! Counters
       INTEGER(IntKi)               :: iSDNode
-      REAL(ReKi)                   :: AllOuts(0:MaxOutPts+p%OutAllInt*p%OutAllDims)
       REAL(ReKi)                   :: rotations(3)
-      REAL(ReKi)                   :: ULS(p%nDOF__L),  UL0m(p%nDOF__L),  FLt(p%nDOF__L)  ! Temporary values in static improvement method
       REAL(ReKi)                   :: Y1(6)
       REAL(ReKi)                   :: Y1_CB(6)
       REAL(ReKi)                   :: Y1_CB_L(6)
@@ -424,7 +483,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(ReKi)                   :: DCM(3,3)
       REAL(ReKi)                   :: F_I(6*p%nNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
       TYPE(SD_ContinuousStateType) :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
-      ! Variables for Guayn rigid body motion
+      ! Variables for Guyan rigid body motion
       real(ReKi), dimension(3) :: Om, OmD ! Omega, OmegaDot (body rotational speed and acceleration)
       real(ReKi), dimension(3) ::  rIP  ! Vector from TP to rotated Node
       real(ReKi), dimension(3) ::  rIP0 ! Vector from TP to Node (undeflected)
@@ -454,16 +513,15 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       RRb2g(4:6,4:6) = Rb2g
      
       ! --------------------------------------------------------------------------------
-      ! --- Output 2, Y2Mesh: motions on all FEM nodes (R, and L DOFs, then full DOF vector)
+      ! --- Output Meshes 2&3
       ! --------------------------------------------------------------------------------
-      ! External force on internal nodes (F_L)
+      ! Y2Mesh: rigidbody displacements            , elastic velocities and accelerations on all FEM nodes
+      ! Y3Mesh: elastic   displacements without SIM, elastic velocities and accelerations on all FEM nodes
+
+      ! External force on internal nodes (m%F_L) based on LMesh + FG (grav+cable) + controllable cables
+      ! - We only apply the lever arm for       (fixed-bottom case + GuyanLoadCorrection)
+      ! - We only rotate the external loads for (floating case + GuyanLoadCorrection)
       call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection.and..not.p%Floating), RotateLoads=(p%GuyanLoadCorrection.and.p%Floating)); if(Failed()) return
-      m%UR_bar        = 0.0_ReKi
-      m%UR_bar_dot    = 0.0_ReKi
-      m%UR_bar_dotdot = 0.0_ReKi
-      m%UL            = 0.0_ReKi
-      m%UL_dot        = 0.0_ReKi
-      m%UL_dotdot     = 0.0_ReKi
       ! --- CB modes contribution to motion (L-DOF only)
       if ( p%nDOFM > 0) then
          if (p%GuyanLoadCorrection.and.p%Floating) then ! >>> Rotate All
@@ -476,17 +534,11 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          m%UL_dot        = matmul( p%PhiM,  x%qmdot )
          m%UL_dotdot     = matmul( p%C2_61, x%qm    )    + matmul( p%C2_62   , x%qmdot )    & 
                          + matmul( p%D2_63, udotdot_TP ) + matmul( p%D2_64,    m%F_L   )
+      else
+         m%UL            = 0.0_ReKi
+         m%UL_dot        = 0.0_ReKi
+         m%UL_dotdot     = 0.0_ReKi
       end if
-      ! Static improvement (modify UL)
-      if (p%SttcSolve/=idSIM_None) then
-         FLt  = MATMUL(p%PhiL_T      , m%F_L) ! NOTE: Gravity in F_L
-         ULS  = MATMUL(p%PhiLInvOmgL2, FLt ) 
-         if ( p%nDOFM > 0) then
-            UL0M = MATMUL(p%PhiLInvOmgL2(:,1:p%nDOFM), FLt(1:p%nDOFM)       )
-            ULS = ULS-UL0M
-         end if          
-         m%UL = m%UL + ULS 
-      endif    
       ! --- Adding Guyan contribution to R and L DOFs
       if (.not.p%Floating) then
          ! Then we add the Guyan motion here
@@ -499,32 +551,30 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       else
          ! We know that the Guyan modes are rigid body modes.
          ! We will add them in the "Full system" later
+         m%UR_bar        = 0.0_ReKi
+         m%UR_bar_dot    = 0.0_ReKi
+         m%UR_bar_dotdot = 0.0_ReKi
       endif
-      ! --- Build original DOF vectors (DOF before the CB reduction)
-      m%U_red       (p%IDI__) = m%UR_bar
-      m%U_red       (p%ID__L) = m%UL     
-      m%U_red       (p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
-      m%U_red       (p%ID__F) = 0
-      m%U_red_dot   (p%IDI__) = m%UR_bar_dot
-      m%U_red_dot   (p%ID__L) = m%UL_dot     
-      m%U_red_dot   (p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
-      m%U_red_dot   (p%ID__F) = 0
-      m%U_red_dotdot(p%IDI__) = m%UR_bar_dotdot
-      m%U_red_dotdot(p%ID__L) = m%UL_dotdot    
-      m%U_red_dotdot(p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
-      m%U_red_dotdot(p%ID__F) = 0
+      m%UL_NS = m%UL ! Storing displacements without SIM
+      ! Static improvement (modify UL)
+      if (p%SttcSolve/=idSIM_None) then
+         m%F_L2    = MATMUL(p%PhiL_T      , m%F_L) ! NOTE: Gravity in F_L
+         m%UL_SIM  = MATMUL(p%PhiLInvOmgL2, m%F_L2)
+         if ( p%nDOFM > 0) then
+            m%UL_0m = MATMUL(p%PhiLInvOmgL2(:,1:p%nDOFM), m%F_L2(1:p%nDOFM)       )
+            m%UL_SIM = m%UL_SIM - m%UL_0m
+         end if          
+         m%UL = m%UL + m%UL_SIM
+      endif    
 
-      if (p%reduced) then
-         m%U_full        = matmul(p%T_red, m%U_red)
-         m%U_full_dot    = matmul(p%T_red, m%U_red_dot)
-         m%U_full_dotdot = matmul(p%T_red, m%U_red_dotdot)
-      else
-         m%U_full        = m%U_red
-         m%U_full_dot    = m%U_red_dot
-         m%U_full_dotdot = m%U_red_dotdot
-      endif
+      ! --- Build original DOF vectors ("full", prior to constraints and CB)
+      call ReducedToFull(p, m, m%UR_bar        , m%UL       , m%U_full       )
+      call ReducedToFull(p, m, m%UR_bar_dot    , m%UL_dot   , m%U_full_dot   )
+      call ReducedToFull(p, m, m%UR_bar_dotdot,  m%UL_dotdot, m%U_full_dotdot)
+      ! Do the same for the displacements without SIM. We'll use those for Y3 mesh
+      call ReducedToFull(p, m, m%UR_bar        , m%UL_NS    , m%U_full_NS    )
 
-      ! Storing elastic motion (full motion for fixed bottom, CB motion only for floating)
+      ! Storing elastic motion (full motion for fixed bottom, CB motion+SIM for floating)
       m%U_full_elast  = m%U_full
                                                             
       ! --- Place displacement/velocity/acceleration into Y2 output mesh        
@@ -545,6 +595,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
             ! Full displacements CB-rotated + Guyan (KEEP ME) >>> Rotate All
             if (p%GuyanLoadCorrection) then
+               m%U_full_NS    (DOFList(1:3)) = matmul(Rb2g, m%U_full_NS    (DOFList(1:3))) + duP(1:3)       
+               m%U_full_NS    (DOFList(4:6)) = matmul(Rb2g, m%U_full_NS    (DOFList(4:6))) + rotations(1:3)
                m%U_full       (DOFList(1:3)) = matmul(Rb2g, m%U_full       (DOFList(1:3))) + duP(1:3)       
                m%U_full       (DOFList(4:6)) = matmul(Rb2g, m%U_full       (DOFList(4:6))) + rotations(1:3)
                m%U_full_dot   (DOFList(1:3)) = matmul(Rb2g, m%U_full_dot   (DOFList(1:3))) + vP(1:3)
@@ -552,6 +604,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
                m%U_full_dotdot(DOFList(1:3)) = matmul(Rb2g, m%U_full_dotdot(DOFList(1:3))) + aP(1:3)
                m%U_full_dotdot(DOFList(4:6)) = matmul(Rb2g, m%U_full_dotdot(DOFList(4:6))) + OmD(1:3)
             else
+               m%U_full_NS    (DOFList(1:3)) = m%U_full_NS    (DOFList(1:3)) + duP(1:3)       
+               m%U_full_NS    (DOFList(4:6)) = m%U_full_NS    (DOFList(4:6)) + rotations(1:3)
                m%U_full       (DOFList(1:3)) = m%U_full       (DOFList(1:3)) + duP(1:3)       
                m%U_full       (DOFList(4:6)) = m%U_full       (DOFList(4:6)) + rotations(1:3)
                m%U_full_dot   (DOFList(1:3)) = m%U_full_dot   (DOFList(1:3)) + vP(1:3)
@@ -560,49 +614,64 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
                m%U_full_dotdot(DOFList(4:6)) = m%U_full_dotdot(DOFList(4:6)) + OmD(1:3)
             endif
 
-            ! NOTE: For now, displacements passed to HydroDyn are Guyan only!
+            ! --- Rigid body displacements for hydrodyn
             ! Construct the direction cosine matrix given the output angles
-            !call SmllRotTrans( 'UR_bar input angles', m%U_full(DOFList(4)), m%U_full(DOFList(5)), m%U_full(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
-            call SmllRotTrans( 'UR_bar input angles', rotations(1), rotations(2), rotations(3), DCM, '', ErrStat2, ErrMsg2) ! NOTE: using only Guyan rotations
+            call SmllRotTrans( 'UR_bar input angles Guyan', rotations(1), rotations(2), rotations(3), DCM, '', ErrStat2, ErrMsg2) ! NOTE: using only Guyan rotations
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
             y%Y2mesh%Orientation     (:,:,iSDNode)   = DCM
-            !y%Y2mesh%TranslationDisp (:,iSDNode)     = m%U_full        (DOFList(1:3))
-            y%Y2mesh%TranslationDisp (:,iSDNode)     = duP(1:3)                       ! NOTE: using only the Guyan Displacements
+            y%Y2mesh%TranslationDisp (:,iSDNode)     = duP(1:3)                       ! Y2: NOTE: only the Guyan displacements for floating
+            ! --- Full elastic displacements for others (moordyn)
+            call SmllRotTrans( 'Nodal rotation', m%U_full_NS(DOFList(4)), m%U_full_NS(DOFList(5)), m%U_full_NS(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
+            y%Y3mesh%Orientation     (:,:,iSDNode)   = DCM
+            y%Y3mesh%TranslationDisp (:,iSDNode)     = m%U_full_NS     (DOFList(1:3)) ! Y3: Guyan+CB (but no SIM) displacements
+            ! --- Elastic velocities and accelerations 
             y%Y2mesh%TranslationVel  (:,iSDNode)     = m%U_full_dot    (DOFList(1:3))
             y%Y2mesh%TranslationAcc  (:,iSDNode)     = m%U_full_dotdot (DOFList(1:3))
             y%Y2mesh%RotationVel     (:,iSDNode)     = m%U_full_dot    (DOFList(4:6))
             y%Y2mesh%RotationAcc     (:,iSDNode)     = m%U_full_dotdot (DOFList(4:6))
          enddo
       else
-         ! --- Fixed bottom
+         ! --- Fixed bottom - Y3 and Y2 meshes are identical in this case
          do iSDNode = 1,p%nNodes
             DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
             ! TODO TODO which orientation to give for joints with more than 6 dofs?
             ! Construct the direction cosine matrix given the output angles
-            CALL SmllRotTrans( 'UR_bar input angles', m%U_full(DOFList(4)), m%U_full(DOFList(5)), m%U_full(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
+            CALL SmllRotTrans( 'UR_bar input angles', m%U_full_NS(DOFList(4)), m%U_full_NS(DOFList(5)), m%U_full_NS(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
             y%Y2mesh%Orientation     (:,:,iSDNode)   = DCM
-            y%Y2mesh%TranslationDisp (:,iSDNode)     = m%U_full        (DOFList(1:3))
+            y%Y2mesh%TranslationDisp (:,iSDNode)     = m%U_full_NS     (DOFList(1:3)) !Y2: Guyan+CB (but no SIM) displacements
             y%Y2mesh%TranslationVel  (:,iSDNode)     = m%U_full_dot    (DOFList(1:3))
             y%Y2mesh%TranslationAcc  (:,iSDNode)     = m%U_full_dotdot (DOFList(1:3))
             y%Y2mesh%RotationVel     (:,iSDNode)     = m%U_full_dot    (DOFList(4:6))
             y%Y2mesh%RotationAcc     (:,iSDNode)     = m%U_full_dotdot (DOFList(4:6))
+            y%Y3mesh%TranslationDisp (:,iSDNode)     = y%Y2mesh%TranslationDisp (:,iSDNode)   
+            y%Y3mesh%Orientation     (:,:,iSDNode)   = y%Y2mesh%Orientation     (:,:,iSDNode)   
          enddo
       endif
-                                    
+
+      ! --- Y3 mesh and Y2 mesh both have elastic (Guyan+CB) velocities and accelerations
+      do iSDNode = 1,p%nNodes
+         y%Y3mesh%TranslationVel  (:,iSDNode)     = y%Y2mesh%TranslationVel  (:,iSDNode) 
+         y%Y3mesh%TranslationAcc  (:,iSDNode)     = y%Y2mesh%TranslationAcc  (:,iSDNode)
+         y%Y3mesh%RotationVel     (:,iSDNode)     = y%Y2mesh%RotationVel     (:,iSDNode)
+         y%Y3mesh%RotationAcc     (:,iSDNode)     = y%Y2mesh%RotationAcc     (:,iSDNode)
+      enddo
+
       ! --------------------------------------------------------------------------------
       ! --- Outputs 1, Y1=-F_TP, reaction force from SubDyn to ElastoDyn (stored in y%Y1Mesh)
       ! --------------------------------------------------------------------------------
-      ! --- Special case for floating with extramoment
-      if (p%GuyanLoadCorrection.and.p%Floating) then
-         Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! Uses rotated loads
+      ! Contribution from Craig-Bampton modes qm and qdot_m
+      if ( p%nDOFM > 0) then
+         Y1_CB = -( matmul(p%C1_11, x%qm) + matmul(p%C1_12, x%qmdot) )  ! - ( [-M_Bm K_mm]q_m + [-M_Bm C_mm] qdot_m )
+         if (p%GuyanLoadCorrection.and.p%Floating) then
+            Y1_CB = matmul(RRb2g, Y1_CB) !>>> Rotate All
+         endif
+      else
+         Y1_CB = 0.0_ReKi
       endif
 
-      ! Compute external force on internal (F_L) and interface nodes (F_I)
-      call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection), RotateLoads=.False.); if(Failed()) return
-      call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
-
-      ! Compute reaction/coupling force at TP
+      ! Contribution from U_TP, Udot_TP, Uddot_TP, Reaction/coupling force at TP 
       Y1_Utp  = - (matmul(p%KBB, m%u_TP) + matmul(p%CBB, m%udot_TP) + matmul(p%MBB, m%udotdot_TP) )
       if (p%nDOFM>0) then
          !>>> Rotate All
@@ -615,23 +684,26 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          Y1_Utp  = Y1_Utp + matmul(p%MBmmB, m%udotdot_TP)  
          !endif
       endif
-      if ( p%nDOFM > 0) then
-         Y1_CB = -( matmul(p%C1_11, x%qm) + matmul(p%C1_12, x%qmdot) )
-         if (p%GuyanLoadCorrection.and.p%Floating) then
-            Y1_CB = matmul(RRb2g, Y1_CB) !>>> Rotate All
-         endif
-      else
-         Y1_CB = 0.0_ReKi
-      endif
-      Y1_Guy_R =   matmul( F_I, p%TI )
-      Y1_Guy_L = - matmul(p%D1_142, m%F_L)  ! non rotated loads
-      if (.not.(p%GuyanLoadCorrection.and.p%Floating)) then
-         Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! Uses non rotated loads
-      endif
+
+      ! --- Special case for floating with extramoment, we use "rotated loads" m%F_L previously computed
       if (p%GuyanLoadCorrection.and.p%Floating) then
-         Y1_CB_L = matmul(RRb2g, Y1_CB_L) !>>> Rotate All
+         Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! = -      (M_Bm . Phi_m^T) "F_L", where "F_L"=Rg2b F_L are rotated loads
+         Y1_CB_L = matmul(RRb2g, Y1_CB_L)      ! = - Rb2g (M_Bm . Phi_m^T) Rg2b F_L
       endif
 
+      ! Compute "non-rotated" external force on internal (F_L) and interface nodes (F_I)
+      call GetExtForceOnInternalDOF(u, p, x, m, m%F_L, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection), RotateLoads=.False.); if(Failed()) return
+      call GetExtForceOnInterfaceDOF(p, m%Fext, F_I)
+
+      ! Contributions from external forces
+      Y1_Guy_R =   matmul( F_I, p%TI )     ! = - [-T_I.^T] F_R  = [T_I.^T] F_R =~ F_R T_I (~: FORTRAN convention)
+      Y1_Guy_L = - matmul(p%D1_142, m%F_L) ! = - (- T_I^T . Phi_Rb^T) F_L, non-rotated loads
+
+      if (.not.(p%GuyanLoadCorrection.and.p%Floating)) then
+         Y1_CB_L = - (matmul(p%D1_141, m%F_L)) ! = - (M_Bm . Phi_m^T) F_L, non-rotated loads
+      endif
+
+      ! Total contribution
       Y1 = Y1_CB + Y1_Utp + Y1_CB_L+ Y1_Guy_L + Y1_Guy_R 
       ! KEEP ME
       !if ( p%nDOFM > 0) then
@@ -691,11 +763,11 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          END IF        
          
          ! Map calculated results into the AllOuts Array + perform averaging and all necessary extra calculations
-         CALL SDOut_MapOutputs(u, p, x, y, m, AllOuts, ErrStat2, ErrMsg2); if(Failed()) return
+         CALL SDOut_MapOutputs(u, p, x, y, m, m%AllOuts, ErrStat2, ErrMsg2); if(Failed()) return
             
          ! Put the output data in the WriteOutput array
          DO I = 1,p%NumOuts+p%OutAllInt*p%OutAllDims
-            y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
+            y%WriteOutput(I) = p%OutParam(I)%SignM * m%AllOuts( p%OutParam(I)%Indx )
             IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
                m%SDWrOutput(I) = y%WriteOutput(I)            
             END IF                        
@@ -774,7 +846,7 @@ CHARACTER(1024)              :: Line, Dummy_Str  ! String to temporarially hold 
 CHARACTER(64), ALLOCATABLE   :: StrArray(:)  ! Array of strings, for better control of table inputs
 LOGICAL                      :: Echo  
 LOGICAL                      :: LegacyFormat
-LOGICAL                      :: bNumeric
+LOGICAL                      :: bNumeric, bInteger
 INTEGER(IntKi)               :: UnIn
 INTEGER(IntKi)               :: nColumns, nColValid, nColNumeric
 INTEGER(IntKi)               :: IOS
@@ -1013,7 +1085,12 @@ Init%SSIM       = 0.0_ReKi ! Important init
 ! Reading reaction lines one by one, allowing for 1, 7 or 8 columns, with col8 being a string for the SSIfile
 do I = 1, p%nNodes_C
    READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading reaction line'; if (Failed()) return
-   call ReadIAryFromStr(Line, p%Nodes_C(I,:), 8, nColValid, nColNumeric, Init%SSIfile(I:I));
+   j = index(line, achar(13))       ! Remove any carriage returns in this line (required by the Flang compiler)
+   do while (j > 0)
+      line(j:j) = " "
+      j = index(line, achar(13))
+   end do
+   call ReadIAryFromStrSD(Line, p%Nodes_C(I,:), 8, nColValid, nColNumeric, Init%SSIfile(I:I));
    if (nColValid==1 .and. nColNumeric==1) then
       ! Temporary allowing this
       call LegacyWarning('SubDyn reaction line has only 1 column. Please use 7 or 8 values')
@@ -1051,7 +1128,12 @@ p%Nodes_I(:,1) = -1 ! First column is node, initalize to wrong value for safety
 ! Reading interface lines one by one, allowing for 1 or 7 columns (cannot use ReadIAry)
 DO I = 1, p%nNodes_I
    READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='Error reading interface line'; if (Failed()) return
-   call ReadIAryFromStr(Line, p%Nodes_I(I,:), 7, nColValid, nColNumeric);
+   j = index(line, achar(13))    ! Remove any carriage returns in this line (required by the Flang compiler)
+   do while (j > 0)
+      line(j:j) = " "
+      j = index(line, achar(13))
+   end do
+   call ReadIAryFromStrSD(Line, p%Nodes_I(I,:), 7, nColValid, nColNumeric);
    if ((nColValid/=nColNumeric).or.((nColNumeric/=1).and.(nColNumeric/=7)) ) then
       CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Interface line must consist of 1 or 7 numerical values. Problematic line: "'//trim(Line)//'"')
       return
@@ -1072,20 +1154,50 @@ CALL ReadCom  ( UnIn, SDInputFile,             'Members Headers'              ,E
 CALL ReadCom  ( UnIn, SDInputFile,             'Members Units  '              ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL AllocAry(Init%Members, p%NMembers, MembersCol, 'Members', ErrStat2, ErrMsg2)
 Init%Members(:,:) = 0.0_ReKi
-if (LegacyFormat) then
-   nColumns = 5
-   Init%Members(:,iMType) = idMemberBeam ! Important, in legacy all members are beams
-else
-   nColumns = MembersCol
+
+nColumns=MembersCol
+
+if (p%NMembers == 0) then
+   CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": There should be at least one SubDyn member: "'//trim(Line)//'"')
+   return
 endif
-DO I = 1, p%NMembers
+
+CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
+READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='First line of members array'; if (Failed()) return
+CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Members', 'First line of members array', ErrStat2, ErrMsg2 )
+if (ErrStat2/=0) then
+   ! We try with one column less (legacy format)
+   nColumns = MembersCol-1
+   deallocate(StrArray)
+   CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
+   CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Members', 'First line of members array', ErrStat2, ErrMsg2 ); if(Failed()) return
+   call LegacyWarning('Member table contains 6 columns instead of 7,  using default member directional cosines ID (-1) for all members. &
+   &The directional cosines will be computed based on the member nodes for all members.')
+   Init%Members(:,7) = -1
+endif
+! Extract fields from first line
+DO I = 1, nColumns
+   bInteger = is_integer(StrArray(I), Init%Members(1,I)) ! Convert from string to float
+   if (.not.bInteger) then
+      CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Non integer character found in Member line. Problematic line: "'//trim(Line)//'"')
+      return
+   endif
+ENDDO
+
+if (allocated(StrArray)) then
+   deallocate(StrArray)
+endif
+
+! ! Read remaining lines
+DO I = 2, p%NMembers
    CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, nColumns, 'Members line '//Num2LStr(I), 'Member number and connectivity ', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
    Init%Members(I,1:nColumns) = Dummy_IntAry(1:nColumns)
-ENDDO   
+ENDDO 
+
 IF (Check( p%NMembers < 1 , 'NMembers must be > 0')) return
 
-!------------------ MEMBER X-SECTION PROPERTY data 1/2 [isotropic material for now: use this table if circular-tubular elements ------------------------
-CALL ReadCom  ( UnIn, SDInputFile,                 ' Member X-Section Property Data 1/2 ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+!------------------ MEMBER CROSS-SECTION PROPERTY data 1/2 [isotropic material for now: use this table if circular-tubular elements ------------------------
+CALL ReadCom  ( UnIn, SDInputFile,                 ' Member CROSS-Section Property Data 1/2 ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsB, 'NPropSets', 'Number of property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Header'            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Units '            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -1096,8 +1208,8 @@ DO I = 1, Init%NPropSetsB
 ENDDO   
 IF (Check( Init%NPropSetsB < 1 , 'NPropSets must be >0')) return
 
-!------------------ MEMBER X-SECTION PROPERTY data 2/2 [isotropic material for now: use this table if any section other than circular, however provide COSM(i,j) below) ------------------------
-CALL ReadCom  ( UnIn, SDInputFile,                  'Member X-Section Property Data 2/2 '               ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+!------------------ MEMBER CROSS-SECTION PROPERTY data 2/2 [isotropic material for now: use this table if any section other than circular, however provide COSM(i,j) below) ------------------------
+CALL ReadCom  ( UnIn, SDInputFile,                  'Member CROSS-Section Property Data 2/2 '               ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsX, 'NXPropSets', 'Number of non-circular property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                  'Property Data 2/2 Header'                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                  'Property Data 2/2 Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -1183,8 +1295,32 @@ IF (Check( Init%nCMass < 0     , 'NCMass must be >=0')) return
 
 !---------------------------- OUTPUT: SUMMARY & OUTFILE ------------------------------
 CALL ReadCom (UnIn, SDInputFile,               'OUTPUT'                                            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL ReadLVar(UnIn, SDInputFile, Init%SSSum  , 'SSSum'  , 'Summary File Logic Variable'            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL ReadLVar(UnIn, SDInputFile, Init%OutCOSM, 'OutCOSM', 'Cosine Matrix Logic Variable'           ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return !bjj: TODO: OutCOSM isn't used anywhere else.
+CALL ReadLVar(UnIn, SDInputFile, Init%SSSum  , 'SumPrint'  , 'Summary File Logic Variable'            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+! --- Reading OutCBModes and OutFEM Modes (temporary backward compatibility if missing)
+!CALL ReadIVar( UnIn, SDInputFile, p%OutCBModes  , 'OutCBModes'  , 'Output of CB Modes'  , ErrStat2 , ErrMsg2 , UnEc ); if(Failed()) return
+read(UnIn,'(A)',iostat=ErrStat2) Line
+call Conv2UC(Line)  ! to uppercase
+if (index(Line, 'OUTCBMODES')>1) then
+   read(Line, *, iostat=ErrStat2) p%OutCBModes
+   ErrMsg2='Error reading OutCBModes in file:'//trim(SDInputFile)
+   if(Failed()) return 
+
+   CALL ReadIVar( UnIn, SDInputFile, p%OutFEMModes , 'OutFEMModes' , 'Output of FEM Modes' , ErrStat2 , ErrMsg2 , UnEc ); if(Failed()) return
+   if(Failed()) return 
+
+   CALL ReadLVar(UnIn, SDInputFile, Init%OutCOSM, 'OutCOSM', 'Cosine Matrix Logic Variable'           ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return !bjj: TODO: OutCOSM isn't used anywhere else.
+else
+   p%OutCBModes  = idOutputFormatNone
+   p%OutFEMModes = idOutputFormatNone
+   call LegacyWarning('OutCBModes and OutFEMModes are not present in input file towards the output section')
+
+   read(Line, *, iostat=ErrStat2) Init%OutCOSM
+   ErrMsg2='Error reading OutCOSM in file:'//trim(SDInputFile)
+   if(Failed()) return 
+
+endif
+! --- Continue
+!CALL ReadLVar(UnIn, SDInputFile, Init%OutCOSM, 'OutCOSM', 'Cosine Matrix Logic Variable'           ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return !bjj: TODO: OutCOSM isn't used anywhere else.
 CALL ReadLVar(UnIn, SDInputFile, p%OutAll    , 'OutAll' , 'Output all Member Forces Logic Variable',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 !Store an integer version of it
 p%OutAllInt= 1
@@ -1216,7 +1352,7 @@ CALL ReadVar ( UnIn, SDInputFile, p%OutSFmt , 'OutSFmt' , 'Format for output col
 CALL ReadCom ( UnIn, SDInputFile,             ' Member Output List SECTION ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadIVar( UnIn, SDInputFile, p%NMOutputs, 'NMOutputs', 'Number of Members whose output must go into OutJckF and/or FAST .out',ErrStat2, ErrMsg2, UnEc )
 if (Failed()) return
-IF (Check ( (p%NMOutputs < 0) .OR. (p%NMOutputs > p%NMembers) .OR. (p%NMOutputs > 9), 'NMOutputs must be >=0 and <= minimim(NMembers,9)')) return
+IF (Check ( (p%NMOutputs < 0) .OR. (p%NMOutputs > p%NMembers) .OR. (p%NMOutputs > 99), 'NMOutputs must be >=0 and <= minimim(NMembers,99)')) return
 
 CALL ReadCom( UnIn, SDInputFile, ' Output Member Headers',ErrStat2, ErrMsg2, UnEc) ; if(Failed()) return
 CALL ReadCom( UnIn, SDInputFile, ' Output Member Units'  ,ErrStat2, ErrMsg2, UnEc) ; if(Failed()) return
@@ -1320,7 +1456,7 @@ END SUBROUTINE SD_Input
 !! Example Str="1 2 not_a_int 3" -> IntArray = (/1,2,3/)  StrArrayOut=(/"not_a_int"/)
 !! No need for error handling, the caller will check how many valid inputs were on the line
 !! TODO, place me in NWTC LIb 
-SUBROUTINE ReadIAryFromStr(Str, IntArray, nColMax, nColValid, nColNumeric, StrArrayOut)
+SUBROUTINE ReadIAryFromStrSD(Str, IntArray, nColMax, nColValid, nColNumeric, StrArrayOut)
    character(len=*),               intent(in)            :: Str                    !< 
    integer(IntKi), dimension(:),   intent(inout)         :: IntArray               !< NOTE: inout, to allow for init values
    integer(IntKi),                 intent(in)            :: nColMax
@@ -1361,7 +1497,7 @@ SUBROUTINE ReadIAryFromStr(Str, IntArray, nColMax, nColValid, nColNumeric, StrAr
       endif
    enddo
    if(allocated(StrArray)) deallocate(StrArray)
-END SUBROUTINE ReadIAryFromStr
+END SUBROUTINE ReadIAryFromStrSD
 
 !> See ReadIAryFromStr, same but for floats
 SUBROUTINE ReadFAryFromStr(Str, FloatArray, nColMax, nColValid, nColNumeric, StrArrayOut)
@@ -1730,7 +1866,6 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    TYPE(SD_InputType)                              :: u_interp       ! interpolated value of inputs 
    REAL(ReKi)                                      :: xq(2*p%nDOFM) !temporary states (qm and qmdot only)
    REAL(ReKi)                                      :: udotdot_TP2(6) ! temporary copy of udotdot_TP
-   REAL(ReKi)                                      :: F_L2(p%nDOF__L)   ! temporary copy of F_L
    INTEGER(IntKi)                                  :: ErrStat2
    CHARACTER(ErrMsgLen)                            :: ErrMsg2
 
@@ -1753,7 +1888,7 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
                 
    ! extrapolate u to find u_interp = u(t + dt)=u_n+1
    CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-   CALL GetExtForceOnInternalDOF(u_interp, p, x, m, F_L2, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection.and..not.p%Floating), RotateLoads=(p%GuyanLoadCorrection.and.p%Floating))
+   CALL GetExtForceOnInternalDOF(u_interp, p, x, m, m%F_L2, ErrStat2, ErrMsg2, GuyanLoadCorrection=(p%GuyanLoadCorrection.and..not.p%Floating), RotateLoads=(p%GuyanLoadCorrection.and.p%Floating))
    udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
    if (p%GuyanLoadCorrection.and.p%Floating) then
       ! >>> Rotate All - udotdot_TP to body coordinates
@@ -1763,11 +1898,11 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    
    ! calculate (u_n + u_n+1)/2
    udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
-   F_L2        = 0.5_ReKi * ( F_L2        + m%F_L        )
+   m%F_L2      = 0.5_ReKi * ( m%F_L2      + m%F_L        )
           
    ! set xq = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)   
    xq(        1:  p%nDOFM)=p%SDDeltaT * x%qmdot                                                                                     !upper portion of array
-   xq(1+p%nDOFM:2*p%nDOFM)=p%SDDeltaT * (-p%KMMDiag*x%qm - p%CMMDiag*x%qmdot - matmul(p%MMB, udotdot_TP2)  + matmul(F_L2,p%PhiM ))  !lower portion of array
+   xq(1+p%nDOFM:2*p%nDOFM)=p%SDDeltaT * (-p%KMMDiag*x%qm - p%CMMDiag*x%qmdot - matmul(p%MMB, udotdot_TP2)  + matmul(m%F_L2,p%PhiM ))  !lower portion of array
    ! note: matmul(F_L2,p%PhiM  ) = matmul(p%PhiM_T,F_L2) because F_L2 is 1-D
              
    !....................................................
@@ -2086,7 +2221,7 @@ SUBROUTINE SD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
 END SUBROUTINE SD_JacobianPConstrState
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedTrimOP )
    REAL(DbKi),                        INTENT(IN   ) :: t          !< Time in seconds at operating point
    TYPE(SD_InputType),                INTENT(INOUT) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(SD_ParameterType),            INTENT(IN   ) :: p          !< Parameters
@@ -2104,8 +2239,11 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL, INTENT(INOUT) :: z_op(:)    !< values of linearized constraint states
+   LOGICAL,                 OPTIONAL, INTENT(IN   ) :: NeedTrimOP !< whether a y_op values should contain values for trim solution (3-value representation instead of full orientation matrices, no rotation acc)
+
    ! Local
    INTEGER(IntKi)                                                :: idx, i
+   LOGICAL                                                       :: ReturnTrimOP
    INTEGER(IntKi)                                                :: nu
    INTEGER(IntKi)                                                :: ny
    INTEGER(IntKi)                                                :: ErrStat2
@@ -2131,11 +2269,21 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       call PackMotionMesh(u%TPMesh, u_op, idx, FieldMask=FieldMask)
       call PackLoadMesh(u%LMesh, u_op, idx)
    END IF
+   
    IF ( PRESENT( y_op ) ) THEN
-      ny = p%Jac_ny + y%Y2Mesh%NNodes * 6  ! Jac_ny has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
+      ny = p%Jac_ny + y%Y2Mesh%NNodes * 6 + y%Y3Mesh%NNodes * 6  ! Jac_ny has 3 orientation angles, but the OP needs the full 9 elements of the DCM (thus 6 more per node)
       if (.not. allocated(y_op)) then
          call AllocAry(y_op, ny, 'y_op', ErrStat2, ErrMsg2); if(Failed()) return
       end if
+      
+      if (present(NeedTrimOP)) then
+         ReturnTrimOP = NeedTrimOP
+      else
+         ReturnTrimOP = .false.
+      end if
+      
+      if (ReturnTrimOP) y_op = 0.0_ReKi ! initialize in case we are returning packed orientations and don't fill the entire array
+      
       idx = 1
       call PackLoadMesh(y%Y1Mesh, y_op, idx)
       FieldMask = .false.
@@ -2145,12 +2293,14 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       FieldMask(MASKID_RotationVel)     = .true.
       FieldMask(MASKID_TranslationAcc)  = .true.
       FieldMask(MASKID_RotationAcc)     = .true.
-      call PackMotionMesh(y%Y2Mesh, y_op, idx, FieldMask=FieldMask)
+      call PackMotionMesh(y%Y2Mesh, y_op, idx, FieldMask=FieldMask, TrimOP=ReturnTrimOP)
+      call PackMotionMesh(y%Y3Mesh, y_op, idx, FieldMask=FieldMask, TrimOP=ReturnTrimOP)
       idx = idx - 1
       do i=1,p%NumOuts
          y_op(i+idx) = y%WriteOutput(i)
       end do
    END IF
+   
    IF ( PRESENT( x_op ) ) THEN
       if (.not. allocated(x_op)) then
          call AllocAry(x_op, p%Jac_nx*2,'x_op',ErrStat2,ErrMsg2); if (Failed()) return
@@ -2184,7 +2334,7 @@ SUBROUTINE SD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    call CleanUp()
 contains
    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton') 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
         Failed =  ErrStat >= AbortErrLev
         if (Failed) call CleanUp()
    end function Failed
@@ -2548,7 +2698,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, PhiRb, nM_out, OmegaL, PhiL,
       !if (p%SDDeltaT>dt_max) then
       !   print*,'info: time step may be too large compared to max SubDyn frequency.'
       !endif
-      write(Info,'(3x,A,F8.5,A,F8.5,A,F8.5)') 'SubDyn recommended dt:',dt_max, ' - Current dt:', p%SDDeltaT,' - Max frequency:', freq_max
+      write(Info,'(3x,A,F8.5,A,F8.5,A,F9.3)') 'SubDyn recommended dt:',dt_max, ' - Current dt:', p%SDDeltaT,' - Max frequency:', freq_max
       call WrScr(Info)
    ELSE ! no retained modes, so 
       ! OmegaM, JDampings, PhiM, MBM, MMB,  x don't exist in this case
@@ -2622,20 +2772,23 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
       
    ! for readability, we're going to keep track of the max ErrStat through SetErrStat() and not return until the end of this routine.
    CALL AllocAry( Misc%F_L,          p%nDOF__L,   'F_L',           ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%F_L2,         p%nDOF__L,   'F_L2',          ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%UR_bar,       p%nDOFI__,   'UR_bar',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
    CALL AllocAry( Misc%UR_bar_dot,   p%nDOFI__,   'UR_bar_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
    CALL AllocAry( Misc%UR_bar_dotdot,p%nDOFI__,   'UR_bar_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars') !TODO Rb
    CALL AllocAry( Misc%UL,           p%nDOF__L,   'UL',            ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%UL_NS,        p%nDOF__L,   'UL_NS',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%UL_dot,       p%nDOF__L,   'UL_dot',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%UL_dotdot,    p%nDOF__L,   'UL_dotdot',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%UL_SIM,       p%nDOF__L,   'UL_SIM'   ,     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%UL_0m,        p%nDOF__L,   'UL_0m',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%DU_full,      p%nDOF,      'DU_full',       ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full,       p%nDOF,      'U_full',        ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
+   CALL AllocAry( Misc%U_full_NS,    p%nDOF,      'U_full_NS',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_elast, p%nDOF,      'U_full_elast',  ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_dot,   p%nDOF,      'U_full_dot',    ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_full_dotdot,p%nDOF,      'U_full_dotdot', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
    CALL AllocAry( Misc%U_red,        p%nDOF_red,  'U_red',         ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%U_red_dot,    p%nDOF_red,  'U_red_dot',     ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
-   CALL AllocAry( Misc%U_red_dotdot, p%nDOF_red,  'U_red_dotdot',  ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')      
 
    CALL AllocAry( Misc%Fext,      p%nDOF     , 'm%Fext    ', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
    CALL AllocAry( Misc%Fext_red,  p%nDOF_red , 'm%Fext_red', ErrStat2, ErrMsg2 );CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocMiscVars')
@@ -2896,9 +3049,37 @@ contains
    
 END SUBROUTINE PartitionDOFNodes
 
+
+!> Setup the vector of reduced DOFs based on R and L values, and transfer to full vector of DOFs
+!! Reminder "reduced" here means the reduction due to constraints (rigid links and rotational joints)
+!! This is a generic function, "x" can be used for displacements, velocities, accelerations
+!! m%U_red is only used as a intermediate storage
+SUBROUTINE ReducedToFull(p, m, xR_bar, xL, x_full)
+   TYPE(SD_ParameterType),target,INTENT(IN   )  :: p           !< Parameters
+   TYPE(SD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
+   REAL(ReKi), DIMENSION(:),     INTENT(IN   )  :: xR_bar      !< Values of "x" interface nodes (6xnI)
+   REAL(ReKi), DIMENSION(:),     INTENT(IN   )  :: xL          !< Values of "x" internal nodes
+   REAL(ReKi), DIMENSION(:),     INTENT(  OUT)  :: x_full      !< Values of "x" transferred to full vector of DOF
+   if (p%reduced) then
+      ! Filling up full vector of reduced DOF
+      m%U_red(p%IDI__) = xR_bar
+      m%U_red(p%ID__L) = xL     
+      m%U_red(p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
+      m%U_red(p%ID__F) = 0
+      ! Transfer to full 
+      x_full = matmul(p%T_red, m%U_red) ! TODO use LAPACK, but T_red and U_red have different types...
+   else
+      ! We use U_full directly
+      x_full(p%IDI__) = xR_bar
+      x_full(p%ID__L) = xL     
+      x_full(p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
+      x_full(p%ID__F) = 0
+   endif
+END SUBROUTINE ReducedToFull
+
 !> Compute displacements of all nodes in global system (Guyan + Rotated CB)
 !! 
-SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic, U_full)
+SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic)
    TYPE(SD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
    TYPE(SD_ParameterType),target,INTENT(IN   )  :: p           !< Parameters
    TYPE(SD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
@@ -2906,7 +3087,6 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic, U_full)
    LOGICAL,                      INTENT(IN   )  :: bGuyan      !< include Guyan Contribution
    LOGICAL,                      INTENT(IN   )  :: bElastic    !< include Elastic contribution
    REAL(ReKi), DIMENSION(:),     INTENT(  OUT)  :: DU_full     !< LeverArm in full system
-   REAL(ReKi), DIMENSION(:), OPTIONAL,   INTENT(IN   )  :: U_full  !< Displacements in full system
    !locals
    INTEGER(IntKi)               :: iSDNode
    REAL(ReKi)                   :: rotations(3)
@@ -2923,77 +3103,56 @@ SUBROUTINE LeverArm(u, p, x, m, DU_full, bGuyan, bElastic, U_full)
    rotations  = GetSmllRotAngs(u%TPMesh%Orientation(:,:,1), ErrStat2, Errmsg2);
    m%u_TP     = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
 
-   if (present(U_full)) then
-      ! Then we use it directly, U_full may contain Static improvement
-      DU_full=U_full
-      ! We remove u_TP for floating
-      if (p%Floating) then
-         do iSDNode = 1,p%nNodes
-            DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
-            DU_full(DOFList(1:3)) = DU_full(DOFList(1:3)) - m%u_TP(1:3)
-         enddo
-      endif 
+   ! --- CB modes contribution to motion (L-DOF only), NO STATIC IMPROVEMENT
+   if (bElastic .and. p%nDOFM > 0) then
+      m%UL = matmul( p%PhiM,  x%qm    )
    else
-      ! --- CB modes contribution to motion (L-DOF only), NO STATIC IMPROVEMENT
-      if (bElastic .and. p%nDOFM > 0) then
-         m%UL = matmul( p%PhiM,  x%qm    )
-      else
-         m%UL = 0.0_ReKi
-      end if
-      ! --- Adding Guyan contribution to R and L DOFs
-      if (bGuyan .and. .not.p%Floating) then
-         m%UR_bar =         matmul( p%TI      , m%u_TP       )
-         m%UL     = m%UL +  matmul( p%PhiRb_TI, m%u_TP       ) 
-      else
-         ! Guyan modes are rigid body modes, we will add them in the "Full system" later
-         m%UR_bar = 0.0_ReKi
-      endif
-      ! --- Build original DOF vectors (DOF before the CB reduction)
-      m%U_red(p%IDI__) = m%UR_bar
-      m%U_red(p%ID__L) = m%UL     
-      m%U_red(p%IDC_Rb)= 0    ! NOTE: for now we don't have leader DOF at "C" (bottom)
-      m%U_red(p%ID__F) = 0
-      if (p%reduced) then
-         DU_full = matmul(p%T_red, m%U_red)
-      else
-         DU_full = m%U_red
-      endif
-      ! --- Adding Guyan contribution for rigid body
-      if (bGuyan .and. p%Floating) then
-         ! For floating, we compute the Guyan motion directly (rigid body motion with TP as origin)
-         ! This introduce non-linear "rotations" effects, where the bottom node should "go up", and not just translate horizontally
-         Rb2g(1:3,1:3) = transpose(u%TPMesh%Orientation(:,:,1))
-         do iSDNode = 1,p%nNodes
-            DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
-            ! --- Guyan (rigid body) motion in global coordinates
-            rIP0(1:3)   = p%DP0(1:3, iSDNode)
-            rIP(1:3)    = matmul(Rb2g, rIP0)
-            duP(1:3)    = rIP - rIP0 ! NOTE: without m%u_TP(1:3)
-            ! Full diplacements Guyan + rotated CB (if asked) >>> Rotate All
-            if (p%GuyanLoadCorrection) then
-               DU_full(DOFList(1:3)) = matmul(Rb2g, DU_full(DOFList(1:3))) + duP(1:3)       
-               DU_full(DOFList(4:6)) = matmul(Rb2g, DU_full(DOFList(4:6))) + rotations(1:3)
-            else
-               DU_full(DOFList(1:3)) = DU_full(DOFList(1:3)) + duP(1:3)       
-               DU_full(DOFList(4:6)) = DU_full(DOFList(4:6)) + rotations(1:3)
-            endif
-         enddo
-      endif 
-   endif ! U_full no provided
+      m%UL = 0.0_ReKi
+   end if
+   ! --- Adding Guyan contribution to R and L DOFs
+   if (bGuyan .and. .not.p%Floating) then
+      m%UR_bar =         matmul( p%TI      , m%u_TP       )
+      m%UL     = m%UL +  matmul( p%PhiRb_TI, m%u_TP       ) 
+   else
+      ! Guyan modes are rigid body modes, we will add them in the "Full system" later
+      m%UR_bar = 0.0_ReKi
+   endif
+   ! --- Build original DOF vectors (DOF before the CB reduction)
+   call ReducedToFull(p, m, m%UR_bar, m%UL, DU_full)
+   ! --- Adding Guyan contribution for rigid body
+   if (bGuyan .and. p%Floating) then
+      ! For floating, we compute the Guyan motion directly (rigid body motion with TP as origin)
+      ! This introduce non-linear "rotations" effects, where the bottom node should "go up", and not just translate horizontally
+      Rb2g(1:3,1:3) = transpose(u%TPMesh%Orientation(:,:,1))
+      do iSDNode = 1,p%nNodes
+         DOFList => p%NodesDOF(iSDNode)%List  ! Alias to shorten notations
+         ! --- Guyan (rigid body) motion in global coordinates
+         rIP0(1:3)   = p%DP0(1:3, iSDNode)
+         rIP(1:3)    = matmul(Rb2g, rIP0)
+         duP(1:3)    = rIP - rIP0 ! NOTE: without m%u_TP(1:3)
+         ! Full diplacements Guyan + rotated CB (if asked) >>> Rotate All
+         if (p%GuyanLoadCorrection) then
+            DU_full(DOFList(1:3)) = matmul(Rb2g, DU_full(DOFList(1:3))) + duP(1:3)       
+            DU_full(DOFList(4:6)) = matmul(Rb2g, DU_full(DOFList(4:6))) + rotations(1:3)
+         else
+            DU_full(DOFList(1:3)) = DU_full(DOFList(1:3)) + duP(1:3)       
+            DU_full(DOFList(4:6)) = DU_full(DOFList(4:6)) + rotations(1:3)
+         endif
+      enddo
+   endif 
 END SUBROUTINE LeverArm
 
 !------------------------------------------------------------------------------------------------------
 !> Construct force vector on internal DOF (L) from the values on the input mesh 
-!! First, the full vector of external forces is built on the non-reduced DOF
-!! Then, the vector is reduced using the Tred matrix
-SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadCorrection, RotateLoads, U_full)
+!! First, the full vector of external forces/moments is built on the non-reduced DOF
+!! Then, the vector is reduced using the T_red matrix
+SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadCorrection, RotateLoads)
    type(SD_InputType),     intent(in   )  :: u ! Inputs
    type(SD_ParameterType), intent(in   )  :: p ! Parameters
    type(SD_ContinuousStateType), intent(in   )  :: x  !< Continuous states at t
    type(SD_MiscVarType),   intent(inout)  :: m ! Misc, for storage optimization of Fext and Fext_red
    logical               , intent(in   )  :: GuyanLoadCorrection ! If true add extra moment
    logical               , intent(in   )  :: RotateLoads ! If true, loads are rotated to body coordinate 
-   real(Reki), optional,   intent(in   )  :: U_full(:)      ! DOF displacements (Guyan + CB)
    real(ReKi)          ,   intent(out)    :: F_L(p%nDOF__L)  !< External force on internal nodes "L"
    integer(IntKi),         intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),           intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -3003,6 +3162,7 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    integer :: iCC, iElem, iChannel !< Index on control cables, element, Channel
    integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
    real(ReKi)                    :: CableTension ! Controllable Cable force
+   real(ReKi)                    :: DeltaL ! Change of length
    real(ReKi)                    :: rotations(3)
    real(ReKi)                    :: du(3), Moment(3), Force(3) 
    real(ReKi)                    :: u_TP(6)
@@ -3012,16 +3172,23 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
    real(ReKi), dimension(3) ::  duP  ! Displacement of node due to rigid rotation
    real(R8Ki), dimension(3,3) :: Rb2g ! Rotation matrix body 2 global
    real(R8Ki), dimension(3,3) :: Rg2b ! Rotation matrix global 2 body coordinates
-   !
-   real(ReKi), parameter :: myNaN = -9999998.989_ReKi 
 
    if (GuyanLoadCorrection) then
       ! Compute node displacements "DU_full" for lever arm
-      call LeverArm(u, p, x, m, m%DU_full, bGuyan=.True., bElastic=.False., U_full=U_full)
+      call LeverArm(u, p, x, m, m%DU_full, bGuyan=.True., bElastic=.False.)
    endif
 
+   ! TODO
+   ! Rewrite this function into five steps:
+   !  - Setup loads by simple sum on physial nodes of LMesh, FG and FC_
+   !  - Rotate them if needed
+   !  - Introduce lever arm if needed
+   !  - Spread moment on nodes 
+   !  - Perform reduction using T_red
+   ! This could make things slightly cleaner and avoid the if statement in the do-loop for the moment
+
    ! --- Build vector of external forces (including gravity) (Moment done below)  
-   m%Fext= myNaN
+   m%Fext= 0.0_ReKi
    if (RotateLoads) then ! Forces in body coordinates 
       Rg2b(1:3,1:3) = u%TPMesh%Orientation(:,:,1)  ! global 2 body coordinates
       do iNode = 1,p%nNodes
@@ -3045,27 +3212,33 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
          iElem    = p%CtrlElem2Channel(iCC,1)
          iChannel = p%CtrlElem2Channel(iCC,2)
          IDOF = p%ElemsDOF(1:12, iElem)
+         ! DeltaL = DeltaL0 + DeltaL_control = - Le T0/(EA+T0) + DeltaL_control
+         DeltaL = - p%ElemProps(iElem)%Length * p%ElemProps(iElem)%T0  / (p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area   +  p%ElemProps(iElem)%T0)
+         DeltaL = DeltaL + u%CableDeltaL(iChannel) 
          ! T(t) = - EA * DeltaL(t) /(Le + Delta L(t)) ! NOTE DeltaL<0
-         CableTension =  -p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area * u%CableDeltaL(iChannel) / (p%ElemProps(iElem)%Length + u%CableDeltaL(iChannel))
-         print*,'TODO, Controllable pretension cable needs thinking for moment'
-         STOP
-         !if (RotateLoads) then ! in body coordinate
-         !   m%Fext(IDOF) = m%Fext(IDOF) + matmul(Rg2b,m%FC_unit( IDOF ) * (CableTension - p%ElemProps(iElem)%T0))
-         !else ! in global
-         !   m%Fext(IDOF) = m%Fext(IDOF) +             m%FC_unit( IDOF ) * (CableTension - p%ElemProps(iElem)%T0)
-         !endif
+         CableTension =  -p%ElemProps(iElem)%YoungE*p%ElemProps(iElem)%Area * DeltaL / (p%ElemProps(iElem)%Length + DeltaL)
+         if (RotateLoads) then ! in body coordinate
+            ! We only rotate the loads, moments are rotated below
+            m%Fext(IDOF(1:3))   = m%Fext(IDOF(1:3))   + matmul(Rg2b,m%FC_unit( IDOF(1:3) )   * (CableTension - p%ElemProps(iElem)%T0))
+            m%Fext(IDOF(7:9))   = m%Fext(IDOF(7:9))   + matmul(Rg2b,m%FC_unit( IDOF(7:9) )   * (CableTension - p%ElemProps(iElem)%T0))
+            m%Fext(IDOF(4:6))   = m%Fext(IDOF(4:6))   +             m%FC_unit( IDOF(4:6) )   * (CableTension - p%ElemProps(iElem)%T0)
+            m%Fext(IDOF(10:12)) = m%Fext(IDOF(10:12)) +             m%FC_unit( IDOF(10:12) ) * (CableTension - p%ElemProps(iElem)%T0)
+         else ! in global
+            m%Fext(IDOF) = m%Fext(IDOF) +             m%FC_unit( IDOF ) * (CableTension - p%ElemProps(iElem)%T0)
+         endif
       enddo
    endif
 
    ! --- Build vector of external moment
    do iNode = 1,p%nNodes
       Force(1:3)  = m%Fext(p%NodesDOF(iNode)%List(1:3) ) ! Controllable cable + External Forces on LMesh
+      Moment(1:3) = m%Fext(p%NodesDOF(iNode)%List(4:6) ) ! Controllable cable 
       ! Moment ext + gravity
       if (RotateLoads) then
          ! In body coordinates
-         Moment(1:3) = matmul(Rg2b, u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6)))
+         Moment(1:3) = matmul(Rg2b, Moment(1:3)+ u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6)))
       else
-         Moment(1:3) =              u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6))
+         Moment(1:3) =              Moment(1:3)+ u%LMesh%Moment(1:3,iNode) + p%FG(p%NodesDOF(iNode)%List(4:6))
       endif
 
       ! Extra moment dm = Delta u x (fe + fg)
@@ -3083,17 +3256,9 @@ SUBROUTINE GetExtForceOnInternalDOF(u, p, x, m, F_L, ErrStat, ErrMsg, GuyanLoadC
       m%Fext( p%NodesDOF(iNode)%List(6::3)) = Moment(3)/nMembers
    enddo
 
-   ! TODO: remove test below in the future
-   if (DEV_VERSION) then
-      if (any(m%Fext == myNaN)) then
-         print*,'Error in setting up Fext'
-         STOP
-      endif
-   endif
-
    ! --- Reduced vector of external force
    if (p%reduced) then
-      m%Fext_red = matmul(p%T_red_T, m%Fext)
+      m%Fext_red = matmul(p%T_red_T, m%Fext) ! TODO use LAPACK
       F_L= m%Fext_red(p%ID__L)
    else
       F_L= m%Fext(p%ID__L)
@@ -3121,17 +3286,261 @@ SUBROUTINE GetExtForceOnInterfaceDOF(  p, Fext, F_I)
    ENDDO
 END SUBROUTINE GetExtForceOnInterfaceDOF
 
+
+!------------------------------------------------------------------------------------------------------
+!> Output the modes to file file    
+SUBROUTINE OutModes(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, ErrStat,ErrMsg)
+   use JSON, only: json_write_array
+   TYPE(SD_InitType),          INTENT(INOUT)  :: Init           ! Input data for initialization routine
+   TYPE(SD_ParameterType),     INTENT(IN)     :: p              ! Parameters
+   TYPE(SD_MiscVarType)  ,     INTENT(IN)     :: m              ! Misc
+   TYPE(SD_InitInputType),     INTENT(IN)     :: InitInput   !< Input data for initialization routine         
+   TYPE(CB_MatArrays),         INTENT(IN)     :: CBparams       ! CB parameters that will be passed in for summary file use
+   REAL(FEKi), dimension(:,:), INTENT(IN)     :: Modes
+   REAL(FEKi), dimension(:)  , INTENT(IN)     :: Omega
+   REAL(FEKi), dimension(:)  , INTENT(IN)     :: Omega_Gy       ! Frequencies of Guyan modes
+   INTEGER(IntKi),             INTENT(OUT)    :: ErrStat        ! Error status of the operation
+   CHARACTER(*),               INTENT(OUT)    :: ErrMsg         ! Error message if ErrStat /= ErrID_None
+   ! LOCALS
+   INTEGER(IntKi)         :: UnSum          ! unit number for this file
+   INTEGER(IntKi)         :: ErrStat2       ! Temporary storage for local errors
+   CHARACTER(ErrMsgLen)   :: ErrMsg2        ! Temporary storage for local errors
+   CHARACTER(1024)        :: FileName       ! name of the filename for modes
+   INTEGER(IntKi) :: I, nModes
+   real(ReKi), allocatable, dimension(:)   :: U         ! Mode
+   real(ReKi), allocatable, dimension(:)   :: U_red     ! Mode
+   real(ReKi), allocatable, dimension(:,:) :: U_Gy      ! All Guyan Modes
+   real(ReKi), allocatable, dimension(:,:) :: U_Gy_red  ! All Guyan Modes reduced
+   real(ReKi), allocatable, dimension(:,:) :: U_Intf    ! Guyan modes at interface
+   real(ReKi), allocatable, dimension(:,:) :: NodesDisp ! Mode
+   integer(IntKi), allocatable, dimension(:) :: Ix, Iy, Iz
+   real(ReKi) :: dx, dy, dz, maxDisp, maxAmplitude
+   character(len=*),parameter :: ReFmt='ES13.6E2'
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+
+   call AllocAry( U        , p%nDOF    , 'U'    , ErrStat2, ErrMsg2); if(Failed()) return
+   call AllocAry( U_red    , p%nDOF_red, 'U_red', ErrStat2, ErrMsg2); if(Failed()) return
+   call AllocAry( Ix       , p%nNodes,   'Ix'   , ErrStat2, ErrMsg2); if(Failed()) return
+   call AllocAry( Iy       , p%nNodes,   'Iy'   , ErrStat2, ErrMsg2); if(Failed()) return
+   call AllocAry( Iz       , p%nNodes,   'Iz'   , ErrStat2, ErrMsg2); if(Failed()) return
+   call AllocAry( NodesDisp, p%nNodes, 3,'NodesDisp', ErrStat2, ErrMsg2); if(Failed()) return
+   call AllocAry( U_Gy     , p%nDOF    , size(CBparams%PhiR,2), 'U_Gy'    , ErrStat2, ErrMsg2); if(Failed()) return
+   call AllocAry( U_Gy_red , p%nDOF_red, size(CBparams%PhiR,2), 'U_Gy_red', ErrStat2, ErrMsg2); if(Failed()) return
+   call AllocAry( U_Intf   , p%nDOF    , 6           ,          'U_Intf'  , ErrStat2, ErrMsg2); if(Failed()) return
+   ! --- Preparation for Modes
+   ! Creating index of "x, y z displacements" in DOF vector for each node
+   do i = 1, p%nNodes
+      Ix(i) = p%NodesDOF(i)%List(1)
+      Iy(i) = p%NodesDOF(i)%List(2)
+      Iz(i) = p%NodesDOF(i)%List(3)
+   enddo
+   ! Computing max displacements
+   dx = maxval(Init%Nodes(:,2))-minval(Init%Nodes(:,2))
+   dy = maxval(Init%Nodes(:,3))-minval(Init%Nodes(:,3))
+   dz = maxval(Init%Nodes(:,4))-minval(Init%Nodes(:,4))
+   maxDisp = max(dx,dy,dz)*0.1 ! 10% of max length
+
+   ! --------------------------------------------------------------------------------}
+   ! --- GY/CB Modes
+   ! --------------------------------------------------------------------------------{
+   if (p%OutCBModes == idOutputFormatNone) then
+      ! pass
+   elseif (p%OutCBModes == idOutputFormatJSON) then
+      ! --- JSON
+      CALL WrScr('   Exporting GY/CB modes to JSON')
+      FileName = TRIM(Init%RootName)//'.CBmodes.json'
+      ! Write Nodes/Connectivity/ElementProperties
+      call WriteJSONCommon(FileName, Init, p, m, InitInput, 'Modes', UnSum, ErrStat2, ErrMsg2); if(Failed()) return
+      write(UnSum, '(A)', advance='no') ','//NewLine 
+      write(UnSum, '(A)') '"Modes": ['
+
+      ! --- Guyan Modes
+      U_Gy_red = 0.0_ReKi                 ! nDOF_red x nGY
+      do i = 1, size(CBparams%PhiR,2)
+         U_Gy_red(p%ID__Rb(i),i) = 1.0_ReKi
+         U_Gy_red(p%ID__L, i)       = CBparams%PhiR(:,i)
+      enddo
+      if(p%reduced) then
+         U_Gy = matmul(p%T_red, U_Gy_red) ! nDOF x nGY
+      else
+         U_Gy = U_Gy_red                  ! nDOF x nGY
+      endif
+      ! TI
+      U_Intf = matmul(U_Gy, p%TI)         ! nDOF x 6 (since TI is nGY x 6)
+      do i = 1, 6
+         call WriteOneMode(U_Intf(:,i), Omega_GY(i), 'GY', i, 6, reduced=.false.)
+      enddo
+
+      ! --- CB Modes
+      if (p%nDOFM>0) write(UnSum, '(A)', advance='no')','//NewLine 
+      do i = 1, p%nDOFM
+         U_red              = 0.0_ReKi
+         U_red(p%ID__L)     = CBparams%PhiL(:,i)
+         call WriteOneMode(U_red, CBparams%OmegaL(i), 'CB', i, p%nDOFM, reduced=p%reduced)
+      enddo
+      write(UnSum, '(A)') ']'
+      write(UnSum, '(A)') '}'
+      if(UnSum>0) close(UnSum)
+   else
+      ErrMsg2='Unknown OutCBMode format: '//num2lstr(p%OutCBModes)
+      ErrStat2=ErrID_Fatal
+      if(Failed()) return
+   endif
+
+
+
+   ! --------------------------------------------------------------------------------
+   ! --- Full FEM Modes
+   ! --------------------------------------------------------------------------------
+   if (p%OutFEMModes == idOutputFormatNone) then
+      ! pass
+   elseif (p%OutFEMModes == idOutputFormatJSON) then
+      ! --- JSON
+      CALL WrScr('   Exporting FEM modes to JSON')
+      FileName = TRIM(Init%RootName)//'.FEMmodes.json'
+      call WriteJSONCommon(FileName, Init, p, m, InitInput, 'Modes', UnSum, ErrStat2, ErrMsg2); if(Failed()) return
+      write(UnSum, '(A)', advance='no') ','//NewLine
+      write(UnSum, '(A)') '"Modes": ['
+      nModes = min(size(Modes,2), 30) ! TODO potentially a parameter
+      do i = 1, nModes
+         U_red = real(Modes(:,i), ReKi)
+         call WriteOneMode(U_red, Omega(i), 'FEM', i, nModes, reduced=p%reduced)
+      enddo
+      write(UnSum, '(A)') ']'
+      write(UnSum, '(A)') '}'
+      if(UnSum>0) close(UnSum)
+
+   else
+      ErrMsg2='Unknown OutFEMModes format: '//num2lstr(p%OutFEMModes)
+      ErrStat2=ErrID_Fatal
+      if(Failed()) return
+   endif
+
+   call CleanUp()
+
+contains
+   SUBROUTINE WriteOneMode(U_red, omegaMode, Prefix, iMode, nModes, reduced)
+      real(ReKi)      , intent(in) :: U_red(:)
+      real(FeKi)      , intent(in) :: omegaMode
+      character(len=*), intent(in) :: Prefix
+      integer(IntKi)  , intent(in) :: iMode
+      integer(IntKi)  , intent(in) :: nModes
+      logical         , intent(in) :: reduced
+      write(UnSum, '(A,A,I0,A,E13.6,A,E13.6,A)', advance='no') '  {"name": "',trim(Prefix),iMode, '", "frequency": ',omegaMode/(TwoPi), ', "omega": ', omegaMode, ', '
+      ! U_full
+      if(reduced) then
+         U = matmul(p%T_red, U_red)
+      else
+         U = U_red
+      endif
+      ! Displacements (x,y,z)
+      NodesDisp(:,1) = U(Ix)
+      NodesDisp(:,2) = U(Iy)
+      NodesDisp(:,3) = U(Iz)
+      ! Normalizing
+      maxAmplitude = maxval(abs(NodesDisp))
+      if (maxAmplitude>1e-5) then
+         NodesDisp(:,:) = NodesDisp(:,:)*maxDisp/maxAmplitude
+      endif
+      call json_write_array(UnSum, '"Displ"', NodesDisp, ReFmt, ErrStat2, ErrMsg2);  
+      write(UnSum, '(A)', advance='no')'}'
+      if (iMode<nModes) write(UnSum, '(A)', advance='no')','//NewLine 
+   END SUBROUTINE WriteOneMode
+
+   LOGICAL FUNCTION Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'OutModes') 
+      Failed =  ErrStat >= AbortErrLev
+      if (Failed) call CleanUp()
+   END FUNCTION Failed
+
+   SUBROUTINE CleanUp()
+      if(allocated(Ix))   deallocate(Ix)
+      if(allocated(Iy))   deallocate(Iy)
+      if(allocated(Iz))   deallocate(Iz)
+      if(allocated(NodesDisp))  deallocate(NodesDisp)
+      if(allocated(U_red))      deallocate(U_red)
+      if(allocated(U_Gy))       deallocate(U_Gy)
+      if(allocated(U_Gy_red))   deallocate(U_Gy_red)
+      if(allocated(U_Intf))     deallocate(U_Intf)
+      if(UnSum>0) close(UnSum)
+   END SUBROUTINE CleanUp
+END SUBROUTINE OutModes
+
+
+!> Write the common part of the JSON file (Nodes, Connectivity, Element prop)
+SUBROUTINE WriteJSONCommon(FileName, Init, p, m, InitInput, FileKind, UnSum, ErrStat, ErrMsg)
+   use JSON, only: json_write_array
+   TYPE(SD_InitType),          INTENT(INOUT)  :: Init           !< Input data for initialization routine
+   TYPE(SD_ParameterType),     INTENT(IN)     :: p              !< Parameters
+   TYPE(SD_MiscVarType)  ,     INTENT(IN)     :: m              !< Misc
+   TYPE(SD_InitInputType),     INTENT(IN)     :: InitInput      !< Input data for initialization routine         
+   CHARACTER(len=*),           INTENT(IN)     :: FileKind       !< FileKind
+   INTEGER(IntKi),             INTENT(OUT)    :: UnSum          !< Unit for file
+   INTEGER(IntKi),             INTENT(OUT)    :: ErrStat        !< Error status of the operation
+   CHARACTER(*),               INTENT(OUT)    :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)         :: ErrStat2       ! Temporary storage for local errors
+   CHARACTER(ErrMsgLen)   :: ErrMsg2        ! Temporary storage for local errors
+   CHARACTER(1024)        :: FileName       ! name of the filename for modes
+   INTEGER(IntKi), allocatable, dimension(:,:) :: Connectivity
+   INTEGER(IntKi) :: I
+   character(len=*),parameter :: ReFmt='ES13.6E2'
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! --- Create file  and get unit
+   UnSum = -1 ! we haven't opened the summary file, yet.   
+   call GetNewUnit( UnSum )
+   call OpenFOutFile ( UnSum, FileName, ErrStat2, ErrMsg2 ) 
+   write(UnSum, '(A)')'{'
+
+   ! --- Misc
+   write(UnSum, '(A,A,",")')   '"writer": ', '"SubDyn"'
+   write(UnSum, '(A,A,A,",")') '"fileKind": "', trim(fileKind), '"'
+   write(UnSum, '(A,E10.3,",")') '"groundLevel": ', -InitInput%WtrDpth
+
+   ! --- Connectivity
+   CALL AllocAry( Connectivity,  size(p%ElemProps), 2, 'Connectivity', ErrStat2, ErrMsg2 ); 
+   do i=1,size(p%ElemProps)
+      Connectivity(i,1) = p%Elems(i,2)-1 ! Node 1
+      Connectivity(i,2) = p%Elems(i,3)-1 ! Node 2
+   enddo
+   call json_write_array(UnSum, '"Connectivity"', Connectivity, 'I0', ErrStat2, ErrMsg2); write(UnSum, '(A)', advance='no')','//NewLine 
+   if(allocated(Connectivity)) deallocate(Connectivity)
+
+   ! --- Nodes
+   call json_write_array(UnSum, '"Nodes"', Init%Nodes(:,2:4), ReFmt, ErrStat2, ErrMsg2);  write(UnSum, '(A)', advance='no')','//NewLine 
+
+   ! --- Elem props
+   write(UnSum, '(A)') '"ElemProps": ['
+   do i = 1, size(p%ElemProps)
+      write(UnSum, '(A,I0,A,F8.4,A)', advance='no') '  {"shape": "cylinder", "type": ',p%ElemProps(i)%eType, ', "Diam":',p%ElemProps(i)%D(1),'}'
+      if (i<size(p%ElemProps)) write(UnSum, '(A)', advance='no')','//NewLine 
+   enddo
+   write(UnSum, '(A)') ']'
+
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WriteJSONCommon') 
+END SUBROUTINE WriteJSONCommon
+
+
+
+
+
 !------------------------------------------------------------------------------------------------------
 !> Output the summary file    
-SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
-   use Yaml
-   TYPE(SD_InitType),      INTENT(INOUT)  :: Init           ! Input data for initialization routine
-   TYPE(SD_ParameterType), INTENT(IN)     :: p              ! Parameters
-   TYPE(SD_MiscVarType)  , INTENT(IN)     :: m              ! Misc
-   TYPE(SD_InitInputType), INTENT(IN)     :: InitInput   !< Input data for initialization routine         
-   TYPE(CB_MatArrays),     INTENT(IN)     :: CBparams       ! CB parameters that will be passed in for summary file use
-   INTEGER(IntKi),         INTENT(OUT)    :: ErrStat        ! Error status of the operation
-   CHARACTER(*),           INTENT(OUT)    :: ErrMsg         ! Error message if ErrStat /= ErrID_None
+SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, ErrStat,ErrMsg)
+   use YAML, only: yaml_write_var, yaml_write_list, yaml_write_array
+   TYPE(SD_InitType),          INTENT(INOUT)  :: Init           ! Input data for initialization routine
+   TYPE(SD_ParameterType),     INTENT(IN)     :: p              ! Parameters
+   TYPE(SD_MiscVarType)  ,     INTENT(IN)     :: m              ! Misc
+   TYPE(SD_InitInputType),     INTENT(IN)     :: InitInput   !< Input data for initialization routine         
+   TYPE(CB_MatArrays),         INTENT(IN)     :: CBparams       ! CB parameters that will be passed in for summary file use
+   REAL(FEKi), dimension(:,:), INTENT(IN)     :: Modes
+   REAL(FEKi), dimension(:)  , INTENT(IN)     :: Omega
+   REAL(FEKi), dimension(:)  , INTENT(IN)     :: Omega_Gy       ! Frequencies of Guyan modes
+   INTEGER(IntKi),             INTENT(OUT)    :: ErrStat        ! Error status of the operation
+   CHARACTER(*),               INTENT(OUT)    :: ErrMsg         ! Error message if ErrStat /= ErrID_None
    !LOCALS
    INTEGER(IntKi)         :: UnSum          ! unit number for this summary file
    INTEGER(IntKi)         :: ErrStat2       ! Temporary storage for local errors
@@ -3140,8 +3549,13 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
    INTEGER(IntKi)         :: i, j, k, propIDs(2), Iprop(2)  !counter and temporary holders
    INTEGER(IntKi)         :: iNode1, iNode2 ! Node indices
    INTEGER(IntKi)         :: mType ! Member Type
-   Real(ReKi)             :: mMass, mLength ! Member mass and length
-   REAL(ReKi)             :: MRB(6,6)    ! REDUCED SYSTEM Kmatrix, equivalent mass matrix
+   REAL(ReKi)             :: mMass, mLength ! Member mass and length
+   REAL(ReKi)             :: M_O(6,6)    ! Equivalent mass matrix at origin
+   REAL(ReKi)             :: M_P(6,6)    ! Equivalent mass matrix at P (ref point)
+   REAL(ReKi)             :: M_G(6,6)    ! Equivalent mass matrix at G (center of mass)
+   REAL(ReKi)             :: rOG(3)      ! Vector from origin to G
+   REAL(ReKi)             :: rOP(3)      ! Vector from origin to P (ref point)
+   REAL(ReKi)             :: rPG(3)      ! Vector from origin to G
    REAL(FEKi),allocatable :: MBB(:,:)    ! Leader DOFs mass matrix
    REAL(ReKi)             :: XYZ1(3),XYZ2(3) !temporary arrays
    REAL(FEKi)             :: DirCos(3,3) ! direction cosine matrix (global to local)
@@ -3150,11 +3564,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
    real(FEKi) :: Ke(12,12), Me(12, 12), FCe(12), FGe(12) ! element stiffness and mass matrices gravity force vector
    real(ReKi), dimension(:,:), allocatable :: DummyArray ! 
    ! Variables for Eigenvalue analysis 
-   integer(IntKi) :: nOmega
-   real(FEKi), dimension(:,:), allocatable :: Modes
    real(R8Ki), dimension(:,:), allocatable :: AA, BB, CC, DD ! Linearization matrices
-   real(FEKi), dimension(:)  , allocatable :: Omega
-   logical, allocatable                    :: bDOF(:)        ! Mask for DOF to keep (True), or reduce (False)
    character(len=*),parameter :: ReFmt='ES15.6E2'
    character(len=*),parameter :: SFmt='A15,1x' ! Need +1 for comma compared to ReFmt
    character(len=*),parameter :: IFmt='I7'
@@ -3162,21 +3572,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   ! --- Eigen values of full system (for summary file output only)
-   ! We call the EigenSolver here only so that we get a print-out the eigenvalues from the full system (minus Reaction DOF)
-   ! M and K are reduced matrices, but Boundary conditions are not applied
-   ! We set bDOF, which is true if not a fixed Boundary conditions
-   ! NOTE: we don't check for singularities/rigig body modes here
-   CALL WrScr('   Calculating Full System Modes for summary file')
-   CALL AllocAry(bDOF, p%nDOF_red, 'bDOF',  ErrStat2, ErrMsg2); if(Failed()) return
-   bDOF(:)       = .true.
-   bDOF(p%ID__F) = .false.
-   nOmega = count(bDOF)
-   CALL AllocAry(Omega,             nOmega, 'Omega', ErrStat2, ErrMsg2); if(Failed()) return
-   CALL AllocAry(Modes, p%nDOF_red, nOmega, 'Modes', ErrStat2, ErrMsg2); if(Failed()) return
-   call EigenSolveWrap(Init%K, Init%M, p%nDOF_red, nOmega, .False., Modes, Omega, ErrStat2, ErrMsg2, bDOF); if(Failed()) return
-   IF (ALLOCATED(bDOF)  ) DEALLOCATE(bDOF)
-
+   CALL WrScr('   Exporting Summary file')
    !-------------------------------------------------------------------------------------------------------------
    ! open txt file
    !-------------------------------------------------------------------------------------------------------------
@@ -3184,18 +3580,71 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
    UnSum = -1            ! we haven't opened the summary file, yet.   
 
    CALL SDOut_OpenSum( UnSum, SummaryName, SD_ProgDesc, ErrStat2, ErrMsg2 ); if(Failed()) return
-   !-------------------------------------------------------------------------------------------------------------
-   ! write discretized data to a txt file
-   !-------------------------------------------------------------------------------------------------------------
-!bjj: for debugging, i recommend using the p% versions of all these variables whenever possible in this summary file:
-! (it helps in debugging)
    WRITE(UnSum, '(A)')  '#Unless specified, units are consistent with Input units, [SI] system is advised.'
+
+
+   !-------------------------------------------------------------------------------------------------------------
+   ! --- Most useful data
+   !-------------------------------------------------------------------------------------------------------------
+   ! --- Rigid body equivalent data
    WRITE(UnSum, '(A)') SectionDivide
-   write(UnSum,'(A,3(E15.6))')'#TP reference point:',InitInput%TP_RefPoint(1:3)
-   
+   WRITE(UnSum, '(A)') '# RIGID BODY EQUIVALENT DATA'
+   WRITE(UnSum, '(A)') SectionDivide
+   ! Set TI2, transformation matrix from R DOFs to SubDyn Origin
+   CALL AllocAry( TI2,    p%nDOFR__ , 6,       'TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL RigidTrnsf(Init, p, (/0._ReKi, 0._ReKi, 0._ReKi/), p%IDR__, p%nDOFR__, TI2, ErrStat2, ErrMsg2); if(Failed()) return
+   ! Compute Rigid body mass matrix (without Soil, and using both Interface and Reactions nodes as leader DOF)
+   if (p%nDOFR__/=p%nDOF__Rb) then
+      call SD_Guyan_RigidBodyMass(Init, p, MBB, ErrStat2, ErrMsg2); if(Failed()) return
+      M_O=matmul(TRANSPOSE(TI2),matmul(MBB,TI2)) !Equivalent mass matrix of the rigid body
+   else
+      M_O=matmul(TRANSPOSE(TI2),matmul(CBparams%MBB,TI2)) !Equivalent mass matrix of the rigid body
+   endif
+   deallocate(TI2)
+   ! Clean up for values that ought to be 0
+   M_O(1,2:4)= 0.0_ReKi; 
+   M_O(2,1  )= 0.0_ReKi; M_O(2,3  )= 0.0_ReKi; M_O(2,5  )= 0.0_ReKi;
+   M_O(3,1:2)= 0.0_ReKi; M_O(3,6  )= 0.0_ReKi
+   M_O(4,1  )= 0.0_ReKi; M_O(5,2  )= 0.0_ReKi; M_O(6,3  )= 0.0_ReKi;
+
+   call rigidBodyMassMatrixCOG(M_O, rOG)   ! r_OG=distance from origin to center of mass
+   call translateMassMatrixToCOG(M_O, M_G) ! M_G mass matrix at COG
+   call translateMassMatrixToP(M_O, InitInput%TP_RefPoint(1:3), M_P) ! Mass matrix to TP ref point
+   call yaml_write_var  (UnSum, 'Mass', M_O(1,1), ReFmt, ErrStat2, ErrMsg2, comment='Total Mass')
+   call yaml_write_list (UnSum, 'CM_point', rOG                       , ReFmt, ErrStat2, ErrMsg2, comment='Center of mass coordinates (Xcm,Ycm,Zcm)')
+   call yaml_write_list (UnSum, 'TP_point', InitInput%TP_RefPoint(1:3) ,ReFmt, ErrStat2, ErrMsg2, comment='Transition piece reference point')
+   call yaml_write_array(UnSum, 'MRB' , M_O     , ReFmt, ErrStat2, ErrMsg2, comment='Rigid Body Equivalent Mass Matrix w.r.t. (0,0,0).')
+   call yaml_write_array(UnSum, 'M_P' , M_P     , ReFmt, ErrStat2, ErrMsg2, comment='Rigid Body Equivalent Mass Matrix w.r.t. TP Ref point')
+   call yaml_write_array(UnSum, 'M_G' , M_G     , ReFmt, ErrStat2, ErrMsg2, comment='Rigid Body Equivalent Mass Matrix w.r.t. CM (Xcm,Ycm,Zcm).')
+
+   ! --- write CB system KBBt and MBBt matrices, eq stiffness matrices of the entire substructure at the TP ref point
+   WRITE(UnSum, '(A)') SectionDivide
+   WRITE(UnSum, '(A)') '# GUYAN MATRICES at the TP reference point'
+   WRITE(UnSum, '(A)') SectionDivide
+   call yaml_write_array(UnSum, 'KBBt', p%KBB, ReFmt, ErrStat2, ErrMsg2)
+   call yaml_write_array(UnSum, 'MBBt', p%MBB, ReFmt, ErrStat2, ErrMsg2)
+   call yaml_write_array(UnSum, 'CBBt', p%CBB, Refmt, ErrStat2, ErrMsg2, comment='(user Guyan Damping + potential joint damping from CB-reduction)')
+
+   !-------------------------------------------------------------------------------------------------------------
+   ! write Eigenvalues of full SYstem and CB reduced System
+   !-------------------------------------------------------------------------------------------------------------
+   WRITE(UnSum, '(A)') SectionDivide
+   WRITE(UnSum, '(A)') '# SYSTEM FREQUENCIES'
+   WRITE(UnSum, '(A)') SectionDivide
+   WRITE(UnSum, '(A, I6)') "#Eigenfrequencies [Hz] for full system, with reaction constraints (+ Soil K/M + SoilDyn K0) "
+   call yaml_write_array(UnSum, 'Full_frequencies', Omega/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
+   WRITE(UnSum, '(A, I6)') "#Frequencies of Guyan modes [Hz]"
+   call yaml_write_array(UnSum, 'GY_frequencies', Omega_GY/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
+   WRITE(UnSum, '(A, I6)') "#Frequencies of Craig-Bampton modes [Hz]"
+   call yaml_write_array(UnSum, 'CB_frequencies', CBparams%OmegaL(1:p%nDOFM)/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
+
+   !-------------------------------------------------------------------------------------------------------------
+   ! FEM data
+   !-------------------------------------------------------------------------------------------------------------
    ! --- Internal FEM representation
    WRITE(UnSum, '(A)') SectionDivide
    WRITE(UnSum, '(A)') '# Internal FEM representation'
+   WRITE(UnSum, '(A)') SectionDivide
    call yaml_write_var(UnSum, 'nNodes_I', p%nNodes_I,IFmt, ErrStat2, ErrMsg2, comment='Number of Nodes: "interface" (I)')
    call yaml_write_var(UnSum, 'nNodes_C', p%nNodes_C,IFmt, ErrStat2, ErrMsg2, comment='Number of Nodes: "reactions" (C)')
    call yaml_write_var(UnSum, 'nNodes_L', p%nNodes_L,IFmt, ErrStat2, ErrMsg2, comment='Number of Nodes: "internal"  (L)')
@@ -3240,7 +3689,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
 
    ! Nodes properties
    write(UnSum, '("#",4x,1(A9),8('//trim(SFmt)//'))') 'Node_[#]', 'X_[m]','Y_[m]','Z_[m]', 'JType_[-]', 'JDirX_[-]','JDirY_[-]','JDirZ_[-]','JStff_[Nm/rad]'
-   call yaml_write_array(UnSum, 'Nodes', Init%Nodes, ReFmt, ErrStat2, ErrMsg2, AllFmt='1(F8.0,","),3(F15.3,","),(F15.0,","),4(E15.6,",")') !, comment='',label=.true.)
+   call yaml_write_array(UnSum, 'Nodes', Init%Nodes, ReFmt, ErrStat2, ErrMsg2, AllFmt='1(F8.0,","),3(F15.3,","),(F15.0,","),3(ES15.6,","),ES15.6') !, comment='',label=.true.)
 
    ! Element properties
    CALL AllocAry( DummyArray,  size(p%ElemProps), 16, 'Elem', ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -3256,14 +3705,14 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
       DummyArray(i,9) = p%ElemProps(i)%Rho  ! density  kg/m^3
       DummyArray(i,10) = p%ElemProps(i)%YoungE ! Young modulus
       DummyArray(i,11) = p%ElemProps(i)%ShearG ! G
-      DummyArray(i,12) = p%ElemProps(i)%Kappa ! Shear coefficient
+      DummyArray(i,12) = p%ElemProps(i)%Kappa_x ! Shear coefficient
       DummyArray(i,13) = p%ElemProps(i)%Ixx   ! Moment of inertia
       DummyArray(i,14) = p%ElemProps(i)%Iyy   ! Moment of inertia
       DummyArray(i,15) = p%ElemProps(i)%Jzz   ! Moment of inertia
       DummyArray(i,16) = p%ElemProps(i)%T0    ! Pretension [N]
    enddo
    write(UnSum, '("#",4x,6(A9),10('//SFmt//'))') 'Elem_[#] ','Node_1','Node_2','Prop_1','Prop_2','Type','Length_[m]','Area_[m^2]','Dens._[kg/m^3]','E_[N/m2]','G_[N/m2]','shear_[-]','Ixx_[m^4]','Iyy_[m^4]','Jzz_[m^4]','T0_[N]'
-   call yaml_write_array(UnSum, 'Elements', DummyArray, ReFmt, ErrStat2, ErrMsg2, AllFmt='6(F8.0,","),3(F15.3,","),7(E15.6,",")') !, comment='',label=.true.)
+   call yaml_write_array(UnSum, 'Elements', DummyArray, ReFmt, ErrStat2, ErrMsg2, AllFmt='6(F8.0,","),3(F15.3,","),6(ES15.6,","),ES15.6') !, comment='',label=.true.)
    deallocate(DummyArray)
 
    ! --- C
@@ -3308,7 +3757,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
    WRITE(UnSum, '(A,I6)')  '#Number of concentrated masses (NCMass):',Init%NCMass
    WRITE(UnSum, '(A10,10(A15))')  '#JointCMass',     'Mass',         'JXX',             'JYY',             'JZZ',              'JXY',             'JXZ',             'JYZ',              'MCGX',             'MCGY',             'MCGZ'
    do i=1,Init%NCMass
-      WRITE(UnSum, '("#",F10.0, 10(E15.6))') (Init%Cmass(i, j), j = 1, CMassCol)
+      WRITE(UnSum, '("#",F10.0, 10(ES15.6))') (Init%Cmass(i, j), j = 1, CMassCol)
    enddo
 
    WRITE(UnSum, '()') 
@@ -3322,11 +3771,11 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
        mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
        IF (ErrStat .EQ. ErrID_None) THEN
         mType =  Init%Members(I, iMType) ! 
-        if (mType==idMemberBeam) then
+        if (mType==idMemberBeamCirc) then
            iProp(1) = FINDLOCI(Init%PropSetsB(:,1), propIDs(1))
            iProp(2) = FINDLOCI(Init%PropSetsB(:,1), propIDs(2))
            mMass= BeamMass(Init%PropSetsB(iProp(1),4),Init%PropSetsB(iProp(1),5),Init%PropSetsB(iProp(1),6),   &
-                             Init%PropSetsB(iProp(2),4),Init%PropSetsB(iProp(2),5),Init%PropSetsB(iProp(2),6), mLength, .TRUE.)
+                             Init%PropSetsB(iProp(2),4),Init%PropSetsB(iProp(2),5),Init%PropSetsB(iProp(2),6), mLength, method=-1)
 
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
                  mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
@@ -3340,6 +3789,12 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
            mMass= Init%PropSetsR(iProp(1),2) * mLength ! rho [kg/m] * L
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,2(I6),A)') Init%Members(i,1:3),propIDs(1),propIDs(2),&
                  mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, 2), ' # Rigid link'
+         else if (mType==idMemberBeamArb) then
+           iProp(1) = FINDLOCI(Init%PropSetsX(:,1), propIDs(1))
+           iProp(2) = FINDLOCI(Init%PropSetsX(:,1), propIDs(2))
+           mMass= -1 ! TODO compute mass for arbitrary beams
+           WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))') Init%Members(i,1:3),propIDs(1),propIDs(2),&
+                 mMass, mLength,' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
          else
            WRITE(UnSum, '(A)') '#TODO, member unknown'
         endif
@@ -3360,25 +3815,17 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
       XYZ2   = Init%Joints(iNode2,2:4)
       CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), DirCos, mLength, ErrStat, ErrMsg)
       DirCos=TRANSPOSE(DirCos) !This is now global to local
-      WRITE(UnSum, '("#",I9,9(ES11.3E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
+      WRITE(UnSum, '("#",I9,9(ES28.18E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
    ENDDO
 
-   !-------------------------------------------------------------------------------------------------------------
-   ! write Eigenvalues of full SYstem and CB reduced System
-   !-------------------------------------------------------------------------------------------------------------
-   WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A, I6)') "#Eigenfrequencies [Hz] for full system, with reaction constraints (+ Soil K/M + SoilDyn K0) "
-   call yaml_write_array(UnSum, 'Full_frequencies', Omega/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
-   WRITE(UnSum, '(A, I6)') "#CB frequencies [Hz]"
-   call yaml_write_array(UnSum, 'CB_frequencies', CBparams%OmegaL(1:p%nDOFM)/(TwoPi), ReFmt, ErrStat2, ErrMsg2)
     
    !-------------------------------------------------------------------------------------------------------------
    ! write Eigenvectors of full System 
    !-------------------------------------------------------------------------------------------------------------
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') ('#FEM Eigenvectors ('//TRIM(Num2LStr(p%nDOF_red))//' x '//TRIM(Num2LStr(nOmega))//&
+   WRITE(UnSum, '(A)') ('#FEM Eigenvectors ('//TRIM(Num2LStr(p%nDOF_red))//' x '//TRIM(Num2LStr(size(Omega)))//&
                               ') [m or rad], full system with reaction constraints (+ Soil K/M + SoilDyn K0)')
-   call yaml_write_array(UnSum, 'Full_Modes', Modes(:,1:nOmega), ReFmt, ErrStat2, ErrMsg2)
+   call yaml_write_array(UnSum, 'Full_Modes', Modes(:,1:size(Omega)), ReFmt, ErrStat2, ErrMsg2)
     
    !-------------------------------------------------------------------------------------------------------------
    ! write CB system matrices
@@ -3388,38 +3835,14 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, ErrStat,ErrMsg)
    call yaml_write_array(UnSum, 'PhiM', CBparams%PhiL(:,1:p%nDOFM ), ReFmt, ErrStat2, ErrMsg2, comment='(CB modes)')
    call yaml_write_array(UnSum, 'PhiR', CBparams%PhiR, ReFmt, ErrStat2, ErrMsg2, comment='(Guyan modes)')
            
-   !-------------------------------------------------------------------------------------------------------------
-   ! write CB system KBBt and MBBt matrices, eq stiffness matrices of the entire substructure at the TP ref point
-   !-------------------------------------------------------------------------------------------------------------
-   WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') "#SubDyn's Structure Equivalent Stiffness and Mass Matrices at the TP reference point (Guyan DOFs)"
-   call yaml_write_array(UnSum, 'KBBt', p%KBB, ReFmt, ErrStat2, ErrMsg2)
-   call yaml_write_array(UnSum, 'MBBt', p%MBB, ReFmt, ErrStat2, ErrMsg2)
-   call yaml_write_array(UnSum, 'CBBt', p%CBB, Refmt, ErrStat2, ErrMsg2, comment='(user Guyan Damping + potential joint damping from CB-reduction)')
- 
-   ! Set TI2, transformation matrix from R DOFs to SubDyn Origin
-   CALL AllocAry( TI2,    p%nDOFR__ , 6,       'TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL RigidTrnsf(Init, p, (/0._ReKi, 0._ReKi, 0._ReKi/), p%IDR__, p%nDOFR__, TI2, ErrStat2, ErrMsg2); if(Failed()) return
-   ! Compute Rigid body mass matrix (without Soil, and using both Interface and Reactions nodes as leader DOF)
-   if (p%nDOFR__/=p%nDOF__Rb) then
-      call SD_Guyan_RigidBodyMass(Init, p, MBB, ErrStat2, ErrMsg2); if(Failed()) return
-      MRB=matmul(TRANSPOSE(TI2),matmul(MBB,TI2)) !Equivalent mass matrix of the rigid body
-   else
-      MRB=matmul(TRANSPOSE(TI2),matmul(CBparams%MBB,TI2)) !Equivalent mass matrix of the rigid body
-   endif
-   WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') '#Rigid Body Equivalent Mass Matrix w.r.t. (0,0,0).'
-   call yaml_write_array(UnSum, 'MRB', MRB, ReFmt, ErrStat2, ErrMsg2)
-   WRITE(UnSum, '(A,ES15.6E2)')    "#SubDyn's Total Mass (structural and non-structural)=", MRB(1,1) 
-   WRITE(UnSum, '(A,3(ES15.6E2))') "#SubDyn's Total Mass CM coordinates (Xcm,Ycm,Zcm)   =", (/-MRB(3,5),-MRB(1,6), MRB(1,5)/) /MRB(1,1)        
-   deallocate(TI2)
    
 
    if(p%OutAll) then ! //--- START DEBUG OUTPUTS
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A)') SectionDivide
-   WRITE(UnSum, '(A)') '#**** Additional Debugging Information ****'
+   WRITE(UnSum, '(A)') '# ADDITIONAL DEBUGGING INFORMATION'
+   WRITE(UnSum, '(A)') SectionDivide
 
    ! --- Element Me,Ke,Fg, Fce
    CALL ElemM(p%ElemProps(1), Me)
@@ -3490,8 +3913,12 @@ contains
         if (Failed) call CleanUp()
    END FUNCTION Failed
    SUBROUTINE CleanUp()
-      if(allocated(Omega)) deallocate(Omega)
-      if(allocated(Modes)) deallocate(Modes)
+      if(allocated(DummyArray)) deallocate(DummyArray)
+      if(allocated(TI2))        deallocate(TI2)
+      if(allocated(AA))         deallocate(AA)
+      if(allocated(BB))         deallocate(BB)
+      if(allocated(CC))         deallocate(CC)
+      if(allocated(DD))         deallocate(DD)
       CALL SDOut_CloseSum( UnSum, ErrStat2, ErrMsg2 )  
    END SUBROUTINE CleanUp
 END SUBROUTINE OutSummary
@@ -3666,27 +4093,48 @@ END FUNCTION MemberLength
 !------------------------------------------------------------------------------------------------------
 !> Calculate member mass, given properties at the ends, keep units consistent
 !! For now it works only for circular pipes or for a linearly varying area
-FUNCTION BeamMass(rho1,D1,t1,rho2,D2,t2,L,ctube)
+FUNCTION BeamMass(rho1,D1,t1,rho2,D2,t2,L,method)
    REAL(ReKi), INTENT(IN) :: rho1,D1,t1,rho2,D2,t2 ,L       ! Density, OD and wall thickness for circular tube members at ends, Length of member
-   LOGICAL, INTENT(IN)    :: ctube          ! =TRUE for circular pipes, false elseshape
-   REAL(ReKi)             :: BeamMass  !mass
+   INTEGER(IntKi), INTENT(IN) :: method ! -1: FEM compatible, 0: mid values, 1: circular tube, integral, 
+   REAL(ReKi)  :: BeamMass  !mass
    REAL(ReKi)  :: a0,a1,a2,b0,b1,dd,dt  !temporary coefficients
+   REAL(ReKi)  :: Area,r1,r2,t
    !Density allowed to vary linearly only
    b0=rho1
    b1=(rho2-rho1)/L
    !Here we will need to figure out what element it is for now circular pipes
-   IF (ctube) THEN !circular tube
+   IF (method<=0) THEN 
+      ! Mid values for r, t, and potentially rho
+      r1 = 0.25_ReKi*(D1 + D2)
+      t  = 0.50_ReKi*(t1 + t2)
+      if ( EqualRealNos(t, 0.0_ReKi) ) then
+         r2 = 0
+      else
+         r2 = r1 - t
+      endif
+      Area = Pi_D*(r1*r1-r2*r2)
+      if (method==0) then 
+         BeamMass= (rho2+rho1)/2 * L  * Area
+      else
+         BeamMass = rho1 * L  * Area ! WHAT is currently used by FEM
+      endif
+   ELSEIF (method==1) THEN !circular tube
       a0=pi * (D1*t1-t1**2.)
       dt=t2-t1 !thickness variation
       dd=D2-D1 !OD variation
       a1=pi * ( dd*t1 + D1*dt -2.*t1*dt)/L 
       a2=pi * ( dd*dt-dt**2.)/L**2.
-   ELSE  !linearly varying area
+      BeamMass = b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
+   ELSEIF (method==2) THEN !linearly varying area
       a0=D1  !This is an area
       a1=(D2-D1)/L !Delta area
       a2=0.
+      BeamMass = b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
+   ELSE
+      print*,'Wrong call to BeamMass, method unknown',method
+      STOP
    ENDIF
-   BeamMass= b0*a0*L +(a0*b1+b0*a1)*L**2/2. + (b0*a2+b1*a1)*L**3/3 + a2*b1*L**4/4.!Integral of rho*A dz
+
 END FUNCTION BeamMass
 
 !------------------------------------------------------------------------------------------------------
@@ -3735,6 +4183,19 @@ FUNCTION is_numeric(string, x)
    READ(string,fmt,IOSTAT=e) x
    is_numeric = e == 0
 END FUNCTION is_numeric
+
+FUNCTION is_integer(string, x)
+   IMPLICIT NONE
+   CHARACTER(len=*), INTENT(IN) :: string
+   INTEGER(IntKi), INTENT(OUT) :: x
+   LOGICAL :: is_integer
+   INTEGER :: e, n
+   x = 0
+   n=LEN_TRIM(string)
+   READ(string,*,IOSTAT=e) x
+   is_integer = e == 0
+END FUNCTION is_integer
+
 FUNCTION is_logical(string, b)
    IMPLICIT NONE
    CHARACTER(len=*), INTENT(IN) :: string

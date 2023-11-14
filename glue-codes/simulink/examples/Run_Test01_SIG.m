@@ -32,6 +32,11 @@ OpenFASTRoot = '../../../reg_tests/r-test/glue-codes/openfast/AWT_YFix_WSt/';
 FAST_InputFileName = [ OpenFASTRoot 'AWT_YFix_WSt.fst' ];
 TMax = 20;
 
+OutList = {'Time','Wind1VelX','Wind1VelY','Wind1VelZ','LSSGagVxa','LSSGagPxa','TeetDefl',...
+           'TipDxb2','TipDyb2','TipALxb2','TipALyb2','Spn2ALxb1','Spn2ALyb1','YawBrRDxt',...
+           'YawBrRDyt','YawBrRVxp','YawBrRVyp','YawBrRAxp','YawBrRAyp','RootMyc1','RootMxc1',...
+           'RootFxc2','RootFyc2','Spn3MLxb1','Spn3MLyb1','RotTorq','YawBrMzn','TwrBsMzt'};
+
 % run the model
 sim('Test01_SIG.mdl',[0,TMax]);
 

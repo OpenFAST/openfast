@@ -69,11 +69,23 @@ MODULE NWTC_Num
 
    REAL(SiKi)                                :: Pi_R4                         !< Ratio of a circle's circumference to its diameter in 4-byte precision
    REAL(R8Ki)                                :: Pi_R8                         !< Ratio of a circle's circumference to its diameter in 8-byte precision
-   REAL(QuKi)                                :: Pi_R16                        !< Ratio of a circle's circumference to its diameter in 16-byte precision
 
    REAL(SiKi)                                :: TwoPi_R4                      !< 2*pi in 4-byte precision
    REAL(R8Ki)                                :: TwoPi_R8                      !< 2*pi in 8-byte precision
-   REAL(QuKi)                                :: TwoPi_R16                     !< 2*pi in 16-byte precision
+   
+   ! constants for kernel smoothing
+   INTEGER, PARAMETER :: kernelType_EPANECHINIKOV = 1
+   INTEGER, PARAMETER :: kernelType_QUARTIC       = 2
+   INTEGER, PARAMETER :: kernelType_BIWEIGHT      = 3
+   INTEGER, PARAMETER :: kernelType_TRIWEIGHT     = 4
+   INTEGER, PARAMETER :: kernelType_TRICUBE       = 5
+   INTEGER, PARAMETER :: kernelType_GAUSSIAN      = 6
+
+   
+      ! constants for output formats
+   INTEGER, PARAMETER                        :: Output_in_Native_Units = 0
+   INTEGER, PARAMETER                        :: Output_in_SI_Units     = 1
+   INTEGER, PARAMETER                        :: Output_in_Engr_Units   = 2
 !=======================================================================
 
       ! Create interfaces for generic routines that use specific routines.
@@ -82,28 +94,40 @@ MODULE NWTC_Num
    INTERFACE EqualRealNos
       MODULE PROCEDURE EqualRealNos4
       MODULE PROCEDURE EqualRealNos8
-      MODULE PROCEDURE EqualRealNos16
    END INTERFACE
 
       !> \copydoc nwtc_num::eulerconstructr4()
    INTERFACE EulerConstruct
       MODULE PROCEDURE EulerConstructR4
       MODULE PROCEDURE EulerConstructR8
-      MODULE PROCEDURE EulerConstructR16
+   END INTERFACE
+
+   INTERFACE EulerConstructZYX
+      MODULE PROCEDURE EulerConstructZYXR8
    END INTERFACE
    
       !> \copydoc nwtc_num::eulerextractr4()
    INTERFACE EulerExtract
       MODULE PROCEDURE EulerExtractR4
       MODULE PROCEDURE EulerExtractR8
-      MODULE PROCEDURE EulerExtractR16
+   END INTERFACE
+
+      !> \copydoc nwtc_num::taitbryanyxzextractr4()
+      !! See nwtc_num::taitbryanyxzextractr4() for details on the algorithm
+   INTERFACE TaitBryanYXZExtract
+      MODULE PROCEDURE TaitBryanYXZExtractR4
+      MODULE PROCEDURE TaitBryanYXZExtractR8
+   END INTERFACE
+   
+   INTERFACE TaitBryanYXZConstruct
+      MODULE PROCEDURE TaitBryanYXZConstructR4
+      MODULE PROCEDURE TaitBryanYXZConstructR8
    END INTERFACE
 
       !> \copydoc nwtc_num::outerproductr4
    INTERFACE OuterProduct
       MODULE PROCEDURE OuterProductR4
       MODULE PROCEDURE OuterProductR8
-      MODULE PROCEDURE OuterProductR16
    END INTERFACE
 
       !> \copydoc nwtc_num::cross_productr4()
@@ -112,12 +136,10 @@ MODULE NWTC_Num
       MODULE PROCEDURE Cross_ProductR4R8
       MODULE PROCEDURE Cross_ProductR8
       MODULE PROCEDURE Cross_ProductR8R4
-      MODULE PROCEDURE Cross_ProductR16
    END INTERFACE
    
       !> \copydoc nwtc_num::smllrottransd()
    INTERFACE SmllRotTrans
-      MODULE PROCEDURE SmllRotTransDD
       MODULE PROCEDURE SmllRotTransD
       MODULE PROCEDURE SmllRotTransR
    END INTERFACE
@@ -132,21 +154,18 @@ MODULE NWTC_Num
    INTERFACE Zero2TwoPi
       MODULE PROCEDURE Zero2TwoPiR4
       MODULE PROCEDURE Zero2TwoPiR8
-      MODULE PROCEDURE Zero2TwoPiR16
    END INTERFACE
    
       !> \copydoc nwtc_num::twonormr4
    INTERFACE TwoNorm
       MODULE PROCEDURE TwoNormR4
       MODULE PROCEDURE TwoNormR8
-      MODULE PROCEDURE TwoNormR16
    END INTERFACE
    
       !> \copydoc nwtc_num::tracer4
    INTERFACE trace
       MODULE PROCEDURE traceR4
       MODULE PROCEDURE traceR8
-      MODULE PROCEDURE traceR16
    END INTERFACE
    
       !> \copydoc nwtc_num::dcm_expd
@@ -185,18 +204,22 @@ MODULE NWTC_Num
    INTERFACE InterpStp
       MODULE PROCEDURE InterpStpComp4
       MODULE PROCEDURE InterpStpComp8
-      MODULE PROCEDURE InterpStpComp16
       MODULE PROCEDURE InterpStpReal4
       MODULE PROCEDURE InterpStpReal4_8
       MODULE PROCEDURE InterpStpReal8
-      MODULE PROCEDURE InterpStpReal16
    END INTERFACE
 
+      !> \copydoc nwtc_num::interpstpmat4
+   INTERFACE InterpStpMat
+      MODULE PROCEDURE InterpStpMat4
+      MODULE PROCEDURE InterpStpMat8
+   END INTERFACE
+   
+   
       !> \copydoc nwtc_num::interparrayr4
    INTERFACE InterpArray
       MODULE PROCEDURE InterpArrayR4
       MODULE PROCEDURE InterpArrayR8
-      MODULE PROCEDURE InterpArrayR16
    END INTERFACE
 
       !> \copydoc nwtc_num::interpwrappedstpreal4
@@ -204,51 +227,42 @@ MODULE NWTC_Num
       MODULE PROCEDURE InterpWrappedStpReal4
       MODULE PROCEDURE InterpWrappedStpReal4_8
       MODULE PROCEDURE InterpWrappedStpReal8
-      MODULE PROCEDURE InterpWrappedStpReal16
    END INTERFACE
    
       !> \copydoc nwtc_num::locatestpr4
    INTERFACE LocateStp
       MODULE PROCEDURE LocateStpR4
       MODULE PROCEDURE LocateStpR8
-      MODULE PROCEDURE LocateStpR16
    END INTERFACE
 
    !> \copydoc nwtc_num::skewsymmatr4
    INTERFACE SkewSymMat
       MODULE PROCEDURE SkewSymMatR4
       MODULE PROCEDURE SkewSymMatR8
-      MODULE PROCEDURE SkewSymMatR16
    END INTERFACE
    
       !> \copydoc nwtc_num::angle_extrapinterp2_r4
    INTERFACE Angles_ExtrapInterp
       MODULE PROCEDURE Angles_ExtrapInterp1_R4
       MODULE PROCEDURE Angles_ExtrapInterp1_R8
-      MODULE PROCEDURE Angles_ExtrapInterp1_R16
       MODULE PROCEDURE Angles_ExtrapInterp1_R4R
       MODULE PROCEDURE Angles_ExtrapInterp1_R8R
-      MODULE PROCEDURE Angles_ExtrapInterp1_R16R
       MODULE PROCEDURE Angles_ExtrapInterp2_R4
       MODULE PROCEDURE Angles_ExtrapInterp2_R8
-      MODULE PROCEDURE Angles_ExtrapInterp2_R16
       MODULE PROCEDURE Angles_ExtrapInterp2_R4R
       MODULE PROCEDURE Angles_ExtrapInterp2_R8R
-      MODULE PROCEDURE Angles_ExtrapInterp2_R16R
    END INTERFACE
 
       !> \copydoc nwtc_num::addorsub2pi_r4
    INTERFACE AddOrSub2Pi
       MODULE PROCEDURE AddOrSub2Pi_R4
       MODULE PROCEDURE AddOrSub2Pi_R8
-      MODULE PROCEDURE AddOrSub2Pi_R16
    END INTERFACE
    
       !> \copydoc nwtc_num::mpi2pi_r4
    INTERFACE MPi2Pi
       MODULE PROCEDURE MPi2Pi_R4
       MODULE PROCEDURE MPi2Pi_R8
-      MODULE PROCEDURE MPi2Pi_R16
    END INTERFACE
    
 CONTAINS
@@ -323,36 +337,6 @@ CONTAINS
    RETURN
    END SUBROUTINE AddOrSub2Pi_R8
 !=======================================================================
-!> \copydoc nwtc_num::addorsub2pi_r4
-   SUBROUTINE AddOrSub2Pi_R16 ( OldAngle, NewAngle )
-
-      ! Argument declarations:
-
-   REAL(QuKi), INTENT(IN   )    :: OldAngle                                     ! Angle from which NewAngle will be converted to within 2*Pi of, rad.
-   REAL(QuKi), INTENT(INOUT)    :: NewAngle                                     ! Angle to be converted to within 2*Pi of OldAngle, rad.
-
-
-      ! Local declarations:
-
-   REAL(QuKi)                   :: DelAngle                                     ! The difference between OldAngle and NewAngle, rad.
-
-
-
-      ! Add or subtract 2*Pi in order to convert NewAngle two within Pi of OldAngle:
-
-   
-   DelAngle = OldAngle - NewAngle
-
-   DO WHILE ( ABS( DelAngle ) > Pi_R16 )
-
-      NewAngle = NewAngle + SIGN( TwoPi_R16, DelAngle )
-      DelAngle = OldAngle - NewAngle
-
-   END DO
-
-   RETURN
-   END SUBROUTINE AddOrSub2Pi_R16
-!=======================================================================
    FUNCTION BlendCosine( x, LowerBound, UpperBound ) RESULT(S)
    
       REAL(ReKi), INTENT(IN) :: x            !
@@ -414,6 +398,96 @@ CONTAINS
 
    RETURN
    END SUBROUTINE BSortReal ! ( RealAry, NumPts )
+!=======================================================================
+!> This subroutine takes an "oldUnits" array, compares the strings
+!! to a list of units that will be converted to SI, and returns two arrays
+!! that give the new units and the multiplicative scaling factor to convert 
+!! the old units to the new ones. The three arrays must be the same size.
+   SUBROUTINE ConvertUnitsToSI(Units,ScaleFactor)
+      CHARACTER(*), INTENT(INOUT)   :: Units(:)          !< in: the old units; out: the new units
+      REAL(ReKi),   INTENT(  OUT)   :: ScaleFactor(:)    !< scaling factor to convert old to new units (old*SF = new)
+
+      
+      ! local variables
+      INTEGER                       :: i
+
+      DO i=1,SIZE(Units)
+
+         SELECT CASE( TRIM(Units(i)) )  ! Note that this IS case sensitive!
+
+         CASE ('(kN)','kN')
+            Units(i)    = '(N)'
+            ScaleFactor(i) = 1000.0_ReKi
+         CASE ('(kN-m)','kN-m')
+            Units(i)    = '(N-m)'
+            ScaleFactor(i) = 1000.0_ReKi
+         CASE ('(deg)','deg')
+            Units(i)    = '(rad)'
+            ScaleFactor(i) = D2R
+         CASE ('(deg/s)','deg/s')
+            Units(i)    = '(rad/s)'
+            ScaleFactor(i) = D2R
+         CASE ('(deg/s^2)','deg/s^2')
+            Units(i)    = '(rad/s^2)'
+            ScaleFactor(i) = D2R
+         CASE ('(rpm)','rpm')
+            Units(i)    = '(rad/s)'
+            ScaleFactor(i) = RPM2RPS
+         CASE ('(kW)','kW')
+            Units(i)    = '(W)'
+            ScaleFactor(i) = 1000.0_ReKi
+         CASE DEFAULT
+            ScaleFactor(i) = 1.0_ReKi
+         END SELECT
+
+      END DO
+
+   END SUBROUTINE ConvertUnitsToSI
+!=======================================================================
+!> This subroutine takes an "oldUnits" array, compares the strings
+!! to a list of units that will be converted to engineering units (kN and deg), and returns two arrays
+!! that give the new units and the multiplicative scaling factor to convert 
+!! the old units to the new ones. The three arrays must be the same size.
+   SUBROUTINE ConvertUnitsToEngr(Units,ScaleFactor)
+      CHARACTER(*), INTENT(INOUT)   :: Units(:)          !< in: the old units; out: the new units
+      REAL(ReKi),   INTENT(  OUT)   :: ScaleFactor(:)    !< scaling factor to convert old to new units (old*SF = new)
+
+      
+      ! local variables
+      INTEGER                       :: i
+
+      DO i=1,SIZE(Units)
+
+         SELECT CASE( TRIM(Units(i)) )  ! Note that this IS case sensitive!
+
+         CASE ('(N)','N')
+            Units(i)    = '(kN)'
+            ScaleFactor(i) = 0.001_ReKi
+         CASE ('(N-m)','N-m', '(Nm)', 'Nm')
+            Units(i)    = '(kN-m)'
+            ScaleFactor(i) = 0.001_ReKi
+         CASE ('(rad)','rad')
+            Units(i)    = '(deg)'
+            ScaleFactor(i) = R2D
+         CASE ('(rad/s)','rad/s')
+            Units(i)    = '(deg/s)'
+            ScaleFactor(i) = R2D
+         CASE ('(rad/s^2)','rad/s^2')
+            Units(i)    = '(deg/s^2)'
+            ScaleFactor(i) = R2D
+         CASE ('(rps)','rps')
+            Units(i)    = '(rpm)'
+            ScaleFactor(i) = 60.0_ReKi
+         CASE ('(W)','W')
+            Units(i)    = '(kW)'
+            ScaleFactor(i) = 0.001_ReKi
+         CASE DEFAULT
+            ScaleFactor(i) = 1.0_ReKi
+         END SELECT
+
+      END DO
+
+   END SUBROUTINE ConvertUnitsToEngr
 !=======================================================================
 !> This function computes the cross product of two 3-element arrays (resulting in a vector): \n
 !! cross_product = Vector1 \f$\times\f$ Vector2 \n
@@ -496,26 +570,6 @@ CONTAINS
 
    RETURN
    END FUNCTION Cross_ProductR8R4
-!=======================================================================
-!> \copydoc nwtc_num::cross_productr4
-   FUNCTION Cross_ProductR16(Vector1, Vector2) result(CProd)
-
-      ! Argument declarations.
-
-   REAL(QuKi), INTENT(IN )         :: Vector1       (3)
-   REAL(QuKi), INTENT(IN )         :: Vector2       (3)
-
-      ! Function definition
-   REAL(QuKi)                      :: CProd (3)        ! = Vector1 X Vector2 (resulting in a vector)
-
-
-   CProd(1) = Vector1(2)*Vector2(3) - Vector1(3)*Vector2(2)
-   CProd(2) = Vector1(3)*Vector2(1) - Vector1(1)*Vector2(3)
-   CProd(3) = Vector1(1)*Vector2(2) - Vector1(2)*Vector2(1)
-
-
-   RETURN
-   END FUNCTION Cross_ProductR16
 !=======================================================================
 !> This routine calculates the parameters needed to compute a irregularly-spaced natural cubic spline.
 !! Natural cubic splines are used in that the curvature at the end points is zero.
@@ -974,7 +1028,6 @@ CONTAINS
 
    NumPts  = SIZE( XAry )
    NumCrvs = SIZE( YAry, 2 )
-   !NumCrvs = SIZE( YAry, 2 )
 
    ALLOCATE ( Res( NumCrvs ) , STAT=ErrStatLcl )
    IF ( ErrStatLcl /= 0 )  THEN
@@ -1104,14 +1157,14 @@ CONTAINS
       !
       ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 31-33
       
-   REAL(ReKi), INTENT(IN)  :: lambda(3)      !< vector containing unique components of skew-symmetric matrix: \f$\lambda_1\f$, \f$\lambda_2\f$, and \f$\lambda_3\f$
-   REAL(ReKi)              :: DCM_expR(3,3)  !< the computed matrix exponential, \f$\Lambda\f$
+   REAL(SiKi), INTENT(IN)  :: lambda(3)      !< vector containing unique components of skew-symmetric matrix: \f$\lambda_1\f$, \f$\lambda_2\f$, and \f$\lambda_3\f$
+   REAL(SiKi)              :: DCM_expR(3,3)  !< the computed matrix exponential, \f$\Lambda\f$
    
       ! local variables
-   REAL(ReKi)              :: stheta         ! sine of angle of rotation   
-   REAL(ReKi)              :: theta          ! angle of rotation   
-   REAL(ReKi)              :: theta2         ! angle of rotation squared
-   REAL(ReKi)              :: tmp_Mat(3,3)
+   REAL(SiKi)              :: stheta         ! sine of angle of rotation   
+   REAL(SiKi)              :: theta          ! angle of rotation   
+   REAL(SiKi)              :: theta2         ! angle of rotation squared
+   REAL(SiKi)              :: tmp_Mat(3,3)
    
    INTEGER(IntKi)          :: ErrStat
    CHARACTER(30)           :: ErrMsg  
@@ -1120,8 +1173,8 @@ CONTAINS
    theta = TwoNorm(lambda)                   ! Eq. 32
    theta2 = theta**2
 
-   IF ( EqualRealNos(theta,   0.0_ReKi)   .or. &
-        EqualRealNos(theta2,  0.0_ReKi) ) THEN  !
+   IF ( EqualRealNos(theta,   0.0_SiKi)   .or. &
+        EqualRealNos(theta2,  0.0_SiKi) ) THEN  !
       
       CALL eye(DCM_expR, ErrStat, ErrMsg)    ! Eq. 33a
       
@@ -1129,15 +1182,15 @@ CONTAINS
       
          ! convert lambda to skew-symmetric matrix:
       !tmp_mat = -SkewSymMat(lambda)
-      tmp_mat(1,1) =  0.0_ReKi                                            
+      tmp_mat(1,1) =  0.0_SiKi                                            
       tmp_mat(2,1) = -lambda(3)                                           
       tmp_mat(3,1) =  lambda(2)                                           
       tmp_mat(1,2) =              lambda(3)                               
-      tmp_mat(2,2) =              0.0_ReKi                                
+      tmp_mat(2,2) =              0.0_SiKi                                
       tmp_mat(3,2) =             -lambda(1)                               
       tmp_mat(1,3) =                               -lambda(2)             
       tmp_mat(2,3) =                                lambda(1)             
-      tmp_mat(3,3) =                                0.0_ReKi            
+      tmp_mat(3,3) =                                0.0_SiKi            
       
       
          ! Eq. 33b
@@ -1316,18 +1369,18 @@ CONTAINS
    
       ! This function computes the logarithmic map for a direction cosine matrix.
    
-   REAL(ReKi),         INTENT(IN)    :: DCM(3,3)
-   REAL(ReKi),         INTENT(  OUT) :: logMap(3)
-   REAL(ReKi),OPTIONAL,INTENT(  OUT) :: thetaOut
+   REAL(SiKi),         INTENT(IN)    :: DCM(3,3)
+   REAL(SiKi),         INTENT(  OUT) :: logMap(3)
+   REAL(SiKi),OPTIONAL,INTENT(  OUT) :: thetaOut
    INTEGER(IntKi),     INTENT(  OUT) :: ErrStat                   ! Error status of the operation
    CHARACTER(*),       INTENT(  OUT) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
    
       ! local variables
-   REAL(ReKi)                        :: cosTheta
-   REAL(ReKi)                        :: theta
-   REAL(ReKi)                        :: TwoSinTheta
-   REAL(ReKi)                        :: v(3)
-   REAL(ReKi)                        :: divisor
+   REAL(SiKi)                        :: cosTheta
+   REAL(SiKi)                        :: theta
+   REAL(SiKi)                        :: TwoSinTheta
+   REAL(SiKi)                        :: v(3)
+   REAL(SiKi)                        :: divisor
    INTEGER(IntKi)                    :: indx_max
       
          ! initialization
@@ -1335,13 +1388,13 @@ CONTAINS
       ErrMsg  = ""   
    
    
-      cosTheta  = 0.5_ReKi*( trace(DCM) - 1.0_ReKi )
-      cosTheta  = min( max(cosTheta,-1.0_ReKi), 1.0_ReKi ) !make sure it's in a valid range (to avoid cases where this is slightly outside the +/-1 range)
+      cosTheta  = 0.5_SiKi*( trace(DCM) - 1.0_SiKi )
+      cosTheta  = min( max(cosTheta,-1.0_SiKi), 1.0_SiKi ) !make sure it's in a valid range (to avoid cases where this is slightly outside the +/-1 range)
       theta     = ACOS( cosTheta )                         ! Eq. 25 ( 0<=theta<=pi )
       
       
       !IF ( EqualRealNos( pi, theta )  ) THEN
-      IF ( theta > 3.1_ReKi ) THEN  ! theta/(2*sin(theta)) blows up quickly as theta approaches pi, 
+      IF ( theta > 3.1_SiKi ) THEN  ! theta/(2*sin(theta)) blows up quickly as theta approaches pi, 
          ! so I'm putting a pretty large tolerance on pi here, and using a different equation to find the solution near pi
 
          logMap(1) = 1.0_ReKi + DCM(1,1) - DCM(2,2) - DCM(3,3);
@@ -1350,7 +1403,7 @@ CONTAINS
              
          indx_max = maxloc( abs(logMap), 1 )
              
-         divisor = sqrt(abs( logMap(indx_max) *  2.0_ReKi*(1.0_ReKi - cosTheta)  )) / theta  ! 2*(1-cosTheta)/theta^2 * abs(lambda(indx_max))
+         divisor = sqrt(abs( logMap(indx_max) *  2.0_SiKi*(1.0_SiKi - cosTheta)  )) / theta  ! 2*(1-cosTheta)/theta^2 * abs(lambda(indx_max))
          if (indx_max == 1) then
            !logMap(1) = 1.0 + DCM(1,1) - DCM(2,2) - DCM(3,3)               ! 2*(1-cosTheta)/theta^2 * lambda(1) * lambda(1)
             logMap(2) = DCM(1,2) + DCM(2,1)                                ! 2*(1-cosTheta)/theta^2 * lambda(1) * lambda(2)
@@ -1369,20 +1422,20 @@ CONTAINS
          ! at this point we may have the wrong sign for logMap (though if theta==pi, it doesn't matter because we can change it in the DCM_setLogMapforInterp() routines)
          ! we'll do a little checking to see if we should change the sign:
          
-         IF ( EqualRealNos( pi, theta )  ) RETURN
+         IF ( EqualRealNos( Pi_S, theta )  ) RETURN
          
          v(1) = -DCM(3,2) + DCM(2,3) !-skewSym(3,2)
          v(2) =  DCM(3,1) - DCM(1,3) ! skewSym(3,1)
          v(3) = -DCM(2,1) + DCM(1,2) !-skewSym(2,1)
  
          indx_max = maxloc( abs(v), 1 )  ! find component with largest magnitude
-         if ( .not. EqualRealNos( sign(1.0_ReKi,v(indx_max)), sign(1.0_ReKi,logMap(indx_max)) )) logMap = -logMap
+         if ( .not. EqualRealNos( sign(1.0_SiKi,v(indx_max)), sign(1.0_SiKi,logMap(indx_max)) )) logMap = -logMap
          
       ELSE
          
-         TwoSinTheta = 2.0_ReKi*sin(theta)
+         TwoSinTheta = 2.0_SiKi*sin(theta)
          
-         IF ( EqualRealNos(0.0_ReKi, theta) .or. EqualRealNos( 0.0_ReKi, TwoSinTheta ) ) THEN
+         IF ( EqualRealNos(0.0_SiKi, theta) .or. EqualRealNos( 0.0_SiKi, TwoSinTheta ) ) THEN
          
             !skewSym = DCM - TRANSPOSE(DCM)
             !
@@ -1393,7 +1446,7 @@ CONTAINS
             !logMap = 0.5_ReKi * logMap   ! Eq. 26b with limit as x approaches 0 of (x/sin(x)) = 1
          
          
-            logMap = 0.0_ReKi                                                   ! Eq. 26a
+            logMap = 0.0_SiKi                                                   ! Eq. 26a
                   
          ELSE ! 0 < theta < pi 
       
@@ -1501,11 +1554,11 @@ CONTAINS
    !  tensor*( 1 + TwoPi*k/TwoNorm(tensor) ) for any integer k
       
    
-   REAL(ReKi),     INTENT(INOUT) :: tensor(:,:)
+   REAL(SiKi),     INTENT(INOUT) :: tensor(:,:)
 
-   REAL(ReKi)                    :: diff1, diff2      ! magnitude-squared of difference between two adjacent values
-   REAL(ReKi)                    :: temp(3), temp1(3) ! difference between two tensors
-   REAL(ReKi)                    :: period(3)         ! the period to add to the rotational parameters
+   REAL(SiKi)                    :: diff1, diff2      ! magnitude-squared of difference between two adjacent values
+   REAL(SiKi)                    :: temp(3), temp1(3) ! difference between two tensors
+   REAL(SiKi)                    :: period(3)         ! the period to add to the rotational parameters
    INTEGER(IntKi)                :: nc                ! size of the tensors matrix
    INTEGER(IntKi)                :: ic                ! loop counters for each array dimension
    
@@ -1516,7 +1569,7 @@ CONTAINS
       
       diff1 = TwoNorm( tensor(:,ic) )
       
-      if ( .NOT. EqualRealNos( diff1, 0.0_ReKi) ) then
+      if ( .NOT. EqualRealNos( diff1, 0.0_SiKi) ) then
             ! check if we're going around a 2pi boundary:
       
          period = tensor(:,ic) * ( Twopi/diff1 )
@@ -1634,40 +1687,6 @@ CONTAINS
 
    END FUNCTION EqualRealNos8
 !=======================================================================
-!> \copydoc nwtc_num::equalrealnos4
-   FUNCTION EqualRealNos16 ( ReNum1, ReNum2 )
-
-      ! passed variables
-
-   REAL(QuKi), INTENT(IN )         :: ReNum1                            ! the first  real number to compare
-   REAL(QuKi), INTENT(IN )         :: ReNum2                            ! the second real number to compare
-
-   LOGICAL                         :: EqualRealNos16                    !< .true. if and only if the numbers are almost equal
-
-      ! local variables
-   REAL(QuKi), PARAMETER           :: Eps = EPSILON(ReNum1)             ! machine precision
-   REAL(QuKi), PARAMETER           :: Tol = 100.0_QuKi*Eps / 2.0_QuKi   ! absolute tolerance (ignore the last 2 significant digits)
-
-   REAL(QuKi)                      :: Fraction
-
-
-      ! make sure we're never trying to get more precision than Tol
-
-   Fraction = MAX( ABS(ReNum1+ReNum2), 1.0_QuKi )
-
-
-
-      ! determine if ReNum1 and ReNum2 are approximately equal
-
-   IF ( ABS(ReNum1 - ReNum2) <= Fraction*Tol ) THEN  ! the relative error
-      EqualRealNos16 = .TRUE.
-   ELSE
-      EqualRealNos16 = .FALSE.
-   ENDIF
-
-
-   END FUNCTION EqualRealNos16
-!=======================================================================
 !> This function creates a rotation matrix, M, from a 1-2-3 rotation
 !! sequence of the 3 Euler angles, \f$\theta_x\f$, \f$\theta_y\f$, and \f$\theta_z\f$, in radians.
 !! M represents a change of basis (from global to local coordinates; 
@@ -1780,57 +1799,6 @@ CONTAINS
       M(3,3) =        cx*cy               
    
    END FUNCTION EulerConstructR8
-!=======================================================================
-!> \copydoc nwtc_num::eulerconstructr4
-   FUNCTION EulerConstructR16(theta) result(M)
-   
-      ! this function creates a rotation matrix, M, from a 1-2-3 rotation
-      ! sequence of the 3 Euler angles, theta_x, theta_y, and theta_z, in radians.
-      ! M represents a change of basis (from global to local coordinates; 
-      ! not a physical rotation of the body). it is the inverse of EulerExtract().
-      !
-      ! M = R(theta_z) * R(theta_y) * R(theta_x)
-      !   = [ cz sz 0 |   [ cy  0 -sy |   [ 1   0   0 |
-      !     |-sz cz 0 | * |  0  1   0 | * | 0  cx  sx |
-      !     |  0  0 1 ]   | sy  0  cy ]   | 0 -sx  cx ]
-      !   = [ cy*cz   cx*sz+sx*sy*cz    sx*sz-cx*sy*cz |
-      !     |-cy*sz   cx*cz-sx*sy*sz    sx*cz+cx*sy*sz |
-      !     | sy           -sx*cy             cx*cy    ]
-      ! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
-   
-      REAL(QuKi)             :: M(3,3)    ! rotation matrix M 
-      REAL(QuKi), INTENT(IN) :: theta(3)  ! the 3 rotation angles: theta_x, theta_y, theta_z
-      
-      REAL(QuKi)             :: cx        ! cos(theta_x)
-      REAL(QuKi)             :: sx        ! sin(theta_x)
-      REAL(QuKi)             :: cy        ! cos(theta_y)
-      REAL(QuKi)             :: sy        ! sin(theta_y)
-      REAL(QuKi)             :: cz        ! cos(theta_z)
-      REAL(QuKi)             :: sz        ! sin(theta_z)
-   
-
-      cx = cos( theta(1) )
-      sx = sin( theta(1) )
-      
-      cy = cos( theta(2) )
-      sy = sin( theta(2) )
-      
-      cz = cos( theta(3) )
-      sz = sin( theta(3) )
-         
-      M(1,1) =  cy*cz            
-      M(2,1) = -cy*sz            
-      M(3,1) =  sy    
-      
-      M(1,2) =  cx*sz+sx*sy*cz            
-      M(2,2) =  cx*cz-sx*sy*sz            
-      M(3,2) =       -sx*cy     
-      
-      M(1,3) =  sx*sz-cx*sy*cz            
-      M(2,3) =  sx*cz+cx*sy*sz            
-      M(3,3) =        cx*cy               
-   
-   END FUNCTION EulerConstructR16
 !=======================================================================
 !> if M is a rotation matrix from a 1-2-3 rotation sequence, this function returns 
 !! the 3 Euler angles, \f$\theta_x\f$, \f$\theta_y\f$, and \f$\theta_z\f$ (in radians), that formed 
@@ -2033,102 +2001,49 @@ CONTAINS
             
       
    END FUNCTION EulerExtractR8
+
 !=======================================================================
-!> \copydoc nwtc_num::eulerextractr4 
-   FUNCTION EulerExtractR16(M) result(theta)
+!> 
+   FUNCTION EulerConstructZYXR8(theta) result(M)
    
-      ! if M is a rotation matrix from a 1-2-3 rotation sequence, this function returns 
-      ! the 3 Euler angles, theta_x, theta_y, and theta_z (in radians), that formed 
-      ! the matrix. M represents a change of basis (from global to local coordinates; 
-      ! not a physical rotation of the body). M is the inverse of EulerConstruct().
+      ! this function creates a rotation matrix, M, from a 3-2-1 rotation
+      ! sequence of the 3 Euler angles, theta_z, theta_y, and theta_x, in radians.
+      ! M represents a change of basis (from global to local coordinates; 
+      ! not a physical rotation of the body). 
       !
-      ! M = R(theta_z) * R(theta_y) * R(theta_x)
-      !   = [ cz sz 0 |   [ cy  0 -sy |   [ 1   0   0 |
-      !     |-sz cz 0 | * |  0  1   0 | * | 0  cx  sx |
-      !     |  0  0 1 ]   | sy  0  cy ]   | 0 -sx  cx ]
-      !   = [ cy*cz   cx*sz+sx*sy*cz    sx*sz-cx*sy*cz |
-      !     |-cy*sz   cx*cz-sx*sy*sz    sx*cz+cx*sy*sz |
-      !     | sy           -sx*cy             cx*cy    ]
-      ! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
-      ! 
-      ! returned angles are in the range [-pi, pi]
-   
-      REAL(QuKi), INTENT(IN) :: M(3,3)    ! rotation matrix M 
-      REAL(QuKi)             :: theta(3)  ! the 3 rotation angles: theta_x, theta_y, theta_z
+      REAL(R8Ki)             :: M(3,3)    ! rotation matrix M 
+      REAL(R8Ki), INTENT(IN) :: theta(3)  ! the 3 rotation angles: theta_x, theta_y, theta_z
       
-      REAL(QuKi)             :: cx        ! cos(theta_x)
-      REAL(QuKi)             :: sx        ! sin(theta_x)
-      REAL(QuKi)             :: cy        ! cos(theta_y)
-!     REAL(QuKi)             :: sy        ! sin(theta_y)
-      REAL(QuKi)             :: cz        ! cos(theta_z)
-      REAL(QuKi)             :: sz        ! sin(theta_z)
+      REAL(R8Ki)             :: cx        ! cos(theta_x)
+      REAL(R8Ki)             :: sx        ! sin(theta_x)
+      REAL(R8Ki)             :: cy        ! cos(theta_y)
+      REAL(R8Ki)             :: sy        ! sin(theta_y)
+      REAL(R8Ki)             :: cz        ! cos(theta_z)
+      REAL(R8Ki)             :: sz        ! sin(theta_z)
    
-         ! use trig identity sz**2 + cz**2 = 1 to get abs(cy):
-      cy = sqrt( m(1,1)**2 + m(2,1)**2 ) 
-!      cy = sqrt( m(3,3)**2 + m(3,2)**2 ) 
-            
-      if ( EqualRealNos(cy,0.0_QuKi) ) then
-      !if ( cy < 16*epsilon(0.0_ReKi) ) then
-         
-         theta(2) = atan2( m(3,1), cy )               ! theta_y
-         
-         ! cy = 0 -> sy = +/- 1
-         ! M  = [  0   cx*sz+/-sx*cz    sx*sz-/+cx*cz |
-         !      |  0   cx*cz-/+sx*sz    sx*cz+/-cx*sz |
-         !      |+/-1        0                0       ]
-         
-         ! gimbal lock allows us to choose theta_z = 0
-         theta(3) = 0.0_QuKi                          ! theta_z
-         
-         ! which reduces the matrix to 
-         ! M  = [  0  +/-sx  -/+cx |
-         !      |  0     cx     sx |
-         !      |+/-1    0       0 ]
-         
-         theta(1) = atan2(  m(2,3), m(2,2) )          ! theta_x
-         
-      else
-         ! atan2( cy*sz, cy*cz )
-         theta(3) = atan2( -m(2,1), m(1,1) )          ! theta_z         
-         cz       = cos( theta(3) )
-         sz       = sin( theta(3) )
 
-            ! get the appropriate sign for cy:
-         if ( EqualRealNos(cz, 0.0_QuKi) ) then
-            cy = sign( cy, -m(2,1)/sz )
-            !cy = -m(2,1)/sz
-         else
-            cy = sign( cy, m(1,1)/cz )
-            !cy = -m(1,1)/cz
-         end if
-         theta(2) = atan2( m(3,1), cy )               ! theta_y
-         
-        !theta(1) = atan2( -m(3,2), m(3,3) )          ! theta_x
-         
-         ! for numerical reasons, we're going to get theta_x using
-         ! M' = (R(theta_z) * R(theta_y))^T * M = R(theta_x)
-         !    = [ cy  0  sy |   [ cz -sz 0 |       [ 1   0   0 |
-         !      |  0  1   0 | * | sz  cz 0 | * M = | 0  cx  sx |
-         !      |-sy  0  cy ]   |  0   0 1 ]       | 0 -sx  cx ]
-         !    = [ cy*cz  -cy*sz  sy |       [ 1   0   0 |
-         !      |    sz      cz   0 | * M = | 0  cx  sx |
-         !      |-sy*cz   sy*sz  cy ]       | 0 -sx  cx ]
-         ! taking M'(2,2) and M'(2,3) , we get cx and sx:
-         ! sz*m(1,2) + cz*m(2,2) = cx
-         ! sz*m(1,3) + cz*m(2,3) = sx
-
-         cz = cos( theta(3) )
-         sz = sin( theta(3) )
-         
-         cx = sz*m(1,2) + cz*m(2,2)
-         sx = sz*m(1,3) + cz*m(2,3)
-         
-         theta(1) = atan2( sx, cx )
-         
-      end if
-            
+      cx = cos( theta(1) )
+      sx = sin( theta(1) )
       
-   END FUNCTION EulerExtractR16
+      cy = cos( theta(2) )
+      sy = sin( theta(2) )
+      
+      cz = cos( theta(3) )
+      sz = sin( theta(3) )
+         
+      M(1,1) =  cy*cz            
+      M(2,1) =  sx*sy*cz - sz*cx
+      M(3,1) =  sx*sz + sy*cx*cz
+      
+      M(1,2) =  sz*cy
+      M(2,2) =  sx*sy*sz + cx*cz
+      M(3,2) =  -sx*cz + sy*sz*cx
+      
+      M(1,3) =  -sy
+      M(2,3) =  sx*cy
+      M(3,3) =  cx*cy
+   
+   END FUNCTION EulerConstructZYXR8
 !=======================================================================
 !> This routine sets the matrices in the first two dimensions of A equal 
 !! to the identity matrix (all zeros, with ones on the diagonal).
@@ -2139,7 +2054,7 @@ CONTAINS
    SUBROUTINE Eye2( A, ErrStat, ErrMsg )
 
 
-   REAL(ReKi),     INTENT(INOUT) :: A (:,:)                        !< Array to set to the identity matrix (nr,nc,n)
+   REAL(SiKi),     INTENT(INOUT) :: A (:,:)                        !< Array to set to the identity matrix (nr,nc,n)
    INTEGER(IntKi), INTENT(OUT)   :: ErrStat                        !< Error level
    CHARACTER(*),   INTENT(OUT)   :: ErrMsg                         !< ErrMsg corresponding to ErrStat
 
@@ -2161,11 +2076,11 @@ CONTAINS
    END IF
 
       ! initialize to zero:
-   A = 0._ReKi
+   A = 0.0_SiKi
 
       ! set the diagonals to one:
    DO j = 1, MIN(nr,nc) ! the diagonal of the matrix
-      A(j,j) = 1._ReKi
+      A(j,j) = 1.0_SiKi
    END DO
 
    END SUBROUTINE Eye2
@@ -2212,7 +2127,7 @@ CONTAINS
       ! Note that this also returns the "pseudo-identity" when A(:,:)
       ! is not square (i.e., nr/=nc).
 
-   REAL(ReKi),     INTENT(INOUT) :: A (:,:,:)                      ! Array to set to the identity matrix (nr,nc,n)
+   REAL(SiKi),     INTENT(INOUT) :: A (:,:,:)                      ! Array to set to the identity matrix (nr,nc,n)
    INTEGER(IntKi), INTENT(OUT)   :: ErrStat                        ! Error level
    CHARACTER(*),   INTENT(OUT)   :: ErrMsg                         ! ErrMsg corresponding to ErrStat
 
@@ -2236,12 +2151,12 @@ CONTAINS
    END IF
 
       ! initialize to zero:
-   A = 0._ReKi
+   A = 0.0_SiKi
 
       ! set the diagonals to one:
    DO i = 1, n ! loop through the matrices
       DO j = 1, MIN(nr,nc) ! the diagonal of the matrix
-         A(j,j,i) = 1._ReKi
+         A(j,j,i) = 1.0_SiKi
       END DO
    END DO
 
@@ -2289,6 +2204,51 @@ CONTAINS
    END DO
 
    END SUBROUTINE Eye3D
+!====================================================================================================
+INTEGER FUNCTION FindValidChannelIndx(OutListVal, ValidParamAry, SignM_out) RESULT( Indx )
+
+   CHARACTER(*),                INTENT(IN)  :: OutListVal
+   CHARACTER(OutStrLenM1),      INTENT(IN)  :: ValidParamAry(:)
+   INTEGER,           OPTIONAL, INTENT(OUT) :: SignM_out
+   
+   CHARACTER(ChanLen)             :: OutListTmp                                      ! A string to temporarily hold OutList(I)
+   INTEGER                        :: SignM
+   LOGICAL                        :: CheckOutListAgain                               ! Flag used to determine if output parameter starting with "M" is valid (or the negative of another parameter)
+   
+      OutListTmp          = OutListVal
+
+      ! Reverse the sign (+/-) of the output channel if the user prefixed the
+      !   channel name with a "-", "_", "m", or "M" character indicating "minus".
+      CheckOutListAgain = .FALSE.
+
+      IF      ( INDEX( "-_", OutListTmp(1:1) ) > 0 ) THEN
+         SignM = -1                         ! ex, "-TipDxc1" causes the sign of TipDxc1 to be switched.
+         OutListTmp          = OutListTmp(2:)
+      ELSE IF ( INDEX( "mM", OutListTmp(1:1) ) > 0 ) THEN ! We'll assume this is a variable name for now, (if not, we will check later if OutListTmp(2:) is also a variable name)
+         CheckOutListAgain   = .TRUE.
+         SignM = 1
+      ELSE
+         SignM = 1
+      END IF
+
+      CALL Conv2UC( OutListTmp )    ! Convert OutListTmp to upper case
+
+
+      Indx = IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
+
+
+         ! If it started with an "M" (CheckOutListAgain) we didn't find the value in our list (Indx < 1)
+
+      IF ( CheckOutListAgain .AND. Indx < 1 ) THEN    ! Let's assume that "M" really meant "minus" and then test again
+         SignM         = -1                     ! ex, "MTipDxc1" causes the sign of TipDxc1 to be switched.
+         OutListTmp    = OutListTmp(2:)
+
+         Indx = IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
+      END IF
+      
+      IF (PRESENT(SignM_out))  SignM_out = SignM
+      
+END FUNCTION FindValidChannelIndx
 !=======================================================================
 !> This routine uses the Gauss-Jordan elimination method for the
 !!   solution of a given set of simultaneous linear equations.
@@ -2548,21 +2508,21 @@ CONTAINS
 
       ! passed variables
 
-   REAL(ReKi), INTENT(IN )            :: DCMat          (3,3)
+   REAL(SiKi), INTENT(IN )            :: DCMat          (3,3)
    INTEGER,    INTENT(OUT )           :: ErrStat               ! a non-zero value indicates an error in the permutation matrix algorithm
    CHARACTER(*),INTENT(OUT ),OPTIONAL :: ErrMsg                ! a non-zero value indicates an error in the permutation matrix algorithm
 
-   REAL(ReKi)                         :: GetSmllRotAngsR ( 3 )
+   REAL(SiKi)                         :: GetSmllRotAngsR ( 3 )
 
       ! local variables
-   REAL(ReKi)                         :: denom                 ! the denominator of the resulting matrix
-   REAL(ReKi), PARAMETER              :: LrgAngle  = 0.4_ReKi  ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
+   REAL(SiKi)                         :: denom                 ! the denominator of the resulting matrix
+   REAL(SiKi), PARAMETER              :: LrgAngle  = 0.4_SiKi  ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
 
 
 
       ! initialize output angles (just in case there is an error that prevents them from getting set)
 
-   GetSmllRotAngsR = 0.0_ReKi
+   GetSmllRotAngsR = 0.0_SiKi
    ErrStat         = ErrID_None
    ErrMsg          = ""
 
@@ -2571,9 +2531,9 @@ CONTAINS
    GetSmllRotAngsR(2) = DCMat(3,1) - DCMat(1,3)
    GetSmllRotAngsR(3) = DCMat(1,2) - DCMat(2,1)
 
-   denom             = DCMat(1,1) + DCMat(2,2) + DCMat(3,3) - 1.0_ReKi
+   denom             = DCMat(1,1) + DCMat(2,2) + DCMat(3,3) - 1.0_SiKi
 
-   IF ( .NOT. EqualRealNos( denom, 0.0_ReKi ) ) THEN
+   IF ( .NOT. EqualRealNos( denom, 0.0_SiKi ) ) THEN
       GetSmllRotAngsR = GetSmllRotAngsR / denom
 
          ! check that the angles are, in fact, small
@@ -3046,66 +3006,7 @@ CONTAINS
 
    RETURN
    END FUNCTION InterpStpComp8
-!=======================================================================
-!> \copydoc nwtc_num::interpstpcomp4
-   FUNCTION InterpStpComp16( XVal, XAry, YAry, Ind, AryLen )
 
-      ! Function declaration.
-
-   COMPLEX(QuKi)                :: InterpStpComp16                                 !< The interpolated value of Y at XVal
-
-
-      ! Argument declarations.
-
-   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the arrays.
-   INTEGER, INTENT(INOUT)       :: Ind                                             !< Initial and final index into the arrays.
-
-   REAL(QuKi), INTENT(IN)       :: XAry    (AryLen)                                !< Array of X values to be interpolated.
-   REAL(QuKi), INTENT(IN)       :: XVal                                            !< X value to be interpolated.
-
-   COMPLEX(QuKi), INTENT(IN)    :: YAry    (AryLen)                                !< Array of Y values to be interpolated.
-
-
-
-      ! Let's check the limits first.
-
-   IF ( XVal <= XAry(1) )  THEN
-      InterpStpComp16 = YAry(1)
-      Ind             = 1
-      RETURN
-   ELSE IF ( XVal >= XAry(AryLen) )  THEN
-      InterpStpComp16 = YAry(AryLen)
-      Ind             = MAX(AryLen - 1, 1)
-      RETURN
-   END IF
-
-
-     ! Let's interpolate!
-
-   Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
-
-   DO
-
-      IF ( XVal < XAry(Ind) )  THEN
-
-         Ind = Ind - 1
-
-      ELSE IF ( XVal >= XAry(Ind+1) )  THEN
-
-         Ind = Ind + 1
-
-      ELSE
-
-         InterpStpComp16 = ( YAry(Ind+1) - YAry(Ind) )*( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) ) + YAry(Ind)
-         RETURN
-
-      END IF
-
-   END DO
-
-
-   RETURN
-   END FUNCTION InterpStpComp16
 !=======================================================================
 !> \copydoc nwtc_num::interpstpcomp4
    FUNCTION InterpStpReal4( XVal, XAry, YAry, Ind, AryLen )
@@ -3283,75 +3184,18 @@ CONTAINS
 
    RETURN
    END FUNCTION InterpStpReal8 
-!=======================================================================
-!> \copydoc nwtc_num::interpstpcomp4
-   FUNCTION InterpStpReal16( XVal, XAry, YAry, Ind, AryLen )
 
-      ! Function declaration.
-
-   REAL(QuKi)                   :: InterpStpReal16                                 !< The interpolated value of Y at XVal
-
-      ! Argument declarations.
-
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
-   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
-
-   REAL(QuKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(QuKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
-   REAL(QuKi), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
-
-
-
-      ! Let's check the limits first.
-
-   IF ( XVal <= XAry(1) )  THEN
-      InterpStpReal16 = YAry(1)
-      Ind             = 1
-      RETURN
-   ELSE IF ( XVal >= XAry(AryLen) )  THEN
-      InterpStpReal16 = YAry(AryLen)
-      Ind             = MAX(AryLen - 1, 1)
-      RETURN
-   END IF
-
-
-     ! Let's interpolate!
-
-   Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
-
-   DO
-
-      IF ( XVal < XAry(Ind) )  THEN
-
-         Ind = Ind - 1
-
-      ELSE IF ( XVal >= XAry(Ind+1) )  THEN
-
-         Ind = Ind + 1
-
-      ELSE
-
-         InterpStpReal16 = ( YAry(Ind+1) - YAry(Ind) )*( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) ) + YAry(Ind)
-         RETURN
-
-      END IF
-
-   END DO
-
-
-   RETURN
-   END FUNCTION InterpStpReal16
 !=======================================================================
 !> This funtion returns a y-value array that corresponds to an input x-value by interpolating into the arrays.
 !! It uses the passed index as the starting point and does a stepwise interpolation from there. This is
 !! especially useful when the calling routines save the value from the last time this routine was called
 !! for a given case where XVal does not change much from call to call. 
 !! It returns the first or last Y() row value if XVal is outside the limits of XAry().
-   SUBROUTINE InterpStpMat( XVal, XAry, Y, Ind, AryLen, yInterp )
+   SUBROUTINE InterpStpMat4( XVal, XAry, Y, Ind, AryLen, yInterp )
 
       ! Function declaration.
 
-   REAL(ReKi), intent(out)      :: yInterp(:)                                      !< The interpolated value(s) of Y(dim=2) at XVal
+   REAL(R4Ki), intent(out)      :: yInterp(:)                                      !< The interpolated value(s) of Y(dim=2) at XVal
 
 
       ! Argument declarations.
@@ -3359,9 +3203,9 @@ CONTAINS
    INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the arrays.
    INTEGER, INTENT(INOUT)       :: Ind                                             !< Initial and final index into the arrays.
 
-   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                !< Array of X values to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: XVal                                            !< X value to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: Y       (:,:)                                   !< Matrix of Y values to be interpolated; First dimension is AryLen.
+   REAL(R4Ki), INTENT(IN)       :: XAry    (AryLen)                                !< Array of X values to be interpolated.
+   REAL(R4Ki), INTENT(IN)       :: XVal                                            !< X value to be interpolated.
+   REAL(R4Ki), INTENT(IN)       :: Y       (:,:)                                   !< Matrix of Y values to be interpolated; First dimension is AryLen.
 
 
 
@@ -3403,7 +3247,70 @@ CONTAINS
 
 
    RETURN
-   END SUBROUTINE InterpStpMat
+   END SUBROUTINE InterpStpMat4
+!=======================================================================
+!> This funtion returns a y-value array that corresponds to an input x-value by interpolating into the arrays.
+!! It uses the passed index as the starting point and does a stepwise interpolation from there. This is
+!! especially useful when the calling routines save the value from the last time this routine was called
+!! for a given case where XVal does not change much from call to call. 
+!! It returns the first or last Y() row value if XVal is outside the limits of XAry().
+   SUBROUTINE InterpStpMat8( XVal, XAry, Y, Ind, AryLen, yInterp )
+
+      ! Function declaration.
+
+   REAL(R8Ki), intent(out)      :: yInterp(:)                                      !< The interpolated value(s) of Y(dim=2) at XVal
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             !< Initial and final index into the arrays.
+
+   REAL(R8Ki), INTENT(IN)       :: XAry    (AryLen)                                !< Array of X values to be interpolated.
+   REAL(R8Ki), INTENT(IN)       :: XVal                                            !< X value to be interpolated.
+   REAL(R8Ki), INTENT(IN)       :: Y       (:,:)                                   !< Matrix of Y values to be interpolated; First dimension is AryLen.
+
+
+
+      ! Let's check the limits first.
+
+   IF ( XVal <= XAry(1) )  THEN
+      yInterp = Y(1,:)
+      Ind     = 1
+      RETURN
+   ELSE IF ( XVal >= XAry(AryLen) )  THEN
+      yInterp = Y(AryLen,:)
+      Ind     = MAX(AryLen - 1, 1)
+      RETURN
+   END IF
+
+
+     ! Let's interpolate!
+
+   Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
+
+   DO
+
+      IF ( XVal < XAry(Ind) )  THEN
+
+         Ind = Ind - 1
+
+      ELSE IF ( XVal >= XAry(Ind+1) )  THEN
+
+         Ind = Ind + 1
+
+      ELSE
+
+         yInterp = ( Y(Ind+1,:) - Y(Ind,:) )*( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) ) + Y(Ind,:)
+         RETURN
+
+      END IF
+
+   END DO
+
+
+   RETURN
+   END SUBROUTINE InterpStpMat8
 !=======================================================================   
 !< This routine linearly interpolates Dataset. It is
 !! set for a 2-d interpolation on x and y of the input point.
@@ -3716,40 +3623,6 @@ CONTAINS
    
    END FUNCTION InterpWrappedStpReal8
 !=======================================================================
-!> \copydoc nwtc_num::interpwrappedstpreal4
-   FUNCTION InterpWrappedStpReal16( XValIn, XAry, YAry, Ind, AryLen )
-
-      ! Function declaration.
-
-   REAL(QuKi)                   :: InterpWrappedStpReal16                        !< The interpolated value of Y at XVal
-
-
-      ! Argument declarations.
-
-   INTEGER, INTENT(IN)          :: AryLen                                        !< Length of the arrays.
-   INTEGER, INTENT(INOUT)       :: Ind                                           ! Initial and final index into the arrays.
-
-   REAL(QuKi), INTENT(IN)       :: XAry    (AryLen)                              ! Array of X values to be interpolated.
-   REAL(QuKi), INTENT(IN)       :: XValIn                                        ! X value to be interpolated.
-   REAL(QuKi), INTENT(IN)       :: YAry    (AryLen)                              ! Array of Y values to be interpolated.
-
-   REAL(QuKi)                   :: XVal                                          ! X value to be interpolated.
-   
-   
-   
-      ! Wrap XValIn into the range XAry(1) to XAry(AryLen)
-   XVal = MOD(XValIn, XAry(AryLen))
-
-      ! Set the Ind to the first index if we are at the beginning of XAry
-   IF ( XVal <= XAry(2) )  THEN  
-      Ind           = 1
-   END IF
-   
-   InterpWrappedStpReal16 = InterpStp( XVal, XAry, YAry, Ind, AryLen )
-   
-   
-   END FUNCTION InterpWrappedStpReal16 
-!=======================================================================
 !> This subroutine calculates interpolated values for an array of input values.
 !! The size of the xknown and yknown arrays must match, and the size of the
 !! xnew and ynew arrays must match. Xknown must be in ascending order.
@@ -3835,47 +3708,6 @@ CONTAINS
          end function interp_lin0
    END SUBROUTINE InterpArrayR8
 !=======================================================================
-!> \copydoc nwtc_num::interparrayr4
-   SUBROUTINE InterpArrayR16( xknown, yknown, xnew, ynew )
-      REAL(QuKi), INTENT(IN   ) :: xknown(:)
-      REAL(QuKi), INTENT(IN   ) :: yknown(:)
-      REAL(QuKi), INTENT(IN   ) :: xnew(:)
-      REAL(QuKi), INTENT(  OUT) :: ynew(:)
-      integer(IntKi) i,itmp,nknown
-      nknown=size(xknown)
-      do i=1,size(xnew)
-         itmp=minloc(abs(xnew(i)-xknown),dim=1)
-         if (itmp==nknown) then
-            if (xknown(itmp)>xnew(i)) then
-               ynew(i)=interp_lin0(xnew(i),xknown(itmp-1),xknown(itmp),yknown(itmp-1),yknown(itmp))
-            else
-               ! The current x is above the max of xknown
-               ! extrapolation required, here fixed to upper bound
-               ynew(i)=yknown(nknown)
-            endif
-         elseif (xknown(itmp)<xnew(i)) then
-            ! normal case, x between itmp and itmp+1
-            ynew(i)=interp_lin0(xnew(i),xknown(itmp),xknown(itmp+1),yknown(itmp),yknown(itmp+1))
-         elseif (itmp==1) then
-            ! The current x is below the min of xknown
-            ynew(i)=yknown(1)
-         else
-            ! normal case but inverted, x between itmp-1 and itmp
-            ynew(i)=interp_lin0(xnew(i),xknown(itmp-1),xknown(itmp),yknown(itmp-1),yknown(itmp))
-         endif
-      enddo
-      CONTAINS
-         function interp_lin0(x,x0,x1,f0,f1)   ! Linear interpolation function                                     
-            real(QuKi) ::interp_lin0
-            real(QuKi),intent(in):: x,x0,x1,f0,f1
-            if (EqualRealNos(x0,x1)) then    ! to avoid division by zero
-               interp_lin0=f0
-            else
-               interp_lin0=(x-x1)/(x0-x1)*f0+(x-x0)/(x1-x0)*f1
-            endif
-         end function interp_lin0
-   END SUBROUTINE InterpArrayR16
-!=======================================================================
 !> This subroutine calculates the iosparametric coordinates, isopc, which is a value between -1 and 1 
 !! (for each dimension of a dataset), indicating where InCoord falls between posLo and posHi.
 !! It is used in InterpStpReal2D (nwtcnum::interpstpreal2d) and InterpStpReal3D (nwtcnum::interpstpreal3d).
@@ -3949,6 +3781,105 @@ CONTAINS
 
 
    END FUNCTION IsSymmetric
+!=======================================================================
+!> KERNELSMOOTHING Kernel smoothing of vector data
+!!
+!!   fNew = kernelSmoothing( x, f, KERNELTYPE, RADIUS ) generates a smoothed
+!!   version of the data f(x) in fNew.  Supported KERNELTYPE values are
+!!   'EPANECHINIKOV', 'QUARTIC' or 'BIWEIGHT', 'TRIWEIGHT', 'TRICUBE' and
+!!   'GAUSSIAN'.  RADIUS controls the width of the kernel relative to the
+!!   vector x.
+!!
+!!   See also: https://en.wikipedia.org/wiki/Kernel_(statistics)#Kernel_functions_in_common_use
+subroutine kernelSmoothing(x, f, kernelType, radius, fNew)
+
+   REAL(ReKi),             INTENT(in   ) :: x(:)         !> independent axis
+   REAL(ReKi),             INTENT(in   ) :: f(:)         !> function values, f(x), to be smoothed
+   INTEGER,                INTENT(in   ) :: kernelType   !> what kind of smoothing function to use
+   REAL(ReKi),             INTENT(in   ) :: radius       !> width of the "window", in the units of x
+   REAL(ReKi),             INTENT(  out) :: fNew(:)      !> smoothed function values
+   
+   REAL(ReKi)                            :: k
+   REAL(ReKi)                            :: k_sum
+   REAL(ReKi)                            :: w
+   INTEGER(IntKi)                        :: Exp1
+   INTEGER(IntKi)                        :: Exp2
+   REAL(ReKi)                            :: u(size(x))
+   INTEGER                               :: i, j
+   INTEGER                               :: n
+   
+   ! check that radius > 0
+   ! check that size(x) = size(f)=size(fNew)
+   ! check that kernelType is a valid number
+   
+   n = size(x)
+   
+   
+   ! make sure that the value of u is in [-1 and 1] for these kernels:
+   if (kernelType /= kernelType_GAUSSIAN) then
+
+      select case ( kernelType )
+         case (kernelType_EPANECHINIKOV)
+            w = 3.0_ReKi/4.0_ReKi
+            Exp1 = 2
+            Exp2 = 1
+         case (kernelType_QUARTIC, kernelType_BIWEIGHT)
+            w = 15.0_ReKi/16.0_ReKi
+            Exp1 = 2
+            Exp2 = 2
+         case (kernelType_TRIWEIGHT)
+            w = 35.0_ReKi/32.0_ReKi
+            Exp1 = 2
+            Exp2 = 3
+         case (kernelType_TRICUBE)
+            w = 70.0_ReKi/81.0_ReKi
+            Exp1 = 3
+            Exp2 = 3
+      end select
+         
+      fNew = 0.0_ReKi ! whole array operation
+      do j=1,n ! for each value in f:
+      
+         u = (x - x(j)) / radius ! whole array operation
+         do i=1,n
+            u(i) = min( 1.0_ReKi, max( -1.0_ReKi, u(i) ) )
+         end do
+         
+         k_sum   = 0.0_ReKi
+         do i=1,n
+            k = w*(1.0_ReKi-abs(u(i))**Exp1)**Exp2;
+            k_sum = k_sum + k
+            fNew(j) = fNew(j) + k*f(i)
+         end do
+         if (k_sum > 0.0_ReKi) then
+            fNew(j) = fNew(j) / k_sum
+         end if
+         
+      end do ! j (each output value)
+      
+   else ! kernelType_GAUSSIAN
+      w = 1.0_ReKi/sqrt(TwoPi)
+      
+      fNew = 0.0_ReKi ! whole array operation
+      do j=1,n ! for each value in f:
+      
+         u = (x - x(j)) / radius ! whole array operation
+      
+         k_sum   = 0.0_ReKi
+         do i=1,n
+            k = w*exp(-0.5*u(i)**2);
+            k_sum = k_sum + k
+            fNew(j) = fNew(j) + k*f(i)
+         end do
+         if (k_sum > 0.0_ReKi) then
+            fNew(j) = fNew(j) / k_sum
+         end if
+         
+      end do ! j (each output value)
+      
+   end if
+
+end subroutine kernelSmoothing
 !=======================================================================
 !> This subroutine finds the lower-bound index of an input x-value located in an array.
 !! On return, Ind has a value such that
@@ -4112,54 +4043,6 @@ CONTAINS
 
    END SUBROUTINE LocateStpR8
 !=======================================================================
-!> \copydoc nwtc_num::locatestpr4
-   SUBROUTINE LocateStpR16( XVal, XAry, Ind, AryLen )
-
-      ! Argument declarations.
-
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the array.
-   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the array.
-
-   REAL(QuKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(QuKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
-
-
-
-      ! Let's check the limits first.
-
-   IF ( XVal < XAry(1) )  THEN
-      Ind = 0
-   ELSE IF ( XVal >= XAry(AryLen) )  THEN
-      Ind = AryLen
-   ELSE
-
-      Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
-
-      DO
-
-         IF ( XVal < XAry(Ind) )  THEN
-
-            Ind = Ind - 1
-
-         ELSE IF ( XVal >= XAry(Ind+1) )  THEN
-
-            Ind = Ind + 1
-
-         ELSE
-
-            RETURN
-
-         END IF
-
-      END DO
-
-
-   END IF
-
-   RETURN
-
-   END SUBROUTINE LocateStpR16
-!=======================================================================
 !> This routine calculates the mean value of an array.
    FUNCTION Mean ( Ary, AryLen )
       
@@ -4248,30 +4131,6 @@ CONTAINS
    RETURN
    END SUBROUTINE MPi2Pi_R8
 !=======================================================================
-!> \copydoc nwtc_num::mpi2pi_r4
-   SUBROUTINE MPi2Pi_R16 ( Angle )
-
-                 
-      ! Argument declarations:
-
-   REAL(QuKi), INTENT(INOUT)    :: Angle
-
-
-      ! Get the angle between 0 and 2Pi.
-
-   Angle = MODULO( Angle, TwoPi_R16 )
-
-
-      ! Get the angle between -Pi and Pi.
-
-   IF ( Angle > Pi_R16 )  THEN
-      Angle = Angle - TwoPi_R16
-   END IF
-
-
-   RETURN
-   END SUBROUTINE MPi2Pi_R16
-!=======================================================================
 !> This function takes an angle in radians and converts it to 
 !! an angle in degrees in the range [-180,180]
 real(reKi) function Rad2M180to180Deg(Angle) result(Alpha)
@@ -4341,45 +4200,60 @@ end function Rad2M180to180Deg
 
    END FUNCTION OuterProductR8   
 !=======================================================================
-!> \copydoc nwtc_num::outerproductr4
-   FUNCTION OuterProductR16(u,v)
-   
-   ! this routine calculates the outer product of two vectors
-
-   REAL(QuKi),INTENT(IN):: u(:),v(:)
-   REAL(QuKi)::OuterProductR16(SIZE(u),SIZE(v))
-
-   INTEGER(IntKi)::i,j,n1,n2
-
-   n1=SIZE(u)
-   n2=SIZE(v)
-
-   DO i=1,n1
-       DO j=1,n2
-           OuterProductR16(i,j) = u(i) * v(j)
-       ENDDO
-   ENDDO
-
-   END FUNCTION OuterProductR16 
-!=======================================================================
-!> This subroutine perturbs an orientation matrix by a small angle, using 
-!! a logarithmic map. For small angles, the change in angle is equivalent to 
-!! a change in log map parameters.
-   SUBROUTINE PerturbOrientationMatrix( Orientation, Perturbation, AngleDim )
-      REAL(R8Ki), INTENT(INOUT)  :: Orientation(3,3)
-      REAL(R8Ki), INTENT(IN)     :: Perturbation ! angle (radians) of the perturbation
-      INTEGER,    INTENT(IN)     :: AngleDim
+!> This subroutine perturbs an orientation matrix by a small angle.  Two methods
+!! are used:
+!!    small angle DCM:  perturb small angles extracted from DCM
+!!    large angle DCM:  multiply input DCM with DCM created with small angle
+!!                      perturbations
+!! NOTE1: this routine originally used logarithmic mapping for small angle
+!!          perturbations
+!! NOTE2: all warnings from SmllRotTrans are ignored.
+!! NOTE3: notice no checks are made to verify correct set of inputs given
+!!          one of the follwing combinations must be provided (others truly
+!!          optional):
+!!             Perturbations
+!!             Perturbation + AngleDim
+   SUBROUTINE PerturbOrientationMatrix( Orientation, Perturbation, AngleDim, Perturbations, UseSmlAngle )
+      REAL(R8Ki),           INTENT(INOUT)  :: Orientation(3,3)
+      REAL(R8Ki), OPTIONAL, INTENT(IN)     :: Perturbation ! angle (radians) of the perturbation
+      INTEGER,    OPTIONAL, INTENT(IN)     :: AngleDim
+      REAL(R8Ki), OPTIONAL, INTENT(IN)     :: Perturbations(3) ! angles (radians) of the perturbations
+      LOGICAL,    OPTIONAL, INTENT(IN)     :: UseSmlAngle
    
            ! Local variables
       REAL(R8Ki)                 :: angles(3)
+      REAL(R8Ki)                 :: OrientationTmp(3,3)
+      LOGICAL                    :: OutputSmlAngle
       integer(intKi)             :: ErrStat2
       character(ErrMsgLen)       :: ErrMsg2
       
-      CALL DCM_LogMap( Orientation, angles, ErrStat2, ErrMsg2 )
+      if (present(UseSmlAngle)) then
+         OutputSmlAngle = UseSmlAngle
+      else
+         OutputSmlAngle = .false.
+      end if
+
+      if (OutputSmlAngle) then
+!         CALL DCM_LogMap( Orientation, angles, ErrStat2, ErrMsg2 )
+         angles =  GetSmllRotAngs ( Orientation, ErrStat2, ErrMsg2 )
+         IF (PRESENT(Perturbations)) THEN
+            angles = angles + Perturbations
+         ELSE
+            angles(AngleDim) = angles(AngleDim) + Perturbation
+         END IF
+!         Orientation = DCM_exp( angles )
+         call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), Orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+      else !Only works if AngleDim is specified
+         IF (PRESENT(Perturbations)) THEN
+            angles = Perturbations
+         ELSE
+            angles = 0.0_R8Ki
+            angles(AngleDim) = Perturbation
+         END IF
+         call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), OrientationTmp, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+         Orientation = matmul(Orientation, OrientationTmp)
+      endif
       
-      angles(AngleDim) = angles(AngleDim) + Perturbation
-      
-      Orientation = DCM_exp( angles )
 
    END SUBROUTINE PerturbOrientationMatrix
 !=======================================================================
@@ -5380,11 +5254,9 @@ end function Rad2M180to180Deg
       Inv2Pi_S  =  0.5_SiKi/Pi_S    ! 1.0_SiKi/TwoPi_S
       Pi_R4   = ACOS( -1.0_SiKi )
       Pi_R8   = ACOS( -1.0_R8Ki )
-      Pi_R16  = ACOS( -1.0_QuKi )
 
       TwoPi_R4  = Pi_R4 *2.0_SiKi
       TwoPi_R8  = Pi_R8 *2.0_R8Ki
-      TwoPi_R16 = Pi_R16*2.0_QuKi
       
          ! IEEE constants:
       CALL Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )
@@ -5577,10 +5449,10 @@ end function Rad2M180to180Deg
 
       ! Passed Variables:
 
-   REAL(ReKi), INTENT(IN )             :: Theta1                                          !< \f$\theta_1\f$: the small rotation about \f$X_1\f$, (rad).
-   REAL(ReKi), INTENT(IN )             :: Theta2                                          !< \f$\theta_2\f$: the small rotation about \f$X_2\f$, (rad).
-   REAL(ReKi), INTENT(IN )             :: Theta3                                          !< \f$\theta_3\f$: the small rotation about \f$X_3\f$, (rad).
-   REAL(DbKi), INTENT(OUT)             :: TransMat (3,3)                                  !< The resulting transformation matrix from \f$X\f$ to \f$x\f$, (-).
+   REAL(R8Ki), INTENT(IN )             :: Theta1                                          !< \f$\theta_1\f$: the small rotation about \f$X_1\f$, (rad).
+   REAL(R8Ki), INTENT(IN )             :: Theta2                                          !< \f$\theta_2\f$: the small rotation about \f$X_2\f$, (rad).
+   REAL(R8Ki), INTENT(IN )             :: Theta3                                          !< \f$\theta_3\f$: the small rotation about \f$X_3\f$, (rad).
+   REAL(R8Ki), INTENT(OUT)             :: TransMat (3,3)                                  !< The resulting transformation matrix from \f$X\f$ to \f$x\f$, (-).
 
    INTEGER(IntKi),INTENT(OUT)          :: ErrStat                                         !< Error status 
    CHARACTER(*), INTENT(OUT)           :: ErrMsg                                          !< Error message corresponding to ErrStat
@@ -5668,101 +5540,6 @@ end function Rad2M180to180Deg
    END SUBROUTINE SmllRotTransD
 !=======================================================================
 !> \copydoc nwtc_num::smllrottransd
-   SUBROUTINE SmllRotTransDD( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt, ErrStat, ErrMsg )
-
-      ! Passed Variables:
-
-   REAL(DbKi), INTENT(IN )             :: Theta1                                          !< The small rotation about X1, (rad).
-   REAL(DbKi), INTENT(IN )             :: Theta2                                          !< The small rotation about X2, (rad).
-   REAL(DbKi), INTENT(IN )             :: Theta3                                          !< The small rotation about X3, (rad).
-   REAL(DbKi), INTENT(OUT)             :: TransMat (3,3)                                  !< The resulting transformation matrix from X to x, (-).
-
-   INTEGER(IntKi),INTENT(OUT)          :: ErrStat                                         !< Error status 
-   CHARACTER(*), INTENT(OUT)           :: ErrMsg                                          !< Error message corresponding to ErrStat
-
-   CHARACTER(*), INTENT(IN)            :: RotationType                                    !< The type of rotation; used to inform the user where a large rotation is occuring upon such an event.
-   CHARACTER(*), INTENT(IN ), OPTIONAL :: ErrTxt                                          !< an additional message to be displayed as a warning (typically the simulation time)
-
-      ! Local Variables:
-
-   REAL(DbKi)                          :: ComDenom                                        ! = ( Theta1^2 + Theta2^2 + Theta3^2 )*SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
-   REAL(DbKi), PARAMETER               :: LrgAngle  = 0.4                                 ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
-   REAL(DbKi)                          :: Theta11                                         ! = Theta1^2
-   REAL(DbKi)                          :: Theta12S                                        ! = Theta1*Theta2*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(DbKi)                          :: Theta13S                                        ! = Theta1*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(DbKi)                          :: Theta22                                         ! = Theta2^2
-   REAL(DbKi)                          :: Theta23S                                        ! = Theta2*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(DbKi)                          :: Theta33                                         ! = Theta3^2
-   REAL(DbKi)                          :: SqrdSum                                         ! = Theta1^2 + Theta2^2 + Theta3^2
-   REAL(DbKi)                          :: SQRT1SqrdSum                                    ! = SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
-
-   LOGICAL,    SAVE                    :: FrstWarn  = .TRUE.                              ! When .TRUE., indicates that we're on the first warning.
-
-
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-
-      ! Display a warning message if at least one angle gets too large in magnitude:
-
-   IF ( ( ( ABS(Theta1) > LrgAngle ) .OR. ( ABS(Theta2) > LrgAngle ) .OR. ( ABS(Theta3) > LrgAngle ) ) .AND. FrstWarn )  THEN
-
-      ErrStat= ErrID_Severe
-      ErrMsg = 'Small angle assumption violated in SUBROUTINE SmllRotTrans() due to a large '//TRIM(RotationType)//'. '// &
-               'The solution may be inaccurate. Simulation continuing, but future warnings from SmllRotTrans() will be suppressed.'
-
-      IF ( PRESENT(ErrTxt) ) THEN
-         ErrMsg = TRIM(ErrMsg)//NewLine//' Additional debugging message from SUBROUTINE SmllRotTrans(): '//TRIM(ErrTxt)
-      END IF
-
-      !CALL ProgWarn( TRIM(ErrMsg) )
-
-      FrstWarn = .FALSE.   ! Don't enter here again!
-
-   ENDIF
-
-
-      ! Compute some intermediate results:
-
-   Theta11      = Theta1*Theta1
-   Theta22      = Theta2*Theta2
-   Theta33      = Theta3*Theta3
-
-   SqrdSum      = Theta11 + Theta22 + Theta33
-   SQRT1SqrdSum = SQRT( 1.0_DbKi + SqrdSum )
-   ComDenom     = SqrdSum*SQRT1SqrdSum
-
-   Theta12S     = Theta1*Theta2*( SQRT1SqrdSum - 1.0_DbKi )
-   Theta13S     = Theta1*Theta3*( SQRT1SqrdSum - 1.0_DbKi )
-   Theta23S     = Theta2*Theta3*( SQRT1SqrdSum - 1.0_DbKi )
-
-
-      ! Define the transformation matrix:
-
-   IF ( ComDenom == 0.0_DbKi )  THEN  ! All angles are zero and matrix is ill-conditioned (the matrix is derived assuming that the angles are not zero); return identity
-
-      TransMat(1,:) = (/ 1.0_DbKi, 0.0_DbKi, 0.0_DbKi /)
-      TransMat(2,:) = (/ 0.0_DbKi, 1.0_DbKi, 0.0_DbKi /)
-      TransMat(3,:) = (/ 0.0_DbKi, 0.0_DbKi, 1.0_DbKi /)
-
-   ELSE                          ! At least one angle is nonzero
-
-      TransMat(1,1) = ( Theta11*SQRT1SqrdSum + Theta22              + Theta33              )/ComDenom
-      TransMat(2,2) = ( Theta11              + Theta22*SQRT1SqrdSum + Theta33              )/ComDenom
-      TransMat(3,3) = ( Theta11              + Theta22              + Theta33*SQRT1SqrdSum )/ComDenom
-      TransMat(1,2) = (  Theta3*SqrdSum + Theta12S )/ComDenom
-      TransMat(2,1) = ( -Theta3*SqrdSum + Theta12S )/ComDenom
-      TransMat(1,3) = ( -Theta2*SqrdSum + Theta13S )/ComDenom
-      TransMat(3,1) = (  Theta2*SqrdSum + Theta13S )/ComDenom
-      TransMat(2,3) = (  Theta1*SqrdSum + Theta23S )/ComDenom
-      TransMat(3,2) = ( -Theta1*SqrdSum + Theta23S )/ComDenom
-
-   ENDIF
-
-
-   RETURN
-   END SUBROUTINE SmllRotTransDD
-!=======================================================================
-!> \copydoc nwtc_num::smllrottransd
    SUBROUTINE SmllRotTransR( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt, ErrStat, ErrMsg )
 
 
@@ -5804,10 +5581,10 @@ end function Rad2M180to180Deg
 
       ! Passed Variables:
 
-   REAL(ReKi), INTENT(IN )             :: Theta1                                          ! The small rotation about X1, (rad).
-   REAL(ReKi), INTENT(IN )             :: Theta2                                          ! The small rotation about X2, (rad).
-   REAL(ReKi), INTENT(IN )             :: Theta3                                          ! The small rotation about X3, (rad).
-   REAL(ReKi), INTENT(OUT)             :: TransMat (3,3)                                  ! The resulting transformation matrix from X to x, (-).
+   REAL(SiKi), INTENT(IN )             :: Theta1                                          ! The small rotation about X1, (rad).
+   REAL(SiKi), INTENT(IN )             :: Theta2                                          ! The small rotation about X2, (rad).
+   REAL(SiKi), INTENT(IN )             :: Theta3                                          ! The small rotation about X3, (rad).
+   REAL(SiKi), INTENT(OUT)             :: TransMat (3,3)                                  ! The resulting transformation matrix from X to x, (-).
 
    INTEGER(IntKi),INTENT(OUT)          :: ErrStat
    CHARACTER(*), INTENT(OUT)           :: ErrMsg
@@ -5817,16 +5594,16 @@ end function Rad2M180to180Deg
 
       ! Local Variables:
 
-   REAL(ReKi)                          :: ComDenom                                        ! = ( Theta1^2 + Theta2^2 + Theta3^2 )*SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
-   REAL(ReKi), PARAMETER               :: LrgAngle  = 0.4                                 ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
-   REAL(ReKi)                          :: Theta11                                         ! = Theta1^2
-   REAL(ReKi)                          :: Theta12S                                        ! = Theta1*Theta2*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(ReKi)                          :: Theta13S                                        ! = Theta1*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(ReKi)                          :: Theta22                                         ! = Theta2^2
-   REAL(ReKi)                          :: Theta23S                                        ! = Theta2*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
-   REAL(ReKi)                          :: Theta33                                         ! = Theta3^2
-   REAL(ReKi)                          :: SqrdSum                                         ! = Theta1^2 + Theta2^2 + Theta3^2
-   REAL(ReKi)                          :: SQRT1SqrdSum                                    ! = SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
+   REAL(SiKi)                          :: ComDenom                                        ! = ( Theta1^2 + Theta2^2 + Theta3^2 )*SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
+   REAL(SiKi), PARAMETER               :: LrgAngle  = 0.4                                 ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
+   REAL(SiKi)                          :: Theta11                                         ! = Theta1^2
+   REAL(SiKi)                          :: Theta12S                                        ! = Theta1*Theta2*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
+   REAL(SiKi)                          :: Theta13S                                        ! = Theta1*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
+   REAL(SiKi)                          :: Theta22                                         ! = Theta2^2
+   REAL(SiKi)                          :: Theta23S                                        ! = Theta2*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
+   REAL(SiKi)                          :: Theta33                                         ! = Theta3^2
+   REAL(SiKi)                          :: SqrdSum                                         ! = Theta1^2 + Theta2^2 + Theta3^2
+   REAL(SiKi)                          :: SQRT1SqrdSum                                    ! = SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
 
    LOGICAL,    SAVE                    :: FrstWarn  = .TRUE.                              ! When .TRUE., indicates that we're on the first warning.
 
@@ -5863,18 +5640,18 @@ end function Rad2M180to180Deg
    SQRT1SqrdSum = SQRT( 1.0_ReKi + SqrdSum )
    ComDenom     = SqrdSum*SQRT1SqrdSum
 
-   Theta12S     = Theta1*Theta2*( SQRT1SqrdSum - 1.0_Reki )
-   Theta13S     = Theta1*Theta3*( SQRT1SqrdSum - 1.0_Reki )
-   Theta23S     = Theta2*Theta3*( SQRT1SqrdSum - 1.0_Reki )
+   Theta12S     = Theta1*Theta2*( SQRT1SqrdSum - 1.0_Siki )
+   Theta13S     = Theta1*Theta3*( SQRT1SqrdSum - 1.0_Siki )
+   Theta23S     = Theta2*Theta3*( SQRT1SqrdSum - 1.0_Siki )
 
 
       ! Define the transformation matrix:
 
    IF ( ComDenom == 0.0_ReKi )  THEN  ! All angles are zero and matrix is ill-conditioned (the matrix is derived assuming that the angles are not zero); return identity
 
-      TransMat(1,:) = (/ 1.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
-      TransMat(2,:) = (/ 0.0_ReKi, 1.0_ReKi, 0.0_ReKi /)
-      TransMat(3,:) = (/ 0.0_ReKi, 0.0_ReKi, 1.0_ReKi /)
+      TransMat(1,:) = (/ 1.0_SiKi, 0.0_SiKi, 0.0_SiKi /)
+      TransMat(2,:) = (/ 0.0_SiKi, 1.0_SiKi, 0.0_SiKi /)
+      TransMat(3,:) = (/ 0.0_SiKi, 0.0_SiKi, 1.0_SiKi /)
 
    ELSE                          ! At least one angle is nonzero
 
@@ -6066,28 +5843,387 @@ end function Rad2M180to180Deg
    RETURN
    END FUNCTION SkewSymMatR8
 !=======================================================================
-!> \copydoc nwtc_num::skewsymmatr4
-   FUNCTION SkewSymMatR16 ( x ) RESULT(M)
-
-      ! Function arguments
-
-   REAL(QuKi)                   :: M(3,3)                          ! skew-symmetric matrix formed from input vector \f$x\f$
-   REAL(QuKi), INTENT(IN)       :: x(3)                            ! input vector \f$x\f$
-
-   M(1,1) =    0.0_QuKi
-   M(2,1) =  x(3)
-   M(3,1) = -x(2)
-
-   M(1,2) = -x(3)
-   M(2,2) =    0.0_QuKi
-   M(3,2) =  x(1)
-
-   M(1,3) =  x(2)
-   M(2,3) = -x(1)
-   M(3,3) =    0.0_QuKi
+!> If M is a rotation matrix from a 1-2-3 rotation sequence about Y-X-Z, this function returns 
+!! the 3 sequential angles, \f$\theta_y\f$, \f$\theta_x\f$, and \f$\theta_z\f$ (in radians), that formed 
+!! the matrix. M represents a change of basis (from global to local coordinates; 
+!! not a physical rotation of the body; passive rotation).
+!!
+!! See Tait-Bryan angle \f$ Y_1 X_2 Z_3 \f$ at https://en.wikipedia.org/wiki/Euler_angles#Rotation_matrix
+!! Note that what we are using here is the passive rotation, which is the transpose of what appears in the
+!! wikipedia article.
+!! 
+!!
+!! \f{eqnarray*}{   
+!! M & = & R(\theta_z) R(\theta_x) R(\theta_y)
+!!   & = & R(\theta_3) R(\theta_2) R(\theta_1) \\
+!!   & = & \begin{bmatrix}    \cos(\theta_z)    & \sin(\theta_z)     & 0                  \\
+!!                            -\sin(\theta_z)   & \cos(\theta_z)     & 0                  \\
+!!                            0                 &  0                 & 1                  \end{bmatrix}
+!!         \begin{bmatrix}    1                 &  0                 & 0                  \\
+!!                            0                 &  \cos(\theta_x)    & \sin(\theta_x)     \\
+!!                            0                 & -\sin(\theta_x)    & \cos(\theta_x)     \end{bmatrix}
+!!         \begin{bmatrix}    \cos(\theta_y)    & 0                  & -\sin(\theta_y)    \\
+!!                            0                 & 1                  & 0                  \\
+!!                            \sin(\theta_y)    & 0                  & \cos(\theta_y)     \end{bmatrix}
+!!   & = & \begin{bmatrix}    C_3               & S_3                & 0                  \\
+!!                            -S_3              & C_3                & 0                  \\
+!!                            0                 & 0                  & 1                  \end{bmatrix}
+!!         \begin{bmatrix}    1                 & 0                  & 0                  \\
+!!                            0                 & C_2                & S_2                \\
+!!                            0                 & -S_2               & C_2                \end{bmatrix}
+!!         \begin{bmatrix}    C_1               & 0                  & -S_1               \\
+!!                            0                 & 1                  & 0                  \\
+!!                            S_1               & 0                  & C_1                \end{bmatrix}  \\
+!!   & = & \begin{bmatrix}  
+!!             \cos(\theta_y) \cos(\theta_z) + \sin(\theta_y) \sin(\theta_x) \sin(\theta_z)     &  \cos(\theta_x) \sin(\theta_z)    &  \cos(\theta_y) \sin(\theta_x) \sin(\theta_z) - \sin(\theta_y) \cos(\theta_z)  \\
+!!             \sin(\theta_y) \sin(\theta_x) \cos(\theta_z) - \cos(\theta_y) \sin(\theta_z)     &  \cos(\theta_x) \cos(\theta_z)    &  \cos(\theta_y) \sin(\theta_x) \cos(\theta_z) + \sin(\theta_y) \sin(\theta_z)  \\
+!!             \sin(\theta_y) \cos(\theta_x)                                                    &  -\sin(\theta_x)                  &  \cos(\theta_y) \cos(\theta_x)                                                 \\
+!!         \end{bmatrix}   
+!!   & = & \begin{bmatrix}  
+!!             C_1 C_3 + S_1 S_2 S_3   &  C_2 S_3     &  C_1 S_2 S_3 - S_1 C_3   \\
+!!             S_1 S_2 C_3 - C_1 S_3   &  C_2 C_3     &  C_1 S_2 C_3 + S_1 S_3   \\
+!!             S_1 C_2                 &  -S_2        &  C_1 C_2                 \\
+!!         \end{bmatrix}   
+!! \f}
+!! returned angles are in the range \f$\theta_y,\theta_x, \theta_z \in \left[ \pi, -\pi \right]\f$ \n
+!! Use TaitBryanYXZExtract (nwtc_num::taitbryanyxzextract)  instead of directly calling a specific routine in the generic interface. 
+   FUNCTION TaitBryanYXZExtractR4(M) result(theta)
    
-   RETURN
-   END FUNCTION SkewSymMatR16
+   
+      REAL(SiKi), INTENT(IN) :: M(3,3)    !< rotation matrix, M 
+      REAL(SiKi)             :: theta(3)  !< the 3 rotation angles, \f$(\theta_y, \theta_x, \theta_z)\f$, corresponding to the Tait-Bryan rotation angle corresponding to cant-toe-twist
+     
+      REAL(SiKi)              :: C_1       ! C_1 > cos(theta_y) 
+      REAL(SiKi)              :: S_1       ! S_1 > sin(theta_y) 
+      REAL(SiKi)              :: C_2       ! C_2 > cos(theta_x) 
+      REAL(SiKi)              :: C_3       ! C_3 > cos(theta_z) 
+      REAL(SiKi)              :: S_3       ! S_3 > sin(theta_z)
+
+         !> # Algorithm
+
+         !> Starting with the trig identity of \f$ \sin(\theta_3)^2 + \cos(\theta_3)^2 = S_3^2 + C_3^2 \equiv 1\f$, we can find \f$ \cos(\theta_2) \f$
+         !! from matrix elements \f$M(1,2)\f$ and \f$M(2,2)\f$ by 
+         !! \f{equation}{
+         !!    \cos(\theta_2) = C_2 = \sqrt{ M(1,2)^2 + M(2,2)^2} = \sqrt{ C_2^2 S_3^2 + C_2^2 C_3^2 } = \sqrt{ C_2^2 ( S_3^2 + C_3^2 ) }.
+         !! \f}
+
+         ! use trig identity S_3**2 + C_3**2 = 1 to get abs( C_2 )
+      C_2 = sqrt( m(1,2)**2 + m(2,2)**2 )
+
+      if ( EqualRealNos( C_2, 0.0_SiKi ) ) then
+
+         !> ## If \f$ \cos(\theta_2) = C_2 = 0\f$:
+         !! If \f$\cos(\theta_2) = C_2 = 0\f$, then \f$ \theta_2 \f$ is \f$ \pm\pi/2 \f$ and \f$ S_2 = \pm 1\f$.  We can solve for the sign of \f$\theta_2\f$ by using 
+         !! \f{equation}{
+         !!    \theta_2 = \arctan{\left( \frac{-M(3,2)}{C_2} \right)} = \arctan{\left( \frac{S_2}{C_2} \right)}
+         !! \f}
+         !! (but using the _atan2_ function in the complex plane instead of \f$ \arctan \f$).
+
+         theta(2) = atan2( -m(3,2), C_2 )     ! theta_2 -> theta_x
+
+
+         !> Considering \f$ C_2 = 0 \f$ and \f$ S_2 = \pm 1\f$, the matrix \f$ M \f$ reduces to
+         !! \f{equation}
+         !!    M =  \begin{bmatrix}  
+         !!             C_1 C_3 \pm S_1 S_3     &  0        &  \pm C_1 S_3 - S_1 C_3   \\
+         !!             \pm S_1 C_3 - C_1 S_3   &  0        &  \pm C_1 C_3 + S_1 S_3   \\
+         !!             0                       &  \mp 1    &  0                       \\
+         !!         \end{bmatrix}
+         !! \f}
+         !!
+         !! At this point we can choose \f$ \theta_3 = 0 \f$ due to gimbal lock giving \f$ \sin(\theta_3) = 0 \f$, \f$ \cos(\theta_3) = 1\f$.
+
+         theta(3) = 0.0_SiKi                          ! theta_z = theta_3
+
+         !> This further reduces \f$ M \f$ to 
+         !! \f{equation}
+         !!    M =  \begin{bmatrix}  
+         !!             C_1      &  0        &  - S_1    \\
+         !!             \pm S_1  &  0        &  \pm C_1  \\
+         !!             0        &  \mp 1    &  0        \\
+         !!         \end{bmatrix},
+         !! \f}
+         !! allowing us to solve for \f$ \theta_1 \f$ by \f$ \theta_1 = \arctan{\left( \frac{-M(1,3)}{M(1,1)} \right)} = \arctan{\left( \frac{S_1}{C_1} \right)}\f$.
+
+         theta(1) = atan2( -m(1,3), m(1,1) )
+
+      else
+         !> ## Else \f$ \cos(\theta_2) = C_2 \neq 0\f$:
+         !!
+         !! First, start by finding \f$ \theta(1) \f$ from \f$ M(3,1) \f$ and \f$ M(3,3) \f$ using
+         !! \f{equation}{
+         !!    \theta_1 = \arctan{\left( \frac{M(3,1)}{M(3,3)} \right)} = \arctan{\left( \frac{S_1 C_2}{C_1 C_2} \right)}.
+         !! \f}
+         !! With this we calculate values for \f$S_1\f$ and \f$C_1\f$.
+
+         theta(1) = atan2( m(3,1), m(3,3) )     ! theta_1 -> theta_y
+         C_1   = cos( theta(1) )
+         S_1   = sin( theta(1) )
+
+         !> We already know \f$ \text{abs}( C_2 ) \f$, but need the sign of it.  This can be found by comparing the
+         !! \f$ S_1 C_2 \f$ and \f$ C_1 C_2 \f$ terms with the \f$ C_1 \f$ and \f$ S_1 \f$ terms we just found.
+         !! If \f$ C_1 = 0 \f$, then we use 
+         !! \f{equation}{
+         !!    C_2 = C_2 \cdot \text{sgn}{\left( \frac{M(3,1)}{S_1} \right)} = C_2 \cdot \text{sgn}{( C_2 )},
+         !! \f}
+         !! otherwise
+         !! \f{equation}{
+         !!    C_2 = C_2 \cdot \text{sgn}{\left( \frac{M(3,3)}{C_1} \right)} = C_2 \cdot \text{sgn}{( C_2 )}
+         !! \f}
+         !!
+         if ( EqualRealNos( C_1, 0.0_SiKi ) ) then
+            C_2 = sign( C_2, m(3,1) / S_1 )
+         else
+            C_2 = sign( C_2, m(3,3) / C_1 )
+         endif
+
+         !> Now can calculate \f$ \theta_2 \f$ from
+         !! \f{equation}{
+         !!    \theta_2 = \arctan{\left( \frac{-M(3,2)}{C_2} \right)} = \arctan{\left( \frac{S_2}{C_2} \right)}
+         !! \f}
+         theta(2) = atan2( -m(3,2), C_2 )
+        
+
+         !> For numerical reasons, we're going to get \f$ \theta_3 \f$ (\f$\theta_z\f$) using
+         !! \f{eqnarray*}{
+         !!    M' &=& M \cdot (R(\theta_2) \cdot R(\theta_1))^\text{T} = M \cdot R(\theta_1)^\text{T} \cdot R(\theta_2)^\text{T} & = & R(\theta_3) \\
+         !!       &=& R(\theta_3) R(\theta_2) R(\theta_1) R(\theta_1)^T R(\theta_2)^T  &=& R(\theta_3) \\
+         !!       &=&   M \cdot
+         !!             \begin{bmatrix}
+         !!                C_1   &  0     &  S_1   \\
+         !!                0     &  1     &  0     \\
+         !!                -S_1  &  0     &  C_1
+         !!             \end{bmatrix}
+         !!                \cdot
+         !!             \begin{bmatrix}
+         !!                1     &  0     &  0     \\
+         !!                0     &  C_2   & -S_2   \\
+         !!                0     &  S_2   &  C_2
+         !!             \end{bmatrix}
+         !!       &=&  
+         !!             \begin{bmatrix}
+         !!                C_3   &  S_3   &  0     \\
+         !!                -S_3  &  C_3   &  0     \\
+         !!                0     &  0     &  1
+         !!             \end{bmatrix}  \\
+         !!       &=&   M \cdot
+         !!             \begin{bmatrix}
+         !!                C_1   &  S_1 S_2  &  S_1 C_2  \\
+         !!                0     &  C_2      &  -S_2     \\
+         !!                -S_1  &  C_1 S_2  &  C_1 C_2
+         !!             \end{bmatrix}
+         !!       &=&   \begin{bmatrix}
+         !!                C_3   &  S_3   &  0     \\
+         !!                -S_3  &  C_3   &  0     \\
+         !!                0     &  0     &  1
+         !!             \end{bmatrix}  \\
+         !! \f}
+         !!
+         !! From this we can find \f$ -S_3 \f$ and \f$ C_3 \f$ as
+         !! \f{eqnarray}{
+         !!    -S_3  &=&   M(2,1) C_1 + M(2,3) (- S_1 )  &=&   ( S_1 S_2 C_3 - C_1 S_3 ) C_1 + ( C_1 S_2 C_3 + S_1 S_3 ) ( - S_1 )  \\
+         !!          &&                                  &=&   S_1 C_1 S_2 C_3 - C_1^2 S_3 - S_1^2 S_3 - S_1 C_1 S_2 C_3            \\
+         !!          &&                                  &=&   -( C_1^2 + S_1^2 ) S_3                                               \\
+         !!          &&                                  &=&   -S_3
+         !! \f}
+         !! and
+         !! \f{eqnarray}{
+         !!    C_3   &=&   M(1,1) C_1 + M(1,3) (- S_1 )  &=&   ( C_1 C_3 + S_1 S_2 S_3 ) C_1 + ( C_1 S_2 S_3 - S_1 C_3 ) (- S_1 )   \\
+         !!          &&                                  &=&   C_1^2 C_3 + S_1 C_1 S_2 S_3 - S_1 C_1 S_2 S_3 + S_1^2 C_3            \\
+         !!          &&                                  &=&   ( C_1^2 + S_1^2 ) C_3                                                \\
+         !!          &&                                  &=&   C_3
+         !! \f}
+         !!
+         !! \f$\theta_3\f$ is then found as \f$\theta_3 = \arctan{\left( \frac{S_3}{C_3} \right)}\f$.
+
+
+         S_3 =    -( m(2,1) * C_1   + m(2,3) * (- S_1)   )
+         C_3 =       m(1,1) * C_1   + m(1,3) * (- S_1)
+
+         theta(3) = atan2( S_3, C_3)
+
+      endif
+
+      
+   END FUNCTION TaitBryanYXZExtractR4
+
+!> See nwtc_num::taitbryanyxzextractr4 for detailed explanation of algorithm
+   FUNCTION TaitBryanYXZExtractR8(M) result(theta)
+   
+   
+      REAL(R8Ki), INTENT(IN) :: M(3,3)    !< rotation matrix, M 
+      REAL(R8Ki)             :: theta(3)  !< the 3 rotation angles, \f$(\theta_y, \theta_x, \theta_z)\f$, corresponding to the Tait-Bryan rotation angle corresponding to cant-toe-twist
+     
+      REAL(R8Ki)              :: C_1       ! C_1 > cos(theta_y) 
+      REAL(R8Ki)              :: S_1       ! S_1 > sin(theta_y) 
+      REAL(R8Ki)              :: C_2       ! C_2 > cos(theta_x) 
+      REAL(R8Ki)              :: C_3       ! C_3 > cos(theta_z) 
+      REAL(R8Ki)              :: S_3       ! S_3 > sin(theta_z)
+
+         !> See nwtc_num::taitbryanyxzextractr4 for detailed description of how this works.
+
+         ! use trig identity S_3**2 + C_3**2 = 1 to get abs( C_2 )
+      C_2 = sqrt( m(1,2)**2 + m(2,2)**2 )
+
+         ! If C_2 is zero, we can simplifiy some things since theta(2) is +/- pi/2
+      if ( EqualRealNos( C_2, 0.0_R8Ki ) ) then
+
+         ! find sign of theta(2) based on sin(theta_2)
+         theta(2) = atan2( -m(3,2), C_2 )     ! theta_2 -> theta_x
+
+         ! Considering C_2 = 0  and  S_2 = \pm 1, the matrix M reduces to
+         !     M =  [   C_1 C_3 \pm S_1 S_3        0           \pm C_1 S_3 - S_1 C_3  |
+         !          |   \pm S_1 C_3 - C_1 S_3      0           \pm C_1 C_3 + S_1 S_3  |
+         !          |   0                          0  \mp 1    0                      ]
+         ! 
+         !  At this point we can choose \theta_3 = 0 due to gimbal lock giving sin(theta(3)) = 0, cos(theta(3)) = 1.
+
+         theta(3) = 0.0_R8Ki                          ! theta_z = theta_3
+
+         ! This further reduces M to 
+         !     M =  [   C_1         0           - S_1    |
+         !          |   \pm S_1     0           \pm C_1  |
+         !          |   0           \mp 1       0        ]
+         !
+         !
+         ! allowing us to solve for theta_1  by  theta_1 = atan2( -M(1,3), M(1,1) ) = atan2( S_1, C_1).
+
+         theta(1) = atan2( -m(1,3), m(1,1) )
+
+      else
+         ! First, start by finding \f$ \theta(1) \f$ from \f$ M(3,1) \f$ and \f$ M(3,3) \f$ using
+         !
+         !    theta(1) = atan2( M(3,1), M(3,3) ) = atan2( S_1 * C_2, C_1 * C_2 ).
+         ! With this we calculate values for S_1 and C_1.
+
+         theta(1) = atan2( m(3,1), m(3,3) )     ! theta_1 -> theta_y
+         C_1   = cos( theta(1) )
+         S_1   = sin( theta(1) )
+
+         !  We already know abs( C_2 ), but need the sign of it.  This can be found by comparing the
+         !  S_1 * C_2 and C_1 * C_2 terms with the C_1 and S_1 terms we just found.
+          
+         if ( EqualRealNos( C_1, 0.0_R8Ki ) ) then
+            C_2 = sign( C_2, m(3,1) / S_1 )
+         else
+            C_2 = sign( C_2, m(3,3) / C_1 )
+         endif
+
+         ! Now can calculate theta(2)
+         theta(2) = atan2( -m(3,2), C_2 )
+        
+
+         ! For numerical reasons, we're going to get theta(3) using some matrix math and identities about M.
+         !  See nwtc_num::taitbryanyxzextractr4 for complete documentation on the matrix math used here
+
+         S_3 =    -( m(2,1) * C_1   + m(2,3) * (- S_1)   )
+         C_3 =       m(1,1) * C_1   + m(1,3) * (- S_1)
+
+         theta(3) = atan2( S_3, C_3)
+
+      endif
+
+      
+   END FUNCTION TaitBryanYXZExtractR8
+
+
+      FUNCTION TaitBryanYXZConstructR4(theta) result(M)
+            ! this function creates a rotation matrix, M, from a 1-2-3 rotation
+      ! sequence of the 3 TaitBryan angles, theta_x, theta_y, and theta_z, in radians.
+      ! M represents a change of basis (from global to local coordinates; 
+      ! not a physical rotation of the body). it is the inverse of TaitBryanYXZExtract().
+      ! 
+      ! M = R(theta_z) * R(theta_x) * R(theta_y)
+      !   = [ cz sz 0 |  [ 1   0   0 |    [ cy  0 -sy | 
+      !     |-sz cz 0 |* | 0  cx  sx |  * |  0  1   0 | 
+      !     |  0  0 1 ]  | 0 -sx  cx ]    | sy  0  cy ] 
+      !   = [ cy*cz+sy*sx*sz   cx*sz    cy*sx*sz-cz*sy |
+      !     |cz*sy*sx-cy*sz   cx*cz    cy*cz*sx+sy*sz |
+      !     |cx*sy           -sx             cx*cy    ]
+      ! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
+   
+      REAL(SiKi)             :: M(3,3)    !< rotation matrix, M 
+      REAL(SiKi), INTENT(IN) :: theta(3)  !< the 3 rotation angles: \f$\theta_x, \theta_y, \theta_z\f$
+      
+      REAL(SiKi)             :: cx        ! cos(theta_x)
+      REAL(SiKi)             :: sx        ! sin(theta_x)
+      REAL(SiKi)             :: cy        ! cos(theta_y)
+      REAL(SiKi)             :: sy        ! sin(theta_y)
+      REAL(SiKi)             :: cz        ! cos(theta_z)
+      REAL(SiKi)             :: sz        ! sin(theta_z)
+   
+      cx = cos( theta(1) )
+      sx = sin( theta(1) )
+      
+      cy = cos( theta(2) )
+      sy = sin( theta(2) )
+      
+      cz = cos( theta(3) )
+      sz = sin( theta(3) )
+         
+      M(1,1) =  cy*cz+sy*sx*sz            
+      M(1,2) =  cx*sz            
+      M(1,3) =  cy*sx*sz-cz*sy    
+      
+      M(2,1) =  cz*sy*sx-cy*sz            
+      M(2,2) =  cx*cz            
+      M(2,3) =  cy*cz*sx+sy*sz     
+      
+      M(3,1) =   cx*sy            
+      M(3,2) =  -sx            
+      M(3,3) =   cy*cx   
+
+   END FUNCTION TaitBryanYXZConstructR4
+   
+   FUNCTION TaitBryanYXZConstructR8(theta) result(M)
+   
+      ! this function creates a rotation matrix, M, from a 1-2-3 rotation
+      ! sequence of the 3 TaitBryan angles, theta_x, theta_y, and theta_z, in radians.
+      ! M represents a change of basis (from global to local coordinates; 
+      ! not a physical rotation of the body). it is the inverse of TaitBryanYXZExtract().
+      ! 
+      ! M = R(theta_z) * R(theta_x) * R(theta_y)
+      !   = [ cz sz 0 |  [ 1   0   0 |    [ cy  0 -sy | 
+      !     |-sz cz 0 |* | 0  cx  sx |  * |  0  1   0 | 
+      !     |  0  0 1 ]  | 0 -sx  cx ]    | sy  0  cy ] 
+      !   = [ cy*cz+sy*sx*sz   cx*sz    cy*sx*sz-cz*sy |
+      !     |cz*sy*sx-cy*sz   cx*cz    cy*cz*sx+sy*sz |
+      !     |cx*sy           -sx             cx*cy    ]
+      ! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
+   
+      REAL(R8Ki)             :: M(3,3)    ! rotation matrix M 
+      REAL(R8Ki), INTENT(IN) :: theta(3)  ! the 3 rotation angles: theta_x, theta_y, theta_z
+      
+      REAL(R8Ki)             :: cx        ! cos(theta_x)
+      REAL(R8Ki)             :: sx        ! sin(theta_x)
+      REAL(R8Ki)             :: cy        ! cos(theta_y)
+      REAL(R8Ki)             :: sy        ! sin(theta_y)
+      REAL(R8Ki)             :: cz        ! cos(theta_z)
+      REAL(R8Ki)             :: sz        ! sin(theta_z)
+   
+      cx = cos( theta(1) )
+      sx = sin( theta(1) )
+      
+      cy = cos( theta(2) )
+      sy = sin( theta(2) )
+      
+      cz = cos( theta(3) )
+      sz = sin( theta(3) )
+         
+      M(1,1) =  cy*cz+sy*sx*sz            
+      M(1,2) =  cx*sz            
+      M(1,3) =  cy*sx*sz-cz*sy    
+      
+      M(2,1) =  cz*sy*sx-cy*sz            
+      M(2,2) =  cx*cz            
+      M(2,3) =  cy*cz*sx+sy*sz     
+      
+      M(3,1) =   cx*sy            
+      M(3,2) =  -sx            
+      M(3,3) =   cy*cx               
+   
+   END FUNCTION TaitBryanYXZConstructR8
+   
 
 !=======================================================================
 !> This routine takes an array of time values such as that returned from
@@ -6145,24 +6281,7 @@ end function Rad2M180to180Deg
    end do
    
    END FUNCTION traceR8
-!=======================================================================
-!> \copydoc nwtc_num::tracer4
-   FUNCTION traceR16(A)
-         
-   REAL(QuKi), INTENT(IN)  :: A(:,:)
-   REAL(QuKi)              :: traceR16
-   
-   INTEGER(IntKi)          :: n     ! rows/cols in A
-   INTEGER(IntKi)          :: i     ! loop counter
-   
-   n = min( SIZE(A,1), SIZE(A,2) )
 
-   traceR16 = 0.0_ReKi
-   do i=1,n
-      traceR16 = traceR16 + A(i,i)
-   end do
-   
-   END FUNCTION traceR16
 !=======================================================================
 !> This function returns the \f$l_2\f$ (Euclidian) norm of a vector, 
 !! \f$v = \left(v_1, v_2, \ldots ,v_n\right)\f$. The \f$l_2\f$-norm is defined as   
@@ -6195,20 +6314,7 @@ end function Rad2M180to180Deg
       
       
    END FUNCTION
-!=======================================================================
-!> \copydoc nwtc_num::twonormr4
-   FUNCTION TwoNormR16(v)
-   
-      ! this function returns the 2-norm of a vector v
-      ! fortran 2008 has Norm2() built in
-      
-      REAL(QuKi), INTENT(IN)  :: v(:)      
-      REAL(QuKi)              :: TwoNormR16      
-      
-      TwoNormR16 = SQRT( DOT_PRODUCT(v, v) )
-      
-      
-   END FUNCTION
+
 !=======================================================================  
 !> This routine is used to convert Angle to an equivalent value
 !!  in the range \f$[0, 2\pi)\f$. \n
@@ -6262,50 +6368,28 @@ end function Rad2M180to180Deg
 
    RETURN
    END SUBROUTINE Zero2TwoPiR8   
-!=======================================================================  
-!> \copydoc nwtc_num::zero2twopir4
-   SUBROUTINE Zero2TwoPiR16 ( Angle )
-
-      ! This routine is used to convert Angle to an equivalent value
-      !  in the range [0, 2*pi).
-      
-
-      ! Argument declarations:
-
-   REAL(QuKi), INTENT(INOUT)    :: Angle
-
-
-
-      ! Get the angle between 0 and 2Pi.
-
-   Angle = MODULO( Angle, TwoPi_R16 )
-
-
-      ! Check numerical case where Angle == 2Pi.
-
-   IF ( Angle == TwoPi_R16 )  THEN
-      Angle = 0.0_DbKi
-   END IF
-
-
-   RETURN
-   END SUBROUTINE Zero2TwoPiR16
 !=======================================================================
    !< This routine extrapolates or interpolates between angles
    SUBROUTINE Angles_ExtrapInterp1_R4(Angle1, Angle2, tin, Angle_out, tin_out )
        REAL(SiKi),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2
        REAL(SiKi),          INTENT(IN   )  :: Angle2 !< Angle at t2
-       REAL(DbKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
+       REAL(R8Ki),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
        REAL(SiKi),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
-       REAL(DbKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
+       REAL(R8Ki),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
                                                                      
          ! local variables                                              
        INTEGER(IntKi), parameter           :: order = 1                 ! order of polynomial fit (max 2)
-       REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
-       REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd
+       REAL(R8Ki)                          :: t(SIZE(tin))              ! Times associated with the inputs
+       REAL(R8Ki)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
        REAL(SiKi)                          :: Angle2_mod
-    
+
+         ! If both inputs are the same, then the output must equal the input
+      if (Angle1 == Angle2) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6339,17 +6423,23 @@ end function Rad2M180to180Deg
    SUBROUTINE Angles_ExtrapInterp1_R8(Angle1, Angle2, tin, Angle_out, tin_out)
        REAL(R8Ki),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2
        REAL(R8Ki),          INTENT(IN   )  :: Angle2 !< Angle at t2
-       REAL(DbKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
+       REAL(R8Ki),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
        REAL(R8Ki),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
-       REAL(DbKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
+       REAL(R8Ki),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
          
          ! local variables                                              
        INTEGER(IntKi), parameter           :: order = 1                 ! order of polynomial fit (max 2)
-       REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
-       REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd
+       REAL(R8Ki)                          :: t(SIZE(tin))              ! Times associated with the inputs
+       REAL(R8Ki)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
        REAL(R8Ki)                          :: Angle2_mod
-    
+
+         ! If both inputs are the same, then the output must equal the input
+      if (Angle1 == Angle2) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6377,65 +6467,28 @@ end function Rad2M180to180Deg
 !      call MPi2Pi(Angle_out)
 
    END SUBROUTINE Angles_ExtrapInterp1_R8
-!=======================================================================  
-   !< This routine extrapolates or interpolates between angles
-   SUBROUTINE Angles_ExtrapInterp1_R16(Angle1, Angle2, tin, Angle_out, tin_out)
-       REAL(QuKi),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2
-       REAL(QuKi),          INTENT(IN   )  :: Angle2 !< Angle at t2
-       REAL(DbKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
-       REAL(QuKi),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
-       REAL(DbKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
-
-       ! local variables                                              
-       INTEGER(IntKi), parameter           :: order = 1                 ! order of polynomial fit (max 2)
-       REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
-       REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd
-                                                                     
-       REAL(QuKi)                          :: Angle2_mod
-    
-          ! we'll subtract a constant from the times to resolve some
-          ! numerical issues when t gets large (and to simplify the equations)
-       t = tin - tin(1)
-       t_out = tin_out - tin(1)
-
-      !    ! some error checking:
-      !
-      ! if ( size(t) .ne. order+1) then
-      !    ErrStat = ErrID_Fatal
-      !    ErrMsg = 'Angles_ExtrapInterp1: size(t) must equal 2.'
-      !    RETURN
-      ! end if
-      !
-      !IF ( EqualRealNos( t(1), t(2) ) ) THEN
-      !   ErrStat = ErrID_Fatal
-      !   ErrMsg  = 'Angles_ExtrapInterp1: t(1) must not equal t(2) to avoid a division-by-zero error.'
-      !   RETURN
-      !END IF
-
-      Angle2_mod = Angle2
-      call AddOrSub2Pi( Angle1, Angle2_mod )
-      
-      Angle_out = Angle1 + (Angle2_mod - Angle1) * t_out / t(2)
-!     call Zero2TwoPi(Angle_out)
-!      call MPi2Pi(Angle_out)
-
-   END SUBROUTINE Angles_ExtrapInterp1_R16
 !=======================================================================
    !< This routine extrapolates or interpolates between angles
    SUBROUTINE Angles_ExtrapInterp1_R4R(Angle1, Angle2, tin, Angle_out, tin_out )
        REAL(SiKi),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2
        REAL(SiKi),          INTENT(IN   )  :: Angle2 !< Angle at t2
-       REAL(ReKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
+       REAL(R4Ki),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
        REAL(SiKi),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
-       REAL(ReKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
+       REAL(R4Ki),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
                                                                      
          ! local variables                                              
        INTEGER(IntKi), parameter           :: order = 1                 ! order of polynomial fit (max 2)
-       REAL(ReKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
-       REAL(ReKi)                          :: t_out                     ! Time to which to be extrap/interpd
+       REAL(SiKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
+       REAL(SiKi)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
        REAL(SiKi)                          :: Angle2_mod
-    
+
+         ! If both inputs are the same, then the output must equal the input
+      if (Angle1 == Angle2) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6469,17 +6522,23 @@ end function Rad2M180to180Deg
    SUBROUTINE Angles_ExtrapInterp1_R8R(Angle1, Angle2, tin, Angle_out, tin_out)
        REAL(R8Ki),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2
        REAL(R8Ki),          INTENT(IN   )  :: Angle2 !< Angle at t2
-       REAL(ReKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
+       REAL(SiKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
        REAL(R8Ki),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
-       REAL(ReKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
+       REAL(SiKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
          
          ! local variables                                              
        INTEGER(IntKi), parameter           :: order = 1                 ! order of polynomial fit (max 2)
-       REAL(ReKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
-       REAL(ReKi)                          :: t_out                     ! Time to which to be extrap/interpd
+       REAL(SiKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
+       REAL(SiKi)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
        REAL(R8Ki)                          :: Angle2_mod
-    
+
+         ! If both inputs are the same, then the output must equal the input
+      if (Angle1 == Angle2) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6509,49 +6568,6 @@ end function Rad2M180to180Deg
    END SUBROUTINE Angles_ExtrapInterp1_R8R
 !=======================================================================  
    !< This routine extrapolates or interpolates between angles
-   SUBROUTINE Angles_ExtrapInterp1_R16R(Angle1, Angle2, tin, Angle_out, tin_out)
-       REAL(QuKi),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2
-       REAL(QuKi),          INTENT(IN   )  :: Angle2 !< Angle at t2
-       REAL(ReKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
-       REAL(QuKi),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
-       REAL(ReKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
-
-       ! local variables                                              
-       INTEGER(IntKi), parameter           :: order = 1                 ! order of polynomial fit (max 2)
-       REAL(ReKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
-       REAL(ReKi)                          :: t_out                     ! Time to which to be extrap/interpd
-                                                                     
-       REAL(QuKi)                          :: Angle2_mod
-    
-          ! we'll subtract a constant from the times to resolve some
-          ! numerical issues when t gets large (and to simplify the equations)
-       t = tin - tin(1)
-       t_out = tin_out - tin(1)
-
-      !    ! some error checking:
-      !
-      ! if ( size(t) .ne. order+1) then
-      !    ErrStat = ErrID_Fatal
-      !    ErrMsg = 'Angles_ExtrapInterp1: size(t) must equal 2.'
-      !    RETURN
-      ! end if
-      !
-      !IF ( EqualRealNos( t(1), t(2) ) ) THEN
-      !   ErrStat = ErrID_Fatal
-      !   ErrMsg  = 'Angles_ExtrapInterp1: t(1) must not equal t(2) to avoid a division-by-zero error.'
-      !   RETURN
-      !END IF
-
-      Angle2_mod = Angle2
-      call AddOrSub2Pi( Angle1, Angle2_mod )
-      
-      Angle_out = Angle1 + (Angle2_mod - Angle1) * t_out / t(2)
-!     call Zero2TwoPi(Angle_out)
-!      call MPi2Pi(Angle_out)
-
-   END SUBROUTINE Angles_ExtrapInterp1_R16R
-!=======================================================================  
-   !< This routine extrapolates or interpolates between angles
    SUBROUTINE Angles_ExtrapInterp2_R4(Angle1, Angle2, Angle3, tin, Angle_out, tin_out )
        REAL(SiKi),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2 > t3
        REAL(SiKi),          INTENT(IN   )  :: Angle2 !< Angle at t2 > t3
@@ -6568,7 +6584,13 @@ end function Rad2M180to180Deg
        REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
        REAL(SiKi)                          :: Angle2_mod
        REAL(SiKi)                          :: Angle3_mod
-    
+
+         ! If all inputs are the same, then the output must equal the input
+      if ((Angle1 == Angle2) .and. (Angle2 == Angle3)) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6631,7 +6653,13 @@ end function Rad2M180to180Deg
        REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
        REAL(R8Ki)                          :: Angle2_mod
        REAL(R8Ki)                          :: Angle3_mod
-    
+
+         ! If all inputs are the same, then the output must equal the input
+      if ((Angle1 == Angle2) .and. (Angle2 == Angle3)) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6675,87 +6703,32 @@ end function Rad2M180to180Deg
 !      call MPi2Pi(Angle_out)
       
    END SUBROUTINE Angles_ExtrapInterp2_R8
-!=======================================================================  
-   !< This routine extrapolates or interpolates between angles
-   SUBROUTINE Angles_ExtrapInterp2_R16(Angle1, Angle2, Angle3, tin, Angle_out, tin_out )
-       REAL(QuKi),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2 > t3
-       REAL(QuKi),          INTENT(IN   )  :: Angle2 !< Angle at t2 > t3
-       REAL(QuKi),          INTENT(IN   )  :: Angle3 !< Angle at t3
-       REAL(DbKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
-       REAL(QuKi),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
-       REAL(DbKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
-                                                                     
-         ! local variables                                              
-       INTEGER(IntKi), parameter           :: order = 2                 ! order of polynomial fit (max 2)
-       REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
-       REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd
-                                                                     
-       REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
-       REAL(QuKi)                          :: Angle2_mod
-       REAL(QuKi)                          :: Angle3_mod
-    
-          ! we'll subtract a constant from the times to resolve some
-          ! numerical issues when t gets large (and to simplify the equations)
-       t = tin - tin(1)
-       t_out = tin_out - tin(1)
 
-          ! some error checking:
-
-      !if ( size(t) .ne. order+1) then
-      !   ErrStat = ErrID_Fatal
-      !   ErrMsg = 'Angles_ExtrapInterp2: size(t) must equal 3.'
-      !   RETURN
-      !end if
-      !
-      !IF ( EqualRealNos( t(1), t(2) ) ) THEN
-      !   ErrStat = ErrID_Fatal
-      !   ErrMsg  = 'Angles_ExtrapInterp2: t(1) must not equal t(2) to avoid a division-by-zero error.'
-      !   RETURN
-      !END IF
-      !IF ( EqualRealNos( t(2), t(3) ) ) THEN
-      !   ErrStat = ErrID_Fatal
-      !   ErrMsg  = 'Angles_ExtrapInterp2: t(2) must not equal t(3) to avoid a division-by-zero error.'
-      !   RETURN
-      !END IF
-      !IF ( EqualRealNos( t(1), t(3) ) ) THEN
-      !   ErrStat = ErrID_Fatal
-      !   ErrMsg  = 'Angles_ExtrapInterp2: t(1) must not equal t(3) to avoid a division-by-zero error.'
-      !   RETURN
-      !END IF
-
-      Angle2_mod = Angle2
-      Angle3_mod = Angle3
-      call AddOrSub2Pi( Angle1, Angle2_mod )
-      call AddOrSub2Pi( Angle2_mod, Angle3_mod )
-      
-      scaleFactor = t_out / ( t(2) * t(3) * (t(2) - t(3)) )
-
-      Angle_out =   Angle1 &
-                     + ( t(3)**2 * (Angle1 - Angle2_mod) + t(2)**2*(-Angle1 + Angle3_mod) ) * scaleFactor &
-                     + ( (t(2)-t(3))*Angle1 + t(3)*Angle2_mod - t(2)*Angle3_mod ) *scaleFactor * t_out
-!     call Zero2TwoPi(Angle_out)
-!      call MPi2Pi(Angle_out)
-      
-   END SUBROUTINE Angles_ExtrapInterp2_R16
 !=======================================================================  
    !< This routine extrapolates or interpolates between angles
    SUBROUTINE Angles_ExtrapInterp2_R4R(Angle1, Angle2, Angle3, tin, Angle_out, tin_out )
        REAL(SiKi),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2 > t3
        REAL(SiKi),          INTENT(IN   )  :: Angle2 !< Angle at t2 > t3
        REAL(SiKi),          INTENT(IN   )  :: Angle3 !< Angle at t3
-       REAL(ReKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
+       REAL(R4Ki),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
        REAL(SiKi),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
-       REAL(ReKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
+       REAL(R4Ki),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
                                                                      
          ! local variables                                              
        INTEGER(IntKi), parameter           :: order = 2                 ! order of polynomial fit (max 2)
-       REAL(ReKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
-       REAL(ReKi)                          :: t_out                     ! Time to which to be extrap/interpd
+       REAL(R4Ki)                          :: t(SIZE(tin))              ! Times associated with the inputs
+       REAL(R4Ki)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
-       REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
+       REAL(R8Ki)                          :: scaleFactor               ! temporary for extrapolation/interpolation
        REAL(SiKi)                          :: Angle2_mod
        REAL(SiKi)                          :: Angle3_mod
-    
+
+         ! If all inputs are the same, then the output must equal the input
+      if ((Angle1 == Angle2) .and. (Angle2 == Angle3)) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6806,19 +6779,25 @@ end function Rad2M180to180Deg
        REAL(R8Ki),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2 > t3
        REAL(R8Ki),          INTENT(IN   )  :: Angle2 !< Angle at t2 > t3
        REAL(R8Ki),          INTENT(IN   )  :: Angle3 !< Angle at t3
-       REAL(ReKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
+       REAL(R4Ki),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
        REAL(R8Ki),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
-       REAL(ReKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
+       REAL(R4Ki),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
                                                                      
          ! local variables                                              
        INTEGER(IntKi), parameter           :: order = 2                 ! order of polynomial fit (max 2)
-       REAL(ReKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
-       REAL(ReKi)                          :: t_out                     ! Time to which to be extrap/interpd
+       REAL(R4Ki)                          :: t(SIZE(tin))              ! Times associated with the inputs
+       REAL(R4Ki)                          :: t_out                     ! Time to which to be extrap/interpd
                                                                      
-       REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
+       REAL(R8Ki)                          :: scaleFactor               ! temporary for extrapolation/interpolation
        REAL(R8Ki)                          :: Angle2_mod
        REAL(R8Ki)                          :: Angle3_mod
-    
+
+         ! If all inputs are the same, then the output must equal the input
+      if ((Angle1 == Angle2) .and. (Angle2 == Angle3)) then
+         Angle_out = Angle1
+         return
+      end if
+
           ! we'll subtract a constant from the times to resolve some
           ! numerical issues when t gets large (and to simplify the equations)
        t = tin - tin(1)
@@ -6862,67 +6841,5 @@ end function Rad2M180to180Deg
 !      call MPi2Pi(Angle_out)
       
    END SUBROUTINE Angles_ExtrapInterp2_R8R
-!=======================================================================  
-   !< This routine extrapolates or interpolates between angles
-   SUBROUTINE Angles_ExtrapInterp2_R16R(Angle1, Angle2, Angle3, tin, Angle_out, tin_out )
-       REAL(QuKi),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2 > t3
-       REAL(QuKi),          INTENT(IN   )  :: Angle2 !< Angle at t2 > t3
-       REAL(QuKi),          INTENT(IN   )  :: Angle3 !< Angle at t3
-       REAL(ReKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
-       REAL(QuKi),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
-       REAL(ReKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
-                                                                     
-         ! local variables                                              
-       INTEGER(IntKi), parameter           :: order = 2                 ! order of polynomial fit (max 2)
-       REAL(ReKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
-       REAL(ReKi)                          :: t_out                     ! Time to which to be extrap/interpd
-                                                                     
-       REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
-       REAL(QuKi)                          :: Angle2_mod
-       REAL(QuKi)                          :: Angle3_mod
-    
-          ! we'll subtract a constant from the times to resolve some
-          ! numerical issues when t gets large (and to simplify the equations)
-       t = tin - tin(1)
-       t_out = tin_out - tin(1)
-
-          ! some error checking:
-
-      !if ( size(t) .ne. order+1) then
-      !   ErrStat = ErrID_Fatal
-      !   ErrMsg = 'Angles_ExtrapInterp2: size(t) must equal 3.'
-      !   RETURN
-      !end if
-      !
-      !IF ( EqualRealNos( t(1), t(2) ) ) THEN
-      !   ErrStat = ErrID_Fatal
-      !   ErrMsg  = 'Angles_ExtrapInterp2: t(1) must not equal t(2) to avoid a division-by-zero error.'
-      !   RETURN
-      !END IF
-      !IF ( EqualRealNos( t(2), t(3) ) ) THEN
-      !   ErrStat = ErrID_Fatal
-      !   ErrMsg  = 'Angles_ExtrapInterp2: t(2) must not equal t(3) to avoid a division-by-zero error.'
-      !   RETURN
-      !END IF
-      !IF ( EqualRealNos( t(1), t(3) ) ) THEN
-      !   ErrStat = ErrID_Fatal
-      !   ErrMsg  = 'Angles_ExtrapInterp2: t(1) must not equal t(3) to avoid a division-by-zero error.'
-      !   RETURN
-      !END IF
-
-      Angle2_mod = Angle2
-      Angle3_mod = Angle3
-      call AddOrSub2Pi( Angle1, Angle2_mod )
-      call AddOrSub2Pi( Angle2_mod, Angle3_mod )
-      
-      scaleFactor = t_out / ( t(2) * t(3) * (t(2) - t(3)) )
-
-      Angle_out =   Angle1 &
-                     + ( t(3)**2 * (Angle1 - Angle2_mod) + t(2)**2*(-Angle1 + Angle3_mod) ) * scaleFactor &
-                     + ( (t(2)-t(3))*Angle1 + t(3)*Angle2_mod - t(2)*Angle3_mod ) *scaleFactor * t_out
-!     call Zero2TwoPi(Angle_out)
-!      call MPi2Pi(Angle_out)
-      
-   END SUBROUTINE Angles_ExtrapInterp2_R16R
 !=======================================================================  
 END MODULE NWTC_Num

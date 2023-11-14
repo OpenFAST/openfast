@@ -21,13 +21,13 @@ MODULE SubDyn_Output
    USE NWTC_Library
    USE SubDyn_Types
    USE SD_FEM
-   USE SubDyn_Output_Params, only: MNfmKe, MNfmMe, MNTDss, MNRDe, MNTRAe, IntfSS, IntfTRss, IntfTRAss, ReactSS
+   USE SubDyn_Output_Params, only: MNfmKe, MNfmMe, MNTDss, MNRDe, MNTRAe, IntfSS, IntfTRss, IntfTRAss, ReactSS, OutStrLenM1
    USE SubDyn_Output_Params, only: ParamIndxAry, ParamUnitsAry, ValidParamAry, SSqm01, SSqmd01, SSqmdd01
 
    IMPLICIT NONE
 
    ! The maximum number of output channels which can be output by the code.
-   INTEGER(IntKi),PUBLIC, PARAMETER      :: MaxOutPts = 2265
+   INTEGER(IntKi),PUBLIC, PARAMETER      :: MaxOutPts = 21705
 
    PRIVATE
       ! ..... Public Subroutines ...................................................................................................
@@ -85,6 +85,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
    CALL AllocAry(misc%SDWrOutput       , p%NumOuts + p%OutAllInt*p%OutAllDims, 'SDWrOutupt' , ErrStat2, ErrMsg2) ; if(Failed()) return
    ! Allocate WriteOuput  
    CALL AllocAry(y%WriteOutput         , p%NumOuts + p%OutAllInt*p%OutAllDims, 'WriteOutput', ErrStat2, ErrMsg2); if(Failed()) return
+   allocate(misc%AllOuts(0:MaxOutPts + p%OutAllInt*p%OutAllDims)) ! Need to start at 0... 
    ! Header, and Units, copy of data already available in the OutParam data structure ! TODO TODO TODO remove copy
    CALL AllocAry(InitOut%WriteOutputHdr, p%NumOuts + p%OutAllint*p%OutAllDims, 'WriteOutputHdr', ErrStat2, ErrMsg2); if(Failed()) return
    CALL AllocAry(InitOut%WriteOutputUnt, p%NumOuts + p%OutAllint*p%OutAllDims, 'WriteOutputUnt', ErrStat2, ErrMsg2); if(Failed()) return
@@ -251,10 +252,10 @@ CONTAINS
       CALL ElemM(p%ElemProps(iElem),         pLst%Me(:,:,iiNode,iStore))
       CALL ElemK(p%ElemProps(iElem),         pLst%Ke(:,:,iiNode,iStore))
       CALL ElemF(p%ElemProps(iElem), Init%g, pLst%Fg(:,iiNode,iStore), FCe)
-      ! NOTE: Removing this force contribution for now (maybe put Tension only?)
+      ! NOTE: Removing this force contribution for now 
       ! The output of subdyn will just be the "Kx" part for now
       !pLst%Fg(:,iiNode,iStore) = pLst%Fg(:,iiNode,iStore) + FCe(1:12) ! Adding cable element force 
-      pLst%Fg(:,iiNode,iStore) = 0.0_ReKi
+      pLst%Fg(:,iiNode,iStore) = FCe(1:12) ! Adding cable element force 
    END SUBROUTINE ConfigOutputNode_MKF_ID
 
 
@@ -701,7 +702,7 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
       InvalidOutput(SSqmdd01+k-1) = .true.
    END DO
          
-   DO I=1,9
+   DO I=1,99
           !I know el # and whether it is 1st node or second node
       if (I <= p%NMOutputs) then
          INDX=p%MOutLst(I)%NOutCnt+1
@@ -756,22 +757,27 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
          p%OutParam(I)%SignM = -1     ! ex, '-TipDxc1' causes the sign of TipDxc1 to be switched.
          OutListTmp                   = OutListTmp(2:)
       ELSE IF ( INDEX( 'mM', OutListTmp(1:1) ) > 0 ) THEN ! We'll assume this is a variable name for now, (if not, we will check later if OutListTmp(2:) is also a variable name)
-         CheckOutListAgain            = .TRUE.
+         CheckOutListAgain  = .TRUE.
          p%OutParam(I)%SignM = 1
       ELSE
          p%OutParam(I)%SignM = 1
       END IF
       
+      if ( INDEX( 'mM', OutListTmp(1:1) ) > 0 .and. INDEX( '0123456789', OutListTmp(2:2) ) > 0 .and. INDEX( 'nN', OutListTmp(3:3) ) > 0 ) then ! an old-style output without the leading zero on the member number
+         OutListTmp = OutListTmp(1:1)//'0'//OutListTmp(2:)
+         CheckOutListAgain  = .FALSE.
+      end if
+      
       CALL Conv2UC( OutListTmp )    ! Convert OutListTmp to upper case
    
    
-      Indx =  IndexCharAry( OutListTmp(1:9), ValidParamAry )
+      Indx =  IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
       
       IF ( CheckOutListAgain .AND. Indx < 1 ) THEN    ! Let's assume that "M" really meant "minus" and then test again         
          p%OutParam(I)%SignM = -1            ! ex, 'MTipDxc1' causes the sign of TipDxc1 to be switched.
          OutListTmp                   = OutListTmp(2:)
          
-         Indx = IndexCharAry( OutListTmp(1:9), ValidParamAry )         
+         Indx = IndexCharAry( OutListTmp(1:10), ValidParamAry )         
       END IF
       
       IF ( Indx > 0 ) THEN
@@ -851,6 +857,7 @@ contains
       ! Number of outputs
       p%Jac_ny = y%Y1Mesh%nNodes * 6     & ! 3 forces + 3 moments at each node
                + y%Y2Mesh%nNodes * 18    & ! 6 displacements + 6 velocities + 6 accelerations at each node
+               + y%Y3Mesh%nNodes * 18    & ! 6 displacements + 6 velocities + 6 accelerations at each node
                + p%NumOuts                 ! WriteOutput values 
       ! Storage info for each output (names, rotframe)
       call AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y',ErrStat2,ErrMsg2); if(ErrStat2/=ErrID_None) return
@@ -858,7 +865,8 @@ contains
       ! Names
       index_next = 1
       call PackLoadMesh_Names(  y%Y1Mesh, 'Interface displacement', InitOut%LinNames_y, index_next)
-      call PackMotionMesh_Names(y%Y2Mesh, 'Nodes motion'          , InitOut%LinNames_y, index_next)
+      call PackMotionMesh_Names(y%Y2Mesh, 'Nodes motion mixed'    , InitOut%LinNames_y, index_next)
+      call PackMotionMesh_Names(y%Y3Mesh, 'Nodes motion full'     , InitOut%LinNames_y, index_next)
       do i=1,p%NumOuts
          InitOut%LinNames_y(i+index_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
       end do
@@ -976,7 +984,7 @@ SUBROUTINE SD_Perturb_u( p, n, perturb_sign, u, du )
    CASE ( 1) !Module/Mesh/Field: u%TPMesh%TranslationDisp = 1;
       u%TPMesh%TranslationDisp( fieldIndx,node) = u%TPMesh%TranslationDisp( fieldIndx,node) + du * perturb_sign
    CASE ( 2) !Module/Mesh/Field: u%TPMesh%Orientation = 2;
-      CALL PerturbOrientationMatrix( u%TPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx )
+      CALL PerturbOrientationMatrix( u%TPMesh%Orientation(:,:,node), du * perturb_sign, fieldIndx, UseSmlAngle=.true. )
    CASE ( 3) !Module/Mesh/Field: u%TPMesh%TranslationVel = 3;
       u%TPMesh%TranslationVel( fieldIndx,node) = u%TPMesh%TranslationVel( fieldIndx,node) + du * perturb_sign
    CASE ( 4) !Module/Mesh/Field: u%TPMesh%RotationVel = 4;
@@ -1005,7 +1013,8 @@ SUBROUTINE SD_Compute_dY(p, y_p, y_m, delta, dY)
    INTEGER(IntKi) :: indx_first     ! index indicating next value of dY to be filled
    indx_first = 1
    call PackLoadMesh_dY(  y_p%Y1Mesh, y_m%Y1Mesh, dY, indx_first)
-   call PackMotionMesh_dY(y_p%Y2Mesh, y_m%Y2Mesh, dY, indx_first) ! all 6 motion fields
+   call PackMotionMesh_dY(y_p%Y2Mesh, y_m%Y2Mesh, dY, indx_first, UseSmlAngle=.true.) ! all 6 motion fields
+   call PackMotionMesh_dY(y_p%Y3Mesh, y_m%Y3Mesh, dY, indx_first, UseSmlAngle=.true.) ! all 6 motion fields
    do i=1,p%NumOuts
       dY(i+indx_first-1) = y_p%WriteOutput(i) - y_m%WriteOutput(i)
    end do

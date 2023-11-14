@@ -1,0 +1,42 @@
+###################################################################################################################################
+# Registry for SeaState_Interp, creates MODULE SeaState_Interp_Types
+# Module SeaState_Interp_Types contains all of the user-defined types needed in SeaState_Interp. It also contains copy, destroy, pack, and
+# unpack routines associated with each defined data types.
+###################################################################################################################################
+# Entries are of the form
+# keyword <SeaState_Interp[/ModuleAbvr]> <TypeName>   <FieldType>    <FieldName>  <Dims>  <Ctrl> <DNAME> <DESCRIP> <UNITS>
+###################################################################################################################################
+
+include Registry_NWTC_Library.txt
+
+
+#########################
+
+typedef SeaState_Interp/SeaSt_Interp   InitInputType       IntKi     n      4     -     -     "number of grid points in the t, x, y, and z directions"                     -
+typedef  ^                              InitInputType       ReKi      delta  4     -     -     "size between 2 consecutive grid points in each grid direction (time, x, y, z)"  "s,m,m,m"
+typedef  ^                              InitInputType       ReKi      pZero  4     -     -     "fixed position of the time-X-Y-Z grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))" "m"
+typedef  ^                    InitInputType       ReKi      Z_Depth - - - "grid depth" m
+
+# Init Output
+typedef  ^                             InitOutputType       ProgDesc  Ver    -     -     -     "Version information of this submodule"         -
+
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef    ^                              MiscVarType       SiKi         N3D         {8} - -  "this is the 3-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field" -
+typedef    ^                              MiscVarType       SiKi         N4D         {16} - -  "this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field" -
+typedef    ^                              MiscVarType       integer      Indx_Lo    4 - -  "this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field" -
+typedef    ^                              MiscVarType       integer      Indx_Hi    4 - -  "this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field" -
+typedef    ^                              MiscVarType       logical      FirstWarn_Clamp -  .true.  - "used to avoid too many 'Position has been clamped to the grid boundary' warning messages " -
+
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef  ^                    ParameterType       IntKi     n      4     -     -     "number of evenly-spaced grid points in the t, x, y, and z directions"      -
+typedef  ^                    ParameterType       ReKi      delta  4     -     -     "size between 2 consecutive grid points in each grid direction"            "s,m,m,m"
+typedef  ^                    ParameterType       ReKi      pZero  4     -     -     "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))" "m"
+typedef  ^                    ParameterType       ReKi      Z_Depth - - - "grid depth" m
+
+
+

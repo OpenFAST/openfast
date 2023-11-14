@@ -404,7 +404,7 @@ MODULE MAP
     CHARACTER(KIND=C_CHAR), DIMENSION(1024)         :: message_from_MAP
     
     INTEGER(IntKi)                                  :: ErrStat2     ! Error status of the operation
-    CHARACTER(1024)                                 :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
+    CHARACTER(ErrMsgLen)                            :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
     CHARACTER(*), PARAMETER                         :: RoutineName = 'MAP_Restart'
     
         
@@ -517,7 +517,7 @@ MODULE MAP
     CHARACTER(KIND=C_CHAR), DIMENSION(1024)         :: message_from_MAP
     
     INTEGER(IntKi)                                  :: ErrStat2     ! Error status of the operation
-    CHARACTER(1024)                                 :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
+    CHARACTER(ErrMsgLen)                            :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
     CHARACTER(*), PARAMETER                         :: RoutineName = 'MAP_Init'
     
     INTEGER(IntKi)                                  :: i
@@ -722,7 +722,7 @@ IF (ErrStat >= AbortErrLev) RETURN
     TYPE(MAP_InputType)                             :: u_interp    ! Inputs at t
     
     INTEGER(IntKi)                                  :: ErrStat2     ! Error status of the operation
-    CHARACTER(1024)                                 :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
+    CHARACTER(ErrMsgLen)                            :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
     CHARACTER(*), PARAMETER                         :: RoutineName = 'MAP_UpdateStates'
     
     ErrStat = ErrID_None
@@ -796,7 +796,7 @@ IF (ErrStat >= AbortErrLev) RETURN
     integer                                         :: i     
     
     INTEGER(IntKi)                                  :: ErrStat2     ! Error status of the operation
-    CHARACTER(1024)                                 :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
+    CHARACTER(ErrMsgLen)                            :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
     CHARACTER(*), PARAMETER                         :: RoutineName = 'MAP_CalcOutput'
     
     
@@ -859,7 +859,7 @@ IF (ErrStat >= AbortErrLev) RETURN
 !    INTEGER(IntKi)                                  :: i=0 
             
     INTEGER(IntKi)                                  :: ErrStat2     ! Error status of the operation
-    CHARACTER(1024)                                 :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
+    CHARACTER(ErrMsgLen)                            :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
     CHARACTER(*), PARAMETER                         :: RoutineName = 'MAP_End'
             
     
@@ -920,7 +920,7 @@ IF (ErrStat >= AbortErrLev) RETURN
     CHARACTER(255)                         :: line
    
     INTEGER                                :: Un
-    CHARACTER(1024)                        :: ErrMsg
+    CHARACTER(ErrMsgLen)                   :: ErrMsg
     CHARACTER(*), PARAMETER                :: RoutineName = 'map_read_input_file_contents'
                                                                                                  
     ErrStat = ErrID_None  
@@ -1061,16 +1061,16 @@ IF (ErrStat >= AbortErrLev) RETURN
           
          SELECT CASE( p%InputLineType(iLine) )
          CASE('C')             
-            InitInp%C_obj%library_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%library_input_str )
+            InitInp%C_obj%library_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%library_input_str,   SIZE(InitInp%C_obj%library_input_str) )
             CALL MAP_SetCableLibraryData(InitInp%C_obj)
          CASE ('N')            
-            InitInp%C_obj%node_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%node_input_str )
+            InitInp%C_obj%node_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%node_input_str,         SIZE(InitInp%C_obj%library_input_str) )
             CALL MAP_SetNodeData(InitInp%C_obj)                 
          CASE ('E')
-            InitInp%C_obj%line_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%line_input_str )
+            InitInp%C_obj%line_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%line_input_str,         SIZE(InitInp%C_obj%library_input_str) )
             CALL MAP_SetElementData(InitInp%C_obj)                 
          CASE ('S')
-            InitInp%C_obj%option_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%option_input_str )
+            InitInp%C_obj%option_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%option_input_str,     SIZE(InitInp%C_obj%library_input_str) )
             CALL MAP_SetSolverOptions(InitInp%C_obj)                  
          END SELECT
              
@@ -1403,6 +1403,9 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg
    end if
    call cleanup()
    
+   ! Calling CalcOutput at operating point to ensure that "y" does not have the values of y_m (MAP specific issue)
+   call map_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat2, ErrMsg2 ) 
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later  
 contains
    subroutine cleanup()
       call map_DestroyOutput(       y_p, ErrStat2, ErrMsg2 )
@@ -1492,22 +1495,6 @@ SUBROUTINE MAP_GetOP( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg, u_op, y
 END SUBROUTINE MAP_GetOP   
 
  !==========================================================================================================
-
-  ! ==========   MAP_ERROR   ======     <-------------------------------------------------------------------+
-  !                                                                                              !          |
-  ! this is different from MAP_ERROR_CHECKER. MAP_ERROR check internal fortran errors, whereas
-  ! the former checks errors in the MAP DLL.
-  SUBROUTINE MAP_ERROR(ErrMsg, ErrStat, string)
-    CHARACTER(1024), INTENT(INOUT) :: ErrMsg 
-    INTEGER(IntKi),  INTENT(INOUT) :: ErrStat 
-    CHARACTER(*),    INTENT(IN   ) :: string    
-
-    IF (ErrStat.NE.ErrID_None) THEN
-       ErrMsg = TRIM(ErrMsg)//string
-    END IF
-  END SUBROUTINE  MAP_ERROR                                                                         !   -------+
-  !==========================================================================================================
-
    
   ! ==========   MAP_ERROR_CHECKER   ======     <-----------------------------------------------------------+
   !                                                                                              !          |

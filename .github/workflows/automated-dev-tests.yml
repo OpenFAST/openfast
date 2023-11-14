@@ -1,324 +1,1042 @@
-  
+
 name: 'Development Pipeline'
 
 on:
   push:
     paths-ignore:
+      - 'LICENSE'
+      - 'README.rst'
       - 'docs/**'
       - 'share/**'
       - 'vs-build/**'
 
   pull_request:
-    types: [opened, synchronize] #labeled, assigned]
-    paths-ignore:
-      - 'docs/**'
-      - 'share/**'
-      - 'vs-build/**'
+    types: [opened, synchronize, edited, reopened] #labeled, assigned]
+    # Pull request event triggers are unrelated to paths
+    # paths-ignore:
 
 env:
-  FORTRAN_COMPILER: gfortran-10
-  NUM_PROCS: 8
+  FORTRAN_COMPILER: gfortran-12
+  CXX_COMPILER: g++-12
+  C_COMPILER: gcc-12
+  GCOV_EXE: gcov-12
+  CMAKE_BUILD_PARALLEL_LEVEL: 8
 
-# runs-on: ${{ matrix.os }}
-# strategy:
-#   matrix:
-#     os: [macOS-10.14, ubuntu-18.04]
 
 jobs:
-  regression-tests-release:
-    runs-on: ubuntu-20.04
+
+  ### BUILD JOBS
+
+
+  build-all-debug:
+    # Tests compiling in debug mode.
+    # Also compiles the Registry and generates new types files.
+    # Debug more speeds up the build.
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@main
         with:
           submodules: recursive
-
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
-          python-version: '3.7'
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v1
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh==1.4
-
-      - name: Setup Workspace
-        run: cmake -E make_directory ${{runner.workspace}}/build
-      - name: Configure Build
-        working-directory: ${{runner.workspace}}/build
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+      - name: Setup workspace
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
-            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
+            -DCMAKE_BUILD_TYPE:STRING=DEBUG \
+            -DBUILD_SHARED_LIBS:BOOL=OFF \
+            -DGENERATE_TYPES=ON \
+            -DVARIABLE_TRACKING=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
+            -DBUILD_OPENFAST_SIMULINK_API=ON \
             ${GITHUB_WORKSPACE}
-      - name: Build OpenFAST
-        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
-        working-directory: ${{runner.workspace}}/build
-        run: cmake --build . --target install -- -j ${{env.NUM_PROCS}}
-
-      - name: Run AeroDyn tests
-        uses: ./.github/actions/tests-module-aerodyn
+            # -DDOUBLE_PRECISION=OFF \
+      - name: Build all
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target all
+      - name: Cache the workspace
+        uses: actions/cache@v3
         with:
-          test-target: regression
-      - name: Run BeamDyn tests
-        uses: ./.github/actions/tests-module-beamdyn
-        with:
-          test-target: regression
-      - name: Run HydroDyn tests
-        uses: ./.github/actions/tests-module-hydrodyn
-      - name: Run SubDyn tests
-        uses: ./.github/actions/tests-module-subdyn
-      - name: Run OpenFAST tests
-        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
-        uses: ./.github/actions/tests-gluecode-openfast
+          path: ${{runner.workspace}}
+          key: build-all-debug-${{ github.sha }}
 
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: regression-tests-release
-          path: |
-            ${{runner.workspace}}/build/reg_tests/modules
-            ${{runner.workspace}}/build/reg_tests/glue-codes/openfast
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/5MW_Baseline
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/AOC
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/AWT27
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/SWRT
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/UAE_VI
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast/WP_Baseline
-
-  regression-tests-debug:
-    runs-on: ubuntu-20.04
+  build-all-debug-single:
+    # Tests compiling in debug mode with single precision.
+    # This workspace is not used by any other subtests, it checks type errors of the type ReKi/R8Ki
+    # Debug speeds up the build.
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@main
         with:
           submodules: recursive
-
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.7'
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install numpy Bokeh==1.4
-
-      - name: Setup Workspace
-        run: cmake -E make_directory ${{runner.workspace}}/build
-      - name: Configure Build
-        working-directory: ${{runner.workspace}}/build
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev
+      - name: Setup workspace
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
-            -DCMAKE_BUILD_TYPE:STRING=Debug \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-
-      - name: Build OpenFAST
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          cmake --build . --target aerodyn_driver -- -j ${{env.NUM_PROCS}}
-          cmake --build . --target beamdyn_driver -- -j ${{env.NUM_PROCS}}
-          cmake --build . --target hydrodyn_driver -- -j ${{env.NUM_PROCS}}
-          cmake --build . --target subdyn_driver -- -j ${{env.NUM_PROCS}}
-
-      - name: Run AeroDyn tests
-        uses: ./.github/actions/tests-module-aerodyn
-        with:
-          test-target: regression
-      - name: Run BeamDyn tests
-        uses: ./.github/actions/tests-module-beamdyn
-        with:
-          test-target: regression
-      - name: Run HydroDyn tests
-        uses: ./.github/actions/tests-module-hydrodyn
-      - name: Run SubDyn tests
-        uses: ./.github/actions/tests-module-subdyn
-
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: regression-tests-debug
-          path: |
-            ${{runner.workspace}}/build/reg_tests/modules
-
-  fastfarm-regression-test:
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@main
-        with:
-          submodules: recursive
-
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.7'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install numpy Bokeh==1.4
-
-      - name: Setup Workspace
-        run: cmake -E make_directory ${{runner.workspace}}/build
-      - name: Configure Build
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
-            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
-            -DOPENMP:BOOL=ON \
-            -DBUILD_FASTFARM:BOOL=ON \
-            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
-            -DBUILD_TESTING:BOOL=ON \
-            -DCTEST_PLOT_ERRORS:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-      - name: Build FAST.Farm
-        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          cmake --build . --target FAST.Farm -- -j ${{env.NUM_PROCS}}
-          cmake --build . --target regression_tests -- -j ${{env.NUM_PROCS}}
-
-      - name: Run FAST.Farm tests
-        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
-        run: |
-          ctest -VV -L fastfarm -j ${{env.NUM_PROCS}}
-        working-directory: ${{runner.workspace}}/build
-        shell: bash
-
-      - name: Failing test artifacts
-        uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: test-results
-          path: |
-            ${{runner.workspace}}/build/reg_tests/glue-codes/fastfarm
-
-  unit-test:
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@main
-        with:
-          submodules: recursive
-      - name: Setup
-        run: cmake -E make_directory ${{runner.workspace}}/build
-      - name: Configure
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
-            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
-            -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
-            -DBUILD_TESTING:BOOL=ON \
-            ${GITHUB_WORKSPACE}
-
-      - name: Build unit tests
-        working-directory: ${{runner.workspace}}/build
-        run: cmake --build . --target unit_tests -- -j ${{env.NUM_PROCS}}
-
-      - name: Run NWTC Library tests
-        uses: ./.github/actions/tests-module-nwtclibrary
-      - name: Run AeroDyn tests
-        uses: ./.github/actions/tests-module-aerodyn
-        with:
-          test-target: unit
-      - name: Run BeamDyn tests
-        uses: ./.github/actions/tests-module-beamdyn
-        with:
-          test-target: unit
-      - name: Run InflowWind tests
-        uses: ./.github/actions/tests-module-inflowwind
-
-  compile-all-single-precision:
-    # Test if single precision compile completes.
-    # Compiles all targets excluding tests.
-    # Run with the OpenFAST registry generating the types files.
-    # Do not run the test suite.
-
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@main
-        with:
-          submodules: recursive
-      - name: Setup
-        run: cmake -E make_directory ${{runner.workspace}}/build
-      - name: Configure
-        working-directory: ${{runner.workspace}}/build
-        run: |
-          cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
-            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
-            -DCMAKE_BUILD_TYPE:STRING=Debug \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
+            -DCMAKE_BUILD_TYPE:STRING=DEBUG \
+            -DBUILD_SHARED_LIBS:BOOL=OFF \
+            -DVARIABLE_TRACKING=OFF \
             -DDOUBLE_PRECISION:BOOL=OFF \
-            -DGENERATE_TYPES:BOOL=ON \
             ${GITHUB_WORKSPACE}
       - name: Build all
-        working-directory: ${{runner.workspace}}/build
-        run: cmake --build . --target all -- -j ${{env.NUM_PROCS}}
-      - name: Test
-        working-directory: ${{runner.workspace}}/build
-        run: ./glue-codes/openfast/openfast -v
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target all
 
-  cpp-interface-tests:
-    runs-on: ubuntu-20.04
+
+
+  build-drivers-release:
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@main
         with:
           submodules: recursive
-
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
-          python-version: '3.7'
+          python-version: '3.11'
+          cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install numpy Bokeh==1.4
-          sudo apt-get update
-          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
-
-      - name: Setup Workspace
-        run: cmake -E make_directory ${{runner.workspace}}/build
-      - name: Configure Build
-        working-directory: ${{runner.workspace}}/build
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+      - name: Setup workspace
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure build
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
           cmake \
-            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/install \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
             -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
             -DCMAKE_BUILD_TYPE:STRING=RelWithDebInfo \
-            -DBUILD_OPENFAST_CPP_API:BOOL=ON \
-            -DBUILD_SHARED_LIBS:BOOL=ON \
+            -DVARIABLE_TRACKING=OFF \
             -DBUILD_TESTING:BOOL=ON \
             -DCTEST_PLOT_ERRORS:BOOL=ON \
             ${GITHUB_WORKSPACE}
-      - name: Build OpenFAST C++ API
-        # if: contains(github.event.head_commit.message, 'Action - Test All') || contains(github.event.pull_request.labels.*.name, 'Action - Test All') 
-        working-directory: ${{runner.workspace}}/build
+      - name: Build module drivers
+        working-directory: ${{runner.workspace}}/openfast/build
         run: |
-          cmake --build . --target openfastcpp -- -j ${{env.NUM_PROCS}}
-          cmake --build . --target regression_tests -- -j ${{env.NUM_PROCS}}
+          cmake --build . --target regression_test_module_drivers
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-drivers-release-${{ github.sha }}
 
-      - name: Run OpenFAST C++ API tests
-        working-directory: ${{runner.workspace}}/build
+
+  build-postlib-release:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v1
+      - name: Install dependencies
         run: |
-          ctest -VV -L cpp
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev  # gcovr
+      - name: Setup workspace
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBLA_VENDOR:STRING=OpenBLAS \
+            -DCMAKE_BUILD_TYPE:STRING=RELWITHDEBINFO \
+            -DOPENMP:BOOL=ON \
+            -DDOUBLE_PRECISION=ON \
+            -DVARIABLE_TRACKING=OFF \
+            -DBUILD_FASTFARM:BOOL=ON \
+            -DBUILD_OPENFAST_CPP_API:BOOL=ON \
+            -DBUILD_OPENFAST_CPP_DRIVER:BOOL=ON \
+            -DBUILD_SHARED_LIBS:BOOL=OFF \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            -DBUILD_OPENFAST_SIMULINK_API=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Build openfast-postlib
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: cmake --build . --target openfast_postlib
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-postlib-release-${{ github.sha }}
+
+
+  build-interfaces-release:
+    runs-on: ubuntu-22.04
+    needs: build-postlib-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-postlib-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            ${GITHUB_WORKSPACE}
+      - name: Build OpenFAST C-Interfaces
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target openfastlib openfast_cpp_driver openfastcpp aerodyn_inflow_c_binding moordyn_c_binding ifw_c_binding hydrodyn_c_binding regression_test_controllers
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-interfaces-release-${{ github.sha }}
+
+
+  build-openfast-release:
+    runs-on: ubuntu-22.04
+    needs: build-postlib-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-postlib-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            ${GITHUB_WORKSPACE}
+      - name: Build OpenFAST glue-code
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target openfast
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+
+
+  build-fastfarm-release:
+    runs-on: ubuntu-22.04
+    needs: build-postlib-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-postlib-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            ${GITHUB_WORKSPACE}
+      - name: Build FAST.Farm
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target FAST.Farm
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-fastfarm-release-${{ github.sha }}
+
+
+
+  ### BUILD AND TEST JOBS
+
+  build-test-uadriver-debug:
+    # UA driver requires -DUA_OUTS, cannot be compiled with other
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          submodules: recursive
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev
+      - name: Setup workspace
+        run: cmake -E make_directory ${{runner.workspace}}/openfast/build
+      - name: Configure build
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DCMAKE_INSTALL_PREFIX:PATH=${{runner.workspace}}/openfast/install \
+            -DCMAKE_Fortran_COMPILER:STRING=${{env.FORTRAN_COMPILER}} \
+            -DCMAKE_CXX_COMPILER:STRING=${{env.CXX_COMPILER}} \
+            -DCMAKE_C_COMPILER:STRING=${{env.C_COMPILER}} \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DCMAKE_BUILD_TYPE:STRING=DEBUG \
+            -DBUILD_SHARED_LIBS:BOOL=OFF \
+            -DGENERATE_TYPES=ON \
+            -DVARIABLE_TRACKING=OFF \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            -DCMAKE_Fortran_FLAGS="-DUA_OUTS=ON" \
+            ${GITHUB_WORKSPACE}
+      - name: Build all
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake --build . --target unsteadyaero_driver
+
+      - name: Run UnsteadyAero tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        shell: bash
+        run: |
+          ctest -VV -R "^ua_" 
 
       - name: Failing test artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: failure()
         with:
-          name: test-results
+          name: rtest-uadriver
           path: |
-            ${{runner.workspace}}/build/reg_tests/glue-codes/openfast-cpp
-            !${{runner.workspace}}/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/unsteadyaero
+
+
+
+  ### TEST JOBS
+
+  rtest-module-drivers:
+    runs-on: ubuntu-22.04
+    needs: build-drivers-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-drivers-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Run AeroDyn tests
+        uses: ./.github/actions/tests-module-aerodyn
+        with:
+          test-target: regression
+      - name: Run BeamDyn tests
+        uses: ./.github/actions/tests-module-beamdyn
+        with:
+          test-target: regression
+      - name: Run HydroDyn tests
+        uses: ./.github/actions/tests-module-hydrodyn
+      - name: Run InflowWind tests
+        uses: ./.github/actions/tests-module-inflowwind
+        with:
+          test-target: regression
+      - name: Run MoorDyn tests
+        uses: ./.github/actions/tests-module-moordyn
+      - name: Run SeaState tests
+        uses: ./.github/actions/tests-module-seastate
+      - name: Run SubDyn tests
+        uses: ./.github/actions/tests-module-subdyn
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: rtest-module-drivers
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+
+
+  rtest-modules-debug:
+    runs-on: ubuntu-22.04
+    needs: build-all-debug
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-all-debug-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+          cmake --build . --target regression_test_controllers
+      - name: Run AeroDyn tests
+        uses: ./.github/actions/tests-module-aerodyn
+        with:
+          # Don't run regression tests here since they currently fail inconsistently
+          test-target: unit
+      - name: Run BeamDyn tests
+        uses: ./.github/actions/tests-module-beamdyn
+      - name: Run HydroDyn tests
+        uses: ./.github/actions/tests-module-hydrodyn
+      - name: Run InflowWind tests
+        uses: ./.github/actions/tests-module-inflowwind
+      - name: Run MoorDyn tests
+        uses: ./.github/actions/tests-module-moordyn
+      - name: Run NWTC Library tests
+        uses: ./.github/actions/tests-module-nwtclibrary
+      - name: Run SeaState tests
+        uses: ./.github/actions/tests-module-seastate
+      - name: Run SubDyn tests
+        uses: ./.github/actions/tests-module-subdyn
+      - name: Run VersionInfo tests
+        uses: ./.github/actions/tests-module-version
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: rtest-modules-debug
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/unit_tests
+
+
+  rtest-interfaces:
+    runs-on: ubuntu-22.04
+    needs: build-interfaces-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-interfaces-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3" vtk
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Run Interface / API tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L "cpp|python|fastlib"
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: rtest-interfaces
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/python
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/aerodyn
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/moordyn
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/inflowwind
+            ${{runner.workspace}}/openfast/build/reg_tests/modules/hydrodyn
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast-cpp/5MW_Baseline
+
+
+  rtest-OF:
+    runs-on: ubuntu-22.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+          cmake --build . --target regression_test_controllers
+      - name: Run 5MW tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -j4 \
+          -L openfast \
+          -LE "cpp|linear|python|fastlib|aeromap" \
+          -E "5MW_OC4Semi_WSt_WavesWN|5MW_OC3Mnpl_DLL_WTurb_WavesIrr|5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth|5MW_OC3Trpd_DLL_WSt_WavesReg|5MW_Land_BD_DLL_WTurb"
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: rtest-OF
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-OF-simulink:
+    runs-on: ubuntu-22.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev libopenblas-dev libopenblas-openmp-dev
+      - name: Set up MATLAB
+        uses: matlab-actions/setup-matlab@v1
+      - name: Build FAST_SFunc
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DUSE_LOCAL_STATIC_LAPACK:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+          cmake --build . --target FAST_SFunc
+      - name: Run MATLAB tests and generate artifacts
+        uses: matlab-actions/run-tests@v1
+        with:
+          source-folder: ${{runner.workspace}}/openfast/build/glue-codes/simulink; ${{runner.workspace}}/openfast/glue-codes/simulink/examples
+          test-results-junit: test-results/results.xml
+          code-coverage-cobertura: code-coverage/coverage.xml
+
+
+  rtest-OF-5MW_Land_AeroMap:
+    runs-on: ubuntu-22.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Run 5MW aero map tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L aeromap -LE "cpp|linear|python" -R 5MW_Land_AeroMap
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: rtest-OF-5MW_Land_AeroMap
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-OF-5MW_OC4Semi_WSt_WavesWN:
+    runs-on: ubuntu-22.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+          cmake --build . --target regression_test_controllers
+      - name: Run 5MW tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC4Semi_WSt_WavesWN
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: rtest-OF-5MW_OC4Semi_WSt_WavesWN
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-OF-5MW_OC3Mnpl_DLL_WTurb_WavesIrr:
+    runs-on: ubuntu-22.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+          cmake --build . --target regression_test_controllers
+      - name: Run 5MW tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Mnpl_DLL_WTurb_WavesIrr
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: rtest-OF-5MW_OC3Mnpl_DLL_WTurb_WavesIrr
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-OF-5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth:
+    runs-on: ubuntu-22.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+          cmake --build . --target regression_test_controllers
+      - name: Run 5MW tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: rtest-OF-5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-OF-5MW_OC3Trpd_DLL_WSt_WavesReg:
+    runs-on: ubuntu-22.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+          cmake --build . --target regression_test_controllers
+      - name: Run 5MW tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_OC3Trpd_DLL_WSt_WavesReg
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: rtest-OF-5MW_OC3Trpd_DLL_WSt_WavesReg
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-OF-5MW_Land_BD_DLL_WTurb:
+    runs-on: ubuntu-22.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+          cmake --build . --target regression_test_controllers
+      - name: Run 5MW tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -L openfast -LE "cpp|linear|python" -R 5MW_Land_BD_DLL_WTurb
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: rtest-OF-5MW_Land_BD_DLL_WTurb
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-OF-linearization:
+    runs-on: ubuntu-22.04
+    needs: build-openfast-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-openfast-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+      - name: Run OpenFAST linearization tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          ctest -VV -j4 -L linear
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: rtest-OF-linearization
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/modules
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AOC
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/AWT27
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/SWRT
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/UAE_VI
+            !${{runner.workspace}}/openfast/build/reg_tests/glue-codes/openfast/WP_Baseline
+
+
+  rtest-FF:
+    runs-on: ubuntu-22.04
+    needs: build-fastfarm-release
+    steps:
+      - name: Cache the workspace
+        uses: actions/cache@v3
+        with:
+          path: ${{runner.workspace}}
+          key: build-fastfarm-release-${{ github.sha }}
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy "Bokeh>=2.4,!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3"
+          sudo apt-get update -y
+          sudo apt-get install -y libopenblas-dev libopenblas-openmp-dev
+          sudo apt-get install -y libhdf5-dev libopenmpi-dev libyaml-cpp-dev
+      - name: Configure Tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        run: |
+          cmake \
+            -DPython_ROOT_DIR:STRING=${{env.pythonLocation}} \
+            -DBUILD_TESTING:BOOL=ON \
+            -DCTEST_PLOT_ERRORS:BOOL=ON \
+            ${GITHUB_WORKSPACE}
+          cmake --build . --target regression_test_controllers
+      - name: Run FAST.Farm tests
+        working-directory: ${{runner.workspace}}/openfast/build
+        shell: bash
+        run: |
+          set OMP_NUM_THREADS=2
+          ctest -VV -L fastfarm --verbose
+      - name: Failing test artifacts
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: rtest-FF
+          path: |
+            ${{runner.workspace}}/openfast/build/reg_tests/glue-codes/fast-farm

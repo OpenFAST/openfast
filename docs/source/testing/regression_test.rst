@@ -1,7 +1,7 @@
 .. _regression_test:
 
-Regression test
-===============
+Regression tests
+================
 The regression test executes a series of test cases which intend to fully
 describe OpenFAST and its module's capabilities. Jump to one of the following
 sections for instructions on running the regression
@@ -17,14 +17,14 @@ results. To account for system, hardware, and compiler
 differences, the regression test attempts to match the current machine and
 compiler type to the appropriate solution set from these combinations:
 
-================== ========== ============================
- Operating System   Compiler   Hardware
-================== ========== ============================
- **macOS**          **GNU**    **2017 MacbookPro**
- CentOS 7           Intel      NREL Eagle - Intel Skylake
- CentOS 7           GNU        NREL Eagle - Intel Skylake
- Windows 10         Intel      Dell Precision 3530
-================== ========== ============================
+================== ============== ============================
+ Operating System   Compiler       Hardware
+================== ============== ============================
+ macOS 10.15        GNU 10.2       2020 MacbookPro
+ Ubuntu 20.04       Intel oneAPI   Docker
+ Ubuntu 20.04       GNU 10.2       Docker
+ Windows 10         Intel oneAPI   Dell Precision 3530
+================== ============== ============================
 
 The compiler versions, specific math libraries, and more info on hardware used
 to generate the baseline solutions are documented in the
@@ -40,6 +40,7 @@ configuration as described in the following sections.
 
 In both modes of execution a directory is created in the build directory
 called ``reg_tests`` where all of the input files for the test cases are copied
+(but not overwritten) 
 and all of the locally generated outputs are stored. Ultimately, both CTest and
 the manual execution program call a series of Python scripts and libraries in
 ``reg_tests`` and ``reg_tests/lib``. One such script is ``lib/pass_fail.py``
@@ -68,7 +69,7 @@ The following packages are required for regression testing:
 - Python 3.7+
 - Numpy
 - CMake and CTest (Optional)
-- Bokeh 1.4 (Optional)
+- Bokeh 2.4+ (Optional)
 
 .. _python_driver:
 
@@ -85,17 +86,15 @@ executing with the help option:
 
     >>>$ python manualRegressionTest.py -h
     usage: manualRegressionTest.py [-h] [-p [Plotting-Flag]] [-n [No-Execution]]
-                                [-v [Verbose-Flag]] [-case [Case-Name]]
-                                OpenFAST System-Name Compiler-Id Test-Tolerance
+                                [-v [Verbose-Flag]] [-case [Case-Name]] [-module [Module-Name]]
+                                Executable-Name Relative-Tolerance Absolute-Tolerance
 
-    Executes OpenFAST and a regression test for a single test case.
+    Executes OpenFAST or driver and a regression test for a single test case.
 
     positional arguments:
-    OpenFAST              path to the OpenFAST executable
-    System-Name           current system's name: [Darwin,Linux,Windows]
-    Compiler-Id           compiler's id: [Intel,GNU]
-    Test-Tolerance        tolerance defining pass or failure in the regression
-                            test
+    Executable-Name       path to the executable
+    Relative-Tolerance    Relative tolerance to allow the solution to deviate; expressed as order of magnitudes less than baseline.
+    Absolute-Tolerance    Absolute tolerance to allow small values to pass; expressed as order of magnitudes less than baseline.
 
     optional arguments:
     -h, --help            show this help message and exit
@@ -106,6 +105,8 @@ executing with the help option:
     -v [Verbose-Flag], -verbose [Verbose-Flag]
                             bool to include verbose system output
     -case [Case-Name]     single case name to execute
+    -module [Module-Name], -mod [Module-Name]
+                            name of module to execute
 
 .. note::
 
@@ -351,17 +352,15 @@ included Python driver.
     cd reg_tests
     python manualRegressionTest.py -h
     # usage: manualRegressionTest.py [-h] [-p [Plotting-Flag]] [-n [No-Execution]]
-    #                                [-v [Verbose-Flag]] [-case [Case-Name]]
-    #                                OpenFAST System-Name Compiler-Id Test-Tolerance
+    #                                [-v [Verbose-Flag]] [-case [Case-Name]] [-module [Module-Name]]
+    #                                Executable-Name Relative-Tolerance Absolute-Tolerance
     # 
-    # Executes OpenFAST and a regression test for a single test case.
+    # Executes OpenFAST or driver and a regression test for a single test case.
     # 
     # positional arguments:
-    #   OpenFAST              path to the OpenFAST executable
-    #   System-Name           current system's name: [Darwin,Linux,Windows]
-    #   Compiler-Id           compiler's id: [Intel,GNU]
-    #   Test-Tolerance        tolerance defining pass or failure in the regression
-    #                         test
+    # Executable-Name       path to the executable
+    # Relative-Tolerance    Relative tolerance to allow the solution to deviate; expressed as order of magnitudes less than baseline.
+    # Absolute-Tolerance    Absolute tolerance to allow small values to pass; expressed as order of magnitudes less than baseline.
     # 
     # optional arguments:
     #   -h, --help            show this help message and exit
@@ -372,12 +371,10 @@ included Python driver.
     #   -v [Verbose-Flag], -verbose [Verbose-Flag]
     #                         bool to include verbose system output
     #   -case [Case-Name]     single case name to execute
+    #   -module [Module-Name], -mod [Module-Name]
+    #                         name of module to execute
 
-    python manualRegressionTest.py \
-        ..\build\bin\openfast_x64_Double.exe \
-        Windows \
-        Intel \
-        1e-5
+    python manualRegressionTest.py ..\build\bin\openfast_x64_Double.exe 2.0 1.9
 
 .. _reg_test_windows:
 
@@ -392,3 +389,53 @@ description is given in :ref:`regression_test_windows`.
    :hidden:
 
    regression_test_windows.rst
+
+.. _new_regression_test_case:
+
+Adding test cases
+-----------------
+In all modes of execution, the regression tests are ultimately driven by a
+series of Python scripts located in the ``openfast/reg_tests`` directory
+with the naming scheme ``execute<Module>RegressionTest.py``.
+The first step to adding a new regression test case is to verify that
+a script exists for the target module. If it does not, an issue
+should be opened in `OpenFAST Issues <https://github.com/openfast/openfast/issues>`_
+to coordinate with the NREL team on creating this script.
+
+The next step is to add the test case in the appropriate location in
+the `r-test` submodule. The directory structure in r-test mirrors the
+directory structure in OpenFAST, so module-level tests should be placed
+in their respective module directories and glue-code tests go in
+``r-test/glue-codes/openfast``. Note the naming scheme of files for
+existing tests and adapt the new test case files accordingly. Specifically,
+the main input file and output file names may be expected in a particular
+convention by the Python scripts. Also, consider that any relative paths
+within the input deck for the new test case must work within the r-test
+directory structure.
+
+Once the test directory exists, the test case must be registered with
+the appropriate drivers. For OpenFAST glue-code tests, this happens both in
+CMake and a standalone list of test cases. For CMake, edit the file
+``openfast/reg_tests/CTestList.cmake``. The additional test should be
+added in the section corresponding to the module or driver at the
+bottom of that file. For the Python driver, the new test case must
+be added to ``openfast/reg_tests/r-test/glue-codes/openfast/CaseList.md``.
+At this point, the registration with CTest can be verified:
+
+.. code-block:: bash
+
+    # Move into the build directory
+    cd openfast/build
+
+    # Run CMake to take the new changes to the test list
+    cmake .. -DBUILD_TESTING=ON  # If the BUILD_TESTING flag was previously enabled, this can be left off
+
+    # List the registered tests, but don't run them
+    ctest -N
+
+For module regression tests, the only option for execution is with the
+CMake driver, so follow the instructions above to edit ``CTestList.cmake``.
+
+Finally, the new test cases in the r-test submodule must be added to the
+r-test repository. To do this, open a new issue in `r-test Issues <https://github.com/openfast/r-test/issues>`_
+requesting for support from the NREL team to commit your test.

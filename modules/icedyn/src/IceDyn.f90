@@ -37,7 +37,7 @@ MODULE IceDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER  :: IceD_Ver = ProgDesc( 'IceDyn', 'v1.02.01', '23-Jul-2016' )
+   TYPE(ProgDesc), PARAMETER  :: IceD_Ver = ProgDesc( 'IceDyn', '', '' )
 
    ! ..... Public Subroutines ...................................................................................................
 
@@ -267,7 +267,7 @@ SUBROUTINE IceD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
   !     ! Print the summary file if requested:
   ! IF (InputFileData%SumPrint) THEN
-  !    CALL IceD_PrintSum( p, OtherState, GetAdamsVals, ErrStat2, ErrMsg2 )
+  !    CALL IceD_PrintSum( p, OtherState, ErrStat2, ErrMsg2 )
   !       CALL CheckError( ErrStat2, ErrMsg2 )
   !       IF (ErrStat >= AbortErrLev) RETURN
   ! END IF

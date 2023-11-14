@@ -371,7 +371,7 @@ The structural twist angle is also following the IEC standard which is
 defined as the twist about the negative :math:`Z_l` axis. The key points
 are entered sequentially (from the root to tip) and there should be a
 total of ``kp_total`` lines for BeamDyn to read in the information,
-after two header lines. Please refer to Figure :numref:`blade-geometry` for
+after two header lines. Please refer to :numref:`blade-geometry` for
 more details on the blade geometry definition.
 
 .. _blade-geometry:

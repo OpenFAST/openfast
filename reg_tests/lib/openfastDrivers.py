@@ -27,33 +27,64 @@ import shutil
 import subprocess
 import rtestlib as rtl
 
-def _runCase(executable, inputFile, logFile, stdout):
-    command = "{} {} > {}".format(executable, inputFile, logFile)
+def _runCase(executable, inputFile, logFile, stdout, ExtraFlags=""):
+    if logFile is None:
+        command = "{} {} {}".format(executable, inputFile, ExtraFlags, logFile)
+    else:
+        command = "{} {} {} > {}".format(executable, inputFile, ExtraFlags, logFile)
     print(command)
     return subprocess.call(command, stdout=stdout, shell=True)
     
-def _runGenericCase(inputFile, executable, verbose=False):
+def _runGenericCase(inputFile, executable, verbose=False, ExtraFlags=""):
     stdout = sys.stdout if verbose else open(os.devnull, 'w')
     
     rtl.validateFileOrExit(inputFile)
     rtl.validateExeOrExit(executable)
     
-    casebase = os.path.sep.join(inputFile.split(os.path.sep)[-1].split('.')[:-1])
-    caseparent = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
-    logFile = caseparent + os.path.sep + casebase + '.log'
+    if verbose:
+        logFile = None
+    else:
+        caseparent = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
+        casebase = caseparent.split(os.path.sep)[-1]  # assumes that the directory structure name is the name of the .log file. (for consistent driver + glue-code names)
+        logFile = caseparent + os.path.sep + casebase + '.log'
+    
+    returnCode = _runCase(executable, inputFile, logFile, stdout, ExtraFlags)
+    print("COMPLETE with code {}".format(returnCode), flush=True)    
+    
+    return returnCode
+
+def _runUACase(inputFile, executable, verbose=False):
+    stdout = sys.stdout if verbose else open(os.devnull, 'w')
+    
+    rtl.validateFileOrExit(inputFile)
+    rtl.validateExeOrExit(executable)
+
+    if verbose:
+        logFile = None
+    else:
+        logFile = os.path.splitext(inputFile)[0]+'.log'
     
     returnCode = _runCase(executable, inputFile, logFile, stdout)
     print("COMPLETE with code {}".format(returnCode), flush=True)    
     
     return returnCode
 
+
 def runOpenfastCase(inputFile, executable, verbose=False):
     return _runGenericCase(inputFile, executable, verbose)
+
+def runAeromapCase(inputFile, executable, verbose=False):
+    return _runGenericCase(inputFile, executable, verbose, "-steadystate")
 
 def runAerodynDriverCase(inputFile, executable, verbose=False):
     caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
     os.chdir(caseDirectory)
     return _runGenericCase(inputFile, executable, verbose)
+
+def runUnsteadyAeroDriverCase(inputFile, executable, verbose=False):
+    caseDirectory = os.path.dirname(inputFile)
+    os.chdir(caseDirectory)
+    return _runUACase(inputFile, executable, verbose)
 
 def runBeamdynDriverCase(inputFile, executable, verbose=False):
     caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
@@ -61,11 +92,29 @@ def runBeamdynDriverCase(inputFile, executable, verbose=False):
     return _runGenericCase(inputFile, executable, verbose)
 
 def runHydrodynDriverCase(inputFile, executable, verbose=False):
-     caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
-     os.chdir(caseDirectory)
-     return _runGenericCase(inputFile, executable, verbose)
+    return _runGenericCase(inputFile, executable, verbose)
+
+def runMoordynDriverCase(inputFile, executable, verbose=False):
+    print("MoorDyn run: {}".format(inputFile))
+    return _runGenericCase(inputFile, executable, verbose)
 
 def runSubdynDriverCase(inputFile, executable, verbose=False):
-     caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
-     os.chdir(caseDirectory)
-     return _runGenericCase(inputFile, executable, verbose)
+    caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
+    os.chdir(caseDirectory)
+    return _runGenericCase(inputFile, executable, verbose)
+
+def runInflowwindDriverCase(inputFile, executable, verbose=False):
+    caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
+    os.chdir(caseDirectory)
+    return _runGenericCase(inputFile, executable, verbose)
+
+def runMoordynDriverCase(inputFile, executable, verbose=False):
+    caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
+    os.chdir(caseDirectory)
+    return _runGenericCase(inputFile, executable, verbose)
+
+
+def runSeaStateDriverCase(inputFile, executable, verbose=False):
+    caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
+    os.chdir(caseDirectory)
+    return _runGenericCase(inputFile, executable, verbose)

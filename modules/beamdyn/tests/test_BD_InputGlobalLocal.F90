@@ -22,6 +22,7 @@ subroutine test_BD_InputGlobalLocal()
     
     integer                    :: i, totalnodes
     type(BD_ParameterType)     :: parametertype
+    type(BD_OtherStateType)    :: otherstate
     type(BD_InputType)         :: inputtype
     real(BDKi), dimension(3)   :: vectorInit, vectorAfterRotation, rotationaxis
     integer(IntKi)             :: ErrStat
@@ -44,7 +45,8 @@ subroutine test_BD_InputGlobalLocal()
     
     ! build the parameter type
     parametertype%node_total = totalnodes
-    parametertype%GlbRot = calcRotationMatrix(real(Pi, BDKi), rotationaxis)
+    otherstate=simpleOtherState()
+    otherstate%GlbRot = calcRotationMatrix(real(Pi, BDKi), rotationaxis)
     
     ! build the inputs    
     call AllocAry(inputtype%RootMotion%TranslationDisp, 3, 1, 'TranslationDisp', ErrStat, ErrMsg)
@@ -74,10 +76,10 @@ subroutine test_BD_InputGlobalLocal()
     end do
     
     call AllocAry(inputtype%RootMotion%Orientation, 3, 3, totalnodes, 'RootMotion%Orientation', ErrStat, ErrMsg)
-    inputtype%RootMotion%Orientation(:,:,1) = parametertype%GlbRot
+    inputtype%RootMotion%Orientation(:,:,1) = otherstate%GlbRot
     
     ! call the subroutine to test
-    call BD_InputGlobalLocal(parametertype, inputtype)
+    call BD_InputGlobalLocal(parametertype, otherstate, inputtype)
     
     ! test the values
     @assertEqual(vectorAfterRotation, real(inputtype%RootMotion%TranslationDisp(:,1), BDKi), tolerance, testname)
@@ -97,6 +99,6 @@ subroutine test_BD_InputGlobalLocal()
        @assertEqual(vectorAfterRotation, real(inputtype%DistrLoad%Moment(1:3,i), BDKi), tolerance, testname)
     end do
     
-    @assertEqual(transpose(parametertype%GlbRot), inputtype%RootMotion%Orientation(:,:,1), tolerance, testname)
+    @assertEqual(transpose(otherstate%GlbRot), inputtype%RootMotion%Orientation(:,:,1), tolerance, testname)
     
 end subroutine

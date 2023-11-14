@@ -88,6 +88,8 @@ subroutine ui_seg_11(DeltaPa, DeltaPb, SegGamma, RegFunction, RegParam1, Uind)
                Kv        = 1.0_ReKi
                denominator=denominator+RegParam1**2*norm2_r0
             case default
+               print*,'Unknown SgmtReg', RegFunction
+               STOP ! Will never happen
                Kv=1.0_ReKi !< Should be an error
             end select 
             Kv=SegGamma*fourpi_inv*Kv*(norm_a+norm_b)/denominator
@@ -103,7 +105,7 @@ end subroutine ui_seg_11
 !! The function can compute the velocity on part of the segments and part of the control points.
 !! This feature is useful if some parallelization is used, while common storage vectors are used.
 subroutine ui_seg(iCPStart, iCPEnd, CPs, &
-      iSegStart, iSegEnd, nSegTot, nSegPTot, SegPoints, SegConnct, SegGamma,  &
+      iSegStart, iSegEnd, SegPoints, SegConnct, SegGamma,  &
       RegFunction, RegParam, Uind_out)
    real(ReKi), dimension(:,:),     intent(in)    :: CPs         !< Control points (3 x nCPs++)
    integer(IntKi),                 intent(in)    :: iCPStart    !< Index where we start in Control points array
@@ -113,8 +115,6 @@ subroutine ui_seg(iCPStart, iCPEnd, CPs, &
    real(ReKi), dimension(:),       intent(in)    :: SegGamma    !< Segment circulation (nSegTot)
    integer(IntKi),                 intent(in)    :: iSegStart   !< Index in SegConnct, and SegGamma where we start
    integer(IntKi),                 intent(in)    :: iSegEnd     !< Index in SegConnct, and SegGamma where we end
-   integer(IntKi),                 intent(in)    :: nSegTot     !< Total number of segments
-   integer(IntKi),                 intent(in)    :: nSegPTot    !< Total number of segment points
    integer(IntKi),                 intent(in)    :: RegFunction !< Regularization model
    real(ReKi), dimension(:),       intent(in)    :: RegParam    !< Regularization parameter (nSegTot)
    real(ReKi), dimension(:,:)    , intent(inout) :: Uind_out    !< Induced velocity vector - Side effects!!! (3 x nCPs++)
@@ -323,15 +323,15 @@ subroutine ui_seg(iCPStart, iCPEnd, CPs, &
 end subroutine ui_seg
 
 !> Induced velocity from `nPart` particles at `nCPs` control points. The velocity gradient is not computed
-subroutine ui_part_nograd(CPs, Part, Alpha, RegFunction, RegParam, UIout, nCPs, nPart)
-   integer(IntKi),               intent(in)    :: nCPs
-   integer(IntKi),               intent(in)    :: nPart
-   real(ReKi), dimension(:,:),   intent(in)    :: CPs         !< Control points (3 x nCPs)
-   real(ReKi), dimension(:,:),   intent(inout) :: UIout       !< Induced velocity, with side effects! (3 x nCPs)
-   real(ReKi), dimension(:,:),   intent(in)    :: Part        !< Particle positions (3 x nPart)
-   real(ReKi), dimension(:,:),   intent(in)    :: Alpha       !< Particle intensity [m^3/s] (3 x nPart) omega dV= alpha
+subroutine ui_part_nograd(nCPS, CPs, nPart, Part, Alpha, RegFunction, RegParam, UIout)
+   integer(IntKi),               intent(in)    :: nCPs        !< Number of control points to use (nCPs<=size(CPs,2))
+   integer(IntKi),               intent(in)    :: nPart       !< Number of particles to use (nPart<=size(Part,2))
+   real(ReKi), dimension(:,:),   intent(in)    :: CPs         !< Control points (3 x nCPs+)
+   real(ReKi), dimension(:,:),   intent(inout) :: UIout       !< Induced velocity, with side effects! (3 x nCPs+)
+   real(ReKi), dimension(:,:),   intent(in)    :: Part        !< Particle positions (3 x nPart+)
+   real(ReKi), dimension(:,:),   intent(in)    :: Alpha       !< Particle intensity [m^3/s] (3 x nPart+) omega dV= alpha
    integer(IntKi),               intent(in)    :: RegFunction !< Regularization function 
-   real(ReKi), dimension(:),     intent(in)    :: RegParam    !< Regularization parameter (nPart)
+   real(ReKi), dimension(:),     intent(in)    :: RegParam    !< Regularization parameter (nPart+)
    real(ReKi), dimension(3) :: UItmp   !< 
    real(ReKi), dimension(3) :: DP      !< 
    integer :: icp,ip

@@ -149,7 +149,7 @@ After extracting the contents, the OpenFAST executables
 can be tested by opening a command prompt, moving into the directory
 containing the executables, and running a simple test command:
 
-.. code-block::
+.. code-block:: bash
 
     cd C:\your\path\Desktop\openfast_binaries\
     openfast_x64.exe /h
@@ -243,7 +243,7 @@ combination of the packages listed in the table below.
 ============================================== ==================== ================= =======
  Package                                        Applicable systems   Minimum version   Link
 ============================================== ==================== ================= =======
- CMake                                          All                  3.0               https://cmake.org
+ CMake                                          All                  3.12              https://cmake.org
  GNU Make                                       macOS, Linux         1.8               https://www.gnu.org/software/make/
  Visual Studio                                  Windows              2015              https://visualstudio.microsoft.com>
 ============================================== ==================== ================= =======
@@ -368,20 +368,21 @@ The CMake options specific to OpenFAST and their default settings are:
 ::
 
     BUILD_DOCUMENTATION            - Build documentation (Default: OFF)
+    BUILD_FASTFARM                 - Enable FAST.Farm capabilities (Default: OFF)
     BUILD_OPENFAST_CPP_API         - Enable building OpenFAST - C++ API (Default: OFF)
-    BUILD_OPENFAST_SIMULINK_API    - Enable building OpenFAST for use with Simulink
+    BUILD_OPENFAST_SIMULINK_API    - Enable building OpenFAST for use with Simulink (Default: OFF)
     BUILD_SHARED_LIBS              - Enable building shared libraries (Default: OFF)
     BUILD_TESTING                  - Build the testing tree (Default: OFF)
     CMAKE_BUILD_TYPE               - Choose the build type: Debug Release (Default: Release)
     CMAKE_Fortran_MODULE_DIRECTORY - Set the Fortran Modules directory
     CMAKE_INSTALL_PREFIX           - Install path prefix, prepended onto install directories.
+    CODECOV                        - Enable infrastructure for measuring code coverage (Default: OFF)
     DOUBLE_PRECISION               - Treat REAL as double precision (Default: ON)
     FPE_TRAP_ENABLED               - Enable Floating Point Exception (FPE) trap in compiler options (Default: OFF)
-    GENERATE_TYPES                 - Use the openfast-registry to autogenerate types modules
+    GENERATE_TYPES                 - Use the openfast-registry to autogenerate types modules (Default: OFF)
+    OPENMP                         - Enable OpenMP support (Default: OFF)
     ORCA_DLL_LOAD                  - Enable OrcaFlex library load (Default: OFF)
     USE_DLL_INTERFACE              - Enable runtime loading of dynamic libraries (Default: ON)
-    OPENMP                         - Enable OpenMP support (Default: OFF)
-    BUILD_FAST_FARM                - Enable FAST.Farm capabilities (Default: OFF)
 
 Additional system-specific options may exist for a given system, but those
 should not impact the OpenFAST configuration. As mentioned above, the
@@ -599,7 +600,7 @@ on Windows systems is given below.
     # and build architecture. For a list of available CMake generators, run
     # ``cmake .. -G``.
     # This step creates the Visual Studio solution.
-    cmake .. -G "Visual Studio 14 2015 Win64"
+    cmake .. -G "Visual Studio 16 2019"
 
     # Open the generated Visual Studio solution
     start OpenFAST.sln

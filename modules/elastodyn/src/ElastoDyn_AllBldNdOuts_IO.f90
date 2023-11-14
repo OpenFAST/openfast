@@ -20,7 +20,7 @@ MODULE ElastoDyn_AllBldNdOuts_IO
 
       ! Parameters related to output length (number of characters allowed in the output data headers):
 
-   INTEGER(IntKi), PARAMETER      :: OutStrLenM1 = ChanLen-6    ! The NREL allowed channel name length is usually 20.  We are making these of the form B#N###namesuffix
+!   INTEGER(IntKi), PARAMETER      :: OutStrLenM1 = ChanLen-6    ! The NREL allowed channel name length is usually 20.  We are making these of the form B#N###namesuffix
 
 
 ! ===================================================================================================
@@ -505,9 +505,8 @@ SUBROUTINE AllBldNdOuts_SetParameters( p, InputFileData, ErrStat, ErrMsg )
    ELSE
       p%BldNd_NumOuts = InputFileData%BldNd_NumOuts
    ENDIF
-
    if (p%BldNd_BladesOut==0) p%BldNd_NumOuts = 0
-   
+
       ! Set the total number of outputs ( requested channel groups * number requested nodes * number requested blades )
    p%BldNd_TotNumOuts = p%BldNodes*p%BldNd_BladesOut*p%BldNd_NumOuts !p%BldNd_NumOuts * size(p%BldNd_BlOutNd) * size(p%BldNd_BladesOut)
 

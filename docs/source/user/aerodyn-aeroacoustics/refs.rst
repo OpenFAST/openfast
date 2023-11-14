@@ -5,6 +5,5 @@
 
 .. bibliography:: references.bib
    :labelprefix: aa-
-   :keyprefix: aa-
 
 

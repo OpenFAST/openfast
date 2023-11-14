@@ -98,7 +98,6 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    TYPE(ED_InputFile)                           :: InputFileData           ! Data stored in the module's input file
    INTEGER(IntKi)                               :: ErrStat2                ! temporary Error status of the operation
    INTEGER(IntKi)                               :: i, K                    ! loop counters
-   LOGICAL, PARAMETER                           :: GetAdamsVals = .FALSE.  ! Determines if we should read Adams values and create (update) an Adams model
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                 ! temporary Error message if ErrStat /= ErrID_None
    REAL(R8Ki)                                   :: TransMat(3,3)            ! Initial rotation matrix at Platform Refz
 
@@ -124,8 +123,10 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%UseAD14   = LEN_TRIM(InitInp%ADInputFile) > 0 ! if we're using AD14, we need to use the AD14 input files
 
    p%RootName = InitInp%RootName ! FAST already adds '.ED' to the root name
+   p%CompAeroMaps = InitInp%CompAeroMaps
+   p%Gravity = InitInp%Gravity
    
-   CALL ED_ReadInput( InitInp%InputFile, InitInp%ADInputFile, InputFileData, GetAdamsVals, p%BD4Blades, Interval, p%RootName, ErrStat2, ErrMsg2 )
+   CALL ED_ReadInput( InitInp%InputFile, InitInp%ADInputFile, InputFileData, p%BD4Blades, Interval, p%RootName, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -147,15 +148,63 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
        
    END IF
 
+   IF (p%CompAeroMaps) THEN
+      InputFileData%DT = Interval
+      p%Gravity        = 0.0_ReKi
+      
+      ! DEGREES OF FREEDOM
+      InputFileData%TeetDOF  = .false.
+      InputFileData%DrTrDOF  = .false.
+      InputFileData%GenDOF   = .false.
+      InputFileData%YawDOF   = .false.
+      InputFileData%TwFADOF1 = .false.
+      InputFileData%TwFADOF2 = .false.
+      InputFileData%TwSSDOF1 = .false.
+      InputFileData%TwSSDOF2 = .false.
+      InputFileData%PtfmSgDOF= .false.
+      InputFileData%PtfmSwDOF= .false.
+      InputFileData%PtfmHvDOF= .false.
+      InputFileData%PtfmRDOF = .false.
+      InputFileData%PtfmPDOF = .false.
+      InputFileData%PtfmYDOF = .false.
+      
+      ! INITIAL CONDITIONS
+      InputFileData%RotSpeed = InitInp%RotSpeed
+      InputFileData%OoPDefl     = 0.0_ReKi
+      InputFileData%IPDefl      = 0.0_ReKi
+      InputFileData%BlPitch(1)  = 0.0_ReKi
+      InputFileData%BlPitch(2)  = 0.0_ReKi
+      InputFileData%BlPitch(3)  = 0.0_ReKi
+      InputFileData%TeetDefl    = 0.0_ReKi
+      InputFileData%Azimuth     = 0.0_ReKi
+      InputFileData%NacYaw      = 0.0_ReKi
+      InputFileData%TTDspFA     = 0.0_ReKi
+      InputFileData%TTDspSS     = 0.0_ReKi
+      InputFileData%PtfmSurge   = 0.0_ReKi
+      InputFileData%PtfmSway    = 0.0_ReKi
+      InputFileData%PtfmHeave   = 0.0_ReKi
+      InputFileData%PtfmRoll    = 0.0_ReKi
+      InputFileData%PtfmPitch   = 0.0_ReKi
+      InputFileData%PtfmYaw     = 0.0_ReKi
+      
+      ! TURBINE CONFIGURATION
+   ! CHECK THAT precone is same for all blades???
+      InputFileData%ShftTilt = 0.0_ReKi
+      
+   ! CHECK THAT BldFile is same for all blades???
 
-   CALL ED_ValidateInput( InputFileData, p%BD4Blades, InitInp%Linearize, ErrStat2, ErrMsg2 )
+      InputFileData%TeetMod = 0
+
+   END IF
+
+   CALL ED_ValidateInput( InputFileData, p%BD4Blades, InitInp%Linearize, InitInp%MHK, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
       !............................................................................................
       ! Define parameters here:
       !............................................................................................
-   CALL ED_SetParameters( InputFileData, p, ErrStat2, ErrMsg2 )
+   CALL ED_SetParameters( InitInp, InputFileData, p, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -237,7 +286,6 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       
    InitOut%Ver         = ED_Ver
    InitOut%NumBl       = p%NumBl
-   InitOut%Gravity     = p%Gravity
    InitOut%BladeLength = p%TipRad - p%HubRad
    InitOut%TowerHeight = p%TwrFlexL
    InitOut%TowerBaseHeight = p%TowerBsHt
@@ -249,12 +297,15 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    InitOut%PlatformPos(2) = InitOut%PlatformPos(2) - TransMat(3,2)*p%PtfmRefzt
    InitOut%PlatformPos(3) = InitOut%PlatformPos(3) - TransMat(3,3)*p%PtfmRefzt + p%PtfmRefzt
 
-   InitOut%HubHt       = p%HubHt
-   InitOut%TwrBasePos    = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
-   InitOut%TwrBaseOrient = y%TowerLn2Mesh%Orientation(:,:,p%TwrNodes + 2)
+   InitOut%HubHt            = p%HubHt
+   InitOut%TwrBaseRefPos    = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
+   InitOut%TwrBaseTransDisp = y%TowerLn2Mesh%TranslationDisp(:,p%TwrNodes + 2)
+   InitOut%TwrBaseRefOrient = y%TowerLn2Mesh%RefOrientation(:,:,p%TwrNodes + 2)
+   InitOut%TwrBaseOrient    = y%TowerLn2Mesh%Orientation(:,:,p%TwrNodes + 2)
    InitOut%HubRad      = p%HubRad
    InitOut%RotSpeed    = p%RotSpeed
    InitOut%isFixed_GenDOF = .not. InputFileData%GenDOF
+   InitOut%GearBox_index = DOF_GeAz ! for steady-state solver changing rotor speed
    
 
    if (.not. p%BD4Blades) then
@@ -284,7 +335,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! set up data needed for linearization analysis
       !............................................................................................
    
-   if (InitInp%Linearize) then
+   if (InitInp%Linearize .or. p%CompAeroMaps) then
       call ED_Init_Jacobian(p, u, y, InitOut, ErrStat2, ErrMsg2)
          call CheckError( ErrStat2, ErrMsg2 )
          if (ErrStat >= AbortErrLev) return
@@ -301,7 +352,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
        ! Print the summary file if requested:
    IF (InputFileData%SumPrint) THEN
-      CALL ED_PrintSum( p, OtherState, GetAdamsVals, ErrStat2, ErrMsg2 )
+      CALL ED_PrintSum( p, OtherState, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
    END IF
@@ -546,6 +597,7 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    REAL(ReKi)                   :: MFHydro  (NDims,p%TwrNodes)                     ! Total hydrodynamic + aerodynamic moment per unit length acting on a tower element (body F) at point T.
    REAL(ReKi)                   :: MomH0B   (NDims,p%NumBl)                        ! Total moment at the hub (body H) / blade root (point S(0)) due to the blade.
 
+   REAL(ReKi)                   :: gAccE (NDims)                                   ! Gravitational acceleration in the inertia frame (body E for earth)
 
    INTEGER(IntKi)               :: I                                               ! Generic index
    INTEGER(IntKi)               :: J, J2                                           ! Loops through nodes / elements
@@ -598,6 +650,8 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    !   To do this, first initialize the variables using the portions not associated with the accelerations.  Then add the portions
    !   associated with the accelerations one by one:
    !...............................................................................................................................
+
+   gAccE      = -p%Gravity * m%CoordSys%z2
 
    AngAccEB   = m%RtHS%AngAccEBt
    AngAccEH   = m%RtHS%AngAccEHt
@@ -755,13 +809,24 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          m%AllOuts( TipALxb(K) ) = DOT_PRODUCT( LinAccES(:,p%TipNode,K), m%CoordSys%n1(K,p%BldNodes,:) )
          m%AllOuts( TipALyb(K) ) = DOT_PRODUCT( LinAccES(:,p%TipNode,K), m%CoordSys%n2(K,p%BldNodes,:) )
          m%AllOuts( TipALzb(K) ) = DOT_PRODUCT( LinAccES(:,p%TipNode,K), m%CoordSys%n3(K,p%BldNodes,:) )
+         m%AllOuts( TipALgxb(K) ) = DOT_PRODUCT( LinAccES(:,p%TipNode,K) - gAccE, m%CoordSys%n1(K,p%BldNodes,:) )
+         m%AllOuts( TipALgyb(K) ) = DOT_PRODUCT( LinAccES(:,p%TipNode,K) - gAccE, m%CoordSys%n2(K,p%BldNodes,:) )
+         m%AllOuts( TipALgzb(K) ) = DOT_PRODUCT( LinAccES(:,p%TipNode,K) - gAccE, m%CoordSys%n3(K,p%BldNodes,:) )
          m%AllOuts( TipRDxb(K) ) = DOT_PRODUCT( m%RtHS%AngPosHM(:,K,p%TipNode), m%CoordSys%j1(K,         :) )*R2D
          m%AllOuts( TipRDyb(K) ) = DOT_PRODUCT( m%RtHS%AngPosHM(:,K,p%TipNode), m%CoordSys%j2(K,         :) )*R2D
          ! There is no sense computing AllOuts( TipRDzc(K) ) here since it is always zero for FAST simulation results.
-         IF ( rOSTipzn > 0.0 )  THEN   ! Tip of blade K is above the yaw bearing.
-            m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn + rOSTipzn*rOSTipzn ) ! Absolute distance from the tower top / yaw bearing to the tip of blade 1.
-         ELSE                          ! Tip of blade K is below the yaw bearing.
-            m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn                     ) ! Perpendicular distance from the yaw axis / tower centerline to the tip of blade 1.
+         IF ( p%MHK == MHK_Floating ) THEN
+            IF ( rOSTipzn < 0.0 )  THEN   ! Tip of blade K is above the yaw bearing.
+               m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn + rOSTipzn*rOSTipzn ) ! Absolute distance from the tower top / yaw bearing to the tip of blade 1.
+            ELSE                          ! Tip of blade K is below the yaw bearing.
+               m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn                     ) ! Perpendicular distance from the yaw axis / tower centerline to the tip of blade 1.
+            ENDIF
+         ELSE
+            IF ( rOSTipzn > 0.0 )  THEN   ! Tip of blade K is above the yaw bearing.
+               m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn + rOSTipzn*rOSTipzn ) ! Absolute distance from the tower top / yaw bearing to the tip of blade 1.
+            ELSE                          ! Tip of blade K is below the yaw bearing.
+               m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn                     ) ! Perpendicular distance from the yaw axis / tower centerline to the tip of blade 1.
+            ENDIF
          ENDIF
       END IF      
 
@@ -775,6 +840,10 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          m%AllOuts( SpnALxb(I,K) ) = DOT_PRODUCT( LinAccES(:,p%BldGagNd(I),K), m%CoordSys%n1(K,p%BldGagNd(I),:) )
          m%AllOuts( SpnALyb(I,K) ) = DOT_PRODUCT( LinAccES(:,p%BldGagNd(I),K), m%CoordSys%n2(K,p%BldGagNd(I),:) )
          m%AllOuts( SpnALzb(I,K) ) = DOT_PRODUCT( LinAccES(:,p%BldGagNd(I),K), m%CoordSys%n3(K,p%BldGagNd(I),:) )
+
+         m%AllOuts( SpnALgxb(I,K) ) = DOT_PRODUCT( LinAccES(:,p%BldGagNd(I),K) - gAccE, m%CoordSys%n1(K,p%BldGagNd(I),:) )
+         m%AllOuts( SpnALgyb(I,K) ) = DOT_PRODUCT( LinAccES(:,p%BldGagNd(I),K) - gAccE, m%CoordSys%n2(K,p%BldGagNd(I),:) )
+         m%AllOuts( SpnALgzb(I,K) ) = DOT_PRODUCT( LinAccES(:,p%BldGagNd(I),K) - gAccE, m%CoordSys%n3(K,p%BldGagNd(I),:) )
 
          rSPS                      = m%RtHS%rS0S(:,K,p%BldGagNd(I)) - p%RNodes(p%BldGagNd(I))*m%CoordSys%j3(K,:)
 
@@ -844,6 +913,9 @@ END IF
    m%AllOuts(NcIMUTAxs) =      DOT_PRODUCT(                 LinAccEIMU, m%CoordSys%c1 )
    m%AllOuts(NcIMUTAys) = -1.0*DOT_PRODUCT(                 LinAccEIMU, m%CoordSys%c3 )
    m%AllOuts(NcIMUTAzs) =      DOT_PRODUCT(                 LinAccEIMU, m%CoordSys%c2 )
+   m%AllOuts(NcIMUTAgxs) =      DOT_PRODUCT(          LinAccEIMU-gAccE, m%CoordSys%c1 )
+   m%AllOuts(NcIMUTAgys) = -1.0*DOT_PRODUCT(          LinAccEIMU-gAccE, m%CoordSys%c3 )
+   m%AllOuts(NcIMUTAgzs) =      DOT_PRODUCT(          LinAccEIMU-gAccE, m%CoordSys%c2 )
    m%AllOuts(NcIMURVxs) =      DOT_PRODUCT( m%RtHS%AngVelER  , m%CoordSys%c1 )*R2D
    m%AllOuts(NcIMURVys) = -1.0*DOT_PRODUCT( m%RtHS%AngVelER  , m%CoordSys%c3 )*R2D
    m%AllOuts(NcIMURVzs) =      DOT_PRODUCT( m%RtHS%AngVelER  , m%CoordSys%c2 )*R2D
@@ -894,6 +966,9 @@ END IF
    m%AllOuts(YawBrTAxp) =  DOT_PRODUCT( LinAccEO, m%CoordSys%b1 )
    m%AllOuts(YawBrTAyp) = -DOT_PRODUCT( LinAccEO, m%CoordSys%b3 )
    m%AllOuts(YawBrTAzp) =  DOT_PRODUCT( LinAccEO, m%CoordSys%b2 )
+   m%AllOuts(YawBrTAgxp) =  DOT_PRODUCT( LinAccEO-gAccE, m%CoordSys%b1 )
+   m%AllOuts(YawBrTAgyp) = -DOT_PRODUCT( LinAccEO-gAccE, m%CoordSys%b3 )
+   m%AllOuts(YawBrTAgzp) =  DOT_PRODUCT( LinAccEO-gAccE, m%CoordSys%b2 )
    m%AllOuts(YawBrRDxt) =  DOT_PRODUCT( m%RtHS%AngPosXB, m%CoordSys%a1 )*R2D
    m%AllOuts(YawBrRDyt) = -DOT_PRODUCT( m%RtHS%AngPosXB, m%CoordSys%a3 )*R2D
    ! There is no sense computing m%AllOuts(YawBrRDzt) here since it is always zero for FAST simulation results.
@@ -912,6 +987,10 @@ END IF
       m%AllOuts( TwHtALxt(I) ) =      DOT_PRODUCT( LinAccET(:,p%TwrGagNd(I)), m%CoordSys%t1(p%TwrGagNd(I),:) )
       m%AllOuts( TwHtALyt(I) ) = -1.0*DOT_PRODUCT( LinAccET(:,p%TwrGagNd(I)), m%CoordSys%t3(p%TwrGagNd(I),:) )
       m%AllOuts( TwHtALzt(I) ) =      DOT_PRODUCT( LinAccET(:,p%TwrGagNd(I)), m%CoordSys%t2(p%TwrGagNd(I),:) )
+
+      m%AllOuts( TwHtALgxt(I) ) =      DOT_PRODUCT( LinAccET(:,p%TwrGagNd(I)) - gAccE, m%CoordSys%t1(p%TwrGagNd(I),:) )
+      m%AllOuts( TwHtALgyt(I) ) = -1.0*DOT_PRODUCT( LinAccET(:,p%TwrGagNd(I)) - gAccE, m%CoordSys%t3(p%TwrGagNd(I),:) )
+      m%AllOuts( TwHtALgzt(I) ) =      DOT_PRODUCT( LinAccET(:,p%TwrGagNd(I)) - gAccE, m%CoordSys%t2(p%TwrGagNd(I),:) )
 
       rTPT                   = m%RtHS%rT0T(:,p%TwrGagNd(I)) - p%HNodes(p%TwrGagNd(I))*m%CoordSys%a2(:)
 
@@ -951,9 +1030,15 @@ END IF
    m%AllOuts( PtfmTAxt) =  DOT_PRODUCT(                 LinAccEZ, m%CoordSys%a1 )
    m%AllOuts( PtfmTAyt) = -DOT_PRODUCT(                 LinAccEZ, m%CoordSys%a3 )
    m%AllOuts( PtfmTAzt) =  DOT_PRODUCT(                 LinAccEZ, m%CoordSys%a2 )
+   m%AllOuts( PtfmTAgxt) =  DOT_PRODUCT(        LinAccEZ - gAccE, m%CoordSys%a1 )
+   m%AllOuts( PtfmTAgyt) = -DOT_PRODUCT(        LinAccEZ - gAccE, m%CoordSys%a3 )
+   m%AllOuts( PtfmTAgzt) =  DOT_PRODUCT(        LinAccEZ - gAccE, m%CoordSys%a2 )
    m%AllOuts( PtfmTAxi) = m%QD2T(DOF_Sg  )
    m%AllOuts( PtfmTAyi) = m%QD2T(DOF_Sw  )
    m%AllOuts( PtfmTAzi) = m%QD2T(DOF_Hv  )
+   m%AllOuts( PtfmTAgxi) = m%QD2T(DOF_Sg  )
+   m%AllOuts( PtfmTAgyi) = m%QD2T(DOF_Sw  )
+   m%AllOuts( PtfmTAgzi) = m%QD2T(DOF_Hv  ) + p%Gravity
    m%AllOuts( PtfmRDxi) = x%QT  (DOF_R )*R2D
    m%AllOuts( PtfmRDyi) = x%QT  (DOF_P )*R2D
    m%AllOuts( PtfmRDzi) = x%QT  (DOF_Y )*R2D
@@ -1166,10 +1251,10 @@ END IF
       ! Integrate to find FrcFGagT and MomFGagT using all of the nodes / elements above the current strain gage location:
       DO J = ( p%TwrGagNd(I) + 1 ),p%TwrNodes ! Loop through tower nodes / elements above strain gage node
          TmpVec2  = FTTower(:,J) - p%MassT(J)*( p%Gravity*m%CoordSys%z2 + LinAccET(:,J) )           ! Portion of FrcFGagT associated with element J
-         FrcFGagT = FrcFGagT + TmpVec2*p%DHNodes(J)
+         FrcFGagT = FrcFGagT + TmpVec2*abs(p%DHNodes(J))
 
          TmpVec = CROSS_PRODUCT( m%RtHS%rZT(:,J) - m%RtHS%rZT(:,p%TwrGagNd(I)), TmpVec2 )                          ! Portion of MomFGagT associated with element J
-         MomFGagT = MomFGagT + ( TmpVec + MFHydro(:,J) )*p%DHNodes(J)
+         MomFGagT = MomFGagT + ( TmpVec + MFHydro(:,J) )*abs(p%DHNodes(J))
       ENDDO ! J -Tower nodes / elements above strain gage node
 
       ! Add the effects of 1/2 the strain gage element:
@@ -1179,12 +1264,12 @@ END IF
 
       TmpVec2  = FTTower(:,p%TwrGagNd(I)) - p%MassT(p%TwrGagNd(I))*( p%Gravity*m%CoordSys%z2 + LinAccET(:,p%TwrGagNd(I)))
 
-      FrcFGagT = FrcFGagT + TmpVec2 * 0.5 * p%DHNodes(p%TwrGagNd(I))
+      FrcFGagT = FrcFGagT + TmpVec2 * 0.5 * abs(p%DHNodes(p%TwrGagNd(I)))
       FrcFGagT = 0.001*FrcFGagT  ! Convert the local force to kN
 
       TmpVec = CROSS_PRODUCT( ( 0.25_R8Ki*p%DHNodes( p%TwrGagNd(I)) )*m%CoordSys%a2, TmpVec2 )              ! Portion of MomFGagT associated with 1/2 of the strain gage element
       TmpVec   = TmpVec   + MFHydro(:,p%TwrGagNd(I))
-      MomFGagT = MomFGagT + TmpVec * 0.5 * p%DHNodes(p%TwrGagNd(I))
+      MomFGagT = MomFGagT + TmpVec * 0.5 * abs(p%DHNodes(p%TwrGagNd(I)))
       MomFGagT = 0.001*MomFGagT  ! Convert the local moment to kN-m
 
       m%AllOuts( TwHtFLxt(I) ) =     DOT_PRODUCT( FrcFGagT, m%CoordSys%t1(p%TwrGagNd(I),:) )
@@ -1573,6 +1658,35 @@ END IF
    y%RotorFurlMotion14%RotationVel(1,1) =     m%RtHS%AngVelER(1)
    y%RotorFurlMotion14%RotationVel(2,1) = -1.*m%RtHS%AngVelER(3)
    y%RotorFurlMotion14%RotationVel(3,1) =     m%RtHS%AngVelER(2)
+
+   !...........
+   ! TailFin :
+   !...........   
+   ! Translation (absolute position - starting position):
+   y%TFinCMMotion%TranslationDisp(1,1) =     m%RtHS%rJ(1)
+   y%TFinCMMotion%TranslationDisp(2,1) = -1.*m%RtHS%rJ(3)
+   y%TFinCMMotion%TranslationDisp(3,1) =     m%RtHS%rJ(2) + p%PtfmRefzt
+   y%TFinCMMotion%TranslationDisp      = y%TFinCMMotion%TranslationDisp - y%TFinCMMotion%Position
+   ! Orientation:        
+   y%TFinCMMotion%Orientation(1,1,1)   =     m%CoordSys%tf1(1) 
+   y%TFinCMMotion%Orientation(2,1,1)   =     m%CoordSys%tf2(1)
+   y%TFinCMMotion%Orientation(3,1,1)   =     m%CoordSys%tf3(1)   
+   y%TFinCMMotion%Orientation(1,2,1)   = -1.*m%CoordSys%tf1(3)
+   y%TFinCMMotion%Orientation(2,2,1)   = -1.*m%CoordSys%tf2(3) 
+   y%TFinCMMotion%Orientation(3,2,1)   = -1.*m%CoordSys%tf3(3) 
+   y%TFinCMMotion%Orientation(1,3,1)   =     m%CoordSys%tf1(2)
+   y%TFinCMMotion%Orientation(2,3,1)   =     m%CoordSys%tf2(2)
+   y%TFinCMMotion%Orientation(3,3,1)   =     m%CoordSys%tf3(2)
+   ! Rotational velocity:
+   y%TFinCMMotion%RotationVel(1,1)     =     m%RtHS%AngVelEA(1)
+   y%TFinCMMotion%RotationVel(2,1)     = -1.*m%RtHS%AngVelEA(3)
+   y%TFinCMMotion%RotationVel(3,1)     =     m%RtHS%AngVelEA(2)   
+   ! Linear velocity:
+   y%TFinCMMotion%TranslationVel(1,1)  =     m%RtHS%LinVelEJ(1)
+   y%TFinCMMotion%TranslationVel(2,1)  = -1.*m%RtHS%LinVelEJ(3)
+   y%TFinCMMotion%TranslationVel(3,1)  =     m%RtHS%LinVelEJ(2)
+
+
       
    !...........
    ! Nacelle :
@@ -1809,7 +1923,10 @@ END IF
    y%NcIMURAxs = m%AllOuts(NcIMURAxs)*D2R                  ! Nacelle roll    acceleration (rad/s^2) -- this is in the shaft (tilted) coordinate system, instead of the nacelle (nontilted) coordinate system
    y%NcIMURAys = m%AllOuts(NcIMURAys)*D2R                  ! Nacelle nodding acceleration (rad/s^2)
    y%NcIMURAzs = m%AllOuts(NcIMURAzs)*D2R                  ! Nacelle yaw     acceleration (rad/s^2) -- this is in the shaft (tilted) coordinate system, instead of the nacelle (nontilted) coordinate system
-   
+   y%LSShftFxa = m%AllOuts(LSShftFxa)*1000.                ! Rotating low-speed shaft force x (GL co-ords) (N)
+   y%LSShftFys = m%AllOuts(LSShftFys)*1000.                ! Nonrotating low-speed shaft force y (GL co-ords) (N)
+   y%LSShftFzs = m%AllOuts(LSShftFzs)*1000.                ! Nonrotating low-speed shaft force z (GL co-ords) (N)
+
                
    RETURN
    
@@ -2003,9 +2120,10 @@ END SUBROUTINE ED_CalcConstrStateResidual
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the parameters, based on the data stored in InputFileData
-SUBROUTINE ED_SetParameters( InputFileData, p, ErrStat, ErrMsg )
+SUBROUTINE ED_SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
 !..................................................................................................................................
 
+   TYPE(ED_InitInputType),   INTENT(IN   )    :: InitInp        !< Input data for initialization routine
    TYPE(ED_InputFile),       INTENT(IN)       :: InputFileData  !< Data stored in the module's input file
    TYPE(ED_ParameterType),   INTENT(INOUT)    :: p              !< The module's parameter data
    INTEGER(IntKi),           INTENT(OUT)      :: ErrStat        !< The error status code
@@ -2024,7 +2142,7 @@ SUBROUTINE ED_SetParameters( InputFileData, p, ErrStat, ErrMsg )
 
 
       ! Set parameters from primary input file
-   CALL SetPrimaryParameters( p, InputFileData, ErrStat2, ErrMsg2  )
+   CALL SetPrimaryParameters( InitInp, p, InputFileData, ErrStat2, ErrMsg2  )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -2459,28 +2577,21 @@ END SUBROUTINE Alloc_CoordSys
 SUBROUTINE SetBladeParameters( p, BladeInData, BladeMeshData, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-   TYPE(ED_ParameterType),        INTENT(INOUT)  :: p                                   !< The parameters of the structural dynamics module
-   TYPE(BladeInputData),          INTENT(IN)     :: BladeInData(:)                      !< Program input data for all blades
-   TYPE(ED_BladeMeshInputData),   INTENT(IN)     :: BladeMeshData(:)                    !< Program input mesh data for all blades
-   INTEGER(IntKi),                INTENT(OUT)    :: ErrStat                             !< Error status
-   CHARACTER(*),                  INTENT(OUT)    :: ErrMsg                              !< Error message
+   TYPE(ED_ParameterType),                      INTENT(INOUT)  :: p                 !< The parameters of the structural dynamics module
+   TYPE(BladeInputData),         ALLOCATABLE,   INTENT(IN)     :: BladeInData(:)    !< Program input data for all blades
+   TYPE(ED_BladeMeshInputData),  ALLOCATABLE,   INTENT(IN)     :: BladeMeshData(:)  !< Program input mesh data for all blades
+   INTEGER(IntKi),                              INTENT(OUT)    :: ErrStat           !< Error status
+   CHARACTER(*),                                INTENT(OUT)    :: ErrMsg            !< Error message
 
       ! Local variables:
-   REAL(ReKi)                                    :: x                                   ! Fractional location between two points in linear interpolation
-   INTEGER(IntKi )                               :: K                                   ! Blade number
-   INTEGER(IntKi )                               :: J                                   ! Index for the node arrays
-   INTEGER(IntKi)                                :: InterpInd                           ! Index for the interpolation routine
-   LOGICAL                                       :: SetAdmVals                          ! Logical to determine if Adams inputs should be set
+   REAL(ReKi)                                                  :: x                 ! Fractional location between two points in linear interpolation
+   INTEGER(IntKi )                                             :: K                 ! Blade number
+   INTEGER(IntKi )                                             :: J                 ! Index for the node arrays
+   INTEGER(IntKi)                                              :: InterpInd         ! Index for the interpolation routine
 
       ! initialize variables
    ErrStat = ErrID_None
    ErrMsg  = ''
-
-   IF (p%BD4Blades) THEN
-      SetAdmVals = .FALSE.
-   ELSE
-      SetAdmVals = ALLOCATED( BladeInData(1)%GJStff )
-   END IF
    
 
    ! ..............................................................................................................................
@@ -2501,7 +2612,7 @@ SUBROUTINE SetBladeParameters( p, BladeInData, BladeMeshData, ErrStat, ErrMsg )
 
       ! .......... Allocate arrays for the blade parameters being set in this routine ..........:
 
-   CALL Alloc_BladeParameters( p, SetAdmVals, ErrStat, ErrMsg )
+   CALL Alloc_BladeParameters( p, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) RETURN
 
    
@@ -2562,17 +2673,6 @@ SUBROUTINE SetBladeParameters( p, BladeInData, BladeMeshData, ErrStat, ErrMsg )
       !    BMassDen   MassB      Lineal mass density
       !    FlpStff    StiffBF    Flapwise stiffness
       !    EdgStff    StiffBE    Edgewise stiffness
-      !    GJStff     StiffBGJ   Blade torsional stiffness
-      !    EAStff     StiffBEA   Blade extensional stiffness
-      !    Alpha      BAlpha     Blade flap/twist coupling coefficient
-      !    FlpIner    InerBFlp   Blade flap (about local structural yb-axis) mass inertia per unit length
-      !    EdgIner    InerBEdg   Blade edge (about local structural xb-axis) mass inertia per unit length
-      !    PrecrvRef  RefAxisxb  Blade offset for defining the reference axis from the pitch axis for precurved blades (along xb-axis)
-      !    PreswpRef  RefAxisyb  Blade offset for defining the reference axis from the pitch axis for preswept  blades (along yb-axis)
-      !    FlpcgOf    cgOffBFlp  Blade flap mass cg offset
-      !    EdgcgOf    cgOffBEdg  Blade edge mass cg offset
-      !    FlpEAOf    EAOffBFlp  Blade flap elastic axis offset
-      !    EdgEAOf    EAOffBEdg  Blade edge elastic axis offset
 
 
          ! Define RNodesNorm() which is common to all the blades:
@@ -2614,29 +2714,7 @@ SUBROUTINE SetBladeParameters( p, BladeInData, BladeMeshData, ErrStat, ErrMsg )
             p%StiffBF (K,J) = InterpAry( x, BladeInData(K)%FlpStff , InterpInd )
             p%StiffBE (K,J) = InterpAry( x, BladeInData(K)%EdgStff , InterpInd )
 
-            IF ( SetAdmVals ) THEN
-               p%StiffBGJ (K,J) = InterpAry( x, BladeInData(K)%GJStff   , InterpInd )
-               p%StiffBEA (K,J) = InterpAry( x, BladeInData(K)%EAStff   , InterpInd )
-               p%BAlpha   (K,J) = InterpAry( x, BladeInData(K)%Alpha    , InterpInd )
-               p%InerBFlp (K,J) = InterpAry( x, BladeInData(K)%FlpIner  , InterpInd )
-               p%InerBEdg (K,J) = InterpAry( x, BladeInData(K)%EdgIner  , InterpInd )
-               p%RefAxisxb(K,J) = InterpAry( x, BladeInData(K)%PrecrvRef, InterpInd )
-               p%RefAxisyb(K,J) = InterpAry( x, BladeInData(K)%PreswpRef, InterpInd )
-               p%cgOffBFlp(K,J) = InterpAry( x, BladeInData(K)%FlpcgOf  , InterpInd )
-               p%cgOffBEdg(K,J) = InterpAry( x, BladeInData(K)%EdgcgOf  , InterpInd )
-               p%EAOffBFlp(K,J) = InterpAry( x, BladeInData(K)%FlpEAOf  , InterpInd )
-               p%EAOffBEdg(K,J) = InterpAry( x, BladeInData(K)%EdgEAOf  , InterpInd )
-            END IF
-
-
-
          END DO ! J (Blade nodes)
-
-         IF ( SetAdmVals ) THEN
-               ! Set the valus for the tip node
-            p%RefAxisxb(K,p%TipNode) = BladeInData(K)%PrecrvRef( BladeInData(K)%NBlInpSt )
-            p%RefAxisyb(K,p%TipNode) = BladeInData(K)%PreswpRef( BladeInData(K)%NBlInpSt )
-         END IF
 
 
             ! Set the blade damping and stiffness tuner
@@ -2703,11 +2781,10 @@ CONTAINS
 END SUBROUTINE SetBladeParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine allocates arrays for the blade parameters.
-SUBROUTINE Alloc_BladeParameters( p, AllocAdams, ErrStat, ErrMsg )
+SUBROUTINE Alloc_BladeParameters( p, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                                   !< The parameters of the structural dynamics module
-   LOGICAL,                  INTENT(IN)     :: AllocAdams                          !< Logical to determine if Adams inputs should be allocated
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             !< Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              !< Err msg
 
@@ -2739,31 +2816,6 @@ SUBROUTINE Alloc_BladeParameters( p, AllocAdams, ErrStat, ErrMsg )
    CALL AllocAry  ( p%StiffBE,     p%NumBl,    p%BldNodes, 'StiffBE'    , ErrStat, ErrMsg ); IF ( ErrStat /= ErrID_None ) RETURN
 
 
-   IF ( AllocAdams ) THEN
-      CALL AllocAry  ( p%StiffBGJ,    p%NumBl,    p%BldNodes, 'StiffBGJ'   , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%StiffBEA,    p%NumBl,    p%BldNodes, 'StiffBEA'   , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%BAlpha,      p%NumBl,    p%BldNodes, 'BAlpha'     , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%InerBFlp,    p%NumBl,    p%BldNodes, 'InerBFlp'   , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%InerBEdg,    p%NumBl,    p%BldNodes, 'InerBEdg'   , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%RefAxisxb,   p%NumBl,    p%TipNode,  'RefAxisxb'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%RefAxisyb,   p%NumBl,    p%TipNode,  'RefAxisyb'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%cgOffBFlp,   p%NumBl,    p%BldNodes, 'cgOffBFlp'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%cgOffBEdg,   p%NumBl,    p%BldNodes, 'cgOffBEdg'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%EAOffBFlp,   p%NumBl,    p%BldNodes, 'EAOffBFlp'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%EAOffBEdg,   p%NumBl,    p%BldNodes, 'EAOffBEdg'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-   END IF
-
    CALL AllocAry  ( p%BldEDamp,    p%NumBl,    NumBE,      'BldEDamp'   , ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) RETURN
    CALL AllocAry  ( p%BldFDamp,    p%NumBl,    NumBF,      'BldFDamp'   , ErrStat, ErrMsg )
@@ -2785,11 +2837,10 @@ SUBROUTINE Alloc_BladeParameters( p, AllocAdams, ErrStat, ErrMsg )
 END SUBROUTINE Alloc_BladeParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine allocates arrays for the tower parameters.
-SUBROUTINE Alloc_TowerParameters( p, AllocAdams, ErrStat, ErrMsg )
+SUBROUTINE Alloc_TowerParameters( p, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                                   !< The parameters of the structural dynamics module
-   LOGICAL,                  INTENT(IN)     :: AllocAdams                          !< Logical to determine if Adams inputs should be allocated
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             !< Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              !< Err msg
 
@@ -2810,20 +2861,6 @@ SUBROUTINE Alloc_TowerParameters( p, AllocAdams, ErrStat, ErrMsg )
    CALL AllocAry  ( p%StiffTSS,      p%TwrNodes, 'StiffTSS'  , ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) RETURN
 
-   IF ( AllocAdams ) THEN
-      CALL AllocAry  ( p%StiffTGJ,      p%TwrNodes, 'StiffTGJ'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%StiffTEA,      p%TwrNodes, 'StiffTEA'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%InerTFA,       p%TwrNodes, 'InerTFA'   , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%InerTSS,       p%TwrNodes, 'InerTSS'   , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%cgOffTFA,      p%TwrNodes, 'cgOffTFA'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      CALL AllocAry  ( p%cgOffTSS,      p%TwrNodes, 'cgOffTSS'  , ErrStat, ErrMsg )
-      IF ( ErrStat /= ErrID_None ) RETURN
-   END IF
 
    !   ! these are for HydroDyn?
    !CALL AllocAry  ( p%DiamT,         p%TwrNodes, 'DiamT'     , ErrStat, ErrMsg )
@@ -3112,12 +3149,6 @@ SUBROUTINE Alloc_RtHS( RtHS, p, ErrStat, ErrMsg  )
       ErrMsg = ' Error allocating memory for the PLinVelEJ array.'
       RETURN
    ENDIF
-   ALLOCATE ( RtHS%PLinVelEK(p%NDOF,0:1,3) , STAT=ErrStat )
-   IF ( ErrStat /= 0_IntKi )  THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the PLinVelEK array.'
-      RETURN
-   ENDIF
    ALLOCATE ( RtHS%PLinVelEP(p%NDOF,0:1,3) , STAT=ErrStat )
    IF ( ErrStat /= 0_IntKi )  THEN
       ErrStat = ErrID_Fatal
@@ -3209,15 +3240,13 @@ SUBROUTINE SetTowerParameters( p, InputFileData, ErrStat, ErrMsg  )
    REAL(ReKi)                               :: x                            ! Fractional location between two points in linear interpolation
    INTEGER(IntKi )                          :: J                            ! Index for the node arrays
    INTEGER(IntKi)                           :: InterpInd                    ! Index for the interpolation routine
-   LOGICAL                                  :: SetAdmVals                   ! Logical to determine if Adams inputs should be set
 
 
       ! Initialize data
    ErrStat   = ErrID_None
    ErrMsg    = ''
-   SetAdmVals = ALLOCATED( InputFileData%TwGJStif )
 
-   CALL Alloc_TowerParameters( p, SetAdmVals, ErrStat, ErrMsg )
+   CALL Alloc_TowerParameters( p, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) RETURN
 
 
@@ -3250,12 +3279,6 @@ SUBROUTINE SetTowerParameters( p, InputFileData, ErrStat, ErrMsg  )
    !    TMassDen   MassT      Lineal mass density
    !    TwFAStif   StiffTFA   Tower fore-aft stiffness
    !    TwSSStif   StiffTSS   Tower side-to-side stiffness
-   !    TwGJStif   StiffTGJ   Tower torsional stiffness
-   !    TwEAStif   StiffTEA   Tower extensional stiffness
-   !    TwFAIner   InerTFA    Tower fore-aft (about yt-axis) mass inertia per unit length
-   !    TwSSIner   InerTSS    Tower side-to-side (about xt-axis) mass inertia per unit length
-   !    TwFAcgOf   cgOffTFA   Tower fore-aft mass cg offset
-   !    TwSScgOf   cgOffTSS   Tower side-to-side mass cg offset
 
    InterpInd = 1
 
@@ -3267,18 +3290,9 @@ SUBROUTINE SetTowerParameters( p, InputFileData, ErrStat, ErrMsg  )
       p%StiffTFA  (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwFAStif, InterpInd, InputFileData%NTwInpSt )
       p%StiffTSS  (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwSSStif, InterpInd, InputFileData%NTwInpSt )
    END DO ! J
-
-
-   IF ( SetAdmVals )  THEN          ! An ADAMS model will be created; thus, read in all the cols.
-      DO J=1,p%TwrNodes
-         p%StiffTGJ  (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwGJStif, InterpInd, InputFileData%NTwInpSt )
-         p%StiffTEA  (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwEAStif, InterpInd, InputFileData%NTwInpSt )
-         p%InerTFA   (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwFAIner, InterpInd, InputFileData%NTwInpSt )
-         p%InerTSS   (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwSSIner, InterpInd, InputFileData%NTwInpSt )
-         p%cgOffTFA  (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwFAcgOf, InterpInd, InputFileData%NTwInpSt )
-         p%cgOffTSS  (J) = InterpStp( p%HNodesNorm(J), InputFileData%HtFract, InputFileData%TwSScgOf, InterpInd, InputFileData%NTwInpSt )
-      END DO ! J
-   END IF
+   p%MassT = abs(p%MassT)
+   p%StiffTFA = abs(p%StiffTFA)
+   p%StiffTSS = abs(p%StiffTSS)
 
 
    !...............................................................................................................................
@@ -3350,7 +3364,6 @@ SUBROUTINE SetFurlParameters( p, InputFileData, ErrStat, ErrMsg  )
 
    p%RFrlSpr  = InputFileData%RFrlSpr
    p%RFrlDmp  = InputFileData%RFrlDmp
-   p%RFrlCDmp = InputFileData%RFrlCDmp
    p%RFrlUSSP = InputFileData%RFrlUSSP
    p%RFrlDSSP = InputFileData%RFrlDSSP
    p%RFrlDSSpr= InputFileData%RFrlDSSpr
@@ -3362,7 +3375,6 @@ SUBROUTINE SetFurlParameters( p, InputFileData, ErrStat, ErrMsg  )
 
    p%TFrlSpr  = InputFileData%TFrlSpr
    p%TFrlDmp  = InputFileData%TFrlDmp
-   p%TFrlCDmp = InputFileData%TFrlCDmp
    p%TFrlUSSP = InputFileData%TFrlUSSP
    p%TFrlDSSP = InputFileData%TFrlDSSP
    p%TFrlUSSpr= InputFileData%TFrlUSSpr
@@ -3372,26 +3384,15 @@ SUBROUTINE SetFurlParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%TFrlUSDmp= InputFileData%TFrlUSDmp
    p%TFrlDSDmp= InputFileData%TFrlDSDmp
 
-   p%RFrlPntxn = InputFileData%RFrlPntxn
-   p%RFrlPntyn = InputFileData%RFrlPntyn
-   p%RFrlPntzn = InputFileData%RFrlPntzn
+   p%RFrlPnt_n = InputFileData%RFrlPnt_n
 
-   p%TFrlPntxn = InputFileData%TFrlPntxn
-   p%TFrlPntyn = InputFileData%TFrlPntyn
-   p%TFrlPntzn = InputFileData%TFrlPntzn
+   p%TFrlPnt_n = InputFileData%TFrlPnt_n
 
 
       ! Store sine/cosine values instead of some input angles:
 
    p%CShftSkew = COS( REAL(InputFileData%ShftSkew,R8Ki) )
    p%SShftSkew = SIN( REAL(InputFileData%ShftSkew,R8Ki) )
-
-   p%CTFinSkew = COS( REAL(InputFileData%TFinSkew, R8Ki) )
-   p%STFinSkew = SIN( REAL(InputFileData%TFinSkew, R8Ki) )
-   p%CTFinTilt = COS( REAL(InputFileData%TFinTilt, R8Ki) )
-   p%STFinTilt = SIN( REAL(InputFileData%TFinTilt, R8Ki) )
-   p%CTFinBank = COS( REAL(InputFileData%TFinBank, R8Ki) )
-   p%STFinBank = SIN( REAL(InputFileData%TFinBank, R8Ki) )
 
    p%CRFrlSkew = COS( REAL(InputFileData%RFrlSkew, R8Ki) )
    p%SRFrlSkew = SIN( REAL(InputFileData%RFrlSkew, R8Ki) )
@@ -3423,41 +3424,38 @@ SUBROUTINE SetFurlParameters( p, InputFileData, ErrStat, ErrMsg  )
 
       ! Calculate some positions:
 
-   p%rWIxn     = InputFileData%BoomCMxn - p%TFrlPntxn
-   p%rWIyn     = InputFileData%BoomCMyn - p%TFrlPntyn
-   p%rWIzn     = InputFileData%BoomCMzn - p%TFrlPntzn
+   p%rWIxn     = InputFileData%BoomCM_n(1) - p%TFrlPnt_n(1)
+   p%rWIyn     = InputFileData%BoomCM_n(2) - p%TFrlPnt_n(2)
+   p%rWIzn     = InputFileData%BoomCM_n(3) - p%TFrlPnt_n(3)
 
-   p%rWJxn     = InputFileData%TFinCMxn - p%TFrlPntxn
-   p%rWJyn     = InputFileData%TFinCMyn - p%TFrlPntyn
-   p%rWJzn     = InputFileData%TFinCMzn - p%TFrlPntzn
+   p%rWJxn     = InputFileData%TFinCM_n(1) - p%TFrlPnt_n(1)
+   p%rWJyn     = InputFileData%TFinCM_n(2) - p%TFrlPnt_n(2)
+   p%rWJzn     = InputFileData%TFinCM_n(3) - p%TFrlPnt_n(3)
 
-   p%rWKxn     = InputFileData%TFinCPxn - p%TFrlPntxn
-   p%rWKyn     = InputFileData%TFinCPyn - p%TFrlPntyn
-   p%rWKzn     = InputFileData%TFinCPzn - p%TFrlPntzn
+   p%rVDxn     = InputFileData%RFrlCM_n(1) - p%RFrlPnt_n(1)
+   p%rVDyn     = InputFileData%RFrlCM_n(2) - p%RFrlPnt_n(2)
+   p%rVDzn     = InputFileData%RFrlCM_n(3) - p%RFrlPnt_n(3)
 
-   p%rVDxn     = InputFileData%RFrlCMxn - p%RFrlPntxn
-   p%rVDyn     = InputFileData%RFrlCMyn - p%RFrlPntyn
-   p%rVDzn     = InputFileData%RFrlCMzn - p%RFrlPntzn
-
-   p%rVPxn     =        0.0_ReKi        - p%RFrlPntxn
-   p%rVPyn     = InputFileData%Yaw2Shft - p%RFrlPntyn
+   p%rVPxn     =        0.0_ReKi        - p%RFrlPnt_n(1)
+   p%rVPyn     = InputFileData%Yaw2Shft - p%RFrlPnt_n(2)
 
 
       ! Note: These positions are also used for non-furling machines:
 
-   p%rVPzn     = InputFileData%Twr2Shft - p%RFrlPntzn
-   p%rVIMUxn   = InputFileData%NcIMUxn  - p%RFrlPntxn
-   p%rVIMUyn   = InputFileData%NcIMUyn  - p%RFrlPntyn
-   p%rVIMUzn   = InputFileData%NcIMUzn  - p%RFrlPntzn
+   p%rVPzn     = InputFileData%Twr2Shft - p%RFrlPnt_n(3)
+   p%rVIMUxn   = InputFileData%NcIMUxn  - p%RFrlPnt_n(1)
+   p%rVIMUyn   = InputFileData%NcIMUyn  - p%RFrlPnt_n(2)
+   p%rVIMUzn   = InputFileData%NcIMUzn  - p%RFrlPnt_n(3)
 
 END SUBROUTINE SetFurlParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This takes the primary input file data and sets the corresponding parameters.
-SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
+SUBROUTINE SetPrimaryParameters( InitInp, p, InputFileData, ErrStat, ErrMsg  )
 !..................................................................................................................................
 
       ! Passed variables
 
+   TYPE(ED_InitInputType),   INTENT(IN   )  :: InitInp                      !< Input data for initialization routine
    TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                            !< Parameters of the structural dynamics module
    TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                !< Data stored in the module's input file
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      !< Error status
@@ -3482,17 +3480,23 @@ SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%HubRad    = InputFileData%HubRad
    p%method    = InputFileData%method
    p%TwrNodes  = InputFileData%TwrNodes
+   p%MHK       = InitInp%MHK
 
    p%PtfmCMxt = InputFileData%PtfmCMxt
    p%PtfmCMyt = InputFileData%PtfmCMyt   
    
    p%DT        = InputFileData%DT
-   p%Gravity   = InputFileData%Gravity
    p%OverHang  = InputFileData%OverHang
    p%ShftGagL  = InputFileData%ShftGagL
-   p%TowerHt   = InputFileData%TowerHt
-   p%TowerBsHt = InputFileData%TowerBsHt
-   p%PtfmRefzt = InputFileData%PtfmRefzt
+   IF ( InitInp%MHK == MHK_FixedBottom ) THEN
+      p%TowerHt   = InputFileData%TowerHt - InitInp%WtrDpth
+      p%TowerBsHt = InputFileData%TowerBsHt - InitInp%WtrDpth
+      p%PtfmRefzt = InputFileData%PtfmRefzt - InitInp%WtrDpth
+   ELSE
+      p%TowerHt   = InputFileData%TowerHt
+      p%TowerBsHt = InputFileData%TowerBsHt
+      p%PtfmRefzt = InputFileData%PtfmRefzt
+   END IF
    
    p%HubMass   = InputFileData%HubMass
    p%GenIner   = InputFileData%GenIner
@@ -3573,7 +3577,11 @@ SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%BldFlexL  = p%TipRad    - p%HubRad                                            ! Length of the flexible portion of the blade.
    if (p%BD4Blades) p%BldFlexL = 0.0_ReKi
    
-   p%rZYzt     = InputFileData%PtfmCMzt - p%PtfmRefzt
+   IF ( InitInp%MHK == MHK_FixedBottom ) THEN
+      p%rZYzt     = InputFileData%PtfmCMzt - InitInp%WtrDpth - p%PtfmRefzt
+   ELSE
+      p%rZYzt     = InputFileData%PtfmCMzt - p%PtfmRefzt
+   END IF
 
    !...............................................................................................................................
    ! set cosine and sine of Precone and Delta3 angles:
@@ -3936,385 +3944,493 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    INTEGER                      :: I                                               ! Generic loop-counting index
    INTEGER                      :: J                                               ! Generic loop-counting index
    INTEGER                      :: INDX                                            ! Index for valid arrays
-   INTEGER                      :: startIndx                                       ! Index for BeamDyn
+   INTEGER                      :: startIndx                                       ! Index for using BeamDyn for Blades
 
    LOGICAL                      :: CheckOutListAgain                               ! Flag used to determine if output parameter starting with "M" is valid (or the negative of another parameter)
    LOGICAL                      :: InvalidOutput(0:MaxOutPts)                      ! This array determines if the output channel is valid for this configuration
    CHARACTER(ChanLen)           :: OutListTmp                                      ! A string to temporarily hold OutList(I)
    CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
 
-      CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(981) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
-                                  "AZIMUTH  ","BLDPITCH1","BLDPITCH2","BLDPITCH3","BLPITCH1 ","BLPITCH2 ","BLPITCH3 ","GENACCEL ", &
-                                  "GENSPEED ","HSSBRTQ  ","HSSHFTA  ","HSSHFTPWR","HSSHFTTQ ","HSSHFTV  ","IPDEFL1  ","IPDEFL2  ", &
-                                  "IPDEFL3  ","LSSGAGA  ","LSSGAGAXA","LSSGAGAXS","LSSGAGFXA","LSSGAGFXS","LSSGAGFYA","LSSGAGFYS", &
-                                  "LSSGAGFZA","LSSGAGFZS","LSSGAGMXA","LSSGAGMXS","LSSGAGMYA","LSSGAGMYS","LSSGAGMZA","LSSGAGMZS", &
-                                  "LSSGAGP  ","LSSGAGPXA","LSSGAGPXS","LSSGAGV  ","LSSGAGVXA","LSSGAGVXS","LSSHFTFXA","LSSHFTFXS", &
-                                  "LSSHFTFYA","LSSHFTFYS","LSSHFTFZA","LSSHFTFZS","LSSHFTMXA","LSSHFTMXS","LSSHFTPWR","LSSHFTTQ ", &
-                                  "LSSTIPA  ","LSSTIPAXA","LSSTIPAXS","LSSTIPMYA","LSSTIPMYS","LSSTIPMZA","LSSTIPMZS","LSSTIPP  ", &
-                                  "LSSTIPPXA","LSSTIPPXS","LSSTIPV  ","LSSTIPVXA","LSSTIPVXS","NACYAW   ","NACYAWA  ","NACYAWP  ", &
-                                  "NACYAWV  ","NCIMURAXS","NCIMURAYS","NCIMURAZS","NCIMURVXS","NCIMURVYS","NCIMURVZS","NCIMUTAXS", &
-                                  "NCIMUTAYS","NCIMUTAZS","NCIMUTVXS","NCIMUTVYS","NCIMUTVZS","OOPDEFL1 ","OOPDEFL2 ","OOPDEFL3 ", &
-                                  "PTCHDEFL1","PTCHDEFL2","PTCHDEFL3","PTCHPMZB1","PTCHPMZB2","PTCHPMZB3","PTCHPMZC1","PTCHPMZC2", &
-                                  "PTCHPMZC3","PTFMHEAVE","PTFMPITCH","PTFMRAXI ","PTFMRAXT ","PTFMRAYI ","PTFMRAYT ","PTFMRAZI ", &
-                                  "PTFMRAZT ","PTFMRDXI ","PTFMRDYI ","PTFMRDZI ","PTFMROLL ","PTFMRVXI ","PTFMRVXT ","PTFMRVYI ", &
-                                  "PTFMRVYT ","PTFMRVZI ","PTFMRVZT ","PTFMSURGE","PTFMSWAY ","PTFMTAXI ","PTFMTAXT ","PTFMTAYI ", &
-                                  "PTFMTAYT ","PTFMTAZI ","PTFMTAZT ","PTFMTDXI ","PTFMTDXT ","PTFMTDYI ","PTFMTDYT ","PTFMTDZI ", &
-                                  "PTFMTDZT ","PTFMTVXI ","PTFMTVXT ","PTFMTVYI ","PTFMTVYT ","PTFMTVZI ","PTFMTVZT ","PTFMYAW  ", &
-                                  "QD2_B1E1 ","QD2_B1F1 ","QD2_B1F2 ","QD2_B2E1 ","QD2_B2F1 ","QD2_B2F2 ","QD2_B3E1 ","QD2_B3F1 ", &
-                                  "QD2_B3F2 ","QD2_DRTR ","QD2_GEAZ ","QD2_HV   ","QD2_P    ","QD2_R    ","QD2_RFRL ","QD2_SG   ", &
-                                  "QD2_SW   ","QD2_TEET ","QD2_TFA1 ","QD2_TFA2 ","QD2_TFRL ","QD2_TSS1 ","QD2_TSS2 ","QD2_Y    ", &
-                                  "QD2_YAW  ","QD_B1E1  ","QD_B1F1  ","QD_B1F2  ","QD_B2E1  ","QD_B2F1  ","QD_B2F2  ","QD_B3E1  ", &
-                                  "QD_B3F1  ","QD_B3F2  ","QD_DRTR  ","QD_GEAZ  ","QD_HV    ","QD_P     ","QD_R     ","QD_RFRL  ", &
-                                  "QD_SG    ","QD_SW    ","QD_TEET  ","QD_TFA1  ","QD_TFA2  ","QD_TFRL  ","QD_TSS1  ","QD_TSS2  ", &
-                                  "QD_Y     ","QD_YAW   ","Q_B1E1   ","Q_B1F1   ","Q_B1F2   ","Q_B2E1   ","Q_B2F1   ","Q_B2F2   ", &
-                                  "Q_B3E1   ","Q_B3F1   ","Q_B3F2   ","Q_DRTR   ","Q_GEAZ   ","Q_HV     ","Q_P      ","Q_R      ", &
-                                  "Q_RFRL   ","Q_SG     ","Q_SW     ","Q_TEET   ","Q_TFA1   ","Q_TFA2   ","Q_TFRL   ","Q_TSS1   ", &
-                                  "Q_TSS2   ","Q_Y      ","Q_YAW    ","RFRLBRM  ","ROLLDEFL1","ROLLDEFL2","ROLLDEFL3","ROOTFXB1 ", &
-                                  "ROOTFXB2 ","ROOTFXB3 ","ROOTFXC1 ","ROOTFXC2 ","ROOTFXC3 ","ROOTFYB1 ","ROOTFYB2 ","ROOTFYB3 ", &
-                                  "ROOTFYC1 ","ROOTFYC2 ","ROOTFYC3 ","ROOTFZB1 ","ROOTFZB2 ","ROOTFZB3 ","ROOTFZC1 ","ROOTFZC2 ", &
-                                  "ROOTFZC3 ","ROOTMEDG1","ROOTMEDG2","ROOTMEDG3","ROOTMFLP1","ROOTMFLP2","ROOTMFLP3","ROOTMIP1 ", &
-                                  "ROOTMIP2 ","ROOTMIP3 ","ROOTMOOP1","ROOTMOOP2","ROOTMOOP3","ROOTMXB1 ","ROOTMXB2 ","ROOTMXB3 ", &
-                                  "ROOTMXC1 ","ROOTMXC2 ","ROOTMXC3 ","ROOTMYB1 ","ROOTMYB2 ","ROOTMYB3 ","ROOTMYC1 ","ROOTMYC2 ", &
-                                  "ROOTMYC3 ","ROOTMZB1 ","ROOTMZB2 ","ROOTMZB3 ","ROOTMZC1 ","ROOTMZC2 ","ROOTMZC3 ","ROTACCEL ", &
-                                  "ROTFURL  ","ROTFURLA ","ROTFURLP ","ROTFURLV ","ROTPWR   ","ROTSPEED ","ROTTEETA ","ROTTEETP ", &
-                                  "ROTTEETV ","ROTTHRUST","ROTTORQ  ","SPN1ALXB1","SPN1ALXB2","SPN1ALXB3","SPN1ALYB1","SPN1ALYB2", &
-                                  "SPN1ALYB3","SPN1ALZB1","SPN1ALZB2","SPN1ALZB3","SPN1FLXB1","SPN1FLXB2","SPN1FLXB3","SPN1FLYB1", &
-                                  "SPN1FLYB2","SPN1FLYB3","SPN1FLZB1","SPN1FLZB2","SPN1FLZB3","SPN1MLXB1","SPN1MLXB2","SPN1MLXB3", &
-                                  "SPN1MLYB1","SPN1MLYB2","SPN1MLYB3","SPN1MLZB1","SPN1MLZB2","SPN1MLZB3","SPN1RDXB1","SPN1RDXB2", &
-                                  "SPN1RDXB3","SPN1RDYB1","SPN1RDYB2","SPN1RDYB3","SPN1RDZB1","SPN1RDZB2","SPN1RDZB3","SPN1TDXB1", &
-                                  "SPN1TDXB2","SPN1TDXB3","SPN1TDYB1","SPN1TDYB2","SPN1TDYB3","SPN1TDZB1","SPN1TDZB2","SPN1TDZB3", &
-                                  "SPN2ALXB1","SPN2ALXB2","SPN2ALXB3","SPN2ALYB1","SPN2ALYB2","SPN2ALYB3","SPN2ALZB1","SPN2ALZB2", &
-                                  "SPN2ALZB3","SPN2FLXB1","SPN2FLXB2","SPN2FLXB3","SPN2FLYB1","SPN2FLYB2","SPN2FLYB3","SPN2FLZB1", &
-                                  "SPN2FLZB2","SPN2FLZB3","SPN2MLXB1","SPN2MLXB2","SPN2MLXB3","SPN2MLYB1","SPN2MLYB2","SPN2MLYB3", &
-                                  "SPN2MLZB1","SPN2MLZB2","SPN2MLZB3","SPN2RDXB1","SPN2RDXB2","SPN2RDXB3","SPN2RDYB1","SPN2RDYB2", &
-                                  "SPN2RDYB3","SPN2RDZB1","SPN2RDZB2","SPN2RDZB3","SPN2TDXB1","SPN2TDXB2","SPN2TDXB3","SPN2TDYB1", &
-                                  "SPN2TDYB2","SPN2TDYB3","SPN2TDZB1","SPN2TDZB2","SPN2TDZB3","SPN3ALXB1","SPN3ALXB2","SPN3ALXB3", &
-                                  "SPN3ALYB1","SPN3ALYB2","SPN3ALYB3","SPN3ALZB1","SPN3ALZB2","SPN3ALZB3","SPN3FLXB1","SPN3FLXB2", &
-                                  "SPN3FLXB3","SPN3FLYB1","SPN3FLYB2","SPN3FLYB3","SPN3FLZB1","SPN3FLZB2","SPN3FLZB3","SPN3MLXB1", &
-                                  "SPN3MLXB2","SPN3MLXB3","SPN3MLYB1","SPN3MLYB2","SPN3MLYB3","SPN3MLZB1","SPN3MLZB2","SPN3MLZB3", &
-                                  "SPN3RDXB1","SPN3RDXB2","SPN3RDXB3","SPN3RDYB1","SPN3RDYB2","SPN3RDYB3","SPN3RDZB1","SPN3RDZB2", &
-                                  "SPN3RDZB3","SPN3TDXB1","SPN3TDXB2","SPN3TDXB3","SPN3TDYB1","SPN3TDYB2","SPN3TDYB3","SPN3TDZB1", &
-                                  "SPN3TDZB2","SPN3TDZB3","SPN4ALXB1","SPN4ALXB2","SPN4ALXB3","SPN4ALYB1","SPN4ALYB2","SPN4ALYB3", &
-                                  "SPN4ALZB1","SPN4ALZB2","SPN4ALZB3","SPN4FLXB1","SPN4FLXB2","SPN4FLXB3","SPN4FLYB1","SPN4FLYB2", &
-                                  "SPN4FLYB3","SPN4FLZB1","SPN4FLZB2","SPN4FLZB3","SPN4MLXB1","SPN4MLXB2","SPN4MLXB3","SPN4MLYB1", &
-                                  "SPN4MLYB2","SPN4MLYB3","SPN4MLZB1","SPN4MLZB2","SPN4MLZB3","SPN4RDXB1","SPN4RDXB2","SPN4RDXB3", &
-                                  "SPN4RDYB1","SPN4RDYB2","SPN4RDYB3","SPN4RDZB1","SPN4RDZB2","SPN4RDZB3","SPN4TDXB1","SPN4TDXB2", &
-                                  "SPN4TDXB3","SPN4TDYB1","SPN4TDYB2","SPN4TDYB3","SPN4TDZB1","SPN4TDZB2","SPN4TDZB3","SPN5ALXB1", &
-                                  "SPN5ALXB2","SPN5ALXB3","SPN5ALYB1","SPN5ALYB2","SPN5ALYB3","SPN5ALZB1","SPN5ALZB2","SPN5ALZB3", &
-                                  "SPN5FLXB1","SPN5FLXB2","SPN5FLXB3","SPN5FLYB1","SPN5FLYB2","SPN5FLYB3","SPN5FLZB1","SPN5FLZB2", &
-                                  "SPN5FLZB3","SPN5MLXB1","SPN5MLXB2","SPN5MLXB3","SPN5MLYB1","SPN5MLYB2","SPN5MLYB3","SPN5MLZB1", &
-                                  "SPN5MLZB2","SPN5MLZB3","SPN5RDXB1","SPN5RDXB2","SPN5RDXB3","SPN5RDYB1","SPN5RDYB2","SPN5RDYB3", &
-                                  "SPN5RDZB1","SPN5RDZB2","SPN5RDZB3","SPN5TDXB1","SPN5TDXB2","SPN5TDXB3","SPN5TDYB1","SPN5TDYB2", &
-                                  "SPN5TDYB3","SPN5TDZB1","SPN5TDZB2","SPN5TDZB3","SPN6ALXB1","SPN6ALXB2","SPN6ALXB3","SPN6ALYB1", &
-                                  "SPN6ALYB2","SPN6ALYB3","SPN6ALZB1","SPN6ALZB2","SPN6ALZB3","SPN6FLXB1","SPN6FLXB2","SPN6FLXB3", &
-                                  "SPN6FLYB1","SPN6FLYB2","SPN6FLYB3","SPN6FLZB1","SPN6FLZB2","SPN6FLZB3","SPN6MLXB1","SPN6MLXB2", &
-                                  "SPN6MLXB3","SPN6MLYB1","SPN6MLYB2","SPN6MLYB3","SPN6MLZB1","SPN6MLZB2","SPN6MLZB3","SPN6RDXB1", &
-                                  "SPN6RDXB2","SPN6RDXB3","SPN6RDYB1","SPN6RDYB2","SPN6RDYB3","SPN6RDZB1","SPN6RDZB2","SPN6RDZB3", &
-                                  "SPN6TDXB1","SPN6TDXB2","SPN6TDXB3","SPN6TDYB1","SPN6TDYB2","SPN6TDYB3","SPN6TDZB1","SPN6TDZB2", &
-                                  "SPN6TDZB3","SPN7ALXB1","SPN7ALXB2","SPN7ALXB3","SPN7ALYB1","SPN7ALYB2","SPN7ALYB3","SPN7ALZB1", &
-                                  "SPN7ALZB2","SPN7ALZB3","SPN7FLXB1","SPN7FLXB2","SPN7FLXB3","SPN7FLYB1","SPN7FLYB2","SPN7FLYB3", &
-                                  "SPN7FLZB1","SPN7FLZB2","SPN7FLZB3","SPN7MLXB1","SPN7MLXB2","SPN7MLXB3","SPN7MLYB1","SPN7MLYB2", &
-                                  "SPN7MLYB3","SPN7MLZB1","SPN7MLZB2","SPN7MLZB3","SPN7RDXB1","SPN7RDXB2","SPN7RDXB3","SPN7RDYB1", &
-                                  "SPN7RDYB2","SPN7RDYB3","SPN7RDZB1","SPN7RDZB2","SPN7RDZB3","SPN7TDXB1","SPN7TDXB2","SPN7TDXB3", &
-                                  "SPN7TDYB1","SPN7TDYB2","SPN7TDYB3","SPN7TDZB1","SPN7TDZB2","SPN7TDZB3","SPN8ALXB1","SPN8ALXB2", &
-                                  "SPN8ALXB3","SPN8ALYB1","SPN8ALYB2","SPN8ALYB3","SPN8ALZB1","SPN8ALZB2","SPN8ALZB3","SPN8FLXB1", &
-                                  "SPN8FLXB2","SPN8FLXB3","SPN8FLYB1","SPN8FLYB2","SPN8FLYB3","SPN8FLZB1","SPN8FLZB2","SPN8FLZB3", &
-                                  "SPN8MLXB1","SPN8MLXB2","SPN8MLXB3","SPN8MLYB1","SPN8MLYB2","SPN8MLYB3","SPN8MLZB1","SPN8MLZB2", &
-                                  "SPN8MLZB3","SPN8RDXB1","SPN8RDXB2","SPN8RDXB3","SPN8RDYB1","SPN8RDYB2","SPN8RDYB3","SPN8RDZB1", &
-                                  "SPN8RDZB2","SPN8RDZB3","SPN8TDXB1","SPN8TDXB2","SPN8TDXB3","SPN8TDYB1","SPN8TDYB2","SPN8TDYB3", &
-                                  "SPN8TDZB1","SPN8TDZB2","SPN8TDZB3","SPN9ALXB1","SPN9ALXB2","SPN9ALXB3","SPN9ALYB1","SPN9ALYB2", &
-                                  "SPN9ALYB3","SPN9ALZB1","SPN9ALZB2","SPN9ALZB3","SPN9FLXB1","SPN9FLXB2","SPN9FLXB3","SPN9FLYB1", &
-                                  "SPN9FLYB2","SPN9FLYB3","SPN9FLZB1","SPN9FLZB2","SPN9FLZB3","SPN9MLXB1","SPN9MLXB2","SPN9MLXB3", &
-                                  "SPN9MLYB1","SPN9MLYB2","SPN9MLYB3","SPN9MLZB1","SPN9MLZB2","SPN9MLZB3","SPN9RDXB1","SPN9RDXB2", &
-                                  "SPN9RDXB3","SPN9RDYB1","SPN9RDYB2","SPN9RDYB3","SPN9RDZB1","SPN9RDZB2","SPN9RDZB3","SPN9TDXB1", &
-                                  "SPN9TDXB2","SPN9TDXB3","SPN9TDYB1","SPN9TDYB2","SPN9TDYB3","SPN9TDZB1","SPN9TDZB2","SPN9TDZB3", &
-                                  "TAILFURL ","TAILFURLA","TAILFURLP","TAILFURLV","TEETAYA  ","TEETDEFL ","TEETPYA  ","TEETVYA  ", &
-                                  "TFRLBRM  ","TIP2TWR1 ","TIP2TWR2 ","TIP2TWR3 ","TIPALXB1 ","TIPALXB2 ","TIPALXB3 ","TIPALYB1 ", &
-                                  "TIPALYB2 ","TIPALYB3 ","TIPALZB1 ","TIPALZB2 ","TIPALZB3 ","TIPCLRNC1","TIPCLRNC2","TIPCLRNC3", &
-                                  "TIPDXB1  ","TIPDXB2  ","TIPDXB3  ","TIPDXC1  ","TIPDXC2  ","TIPDXC3  ","TIPDYB1  ","TIPDYB2  ", &
-                                  "TIPDYB3  ","TIPDYC1  ","TIPDYC2  ","TIPDYC3  ","TIPDZB1  ","TIPDZB2  ","TIPDZB3  ","TIPDZC1  ", &
-                                  "TIPDZC2  ","TIPDZC3  ","TIPRDXB1 ","TIPRDXB2 ","TIPRDXB3 ","TIPRDYB1 ","TIPRDYB2 ","TIPRDYB3 ", &
-                                  "TIPRDZB1 ","TIPRDZB2 ","TIPRDZB3 ","TIPRDZC1 ","TIPRDZC2 ","TIPRDZC3 ","TTDSPAX  ","TTDSPFA  ", &
-                                  "TTDSPPTCH","TTDSPROLL","TTDSPSS  ","TTDSPTWST","TWHT1ALXT","TWHT1ALYT","TWHT1ALZT","TWHT1FLXT", &
-                                  "TWHT1FLYT","TWHT1FLZT","TWHT1MLXT","TWHT1MLYT","TWHT1MLZT","TWHT1RDXT","TWHT1RDYT","TWHT1RDZT", &
-                                  "TWHT1RPXI","TWHT1RPYI","TWHT1RPZI","TWHT1TDXT","TWHT1TDYT","TWHT1TDZT","TWHT1TPXI","TWHT1TPYI", &
-                                  "TWHT1TPZI","TWHT2ALXT","TWHT2ALYT","TWHT2ALZT","TWHT2FLXT","TWHT2FLYT","TWHT2FLZT","TWHT2MLXT", &
-                                  "TWHT2MLYT","TWHT2MLZT","TWHT2RDXT","TWHT2RDYT","TWHT2RDZT","TWHT2RPXI","TWHT2RPYI","TWHT2RPZI", &
-                                  "TWHT2TDXT","TWHT2TDYT","TWHT2TDZT","TWHT2TPXI","TWHT2TPYI","TWHT2TPZI","TWHT3ALXT","TWHT3ALYT", &
-                                  "TWHT3ALZT","TWHT3FLXT","TWHT3FLYT","TWHT3FLZT","TWHT3MLXT","TWHT3MLYT","TWHT3MLZT","TWHT3RDXT", &
-                                  "TWHT3RDYT","TWHT3RDZT","TWHT3RPXI","TWHT3RPYI","TWHT3RPZI","TWHT3TDXT","TWHT3TDYT","TWHT3TDZT", &
-                                  "TWHT3TPXI","TWHT3TPYI","TWHT3TPZI","TWHT4ALXT","TWHT4ALYT","TWHT4ALZT","TWHT4FLXT","TWHT4FLYT", &
-                                  "TWHT4FLZT","TWHT4MLXT","TWHT4MLYT","TWHT4MLZT","TWHT4RDXT","TWHT4RDYT","TWHT4RDZT","TWHT4RPXI", &
-                                  "TWHT4RPYI","TWHT4RPZI","TWHT4TDXT","TWHT4TDYT","TWHT4TDZT","TWHT4TPXI","TWHT4TPYI","TWHT4TPZI", &
-                                  "TWHT5ALXT","TWHT5ALYT","TWHT5ALZT","TWHT5FLXT","TWHT5FLYT","TWHT5FLZT","TWHT5MLXT","TWHT5MLYT", &
-                                  "TWHT5MLZT","TWHT5RDXT","TWHT5RDYT","TWHT5RDZT","TWHT5RPXI","TWHT5RPYI","TWHT5RPZI","TWHT5TDXT", &
-                                  "TWHT5TDYT","TWHT5TDZT","TWHT5TPXI","TWHT5TPYI","TWHT5TPZI","TWHT6ALXT","TWHT6ALYT","TWHT6ALZT", &
-                                  "TWHT6FLXT","TWHT6FLYT","TWHT6FLZT","TWHT6MLXT","TWHT6MLYT","TWHT6MLZT","TWHT6RDXT","TWHT6RDYT", &
-                                  "TWHT6RDZT","TWHT6RPXI","TWHT6RPYI","TWHT6RPZI","TWHT6TDXT","TWHT6TDYT","TWHT6TDZT","TWHT6TPXI", &
-                                  "TWHT6TPYI","TWHT6TPZI","TWHT7ALXT","TWHT7ALYT","TWHT7ALZT","TWHT7FLXT","TWHT7FLYT","TWHT7FLZT", &
-                                  "TWHT7MLXT","TWHT7MLYT","TWHT7MLZT","TWHT7RDXT","TWHT7RDYT","TWHT7RDZT","TWHT7RPXI","TWHT7RPYI", &
-                                  "TWHT7RPZI","TWHT7TDXT","TWHT7TDYT","TWHT7TDZT","TWHT7TPXI","TWHT7TPYI","TWHT7TPZI","TWHT8ALXT", &
-                                  "TWHT8ALYT","TWHT8ALZT","TWHT8FLXT","TWHT8FLYT","TWHT8FLZT","TWHT8MLXT","TWHT8MLYT","TWHT8MLZT", &
-                                  "TWHT8RDXT","TWHT8RDYT","TWHT8RDZT","TWHT8RPXI","TWHT8RPYI","TWHT8RPZI","TWHT8TDXT","TWHT8TDYT", &
-                                  "TWHT8TDZT","TWHT8TPXI","TWHT8TPYI","TWHT8TPZI","TWHT9ALXT","TWHT9ALYT","TWHT9ALZT","TWHT9FLXT", &
-                                  "TWHT9FLYT","TWHT9FLZT","TWHT9MLXT","TWHT9MLYT","TWHT9MLZT","TWHT9RDXT","TWHT9RDYT","TWHT9RDZT", &
-                                  "TWHT9RPXI","TWHT9RPYI","TWHT9RPZI","TWHT9TDXT","TWHT9TDYT","TWHT9TDZT","TWHT9TPXI","TWHT9TPYI", &
-                                  "TWHT9TPZI","TWRBSFXT ","TWRBSFYT ","TWRBSFZT ","TWRBSMXT ","TWRBSMYT ","TWRBSMZT ","TWRCLRNC1", &
-                                  "TWRCLRNC2","TWRCLRNC3","TWRTPTDXI","TWRTPTDYI","TWRTPTDZI","TWSTDEFL1","TWSTDEFL2","TWSTDEFL3", &
-                                  "YAWACCEL ","YAWAZN   ","YAWAZP   ","YAWBRFXN ","YAWBRFXP ","YAWBRFYN ","YAWBRFYP ","YAWBRFZN ", &
-                                  "YAWBRFZP ","YAWBRMXN ","YAWBRMXP ","YAWBRMYN ","YAWBRMYP ","YAWBRMZN ","YAWBRMZP ","YAWBRRAXP", &
-                                  "YAWBRRAYP","YAWBRRAZP","YAWBRRDXT","YAWBRRDYT","YAWBRRDZT","YAWBRRVXP","YAWBRRVYP","YAWBRRVZP", &
-                                  "YAWBRTAXP","YAWBRTAYP","YAWBRTAZP","YAWBRTDXI","YAWBRTDXP","YAWBRTDXT","YAWBRTDYI","YAWBRTDYP", &
-                                  "YAWBRTDYT","YAWBRTDZI","YAWBRTDZP","YAWBRTDZT","YAWBRTVXP","YAWBRTVYP","YAWBRTVZP","YAWPOS   ", &
-                               "YAWPZN   ","YAWPZP   ","YAWRATE  ","YAWVZN   ","YAWVZP   "/)
-      INTEGER(IntKi), PARAMETER :: ParamIndxAry(981) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
-                                   LSSTipPxa , PtchPMzc1 , PtchPMzc2 , PtchPMzc3 , PtchPMzc1 , PtchPMzc2 , PtchPMzc3 ,   HSShftA , &
-                                     HSShftV ,   HSSBrTq ,   HSShftA , HSShftPwr ,  HSShftTq ,   HSShftV ,   TipDyc1 ,   TipDyc2 , &
-                                     TipDyc3 , LSSGagAxa , LSSGagAxa , LSSGagAxa , LSShftFxa , LSShftFxa , LSShftFya , LSShftFys , &
-                                   LSShftFza , LSShftFzs , LSShftMxa , LSShftMxa , LSSGagMya , LSSGagMys , LSSGagMza , LSSGagMzs , &
-                                   LSSGagPxa , LSSGagPxa , LSSGagPxa , LSSGagVxa , LSSGagVxa , LSSGagVxa , LSShftFxa , LSShftFxa , &
-                                   LSShftFya , LSShftFys , LSShftFza , LSShftFzs , LSShftMxa , LSShftMxa ,    RotPwr , LSShftMxa , &
-                                   LSSTipAxa , LSSTipAxa , LSSTipAxa , LSSTipMya , LSSTipMys , LSSTipMza , LSSTipMzs , LSSTipPxa , &
-                                   LSSTipPxa , LSSTipPxa , LSSTipVxa , LSSTipVxa , LSSTipVxa ,    YawPzn ,    YawAzn ,    YawPzn , &
-                                      YawVzn , NcIMURAxs , NcIMURAys , NcIMURAzs , NcIMURVxs , NcIMURVys , NcIMURVzs , NcIMUTAxs , &
-                                   NcIMUTAys , NcIMUTAzs , NcIMUTVxs , NcIMUTVys , NcIMUTVzs ,   TipDxc1 ,   TipDxc2 ,   TipDxc3 , &
-                                    TipRDyb1 ,  TipRDyb2 ,  TipRDyb3 , PtchPMzc1 , PtchPMzc2 , PtchPMzc3 , PtchPMzc1 , PtchPMzc2 , &
-                                   PtchPMzc3 ,  PtfmTDzi ,  PtfmRDyi ,  PtfmRAxi ,  PtfmRAxt ,  PtfmRAyi ,  PtfmRAyt ,  PtfmRAzi , &
-                                    PtfmRAzt ,  PtfmRDxi ,  PtfmRDyi ,  PtfmRDzi ,  PtfmRDxi ,  PtfmRVxi ,  PtfmRVxt ,  PtfmRVyi , &
-                                    PtfmRVyt ,  PtfmRVzi ,  PtfmRVzt ,  PtfmTDxi ,  PtfmTDyi ,  PtfmTAxi ,  PtfmTAxt ,  PtfmTAyi , &
-                                    PtfmTAyt ,  PtfmTAzi ,  PtfmTAzt ,  PtfmTDxi ,  PtfmTDxt ,  PtfmTDyi ,  PtfmTDyt ,  PtfmTDzi , &
-                                    PtfmTDzt ,  PtfmTVxi ,  PtfmTVxt ,  PtfmTVyi ,  PtfmTVyt ,  PtfmTVzi ,  PtfmTVzt ,  PtfmRDzi , &
-                                    QD2_B1E1 ,  QD2_B1F1 ,  QD2_B1F2 ,  QD2_B2E1 ,  QD2_B2F1 ,  QD2_B2F2 ,  QD2_B3E1 ,  QD2_B3F1 , &
-                                    QD2_B3F2 ,  QD2_DrTr ,  QD2_GeAz ,    QD2_Hv ,     QD2_P ,     QD2_R ,  QD2_RFrl ,    QD2_Sg , &
-                                      QD2_Sw ,  QD2_Teet ,  QD2_TFA1 ,  QD2_TFA2 ,  QD2_TFrl ,  QD2_TSS1 ,  QD2_TSS2 ,     QD2_Y , &
-                                     QD2_Yaw ,   QD_B1E1 ,   QD_B1F1 ,   QD_B1F2 ,   QD_B2E1 ,   QD_B2F1 ,   QD_B2F2 ,   QD_B3E1 , &
-                                     QD_B3F1 ,   QD_B3F2 ,   QD_DrTr ,   QD_GeAz ,     QD_Hv ,      QD_P ,      QD_R ,   QD_RFrl , &
-                                       QD_Sg ,     QD_Sw ,   QD_Teet ,   QD_TFA1 ,   QD_TFA2 ,   QD_TFrl ,   QD_TSS1 ,   QD_TSS2 , &
-                                        QD_Y ,    QD_Yaw ,    Q_B1E1 ,    Q_B1F1 ,    Q_B1F2 ,    Q_B2E1 ,    Q_B2F1 ,    Q_B2F2 , &
-                                      Q_B3E1 ,    Q_B3F1 ,    Q_B3F2 ,    Q_DrTr ,    Q_GeAz ,      Q_Hv ,       Q_P ,       Q_R , &
-                                      Q_RFrl ,      Q_Sg ,      Q_Sw ,    Q_Teet ,    Q_TFA1 ,    Q_TFA2 ,    Q_TFrl ,    Q_TSS1 , &
-                                      Q_TSS2 ,       Q_Y ,     Q_Yaw ,   RFrlBrM ,  TipRDxb1 ,  TipRDxb2 ,  TipRDxb3 ,  RootFxb1 , &
-                                    RootFxb2 ,  RootFxb3 ,  RootFxc1 ,  RootFxc2 ,  RootFxc3 ,  RootFyb1 ,  RootFyb2 ,  RootFyb3 , &
-                                    RootFyc1 ,  RootFyc2 ,  RootFyc3 ,  RootFzc1 ,  RootFzc2 ,  RootFzc3 ,  RootFzc1 ,  RootFzc2 , &
-                                    RootFzc3 ,  RootMxb1 ,  RootMxb2 ,  RootMxb3 ,  RootMyb1 ,  RootMyb2 ,  RootMyb3 ,  RootMxc1 , &
-                                    RootMxc2 ,  RootMxc3 ,  RootMyc1 ,  RootMyc2 ,  RootMyc3 ,  RootMxb1 ,  RootMxb2 ,  RootMxb3 , &
-                                    RootMxc1 ,  RootMxc2 ,  RootMxc3 ,  RootMyb1 ,  RootMyb2 ,  RootMyb3 ,  RootMyc1 ,  RootMyc2 , &
-                                    RootMyc3 ,  RootMzc1 ,  RootMzc2 ,  RootMzc3 ,  RootMzc1 ,  RootMzc2 ,  RootMzc3 , LSSTipAxa , &
-                                    RotFurlP ,  RotFurlA ,  RotFurlP ,  RotFurlV ,    RotPwr , LSSTipVxa ,   TeetAya ,   TeetPya , &
-                                     TeetVya , LSShftFxa , LSShftMxa , Spn1ALxb1 , Spn1ALxb2 , Spn1ALxb3 , Spn1ALyb1 , Spn1ALyb2 , &
-                                   Spn1ALyb3 , Spn1ALzb1 , Spn1ALzb2 , Spn1ALzb3 , Spn1FLxb1 , Spn1FLxb2 , Spn1FLxb3 , Spn1FLyb1 , &
-                                   Spn1FLyb2 , Spn1FLyb3 , Spn1FLzb1 , Spn1FLzb2 , Spn1FLzb3 , Spn1MLxb1 , Spn1MLxb2 , Spn1MLxb3 , &
-                                   Spn1MLyb1 , Spn1MLyb2 , Spn1MLyb3 , Spn1MLzb1 , Spn1MLzb2 , Spn1MLzb3 , Spn1RDxb1 , Spn1RDxb2 , &
-                                   Spn1RDxb3 , Spn1RDyb1 , Spn1RDyb2 , Spn1RDyb3 , Spn1RDzb1 , Spn1RDzb2 , Spn1RDzb3 , Spn1TDxb1 , &
-                                   Spn1TDxb2 , Spn1TDxb3 , Spn1TDyb1 , Spn1TDyb2 , Spn1TDyb3 , Spn1TDzb1 , Spn1TDzb2 , Spn1TDzb3 , &
-                                   Spn2ALxb1 , Spn2ALxb2 , Spn2ALxb3 , Spn2ALyb1 , Spn2ALyb2 , Spn2ALyb3 , Spn2ALzb1 , Spn2ALzb2 , &
-                                   Spn2ALzb3 , Spn2FLxb1 , Spn2FLxb2 , Spn2FLxb3 , Spn2FLyb1 , Spn2FLyb2 , Spn2FLyb3 , Spn2FLzb1 , &
-                                   Spn2FLzb2 , Spn2FLzb3 , Spn2MLxb1 , Spn2MLxb2 , Spn2MLxb3 , Spn2MLyb1 , Spn2MLyb2 , Spn2MLyb3 , &
-                                   Spn2MLzb1 , Spn2MLzb2 , Spn2MLzb3 , Spn2RDxb1 , Spn2RDxb2 , Spn2RDxb3 , Spn2RDyb1 , Spn2RDyb2 , &
-                                   Spn2RDyb3 , Spn2RDzb1 , Spn2RDzb2 , Spn2RDzb3 , Spn2TDxb1 , Spn2TDxb2 , Spn2TDxb3 , Spn2TDyb1 , &
-                                   Spn2TDyb2 , Spn2TDyb3 , Spn2TDzb1 , Spn2TDzb2 , Spn2TDzb3 , Spn3ALxb1 , Spn3ALxb2 , Spn3ALxb3 , &
-                                   Spn3ALyb1 , Spn3ALyb2 , Spn3ALyb3 , Spn3ALzb1 , Spn3ALzb2 , Spn3ALzb3 , Spn3FLxb1 , Spn3FLxb2 , &
-                                   Spn3FLxb3 , Spn3FLyb1 , Spn3FLyb2 , Spn3FLyb3 , Spn3FLzb1 , Spn3FLzb2 , Spn3FLzb3 , Spn3MLxb1 , &
-                                   Spn3MLxb2 , Spn3MLxb3 , Spn3MLyb1 , Spn3MLyb2 , Spn3MLyb3 , Spn3MLzb1 , Spn3MLzb2 , Spn3MLzb3 , &
-                                   Spn3RDxb1 , Spn3RDxb2 , Spn3RDxb3 , Spn3RDyb1 , Spn3RDyb2 , Spn3RDyb3 , Spn3RDzb1 , Spn3RDzb2 , &
-                                   Spn3RDzb3 , Spn3TDxb1 , Spn3TDxb2 , Spn3TDxb3 , Spn3TDyb1 , Spn3TDyb2 , Spn3TDyb3 , Spn3TDzb1 , &
-                                   Spn3TDzb2 , Spn3TDzb3 , Spn4ALxb1 , Spn4ALxb2 , Spn4ALxb3 , Spn4ALyb1 , Spn4ALyb2 , Spn4ALyb3 , &
-                                   Spn4ALzb1 , Spn4ALzb2 , Spn4ALzb3 , Spn4FLxb1 , Spn4FLxb2 , Spn4FLxb3 , Spn4FLyb1 , Spn4FLyb2 , &
-                                   Spn4FLyb3 , Spn4FLzb1 , Spn4FLzb2 , Spn4FLzb3 , Spn4MLxb1 , Spn4MLxb2 , Spn4MLxb3 , Spn4MLyb1 , &
-                                   Spn4MLyb2 , Spn4MLyb3 , Spn4MLzb1 , Spn4MLzb2 , Spn4MLzb3 , Spn4RDxb1 , Spn4RDxb2 , Spn4RDxb3 , &
-                                   Spn4RDyb1 , Spn4RDyb2 , Spn4RDyb3 , Spn4RDzb1 , Spn4RDzb2 , Spn4RDzb3 , Spn4TDxb1 , Spn4TDxb2 , &
-                                   Spn4TDxb3 , Spn4TDyb1 , Spn4TDyb2 , Spn4TDyb3 , Spn4TDzb1 , Spn4TDzb2 , Spn4TDzb3 , Spn5ALxb1 , &
-                                   Spn5ALxb2 , Spn5ALxb3 , Spn5ALyb1 , Spn5ALyb2 , Spn5ALyb3 , Spn5ALzb1 , Spn5ALzb2 , Spn5ALzb3 , &
-                                   Spn5FLxb1 , Spn5FLxb2 , Spn5FLxb3 , Spn5FLyb1 , Spn5FLyb2 , Spn5FLyb3 , Spn5FLzb1 , Spn5FLzb2 , &
-                                   Spn5FLzb3 , Spn5MLxb1 , Spn5MLxb2 , Spn5MLxb3 , Spn5MLyb1 , Spn5MLyb2 , Spn5MLyb3 , Spn5MLzb1 , &
-                                   Spn5MLzb2 , Spn5MLzb3 , Spn5RDxb1 , Spn5RDxb2 , Spn5RDxb3 , Spn5RDyb1 , Spn5RDyb2 , Spn5RDyb3 , &
-                                   Spn5RDzb1 , Spn5RDzb2 , Spn5RDzb3 , Spn5TDxb1 , Spn5TDxb2 , Spn5TDxb3 , Spn5TDyb1 , Spn5TDyb2 , &
-                                   Spn5TDyb3 , Spn5TDzb1 , Spn5TDzb2 , Spn5TDzb3 , Spn6ALxb1 , Spn6ALxb2 , Spn6ALxb3 , Spn6ALyb1 , &
-                                   Spn6ALyb2 , Spn6ALyb3 , Spn6ALzb1 , Spn6ALzb2 , Spn6ALzb3 , Spn6FLxb1 , Spn6FLxb2 , Spn6FLxb3 , &
-                                   Spn6FLyb1 , Spn6FLyb2 , Spn6FLyb3 , Spn6FLzb1 , Spn6FLzb2 , Spn6FLzb3 , Spn6MLxb1 , Spn6MLxb2 , &
-                                   Spn6MLxb3 , Spn6MLyb1 , Spn6MLyb2 , Spn6MLyb3 , Spn6MLzb1 , Spn6MLzb2 , Spn6MLzb3 , Spn6RDxb1 , &
-                                   Spn6RDxb2 , Spn6RDxb3 , Spn6RDyb1 , Spn6RDyb2 , Spn6RDyb3 , Spn6RDzb1 , Spn6RDzb2 , Spn6RDzb3 , &
-                                   Spn6TDxb1 , Spn6TDxb2 , Spn6TDxb3 , Spn6TDyb1 , Spn6TDyb2 , Spn6TDyb3 , Spn6TDzb1 , Spn6TDzb2 , &
-                                   Spn6TDzb3 , Spn7ALxb1 , Spn7ALxb2 , Spn7ALxb3 , Spn7ALyb1 , Spn7ALyb2 , Spn7ALyb3 , Spn7ALzb1 , &
-                                   Spn7ALzb2 , Spn7ALzb3 , Spn7FLxb1 , Spn7FLxb2 , Spn7FLxb3 , Spn7FLyb1 , Spn7FLyb2 , Spn7FLyb3 , &
-                                   Spn7FLzb1 , Spn7FLzb2 , Spn7FLzb3 , Spn7MLxb1 , Spn7MLxb2 , Spn7MLxb3 , Spn7MLyb1 , Spn7MLyb2 , &
-                                   Spn7MLyb3 , Spn7MLzb1 , Spn7MLzb2 , Spn7MLzb3 , Spn7RDxb1 , Spn7RDxb2 , Spn7RDxb3 , Spn7RDyb1 , &
-                                   Spn7RDyb2 , Spn7RDyb3 , Spn7RDzb1 , Spn7RDzb2 , Spn7RDzb3 , Spn7TDxb1 , Spn7TDxb2 , Spn7TDxb3 , &
-                                   Spn7TDyb1 , Spn7TDyb2 , Spn7TDyb3 , Spn7TDzb1 , Spn7TDzb2 , Spn7TDzb3 , Spn8ALxb1 , Spn8ALxb2 , &
-                                   Spn8ALxb3 , Spn8ALyb1 , Spn8ALyb2 , Spn8ALyb3 , Spn8ALzb1 , Spn8ALzb2 , Spn8ALzb3 , Spn8FLxb1 , &
-                                   Spn8FLxb2 , Spn8FLxb3 , Spn8FLyb1 , Spn8FLyb2 , Spn8FLyb3 , Spn8FLzb1 , Spn8FLzb2 , Spn8FLzb3 , &
-                                   Spn8MLxb1 , Spn8MLxb2 , Spn8MLxb3 , Spn8MLyb1 , Spn8MLyb2 , Spn8MLyb3 , Spn8MLzb1 , Spn8MLzb2 , &
-                                   Spn8MLzb3 , Spn8RDxb1 , Spn8RDxb2 , Spn8RDxb3 , Spn8RDyb1 , Spn8RDyb2 , Spn8RDyb3 , Spn8RDzb1 , &
-                                   Spn8RDzb2 , Spn8RDzb3 , Spn8TDxb1 , Spn8TDxb2 , Spn8TDxb3 , Spn8TDyb1 , Spn8TDyb2 , Spn8TDyb3 , &
-                                   Spn8TDzb1 , Spn8TDzb2 , Spn8TDzb3 , Spn9ALxb1 , Spn9ALxb2 , Spn9ALxb3 , Spn9ALyb1 , Spn9ALyb2 , &
-                                   Spn9ALyb3 , Spn9ALzb1 , Spn9ALzb2 , Spn9ALzb3 , Spn9FLxb1 , Spn9FLxb2 , Spn9FLxb3 , Spn9FLyb1 , &
-                                   Spn9FLyb2 , Spn9FLyb3 , Spn9FLzb1 , Spn9FLzb2 , Spn9FLzb3 , Spn9MLxb1 , Spn9MLxb2 , Spn9MLxb3 , &
-                                   Spn9MLyb1 , Spn9MLyb2 , Spn9MLyb3 , Spn9MLzb1 , Spn9MLzb2 , Spn9MLzb3 , Spn9RDxb1 , Spn9RDxb2 , &
-                                   Spn9RDxb3 , Spn9RDyb1 , Spn9RDyb2 , Spn9RDyb3 , Spn9RDzb1 , Spn9RDzb2 , Spn9RDzb3 , Spn9TDxb1 , &
-                                   Spn9TDxb2 , Spn9TDxb3 , Spn9TDyb1 , Spn9TDyb2 , Spn9TDyb3 , Spn9TDzb1 , Spn9TDzb2 , Spn9TDzb3 , &
-                                   TailFurlP , TailFurlA , TailFurlP , TailFurlV ,   TeetAya ,   TeetPya ,   TeetPya ,   TeetVya , &
-                                     TFrlBrM , TipClrnc1 , TipClrnc2 , TipClrnc3 ,  TipALxb1 ,  TipALxb2 ,  TipALxb3 ,  TipALyb1 , &
-                                    TipALyb2 ,  TipALyb3 ,  TipALzb1 ,  TipALzb2 ,  TipALzb3 , TipClrnc1 , TipClrnc2 , TipClrnc3 , &
-                                     TipDxb1 ,   TipDxb2 ,   TipDxb3 ,   TipDxc1 ,   TipDxc2 ,   TipDxc3 ,   TipDyb1 ,   TipDyb2 , &
-                                     TipDyb3 ,   TipDyc1 ,   TipDyc2 ,   TipDyc3 ,   TipDzc1 ,   TipDzc2 ,   TipDzc3 ,   TipDzc1 , &
-                                     TipDzc2 ,   TipDzc3 ,  TipRDxb1 ,  TipRDxb2 ,  TipRDxb3 ,  TipRDyb1 ,  TipRDyb2 ,  TipRDyb3 , &
-                                    TipRDzc1 ,  TipRDzc2 ,  TipRDzc3 ,  TipRDzc1 ,  TipRDzc2 ,  TipRDzc3 , YawBrTDzt , YawBrTDxt , &
-                                   YawBrRDyt , YawBrRDxt , YawBrTDyt , YawBrRDzt , TwHt1ALxt , TwHt1ALyt , TwHt1ALzt , TwHt1FLxt , &
-                                   TwHt1FLyt , TwHt1FLzt , TwHt1MLxt , TwHt1MLyt , TwHt1MLzt , TwHt1RDxt , TwHt1RDyt , TwHt1RDzt , &
-                                   TwHt1RPxi , TwHt1RPyi , TwHt1RPzi , TwHt1TDxt , TwHt1TDyt , TwHt1TDzt , TwHt1TPxi , TwHt1TPyi , &
-                                   TwHt1TPzi , TwHt2ALxt , TwHt2ALyt , TwHt2ALzt , TwHt2FLxt , TwHt2FLyt , TwHt2FLzt , TwHt2MLxt , &
-                                   TwHt2MLyt , TwHt2MLzt , TwHt2RDxt , TwHt2RDyt , TwHt2RDzt , TwHt2RPxi , TwHt2RPyi , TwHt2RPzi , &
-                                   TwHt2TDxt , TwHt2TDyt , TwHt2TDzt , TwHt2TPxi , TwHt2TPyi , TwHt2TPzi , TwHt3ALxt , TwHt3ALyt , &
-                                   TwHt3ALzt , TwHt3FLxt , TwHt3FLyt , TwHt3FLzt , TwHt3MLxt , TwHt3MLyt , TwHt3MLzt , TwHt3RDxt , &
-                                   TwHt3RDyt , TwHt3RDzt , TwHt3RPxi , TwHt3RPyi , TwHt3RPzi , TwHt3TDxt , TwHt3TDyt , TwHt3TDzt , &
-                                   TwHt3TPxi , TwHt3TPyi , TwHt3TPzi , TwHt4ALxt , TwHt4ALyt , TwHt4ALzt , TwHt4FLxt , TwHt4FLyt , &
-                                   TwHt4FLzt , TwHt4MLxt , TwHt4MLyt , TwHt4MLzt , TwHt4RDxt , TwHt4RDyt , TwHt4RDzt , TwHt4RPxi , &
-                                   TwHt4RPyi , TwHt4RPzi , TwHt4TDxt , TwHt4TDyt , TwHt4TDzt , TwHt4TPxi , TwHt4TPyi , TwHt4TPzi , &
-                                   TwHt5ALxt , TwHt5ALyt , TwHt5ALzt , TwHt5FLxt , TwHt5FLyt , TwHt5FLzt , TwHt5MLxt , TwHt5MLyt , &
-                                   TwHt5MLzt , TwHt5RDxt , TwHt5RDyt , TwHt5RDzt , TwHt5RPxi , TwHt5RPyi , TwHt5RPzi , TwHt5TDxt , &
-                                   TwHt5TDyt , TwHt5TDzt , TwHt5TPxi , TwHt5TPyi , TwHt5TPzi , TwHt6ALxt , TwHt6ALyt , TwHt6ALzt , &
-                                   TwHt6FLxt , TwHt6FLyt , TwHt6FLzt , TwHt6MLxt , TwHt6MLyt , TwHt6MLzt , TwHt6RDxt , TwHt6RDyt , &
-                                   TwHt6RDzt , TwHt6RPxi , TwHt6RPyi , TwHt6RPzi , TwHt6TDxt , TwHt6TDyt , TwHt6TDzt , TwHt6TPxi , &
-                                   TwHt6TPyi , TwHt6TPzi , TwHt7ALxt , TwHt7ALyt , TwHt7ALzt , TwHt7FLxt , TwHt7FLyt , TwHt7FLzt , &
-                                   TwHt7MLxt , TwHt7MLyt , TwHt7MLzt , TwHt7RDxt , TwHt7RDyt , TwHt7RDzt , TwHt7RPxi , TwHt7RPyi , &
-                                   TwHt7RPzi , TwHt7TDxt , TwHt7TDyt , TwHt7TDzt , TwHt7TPxi , TwHt7TPyi , TwHt7TPzi , TwHt8ALxt , &
-                                   TwHt8ALyt , TwHt8ALzt , TwHt8FLxt , TwHt8FLyt , TwHt8FLzt , TwHt8MLxt , TwHt8MLyt , TwHt8MLzt , &
-                                   TwHt8RDxt , TwHt8RDyt , TwHt8RDzt , TwHt8RPxi , TwHt8RPyi , TwHt8RPzi , TwHt8TDxt , TwHt8TDyt , &
-                                   TwHt8TDzt , TwHt8TPxi , TwHt8TPyi , TwHt8TPzi , TwHt9ALxt , TwHt9ALyt , TwHt9ALzt , TwHt9FLxt , &
-                                   TwHt9FLyt , TwHt9FLzt , TwHt9MLxt , TwHt9MLyt , TwHt9MLzt , TwHt9RDxt , TwHt9RDyt , TwHt9RDzt , &
-                                   TwHt9RPxi , TwHt9RPyi , TwHt9RPzi , TwHt9TDxt , TwHt9TDyt , TwHt9TDzt , TwHt9TPxi , TwHt9TPyi , &
-                                   TwHt9TPzi ,  TwrBsFxt ,  TwrBsFyt ,  TwrBsFzt ,  TwrBsMxt ,  TwrBsMyt ,  TwrBsMzt , TipClrnc1 , &
-                                   TipClrnc2 , TipClrnc3 , TwrTpTDxi , TwrTpTDyi , TwrTpTDzi ,  TipRDzc1 ,  TipRDzc2 ,  TipRDzc3 , &
-                                      YawAzn ,    YawAzn ,    YawAzn ,  YawBrFxn ,  YawBrFxp ,  YawBrFyn ,  YawBrFyp ,  YawBrFzn , &
-                                    YawBrFzn ,  YawBrMxn ,  YawBrMxp ,  YawBrMyn ,  YawBrMyp ,  YawBrMzn ,  YawBrMzn , YawBrRAxp , &
-                                   YawBrRAyp , YawBrRAzp , YawBrRDxt , YawBrRDyt , YawBrRDzt , YawBrRVxp , YawBrRVyp , YawBrRVzp , &
-                                   YawBrTAxp , YawBrTAyp , YawBrTAzp , TwrTpTDxi , YawBrTDxp , YawBrTDxt , TwrTpTDyi , YawBrTDyp , &
-                                   YawBrTDyt , TwrTpTDzi , YawBrTDzp , YawBrTDzt , YawBrTVxp , YawBrTVyp , YawBrTVzp ,    YawPzn , &
-                                   YawPzn ,    YawPzn ,    YawVzn ,    YawVzn ,    YawVzn /)
-      CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(981) =  (/  &  ! This lists the units corresponding to the allowed parameters
-                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg/s^2)", &
-                                  "(rpm)    ","(kN-m)   ","(deg/s^2)","(kW)     ","(kN-m)   ","(rpm)    ","(m)      ","(m)      ", &
-                                  "(m)      ","(deg/s^2)","(deg/s^2)","(deg/s^2)","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
-                                  "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
-                                  "(deg)    ","(deg)    ","(deg)    ","(rpm)    ","(rpm)    ","(rpm)    ","(kN)     ","(kN)     ", &
-                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kW)     ","(kN-m)   ", &
-                                  "(deg/s^2)","(deg/s^2)","(deg/s^2)","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ", &
-                                  "(deg)    ","(deg)    ","(rpm)    ","(rpm)    ","(rpm)    ","(deg)    ","(deg/s^2)","(deg)    ", &
-                                  "(deg/s)  ","(deg/s^2)","(deg/s^2)","(deg/s^2)","(deg/s)  ","(deg/s)  ","(deg/s)  ","(m/s^2)  ", &
-                                  "(m/s^2)  ","(m/s^2)  ","(m/s)    ","(m/s)    ","(m/s)    ","(m)      ","(m)      ","(m)      ", &
-                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                                  "(deg)    ","(m)      ","(deg)    ","(deg/s^2)","(deg/s^2)","(deg/s^2)","(deg/s^2)","(deg/s^2)", &
-                                  "(deg/s^2)","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg/s)  ","(deg/s)  ","(deg/s)  ", &
-                                  "(deg/s)  ","(deg/s)  ","(deg/s)  ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                                  "(m)      ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(deg)    ", &
-                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                                  "(m/s^2)  ","(rad/s^2)","(rad/s^2)","(m/s^2)  ","(rad/s^2)","(rad/s^2)","(rad/s^2)","(m/s^2)  ", &
-                                  "(m/s^2)  ","(rad/s^2)","(m/s^2)  ","(m/s^2)  ","(rad/s^2)","(m/s^2)  ","(m/s^2)  ","(rad/s^2)", &
-                                  "(rad/s^2)","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ", &
-                                  "(m/s)    ","(m/s)    ","(rad/s)  ","(rad/s)  ","(m/s)    ","(rad/s)  ","(rad/s)  ","(rad/s)  ", &
-                                  "(m/s)    ","(m/s)    ","(rad/s)  ","(m/s)    ","(m/s)    ","(rad/s)  ","(m/s)    ","(m/s)    ", &
-                                  "(rad/s)  ","(rad/s)  ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                                  "(m)      ","(m)      ","(m)      ","(rad)    ","(rad)    ","(m)      ","(rad)    ","(rad)    ", &
-                                  "(rad)    ","(m)      ","(m)      ","(rad)    ","(m)      ","(m)      ","(rad)    ","(m)      ", &
-                                  "(m)      ","(rad)    ","(rad)    ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(kN)     ", &
-                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
-                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
-                                  "(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
-                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
-                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
-                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg/s^2)", &
-                                  "(deg)    ","(deg/s^2)","(deg)    ","(deg/s)  ","(kW)     ","(rpm)    ","(deg/s^2)","(deg)    ", &
-                                  "(deg/s)  ","(kN)     ","(kN-m)   ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
-                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
-                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ", &
-                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ", &
-                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                                  "(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
-                                  "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
-                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ", &
-                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ", &
-                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
-                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                                  "(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                                  "(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
-                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
-                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ", &
-                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ", &
-                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ", &
-                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
-                                  "(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
-                                  "(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                                  "(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ", &
-                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ", &
-                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ", &
-                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                                  "(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                                  "(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
-                                  "(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
-                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ", &
-                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ", &
-                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ", &
-                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
-                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
-                                  "(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                                  "(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                                  "(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
-                                  "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
-                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ", &
-                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ", &
-                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                                  "(deg)    ","(deg/s^2)","(deg)    ","(deg/s)  ","(deg/s^2)","(deg)    ","(deg)    ","(deg/s)  ", &
-                                  "(kN-m)   ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m)      ","(m)      ","(m)      ", &
-                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                                  "(m)      ","(m)      ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ", &
-                                  "(deg)    ","(deg)    ","(m)      ","(deg)    ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ", &
-                                  "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ", &
-                                  "(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                                  "(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ", &
-                                  "(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ", &
-                                  "(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ", &
-                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ", &
-                                  "(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ", &
-                                  "(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                                  "(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ", &
-                                  "(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ", &
-                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
-                                  "(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ", &
-                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                                  "(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ", &
-                                  "(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
-                                  "(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ", &
-                                  "(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
-                                  "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ", &
-                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ", &
-                                  "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ", &
-                                  "(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                                  "(m)      ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(m)      ", &
-                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(deg)    ","(deg)    ","(deg)    ", &
-                                  "(deg/s^2)","(deg/s^2)","(deg/s^2)","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
-                                  "(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg/s^2)", &
-                                  "(deg/s^2)","(deg/s^2)","(deg)    ","(deg)    ","(deg)    ","(deg/s)  ","(deg/s)  ","(deg/s)  ", &
-                                  "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
-                                  "(m)      ","(m)      ","(m)      ","(m)      ","(m/s)    ","(m/s)    ","(m/s)    ","(deg)    ", &
-                                  "(deg)    ","(deg)    ","(deg/s)  ","(deg/s)  ","(deg/s)  "/)
+   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(1110) =  (/  &   ! This lists the names of the allowed parameters, which must be sorted alphabetically
+                               "AZIMUTH   ","BLDPITCH1 ","BLDPITCH2 ","BLDPITCH3 ","BLPITCH1  ","BLPITCH2  ","BLPITCH3  ", &
+                               "GENACCEL  ","GENSPEED  ","HSSBRTQ   ","HSSHFTA   ","HSSHFTPWR ","HSSHFTTQ  ","HSSHFTV   ", &
+                               "IPDEFL1   ","IPDEFL2   ","IPDEFL3   ","LSSGAGA   ","LSSGAGAXA ","LSSGAGAXS ","LSSGAGFXA ", &
+                               "LSSGAGFXS ","LSSGAGFYA ","LSSGAGFYS ","LSSGAGFZA ","LSSGAGFZS ","LSSGAGMXA ","LSSGAGMXS ", &
+                               "LSSGAGMYA ","LSSGAGMYS ","LSSGAGMZA ","LSSGAGMZS ","LSSGAGP   ","LSSGAGPXA ","LSSGAGPXS ", &
+                               "LSSGAGV   ","LSSGAGVXA ","LSSGAGVXS ","LSSHFTFXA ","LSSHFTFXS ","LSSHFTFYA ","LSSHFTFYS ", &
+                               "LSSHFTFZA ","LSSHFTFZS ","LSSHFTMXA ","LSSHFTMXS ","LSSHFTPWR ","LSSHFTTQ  ","LSSTIPA   ", &
+                               "LSSTIPAXA ","LSSTIPAXS ","LSSTIPMYA ","LSSTIPMYS ","LSSTIPMZA ","LSSTIPMZS ","LSSTIPP   ", &
+                               "LSSTIPPXA ","LSSTIPPXS ","LSSTIPV   ","LSSTIPVXA ","LSSTIPVXS ","NACYAW    ","NACYAWA   ", &
+                               "NACYAWP   ","NACYAWV   ","NCIMURAXS ","NCIMURAYS ","NCIMURAZS ","NCIMURVXS ","NCIMURVYS ", &
+                               "NCIMURVZS ","NCIMUTAGXS","NCIMUTAGYS","NCIMUTAGZS","NCIMUTAXS ","NCIMUTAYS ","NCIMUTAZS ", &
+                               "NCIMUTVXS ","NCIMUTVYS ","NCIMUTVZS ","OOPDEFL1  ","OOPDEFL2  ","OOPDEFL3  ","PTCHDEFL1 ", &
+                               "PTCHDEFL2 ","PTCHDEFL3 ","PTCHPMZB1 ","PTCHPMZB2 ","PTCHPMZB3 ","PTCHPMZC1 ","PTCHPMZC2 ", &
+                               "PTCHPMZC3 ","PTFMHEAVE ","PTFMPITCH ","PTFMRAXI  ","PTFMRAXT  ","PTFMRAYI  ","PTFMRAYT  ", &
+                               "PTFMRAZI  ","PTFMRAZT  ","PTFMRDXI  ","PTFMRDYI  ","PTFMRDZI  ","PTFMROLL  ","PTFMRVXI  ", &
+                               "PTFMRVXT  ","PTFMRVYI  ","PTFMRVYT  ","PTFMRVZI  ","PTFMRVZT  ","PTFMSURGE ","PTFMSWAY  ", &
+                               "PTFMTAGXI ","PTFMTAGXT ","PTFMTAGYI ","PTFMTAGYT ","PTFMTAGZI ","PTFMTAGZT ","PTFMTAXI  ", &
+                               "PTFMTAXT  ","PTFMTAYI  ","PTFMTAYT  ","PTFMTAZI  ","PTFMTAZT  ","PTFMTDXI  ","PTFMTDXT  ", &
+                               "PTFMTDYI  ","PTFMTDYT  ","PTFMTDZI  ","PTFMTDZT  ","PTFMTVXI  ","PTFMTVXT  ","PTFMTVYI  ", &
+                               "PTFMTVYT  ","PTFMTVZI  ","PTFMTVZT  ","PTFMYAW   ","QD2_B1E1  ","QD2_B1F1  ","QD2_B1F2  ", &
+                               "QD2_B2E1  ","QD2_B2F1  ","QD2_B2F2  ","QD2_B3E1  ","QD2_B3F1  ","QD2_B3F2  ","QD2_DRTR  ", &
+                               "QD2_GEAZ  ","QD2_HV    ","QD2_P     ","QD2_R     ","QD2_RFRL  ","QD2_SG    ","QD2_SW    ", &
+                               "QD2_TEET  ","QD2_TFA1  ","QD2_TFA2  ","QD2_TFRL  ","QD2_TSS1  ","QD2_TSS2  ","QD2_Y     ", &
+                               "QD2_YAW   ","QD_B1E1   ","QD_B1F1   ","QD_B1F2   ","QD_B2E1   ","QD_B2F1   ","QD_B2F2   ", &
+                               "QD_B3E1   ","QD_B3F1   ","QD_B3F2   ","QD_DRTR   ","QD_GEAZ   ","QD_HV     ","QD_P      ", &
+                               "QD_R      ","QD_RFRL   ","QD_SG     ","QD_SW     ","QD_TEET   ","QD_TFA1   ","QD_TFA2   ", &
+                               "QD_TFRL   ","QD_TSS1   ","QD_TSS2   ","QD_Y      ","QD_YAW    ","Q_B1E1    ","Q_B1F1    ", &
+                               "Q_B1F2    ","Q_B2E1    ","Q_B2F1    ","Q_B2F2    ","Q_B3E1    ","Q_B3F1    ","Q_B3F2    ", &
+                               "Q_DRTR    ","Q_GEAZ    ","Q_HV      ","Q_P       ","Q_R       ","Q_RFRL    ","Q_SG      ", &
+                               "Q_SW      ","Q_TEET    ","Q_TFA1    ","Q_TFA2    ","Q_TFRL    ","Q_TSS1    ","Q_TSS2    ", &
+                               "Q_Y       ","Q_YAW     ","RFRLBRM   ","ROLLDEFL1 ","ROLLDEFL2 ","ROLLDEFL3 ","ROOTFXB1  ", &
+                               "ROOTFXB2  ","ROOTFXB3  ","ROOTFXC1  ","ROOTFXC2  ","ROOTFXC3  ","ROOTFYB1  ","ROOTFYB2  ", &
+                               "ROOTFYB3  ","ROOTFYC1  ","ROOTFYC2  ","ROOTFYC3  ","ROOTFZB1  ","ROOTFZB2  ","ROOTFZB3  ", &
+                               "ROOTFZC1  ","ROOTFZC2  ","ROOTFZC3  ","ROOTMEDG1 ","ROOTMEDG2 ","ROOTMEDG3 ","ROOTMFLP1 ", &
+                               "ROOTMFLP2 ","ROOTMFLP3 ","ROOTMIP1  ","ROOTMIP2  ","ROOTMIP3  ","ROOTMOOP1 ","ROOTMOOP2 ", &
+                               "ROOTMOOP3 ","ROOTMXB1  ","ROOTMXB2  ","ROOTMXB3  ","ROOTMXC1  ","ROOTMXC2  ","ROOTMXC3  ", &
+                               "ROOTMYB1  ","ROOTMYB2  ","ROOTMYB3  ","ROOTMYC1  ","ROOTMYC2  ","ROOTMYC3  ","ROOTMZB1  ", &
+                               "ROOTMZB2  ","ROOTMZB3  ","ROOTMZC1  ","ROOTMZC2  ","ROOTMZC3  ","ROTACCEL  ","ROTFURL   ", &
+                               "ROTFURLA  ","ROTFURLP  ","ROTFURLV  ","ROTPWR    ","ROTSPEED  ","ROTTEETA  ","ROTTEETP  ", &
+                               "ROTTEETV  ","ROTTHRUST ","ROTTORQ   ","SPN1ALGXB1","SPN1ALGXB2","SPN1ALGXB3","SPN1ALGYB1", &
+                               "SPN1ALGYB2","SPN1ALGYB3","SPN1ALGZB1","SPN1ALGZB2","SPN1ALGZB3","SPN1ALXB1 ","SPN1ALXB2 ", &
+                               "SPN1ALXB3 ","SPN1ALYB1 ","SPN1ALYB2 ","SPN1ALYB3 ","SPN1ALZB1 ","SPN1ALZB2 ","SPN1ALZB3 ", &
+                               "SPN1FLXB1 ","SPN1FLXB2 ","SPN1FLXB3 ","SPN1FLYB1 ","SPN1FLYB2 ","SPN1FLYB3 ","SPN1FLZB1 ", &
+                               "SPN1FLZB2 ","SPN1FLZB3 ","SPN1MLXB1 ","SPN1MLXB2 ","SPN1MLXB3 ","SPN1MLYB1 ","SPN1MLYB2 ", &
+                               "SPN1MLYB3 ","SPN1MLZB1 ","SPN1MLZB2 ","SPN1MLZB3 ","SPN1RDXB1 ","SPN1RDXB2 ","SPN1RDXB3 ", &
+                               "SPN1RDYB1 ","SPN1RDYB2 ","SPN1RDYB3 ","SPN1RDZB1 ","SPN1RDZB2 ","SPN1RDZB3 ","SPN1TDXB1 ", &
+                               "SPN1TDXB2 ","SPN1TDXB3 ","SPN1TDYB1 ","SPN1TDYB2 ","SPN1TDYB3 ","SPN1TDZB1 ","SPN1TDZB2 ", &
+                               "SPN1TDZB3 ","SPN2ALGXB1","SPN2ALGXB2","SPN2ALGXB3","SPN2ALGYB1","SPN2ALGYB2","SPN2ALGYB3", &
+                               "SPN2ALGZB1","SPN2ALGZB2","SPN2ALGZB3","SPN2ALXB1 ","SPN2ALXB2 ","SPN2ALXB3 ","SPN2ALYB1 ", &
+                               "SPN2ALYB2 ","SPN2ALYB3 ","SPN2ALZB1 ","SPN2ALZB2 ","SPN2ALZB3 ","SPN2FLXB1 ","SPN2FLXB2 ", &
+                               "SPN2FLXB3 ","SPN2FLYB1 ","SPN2FLYB2 ","SPN2FLYB3 ","SPN2FLZB1 ","SPN2FLZB2 ","SPN2FLZB3 ", &
+                               "SPN2MLXB1 ","SPN2MLXB2 ","SPN2MLXB3 ","SPN2MLYB1 ","SPN2MLYB2 ","SPN2MLYB3 ","SPN2MLZB1 ", &
+                               "SPN2MLZB2 ","SPN2MLZB3 ","SPN2RDXB1 ","SPN2RDXB2 ","SPN2RDXB3 ","SPN2RDYB1 ","SPN2RDYB2 ", &
+                               "SPN2RDYB3 ","SPN2RDZB1 ","SPN2RDZB2 ","SPN2RDZB3 ","SPN2TDXB1 ","SPN2TDXB2 ","SPN2TDXB3 ", &
+                               "SPN2TDYB1 ","SPN2TDYB2 ","SPN2TDYB3 ","SPN2TDZB1 ","SPN2TDZB2 ","SPN2TDZB3 ","SPN3ALGXB1", &
+                               "SPN3ALGXB2","SPN3ALGXB3","SPN3ALGYB1","SPN3ALGYB2","SPN3ALGYB3","SPN3ALGZB1","SPN3ALGZB2", &
+                               "SPN3ALGZB3","SPN3ALXB1 ","SPN3ALXB2 ","SPN3ALXB3 ","SPN3ALYB1 ","SPN3ALYB2 ","SPN3ALYB3 ", &
+                               "SPN3ALZB1 ","SPN3ALZB2 ","SPN3ALZB3 ","SPN3FLXB1 ","SPN3FLXB2 ","SPN3FLXB3 ","SPN3FLYB1 ", &
+                               "SPN3FLYB2 ","SPN3FLYB3 ","SPN3FLZB1 ","SPN3FLZB2 ","SPN3FLZB3 ","SPN3MLXB1 ","SPN3MLXB2 ", &
+                               "SPN3MLXB3 ","SPN3MLYB1 ","SPN3MLYB2 ","SPN3MLYB3 ","SPN3MLZB1 ","SPN3MLZB2 ","SPN3MLZB3 ", &
+                               "SPN3RDXB1 ","SPN3RDXB2 ","SPN3RDXB3 ","SPN3RDYB1 ","SPN3RDYB2 ","SPN3RDYB3 ","SPN3RDZB1 ", &
+                               "SPN3RDZB2 ","SPN3RDZB3 ","SPN3TDXB1 ","SPN3TDXB2 ","SPN3TDXB3 ","SPN3TDYB1 ","SPN3TDYB2 ", &
+                               "SPN3TDYB3 ","SPN3TDZB1 ","SPN3TDZB2 ","SPN3TDZB3 ","SPN4ALGXB1","SPN4ALGXB2","SPN4ALGXB3", &
+                               "SPN4ALGYB1","SPN4ALGYB2","SPN4ALGYB3","SPN4ALGZB1","SPN4ALGZB2","SPN4ALGZB3","SPN4ALXB1 ", &
+                               "SPN4ALXB2 ","SPN4ALXB3 ","SPN4ALYB1 ","SPN4ALYB2 ","SPN4ALYB3 ","SPN4ALZB1 ","SPN4ALZB2 ", &
+                               "SPN4ALZB3 ","SPN4FLXB1 ","SPN4FLXB2 ","SPN4FLXB3 ","SPN4FLYB1 ","SPN4FLYB2 ","SPN4FLYB3 ", &
+                               "SPN4FLZB1 ","SPN4FLZB2 ","SPN4FLZB3 ","SPN4MLXB1 ","SPN4MLXB2 ","SPN4MLXB3 ","SPN4MLYB1 ", &
+                               "SPN4MLYB2 ","SPN4MLYB3 ","SPN4MLZB1 ","SPN4MLZB2 ","SPN4MLZB3 ","SPN4RDXB1 ","SPN4RDXB2 ", &
+                               "SPN4RDXB3 ","SPN4RDYB1 ","SPN4RDYB2 ","SPN4RDYB3 ","SPN4RDZB1 ","SPN4RDZB2 ","SPN4RDZB3 ", &
+                               "SPN4TDXB1 ","SPN4TDXB2 ","SPN4TDXB3 ","SPN4TDYB1 ","SPN4TDYB2 ","SPN4TDYB3 ","SPN4TDZB1 ", &
+                               "SPN4TDZB2 ","SPN4TDZB3 ","SPN5ALGXB1","SPN5ALGXB2","SPN5ALGXB3","SPN5ALGYB1","SPN5ALGYB2", &
+                               "SPN5ALGYB3","SPN5ALGZB1","SPN5ALGZB2","SPN5ALGZB3","SPN5ALXB1 ","SPN5ALXB2 ","SPN5ALXB3 ", &
+                               "SPN5ALYB1 ","SPN5ALYB2 ","SPN5ALYB3 ","SPN5ALZB1 ","SPN5ALZB2 ","SPN5ALZB3 ","SPN5FLXB1 ", &
+                               "SPN5FLXB2 ","SPN5FLXB3 ","SPN5FLYB1 ","SPN5FLYB2 ","SPN5FLYB3 ","SPN5FLZB1 ","SPN5FLZB2 ", &
+                               "SPN5FLZB3 ","SPN5MLXB1 ","SPN5MLXB2 ","SPN5MLXB3 ","SPN5MLYB1 ","SPN5MLYB2 ","SPN5MLYB3 ", &
+                               "SPN5MLZB1 ","SPN5MLZB2 ","SPN5MLZB3 ","SPN5RDXB1 ","SPN5RDXB2 ","SPN5RDXB3 ","SPN5RDYB1 ", &
+                               "SPN5RDYB2 ","SPN5RDYB3 ","SPN5RDZB1 ","SPN5RDZB2 ","SPN5RDZB3 ","SPN5TDXB1 ","SPN5TDXB2 ", &
+                               "SPN5TDXB3 ","SPN5TDYB1 ","SPN5TDYB2 ","SPN5TDYB3 ","SPN5TDZB1 ","SPN5TDZB2 ","SPN5TDZB3 ", &
+                               "SPN6ALGXB1","SPN6ALGXB2","SPN6ALGXB3","SPN6ALGYB1","SPN6ALGYB2","SPN6ALGYB3","SPN6ALGZB1", &
+                               "SPN6ALGZB2","SPN6ALGZB3","SPN6ALXB1 ","SPN6ALXB2 ","SPN6ALXB3 ","SPN6ALYB1 ","SPN6ALYB2 ", &
+                               "SPN6ALYB3 ","SPN6ALZB1 ","SPN6ALZB2 ","SPN6ALZB3 ","SPN6FLXB1 ","SPN6FLXB2 ","SPN6FLXB3 ", &
+                               "SPN6FLYB1 ","SPN6FLYB2 ","SPN6FLYB3 ","SPN6FLZB1 ","SPN6FLZB2 ","SPN6FLZB3 ","SPN6MLXB1 ", &
+                               "SPN6MLXB2 ","SPN6MLXB3 ","SPN6MLYB1 ","SPN6MLYB2 ","SPN6MLYB3 ","SPN6MLZB1 ","SPN6MLZB2 ", &
+                               "SPN6MLZB3 ","SPN6RDXB1 ","SPN6RDXB2 ","SPN6RDXB3 ","SPN6RDYB1 ","SPN6RDYB2 ","SPN6RDYB3 ", &
+                               "SPN6RDZB1 ","SPN6RDZB2 ","SPN6RDZB3 ","SPN6TDXB1 ","SPN6TDXB2 ","SPN6TDXB3 ","SPN6TDYB1 ", &
+                               "SPN6TDYB2 ","SPN6TDYB3 ","SPN6TDZB1 ","SPN6TDZB2 ","SPN6TDZB3 ","SPN7ALGXB1","SPN7ALGXB2", &
+                               "SPN7ALGXB3","SPN7ALGYB1","SPN7ALGYB2","SPN7ALGYB3","SPN7ALGZB1","SPN7ALGZB2","SPN7ALGZB3", &
+                               "SPN7ALXB1 ","SPN7ALXB2 ","SPN7ALXB3 ","SPN7ALYB1 ","SPN7ALYB2 ","SPN7ALYB3 ","SPN7ALZB1 ", &
+                               "SPN7ALZB2 ","SPN7ALZB3 ","SPN7FLXB1 ","SPN7FLXB2 ","SPN7FLXB3 ","SPN7FLYB1 ","SPN7FLYB2 ", &
+                               "SPN7FLYB3 ","SPN7FLZB1 ","SPN7FLZB2 ","SPN7FLZB3 ","SPN7MLXB1 ","SPN7MLXB2 ","SPN7MLXB3 ", &
+                               "SPN7MLYB1 ","SPN7MLYB2 ","SPN7MLYB3 ","SPN7MLZB1 ","SPN7MLZB2 ","SPN7MLZB3 ","SPN7RDXB1 ", &
+                               "SPN7RDXB2 ","SPN7RDXB3 ","SPN7RDYB1 ","SPN7RDYB2 ","SPN7RDYB3 ","SPN7RDZB1 ","SPN7RDZB2 ", &
+                               "SPN7RDZB3 ","SPN7TDXB1 ","SPN7TDXB2 ","SPN7TDXB3 ","SPN7TDYB1 ","SPN7TDYB2 ","SPN7TDYB3 ", &
+                               "SPN7TDZB1 ","SPN7TDZB2 ","SPN7TDZB3 ","SPN8ALGXB1","SPN8ALGXB2","SPN8ALGXB3","SPN8ALGYB1", &
+                               "SPN8ALGYB2","SPN8ALGYB3","SPN8ALGZB1","SPN8ALGZB2","SPN8ALGZB3","SPN8ALXB1 ","SPN8ALXB2 ", &
+                               "SPN8ALXB3 ","SPN8ALYB1 ","SPN8ALYB2 ","SPN8ALYB3 ","SPN8ALZB1 ","SPN8ALZB2 ","SPN8ALZB3 ", &
+                               "SPN8FLXB1 ","SPN8FLXB2 ","SPN8FLXB3 ","SPN8FLYB1 ","SPN8FLYB2 ","SPN8FLYB3 ","SPN8FLZB1 ", &
+                               "SPN8FLZB2 ","SPN8FLZB3 ","SPN8MLXB1 ","SPN8MLXB2 ","SPN8MLXB3 ","SPN8MLYB1 ","SPN8MLYB2 ", &
+                               "SPN8MLYB3 ","SPN8MLZB1 ","SPN8MLZB2 ","SPN8MLZB3 ","SPN8RDXB1 ","SPN8RDXB2 ","SPN8RDXB3 ", &
+                               "SPN8RDYB1 ","SPN8RDYB2 ","SPN8RDYB3 ","SPN8RDZB1 ","SPN8RDZB2 ","SPN8RDZB3 ","SPN8TDXB1 ", &
+                               "SPN8TDXB2 ","SPN8TDXB3 ","SPN8TDYB1 ","SPN8TDYB2 ","SPN8TDYB3 ","SPN8TDZB1 ","SPN8TDZB2 ", &
+                               "SPN8TDZB3 ","SPN9ALGXB1","SPN9ALGXB2","SPN9ALGXB3","SPN9ALGYB1","SPN9ALGYB2","SPN9ALGYB3", &
+                               "SPN9ALGZB1","SPN9ALGZB2","SPN9ALGZB3","SPN9ALXB1 ","SPN9ALXB2 ","SPN9ALXB3 ","SPN9ALYB1 ", &
+                               "SPN9ALYB2 ","SPN9ALYB3 ","SPN9ALZB1 ","SPN9ALZB2 ","SPN9ALZB3 ","SPN9FLXB1 ","SPN9FLXB2 ", &
+                               "SPN9FLXB3 ","SPN9FLYB1 ","SPN9FLYB2 ","SPN9FLYB3 ","SPN9FLZB1 ","SPN9FLZB2 ","SPN9FLZB3 ", &
+                               "SPN9MLXB1 ","SPN9MLXB2 ","SPN9MLXB3 ","SPN9MLYB1 ","SPN9MLYB2 ","SPN9MLYB3 ","SPN9MLZB1 ", &
+                               "SPN9MLZB2 ","SPN9MLZB3 ","SPN9RDXB1 ","SPN9RDXB2 ","SPN9RDXB3 ","SPN9RDYB1 ","SPN9RDYB2 ", &
+                               "SPN9RDYB3 ","SPN9RDZB1 ","SPN9RDZB2 ","SPN9RDZB3 ","SPN9TDXB1 ","SPN9TDXB2 ","SPN9TDXB3 ", &
+                               "SPN9TDYB1 ","SPN9TDYB2 ","SPN9TDYB3 ","SPN9TDZB1 ","SPN9TDZB2 ","SPN9TDZB3 ","TAILFURL  ", &
+                               "TAILFURLA ","TAILFURLP ","TAILFURLV ","TEETAYA   ","TEETDEFL  ","TEETPYA   ","TEETVYA   ", &
+                               "TFRLBRM   ","TIP2TWR1  ","TIP2TWR2  ","TIP2TWR3  ","TIPALGXB1 ","TIPALGXB2 ","TIPALGXB3 ", &
+                               "TIPALGYB1 ","TIPALGYB2 ","TIPALGYB3 ","TIPALGZB1 ","TIPALGZB2 ","TIPALGZB3 ","TIPALXB1  ", &
+                               "TIPALXB2  ","TIPALXB3  ","TIPALYB1  ","TIPALYB2  ","TIPALYB3  ","TIPALZB1  ","TIPALZB2  ", &
+                               "TIPALZB3  ","TIPCLRNC1 ","TIPCLRNC2 ","TIPCLRNC3 ","TIPDXB1   ","TIPDXB2   ","TIPDXB3   ", &
+                               "TIPDXC1   ","TIPDXC2   ","TIPDXC3   ","TIPDYB1   ","TIPDYB2   ","TIPDYB3   ","TIPDYC1   ", &
+                               "TIPDYC2   ","TIPDYC3   ","TIPDZB1   ","TIPDZB2   ","TIPDZB3   ","TIPDZC1   ","TIPDZC2   ", &
+                               "TIPDZC3   ","TIPRDXB1  ","TIPRDXB2  ","TIPRDXB3  ","TIPRDYB1  ","TIPRDYB2  ","TIPRDYB3  ", &
+                               "TIPRDZB1  ","TIPRDZB2  ","TIPRDZB3  ","TIPRDZC1  ","TIPRDZC2  ","TIPRDZC3  ","TTDSPAX   ", &
+                               "TTDSPFA   ","TTDSPPTCH ","TTDSPROLL ","TTDSPSS   ","TTDSPTWST ","TWHT1ALGXT","TWHT1ALGYT", &
+                               "TWHT1ALGZT","TWHT1ALXT ","TWHT1ALYT ","TWHT1ALZT ","TWHT1FLXT ","TWHT1FLYT ","TWHT1FLZT ", &
+                               "TWHT1MLXT ","TWHT1MLYT ","TWHT1MLZT ","TWHT1RDXT ","TWHT1RDYT ","TWHT1RDZT ","TWHT1RPXI ", &
+                               "TWHT1RPYI ","TWHT1RPZI ","TWHT1TDXT ","TWHT1TDYT ","TWHT1TDZT ","TWHT1TPXI ","TWHT1TPYI ", &
+                               "TWHT1TPZI ","TWHT2ALGXT","TWHT2ALGYT","TWHT2ALGZT","TWHT2ALXT ","TWHT2ALYT ","TWHT2ALZT ", &
+                               "TWHT2FLXT ","TWHT2FLYT ","TWHT2FLZT ","TWHT2MLXT ","TWHT2MLYT ","TWHT2MLZT ","TWHT2RDXT ", &
+                               "TWHT2RDYT ","TWHT2RDZT ","TWHT2RPXI ","TWHT2RPYI ","TWHT2RPZI ","TWHT2TDXT ","TWHT2TDYT ", &
+                               "TWHT2TDZT ","TWHT2TPXI ","TWHT2TPYI ","TWHT2TPZI ","TWHT3ALGXT","TWHT3ALGYT","TWHT3ALGZT", &
+                               "TWHT3ALXT ","TWHT3ALYT ","TWHT3ALZT ","TWHT3FLXT ","TWHT3FLYT ","TWHT3FLZT ","TWHT3MLXT ", &
+                               "TWHT3MLYT ","TWHT3MLZT ","TWHT3RDXT ","TWHT3RDYT ","TWHT3RDZT ","TWHT3RPXI ","TWHT3RPYI ", &
+                               "TWHT3RPZI ","TWHT3TDXT ","TWHT3TDYT ","TWHT3TDZT ","TWHT3TPXI ","TWHT3TPYI ","TWHT3TPZI ", &
+                               "TWHT4ALGXT","TWHT4ALGYT","TWHT4ALGZT","TWHT4ALXT ","TWHT4ALYT ","TWHT4ALZT ","TWHT4FLXT ", &
+                               "TWHT4FLYT ","TWHT4FLZT ","TWHT4MLXT ","TWHT4MLYT ","TWHT4MLZT ","TWHT4RDXT ","TWHT4RDYT ", &
+                               "TWHT4RDZT ","TWHT4RPXI ","TWHT4RPYI ","TWHT4RPZI ","TWHT4TDXT ","TWHT4TDYT ","TWHT4TDZT ", &
+                               "TWHT4TPXI ","TWHT4TPYI ","TWHT4TPZI ","TWHT5ALGXT","TWHT5ALGYT","TWHT5ALGZT","TWHT5ALXT ", &
+                               "TWHT5ALYT ","TWHT5ALZT ","TWHT5FLXT ","TWHT5FLYT ","TWHT5FLZT ","TWHT5MLXT ","TWHT5MLYT ", &
+                               "TWHT5MLZT ","TWHT5RDXT ","TWHT5RDYT ","TWHT5RDZT ","TWHT5RPXI ","TWHT5RPYI ","TWHT5RPZI ", &
+                               "TWHT5TDXT ","TWHT5TDYT ","TWHT5TDZT ","TWHT5TPXI ","TWHT5TPYI ","TWHT5TPZI ","TWHT6ALGXT", &
+                               "TWHT6ALGYT","TWHT6ALGZT","TWHT6ALXT ","TWHT6ALYT ","TWHT6ALZT ","TWHT6FLXT ","TWHT6FLYT ", &
+                               "TWHT6FLZT ","TWHT6MLXT ","TWHT6MLYT ","TWHT6MLZT ","TWHT6RDXT ","TWHT6RDYT ","TWHT6RDZT ", &
+                               "TWHT6RPXI ","TWHT6RPYI ","TWHT6RPZI ","TWHT6TDXT ","TWHT6TDYT ","TWHT6TDZT ","TWHT6TPXI ", &
+                               "TWHT6TPYI ","TWHT6TPZI ","TWHT7ALGXT","TWHT7ALGYT","TWHT7ALGZT","TWHT7ALXT ","TWHT7ALYT ", &
+                               "TWHT7ALZT ","TWHT7FLXT ","TWHT7FLYT ","TWHT7FLZT ","TWHT7MLXT ","TWHT7MLYT ","TWHT7MLZT ", &
+                               "TWHT7RDXT ","TWHT7RDYT ","TWHT7RDZT ","TWHT7RPXI ","TWHT7RPYI ","TWHT7RPZI ","TWHT7TDXT ", &
+                               "TWHT7TDYT ","TWHT7TDZT ","TWHT7TPXI ","TWHT7TPYI ","TWHT7TPZI ","TWHT8ALGXT","TWHT8ALGYT", &
+                               "TWHT8ALGZT","TWHT8ALXT ","TWHT8ALYT ","TWHT8ALZT ","TWHT8FLXT ","TWHT8FLYT ","TWHT8FLZT ", &
+                               "TWHT8MLXT ","TWHT8MLYT ","TWHT8MLZT ","TWHT8RDXT ","TWHT8RDYT ","TWHT8RDZT ","TWHT8RPXI ", &
+                               "TWHT8RPYI ","TWHT8RPZI ","TWHT8TDXT ","TWHT8TDYT ","TWHT8TDZT ","TWHT8TPXI ","TWHT8TPYI ", &
+                               "TWHT8TPZI ","TWHT9ALGXT","TWHT9ALGYT","TWHT9ALGZT","TWHT9ALXT ","TWHT9ALYT ","TWHT9ALZT ", &
+                               "TWHT9FLXT ","TWHT9FLYT ","TWHT9FLZT ","TWHT9MLXT ","TWHT9MLYT ","TWHT9MLZT ","TWHT9RDXT ", &
+                               "TWHT9RDYT ","TWHT9RDZT ","TWHT9RPXI ","TWHT9RPYI ","TWHT9RPZI ","TWHT9TDXT ","TWHT9TDYT ", &
+                               "TWHT9TDZT ","TWHT9TPXI ","TWHT9TPYI ","TWHT9TPZI ","TWRBSFXT  ","TWRBSFYT  ","TWRBSFZT  ", &
+                               "TWRBSMXT  ","TWRBSMYT  ","TWRBSMZT  ","TWRCLRNC1 ","TWRCLRNC2 ","TWRCLRNC3 ","TWRTPTDXI ", &
+                               "TWRTPTDYI ","TWRTPTDZI ","TWSTDEFL1 ","TWSTDEFL2 ","TWSTDEFL3 ","YAWACCEL  ","YAWAZN    ", &
+                               "YAWAZP    ","YAWBRFXN  ","YAWBRFXP  ","YAWBRFYN  ","YAWBRFYP  ","YAWBRFZN  ","YAWBRFZP  ", &
+                               "YAWBRMXN  ","YAWBRMXP  ","YAWBRMYN  ","YAWBRMYP  ","YAWBRMZN  ","YAWBRMZP  ","YAWBRRAXP ", &
+                               "YAWBRRAYP ","YAWBRRAZP ","YAWBRRDXT ","YAWBRRDYT ","YAWBRRDZT ","YAWBRRVXP ","YAWBRRVYP ", &
+                               "YAWBRRVZP ","YAWBRTAGXP","YAWBRTAGYP","YAWBRTAGZP","YAWBRTAXP ","YAWBRTAYP ","YAWBRTAZP ", &
+                               "YAWBRTDXI ","YAWBRTDXP ","YAWBRTDXT ","YAWBRTDYI ","YAWBRTDYP ","YAWBRTDYT ","YAWBRTDZI ", &
+                               "YAWBRTDZP ","YAWBRTDZT ","YAWBRTVXP ","YAWBRTVYP ","YAWBRTVZP ","YAWPOS    ","YAWPZN    ", &
+                               "YAWPZP    ","YAWRATE   ","YAWVZN    ","YAWVZP    "/)
+   INTEGER(IntKi), PARAMETER :: ParamIndxAry(1110) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
+                                 LSSTipPxa ,  PtchPMzc1 ,  PtchPMzc2 ,  PtchPMzc3 ,  PtchPMzc1 ,  PtchPMzc2 ,  PtchPMzc3 , &
+                                   HSShftA ,    HSShftV ,    HSSBrTq ,    HSShftA ,  HSShftPwr ,   HSShftTq ,    HSShftV , &
+                                   TipDyc1 ,    TipDyc2 ,    TipDyc3 ,  LSSGagAxa ,  LSSGagAxa ,  LSSGagAxa ,  LSShftFxa , &
+                                 LSShftFxa ,  LSShftFya ,  LSShftFys ,  LSShftFza ,  LSShftFzs ,  LSShftMxa ,  LSShftMxa , &
+                                 LSSGagMya ,  LSSGagMys ,  LSSGagMza ,  LSSGagMzs ,  LSSGagPxa ,  LSSGagPxa ,  LSSGagPxa , &
+                                 LSSGagVxa ,  LSSGagVxa ,  LSSGagVxa ,  LSShftFxa ,  LSShftFxa ,  LSShftFya ,  LSShftFys , &
+                                 LSShftFza ,  LSShftFzs ,  LSShftMxa ,  LSShftMxa ,     RotPwr ,  LSShftMxa ,  LSSTipAxa , &
+                                 LSSTipAxa ,  LSSTipAxa ,  LSSTipMya ,  LSSTipMys ,  LSSTipMza ,  LSSTipMzs ,  LSSTipPxa , &
+                                 LSSTipPxa ,  LSSTipPxa ,  LSSTipVxa ,  LSSTipVxa ,  LSSTipVxa ,     YawPzn ,     YawAzn , &
+                                    YawPzn ,     YawVzn ,  NcIMURAxs ,  NcIMURAys ,  NcIMURAzs ,  NcIMURVxs ,  NcIMURVys , &
+                                 NcIMURVzs , NcIMUTAgxs , NcIMUTAgys , NcIMUTAgzs ,  NcIMUTAxs ,  NcIMUTAys ,  NcIMUTAzs , &
+                                 NcIMUTVxs ,  NcIMUTVys ,  NcIMUTVzs ,    TipDxc1 ,    TipDxc2 ,    TipDxc3 ,   TipRDyb1 , &
+                                  TipRDyb2 ,   TipRDyb3 ,  PtchPMzc1 ,  PtchPMzc2 ,  PtchPMzc3 ,  PtchPMzc1 ,  PtchPMzc2 , &
+                                 PtchPMzc3 ,   PtfmTDzi ,   PtfmRDyi ,   PtfmRAxi ,   PtfmRAxt ,   PtfmRAyi ,   PtfmRAyt , &
+                                  PtfmRAzi ,   PtfmRAzt ,   PtfmRDxi ,   PtfmRDyi ,   PtfmRDzi ,   PtfmRDxi ,   PtfmRVxi , &
+                                  PtfmRVxt ,   PtfmRVyi ,   PtfmRVyt ,   PtfmRVzi ,   PtfmRVzt ,   PtfmTDxi ,   PtfmTDyi , &
+                                 PtfmTAgxi ,  PtfmTAgxt ,  PtfmTAgyi ,  PtfmTAgyt ,  PtfmTAgzi ,  PtfmTAgzt ,   PtfmTAxi , &
+                                  PtfmTAxt ,   PtfmTAyi ,   PtfmTAyt ,   PtfmTAzi ,   PtfmTAzt ,   PtfmTDxi ,   PtfmTDxt , &
+                                  PtfmTDyi ,   PtfmTDyt ,   PtfmTDzi ,   PtfmTDzt ,   PtfmTVxi ,   PtfmTVxt ,   PtfmTVyi , &
+                                  PtfmTVyt ,   PtfmTVzi ,   PtfmTVzt ,   PtfmRDzi ,   QD2_B1E1 ,   QD2_B1F1 ,   QD2_B1F2 , &
+                                  QD2_B2E1 ,   QD2_B2F1 ,   QD2_B2F2 ,   QD2_B3E1 ,   QD2_B3F1 ,   QD2_B3F2 ,   QD2_DrTr , &
+                                  QD2_GeAz ,     QD2_Hv ,      QD2_P ,      QD2_R ,   QD2_RFrl ,     QD2_Sg ,     QD2_Sw , &
+                                  QD2_Teet ,   QD2_TFA1 ,   QD2_TFA2 ,   QD2_TFrl ,   QD2_TSS1 ,   QD2_TSS2 ,      QD2_Y , &
+                                   QD2_Yaw ,    QD_B1E1 ,    QD_B1F1 ,    QD_B1F2 ,    QD_B2E1 ,    QD_B2F1 ,    QD_B2F2 , &
+                                   QD_B3E1 ,    QD_B3F1 ,    QD_B3F2 ,    QD_DrTr ,    QD_GeAz ,      QD_Hv ,       QD_P , &
+                                      QD_R ,    QD_RFrl ,      QD_Sg ,      QD_Sw ,    QD_Teet ,    QD_TFA1 ,    QD_TFA2 , &
+                                   QD_TFrl ,    QD_TSS1 ,    QD_TSS2 ,       QD_Y ,     QD_Yaw ,     Q_B1E1 ,     Q_B1F1 , &
+                                    Q_B1F2 ,     Q_B2E1 ,     Q_B2F1 ,     Q_B2F2 ,     Q_B3E1 ,     Q_B3F1 ,     Q_B3F2 , &
+                                    Q_DrTr ,     Q_GeAz ,       Q_Hv ,        Q_P ,        Q_R ,     Q_RFrl ,       Q_Sg , &
+                                      Q_Sw ,     Q_Teet ,     Q_TFA1 ,     Q_TFA2 ,     Q_TFrl ,     Q_TSS1 ,     Q_TSS2 , &
+                                       Q_Y ,      Q_Yaw ,    RFrlBrM ,   TipRDxb1 ,   TipRDxb2 ,   TipRDxb3 ,   RootFxb1 , &
+                                  RootFxb2 ,   RootFxb3 ,   RootFxc1 ,   RootFxc2 ,   RootFxc3 ,   RootFyb1 ,   RootFyb2 , &
+                                  RootFyb3 ,   RootFyc1 ,   RootFyc2 ,   RootFyc3 ,   RootFzc1 ,   RootFzc2 ,   RootFzc3 , &
+                                  RootFzc1 ,   RootFzc2 ,   RootFzc3 ,   RootMxb1 ,   RootMxb2 ,   RootMxb3 ,   RootMyb1 , &
+                                  RootMyb2 ,   RootMyb3 ,   RootMxc1 ,   RootMxc2 ,   RootMxc3 ,   RootMyc1 ,   RootMyc2 , &
+                                  RootMyc3 ,   RootMxb1 ,   RootMxb2 ,   RootMxb3 ,   RootMxc1 ,   RootMxc2 ,   RootMxc3 , &
+                                  RootMyb1 ,   RootMyb2 ,   RootMyb3 ,   RootMyc1 ,   RootMyc2 ,   RootMyc3 ,   RootMzc1 , &
+                                  RootMzc2 ,   RootMzc3 ,   RootMzc1 ,   RootMzc2 ,   RootMzc3 ,  LSSTipAxa ,   RotFurlP , &
+                                  RotFurlA ,   RotFurlP ,   RotFurlV ,     RotPwr ,  LSSTipVxa ,    TeetAya ,    TeetPya , &
+                                   TeetVya ,  LSShftFxa ,  LSShftMxa , Spn1ALgxb1 , Spn1ALgxb2 , Spn1ALgxb3 , Spn1ALgyb1 , &
+                                Spn1ALgyb2 , Spn1ALgyb3 , Spn1ALgzb1 , Spn1ALgzb2 , Spn1ALgzb3 ,  Spn1ALxb1 ,  Spn1ALxb2 , &
+                                 Spn1ALxb3 ,  Spn1ALyb1 ,  Spn1ALyb2 ,  Spn1ALyb3 ,  Spn1ALzb1 ,  Spn1ALzb2 ,  Spn1ALzb3 , &
+                                 Spn1FLxb1 ,  Spn1FLxb2 ,  Spn1FLxb3 ,  Spn1FLyb1 ,  Spn1FLyb2 ,  Spn1FLyb3 ,  Spn1FLzb1 , &
+                                 Spn1FLzb2 ,  Spn1FLzb3 ,  Spn1MLxb1 ,  Spn1MLxb2 ,  Spn1MLxb3 ,  Spn1MLyb1 ,  Spn1MLyb2 , &
+                                 Spn1MLyb3 ,  Spn1MLzb1 ,  Spn1MLzb2 ,  Spn1MLzb3 ,  Spn1RDxb1 ,  Spn1RDxb2 ,  Spn1RDxb3 , &
+                                 Spn1RDyb1 ,  Spn1RDyb2 ,  Spn1RDyb3 ,  Spn1RDzb1 ,  Spn1RDzb2 ,  Spn1RDzb3 ,  Spn1TDxb1 , &
+                                 Spn1TDxb2 ,  Spn1TDxb3 ,  Spn1TDyb1 ,  Spn1TDyb2 ,  Spn1TDyb3 ,  Spn1TDzb1 ,  Spn1TDzb2 , &
+                                 Spn1TDzb3 , Spn2ALgxb1 , Spn2ALgxb2 , Spn2ALgxb3 , Spn2ALgyb1 , Spn2ALgyb2 , Spn2ALgyb3 , &
+                                Spn2ALgzb1 , Spn2ALgzb2 , Spn2ALgzb3 ,  Spn2ALxb1 ,  Spn2ALxb2 ,  Spn2ALxb3 ,  Spn2ALyb1 , &
+                                 Spn2ALyb2 ,  Spn2ALyb3 ,  Spn2ALzb1 ,  Spn2ALzb2 ,  Spn2ALzb3 ,  Spn2FLxb1 ,  Spn2FLxb2 , &
+                                 Spn2FLxb3 ,  Spn2FLyb1 ,  Spn2FLyb2 ,  Spn2FLyb3 ,  Spn2FLzb1 ,  Spn2FLzb2 ,  Spn2FLzb3 , &
+                                 Spn2MLxb1 ,  Spn2MLxb2 ,  Spn2MLxb3 ,  Spn2MLyb1 ,  Spn2MLyb2 ,  Spn2MLyb3 ,  Spn2MLzb1 , &
+                                 Spn2MLzb2 ,  Spn2MLzb3 ,  Spn2RDxb1 ,  Spn2RDxb2 ,  Spn2RDxb3 ,  Spn2RDyb1 ,  Spn2RDyb2 , &
+                                 Spn2RDyb3 ,  Spn2RDzb1 ,  Spn2RDzb2 ,  Spn2RDzb3 ,  Spn2TDxb1 ,  Spn2TDxb2 ,  Spn2TDxb3 , &
+                                 Spn2TDyb1 ,  Spn2TDyb2 ,  Spn2TDyb3 ,  Spn2TDzb1 ,  Spn2TDzb2 ,  Spn2TDzb3 , Spn3ALgxb1 , &
+                                Spn3ALgxb2 , Spn3ALgxb3 , Spn3ALgyb1 , Spn3ALgyb2 , Spn3ALgyb3 , Spn3ALgzb1 , Spn3ALgzb2 , &
+                                Spn3ALgzb3 ,  Spn3ALxb1 ,  Spn3ALxb2 ,  Spn3ALxb3 ,  Spn3ALyb1 ,  Spn3ALyb2 ,  Spn3ALyb3 , &
+                                 Spn3ALzb1 ,  Spn3ALzb2 ,  Spn3ALzb3 ,  Spn3FLxb1 ,  Spn3FLxb2 ,  Spn3FLxb3 ,  Spn3FLyb1 , &
+                                 Spn3FLyb2 ,  Spn3FLyb3 ,  Spn3FLzb1 ,  Spn3FLzb2 ,  Spn3FLzb3 ,  Spn3MLxb1 ,  Spn3MLxb2 , &
+                                 Spn3MLxb3 ,  Spn3MLyb1 ,  Spn3MLyb2 ,  Spn3MLyb3 ,  Spn3MLzb1 ,  Spn3MLzb2 ,  Spn3MLzb3 , &
+                                 Spn3RDxb1 ,  Spn3RDxb2 ,  Spn3RDxb3 ,  Spn3RDyb1 ,  Spn3RDyb2 ,  Spn3RDyb3 ,  Spn3RDzb1 , &
+                                 Spn3RDzb2 ,  Spn3RDzb3 ,  Spn3TDxb1 ,  Spn3TDxb2 ,  Spn3TDxb3 ,  Spn3TDyb1 ,  Spn3TDyb2 , &
+                                 Spn3TDyb3 ,  Spn3TDzb1 ,  Spn3TDzb2 ,  Spn3TDzb3 , Spn4ALgxb1 , Spn4ALgxb2 , Spn4ALgxb3 , &
+                                Spn4ALgyb1 , Spn4ALgyb2 , Spn4ALgyb3 , Spn4ALgzb1 , Spn4ALgzb2 , Spn4ALgzb3 ,  Spn4ALxb1 , &
+                                 Spn4ALxb2 ,  Spn4ALxb3 ,  Spn4ALyb1 ,  Spn4ALyb2 ,  Spn4ALyb3 ,  Spn4ALzb1 ,  Spn4ALzb2 , &
+                                 Spn4ALzb3 ,  Spn4FLxb1 ,  Spn4FLxb2 ,  Spn4FLxb3 ,  Spn4FLyb1 ,  Spn4FLyb2 ,  Spn4FLyb3 , &
+                                 Spn4FLzb1 ,  Spn4FLzb2 ,  Spn4FLzb3 ,  Spn4MLxb1 ,  Spn4MLxb2 ,  Spn4MLxb3 ,  Spn4MLyb1 , &
+                                 Spn4MLyb2 ,  Spn4MLyb3 ,  Spn4MLzb1 ,  Spn4MLzb2 ,  Spn4MLzb3 ,  Spn4RDxb1 ,  Spn4RDxb2 , &
+                                 Spn4RDxb3 ,  Spn4RDyb1 ,  Spn4RDyb2 ,  Spn4RDyb3 ,  Spn4RDzb1 ,  Spn4RDzb2 ,  Spn4RDzb3 , &
+                                 Spn4TDxb1 ,  Spn4TDxb2 ,  Spn4TDxb3 ,  Spn4TDyb1 ,  Spn4TDyb2 ,  Spn4TDyb3 ,  Spn4TDzb1 , &
+                                 Spn4TDzb2 ,  Spn4TDzb3 , Spn5ALgxb1 , Spn5ALgxb2 , Spn5ALgxb3 , Spn5ALgyb1 , Spn5ALgyb2 , &
+                                Spn5ALgyb3 , Spn5ALgzb1 , Spn5ALgzb2 , Spn5ALgzb3 ,  Spn5ALxb1 ,  Spn5ALxb2 ,  Spn5ALxb3 , &
+                                 Spn5ALyb1 ,  Spn5ALyb2 ,  Spn5ALyb3 ,  Spn5ALzb1 ,  Spn5ALzb2 ,  Spn5ALzb3 ,  Spn5FLxb1 , &
+                                 Spn5FLxb2 ,  Spn5FLxb3 ,  Spn5FLyb1 ,  Spn5FLyb2 ,  Spn5FLyb3 ,  Spn5FLzb1 ,  Spn5FLzb2 , &
+                                 Spn5FLzb3 ,  Spn5MLxb1 ,  Spn5MLxb2 ,  Spn5MLxb3 ,  Spn5MLyb1 ,  Spn5MLyb2 ,  Spn5MLyb3 , &
+                                 Spn5MLzb1 ,  Spn5MLzb2 ,  Spn5MLzb3 ,  Spn5RDxb1 ,  Spn5RDxb2 ,  Spn5RDxb3 ,  Spn5RDyb1 , &
+                                 Spn5RDyb2 ,  Spn5RDyb3 ,  Spn5RDzb1 ,  Spn5RDzb2 ,  Spn5RDzb3 ,  Spn5TDxb1 ,  Spn5TDxb2 , &
+                                 Spn5TDxb3 ,  Spn5TDyb1 ,  Spn5TDyb2 ,  Spn5TDyb3 ,  Spn5TDzb1 ,  Spn5TDzb2 ,  Spn5TDzb3 , &
+                                Spn6ALgxb1 , Spn6ALgxb2 , Spn6ALgxb3 , Spn6ALgyb1 , Spn6ALgyb2 , Spn6ALgyb3 , Spn6ALgzb1 , &
+                                Spn6ALgzb2 , Spn6ALgzb3 ,  Spn6ALxb1 ,  Spn6ALxb2 ,  Spn6ALxb3 ,  Spn6ALyb1 ,  Spn6ALyb2 , &
+                                 Spn6ALyb3 ,  Spn6ALzb1 ,  Spn6ALzb2 ,  Spn6ALzb3 ,  Spn6FLxb1 ,  Spn6FLxb2 ,  Spn6FLxb3 , &
+                                 Spn6FLyb1 ,  Spn6FLyb2 ,  Spn6FLyb3 ,  Spn6FLzb1 ,  Spn6FLzb2 ,  Spn6FLzb3 ,  Spn6MLxb1 , &
+                                 Spn6MLxb2 ,  Spn6MLxb3 ,  Spn6MLyb1 ,  Spn6MLyb2 ,  Spn6MLyb3 ,  Spn6MLzb1 ,  Spn6MLzb2 , &
+                                 Spn6MLzb3 ,  Spn6RDxb1 ,  Spn6RDxb2 ,  Spn6RDxb3 ,  Spn6RDyb1 ,  Spn6RDyb2 ,  Spn6RDyb3 , &
+                                 Spn6RDzb1 ,  Spn6RDzb2 ,  Spn6RDzb3 ,  Spn6TDxb1 ,  Spn6TDxb2 ,  Spn6TDxb3 ,  Spn6TDyb1 , &
+                                 Spn6TDyb2 ,  Spn6TDyb3 ,  Spn6TDzb1 ,  Spn6TDzb2 ,  Spn6TDzb3 , Spn7ALgxb1 , Spn7ALgxb2 , &
+                                Spn7ALgxb3 , Spn7ALgyb1 , Spn7ALgyb2 , Spn7ALgyb3 , Spn7ALgzb1 , Spn7ALgzb2 , Spn7ALgzb3 , &
+                                 Spn7ALxb1 ,  Spn7ALxb2 ,  Spn7ALxb3 ,  Spn7ALyb1 ,  Spn7ALyb2 ,  Spn7ALyb3 ,  Spn7ALzb1 , &
+                                 Spn7ALzb2 ,  Spn7ALzb3 ,  Spn7FLxb1 ,  Spn7FLxb2 ,  Spn7FLxb3 ,  Spn7FLyb1 ,  Spn7FLyb2 , &
+                                 Spn7FLyb3 ,  Spn7FLzb1 ,  Spn7FLzb2 ,  Spn7FLzb3 ,  Spn7MLxb1 ,  Spn7MLxb2 ,  Spn7MLxb3 , &
+                                 Spn7MLyb1 ,  Spn7MLyb2 ,  Spn7MLyb3 ,  Spn7MLzb1 ,  Spn7MLzb2 ,  Spn7MLzb3 ,  Spn7RDxb1 , &
+                                 Spn7RDxb2 ,  Spn7RDxb3 ,  Spn7RDyb1 ,  Spn7RDyb2 ,  Spn7RDyb3 ,  Spn7RDzb1 ,  Spn7RDzb2 , &
+                                 Spn7RDzb3 ,  Spn7TDxb1 ,  Spn7TDxb2 ,  Spn7TDxb3 ,  Spn7TDyb1 ,  Spn7TDyb2 ,  Spn7TDyb3 , &
+                                 Spn7TDzb1 ,  Spn7TDzb2 ,  Spn7TDzb3 , Spn8ALgxb1 , Spn8ALgxb2 , Spn8ALgxb3 , Spn8ALgyb1 , &
+                                Spn8ALgyb2 , Spn8ALgyb3 , Spn8ALgzb1 , Spn8ALgzb2 , Spn8ALgzb3 ,  Spn8ALxb1 ,  Spn8ALxb2 , &
+                                 Spn8ALxb3 ,  Spn8ALyb1 ,  Spn8ALyb2 ,  Spn8ALyb3 ,  Spn8ALzb1 ,  Spn8ALzb2 ,  Spn8ALzb3 , &
+                                 Spn8FLxb1 ,  Spn8FLxb2 ,  Spn8FLxb3 ,  Spn8FLyb1 ,  Spn8FLyb2 ,  Spn8FLyb3 ,  Spn8FLzb1 , &
+                                 Spn8FLzb2 ,  Spn8FLzb3 ,  Spn8MLxb1 ,  Spn8MLxb2 ,  Spn8MLxb3 ,  Spn8MLyb1 ,  Spn8MLyb2 , &
+                                 Spn8MLyb3 ,  Spn8MLzb1 ,  Spn8MLzb2 ,  Spn8MLzb3 ,  Spn8RDxb1 ,  Spn8RDxb2 ,  Spn8RDxb3 , &
+                                 Spn8RDyb1 ,  Spn8RDyb2 ,  Spn8RDyb3 ,  Spn8RDzb1 ,  Spn8RDzb2 ,  Spn8RDzb3 ,  Spn8TDxb1 , &
+                                 Spn8TDxb2 ,  Spn8TDxb3 ,  Spn8TDyb1 ,  Spn8TDyb2 ,  Spn8TDyb3 ,  Spn8TDzb1 ,  Spn8TDzb2 , &
+                                 Spn8TDzb3 , Spn9ALgxb1 , Spn9ALgxb2 , Spn9ALgxb3 , Spn9ALgyb1 , Spn9ALgyb2 , Spn9ALgyb3 , &
+                                Spn9ALgzb1 , Spn9ALgzb2 , Spn9ALgzb3 ,  Spn9ALxb1 ,  Spn9ALxb2 ,  Spn9ALxb3 ,  Spn9ALyb1 , &
+                                 Spn9ALyb2 ,  Spn9ALyb3 ,  Spn9ALzb1 ,  Spn9ALzb2 ,  Spn9ALzb3 ,  Spn9FLxb1 ,  Spn9FLxb2 , &
+                                 Spn9FLxb3 ,  Spn9FLyb1 ,  Spn9FLyb2 ,  Spn9FLyb3 ,  Spn9FLzb1 ,  Spn9FLzb2 ,  Spn9FLzb3 , &
+                                 Spn9MLxb1 ,  Spn9MLxb2 ,  Spn9MLxb3 ,  Spn9MLyb1 ,  Spn9MLyb2 ,  Spn9MLyb3 ,  Spn9MLzb1 , &
+                                 Spn9MLzb2 ,  Spn9MLzb3 ,  Spn9RDxb1 ,  Spn9RDxb2 ,  Spn9RDxb3 ,  Spn9RDyb1 ,  Spn9RDyb2 , &
+                                 Spn9RDyb3 ,  Spn9RDzb1 ,  Spn9RDzb2 ,  Spn9RDzb3 ,  Spn9TDxb1 ,  Spn9TDxb2 ,  Spn9TDxb3 , &
+                                 Spn9TDyb1 ,  Spn9TDyb2 ,  Spn9TDyb3 ,  Spn9TDzb1 ,  Spn9TDzb2 ,  Spn9TDzb3 ,  TailFurlP , &
+                                 TailFurlA ,  TailFurlP ,  TailFurlV ,    TeetAya ,    TeetPya ,    TeetPya ,    TeetVya , &
+                                   TFrlBrM ,  TipClrnc1 ,  TipClrnc2 ,  TipClrnc3 ,  TipALgxb1 ,  TipALgxb2 ,  TipALgxb3 , &
+                                 TipALgyb1 ,  TipALgyb2 ,  TipALgyb3 ,  TipALgzb1 ,  TipALgzb2 ,  TipALgzb3 ,   TipALxb1 , &
+                                  TipALxb2 ,   TipALxb3 ,   TipALyb1 ,   TipALyb2 ,   TipALyb3 ,   TipALzb1 ,   TipALzb2 , &
+                                  TipALzb3 ,  TipClrnc1 ,  TipClrnc2 ,  TipClrnc3 ,    TipDxb1 ,    TipDxb2 ,    TipDxb3 , &
+                                   TipDxc1 ,    TipDxc2 ,    TipDxc3 ,    TipDyb1 ,    TipDyb2 ,    TipDyb3 ,    TipDyc1 , &
+                                   TipDyc2 ,    TipDyc3 ,    TipDzc1 ,    TipDzc2 ,    TipDzc3 ,    TipDzc1 ,    TipDzc2 , &
+                                   TipDzc3 ,   TipRDxb1 ,   TipRDxb2 ,   TipRDxb3 ,   TipRDyb1 ,   TipRDyb2 ,   TipRDyb3 , &
+                                  TipRDzc1 ,   TipRDzc2 ,   TipRDzc3 ,   TipRDzc1 ,   TipRDzc2 ,   TipRDzc3 ,  YawBrTDzt , &
+                                 YawBrTDxt ,  YawBrRDyt ,  YawBrRDxt ,  YawBrTDyt ,  YawBrRDzt , TwHt1ALgxt , TwHt1ALgyt , &
+                                TwHt1ALgzt ,  TwHt1ALxt ,  TwHt1ALyt ,  TwHt1ALzt ,  TwHt1FLxt ,  TwHt1FLyt ,  TwHt1FLzt , &
+                                 TwHt1MLxt ,  TwHt1MLyt ,  TwHt1MLzt ,  TwHt1RDxt ,  TwHt1RDyt ,  TwHt1RDzt ,  TwHt1RPxi , &
+                                 TwHt1RPyi ,  TwHt1RPzi ,  TwHt1TDxt ,  TwHt1TDyt ,  TwHt1TDzt ,  TwHt1TPxi ,  TwHt1TPyi , &
+                                 TwHt1TPzi , TwHt2ALgxt , TwHt2ALgyt , TwHt2ALgzt ,  TwHt2ALxt ,  TwHt2ALyt ,  TwHt2ALzt , &
+                                 TwHt2FLxt ,  TwHt2FLyt ,  TwHt2FLzt ,  TwHt2MLxt ,  TwHt2MLyt ,  TwHt2MLzt ,  TwHt2RDxt , &
+                                 TwHt2RDyt ,  TwHt2RDzt ,  TwHt2RPxi ,  TwHt2RPyi ,  TwHt2RPzi ,  TwHt2TDxt ,  TwHt2TDyt , &
+                                 TwHt2TDzt ,  TwHt2TPxi ,  TwHt2TPyi ,  TwHt2TPzi , TwHt3ALgxt , TwHt3ALgyt , TwHt3ALgzt , &
+                                 TwHt3ALxt ,  TwHt3ALyt ,  TwHt3ALzt ,  TwHt3FLxt ,  TwHt3FLyt ,  TwHt3FLzt ,  TwHt3MLxt , &
+                                 TwHt3MLyt ,  TwHt3MLzt ,  TwHt3RDxt ,  TwHt3RDyt ,  TwHt3RDzt ,  TwHt3RPxi ,  TwHt3RPyi , &
+                                 TwHt3RPzi ,  TwHt3TDxt ,  TwHt3TDyt ,  TwHt3TDzt ,  TwHt3TPxi ,  TwHt3TPyi ,  TwHt3TPzi , &
+                                TwHt4ALgxt , TwHt4ALgyt , TwHt4ALgzt ,  TwHt4ALxt ,  TwHt4ALyt ,  TwHt4ALzt ,  TwHt4FLxt , &
+                                 TwHt4FLyt ,  TwHt4FLzt ,  TwHt4MLxt ,  TwHt4MLyt ,  TwHt4MLzt ,  TwHt4RDxt ,  TwHt4RDyt , &
+                                 TwHt4RDzt ,  TwHt4RPxi ,  TwHt4RPyi ,  TwHt4RPzi ,  TwHt4TDxt ,  TwHt4TDyt ,  TwHt4TDzt , &
+                                 TwHt4TPxi ,  TwHt4TPyi ,  TwHt4TPzi , TwHt5ALgxt , TwHt5ALgyt , TwHt5ALgzt ,  TwHt5ALxt , &
+                                 TwHt5ALyt ,  TwHt5ALzt ,  TwHt5FLxt ,  TwHt5FLyt ,  TwHt5FLzt ,  TwHt5MLxt ,  TwHt5MLyt , &
+                                 TwHt5MLzt ,  TwHt5RDxt ,  TwHt5RDyt ,  TwHt5RDzt ,  TwHt5RPxi ,  TwHt5RPyi ,  TwHt5RPzi , &
+                                 TwHt5TDxt ,  TwHt5TDyt ,  TwHt5TDzt ,  TwHt5TPxi ,  TwHt5TPyi ,  TwHt5TPzi , TwHt6ALgxt , &
+                                TwHt6ALgyt , TwHt6ALgzt ,  TwHt6ALxt ,  TwHt6ALyt ,  TwHt6ALzt ,  TwHt6FLxt ,  TwHt6FLyt , &
+                                 TwHt6FLzt ,  TwHt6MLxt ,  TwHt6MLyt ,  TwHt6MLzt ,  TwHt6RDxt ,  TwHt6RDyt ,  TwHt6RDzt , &
+                                 TwHt6RPxi ,  TwHt6RPyi ,  TwHt6RPzi ,  TwHt6TDxt ,  TwHt6TDyt ,  TwHt6TDzt ,  TwHt6TPxi , &
+                                 TwHt6TPyi ,  TwHt6TPzi , TwHt7ALgxt , TwHt7ALgyt , TwHt7ALgzt ,  TwHt7ALxt ,  TwHt7ALyt , &
+                                 TwHt7ALzt ,  TwHt7FLxt ,  TwHt7FLyt ,  TwHt7FLzt ,  TwHt7MLxt ,  TwHt7MLyt ,  TwHt7MLzt , &
+                                 TwHt7RDxt ,  TwHt7RDyt ,  TwHt7RDzt ,  TwHt7RPxi ,  TwHt7RPyi ,  TwHt7RPzi ,  TwHt7TDxt , &
+                                 TwHt7TDyt ,  TwHt7TDzt ,  TwHt7TPxi ,  TwHt7TPyi ,  TwHt7TPzi , TwHt8ALgxt , TwHt8ALgyt , &
+                                TwHt8ALgzt ,  TwHt8ALxt ,  TwHt8ALyt ,  TwHt8ALzt ,  TwHt8FLxt ,  TwHt8FLyt ,  TwHt8FLzt , &
+                                 TwHt8MLxt ,  TwHt8MLyt ,  TwHt8MLzt ,  TwHt8RDxt ,  TwHt8RDyt ,  TwHt8RDzt ,  TwHt8RPxi , &
+                                 TwHt8RPyi ,  TwHt8RPzi ,  TwHt8TDxt ,  TwHt8TDyt ,  TwHt8TDzt ,  TwHt8TPxi ,  TwHt8TPyi , &
+                                 TwHt8TPzi , TwHt9ALgxt , TwHt9ALgyt , TwHt9ALgzt ,  TwHt9ALxt ,  TwHt9ALyt ,  TwHt9ALzt , &
+                                 TwHt9FLxt ,  TwHt9FLyt ,  TwHt9FLzt ,  TwHt9MLxt ,  TwHt9MLyt ,  TwHt9MLzt ,  TwHt9RDxt , &
+                                 TwHt9RDyt ,  TwHt9RDzt ,  TwHt9RPxi ,  TwHt9RPyi ,  TwHt9RPzi ,  TwHt9TDxt ,  TwHt9TDyt , &
+                                 TwHt9TDzt ,  TwHt9TPxi ,  TwHt9TPyi ,  TwHt9TPzi ,   TwrBsFxt ,   TwrBsFyt ,   TwrBsFzt , &
+                                  TwrBsMxt ,   TwrBsMyt ,   TwrBsMzt ,  TipClrnc1 ,  TipClrnc2 ,  TipClrnc3 ,  TwrTpTDxi , &
+                                 TwrTpTDyi ,  TwrTpTDzi ,   TipRDzc1 ,   TipRDzc2 ,   TipRDzc3 ,     YawAzn ,     YawAzn , &
+                                    YawAzn ,   YawBrFxn ,   YawBrFxp ,   YawBrFyn ,   YawBrFyp ,   YawBrFzn ,   YawBrFzn , &
+                                  YawBrMxn ,   YawBrMxp ,   YawBrMyn ,   YawBrMyp ,   YawBrMzn ,   YawBrMzn ,  YawBrRAxp , &
+                                 YawBrRAyp ,  YawBrRAzp ,  YawBrRDxt ,  YawBrRDyt ,  YawBrRDzt ,  YawBrRVxp ,  YawBrRVyp , &
+                                 YawBrRVzp , YawBrTAgxp , YawBrTAgyp , YawBrTAgzp ,  YawBrTAxp ,  YawBrTAyp ,  YawBrTAzp , &
+                                 TwrTpTDxi ,  YawBrTDxp ,  YawBrTDxt ,  TwrTpTDyi ,  YawBrTDyp ,  YawBrTDyt ,  TwrTpTDzi , &
+                                 YawBrTDzp ,  YawBrTDzt ,  YawBrTVxp ,  YawBrTVyp ,  YawBrTVzp ,     YawPzn ,     YawPzn , &
+                                    YawPzn ,     YawVzn ,     YawVzn ,     YawVzn /)
+   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(1110) =  (/  &  ! This lists the units corresponding to the allowed parameters
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg/s^2)","(rpm)    ","(kN-m)   ","(deg/s^2)","(kW)     ","(kN-m)   ","(rpm)    ", &
+                               "(m)      ","(m)      ","(m)      ","(deg/s^2)","(deg/s^2)","(deg/s^2)","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(rpm)    ","(rpm)    ","(rpm)    ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kW)     ","(kN-m)   ","(deg/s^2)", &
+                               "(deg/s^2)","(deg/s^2)","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(rpm)    ","(rpm)    ","(rpm)    ","(deg)    ","(deg/s^2)", &
+                               "(deg)    ","(deg/s)  ","(deg/s^2)","(deg/s^2)","(deg/s^2)","(deg/s)  ","(deg/s)  ", &
+                               "(deg/s)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s)    ","(m/s)    ","(m/s)    ","(m)      ","(m)      ","(m)      ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(m)      ","(deg)    ","(deg/s^2)","(deg/s^2)","(deg/s^2)","(deg/s^2)", &
+                               "(deg/s^2)","(deg/s^2)","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg/s)  ", &
+                               "(deg/s)  ","(deg/s)  ","(deg/s)  ","(deg/s)  ","(deg/s)  ","(m)      ","(m)      ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m/s)    ","(m/s)    ","(m/s)    ", &
+                               "(m/s)    ","(m/s)    ","(m/s)    ","(deg)    ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(rad/s^2)", &
+                               "(rad/s^2)","(m/s^2)  ","(rad/s^2)","(rad/s^2)","(rad/s^2)","(m/s^2)  ","(m/s^2)  ", &
+                               "(rad/s^2)","(m/s^2)  ","(m/s^2)  ","(rad/s^2)","(m/s^2)  ","(m/s^2)  ","(rad/s^2)", &
+                               "(rad/s^2)","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ","(m/s)    ", &
+                               "(m/s)    ","(m/s)    ","(m/s)    ","(rad/s)  ","(rad/s)  ","(m/s)    ","(rad/s)  ", &
+                               "(rad/s)  ","(rad/s)  ","(m/s)    ","(m/s)    ","(rad/s)  ","(m/s)    ","(m/s)    ", &
+                               "(rad/s)  ","(m/s)    ","(m/s)    ","(rad/s)  ","(rad/s)  ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(rad)    ","(rad)    ","(m)      ","(rad)    ","(rad)    ","(rad)    ","(m)      ", &
+                               "(m)      ","(rad)    ","(m)      ","(m)      ","(rad)    ","(m)      ","(m)      ", &
+                               "(rad)    ","(rad)    ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg/s^2)","(deg)    ", &
+                               "(deg/s^2)","(deg)    ","(deg/s)  ","(kW)     ","(rpm)    ","(deg/s^2)","(deg)    ", &
+                               "(deg/s)  ","(kN)     ","(kN-m)   ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(deg)    ", &
+                               "(deg/s^2)","(deg)    ","(deg/s)  ","(deg/s^2)","(deg)    ","(deg)    ","(deg/s)  ", &
+                               "(kN-m)   ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ", &
+                               "(m)      ","(deg)    ","(deg)    ","(m)      ","(deg)    ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ", &
+                               "(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ", &
+                               "(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ", &
+                               "(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ", &
+                               "(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ","(deg)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(kN)     ","(kN)     ","(kN)     ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg)    ", &
+                               "(deg)    ","(deg)    ","(deg)    ","(deg)    ","(deg)    ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(deg)    ","(deg)    ","(deg)    ","(deg/s^2)","(deg/s^2)", &
+                               "(deg/s^2)","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ","(kN)     ", &
+                               "(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(kN-m)   ","(deg/s^2)", &
+                               "(deg/s^2)","(deg/s^2)","(deg)    ","(deg)    ","(deg)    ","(deg/s)  ","(deg/s)  ", &
+                               "(deg/s)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ","(m/s^2)  ", &
+                               "(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ","(m)      ", &
+                               "(m)      ","(m)      ","(m/s)    ","(m/s)    ","(m/s)    ","(deg)    ","(deg)    ", &
+                               "(deg)    ","(deg/s)  ","(deg/s)  ","(deg/s)  "/)
 
 
       ! Initialize values
@@ -4342,6 +4458,9 @@ end if
       InvalidOutput(  TipALxb(  I) ) = .TRUE.
       InvalidOutput(  TipALyb(  I) ) = .TRUE.
       InvalidOutput(  TipALzb(  I) ) = .TRUE.
+      InvalidOutput(  TipALgxb(  I) ) = .TRUE.
+      InvalidOutput(  TipALgyb(  I) ) = .TRUE.
+      InvalidOutput(  TipALgzb(  I) ) = .TRUE.
       InvalidOutput(  TipRDxb(  I) ) = .TRUE.
       InvalidOutput(  TipRDyb(  I) ) = .TRUE.
       InvalidOutput(  TipRDzc(  I) ) = .TRUE.
@@ -4365,6 +4484,10 @@ end if
       InvalidOutput(  SpnALxb(:,I) ) = .TRUE.
       InvalidOutput(  SpnALyb(:,I) ) = .TRUE.
       InvalidOutput(  SpnALzb(:,I) ) = .TRUE.
+
+      InvalidOutput(  SpnALgxb(:,I) ) = .TRUE.
+      InvalidOutput(  SpnALgyb(:,I) ) = .TRUE.
+      InvalidOutput(  SpnALgzb(:,I) ) = .TRUE.
 
       InvalidOutput(  SpnTDxb(:,I) ) = .TRUE.
       InvalidOutput(  SpnTDyb(:,I) ) = .TRUE.
@@ -4394,6 +4517,10 @@ end if
          InvalidOutput(  SpnALxb(J,I) ) = .TRUE.
          InvalidOutput(  SpnALyb(J,I) ) = .TRUE.
          InvalidOutput(  SpnALzb(J,I) ) = .TRUE.
+
+         InvalidOutput(  SpnALgxb(J,I) ) = .TRUE.
+         InvalidOutput(  SpnALgyb(J,I) ) = .TRUE.
+         InvalidOutput(  SpnALgzb(J,I) ) = .TRUE.
 
          InvalidOutput(  SpnTDxb(J,I) ) = .TRUE.
          InvalidOutput(  SpnTDyb(J,I) ) = .TRUE.
@@ -4425,6 +4552,10 @@ end if
       InvalidOutput( TwHtALxt(J) ) = .TRUE.
       InvalidOutput( TwHtALyt(J) ) = .TRUE.
       InvalidOutput( TwHtALzt(J) ) = .TRUE.
+
+      InvalidOutput( TwHtALgxt(J) ) = .TRUE.
+      InvalidOutput( TwHtALgyt(J) ) = .TRUE.
+      InvalidOutput( TwHtALgzt(J) ) = .TRUE.
 
       InvalidOutput( TwHtTDxt(J) ) = .TRUE.
       InvalidOutput( TwHtTDyt(J) ) = .TRUE.
@@ -4557,50 +4688,20 @@ end if
    DO I = 1,p%NumOuts
 
       p%OutParam(I)%Name  = OutList(I)
-      OutListTmp          = OutList(I)
 
-      ! Reverse the sign (+/-) of the output channel if the user prefixed the
-      !   channel name with a "-", "_", "m", or "M" character indicating "minus".
-
-
-      CheckOutListAgain = .FALSE.
-
-      IF      ( INDEX( "-_", OutListTmp(1:1) ) > 0 ) THEN
-         p%OutParam(I)%SignM = -1                         ! ex, "-TipDxc1" causes the sign of TipDxc1 to be switched.
-         OutListTmp          = OutListTmp(2:)
-      ELSE IF ( INDEX( "mM", OutListTmp(1:1) ) > 0 ) THEN ! We'll assume this is a variable name for now, (if not, we will check later if OutListTmp(2:) is also a variable name)
-         CheckOutListAgain   = .TRUE.
-         p%OutParam(I)%SignM = 1
-      ELSE
-         p%OutParam(I)%SignM = 1
-      END IF
-
-      CALL Conv2UC( OutListTmp )    ! Convert OutListTmp to upper case
-
-
-      Indx = IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
-
-
-         ! If it started with an "M" (CheckOutListAgain) we didn't find the value in our list (Indx < 1)
-
-      IF ( CheckOutListAgain .AND. Indx < 1 ) THEN    ! Let's assume that "M" really meant "minus" and then test again
-         p%OutParam(I)%SignM = -1                     ! ex, "MTipDxc1" causes the sign of TipDxc1 to be switched.
-         OutListTmp          = OutListTmp(2:)
-
-         Indx = IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
-      END IF
-
+      Indx = FindValidChannelIndx(OutList(I), ValidParamAry, p%OutParam(I)%SignM)
 
       IF ( Indx > 0 ) THEN ! we found the channel name
-         p%OutParam(I)%Indx     = ParamIndxAry(Indx)
          IF ( InvalidOutput( ParamIndxAry(Indx) ) ) THEN  ! but, it isn't valid for these settings
+            p%OutParam(I)%Indx  = 0                 ! pick any valid channel (I just picked "Time=0" here because it's universal)
             p%OutParam(I)%Units = "INVALID"
             p%OutParam(I)%SignM = 0
          ELSE
+            p%OutParam(I)%Indx  = ParamIndxAry(Indx)
             p%OutParam(I)%Units = ParamUnitsAry(Indx) ! it's a valid output
          END IF
       ELSE ! this channel isn't valid
-         p%OutParam(I)%Indx  = Time                 ! pick any valid channel (I just picked "Time" here because it's universal)
+         p%OutParam(I)%Indx  = 0                    ! pick any valid channel (I just picked "Time=0" here because it's universal)
          p%OutParam(I)%Units = "INVALID"
          p%OutParam(I)%SignM = 0                    ! multiply all results by zero
 
@@ -5100,7 +5201,7 @@ SUBROUTINE Coeff(p,InputFileData, ErrStat, ErrMsg)
 
       ! Calculate the mass of the current element
 
-      p%TElmntMass(J)    = p%MassT(J)*p%DHNodes(J)     ! Mass of tower element J
+      p%TElmntMass(J)    = p%MassT(J)*abs(p%DHNodes(J))     ! Mass of tower element J
 
 
       ! Integrate to find the tower mass which will be output in .fsm
@@ -5174,8 +5275,8 @@ SUBROUTINE Coeff(p,InputFileData, ErrStat, ErrMsg)
       ! Integrate to find the generalized stiffness of the tower (not including gravitational
       !    effects).
 
-      ElStffFA       = p%StiffTFA(J)*p%DHNodes(J)                        ! Fore-aft stiffness of tower element J
-      ElStffSS       = p%StiffTSS(J)*p%DHNodes(J)                        ! Side-to-side stiffness of tower element J
+      ElStffFA       = p%StiffTFA(J)*abs(p%DHNodes(J))                        ! Fore-aft stiffness of tower element J
+      ElStffSS       = p%StiffTSS(J)*abs(p%DHNodes(J))                        ! Side-to-side stiffness of tower element J
 
       DO I = 1,2     ! Loop through all tower DOFs in one direction
          DO L = 1,2  ! Loop through all tower DOFs in one direction
@@ -5189,7 +5290,7 @@ SUBROUTINE Coeff(p,InputFileData, ErrStat, ErrMsg)
       !   Ignore the cross-correlation terms of KTFAGrav (i.e. KTFAGrav(i,j) where i /= j)
       !   and KTSSGrav since these terms will never be used.
 
-      ElmntStff      = -TMssAbvNd(J)*p%DHNodes(J)*p%Gravity              ! Gravitational stiffness of tower element J
+      ElmntStff      = -TMssAbvNd(J)*abs(p%DHNodes(J))*p%Gravity              ! Gravitational stiffness of tower element J
 
       DO I = 1,2     ! Loop through all tower DOFs in one direction
          KTFAGrav(I,I) = KTFAGrav(I,I) + ElmntStff*p%TwrFASF(I,J,1)**2
@@ -6308,18 +6409,6 @@ SUBROUTINE SetCoordSy( t, CoordSys, RtHSdat, BlPitch, p, x, ErrStat, ErrMsg )
    CoordSys%tfa = p%CTFrlSkew*p%CTFrlTilt*CoordSys%d1 + p%STFrlTilt*CoordSys%d2 - p%STFrlSkew*p%CTFrlTilt*CoordSys%d3
 
 
-      ! Tail fin coordinate system:
-
-   CoordSys%p1 = (                           p%CTFinSkew*p%CTFinTilt             )*CoordSys%tf1 &   ! Vector / direction p1 (= tail fin  x).
-               + (                                       p%STFinTilt             )*CoordSys%tf2 &
-               + (                         - p%STFinSkew*p%CTFinTilt             )*CoordSys%tf3
-   CoordSys%p2 = ( p%STFinSkew*p%STFinBank - p%CTFinSkew*p%STFinTilt*p%CTFinBank )*CoordSys%tf1 &   ! Vector / direction p2 (= tail fin  z).
-               + (                                       p%CTFinTilt*p%CTFinBank )*CoordSys%tf2 &
-               + ( p%CTFinSkew*p%STFinBank + p%STFinSkew*p%STFinTilt*p%CTFinBank )*CoordSys%tf3
-   CoordSys%p3 = ( p%STFinSkew*p%CTFinBank + p%CTFinSkew*p%STFinTilt*p%STFinBank )*CoordSys%tf1 &   ! Vector / direction p3 (= tail fin -y).
-               + (                         -             p%CTFinTilt*p%STFinBank )*CoordSys%tf2 &
-               + ( p%CTFinSkew*p%CTFinBank - p%STFinSkew*p%STFinTilt*p%STFinBank )*CoordSys%tf3
-
    RETURN
 CONTAINS
    !...............................................................................................................................
@@ -6357,82 +6446,52 @@ END SUBROUTINE SetCoordSy
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine computes the rotor-furl moment due to rotor-furl deflection and rate.
 SUBROUTINE RFurling( t, p, RFrlDef, RFrlRate, RFrlMom )
-!..................................................................................................................................
-
       ! Passed Variables:
    REAL(DbKi), INTENT(IN)              :: t                                   !< simulation time
    TYPE(ED_ParameterType), INTENT(IN)  :: p                                   !< parameters from the structural dynamics module
-
    REAL(R8Ki), INTENT(IN )             :: RFrlDef                             !< The rotor-furl deflection, x%QT(DOF_RFrl)
    REAL(ReKi), INTENT(OUT)             :: RFrlMom                             !< The total moment supplied by the springs, and dampers
    REAL(R8Ki), INTENT(IN )             :: RFrlRate                            !< The rotor-furl rate, x%QDT(DOF_RFrl)
-
-
       ! Local variables:
    REAL(ReKi)                   :: RFrlDMom                                   ! The moment supplied by the rotor-furl dampers
    REAL(ReKi)                   :: RFrlSMom                                   ! The moment supplied by the rotor-furl springs
-
 
    SELECT CASE ( p%RFrlMod ) ! Which rotor-furl model are we using?
 
       CASE ( 0_IntKi )       ! None!
 
-
          RFrlMom = 0.0
-
 
       CASE ( 1_IntKi )        ! Standard (using inputs from the FAST furling input file).
 
-
          ! Linear spring:
-
          RFrlSMom = -p%RFrlSpr*RFrlDef
 
-
          ! Add spring-stops:
-
          IF ( RFrlDef > p%RFrlUSSP )  THEN       ! Up-stop
             RFrlSMom = RFrlSMom - p%RFrlUSSpr*( RFrlDef - p%RFrlUSSP )
          ELSEIF ( RFrlDef < p%RFrlDSSP )  THEN   ! Down-stop
             RFrlSMom = RFrlSMom - p%RFrlDSSpr*( RFrlDef - p%RFrlDSSP )
          ENDIF
 
-
          ! Linear damper:
-
          RFrlDMom = -p%RFrlDmp*RFrlRate
 
-
-         ! Add coulomb friction:
-
-         IF ( RFrlRate /= 0.0 )  THEN
-            RFrlDMom = RFrlDMom - SIGN( p%RFrlCDmp, real(RFrlRate,ReKi) )
-         ENDIF
-
-
          ! Add damper-stops:
-
          IF ( RFrlDef > p%RFrlUSDP )  THEN       ! Up-stop
             RFrlDMom = RFrlDMom - p%RFrlUSDmp*RFrlRate
          ELSEIF ( RFrlDef < p%RFrlDSDP )  THEN   ! Down-stop
             RFrlDMom = RFrlDMom - p%RFrlDSDmp*RFrlRate
          ENDIF
 
-
          ! Total up all the moments.
-
          RFrlMom = RFrlSMom + RFrlDMom
-
 
       CASE ( 2_IntKi )              ! User-defined rotor-furl spring/damper model.
 
-
          CALL UserRFrl ( RFrlDef, RFrlRate, t, p%RootName, RFrlMom )
 
-
    END   SELECT
-
-   RETURN
 END SUBROUTINE RFurling
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine computes the teeter moment due to teeter deflection and rate.
@@ -6534,87 +6593,52 @@ END SUBROUTINE Teeter
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine computes the tail-furl moment due to tail-furl deflection and rate.
 SUBROUTINE TFurling( t, p, TFrlDef, TFrlRate, TFrlMom )
-!..................................................................................................................................
-
-   IMPLICIT                        NONE
-
       ! Passed Variables:
    REAL(DbKi), INTENT(IN)             :: t                                       !< simulation time
    TYPE(ED_ParameterType), INTENT(IN) :: p                                       !< parameters from the structural dynamics module
-
    REAL(R8Ki), INTENT(IN )            :: TFrlDef                                 !< The tail-furl deflection, QT(DOF_TFrl).
    REAL(ReKi), INTENT(OUT)            :: TFrlMom                                 !< The total moment supplied by the springs, and dampers.
    REAL(R8Ki), INTENT(IN )            :: TFrlRate                                !< The tail-furl rate, QDT(DOF_TFrl).
-
-
       ! Local variables:
-
    REAL(ReKi)                         :: TFrlDMom                                ! The moment supplied by the tail-furl dampers.
    REAL(ReKi)                         :: TFrlSMom                                ! The moment supplied by the tail-furl springs.
-
-
 
    SELECT CASE ( p%TFrlMod ) ! Which tail-furl model are we using?
 
       CASE ( 0_IntKi )              ! None!
 
-
          TFrlMom = 0.0
-
 
       CASE ( 1_IntKi )              ! Standard (using inputs from the FAST furling input file).
 
-
          ! Linear spring:
-
          TFrlSMom = -p%TFrlSpr*TFrlDef
 
-
          ! Add spring-stops:
-
          IF ( TFrlDef > p%TFrlUSSP )  THEN      ! Up-stop
             TFrlSMom = TFrlSMom - p%TFrlUSSpr*( TFrlDef - p%TFrlUSSP )
          ELSEIF ( TFrlDef < p%TFrlDSSP )  THEN  ! Down-stop
             TFrlSMom = TFrlSMom - p%TFrlDSSpr*( TFrlDef - p%TFrlDSSP )
          ENDIF
 
-
          ! Linear damper:
-
          TFrlDMom = -p%TFrlDmp*TFrlRate
 
-
-         ! Add coulomb friction:
-
-         IF ( .NOT. EqualRealNos( TFrlRate, 0.0_R8Ki) )  THEN
-            TFrlDMom = TFrlDMom - SIGN( p%TFrlCDmp, real(TFrlRate,reKi) )
-         ENDIF
-
-
          ! Add damper-stops:
-
          IF ( TFrlDef > p%TFrlUSDP )  THEN      ! Up-stop
             TFrlDMom = TFrlDMom - p%TFrlUSDmp*TFrlRate
          ELSEIF ( TFrlDef < p%TFrlDSDP )  THEN  ! Down-stop
             TFrlDMom = TFrlDMom - p%TFrlDSDmp*TFrlRate
          ENDIF
 
-
          ! Total up all the moments.
-
          TFrlMom = TFrlSMom + TFrlDMom
-
 
       CASE ( 2 )              ! User-defined tail-furl spring/damper model.
 
-
          CALL UserTFrl ( TFrlDef, TFrlRate, t, p%RootName, TFrlMom )
 
-
    END SELECT
-
-
-   RETURN
 END SUBROUTINE TFurling
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This function calculates the sign (+/-1) of the low-speed shaft torque for
@@ -6661,7 +6685,6 @@ SUBROUTINE CalculatePositions( p, x, CoordSys, RtHSdat )
    TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     !< data from the RtHndSid module (contains positions to be set)
 
       !Local variables
-   REAL(R8Ki)                   :: rK        (3)                                   ! Position vector from inertial frame origin to tail fin center of pressure (point K).
    !REAL(R8Ki)                   :: rQ        (3)                                   ! Position vector from inertial frame origin to apex of rotation (point Q).
 
    INTEGER(IntKi)               :: J                                               ! Counter for elements
@@ -6686,16 +6709,15 @@ SUBROUTINE CalculatePositions( p, x, CoordSys, RtHSdat )
                                           + 2.0*p%AxRedTSS(1,2,p%TTopNode)*x%QT(DOF_TSS1)*x%QT(DOF_TSS2)   ) )*CoordSys%a2 &
                     + ( x%QT(DOF_TSS1) + x%QT(DOF_TSS2)                                                      )*CoordSys%a3
    RtHSdat%rOU   =   p%NacCMxn*CoordSys%d1  +  p%NacCMzn  *CoordSys%d2  -  p%NacCMyn  *CoordSys%d3                            ! Position vector from tower-top / base plate (point O) to nacelle center of mass (point U).
-   RtHSdat%rOV   = p%RFrlPntxn*CoordSys%d1  +  p%RFrlPntzn*CoordSys%d2  -  p%RFrlPntyn*CoordSys%d3                            ! Position vector from tower-top / base plate (point O) to specified point on rotor-furl axis (point V).
+   RtHSdat%rOV   = p%RFrlPnt_n(1)*CoordSys%d1  +  p%RFrlPnt_n(3)*CoordSys%d2  -  p%RFrlPnt_n(2)*CoordSys%d3                            ! Position vector from tower-top / base plate (point O) to specified point on rotor-furl axis (point V).
    RtHSdat%rVIMU =   p%rVIMUxn*CoordSys%rf1 +  p%rVIMUzn  *CoordSys%rf2 -   p%rVIMUyn *CoordSys%rf3                           ! Position vector from specified point on rotor-furl axis (point V) to nacelle IMU (point IMU).
    RtHSdat%rVD   =     p%rVDxn*CoordSys%rf1 +    p%rVDzn  *CoordSys%rf2 -     p%rVDyn *CoordSys%rf3                           ! Position vector from specified point on rotor-furl axis (point V) to center of mass of structure that furls with the rotor (not including rotor) (point D).
    RtHSdat%rVP   =     p%rVPxn*CoordSys%rf1 +    p%rVPzn  *CoordSys%rf2 -     p%rVPyn *CoordSys%rf3 + p%OverHang*CoordSys%c1  ! Position vector from specified point on rotor-furl axis (point V) to teeter pin (point P).
    RtHSdat%rPQ   = -p%UndSling*CoordSys%g1                                                                                    ! Position vector from teeter pin (point P) to apex of rotation (point Q).
    RtHSdat%rQC   =     p%HubCM*CoordSys%g1                                                                                    ! Position vector from apex of rotation (point Q) to hub center of mass (point C).
-   RtHSdat%rOW   = p%TFrlPntxn*CoordSys%d1  + p%TFrlPntzn *CoordSys%d2 -  p%TFrlPntyn*CoordSys%d3                             ! Position vector from tower-top / base plate (point O) to specified point on  tail-furl axis (point W).
+   RtHSdat%rOW   = p%TFrlPnt_n(1)*CoordSys%d1  + p%TFrlPnt_n(3) *CoordSys%d2 -  p%TFrlPnt_n(2)*CoordSys%d3                             ! Position vector from tower-top / base plate (point O) to specified point on  tail-furl axis (point W).
    RtHSdat%rWI   =     p%rWIxn*CoordSys%tf1 +      p%rWIzn*CoordSys%tf2 -     p%rWIyn*CoordSys%tf3                            ! Position vector from specified point on  tail-furl axis (point W) to tail boom center of mass     (point I).
    RtHSdat%rWJ   =     p%rWJxn*CoordSys%tf1 +      p%rWJzn*CoordSys%tf2 -     p%rWJyn*CoordSys%tf3                            ! Position vector from specified point on  tail-furl axis (point W) to tail fin  center of mass     (point J).
-   RtHSdat%rWK   =     p%rWKxn*CoordSys%tf1 +      p%rWKzn*CoordSys%tf2 -     p%rWKyn*CoordSys%tf3                            ! Position vector from specified point on  tail-furl axis (point W) to tail fin  center of pressure (point K).
    RtHSdat%rPC   = RtHSdat%rPQ + RtHSdat%rQC                                                                                  ! Position vector from teeter pin (point P) to hub center of mass (point C).
    RtHSdat%rT0O  = RtHSdat%rZO - RtHSdat%rZT0                                                                                 ! Position vector from the tower base (point T(0)) to tower-top / base plate (point O).
    RtHSdat%rO    = RtHSdat%rZ  + RtHSdat%rZO                                                                                  ! Position vector from inertial frame origin to tower-top / base plate (point O).
@@ -6703,7 +6725,7 @@ SUBROUTINE CalculatePositions( p, x, CoordSys, RtHSdat )
    !RtHSdat%rP    = RtHSdat%rO  + RtHSdat%rOV + RtHSdat%rVP                                                                   ! Position vector from inertial frame origin to teeter pin (point P).
    RtHSdat%rP    = RtHSdat%rV  + RtHSdat%rVP                                                                                  ! Position vector from inertial frame origin to teeter pin (point P).
    RtHSdat%rQ    = RtHSdat%rP  + RtHSdat%rPQ                                                                                  ! Position vector from inertial frame origin to apex of rotation (point Q).
-           rK    = RtHSdat%rO  + RtHSdat%rOW + RtHSdat%rWK                                                                    ! Position vector from inertial frame origin to tail fin center of pressure (point K).
+   RtHSdat%rJ    = RtHSdat%rO  + RtHSdat%rOW + RtHSdat%rWJ                                                                    ! Position vector from inertial frame origin to tail fin center of mass (point J).
 
 
    DO K = 1,p%NumBl ! Loop through all blades
@@ -7026,19 +7048,16 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
    TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     !< data from the RtHndSid module (contains positions to be set)
 
       ! Local variables
-   REAL(ReKi)                   :: LinAccEKt (3)                                   ! "Portion of the linear acceleration of the tail fin  center of pressure (point K) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
    REAL(ReKi)                   :: LinAccEPt (3)                                   ! "Portion of the linear acceleration of the teeter pin (point P) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
    REAL(ReKi)                   :: LinAccEQt (3)                                   ! "Portion of the linear acceleration of the apex of rotation (point Q) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
    REAL(ReKi)                   :: LinAccEVt (3)                                   ! "Portion of the linear acceleration of the selected point on the rotor-furl axis (point V) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
    REAL(ReKi)                   :: LinAccEWt (3)                                   ! "Portion of the linear acceleration of the selected point on the  tail-furl axis (point W) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
-   REAL(ReKi)                   :: LinVelEK  (3)                                   ! "Linear velocity of tail fin center-of-pressure (point K) in the inertia frame"
    REAL(ReKi)                   :: LinVelHS  (3)                                   ! "Relative linear velocity of the current point on the current blade (point S) in the hub frame (body H)"
    REAL(ReKi)                   :: LinVelXO  (3)                                   ! "Relative linear velocity of the tower-top / base plate (point O) in the platform (body X)"
    REAL(ReKi)                   :: LinVelXT  (3)                                   ! "Relative linear velocity of the current point on the tower (point T) in the platform (body X)"
 
    REAL(ReKi)                   :: EwAXrWI   (3)                                   ! = AngVelEA X rWI
    REAL(ReKi)                   :: EwAXrWJ   (3)                                   ! = AngVelEA X rWJ
-   REAL(ReKi)                   :: EwAXrWK   (3)                                   ! = AngVelEA X rWK
    REAL(ReKi)                   :: EwHXrPQ   (3)                                   ! = AngVelEH X rPQ
    REAL(ReKi)                   :: EwHXrQC   (3)                                   ! = AngVelEH X rQC
    REAL(ReKi)                   :: EwHXrQS   (3)                                   ! = AngVelEH X rQS of the current blade point S.
@@ -7070,7 +7089,6 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
    RtHSdat%LinAccEIMUt = 0.0
    RtHSdat%LinAccEIt   = 0.0
    RtHSdat%LinAccEJt   = 0.0
-           LinAccEKt   = 0.0
    RtHSdat%LinAccEOt   = 0.0
            LinAccEPt   = 0.0
            LinAccEQt   = 0.0
@@ -7107,7 +7125,6 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
    EwNXrOW   = CROSS_PRODUCT( RtHSdat%AngVelEN, RtHSdat%rOW   ) !
    EwAXrWI   = CROSS_PRODUCT( RtHSdat%AngVelEA, RtHSdat%rWI   ) !
    EwAXrWJ   = CROSS_PRODUCT( RtHSdat%AngVelEA, RtHSdat%rWJ   ) !
-   EwAXrWK   = CROSS_PRODUCT( RtHSdat%AngVelEA, RtHSdat%rWK   ) !
 
 
    RtHSdat%PLinVelEZ(       :,:,:) = 0.0
@@ -7387,6 +7404,7 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
    ENDDO          ! I - all DOFs associated with the angular motion of the nacelle (body N)
 
 
+   ! Velocities of point I (tail boom center of mass)
    RtHSdat%PLinVelEI(       :,:,:) = RtHSdat%PLinVelEW(:,:,:)
    DO I = 1,NPA   ! Loop through all DOFs associated with the angular motion of the tail (body A)
 
@@ -7402,7 +7420,9 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
    ENDDO          ! I - all DOFs associated with the angular motion of the tail (body A)
 
 
+   ! Velocities of point J (tail fin center of mass)
    RtHSdat%PLinVelEJ(       :,:,:) = RtHSdat%PLinVelEW(:,:,:)
+   RtHSdat%LinVelEJ                = RtHSdat%LinVelEZ
    DO I = 1,NPA   ! Loop through all DOFs associated with the angular motion of the tail (body A)
 
       TmpVec0 = CROSS_PRODUCT( RtHSdat%PAngVelEA(PA(I)   ,0,:), RtHSdat%rWJ                 )
@@ -7412,26 +7432,10 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
       RtHSdat%PLinVelEJ(PA(I),0,:) = TmpVec0    +               RtHSdat%PLinVelEJ(PA(I)   ,0,:)
       RtHSdat%PLinVelEJ(PA(I),1,:) = TmpVec1    + TmpVec2 +     RtHSdat%PLinVelEJ(PA(I)   ,1,:)
 
+       RtHSdat%LinVelEJ            =  RtHSdat%LinVelEJ  + x%QDT(PA(I) )*RtHSdat%PLinVelEJ(PA(I)   ,0,:)
        RtHSdat%LinAccEJt           =  RtHSdat%LinAccEJt + x%QDT(PA(I) )*RtHSdat%PLinVelEJ(PA(I)   ,1,:)
 
    ENDDO          ! I - all DOFs associated with the angular motion of the tail (body A)
-
-   RtHSdat%PLinVelEK(       :,:,:) = RtHSdat%PLinVelEW(:,:,:)
-    LinVelEK               =  RtHSdat%LinVelEZ
-   DO I = 1,NPA   ! Loop through all DOFs associated with the angular motion of the tail (body A)
-
-      TmpVec0  = CROSS_PRODUCT( RtHSdat%PAngVelEA(PA(I)   ,0,:), RtHSdat%rWK                 )
-      TmpVec1  = CROSS_PRODUCT( RtHSdat%PAngVelEA(PA(I)   ,0,:),         EwAXrWK             )
-      TmpVec2  = CROSS_PRODUCT( RtHSdat%PAngVelEA(PA(I)   ,1,:), RtHSdat%rWK                 )
-
-      RtHSdat%PLinVelEK(PA(I),0,:) = TmpVec0    +                RtHSdat%PLinVelEK(PA(I)   ,0,:)
-      RtHSdat%PLinVelEK(PA(I),1,:) = TmpVec1    + TmpVec2 +      RtHSdat%PLinVelEK(PA(I)   ,1,:)
-
-       LinVelEK                    =   LinVelEK  + x%QDT(PA(I) )*RtHSdat%PLinVelEK(PA(I)   ,0,:)
-       LinAccEKt                   =   LinAccEKt + x%QDT(PA(I) )*RtHSdat%PLinVelEK(PA(I)   ,1,:)
-
-   ENDDO          ! I - all DOFs associated with the angular motion of the tail (body A)
-
 
 
    DO J = 0,p%TwrNodes  ! Loop through the tower nodes / elements
@@ -7516,12 +7520,8 @@ SUBROUTINE CalculateForcesMoments( p, x, CoordSys, u, RtHSdat )
    REAL(ReKi)                   :: TmpVec3   (3)                                   ! A temporary vector used in various computations.
    REAL(ReKi)                   :: TmpVec4   (3)                                   ! A temporary vector used in various computations.
    REAL(ReKi)                   :: TmpVec5   (3)                                   ! A temporary vector used in various computations.
-      
-!REAL(ReKi)                   :: rSAerCen  (3)                                   ! Position vector from a blade analysis node (point S) on the current blade to the aerodynamic center associated with the element.
-   REAL(ReKi), PARAMETER        :: FKAero   (3) = 0.0                              ! The tail fin aerodynamic force acting at point K, the center-of-pressure of the tail fin. (bjj: should be an input)
-   REAL(ReKi), PARAMETER        :: MAAero   (3) = 0.0                              ! The tail fin aerodynamic moment acting at point K, the center-of-pressure of the tail fin. (bjj: should be an input)   
-   
-   
+   REAL(ReKi)                   :: Force(3)  ! External force  (e.g. from AeroDyn)
+   REAL(ReKi)                   :: Moment(3) ! External moment (e.g. from AeroDyn)
    INTEGER(IntKi)               :: I                                               ! Loops through some or all of the DOFs
    INTEGER(IntKi)               :: J                                               ! Counter for elements
    INTEGER(IntKi)               :: K                                               ! Counter for blades
@@ -7801,9 +7801,11 @@ DO K = 1,p%NumBl ! Loop through all blades
    ENDDO          ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the tail boom center of mass (point I)
 
 !.....................................
-! FrcWTailt and MomNTailt
-!  (requires FKAero and MAAero)
+! FrcWTailt and MomNTailt - Forces on the tailfin
 !.....................................
+   ! Aerodynamic loads on TailFin CM (point K), with change of coordinate system
+   Force(1:3)  = (/ u%TFinCMLoads%Force (1,1), u%TFinCMLoads%Force (3,1), -u%TFinCMLoads%Force (2,1) /)
+   Moment(1:3) = (/ u%TFinCMLoads%Moment(1,1), u%TFinCMLoads%Moment(3,1), -u%TFinCMLoads%Moment(2,1) /)
 
    TmpVec1 = -p%BoomMass*( p%Gravity*CoordSys%z2 + RtHSdat%LinAccEIt )                 ! The portion of FrcWTailt associated with the BoomMass
    TmpVec2 = -p%TFinMass*( p%Gravity*CoordSys%z2 + RtHSdat%LinAccEJt )                 ! The portion of FrcWTailt associated with the TFinMass
@@ -7812,9 +7814,9 @@ DO K = 1,p%NumBl ! Loop through all blades
    TmpVec  = p%AtfaIner*CoordSys%tfa*DOT_PRODUCT( CoordSys%tfa, RtHSdat%AngVelEA )   ! = ( A inertia dyadic ) dot ( angular velocity of the tail in the inertia frame )
    TmpVec5 = CROSS_PRODUCT( -RtHSdat%AngVelEA, TmpVec  )                           ! = ( -angular velocity of the tail in the inertia frame ) cross ( TmpVec )
 
-   RtHSdat%FrcWTailt = FKAero + TmpVec1 + TmpVec2
-   RtHSdat%MomNTailt = MAAero + TmpVec3 + TmpVec4 + TmpVec5         &
-                     + CROSS_PRODUCT( RtHSdat%rWK      , FKAero  )  &                         ! The portion of MomNTailt associated with FKAero
+   RtHSdat%FrcWTailt = Force + TmpVec1 + TmpVec2
+   RtHSdat%MomNTailt = Moment + TmpVec3 + TmpVec4 + TmpVec5         &
+                     + CROSS_PRODUCT( RtHSdat%rWJ      , Force  )  &                         ! The portion of MomNTailt associated with Force with lever arm WK
                      - p%AtfaIner*CoordSys%tfa*DOT_PRODUCT( CoordSys%tfa, RtHSdat%AngAccEAt )   
    
 !.....................................
@@ -7940,42 +7942,42 @@ DO K = 1,p%NumBl ! Loop through all blades
 !.....................................
    
    DO J=1,p%TwrNodes
-      RtHSdat%FTHydrot(:,J) = CoordSys%z1*( u%TowerPtLoads%Force(DOF_Sg,J)/p%DHNodes(J) &
+      RtHSdat%FTHydrot(:,J) = CoordSys%z1*( u%TowerPtLoads%Force(DOF_Sg,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_Sg,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_Sg,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_Sg,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_Sg,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_Sg,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_Sg,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   ) &
-                            - CoordSys%z3*( u%TowerPtLoads%Force(DOF_Sw,J)/p%DHNodes(J) &
+                            - CoordSys%z3*( u%TowerPtLoads%Force(DOF_Sw,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_Sw,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_Sw,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_Sw,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_Sw,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_Sw,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_Sw,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   ) &
-                             + CoordSys%z2*( u%TowerPtLoads%Force(DOF_Hv,J)/p%DHNodes(J) &
+                             + CoordSys%z2*( u%TowerPtLoads%Force(DOF_Hv,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_Hv,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_Hv,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_Hv,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_Hv,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_Hv,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_Hv,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   )
-      RtHSdat%MFHydrot(:,J) = CoordSys%z1*( u%TowerPtLoads%Moment(DOF_R-3,J)/p%DHNodes(J) &
+      RtHSdat%MFHydrot(:,J) = CoordSys%z1*( u%TowerPtLoads%Moment(DOF_R-3,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_R ,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_R ,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_R ,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_R ,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_R ,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_R ,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   ) &
-                            - CoordSys%z3*( u%TowerPtLoads%Moment(DOF_P-3 ,J)/p%DHNodes(J) &
+                            - CoordSys%z3*( u%TowerPtLoads%Moment(DOF_P-3 ,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_P ,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_P ,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_P ,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
                                                   - u%TwrAddedMass(DOF_P ,DOF_R ,J)*RtHSdat%AngAccEFt(1,J) &
                                                   + u%TwrAddedMass(DOF_P ,DOF_P ,J)*RtHSdat%AngAccEFt(3,J) &
                                                   - u%TwrAddedMass(DOF_P ,DOF_Y ,J)*RtHSdat%AngAccEFt(2,J)   ) &
-                            + CoordSys%z2*( u%TowerPtLoads%Moment(DOF_Y-3 ,J)/p%DHNodes(J) &
+                            + CoordSys%z2*( u%TowerPtLoads%Moment(DOF_Y-3 ,J)/abs(p%DHNodes(J)) &
                                                   - u%TwrAddedMass(DOF_Y ,DOF_Sg,J)*RtHSdat%LinAccETt(1,J) &
                                                   + u%TwrAddedMass(DOF_Y ,DOF_Sw,J)*RtHSdat%LinAccETt(3,J) &
                                                   - u%TwrAddedMass(DOF_Y ,DOF_Hv,J)*RtHSdat%LinAccETt(2,J) &
@@ -8025,19 +8027,19 @@ DO K = 1,p%NumBl ! Loop through all blades
 
       DO I = 1,p%DOFs%NPTE  ! Loop through all active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the tower
 
-         TmpVec1 = RtHSdat%PFTHydro(:,J,p%DOFs%PTE(I))*p%DHNodes(J) - p%TElmntMass(J)*RtHSdat%PLinVelET(J,p%DOFs%PTE(I),0,:)           ! The portion of PFrcT0Trb associated with tower element J
+         TmpVec1 = RtHSdat%PFTHydro(:,J,p%DOFs%PTE(I))*abs(p%DHNodes(J)) - p%TElmntMass(J)*RtHSdat%PLinVelET(J,p%DOFs%PTE(I),0,:)           ! The portion of PFrcT0Trb associated with tower element J
          TmpVec2 = CROSS_PRODUCT( RtHSdat%rT0T(:,J), TmpVec1 )                 ! The portion of PMomX0Trb associated with tower element J
-         TmpVec3 = RtHSdat%PMFHydro(:,J,p%DOFs%PTE(I))*p%DHNodes(J)             ! The added moment applied at tower element J
+         TmpVec3 = RtHSdat%PMFHydro(:,J,p%DOFs%PTE(I))*abs(p%DHNodes(J))             ! The added moment applied at tower element J
 
          RtHSdat%PFrcT0Trb(:,p%DOFs%PTE(I)) = RtHSdat%PFrcT0Trb(:,p%DOFs%PTE(I)) + TmpVec1
          RtHSdat%PMomX0Trb(:,p%DOFs%PTE(I)) = RtHSdat%PMomX0Trb(:,p%DOFs%PTE(I)) + TmpVec2 + TmpVec3
 
       ENDDO          ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the tower
 
-      TmpVec1 = ( RtHSdat%FTHydrot(:,J) )*p%DHNodes(J) &
+      TmpVec1 = ( RtHSdat%FTHydrot(:,J) )*abs(p%DHNodes(J)) &
               - p%TElmntMass(J)*( p%Gravity*CoordSys%z2 + RtHSdat%LinAccETt(:,J) )          ! The portion of FrcT0Trbt associated with tower element J
       TmpVec2 = CROSS_PRODUCT( RtHSdat%rT0T(:,J), TmpVec1 )                                 ! The portion of MomX0Trbt associated with tower element J
-      TmpVec3 = ( RtHSdat%MFHydrot(:,J) )*p%DHNodes(J)                                      ! The external moment applied to tower element J
+      TmpVec3 = ( RtHSdat%MFHydrot(:,J) )*abs(p%DHNodes(J))                                      ! The external moment applied to tower element J
 
       RtHSdat%FrcT0Trbt = RtHSdat%FrcT0Trbt + TmpVec1
 
@@ -8305,16 +8307,16 @@ SUBROUTINE FillAugMat( p, x, CoordSys, u, HSSBrTrq, RtHSdat, AugMat )
             AugMat(p%DOFs%PTTE(I),p%DOFs%PTTE(L)) = AugMat(p%DOFs%PTTE(I),p%DOFs%PTTE(L))  &
                                                   + p%TElmntMass(J)   *DOT_PRODUCT( RtHSdat%PLinVelET(J,p%DOFs%PTTE(I),0,:),  &
                                                                               RtHSdat%PLinVelET(J,p%DOFs%PTTE(L),0,:) ) &   ! [C(q,t)]T + [C(q,t)]HydroT
-                                                  - p%DHNodes(J)*DOT_PRODUCT( RtHSdat%PLinVelET(J,p%DOFs%PTTE(I),0,:),  &
+                                                  - abs(p%DHNodes(J))*DOT_PRODUCT( RtHSdat%PLinVelET(J,p%DOFs%PTTE(I),0,:),  &
                                                                               RtHSdat%PFTHydro (:,J,p%DOFs%PTTE(L)  ) ) &
-                                                  - p%DHNodes(J)*DOT_PRODUCT( RtHSdat%PAngVelEF(J,p%DOFs%PTTE(I),0,:),  &
+                                                  - abs(p%DHNodes(J))*DOT_PRODUCT( RtHSdat%PAngVelEF(J,p%DOFs%PTTE(I),0,:),  &
                                                                               RtHSdat%PMFHydro (:,J,p%DOFs%PTTE(L)  ) )
          ENDDO                 ! I - All active (enabled) tower DOFs greater than or equal to L
       ENDDO                    ! L - All active (enabled) tower DOFs that contribute to the QD2T-related linear accelerations of the tower
 
-      TmpVec1 = ( RtHSdat%FTHydrot(:,J) )*p%DHNodes(J) &
+      TmpVec1 = ( RtHSdat%FTHydrot(:,J) )*abs(p%DHNodes(J)) &
               - p%TElmntMass(J)*( p%Gravity*CoordSys%z2 + RtHSdat%LinAccETt(:,J) )          ! The portion of FrcT0Trbt associated with tower element J
-      TmpVec3 = ( RtHSdat%MFHydrot(:,J) )*p%DHNodes(J)             ! The external moment applied to tower element J
+      TmpVec3 = ( RtHSdat%MFHydrot(:,J) )*abs(p%DHNodes(J))             ! The external moment applied to tower element J
       DO I = 1,p%DOFs%NPTTE    ! Loop through all active (enabled) tower DOFs that contribute to the QD2T-related linear accelerations of the tower
             AugMat(p%DOFs%PTTE(I),        p%NAug) = AugMat(p%DOFs%PTTE(I),   p%NAug)                         &                 ! {-f(qd,q,t)}T + {-f(qd,q,t)}GravT + {-f(qd,q,t)}AeroT + {-f(qd,q,t)}HydroT
                                                   +  DOT_PRODUCT( RtHSdat%PLinVelET(J,p%DOFs%PTTE(I),0,:), TmpVec1        ) &  ! NOTE: TmpVec1 is still the portion of FrcT0Trbt associated with tower element J
@@ -8969,6 +8971,22 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
       IF (ErrStat >= AbortErrLev) RETURN
       
       
+   ! -------------- Tailfin -----------------------------------
+   call MeshCopy ( SrcMesh  = u%TFinCMLoads    &
+                 , DestMesh = y%TFinCMMotion   &
+                 , CtrlCode = MESH_SIBLING     &
+                 , IOS      = COMPONENT_OUTPUT &
+                 , TranslationDisp = .TRUE.    &
+                 , Orientation     = .TRUE.    &
+                 , TranslationVel  = .TRUE.    &
+                 , RotationVel     = .TRUE.    &
+                 , TranslationAcc  = .TRUE.    &
+                 , RotationAcc     = .TRUE.    &   
+                 , ErrStat  = ErrStat2         &
+                 , ErrMess  = ErrMsg2          )
+
+   call CheckError( ErrStat2, ErrMsg2 )
+   if (ErrStat >= AbortErrLev) RETURN         
      
    ! -------------- Tower Base-----------------------------------
    CALL MeshCreate( BlankMesh          = y%TowerBaseMotion14    &
@@ -9084,11 +9102,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    !.......................................................
 
    CALL AllocAry( u%BlPitchCom, p%NumBl, 'BlPitchCom', ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+   if (Failed()) return
    ! will initialize u%BlPitchCom later, after getting undisplaced positions    
    
    !.......................................................
@@ -9097,11 +9111,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    ! want inputs and states initialized to 0 first.
    !.......................................................
    CALL ED_CopyContState( x, x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+   if (Failed()) return
       x_tmp%qt  = 0.0_ReKi
       x_tmp%qdt = 0.0_ReKi
       x_tmp%QT (DOF_GeAz) = - p%AzimB1Up - REAL(Piby2_D, R8Ki)
@@ -9147,11 +9157,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
                            ,Moment          = .TRUE.                 &
                            ,ErrStat         = ErrStat2               &
                            ,ErrMess         = ErrMsg2                )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            IF (ErrStat >= AbortErrLev) THEN
-               CALL Cleanup()
-               RETURN
-            END IF
+         if (Failed()) return
       
          if (p%UseAD14) then
             ! position the nodes on the blades:
@@ -9229,11 +9235,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
 
             ! that's our entire mesh:
          CALL MeshCommit ( u%BladePtLoads(K), ErrStat2, ErrMsg2 )   
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            IF (ErrStat >= AbortErrLev) THEN
-               CALL Cleanup()
-               RETURN
-            END IF
+         if (Failed()) return
 
    
             ! initialize it
@@ -9245,23 +9247,9 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    END IF ! p%BD4Blades
    
                      
-      !.......................................................
-      ! Create Point Mesh for loads input at hub point (from BeamDyn):
-      !....................................................... 
-    
-   CALL MeshCreate( BlankMesh      = u%HubPtLoad            &
-                  ,IOS             = COMPONENT_INPUT        &
-                  ,NNodes          = 1                      &
-                  ,Force           = .TRUE.                 &
-                  ,Moment          = .TRUE.                 &
-                  ,ErrStat         = ErrStat2               &
-                  ,ErrMess         = ErrMsg2                )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
+   !.......................................................
+   ! Create Point Mesh for loads input at hub point (from BeamDyn):
+   !....................................................... 
    ! place single node at hub; position affects mapping/coupling with other modules      
    Position(1)  =     m%RtHS%rQ(1)
    Position(2)  = -1.*m%RtHS%rQ(3)
@@ -9276,147 +9264,52 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
    Orientation(1,3) =     m%CoordSys%g1(2)
    Orientation(2,3) =     m%CoordSys%g2(2)
    Orientation(3,3) =     m%CoordSys%g3(2) 
-      
-   CALL MeshPositionNode ( u%HubPtLoad, 1, Position, ErrStat2, ErrMsg2, orient=Orientation )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-      
-      ! create an element from this point      
-      CALL MeshConstructElement ( Mesh = u%HubPtLoad       &
-                           , Xelement = ELEMENT_POINT      &
-                           , P1       = 1                  &   ! node number
-                           , ErrStat  = ErrStat2           &
-                           , ErrMess  = ErrMsg2            )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-
-         ! that's our entire mesh:
-      CALL MeshCommit ( u%HubPtLoad, ErrStat2, ErrMsg2 )   
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-
-         ! initailize it
-      u%HubPtLoad%Moment      = 0.0_ReKi
-      u%HubPtLoad%Force       = 0.0_ReKi
+   call CreatePointMesh(u%HubPtLoad, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   if (Failed()) return
          
                      
    !.......................................................
    ! Create Point Mesh for loads input at Platform Reference Point:
    !.......................................................
-      
-   CALL MeshCreate( BlankMesh         = u%PlatformPtMesh       &
-                     ,IOS             = COMPONENT_INPUT        &
-                     ,NNodes          = 1                      &
-                     ,Force           = .TRUE.                 &
-                     ,Moment          = .TRUE.                 &
-                     ,ErrStat         = ErrStat2               &
-                     ,ErrMess         = ErrMsg2                )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      ! place single node at platform reference point; position affects mapping/coupling with other modules
-   CALL MeshPositionNode ( u%PlatformPtMesh, 1, (/0.0_ReKi, 0.0_ReKi, p%PtfmRefzt /), ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-      
-      ! create an element from this point      
-   CALL MeshConstructElement ( Mesh = u%PlatformPtMesh        &
-                              , Xelement = ELEMENT_POINT      &
-                              , P1       = 1                  &   ! node number
-                              , ErrStat  = ErrStat2           &
-                              , ErrMess  = ErrMsg2            )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-
-      ! that's our entire mesh:
-   CALL MeshCommit ( u%PlatformPtMesh, ErrStat2, ErrMsg2 )   
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-   
-      ! initialize fields
-   u%PlatformPtMesh%Moment = 0.0_ReKi
-   u%PlatformPtMesh%Force  = 0.0_ReKi
+   Position = (/0.0_ReKi, 0.0_ReKi, p%PtfmRefzt /)
+   call Eye(Orientation, ErrStat2, errMsg2)
+   call CreatePointMesh(u%PlatformPtMesh, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   if (Failed()) return
       
    !.......................................................
    ! Create Point Mesh for loads input at nacelle:
    !.......................................................
-         
-   CALL MeshCreate( BlankMesh          = u%NacelleLoads      &
-                     ,IOS              = COMPONENT_OUTPUT    &
-                     ,NNodes           = 1                   &
-                     ,Force            = .TRUE.              &
-                     ,Moment           = .TRUE.              &   
-                     ,ErrStat          = ErrStat2            &
-                     ,ErrMess          = ErrMsg2             )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+   Position = (/0.0_ReKi, 0.0_ReKi, p%TowerHt /)
+   call Eye(Orientation, ErrStat2, errMsg2)
+   call CreatePointMesh(u%NacelleLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   if (Failed()) return
+      
+   !.......................................................
+   ! Create Point Mesh for loads on Rotor tailfin:
+   !.......................................................
+   Position(1) =     m%RtHS%rJ(1)               ! undeflected position of the tailfin CM in the xi ( z1) direction
+   Position(2) = -1.*m%RtHS%rJ(3)               ! undeflected position of the tailfin CM in the yi (-z3) direction
+   Position(3) =     m%RtHS%rJ(2) + p%PtfmRefzt ! undeflected position of the tailfin CM in the zi ( z2) direction
+   Orientation(1,1) =     m%CoordSys%tf1(1)
+   Orientation(2,1) =     m%CoordSys%tf2(1)
+   Orientation(3,1) =     m%CoordSys%tf3(1)
+   Orientation(1,2) = -1.*m%CoordSys%tf1(3)
+   Orientation(2,2) = -1.*m%CoordSys%tf2(3)
+   Orientation(3,2) = -1.*m%CoordSys%tf3(3)
+   Orientation(1,3) =     m%CoordSys%tf1(2)
+   Orientation(2,3) =     m%CoordSys%tf2(2)
+   Orientation(3,3) =     m%CoordSys%tf3(2) 
+   call CreatePointMesh(u%TFinCMLoads, Position, Orientation, errStat2, errMsg2, hasMotion=.False., hasLoads=.True.)
+   if (Failed()) return
 
-   CALL MeshPositionNode ( u%NacelleLoads,  1, (/0.0_ReKi, 0.0_ReKi, p%TowerHt /), ErrStat2, ErrMsg2 ) ! orientation is identity by default
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-      
-      ! create an element from this point      
-   CALL MeshConstructElement ( Mesh = u%NacelleLoads          &
-                              , Xelement = ELEMENT_POINT      &
-                              , P1       = 1                  &   ! node number
-                              , ErrStat  = ErrStat2           &
-                              , ErrMess  = ErrMsg2            )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-      
-      
-   CALL MeshCommit ( u%NacelleLoads, ErrStat2, ErrMsg2 )   
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-            
-      ! initialize fields
-   u%NacelleLoads%Force    = 0.0_ReKi
-   u%NacelleLoads%Moment   = 0.0_ReKi
-      
+
    !.......................................................
    ! Create u%TwrAddedMass for loads input on tower:
    ! SHOULD REMOVE EVENTUALLY
    !.......................................................
          
    CALL AllocAry( u%TwrAddedMass,  6_IntKi, 6_IntKi, p%TwrNodes,   'TwrAddedMass',    ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+   if (Failed()) return
       
       ! initialize it
    u%TwrAddedMass          = 0.0_ReKi  
@@ -9433,20 +9326,12 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
                      ,Moment       = .TRUE.                 &
                      ,ErrStat      = ErrStat2               &
                      ,ErrMess      = ErrMsg2                )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+   if (Failed()) return
    
       ! position the nodes on the tower:
    DO J = 1,p%TwrNodes      
       CALL MeshPositionNode ( u%TowerPtLoads, J, (/0.0_ReKi, 0.0_ReKi, p%HNodes(J) + p%TowerBsHt /), ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+      if (Failed()) return
    END DO
    
       ! create elements:      
@@ -9457,21 +9342,13 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
                                  , ErrStat  = ErrStat2           &
                                  , ErrMess  = ErrMsg2            )
          
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+      if (Failed()) return
    END DO
       
    
       ! that's our entire mesh:
    CALL MeshCommit ( u%TowerPtLoads, ErrStat2, ErrMsg2 )   
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
+   if (Failed()) return
       
       ! initialize fields
    u%TowerPtLoads%Moment   = 0.0_ReKi
@@ -9499,6 +9376,11 @@ CONTAINS
          CALL ED_DestroyContState( x_tmp, ErrStat2, ErrMsg2 )
          
    END SUBROUTINE Cleanup   
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call Cleanup()
+   end function Failed
             
 END SUBROUTINE Init_u
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -10035,12 +9917,11 @@ CONTAINS
 END SUBROUTINE ED_ABM4
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine generates the summary file, which contains a regurgitation of  the input data and interpolated flexible body data.
-SUBROUTINE ED_PrintSum( p, OtherState, GenerateAdamsModel, ErrStat, ErrMsg )
+SUBROUTINE ED_PrintSum( p, OtherState, ErrStat, ErrMsg )
 
       ! passed variables
    TYPE(ED_ParameterType),    INTENT(IN   )  :: p                       !< Parameters of the structural dynamics module
    TYPE(ED_OtherStateType),   INTENT(IN   )  :: OtherState              !< Other states of the structural dynamics module 
-   LOGICAL,                   INTENT(IN   )  :: GenerateAdamsModel      !< Logical to determine if Adams inputs were read/should be summarized
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                 !< Error status of the operation
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                  !< Error message if ErrStat /= ErrID_None
 
@@ -10180,30 +10061,14 @@ END IF
       ! Interpolated tower properties.
 
    WRITE (UnSu,"(//,'Interpolated tower properties:',/)")
-   IF ( GenerateAdamsModel )  THEN  ! An ADAMS model will be created; thus, print out all the cols.
 
-      WRITE (UnSu,'(A)')  'Node  TwFract   HNodes  DHNodes  TMassDen    FAStiff    SSStiff'// &
-                           '    GJStiff    EAStiff    FAIner    SSIner  FAcgOff  SScgOff'
-      WRITE (UnSu,'(A)')  ' (-)      (-)      (m)      (m)    (kg/m)     (Nm^2)     (Nm^2)'// &
-                           '     (Nm^2)        (N)    (kg m)    (kg m)      (m)      (m)'
+   WRITE (UnSu,'(A)')  'Node  TwFract   HNodes  DHNodes  TMassDen    FAStiff    SSStiff'
+   WRITE (UnSu,'(A)')  ' (-)      (-)      (m)      (m)    (kg/m)     (Nm^2)     (Nm^2)'
 
-      DO I=1,p%TwrNodes
-         WRITE(UnSu,'(I4,3F9.3,F10.3,4ES11.3,2F10.3,2F9.3)')  I, p%HNodesNorm(I), p%HNodes(I), p%DHNodes(I), p%MassT(I), &
-                                                                 p%StiffTFA(I), p%StiffTSS(I), p%StiffTGJ(I), p%StiffTEA(I),       &
-                                                                 p%InerTFA(I), p%InerTSS(I), p%cgOffTFA(I), p%cgOffTSS(I)
-      ENDDO ! I
-
-   ELSE                                                     ! Only FAST will be run; thus, only print out the necessary cols.
-
-      WRITE (UnSu,'(A)')  'Node  TwFract   HNodes  DHNodes  TMassDen    FAStiff    SSStiff'
-      WRITE (UnSu,'(A)')  ' (-)      (-)      (m)      (m)    (kg/m)     (Nm^2)     (Nm^2)'
-
-      DO I=1,p%TwrNodes
-         WRITE(UnSu,'(I4,3F9.3,F10.3,2ES11.3)')  I, p%HNodesNorm(I), p%HNodes(I), p%DHNodes(I), p%MassT(I), &
-                                                    p%StiffTFA(I),  p%StiffTSS(I)
-      ENDDO ! I
-
-   ENDIF
+   DO I=1,p%TwrNodes
+      WRITE(UnSu,'(I4,3F9.3,F10.3,2ES11.3)')  I, p%HNodesNorm(I), p%HNodes(I), p%DHNodes(I), p%MassT(I), &
+                                                   p%StiffTFA(I),  p%StiffTSS(I)
+   ENDDO ! I
 
 
       ! Interpolated blade properties.
@@ -10212,39 +10077,15 @@ IF (.NOT. p%BD4Blades) THEN
    DO K=1,p%NumBl
 
       WRITE (UnSu,'(//,A,I1,A,/)')  'Interpolated blade ', K, ' properties:'
-      IF ( GenerateAdamsModel )  THEN  ! An ADAMS model will be created; thus, print out all the cols.
 
-         WRITE (UnSu,'(A)')  'Node  BlFract   RNodes  DRNodes  PitchAxis  StrcTwst  BMassDen    FlpStff    EdgStff'//       &
-                              '     GJStff     EAStff    Alpha   FlpIner   EdgIner PrecrvRef PreswpRef  FlpcgOf  EdgcgOf'// &
-                              '  FlpEAOf  EdgEAOf'
-         WRITE (UnSu,'(A)')  ' (-)      (-)      (m)      (m)     (-)       (deg)    (kg/m)     (Nm^2)     (Nm^2)'//       &
-                              '     (Nm^2)     (Nm^2)      (-)    (kg m)    (kg m)       (m)       (m)      (m)      (m)'// &
-                              '      (m)      (m)'
+      WRITE (UnSu,'(A)')  'Node  BlFract   RNodes  DRNodes PitchAxis  StrcTwst  BMassDen    FlpStff    EdgStff'
+      WRITE (UnSu,'(A)')  ' (-)      (-)      (m)      (m)       (-)     (deg)    (kg/m)     (Nm^2)     (Nm^2)'
 
-         DO I=1,p%BldNodes
-
-            WRITE(UnSu,'(I4,3F9.3,3F10.3,4ES11.3,F9.3,4F10.3,4F9.3)')  I, p%RNodesNorm(I),  p%RNodes(I) + p%HubRad, p%DRNodes(I), &
-                                                                          p%PitchAxis(K,I), p%ThetaS(K,I)*R2D,      p%MassB(K,I), &
-                                                                          p%StiffBF(K,I),   p%StiffBE(K,I),                       &
-                                                                          p%StiffBGJ(K,I),  p%StiffBEA(K,I),                      &
-                                                                          p%BAlpha(K,I),    p%InerBFlp(K,I), p%InerBEdg(K,I),     &
-                                                                          p%RefAxisxb(K,I), p%RefAxisyb(K,I),                     &
-                                                                          p%cgOffBFlp(K,I), p%cgOffBEdg(K,I),                     &
-                                                                          p%EAOffBFlp(K,I), p%EAOffBEdg(K,I)
-         ENDDO ! I
-
-      ELSE                                                     ! Only FAST will be run; thus, only print out the necessary cols.
-
-         WRITE (UnSu,'(A)')  'Node  BlFract   RNodes  DRNodes PitchAxis  StrcTwst  BMassDen    FlpStff    EdgStff'
-         WRITE (UnSu,'(A)')  ' (-)      (-)      (m)      (m)       (-)     (deg)    (kg/m)     (Nm^2)     (Nm^2)'
-
-         DO I=1,p%BldNodes
-            WRITE(UnSu,'(I4,3F9.3,3F10.3,2ES11.3)')  I, p%RNodesNorm(I), p%RNodes(I) + p%HubRad, p%DRNodes(I), &
-                                                        p%PitchAxis(K,I),p%ThetaS(K,I)*R2D, p%MassB(K,I), &
-                                                        p%StiffBF(K,I), p%StiffBE(K,I)
-         ENDDO ! I
-
-      ENDIF
+      DO I=1,p%BldNodes
+         WRITE(UnSu,'(I4,3F9.3,3F10.3,2ES11.3)')  I, p%RNodesNorm(I), p%RNodes(I) + p%HubRad, p%DRNodes(I), &
+                                                      p%PitchAxis(K,I),p%ThetaS(K,I)*R2D, p%MassB(K,I), &
+                                                      p%StiffBF(K,I), p%StiffBE(K,I)
+      ENDDO ! I
 
    ENDDO ! K
    
@@ -10560,7 +10401,7 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
       ! allocate dYdu if necessary
       if (.not. allocated(dYdu)) then
-         call AllocAry(dYdu, p%Jac_ny, size(p%Jac_u_indx,1)+1, 'dYdu', ErrStat2, ErrMsg2)
+         call AllocAry(dYdu, p%Jac_ny, size(p%Jac_u_indx,1)+p%NumExtendedInputs, 'dYdu', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -10568,57 +10409,62 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          end if
       end if
       
-         ! make a copy of outputs because we will need two for the central difference computations (with orientations)
-      call ED_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call ED_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
+      if (p%CompAeroMaps) then
+         dYdu = 0.0_R8Ki
+      else
+            ! make a copy of outputs because we will need two for the central difference computations (with orientations)
+         call ED_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call ED_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            if (ErrStat>=AbortErrLev) then
+               call cleanup()
+               return
+            end if
          
-      do i=1,size(p%Jac_u_indx,1)
+         do i=1,size(p%Jac_u_indx,1)
          
-            ! get u_op + delta u
-         call ED_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         call ED_Perturb_u( p, i, 1, u_perturb, delta )
+               ! get u_op + delta u
+            call ED_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
+            call ED_Perturb_u( p, i, 1, u_perturb, delta )
 
-            ! compute y at u_op + delta u
-         call ED_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
+               ! compute y at u_op + delta u
+            call ED_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ) 
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
          
             
-            ! get u_op - delta u
-         call ED_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
-         call ED_Perturb_u( p, i, -1, u_perturb, delta )
+               ! get u_op - delta u
+            call ED_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
+            call ED_Perturb_u( p, i, -1, u_perturb, delta )
          
-            ! compute y at u_op - delta u
-         call ED_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
+               ! compute y at u_op - delta u
+            call ED_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_m, m, ErrStat2, ErrMsg2 ) 
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
          
             
-            ! get central difference:            
-         call Compute_dY( p, y_p, y_m, delta, dYdu(:,i) )
+               ! get central difference:            
+            call Compute_dY( p, y_p, y_m, delta, dYdu(:,i) )
          
-      end do
+         end do
       
-      ! now do the extended input: sum the p%NumBl blade pitch columns
-      dYdu(:,size(p%Jac_u_indx,1)+1) = dYdu(:,size(p%Jac_u_indx,1)-p%NumBl-1) ! last NumBl+2 columns are: GenTrq, YawMom, and BlPitchCom   
-      do i=2,p%NumBl
-         dYdu(:,size(p%Jac_u_indx,1)+1) = dYdu(:,size(p%Jac_u_indx,1)+1) + dYdu(:,size(p%Jac_u_indx,1)-p%NumBl-2+i) 
-      end do
+         ! now do the extended input: sum the p%NumBl blade pitch columns
+         if (p%NumExtendedInputs > 0) then
+            dYdu(:,size(p%Jac_u_indx,1)+1) = dYdu(:,size(p%Jac_u_indx,1)-p%NumBl-1) ! last NumBl+2 columns are: GenTrq, YawMom, and BlPitchCom   
+            do i=2,p%NumBl
+               dYdu(:,size(p%Jac_u_indx,1)+1) = dYdu(:,size(p%Jac_u_indx,1)+1) + dYdu(:,size(p%Jac_u_indx,1)-p%NumBl-2+i) 
+            end do
+         end if
       
       
-      if (ErrStat>=AbortErrLev) then
-         call cleanup()
-         return
-      end if
-      call ED_DestroyOutput( y_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      call ED_DestroyOutput( y_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
-      
+         if (ErrStat>=AbortErrLev) then
+            call cleanup()
+            return
+         end if
+         call ED_DestroyOutput( y_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
+         call ED_DestroyOutput( y_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
+      end if !CompAeroMaps
 
    END IF
    
@@ -10629,7 +10475,7 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
       ! allocate dXdu if necessary
       if (.not. allocated(dXdu)) then
-         call AllocAry(dXdu, p%DOFs%NActvDOF * 2, size(p%Jac_u_indx,1)+1, 'dXdu', ErrStat2, ErrMsg2)
+         call AllocAry(dXdu, p%NActvDOF_Lin  + p%NActvVelDOF_Lin, size(p%Jac_u_indx,1)+p%NumExtendedInputs, 'dXdu', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -10661,31 +10507,25 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
             
             
-            ! get central difference:            
-            
             ! we may have had an error allocating memory, so we'll check
          if (ErrStat>=AbortErrLev) then 
             call cleanup()
             return
-         end if         
+         end if
          
-         do j=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-            dXdu(j, i) = x_p%QT( p%DOFs%PS(j) ) - x_m%QT( p%DOFs%PS(j) )
-         end do
-         do j=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-            dXdu(j+p%DOFs%NActvDOF, i) = x_p%QDT( p%DOFs%PS(j) ) - x_m%QDT( p%DOFs%PS(j) )
-         end do              
-         dXdu(:,i) = dXdu(:,i) / (2*delta) 
-         
+            ! get central difference:
+         call Compute_dX( p, x_p, x_m, delta, dXdu(:,i) )
+
       end do
       
       
       ! now do the extended input: sum the p%NumBl blade pitch columns
-      dXdu(:,size(p%Jac_u_indx,1)+1) = dXdu(:,size(p%Jac_u_indx,1)-p%NumBl-1) ! last NumBl+2 columns are: GenTrq, YawMom, and BlPitchCom   
-      do i=2,p%NumBl
-         dXdu(:,size(p%Jac_u_indx,1)+1) = dXdu(:,size(p%Jac_u_indx,1)+1) + dXdu(:,size(p%Jac_u_indx,1)-p%NumBl-2+i) 
-      end do
-      
+      if (p%NumExtendedInputs > 0) then
+         dXdu(:,size(p%Jac_u_indx,1)+1) = dXdu(:,size(p%Jac_u_indx,1)-p%NumBl-1) ! last NumBl+2 columns are: GenTrq, YawMom, and BlPitchCom   
+         do i=2,p%NumBl
+            dXdu(:,size(p%Jac_u_indx,1)+1) = dXdu(:,size(p%Jac_u_indx,1)+1) + dXdu(:,size(p%Jac_u_indx,1)-p%NumBl-2+i) 
+         end do
+      end if
       
       call ED_DestroyContState( x_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
       call ED_DestroyContState( x_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
@@ -10780,7 +10620,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
       ! allocate dYdx if necessary
       if (.not. allocated(dYdx)) then
-         call AllocAry(dYdx, p%Jac_ny, p%DOFs%NActvDOF*2, 'dYdx', ErrStat2, ErrMsg2)
+         call AllocAry(dYdx, p%Jac_ny, p%NActvDOF_Lin + p%NActvVelDOF_Lin, 'dYdx', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -10799,7 +10639,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          end if
          
          
-      do i=1,p%DOFs%NActvDOF*2
+      do i=1,p%NActvDOF_Lin + p%NActvVelDOF_Lin
          
             ! get x_op + delta x
          call ED_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
@@ -10841,7 +10681,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
       ! allocate dXdx if necessary
       if (.not. allocated(dXdx)) then
-         call AllocAry(dXdx, p%DOFs%NActvDOF * 2, p%DOFs%NActvDOF * 2, 'dXdx', ErrStat2, ErrMsg2)
+         call AllocAry(dXdx, p%NActvDOF_Lin + p%NActvVelDOF_Lin, p%NActvDOF_Lin + p%NActvVelDOF_Lin, 'dXdx', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -10849,7 +10689,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          end if
       end if
       
-      do i=1,p%DOFs%NActvDOF * 2
+      do i=1,p%NActvDOF_Lin  + p%NActvVelDOF_Lin
          
             ! get x_op + delta x
          call ED_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
@@ -10871,22 +10711,17 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
                                          
             
-            ! get central difference:            
-            
             ! we may have had an error allocating memory, so we'll check
          if (ErrStat>=AbortErrLev) then 
             call cleanup()
             return
-         end if         
+         end if
          
-         do j=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-            dXdx(j, i) = x_p%QT( p%DOFs%PS(j) ) - x_m%QT( p%DOFs%PS(j) )
-         end do
-         do j=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-            dXdx(j+p%DOFs%NActvDOF, i) = x_p%QDT( p%DOFs%PS(j) ) - x_m%QDT( p%DOFs%PS(j) )
-         end do              
-         dXdx(:,i) = dXdx(:,i) / (2*delta) 
+            ! get central difference:            
+            
+         call Compute_dX( p, x_p, x_m, delta, dXdx(:,i) )
          
+
       end do
       
       call ED_DestroyContState( x_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
@@ -11076,6 +10911,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_Init_Jacobian_y'
    LOGICAL                                           :: Mask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
+   LOGICAL                                           :: BladeMask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
    logical, allocatable                              :: AllOut(:)
    
    
@@ -11085,25 +10921,37 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    
    
       ! determine how many outputs there are in the Jacobians      
-   p%Jac_ny = 0         
-   if (allocated(y%BladeLn2Mesh)) then
-      do i=1,p%NumBl
-         p%Jac_ny = p%Jac_ny + y%BladeLn2Mesh(i)%NNodes * 18  ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node on each blade
-      end do      
-   end if
+   p%Jac_ny = 0
+   BladeMask = .true. ! default is all the fields
+   if (p%CompAeroMaps) then
+      if (allocated(y%BladeLn2Mesh)) then
+         do i=1,p%NumBl_Lin
+            p%Jac_ny = p%Jac_ny + y%BladeLn2Mesh(i)%NNodes * 12  ! 3 TranslationDisp, Orientation, TranslationVel, and RotationVel at each node on each blade (skip accelerations)
+         end do
+      end if
+      BladeMask(MASKID_TRANSLATIONACC) = .false.
+      BladeMask(MASKID_ROTATIONACC)    = .false.
+   else
    
-   p%Jac_ny = p%Jac_ny &
-      + y%PlatformPtMesh%NNodes  * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
-      + y%TowerLn2Mesh%NNodes    * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
-      + y%HubPtMotion%NNodes     * 9            & ! 3 TranslationDisp, Orientation, and RotationVel at each node
-      + y%NacelleMotion%NNodes   * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
-      + 3                                       & ! Yaw, YawRate, and HSS_Spd
-      + p%NumOuts  + p%BldNd_TotNumOuts           ! WriteOutput values 
+      if (allocated(y%BladeLn2Mesh)) then
+         do i=1,p%NumBl_Lin
+            p%Jac_ny = p%Jac_ny + y%BladeLn2Mesh(i)%NNodes * 18  ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node on each blade
+         end do      
+      end if
+   
+      p%Jac_ny = p%Jac_ny &
+         + y%PlatformPtMesh%NNodes  * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
+         + y%TowerLn2Mesh%NNodes    * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
+         + y%HubPtMotion%NNodes     * 9            & ! 3 TranslationDisp, Orientation, and RotationVel at each node
+         + y%NacelleMotion%NNodes   * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
+         + 3                                       & ! Yaw, YawRate, and HSS_Spd
+         + p%NumOuts  + p%BldNd_TotNumOuts           ! WriteOutput values 
       
-   do i=1,p%NumBl
-      p%Jac_ny = p%Jac_ny + y%BladeRootMotion(i)%NNodes * 18  ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each (1) node on each blade
-   end do
+      do i=1,p%NumBl_Lin
+         p%Jac_ny = p%Jac_ny + y%BladeRootMotion(i)%NNodes * 18  ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each (1) node on each blade
+      end do
 
+   end if
    
       !.................   
       ! set linearization output names:
@@ -11114,101 +10962,103 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    
    InitOut%RotFrame_y = .false. ! note that meshes are in the global, not rotating frame
    
-   ! note that this Mask is for the y%HubPtMotion mesh ONLY. The others pack *all* of the motion fields
-   Mask  = .false.
-   Mask(MASKID_TRANSLATIONDISP) = .true.
-   Mask(MASKID_ORIENTATION) = .true.
-   Mask(MASKID_ROTATIONVEL) = .true.
    
    index_next = 1
    if (allocated(y%BladeLn2Mesh)) then
       index_last = index_next
-      do i=1,p%NumBl
-         call PackMotionMesh_Names(y%BladeLn2Mesh(i), 'Blade '//trim(num2lstr(i)), InitOut%LinNames_y, index_next)
+      do i=1,p%NumBl_Lin
+         call PackMotionMesh_Names(y%BladeLn2Mesh(i), 'Blade '//trim(num2lstr(i)), InitOut%LinNames_y, index_next, FieldMask=BladeMask)
       end do      
-      !InitOut%RotFrame_y(index_last:index_next-1) = .true. ! values on the mesh are in global, not rotating frame
-   end if
-   call PackMotionMesh_Names(y%PlatformPtMesh, 'Platform', InitOut%LinNames_y, index_next)
-   call PackMotionMesh_Names(y%TowerLn2Mesh, 'Tower', InitOut%LinNames_y, index_next)
-   call PackMotionMesh_Names(y%HubPtMotion, 'Hub', InitOut%LinNames_y, index_next, FieldMask=Mask)
-   index_last = index_next
-   do i=1,p%NumBl
-      call PackMotionMesh_Names(y%BladeRootMotion(i), 'Blade root '//trim(num2lstr(i)), InitOut%LinNames_y, index_next)
-   end do   
-   !InitOut%RotFrame_y(index_last:index_next-1) = .true. ! values on the mesh are in global, not rotating frame
-
-   call PackMotionMesh_Names(y%NacelleMotion, 'Nacelle', InitOut%LinNames_y, index_next)
-   InitOut%LinNames_y(index_next) = 'Yaw, rad'; index_next = index_next+1
-   InitOut%LinNames_y(index_next) = 'YawRate, rad/s'; index_next = index_next+1
-   InitOut%LinNames_y(index_next) = 'HSS_Spd, rad/s'
-         
-   do i=1,p%NumOuts + p%BldNd_TotNumOuts
-      InitOut%LinNames_y(i+index_next) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i)) !trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
-   end do   
-   
-   
-   !! check for AllOuts in rotating frame
-   allocate( AllOut(0:MaxOutPts), STAT=ErrStat2 ) ! allocate starting at zero to account for invalid output channels
-   if (ErrStat2 /=0 ) then
-      call SetErrStat(ErrID_Info, 'error allocating temporary space for AllOut',ErrStat,ErrMsg,RoutineName)
-      return;
    end if
    
-   AllOut = .false.
-   do k=1,3
-      AllOut(TipDxc(  k)) = .true.
-      AllOut(TipDyc(  k)) = .true.
-      AllOut(TipDzc(  k)) = .true.
-      AllOut(TipDxb(  k)) = .true.
-      AllOut(TipDyb(  k)) = .true.
-      AllOut(TipALxb( k)) = .true.
-      AllOut(TipALyb( k)) = .true.
-      AllOut(TipALzb( k)) = .true.
-      AllOut(TipRDxb( k)) = .true.
-      AllOut(TipRDyb( k)) = .true.
-      AllOut(TipRDzc( k)) = .true.
-      AllOut(TipClrnc(k)) = .true.
-      AllOut(PtchPMzc(k)) = .true.
-      AllOut(RootFxc( k)) = .true.
-      AllOut(RootFyc( k)) = .true.
-      AllOut(RootFzc( k)) = .true.
-      AllOut(RootFxb( k)) = .true.
-      AllOut(RootFyb( k)) = .true.
-      AllOut(RootMxc( k)) = .true.
-      AllOut(RootMyc( k)) = .true.
-      AllOut(RootMzc( k)) = .true.
-      AllOut(RootMxb( k)) = .true.
-      AllOut(RootMyb( k)) = .true.
+   if (.not. p%CompAeroMaps) then
+      call PackMotionMesh_Names(y%PlatformPtMesh, 'Platform', InitOut%LinNames_y, index_next)
+      call PackMotionMesh_Names(y%TowerLn2Mesh, 'Tower', InitOut%LinNames_y, index_next)
       
-      do j=1,9            
-         AllOut(SpnALxb( j,k)) = .true.         
-         AllOut(SpnALyb( j,k)) = .true.
-         AllOut(SpnALzb( j,k)) = .true.
-         AllOut(SpnFLxb( j,k)) = .true.
-         AllOut(SpnFLyb( j,k)) = .true.
-         AllOut(SpnFLzb( j,k)) = .true.
-         AllOut(SpnMLxb( j,k)) = .true.
-         AllOut(SpnMLyb( j,k)) = .true.
-         AllOut(SpnMLzb( j,k)) = .true.
-         AllOut(SpnTDxb( j,k)) = .true.
-         AllOut(SpnTDyb( j,k)) = .true.
-         AllOut(SpnTDzb( j,k)) = .true.
-         AllOut(SpnRDxb( j,k)) = .true.
-         AllOut(SpnRDyb( j,k)) = .true.
-         AllOut(SpnRDzb( j,k)) = .true.
+      ! note that this Mask is for the y%HubPtMotion mesh ONLY. The others pack *all* of the motion fields
+      Mask  = .false.
+      Mask(MASKID_TRANSLATIONDISP) = .true.
+      Mask(MASKID_ORIENTATION) = .true.
+      Mask(MASKID_ROTATIONVEL) = .true.
+      
+      call PackMotionMesh_Names(y%HubPtMotion, 'Hub', InitOut%LinNames_y, index_next, FieldMask=Mask)
+      index_last = index_next
+      do i=1,p%NumBl_Lin
+         call PackMotionMesh_Names(y%BladeRootMotion(i), 'Blade root '//trim(num2lstr(i)), InitOut%LinNames_y, index_next)
+      end do   
+
+      call PackMotionMesh_Names(y%NacelleMotion, 'Nacelle', InitOut%LinNames_y, index_next)
+      InitOut%LinNames_y(index_next) = 'Yaw, rad'; index_next = index_next+1
+      InitOut%LinNames_y(index_next) = 'YawRate, rad/s'; index_next = index_next+1
+      InitOut%LinNames_y(index_next) = 'HSS_Spd, rad/s'
+         
+      do i=1,p%NumOuts + p%BldNd_TotNumOuts
+         InitOut%LinNames_y(i+index_next) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i)) !trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
+      end do   
+   
+   
+      !! check for AllOuts in rotating frame
+      allocate( AllOut(0:MaxOutPts), STAT=ErrStat2 ) ! allocate starting at zero to account for invalid output channels
+      if (ErrStat2 /=0 ) then
+         call SetErrStat(ErrID_Info, 'error allocating temporary space for AllOut',ErrStat,ErrMsg,RoutineName)
+         return;
+      end if
+   
+      AllOut = .false.
+      do k=1,3
+         AllOut(TipDxc(  k)) = .true.
+         AllOut(TipDyc(  k)) = .true.
+         AllOut(TipDzc(  k)) = .true.
+         AllOut(TipDxb(  k)) = .true.
+         AllOut(TipDyb(  k)) = .true.
+         AllOut(TipALxb( k)) = .true.
+         AllOut(TipALyb( k)) = .true.
+         AllOut(TipALzb( k)) = .true.
+         AllOut(TipRDxb( k)) = .true.
+         AllOut(TipRDyb( k)) = .true.
+         AllOut(TipRDzc( k)) = .true.
+         AllOut(TipClrnc(k)) = .true.
+         AllOut(PtchPMzc(k)) = .true.
+         AllOut(RootFxc( k)) = .true.
+         AllOut(RootFyc( k)) = .true.
+         AllOut(RootFzc( k)) = .true.
+         AllOut(RootFxb( k)) = .true.
+         AllOut(RootFyb( k)) = .true.
+         AllOut(RootMxc( k)) = .true.
+         AllOut(RootMyc( k)) = .true.
+         AllOut(RootMzc( k)) = .true.
+         AllOut(RootMxb( k)) = .true.
+         AllOut(RootMyb( k)) = .true.
+      
+         do j=1,9            
+            AllOut(SpnALxb( j,k)) = .true.         
+            AllOut(SpnALyb( j,k)) = .true.
+            AllOut(SpnALzb( j,k)) = .true.
+            AllOut(SpnFLxb( j,k)) = .true.
+            AllOut(SpnFLyb( j,k)) = .true.
+            AllOut(SpnFLzb( j,k)) = .true.
+            AllOut(SpnMLxb( j,k)) = .true.
+            AllOut(SpnMLyb( j,k)) = .true.
+            AllOut(SpnMLzb( j,k)) = .true.
+            AllOut(SpnTDxb( j,k)) = .true.
+            AllOut(SpnTDyb( j,k)) = .true.
+            AllOut(SpnTDzb( j,k)) = .true.
+            AllOut(SpnRDxb( j,k)) = .true.
+            AllOut(SpnRDyb( j,k)) = .true.
+            AllOut(SpnRDzb( j,k)) = .true.
+         end do
       end do
-   end do
    
-   do i=1,p%NumOuts
-      InitOut%RotFrame_y(i+index_next) = AllOut( p%OutParam(i)%Indx )      
-   end do    
+      do i=1,p%NumOuts
+         InitOut%RotFrame_y(i+index_next) = AllOut( p%OutParam(i)%Indx )      
+      end do    
    
-   do i=1, p%BldNd_TotNumOuts
-      InitOut%RotFrame_y(i+p%NumOuts+index_next) = .true.     
-   end do
+      do i=1, p%BldNd_TotNumOuts
+         InitOut%RotFrame_y(i+p%NumOuts+index_next) = .true.     
+      end do
    
-   deallocate(AllOut)         
-   
+      deallocate(AllOut)         
+   end if !.not. p%CompAeroMaps
    
 END SUBROUTINE ED_Init_Jacobian_y
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -11226,17 +11076,26 @@ SUBROUTINE ED_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_Init_Jacobian_x'
    
       ! local variables:
-   INTEGER(IntKi)                :: i
+   INTEGER(IntKi)                :: i, indx
    
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+   if (p%CompAeroMaps) then
+      p%NActvDOF_Lin = p%DOFs%NActvDOF / p%NumBl ! we have only blade DOFs, and we are going to use only 1 of the blades
+      p%NActvDOF_Stride = p%NumBl
+      p%NActvVelDOF_Lin = 0 ! we do NOT have velocity states
+   else
+      p%NActvDOF_Lin = p%DOFs%NActvDOF
+      p%NActvDOF_Stride = 1
+      p%NActvVelDOF_Lin = p%NActvDOF_Lin ! we have velocity states
+   end if
    
       ! allocate space for the row/column names and for perturbation sizes
-   call allocAry(p%dx,               p%NDof,            'p%dx',       ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   CALL AllocAry(InitOut%LinNames_x, p%DOFs%NActvDOF*2, 'LinNames_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   CALL AllocAry(InitOut%RotFrame_x, p%DOFs%NActvDOF*2, 'RotFrame_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   CALL AllocAry(InitOut%DerivOrder_x, p%DOFs%NActvDOF*2, 'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call allocAry(p%dx,                 p%NDof,                            'p%dx',         ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%LinNames_x,   p%NActvDOF_Lin + p%NActvVelDOF_Lin,'LinNames_x',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%RotFrame_x,   p%NActvDOF_Lin + p%NActvVelDOF_Lin,'RotFrame_x',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%DerivOrder_x, p%NActvDOF_Lin + p%NActvVelDOF_Lin,'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    
       ! All Elastodyn continuous states are max order = 2
@@ -11266,26 +11125,33 @@ SUBROUTINE ED_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
       p%dx(i) = max(p%dx(i), MinPerturb)
    end do
       
-   InitOut%RotFrame_x   = .false.
-   do i=1,p%DOFs%NActvDOF
-      if (  p%DOFs%PS(i) >=  DOF_BF(1,1) ) then
-         if ( p%NumBl == 2 ) then
-            InitOut%RotFrame_x(i) = p%DOFs%PS(i) < DOF_Teet
-         else
-            InitOut%RotFrame_x(i) = .true. ! = p%DOFs%PS(i) <= DOF_BF (MaxBl,NumBF)
+   if (p%CompAeroMaps) then
+      InitOut%RotFrame_x = .true.
+   else
+      InitOut%RotFrame_x   = .false.
+      do i=1,p%DOFs%NActvDOF
+         if (  p%DOFs%PS(i) >=  DOF_BF(1,1) ) then
+            if ( p%NumBl == 2 ) then
+               InitOut%RotFrame_x(i) = p%DOFs%PS(i) < DOF_Teet
+            else
+               InitOut%RotFrame_x(i) = .true. ! = p%DOFs%PS(i) <= DOF_BF (MaxBl,NumBF)
+            end if
          end if
-      end if      
-   end do
+      end do
+   end if
    
       ! set linearization output names:
-   do i=1,p%DOFs%NActvDOF
-      InitOut%LinNames_x(i) = p%DOF_Desc( p%DOFs%PS(i) )
+   indx = 0
+   do i=1,p%DOFs%NActvDOF,p%NActvDOF_Stride
+      indx = indx + 1
+      InitOut%LinNames_x(indx) = p%DOF_Desc( p%DOFs%PS(i) )
    end do
    
-   do i=1,p%DOFs%NActvDOF
-      InitOut%LinNames_x(i+p%DOFs%NActvDOF) = 'First time derivative of '//trim(InitOut%LinNames_x(i))//'/s'
-      InitOut%RotFrame_x(i+p%DOFs%NActvDOF) = InitOut%RotFrame_x(i)
-   end do      
+
+   do i=1,p%NActvVelDOF_Lin
+      InitOut%LinNames_x(i+p%NActvDOF_Lin) = 'First time derivative of '//trim(InitOut%LinNames_x(i))//'/s'
+      InitOut%RotFrame_x(i+p%NActvDOF_Lin) = InitOut%RotFrame_x(i)
+   end do
    
 END SUBROUTINE ED_Init_Jacobian_x
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -11310,10 +11176,15 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    REAL(R8Ki)                    :: ScaleLength
    
    
-   
    ErrStat = ErrID_None
    ErrMsg  = ""
-         
+   
+   if (p%CompAeroMaps) then
+      p%NumBl_Lin = 1
+   else
+      p%NumBl_Lin = p%NumBl
+   end if
+   
    
    call ED_Init_Jacobian_y( p, y, InitOut, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -11326,18 +11197,23 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       ! determine how many inputs there are in the Jacobians
    nu = 0;
    if (allocated(u%BladePtLoads)) then
-      do i=1,p%NumBl
+      do i=1,p%NumBl_Lin
          nu = nu + u%BladePtLoads(i)%NNodes * 6  ! 3 forces + 3 moments at each node on each blade
       end do      
    end if
-   nu = nu &
-      + u%PlatformPtMesh%NNodes * 6            & ! 3 forces + 3 moments at each node
-      + u%TowerPtLoads%NNodes   * 6            & ! 3 forces + 3 moments at each node
-      + u%HubPtLoad%NNodes      * 6            & ! 3 forces + 3 moments at each node
-      + u%NacelleLoads%NNodes   * 6            & ! 3 forces + 3 moments at each node
-      + p%NumBl                                & ! blade pitch command (BlPitchCom)    
-      + 2                                        ! YawMom and GenTrq
-         
+   
+   if (p%CompAeroMaps) then
+      p%NumExtendedInputs = 0
+   else
+      nu = nu &
+         + u%PlatformPtMesh%NNodes * 6            & ! 3 forces + 3 moments at each node
+         + u%TowerPtLoads%NNodes   * 6            & ! 3 forces + 3 moments at each node
+         + u%HubPtLoad%NNodes      * 6            & ! 3 forces + 3 moments at each node
+         + u%NacelleLoads%NNodes   * 6            & ! 3 forces + 3 moments at each node
+         + p%NumBl                                & ! blade pitch command (BlPitchCom)    
+         + 2                                        ! YawMom and GenTrq
+      p%NumExtendedInputs = 1
+   end if
    ! note: all other inputs are ignored
       
    !....................                        
@@ -11364,7 +11240,7 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       !Module/Mesh/Field: u%BladePtLoads(2)%Moment = 4;
       !Module/Mesh/Field: u%BladePtLoads(3)%Force  = 5;
       !Module/Mesh/Field: u%BladePtLoads(3)%Moment = 6;      
-      do k=1,p%NumBl
+      do k=1,p%NumBl_Lin
          
          do i_meshField = 1,2
             do i=1,u%BladePtLoads(k)%NNodes
@@ -11381,64 +11257,66 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
                         
    end if
    
-   !if MaxBl ever changes (i.e., MaxBl /=3), we need to modify this accordingly:
-   do i_meshField = 7,8
-      do i=1,u%PlatformPtMesh%NNodes
-         do j=1,3
-            p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%PlatformPtMesh%Force = 7; u%PlatformPtMesh%Moment = 8;
-            p%Jac_u_indx(index,2) =  j !index:  j
-            p%Jac_u_indx(index,3) =  i !Node:   i
-            index = index + 1
-         end do !j      
-      end do !i
-   end do
+   if (.not. p%CompAeroMaps) then
+      !if MaxBl ever changes (i.e., MaxBl /=3), we need to modify this accordingly:
+      do i_meshField = 7,8
+         do i=1,u%PlatformPtMesh%NNodes
+            do j=1,3
+               p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%PlatformPtMesh%Force = 7; u%PlatformPtMesh%Moment = 8;
+               p%Jac_u_indx(index,2) =  j !index:  j
+               p%Jac_u_indx(index,3) =  i !Node:   i
+               index = index + 1
+            end do !j      
+         end do !i
+      end do
   
-   do i_meshField = 9,10
-      do i=1,u%TowerPtLoads%NNodes
-         do j=1,3
-            p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%TowerPtLoads%Force = 9; u%TowerPtLoads%Moment = 10;
-            p%Jac_u_indx(index,2) =  j !index:  j
-            p%Jac_u_indx(index,3) =  i !Node:   i
-            index = index + 1
-         end do !j      
-      end do !i
-   end do
+      do i_meshField = 9,10
+         do i=1,u%TowerPtLoads%NNodes
+            do j=1,3
+               p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%TowerPtLoads%Force = 9; u%TowerPtLoads%Moment = 10;
+               p%Jac_u_indx(index,2) =  j !index:  j
+               p%Jac_u_indx(index,3) =  i !Node:   i
+               index = index + 1
+            end do !j      
+         end do !i
+      end do
          
-   do i_meshField = 11,12
-      do i=1,u%HubPtLoad%NNodes
-         do j=1,3
-            p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%HubPtLoad%Force = 11; u%HubPtLoad%Moment = 12;
-            p%Jac_u_indx(index,2) =  j !index:  j
-            p%Jac_u_indx(index,3) =  i !Node:   i
-            index = index + 1
-         end do !j      
-      end do !i
-   end do   
+      do i_meshField = 11,12
+         do i=1,u%HubPtLoad%NNodes
+            do j=1,3
+               p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%HubPtLoad%Force = 11; u%HubPtLoad%Moment = 12;
+               p%Jac_u_indx(index,2) =  j !index:  j
+               p%Jac_u_indx(index,3) =  i !Node:   i
+               index = index + 1
+            end do !j      
+         end do !i
+      end do   
    
-   do i_meshField = 13,14
-      do i=1,u%NacelleLoads%NNodes
-         do j=1,3
-            p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%NacelleLoads%Force = 13; u%NacelleLoads%Moment = 14;
-            p%Jac_u_indx(index,2) =  j !index:  j
-            p%Jac_u_indx(index,3) =  i !Node:   i
-            index = index + 1
-         end do !j      
-      end do !i
-   end do
+      do i_meshField = 13,14
+         do i=1,u%NacelleLoads%NNodes
+            do j=1,3
+               p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%NacelleLoads%Force = 13; u%NacelleLoads%Moment = 14;
+               p%Jac_u_indx(index,2) =  j !index:  j
+               p%Jac_u_indx(index,3) =  i !Node:   i
+               index = index + 1
+            end do !j      
+         end do !i
+      end do
    
-   do i_meshField = 1,p%NumBl ! scalars   
-      p%Jac_u_indx(index,1) =  15 !Module/Mesh/Field: u%BlPitchCom = 15;
-      p%Jac_u_indx(index,2) =  1 !index:  n/a
-      p%Jac_u_indx(index,3) =  i_meshField !Node:   blade
-      index = index + 1      
-   end do
+      do i_meshField = 1,p%NumBl ! scalars   
+         p%Jac_u_indx(index,1) =  15 !Module/Mesh/Field: u%BlPitchCom = 15;
+         p%Jac_u_indx(index,2) =  1 !index:  n/a
+         p%Jac_u_indx(index,3) =  i_meshField !Node:   blade
+         index = index + 1      
+      end do
    
-   do i_meshField = 16,17 ! scalars   
-      p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%YawMom = 16; u%GenTrq = 17;
-      p%Jac_u_indx(index,2) =  1 !index:  j
-      p%Jac_u_indx(index,3) =  1 !Node:   i
-      index = index + 1
-   end do
+      do i_meshField = 16,17 ! scalars   
+         p%Jac_u_indx(index,1) =  i_meshField !Module/Mesh/Field: u%YawMom = 16; u%GenTrq = 17;
+         p%Jac_u_indx(index,2) =  1 !index:  j
+         p%Jac_u_indx(index,3) =  1 !Node:   i
+         index = index + 1
+      end do
+   end if ! .not. p%CompAeroMaps
    
    !................
    ! input perturbations, du:
@@ -11481,9 +11359,9 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    !................
    ! names of the columns, InitOut%LinNames_u:
    !................
-   call AllocAry(InitOut%LinNames_u, nu+1, 'LinNames_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AllocAry(InitOut%RotFrame_u, nu+1, 'RotFrame_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   call AllocAry(InitOut%IsLoad_u,   nu+1, 'IsLoad_u',   ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%LinNames_u, nu+p%NumExtendedInputs, 'LinNames_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%RotFrame_u, nu+p%NumExtendedInputs, 'RotFrame_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%IsLoad_u,   nu+p%NumExtendedInputs, 'IsLoad_u',   ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
       
    InitOut%IsLoad_u   = .true.  ! most of ED's inputs are loads; we will override the non-load inputs below.
@@ -11491,27 +11369,29 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    index = 1
    if (allocated(u%BladePtLoads)) then
       index_last = index
-      do k=1,p%NumBl
+      do k=1,p%NumBl_Lin
          call PackLoadMesh_Names(u%BladePtLoads(k), 'Blade '//trim(num2lstr(k)), InitOut%LinNames_u, index)   
       end do
       !InitOut%RotFrame_u(index_last:index-1) = .true. ! values on the mesh are in global, not rotating frame
    end if
-   call PackLoadMesh_Names(u%PlatformPtMesh, 'Platform', InitOut%LinNames_u, index)   
-   call PackLoadMesh_Names(u%TowerPtLoads, 'Tower', InitOut%LinNames_u, index)   
-   call PackLoadMesh_Names(u%HubPtLoad, 'Hub', InitOut%LinNames_u, index)   
-   call PackLoadMesh_Names(u%NacelleLoads, 'Nacelle', InitOut%LinNames_u, index)   
+   if (.not. p%CompAeroMaps) then
+      call PackLoadMesh_Names(u%PlatformPtMesh, 'Platform', InitOut%LinNames_u, index)   
+      call PackLoadMesh_Names(u%TowerPtLoads, 'Tower', InitOut%LinNames_u, index)   
+      call PackLoadMesh_Names(u%HubPtLoad, 'Hub', InitOut%LinNames_u, index)   
+      call PackLoadMesh_Names(u%NacelleLoads, 'Nacelle', InitOut%LinNames_u, index)   
       
-   do k = 1,p%NumBl ! scalars
-      InitOut%LinNames_u(index) = 'Blade '//trim(num2lstr(k))//' pitch command, rad'
-      InitOut%IsLoad_u(  index) = .false.
-      InitOut%RotFrame_u(index) = .true.
-      index = index + 1
-   end do
+      do k = 1,p%NumBl ! scalars
+         InitOut%LinNames_u(index) = 'Blade '//trim(num2lstr(k))//' pitch command, rad'
+         InitOut%IsLoad_u(  index) = .false.
+         InitOut%RotFrame_u(index) = .true.
+         index = index + 1
+      end do
 
-   InitOut%LinNames_u(index) = 'Yaw moment, Nm' ; index = index + 1
-   InitOut%LinNames_u(index) = 'Generator torque, Nm' ; index = index + 1
-   InitOut%LinNames_u(index) = 'Extended input: collective blade-pitch command, rad'
-   InitOut%IsLoad_u(  index) = .false.
+      InitOut%LinNames_u(index) = 'Yaw moment, Nm' ; index = index + 1
+      InitOut%LinNames_u(index) = 'Generator torque, Nm' ; index = index + 1
+      InitOut%LinNames_u(index) = 'Extended input: collective blade-pitch command, rad'
+      InitOut%IsLoad_u(  index) = .false.
+   end if
    
 END SUBROUTINE ED_Init_Jacobian
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -11585,10 +11465,10 @@ END SUBROUTINE ED_Perturb_u
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine perturbs the nth element of the continuous state array.
 !! Do not change this without making sure subroutine elastodyn::ed_init_jacobian is consistant with this routine!
-SUBROUTINE ED_Perturb_x( p, n, perturb_sign, x, dx )
+SUBROUTINE ED_Perturb_x( p, n_in, perturb_sign, x, dx )
 
    TYPE(ED_ParameterType)              , INTENT(IN   ) :: p                      !< parameters
-   INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use 
+   INTEGER( IntKi )                    , INTENT(IN   ) :: n_in                   !< number of array element to use 
    INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
    TYPE(ED_ContinuousStateType)        , INTENT(INOUT) :: x                      !< perturbed ED states
    REAL( R8Ki )                        , INTENT(  OUT) :: dx                     !< amount that specific state was perturbed
@@ -11596,14 +11476,19 @@ SUBROUTINE ED_Perturb_x( p, n, perturb_sign, x, dx )
 
    ! local variables
    integer(intKi)                                      :: indx
+   integer(intKi)                                      :: n
    
+   n = (n_in - 1) * p%NActvDOF_Stride + 1
    
    if (n > p%DOFs%NActvDOF) then
+   
       indx = p%DOFs%PS(n-p%DOFs%NActvDOF)
       dx   = p%dx( indx )
 
-      x%QDT( indx ) = x%QDT( indx ) + dx * perturb_sign 
+      x%QDT( indx ) = x%QDT( indx ) + dx * perturb_sign
+      
    else
+   
       indx = p%DOFs%PS(n)
       dx   = p%dx( indx )
       
@@ -11628,42 +11513,83 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    LOGICAL                                           :: Mask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
 
    
-   Mask  = .false.
-   Mask(MASKID_TRANSLATIONDISP) = .true.
-   Mask(MASKID_ORIENTATION) = .true.
-   Mask(MASKID_ROTATIONVEL) = .true.   
-   
-   
-   indx_first = 1            
+   indx_first = 1
    if (allocated(y_p%BladeLn2Mesh)) then
-      do k=1,p%NumBl
-         call PackMotionMesh_dY(y_p%BladeLn2Mesh(k), y_m%BladeLn2Mesh(k), dY, indx_first)                  
-      end do      
+      Mask  = .true.
+      if (p%CompAeroMaps) then
+         Mask(MASKID_TRANSLATIONACC) = .false.
+         Mask(MASKID_ROTATIONACC) = .false.
+      end if
+      
+      do k=1,p%NumBl_Lin
+         call PackMotionMesh_dY(y_p%BladeLn2Mesh(k), y_m%BladeLn2Mesh(k), dY, indx_first, FieldMask=Mask)
+      end do
    end if
    
-   call PackMotionMesh_dY(y_p%PlatformPtMesh, y_m%PlatformPtMesh, dY, indx_first)                  
-   call PackMotionMesh_dY(y_p%TowerLn2Mesh,   y_m%TowerLn2Mesh,   dY, indx_first)                  
-   call PackMotionMesh_dY(y_p%HubPtMotion,    y_m%HubPtMotion,    dY, indx_first, FieldMask=Mask)  
-   do k=1,p%NumBl
-      call PackMotionMesh_dY(y_p%BladeRootMotion(k),   y_m%BladeRootMotion(k),   dY, indx_first)                  
-   end do
-   call PackMotionMesh_dY(y_p%NacelleMotion,  y_m%NacelleMotion,  dY, indx_first)                  
+   if (.not. p%CompAeroMaps) then
+      call PackMotionMesh_dY(y_p%PlatformPtMesh, y_m%PlatformPtMesh, dY, indx_first, UseSmlAngle=.true.)
+      call PackMotionMesh_dY(y_p%TowerLn2Mesh,   y_m%TowerLn2Mesh,   dY, indx_first, UseSmlAngle=.true.)
+      
+      Mask  = .false.
+      Mask(MASKID_TRANSLATIONDISP) = .true.
+      Mask(MASKID_ORIENTATION) = .true.
+      Mask(MASKID_ROTATIONVEL) = .true.   
+      call PackMotionMesh_dY(y_p%HubPtMotion,    y_m%HubPtMotion,    dY, indx_first, FieldMask=Mask)
+      
+      do k=1,p%NumBl_Lin
+         call PackMotionMesh_dY(y_p%BladeRootMotion(k),   y_m%BladeRootMotion(k),   dY, indx_first)
+      end do
+      call PackMotionMesh_dY(y_p%NacelleMotion,  y_m%NacelleMotion,  dY, indx_first)
                      
-   dY(indx_first) = y_p%Yaw     - y_m%Yaw;       indx_first = indx_first + 1    
-   dY(indx_first) = y_p%YawRate - y_m%YawRate;   indx_first = indx_first + 1    
-   dY(indx_first) = y_p%HSS_Spd - y_m%HSS_Spd;   indx_first = indx_first + 1
+      dY(indx_first) = y_p%Yaw     - y_m%Yaw;       indx_first = indx_first + 1
+      dY(indx_first) = y_p%YawRate - y_m%YawRate;   indx_first = indx_first + 1
+      dY(indx_first) = y_p%HSS_Spd - y_m%HSS_Spd;   indx_first = indx_first + 1
    
-   !indx_last = indx_first + p%NumOuts - 1
-   do k=1,p%NumOuts + p%BldNd_TotNumOuts
-      dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
-   end do   
+      !indx_last = indx_first + p%NumOuts - 1
+      do k=1,p%NumOuts + p%BldNd_TotNumOuts
+         dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
+      end do
+   end if
    
    dY = dY / (2.0_R8Ki*delta)
    
 END SUBROUTINE Compute_dY
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine uses values of two continuous state types to compute an array of differences.
+!! Do not change this packing without making sure subroutine elastodyn::init_jacobian is consistant with this routine!
+SUBROUTINE Compute_dX(p, x_p, x_m, delta, dX)
+   
+   TYPE(ED_ParameterType)            , INTENT(IN   ) :: p         !< parameters
+   TYPE(ED_ContinuousStateType)      , INTENT(IN   ) :: x_p       !< ED continuous states at \f$ u + \Delta_p u \f$ or \f$ x + \Delta_p x \f$ (p=plus)
+   TYPE(ED_ContinuousStateType)      , INTENT(IN   ) :: x_m       !< ED continuous states at \f$ u - \Delta_m u \f$ or \f$ x - \Delta_m x \f$ (m=minus)
+   REAL(R8Ki)                        , INTENT(IN   ) :: delta     !< difference in inputs or states \f$ delta = \Delta u \f$ or \f$ delta = \Delta_p x \f$
+   REAL(R8Ki)                        , INTENT(INOUT) :: dX(:)     !< column of dXdu or dXdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial x_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
+   
+      ! local variables:
+   INTEGER(IntKi)    :: i              ! loop over blade nodes
+   INTEGER(IntKi)    :: j              ! loop over blades
+   INTEGER(IntKi)    :: indx_first     ! index indicating next value of dY to be filled 
+   
+   indx_first = 0
+   
+   if (p%NActvVelDOF_Lin > 0) then
+      do j=1,p%DOFs%NActvDOF, p%NActvDOF_Stride ! Loop through all active (enabled) DOFs for linearization
+         indx_first = indx_first + 1
+         dX(indx_first) = x_p%QT( p%DOFs%PS(j) ) - x_m%QT( p%DOFs%PS(j) )
+      end do
+   end if
+   
+   do j=1,p%DOFs%NActvDOF, p%NActvDOF_Stride ! Loop through all active (enabled) DOFs for linearization
+      indx_first = indx_first + 1
+      dX(indx_first) = x_p%QDT( p%DOFs%PS(j) ) - x_m%QDT( p%DOFs%PS(j) )
+   end do
+   
+   dX = dX / (2*delta) ! whole array operation
+
+END SUBROUTINE Compute_dX
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedLogMap )
+SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedTrimOP )
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(ED_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
@@ -11682,7 +11608,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
-   LOGICAL,                 OPTIONAL,    INTENT(IN   )           :: NeedLogMap !< whether a y_op values should contain log maps instead of full orientation matrices
+   LOGICAL,                 OPTIONAL,    INTENT(IN   )           :: NeedTrimOP !< whether a y_op values should contain values for trim solution (3-value representation instead of full orientation matrices, no rotation acc)
 
 
 
@@ -11691,7 +11617,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_GetOP'
-   LOGICAL                                           :: ReturnLogMap
+   LOGICAL                                           :: ReturnTrimOP
    TYPE(ED_ContinuousStateType)                      :: dx          !< derivative of continuous states at operating point
    LOGICAL                                           :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
    
@@ -11700,103 +11626,124 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
    ErrStat = ErrID_None
    ErrMsg  = ''
-
+   
    !..................................
    IF ( PRESENT( u_op ) ) THEN
       if (.not. allocated(u_op)) then         
-         call AllocAry(u_op, size(p%Jac_u_indx,1)+1,'u_op',ErrStat2,ErrMsg2) ! +1 for extended input here
+         call AllocAry(u_op, size(p%Jac_u_indx,1)+p%NumExtendedInputs,'u_op',ErrStat2,ErrMsg2) ! +1 for extended input here
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) return
       end if
             
       index = 1
       if (allocated(u%BladePtLoads)) then
-         do k=1,p%NumBl
+         do k=1,p%NumBl_Lin
             call PackLoadMesh(u%BladePtLoads(k), u_op, index)   
          end do
       end if
-      call PackLoadMesh(u%PlatformPtMesh, u_op, index)   
-      call PackLoadMesh(u%TowerPtLoads, u_op, index)   
-      call PackLoadMesh(u%HubPtLoad, u_op, index)   
-      call PackLoadMesh(u%NacelleLoads, u_op, index)   
+      if (.not. p%CompAeroMaps) then
+         call PackLoadMesh(u%PlatformPtMesh, u_op, index)   
+         call PackLoadMesh(u%TowerPtLoads, u_op, index)   
+         call PackLoadMesh(u%HubPtLoad, u_op, index)   
+         call PackLoadMesh(u%NacelleLoads, u_op, index)   
       
-      do k = 1,p%NumBl ! scalars
-         u_op(index) = u%BlPitchCom(k)
-         index = index + 1
-      end do
-      u_op(index) = u%YawMom ; index = index + 1
-      u_op(index) = u%GenTrq ; index = index + 1
+         do k = 1,p%NumBl_Lin ! scalars
+            u_op(index) = u%BlPitchCom(k)
+            index = index + 1
+         end do
+         u_op(index) = u%YawMom ; index = index + 1
+         u_op(index) = u%GenTrq ; index = index + 1
       
-         ! extended input:
-      u_op(index) = u%BlPitchCom(1)
+            ! extended input: ! note this happens only if .not. p%CompAeroMaps, so p%NumExtendedInputs > 0
+         u_op(index) = u%BlPitchCom(1)
       
-      do k = 2,p%NumBl
-         if (.not. EqualRealNos( u%BlPitchCom(1), u%BlPitchCom(k) ) ) then
-            call SetErrStat(ErrID_Info,"Operating point of collective pitch extended input is invalid because "// &
-                     "the commanded blade pitch angles are not the same for each blade.", ErrStat, ErrMsg, RoutineName)
-            exit
-         end if      
-      end do      
+         do k = 2,p%NumBl_Lin
+            if (.not. EqualRealNos( u%BlPitchCom(1), u%BlPitchCom(k) ) ) then
+               call SetErrStat(ErrID_Info,"Operating point of collective pitch extended input is invalid because "// &
+                        "the commanded blade pitch angles are not the same for each blade.", ErrStat, ErrMsg, RoutineName)
+               exit
+            end if      
+         end do
+      end if
       
    END IF
 
    !..................................
    IF ( PRESENT( y_op ) ) THEN
-      if (present(NeedLogMap)) then
-         ReturnLogMap = NeedLogMap
+      if (present(NeedTrimOP)) then
+         ReturnTrimOP = NeedTrimOP
       else
-         ReturnLogMap = .false.
+         ReturnTrimOP = .false.
       end if
       
       if (.not. allocated(y_op)) then 
             ! our operating point includes DCM (orientation) matrices, not just small angles like the perturbation matrices do
-         ny = p%Jac_ny + y%PlatformPtMesh%NNodes * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node
+         if (p%CompAeroMaps) then
+            ny = p%Jac_ny
+         else
+            ny = p%Jac_ny + y%PlatformPtMesh%NNodes * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node
                        + y%TowerLn2Mesh%NNodes   * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node 
                        + y%HubPtMotion%NNodes    * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node
                        + y%NacelleMotion%NNodes  * 6   ! Jac_ny has 3 for Orientation, but we need 9 at each node
-            
+                       
+            do k=1,p%NumBl_Lin
+               ny = ny + y%BladeRootMotion(k)%NNodes * 6  ! Jac_ny has 3 for Orientation, but we need 9 at each node on each blade
+            end do
+                                    
+         end if
+         
          if (allocated(y%BladeLn2Mesh)) then
-            do k=1,p%NumBl
+            do k=1,p%NumBl_Lin
                ny = ny + y%BladeLn2Mesh(k)%NNodes * 6  ! Jac_ny has 3 for Orientation, but we need 9 (at each node on each blade)
             end do      
          end if
-         do k=1,p%NumBl
-            ny = ny + y%BladeRootMotion(k)%NNodes * 6  ! Jac_ny has 3 for Orientation, but we need 9 at each node on each blade
-         end do
-                                    
+         
          call AllocAry(y_op, ny,'y_op',ErrStat2,ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) return
       end if
             
+      if (ReturnTrimOP) y_op = 0.0_ReKi ! initialize in case we are returning packed orientations and don't fill the entire array
+
       
-      
-      Mask  = .false.
-      Mask(MASKID_TRANSLATIONDISP) = .true.
-      Mask(MASKID_ORIENTATION) = .true.
-      Mask(MASKID_ROTATIONVEL) = .true.
-   
+      if ( p%CompAeroMaps ) then
+         Mask  = .false.
+         Mask(MASKID_TRANSLATIONDISP) = .true.
+         Mask(MASKID_ORIENTATION) = .true.
+         Mask(MASKID_TRANSLATIONVEL) = .true.
+         Mask(MASKID_ROTATIONVEL) = .true.
+      else
+         Mask =  .true.
+      end if
+
       index = 1
       if (allocated(y%BladeLn2Mesh)) then
-         do k=1,p%NumBl
-            call PackMotionMesh(y%BladeLn2Mesh(k), y_op, index, UseLogMaps=ReturnLogMap)
+         do k=1,p%NumBl_Lin
+            call PackMotionMesh(y%BladeLn2Mesh(k), y_op, index, FieldMask=Mask, TrimOP=ReturnTrimOP)
          end do      
       end if
-      call PackMotionMesh(y%PlatformPtMesh, y_op, index, UseLogMaps=ReturnLogMap)
-      call PackMotionMesh(y%TowerLn2Mesh, y_op, index, UseLogMaps=ReturnLogMap)
-      call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask, UseLogMaps=ReturnLogMap)
-      do k=1,p%NumBl
-         call PackMotionMesh(y%BladeRootMotion(k), y_op, index, UseLogMaps=ReturnLogMap)
-      end do   
-      call PackMotionMesh(y%NacelleMotion, y_op, index, UseLogMaps=ReturnLogMap)
+      if (.not. p%CompAeroMaps) then
+         Mask  = .false.
+         Mask(MASKID_TRANSLATIONDISP) = .true.
+         Mask(MASKID_ORIENTATION) = .true.
+         Mask(MASKID_ROTATIONVEL) = .true.
       
-      y_op(index) = y%Yaw     ; index = index + 1    
-      y_op(index) = y%YawRate ; index = index + 1    
-      y_op(index) = y%HSS_Spd 
+         call PackMotionMesh(y%PlatformPtMesh, y_op, index, TrimOP=ReturnTrimOP)
+         call PackMotionMesh(y%TowerLn2Mesh, y_op, index, TrimOP=ReturnTrimOP)
+         call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask, TrimOP=ReturnTrimOP)
+         do k=1,p%NumBl_Lin
+            call PackMotionMesh(y%BladeRootMotion(k), y_op, index, TrimOP=ReturnTrimOP)
+         end do   
+         call PackMotionMesh(y%NacelleMotion, y_op, index, TrimOP=ReturnTrimOP)
+      
+         y_op(index) = y%Yaw     ; index = index + 1    
+         y_op(index) = y%YawRate ; index = index + 1    
+         y_op(index) = y%HSS_Spd 
    
-      do i=1,p%NumOuts + p%BldNd_TotNumOuts
-         y_op(i+index) = y%WriteOutput(i)
-      end do   
+         do i=1,p%NumOuts + p%BldNd_TotNumOuts
+            y_op(i+index) = y%WriteOutput(i)
+         end do
+      end if
                         
    END IF
 
@@ -11804,17 +11751,23 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    IF ( PRESENT( x_op ) ) THEN
 
       if (.not. allocated(x_op)) then                           
-         call AllocAry(x_op, p%DOFs%NActvDOF * 2,'x_op',ErrStat2,ErrMsg2)
+         call AllocAry(x_op, p%NActvDOF_Lin  + p%NActvVelDOF_Lin,'x_op',ErrStat2,ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) return
       end if
       
-      do i=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-         x_op(i) = x%QT( p%DOFs%PS(i) )
+      index = 0
+      do i=1,p%DOFs%NActvDOF,p%NActvDOF_Stride ! Loop through all active (enabled) DOFs in the Jacobian
+         index = index + 1
+         x_op(index) = x%QT( p%DOFs%PS(i) )
       end do
-      do i=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-         x_op(i+p%DOFs%NActvDOF) = x%QDT( p%DOFs%PS(i) )
-      end do                                
+      
+      if (p%NActvVelDOF_Lin > 0) then ! .not. p%CompAeroMaps
+         do i=1,p%DOFs%NActvDOF,p%NActvDOF_Stride ! Loop through all active (enabled) DOFs in the Jacobian
+            index = index + 1
+            x_op(index) = x%QDT( p%DOFs%PS(i) )
+         end do
+      end if
       
    END IF
 
@@ -11822,7 +11775,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    IF ( PRESENT( dx_op ) ) THEN
 
       if (.not. allocated(dx_op)) then                           
-         call AllocAry(dx_op, p%DOFs%NActvDOF * 2,'dx_op',ErrStat2,ErrMsg2)
+         call AllocAry(dx_op, p%NActvDOF_Lin  + p%NActvVelDOF_Lin,'dx_op',ErrStat2,ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) return
       end if
@@ -11834,12 +11787,18 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
             return
          end if
                      
-      do i=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-         dx_op(i) = dx%QT( p%DOFs%PS(i) )
+      index = 0
+      if (p%NActvVelDOF_Lin > 0) then ! p%CompAeroMaps
+         do i=1,p%DOFs%NActvDOF,p%NActvDOF_Stride ! Loop through all active (enabled) DOFs in the Jacobian
+            index = index + 1
+            dx_op(index) = dx%QT( p%DOFs%PS(i) )
+         end do
+      end if
+      
+      do i=1,p%DOFs%NActvDOF,p%NActvDOF_Stride ! Loop through all active (enabled) DOFs in the Jacobian
+         index = index + 1
+         dx_op(index) = dx%QDT( p%DOFs%PS(i) )
       end do
-      do i=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-         dx_op(i+p%DOFs%NActvDOF) = dx%QDT( p%DOFs%PS(i) )
-      end do                                
       
       call ED_DestroyContState( dx, ErrStat2, ErrMsg2)
             

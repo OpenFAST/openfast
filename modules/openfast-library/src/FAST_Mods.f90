@@ -24,14 +24,15 @@ MODULE FAST_ModTypes
    USE NWTC_Library
    USE FAST_Types
 
-   TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'OpenFAST', '', '' ) !< The version number of this module
+   TYPE(ProgDesc) :: FAST_Ver  = ProgDesc( 'OpenFAST', '', '' ) !< The version number of this module
          
    !..................................................................
    
    INTEGER(IntKi), PARAMETER :: Type_LandBased          = 1
    INTEGER(IntKi), PARAMETER :: Type_Offshore_Fixed     = 2
    INTEGER(IntKi), PARAMETER :: Type_Offshore_Floating  = 3
+   INTEGER(IntKi), PARAMETER :: Type_MHK_Fixed          = 4
+   INTEGER(IntKi), PARAMETER :: Type_MHK_Floating       = 5
    
    ! state array indexes
    INTEGER(IntKi), PARAMETER :: STATE_CURR              = 1          !< index for "current" (t_global) states
@@ -59,10 +60,11 @@ MODULE FAST_ModTypes
    INTEGER(IntKi), PARAMETER :: LIN_OUTPUT_COL          = 2          !< index for outputs
    INTEGER(IntKi), PARAMETER :: LIN_ContSTATE_COL       = 3          !< index for continuous states
    
+   INTEGER(IntKi), PARAMETER :: Solve_FullOpt1          = 1
+   INTEGER(IntKi), PARAMETER :: Solve_FullOpt2          = 2
+   INTEGER(IntKi), PARAMETER :: Solve_SimplifiedOpt1    = 3
    
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12
-
-   LOGICAL,        PARAMETER :: GenerateAdamsModel = .FALSE.
 
    LOGICAL,        PARAMETER :: BD_Solve_Option1 = .TRUE.
 

@@ -14,6 +14,7 @@ module FVW
    use FVW_IO
    use FVW_Wings
    use FVW_BiotSavart
+   use FVW_VortexTools, only: tic, toc
    use FVW_Tests
    use AirFoilInfo
 
@@ -21,7 +22,7 @@ module FVW
 
    PRIVATE
 
-   type(ProgDesc), parameter  :: FVW_Ver = ProgDesc( 'FVW', '', '' )
+   type(ProgDesc), parameter  :: FVW_Ver = ProgDesc( 'OLAF', '', '' )
 
    public   :: FVW_Init             ! Initialization routine
    public   :: FVW_End
@@ -82,16 +83,6 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
    call getcwd(DirName)
    call WrScr(' - Directory:         '//trim(DirName))
    call WrScr(' - RootName:          '//trim(InitInp%RootName))
-#ifdef _OPENMP   
-   call WrScr(' - Compiled with OpenMP')
-   !$OMP PARALLEL default(shared)
-   if (omp_get_thread_num()==0) then
-        call WrScr('   Number of threads: '//trim(Num2LStr(omp_get_num_threads()))//'/'//trim(Num2LStr(omp_get_max_threads())))
-   endif
-   !$OMP END PARALLEL 
-#else
-   call WrScr(' - No OpenMP support')
-#endif
    if (DEV_VERSION) then
       CALL FVW_RunTests(ErrStat2, ErrMsg2); if (Failed()) return
    endif
@@ -105,9 +96,15 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
    ! Trigger required before allocations
    p%nNWMax  = max(InputFileData%nNWPanels,0)+1          ! +1 since LL panel included in NW
    p%nFWMax  = max(InputFileData%nFWPanels,0)
+   p%nNWFree = max(InputFileData%nNWPanelsFree,0)+1      ! +1 since LL panel included in NW
    p%nFWFree = max(InputFileData%nFWPanelsFree,0)
    p%DTfvw   = InputFileData%DTfvw
    p%DTvtk   = InputFileData%DTvtk
+   if (p%WakeAtTE) then
+      p%iNWStart=2
+   else
+      p%iNWStart=1
+   endif
 
    ! Initialize Misc Vars (may depend on input file)
    CALL FVW_InitMiscVars( p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -116,10 +113,10 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
    CALL MOVE_ALLOC( InitInp%WingsMesh, u%WingsMesh )     ! Move from InitInp to u
 
    ! This mesh is passed in as a cousin of the BladeMotion mesh.
-   CALL Wings_Panelling_Init(u%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL Wings_Panelling_Init(u%WingsMesh, p, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Set parameters from InputFileData (need Misc allocated)
-   CALL FVW_SetParametersFromInputFile(InputFileData, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL FVW_SetParametersFromInputFile(InputFileData, p, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Initialize Misc Vars (after input file params)
    CALL FVW_InitMiscVarsPostParam( p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -134,7 +131,6 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
    ! This mesh is now a cousin of the BladeMotion mesh from AD.
    CALL Wings_Panelling     (u%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
    CALL FVW_InitRegularization(x, p, m, ErrStat2, ErrMsg2); if(Failed()) return
-   CALL FVW_ToString(p, m) ! Print to screen
 
    ! Mapping NW and FW (purely for esthetics, and maybe wind) ! TODO, just points
    call Map_LL_NW(p, m, z, x, 1.0_ReKi, ErrStat2, ErrMsg2); if(Failed()) return
@@ -153,9 +149,9 @@ subroutine FVW_Init(AFInfo, InitInp, u, p, x, xd, z, OtherState, y, m, Interval,
    call UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Framework types unused
-   OtherState%NULL = 0
-   xd%NULL         = 0
-   InitOut%NULL    = 0
+   OtherState%Dummy = 0
+   xd%Dummy         = 0
+   InitOut%Dummy    = 0
 CONTAINS
 
    logical function Failed()
@@ -177,152 +173,104 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
    character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
    character(*), parameter :: RoutineName = 'FVW_InitMiscVars'
+   integer(IntKi) :: iW
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
    m%FirstCall = .True.
-   m%nNW       = iNWStart-1    ! Number of active nearwake panels
+   m%nNW       = p%iNWStart-1  ! Number of active nearwake panels
    m%nFW       = 0             ! Number of active farwake  panels
    m%iStep     = 0             ! Current step number
-   m%VTKStep   = -1            ! Counter of VTK outputs
+   m%VTKstep   = -1            ! Counter of VTK outputs
    m%VTKlastTime = -HUGE(1.0_DbKi)
-   m%tSpent    = 0
-   call AllocAry(m%iTip,  p%nWings, 'iTip',  ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%iTip  = -1;! Important init
-   call AllocAry(m%iRoot, p%nWings, 'iRoot', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%iRoot = -1;! Important init
+   m%OldWakeTime = -HUGE(1.0_DbKi)
 
-   call AllocAry( m%LE      ,  3  ,  p%nSpan+1  , p%nWings, 'Leading Edge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%LE = -999999_ReKi;
-   call AllocAry( m%TE      ,  3  ,  p%nSpan+1  , p%nWings, 'TrailingEdge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%TE = -999999_ReKi;
-   call AllocAry( m%PitchAndTwist ,  p%nSpan+1  , p%nWings, 'Pitch and twist    ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%PitchAndTwist= -999999_ReKi;
-   call AllocAry( m%alpha_LL,        p%nSpan    , p%nWings, 'Wind on CP ll      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%alpha_LL= -999999_ReKi;
-   call AllocAry( m%Vreln_LL,        p%nSpan    , p%nWings, 'Wind on CP ll      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Vreln_LL = -999999_ReKi;
-   ! Variables at control points/elements
-   call AllocAry( m%Gamma_LL,        p%nSpan    , p%nWings, 'Lifting line Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Gamma_LL = -999999_ReKi;
-   call AllocAry( m%CP_LL   , 3   ,  p%nSpan    , p%nWings, 'Control points LL  ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%CP_LL= -999999_ReKi;
-   call AllocAry( m%Tang    , 3   ,  p%nSpan    , p%nWings, 'Tangential vector  ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Tang= -999999_ReKi;
-   call AllocAry( m%Norm    , 3   ,  p%nSpan    , p%nWings, 'Normal     vector  ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Norm= -999999_ReKi;
-   call AllocAry( m%Orth    , 3   ,  p%nSpan    , p%nWings, 'Orthogonal vector  ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Orth= -999999_ReKi;
-   call AllocAry( m%dl      , 3   ,  p%nSpan    , p%nWings, 'Orthogonal vector  ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%dl= -999999_ReKi;
-   call AllocAry( m%Area    ,        p%nSpan    , p%nWings, 'LL Panel area      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Area = -999999_ReKi;
-   call AllocAry( m%diag_LL ,        p%nSpan    , p%nWings, 'LL Panel diagonals ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%diag_LL = -999999_ReKi;
-   call AllocAry( m%Vind_LL , 3   ,  p%nSpan    , p%nWings, 'Vind on CP ll      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Vind_LL= -999999_ReKi;
-   call AllocAry( m%Vtot_LL , 3   ,  p%nSpan    , p%nWings, 'Vtot on CP ll      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Vtot_LL= -999999_ReKi;
-   call AllocAry( m%Vstr_LL , 3   ,  p%nSpan    , p%nWings, 'Vstr on CP ll      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Vstr_LL= -999999_ReKi;
-   call AllocAry( m%Vwnd_LL , 3   ,  p%nSpan    , p%nWings, 'Wind on CP ll      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Vwnd_LL= -999999_ReKi;
-   ! Variables at panels points
-   call AllocAry( m%r_LL    , 3   ,  p%nSpan+1  , 2        ,  p%nWings, 'Lifting Line Panels', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%r_LL= -999999_ReKi;
-   call AllocAry( m%Vwnd_NW , 3   ,  p%nSpan+1  ,p%nNWMax+1,  p%nWings, 'Wind on NW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Vwnd_NW= -999_ReKi;
-   call AllocAry( m%Vwnd_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1,  p%nWings, 'Wind on FW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Vwnd_FW= -999_ReKi;
-   call AllocAry( m%Vind_NW , 3   ,  p%nSpan+1  ,p%nNWMax+1,  p%nWings, 'Vind on NW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Vind_NW= -999_ReKi;
-   call AllocAry( m%Vind_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1,  p%nWings, 'Vind on FW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%Vind_FW= -999_ReKi;
-   ! Variables for optimizing outputs at blade nodes
-   call AllocAry( m%BN_UrelWind_s, 3, p%nSpan+1 , p%nWings, 'Relative wind in section coordinates',   ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_UrelWind_s= -999999_ReKi;
-   call AllocAry( m%BN_AxInd   ,      p%nSpan+1 , p%nWings, 'Axial induction',                        ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_AxInd     = -999999_ReKi;
-   call AllocAry( m%BN_TanInd  ,      p%nSpan+1 , p%nWings, 'Tangential induction',                   ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_TanInd    = -999999_ReKi;
-   call AllocAry( m%BN_Vrel    ,      p%nSpan+1 , p%nWings, 'Relative velocity',                      ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_Vrel      = -999999_ReKi;
-   call AllocAry( m%BN_alpha   ,      p%nSpan+1 , p%nWings, 'Angle of attack',                        ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_alpha     = -999999_ReKi;
-   call AllocAry( m%BN_phi     ,      p%nSpan+1 , p%nWings, 'angle between the plane local wind dir', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_phi       = -999999_ReKi;
-   call AllocAry( m%BN_Re      ,      p%nSpan+1 , p%nWings, 'Reynolds number',                        ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_Re        = -999999_ReKi;
-   call AllocAry( m%BN_Cl_Static ,    p%nSpan+1 , p%nWings, 'Coefficient lift - no UA',               ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_Cl_Static = -999999_ReKi;
-   call AllocAry( m%BN_Cd_Static ,    p%nSpan+1 , p%nWings, 'Coefficient drag - no UA',               ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_Cd_Static = -999999_ReKi;
-   call AllocAry( m%BN_Cm_Static ,    p%nSpan+1 , p%nWings, 'Coefficient moment - no UA',             ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_Cm_Static = -999999_ReKi;
-   call AllocAry( m%BN_Cl        ,    p%nSpan+1 , p%nWings, 'Coefficient lift - with UA',             ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_Cl        = -999999_ReKi;
-   call AllocAry( m%BN_Cd        ,    p%nSpan+1 , p%nWings, 'Coefficient drag - with UA',             ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_Cd        = -999999_ReKi;
-   call AllocAry( m%BN_Cm        ,    p%nSpan+1 , p%nWings, 'Coefficient moment - with UA',           ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_Cm        = -999999_ReKi;
-   call AllocAry( m%BN_Cx        ,    p%nSpan+1 , p%nWings, 'Coefficient normal (to plane)',          ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_Cx        = -999999_ReKi;
-   call AllocAry( m%BN_Cy        ,    p%nSpan+1 , p%nWings, 'Coefficient tangential (to plane)',      ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%BN_Cy        = -999999_ReKi;
+   allocate(m%W(p%nWings))
+   allocate(m%dxdt%W(p%nWings))
+   do iW = 1,p%nWings
+      m%W(iW)%iTip=-1 ! Imort init
+      m%W(iW)%iRoot=-1 ! Imort init
 
+      call AllocAry( m%W(iW)%LE           , 3,p%W(iW)%nSpan+1, 'Leading Edge Points', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%LE = -999999_ReKi;
+      call AllocAry( m%W(iW)%TE           , 3,p%W(iW)%nSpan+1, 'TrailingEdge Points', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%TE = -999999_ReKi;
+      call AllocAry( m%W(iW)%PitchAndTwist,   p%W(iW)%nSpan+1, 'Pitch and twist    ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%PitchAndTwist= -999999_ReKi;
+      call AllocAry( m%W(iW)%alpha_LL,        p%W(iW)%nSpan  , 'Wind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%alpha_LL= -999999_ReKi;
+      call AllocAry( m%W(iW)%Vreln_LL,        p%W(iW)%nSpan  , 'Wind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vreln_LL = -999999_ReKi;
+      ! Variables at control points/elements
+      call AllocAry( m%W(iW)%CP      , 3   ,  p%W(iW)%nSpan, 'Control points LL  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%CP= -999999_ReKi;
+      call AllocAry( m%W(iW)%Tang    , 3   ,  p%W(iW)%nSpan, 'Tangential vector  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Tang= -999999_ReKi;
+      call AllocAry( m%W(iW)%Norm    , 3   ,  p%W(iW)%nSpan, 'Normal     vector  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Norm= -999999_ReKi;
+      call AllocAry( m%W(iW)%Orth    , 3   ,  p%W(iW)%nSpan, 'Orthogonal vector  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Orth= -999999_ReKi;
+      call AllocAry( m%W(iW)%dl      , 3   ,  p%W(iW)%nSpan, 'Orthogonal vector  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%dl= -999999_ReKi;
+      call AllocAry( m%W(iW)%Area    ,        p%W(iW)%nSpan, 'LL Panel area      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Area = -999999_ReKi;
+      call AllocAry( m%W(iW)%diag_LL ,        p%W(iW)%nSpan, 'LL Panel diagonals ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%diag_LL = -999999_ReKi;
+      call AllocAry( m%W(iW)%Vind_CP , 3   ,  p%W(iW)%nSpan, 'Vind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vind_CP= -999999_ReKi;
+      call AllocAry( m%W(iW)%Vtot_CP , 3   ,  p%W(iW)%nSpan, 'Vtot on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vtot_CP= -999999_ReKi;
+      call AllocAry( m%W(iW)%Vstr_CP , 3   ,  p%W(iW)%nSpan, 'Vstr on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vstr_CP= -999999_ReKi;
+      call AllocAry( m%W(iW)%Vwnd_CP , 3   ,  p%W(iW)%nSpan, 'Wind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vwnd_CP= -999999_ReKi;
+      ! Variables at panels points
+      call AllocAry( m%W(iW)%r_LL    , 3   ,  p%W(iW)%nSpan+1  , 2        , 'Lifting Line Panels', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%r_LL= -999999_ReKi;
+      call AllocAry( m%W(iW)%Vind_LL , 3   ,  p%W(iW)%nSpan+1,              'Vind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vind_LL= -999999_ReKi;
+      !call AllocAry( m%W(iW)%Vtot_LL , 3   ,  p%W(iW)%nSpan+1,              'Vtot on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vtot_LL= -999999_ReKi;
+      !call AllocAry( m%W(iW)%Vstr_LL , 3   ,  p%W(iW)%nSpan+1,              'Vstr on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vstr_LL= -999999_ReKi;
+      !call AllocAry( m%W(iW)%Vwnd_LL , 3   ,  p%W(iW)%nSpan+1,              'Wind on CP ll      ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vwnd_LL= -999999_ReKi;
+      call AllocAry( m%W(iW)%Vwnd_NW , 3   ,  p%W(iW)%nSpan+1  ,p%nNWMax+1, 'Wind on NW ', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vwnd_NW= -999_ReKi;
+      call AllocAry( m%W(iW)%Vwnd_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1, 'Wind on FW ', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vwnd_FW= -999_ReKi;
+      call AllocAry( m%W(iW)%Vind_NW , 3   ,  p%W(iW)%nSpan+1  ,p%nNWMax+1, 'Vind on NW ', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vind_NW= -999_ReKi;
+      call AllocAry( m%W(iW)%Vind_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1, 'Vind on FW ', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%Vind_FW= -999_ReKi;
+      ! Variables for optimizing outputs at blade nodes
+      call AllocAry( m%W(iW)%BN_UrelWind_s, 3, p%W(iW)%nSpan+1 , 'Relative wind in section coordinates',   ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_UrelWind_s= -999999_ReKi;
+      call AllocAry( m%W(iW)%BN_AxInd   ,      p%W(iW)%nSpan+1 , 'Axial induction',                        ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_AxInd     = -999999_ReKi;
+      call AllocAry( m%W(iW)%BN_TanInd  ,      p%W(iW)%nSpan+1 , 'Tangential induction',                   ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_TanInd    = -999999_ReKi;
+      call AllocAry( m%W(iW)%BN_Vrel    ,      p%W(iW)%nSpan+1 , 'Relative velocity',                      ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Vrel      = -999999_ReKi;
+      call AllocAry( m%W(iW)%BN_alpha   ,      p%W(iW)%nSpan+1 , 'Angle of attack',                        ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_alpha     = -999999_ReKi;
+      call AllocAry( m%W(iW)%BN_phi     ,      p%W(iW)%nSpan+1 , 'angle between the plane local wind dir', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_phi       = -999999_ReKi;
+      call AllocAry( m%W(iW)%BN_Re      ,      p%W(iW)%nSpan+1 , 'Reynolds number',                        ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Re        = -999999_ReKi;
+      call AllocAry( m%W(iW)%BN_Cl_Static ,    p%W(iW)%nSpan+1 , 'Coefficient lift - no UA',               ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Cl_Static = -999999_ReKi;
+      call AllocAry( m%W(iW)%BN_Cd_Static ,    p%W(iW)%nSpan+1 , 'Coefficient drag - no UA',               ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Cd_Static = -999999_ReKi;
+      call AllocAry( m%W(iW)%BN_Cm_Static ,    p%W(iW)%nSpan+1 , 'Coefficient moment - no UA',             ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Cm_Static = -999999_ReKi;
+      call AllocAry( m%W(iW)%BN_Cpmin     ,    p%W(iW)%nSpan+1 , 'Coefficient minimum pressure - no UA',   ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Cpmin     = -999999_ReKi;
+      call AllocAry( m%W(iW)%BN_Cl        ,    p%W(iW)%nSpan+1 , 'Coefficient lift - with UA',             ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Cl        = -999999_ReKi;
+      call AllocAry( m%W(iW)%BN_Cd        ,    p%W(iW)%nSpan+1 , 'Coefficient drag - with UA',             ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Cd        = -999999_ReKi;
+      call AllocAry( m%W(iW)%BN_Cm        ,    p%W(iW)%nSpan+1 , 'Coefficient moment - with UA',           ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Cm        = -999999_ReKi;
+      call AllocAry( m%W(iW)%BN_Cx        ,    p%W(iW)%nSpan+1 , 'Coefficient normal (to plane)',          ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Cx        = -999999_ReKi;
+      call AllocAry( m%W(iW)%BN_Cy        ,    p%W(iW)%nSpan+1 , 'Coefficient tangential (to plane)',      ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName ); m%W(iW)%BN_Cy        = -999999_ReKi;
+      ! dxdt, to avoid realloc all the time, and storage for subcycling 
+      call AllocAry( m%dxdt%W(iW)%r_NW , 3   ,  p%W(iW)%nSpan+1 , p%nNWMax+1, 'r NW dxdt'  , ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%dxdt%W(iW)%r_NW = -999999_ReKi;
+      call AllocAry( m%dxdt%W(iW)%r_FW , 3   ,  FWnSpan+1 , p%nFWMax+1, 'r FW dxdt'  , ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%dxdt%W(iW)%r_FW = -999999_ReKi;
+      call AllocAry( m%dxdt%W(iW)%Eps_NW, 3  ,  p%W(iW)%nSpan    ,p%nNWMax  , 'Eps NW dxdt', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%dxdt%W(iW)%Eps_NW = -999999_ReKi;
+      call AllocAry( m%dxdt%W(iW)%Eps_FW, 3  ,  FWnSpan    ,p%nFWMax  , 'Eps FW dxdt', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%dxdt%W(iW)%Eps_FW = -999999_ReKi;
 
-   ! dxdt, to avoid realloc all the time, and storage for subcycling 
-   call AllocAry( m%dxdt%r_NW , 3   ,  p%nSpan+1 , p%nNWMax+1,  p%nWings, 'r NW dxdt'  , ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%dxdt%r_NW = -999999_ReKi;
-   call AllocAry( m%dxdt%r_FW , 3   ,  FWnSpan+1 , p%nFWMax+1,  p%nWings, 'r FW dxdt'  , ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%dxdt%r_FW = -999999_ReKi;
-   call AllocAry( m%dxdt%Eps_NW, 3  ,  p%nSpan    ,p%nNWMax  ,  p%nWings, 'Eps NW dxdt', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%dxdt%Eps_NW = -999999_ReKi;
-   call AllocAry( m%dxdt%Eps_FW, 3  ,  FWnSpan    ,p%nFWMax  ,  p%nWings, 'Eps FW dxdt', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%dxdt%Eps_FW = -999999_ReKi;
+      ! Wind set to 0. TODO check if -99999 works now
+      !NOTE: We do not have the windspeed until after the FVW initialization (IfW is not initialized until after AD15)
+      m%W(iW)%Vwnd_CP(:,:)   = 0
+      m%W(iW)%Vwnd_NW(:,:,:) = 0
+      m%W(iW)%Vwnd_FW(:,:,:) = 0
+   enddo
 
    ! Wind request points
    nMax = 0
-   nMax = nMax +  p%nSpan                   * p%nWings   ! Lifting line Control Points
-   nMax = nMax + (p%nSpan+1) * (p%nNWMax+1) * p%nWings   ! Nearwake points
-   nMax = nMax + (FWnSpan+1) * (p%nFWMax+1) * p%nWings   ! Far wake points
+   do iW = 1,p%nWings
+      nMax = nMax +  p%W(iW)%nSpan                    ! Lifting line Control Points
+      nMax = nMax + (p%W(iW)%nSpan+1) * (p%nNWMax+1)  ! Nearwake points
+      nMax = nMax + (FWnSpan+1) * (p%nFWMax+1)  ! Far wake points
+   enddo
+   ! Grid outputs
    do iGrid=1,p%nGridOut
       nMax = nMax + m%GridOutputs(iGrid)%nx * m%GridOutputs(iGrid)%ny * m%GridOutputs(iGrid)%nz
       call AllocAry(m%GridOutputs(iGrid)%uGrid, 3, m%GridOutputs(iGrid)%nx,  m%GridOutputs(iGrid)%ny, m%GridOutputs(iGrid)%nz, 'uGrid', ErrStat2, ErrMsg2);
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
+      if (m%GridOutputs(iGrid)%type==idGridVelVorticity) then
+         call AllocAry(m%GridOutputs(iGrid)%omGrid, 3, m%GridOutputs(iGrid)%nx,  m%GridOutputs(iGrid)%ny, m%GridOutputs(iGrid)%nz, 'omGrid', ErrStat2, ErrMsg2);
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
+      endif
       m%GridOutputs(iGrid)%tLastOutput = -HUGE(1.0_DbKi)
    enddo
    call AllocAry( m%r_wind, 3, nMax, 'Requested wind points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )
    m%r_wind = 0.0_ReKi     ! set to zero so InflowWind can shortcut calculations
-   m%OldWakeTime = -HUGE(1.0_DbKi)
-   ! Wind set to 0. TODO check if -99999 works now
-   !NOTE: We do not have the windspeed until after the FVW initialization (IfW is not initialized until after AD15)
-   m%Vwnd_LL(:,:,:)   = 0
-   m%Vwnd_NW(:,:,:,:) = 0
-   m%Vwnd_FW(:,:,:,:) = 0
 
 end subroutine FVW_InitMiscVars
-! ==============================================================================
-subroutine FVW_InitMiscVarsPostParam( p, m, ErrStat, ErrMsg )
-   type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
-   type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
-   integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
-   character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-   integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
-   character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
-   character(*), parameter :: RoutineName = 'FVW_InitMiscVarsPostParam'
-   integer(IntKi) :: nSeg, nSegP, nSegNW  !< Total number of segments after packing
-   integer(IntKi) :: nCPs                 !< Total number of control points
-   logical :: bMirror
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   ! --- Counting maximum number of segments and Control Points expected for the whole simulation
-   call CountSegments(p, p%nNWMax, p%nFWMax, 1, nSeg, nSegP, nSegNW)
-   nCPs = CountCPs(p, p%nNWMax, p%nFWFree)
-
-   bMirror = p%ShearModel==idShearMirror ! Whether or not we mirror the vorticity wrt ground
-   if (bMirror) then
-      nSeg  = nSeg*2
-      nSegP = nSegP*2
-   endif
-   call AllocAry( m%Sgmt%Connct, 4, nSeg , 'SegConnct' , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Sgmt%Connct = -999;
-   call AllocAry( m%Sgmt%Points, 3, nSegP, 'SegPoints' , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Sgmt%Points = -999999_ReKi;
-   call AllocAry( m%Sgmt%Gamma ,    nSeg,  'SegGamma'  , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Sgmt%Gamma  = -999999_ReKi;
-   call AllocAry( m%Sgmt%Epsilon,   nSeg,  'SegEpsilon', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Sgmt%Epsilon= -999999_ReKi;
-   m%Sgmt%nAct        = -1  ! Active segments
-   m%Sgmt%nActP       = -1
-   m%Sgmt%RegFunction = p%RegFunction
-
-   call AllocAry( m%CPs      , 3,  nCPs, 'CPs'       , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%CPs= -999999_ReKi;
-   call AllocAry( m%Uind     , 3,  nCPs, 'Uind'      , ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); m%Uind= -999999_ReKi;
-
-end subroutine FVW_InitMiscVarsPostParam
-! ==============================================================================
-subroutine FVW_InitStates( x, p, ErrStat, ErrMsg )
-   type(FVW_ContinuousStateType),   intent(  out)  :: x              !< States
-   type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
-   integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
-   character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-   integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
-   character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
-   character(*), parameter :: RoutineName = 'FVW_InitMiscVars'
-   ! Initialize ErrStat
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-   call AllocAry( x%Gamma_NW,    p%nSpan   , p%nNWMax  , p%nWings, 'NW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); 
-   call AllocAry( x%Gamma_FW,    FWnSpan   , p%nFWMax  , p%nWings, 'FW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); 
-   call AllocAry( x%Eps_NW  , 3, p%nSpan   , p%nNWMax  , p%nWings, 'NW Panels Reg Param'  , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
-   call AllocAry( x%Eps_FW  , 3, FWnSpan   , p%nFWMax  , p%nWings, 'FW Panels Reg Param'  , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
-   ! set x%r_NW and x%r_FW to (0,0,0) so that InflowWind can shortcut the calculations
-   call AllocAry( x%r_NW    , 3, p%nSpan+1 , p%nNWMax+1, p%nWings, 'NW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
-   call AllocAry( x%r_FW    , 3, FWnSpan+1 , p%nFWMax+1, p%nWings, 'FW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' );
-   if (ErrStat >= AbortErrLev) return
-   x%r_NW     = 0.0_ReKi
-   x%r_FW     = 0.0_ReKi
-   x%Gamma_NW = 0.0_ReKi ! First call of calcoutput, states might not be set 
-   x%Gamma_FW = 0.0_ReKi ! NOTE, these values might be mapped from z%Gamma_LL at init
-   x%Eps_NW   = 0.001_ReKi 
-   x%Eps_FW   = 0.001_ReKi 
-end subroutine FVW_InitStates
 ! ==============================================================================
 subroutine FVW_InitConstraint( z, p, m, ErrStat, ErrMsg )
    type(FVW_ConstraintStateType),   intent(  out)  :: z              !< Constraints
@@ -333,13 +281,17 @@ subroutine FVW_InitConstraint( z, p, m, ErrStat, ErrMsg )
    integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
    character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
    character(*), parameter :: RoutineName = 'FVW_InitMiscVars'
+   integer :: iW
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
    !
-   call AllocAry( z%Gamma_LL,  p%nSpan, p%nWings, 'Lifting line Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitConstraint' );
-   !z%Gamma_LL = -999999_ReKi
-   z%Gamma_LL = 0.0_ReKi
+   allocate(z%W(p%nWings))
+   do iW=1,p%nWings 
+      call AllocAry( z%W(iW)%Gamma_LL,  p%W(iW)%nSpan, 'Lifting line Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitConstraint' );
+      !z%W(iW)%Gamma_LL = -999999_ReKi
+      z%W(iW)%Gamma_LL = 0.0_ReKi
+   enddo
 
    if (ErrStat >= AbortErrLev) return
    if(.false.) print*,m%nNW ! unused var for now
@@ -353,72 +305,119 @@ subroutine FVW_Init_U_Y( p, u, y, m, ErrStat, ErrMsg )
    type(FVW_OutputType),            intent(  out)  :: y              !< Constraints
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-   integer(IntKi)          :: nMax           ! Total number of wind points possible
+
    integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
    character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
    character(*), parameter :: RoutineName = 'FVW_Init_U_Y'
+   integer :: iW
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
-   !
-   nMax = 0
-   nMax = nMax +  p%nSpan                   * p%nWings   ! Lifting line Control Points
-   nMax = nMax + (p%nSpan+1) * (p%nNWMax+1) * p%nWings   ! Nearwake points
-   nMax = nMax + (FWnSpan+1) * (p%nFWMax+1) * p%nWings   ! Far wake points
-
-   call AllocAry( u%V_wind,   3, nMax, 'Wind Velocity at points', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
-   call AllocAry( y%Vind ,    3, p%nSpan+1, p%nWings, 'Induced velocity vector', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
-   call AllocAry( u%omega_z,     p%nSpan+1, p%nWings, 'Section torsion rate'   , ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
-   call AllocAry( u%Vwnd_LLMP,3, p%nSpan+1, p%nWings, 'Dist. wind at LL nodes',  ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
-   y%Vind    = -9999.9_ReKi  
+   ! Wind at requested points
+   call AllocAry(u%V_wind, 3, size(m%r_wind,2), 'Wind Velocity at points', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
    u%V_wind  = -9999.9_ReKi
-   u%Vwnd_LLMP = -9999.9_ReKi
-   u%omega_z = -9999.9_ReKi
+
+   allocate(y%W(p%nWings))
+   allocate(u%W(p%nWings))
+   do iW=1,p%nWings
+      call AllocAry( y%W(iW)%Vind ,    3, p%W(iW)%nSpan+1, 'Induced velocity vector', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
+      call AllocAry( u%W(iW)%omega_z,     p%W(iW)%nSpan+1, 'Section torsion rate'   , ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
+      call AllocAry( u%W(iW)%Vwnd_LL,  3, p%W(iW)%nSpan+1, 'Dist. wind at LL nodes',  ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName)
+      y%W(iW)%Vind    = -9999.9_ReKi  
+      u%W(iW)%Vwnd_LL = -9999.9_ReKi
+      u%W(iW)%omega_z = -9999.9_ReKi
+   enddo
+   ! Rotors, contain hub info
+   allocate(u%rotors(p%nRotors))
+
+
 end subroutine FVW_Init_U_Y
 ! ==============================================================================
 !> Setting parameters *and misc* from module inputs
-SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
+subroutine FVW_SetRootName(RootName, p)
+   character(*)           , intent(in   ) :: RootName !< Input data for initialization routine  (inout so we can use MOVE_ALLOC)
+   type(FVW_ParameterType), intent(inout) :: p        !< Parameters
+   ! Local variables
+   character(1024)         :: rootDir, baseName  ! Simulation root dir and basename
+   p%RootName     = RootName        ! Rootname for outputs
+   call GetPath( p%RootName, rootDir, baseName ) 
+   p%VTK_OutFileRoot = trim(rootDir) // 'vtk_fvw'  ! Directory for VTK outputs
+   p%VTK_OutFileBase = trim(rootDir) // 'vtk_fvw' // PathSep // trim(baseName) ! Basename for VTK files
+end subroutine FVW_SetRootName
+! ==============================================================================
+!> Setting parameters *and misc* from module inputs
+subroutine FVW_SetParametersFromInputs( InitInp, p, ErrStat, ErrMsg )
    type(FVW_InitInputType),    intent(inout)  :: InitInp       !< Input data for initialization routine  (inout so we can use MOVE_ALLOC)
    type(FVW_ParameterType),    intent(inout) :: p             !< Parameters
    integer(IntKi),             intent(  out) :: ErrStat       !< Error status of the operation
    character(*),               intent(  out) :: ErrMsg        !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   character(1024)          :: rootDir, baseName  ! Simulation root dir and basename
+   character(1024)         :: rootDir, baseName  ! Simulation root dir and basename
+   integer(IntKi)          :: iW, nBldMax
+   integer(IntKi), allocatable :: nBldPerRot(:)
    integer(IntKi)          :: ErrStat2
    character(ErrMsgLen)    :: ErrMsg2
    character(*), parameter :: RoutineName = 'FVW_SetParametersFromInputs'
    ErrStat = ErrID_None
    ErrMsg  = ""
    ! 
-   p%nWings       = InitInp%NumBlades
-   p%nSpan        = InitInp%numBladeNodes-1 ! NOTE: temporary limitation, all wings have the same nspan
+   p%nWings       = size(InitInp%WingsMesh)
    p%DTaero       = InitInp%DTaero          ! AeroDyn Time step
    p%KinVisc      = InitInp%KinVisc         ! Kinematic air viscosity
-   p%RootName     = InitInp%RootName        ! Rootname for outputs
-   call GetPath( p%RootName, rootDir, baseName ) 
-   p%VTK_OutFileRoot = trim(rootDir) // 'vtk_fvw'  ! Directory for VTK outputs
-   p%VTK_OutFileBase = trim(rootDir) // 'vtk_fvw' // PathSep // trim(baseName) ! Basename for VTK files
+   p%MHK          = InitInp%MHK             ! MHK flag
+   p%WtrDpth      = InitInp%WtrDpth         ! Water depth
+   call FVW_SetRootName(InitInp%RootName, p)
+
    ! Set indexing to AFI tables -- this is set from the AD15 calling code.
-   call AllocAry(p%AFindx,size(InitInp%AFindx,1),size(InitInp%AFindx,2),'AFindx',ErrStat,ErrMsg)
-   p%AFindx = InitInp%AFindx     ! Copying in case AD15 still needs these
 
    ! Set the Chord values
-   call move_alloc(InitInp%Chord, p%Chord)
-   call AllocAry(p%s_LL          ,  p%nSpan+1  , p%nWings, 'Spanwise coord LL  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%s_LL= -999999_ReKi;
-   call AllocAry(p%s_CP_LL       ,  p%nSpan    , p%nWings, 'Spanwise coord CPll', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%s_CP_LL= -999999_ReKi;
-   call AllocAry(p%chord_LL      ,  p%nSpan+1  , p%nWings, 'Chord on LL        ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%chord_LL= -999999_ReKi;
-   call AllocAry(p%chord_CP_LL   ,  p%nSpan    , p%nWings, 'Chord on CP LL     ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%chord_CP_LL= -999999_ReKi;
+   allocate(p%W(p%nWings))
+   do iW=1,p%nWings
+      call AllocAry(p%W(iW)%AFindx, size(InitInp%W(iW)%AFindx,1), 1, 'AFindx',ErrStat,ErrMsg)
+      p%W(iW)%AFindx = InitInp%W(iW)%AFindx     ! Copying in case AD15 still needs these
+      p%W(iW)%iRotor = InitInp%W(iW)%iRotor    
+
+      p%W(iW)%nSpan  = size(InitInp%W(iW)%chord)-1
+      call move_alloc(InitInp%W(iW)%chord, p%W(iW)%chord_LL)
+      call AllocAry(p%W(iW)%s_LL    , p%W(iW)%nSpan+1, 'Spanwise coord LL  ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%W(iW)%s_LL= -999999_ReKi;
+      call AllocAry(p%W(iW)%s_CP    , p%W(iW)%nSpan  , 'Spanwise coord CPll', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%W(iW)%s_CP= -999999_ReKi;
+      !call AllocAry(p%W(iW)%chord_LL   , p%W(iW)%nSpan+1, 'Chord on LL        ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%W(iW)%chord_LL= -999999_ReKi;
+      call AllocAry(p%W(iW)%chord_CP, p%W(iW)%nSpan  , 'Chord on CP LL     ', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); p%W(iW)%chord_CP= -999999_ReKi;
+   enddo
+
+   ! --- Distributing wings to rotors
+   p%nRotors = 0
+   do iW=1,p%nWings
+      p%nRotors = max(p%nRotors,p%W(iW)%iRotor)
+   end do
+   ! Count number of blades per rotor
+   call AllocAry(nBldPerRot, p%nRotors , 'nBldPerRot', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); 
+   nBldPerRot=0
+   do iW=1,p%nWings
+      nBldPerRot(p%W(iW)%iRotor) = nBldPerRot(p%W(iW)%iRotor)+1
+   enddo
+   nBldMax   = maxval(nBldPerRot)
+   ! Set mapping from (rotor,blades) to wings
+   call AllocAry(p%Bld2Wings, p%nRotors , nBldMax, 'Bld2Wings', ErrStat2, ErrMsg2);call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName); 
+   p%Bld2Wings=-1 ! Import init to trigger some index errors
+   nBldPerRot=0
+   do iW=1,p%nWings
+      nBldPerRot(p%W(iW)%iRotor) = nBldPerRot(p%W(iW)%iRotor)+1
+      p%Bld2Wings(p%W(iW)%iRotor, nBldPerRot(p%W(iW)%iRotor)) = iW
+   enddo
+
+   if (allocated(nBldPerRot)) deallocate(nBldPerRot)
 
 end subroutine FVW_SetParametersFromInputs
 ! ==============================================================================
 !>
-SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg )
+SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, ErrStat, ErrMsg )
    type(FVW_InputFile),        intent(in   ) :: InputFileData !< Data stored in the module's input file
    type(FVW_ParameterType),    intent(inout) :: p             !< Parameters
-   type(FVW_MiscVarType),      intent(inout) :: m             !< Misc
    integer(IntKi),             intent(  out) :: ErrStat       !< Error status of the operation
    character(*),               intent(  out) :: ErrMsg        !< Error message if ErrStat /= ErrID_None
    ! Local variables
+   integer(IntKi)       :: iW
    integer(IntKi)       :: ErrStat2
    character(ErrMsgLen) :: ErrMsg2
    ErrStat = ErrID_None
@@ -426,13 +425,13 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
 
    ! Set parameters from input file
    p%IntMethod            = InputFileData%IntMethod
-   p%CirculationMethod    = InputFileData%CirculationMethod
+   p%CircSolvMethod       = InputFileData%CircSolvMethod
    p%CircSolvConvCrit     = InputFileData%CircSolvConvCrit
    p%CircSolvRelaxation   = InputFileData%CircSolvRelaxation 
    p%CircSolvMaxIter      = InputFileData%CircSolvMaxIter
    p%FreeWakeStart        = InputFileData%FreeWakeStart
    p%CircSolvPolar        = InputFileData%CircSolvPolar
-   p%FullCirculationStart = InputFileData%FullCirculationStart
+   p%FullCircStart        = InputFileData%FullCircStart
    p%FWShedVorticity      = InputFileData%FWShedVorticity
    p%DiffusionMethod      = InputFileData%DiffusionMethod
    p%RegFunction          = InputFileData%RegFunction
@@ -450,31 +449,52 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
    p%VTKBlades            = min(InputFileData%VTKBlades,p%nWings) ! Note: allowing it to be negative for temporary hack
    p%VTKCoord             = InputFileData%VTKCoord
 
-   if (allocated(p%PrescribedCirculation)) deallocate(p%PrescribedCirculation)
-   if (InputFileData%CirculationMethod==idCircPrescribed) then 
-      call AllocAry(p%PrescribedCirculation,  p%nSpan, 'Prescribed Circulation', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_SetParameters'); p%PrescribedCirculation = -999999_ReKi;
-      if (.not. allocated(p%s_CP_LL)) then
-         ErrMsg  = 'Spanwise coordinate not allocated.'
-         ErrStat = ErrID_Fatal
-         return
+   do iW=1,p%nWings
+      if (allocated(p%W(iW)%PrescribedCirculation)) deallocate(p%W(iW)%PrescribedCirculation)
+      if (InputFileData%CircSolvMethod==idCircPrescribed) then 
+         call AllocAry(p%W(iW)%PrescribedCirculation,  p%W(iW)%nSpan, 'Prescribed Circulation', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_SetParameters');
+         p%W(iW)%PrescribedCirculation = -999999_ReKi;
+         if (.not. allocated(p%W(iW)%s_CP)) then
+            ErrMsg  = 'Spanwise coordinate not allocated.'
+            ErrStat = ErrID_Fatal
+            return
+         endif
+         call ReadAndInterpGamma(trim(InputFileData%CirculationFile), p%W(iW)%s_CP(1:p%W(iW)%nSpan), p%W(iW)%s_LL(p%W(iW)%nSpan+1), p%W(iW)%PrescribedCirculation, ErrStat2, ErrMsg2)
+         call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_SetParameters' ); 
       endif
-      call ReadAndInterpGamma(trim(InputFileData%CirculationFile), p%s_CP_LL(1:p%nSpan,1), p%s_LL(p%nSpan+1,1), p%PrescribedCirculation, ErrStat2, ErrMsg2)
-      call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_SetParameters' ); 
-   endif
+   enddo
 
 end subroutine FVW_SetParametersFromInputFile
-
-subroutine FVW_ToString(p,m)
-   type(FVW_ParameterType), intent(in)       :: p !< Parameters
-   type(FVW_MiscVarType),      intent(inout) :: m !< Misc
-   if (DEV_VERSION) then
-      print*,'-----------------------------------------------------------------------------------------'
-      if(.false.) print*,m%nNW ! unused var for now
-   endif
-end subroutine FVW_ToString
-
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
+subroutine FVW_FinalWrite(u, p, x, z, m, ErrStat, ErrMsg)
+   type(FVW_InputType),             intent(in   )  :: u           !< System inputs
+   type(FVW_ParameterType),         intent(in   )  :: p           !< Parameters
+   type(FVW_ContinuousStateType),   intent(in   )  :: x           !< Continuous states
+   type(FVW_ConstraintStateType),   intent(in   )  :: z           !< Constraint states
+   type(FVW_MiscVarType),           intent(inout)  :: m           !< Misc/optimization variables
+   integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   real(DbKi) :: t
+   integer, parameter :: FINAL_STEP = 999999999
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   ! Place any last minute operations or calculations here:
+   if (p%WrVTK>0 .and. m%VTKstep<FINAL_STEP) then
+      print*,'>>> FINAL WRITE'
+      t=-1.0_ReKi
+      if (p%WrVTK==1) then
+         if (m%VTKstep<m%iStep+1) then
+            call WriteVTKOutputs(t, .true., m%iStep+1, u, p, x, z, m, ErrStat, ErrMsg)
+         endif
+      elseif (p%WrVTK==2) then
+         call WriteVTKOutputs(t, .true., FINAL_STEP, u, p, x, z, m, ErrStat, ErrMsg)
+      endif
+      m%VTKstep = FINAL_STEP ! We make sure we don't write again
+   endif
+end subroutine FVW_FinalWrite
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine is called at the end of the simulation. NOTE: we don't store errstat
 subroutine FVW_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
    type(FVW_InputType),allocatable, intent(inout)  :: u(:)        !< System inputs
@@ -487,22 +507,11 @@ subroutine FVW_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    type(FVW_MiscVarType),           intent(inout)  :: m           !< Misc/optimization variables
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-   integer(IntKi) :: i
-   real(DbKi) :: t
-
-   ! Initialize ErrStat
+   integer :: i
    ErrStat = ErrID_None
    ErrMsg  = ""
-   ! Place any last minute operations or calculations here:
-   if (p%WrVTK==2) then
-      call WrScr('Outputs of VTK before FVW_END')
-      t=-1.0_ReKi
-      m%VTKStep=999999999 ! not pretty, but we know we have twidth=9
-      call WriteVTKOutputs(t, .true., u(1), p, x, z, y, m, ErrStat, ErrMsg)
-   endif
-
-   ! Close files here:
+   ! Final trigger
+   call FVW_FinalWrite(u(1), p, x, z, m, ErrStat, ErrMsg)
    
    ! Destroy the input data:
    if (allocated(u)) then
@@ -532,7 +541,6 @@ end subroutine FVW_End
 !> Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete and other states.
 !! Continuous, constraint, discrete, and other states are updated for t + Interval
 subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m, errStat, errMsg )
-!..................................................................................................................................
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    integer(IntKi),                  intent(in   )  :: n           !< Current simulation time step n = 0,1,...
    type(FVW_InputType),             intent(inout)  :: u(:)        !< Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
@@ -551,11 +559,11 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    integer(IntKi)                :: ErrStat2                                                           ! temporary Error status
    character(ErrMsgLen)          :: ErrMsg2                                                            ! temporary Error message
    type(FVW_ConstraintStateType) :: z_guess                                                                              ! <
-   integer(IntKi) :: nP, nFWEff
-   integer, dimension(8) :: time1, time2, time_diff
+   integer(IntKi) :: nP, nFWEff, nNWEff, iW
    real(ReKi) :: ShedScale !< Scaling factor for shed vorticity (for sub-cycling), 1 if no subcycling
    logical :: bReevaluation
    logical :: bOverCycling
+   if (OLAF_PROFILING) call tic('FVW_UpdateStates')
    ErrStat = ErrID_None
    ErrMsg  = ""
 
@@ -576,18 +584,19 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       m%ComputeWakeInduced = .FALSE.
    endif
    if (bReevaluation) then
-      print*,'[INFO] FVW: Update States: reevaluation at the same starting time'
+      call WrScr('[INFO] FVW: Update States: reevaluation at the same starting time')
       call RollBackPreviousTimeStep() ! Cancel wake emission done in previous call
       m%ComputeWakeInduced = .TRUE.
    endif
-   if (m%ComputeWakeInduced) then
-      call date_and_time(values=time1)
-   endif
 
-   nP = p%nWings * (  (p%nSpan+1)*(m%nNW-1+2) +(FWnSpan+1)*(m%nFW+1) )
+   nP=0
+   do iW=1,p%nWings
+      nP = np + (  (p%W(iW)%nSpan+1)*(m%nNW-1+2) +(FWnSpan+1)*(m%nFW+1) )
+   enddo
+   nNWEff = min(m%nNW, p%nNWFree)
    nFWEff = min(m%nFW, p%nFWFree)
    ! --- Display some status to screen
-   if (DEV_VERSION)  print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,F7.2,A,L1)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP,'  spent:', m%tSpent, 's Comp:',m%ComputeWakeInduced
+   if (DEV_VERSION)  print'(A,F10.3,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,I0,A,L1)','FVW status - t:',t,'  n:',n,'  nNW:',m%nNW-1,'-',nNWEff-1,'/',p%nNWMax-1,'  nFW:',nFWEff, '+',m%nFW-nFWEff,'=',m%nFW,'/',p%nFWMax,'  nP:',nP, 's Comp:',m%ComputeWakeInduced
 
    ! --- Evaluation at t
    ! Inputs at t
@@ -597,18 +606,17 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    call Map_LL_NW(p, m, z, x, 1.0_ReKi, ErrStat2, ErrMsg2); if(Failed()) return ! needed at t=0 if wing moved after init
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
 
-   !  TODO convert quasi steady Gamma to unsteady gamma with UA states
-
    ! Compute UA inputs at t
    if (m%UA_Flag) then
-      call CalculateInputsAndOtherStatesForUA(1, uInterp, p, x, xd, z, OtherState, AFInfo, m, ErrStat2, ErrMsg2); if(Failed()) return
+      call CalculateInputsAndOtherStatesForUA(1, uInterp, p, x, xd, z, m, ErrStat2, ErrMsg2); if(Failed()) return
    end if
 
    ! --- Integration between t and t+DTfvw
    if (m%ComputeWakeInduced) then
 
       ! TODO TODO: this should be in CCSD, but memory is changing between time steps, so for now we have to use u(1)..
-      CALL DistributeRequestedWind_NWFW(u(1)%V_wind, p, m%Vwnd_NW, m%Vwnd_FW)
+      ! inputs: V_wind, output: set m%W%Vwnd_NW, m%W%Vwnd_FW
+      CALL DistributeRequestedWind_NWFW(u(1)%V_wind, p, m)
 
       if (bOverCycling) then
          ! Store states at t, and use this opportunity to store outputs at t
@@ -618,7 +626,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
       if (p%IntMethod .eq. idEuler1) then 
         call FVW_Euler1( t, uInterp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
       elseif (p%IntMethod .eq. idRK4) then 
-         call FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
+         call FVW_RK4( t, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
       !elseif (p%IntMethod .eq. idAB4) then
       !   call FVW_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
       !elseif (p%IntMethod .eq. idABM4) then
@@ -645,19 +653,19 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
          ! States x2
          call FVW_CopyContState(x, m%x2, 0, ErrStat2, ErrMsg2) ! Backup current state at t+DTfvw
          m%t2=t+p%DTfvw
-         !! Inputs at t+DTfvw (Wings Panelling updates CP_LL, and Vstr_LL) 
+         !! Inputs at t+DTfvw (Wings Panelling updates CP, and VstW(iW)%r_LL) 
          !call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes,uInterp,t+p%DTfvw, ErrStat2, ErrMsg2); if(Failed()) return
          !call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
          !! Updating positions of first NW and FW panels (Circulation also updated but irrelevant)
          !call Map_LL_NW(p, m, z, m%x2, 1.0, ErrStat2, ErrMsg2); if(Failed()) return
          !call Map_NW_FW(p, m, z, m%x2, ErrStat2, ErrMsg2); if(Failed()) return
          !! --- Solve for quasi steady circulation at t+p%DTfvw
-         !! Returns: z%Gamma_LL (at t+p%DTfvw)
-         !z_guess%Gamma_LL = z%Gamma_LL ! We use as guess the circulation from the previous time step (see above)
+         !! Returns: z%W(iW)%Gamma_LL (at t+p%DTfvw)
+         !z_guess%W(iW)%Gamma_LL = z%W(iW)%Gamma_LL ! We use as guess the circulation from the previous time step (see above)
          !call FVW_CalcConstrStateResidual(t+p%DTfvw, uInterp, p, m%x2, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 2); if(Failed()) return
          !! Compute UA inputs at t+DTfvw and integrate UA states between t and t+dtAero
          !if (m%UA_Flag) then
-         !   call CalculateInputsAndOtherStatesForUA(2, uInterp, p, m%x2, xd, z, OtherState, AFInfo, m, ErrStat2, ErrMsg2); if(Failed()) return
+         !   call CalculateInputsAndOtherStatesForUA(2, uInterp, p, m%x2, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
          !   call UA_UpdateState_Wrapper(AFInfo, t, n, (/t,t+p%DTfvw/), p, m%x2, xd, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
          !end if
          !! Updating circulation of near wake panel (and position but irrelevant)
@@ -669,10 +677,10 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    ! --- Integration between t and t+DTaero if DTaero/=DTfvw
    if (bOverCycling) then
       ! Linear interpolation of states between t and dtaero
-      call FVW_ContStates_Interp(t+p%DTaero, (/m%x1, m%x2/), (/m%t1, m%t2/), p, m, x, ErrStat2, ErrMsg2); if(Failed()) return
+      call FVW_ContStates_Interp(t+p%DTaero, (/m%x1, m%x2/), (/m%t1, m%t2/), p, x, ErrStat2, ErrMsg2); if(Failed()) return
    endif
 
-   ! Inputs at t+DTaero (Wings Panelling updates CP_LL, and Vstr_LL) 
+   ! Inputs at t+DTaero (Wings Panelling updates CP, and VstW(iW)%r_LL) 
    call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes,uInterp,t+p%DTaero, ErrStat2, ErrMsg2); if(Failed()) return
    call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
@@ -684,22 +692,33 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    !call print_x_NW_FW(p, m, x,'Map2')
 
    ! --- Solve for quasi steady circulation at t+p%DTaero
-   ! Returns: z%Gamma_LL (at t+p%DTaero)
-   z_guess%Gamma_LL = z%Gamma_LL ! We use as guess the circulation from the previous time step (see above)
+   if (OLAF_PROFILING) call tic('Circulation Solving')
+   ! Returns: z%W(iW)%Gamma_LL (at t+p%DTaero)
+   allocate(z_guess%W(p%nWings))
+   do iW=1,p%nWings 
+      z_guess%W(iW)%Gamma_LL = z%W(iW)%Gamma_LL ! We use as guess the circulation from the previous time step (see above)
+   enddo
    call FVW_CalcConstrStateResidual(t+p%DTaero, uInterp, p, x, xd, z_guess, OtherState, m, z, AFInfo, ErrStat2, ErrMsg2, 2); if(Failed()) return
-   ! Compute UA inputs at t+DTaero and integrate UA states between t and t+dtAero
-   if (m%UA_Flag) then
-      call CalculateInputsAndOtherStatesForUA(2, uInterp, p, x, xd, z, OtherState, AFInfo, m, ErrStat2, ErrMsg2); if(Failed()) return
-      call UA_UpdateState_Wrapper(AFInfo, t, n, (/t,t+p%DTaero/), p, x, xd, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
-   end if
-
-   ! TODO compute unsteady Gamma here based on UA Cl
-
-   ! Updating circulation of near wake panel (and position but irrelevant)
+   if (OLAF_PROFILING) call toc()
+   ! Updating circulation of near wake panel (need to be set for UA, Uind on LL) (and position but irrelevant)
    ! Changes: x only
    call Map_LL_NW(p, m, z, x, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
-   !call print_x_NW_FW(p, m, x,'Map3')
+   ! Compute UA inputs at t+DTaero and integrate UA states between t and t+dtAero
+   if (m%UA_Flag) then
+      call CalculateInputsAndOtherStatesForUA(2, uInterp, p, x, xd, z, m, ErrStat2, ErrMsg2); if(Failed()) return
+      call UA_UpdateState_Wrapper(AFInfo, t, n, (/t,t+p%DTaero/), p, x, xd, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
+      ! Compute unsteady Gamma based on UA Cl
+      if (p%DStallOnWake .and. p%CircSolvMethod/=idCircPrescribed) then 
+         call UA_SetGammaDyn(t, uInterp, p, x, xd, OtherState, m, AFInfo, z, ErrStat, ErrMsg)
+         ! Updating circulation of near wake panel again (and position but irrelevant)
+         ! Changes: x only
+         call Map_LL_NW(p, m, z, x, ShedScale, ErrStat2, ErrMsg2); if(Failed()) return
+         call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2); if(Failed()) return
+      end if
+   end if
+
+
 
    ! --- Fake handling of ground effect (ensure vorticies above ground)
    call FakeGroundEffect(p, x, m, ErrStat, ErrMsg)
@@ -710,20 +729,15 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, m
    if (m%FirstCall) then
       m%FirstCall=.False.
    endif
-   if (m%ComputeWakeInduced) then
-      ! Profiling of expensive time step
-      call date_and_time(values=time2)
-      time_diff=time2-time1
-      m%tSpent = time_diff(5)*3600+time_diff(6)*60 +time_diff(7)+0.001*time_diff(8)
-   endif
-   call FVW_DestroyConstrState(z_guess, ErrStat2, ErrMsg2); if(Failed()) return
+   call CleanUp()
 
    if (DEV_VERSION) then
-      if(have_nan(p, m, x, u, 'End Update ')) then
+      if(have_nan(p, m, x, z, u, 'End Update ')) then
          STOP
       endif
    endif
 
+   if (OLAF_PROFILING) call toc()
 contains
    subroutine PrepareNextTimeStep()
       ! --- Increase wake length if maximum not reached
@@ -741,10 +755,14 @@ contains
       m%nNW=max(m%nNW-1, 0)
    end subroutine RollBackPreviousTimeStep
 
+   subroutine CleanUp()
+      call FVW_DestroyConstrState(z_guess, ErrStat2, ErrMsg2); if(Failed()) return
+   end subroutine
+
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'FVW_UpdateStates') 
       Failed =  ErrStat >= AbortErrLev
-      !if (Failed) call CleanUp()
+      if (Failed) call CleanUp()
    end function Failed
 
 end subroutine FVW_UpdateStates
@@ -769,121 +787,201 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    integer(IntKi)       :: ErrStat2       ! temporary error status of the operation
    character(ErrMsgLen) :: ErrMsg2        ! temporary error message
    integer(IntKi)       :: nFWEff ! Number of farwake panels that are free at current time step
-   integer(IntKi)       :: i,j,k
-   real(ReKi)           :: visc_fact, age  ! Viscosity factor for diffusion of reg param
-   real(ReKi), dimension(3) :: VmeanFW, VmeanNW ! Mean velocity of the near wake and far wake
-
+   integer(IntKi)       :: nNWEff ! Number of nearwake panels that are free at current time step
+   integer(IntKi)       :: nNWEffEnd ! End the number of free nearwake panels
+   integer(IntKi)       :: j,k,iW,nP
+   real(ReKi)           :: visc_fact  ! Viscosity factor for diffusion of reg param
+   real(ReKi)           :: UiScale  ! Scale induced velocity from full to 0 in frozen wake
+   real(ReKi), dimension(3) :: VmeanFWFree, VmeanNW, VmeanNWFree ! Mean velocity of the near wake and far wake
+   real(ReKi), dimension(3) :: VmeanNWFixed
+   integer(IntKi), parameter :: nNWFreeAvg=20 ! Number of parameters used to compute velocity for frozen wake
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   if (.not.allocated(dxdt%r_NW)) then
-      call AllocAry( dxdt%r_NW , 3   ,  p%nSpan+1  ,p%nNWMax+1,  p%nWings, 'Wind on NW ', ErrStat2, ErrMsg2); dxdt%r_NW= -999999_ReKi;
-      call AllocAry( dxdt%r_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1,  p%nWings, 'Wind on FW ', ErrStat2, ErrMsg2); dxdt%r_FW= -999999_ReKi;
+
+   if (.not.allocated(dxdt%W)) then
+      allocate(dxdt%W(p%nWings))
+      do iW=1,p%nWings
+         call AllocAry( dxdt%W(iW)%r_NW , 3   ,  p%W(iW)%nSpan+1  ,p%nNWMax+1, 'Wind on NW ', ErrStat2, ErrMsg2); dxdt%W(iW)%r_NW= -999999_ReKi;
+         call AllocAry( dxdt%W(iW)%r_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1, 'Wind on FW ', ErrStat2, ErrMsg2); dxdt%W(iW)%r_FW= -999999_ReKi;
+      enddo
       if(Failed()) return
    endif
 
    ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
-   ! TODO ANDY: replace with direct call to inflow wind at r_NW and r_FW locations
+   ! TODO ANDY: replace with direct call to inflow wind at W(iW)%r_NW and W(iW)%r_FW locations
    ! NOTE: this has been commented out due to some information missing at some times (and memoery reindexing)
    !       Call to inflow wind sould be done here at actual positions.
    !CALL DistributeRequestedWind_NWFW(u%V_wind, p, m%Vwnd_NW, m%Vwnd_FW)
 
    ! Only calculate freewake after start time and if on a timestep when it should be calculated.
    if ((t>= p%FreeWakeStart)) then
+      nNWEff = min(m%nNW, p%nNWFree)
       nFWEff = min(m%nFW, p%nFWFree)
+      nNWEffEnd = max(nNWEff-nNWFreeAvg, 2) ! start for frozen convection average
 
       ! --- Compute Induced velocities on the Near wake and far wake based on the marker postions:
       ! (expensive N^2 call)
-      ! In  : x%r_NW,    r%r_FW 
-      ! Out:  m%Vind_NW, m%Vind_FW 
+      ! In  : x%W(iW)%r_NW,    r%W(iW)%r_FW 
+      ! Out:  m%W(iW)%Vind_NW, m%Vind_FW 
       call WakeInducedVelocities(p, x, m, ErrStat2, ErrMsg2); if(Failed()) return
 
-      ! --- Mean induced velocity over the near wake (NW)
+      ! --- Mean induced velocity over end of the free near wake (NW)
+      VmeanNWFree(1:3)=0
+      if (nNWEff >0) then
+         nP=0;
+         do iW=1,size(m%W); do j=nNWEffEnd,nNWEff+1; do k=1,size(m%W(iW)%Vind_NW,2); 
+            VmeanNWFree(1:3) = VmeanNWFree(1:3) + m%W(iW)%Vind_NW(1:3, k, j)
+            nP=nP+1;
+         enddo; enddo; enddo; 
+         VmeanNWFree(1:3) = VmeanNWFree(1:3) / nP
+      endif
+      ! --- Convecting non-free NW based on an average (decaying) induced velocity (and free stream)
+      do iW=1,p%nWings
+         do j=p%nNWFree+2,p%nNWMax+1
+            ! Scale so that induced velocity scale goes from s=kFrozenNWStart to e=kFrozenNWEnd in frozen Wake
+            ! Uiscale = [ (e-s)*j + b*s - a*e ]/(b-a)  b=(p%nNWMax+1) , a=(p%nNWFree+2)
+            UiScale =  ( (p%kFrozenNWEnd-p%kFrozenNWStart)*j + (p%nNWMax+1)*p%kFrozenNWStart - (p%nNWFree+2)*p%kFrozenNWEnd)/(p%nNWMax+1-(p%nNWFree+2))
+            do k=1,size(m%W(iW)%Vind_NW,2);
+               m%W(iW)%Vind_NW(1, k, j) = VmeanNWFree(1)*UiScale !
+               m%W(iW)%Vind_NW(2, k, j) = VmeanNWFree(2)*UiScale !
+               m%W(iW)%Vind_NW(3, k, j) = VmeanNWFree(3)*UiScale !
+            enddo
+         enddo
+      enddo
+
+      ! --- Mean induced velocity over the full near wake (NW) TODO, store per wing
       VmeanNW(1:3)=0
       if (m%nNW >1) then
-         do i=1,size(m%Vind_NW,4); do j=2,m%nNW+1; do k=1,size(m%Vind_NW,2); 
-            VmeanNW(1:3) = VmeanNW(1:3) + m%Vind_NW(1:3, k, j, i)
+         nP=0;
+         do iW=1,size(m%W); do j=2,m%nNW+1; do k=1,size(m%W(iW)%Vind_NW,2); 
+            VmeanNW(1:3) = VmeanNW(1:3) + m%W(iW)%Vind_NW(1:3, k, j)
+            nP=nP+1;
          enddo; enddo; enddo; 
-         VmeanNW(1:3) = VmeanNW(1:3) / (size(m%Vind_NW,4)*m%nNW*size(m%Vind_NW,2))
+         VmeanNW(1:3) = VmeanNW(1:3) / nP
       endif
-      ! --- Induced velocity over the free far wake (FWEff)
-      VmeanFW(1:3)=0
-      if (nFWEff >0) then
-         do i=1,size(m%Vind_FW,4); do j=1,nFWEff; do k=1,size(m%Vind_FW,2); 
-            VmeanFW(1:3) = VmeanFW(1:3) + m%Vind_FW(1:3, k, j, i)
+
+      ! --- Mean induced velocity over the fixed near wake (NW) TODO REMOVE FOR DEBUG ONLY
+      VmeanNWFixed(1:3)=0
+         nP=0;
+         do iW=1,size(m%W); do j=p%nNWFree+2,p%nNWMax+1; do k=1,size(m%W(iW)%Vind_NW,2); 
+            VmeanNWFixed(1:3) = VmeanNWFixed(1:3) + m%W(iW)%Vind_NW(1:3, k, j)
+            nP=nP+1;
          enddo; enddo; enddo; 
-         VmeanFW(1:3) = VmeanFW(1:3) / (size(m%Vind_FW,4)*nFWEff*size(m%Vind_FW,2))
+      VmeanNWFixed(1:3) = VmeanNWFixed(1:3) / nP
+
+      ! --- Mean induced velocity over the free far wake (FWEff)
+      VmeanFWFree(1:3)=0
+      if (nFWEff >0) then
+         nP=0
+         do iW=1,size(m%W); do j=1,nFWEff; do k=1,size(m%W(iW)%Vind_FW,2); 
+            VmeanFWFree(1:3) = VmeanFWFree(1:3) + m%W(iW)%Vind_FW(1:3, k, j)
+            nP=nP+1;
+         enddo; enddo; enddo; 
+         VmeanFWFree(1:3) = VmeanFWFree(1:3) / nP
       else
-         VmeanFW=VmeanNW
+         if (p%nNWMax==p%nNWFree) then ! No frozen near wake
+            VmeanFWFree=VmeanNW
+         else ! a frozen near wake is present, frozen far wake we convect at same end velocity as end of frozen near wake
+            VmeanFWFree=VmeanNWFree*p%kFrozenNWEnd
+         endif
          ! Since we convect the first FW point, we need a reasonable velocity there 
          ! NOTE: mostly needed for sub-cycling and when no FW
-         m%Vind_FW(1, 1:FWnSpan+1, 1, 1:p%nWings) = VmeanFW(1)
-         m%Vind_FW(2, 1:FWnSpan+1, 1, 1:p%nWings) = VmeanFW(2)
-         m%Vind_FW(3, 1:FWnSpan+1, 1, 1:p%nWings) = VmeanFW(3)
+         do iW=1,p%nWings
+            m%W(iW)%Vind_FW(1, 1:FWnSpan+1, 1) = VmeanFWFree(1)
+            m%W(iW)%Vind_FW(2, 1:FWnSpan+1, 1) = VmeanFWFree(2)
+            m%W(iW)%Vind_FW(3, 1:FWnSpan+1, 1) = VmeanFWFree(3)
+         enddo
       endif
 
       ! --- Convecting non-free FW with a constant induced velocity (and free stream)
-      m%Vind_FW(1, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax+1, 1:p%nWings) = VmeanFW(1) !
-      m%Vind_FW(2, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax+1, 1:p%nWings) = VmeanFW(2) !
-      m%Vind_FW(3, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax+1, 1:p%nWings) = VmeanFW(3) !
+      do iW=1,p%nWings
+         m%W(iW)%Vind_FW(1, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax+1) = VmeanFWFree(1) !
+         m%W(iW)%Vind_FW(2, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax+1) = VmeanFWFree(2) !
+         m%W(iW)%Vind_FW(3, 1:FWnSpan+1, p%nFWFree+1:p%nFWMax+1) = VmeanFWFree(3) !
+      enddo
 
       if (DEV_VERSION) then
-         call print_mean_4d( m%Vind_NW(:,:, 1:m%nNW+1,:), 'Mean induced vel. NW')
-         if (nFWEff>0) then
-            call print_mean_4d( m%Vind_FW(:,:, 1:nFWEff ,:), 'Mean induced vel. FW')
-         endif
-         print'(A25,3F12.4)','MeanFW (non free)',VmeanFW
-         call print_mean_4d( m%Vwnd_NW(:,:, 1:m%nNW+1,:), 'Mean wind vel.    NW')
-         call print_mean_4d( m%Vwnd_FW(:,:, 1:nFWEff+1,:), 'Mean wind vel. FWEff')
-         call print_mean_4d( m%Vwnd_FW(:,:, (p%nFWFree+1):m%nFW+1,:), 'Mean wind vel.    FWNF')
-         call print_mean_4d( m%Vwnd_FW(:,:, 1:m%nFW+1,:), 'Mean wind vel.    FW')
+         do iW=1,p%nWings
+            call print_mean_3d( m%W(iW)%Vind_NW(:,:, 1:m%nNW+1), 'Mean induced vel. NW')
+            if (nFWEff>0) then
+               call print_mean_3d( m%W(iW)%Vind_FW(:,:, 1:nFWEff), 'Mean induced vel. FW')
+            endif
+         enddo
+         print'(A25,3F12.4)','MeanNW (all)     ',VmeanNW
+         print'(A25,3F12.4)','MeanNW (all2)    ',(VmeanNWFree+VmeanNWFixed)/2
+         print'(A25,3F12.4)','MeanNW (free)    ',VmeanNWFree
+         print'(A25,3F12.4)','MeanNW (fixed)   ',VmeanNWFixed
+         print'(A25,3F12.4)','MeanFW (non free)',VmeanFWFree
+         !call print_mean_4d( m%Vwnd_NW(:,:, 1:m%nNW+1,:), 'Mean wind vel.    NW')
+         !call print_mean_4d( m%Vwnd_FW(:,:, 1:nFWEff+1,:), 'Mean wind vel. FWEff')
+         !call print_mean_4d( m%Vwnd_FW(:,:, (p%nFWFree+1):m%nFW+1,:), 'Mean wind vel.    FWNF')
+         !call print_mean_4d( m%Vwnd_FW(:,:, 1:m%nFW+1,:), 'Mean wind vel.    FW')
       endif
 
       ! --- Vortex points are convected with the free stream and induced velocity
-      dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%Vwnd_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) +  m%Vind_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
-      dxdt%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = m%Vwnd_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) +  m%Vind_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+      do iW=1,p%nWings
+         dxdt%W(iW)%r_NW(1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) = m%W(iW)%Vwnd_NW(1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) +  m%W(iW)%Vind_NW(1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1)
+         dxdt%W(iW)%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1) = m%W(iW)%Vwnd_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1) +  m%W(iW)%Vind_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1)
+      enddo
    else
       if(DEV_VERSION) then
-         call print_mean_4d( m%Vwnd_NW(:,:,1:m%nNW+1,:), 'Mean wind vel.    NW')
+         !call print_mean_4d( m%Vwnd_NW(:,:,1:m%nNW+1,:), 'Mean wind vel.    NW')
          !call print_mean_4d( m%Vwnd_FW(:,:,1:m%nFW+1,:), 'Mean wind vel.    FW')
       endif
 
       ! --- Vortex points are convected with the free stream
-      dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%Vwnd_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) 
-      dxdt%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = m%Vwnd_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+      do iW=1,p%nWings
+         dxdt%W(iW)%r_NW(1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) = m%W(iW)%Vwnd_NW(1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) 
+         dxdt%W(iW)%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1) = m%W(iW)%Vwnd_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1)
+      enddo
    endif
    ! First NW point does not convect (bound to LL)
-   dxdt%r_NW(1:3, :, 1:iNWStart-1, :)=0.0_ReKi
+   do iW=1,p%nWings
+      dxdt%W(iW)%r_NW(1:3, :, 1:p%iNWStart-1)=0.0_ReKi
+   enddo
    ! First FW point always convects (even if bound to NW)
    ! This is done for overcycling
-   !dxdt%r_FW(1:3, :, 1, :)=0
+   !dxdt%W(iW)%r_FW(1:3, :, 1, :)=0
 
    ! --- Regularization
-   if (.not.allocated(dxdt%Eps_NW)) then
-      call AllocAry( dxdt%Eps_NW , 3   ,  p%nSpan    ,p%nNWMax  ,  p%nWings, 'Eps NW ', ErrStat2, ErrMsg2); 
-      call AllocAry( dxdt%Eps_FW , 3   ,  FWnSpan    ,p%nFWMax  ,  p%nWings, 'Eps FW ', ErrStat2, ErrMsg2); 
-      if(Failed()) return
-   endif
+   do iW=1,p%nWings
+      if (.not.allocated(dxdt%W(iW)%Eps_NW)) then
+         call AllocAry( dxdt%W(iW)%Eps_NW , 3   ,  p%W(iW)%nSpan    ,p%nNWMax, 'Eps NW ', ErrStat2, ErrMsg2); 
+         call AllocAry( dxdt%W(iW)%Eps_FW , 3   ,  FWnSpan    ,p%nFWMax, 'Eps FW ', ErrStat2, ErrMsg2); 
+         if(Failed()) return
+      endif
+   enddo
    if (p%WakeRegMethod==idRegConstant) then
-      dxdt%Eps_NW(1:3, :, :, :)=0.0_ReKi
-      dxdt%Eps_FW(1:3, :, :, :)=0.0_ReKi
+      do iW=1,p%nWings
+         dxdt%W(iW)%Eps_NW(1:3, :, :)=0.0_ReKi
+         dxdt%W(iW)%Eps_FW(1:3, :, :)=0.0_ReKi
+      enddo
 
    else if (p%WakeRegMethod==idRegStretching) then
       ! TODO
    else if (p%WakeRegMethod==idRegAge) then
       visc_fact = 2.0_ReKi * CoreSpreadAlpha * p%CoreSpreadEddyVisc * p%KinVisc
       ! --- Method 1, use d(rc^2)/dt = 4 k 
-      dxdt%Eps_NW(1:3, :, iNWStart:, :) = visc_fact/x%Eps_NW(1:3, :, iNWStart:, :)
-      dxdt%Eps_FW(1:3, :,         :, :) = visc_fact/x%Eps_FW(1:3, :, :, :)
-      ! --- Method 2, use rc(tau) = 2k/sqrt(r_c^2(tau=0) + 4 k tau)
-      !dxdt%Eps_NW(1:3, :, :, :) = (visc_fact)/sqrt(x%Eps_NW(1:3, :, :, :)**2 + 2*visc_fact*p%DTaero)
-      !dxdt%Eps_FW(1:3, :, :, :) = (visc_fact)/sqrt(x%Eps_FW(1:3, :, :, :)**2 + 4*visc_fact*p%DTaero)
+      do iW=1,p%nWings
+         dxdt%W(iW)%Eps_NW(1:3, :,p%iNWStart:) = visc_fact/x%W(iW)%Eps_NW(1:3, :, p%iNWStart:)
+         dxdt%W(iW)%Eps_FW(1:3, :,          :) = visc_fact/x%W(iW)%Eps_FW(1:3, :, :)
+         ! --- Method 2, use rc(tau) = 2k/sqrt(r_c^2(tau=0) + 4 k tau)
+         !dxdt%W(iW)%Eps_NW(1:3, :, :, :) = (visc_fact)/sqrt(x%W(iW)%Eps_NW(1:3, :, :, :)**2 + 2*visc_fact*p%DTaero)
+         !dxdt%W(iW)%Eps_FW(1:3, :, :, :) = (visc_fact)/sqrt(x%W(iW)%Eps_FW(1:3, :, :, :)**2 + 4*visc_fact*p%DTaero)
+      enddo
    else
       ErrStat = ErrID_Fatal
       ErrMsg ='Regularization method not implemented'
    endif
-   dxdt%Eps_NW(1:3,:,1:iNWStart,:) = 0.0_ReKi ! Important! LL and First NW panel epsilon does not change
+   do iW=1,p%nWings
+      dxdt%W(iW)%Eps_NW(1:3,:,1:p%iNWStart) = 0.0_ReKi ! Important! LL and First NW panel epsilon does not change
+   enddo
 
+   if(.false.) print*,OtherState%Dummy  ! unused var
+   if(.false.) print*,u%W(1)%omega_z(1) ! unused var
+   if(.false.) print*,xd%Dummy
+   if(.false.) print*,z%W(1)%Gamma_LL(1)
 contains
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'FVW_CalcContStateDeriv') 
@@ -892,18 +990,19 @@ contains
 end subroutine FVW_CalcContStateDeriv
 
 
+!------------------------------------------------------------------------------------------------
 !> Interpolate states to the current time
 !! For now: linear interpolation, two states, with t1<t2
-subroutine FVW_ContStates_Interp(t, states, times, p, m, x, ErrStat, ErrMsg )
+subroutine FVW_ContStates_Interp(t, states, times, p, x, ErrStat, ErrMsg )
    real(DbKi),                      intent(in   )  :: t         !< Current simulation time in seconds
    type(FVW_ContinuousStateType),   intent(in   )  :: states(:) !< States at times
    real(DbKi),                      intent(in   )  :: times(:)  !< Times associated with states(:), in seconds
    type(FVW_ParameterType),         intent(in   ) :: p          !< Parameters
-   type(FVW_MiscVarType),           intent(inout) :: m          !< Misc/optimization variables
    type(FVW_ContinuousStateType),   intent(inout) :: x          !< Continuous states at t on input at t + dt on output
    integer(IntKi),                  intent(  out) :: ErrStat    !< Error status of the operation
    character(*),                    intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    real(ReKi) :: fact
+   integer :: iW
    ErrStat = ErrID_None
    ErrMsg  = "" 
    if (size(times)/=2) then
@@ -917,14 +1016,16 @@ subroutine FVW_ContStates_Interp(t, states, times, p, m, x, ErrStat, ErrMsg )
 
    fact = (t-times(1))/(times(2)-times(1))
 
-   x%r_NW     = (1_ReKi-fact) * states(1)%r_NW     + fact * states(2)%r_NW
-   x%r_FW     = (1_ReKi-fact) * states(1)%r_FW     + fact * states(2)%r_FW
-   x%Eps_NW   = (1_ReKi-fact) * states(1)%Eps_NW   + fact * states(2)%Eps_NW
-   x%Eps_FW   = (1_ReKi-fact) * states(1)%Eps_FW   + fact * states(2)%Eps_FW
-   x%Gamma_NW = (1_ReKi-fact) * states(1)%Gamma_NW + fact * states(2)%Gamma_NW
-   x%Gamma_FW = (1_ReKi-fact) * states(1)%Gamma_FW + fact * states(2)%Gamma_FW
-   !print*,'fact',fact,states(1)%Gamma_NW(29,iNWStart+1,1),x%Gamma_NW(29,iNWStart+1,1),states(2)%Gamma_NW(29,iNWStart+1,1)
-   !print*,'fact',fact,states(1)%r_NW(1,29,iNWStart+1,1),x%r_NW(1,29,iNWStart+1,1),states(2)%r_NW(1,29,iNWStart+1,1)
+   do iW=1,p%nWings
+      x%W(iW)%r_NW     = (1_ReKi-fact) * states(1)%W(iW)%r_NW     + fact * states(2)%W(iW)%r_NW
+      x%W(iW)%r_FW     = (1_ReKi-fact) * states(1)%W(iW)%r_FW     + fact * states(2)%W(iW)%r_FW
+      x%W(iW)%Eps_NW   = (1_ReKi-fact) * states(1)%W(iW)%Eps_NW   + fact * states(2)%W(iW)%Eps_NW
+      x%W(iW)%Eps_FW   = (1_ReKi-fact) * states(1)%W(iW)%Eps_FW   + fact * states(2)%W(iW)%Eps_FW
+      x%W(iW)%Gamma_NW = (1_ReKi-fact) * states(1)%W(iW)%Gamma_NW + fact * states(2)%W(iW)%Gamma_NW
+      x%W(iW)%Gamma_FW = (1_ReKi-fact) * states(1)%W(iW)%Gamma_FW + fact * states(2)%W(iW)%Gamma_FW
+   enddo
+   !print*,'fact',fact,states(1)%W(iW)%Gamma_NW(29,iNWStart+1,1),x%W(iW)%Gamma_NW(29,iNWStart+1,1),states(2)%W(iW)%Gamma_NW(29,iNWStart+1,1)
+   !print*,'fact',fact,states(1)%W(iW)%r_NW(1,29,iNWStart+1,1),x%W(iW)%r_NW(1,29,iNWStart+1,1),states(2)%W(iW)%r_NW(1,29,iNWStart+1,1)
 
 end subroutine FVW_ContStates_Interp
 
@@ -944,6 +1045,7 @@ subroutine FVW_Euler1( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    real(ReKi)     :: dt
    integer(IntKi)       :: ErrStat2      ! temporary error status of the operation
    character(ErrMsgLen) :: ErrMsg2       ! temporary error message
+   integer :: iW
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = "" 
@@ -953,38 +1055,45 @@ subroutine FVW_Euler1( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    CALL FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, m%dxdt, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Update of positions and reg param
-   x%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + dt * m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
-   x%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) = x%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) + dt * m%dxdt%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings)
-   if ( m%nFW>0) then
-      x%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) + dt * m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
-      x%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  , 1:p%nWings) = x%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  , 1:p%nWings) + dt * m%dxdt%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  , 1:p%nWings)
-   endif
+   do iW = 1, p%nWings
+      x%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) = x%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) + dt * m%dxdt%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1)
+      x%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) = x%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) + dt * m%dxdt%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  )
+      if ( m%nFW>0) then
+         x%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1) = x%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1) + dt * m%dxdt%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1)
+         x%W(iW)%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  ) = x%W(iW)%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  ) + dt * m%dxdt%W(iW)%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  )
+      endif
+   enddo
    ! Update of Gamma TODO (viscous diffusion, stretching)
 
 
    if (DEV_VERSION) then
-      ! Additional checks
-      if (any(m%dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)<-999)) then
-         print*,'FVW_Euler1: Attempting to convect NW with a wrong velocity'
-         STOP
-      endif
-      if ( m%nFW>0) then
-         if (any(m%dxdt%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)<-999)) then
-            call print_x_NW_FW(p, m, x, 'STP')
-            print*,'FVW_Euler1: Attempting to convect FW with a wrong velocity'
+      do iW = 1, p%nWings
+         ! Additional checks
+         ! Find points that are the same
+         call find_equal_points(x%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1), 'r_NW After conv'//trim(num2lstr(iW)))
+
+         if (any(m%dxdt%W(iW)%r_NW(1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1)<-999)) then
+            print*,'FVW_Euler1: Attempting to convect NW with a wrong velocity'
             STOP
          endif
-      endif
-      if (any(m%dxdt%Eps_NW(1:3, 1:p%nSpan, 1:m%nNW, 1:p%nWings)<-0)) then
-         print*,'FVW_Euler1: Wrong Epsilon NW'
-         STOP
-      endif
-      if ( m%nFW>0) then
-         if (any(m%dxdt%Eps_FW(1:3, 1:FWnSpan, 1:m%nFW, 1:p%nWings)<-999)) then
-            print*,'FVW_Euler1: Wrong Epsilon FW'
+         if ( m%nFW>0) then
+            if (any(m%dxdt%W(iW)%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1)<-999)) then
+               call print_x_NW_FW(p, m, x, 'STP')
+               print*,'FVW_Euler1: Attempting to convect FW with a wrong velocity'
+               STOP
+            endif
+         endif
+         if (any(m%dxdt%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan, 1:m%nNW)<-0)) then
+            print*,'FVW_Euler1: Wrong Epsilon NW'
             STOP
          endif
-      endif
+         if ( m%nFW>0) then
+            if (any(m%dxdt%W(iW)%Eps_FW(1:3, 1:FWnSpan, 1:m%nFW)<-999)) then
+               print*,'FVW_Euler1: Wrong Epsilon FW'
+               STOP
+            endif
+         endif
+      enddo
    endif
 contains
    logical function Failed()
@@ -1013,9 +1122,8 @@ end subroutine FVW_Euler1
 !!   Runge-Kutta." Sections 16.1 and 16.2 in Numerical Recipes in FORTRAN: The
 !Art of Scientific Computing, 2nd ed. Cambridge, England: 
 !!   Cambridge University Press, pp. 704-716, 1992.
-SUBROUTINE FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg)
+SUBROUTINE FVW_RK4( t, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg)
       REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
-      INTEGER(IntKi),               INTENT(IN   )  :: n           !< time step number
       TYPE(FVW_InputType),           INTENT(INOUT)  :: u(:)        !< Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
       REAL(DbKi),                   INTENT(IN   )  :: utimes(:)   !< times of input
       TYPE(FVW_ParameterType),       INTENT(IN   )  :: p           !< Parameters
@@ -1036,6 +1144,7 @@ SUBROUTINE FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       TYPE(FVW_InputType)                           :: u_interp    ! interpolated value of inputs 
       INTEGER(IntKi)                               :: ErrStat2    ! local error status
       CHARACTER(ErrMsgLen)                         :: ErrMsg2     ! local error message (ErrMsg)
+      integer :: iW
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
@@ -1059,32 +1168,36 @@ SUBROUTINE FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
 
       if (DEV_VERSION) then
          ! Additional checks
-         if (any(m%dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)<-999)) then
-            print*,'FVW_RK4: Attempting to convect NW with a wrong velocity'
-            STOP
-         endif
-         if ( m%nFW>0) then
-            if (any(m%dxdt%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)<-999)) then
-               call print_x_NW_FW(p, m, x, 'STP')
-               print*,'FVW_RK4: Attempting to convect FW with a wrong velocity'
+         do iW = 1,p%nWings
+            if (any(m%dxdt%W(iW)%r_NW(1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1)<-999)) then
+               print*,'FVW_RK4: Attempting to convect NW with a wrong velocity'
                STOP
             endif
+            if ( m%nFW>0) then
+               if (any(m%dxdt%W(iW)%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1)<-999)) then
+                  call print_x_NW_FW(p, m, x, 'STP')
+                  print*,'FVW_RK4: Attempting to convect FW with a wrong velocity'
+                  STOP
+               endif
+            endif
+         enddo
+      endif
+
+      do iW = 1,p%nWings
+         k1%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) = dt * m%dxdt%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) 
+         k1%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) = dt * m%dxdt%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan,   1:m%nNW  )
+         if ( m%nFW>0) then   
+            k1%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1) = dt * m%dxdt%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1)
+            k1%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  ) = dt * m%dxdt%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  )
          endif
-      endif
 
-      k1%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = dt * m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) 
-      k1%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) = dt * m%dxdt%Eps_NW(1:3, 1:p%nSpan,   1:m%nNW,   1:p%nWings)
-      if ( m%nFW>0) then   
-         k1%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = dt * m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
-         k1%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = dt * m%dxdt%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)
-      endif
-
-      x_tmp%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + 0.5 * k1%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
-      x_tmp%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) = x%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) + 0.5 * k1%Eps_NW(1:3, 1:p%nSpan,   1:m%nNW,   1:p%nWings)
-      if ( m%nFW>0) then
-         x_tmp%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + 0.5 * k1%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
-         x_tmp%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = x%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)  + 0.5 * k1%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)
-      endif
+         x_tmp%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) = x%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) + 0.5 * k1%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1)
+         x_tmp%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) = x%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) + 0.5 * k1%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan,   1:m%nNW  )
+         if ( m%nFW>0) then
+            x_tmp%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1) = x%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1)  + 0.5 * k1%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1)
+            x_tmp%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  ) = x%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  )  + 0.5 * k1%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  )
+         endif
+      enddo
 
       ! interpolate u to find u_interp = u(t + dt/2)
       CALL FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes(:),u_interp, t+0.5*dt, ErrStat2, ErrMsg2); CALL CheckError(ErrStat2,ErrMsg2); IF ( ErrStat >= AbortErrLev ) RETURN        
@@ -1092,36 +1205,40 @@ SUBROUTINE FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       ! find dxdt at t + dt/2
       CALL FVW_CalcContStateDeriv( t + 0.5*dt, u_interp, p, x_tmp, xd, z, OtherState, m, m%dxdt, ErrStat2, ErrMsg2 ); CALL CheckError(ErrStat2,ErrMsg2); IF ( ErrStat >= AbortErrLev ) RETURN
 
-      k2%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = dt * m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
-      k2%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) = dt * m%dxdt%Eps_NW(1:3, 1:p%nSpan,   1:m%nNW,   1:p%nWings)
-      if ( m%nFW>0) then
-         k2%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = dt * m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
-         k2%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = dt * m%dxdt%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)
-      endif
+      do iW = 1,p%nWings
+         k2%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) = dt * m%dxdt%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1)
+         k2%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) = dt * m%dxdt%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan,   1:m%nNW  )
+         if ( m%nFW>0) then
+            k2%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1) = dt * m%dxdt%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1)
+            k2%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  ) = dt * m%dxdt%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  )
+         endif
 
-      x_tmp%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + 0.5 * k2%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
-      x_tmp%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) = x%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) + 0.5 * k2%Eps_NW(1:3, 1:p%nSpan,   1:m%nNW,   1:p%nWings)
-      if ( m%nFW>0) then
-         x_tmp%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + 0.5 * k2%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
-         x_tmp%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = x%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)  + 0.5 * k2%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)
-      endif
+         x_tmp%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) = x%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) + 0.5 * k2%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1)
+         x_tmp%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) = x%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) + 0.5 * k2%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan,   1:m%nNW  )
+         if ( m%nFW>0) then
+            x_tmp%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1) = x%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1)  + 0.5 * k2%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1)
+            x_tmp%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  ) = x%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  )  + 0.5 * k2%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  )
+         endif
+      enddo
 
       ! find dxdt at t + dt/2       
       CALL FVW_CalcContStateDeriv( t + 0.5*dt, u_interp, p, x_tmp, xd, z, OtherState, m, m%dxdt, ErrStat2, ErrMsg2 ); CALL CheckError(ErrStat2,ErrMsg2); IF ( ErrStat >= AbortErrLev ) RETURN
 
-      k3%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = dt * m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
-      k3%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) = dt * m%dxdt%Eps_NW(1:3, 1:p%nSpan,   1:m%nNW,   1:p%nWings)
-      if ( m%nFW>0) then
-         k3%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = dt * m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
-         k3%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = dt * m%dxdt%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)
-      endif
+      do iW = 1,p%nWings
+         k3%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) = dt * m%dxdt%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1)
+         k3%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) = dt * m%dxdt%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan,   1:m%nNW)
+         if ( m%nFW>0) then
+            k3%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1) = dt * m%dxdt%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1)
+            k3%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  ) = dt * m%dxdt%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW)
+         endif
 
-      x_tmp%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + k3%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
-      x_tmp%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) = x%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) + k3%Eps_NW(1:3, 1:p%nSpan,   1:m%nNW,   1:p%nWings)
-      if ( m%nFW>0) then
-         x_tmp%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  + k3%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
-         x_tmp%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = x%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)  + k3%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)
-      endif
+         x_tmp%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) = x%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) + k3%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1)
+         x_tmp%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) = x%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) + k3%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan,   1:m%nNW)
+         if ( m%nFW>0) then
+            x_tmp%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1) = x%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1)  + k3%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1)
+            x_tmp%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  ) = x%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  )  + k3%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW)
+         endif
+      enddo
 
       ! interpolate u to find u_interp = u(t + dt)
       CALL FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes(:),u_interp, t + dt, ErrStat2, ErrMsg2); CALL CheckError(ErrStat2,ErrMsg2); IF ( ErrStat >= AbortErrLev ) RETURN
@@ -1129,36 +1246,44 @@ SUBROUTINE FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       ! find dxdt at t + dt
       CALL FVW_CalcContStateDeriv( t + dt, u_interp, p, x_tmp, xd, z, OtherState, m, m%dxdt, ErrStat2, ErrMsg2 ); CALL CheckError(ErrStat2,ErrMsg2); IF ( ErrStat >= AbortErrLev ) RETURN
 
-      k4%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = dt * m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
-      k4%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW,   1:p%nWings) = dt * m%dxdt%Eps_NW(1:3, 1:p%nSpan,   1:m%nNW,   1:p%nWings)
-      if ( m%nFW>0) then
-         k4%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = dt * m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
-         k4%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = dt * m%dxdt%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)
-      endif
+      do iW = 1,p%nWings
+         k4%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) = dt * m%dxdt%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1)
+         k4%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) = dt * m%dxdt%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan,   1:m%nNW)
+         if ( m%nFW>0) then
+            k4%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1) = dt * m%dxdt%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1)
+            k4%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  ) = dt * m%dxdt%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW)
+         endif
+      enddo
 
       ! Compute and store combined dx = (k1/6 + k2/3 + k3/3 + k4/6) ! NOTE: this has dt, it's not a true dxdt yet
-      m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = ( k1%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + 2._ReKi * k2%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + 2._ReKi * k3%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + k4%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)  ) / 6._ReKi
-      m%dxdt%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) = ( k1%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) + 2._ReKi * k2%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) + 2._ReKi * k3%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) + k4%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings)  ) / 6._ReKi
-      if ( m%nFW>0) then         
-         m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = ( k1%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) + 2._ReKi * k2%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) + 2._ReKi * k3%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) + k4%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)  ) / 6._ReKi
-         m%dxdt%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = ( k1%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  , 1:p%nWings) + 2._ReKi * k2%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  , 1:p%nWings) + 2._ReKi * k3%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  , 1:p%nWings) + k4%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  , 1:p%nWings)  ) / 6._ReKi
-      endif
+      do iW = 1,p%nWings
+         m%dxdt%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) = ( k1%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) + 2._ReKi * k2%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) + 2._ReKi * k3%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) + k4%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1)  ) / 6._ReKi
+         m%dxdt%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) = ( k1%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) + 2._ReKi * k2%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) + 2._ReKi * k3%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) + k4%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  )  ) / 6._ReKi
+         if ( m%nFW>0) then         
+            m%dxdt%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1) = ( k1%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1) + 2._ReKi * k2%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1) + 2._ReKi * k3%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1) + k4%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1)  ) / 6._ReKi
+            m%dxdt%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  ) = ( k1%W(iW)%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  ) + 2._ReKi * k2%W(iW)%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  ) + 2._ReKi * k3%W(iW)%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  ) + k4%W(iW)%Eps_FW(1:3, 1:FWnSpan  , 1:m%nFW  )  ) / 6._ReKi
+         endif
+      enddo
 
       !update positions
-      x%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) + m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) 
-      x%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) = x%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) + m%dxdt%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) 
-      if ( m%nFW>0) then         
-         x%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) + m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
-         x%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = x%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) + m%dxdt%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)
-      endif
+      do iW = 1,p%nWings
+         x%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) = x%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) + m%dxdt%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) 
+         x%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) = x%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) + m%dxdt%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) 
+         if ( m%nFW>0) then         
+            x%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1) = x%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1) + m%dxdt%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1)
+            x%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  ) = x%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  ) + m%dxdt%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW)
+         endif
+      enddo
 
       ! Store true dxdt =  (k1/6 + k2/3 + k3/3 + k4/6)/dt 
-      m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%dxdt%r_NW  (1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)/dt
-      m%dxdt%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings) = m%dxdt%Eps_NW(1:3, 1:p%nSpan  , 1:m%nNW  , 1:p%nWings)/dt
-      if ( m%nFW>0) then         
-         m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = m%dxdt%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)/dt
-         m%dxdt%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings) = m%dxdt%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW,   1:p%nWings)/dt
-      endif
+      do iW = 1,p%nWings
+         m%dxdt%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1) = m%dxdt%W(iW)%r_NW  (1:3, 1:p%W(iW)%nSpan+1, 1:m%nNW+1)/dt
+         m%dxdt%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  ) = m%dxdt%W(iW)%Eps_NW(1:3, 1:p%W(iW)%nSpan  , 1:m%nNW  )/dt
+         if ( m%nFW>0) then         
+            m%dxdt%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1) = m%dxdt%W(iW)%r_FW  (1:3, 1:FWnSpan+1, 1:m%nFW+1)/dt
+            m%dxdt%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  ) = m%dxdt%W(iW)%Eps_FW(1:3, 1:FWnSpan,   1:m%nFW  )/dt
+         endif
+      enddo
 
       ! clean up local variables:
       CALL ExitThisRoutine(  )
@@ -1207,37 +1332,43 @@ subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, 
    integer(IntKi),                intent(in   )  :: iLabel
    integer(IntKi),                intent(  OUT)  :: ErrStat     !< Error status of the operation
    character(*),                  intent(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   integer :: iW
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
    ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
-   ! TODO ANDY: replace with direct call to inflow wind at m%CP_LL location
-   CALL DistributeRequestedWind_LL(u%V_wind, p, m%Vwnd_LL)
+   ! TODO ANDY: replace with direct call to inflow wind at m%W(iW)%CP location
+   ! input: V_wind, output: m%W%Vwnd_LL
+   CALL DistributeRequestedWind_LL(u%V_wind, p, m)
 
    ! Solve for the residual of the constraint state functions here:
    !z%residual = 0.0_ReKi
-   !z%Gamma_LL = 0.0_ReKi
-   call AllocAry( z_out%Gamma_LL,  p%nSpan, p%nWings, 'Lifting line Circulation', ErrStat, ErrMsg );
-   z_out%Gamma_LL = -999999_ReKi;
+   !z%W(iW)%Gamma_LL = 0.0_ReKi
+   allocate(z_out%W(p%nWings))
+   do iW= 1,p%nWings
+      call AllocAry( z_out%W(iW)%Gamma_LL,  p%W(iW)%nSpan, 'Lifting line Circulation', ErrStat, ErrMsg );
+      z_out%W(iW)%Gamma_LL = -999999_ReKi;
+   enddo
 
-   CALL Wings_ComputeCirculation(t, z_out%Gamma_LL, z_guess%Gamma_LL, u, p, x, m, AFInfo, ErrStat, ErrMsg, iLabel)
+   CALL Wings_ComputeCirculation(t, z_out, z_guess, p, x, m, AFInfo, ErrStat, ErrMsg, iLabel)
 
+   if(.false.) print*,OtherState%Dummy !unused var
+   if(.false.) print*,xd%Dummy
 end subroutine FVW_CalcConstrStateResidual
 
 
-subroutine CalcOutputForAD(t, u, p, x, y, m, AFInfo, ErrStat, ErrMsg)
-   real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
+!----------------------------------------------------------------------------------------------------------------------------------
+subroutine CalcOutputForAD(u, p, x, y, m, ErrStat, ErrMsg)
    type(FVW_InputType),             intent(in   )  :: u           !< Inputs at Time t
    type(FVW_ParameterType),         intent(in   )  :: p           !< Parameters
    type(FVW_ContinuousStateType),   intent(in   )  :: x           !< Continuous states at t
    type(FVW_OutputType),            intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
    type(FVW_MiscVarType),           intent(inout)  :: m           !< Misc/optimization variables
-   type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-   integer(IntKi) :: iW, n
+   integer(IntKi) :: iW
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
    character(*), parameter       :: RoutineName = 'FVW_CalcOutput'
@@ -1246,38 +1377,37 @@ subroutine CalcOutputForAD(t, u, p, x, y, m, AFInfo, ErrStat, ErrMsg)
    ErrMsg  = ""
 !       ! --- NOTE: this below might not be needed
 !       ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
-!       ! TODO ANDY: replace with direct call to inflow wind at m%CP_LL location
+!       ! TODO ANDY: replace with direct call to inflow wind at m%W(iW)%CP location
 !       CALL DistributeRequestedWind_LL(u%V_wind, p, m%Vwnd_LL)
 ! 
-!       ! Control points location and structrual velocity
-   call Wings_Panelling(u%WingsMesh, p, m, ErrStat2, ErrMsg2);
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+!       ! Control points location and structural velocity
+   call Wings_Panelling(u%WingsMesh, p, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 ! 
 !    ! if we are on a correction step, CalcOutput may be called again with different inputs
-!    ! Compute m%Gamma_LL
-!    CALL Wings_ComputeCirculation(t, m%Gamma_LL, z%Gamma_LL, u, p, x, m, AFInfo, ErrStat2, ErrMsg2, 0); if(Failed()) return ! For plotting only
-   !---
+!    ! Compute m%W(iW)%Gamma_LL
+!    CALL Wings_ComputeCirculation(t, m%W(iW)%Gamma_LL, z%W(iW)%Gamma_LL, u, p, x, m, AFInfo, ErrStat2, ErrMsg2, 0); if(Failed()) return ! For plotting only
 
-   ! Induction on the lifting line control point
-   ! Compute m%Vind_LL
-   m%Vind_LL=-9999.0_ReKi
-   call LiftingLineInducedVelocities(m%CP_LL, p, x, 1, m, m%Vind_LL, ErrStat2, ErrMsg2); 
-   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
-   ! Induction on the mesh points (AeroDyn nodes)
-   n=p%nSpan
-   y%Vind(1:3,:,:) = 0.0_ReKi
-   do iW=1,p%nWings
-      ! --- Linear interpolation for interior points and extrapolations at boundaries
-      call interpextrap_cp2node(p%s_CP_LL(:,iW), m%Vind_LL(1,:,iW), p%s_LL(:,iW), y%Vind(1,:,iW))
-      call interpextrap_cp2node(p%s_CP_LL(:,iW), m%Vind_LL(2,:,iW), p%s_LL(:,iW), y%Vind(2,:,iW))
-      call interpextrap_cp2node(p%s_CP_LL(:,iW), m%Vind_LL(3,:,iW), p%s_LL(:,iW), y%Vind(3,:,iW))
-   enddo
+   !--- Induction on the lifting line control point
+   ! if     InductionAtCP : In: m%W%CP,  Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
+   ! if not InductionAtCP : In: m%W%r_LL,   Out:m%W%Vind_CP (interp/extrap) and m%W%Vind_LL
+   if (p%Induction) then
+      call LiftingLineInducedVelocities(p, x, p%InductionAtCP, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      ! Transfer to output
+      do iW=1,p%nWings
+          y%W(iW)%Vind(1,:) = m%W(iW)%Vind_LL(1,:)
+          y%W(iW)%Vind(2,:) = m%W(iW)%Vind_LL(2,:)
+          y%W(iW)%Vind(3,:) = m%W(iW)%Vind_LL(3,:)
+      enddo
+   else
+      do iW=1,p%nWings
+          y%W(iW)%Vind(1:3,:) = 0.0_ReKi
+      enddo
+   endif
 end subroutine CalcOutputForAD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
-subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, ErrMsg)
-   use FVW_VTK, only: set_vtk_coordinate_transform
+subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg)
+   use VTK, only: set_vtk_coordinate_transform
    use FVW_VortexTools, only: interpextrap_cp2node
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    type(FVW_InputType),             intent(in   )  :: u           !< Inputs at Time t
@@ -1286,18 +1416,19 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, 
    type(FVW_DiscreteStateType),     intent(in   )  :: xd          !< Discrete states at t
    type(FVW_ConstraintStateType),   intent(in   )  :: z           !< Constraint states at t
    type(FVW_OtherStateType),        intent(in   )  :: OtherState  !< Other states at t
-   type(AFI_ParameterType),         intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
    type(FVW_OutputType),            intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
                                                                   !!   nectivity information does not have to be recalculated)
    type(FVW_MiscVarType),           intent(inout)  :: m           !< Misc/optimization variables
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local variables
+   integer(IntKi)                :: nP
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
    character(*), parameter       :: RoutineName = 'FVW_CalcOutput'
    logical :: bOverCycling
-   real(ReKi) :: fact
+   if (OLAF_PROFILING) call tic('FVW_CalcOutput')
+
    ErrStat = ErrID_None
    ErrMsg  = ""
    if (DEV_VERSION) then
@@ -1308,61 +1439,93 @@ subroutine FVW_CalcOutput(t, u, p, x, xd, z, OtherState, AFInfo, y, m, ErrStat, 
    bOverCycling = p%DTfvw > p%DTaero
 
    ! Compute induced velocity at AD nodes
-   call CalcOutputForAD(t,u,p,x,y,m,AFInfo, ErrStat2, ErrMsg2)
+   call CalcOutputForAD(u,p,x,y,m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   ! Write some info to screen when major milestone achieved
+   if (m%iStep == p%nNWFree .and. p%nNWFree<p%nNWMax) then
+      nP = CountCPs(p, p%nNWFree, 0)
+      call WrScr(NewLine//'[INFO] OLAF free near wake is at full extent - '//trim(num2lstr(t))//'s, '//trim(num2lstr(nP))//' points.')
+   endif
+   if (m%iStep == p%nNWMax) then
+      nP = CountCPs(p, p%nNWMax, 0)
+      if (p%nFWMax==0) then
+         call WrScr(NewLine//'[INFO] OLAF wake is at full extent - '//trim(num2lstr(t))//'s, '//trim(num2lstr(nP))//' points.')
+      else
+         call WrScr(NewLine//'[INFO] OLAF near wake is at full extent - '//trim(num2lstr(t))//'s, '//trim(num2lstr(nP))//' points.')
+      endif
+   endif
+   if (p%nFWMax>0 .and. m%iStep== p%nNWMax+p%nFWMax) then
+      nP = CountCPs(p, p%nNWMax, p%nFWMax)
+      call WrScr(NewLine//'[INFO] OLAF wake is at full extent - '//trim(num2lstr(t))//'s, '//trim(num2lstr(nP))//' points.')
+   endif
    
    ! Export to VTK
-   if (m%VTKStep==-1) then 
-      m%VTKStep = 0 ! Has never been called, special handling for init
+   if (m%VTKstep==-1) then 
+       ! Has never been called, special handling for init
+      call WriteVTKOutputs(t, .False., 0        , u, p, x, z, m, ErrStat2, ErrMsg2)
    else
-      m%VTKStep = m%iStep+1 ! We use glue code step number for outputs
+      call WriteVTKOutputs(t, .False., m%iStep+1, u, p, x, z, m, ErrStat2, ErrMsg2)
    endif
-   call WriteVTKOutputs(t, .False., u, p, x, z, y, m, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
+   if (OLAF_PROFILING) call toc()
+   if(.false.) print*,OtherState%Dummy !unused var
+   if(.false.) print*,xd%Dummy
 end subroutine FVW_CalcOutput
 
+!------------------------------------------------------------------------------------------------
 !> Write to  vtk_fvw folder at fps requested
-subroutine WriteVTKOutputs(t, force, u, p, x, z, y, m, ErrStat, ErrMsg)
+subroutine WriteVTKOutputs(t, force, VTKstep, u, p, x, z, m, ErrStat, ErrMsg)
    real(DbKi),                      intent(in   )  :: t       !< Current simulation time in seconds
    logical,                         intent(in   )  :: force   !< force the writing
+   integer,                         intent(in   )  :: VTKstep !< step index used to write the filenames
    type(FVW_InputType),             intent(in   )  :: u       !< Inputs at Time t
    type(FVW_ParameterType),         intent(in   )  :: p       !< Parameters
    type(FVW_ContinuousStateType),   intent(in   )  :: x       !< Continuous states at t
    type(FVW_ConstraintStateType),   intent(in   )  :: z       !< Constraint states at t
-   type(FVW_OutputType),            intent(in   )  :: y       !< Outputs computed at t (Input only so that mesh con-
    type(FVW_MiscVarType),           intent(inout)  :: m       !< Misc/optimization variables
    integer(IntKi),                  intent(  out)  :: ErrStat !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi)                :: ErrStat2
-   character(ErrMsgLen)          :: ErrMsg2
-   character(*), parameter       :: RoutineName = 'FVW_CalcOutput'
+   logical                 :: bTimeToOutput
+   logical                 :: bWithinTime
+   integer(IntKi)          :: ErrStat2
+   character(ErrMsgLen)    :: ErrMsg2
+   character(*), parameter :: RoutineName = 'FVW_CalcOutput'
    integer(IntKi) :: iW, iGrid
    integer(IntKi) :: nSeg, nSegP
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   ! --- Write VTK of wake/blade filaments/panels
    if (p%WrVTK>0) then
       if (m%FirstCall .or. force) then
          call MKDIR(p%VTK_OutFileRoot)
       endif
       ! For plotting only
       call PackPanelsToSegments(p, x, 1, (p%ShearModel==idShearMirror), m%nNW, m%nFW, m%Sgmt%Connct, m%Sgmt%Points, m%Sgmt%Gamma, m%Sgmt%Epsilon, nSeg, nSegP)
-      m%Vtot_LL = m%Vind_LL + m%Vwnd_LL - m%Vstr_LL
-      if (DEV_VERSION) then
-         call print_mean_3d(m%Vind_LL,'Mean induced vel. LL')
-         call print_mean_3d(m%Vtot_LL,'Mean relativevel. LL')
-      endif
+      do iW=1,p%nWings
+         m%W(iW)%Vtot_CP = m%W(iW)%Vind_CP + m%W(iW)%Vwnd_CP - m%W(iW)%Vstr_CP
+      enddo
       if ( force .or. (( t - m%VTKlastTime ) >= p%DTvtk*OneMinusEpsilon ))  then
          m%VTKlastTime = t
          if ((p%VTKCoord==2).or.(p%VTKCoord==3)) then
             ! Hub reference coordinates, for export only, ALL VTK Will be exported in this coordinate system!
             ! Note: hubOrientation and HubPosition are optional, but required for bladeFrame==TRUE
-            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Hub', m%VTKStep, 9, bladeFrame=.TRUE.,  &
-                     HubOrientation=real(u%HubOrientation,ReKi),HubPosition=real(u%HubPosition,ReKi))
+            if (size(u%rotors)>1) then
+               ErrMsg2='VTK outputs in hub coordinates not implemented for multiple rotors'
+               call SetErrStat(ErrID_Warn, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            endif
+            ! We ouput in first rotor frame
+            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Hub', VTKstep, 9, bladeFrame=.TRUE.,  &
+                     HubOrientation=real(u%rotors(1)%HubOrientation,ReKi),HubPosition=real(u%rotors(1)%HubPosition,ReKi))
          endif
          if ((p%VTKCoord==1).or.(p%VTKCoord==3)) then
             ! Global coordinate system, ALL VTK will be exported in global
-            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Glb', m%VTKStep, 9, bladeFrame=.FALSE.)
+            call WrVTK_FVW(p, x, z, m, trim(p%VTK_OutFileBase)//'FVW_Glb', VTKstep, 9, bladeFrame=.FALSE.)
          endif
+         m%VTKstep=VTKstep ! We save the step at which writing occured
       endif
    endif
    ! --- Write VTK grids
@@ -1374,11 +1537,15 @@ subroutine WriteVTKOutputs(t, force, u, p, x, z, y, m, ErrStat, ErrMsg)
       ! TODO ANDY: replace with direct call to inflow wind at Grid points
       CALL DistributeRequestedWind_Grid(u%V_wind, p, m)
       do iGrid=1,p%nGridOut
-         if (force.or. (( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout * OneMinusEpsilon) )  then
+         bWithinTime   = t>=m%GridOutputs(iGrid)%tStart-p%DTaero/2. .and. t<= m%GridOutputs(iGrid)%tEnd+p%DTaero/2.
+         bTimeToOutput = ( t - m%GridOutputs(iGrid)%tLastOutput) >= m%GridOutputs(iGrid)%DTout * OneMinusEpsilon
+         if (force .or. (bWithinTime .and. bTimeToOutput) )  then
             ! Compute induced velocity on grid, TODO use the same Tree for all CalcOutput
             call InducedVelocitiesAll_OnGrid(m%GridOutputs(iGrid), p, x, m, ErrStat2, ErrMsg2);
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             m%GridOutputs(iGrid)%tLastOutput = t
-            call WrVTK_FVW_Grid(p, x, z, m, iGrid, trim(p%VTK_OutFileBase)//'FVW_Grid', m%VTKStep, 9)
+            call WrVTK_FVW_Grid(p, m, iGrid, trim(p%VTK_OutFileBase)//'FVW_Grid', VTKstep, 9)
+            m%VTKstep=VTKstep ! We save the step at which writing occured
          endif
       enddo
    endif
@@ -1404,7 +1571,7 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
    !
    type(UA_InitInputType) :: Init_UA_Data
    type(UA_InitOutputType):: InitOutData_UA
-   integer                :: i,j
+   integer                :: i,iW
    integer(intKi)         :: ErrStat2
    character(ErrMsgLen)   :: ErrMsg2
    ErrStat = ErrID_None
@@ -1413,33 +1580,43 @@ subroutine UA_Init_Wrapper(AFInfo, InitInp, interval, p, x, xd, OtherState, m, E
    m%UA_Flag=InitInp%UA_Flag
    ! --- Condensed version of BEMT_Init_Otherstate
    if ( m%UA_Flag ) then
-      ! ---Condensed version of "BEMT_Set_UA_InitData"
-      allocate(Init_UA_Data%c(InitInp%numBladeNodes,InitInp%numBlades), STAT = errStat2)
-      do j = 1,InitInp%numBlades
+
+      ! We store these per wings (they each contains element info for (nNodes x 1)
+      allocate(x%UA(p%nWings), xd%UA(p%nWings), OtherState%UA(p%nWings))
+
+      do iW=1,p%nWings
+         ! ---Condensed version of "BEMT_Set_UA_InitData"
+         allocate(Init_UA_Data%c(InitInp%numBladeNodes,1), STAT = errStat2)
          do i = 1,InitInp%numBladeNodes
-            Init_UA_Data%c(i,j)      = p%chord(i,j) ! NOTE: InitInp chord move-allocd to p
+            Init_UA_Data%c(i,1)      = p%W(iW)%chord_LL(i) ! NOTE: InitInp chord move-allocd to p
          end do
-      end do
-      Init_UA_Data%dt              = interval          
+         Init_UA_Data%dt              = interval          
+         Init_UA_Data%OutRootName     = trim(InitInp%RootName)//'W'//num2lstr(iW)
+         Init_UA_Data%numBlades       = 1
+         Init_UA_Data%nNodesPerBlade  = InitInp%numBladeNodes ! At AeroDyn ndoes, not CP
 
-      Init_UA_Data%OutRootName     = 'Debug.UA'
-      Init_UA_Data%numBlades       = InitInp%numBlades 
-      Init_UA_Data%nNodesPerBlade  = InitInp%numBladeNodes ! At AeroDyn ndoes, not CP
-      Init_UA_Data%UAMod           = InitInp%UAMod  
-      Init_UA_Data%Flookup         = InitInp%Flookup
-      Init_UA_Data%a_s             = InitInp%a_s ! Speed of sound, m/s  
-      Init_UA_Data%ShedEffect      = .False. ! Important, when coupling UA wih vortex code, shed vorticity is inherently accounted for
+         Init_UA_Data%UAMod           = InitInp%UAMod  
+         Init_UA_Data%Flookup         = InitInp%Flookup
+         Init_UA_Data%a_s             = InitInp%a_s ! Speed of sound, m/s  
+         Init_UA_Data%ShedEffect      = .False. ! Important, when coupling UA wih vortex code, shed vorticity is inherently accounted for
+         Init_UA_Data%WrSum           = InitInp%SumPrint
+         allocate(Init_UA_Data%UAOff_innerNode(1), stat=errStat2)
+         allocate(Init_UA_Data%UAOff_outerNode(1), stat=errStat2)
+         Init_UA_Data%UAOff_innerNode(1) = InitInp%W(iW)%UAOff_innerNode
+         Init_UA_Data%UAOff_outerNode(1) = InitInp%W(iW)%UAOff_outerNode
 
-      ! --- UA init
-      allocate(m%u_UA( InitInp%numBladeNodes, InitInp%numBlades, 2), stat=errStat2) 
-      call UA_Init( Init_UA_Data, m%u_UA(1,1,1), m%p_UA, x%UA, xd%UA, OtherState%UA, m%y_UA, m%m_UA, interval, AFInfo, p%AFIndx, InitOutData_UA, ErrStat2, ErrMsg2); if(Failed())return
+         ! --- UA init
+         allocate(m%W(iW)%u_UA(InitInp%numBladeNodes, 2), stat=errStat2) 
+         call UA_Init( Init_UA_Data, m%W(iW)%u_UA(1,1), m%W(iW)%p_UA, x%UA(iW), xd%UA(iW), OtherState%UA(iW), m%W(iW)%y_UA, m%W(iW)%m_UA, interval, AFInfo, p%W(iW)%AFIndx, InitOutData_UA, ErrStat2, ErrMsg2); if(Failed())return
 
-      call UA_DestroyInitInput( Init_UA_Data, ErrStat2, ErrMsg2 ); if(Failed())return
-      call UA_DestroyInitOutput( InitOutData_UA, ErrStat2, ErrMsg2 ); if(Failed())return
+         call UA_DestroyInitInput( Init_UA_Data, ErrStat2, ErrMsg2 ); if(Failed())return
+         call UA_DestroyInitOutput( InitOutData_UA, ErrStat2, ErrMsg2 ); if(Failed())return
+
+      enddo
 
       ! --- FVW specific
-      if (p%CirculationMethod/=idCircPolarData) then 
-         ErrMsg2='Unsteady aerodynamic (`AFAeroMod>1`) is only available with a circulation solving using profile data (`CircSolvingMethod=1`)'; ErrStat2=ErrID_Fatal;
+      if (p%CircSolvMethod/=idCircPolarData) then 
+         ErrMsg2='Unsteady aerodynamic (`AFAeroMod>1`) is only available with a circulation solving using profile data (`CircSolvMethod=1`)'; ErrStat2=ErrID_Fatal;
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'UA_Init_Wrapper'); return
       endif
    endif
@@ -1450,72 +1627,68 @@ contains
    end function Failed
 end subroutine  UA_Init_Wrapper
 
+!------------------------------------------------------------------------------------------------
 !> Compute necessary inputs for UA at a given time step, stored in m%u_UA
 !!  Inputs are AoA, U, Re, 
 !!  See equivalent version in BEMT, and SetInputs_for_UA in BEMT
-subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, OtherState, AFInfo, m, ErrStat, ErrMsg)
+subroutine CalculateInputsAndOtherStatesForUA(InputIndex, u, p, x, xd, z, m, ErrStat, ErrMsg)
    integer(IntKi),                     intent(in   ) :: InputIndex ! InputIndex= 1 or 2, depending on time step we are calculating inputs for
    type(FVW_InputType),                intent(in   ) :: u          ! Input
    type(FVW_ParameterType),            intent(in   ) :: p          ! Parameters   
    type(FVW_ContinuousStateType),      intent(in   ) :: x          ! Continuous states at given time step
    type(FVW_DiscreteStateType),        intent(in   ) :: xd         ! Discrete states at given time step
    type(FVW_ConstraintStateType),      intent(in   ) :: z          ! Constraint states at given time step
-   type(FVW_OtherStateType),           intent(inout) :: OtherState ! Other states at given time step
+   !type(FVW_OtherStateType),           intent(inout) :: OtherState ! Other states at given time step
    type(FVW_MiscVarType), target,      intent(inout) :: m          ! Misc/optimization variables
-   type(AFI_ParameterType),            intent(in   ) :: AFInfo(:)  ! The airfoil parameter data
-   integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
-   character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   integer(IntKi),                     intent(  out) :: ErrStat    !< Error status of the operation
+   character(*),                       intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    ! Local
-   real(ReKi), dimension(:,:), allocatable :: Vind_node
    type(UA_InputType), pointer     :: u_UA ! Alias to shorten notations
-   integer(IntKi)                                    :: i,j
+   integer(IntKi)                                    :: i,iW
    character(ErrMsgLen)                              :: errMsg2     ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                                    :: errStat2    ! temporary Error status of the operation
    ErrStat  = ErrID_None
    ErrMsg   = ""
+   !NOTE: UA happens at the LL nodes (different from the Control Points)
 
    ! --- Induction on the lifting line control points
-   ! NOTE: this is expensive since it's an output for FVW but here we have to use it for UA
-   ! Set m%Vind_LL
-   m%Vind_LL=-9999.0_ReKi
-   call LiftingLineInducedVelocities(m%CP_LL, p, x, 1, m, m%Vind_LL, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'UA_UpdateState_Wrapper'); if (ErrStat >= AbortErrLev) return
-   allocate(Vind_node(3,1:p%nSpan+1))
-
-   do j = 1,p%nWings  
-      ! Induced velocity at Nodes (NOTE: we rely on storage done when computing Circulation)
-      if (m%nNW>1) then
-         call interpextrap_cp2node(p%s_CP_LL(:,j), m%Vind_LL(1,:,j), p%s_LL(:,j), Vind_node(1,:))
-         call interpextrap_cp2node(p%s_CP_LL(:,j), m%Vind_LL(2,:,j), p%s_LL(:,j), Vind_node(2,:))
-         call interpextrap_cp2node(p%s_CP_LL(:,j), m%Vind_LL(3,:,j), p%s_LL(:,j), Vind_node(3,:))
-      else
-         Vind_node=0.0_ReKi
+   ! if     InductionAtCP : In: m%W%CP,     Out:m%W%Vind_CP                 and m%W%Vind_LL (averaged)
+   ! if not InductionAtCP : In: m%W%r_LL,   Out:m%W%Vind_CP (interp/extrap) and m%W%Vind_LL
+   if (p%Induction) then
+      call LiftingLineInducedVelocities(p, x, p%InductionAtCP, 1, m, ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CalculateInputsAndOtherStatesForUA'); if (ErrStat >= AbortErrLev) return
+   else
+      do iW = 1,p%nWings  
+         m%W(iW)%Vind_LL(1:3,:)=0.0_ReKi
+      enddo
+   endif
+   if (p%InductionAtCP) then
+      if (m%nNW<=1) then
+         do iW = 1,p%nWings  
+            m%W(iW)%Vind_LL(1:3,:)=0.0_ReKi
+         enddo
       endif
-      do i = 1,p%nSpan+1 
+   endif
+   ! --- UA inputs
+   do iW = 1,p%nWings  
+      do i = 1,p%W(iW)%nSpan+1 
          ! We only update the UnsteadyAero states if we have unsteady aero turned on for this node      
-         u_UA => m%u_UA(i,j,InputIndex) ! Alias
+         u_UA => m%W(iW)%u_UA(i,InputIndex) ! Alias
          !! ....... compute inputs to UA ...........
-         ! NOTE: To be consistent with CalcOutput we take Vwind_ND that was set using m%DisturbedInflow from AeroDyn.. 
+         ! NOTE: To be consistent with CalcOutput we take Vwind_LL that was set using m%DisturbedInflow from AeroDyn.. 
          ! This is not clean, but done to be consistent, waiting for AeroDyn to handle UA
-         call AlphaVrel_Generic(u%WingsMesh(j)%Orientation(1:3,1:3,i), u%WingsMesh(j)%TranslationVel(1:3,i),  Vind_node(1:3,i), u%Vwnd_LLMP(1:3,i,j), &
-                                 p%KinVisc, p%Chord(i,j), u_UA%U, u_UA%alpha, u_UA%Re)
+         call AlphaVrel_Generic(u%WingsMesh(iW)%Orientation(1:3,1:3,i), u%WingsMesh(iW)%TranslationVel(1:3,i),  m%W(iW)%Vind_LL(1:3,i), u%W(iW)%Vwnd_LL(1:3,i), &
+                                 p%KinVisc, p%W(iW)%chord_LL(i), u_UA%U, u_UA%alpha, u_UA%Re)
          u_UA%v_ac(1)  = sin(u_UA%alpha)*u_UA%U
          u_UA%v_ac(2)  = cos(u_UA%alpha)*u_UA%U
-         u_UA%omega    = u%omega_z(i,j)
+         u_UA%omega    = u%W(iW)%omega_z(i)
          u_UA%UserProp = 0 ! u1%UserProp(i,j) ! TODO
       end do ! i nSpan
-   end do ! j nWings
-   deallocate(Vind_node)
-
-contains
-   function NodeText(i,j)
-      integer(IntKi), intent(in) :: i ! node number
-      integer(IntKi), intent(in) :: j ! blade number
-      character(25)              :: NodeText
-      NodeText = '(nd:'//trim(num2lstr(i))//' bld:'//trim(num2lstr(j))//')'
-   end function NodeText
+   end do ! iW nWings
+   if(.false.) print*,xd%Dummy
+   if(.false.) print*,z%W(1)%Gamma_LL(1)
 end subroutine CalculateInputsAndOtherStatesForUA
 
-
+!------------------------------------------------------------------------------------------------
 subroutine UA_UpdateState_Wrapper(AFInfo, t, n, uTimes, p, x, xd, OtherState, m, ErrStat, ErrMsg )
    use FVW_VortexTools, only: interpextrap_cp2node
    use UnsteadyAero, only: UA_UpdateStates
@@ -1541,9 +1714,9 @@ subroutine UA_UpdateState_Wrapper(AFInfo, t, n, uTimes, p, x, xd, OtherState, m,
 
    ! --- Condensed version of BEMT_Update States
    do j = 1,p%nWings  
-      do i = 1,p%nSpan+1 
+      do i = 1,p%W(j)%nSpan+1 
          ! COMPUTE: x%UA, xd%UA
-         call UA_UpdateStates( i, j, t, n, m%u_UA(i,j,:), uTimes, m%p_UA, x%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), m%m_UA, errStat2, errMsg2 )
+         call UA_UpdateStates( i, 1, t, n, m%W(j)%u_UA(i,:), uTimes, m%W(j)%p_UA, x%UA(j), xd%UA(j), OtherState%UA(j), AFInfo(p%W(j)%AFIndx(i,1)), m%W(j)%m_UA, errStat2, errMsg2 )
          if (ErrStat2 /= ErrID_None) then
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'UA_UpdateState_Wrapper'//trim(NodeText(i,j)))
             call WrScr(trim(ErrMsg))
@@ -1561,5 +1734,49 @@ contains
       NodeText = '(nd:'//trim(num2lstr(i))//' bld:'//trim(num2lstr(j))//')'
    end function NodeText
 end subroutine UA_UpdateState_Wrapper
+!------------------------------------------------------------------------------------------------
+!> Set dynamic gamma based on dynamic stall states
+!! NOTE: We use Vind_LL computed in CalculateInputsAndOtherStatesForUA
+subroutine UA_SetGammaDyn(t, u, p, x, xd, OtherState, m, AFInfo, z, ErrStat, ErrMsg)
+   use UnsteadyAero, only: UA_CalcOutput
+   real(DbKi),                    intent(in   ) :: t           !< Curent time
+   type(FVW_InputType),           intent(in   ) :: u          !< Inputs at Time t
+   type(FVW_ParameterType),       intent(in   ) :: p          !< AD parameters
+   type(FVW_ContinuousStateType), intent(in )   :: x          !< continuous states
+   type(FVW_DiscreteStateType),   intent(in   ) :: xd         !< Discrete states
+   type(FVW_OtherStateType),      intent(in   ) :: OtherState !< OtherState
+   type(FVW_MiscVarType),target,  intent(inout) :: m          !< Misc/optimization variables
+   type(AFI_ParameterType ),      intent(in   ) :: AFInfo(:)  !< The airfoil parameter data, temporary, for UA..
+   type(FVW_ConstraintStateType), intent(inout) :: z          !< Constraint states
+   integer(IntKi),                intent(  out) :: ErrStat    !< Error status of the operation
+   character(*),                  intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   real(ReKi)                  :: Gamma_dyn, Gamma_dyn_prev, Gamma_dyn_avg
+   type(UA_InputType), pointer :: u_UA ! Alias to shorten notations
+   integer(IntKi), parameter   :: InputIndex=2 ! we will always use values at t+dt in this routine
+   integer(intKi)              :: iW, j ! loop counter on wings and nodes
+   integer(intKi)              :: errStat2
+   character(ErrMsgLen)        :: errMsg2
+
+   ErrStat = 0
+   ErrMsg = ""
+
+   do iW=1,p%nWings
+      ! Gamma_LL is expressed at CP, so we average the dynamic gamma from both nodes
+      ! NOTE: this is inconsistent with the Wings solving which occurs at the CPs
+      j=1
+      u_UA => m%W(iW)%u_UA(j,InputIndex) ! Alias
+      call UA_CalcOutput(j, 1, t, u_UA, m%W(iW)%p_UA, x%UA(iW), xd%UA(iW), OtherState%UA(iW), AFInfo(p%W(iW)%AFindx(j,1)), m%W(iW)%y_UA, m%W(iW)%m_UA, errStat2, errMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'UA_SetGammaDyn')
+      Gamma_dyn_prev = 0.5_ReKi * m%W(iW)%y_UA%Cl * u_UA%U * p%W(iW)%chord_LL(j)
+      do j = 2,p%W(iW)%nSpan+1
+         u_UA => m%W(iW)%u_UA(j,InputIndex) ! Alias
+         call UA_CalcOutput(j, 1, t, u_UA, m%W(iW)%p_UA, x%UA(iW), xd%UA(iW), OtherState%UA(iW), AFInfo(p%W(iW)%AFindx(j,1)), m%W(iW)%y_UA, m%W(iW)%m_UA, errStat2, errMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'UA_SetGammaDyn')
+         Gamma_dyn      = 0.5_ReKi * m%W(iW)%y_UA%Cl * u_UA%U * p%W(iW)%chord_LL(j)
+         Gamma_dyn_avg  = (Gamma_dyn+Gamma_dyn_prev)*0.5_ReKi
+         Gamma_dyn_prev = Gamma_dyn
+         z%W(iW)%Gamma_LL(j-1) = Gamma_dyn_avg
+      enddo
+   enddo ! iW, Loop on wings
+   if(.false.) print*,u%W(1)%omega_z(1) ! unused var
+end subroutine UA_SetGammaDyn
 
 end module FVW

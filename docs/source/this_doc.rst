@@ -10,7 +10,7 @@ generated from both the
 `dev <http://github.com/openfast/openfast/tree/dev/>`_ branches whenever
 new commits are added. Clicking on the bar on the lower left corner of the
 page reveals a panel (see image below) containing options to select the branch
-of the repository, download the documentation other formats (PFD, HTML, EPub),
+of the repository, download the documentation other formats (PDF, HTML, EPub),
 and link to other relevant websites.
 
 .. image:: ../_static/docs_options.png
@@ -19,7 +19,7 @@ and link to other relevant websites.
 
 While OpenFAST developer documentation is being enhanced here, developers are
 encouraged to consult the legacy FAST v8
-`Programmer's Handbook <https://nwtc.nrel.gov/system/files/ProgrammingHandbook_Mod20130717.pdf>`_.
+:download:`NWTC Programmer's Handbook <../OtherSupporting/NWTC_Programmers_Handbook.pdf>`.
 Instructions on obtaining and installing OpenFAST are available in
 :ref:`installation`, and documentation for verifying an installation with the
 automated tests is at :ref:`testing`.
