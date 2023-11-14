@@ -193,7 +193,7 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    type(FileInfoType)      :: FI       !< The derived type for holding the file information.
    integer(IntKi)          :: errStat2 ! Status of error message
    character(1024)         :: errMsg2  ! Error message if ErrStat /= ErrID_None
-   character(*), parameter :: RoutineName = 'ReadDriverfilename'
+   character(*), parameter :: RoutineName = 'ReadDriverInputFile'
    ! Initialize the echo file unit to -1 which is the default to prevent echoing, we will alter this based on user input
    UnEcho  = -1
    ErrStat = ErrID_None
