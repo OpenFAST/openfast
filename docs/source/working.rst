@@ -88,7 +88,7 @@ The command above will display the version of OpenFAST, the compilation options,
 
 .. tip::
 
-    To avoid having to copy the executable in your working directory, you can place the executable into a folder and add this folder to your system path. If you chose this method, are restart your terminal, you should be able to run `openfast /h` from any folder, and this time, `./` is not needed. 
+    To avoid having to copy the executable in your working directory, you can place the executable into a folder and add this folder to your system path. If you chose this method, and restart your terminal, you should be able to run `openfast /h` from any folder, and this time, `./` is not needed. 
 
 
 Run your first OpenFAST simulation
@@ -196,6 +196,7 @@ The warnings can sometimes be ignored, but they often indicate an issue in the m
 
 
 
+
 Advanced troubleshooting
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -241,7 +242,26 @@ Below are some steps you can take to troubleshoot your model, in particular tryi
 - Generate VTK outputs for visualization of the turbine and the various meshes used by OpenFAST. VTK outputs are activated using `WrVTK=1` or `WrVTK=2`. The VTK are written in folders `vtk*` in the main directory, and can be visualized using Paraview (see :ref:`visualizing_input_output_OF`).
 
 
-Additional guidelines may be added in the future. In particular, troubleshooting dedicated to each module.
+
+
+.. _moduleTroubleshooting:
+
+Troubleshooting for specific modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+All modules of OpenFAST require a certain level of expertise to ensure that the simulations are physical.
+Guidelines for the different modules can be found throughout this documentation, see in particular:
+
+
+- AeroDyn: :ref:`ad_modeling`
+
+- HydroDyn: :ref:`hd-modeling-considerations`
+
+- OLAF: :ref:`Guidelines-OLAF`
+
+- SubDyn: :ref:`sd_modeling-considerations`
+
+- FAST.Farm: :ref:`FF:ModGuidance`
 
 
 
