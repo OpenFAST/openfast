@@ -13,7 +13,7 @@ This section contains documentation for the OpenFAST module-coupling environment
 .. toctree::
    :maxdepth: 1
 
-   General consideratios <general.rst>
+   General considerations <general.rst>
    AeroDyn <aerodyn/index.rst>
    OLAF <aerodyn-olaf/index.rst>
    Aeroacoustics <aerodyn-aeroacoustics/index.rst>
