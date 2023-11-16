@@ -901,7 +901,7 @@ end if
       else
            ! Initialize the variables associated with the incident wave:
 
-         SELECT CASE ( InitInp%WaveField%WaveMod ) ! Which incident wave kinematics model are we using?
+         SELECT CASE ( p%WaveField%WaveMod ) ! Which incident wave kinematics model are we using?
          
          CASE ( WaveMod_None )  ! No waves, NOTE: for this case we are forcing ExctnDisp = 0, so only p%WaveExctn needs to be allocated, not p%WaveExctnGrid
             if ( p%ExctnMod == 1 ) then
@@ -1029,7 +1029,7 @@ end if
                   do J = 1, NInpWvDir  
                      do I = 1, NInpFreq
                            ! Fxy = exp(-j * k(w) * ( X*cos(Beta(w)) + Y*sin(Beta(w)) )
-                        WaveNmbr   = WaveNumber ( HdroFreq(I), InitInp%Gravity, InitInp%WaveField%EffWtrDpth )
+                        WaveNmbr   = WaveNumber ( HdroFreq(I), InitInp%Gravity, p%WaveField%EffWtrDpth )
                         tmpAngle   = WaveNmbr * ( InitInp%PtfmRefxt(1)*cos(HdroWvDir(J)*D2R) + InitInp%PtfmRefyt(1)*sin(HdroWvDir(J)*D2R) )
                         TmpRe =  cos(tmpAngle)
                         TmpIm = -sin(tmpAngle)
@@ -1213,7 +1213,7 @@ end if
 
                               Omega = I*p%WaveField%WaveDOmega
                                  ! Fxy = exp(-j * k(w) * ( X*cos(Beta(w)) + Y*sin(Beta(w)) )
-                              WaveNmbr   = WaveNumber ( Omega, InitInp%Gravity, InitInp%WaveField%EffWtrDpth )
+                              WaveNmbr   = WaveNumber ( Omega, InitInp%Gravity, p%WaveField%EffWtrDpth )
                               tmpAngle   = WaveNmbr * ( InitInp%PtfmRefxt(1)*cos(HdroWvDir(J)*D2R) + InitInp%PtfmRefyt(1)*sin(HdroWvDir(J)*D2R) )
                               TmpRe =  cos(tmpAngle)
                               TmpIm = -sin(tmpAngle)
@@ -1301,9 +1301,6 @@ end if
             end if
                
             ! Set Initialization data for the Conv_Rdtn submodule
-            ! Would be nice if there were a copy InitInput function in the *_Types file
-            ! BJJ 6/25/2014: There is a copy InitInput function.... ???
-            
             CALL MOVE_ALLOC( HdroFreq,  Conv_Rdtn_InitInp%HdroFreq  )
             CALL MOVE_ALLOC( HdroAddMs, Conv_Rdtn_InitInp%HdroAddMs )
             CALL MOVE_ALLOC( HdroDmpng, Conv_Rdtn_InitInp%HdroDmpng )

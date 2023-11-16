@@ -228,16 +228,6 @@ SUBROUTINE HydroDyn_ParseInput( InputFileName, OutRootName, FileInfo_In, InputFi
       if (Failed())  return;
    
 
-!bjj: should we add this?
-!test for numerical stability
-!      IF ( FP_InitData%RdtnDT <= FP_InitData%RdtnTMax*EPSILON(FP_InitData%RdtnDT) )  THEN  ! Test RdtnDT and RdtnTMax to ensure numerical stability -- HINT: see the use of OnePlusEps."
-!         ErrStat = ErrID_Fatal
-!         ErrMsg2 = ' RdtnDT must be greater than '//TRIM ( Num2LStr( RdtnTMax*EPSILON(RdtnDT) ) )//' seconds.'
-!         if (Failed())  return;
-!      END IF
-
-
-
    !-------------------------------------------------------------------------------------------------
    ! Data section for 2nd order WAMIT forces
    !-------------------------------------------------------------------------------------------------
@@ -1162,27 +1152,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, Interval, InputFileData, ErrS
    !     (InputFileData%WAMIT2%SumQTF /= 0 )                                     ) then
    !   
    !end if
-        
-   
-   ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface.
-   IF ( InitInp%WaveField%WaveMod /= WaveMod_None .AND. InputFileData%Morison%NMembers > 0 ) THEN
-      IF ( InitInp%WaveField%WaveMod /= WaveMod_ExtFull ) THEN 
-         IF ( ( InitInp%WaveField%WaveStMod /= 0 ) .AND. ( InitInp%WaveField%WaveStMod /= 1 ) .AND. &
-              ( InitInp%WaveField%WaveStMod /= 2 ) .AND. ( InitInp%WaveField%WaveStMod /= 3 ) ) THEN
-            ErrMsg  = ' WaveStMod must be 0, 1, 2, or 3.'
-            ErrStat = ErrID_Fatal
-            RETURN
-         END IF
-      ELSE
-         IF ( ( InitInp%WaveField%WaveStMod /= 0 ) .AND. ( InitInp%WaveField%WaveStMod /= 1 ) .AND. &
-              ( InitInp%WaveField%WaveStMod /= 3 ) ) THEN
-            ErrMsg  = ' WaveStMod must be 0, 1, or 3 when WaveMod = 6.'
-            ErrStat = ErrID_Fatal
-            RETURN
-         END IF
-      END IF
-   END IF
-
 
        ! PotFile - Root name of potential flow files
 

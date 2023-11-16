@@ -116,7 +116,7 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          
       ErrStat = ErrID_None         
       ErrMsg  = ""               
-      p%UnOutFile = -1 !bjj: this was being written to the screen when I had an error in my HD input file, so I'm going to initialize here.
+      p%UnOutFile = -1
       
       u%DummyInput = 0  ! initialize dummy variable to make the compiler warnings go away
       z%UnusedStates = 0.0
@@ -359,10 +359,10 @@ SUBROUTINE SeaSt_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       InitOut%WaveField => p%WaveField
 
       ! Tell HydroDyn if state-space wave excitation is not allowed:
-       InitOut%InvalidWithSSExctn = InputFileData%WaveMod == WaveMod_ExtFull  .or. & !call SetErrStat( ErrID_Fatal, 'Externally generated full wave-kinematics time series cannot be used with state-space wave excitations. Set WaveMod 0, 1, 1P#, 2, 3, 4, or 5.', ErrStat, ErrMsg, RoutineName )
+       InitOut%InvalidWithSSExctn = InputFileData%WaveMod == WaveMod_ExtFull      .or. & !call SetErrStat( ErrID_Fatal, 'Externally generated full wave-kinematics time series cannot be used with state-space wave excitations. Set WaveMod 0, 1, 1P#, 2, 3, 4, or 5.', ErrStat, ErrMsg, RoutineName )
                                     InputFileData%WaveDirMod /= WaveDirMod_None   .or. & !call SetErrStat( ErrID_Fatal, 'Directional spreading cannot be used with state-space wave excitations. Set WaveDirMod=0.', ErrStat, ErrMsg, RoutineName )
-                                    InputFileData%Waves2%WvDiffQTFF      .or. & !call SetErrStat( ErrID_Fatal, 'Cannot use full difference-frequency 2nd-order wave kinematics with state-space wave excitations. Set WvDiffQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
-                                    InputFileData%Waves2%WvSumQTFF              !call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency 2nd-order wave kinematics with state-space wave excitations. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
+                                    InputFileData%Waves2%WvDiffQTFF               .or. & !call SetErrStat( ErrID_Fatal, 'Cannot use full difference-frequency 2nd-order wave kinematics with state-space wave excitations. Set WvDiffQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
+                                    InputFileData%Waves2%WvSumQTFF                       !call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency 2nd-order wave kinematics with state-space wave excitations. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
       
          ! Write Wave Kinematics?
       if ( InputFileData%WaveMod /= WaveMod_ExtFull ) then

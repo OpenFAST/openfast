@@ -340,7 +340,7 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, InitOut, E
    m%LastIndRdtn = 0
    OtherState%IndRdtn = 0
 
-      ! bjj: these initializations don't matter, but I don't like seeing the compilation warning in IVF:
+      ! bjj: these initializations don't matter, but I don't like seeing the compilation warning in Intel Fortran:
    x%DummyContState = 0.0
    z%DummyConstrState = 0.0
    y%F_Rdtn = 0.0
@@ -632,7 +632,6 @@ SUBROUTINE Conv_Rdtn_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, Er
          !   with the newest values:
          ! NOTE: When IndRdtn > LastIndRdtn, IndRdtn will equal           LastIndRdtn + 1 if DT <= RdtnDT;
          !       When IndRdtn > LastIndRdtn, IndRdtn will be greater than LastIndRdtn + 1 if DT >  RdtnDT.
-   !BJJ: this needs a better check so that it is ALWAYS done (MATLAB/Simulink could possibly avoid this step by starting at Time>0, OR there may be some numerical issues where this is NOT EXACTLY zero)
 
       IF ( OtherState%IndRdtn < (p%NStepRdtn) )  THEN
          DO J = 1,6*p%NBody  ! Loop through all platform DOFs

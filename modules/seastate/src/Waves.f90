@@ -588,7 +588,7 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       !>>>>>> COMPUTE INITOUT SCALARS WaveField%NStepWave, WaveField%NStepWave2, InitOut%WaveTMax, and InitOut%WaveDOmega for WAVEMOD = 0 (WaveMod_None)
       WaveField%NStepWave  = 2                ! We must have at least two elements in order to interpolate later on
       WaveField%NStepWave2 = 1
-      InitOut%WaveTMax   = InitInp%WaveTMax ! bjj added this... I don't think it was set anywhere for this wavemod.
+      InitOut%WaveTMax   = InitInp%WaveTMax
       WaveField%WaveDOmega = 0.0
       
       ! >>> Allocate and initialize (set to 0) InitOut arrays

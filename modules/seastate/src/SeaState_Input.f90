@@ -122,7 +122,7 @@ subroutine SeaSt_ParseInput( InputFileName, OutRootName, defWtrDens, defWtrDpth,
       if (Failed())  return;
 
       ! Z_Depth - Depth of the domain the Z direction.
-   call ParseVarWDefault ( FileInfo_In, CurLine, 'Z_Depth', InputFileData%Z_Depth, defWtrDpth+InputFileData%MSL2SWL, ErrStat2, ErrMsg2, UnEc ) !bjj: wouldn't the default be better with InputFileData%WtrDpth + InputFileData%MSL2SWL since we may have specified a WtrDpth already?
+   call ParseVarWDefault ( FileInfo_In, CurLine, 'Z_Depth', InputFileData%Z_Depth, InputFileData%WtrDpth+InputFileData%MSL2SWL, ErrStat2, ErrMsg2, UnEc )
       if (Failed())  return;
 
       ! NX - Number of nodes in half of the X-direction domain.
@@ -600,18 +600,20 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
 
    ! WaveStMod - Model switch for stretching incident wave kinematics to instantaneous free surface.
-
-   ! TODO: We are only implementing WaveStMod = 0 (No stretching) at this point in time. 1 Mar 2013 GJH
-   ! All three methods of wave stretching tentatively implemented.
-
-   IF ( InputFileData%WaveMod /= WaveMod_None .AND. InputFileData%WaveMod /= WaveMod_ExtFull ) THEN
+   IF ( InputFileData%WaveMod == WaveMod_None ) THEN
+      InputFileData%WaveStMod = 0_IntKi
+   ELSEIF ( InputFileData%WaveMod == WaveMod_ExtFull ) THEN
+      IF ( (InputFileData%WaveStMod /= 0) .AND. (InputFileData%WaveStMod /= 1) .AND. &
+                                                (InputFileData%WaveStMod /= 3) ) THEN
+         CALL SetErrStat( ErrID_Fatal,'WaveStMod must be 0, 1, or 3 when WaveMod = 6.',ErrStat,ErrMsg,RoutineName)
+         RETURN
+      END IF
+   ELSE
       IF ( (InputFileData%WaveStMod /= 0) .AND. (InputFileData%WaveStMod /= 1) .AND. &
            (InputFileData%WaveStMod /= 2) .AND. (InputFileData%WaveStMod /= 3) ) THEN
          CALL SetErrStat( ErrID_Fatal,'WaveStMod must be 0, 1, 2, or 3.',ErrStat,ErrMsg,RoutineName)
          RETURN
       END IF
-   ELSE ! Wave stretching is not supported when WaveMod = 0 (WaveMod_None) or 6 (WaveMod_ExtFull).
-      InputFileData%WaveStMod = 0_IntKi
    END IF
    
 
@@ -661,18 +663,16 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
 
 
        ! WaveHs - Significant wave height
-       !bjj: is this check still appropriate? do we need to add something for WaveMod 6 or 7? Otherwise, fix the comment on the next line
-   if ( ( InputFileData%WaveMod /= WaveMod_None ) .AND. ( InputFileData%WaveMod /= WaveMod_UserSpctrm ) .AND. ( InputFileData%WaveMod /= WaveMod_ExtElev ) ) then   ! .TRUE. (when WaveMod = 1, 2, 3, or 10) if we have plane progressive (regular), JONSWAP/Pierson-Moskowitz spectrum (irregular) waves, or white-noise waves, but not user-defined or GH Bladed wave data.
+   if ( InputFileData%WaveMod == WaveMod_Regular      .OR. &
+        InputFileData%WaveMod == WaveMod_RegularUsrPh .OR. &
+        InputFileData%WaveMod == WaveMod_JONSWAP      .OR. &
+        InputFileData%WaveMod == WaveMod_WhiteNoise    ) then
 
       if ( InputFileData%Waves%WaveHs <= 0.0 )  then
          call SetErrStat( ErrID_Fatal,'WaveHs must be greater than zero.',ErrStat,ErrMsg,RoutineName)
          return
       end if
-
-   else
-
-      InputFileData%Waves%WaveHs = 0.0
-
+      
    end if
 
 
@@ -709,12 +709,20 @@ subroutine SeaStateInput_ProcessInitData( InitInp, p, InputFileData, ErrStat, Er
       end if
    end if
 
-   !bjj: do we even need this check on WaveMod? Even if it's not being used, we can check that low < Hi, right?
-   if (InputFileData%WaveMod > WaveMod_JONSWAP .and. InputFileData%WaveMod /= WaveMod_ExtFull) then
+   if (InputFileData%WaveMod == WaveMod_JONSWAP    .or. &
+       InputFileData%WaveMod == WaveMod_WhiteNoise .or. &
+       InputFileData%WaveMod == WaveMod_UserSpctrm .or. &
+       InputFileData%WaveMod == WaveMod_ExtElev    .or. &
+       InputFileData%WaveMod == WaveMod_UserFreq   ) then
+       
       if ( InputFileData%WvLowCOff >= InputFileData%WvHiCOff ) then
          call SetErrSTat( ErrID_Fatal,'WvLowCOff must be less than WvHiCOff.',ErrStat,ErrMsg,RoutineName)
          return
       end if
+   else
+      ! overwrite these so that ALL frequencies are allowed (otherwise we might exclude frequencies with WaveMod = WaveMod_Regular or WaveMod_RegularUsrPh)
+      InputFileData%WvLowCOff = -HUGE(InputFileData%WvLowCOff)
+      InputFileData%WvHiCOff  =  HUGE(InputFileData%WvHiCOff )
    end if
    
       ! WaveDir - Wave heading direction.

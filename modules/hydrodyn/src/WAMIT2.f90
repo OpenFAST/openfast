@@ -1152,9 +1152,6 @@ END SUBROUTINE WAMIT2_Init
                      ! Only get a QTF value if within the range of frequencies we have wave amplitudes for (first order cutoffs).  This
                      ! is done only for efficiency. 
                   
-                  !BJJ: If WaveMod==1, this could result in zeroing out the wrong values... 
-                  !InitInp%WvLowCOff and InitInp%WvHiCOff are not used in SeaState when WaveMod = 0,1, or 6 (WaveMod_ExtFull)
-                  ! Probably could just remove this IF statement????
                   IF ( (Omega1 >= InitInp%WaveField%WvLowCOff) .AND. (Omega1 <= InitInp%WaveField%WvHiCOff) ) THEN
 
                         ! Now get the QTF value that corresponds to this frequency and wavedirection pair.
@@ -1352,7 +1349,6 @@ END SUBROUTINE WAMIT2_Init
          !> 1. Check the data to see if the wave frequencies are present in the QTF data.  Since Newman's approximation only uses
          !!    frequencies where \f$ \omega_1=\omega_2 \f$, the data read in from the files must contain the full range of frequencies
          !!    present in the waves.
-!bjj: InitInp%WvLowCOff and InitInp%WvHiCOff aren't supposed to be used when WaveMod=0, 1, or 6, but they are used here regardless of those conditions.
       IF ( NewmanAppData%DataIs3D ) THEN
 
             ! Check the low frequency cutoff
@@ -2979,7 +2975,7 @@ END SUBROUTINE WAMIT2_Init
             ENDIF
 
                ! Now we add the two terms together.  The 0.5 multiplier on is because the double sided FFT was used.
-            DO J=0,InitInp%WaveField%NStepWave-1  !bjj: Term1Array and Term2Array don't set the last element, so we can get over-flow errors here. SumQTFForce(InitInp%WaveField%NStepWave,Idx) gets overwritten later, so Idx'm setting the array bounds to be -1.
+            DO J=0,InitInp%WaveField%NStepWave-1  !bjj: Term1Array and Term2Array don't set the last element, so we can get overflow errors here. SumQTFForce(InitInp%WaveField%NStepWave,Idx) gets overwritten later, so I'm setting the array bounds to be InitInp%WaveField%NStepWave-1.
                SumQTFForce(J,Idx) = 0.5_SiKi*(REAL(Term1Array(J) + 2*Term2Array(J), SiKi))
             ENDDO
 

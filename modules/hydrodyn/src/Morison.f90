@@ -2117,7 +2117,7 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       tMG       = -999.0
       An_drag   = 0.0
       
-      IF ( (InitInp%InpJoints(i)%Position(3)-p%WaveField%MSL2SWL) >= -InitInp%WaveField%EffWtrDpth ) THEN !bjj: ask Lu if this is correct. I wonder if this check is supposed to be against WtrDpth
+      IF ( InitInp%InpJoints(i)%Position(3) >= -InitInp%WaveField%WtrDpth ) THEN
    
          ! loop through each member attached to the joint, getting the radius of its appropriate end
          DO J = 1, InitInp%InpJoints(I)%NConnections

@@ -466,8 +466,8 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
    END IF
 
    WaveField%NStepWave2 = WaveField%NStepWave/2
-   InitOut%WaveTMax   = InitInp%WaveTMax  ! bjj added this
-   WaveField%WaveDOmega = TwoPi/InitInp%WaveTMax ! bjj added this
+   InitOut%WaveTMax   = InitInp%WaveTMax
+   WaveField%WaveDOmega = TwoPi/InitInp%WaveTMax
    
    ! >>> Allocate and initialize (set to 0) InitOut arrays
    call Initial_InitOut_Arrays(InitOut, WaveField, InitInp, InitInp%WaveDT, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)

@@ -142,7 +142,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          
       ErrStat = ErrID_None         
       ErrMsg  = ""               
-      p%UnOutFile = -1 !bjj: this was being written to the screen when I had an error in my HD input file, so I'm going to initialize here.
+      p%UnOutFile = -1
       
       p%WaveField    =>  InitInp%WaveField
 
