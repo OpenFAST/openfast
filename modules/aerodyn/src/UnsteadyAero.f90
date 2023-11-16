@@ -1416,11 +1416,11 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
    
    ! --- Write to File
    if ((p%NumOuts > 0) .and. p%UA_OUTS==2) then
-      call WrScr('   UA: Writing separate output file: '//trim((InitInp%OutRootName)//'.UA.out'))
+      call WrScr('   UA: Writing separate output file: '//trim((InitInp%OutRootName)//'.out'))
       CALL GetNewUnit( p%unOutFile, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
-      CALL OpenFOutFile ( p%unOutFile, trim(InitInp%OutRootName)//'.UA.out', ErrStat2, ErrMsg2 )
+      CALL OpenFOutFile ( p%unOutFile, trim(InitInp%OutRootName)//'.out', ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
 

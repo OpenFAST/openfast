@@ -420,7 +420,7 @@ subroutine driverInputsToUAInitData(p, InitInData, AFI_Params, AFIndx, errStat, 
    InitInData%c(1,1)       = p%Chord
    InitInData%UAMod        = p%UAMod 
    InitInData%Flookup      = p%Flookup
-   InitInData%OutRootName  = p%OutRootName
+   InitInData%OutRootName  = trim(p%OutRootName)//'.UA'
    InitInData%WrSum        = p%SumPrint 
    InitInData%d_34_to_ac   = p%d_34_to_ac !  d_34_to_ac = d_QT ~0.5 [-], Approximated using y coordinate
 
