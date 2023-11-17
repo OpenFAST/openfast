@@ -222,7 +222,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       !     %RefOrientation   is the identity matrix (3,3,N)
       !     %Position         is the reference position (3,N)
       ! Maybe some logic to make sure these points correspond roughly to nodes -- though this may not be true for a long pile into the soil with multiple connection points
-      ! Note: F = -kx  whre k is the relevant 6x6 matrix from SoilStiffness
+      ! Note: F = -kx  where k is the relevant 6x6 matrix from SoilStiffness
       call AllocAry(Init%Soil_K, 6,6, size(InitInput%SoilStiffness,3), 'Soil_K', ErrStat2, ErrMsg2);
       call AllocAry(Init%Soil_Points, 3, InitInput%SoilMesh%NNodes, 'Soil_Points', ErrStat2, ErrMsg2);
       call AllocAry(Init%Soil_Nodes,     InitInput%SoilMesh%NNodes, 'Soil_Nodes' , ErrStat2, ErrMsg2);
@@ -1173,7 +1173,7 @@ if (ErrStat2/=0) then
    CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Members', 'First line of members array', ErrStat2, ErrMsg2 ); if(Failed()) return
    call LegacyWarning('Member table contains 6 columns instead of 7,  using default member directional cosines ID (-1) for all members. &
    &The directional cosines will be computed based on the member nodes for all members.')
-   Init%Members(:,7) = -1
+   Init%Members(:,7) = -1 ! For the spring element, we need the direction cosine from the user. Both JointIDs are coincident, the direction cosine cannot be determined.
 endif
 ! Extract fields from first line
 DO I = 1, nColumns
@@ -1250,11 +1250,23 @@ if (.not. LegacyFormat) then
       CALL ReadAry( UnIn, SDInputFile, Init%PropSetsR(I,:), PropSetsRCol, 'RigidPropSets', 'RigidPropSets ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    ENDDO   
    IF (Check( Init%NPropSetsR < 0, 'NPropSetsRigid must be >=0')) return
+   !----------------------- SPRING ELEMENT PROPERTIES --------------------------------
+   CALL ReadCom  ( UnIn, SDInputFile,                  'Spring element properties'                                 ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsS, 'NPropSetsS', 'Number of spring properties' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadCom  ( UnIn, SDInputFile,                  'Spring element properties Header'                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadCom  ( UnIn, SDInputFile,                  'Spring element properties Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL AllocAry(Init%PropSetsS, Init%NPropSetsS, PropSetsSCol, 'SpringPropSets', ErrStat2, ErrMsg2); if(Failed()) return
+   DO I = 1, Init%NPropSetsS
+      CALL ReadAry( UnIn, SDInputFile, Init%PropSetsS(I,:), PropSetsSCol, 'SpringPropSets', 'SpringPropSets ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   ENDDO   
+   IF (Check( Init%NPropSetsS < 0, 'NPropSetsSpring must be >=0')) return
 else
    Init%NPropSetsC=0
    Init%NPropSetsR=0
+   Init%NPropSetsS=0
    CALL AllocAry(Init%PropSetsC, Init%NPropSetsC, PropSetsCCol, 'PropSetsC', ErrStat2, ErrMsg2); if(Failed()) return
    CALL AllocAry(Init%PropSetsR, Init%NPropSetsR, PropSetsRCol, 'RigidPropSets', ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(Init%PropSetsS, Init%NPropSetsS, PropSetsSCol, 'SpringPropSets', ErrStat2, ErrMsg2); if(Failed()) return
 endif
 
 !---------------------- MEMBER COSINE MATRICES COSM(i,j) ------------------------
@@ -3789,6 +3801,12 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
            mMass= Init%PropSetsR(iProp(1),2) * mLength ! rho [kg/m] * L
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,2(I6),A)') Init%Members(i,1:3),propIDs(1),propIDs(2),&
                  mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, 2), ' # Rigid link'
+        else if (mType==idMemberSpring) then
+           iProp(1) = FINDLOCI(Init%PropSetsS(:,1), propIDs(1))
+           mMass= 0.0 ! Spring element has no mass
+		   mLength = 0.0 ! Spring element has no length. Both JointIDs must be coincident.
+           WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,2(I6),A)') Init%Members(i,1:3),propIDs(1),propIDs(2),&
+                 mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, 2), ' # Spring element'
          else if (mType==idMemberBeamArb) then
            iProp(1) = FINDLOCI(Init%PropSetsX(:,1), propIDs(1))
            iProp(2) = FINDLOCI(Init%PropSetsX(:,1), propIDs(2))
