@@ -48,10 +48,10 @@ IMPLICIT NONE
 ! =======================
 ! =========  SeaSt_Interp_MiscVarType  =======
   TYPE, PUBLIC :: SeaSt_Interp_MiscVarType
-    REAL(SiKi) , DIMENSION(1:8)  :: N3D = 0.0_R4Ki      !< this is the 3-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
-    REAL(SiKi) , DIMENSION(1:16)  :: N4D = 0.0_R4Ki      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
-    INTEGER(IntKi) , DIMENSION(1:4)  :: Indx_Lo = 0_IntKi      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
-    INTEGER(IntKi) , DIMENSION(1:4)  :: Indx_Hi = 0_IntKi      !< this is the 4-d velocity field for each wind component [{uvw},nx,ny,nz,nt]; it is stored as a miscVar instead of an input so that we don't have 4 copies of a very large field [-]
+    REAL(SiKi) , DIMENSION(1:8)  :: N3D = 0.0_R4Ki      !< this is the weighting function for 3-d velocity field [-]
+    REAL(SiKi) , DIMENSION(1:16)  :: N4D = 0.0_R4Ki      !< this is the weighting function for 4-d velocity field [-]
+    INTEGER(IntKi) , DIMENSION(1:4)  :: Indx_Lo = 0_IntKi      !< this is the index into the 4-d velocity field for each wave component [-]
+    INTEGER(IntKi) , DIMENSION(1:4)  :: Indx_Hi = 0_IntKi      !< this is the index into the 4-d velocity field for each wave component [-]
     LOGICAL  :: FirstWarn_Clamp = .true.      !< used to avoid too many 'Position has been clamped to the grid boundary' warning messages  [-]
   END TYPE SeaSt_Interp_MiscVarType
 ! =======================

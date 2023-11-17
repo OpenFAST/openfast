@@ -56,7 +56,7 @@ CONTAINS
 
 !=======================================================================
 
-   FUNCTION WavePkShpDefault ( Hs, Tp )
+   FUNCTION WavePkShpDefault ( WaveMod, Hs, Tp )
 
 
       ! This FUNCTION is used to return the default value of the peak shape
@@ -73,10 +73,10 @@ CONTAINS
 
 
       ! Passed Variables:
-
-   REAL(SiKi), INTENT(IN )      :: Hs                                              ! Significant wave height (meters)
-   REAL(SiKi), INTENT(IN )      :: Tp                                              ! Peak spectral period (sec)
-   REAL(SiKi)                   :: WavePkShpDefault                                ! This function = default value of the peak shape parameter of the incident wave spectrum conditioned on significant wave height and peak spectral period (-)
+   INTEGER(IntKi), INTENT(IN )      :: WaveMod
+   REAL(SiKi),     INTENT(IN )      :: Hs                                              ! Significant wave height (meters)
+   REAL(SiKi),     INTENT(IN )      :: Tp                                              ! Peak spectral period (sec)
+   REAL(SiKi)                       :: WavePkShpDefault                                ! This function = default value of the peak shape parameter of the incident wave spectrum conditioned on significant wave height and peak spectral period (-)
 
 
       ! Local Variables:
@@ -87,17 +87,32 @@ CONTAINS
 
       ! Compute the default peak shape parameter of the incident wave spectrum,
       !   conditioned on significant wave height and peak spectral period:
+   
+   if ( WaveMod == WaveMod_JONSWAP ) then
+   
+      if ( Hs <= 0.0_SiKi ) then
+      
+         WavePkShpDefault = 1.0
+         
+      else
 
-   TpOvrSqrtHs = Tp/SQRT(Hs)
+         TpOvrSqrtHs = Tp/SQRT(Hs)
 
-   IF (     TpOvrSqrtHs <= 3.6 )  THEN
-      WavePkShpDefault = 5.0
-   ELSEIF ( TpOvrSqrtHs >= 5.0 )  THEN
+         IF (     TpOvrSqrtHs <= 3.6 )  THEN
+            WavePkShpDefault = 5.0
+         ELSEIF ( TpOvrSqrtHs >= 5.0 )  THEN
+            WavePkShpDefault = 1.0
+         ELSE
+            WavePkShpDefault = EXP( 5.75 - 1.15*TpOvrSqrtHs )
+         END IF
+      end if
+
+   else
+   
       WavePkShpDefault = 1.0
-   ELSE
-      WavePkShpDefault = EXP( 5.75 - 1.15*TpOvrSqrtHs )
-   END IF
-
+      
+   end if
+   
 
 
    RETURN
@@ -570,11 +585,11 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
    ! Initialize everything to zero:
 
-      !>>>>>> COMPUTE INITOUT SCALARS InitOut%NStepWave, InitOut%NStepWave2, InitOut%WaveTMax, and InitOut%WaveDOmega for WAVEMOD = 0
-      InitOut%NStepWave  = 2                ! We must have at least two elements in order to interpolate later on
-      InitOut%NStepWave2 = 1
-      InitOut%WaveTMax   = InitInp%WaveTMax ! bjj added this... I don't think it was set anywhere for this wavemod.
-      InitOut%WaveDOmega = 0.0
+      !>>>>>> COMPUTE INITOUT SCALARS WaveField%NStepWave, WaveField%NStepWave2, InitOut%WaveTMax, and InitOut%WaveDOmega for WAVEMOD = 0 (WaveMod_None)
+      WaveField%NStepWave  = 2                ! We must have at least two elements in order to interpolate later on
+      WaveField%NStepWave2 = 1
+      InitOut%WaveTMax   = InitInp%WaveTMax
+      WaveField%WaveDOmega = 0.0
       
       ! >>> Allocate and initialize (set to 0) InitOut arrays
       call Initial_InitOut_Arrays(InitOut, WaveField, InitInp, 1.0_DbKi, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
@@ -711,8 +726,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
          NWaveKin0Prime = 0
          DO J = 1,InitInp%NWaveKinGrid   ! Loop through all mesh points  where the incident wave kinematics will be computed
-               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
-           IF (    InitInp%WaveKinGridzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
+               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and EffWtrDpth have already been adjusted using MSL2SWL
+           IF (    InitInp%WaveKinGridzi(J) >= -WaveField%EffWtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
                NWaveKin0Prime = NWaveKin0Prime + 1
            END IF
          END DO                ! J - All Morison nodes where the incident wave kinematics will be computed
@@ -736,8 +751,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          I = 1
 
          DO J = 1,InitInp%NWaveKinGrid ! Loop through all points where the incident wave kinematics will be computed without stretching
-               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
-            IF (    InitInp%WaveKinGridzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
+               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and EffWtrDpth have already been adjusted using MSL2SWL
+            IF (    InitInp%WaveKinGridzi(J) >= -WaveField%EffWtrDpth .AND. InitInp%WaveKinGridzi(J) <= 0 )  THEN
 
                WaveKinzi0Prime(I) =  InitInp%WaveKinGridzi(J)
                WaveKinPrimeMap(I) =  J
@@ -770,21 +785,21 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       ! used to calculate the number of multidirectional wave directions (WaveNDir) and the UserWaveElevations_Init subroutine
       ! will need to be updated.
 
-      !>>>>>> COMPUTE INITOUT SCALARS InitOut%NStepWave, InitOut%NStepWave2, InitOut%WaveTMax, and InitOut%WaveDOmega for WAVEMOD = 1,2,3,4,10 (5 and 7 also call this routine, but have been set already)
+      !>>>>>> COMPUTE INITOUT SCALARS WaveField%NStepWave, WaveField%NStepWave2, InitOut%WaveTMax, and InitOut%WaveDOmega for WAVEMOD = 1,2,3,4,10 (5 and 7 also call this routine, but have been set already)
       ! NOTE:  For WaveMod = 5, NStepWave and several other things were already set in the UserWaveElevations_Init routine
       !        using file information (an FFT was performed there, so the information was needed before now).
-      !        Same with WaveMod = 7. With WaveMod = 7, WaveDirArr is also populated in UserWaveComponents_Init routine. 
+      !        Same with WaveMod = 7 (WaveMod_UserFreq). With WaveMod = 7, WaveDirArr is also populated in UserWaveComponents_Init routine. 
       !        Need to make sure the wave-direction in formation is not overwritten later. 
-      IF (InitInp%WaveMod /= 5 .AND. InitInp%WaveMod /= 7) THEN
-         InitOut%NStepWave    = CEILING ( InitInp%WaveTMax/InitInp%WaveDT )               ! Set NStepWave to an even integer ...
-         IF ( MOD(InitOut%NStepWave,2) == 1 )  InitOut%NStepWave = InitOut%NStepWave + 1  !   ... larger or equal to WaveTMax/WaveDT.
+      IF (WaveField%WaveMod /= WaveMod_ExtElev .AND. WaveField%WaveMod /= WaveMod_UserFreq) THEN
+         WaveField%NStepWave    = CEILING ( InitInp%WaveTMax/InitInp%WaveDT )               ! Set NStepWave to an even integer ...
+         IF ( MOD(WaveField%NStepWave,2) == 1 )  WaveField%NStepWave = WaveField%NStepWave + 1  !   ... larger or equal to WaveTMax/WaveDT.
          
-         InitOut%NStepWave2   = MAX( InitOut%NStepWave/2, 1 )                             ! Make sure that NStepWave is an even product of small factors (PSF) that is
-         InitOut%NStepWave    = 2 * PSF( InitOut%NStepWave2, 9 )                          !   greater or equal to WaveTMax/WaveDT to ensure that the FFT is efficient.
+         WaveField%NStepWave2   = MAX( WaveField%NStepWave/2, 1 )                             ! Make sure that NStepWave is an even product of small factors (PSF) that is
+         WaveField%NStepWave    = 2 * PSF( WaveField%NStepWave2, 9 )                          !   greater or equal to WaveTMax/WaveDT to ensure that the FFT is efficient.
 
-         InitOut%NStepWave2   = InitOut%NStepWave/2                                       ! Update the value of NStepWave2 based on the value needed for NStepWave.
-         InitOut%WaveTMax     = InitOut%NStepWave*InitInp%WaveDT                          ! Update the value of WaveTMax   based on the value needed for NStepWave.
-         InitOut%WaveDOmega   = TwoPi/InitOut%WaveTMax                                    ! Compute the frequency step for incident wave calculations.
+         WaveField%NStepWave2   = WaveField%NStepWave/2                                       ! Update the value of NStepWave2 based on the value needed for NStepWave.
+         InitOut%WaveTMax     = WaveField%NStepWave*InitInp%WaveDT                          ! Update the value of WaveTMax   based on the value needed for NStepWave.
+         WaveField%WaveDOmega   = TwoPi/InitOut%WaveTMax                                    ! Compute the frequency step for incident wave calculations.
       
          ! >>> Allocate and initialize (set to 0) InitOut arrays
          call Initial_InitOut_Arrays(InitOut, WaveField, InitInp, InitInp%WaveDT, ErrStatTmp, ErrMsgTmp);    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,  ErrStat,ErrMsg,RoutineName)
@@ -793,152 +808,152 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       
 
       ! Allocate all the arrays we need.
-      ALLOCATE ( tmpComplexArr(0:InitOut%NStepWave2                        ), STAT=ErrStatTmp )
+      ALLOCATE ( tmpComplexArr(0:WaveField%NStepWave2                        ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array tmpComplexArr.',     ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( WaveDynPC0        (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      ALLOCATE ( WaveDynPC0        (0:WaveField%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynPC0.',        ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( WaveVelC0Hxi      (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      ALLOCATE ( WaveVelC0Hxi      (0:WaveField%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVelC0Hxi.',      ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( WaveVelC0Hyi      (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      ALLOCATE ( WaveVelC0Hyi      (0:WaveField%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVelC0Hyi.',      ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( WaveVelC0V        (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      ALLOCATE ( WaveVelC0V        (0:WaveField%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVelC0V.',        ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( WaveAccC0Hxi      (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      ALLOCATE ( WaveAccC0Hxi      (0:WaveField%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAccC0Hxi.',      ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( WaveAccC0Hyi      (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      ALLOCATE ( WaveAccC0Hyi      (0:WaveField%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAccC0Hyi.',      ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( WaveAccC0V        (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      ALLOCATE ( WaveAccC0V        (0:WaveField%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAccC0V.',        ErrStat,ErrMsg,RoutineName)
 
 
-      ALLOCATE ( WaveDynP0B        (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      ALLOCATE ( WaveDynP0B        (0:WaveField%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDynP0B.',        ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( WaveVel0Hxi       (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      ALLOCATE ( WaveVel0Hxi       (0:WaveField%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel0Hxi.',       ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( WaveVel0Hyi       (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      ALLOCATE ( WaveVel0Hyi       (0:WaveField%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel0Hyi.',       ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( WaveVel0V         (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      ALLOCATE ( WaveVel0V         (0:WaveField%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveVel0V.',         ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( WaveAcc0Hxi       (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      ALLOCATE ( WaveAcc0Hxi       (0:WaveField%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc0Hxi.',       ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( WaveAcc0Hyi       (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      ALLOCATE ( WaveAcc0Hyi       (0:WaveField%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc0Hyi.',       ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( WaveAcc0V         (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+      ALLOCATE ( WaveAcc0V         (0:WaveField%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc0V.',         ErrStat,ErrMsg,RoutineName)
       
       
-      IF (InitInp%MCFD > 0.0_SiKi) THEN ! MacCamy-Fuchs model
+      IF (WaveField%MCFD > 0.0_SiKi) THEN ! MacCamy-Fuchs model
        
-         ALLOCATE ( WaveAccC0HxiMCF(0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAccC0HxiMCF(0:WaveField%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAccC0HxiMCF.',      ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveAccC0HyiMCF(0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAccC0HyiMCF(0:WaveField%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAccC0HyiMCF.',      ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveAccC0VMCF  (0:InitOut%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAccC0VMCF  (0:WaveField%NStepWave2 ,NWaveKin0Prime   ), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAccC0VMCF.',        ErrStat,ErrMsg,RoutineName)
   
-         ALLOCATE ( WaveAcc0HxiMCF (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc0HxiMCF (0:WaveField%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc0HxiMCF.',       ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveAcc0HyiMCF (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc0HyiMCF (0:WaveField%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc0HyiMCF.',       ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveAcc0VMCF   (0:InitOut%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
+         ALLOCATE ( WaveAcc0VMCF   (0:WaveField%NStepWave-1,NWaveKin0Prime   ), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveAcc0VMCF.',         ErrStat,ErrMsg,RoutineName)
       
-         ALLOCATE ( WaveField%WaveAccMCF  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
+         ALLOCATE ( WaveField%WaveAccMCF  (0:WaveField%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),InitInp%NGrid(3),3), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveField%WaveAccMCF.',  ErrStat,ErrMsg,RoutineName)
       END IF
       
       
-      IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
+      IF (WaveField%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
 
-         ALLOCATE ( PWaveDynPC0BPz0   (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveDynPC0BPz0   (0:WaveField%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveDynPC0BPz0.',   ErrStat,ErrMsg,RoutineName)
       
-         ALLOCATE ( PWaveVelC0HxiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveVelC0HxiPz0  (0:WaveField%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVelC0HxiPz0.',  ErrStat,ErrMsg,RoutineName)
       
-         ALLOCATE ( PWaveVelC0HyiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveVelC0HyiPz0  (0:WaveField%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVelC0HyiPz0.',  ErrStat,ErrMsg,RoutineName)
       
-         ALLOCATE ( PWaveVelC0VPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveVelC0VPz0    (0:WaveField%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVelC0VPz0.',    ErrStat,ErrMsg,RoutineName)
       
-         ALLOCATE ( PWaveAccC0HxiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveAccC0HxiPz0  (0:WaveField%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HxiPz0.',  ErrStat,ErrMsg,RoutineName)
       
-         ALLOCATE ( PWaveAccC0HyiPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveAccC0HyiPz0  (0:WaveField%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HyiPz0.',  ErrStat,ErrMsg,RoutineName)
       
-         ALLOCATE ( PWaveAccC0VPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveAccC0VPz0    (0:WaveField%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0VPz0.',    ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( PWaveDynP0BPz0    (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveDynP0BPz0    (0:WaveField%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveDynP0BPz0.',    ErrStat,ErrMsg,RoutineName)
       
-         ALLOCATE ( PWaveVel0HxiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveVel0HxiPz0   (0:WaveField%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVel0HxiPz0.',   ErrStat,ErrMsg,RoutineName)
       
-         ALLOCATE ( PWaveVel0HyiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveVel0HyiPz0   (0:WaveField%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVel0HyiPz0.',   ErrStat,ErrMsg,RoutineName)
       
-         ALLOCATE ( PWaveVel0VPz0     (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveVel0VPz0     (0:WaveField%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveVel0Pz0.',      ErrStat,ErrMsg,RoutineName)
       
-         ALLOCATE ( PWaveAcc0HxiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveAcc0HxiPz0   (0:WaveField%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0HxiPz0.',   ErrStat,ErrMsg,RoutineName)
       
-         ALLOCATE ( PWaveAcc0HyiPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveAcc0HyiPz0   (0:WaveField%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0HyiPz0.',   ErrStat,ErrMsg,RoutineName)
       
-         ALLOCATE ( PWaveAcc0VPz0     (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+         ALLOCATE ( PWaveAcc0VPz0     (0:WaveField%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0VPz0.',     ErrStat,ErrMsg,RoutineName)
 
-         ALLOCATE ( WaveField%PWaveDynP0 (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)  ), STAT=ErrStatTmp )
+         ALLOCATE ( WaveField%PWaveDynP0 (0:WaveField%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2)  ), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveField%PWaveDynP0.', ErrStat,ErrMsg,RoutineName)
       
-         ALLOCATE ( WaveField%PWaveVel0  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),3), STAT=ErrStatTmp )
+         ALLOCATE ( WaveField%PWaveVel0  (0:WaveField%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),3), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveField%PWaveVel0.',  ErrStat,ErrMsg,RoutineName)
       
-         ALLOCATE ( WaveField%PWaveAcc0  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),3), STAT=ErrStatTmp )
+         ALLOCATE ( WaveField%PWaveAcc0  (0:WaveField%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),3), STAT=ErrStatTmp )
          IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveField%PWaveAcc0.',  ErrStat,ErrMsg,RoutineName)
          
-         IF (InitInp%MCFD > 0.0_ReKi) THEN ! MacCamy-Fuchs model
+         IF (WaveField%MCFD > 0.0_ReKi) THEN ! MacCamy-Fuchs model
          
-            ALLOCATE ( PWaveAccC0HxiMCFPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+            ALLOCATE ( PWaveAccC0HxiMCFPz0  (0:WaveField%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
             IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HxiMCFPz0.',  ErrStat,ErrMsg,RoutineName)
       
-            ALLOCATE ( PWaveAccC0HyiMCFPz0  (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+            ALLOCATE ( PWaveAccC0HyiMCFPz0  (0:WaveField%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
             IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0HyiMCFPz0.',  ErrStat,ErrMsg,RoutineName)
       
-            ALLOCATE ( PWaveAccC0VMCFPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+            ALLOCATE ( PWaveAccC0VMCFPz0    (0:WaveField%NStepWave2 ,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
             IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0VMCFPz0.',    ErrStat,ErrMsg,RoutineName)
 
-            ALLOCATE ( PWaveAcc0HxiMCFPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+            ALLOCATE ( PWaveAcc0HxiMCFPz0   (0:WaveField%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
             IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0HxiMCFPz0.',   ErrStat,ErrMsg,RoutineName)
       
-            ALLOCATE ( PWaveAcc0HyiMCFPz0   (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+            ALLOCATE ( PWaveAcc0HyiMCFPz0   (0:WaveField%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
             IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0HyiMCFPz0.',   ErrStat,ErrMsg,RoutineName)
       
-            ALLOCATE ( PWaveAcc0VMCFPz0     (0:InitOut%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
+            ALLOCATE ( PWaveAcc0VMCFPz0     (0:WaveField%NStepWave-1,InitInp%NWaveElevGrid), STAT=ErrStatTmp )
             IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAcc0VMCFPz0.',     ErrStat,ErrMsg,RoutineName)
          
-            ALLOCATE ( WaveField%PWaveAccMCF0  (0:InitOut%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),3), STAT=ErrStatTmp )
+            ALLOCATE ( WaveField%PWaveAccMCF0  (0:WaveField%NStepWave,InitInp%NGrid(1),InitInp%NGrid(2),3), STAT=ErrStatTmp )
             IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveField%PWaveAccMCF0.',  ErrStat,ErrMsg,RoutineName)
          
          END IF
@@ -949,18 +964,18 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
 
       ! Arrays for the Sin and Cos of the wave direction for each frequency.  Used in calculating wave elevation, velocity, acceleration etc.
-      ALLOCATE ( CosWaveDir( 0:InitOut%NStepWave2                          ), STAT=ErrStatTmp )
+      ALLOCATE ( CosWaveDir( 0:WaveField%NStepWave2                          ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array CosWaveDir.',        ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( SinWaveDir( 0:InitOut%NStepWave2                          ), STAT=ErrStatTmp )
+      ALLOCATE ( SinWaveDir( 0:WaveField%NStepWave2                          ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array SinWaveDir.',        ErrStat,ErrMsg,RoutineName)
 
-      ALLOCATE ( OmegaArr( 0:InitOut%NStepWave2                            ), STAT=ErrStatTmp )
+      ALLOCATE ( OmegaArr( 0:WaveField%NStepWave2                            ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array OmegaArr.',   ErrStat,ErrMsg,RoutineName)
 
       
       ! Arrays for the constrained wave
-      ALLOCATE ( WaveS1SddArr( 0:InitOut%NStepWave2                        ), STAT=ErrStatTmp )
+      ALLOCATE ( WaveS1SddArr( 0:WaveField%NStepWave2                        ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveS1SddArr.',   ErrStat,ErrMsg,RoutineName)
 
       ! Now check if all the allocations worked properly
@@ -973,8 +988,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
       ! Compute the positive-frequency components (including zero) of the discrete
       !   Fourier transforms of the wave kinematics:
-      DO I = 0,InitOut%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
-          OmegaArr(I) = I*InitOut%WaveDOmega
+      DO I = 0,WaveField%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
+          OmegaArr(I) = I*WaveField%WaveDOmega
       END DO
 
       call Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddArr)
@@ -989,8 +1004,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          END IF
          
          ! Store the minimum and maximum wave directions
-      InitOut%WaveDirMin   = MINVAL(WaveField%WaveDirArr)
-      InitOut%WaveDirMax   = MAXVAL(WaveField%WaveDirArr)
+      WaveField%WaveDirMin   = MINVAL(WaveField%WaveDirArr)
+      WaveField%WaveDirMax   = MAXVAL(WaveField%WaveDirArr)
          
 
       ! Set the CosWaveDir and SinWaveDir arrays
@@ -999,7 +1014,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
       
       ! make sure this is called before calling ConstrainedNewWaves
-      CALL InitFFT ( InitOut%NStepWave, FFT_Data, .TRUE., ErrStatTmp )
+      CALL InitFFT ( WaveField%NStepWave, FFT_Data, .TRUE., ErrStatTmp )
          CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
@@ -1010,7 +1025,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       !=== Constrained New Waves ===
       ! Modify the wave components to implement the constrained wave
       ! Only do this if WaveMod = 2 (JONSWAP/Pierson-Moskowitz Spectrum) and ConstWaveMod > 0
-      IF ( InitInp%WaveMod == 2 .AND. InitInp%ConstWaveMod > 0) THEN
+      IF ( WaveField%WaveMod == WaveMod_JONSWAP .AND. InitInp%ConstWaveMod > 0) THEN
          ! adjust InitOut%WaveElevC0 for constrained wave:
          call ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddArr, CosWaveDir, SinWaveDir, FFT_Data, ErrStatTmp, ErrMsgTmp)
             call SetErrStat(ErrStatTmp,ErrMsgTmp, ErrStat,ErrMsg,RoutineName)
@@ -1031,12 +1046,12 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       
          CALL WrScr ( ' Adjusting incident wave kinematics for turbine offset from array origin.' )
       
-         DO I = 0,InitOut%NStepWave2  
+         DO I = 0,WaveField%NStepWave2  
 
             tmpComplex  = CMPLX(  WaveField%WaveElevC0(1,I),   WaveField%WaveElevC0(2,I))
             
             ! some redundant calculations with later, but insignificant
-            WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, InitInp%WtrDpth )
+            WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, WaveField%EffWtrDpth )
             
             ! apply the phase shift
             tmpComplex = tmpComplex * EXP( -ImagNmbr*WaveNmbr*( InitInp%PtfmLocationX*CosWaveDir(I) + InitInp%PtfmLocationY*SinWaveDir(I) ))
@@ -1055,7 +1070,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       !!   incident waves at each desired point on the still water level plane
       !!   where it can be output:
 
-      DO I = 0,InitOut%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
+      DO I = 0,WaveField%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
 
 
             ! Set tmpComplex to the Ith element of the WAveElevC0 array
@@ -1069,12 +1084,12 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
       ! Compute the wavenumber:
 
-         WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, InitInp%WtrDpth )
+         WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, WaveField%EffWtrDpth )
 
       ! Wavenumber-dependent acceleration scaling for MacCamy-Fuchs model
       MCFC = 0.0_ReKi
-      IF (InitInp%MCFD > 0.0_SiKi .AND. I>0_IntKi) THEN
-         ka = 0.5_ReKi * WaveNmbr * InitInp%MCFD
+      IF (WaveField%MCFD > 0.0_SiKi .AND. I>0_IntKi) THEN
+         ka = 0.5_ReKi * WaveNmbr * WaveField%MCFD
          JPrime = BESSEL_JN(1,ka) / ka - BESSEL_JN(2,ka)
          YPrime = BESSEL_YN(1,ka) / ka - BESSEL_YN(2,ka)
          HPrime = SQRT(JPrime*JPrime + YPrime*YPrime)
@@ -1090,18 +1105,18 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
             WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*( InitInp%WaveKinGridxi(WaveKinPrimeMap(J))*CosWaveDir(I) + &
                                                          InitInp%WaveKinGridyi(WaveKinPrimeMap(J))*SinWaveDir(I) ))
 
-            WaveDynPC0 (I,J)     = InitOut%RhoXg*tmpComplex*WaveElevxiPrime0 * COSHNumOvrCOSHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
+            WaveDynPC0 (I,J)     = WaveField%RhoXg*tmpComplex*WaveElevxiPrime0 * COSHNumOvrCOSHDen ( WaveNmbr, WaveField%EffWtrDpth, WaveKinzi0Prime(J) )
 
-            WaveVelC0Hxi (I,J)   = CosWaveDir(I)*OmegaArr(I)*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
-            WaveVelC0Hyi (I,J)   = SinWaveDir(I)*OmegaArr(I)*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
+            WaveVelC0Hxi (I,J)   = CosWaveDir(I)*OmegaArr(I)*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, WaveField%EffWtrDpth, WaveKinzi0Prime(J) )
+            WaveVelC0Hyi (I,J)   = SinWaveDir(I)*OmegaArr(I)*tmpComplex* WaveElevxiPrime0 * COSHNumOvrSINHDen ( WaveNmbr, WaveField%EffWtrDpth, WaveKinzi0Prime(J) )
 
-            WaveVelC0V (I,J)     = ImagOmega*tmpComplex* WaveElevxiPrime0 * SINHNumOvrSINHDen ( WaveNmbr, InitInp%WtrDpth, WaveKinzi0Prime(J) )
+            WaveVelC0V (I,J)     = ImagOmega*tmpComplex* WaveElevxiPrime0 * SINHNumOvrSINHDen ( WaveNmbr, WaveField%EffWtrDpth, WaveKinzi0Prime(J) )
             WaveAccC0Hxi (I,J)   = ImagOmega*        WaveVelC0Hxi (I,J)
 
             WaveAccC0Hyi (I,J)   = ImagOmega*        WaveVelC0Hyi (I,J)
             WaveAccC0V (I,J)     = ImagOmega*        WaveVelC0V   (I,J)
 
-            IF (InitInp%MCFD > 0.0_SiKi) THEN
+            IF (WaveField%MCFD > 0.0_SiKi) THEN
                WaveAccC0HxiMCF(I,J) = WaveAccC0Hxi(I,J) * MCFC
                WaveAccC0HyiMCF(I,J) = WaveAccC0Hyi(I,J) * MCFC
                WaveAccC0VMCF(I,J)   = WaveAccC0V(I,J)   * MCFC
@@ -1111,19 +1126,19 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
 
          !===================================
-         IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation wave stretching
+         IF (WaveField%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation wave stretching
             DO J = 1,InitInp%NWaveElevGrid ! Loop through all points on the SWL
                WaveElevxiPrime0 = EXP( -ImagNmbr*WaveNmbr*( InitInp%WaveKinGridxi(J)*CosWaveDir(I) + &
                                                             InitInp%WaveKinGridyi(J)*SinWaveDir(I) ))
                ! Partial derivatives at zi = 0
-               PWaveDynPC0BPz0 (I,J) = InitOut%RhoXg*      tmpComplex*WaveElevxiPrime0*WaveNmbr*TANH ( WaveNmbr*InitInp%WtrDpth )
+               PWaveDynPC0BPz0 (I,J) = WaveField%RhoXg*      tmpComplex*WaveElevxiPrime0*WaveNmbr*TANH ( WaveNmbr*WaveField%EffWtrDpth )
                PWaveVelC0HxiPz0(I,J) = CosWaveDir(I)*OmegaArr(I)*tmpComplex*WaveElevxiPrime0*WaveNmbr
                PWaveVelC0HyiPz0(I,J) = SinWaveDir(I)*OmegaArr(I)*tmpComplex*WaveElevxiPrime0*WaveNmbr
             
                IF (I == 0_IntKi) THEN ! Zero frequency component - Need to avoid division by zero.
                  PWaveVelC0VPz0  (I,J) =         0.0_ReKi
                ELSE
-                 PWaveVelC0VPz0  (I,J) =         ImagOmega*tmpComplex*WaveElevxiPrime0*WaveNmbr/TANH ( WaveNmbr*InitInp%WtrDpth )
+                 PWaveVelC0VPz0  (I,J) =         ImagOmega*tmpComplex*WaveElevxiPrime0*WaveNmbr/TANH ( WaveNmbr*WaveField%EffWtrDpth )
                END IF
             
                PWaveAccC0HxiPz0(I,J) =           ImagOmega*PWaveVelC0HxiPz0(I,J)
@@ -1131,7 +1146,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
                PWaveAccC0VPz0  (I,J) =           ImagOmega*PWaveVelC0VPz0  (I,J)
                
                
-               IF (InitInp%MCFD > 0.0_SiKi) THEN
+               IF (WaveField%MCFD > 0.0_SiKi) THEN
                   PWaveAccC0HxiMCFPz0(I,J) = PWaveAccC0HxiPz0(I,J) * MCFC
                   PWaveAccC0HyiMCFPz0(I,J) = PWaveAccC0HyiPz0(I,J) * MCFC
                   PWaveAccC0VMCFPz0(I,J)   = PWaveAccC0VPz0(I,J)   * MCFC
@@ -1146,19 +1161,19 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       ! Calculate the array of simulation times at which the instantaneous
       !   elevation of, velocity of, acceleration of, and loads associated with
       !   the incident waves are to be determined:
-      DO I = 0,InitOut%NStepWave ! Loop through all time steps
+      DO I = 0,WaveField%NStepWave ! Loop through all time steps
          WaveField%WaveTime(I) = I*REAL(InitInp%WaveDT,SiKi)
       END DO                ! I - All time steps
       
       
-      DO I = 0,InitOut%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transform
+      DO I = 0,WaveField%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transform
          tmpComplexArr(I)    =  CMPLX(WaveField%WaveElevC0(1,I), WaveField%WaveElevC0(2,I))
       END DO
 
       ! Compute the inverse discrete Fourier transforms to find the time-domain
       !   representations of the wave kinematics without stretcing:
 
-      CALL    ApplyFFT_cx (  WaveField%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
+      CALL    ApplyFFT_cx (  WaveField%WaveElev0    (0:WaveField%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
       CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp()
@@ -1211,7 +1226,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
       END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
 
-      IF (InitInp%MCFD > 0.0_SiKi) THEN
+      IF (WaveField%MCFD > 0.0_SiKi) THEN
          DO J = 1,NWaveKin0Prime ! Loop through all points where the incident wave kinematics will be computed without stretching
             CALL ApplyFFT_cx (          WaveAcc0HxiMCF  (:,J),          WaveAccC0HxiMCF  (:,J), FFT_Data, ErrStatTmp )
             CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveAcc0HxiMCF.',      ErrStat,ErrMsg,RoutineName)
@@ -1230,7 +1245,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       END IF
 
       !===================================
-      IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
+      IF (WaveField%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
          DO J = 1,InitInp%NWaveElevGrid ! Loop through all points on the SWL where z-partial derivatives will be computed for extrapolated stretching
             ! FFT's of the partial derivatives
             CALL  ApplyFFT_cx (         PWaveDynP0BPz0(:,J  ),         PWaveDynPC0BPz0(:,J  ), FFT_Data, ErrStatTmp )
@@ -1261,7 +1276,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       
          END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
          
-         IF (InitInp%MCFD > 0.0_SiKi) THEN ! MacCamy-Fuchs scaled acceleration field
+         IF (WaveField%MCFD > 0.0_SiKi) THEN ! MacCamy-Fuchs scaled acceleration field
             DO J = 1,InitInp%NWaveElevGrid
       
                CALL  ApplyFFT_cx (         PWaveAcc0HxiMCFPz0 (:,J  ),       PWaveAccC0HxiMCFPz0(:,J  ),FFT_Data, ErrStatTmp )
@@ -1340,8 +1355,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       !   mean sea level, the wave kinematics are zero:
 
    !   InitOut%PWaveDynP0(:,:,:,:)   = 0.0
-   !   InitOut%PWaveVel0 (:,:,:,:,:) = 0.0
-   !   InitOut%PWaveAcc0 (:,:,:,:,:) = 0.0
 
       primeCount = 1
       count = 1
@@ -1354,9 +1367,9 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
              !  jj = mod( (count-1) /InitInp%NGrid(1), InitInp%NGrid(2) ) + 1
              !  kk = (count-1) / (InitInp%NGrid(1)*InitInp%NGrid(2)) + 1
 
-               IF (   ( InitInp%WaveKinGridzi(count) < -InitInp%WtrDpth ) .OR. ( InitInp%WaveKinGridzi(count) > 0.0 ) ) THEN
+               IF (   ( InitInp%WaveKinGridzi(count) < -WaveField%EffWtrDpth ) .OR. ( InitInp%WaveKinGridzi(count) > 0.0 ) ) THEN
                   ! .TRUE. if the elevation of the point defined by WaveKinGridzi(J) lies below the seabed or above mean sea level (exclusive)
-                  ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
+                  ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and EffWtrDpth have already been adjusted using MSL2SWL
 
                   WaveField%WaveDynP(:,i,j,k  )  = 0.0
                   WaveField%WaveVel (:,i,j,k,:)  = 0.0
@@ -1365,13 +1378,13 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
                ELSE
                   ! The elevation of the point defined by WaveKinGridzi(J) must lie between the seabed and the mean sea level (inclusive)
 
-                  WaveField%WaveDynP(0:InitOut%NStepWave-1,i,j,k  ) = WaveDynP0B( 0:InitOut%NStepWave-1,primeCount)
-                  WaveField%WaveVel (0:InitOut%NStepWave-1,i,j,k,1) = WaveVel0Hxi(0:InitOut%NStepWave-1,primeCount)
-                  WaveField%WaveVel (0:InitOut%NStepWave-1,i,j,k,2) = WaveVel0Hyi(0:InitOut%NStepWave-1,primeCount)
-                  WaveField%WaveVel (0:InitOut%NStepWave-1,i,j,k,3) = WaveVel0V(  0:InitOut%NStepWave-1,primeCount)
-                  WaveField%WaveAcc (0:InitOut%NStepWave-1,i,j,k,1) = WaveAcc0Hxi(0:InitOut%NStepWave-1,primeCount)
-                  WaveField%WaveAcc (0:InitOut%NStepWave-1,i,j,k,2) = WaveAcc0Hyi(0:InitOut%NStepWave-1,primeCount)
-                  WaveField%WaveAcc (0:InitOut%NStepWave-1,i,j,k,3) = WaveAcc0V(  0:InitOut%NStepWave-1,primeCount)
+                  WaveField%WaveDynP(0:WaveField%NStepWave-1,i,j,k  ) = WaveDynP0B( 0:WaveField%NStepWave-1,primeCount)
+                  WaveField%WaveVel (0:WaveField%NStepWave-1,i,j,k,1) = WaveVel0Hxi(0:WaveField%NStepWave-1,primeCount)
+                  WaveField%WaveVel (0:WaveField%NStepWave-1,i,j,k,2) = WaveVel0Hyi(0:WaveField%NStepWave-1,primeCount)
+                  WaveField%WaveVel (0:WaveField%NStepWave-1,i,j,k,3) = WaveVel0V(  0:WaveField%NStepWave-1,primeCount)
+                  WaveField%WaveAcc (0:WaveField%NStepWave-1,i,j,k,1) = WaveAcc0Hxi(0:WaveField%NStepWave-1,primeCount)
+                  WaveField%WaveAcc (0:WaveField%NStepWave-1,i,j,k,2) = WaveAcc0Hyi(0:WaveField%NStepWave-1,primeCount)
+                  WaveField%WaveAcc (0:WaveField%NStepWave-1,i,j,k,3) = WaveAcc0V(  0:WaveField%NStepWave-1,primeCount)
                   primeCount = primeCount + 1
                END IF
                count = count + 1
@@ -1380,21 +1393,21 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
       end do
 
       ! MacCamy-Fuchs scaled fluid acceleration
-      IF (InitInp%MCFD > 0.0_SiKi) THEN
+      IF (WaveField%MCFD > 0.0_SiKi) THEN
          primeCount = 1
          count = 1
          do k = 1, InitInp%NGrid(3)
             do j = 1, InitInp%NGrid(2)
                do i = 1, InitInp%NGrid(1)
-                  IF (   ( InitInp%WaveKinGridzi(count) < -InitInp%WtrDpth ) .OR. ( InitInp%WaveKinGridzi(count) > 0.0 ) ) THEN
+                  IF (   ( InitInp%WaveKinGridzi(count) < -WaveField%EffWtrDpth ) .OR. ( InitInp%WaveKinGridzi(count) > 0.0 ) ) THEN
                      ! .TRUE. if the elevation of the point defined by WaveKinGridzi(J) lies below the seabed or above mean sea level (exclusive)
-                     ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and WtrDpth have already been adjusted using MSL2SWL
+                     ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinGridzi and EffWtrDpth have already been adjusted using MSL2SWL
                      WaveField%WaveAccMCF(:,i,j,k,:)  = 0.0
                   ELSE
                      ! The elevation of the point defined by WaveKinGridzi(J) must lie between the seabed and the mean sea level (inclusive)
-                     WaveField%WaveAccMCF (0:InitOut%NStepWave-1,i,j,k,1) = WaveAcc0HxiMCF(0:InitOut%NStepWave-1,primeCount)
-                     WaveField%WaveAccMCF (0:InitOut%NStepWave-1,i,j,k,2) = WaveAcc0HyiMCF(0:InitOut%NStepWave-1,primeCount)
-                     WaveField%WaveAccMCF (0:InitOut%NStepWave-1,i,j,k,3) = WaveAcc0VMCF(  0:InitOut%NStepWave-1,primeCount)
+                     WaveField%WaveAccMCF (0:WaveField%NStepWave-1,i,j,k,1) = WaveAcc0HxiMCF(0:WaveField%NStepWave-1,primeCount)
+                     WaveField%WaveAccMCF (0:WaveField%NStepWave-1,i,j,k,2) = WaveAcc0HyiMCF(0:WaveField%NStepWave-1,primeCount)
+                     WaveField%WaveAccMCF (0:WaveField%NStepWave-1,i,j,k,3) = WaveAcc0VMCF(  0:WaveField%NStepWave-1,primeCount)
                      primeCount = primeCount + 1
                   END IF
                   count = count + 1
@@ -1403,29 +1416,29 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          end do
       END IF
 
-      IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
+      IF (WaveField%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
          
          primeCount = 1
          DO j = 1, InitInp%NGrid(2)  ! Loop through all points on the SWL where partial derivatives about z were computed
             DO i = 1, InitInp%NGrid(1)
-               WaveField%PWaveDynP0(0:InitOut%NStepWave-1,i,j  ) = PWaveDynP0BPz0( 0:InitOut%NStepWave-1,primeCount)
-               WaveField%PWaveVel0 (0:InitOut%NStepWave-1,i,j,1) = PWaveVel0HxiPz0(0:InitOut%NStepWave-1,primeCount)
-               WaveField%PWaveVel0 (0:InitOut%NStepWave-1,i,j,2) = PWaveVel0HyiPz0(0:InitOut%NStepWave-1,primeCount)
-               WaveField%PWaveVel0 (0:InitOut%NStepWave-1,i,j,3) = PWaveVel0VPz0(  0:InitOut%NStepWave-1,primeCount)
-               WaveField%PWaveAcc0 (0:InitOut%NStepWave-1,i,j,1) = pWaveAcc0HxiPz0(0:InitOut%NStepWave-1,primeCount)
-               WaveField%PWaveAcc0 (0:InitOut%NStepWave-1,i,j,2) = pWaveAcc0HyiPz0(0:InitOut%NStepWave-1,primeCount)
-               WaveField%PWaveAcc0 (0:InitOut%NStepWave-1,i,j,3) = PWaveAcc0VPz0(  0:InitOut%NStepWave-1,primeCount)
+               WaveField%PWaveDynP0(0:WaveField%NStepWave-1,i,j  ) = PWaveDynP0BPz0( 0:WaveField%NStepWave-1,primeCount)
+               WaveField%PWaveVel0 (0:WaveField%NStepWave-1,i,j,1) = PWaveVel0HxiPz0(0:WaveField%NStepWave-1,primeCount)
+               WaveField%PWaveVel0 (0:WaveField%NStepWave-1,i,j,2) = PWaveVel0HyiPz0(0:WaveField%NStepWave-1,primeCount)
+               WaveField%PWaveVel0 (0:WaveField%NStepWave-1,i,j,3) = PWaveVel0VPz0(  0:WaveField%NStepWave-1,primeCount)
+               WaveField%PWaveAcc0 (0:WaveField%NStepWave-1,i,j,1) = pWaveAcc0HxiPz0(0:WaveField%NStepWave-1,primeCount)
+               WaveField%PWaveAcc0 (0:WaveField%NStepWave-1,i,j,2) = pWaveAcc0HyiPz0(0:WaveField%NStepWave-1,primeCount)
+               WaveField%PWaveAcc0 (0:WaveField%NStepWave-1,i,j,3) = PWaveAcc0VPz0(  0:WaveField%NStepWave-1,primeCount)
                primeCount = primeCount + 1
             END DO
          END DO
          
-         IF (InitInp%MCFD > 0.0_SiKi) THEN
+         IF (WaveField%MCFD > 0.0_SiKi) THEN
             primeCount = 1
             DO j = 1, InitInp%NGrid(2)  ! Loop through all points on the SWL where partial derivatives about z were computed
                DO i = 1, InitInp%NGrid(1)
-                  WaveField%PWaveAccMCF0 (0:InitOut%NStepWave-1,i,j,1) = pWaveAcc0HxiMCFPz0(0:InitOut%NStepWave-1,primeCount)
-                  WaveField%PWaveAccMCF0 (0:InitOut%NStepWave-1,i,j,2) = pWaveAcc0HyiMCFPz0(0:InitOut%NStepWave-1,primeCount)
-                  WaveField%PWaveAccMCF0 (0:InitOut%NStepWave-1,i,j,3) = PWaveAcc0VMCFPz0(  0:InitOut%NStepWave-1,primeCount)
+                  WaveField%PWaveAccMCF0 (0:WaveField%NStepWave-1,i,j,1) = pWaveAcc0HxiMCFPz0(0:WaveField%NStepWave-1,primeCount)
+                  WaveField%PWaveAccMCF0 (0:WaveField%NStepWave-1,i,j,2) = pWaveAcc0HyiMCFPz0(0:WaveField%NStepWave-1,primeCount)
+                  WaveField%PWaveAccMCF0 (0:WaveField%NStepWave-1,i,j,3) = PWaveAcc0VMCFPz0(  0:WaveField%NStepWave-1,primeCount)
                   primeCount = primeCount + 1
                END DO
             END DO
@@ -1483,20 +1496,20 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
   !    ENDSELECT
 
       ! Set the ending timestep to the same as the first timestep
-      WaveField%WaveElev0 (InitOut%NStepWave)          = WaveField%WaveElev0 (0    )
-      WaveField%WaveDynP  (InitOut%NStepWave,:,:,:  )  = WaveField%WaveDynP  (0,:,:,:  )
-      WaveField%WaveVel   (InitOut%NStepWave,:,:,:,:)  = WaveField%WaveVel   (0,:,:,:,:)
-      WaveField%WaveAcc   (InitOut%NStepWave,:,:,:,:)  = WaveField%WaveAcc   (0,:,:,:,:)
-      IF (InitInp%MCFD > 0.0_SiKi) THEN
-         WaveField%WaveAccMCF (InitOut%NStepWave,:,:,:,:) = WaveField%WaveAccMCF(0,:,:,:,:)
+      WaveField%WaveElev0 (WaveField%NStepWave)          = WaveField%WaveElev0 (0    )
+      WaveField%WaveDynP  (WaveField%NStepWave,:,:,:  )  = WaveField%WaveDynP  (0,:,:,:  )
+      WaveField%WaveVel   (WaveField%NStepWave,:,:,:,:)  = WaveField%WaveVel   (0,:,:,:,:)
+      WaveField%WaveAcc   (WaveField%NStepWave,:,:,:,:)  = WaveField%WaveAcc   (0,:,:,:,:)
+      IF (WaveField%MCFD > 0.0_SiKi) THEN
+         WaveField%WaveAccMCF (WaveField%NStepWave,:,:,:,:) = WaveField%WaveAccMCF(0,:,:,:,:)
       END IF
       
-      IF (InitInp%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
-         WaveField%PWaveDynP0(InitOut%NStepWave,:,:  )    = WaveField%PWaveDynP0(0,:,:  )
-         WaveField%PWaveVel0 (InitOut%NStepWave,:,:,:)    = WaveField%PWaveVel0 (0,:,:,:)
-         WaveField%PWaveAcc0 (InitOut%NStepWave,:,:,:)    = WaveField%PWaveAcc0 (0,:,:,:)
-         IF (InitInp%MCFD > 0.0_SiKi) THEN
-            WaveField%PWaveAccMCF0 (InitOut%NStepWave,:,:,:) = WaveField%PWaveAccMCF0(0,:,:,:)
+      IF (WaveField%WaveStMod .EQ. 2_IntKi) THEN ! Extrapolation Wave Stretching
+         WaveField%PWaveDynP0(WaveField%NStepWave,:,:  )    = WaveField%PWaveDynP0(0,:,:  )
+         WaveField%PWaveVel0 (WaveField%NStepWave,:,:,:)    = WaveField%PWaveVel0 (0,:,:,:)
+         WaveField%PWaveAcc0 (WaveField%NStepWave,:,:,:)    = WaveField%PWaveAcc0 (0,:,:,:)
+         IF (WaveField%MCFD > 0.0_SiKi) THEN
+            WaveField%PWaveAccMCF0 (WaveField%NStepWave,:,:,:) = WaveField%PWaveAccMCF0(0,:,:,:)
          END IF
       END IF
 
@@ -1510,9 +1523,9 @@ CONTAINS
 
       REAL(SiKi),       INTENT(IN   )                 :: Xcoord
       REAL(SiKi),       INTENT(IN   )                 :: Ycoord
-      REAL(SiKi),       INTENT(  OUT)                 :: WaveElevAtXY(0:InitOut%NStepWave)
-      real(SiKi),       INTENT(  OUT)                 :: WaveElevCAtXY(2,0:InitOut%NStepWave2)
-      COMPLEX(SiKi),    INTENT(INOUT)                 :: tmpComplexArr(0:InitOut%NStepWave2)            ! A temporary array (0:NStepWave2-1) for FFT use.
+      REAL(SiKi),       INTENT(  OUT)                 :: WaveElevAtXY(0:WaveField%NStepWave)
+      real(SiKi),       INTENT(  OUT)                 :: WaveElevCAtXY(2,0:WaveField%NStepWave2)
+      COMPLEX(SiKi),    INTENT(INOUT)                 :: tmpComplexArr(0:WaveField%NStepWave2)            ! A temporary array (0:NStepWave2-1) for FFT use.
       INTEGER(IntKi),   INTENT(  OUT)                 :: ErrStatLcl
       CHARACTER(*),     INTENT(  OUT)                 :: ErrMsgLcl
       
@@ -1528,22 +1541,22 @@ CONTAINS
       tmpComplexArr  = CMPLX(0.0_SiKi,0.0_SiKi)
 
          ! Loop through the positive frequency components (including zero).
-      DO I = 0,InitOut%NStepWave2
+      DO I = 0,WaveField%NStepWave2
 
-         WaveNmbr          = WaveNumber ( OmegaArr(I), InitInp%Gravity, InitInp%WtrDpth )
+         WaveNmbr          = WaveNumber ( OmegaArr(I), InitInp%Gravity, WaveField%EffWtrDpth )
          tmpComplexArr(I)  =  CMPLX(  WaveField%WaveElevC0(1,I),   WaveField%WaveElevC0(2,I))   *          &
                                       EXP( -ImagNmbr*WaveNmbr*(  Xcoord*CosWaveDir(I)+    &
                                                                  Ycoord*SinWaveDir(I) )   )
       ENDDO
 
-      CALL ApplyFFT_cx (   WaveElevAtXY(0:InitOut%NStepWave-1),   tmpComplexArr, FFT_Data,   ErrStatLcl2  )
+      CALL ApplyFFT_cx (   WaveElevAtXY(0:WaveField%NStepWave-1),   tmpComplexArr, FFT_Data,   ErrStatLcl2  )
       CALL SetErrStat(ErrStatLcl2,'Error occured while applying the FFT.',ErrStatLcl,ErrMsgLcl,'WaveElevTimeSeriesAtXY')
 
       WaveElevCAtXY( 1,: ) = REAL(tmpComplexArr(:))
       WaveElevCAtXY( 2,: ) = AIMAG(tmpComplexArr(:))
       
          ! Append first datpoint as the last as aid for repeated wave data
-      WaveElevAtXY(InitOut%NStepWave) = WaveElevAtXY(0)
+      WaveElevAtXY(WaveField%NStepWave) = WaveElevAtXY(0)
 
    END SUBROUTINE WaveElevTimeSeriesAtXY
 
@@ -1630,10 +1643,6 @@ SUBROUTINE Waves_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          ! Local Variables:
       INTEGER(IntKi)                                  :: ErrStatTmp  ! Temporary error status for processing
       CHARACTER(ErrMsgLen)                            :: ErrMsgTmp   ! Temporary error message for procesing
-!      REAL(ReKi), ALLOCATABLE                         :: tmpWaveKinzi(:)
-
-!      TYPE(FFT_DataType)           :: FFT_Data                                        ! the instance of the FFT module we're using
-
 
 
          ! Initialize ErrStat
@@ -1650,20 +1659,14 @@ SUBROUTINE Waves_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
          ! Define initialization-routine output here:
 
-      !InitOut%WriteOutputHdr = (/ 'Time', 'Column2' /)
-      !InitOut%WriteOutputUnt = (/ '(s)',  '(-)'     /)
-
-      InitOut%RhoXg         = InitInp%WtrDens*InitInp%Gravity
-
-
 
 
             ! Initialize the variables associated with the incident wave:
 
-      SELECT CASE ( InitInp%WaveMod ) ! Which incident wave kinematics model are we using?
+      SELECT CASE ( WaveField%WaveMod ) ! Which incident wave kinematics model are we using?
 
 
-      CASE ( 0 )              ! None=still water.
+      CASE ( WaveMod_None )              ! None=still water.
 
          CALL StillWaterWaves_Init( InitInp, InitOut, WaveField, ErrStatTmp, ErrMsgTmp )
          CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
@@ -1671,7 +1674,7 @@ SUBROUTINE Waves_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
 
 
-      CASE ( 1, 2, 3, 4, 10 )       ! 1, 10: Plane progressive (regular) wave, 2: JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, 3: white-noise, or 4: user-defined spectrum (irregular) wave.
+      CASE ( WaveMod_Regular, WaveMod_JONSWAP, WaveMod_WhiteNoise, WaveMod_UserSpctrm, WaveMod_RegularUsrPh )       ! 1, 10: Plane progressive (regular) wave, 2: JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, 3: white-noise, or 4: user-defined spectrum (irregular) wave.
 
             ! Now call the init with all the zi locations for the Morrison member nodes
          CALL VariousWaves_Init( InitInp, InitOut, WaveField, ErrStatTmp, ErrMsgTmp )
@@ -1679,7 +1682,7 @@ SUBROUTINE Waves_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
             IF ( ErrStat >= AbortErrLev ) RETURN
 
 
-      CASE ( 5 )              ! User-supplied wave elevation time history; HD derives full wave kinematics from this elevation time series data.
+      CASE ( WaveMod_ExtElev )              ! User-supplied wave elevation time history; HD derives full wave kinematics from this elevation time series data.
 
             ! Get the wave frequency information from the file (by FFT of the elevation)
          CALL UserWaveElevations_Init( InitInp, InitOut, WaveField, ErrStatTmp, ErrMsgTmp )
@@ -1692,13 +1695,13 @@ SUBROUTINE Waves_Init( InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          IF ( ErrStat >= AbortErrLev ) RETURN
 
 
-      CASE ( 6 )              ! User-supplied wave kinematics data.
+      CASE ( WaveMod_ExtFull )              ! User-supplied wave kinematics data.
 
          CALL UserWaves_Init( InitInp, InitOut, WaveField, ErrStatTmp, ErrMsgTmp )
          CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
          IF ( ErrStat >= AbortErrLev ) RETURN
          
-      CASE ( 7 )
+      CASE ( WaveMod_UserFreq )
          
          ! Get the wave frequency information from the file (by reading in wave frequency components)
          CALL UserWaveComponents_Init( InitInp, InitOut, WaveField, ErrStatTmp, ErrMsgTmp )
@@ -1798,9 +1801,10 @@ FUNCTION WheelerStretching ( zOrzPrime, Zeta, h, ForwardOrBackward, ErrStat, Err
 END FUNCTION WheelerStretching
 
 !------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE CalculateWaveNDir(InitInp, InitOut, ErrStat, ErrMsg)
+SUBROUTINE CalculateWaveNDir(InitInp, InitOut, WaveField, ErrStat, ErrMsg)
    TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
    TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut     ! Output data
+   TYPE(SeaSt_WaveFieldType),       INTENT(INOUT)  :: WaveField
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -1840,7 +1844,7 @@ SUBROUTINE CalculateWaveNDir(InitInp, InitOut, ErrStat, ErrMsg)
       ErrStatTmp = ErrID_None
       ErrMsgTmp = ""
 
-      DO WHILE ( .NOT. EqualRealNos( REAL(InitOut%NStepWave2/InitOut%WaveNDir), REAL(InitOut%NStepWave2)/REAL(InitOut%WaveNDir) ))
+      DO WHILE ( .NOT. EqualRealNos( REAL(WaveField%NStepWave2/InitOut%WaveNDir), REAL(WaveField%NStepWave2)/REAL(InitOut%WaveNDir) ))
                                   
          IF (InitOut%WaveNDir > WaveNDirMax ) THEN
             ErrMsgTmp   = 'Could not find value for WaveNDir between '//TRIM(Num2LStr(InitInp%WaveNDir))//' and '// &
@@ -1874,9 +1878,9 @@ SUBROUTINE CalculateWaveNDir(InitInp, InitOut, ErrStat, ErrMsg)
          ! Now check for the possible values of WaveNDir (up to I=5) so that we can tell the user about it.
          I = 0
          ErrMsgTmp = 'The next values of WaveNDir that work with the selected values for WaveTMax and WaveDT:'
-         DO WHILE ( InitOut%WaveNDir <= INT(InitOut%NStepWave2/4.0) )
-            IF ( EqualRealNos(REAL(InitOut%NStepWave2/InitOut%WaveNDir), &
-                              REAL(InitOut%NStepWave2)/REAL(InitOut%WaveNDir) )) THEN
+         DO WHILE ( InitOut%WaveNDir <= INT(WaveField%NStepWave2/4.0) )
+            IF ( EqualRealNos(REAL(WaveField%NStepWave2/InitOut%WaveNDir), &
+                              REAL(WaveField%NStepWave2)/REAL(InitOut%WaveNDir) )) THEN
                ErrMsgTmp  = TRIM(ErrMsgTmp)//"  "//TRIM(Num2LStr(InitOut%WaveNDir))
                I = I + 1
                IF (I >= 5) EXIT ! limit the number of choices for WaveNDir that are printed
@@ -1888,7 +1892,7 @@ SUBROUTINE CalculateWaveNDir(InitInp, InitOut, ErrStat, ErrMsg)
          ! If there were no additional values for WaveNDir found, I will be 0, so we rewrite the error message.
          IF ( I == 0 ) THEN
             ErrMsgTmp  =  'There are no values for WaveNDir between '//TRIM(Num2LStr(WaveNDirMax))//' and '// &
-                           TRIM(Num2LStr(INT(InitOut%NStepWave2/4.0)))//' (4 frequencies per wave direction)'// &
+                           TRIM(Num2LStr(INT(WaveField%NStepWave2/4.0)))//' (4 frequencies per wave direction)'// &
                            ' that will work with the selected values for WaveTMax ('//TRIM(Num2Lstr(InitOut%WaveTMax))// &
                            ') and WaveDT ('//TRIM(Num2LStr(InitInp%WaveDT))//').  Change either WaveTMax or WaveDT.'
          ELSE
@@ -1934,15 +1938,15 @@ SUBROUTINE CalculateWaveDirection(InitInp, InitOut, WaveField, ErrStat, ErrMsg )
    ErrMsg  = ""
 
 
-      IF (InitInp%WaveMod == 7) THEN ! wavemod 0 and 6 aren't called from this routine, but they fall into this case, too
+      IF (WaveField%WaveMod == WaveMod_UserFreq) THEN ! wavemod 0 (WaveMod_None) and 6 (WaveMod_ExtFull) aren't called from this routine, but they fall into this case, too
 
          RETURN
          !InitOut%WaveDirArr set in UserWaveComponents_Init for WaveMod 7
-         !InitOut%WaveDirArr = 0, set in Initial_InitOut_Arrays for WaveMod 0 and 6
+         !InitOut%WaveDirArr = 0, set in Initial_InitOut_Arrays for WaveMod 0 and 6 (WaveMod_ExtFull)
 
-      ELSEIF(.not. InitInp%WaveMultiDir .or. InitInp%WaveNDir <= 1) THEN ! we have a single wave direction
+      ELSEIF(.not. WaveField%WaveMultiDir .or. InitInp%WaveNDir <= 1) THEN ! we have a single wave direction
       
-         WaveField%WaveDirArr = InitInp%WaveDir
+         WaveField%WaveDirArr = WaveField%WaveDir
 
       ELSE ! multi directional waves
          
@@ -1969,7 +1973,7 @@ SUBROUTINE CalculateWaveDirection(InitInp, InitOut, WaveField, ErrStat, ErrMsg )
          !!          of smallish numbers.
 
             ! this sets InitOut%WaveNDir:
-         call CalculateWaveNDir(InitInp, InitOut, ErrStatTmp, ErrMsgTmp)
+         call CalculateWaveNDir(InitInp, InitOut, WaveField, ErrStatTmp, ErrMsgTmp)
             call SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
             if (ErrStat >= AbortErrLev) then
                call Cleanup()
@@ -1978,7 +1982,7 @@ SUBROUTINE CalculateWaveDirection(InitInp, InitOut, WaveField, ErrStat, ErrMsg )
             
 
             ! This allocates and sets WvTheta:
-         call CalculateWaveSpreading(InitInp, InitOut, WvTheta, ErrStatTmp, ErrMsgTmp)
+         call CalculateWaveSpreading(InitInp, InitOut, WaveField, WvTheta, ErrStatTmp, ErrMsgTmp)
             call SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
             if (ErrStat >= AbortErrLev) then
                call Cleanup()
@@ -2013,7 +2017,7 @@ SUBROUTINE CalculateWaveDirection(InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
             ! K should be exactly NStepWave2 when done assigning directions. The the Omega = 0 has
             ! no amplitude, but gets a direction anyhow (to simplify the calculation of WaveNDir).
-         WvSpreadFreqPerDir   =  (InitOut%NStepWave2)/InitOut%WaveNDir
+         WvSpreadFreqPerDir   =  (WaveField%NStepWave2)/InitOut%WaveNDir
          K  = 0
             ! Work through the frequencies in groups of directions.
          DO I = 1,WvSpreadFreqPerDir
@@ -2045,7 +2049,7 @@ SUBROUTINE CalculateWaveDirection(InitInp, InitOut, WaveField, ErrStat, ErrMsg )
 
             ! Perform a quick sanity check.  We should have assigned all wave frequencies a direction, so K should be
             ! K = NStepWave2 (K is incrimented afterwards).
-         IF ( K /= (InitOut%NStepWave2 ) ) THEN
+         IF ( K /= (WaveField%NStepWave2 ) ) THEN
             CALL SetErrStat(ErrID_Fatal, 'Something went wrong while assigning wave directions.',ErrStat,ErrMsg,RoutineName)
             CALL CleanUp()
             RETURN
@@ -2066,12 +2070,13 @@ CONTAINS
 
 END SUBROUTINE CalculateWaveDirection
 !------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE CalculateWaveSpreading(InitInp, InitOut, WvTheta, ErrStat, ErrMsg )
+SUBROUTINE CalculateWaveSpreading(InitInp, InitOut, WaveField, WvTheta, ErrStat, ErrMsg )
 ! Compute the wave direction array
 !----------------------------------------------------------------------------------------------------------------------------------
 
    TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
    TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut     !< Output data
+   TYPE(SeaSt_WaveFieldType),       INTENT(INOUT)  :: WaveField
    REAL(SiKi),         ALLOCATABLE, INTENT(  OUT)  :: WvTheta(:)  !< Final set of wave directions (degrees)
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -2171,10 +2176,10 @@ SUBROUTINE CalculateWaveSpreading(InitInp, InitOut, WvTheta, ErrStat, ErrMsg )
             !> 2. Calculate the spreading function as a function of angle.  Step through all _WvSpreadNDir_ steps.
          DO I=0,WvSpreadNDir
                ! The current angle as we step through the range
-            WvSpreadThetas(I) =  I*WvSpreadDTheta  + InitInp%WaveDir - InitInp%WaveDirRange/(2.0_SiKi)
+            WvSpreadThetas(I) =  I*WvSpreadDTheta  + WaveField%WaveDir - InitInp%WaveDirRange/(2.0_SiKi)
 
                ! Calculate the wave spreading for the current value of WvSpreadThetas
-            WvSpreadCos2SArr(I)  =  WvSpreadCos2SConst*abs( cos(Pi*(WvSpreadThetas(I)-InitInp%WaveDir)/InitInp%WaveDirRange) ) **(2*InitInp%WaveDirSpread)
+            WvSpreadCos2SArr(I)  =  WvSpreadCos2SConst*abs( cos(Pi*(WvSpreadThetas(I)-WaveField%WaveDir)/InitInp%WaveDirRange) ) **(2*InitInp%WaveDirSpread)
 
             !> 3. Calculate the integral of the spreading function up to the current angle and save it.
             !     Remember that the first element can't refer to one before it.
@@ -2226,10 +2231,10 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
    TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp                                       ! Input data for initialization routine
    TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut                                       ! Output data
    TYPE(SeaSt_WaveFieldType),       INTENT(INOUT)  :: WaveField
-   REAL(SiKi),                      INTENT(IN   )  :: OmegaArr(0:InitOut%NStepWave2)                !< Array of all non-negative angular frequencies (rad/s)
-   REAL(SiKi),                      INTENT(  OUT)  :: WaveS1SddArr(0:InitOut%NStepWave2)            !< One-sided power spectral density of the wave spectrum at all non-negative frequencies (m^2/(rad/s))
+   REAL(SiKi),                      INTENT(IN   )  :: OmegaArr(0:WaveField%NStepWave2)                !< Array of all non-negative angular frequencies (rad/s)
+   REAL(SiKi),                      INTENT(  OUT)  :: WaveS1SddArr(0:WaveField%NStepWave2)            !< One-sided power spectral density of the wave spectrum at all non-negative frequencies (m^2/(rad/s))
 
-   COMPLEX(SiKi)                                   :: WGNC(0:InitOut%NStepWave2)                    ! Discrete Fourier transform of the realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
+   COMPLEX(SiKi)                                   :: WGNC(0:WaveField%NStepWave2)                    ! Discrete Fourier transform of the realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
    INTEGER                                         :: I                                             ! Loop counter
    INTEGER                                         :: I_WaveTp                                      ! The index of the frequency component nearest to WaveTp
    REAL(SiKi)                                      :: SQRTNStepWave2                                ! SQRT( NStepWave/2 )
@@ -2237,12 +2242,12 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
    REAL(SiKi)                                      :: WaveS2Sdd                                     ! Two-sided power spectral density of the wave spectrum per unit time for the current frequency component (m^2/(rad/s))
    
    
-      IF ( InitInp%WaveMod == 5 .OR. InitInp%WaveMod == 7) THEN    ! Wave elevation or frequency component data read in
+      IF ( WaveField%WaveMod == WaveMod_ExtElev .OR. WaveField%WaveMod == WaveMod_UserFreq) THEN    ! Wave elevation or frequency component data read in (5 or 7)
    
-         DO I = 0,InitOut%NStepWave2
+         DO I = 0,WaveField%NStepWave2
          
             ! Apply limits to the existing WaveElevC0 arrays if outside frequency range
-            IF ( OmegaArr(I) < InitInp%WvLowCOff .OR. OmegaArr(I) > InitInp%WvHiCOff )  THEN
+            IF ( OmegaArr(I) < WaveField%WvLowCOff .OR. OmegaArr(I) > WaveField%WvHiCOff )  THEN
                WaveField%WaveElevC0(:,I) = 0.0_SiKi
             ENDIF
             
@@ -2254,7 +2259,7 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
       END IF
    
    
-      I_WaveTp  = NINT ( TwoPi/(InitOut%WaveDOmega*InitInp%WaveTp) )        ! Compute the index of the frequency component nearest to WaveTp. Note, we don't check if it's a valid index into the arrays
+      I_WaveTp  = NINT ( TwoPi/(WaveField%WaveDOmega*InitInp%WaveTp) )        ! Compute the index of the frequency component nearest to WaveTp. Note, we don't check if it's a valid index into the arrays
    
       ! Compute the discrete Fourier transform of the realization of a White
       !   Gaussian Noise (WGN) time series process with unit variance:
@@ -2266,18 +2271,18 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
       !       OmegaArr(I) == 0.0 and OmegaArr(I) == NStepWave2*WaveDOmega (= WaveOmegaMax)
       !       must be zero.
       !---------------------------------
-      ! I == 1 or InitOut%NStepWave2 if ( OmegaArr(I) == 0.0 ) or ( OmegaArr(I) == NStepWave2*WaveDOmega (= WaveOmegaMax) )
+      ! I == 1 or WaveField%NStepWave2 if ( OmegaArr(I) == 0.0 ) or ( OmegaArr(I) == NStepWave2*WaveDOmega (= WaveOmegaMax) )
       WGNC(1)                  = (0.0,0.0)
-      WGNC(InitOut%NStepWave2) = (0.0,0.0)
+      WGNC(WaveField%NStepWave2) = (0.0,0.0)
       
-      IF ( InitInp%WaveMod == 10 )  THEN                     ! .TRUE. for plane progressive (regular) waves with a specified phase
-         DO I = 0,InitOut%NStepWave2-1                       ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
+      IF ( WaveField%WaveMod == WaveMod_RegularUsrPh )  THEN                     ! .TRUE. for plane progressive (regular) waves with a specified phase
+         DO I = 0,WaveField%NStepWave2-1                           ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
             IF (I==1) CYCLE
             
             WGNC(I) = BoxMuller ( InitInp%RNG%pRNG, InitInp%WaveNDAmp, InitInp%WavePhase )
          END DO
       ELSE                                               ! All other OmegaArr(I)
-         DO I = 0,InitOut%NStepWave2-1  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
+         DO I = 0,WaveField%NStepWave2-1  ! Loop through the positive frequency components (including zero) of the discrete Fourier transforms
             IF (I==1) CYCLE
             
             WGNC(I) = BoxMuller ( InitInp%RNG%pRNG, InitInp%WaveNDAmp )
@@ -2288,10 +2293,10 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
       ! For (WaveMod=1 plane progressive (regular); and WaveMod=10 plane progressive (regular) waves with a specified phase)
       ! adjust WGNC and set PSD at specified frequency
       !------------------------------------
-      IF (InitInp%WaveMod == 10 .or. InitInp%WaveMod == 1) THEN
+      IF (WaveField%WaveMod == WaveMod_RegularUsrPh .or. WaveField%WaveMod == WaveMod_Regular) THEN !10 or 1
          WaveS1SddArr = 0.0
          
-         IF (I_WaveTp < InitOut%NStepWave2 .and. (I_WaveTp > 1 .or. I_WaveTp == 0) ) THEN
+         IF (I_WaveTp < WaveField%NStepWave2 .and. (I_WaveTp > 1 .or. I_WaveTp == 0) ) THEN
              
                ! This scaling of WGNC is used to ensure that the Box-Muller method is only providing a random phase,
                ! not a magnitude change, at the frequency of the plane progressive wave.  The SQRT(2.0) is used to
@@ -2302,14 +2307,14 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
               WGNC(I_WaveTp)         = WGNC(I_WaveTp) * ( SQRT(2.0_SiKi) / ABS(WGNC(I_WaveTp)) )
               
                ! Plane progressive (regular) wave; the wave spectrum is an impulse function centered on frequency component closest to WaveTp.              
-              WaveS1SddArr(I_WaveTp) = 0.5_SiKi * (InitInp%WaveHs/2.0_SiKi)**2 / InitOut%WaveDOmega
+              WaveS1SddArr(I_WaveTp) = 0.5_SiKi * (InitInp%WaveHs/2.0_SiKi)**2 / WaveField%WaveDOmega
               
          END IF
       ELSE
       
-         DO I = 0,InitOut%NStepWave2
+         DO I = 0,WaveField%NStepWave2
 
-            IF ( OmegaArr(I) < InitInp%WvLowCOff .OR. OmegaArr(I) > InitInp%WvHiCOff )  THEN ! .TRUE. if OmegaArr(I) is above or below the cut-off frequency
+            IF ( OmegaArr(I) < WaveField%WvLowCOff .OR. OmegaArr(I) > WaveField%WvHiCOff )  THEN ! .TRUE. if OmegaArr(I) is above or below the cut-off frequency
                !  Zero-out the wave spectrum above the cut-off frequency.  We must cut-off the frequency in order to
                !  void nonphysical wave forces.  Waves that have wavelengths much smaller than the platform diameter
                !  (high frequency) do not contribute to the net force because regions of positive and negative
@@ -2319,13 +2324,13 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
                
             ELSE
             
-               SELECT CASE ( InitInp%WaveMod ) ! Which incident wave kinematics model are we using?
-                  CASE ( 2 )              ! JONSWAP/Pierson-Moskowitz spectrum (irregular) wave.
+               SELECT CASE ( WaveField%WaveMod ) ! Which incident wave kinematics model are we using?
+                  CASE ( WaveMod_JONSWAP )                 ! JONSWAP/Pierson-Moskowitz spectrum (irregular) wave.
                         WaveS1SddArr(I) = JONSWAP ( OmegaArr(I), InitInp%WaveHs, InitInp%WaveTp, InitInp%WavePkShp )
-                  CASE ( 3 )              ! White-noise
-                        WaveS1SddArr(I) =  InitInp%WaveHs * InitInp%WaveHs / ( 16.0 * (InitInp%WvHiCOff - InitInp%WvLowCOff) )
-                  CASE ( 4 )              ! User-defined spectrum (irregular) wave.
-                        CALL UserWaveSpctrm ( OmegaArr(I), InitInp%WaveDir, InitInp%DirRoot, WaveS1SddArr(I) )
+                  CASE ( WaveMod_WhiteNoise )              ! White-noise
+                        WaveS1SddArr(I) =  InitInp%WaveHs * InitInp%WaveHs / ( 16.0 * (WaveField%WvHiCOff - WaveField%WvLowCOff) )
+                  CASE ( WaveMod_UserSpctrm )              ! User-defined spectrum (irregular) wave.
+                        CALL UserWaveSpctrm ( OmegaArr(I), WaveField%WaveDir, InitInp%DirRoot, WaveS1SddArr(I) )
                ENDSELECT
          
             END IF
@@ -2340,9 +2345,9 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
       ! Compute the one-sided power spectral density of the wave spectrum per unit
       !   time; zero-out the wave spectrum above the cut-off frequency:
       !---------------------------------
-      SQRTNStepWave2 = SQRT( REAL( InitOut%NStepWave2, SiKi ) )                  ! Compute SQRT( NStepWave/2 ).
+      SQRTNStepWave2 = SQRT( REAL( WaveField%NStepWave2, SiKi ) )                  ! Compute SQRT( NStepWave/2 ).
       
-      DO I = 0,InitOut%NStepWave2
+      DO I = 0,WaveField%NStepWave2
             ! Compute the two-sided power spectral density of the wave spectrum per unit
             !   time:
 
@@ -2358,16 +2363,16 @@ SUBROUTINE Get_1Spsd_and_WaveElevC0(InitInp, InitOut, WaveField, OmegaArr, WaveS
       
 END SUBROUTINE Get_1Spsd_and_WaveElevC0
 !------------------------------------------------------------------------------------------------------------------------
-!> update InitOut%WaveElevC0; call InitFFT before calling this routine!
+!> update WaveField%WaveElevC0; call InitFFT before calling this routine!
 SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddArr, CosWaveDir, SinWaveDir, FFT_Data, ErrStat, ErrMsg)
 
    TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp                                       ! Input data for initialization routine
    TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut                                       ! Output data
    TYPE(SeaSt_WaveFieldType),       INTENT(INOUT)  :: WaveField
-   REAL(SiKi),                      INTENT(IN   )  :: OmegaArr(0:InitOut%NStepWave2)                !< Array of all non-negative angular frequencies (rad/s)
-   REAL(SiKi),                      INTENT(IN   )  :: WaveS1SddArr(0:InitOut%NStepWave2)            !< One-sided power spectral density of the wave spectrum at all non-negative frequencies (m^2/(rad/s))
-   REAL(SiKi),                      INTENT(IN   )  :: CosWaveDir(0:InitOut%NStepWave2)              !< COS( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction
-   REAL(SiKi),                      INTENT(IN   )  :: SinWaveDir(0:InitOut%NStepWave2)              !< SIN( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction
+   REAL(SiKi),                      INTENT(IN   )  :: OmegaArr(0:WaveField%NStepWave2)                !< Array of all non-negative angular frequencies (rad/s)
+   REAL(SiKi),                      INTENT(IN   )  :: WaveS1SddArr(0:WaveField%NStepWave2)            !< One-sided power spectral density of the wave spectrum at all non-negative frequencies (m^2/(rad/s))
+   REAL(SiKi),                      INTENT(IN   )  :: CosWaveDir(0:WaveField%NStepWave2)              !< COS( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction
+   REAL(SiKi),                      INTENT(IN   )  :: SinWaveDir(0:WaveField%NStepWave2)              !< SIN( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction
    TYPE(FFT_DataType),              INTENT(IN   )  :: FFT_Data                                      !< data for FFT computations, already initialized
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat                                       !< error level/status
    CHARACTER(ErrMsgLen),            INTENT(  OUT)  :: ErrMsg                                        !< error message
@@ -2392,8 +2397,8 @@ SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddA
    INTEGER(IntKi)                                  :: Iter                                          !< Number of iterations when trying to meet the prescribed crest height (-)
    INTEGER(IntKi)                                  :: MaxCrestIter = 20                             !< Maximum number of iterations when trying to meet the prescribed crest height (-)
    
-   REAL(SiKi)                                      :: tmpArr(0:InitOut%NStepWave2)                  !< A temporary array of real numbers of constrained wave (-)
-   COMPLEX(SiKi)                                   :: tmpComplexArr(0:InitOut%NStepWave2)           !< A temporary array for FFT use
+   REAL(SiKi)                                      :: tmpArr(0:WaveField%NStepWave2)                  !< A temporary array of real numbers of constrained wave (-)
+   COMPLEX(SiKi)                                   :: tmpComplexArr(0:WaveField%NStepWave2)           !< A temporary array for FFT use
    
    COMPLEX(SiKi)                                   :: tmpComplex                                    ! A temporary varible to hold the complex value of the wave elevation before storing it into a REAL array
    
@@ -2409,16 +2414,16 @@ SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddA
       ! Modify the wave components to implement the constrained wave
    
       ! Compute the relevant sums
-      m0                   = InitOut%WaveDOmega * SUM(WaveS1SddArr)
-      m2                   = InitOut%WaveDOmega * SUM(WaveS1SddArr*OmegaArr*OmegaArr)
+      m0                   = WaveField%WaveDOmega * SUM(WaveS1SddArr)
+      m2                   = WaveField%WaveDOmega * SUM(WaveS1SddArr*OmegaArr*OmegaArr)
       WaveElevC0ReSum      = SUM(WaveField%WaveElevC0(1,:))/m0
       WaveElevC0ImOmegaSum = SUM(WaveField%WaveElevC0(2,:) * OmegaArr)/m2
       ! Apply the part of the modification that is independent from the crest elevation
-      WaveField%WaveElevC0(1,:) = WaveField%WaveElevC0(1,:) - WaveElevC0ReSum                 * WaveS1SddArr * InitOut%WaveDOmega
-      WaveField%WaveElevC0(2,:) = WaveField%WaveElevC0(2,:) - WaveElevC0ImOmegaSum * OmegaArr * WaveS1SddArr * InitOut%WaveDOmega
+      WaveField%WaveElevC0(1,:) = WaveField%WaveElevC0(1,:) - WaveElevC0ReSum                 * WaveS1SddArr * WaveField%WaveDOmega
+      WaveField%WaveElevC0(2,:) = WaveField%WaveElevC0(2,:) - WaveElevC0ImOmegaSum * OmegaArr * WaveS1SddArr * WaveField%WaveDOmega
 
       Crest = 0.5_SiKi * InitInp%CrestHmax ! Set crest elevation to half of crest height
-      tmpArr = InitOut%NStepWave2/m0 * InitOut%WaveDOmega * WaveS1SddArr
+      tmpArr = WaveField%NStepWave2/m0 * WaveField%WaveDOmega * WaveS1SddArr
         
       IF (InitInp%ConstWaveMod == 1) THEN  ! Crest elevation prescribed
       
@@ -2437,13 +2442,13 @@ SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddA
             ! Compute the crest height based on the current guess of crest elevation
             tmpComplexArr = CMPLX(  WaveField%WaveElevC0(1,:) + Crest * tmpArr, &
                                     WaveField%WaveElevC0(2,:))
-            CALL ApplyFFT_cx (  WaveField%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
+            CALL ApplyFFT_cx (  WaveField%WaveElev0    (0:WaveField%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
             CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
             ! Find the preceding or following trough, whichever is lower
-            Trough = MIN(MINVAL(WaveField%WaveElev0(1:MIN(NStepTp,InitOut%NStepWave-1))), &
-                         MINVAL(WaveField%WaveElev0(MAX(InitOut%NStepWave-NStepTp,0):InitOut%NStepWave-1)))
+            Trough = MIN(MINVAL(WaveField%WaveElev0(1:MIN(NStepTp,WaveField%NStepWave-1))), &
+                         MINVAL(WaveField%WaveElev0(MAX(WaveField%NStepWave-NStepTp,0):WaveField%NStepWave-1)))
             CrestHeight = Crest-Trough
             CrestHeightError = ABS(CrestHeight - InitInp%CrestHmax)
             ! print *, CrestHeight
@@ -2452,14 +2457,14 @@ SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddA
                ! Compute the crest height based on a slightly nudged crest elevation
                tmpComplexArr = CMPLX(  WaveField%WaveElevC0(1,:) + (Crest+CrestHeightTol) * tmpArr, &
                                        WaveField%WaveElevC0(2,:))
-               CALL ApplyFFT_cx (  WaveField%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
+               CALL ApplyFFT_cx (  WaveField%WaveElev0    (0:WaveField%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
                CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,RoutineName)
                IF ( ErrStat >= AbortErrLev ) RETURN
 
                
                ! Find the preceding or following trough, whichever is lower
-               Trough = MIN(MINVAL(WaveField%WaveElev0(1:MIN(NStepTp,InitOut%NStepWave-1))), &
-                           MINVAL(WaveField%WaveElev0(MAX(InitOut%NStepWave-NStepTp,0):InitOut%NStepWave-1)))
+               Trough = MIN(MINVAL(WaveField%WaveElev0(1:MIN(NStepTp,WaveField%NStepWave-1))), &
+                           MINVAL(WaveField%WaveElev0(MAX(WaveField%NStepWave-NStepTp,0):WaveField%NStepWave-1)))
                CrestHeight1 = Crest+CrestHeightTol-Trough
                ! Update crest elevation with Newton-Raphson Method
                Crest = Crest - (CrestHeight-InitInp%CrestHmax)*CrestHeightTol/(CrestHeight1-CrestHeight)
@@ -2471,8 +2476,8 @@ SUBROUTINE ConstrainedNewWaves(InitInp, InitOut, WaveField, OmegaArr, WaveS1SddA
       ENDIF
       
       ! Modify the wave phase so that the crest shows up at the right place and the right time
-      DO I = 1,InitOut%NStepWave2-1
-         WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, InitInp%WtrDpth )
+      DO I = 1,WaveField%NStepWave2-1
+         WaveNmbr   = WaveNumber ( OmegaArr(I), InitInp%Gravity, WaveField%EffWtrDpth )
          ConstWavePhase = WaveNmbr*(CosWaveDir(I)*InitInp%CrestXi  + &
                                     SinWaveDir(I)*InitInp%CrestYi) - &
                                     OmegaArr(I)*InitInp%CrestTime

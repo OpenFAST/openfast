@@ -408,7 +408,7 @@ FUNCTION SeaSt_Interp_4D_Vec( pKinXX, m, ErrStat, ErrMsg )
       ! I/O variables
 
    real(SiKi),                                  intent(in   )  :: pKinXX(0:,:,:,:,:)
-   TYPE(SeaSt_Interp_MiscVarType),           INTENT(IN   )  :: m                 !< Parameters
+   TYPE(SeaSt_Interp_MiscVarType),              INTENT(IN   )  :: m                 !< misc vars for interpolation
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 

@@ -44,7 +44,7 @@ IMPLICIT NONE
     REAL(SiKi)  :: CurrDIV = 0.0_R4Ki      !<  [-]
     REAL(SiKi)  :: CurrDIDir = 0.0_R4Ki      !<  [-]
     INTEGER(IntKi)  :: CurrMod = 0_IntKi      !<  [-]
-    REAL(SiKi)  :: WtrDpth = 0.0_R4Ki      !<  [-]
+    REAL(SiKi)  :: EffWtrDpth = 0.0_R4Ki      !<  [-]
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveKinGridzi      !<  [-]
     INTEGER(IntKi)  :: NGridPts = 0_IntKi      !<  [-]
     CHARACTER(1024)  :: DirRoot      !<  [-]
@@ -80,7 +80,7 @@ subroutine Current_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, E
    DstInitInputData%CurrDIV = SrcInitInputData%CurrDIV
    DstInitInputData%CurrDIDir = SrcInitInputData%CurrDIDir
    DstInitInputData%CurrMod = SrcInitInputData%CurrMod
-   DstInitInputData%WtrDpth = SrcInitInputData%WtrDpth
+   DstInitInputData%EffWtrDpth = SrcInitInputData%EffWtrDpth
    if (allocated(SrcInitInputData%WaveKinGridzi)) then
       LB(1:1) = lbound(SrcInitInputData%WaveKinGridzi)
       UB(1:1) = ubound(SrcInitInputData%WaveKinGridzi)
@@ -123,7 +123,7 @@ subroutine Current_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%CurrDIV)
    call RegPack(Buf, InData%CurrDIDir)
    call RegPack(Buf, InData%CurrMod)
-   call RegPack(Buf, InData%WtrDpth)
+   call RegPack(Buf, InData%EffWtrDpth)
    call RegPack(Buf, allocated(InData%WaveKinGridzi))
    if (allocated(InData%WaveKinGridzi)) then
       call RegPackBounds(Buf, 1, lbound(InData%WaveKinGridzi), ubound(InData%WaveKinGridzi))
@@ -160,7 +160,7 @@ subroutine Current_UnPackInitInput(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%CurrMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WtrDpth)
+   call RegUnpack(Buf, OutData%EffWtrDpth)
    if (RegCheckErr(Buf, RoutineName)) return
    if (allocated(OutData%WaveKinGridzi)) deallocate(OutData%WaveKinGridzi)
    call RegUnpack(Buf, IsAllocAssoc)

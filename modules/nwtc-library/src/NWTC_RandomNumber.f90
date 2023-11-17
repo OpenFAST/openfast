@@ -46,8 +46,8 @@ SUBROUTINE RandNum_Init(p, ErrStat, ErrMsg )
    IMPLICIT NONE
    
    TYPE(NWTC_RandomNumber_ParameterType),  INTENT(IN   ) :: p           ! PARAMETERs for random number generation
-   INTEGER(IntKi)  ,             INTENT(OUT)   :: ErrStat     ! allocation status
-   CHARACTER(*) ,                INTENT(OUT)   :: ErrMsg      ! error message
+   INTEGER(IntKi)  ,                       INTENT(OUT)   :: ErrStat     ! allocation status
+   CHARACTER(*) ,                          INTENT(OUT)   :: ErrMsg      ! error message
 
    INTEGER                          :: I           ! loop counter
    INTEGER(IntKi), ALLOCATABLE      :: NextSeed(:) ! The array that holds the next random seed for each component
