@@ -156,8 +156,9 @@ typedef	^	RotInputFile	ReKi	HubCenBx    -	-	-	"Hub center of buoyancy x directio
 # Nacelle
 typedef	^	RotInputFile	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
 typedef	^	RotInputFile	ReKi	NacCenB     3	-	-	"Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates" m
-typedef	^	RotInputFile	ReKi	NacelleDims     3	-	-	"Length, height and width of the nacelle" m
-typedef	^	RotInputFile	ReKi	NacelleCd	    -	-	-	"Cd for the nacelle" (-)
+typedef	^	RotInputFile	ReKi	NacArea     3	-	-	"Projected area of the nacelle in X, Y, Z in the nacelle coordinate system" m^2
+typedef	^	RotInputFile	ReKi	NacCd       3	-	-	"Drag cefficient for the nacelle areas defied above" -
+typedef	^	RotInputFile	ReKi	NacDragAC   3	-	-	"Position of aerodynamic center of nacelle drag in nacelle coordinates" m
 # TailFin
 typedef  ^  RotInputFile   LOGICAL          TFinAero  - .FALSE. -   "Calculate tail fin aerodynamics model (flag)" flag
 typedef  ^  RotInputFile   CHARACTER(1024)  TFinFile  -    -    -   "Input file for tail fin aerodynamics [used only when TFinAero=True]" -
@@ -347,8 +348,9 @@ typedef	^	RotParameterType	ReKi	VolHub	    -	-	-	"Hub volume" m^3
 typedef	^	RotParameterType	ReKi	HubCenBx    -	-	-	"Hub center of buoyancy x direction offset" m
 typedef	^	RotParameterType	ReKi	VolNac	    -	-	-	"Nacelle volume" m^3
 typedef	^	RotParameterType	ReKi	NacCenB     3	-	-	"Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates" m
-typedef	^	RotParameterType	ReKi	NacelleDims     3	-	-	"Length, height and width of the nacelle" m
-typedef	^	RotParameterType	ReKi	NacelleCd	    -	-	-	"Nacelle cd" (-))
+typedef	^	RotParameterType	ReKi	NacArea     3	-	-	"Projected area of the nacelle in X, Y, Z in the nacelle coordinate system" m^2
+typedef	^	RotParameterType	ReKi	NacCd       3	-	-	"Drag cefficient for the nacelle areas defied above" -
+typedef	^	RotParameterType	ReKi	NacDragAC   3	-	-	"Position of aerodynamic center of nacelle drag in nacelle coordinates" m
 typedef	^	RotParameterType	ReKi	VolBl       -	-	-	"Buoyancy volume of all blades" m^3
 typedef	^	RotParameterType	ReKi	VolTwr       -	-	-	"Buoyancy volume of the tower" m^3
 typedef ^   RotParameterType	ReKi	BlRad     {:}{:}	-	-	"Matrix of equivalent blade radius at each node, used in buoyancy calculation" m

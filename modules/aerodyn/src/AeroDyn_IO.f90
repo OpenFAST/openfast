@@ -202,30 +202,35 @@ CONTAINS
          m%AllOuts( HbMbz ) = tmpHubMB(3)
       end if
    
-         ! nacelle outputs
-      ! if ( p%Buoyancy ) then
-      !    tmp = matmul( u%NacelleMotion%Orientation(:,:,1) , m%NacFB )
-      !    m%AllOuts( NcFbx ) = tmp(1)
-      !    m%AllOuts( NcFby ) = tmp(2)
-      !    m%AllOuts( NcFbz ) = tmp(3)
-   
-      !    tmp = matmul( u%NacelleMotion%Orientation(:,:,1) , m%NacMB )
-      !    m%AllOuts( NcMbx ) = tmp(1)
-      !    m%AllOuts( NcMby ) = tmp(2)
-      !    m%AllOuts( NcMbz ) = tmp(3)
-      ! end if
-
-         ! nacelle drag outputs
-      if ( p%NacelleDrag ) then
-         tmp = matmul( u%NacelleMotion%Orientation(:,:,1) , m%NacDragF )
+         ! nacelle buoyancy outputs
+      if ( p%Buoyancy ) then
+         tmp = matmul( u%NacelleMotion%Orientation(:,:,1) , m%NacFB )
          m%AllOuts( NcFbx ) = tmp(1)
          m%AllOuts( NcFby ) = tmp(2)
          m%AllOuts( NcFbz ) = tmp(3)
    
-         tmp = matmul( u%NacelleMotion%Orientation(:,:,1) , m%NacDragM )
+         tmp = matmul( u%NacelleMotion%Orientation(:,:,1) , m%NacMB )
          m%AllOuts( NcMbx ) = tmp(1)
          m%AllOuts( NcMby ) = tmp(2)
          m%AllOuts( NcMbz ) = tmp(3)
+      end if
+
+         ! nacelle drag outputs
+      if ( p%NacelleDrag ) then
+         tmp = matmul( u%NacelleMotion%Orientation(:,:,1) , u%InflowOnNacelle )
+         m%AllOuts( NcVUndx ) = tmp(1)
+         m%AllOuts( NcVUndy ) = tmp(2)
+         m%AllOuts( NcVUndz ) = tmp(3)
+
+         tmp = m%NacDragF !matmul( u%NacelleMotion%Orientation(:,:,1) , m%NacDragF )
+         m%AllOuts( NcFdx ) = tmp(1)
+         m%AllOuts( NcFdy ) = tmp(2)
+         m%AllOuts( NcFdz ) = tmp(3)
+   
+         tmp = m%NacDragM !matmul( u%NacelleMotion%Orientation(:,:,1) , m%NacDragM )
+         m%AllOuts( NcMdx ) = tmp(1)
+         m%AllOuts( NcMdy ) = tmp(2)
+         m%AllOuts( NcMdz ) = tmp(3)
       end if
 
          ! blade outputs
@@ -914,11 +919,14 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       call ParseAry( FileInfo_In, CurLine, 'NacCenB', InputFileData%rotors(iR)%NacCenB, 3 , ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return
 
-         ! NacelleDims - Length, height and width of the nacelle (m)
-      call ParseAry( FileInfo_In, CurLine, "NacelleDims", InputFileData%rotors(iR)%NacelleDims, 3, ErrStat2, ErrMsg2, UnEc )
+         ! NacArea - Projected area of the nacelle in X, Y, Z in the nacelle coordinate system (m^2)
+      call ParseAry( FileInfo_In, CurLine, "NacArea", InputFileData%rotors(iR)%NacArea, 3, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return
-         ! NacelleCd - Cd for the nacelle (-)
-      call ParseVar( FileInfo_In, CurLine, "NacelleCd", InputFileData%rotors(iR)%NacelleCd, ErrStat2, ErrMsg2, UnEc )
+         ! NacCd - Drag cefficient for the nacelle areas defied above (-)
+         call ParseAry( FileInfo_In, CurLine, "NacCd", InputFileData%rotors(iR)%NacCd, 3, ErrStat2, ErrMsg2, UnEc )
+         if (Failed()) return
+         ! NacDragAC - Position of aerodynamic center of nacelle drag in nacelle coordinates (m)
+         call ParseAry( FileInfo_In, CurLine, "NacDragAC", InputFileData%rotors(iR)%NacDragAC, 3, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return
    end do
 
@@ -1693,12 +1701,12 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
       InvalidOutput( HbMbx ) = .true.
       InvalidOutput( HbMby ) = .true.
       InvalidOutput( HbMbz ) = .true.
-      InvalidOutput( NcFbx ) = .false.
-      InvalidOutput( NcFby ) = .false.
-      InvalidOutput( NcFbz ) = .false.
-      InvalidOutput( NcMbx ) = .false.
-      InvalidOutput( NcMby ) = .false.
-      InvalidOutput( NcMbz ) = .false.
+      InvalidOutput( NcFbx ) = .true.
+      InvalidOutput( NcFby ) = .true.
+      InvalidOutput( NcFbz ) = .true.
+      InvalidOutput( NcMbx ) = .true.
+      InvalidOutput( NcMby ) = .true.
+      InvalidOutput( NcMbz ) = .true.
       InvalidOutput( TwNFbx ) = .true.
       InvalidOutput( TwNFby ) = .true.
       InvalidOutput( TwNFbz ) = .true.
@@ -1726,12 +1734,15 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
    end if
 
    if (.not. p%NacelleDrag) then  ! Invalid Nacelle Drag loads
-      InvalidOutput( NcFbx ) = .false.
-      InvalidOutput( NcFby ) = .false.
-      InvalidOutput( NcFbz ) = .false.
-      InvalidOutput( NcMbx ) = .false.
-      InvalidOutput( NcMby ) = .false.
-      InvalidOutput( NcMbz ) = .false.   
+      InvalidOutput( NcVUndx ) = .true.
+      InvalidOutput( NcVUndy ) = .true.
+      InvalidOutput( NcVUndz ) = .true.
+      InvalidOutput( NcFdx ) = .true.
+      InvalidOutput( NcFdy ) = .true.
+      InvalidOutput( NcFdz ) = .true.
+      InvalidOutput( NcMdx ) = .true.
+      InvalidOutput( NcMdy ) = .true.
+      InvalidOutput( NcMdz ) = .true.   
    end if
 
    DO i = p%NTwOuts+1,9  ! Invalid tower nodes

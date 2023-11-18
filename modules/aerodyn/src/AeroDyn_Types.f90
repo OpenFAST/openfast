@@ -182,8 +182,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: HubCenBx      !< Hub center of buoyancy x direction offset [m]
     REAL(ReKi)  :: VolNac      !< Nacelle volume [m^3]
     REAL(ReKi) , DIMENSION(1:3)  :: NacCenB      !< Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates [m]
-    REAL(ReKi) , DIMENSION(1:3)  :: NacelleDims      !< Length, height and width of the nacelle [m]
-    REAL(ReKi)  :: NacelleCd      !< Cd for the nacelle [(-)]
+    REAL(ReKi) , DIMENSION(1:3)  :: NacArea      !< Projected area of the nacelle in X, Y, Z in the nacelle coordinate system [m^2]
+    REAL(ReKi) , DIMENSION(1:3)  :: NacCd      !< Drag cefficient for the nacelle areas defied above [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: NacDragAC      !< Position of aerodynamic center of nacelle drag in nacelle coordinates [m]
     LOGICAL  :: TFinAero = .FALSE.      !< Calculate tail fin aerodynamics model (flag) [flag]
     CHARACTER(1024)  :: TFinFile      !< Input file for tail fin aerodynamics [used only when TFinAero=True] [-]
     TYPE(TFinInputFileType)  :: TFin      !< Input file data for tail fin [-]
@@ -387,8 +388,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: HubCenBx      !< Hub center of buoyancy x direction offset [m]
     REAL(ReKi)  :: VolNac      !< Nacelle volume [m^3]
     REAL(ReKi) , DIMENSION(1:3)  :: NacCenB      !< Position of nacelle center of buoyancy from yaw bearing in nacelle coordinates [m]
-    REAL(ReKi) , DIMENSION(1:3)  :: NacelleDims      !< Length, height and width of the nacelle [m]
-    REAL(ReKi)  :: NacelleCd      !< Nacelle cd [(-))]
+    REAL(ReKi) , DIMENSION(1:3)  :: NacArea      !< Projected area of the nacelle in X, Y, Z in the nacelle coordinate system [m^2]
+    REAL(ReKi) , DIMENSION(1:3)  :: NacCd      !< Drag cefficient for the nacelle areas defied above [-]
+    REAL(ReKi) , DIMENSION(1:3)  :: NacDragAC      !< Position of aerodynamic center of nacelle drag in nacelle coordinates [m]
     REAL(ReKi)  :: VolBl      !< Buoyancy volume of all blades [m^3]
     REAL(ReKi)  :: VolTwr      !< Buoyancy volume of the tower [m^3]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: BlRad      !< Matrix of equivalent blade radius at each node, used in buoyancy calculation [m]
@@ -4643,8 +4645,9 @@ ENDIF
     DstRotInputFileData%HubCenBx = SrcRotInputFileData%HubCenBx
     DstRotInputFileData%VolNac = SrcRotInputFileData%VolNac
     DstRotInputFileData%NacCenB = SrcRotInputFileData%NacCenB
-    DstRotInputFileData%NacelleDims = SrcRotInputFileData%NacelleDims
-    DstRotInputFileData%NacelleCd = SrcRotInputFileData%NacelleCd
+    DstRotInputFileData%NacArea = SrcRotInputFileData%NacArea
+    DstRotInputFileData%NacCd = SrcRotInputFileData%NacCd
+    DstRotInputFileData%NacDragAC = SrcRotInputFileData%NacDragAC
     DstRotInputFileData%TFinAero = SrcRotInputFileData%TFinAero
     DstRotInputFileData%TFinFile = SrcRotInputFileData%TFinFile
       CALL AD_Copytfininputfiletype( SrcRotInputFileData%TFin, DstRotInputFileData%TFin, CtrlCode, ErrStat2, ErrMsg2 )
@@ -4788,8 +4791,9 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! HubCenBx
       Re_BufSz   = Re_BufSz   + 1  ! VolNac
       Re_BufSz   = Re_BufSz   + SIZE(InData%NacCenB)  ! NacCenB
-      Re_BufSz   = Re_BufSz   + SIZE(InData%NacelleDims)  ! NacelleDims
-      Re_BufSz   = Re_BufSz   + 1  ! NacelleCd
+      Re_BufSz   = Re_BufSz   + SIZE(InData%NacArea)  ! NacArea
+      Re_BufSz   = Re_BufSz   + SIZE(InData%NacCd)  ! NacCd
+      Re_BufSz   = Re_BufSz   + SIZE(InData%NacDragAC)  ! NacDragAC
       Int_BufSz  = Int_BufSz  + 1  ! TFinAero
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%TFinFile)  ! TFinFile
       Int_BufSz   = Int_BufSz + 3  ! TFin: size of buffers for each call to pack subtype
@@ -4964,12 +4968,18 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%NacCenB(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    DO i1 = LBOUND(InData%NacelleDims,1), UBOUND(InData%NacelleDims,1)
-      ReKiBuf(Re_Xferred) = InData%NacelleDims(i1)
+    DO i1 = LBOUND(InData%NacArea,1), UBOUND(InData%NacArea,1)
+      ReKiBuf(Re_Xferred) = InData%NacArea(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    ReKiBuf(Re_Xferred) = InData%NacelleCd
-    Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%NacCd,1), UBOUND(InData%NacCd,1)
+      ReKiBuf(Re_Xferred) = InData%NacCd(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%NacDragAC,1), UBOUND(InData%NacDragAC,1)
+      ReKiBuf(Re_Xferred) = InData%NacDragAC(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     IntKiBuf(Int_Xferred) = TRANSFER(InData%TFinAero, IntKiBuf(1))
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(InData%TFinFile)
@@ -5193,14 +5203,24 @@ ENDIF
       OutData%NacCenB(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    i1_l = LBOUND(OutData%NacelleDims,1)
-    i1_u = UBOUND(OutData%NacelleDims,1)
-    DO i1 = LBOUND(OutData%NacelleDims,1), UBOUND(OutData%NacelleDims,1)
-      OutData%NacelleDims(i1) = ReKiBuf(Re_Xferred)
+    i1_l = LBOUND(OutData%NacArea,1)
+    i1_u = UBOUND(OutData%NacArea,1)
+    DO i1 = LBOUND(OutData%NacArea,1), UBOUND(OutData%NacArea,1)
+      OutData%NacArea(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    OutData%NacelleCd = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%NacCd,1)
+    i1_u = UBOUND(OutData%NacCd,1)
+    DO i1 = LBOUND(OutData%NacCd,1), UBOUND(OutData%NacCd,1)
+      OutData%NacCd(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%NacDragAC,1)
+    i1_u = UBOUND(OutData%NacDragAC,1)
+    DO i1 = LBOUND(OutData%NacDragAC,1), UBOUND(OutData%NacDragAC,1)
+      OutData%NacDragAC(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     OutData%TFinAero = TRANSFER(IntKiBuf(Int_Xferred), OutData%TFinAero)
     Int_Xferred = Int_Xferred + 1
     DO I = 1, LEN(OutData%TFinFile)
@@ -13465,8 +13485,9 @@ ENDIF
     DstRotParameterTypeData%HubCenBx = SrcRotParameterTypeData%HubCenBx
     DstRotParameterTypeData%VolNac = SrcRotParameterTypeData%VolNac
     DstRotParameterTypeData%NacCenB = SrcRotParameterTypeData%NacCenB
-    DstRotParameterTypeData%NacelleDims = SrcRotParameterTypeData%NacelleDims
-    DstRotParameterTypeData%NacelleCd = SrcRotParameterTypeData%NacelleCd
+    DstRotParameterTypeData%NacArea = SrcRotParameterTypeData%NacArea
+    DstRotParameterTypeData%NacCd = SrcRotParameterTypeData%NacCd
+    DstRotParameterTypeData%NacDragAC = SrcRotParameterTypeData%NacDragAC
     DstRotParameterTypeData%VolBl = SrcRotParameterTypeData%VolBl
     DstRotParameterTypeData%VolTwr = SrcRotParameterTypeData%VolTwr
 IF (ALLOCATED(SrcRotParameterTypeData%BlRad)) THEN
@@ -13874,8 +13895,9 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! HubCenBx
       Re_BufSz   = Re_BufSz   + 1  ! VolNac
       Re_BufSz   = Re_BufSz   + SIZE(InData%NacCenB)  ! NacCenB
-      Re_BufSz   = Re_BufSz   + SIZE(InData%NacelleDims)  ! NacelleDims
-      Re_BufSz   = Re_BufSz   + 1  ! NacelleCd
+      Re_BufSz   = Re_BufSz   + SIZE(InData%NacArea)  ! NacArea
+      Re_BufSz   = Re_BufSz   + SIZE(InData%NacCd)  ! NacCd
+      Re_BufSz   = Re_BufSz   + SIZE(InData%NacDragAC)  ! NacDragAC
       Re_BufSz   = Re_BufSz   + 1  ! VolBl
       Re_BufSz   = Re_BufSz   + 1  ! VolTwr
   Int_BufSz   = Int_BufSz   + 1     ! BlRad allocated yes/no
@@ -14230,12 +14252,18 @@ ENDIF
       ReKiBuf(Re_Xferred) = InData%NacCenB(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    DO i1 = LBOUND(InData%NacelleDims,1), UBOUND(InData%NacelleDims,1)
-      ReKiBuf(Re_Xferred) = InData%NacelleDims(i1)
+    DO i1 = LBOUND(InData%NacArea,1), UBOUND(InData%NacArea,1)
+      ReKiBuf(Re_Xferred) = InData%NacArea(i1)
       Re_Xferred = Re_Xferred + 1
     END DO
-    ReKiBuf(Re_Xferred) = InData%NacelleCd
-    Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%NacCd,1), UBOUND(InData%NacCd,1)
+      ReKiBuf(Re_Xferred) = InData%NacCd(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%NacDragAC,1), UBOUND(InData%NacDragAC,1)
+      ReKiBuf(Re_Xferred) = InData%NacDragAC(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     ReKiBuf(Re_Xferred) = InData%VolBl
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%VolTwr
@@ -14868,14 +14896,24 @@ ENDIF
       OutData%NacCenB(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    i1_l = LBOUND(OutData%NacelleDims,1)
-    i1_u = UBOUND(OutData%NacelleDims,1)
-    DO i1 = LBOUND(OutData%NacelleDims,1), UBOUND(OutData%NacelleDims,1)
-      OutData%NacelleDims(i1) = ReKiBuf(Re_Xferred)
+    i1_l = LBOUND(OutData%NacArea,1)
+    i1_u = UBOUND(OutData%NacArea,1)
+    DO i1 = LBOUND(OutData%NacArea,1), UBOUND(OutData%NacArea,1)
+      OutData%NacArea(i1) = ReKiBuf(Re_Xferred)
       Re_Xferred = Re_Xferred + 1
     END DO
-    OutData%NacelleCd = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%NacCd,1)
+    i1_u = UBOUND(OutData%NacCd,1)
+    DO i1 = LBOUND(OutData%NacCd,1), UBOUND(OutData%NacCd,1)
+      OutData%NacCd(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%NacDragAC,1)
+    i1_u = UBOUND(OutData%NacDragAC,1)
+    DO i1 = LBOUND(OutData%NacDragAC,1), UBOUND(OutData%NacDragAC,1)
+      OutData%NacDragAC(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     OutData%VolBl = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%VolTwr = ReKiBuf(Re_Xferred)
