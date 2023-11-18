@@ -353,7 +353,6 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             Morison_JOutput          JOutLst                       {:}        -        -         ""        -
 typedef   ^                            ^                             OutParmType              OutParam                      {:}        -        -         ""        -
 typedef   ^                            ^                             INTEGER                  NumOuts                       -          -        -         ""        -
-typedef   ^                            ^                             INTEGER                  WaveStMod                     -          -        -         ""    -  
 typedef   ^                            ^                             SeaSt_WaveFieldType     *WaveField                     -          -        -         "SeaState wave field" -
 typedef   ^                            ^                             logical                  VisMeshes                       -        .false.     -         "Output visualization meshes" -
 #

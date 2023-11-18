@@ -1927,14 +1927,15 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%AMMod      = InitInp%AMMod
    p%VisMeshes  = InitInp%VisMeshes                       ! visualization mesh for morison elements
 
+   ! Pointer to SeaState WaveField
+   p%WaveField => InitInp%WaveField
+   
    ! Only compute added-mass force up to the free surface if wave stretching is enabled
-   IF ( p%WaveStMod .EQ. 0_IntKi ) THEN
+   IF ( p%WaveField%WaveStMod .EQ. 0_IntKi ) THEN
        ! Setting AMMod to zero just in case. Probably redundant.
        p%AMMod = 0_IntKi
    END IF
 
-   ! Pointer to SeaState WaveField
-   p%WaveField => InitInp%WaveField
 
    ALLOCATE ( p%MOutLst(p%NMOutputs), STAT = errStat2 )
    IF ( errStat2 /= 0 ) THEN
@@ -2636,7 +2637,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       m%memberLoads(im)%F_If  = 0.0_ReKi
 
       ! Determine member submergence status
-      IF ( p%WaveStMod .EQ. 0_IntKi ) THEN ! No wave stretching - Only need to check the two ends
+      IF ( p%WaveField%WaveStMod .EQ. 0_IntKi ) THEN ! No wave stretching - Only need to check the two ends
          IF ( m%nodeInWater(mem%NodeIndx(1)) .NE. m%nodeInWater(mem%NodeIndx(N+1)) ) THEN
             MemSubStat = 1_IntKi  ! Member centerline crosses the SWL once
          ELSE IF ( m%nodeInWater(mem%NodeIndx(1)) .EQ. 0_IntKi ) THEN
@@ -2644,7 +2645,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          ELSE
             MemSubStat = 0_IntKi  ! Member centerline fully submerged
          END IF 
-      ELSE IF ( p%WaveStMod > 0_IntKi ) THEN ! Has wave stretching - Need to check every node
+      ELSE IF ( p%WaveField%WaveStMod > 0_IntKi ) THEN ! Has wave stretching - Need to check every node
          NumFSX = 0_IntKi ! Number of free-surface crossing
          DO i = 1, N ! loop through member elements
             IF ( m%nodeInWater(mem%NodeIndx(i)) .NE. m%nodeInWater(mem%NodeIndx(i+1)) ) THEN
@@ -2745,7 +2746,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
 
             ! ------------------- buoyancy loads: sides: Sections 3.1 and 3.2 ------------------------
             IF (mem%MHstLMod == 1) THEN
-               IF ( p%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute buoyancy up to free surface
+               IF ( p%WaveField%WaveStMod > 0_IntKi ) THEN ! If wave stretching is enabled, compute buoyancy up to free surface
                   CALL GetTotalWaveElev( Time, pos1, Zeta1, ErrStat2, ErrMsg2 )
                   CALL GetTotalWaveElev( Time, pos2, Zeta2, ErrStat2, ErrMsg2 )
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2772,7 +2773,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                ! Get free surface elevation and normal at the element midpoint (both assumed constant over the element)
                posMid = 0.5 * (pos1+pos2)
                rMidb  = 0.5 * (r1b +r2b )
-               IF (p%WaveStMod > 0) THEN
+               IF (p%WaveField%WaveStMod > 0) THEN
                   CALL GetTotalWaveElev( Time, posMid, ZetaMid, ErrStat2, ErrMsg2 )
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   CALL GetFreeSurfaceNormal( Time, posMid, rMidb, n_hat, ErrStat2, ErrMsg2 )
@@ -2912,7 +2913,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
       !-----------------------------------------------------------------------------------------------------!
       !                               External Hydrodynamic Side Loads - Start                              !
       !-----------------------------------------------------------------------------------------------------!
-      IF ( p%WaveStMod > 0 .AND. MemSubStat == 1 .AND. (m%NodeInWater(mem%NodeIndx(N+1)).EQ.0_IntKi) ) THEN 
+      IF ( p%WaveField%WaveStMod > 0 .AND. MemSubStat == 1 .AND. (m%NodeInWater(mem%NodeIndx(N+1)).EQ.0_IntKi) ) THEN 
       !----------------------------Apply load smoothing----------------------------!
       ! only when:
       ! 1. wave stretching is enabled
@@ -3199,7 +3200,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                     deltalLeft = 0.5_ReKi * mem%dl
                  ELSE ! Element i-1 crosses the free surface
                     z2 = m%DispNodePosHdn(3, mem%NodeIndx(i-1))
-                    IF ( p%WaveStMod > 0_IntKi ) THEN ! Wave stretching enabled
+                    IF ( p%WaveField%WaveStMod > 0_IntKi ) THEN ! Wave stretching enabled
                        zeta1 = m%WaveElev(mem%NodeIndx(i  ))
                        zeta2 = m%WaveElev(mem%NodeIndx(i-1))
                     ELSE
@@ -3218,7 +3219,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                     deltalRight = 0.5_ReKi * mem%dl
                  ELSE ! Element i crosses the free surface
                     z2 = m%DispNodePosHdn(3, mem%NodeIndx(i+1))
-                    IF ( p%WaveStMod > 0_IntKi ) THEN ! Wave stretching enabled
+                    IF ( p%WaveField%WaveStMod > 0_IntKi ) THEN ! Wave stretching enabled
                        zeta1 = m%WaveElev(mem%NodeIndx(i  ))
                        zeta2 = m%WaveElev(mem%NodeIndx(i+1))
                     ELSE
@@ -3390,7 +3391,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          r2      = mem%RMGB(N+1)
          if (mem%i_floor == 0) then  ! both ends above or at seabed
             ! Compute loads on the end plate of node 1
-            IF (p%WaveStMod > 0) THEN
+            IF (p%WaveField%WaveStMod > 0) THEN
                CALL GetTotalWaveElev( Time, pos1, Zeta1, ErrStat2, ErrMsg2 )
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                CALL GetFreeSurfaceNormal( Time, pos1, r1, n_hat, ErrStat2, ErrMsg2 )
@@ -3411,7 +3412,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
                END IF
             END IF
             ! Compute loads on the end plate of node N+1
-            IF (p%WaveStMod > 0) THEN
+            IF (p%WaveField%WaveStMod > 0) THEN
                CALL GetTotalWaveElev( Time, pos2, Zeta2, ErrStat2, ErrMsg2 )
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                CALL GetFreeSurfaceNormal( Time, pos2, r2, n_hat, ErrStat2, ErrMsg2 )
@@ -3433,7 +3434,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
             END IF
          elseif ( mem%doEndBuoyancy ) then ! The member crosses the seabed line so only the upper end potentially have hydrostatic load
             ! Only compute the loads on the end plate of node N+1
-            IF (p%WaveStMod > 0) THEN
+            IF (p%WaveField%WaveStMod > 0) THEN
                CALL GetTotalWaveElev( Time, pos2, Zeta2, ErrStat2, ErrMsg2 )
                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                CALL GetFreeSurfaceNormal( Time, pos2, r2, n_hat, ErrStat2, ErrMsg2 )
@@ -3558,7 +3559,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, errStat, 
          ! Use displaced X and Y position
          pos(1,:) = pos(1,:) + u%Mesh%TranslationDisp(1,:)
          pos(2,:) = pos(2,:) + u%Mesh%TranslationDisp(2,:)
-         IF ( (p%WaveStMod > 0) .OR. forceDisplaced ) THEN
+         IF ( (p%WaveField%WaveStMod > 0) .OR. forceDisplaced ) THEN
             ! Use displaced Z position only when wave stretching is enabled
             pos(3,:) = pos(3,:) + u%Mesh%TranslationDisp(3,:)
          END IF
@@ -4204,7 +4205,7 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, errStat
          pos(1) = u%Mesh%TranslationDisp(1,J) + u%Mesh%Position(1,J)
          pos(2) = u%Mesh%TranslationDisp(2,J) + u%Mesh%Position(2,J)
       END IF
-      IF (p%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Wave stretching enabled
+      IF (p%WaveField%WaveStMod > 0 .AND. p%WaveDisp /= 0) THEN ! Wave stretching enabled
          pos(3) = u%Mesh%Position(3,J) + u%Mesh%TranslationDisp(3,J) - p%WaveField%MSL2SWL  ! Use the current Z location.
       ELSE ! Wave stretching disabled
          pos(3) = u%Mesh%Position(3,J) - p%WaveField%MSL2SWL  ! We are intentionally using the undisplaced Z position of the node.
