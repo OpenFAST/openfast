@@ -415,7 +415,6 @@ IMPLICIT NONE
     TYPE(Morison_JOutput) , DIMENSION(:), ALLOCATABLE  :: JOutLst      !<  [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !<  [-]
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !<  [-]
-    INTEGER(IntKi)  :: WaveStMod = 0_IntKi      !<  [-]
     TYPE(SeaSt_WaveFieldType) , POINTER :: WaveField => NULL()      !< SeaState wave field [-]
     LOGICAL  :: VisMeshes = .false.      !< Output visualization meshes [-]
   END TYPE Morison_ParameterType
@@ -5564,7 +5563,6 @@ subroutine Morison_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrM
       end do
    end if
    DstParamData%NumOuts = SrcParamData%NumOuts
-   DstParamData%WaveStMod = SrcParamData%WaveStMod
    DstParamData%WaveField => SrcParamData%WaveField
    DstParamData%VisMeshes = SrcParamData%VisMeshes
 end subroutine
@@ -5753,7 +5751,6 @@ subroutine Morison_PackParam(Buf, Indata)
       end do
    end if
    call RegPack(Buf, InData%NumOuts)
-   call RegPack(Buf, InData%WaveStMod)
    call RegPack(Buf, associated(InData%WaveField))
    if (associated(InData%WaveField)) then
       call RegPackPointer(Buf, c_loc(InData%WaveField), PtrInIndex)
@@ -5995,8 +5992,6 @@ subroutine Morison_UnPackParam(Buf, OutData)
       end do
    end if
    call RegUnpack(Buf, OutData%NumOuts)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WaveStMod)
    if (RegCheckErr(Buf, RoutineName)) return
    if (associated(OutData%WaveField)) deallocate(OutData%WaveField)
    call RegUnpack(Buf, IsAllocAssoc)
