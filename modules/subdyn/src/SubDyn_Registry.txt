@@ -42,6 +42,27 @@ typedef  ^   ElemPropType  ReKi    D      {2} -  -  "Diameter at node 1 and 2, f
 typedef  ^   ElemPropType  ReKi    Area    -  -  -  "Area of an element" m^2
 typedef  ^   ElemPropType  ReKi    Rho     -  -  -  "Density"        kg/m^3
 typedef  ^   ElemPropType  ReKi    T0      -  -  -  "Pretension "    N
+typedef  ^   ElemPropType  ReKi    k11     -  -  -  "Spring translational stiffness"     N/m
+typedef  ^   ElemPropType  ReKi    k12     -  -  -  "Spring cross-coupling stiffness"    N/m
+typedef  ^   ElemPropType  ReKi    k13     -  -  -  "Spring cross-coupling stiffness"    N/m
+typedef  ^   ElemPropType  ReKi    k14     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k15     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k16     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k22     -  -  -  "Spring translational stiffness"     N/m
+typedef  ^   ElemPropType  ReKi    k23     -  -  -  "Spring cross-coupling stiffness"    N/m
+typedef  ^   ElemPropType  ReKi    k24     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k25     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k26     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k33     -  -  -  "Spring translational stiffness"     N/m
+typedef  ^   ElemPropType  ReKi    k34     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k35     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k36     -  -  -  "Spring cross-coupling stiffness"    N/rad
+typedef  ^   ElemPropType  ReKi    k44     -  -  -  "Spring rotational stiffness"    	 Nm/rad
+typedef  ^   ElemPropType  ReKi    k45     -  -  -  "Spring cross-coupling stiffness"    Nm/rad
+typedef  ^   ElemPropType  ReKi    k46     -  -  -  "Spring cross-coupling stiffness"    Nm/rad
+typedef  ^   ElemPropType  ReKi    k55     -  -  -  "Spring rotational stiffness"        Nm/rad
+typedef  ^   ElemPropType  ReKi    k56     -  -  -  "Spring cross-coupling stiffness"    Nm/rad
+typedef  ^   ElemPropType  ReKi    k66     -  -  -  "Spring rotational stiffness"    Nm/rad
 typedef  ^   ElemPropType  R8Ki    DirCos  {3}{3}  -  -  "Element direction cosine matrix"
 
 # ============================== Input Initialization (from glue code)  ============================================================================================================================================
