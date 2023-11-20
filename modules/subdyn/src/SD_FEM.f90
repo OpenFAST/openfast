@@ -827,6 +827,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
    REAL(FEKi)               :: DirCos(3, 3)              ! direction cosine matrices
    REAL(ReKi)               :: L                         ! length of the element
    REAL(ReKi)               :: r1, r2, t, Iyy, Jzz, Ixx, A, kappa, kappa_x, kappa_y, nu, ratioSq, D_inner, D_outer
+   REAL(ReKi)               :: k11, k12, k13, k14, k15, k16, k22, k23, k24, k25, k26, k33, k34, k35, k36, k44, k45, k46, k55, k56, k66
    LOGICAL                  :: shear
    INTEGER(IntKi)           :: eType !< Member type
    REAL(ReKi)               :: Point1(3), Point2(3) ! (x,y,z) positions of two nodes making up an element
@@ -887,7 +888,28 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       p%ElemProps(i)%Area    = -9.99e+36
       p%ElemProps(i)%Rho     = -9.99e+36
       p%ElemProps(i)%T0      = -9.99e+36
-
+	  p%ElemProps(i)%k11     = -9.99e+36
+	  p%ElemProps(i)%k12     = -9.99e+36
+	  p%ElemProps(i)%k13     = -9.99e+36
+	  p%ElemProps(i)%k14     = -9.99e+36
+	  p%ElemProps(i)%k15     = -9.99e+36
+	  p%ElemProps(i)%k16     = -9.99e+36
+	  p%ElemProps(i)%k22     = -9.99e+36
+	  p%ElemProps(i)%k23     = -9.99e+36
+	  p%ElemProps(i)%k24     = -9.99e+36
+	  p%ElemProps(i)%k25     = -9.99e+36
+	  p%ElemProps(i)%k26     = -9.99e+36
+	  p%ElemProps(i)%k33     = -9.99e+36
+	  p%ElemProps(i)%k34     = -9.99e+36
+	  p%ElemProps(i)%k35     = -9.99e+36
+	  p%ElemProps(i)%k36     = -9.99e+36
+	  p%ElemProps(i)%k44     = -9.99e+36
+	  p%ElemProps(i)%k45     = -9.99e+36
+	  p%ElemProps(i)%k46     = -9.99e+36
+	  p%ElemProps(i)%k55     = -9.99e+36
+	  p%ElemProps(i)%k56     = -9.99e+36
+	  p%ElemProps(i)%k66     = -9.99e+36
+	  
       ! --- Properties that are specific to some elements
       if (eType==idMemberBeamCirc) then
          E   = Init%PropsB(P1, 2) ! TODO E2 
@@ -995,27 +1017,29 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          if (DEV_VERSION) then
             print*,'Member',I,'is a spring element'
          endif
-         p%ElemProps(i)%k11 = Init%PropsS(P1, 2)
-         p%ElemProps(i)%k12 = Init%PropsS(P1, 3)
-         p%ElemProps(i)%k13 = Init%PropsS(P1, 4)
-         p%ElemProps(i)%k14 = Init%PropsS(P1, 5)
-         p%ElemProps(i)%k15 = Init%PropsS(P1, 6)
-         p%ElemProps(i)%k16 = Init%PropsS(P1, 7)
-         p%ElemProps(i)%k22 = Init%PropsS(P1, 8)
-         p%ElemProps(i)%k23 = Init%PropsS(P1, 9)
-         p%ElemProps(i)%k24 = Init%PropsS(P1,10)
-         p%ElemProps(i)%k25 = Init%PropsS(P1,11)
-         p%ElemProps(i)%k26 = Init%PropsS(P1,12)
-         p%ElemProps(i)%k33 = Init%PropsS(P1,13)
-         p%ElemProps(i)%k34 = Init%PropsS(P1,14)
-         p%ElemProps(i)%k35 = Init%PropsS(P1,15)
-         p%ElemProps(i)%k36 = Init%PropsS(P1,16)
-         p%ElemProps(i)%k44 = Init%PropsS(P1,17)
-         p%ElemProps(i)%k45 = Init%PropsS(P1,18)
-         p%ElemProps(i)%k46 = Init%PropsS(P1,19)
-         p%ElemProps(i)%k55 = Init%PropsS(P1,20)
-         p%ElemProps(i)%k56 = Init%PropsS(P1,21)
-         p%ElemProps(i)%k66 = Init%PropsS(P1,22)
+		 p%ElemProps(i)%Area = 0	! Spring elements have no area
+		 p%ElemProps(i)%Rho  = 0	! Spring elements have no mass
+         p%ElemProps(i)%k11  = Init%PropsS(P1, 2)
+         p%ElemProps(i)%k12  = Init%PropsS(P1, 3)
+         p%ElemProps(i)%k13  = Init%PropsS(P1, 4)
+         p%ElemProps(i)%k14  = Init%PropsS(P1, 5)
+         p%ElemProps(i)%k15  = Init%PropsS(P1, 6)
+         p%ElemProps(i)%k16  = Init%PropsS(P1, 7)
+         p%ElemProps(i)%k22  = Init%PropsS(P1, 8)
+         p%ElemProps(i)%k23  = Init%PropsS(P1, 9)
+         p%ElemProps(i)%k24  = Init%PropsS(P1,10)
+         p%ElemProps(i)%k25  = Init%PropsS(P1,11)
+         p%ElemProps(i)%k26  = Init%PropsS(P1,12)
+         p%ElemProps(i)%k33  = Init%PropsS(P1,13)
+         p%ElemProps(i)%k34  = Init%PropsS(P1,14)
+         p%ElemProps(i)%k35  = Init%PropsS(P1,15)
+         p%ElemProps(i)%k36  = Init%PropsS(P1,16)
+         p%ElemProps(i)%k44  = Init%PropsS(P1,17)
+         p%ElemProps(i)%k45  = Init%PropsS(P1,18)
+         p%ElemProps(i)%k46  = Init%PropsS(P1,19)
+         p%ElemProps(i)%k55  = Init%PropsS(P1,20)
+         p%ElemProps(i)%k56  = Init%PropsS(P1,21)
+         p%ElemProps(i)%k66  = Init%PropsS(P1,22)
          
       else
          ! Should not happen
@@ -2339,7 +2363,7 @@ SUBROUTINE ElemK(ep, Ke)
       Ke = 0.0_FEKi
 
    else if (ep%eType==idMemberSpring) then
-      CALL ElemK_Spring(eP%k11, eP%k12, eP%k13, eP%k14, eP%k15, eP%k16, eP%k22, eP%k23, eP%k24, eP%k25, eP%k26, eP%k33, eP%k34, eP%k35, eP%k36, eP%k44, eP%k45, eP%k46, eP%k55, eP%k56, eP%k66, Ke)
+      CALL ElemK_Spring(eP%k11, eP%k12, eP%k13, eP%k14, eP%k15, eP%k16, eP%k22, eP%k23, eP%k24, eP%k25, eP%k26, eP%k33, eP%k34, eP%k35, eP%k36, eP%k44, eP%k45, eP%k46, eP%k55, eP%k56, eP%k66, eP%DirCos, Ke)
 	  
    endif
 END SUBROUTINE ElemK
