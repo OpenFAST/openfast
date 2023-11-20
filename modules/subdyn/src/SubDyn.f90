@@ -1255,18 +1255,24 @@ if (.not. LegacyFormat) then
    CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsS, 'NPropSetsS', 'Number of spring properties' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    CALL ReadCom  ( UnIn, SDInputFile,                  'Spring element properties Header'                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    CALL ReadCom  ( UnIn, SDInputFile,                  'Spring element properties Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-   CALL AllocAry(Init%PropSetsS, Init%NPropSetsS, PropSetsSCol, 'SpringPropSets', ErrStat2, ErrMsg2); if(Failed()) return
-   DO I = 1, Init%NPropSetsS
-      CALL ReadAry( UnIn, SDInputFile, Init%PropSetsS(I,:), PropSetsSCol, 'SpringPropSets', 'SpringPropSets ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-   ENDDO   
    IF (Check( Init%NPropSetsS < 0, 'NPropSetsSpring must be >=0')) return
+   CALL AllocAry(Init%PropSetsS, Init%NPropSetsS, PropSetsSCol, 'PropSetsS', ErrStat2, ErrMsg2); if(Failed()) return
+   DO I = 1, Init%NPropSetsS
+      READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading spring property line'; if (Failed()) return
+	  call ReadFAryFromStr(Line, Init%PropSetsS(I,:), PropSetsSCol, nColValid, nColNumeric);
+      if ((nColValid/=nColNumeric).or.((nColNumeric/=22).and.(nColNumeric/=PropSetsSCol)) ) then
+         CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Spring property line must consist of 22 numerical values. Problematic line: "'//trim(Line)//'"')
+         return
+      endif
+   ENDDO   
+
 else
    Init%NPropSetsC=0
    Init%NPropSetsR=0
    Init%NPropSetsS=0
    CALL AllocAry(Init%PropSetsC, Init%NPropSetsC, PropSetsCCol, 'PropSetsC', ErrStat2, ErrMsg2); if(Failed()) return
    CALL AllocAry(Init%PropSetsR, Init%NPropSetsR, PropSetsRCol, 'RigidPropSets', ErrStat2, ErrMsg2); if(Failed()) return
-   CALL AllocAry(Init%PropSetsS, Init%NPropSetsS, PropSetsSCol, 'SpringPropSets', ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(Init%PropSetsS, Init%NPropSetsS, PropSetsSCol, 'PropSetsS', ErrStat2, ErrMsg2); if(Failed()) return
 endif
 
 !---------------------- MEMBER COSINE MATRICES COSM(i,j) ------------------------
