@@ -1760,7 +1760,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    ! Calculate nacelle drag loads
    do iR = 1,size(p%rotors)
       if ( p%rotors(iR)%NacelleDrag ) then 
-         call computeNacelleDragAnon( u%rotors(iR), p%rotors(iR), m%rotors(iR), y%rotors(iR), ErrStat, ErrMsg )
+         call computeNacelleDrag( u%rotors(iR), p%rotors(iR), m%rotors(iR), y%rotors(iR), ErrStat, ErrMsg )
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             if (ErrStat >= AbortErrLev) return
       end if
@@ -2371,7 +2371,7 @@ subroutine CalcBuoyantLoads( u, p, m, y, ErrStat, ErrMsg )
       m%NacMB = NacMBtmp
    end if
 
-      ! Assign buoyant loads to nacelle mesh
+      ! Assign buoyant loads to nacelle mesh. Mesh might contain the nacelle drag force.
    y%NacelleLoad%Force(:,1) = y%NacelleLoad%Force(:,1) + NacFBtmp
    y%NacelleLoad%Moment(:,1) = y%NacelleLoad%Moment(:,1) + NacMBtmp
 
@@ -7464,171 +7464,111 @@ end subroutine AD_SetExternalWindPositions
 !-------------------------------------------------------------------------------------------------------
 
 ! Temp anyonimous function
-SUBROUTINE computeNacelleDragAnon( u, p, m, y, ErrStat, ErrMsg )
+SUBROUTINE computeNacelleDrag( u, p, m, y, ErrStat, ErrMsg )
 
-   TYPE(RotInputType),                             INTENT(IN   )  :: u                !< AD inputs - used for mesh node positions
-   TYPE(RotParameterType),                         INTENT(IN   )  :: p                !< Parameters
-   TYPE(RotMiscVarType),                           INTENT(INOUT)  :: m                !< Misc/optimization variables
-   TYPE(RotOutputType),                            INTENT(INOUT)  :: y                !< Outputs computed at t 
-   INTEGER(IntKi),                                 INTENT(  OUT)  :: ErrStat          !< Error status of the operation
-   CHARACTER(*),                                   INTENT(  OUT)  :: ErrMsg           !< Error message if ErrStat /= ErrID_None
-
-
+   TYPE(RotInputType)               , INTENT(IN   ) :: u                !< AD inputs - used for mesh node positions
+   TYPE(RotParameterType)           , INTENT(IN   ) :: p                !< Parameters
+   TYPE(RotMiscVarType)             , INTENT(INOUT) :: m                !< Misc/optimization variables
+   TYPE(RotOutputType)              , INTENT(INOUT) :: y                !< Outputs computed at t 
+   INTEGER(IntKi)                   , INTENT(  OUT) :: ErrStat          !< Error status of the operation
+   CHARACTER(*)                     , INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
    ! Local Vars
-   REAL(ReKi), DIMENSION(3)          :: Nac_wnd(3)              ! Forces aligned with nacelle 
-   REAL(ReKi), DIMENSION(3)          :: Nac_motion(3)             ! placeholder
-   REAL(ReKi), DIMENSION(3)          :: Nac_Vrel(3)             ! placeholder
-   REAL(ReKi), DIMENSION(3)          :: Nac_Vrel_n(3)             ! placeholder
-   REAL(ReKi), DIMENSION(3)          :: f_drag_n(3)             ! placeholder
-   REAL(ReKi), DIMENSION(3)          :: m_drag_n(3)             ! placeholder
-   integer(intKi)                               :: j              ! node index
-   ! Vars for old function
-   REAL(ReKi), DIMENSION(3)          :: force(3)              ! Forces aligned with nacelle 
-   REAL(ReKi), DIMENSION(3)          :: moment(3)             ! placeholder
-
-
-   INTEGER(IntKi)                ::      Un  !< fortran output unit
-   CHARACTER(200)                                 :: DebugFileName                  ! File name for debugging file
+   REAL(ReKi)                                       :: Nac_wnd(3)       ! Wind velocity at nacelle mesh 
+   REAL(ReKi)                                       :: Nac_motion(3)    ! Translational velocity of the nacelle
+   REAL(ReKi)                                       :: Nac_Vrel(3)      ! Relative velocity of the wind at nacelle
+   REAL(ReKi)                                       :: Nac_Vrel_n(3)    ! Relative wind velocity in the nacelle c.s
+   REAL(ReKi)                                       :: Nac_Vrel_n_nom   ! norm of realtive wind velocity
+   REAL(ReKi)                                       :: f_drag_n(3)      ! Drag force at nacelle mesh in nacelle c.s
+   REAL(ReKi)                                       :: m_drag_n(3)      ! Drag moment at nacelle mesh  in nacelle c.s
+   
+   ! ! Vars for Envision function
+   ! REAL(ReKi)                                       :: totalAngle            ! Angle between incoming wind direction and nacelle, 
+   ! REAL(ReKi)                                       :: area                  ! Area of the nacelle projected in the wind direction
+   ! REAL(ReKi)                                       :: forceMag              ! Drag force aligned with wind direction
+   ! Real(ReKi)                                       :: unitDiskVec(3)        ! unit vector aligned at an angle of "totalAngle" from yawed rotor disk    
+   ! Real(ReKi)                                       :: areaVec(3)            ! Vec containing areas of yz, xz and xy faces of the nacelle 
+   ! REAL(ReKi)                                       :: rho                   ! Air density
+   ! REAL(ReKi)                                       :: nacelleCD             ! Nacelle Drag Coefficient 
+   ! REAL(ReKi)                                       :: hubHeigthWindSpeed(3) ! hubHeigthWindSpeed(1), hubHeigthWindSpeed(2), and hubHeigthWindSpeed(3) and u, v, and w wind velocities at Hub height
+   ! REAL(ReKi)                                       :: nacelleDims(3)        ! nacelleDims(1), nacelleDims(2), and nacelleDims(3) and Length(x), Width(y), and Height(z) of the Nacelle   
+   ! REAL(ReKi)                                       :: yawAngle              ! Current Yaw Bearing (Radians)
+   ! REAL(ReKi)                                       :: force(3)              ! Forces in global c.s
+   ! REAL(ReKi)                                       :: moment(3)             ! Moments in global c.s
 
    ErrStat  = ErrID_None
    ErrMsg   = ""
 
-
-   ! Fetching the nacelle inflow, nacelle motion and nacelle orientation
+   ! Fetch nacelle inflow, and nacelle motion
    Nac_wnd = u%InflowOnNacelle
    Nac_motion = u%NacelleMotion%TranslationVel(:,1)
 
-
-   ! write(*,*) 'Nac_wnd = ',Nac_wnd
-   ! write(*,*) 'Nac_motion = ',Nac_motion
-
    ! Calculating the relative inflow velocity 
    Nac_Vrel = Nac_wnd - Nac_motion
-   write(*,*) 'Nac_Vrel = ',Nac_Vrel
 
-
-   ! transformaing from inertial to nacelle coords 
+   ! transforming from inertial to nacelle coordinate system (c.s)
    Nac_Vrel_n = matmul(u%NacelleMotion%Orientation(:,:,1), Nac_Vrel)
-   write(*,*) 'Nac_Vrel_n = ',Nac_Vrel_n
-   ! write(*,*) 'rho = ',rho
-   ! write(*,*) 'p%NacCd = ',p%NacCd
-   ! write(*,*) 'p%NacArea = ',p%NacArea
-   ! write(*,*) 'orient = ',u%NacelleMotion%Orientation(:,:,1)
 
-
+   ! Calculating the norm of the relative inflow velocity
+   Nac_Vrel_n_nom =  TwoNorm(Nac_Vrel_n)
    
-   ! Find drag force in nacelle coords, assuming proejcted area is also in nac coord, acting at AC
-   do j=1,3
-      f_drag_n(j) = 0.5 * p%AirDens * p%NacCd(j) * (Nac_Vrel_n(j)**2) * p%NacArea(j)
-   end do
+   ! Find drag force in nacelle c.s, assuming projected area is also in nacelle c.s, acting at AC
+   f_drag_n(1:3) = 0.5 * p%AirDens * p%NacCd(1:3) * Nac_Vrel_n_nom * Nac_Vrel_n(1:3) * p%NacArea(1:3)
 
-   write(*,*) 'f_drag_n = ',f_drag_n
-
-
-   ! moment affect due to offset between nacelle reference position and Nacelle Drag AC
+   ! moment affect due to offset between nacelle reference position and nacelle Drag AC
    m_drag_n = CROSS_PRODUCT(p%NacDragAC, f_drag_n)
 
    m%NacDragF = f_drag_n
    m%NacDragM = m_drag_n
 
-   ! ! Transfer to global & Adding the drag forces and moments to the Nacelle point mesh.
-   ! ! Nacelle point mesh is current defined at the tower top and will be at (0,0,TowerHt) for a landbased HAWT
+   ! Transfer to global c.s & adding the drag forces and moments to the Nacelle point mesh.
+   ! Nacelle point mesh is currently defined at the tower top and will be at (0,0,TowerHt) for a landbased HAWT
    y%NacelleLoad%Force(1:3,1)  = y%NacelleLoad%Force(1:3,1) + matmul(transpose(u%NacelleMotion%Orientation(:,:,1)), f_drag_n)
    y%NacelleLoad%Moment(1:3,1) = y%NacelleLoad%Moment(1:3,1) + matmul(transpose(u%NacelleMotion%Orientation(:,:,1)), m_drag_n)
 
-   ! to verify with the old code!
+   ! !! Code from Envision:
+   ! ! Compatability with current subroutine.
+   ! rho = p%AirDens
+   ! nacelleCD = p%NacCd(1)
+   ! hubHeigthWindSpeed = u%InflowOnNacelle
+   ! nacelleDims = p%NacArea
+   ! yawAngle = m%yaw
 
-   force(1) = 0.0_ReKi
-   force(2) = 0.0_ReKi
-   force(3) = 0.0_ReKi
-
-   moment(1) = 0.0_ReKi
-   moment(2) = 0.0_ReKi
-   moment(3) = 0.0_ReKi
+   ! totalAngle = atan2(hubHeigthWindSpeed(2),hubHeigthWindSpeed(1)) - yawAngle
+   ! call MPi2Pi(totalAngle)   
+   ! unitDiskVec(1) = abs(cos(totalAngle))
+   ! unitDiskVec(2) = abs(sin(totalAngle))
+   ! unitDiskVec(3) = 0.0_ReKi ! Can be used if the tilt is to be included.
    
-   CALL computeNacelleDrag(p%AirDens,p%NacCd(1),u%InflowOnNacelle,p%NacArea,m%Yaw,force,moment)
-
-   ! ! Adding the drag forces and moments to the Nacelle point mesh.
-   ! ! Nacelle point mesh is current defined at the tower top and will be at (0,0,TowerHt) for a landbased HAWT
-   ! y%NacelleLoad%Force(:,1) = y%NacelleLoad%Force(:,1) + force
-   ! y%NacelleLoad%Moment(:,1) = y%NacelleLoad%Moment(:,1) + moment
-
-   ! CALL GetNewUnit(Un,ErrStat,ErrMsg)
-   ! DebugFileName='NacelleMesh.'//trim(num2Lstr(Un))//'.dbg'
-   ! CALL OpenFOutFile(Un,DebugFileName,ErrStat,ErrMsg)
-   ! IF (ErrStat >= AbortErrLev) RETURN
-
-   ! WRITE( Un, '(A)') '************************************************** Mesh1 ***************************************************'
-   ! WRITE( Un, '(A)') 'Mesh1 is the destination mesh for transfer of motions/scalars; it is the source mesh for transfer of loads.'
-   ! WRITE( Un, '(A)') '************************************************************************************************************'
-   ! CALL MeshPrintInfo ( Un, y%NacelleLoad )
-   ! CLOSE(Un)
-
-
-   !printing the meshing info
-   ! CALL GetNewUnit(Un,ErrStat2,ErrMsg2)
-   write(*,*)
-   write(6,'("MC-force : ",3(F10.4), "; Bonnie-force : ",3(F10.4))'), y%NacelleLoad%Force(1:3,1), force(:)
-   write(6,'("MC-moment: ",3(F10.4), "; Bonnie-moment: ",3(F10.4))'), y%NacelleLoad%Moment(1:3,1), moment(:)
-   write(*,*)
-
-
-END SUBROUTINE computeNacelleDragAnon
-
-!-------------------------------------------------------------------------------------------------------
-! computeNacelleDrag computes forces and moments due to nacelle drag.
-SUBROUTINE computeNacelleDrag(rho,nacelleCD,hubHeigthWindSpeed,nacelleDims,yawAngle,force,moment)
-
-   REAL(ReKi)                        , INTENT(IN   ) :: rho                   ! Air density
-   REAL(ReKi)                        , INTENT(IN   ) :: nacelleCD             ! Nacelle Drag Coefficient 
-   REAL(ReKi)                        , INTENT(IN)    :: hubHeigthWindSpeed(3) ! hubHeigthWindSpeed(1), hubHeigthWindSpeed(2), and hubHeigthWindSpeed(3) and u, v, and w wind velocities at Hub height
-   REAL(ReKi)                        , INTENT(IN)    :: nacelleDims(3)        ! nacelleDims(1), nacelleDims(2), and nacelleDims(3) and Length(x), Width(y), and Height(z) of the Nacelle   
-   REAL(ReKi)                        , INTENT(IN)    :: yawAngle              ! Current Yaw Bearing (Radians)
-   REAL(ReKi)                        , INTENT(OUT)   :: force(3)              ! Forces aligned with nacelle 
-   REAL(ReKi)                        , INTENT(OUT)   :: moment(3)             ! placeholder
+   ! areaVec(1) =  nacelleDims(1)!nacelleDims(2)*nacelleDims(3) ! area as viewed from front (yz)
+   ! areaVec(2) =  nacelleDims(2)!nacelleDims(1)*nacelleDims(3) ! area as viewed from side  (xz)
+   ! areaVec(3) =  nacelleDims(3)!nacelleDims(1)*nacelleDims(2) ! area as viewed from top   (xy)
    
-   ! Local Variables
-   REAL(ReKi)                                        :: totalAngle            ! Angle between incoming wind direction and nacelle, 
-   REAL(ReKi)                                        :: area                  ! Area of the nacelle projected in the wind direction
-   REAL(ReKi)                                        :: forceMag              ! Drag force aligned with wind direction
-   Real(ReKi)                                        :: unitDiskVec(3)        ! unit vector aligned at an angle of "totalAngle" from yawed rotor disk    
-   Real(ReKi)                                        :: areaVec(3)            ! Vec containing areas of yz, xz and xy faces of the nacelle 
+   ! ! total nacelle area projected into incoming wind direction
+   ! area = dot_product(areaVec, unitDiskVec)
+
+   ! ! Find drag force (in global X direction)
+   ! forceMag = 0.5*rho*nacelleCD*(hubHeigthWindSpeed(1)**2  + hubHeigthWindSpeed(2)**2)*area
    
-   totalAngle = atan2(hubHeigthWindSpeed(2),hubHeigthWindSpeed(1)) - yawAngle
-   call MPi2Pi(totalAngle)   
-   unitDiskVec(1) = abs(cos(totalAngle))
-   unitDiskVec(2) = abs(sin(totalAngle))
-   unitDiskVec(3) = 0.0_ReKi ! Can be used if the tilt is to be included.
-   
-   areaVec(1) =  nacelleDims(1)!nacelleDims(2)*nacelleDims(3) ! area as viewed from front (yz)
-   areaVec(2) =  nacelleDims(2)!nacelleDims(1)*nacelleDims(3) ! area as viewed from side  (xz)
-   areaVec(3) =  nacelleDims(3)!nacelleDims(1)*nacelleDims(2) ! area as viewed from top   (xy)
-   
-   ! write(*,*)'areaVec = ',areaVec
-
-   ! total nacelle area projected into incoming wind direction
-   area = dot_product(areaVec, unitDiskVec)
-
-   ! write(*,*)'area = ',area
-
-
-   ! Find drag force (in global X direction)
-   forceMag = 0.5*rho*nacelleCD*(hubHeigthWindSpeed(1)**2  + hubHeigthWindSpeed(2)**2)*area
-   
-   ! write(*,*)'forceMag = ',hubHeigthWindSpeed
-
-
-   ! Decompose along the nacelle length, width and height 
-   force = unitDiskVec*forceMag
+   ! ! Decompose along the nacelle length, width and height 
+   ! force = unitDiskVec*forceMag
     
-   force(1) = sign(force(1),cos(totalAngle))
-   force(2) = sign(force(2),sin(totalAngle))   
-   force(3) = 0.0_ReKi
+   ! force(1) = sign(force(1),cos(totalAngle))
+   ! force(2) = sign(force(2),sin(totalAngle))   
+   ! force(3) = 0.0_ReKi
    
-   moment(1) = 0.0_ReKi
-   moment(2) = 0.0_ReKi
-   moment(3) = 0.0_ReKi
-   
+   ! moment(1) = 0.0_ReKi
+   ! moment(2) = 0.0_ReKi
+   ! moment(3) = 0.0_ReKi
+
+   ! Need to change from Inertial c.s to Naccelle c.s for outputs
+   ! m%NacDragF = matmul(transpose(u%NacelleMotion%Orientation(:,:,1)),force)
+   ! m%NacDragM = matmul(transpose(u%NacelleMotion%Orientation(:,:,1)),moment)
+
+   ! y%NacelleLoad%Force(1:3,1)  = y%NacelleLoad%Force(1:3,1) + force
+   ! y%NacelleLoad%Moment(1:3,1) = y%NacelleLoad%Moment(1:3,1) + moment
+
+
 END SUBROUTINE computeNacelleDrag
+
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE AeroDyn
