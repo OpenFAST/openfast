@@ -1016,14 +1016,15 @@ CONTAINS
       if (Rod%typeNum == -2) then                          
       
          F6_iner  = -MATMUL(Rod%M6net, Rod%a6)    ! inertial loads      
-         Fnet_out = Rod%F6net + F6_iner           ! add inertial loads
-      
+         Rod%F6net = Rod%F6net + F6_iner           ! add inertial loads  
+         Fnet_out = Rod%F6net
       ! pinned coupled rod      
       else if (Rod%typeNum == -1) then                     
          ! inertial loads ... from input translational ... and solved rotational ... acceleration
          F6_iner(1:3)  = -MATMUL(Rod%M6net(1:3,1:3), Rod%a6(1:3)) - MATMUL(Rod%M6net(1:3,4:6), Rod%a6(4:6))
-         Fnet_out(1:3) = Rod%F6net(1:3) + F6_iner(1:3)     ! add translational inertial loads
-         Fnet_out(4:6) = 0.0_DbKi
+         Rod%F6net(1:3) = Rod%F6net(1:3) + F6_iner(1:3)     ! add translational inertial loads
+         Rod%F6net(4:6) = 0.0_DbKi
+         Fnet_out = Rod%F6net
       else
          print *, "ERROR, Rod_GetCoupledForce called for wrong (non-coupled) rod type!"
       end if

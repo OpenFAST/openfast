@@ -90,7 +90,7 @@ PROGRAM MoorDyn_Driver
    INTEGER(IntKi)                        :: nt               ! number of coupling time steps to use in simulation
 
    REAL(DbKi)                            :: t                ! current time (s)
-   REAL(DbKi)                            :: tMax             ! sim end time (s)
+   REAL(DbKi)                            :: TMax             ! sim end time (s)
    REAL(DbKi)                            :: dtC              ! fixed/constant global time step
    REAL(DbKi)                            :: frac             ! fraction used in interpolation
          
@@ -304,7 +304,7 @@ PROGRAM MoorDyn_Driver
 
   
       ! specify stepping details 
-      nt = tMax/dtC - 1            ! number of coupling time steps
+      nt = TMax/dtC - 1            ! number of coupling time steps
 
       
       ! allocate space for processed motion array
@@ -451,11 +451,11 @@ PROGRAM MoorDyn_Driver
       
       
    else   
-      nt = tMax/dtC - 1            ! number of coupling time steps
+      nt = TMax/dtC - 1            ! number of coupling time steps
    end if   
    
    CALL WrScr(" ")
-   call WrScr("Tmax - "//trim(Num2LStr(tMax))//" and nt="//trim(Num2LStr(nt)))
+   call WrScr("Tmax - "//trim(Num2LStr(TMax))//" and nt="//trim(Num2LStr(nt)))
    CALL WrScr(" ")
    
    
@@ -569,7 +569,7 @@ PROGRAM MoorDyn_Driver
   
    call WrScr("Doing time marching now...")
    
-   CALL SimStatus_FirstTime( PrevSimTime, PrevClockTime, SimStrtTime, SimStrtCPU, t, tMax )
+   CALL SimStatus_FirstTime( PrevSimTime, PrevClockTime, SimStrtTime, SimStrtCPU, t, TMax )
 
    DO i = 1,nt
 
@@ -579,7 +579,7 @@ PROGRAM MoorDyn_Driver
 
 
       if ( MOD( i, 20 ) == 0 ) THEN         
-         CALL SimStatus( PrevSimTime, PrevClockTime, t, tMax )
+         CALL SimStatus( PrevSimTime, PrevClockTime, t, TMax )
       end if
       
       ! shift older inputs back in the buffer

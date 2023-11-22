@@ -221,7 +221,7 @@ CONTAINS
       Type(MD_Body),         INTENT(INOUT)  :: Body       ! the Body object
       Real(DbKi),            INTENT(IN   )  :: r6_in(6)   ! 6-DOF position
       Real(DbKi),            INTENT(IN   )  :: v6_in(6)   ! 6-DOF velocity
-      Real(DbKi),             INTENT(IN   ) :: a6_in(6)       ! 6-DOF acceleration (only used for coupled rods)
+      Real(DbKi),             INTENT(IN   ) :: a6_in(6)       ! 6-DOF acceleration 
       Real(DbKi),            INTENT(IN   )  :: t         ! instantaneous time
       TYPE(MD_MiscVarType),  INTENT(INOUT)  :: m         ! passing along all mooring objects (for simplicity, since Bodies deal with Rods and Points)
 
@@ -386,7 +386,7 @@ CONTAINS
          ! store accelerations in case they're useful as output
          Body%a6 = acc
 
-      ELSE ! Pinned Body, 6 states (rotational only)
+      ELSE ! Pinned Body, 3 states (rotational only)
 
          ! Account for moment response due to inertial coupling
          Fnet = Body%F6net
@@ -523,13 +523,15 @@ CONTAINS
       if (Body%typeNum == -1) then                          
       
          F6_iner = -MATMUL(Body%M, Body%a6)     ! <<<<<<<< why does including F6_iner cause instability???
-         Fnet_out = Body%F6net + F6_iner        ! add inertial loads
+         Body%F6net = Body%F6net + F6_iner        ! add inertial loads
+         Fnet_out = Body%F6net
                  
       else if (Body%typeNum == 2) then  ! pinned coupled body                   
          ! inertial loads ... from input translational ... and solved rotational ... acceleration
-         F6_iner(1:3)  = -MATMUL(Body%M6net(1:3,1:3), Body%a6(1:3)) - MATMUL(Body%M6net(1:3,4:6), Body%a6(4:6))
-         Fnet_out(1:3) = Body%F6net(1:3) + F6_iner(1:3)     ! add translational inertial loads
-         Fnet_out(4:6) = 0.0_DbKi
+         F6_iner(1:3)  = -MATMUL(Body%M(1:3,1:3), Body%a6(1:3)) - MATMUL(Body%M(1:3,4:6), Body%a6(4:6))
+         Body%F6net(1:3) = Body%F6net(1:3) + F6_iner(1:3)     ! add translational inertial loads
+         Body%F6net(4:6) = 0.0_DbKi
+         Fnet_out = Body%F6net
 
       else
          print *, "ERROR, Body_GetCoupledForce called for wrong (non-coupled) body type in MoorDyn!"
