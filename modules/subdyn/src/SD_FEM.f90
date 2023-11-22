@@ -854,7 +854,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       Point2 = Init%Nodes(N2,2:4)
 
       if (iDirCos/=-1) then
-         CALL GetDirCos(Point1, Point2, DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! sets L
+         CALL GetDirCos(Point1, Point2, eType, DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! sets L
          
          ! overwrites direction cosines
          DirCos(1, 1) =  Init%COSMs(iDirCos, 2)
@@ -868,7 +868,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          DirCos(3, 3) =  Init%COSMs(iDirCos, 10)
 
       else
-         CALL GetDirCos(Point1, Point2, DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! L and DirCos
+         CALL GetDirCos(Point1, Point2, eType, DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! L and DirCos
       endif
 
 

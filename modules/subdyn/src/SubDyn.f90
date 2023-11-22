@@ -3786,8 +3786,10 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
        !Calculate member mass here; this should really be done somewhere else, yet it is not used anywhere else
        !IT WILL HAVE TO BE MODIFIED FOR OTHER THAN CIRCULAR PIPE ELEMENTS
        propIDs=Init%Members(i,iMProp:iMProp+1) 
-       mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
-       IF (ErrStat .EQ. ErrID_None) THEN
+       if (Init%Members(I, iMType)/=idMemberSpring) then ! This check only applies for members different than springs (springs have no mass and no length)
+		mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
+       endif
+	   IF (ErrStat .EQ. ErrID_None) THEN
         mType =  Init%Members(I, iMType) ! 
         if (mType==idMemberBeamCirc) then
            iProp(1) = FINDLOCI(Init%PropSetsB(:,1), propIDs(1))
@@ -3837,7 +3839,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
       iNode2 = FINDLOCI(Init%Joints(:,1), Init%Members(i,3)) ! index of joint 2 of member i
       XYZ1   = Init%Joints(iNode1,2:4)
       XYZ2   = Init%Joints(iNode2,2:4)
-      CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), DirCos, mLength, ErrStat, ErrMsg)
+      CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), mType, DirCos, mLength, ErrStat, ErrMsg)
       DirCos=TRANSPOSE(DirCos) !This is now global to local
       WRITE(UnSum, '("#",I9,9(ES28.18E2))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
    ENDDO
@@ -4084,7 +4086,7 @@ END SUBROUTINE StateMatrices
 FUNCTION MemberLength(MemberID,Init,ErrStat,ErrMsg)
     TYPE(SD_InitType), INTENT(IN)             :: Init         !< Input data for initialization routine, this structure contains many variables needed for summary file
     INTEGER(IntKi),    INTENT(IN)             :: MemberID     !< Member ID #
-    REAL(ReKi)                                :: MemberLength !< Member Length
+	REAL(ReKi)                                :: MemberLength !< Member Length
     INTEGER(IntKi),            INTENT(   OUT) :: ErrStat      !< Error status of the operation
     CHARACTER(*),              INTENT(   OUT) :: ErrMsg       !< Error message if ErrStat /= ErrID_None
     !Locals
@@ -4108,7 +4110,7 @@ FUNCTION MemberLength(MemberID,Init,ErrStat,ErrMsg)
     xyz1= Init%Joints(Joint1,2:4)
     xyz2= Init%Joints(Joint2,2:4)
     MemberLength=SQRT( SUM((xyz2-xyz1)**2.) )
-    if ( EqualRealNos(MemberLength, 0.0_ReKi) ) then 
+    if ( EqualRealNos(MemberLength, 0.0_ReKi) ) then	
         call SetErrStat(ErrID_Fatal,' Member with ID '//trim(Num2LStr(MemberID))//' has zero length!', ErrStat,ErrMsg,RoutineName);
         return
     endif

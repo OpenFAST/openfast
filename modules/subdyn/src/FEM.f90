@@ -951,8 +951,9 @@ END SUBROUTINE GetRigidTransformation
 !!
 !! bjj: note that this is the transpose of what is normally considered the Direction Cosine Matrix  
 !!      in the FAST framework.
-SUBROUTINE GetDirCos(P1, P2, DirCos, L_out, ErrStat, ErrMsg)
+SUBROUTINE GetDirCos(P1, P2, eType, DirCos, L_out, ErrStat, ErrMsg)
    REAL(ReKi) ,      INTENT(IN   )  :: P1(3), P2(3)      ! (x,y,z) global positions of two nodes making up an element
+   INTEGER(IntKi),   INTENT(IN   )  :: eType			 ! element type (1:beam circ., 2:cable, 3:rigid, 4:beam arb., 5:spring)
    REAL(FEKi) ,      INTENT(  OUT)  :: DirCos(3, 3)      ! calculated direction cosine matrix
    REAL(ReKi) ,      INTENT(  OUT)  :: L_out             ! length of element
    INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat           ! Error status of the operation
@@ -966,9 +967,16 @@ SUBROUTINE GetDirCos(P1, P2, DirCos, L_out, ErrStat, ErrMsg)
    Dz=P2(3)-P1(3)
    Dxy = sqrt( Dx**2 + Dy**2 )
    L   = sqrt( Dx**2 + Dy**2 + Dz**2)
+
+   ! The spring element should have the same starting and ending location. P1 and P2 must be coincident (L must be 0).
+   IF ( .not. EqualRealNos(L, 0.0_FEKi) .and. eType == 5) THEN
+      ErrMsg = ' Spring(s) must be defined with the same starting and ending locations in the element.' 
+      ErrStat = ErrID_Fatal
+      RETURN
+   ENDIF
    
-   IF ( EqualRealNos(L, 0.0_FEKi) ) THEN
-      ErrMsg = ' Same starting and ending location in the element.'
+   IF ( EqualRealNos(L, 0.0_FEKi) .and. eType/= 5) THEN
+      ErrMsg = ' Same starting and ending location in a beam, cable or rigid element.'
       ErrStat = ErrID_Fatal
       RETURN
    ENDIF
@@ -1303,6 +1311,9 @@ SUBROUTINE ElemK_Spring(k11, k12, k13, k14, k15, k16, k22, k23, k24, k25, k26, k
    ! Temporary check. Looking at the spring element matrix (local coordinate system).  
    print*,'Spring element stiffness (local coordinate system)'
    print*, K
+
+   ! Temporary check. Looking at direction cosine matrix.  
+   print*,'Direction cosine',DirCos
    
    DC = 0.0_FEKi
    DC( 1: 3,  1: 3) = DirCos

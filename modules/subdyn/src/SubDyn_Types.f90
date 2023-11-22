@@ -77,27 +77,27 @@ IMPLICIT NONE
     REAL(ReKi)  :: Area      !< Area of an element [m^2]
     REAL(ReKi)  :: Rho      !< Density [kg/m^3]
     REAL(ReKi)  :: T0      !< Pretension  [N]
-    REAL(ReKi)  :: k11     !< Spring translational stiffness [N/m]
-    REAL(ReKi)  :: k12     !< Spring cross-coupling stiffness [N/m]
-    REAL(ReKi)  :: k13     !< Spring cross-coupling stiffness [N/m]
-    REAL(ReKi)  :: k14     !< Spring cross-coupling stiffness [N/rad]
-    REAL(ReKi)  :: k15     !< Spring cross-coupling stiffness [N/rad]
-    REAL(ReKi)  :: k16     !< Spring cross-coupling stiffness [N/rad]
-    REAL(ReKi)  :: k22     !< Spring translational stiffness [N/m]
-    REAL(ReKi)  :: k23     !< Spring cross-coupling stiffness [N/m]	
-    REAL(ReKi)  :: k24     !< Spring cross-coupling stiffness [N/rad]
-    REAL(ReKi)  :: k25     !< Spring cross-coupling stiffness [N/rad]
-    REAL(ReKi)  :: k26     !< Spring cross-coupling stiffness [N/rad]
-    REAL(ReKi)  :: k33     !< Spring translational stiffness [N/m]
-    REAL(ReKi)  :: k34     !< Spring cross-coupling stiffness [N/rad]
-    REAL(ReKi)  :: k35     !< Spring cross-coupling stiffness [N/rad]
-    REAL(ReKi)  :: k36     !< Spring cross-coupling stiffness [N/rad]
-    REAL(ReKi)  :: k44     !< Spring rotational stiffness [Nm/rad]	
-    REAL(ReKi)  :: k45     !< Spring cross-coupling stiffness [Nm/rad]
-    REAL(ReKi)  :: k46     !< Spring cross-coupling stiffness [Nm/rad]
-    REAL(ReKi)  :: k55     !< Spring rotational stiffness [Nm/rad]
-    REAL(ReKi)  :: k56     !< Spring cross-coupling stiffness [Nm/rad]
-    REAL(ReKi)  :: k66     !< Spring rotational stiffness [Nm/rad]		
+    REAL(ReKi)  :: k11      !< Spring translational stiffness [N/m]
+    REAL(ReKi)  :: k12      !< Spring cross-coupling stiffness [N/m]
+    REAL(ReKi)  :: k13      !< Spring cross-coupling stiffness [N/m]
+    REAL(ReKi)  :: k14      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k15      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k16      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k22      !< Spring translational stiffness [N/m]
+    REAL(ReKi)  :: k23      !< Spring cross-coupling stiffness [N/m]
+    REAL(ReKi)  :: k24      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k25      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k26      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k33      !< Spring translational stiffness [N/m]
+    REAL(ReKi)  :: k34      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k35      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k36      !< Spring cross-coupling stiffness [N/rad]
+    REAL(ReKi)  :: k44      !< Spring rotational stiffness [Nm/rad]
+    REAL(ReKi)  :: k45      !< Spring cross-coupling stiffness [Nm/rad]
+    REAL(ReKi)  :: k46      !< Spring cross-coupling stiffness [Nm/rad]
+    REAL(ReKi)  :: k55      !< Spring rotational stiffness [Nm/rad]
+    REAL(ReKi)  :: k56      !< Spring cross-coupling stiffness [Nm/rad]
+    REAL(ReKi)  :: k66      !< Spring rotational stiffness [Nm/rad]
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: DirCos      !< Element direction cosine matrix [-]
   END TYPE ElemPropType
 ! =======================
@@ -142,7 +142,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NPropSetsB      !< Number of property sets for beams [-]
     INTEGER(IntKi)  :: NPropSetsC      !< Number of property sets for cables [-]
     INTEGER(IntKi)  :: NPropSetsR      !< Number of property sets for rigid links [-]
-	INTEGER(IntKi)  :: NPropSetsS      !< Number of property sets for spring elements [-]
+    INTEGER(IntKi)  :: NPropSetsS      !< Number of property sets for spring elements [-]
     INTEGER(IntKi)  :: NCMass      !< Number of joints with concentrated mass [-]
     INTEGER(IntKi)  :: NCOSMs      !< Number of independent cosine matrices [-]
     INTEGER(IntKi)  :: FEMMod      !< FEM switch  element model in the FEM [-]
@@ -152,7 +152,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsB      !< Property sets number and values [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsC      !< Property ID and values for cables [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsR      !< Property ID and values for rigid link [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsS      !< Property ID and values for spring elements [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsS      !< Property ID and values for spring element [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropSetsX      !< Extended property sets [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: COSMs      !< Independent direction cosine matrices [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: CMass      !< Concentrated mass information [-]
@@ -174,12 +174,12 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NPropB      !< Total number of property sets for Beams [-]
     INTEGER(IntKi)  :: NPropC      !< Total number of property sets for Cable [-]
     INTEGER(IntKi)  :: NPropR      !< Total number of property sets for Rigid [-]
-	INTEGER(IntKi)  :: NPropS      !< Total number of property sets for Spring [-]
+    INTEGER(IntKi)  :: NPropS      !< Total number of property sets for Spring [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Nodes      !< Nodes number and coordinates            [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsB      !< Property sets and values for Beams      [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsC      !< Property sets and values for Cable      [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsR      !< Property sets and values for Rigid link [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsS      !< Property sets and values for Spring [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsS      !< Property sets and values for Spring     [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: K      !< System stiffness matrix                 [-]
     REAL(R8Ki) , DIMENSION(:,:), ALLOCATABLE  :: M      !< System mass matrix                      [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: ElemProps      !< Element properties(A, L, Ixx, Iyy, Jzz, Shear, Kappa, E, G, Rho, DirCos(1,1), DirCos(2, 1), ....., DirCos(3, 3) ) [-]
@@ -1744,25 +1744,25 @@ ENDIF
     DstElemPropTypeData%Area = SrcElemPropTypeData%Area
     DstElemPropTypeData%Rho = SrcElemPropTypeData%Rho
     DstElemPropTypeData%T0 = SrcElemPropTypeData%T0
-	DstElemPropTypeData%k11 = SrcElemPropTypeData%k11
+    DstElemPropTypeData%k11 = SrcElemPropTypeData%k11
     DstElemPropTypeData%k12 = SrcElemPropTypeData%k12
     DstElemPropTypeData%k13 = SrcElemPropTypeData%k13
     DstElemPropTypeData%k14 = SrcElemPropTypeData%k14
     DstElemPropTypeData%k15 = SrcElemPropTypeData%k15
     DstElemPropTypeData%k16 = SrcElemPropTypeData%k16
-	DstElemPropTypeData%k22 = SrcElemPropTypeData%k22
+    DstElemPropTypeData%k22 = SrcElemPropTypeData%k22
     DstElemPropTypeData%k23 = SrcElemPropTypeData%k23
     DstElemPropTypeData%k24 = SrcElemPropTypeData%k24
     DstElemPropTypeData%k25 = SrcElemPropTypeData%k25
     DstElemPropTypeData%k26 = SrcElemPropTypeData%k26
     DstElemPropTypeData%k33 = SrcElemPropTypeData%k33
-	DstElemPropTypeData%k34 = SrcElemPropTypeData%k34
+    DstElemPropTypeData%k34 = SrcElemPropTypeData%k34
     DstElemPropTypeData%k35 = SrcElemPropTypeData%k35
     DstElemPropTypeData%k36 = SrcElemPropTypeData%k36
     DstElemPropTypeData%k44 = SrcElemPropTypeData%k44
     DstElemPropTypeData%k45 = SrcElemPropTypeData%k45
     DstElemPropTypeData%k46 = SrcElemPropTypeData%k46
-	DstElemPropTypeData%k55 = SrcElemPropTypeData%k55
+    DstElemPropTypeData%k55 = SrcElemPropTypeData%k55
     DstElemPropTypeData%k56 = SrcElemPropTypeData%k56
     DstElemPropTypeData%k66 = SrcElemPropTypeData%k66
     DstElemPropTypeData%DirCos = SrcElemPropTypeData%DirCos
@@ -1860,7 +1860,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! k46
       Re_BufSz   = Re_BufSz   + 1  ! k55
       Re_BufSz   = Re_BufSz   + 1  ! k56
-      Re_BufSz   = Re_BufSz   + 1  ! k66	  
+      Re_BufSz   = Re_BufSz   + 1  ! k66
       Db_BufSz   = Db_BufSz   + SIZE(InData%DirCos)  ! DirCos
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -1948,19 +1948,19 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%k35
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%k36
-    Re_Xferred = Re_Xferred + 1	
-	ReKiBuf(Re_Xferred) = InData%k44
     Re_Xferred = Re_Xferred + 1
-	ReKiBuf(Re_Xferred) = InData%k45
+    ReKiBuf(Re_Xferred) = InData%k44
     Re_Xferred = Re_Xferred + 1
-	ReKiBuf(Re_Xferred) = InData%k46
+    ReKiBuf(Re_Xferred) = InData%k45
     Re_Xferred = Re_Xferred + 1
-	ReKiBuf(Re_Xferred) = InData%k55
+    ReKiBuf(Re_Xferred) = InData%k46
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%k55
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%k56
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%k66
-    Re_Xferred = Re_Xferred + 1	
+    Re_Xferred = Re_Xferred + 1
     DO i2 = LBOUND(InData%DirCos,2), UBOUND(InData%DirCos,2)
       DO i1 = LBOUND(InData%DirCos,1), UBOUND(InData%DirCos,1)
         DbKiBuf(Db_Xferred) = InData%DirCos(i1,i2)
@@ -2070,7 +2070,7 @@ ENDIF
     OutData%k56 = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%k66 = ReKiBuf(Re_Xferred)
-    Re_Xferred = Re_Xferred + 1	
+    Re_Xferred = Re_Xferred + 1
     i1_l = LBOUND(OutData%DirCos,1)
     i1_u = UBOUND(OutData%DirCos,1)
     i2_l = LBOUND(OutData%DirCos,2)
@@ -3545,7 +3545,7 @@ ENDIF
     DstInitTypeData%NPropB = SrcInitTypeData%NPropB
     DstInitTypeData%NPropC = SrcInitTypeData%NPropC
     DstInitTypeData%NPropR = SrcInitTypeData%NPropR
-    DstInitTypeData%NPropS = SrcInitTypeData%NPropS	
+    DstInitTypeData%NPropS = SrcInitTypeData%NPropS
 IF (ALLOCATED(SrcInitTypeData%Nodes)) THEN
   i1_l = LBOUND(SrcInitTypeData%Nodes,1)
   i1_u = UBOUND(SrcInitTypeData%Nodes,1)
@@ -3603,10 +3603,10 @@ IF (ALLOCATED(SrcInitTypeData%PropsR)) THEN
     DstInitTypeData%PropsR = SrcInitTypeData%PropsR
 ENDIF
 IF (ALLOCATED(SrcInitTypeData%PropsS)) THEN
-  i1_l = LBOUND(SrcInitTypeData%PropsR,1)
-  i1_u = UBOUND(SrcInitTypeData%PropsR,1)
-  i2_l = LBOUND(SrcInitTypeData%PropsR,2)
-  i2_u = UBOUND(SrcInitTypeData%PropsR,2)
+  i1_l = LBOUND(SrcInitTypeData%PropsS,1)
+  i1_u = UBOUND(SrcInitTypeData%PropsS,1)
+  i2_l = LBOUND(SrcInitTypeData%PropsS,2)
+  i2_u = UBOUND(SrcInitTypeData%PropsS,2)
   IF (.NOT. ALLOCATED(DstInitTypeData%PropsS)) THEN 
     ALLOCATE(DstInitTypeData%PropsS(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
@@ -3855,7 +3855,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! NPropSetsB
       Int_BufSz  = Int_BufSz  + 1  ! NPropSetsC
       Int_BufSz  = Int_BufSz  + 1  ! NPropSetsR
-      Int_BufSz  = Int_BufSz  + 1  ! NPropSetsS	  
+      Int_BufSz  = Int_BufSz  + 1  ! NPropSetsS
       Int_BufSz  = Int_BufSz  + 1  ! NCMass
       Int_BufSz  = Int_BufSz  + 1  ! NCOSMs
       Int_BufSz  = Int_BufSz  + 1  ! FEMMod
@@ -3885,7 +3885,7 @@ ENDIF
   IF ( ALLOCATED(InData%PropSetsS) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! PropSetsS upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%PropSetsS)  ! PropSetsS
-  END IF  
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! PropSetsX allocated yes/no
   IF ( ALLOCATED(InData%PropSetsX) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! PropSetsX upper/lower bounds for each dimension
@@ -3980,7 +3980,7 @@ ENDIF
   IF ( ALLOCATED(InData%PropsS) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! PropsS upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%PropsS)  ! PropsS
-  END IF  
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! K allocated yes/no
   IF ( ALLOCATED(InData%K) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! K upper/lower bounds for each dimension
@@ -4064,7 +4064,7 @@ ENDIF
     IntKiBuf(Int_Xferred) = InData%NPropSetsR
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NPropSetsS
-    Int_Xferred = Int_Xferred + 1	
+    Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NCMass
     Int_Xferred = Int_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%NCOSMs
@@ -4174,7 +4174,7 @@ ENDIF
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
-  END IF  
+  END IF
   IF ( .NOT. ALLOCATED(InData%PropSetsX) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -4529,7 +4529,7 @@ ENDIF
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
-  END IF  
+  END IF
   IF ( .NOT. ALLOCATED(InData%K) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -4835,7 +4835,7 @@ ENDIF
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
-  END IF  
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PropSetsX not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -5132,7 +5132,7 @@ ENDIF
     OutData%NPropR = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
     OutData%NPropS = IntKiBuf(Int_Xferred)
-    Int_Xferred = Int_Xferred + 1	
+    Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Nodes not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -5247,7 +5247,7 @@ ENDIF
           Re_Xferred = Re_Xferred + 1
         END DO
       END DO
-  END IF  
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! K not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
