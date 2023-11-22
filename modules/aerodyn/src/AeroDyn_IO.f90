@@ -222,12 +222,12 @@ CONTAINS
          m%AllOuts( NcVUndy ) = tmp(2)
          m%AllOuts( NcVUndz ) = tmp(3)
 
-         tmp = m%NacDragF !matmul( u%NacelleMotion%Orientation(:,:,1) , m%NacDragF )
+         tmp = m%NacDragF 
          m%AllOuts( NcFdx ) = tmp(1)
          m%AllOuts( NcFdy ) = tmp(2)
          m%AllOuts( NcFdz ) = tmp(3)
    
-         tmp = m%NacDragM !matmul( u%NacelleMotion%Orientation(:,:,1) , m%NacDragM )
+         tmp = m%NacDragM 
          m%AllOuts( NcMdx ) = tmp(1)
          m%AllOuts( NcMdy ) = tmp(2)
          m%AllOuts( NcMdz ) = tmp(3)

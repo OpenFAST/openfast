@@ -1306,9 +1306,9 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p%Buoyancy         = InputFileData%Buoyancy
    
    p%NacelleDrag      = InputFileData%NacelleDrag
-   p%NacArea      = RotData%NacArea
-   p%NacCd        = RotData%NacCd
-   p%NacDragAC    = RotData%NacDragAC
+   p%NacArea          = RotData%NacArea
+   p%NacCd            = RotData%NacCd
+   p%NacDragAC        = RotData%NacDragAC
 
    if (InitInp%Linearize .and. InputFileData%WakeMod == WakeMod_BEMT) then
       p%FrozenWake = InputFileData%FrozenWake
@@ -7462,8 +7462,7 @@ subroutine AD_SetExternalWindPositions(u_AD, o_AD, PosXYZ, node, errStat, errMsg
    end if
 end subroutine AD_SetExternalWindPositions
 !-------------------------------------------------------------------------------------------------------
-
-! Temp anyonimous function
+!> This routine calculates nacelle drag loads on a turbine.
 SUBROUTINE computeNacelleDrag( u, p, m, y, ErrStat, ErrMsg )
 
    TYPE(RotInputType)               , INTENT(IN   ) :: u                !< AD inputs - used for mesh node positions
