@@ -1308,13 +1308,6 @@ SUBROUTINE ElemK_Spring(k11, k12, k13, k14, k15, k16, k22, k23, k24, k25, k26, k
    K(12, 5) = K(11,6)   
    K(12, 11) = K(11,12)  
    
-   ! Temporary check. Looking at the spring element matrix (local coordinate system).  
-   print*,'Spring element stiffness (local coordinate system)'
-   print*, K
-
-   ! Temporary check. Looking at direction cosine matrix.  
-   print*,'Direction cosine',DirCos
-   
    DC = 0.0_FEKi
    DC( 1: 3,  1: 3) = DirCos
    DC( 4: 6,  4: 6) = DirCos
@@ -1322,10 +1315,6 @@ SUBROUTINE ElemK_Spring(k11, k12, k13, k14, k15, k16, k22, k23, k24, k25, k26, k
    DC(10:12, 10:12) = DirCos
    
    K = MATMUL( MATMUL(DC, K), TRANSPOSE(DC) ) ! TODO: change me if DirCos convention is  transposed
-
-   ! Temporary check. Looking at the spring element matrix (global coordinate system).  
-   print*,'Spring element stiffness (global coordinate system)'
-   print*, K
    
 END SUBROUTINE ElemK_Spring
 !------------------------------------------------------------------------------------------------------
