@@ -1,19 +1,3 @@
-!**********************************************************************************************************************************
-!! This module is used to read and process the (undisturbed) inflow winds.  It must be initialized
-!! using InflowWind_Init() with the name of the file, the file type, and possibly reference height and
-!! width (depending on the type of wind file being used).  This module calls appropriate routines
-!! in the wind modules so that the type of wind becomes seamless to the user.  InflowWind_End()
-!! should be called when the program has finshed.
-!!
-!! Data are assumed to be in units of meters and seconds.  Z is measured from the ground (NOT the hub!).
-!!
-!!  7 Oct 2009    Initial Release with AeroDyn 13.00.00         B. Jonkman, NREL/NWTC
-!! 14 Nov 2011    v1.00.01b-bjj                                 B. Jonkman
-!!  1 Aug 2012    v1.01.00a-bjj                                 B. Jonkman
-!! 10 Aug 2012    v1.01.00b-bjj                                 B. Jonkman
-!!    Feb 2013    v2.00.00a-adp   conversion to Framework       A. Platt
-!!    Sep 2015    v3.00.00a-adb   added separate input file     A. Platt
-!
 !..................................................................................................................................
 ! Files with this module:
 !  InflowWind_Subs.f90
@@ -38,8 +22,15 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
+!> InflowWind is used to read and process the (undisturbed) inflow winds.  It must be initialized
+!! using InflowWind_Init() with the name of the file, the file type, and possibly reference height and
+!! width (depending on the type of wind file being used).  This module calls appropriate routines
+!! in the wind modules so that the type of wind becomes seamless to the user.  InflowWind_End()
+!! should be called when the program has finshed.
+!!
+!! Data are assumed to be in units of meters and seconds.  Z is measured from the ground (NOT the hub!).
+!!
 MODULE InflowWind
-
 
    USE                              NWTC_Library
    USE                              InflowWind_Types
@@ -61,32 +52,17 @@ MODULE InflowWind
 
       ! ..... Public Subroutines ...................................................................................................
 
+   ! ..... Public Subroutines ...................................................................................................
    PUBLIC :: InflowWind_Init                                   !< Initialization routine
    PUBLIC :: InflowWind_CalcOutput                             !< Calculate the wind velocities
    PUBLIC :: InflowWind_End                                    !< Ending routine (includes clean up)
 
-      ! These routines satisfy the framework, but do nothing at present.
-   PUBLIC :: InflowWind_UpdateStates               !< Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
-   PUBLIC :: InflowWind_CalcConstrStateResidual    !< Tight coupling routine for returning the constraint state residual
-   PUBLIC :: InflowWind_CalcContStateDeriv         !< Tight coupling routine for computing derivatives of continuous states
-   PUBLIC :: InflowWind_UpdateDiscState            !< Tight coupling routine for updating discrete states
-
-
-      ! These routines compute Jacobians; only dYdu is defined.
-   PUBLIC :: InflowWind_JacobianPInput             !< Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
-                                                   !!   (Xd), and constraint - state(Z) functions all with respect to the inputs(u)
-   PUBLIC :: InflowWind_JacobianPContState         !< Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
-                                                   !!   (Xd), and constraint - state(Z) functions all with respect to the continuous
-                                                   !!   states(x)
-   PUBLIC :: InflowWind_JacobianPDiscState         !< Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
-                                                   !!   (Xd), and constraint - state(Z) functions all with respect to the discrete
-                                                   !!   states(xd)
-   PUBLIC :: InflowWind_JacobianPConstrState       !< Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
-                                                   !!   (Xd), and constraint - state(Z) functions all with respect to the constraint
-                                                   !!   states(z)
-   PUBLIC :: InflowWind_GetOP                      !< Routine to pack the operating point values (for linearization) into arrays
-   
-
+   ! These routines compute Jacobians; only dYdu is defined.
+   PUBLIC :: InflowWind_JacobianPInput
+   PUBLIC :: InflowWind_JacobianPContState
+   PUBLIC :: InflowWind_JacobianPDiscState
+   PUBLIC :: InflowWind_JacobianPConstrState
+   PUBLIC :: InflowWind_GetOP
 
 CONTAINS
 !====================================================================================================
@@ -816,134 +792,6 @@ SUBROUTINE InflowWind_End( InputData, p, ContStates, DiscStates, ConstrStateGues
 END SUBROUTINE InflowWind_End
 
 
-!====================================================================================================
-! The following routines were added to satisfy the framework, but do nothing useful.
-!====================================================================================================
-!> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other 
-!! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
-SUBROUTINE InflowWind_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-
-   REAL(DbKi),                            INTENT(IN   ) :: t               !< Current simulation time in seconds
-   INTEGER(IntKi),                        INTENT(IN   ) :: n               !< Current step of the simulation: t = n*Interval
-   TYPE(InflowWind_InputType),            INTENT(INOUT) :: Inputs(:)       !< Inputs at InputTimes (output only for mesh record-keeping in ExtrapInterp routine)
-   REAL(DbKi),                            INTENT(IN   ) :: InputTimes(:)   !< Times in seconds associated with Inputs
-   TYPE(InflowWind_ParameterType),        INTENT(IN   ) :: p               !< Parameters
-   TYPE(InflowWind_ContinuousStateType),  INTENT(INOUT) :: x               !< Input: Continuous states at t;
-                                                                           !!    Output: Continuous states at t + Interval
-   TYPE(InflowWind_DiscreteStateType),    INTENT(INOUT) :: xd              !< Input: Discrete states at t;
-                                                                           !!    Output: Discrete states at t  + Interval
-   TYPE(InflowWind_ConstraintStateType),  INTENT(INOUT) :: z               !< Input: Constraint states at t;
-                                                                           !!   Output: Constraint states at t + Interval
-   TYPE(InflowWind_OtherStateType),       INTENT(INOUT) :: OtherState      !< Other states: Other states at t;
-                                                                           !!   Output: Other states at t + Interval
-   TYPE(InflowWind_MiscVarType),          INTENT(INOUT) :: m               !< Misc variables for optimization (not copied in glue code)
-   INTEGER(IntKi),                        INTENT(  OUT) :: ErrStat         !< Error status of the operation
-   CHARACTER(*),                          INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
-
-
-      ! Initialize ErrStat
-
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-   x%DummyContState     = 0.0_ReKi
-   xd%DummyDiscState    = 0.0_ReKi
-   z%DummyConstrState   = 0.0_ReKi
-      
-   RETURN
-
-
-END SUBROUTINE InflowWind_UpdateStates
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Tight coupling routine for computing derivatives of continuous states
-SUBROUTINE InflowWind_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
-!..................................................................................................................................
-
-   REAL(DbKi),                               INTENT(IN   )  :: Time        !< Current simulation time in seconds
-   TYPE(InflowWind_InputType),               INTENT(IN   )  :: u           !< Inputs at Time
-   TYPE(InflowWind_ParameterType),           INTENT(IN   )  :: p           !< Parameters
-   TYPE(InflowWind_ContinuousStateType),     INTENT(IN   )  :: x           !< Continuous states at Time
-   TYPE(InflowWind_DiscreteStateType),       INTENT(IN   )  :: xd          !< Discrete states at Time
-   TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: z           !< Constraint states at Time
-   TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherState  !< Other states at Time
-   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
-   TYPE(InflowWind_ContinuousStateType),     INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at Time
-   INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-
-      ! Initialize ErrStat
-
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-
-      ! Compute the first time derivatives of the continuous states here:
-
-   dxdt%DummyContState = 0.0_ReKi
-
-
-END SUBROUTINE InflowWind_CalcContStateDeriv
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Tight coupling routine for updating discrete states
-SUBROUTINE InflowWind_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-
-   REAL(DbKi),                               INTENT(IN   )  :: Time        !< Current simulation time in seconds
-   TYPE(InflowWind_InputType),               INTENT(IN   )  :: u           !< Inputs at Time
-   TYPE(InflowWind_ParameterType),           INTENT(IN   )  :: p           !< Parameters
-   TYPE(InflowWind_ContinuousStateType),     INTENT(IN   )  :: x           !< Continuous states at Time
-   TYPE(InflowWind_DiscreteStateType),       INTENT(INOUT)  :: xd          !< Input: Discrete states at Time;
-                                                                           !! Output: Discrete states at Time + Interval
-   TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: z           !< Constraint states at Time
-   TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherState  !< Other states at Time
-   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
-   INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-
-      ! Initialize ErrStat
-
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-
-      ! Update discrete states here:
-
-   ! StateData%DiscState =
-
-END SUBROUTINE InflowWind_UpdateDiscState
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Tight coupling routine for solving for the residual of the constraint state equations
-SUBROUTINE InflowWind_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
-
-   REAL(DbKi),                               INTENT(IN   )  :: Time        !< Current simulation time in seconds
-   TYPE(InflowWind_InputType),               INTENT(IN   )  :: u           !< Inputs at Time
-   TYPE(InflowWind_ParameterType),           INTENT(IN   )  :: p           !< Parameters
-   TYPE(InflowWind_ContinuousStateType),     INTENT(IN   )  :: x           !< Continuous states at Time
-   TYPE(InflowWind_DiscreteStateType),       INTENT(IN   )  :: xd          !< Discrete states at Time
-   TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: z           !< Constraint states at Time (possibly a guess)
-   TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherState  !< Other states at Time
-   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
-   TYPE(InflowWind_ConstraintStateType),     INTENT(  OUT)  :: z_residual  !< Residual of the constraint state equations using
-                                                                           !! the input values described above
-   INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-
-      ! Initialize ErrStat
-
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-
-      ! Solve for the constraint states here:
-
-   z_residual%DummyConstrState = 0
-
-END SUBROUTINE InflowWind_CalcConstrStateResidual
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! ###### The following four routines are Jacobian routines for linearization capabilities #######
