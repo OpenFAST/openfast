@@ -1,0 +1,43 @@
+###################################################################################################################################
+# Registry for Waves in the FAST Modularization Framework
+# This Registry file is used to create MODULE Current_Types  which contains all of the user-defined types needed in Current.
+# It also contains copy, destroy, pack,  and unpack routines associated with each defined data types.
+# See NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>         <ModuleName/ModName>          <TypeName>          <FieldType>         <FieldName>         <Dims>    <IO>      <DNAME>   <DESCRIP> <UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+
+# ...... Include files (definitions from NWTC Library) ............................................................................
+# make sure that the file name does not have any trailing white spaces!
+include Registry_NWTC_Library.txt
+
+# ..... Initialization data .......................................................................................................
+# Define inputs that the initialization routine may need here:
+#   e.g.,  the name of the input file,  the file root name,etc.
+#
+typedef   Current/Current     InitInputType                 SiKi              CurrSSV0               -          -        -         ""    -
+typedef   ^                   ^                             CHARACTER(80)     CurrSSDirChr           -          -        -         ""    -
+typedef   ^                   ^                             SiKi              CurrSSDir              -          -        -         ""    -
+typedef   ^                   ^                             SiKi              CurrNSRef              -          -        -         ""    -
+typedef   ^                   ^                             SiKi              CurrNSV0               -          -        -         ""    -
+typedef   ^                   ^                             SiKi              CurrNSDir              -          -        -         ""    -
+typedef   ^                   ^                             SiKi              CurrDIV                -          -        -         ""    -
+typedef   ^                   ^                             SiKi              CurrDIDir              -          -        -         ""    -
+typedef   ^                   ^                             INTEGER           CurrMod                -          -        -         ""    -
+typedef   ^                   ^                             SiKi              WtrDpth                -          -        -         ""    -
+typedef   ^                   ^                             SiKi              WaveKinGridzi         {:}         -        -         ""    -
+typedef   ^                   ^                             INTEGER           NGridPts               -          -        -         ""    -
+typedef   ^                   ^                             CHARACTER(1024)   DirRoot                -         ""        -         ""    -
+#
+#
+# Define outputs from the initialization routine here:
+#
+typedef   ^                   InitOutputType                SiKi              CurrVxi               {:}         -        -         ""  -
+typedef   ^                   ^                             SiKi              CurrVyi               {:}         -        -         ""  -
+typedef   ^                   ^                             SiKi              PCurrVxiPz0            -          -        -         ""  -
+typedef   ^                   ^                             SiKi              PCurrVyiPz0            -          -        -         ""  -
+#
+

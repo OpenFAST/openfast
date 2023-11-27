@@ -5185,7 +5185,7 @@ IF ( MOD(R+M,2) == 0 ) THEN
           / REAL( (J+N) * (J+N+2) * ((J-N)*(J-N)-1), ReKi )
 
 ELSE IF ( ABS(J-N) == 1 ) THEN  !bjj: why don't we use the pi() variable? or PibyTwo
-   FGAMMA = 3.14159265 * SIGN(1., REAL(R-M, ReKi) ) * .5 &
+   FGAMMA = Pi * SIGN(1.0_ReKi, REAL(R-M, ReKi) ) * .5 &
           / SQRT( HFUNC(M,N) * HFUNC(R,J) )        &
           / SQRT( REAL( (2*N+1) * (2*J+1) , ReKi) )
 

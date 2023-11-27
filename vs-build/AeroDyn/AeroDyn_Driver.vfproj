@@ -45,7 +45,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Debug_Double|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;DOUBLE_PRECISION" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" RealKIND="realKIND8" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;OPENFAST_DOUBLE_PRECISION" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" RealKIND="realKIND8" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="9999999" LargeAddressAware="addrAwareLarge"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -55,7 +55,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Debug_Double|x64" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;DOUBLE_PRECISION" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" RealKIND="realKIND8" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;OPENFAST_DOUBLE_PRECISION" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" RealKIND="realKIND8" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -65,7 +65,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release_Double|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_Double">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;DOUBLE_PRECISION" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" RealKIND="realKIND8" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;OPENFAST_DOUBLE_PRECISION" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" RealKIND="realKIND8" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="9999999" LargeAddressAware="addrAwareLarge"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -75,7 +75,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release_Double|x64" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_Double">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;DOUBLE_PRECISION" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" RealKIND="realKIND8" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;OPENFAST_DOUBLE_PRECISION" OpenMP="OpenMPParallelCode" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" RealKIND="realKIND8" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" LinkLibraryDependencies="false" GenerateManifest="false" SubSystem="subSystemConsole"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -88,6 +88,37 @@
 		<Filter Name="Header Files" Filter="fi;fd"/>
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
+		<Filter Name="ADI">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Inflow.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
+		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Inflow.f90">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration></File></Filter>
 		<Filter Name="AeroAcoustics">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\AeroDyn\src\AeroAcoustics_Registry.txt">
@@ -130,9 +161,9 @@
 		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Types.f90"/></FileConfiguration>
@@ -140,9 +171,9 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -170,9 +201,9 @@
 		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Driver_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration>
@@ -180,9 +211,9 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Driver_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -195,45 +226,14 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Driver.f90"/>
 		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Driver_Subs.f90"/></Filter>
-		<Filter Name="ADI">
-		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Inflow.f90">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ADI" Description="Running Registry for ADI" Outputs="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Inflow_Types.f90">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Inflow.f90">
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="true"/></FileConfiguration></File></Filter>
 		<Filter Name="AirFoil_Info">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\AeroDyn\src\AirfoilInfo_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\modules\AeroDyn\src\AirfoilInfo_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\modules\AeroDyn\src\AirfoilInfo_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\modules\AeroDyn\src\AirfoilInfo_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\modules\AeroDyn\src\AirfoilInfo_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\modules\AeroDyn\src\AirfoilInfo_Types.f90"/></FileConfiguration>
@@ -241,9 +241,9 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\modules\AeroDyn\src\AirfoilInfo_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\modules\AeroDyn\src\AirfoilInfo_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\modules\AeroDyn\src\AirfoilInfo_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\modules\AeroDyn\src\AirfoilInfo_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\modules\AeroDyn\src\AirfoilInfo_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\AeroDyn\src\AirfoilInfo_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -262,9 +262,9 @@
 		<File RelativePath="..\..\modules\AeroDyn\src\BEMT_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\modules\AeroDyn\src\BEMT_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\modules\AeroDyn\src\BEMT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\modules\AeroDyn\src\BEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\modules\AeroDyn\src\BEMT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\modules\AeroDyn\src\BEMT_Types.f90"/></FileConfiguration>
@@ -272,9 +272,9 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\modules\AeroDyn\src\BEMT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\modules\AeroDyn\src\BEMT_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\modules\AeroDyn\src\BEMT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\modules\AeroDyn\src\BEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\modules\AeroDyn\src\BEMT_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\AeroDyn\src\BEMT_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -299,9 +299,9 @@
 		<File RelativePath="..\..\modules\AeroDyn\src\DBEMT_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\modules\AeroDyn\src\DBEMT_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\modules\AeroDyn\src\DBEMT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\modules\AeroDyn\src\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\modules\AeroDyn\src\DBEMT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\modules\AeroDyn\src\DBEMT_Types.f90"/></FileConfiguration>
@@ -309,9 +309,9 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\modules\AeroDyn\src\DBEMT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\modules\AeroDyn\src\DBEMT_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\modules\AeroDyn\src\DBEMT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\modules\AeroDyn\src\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\modules\AeroDyn\src\DBEMT_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\AeroDyn\src\DBEMT_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -379,9 +379,9 @@
 		<File RelativePath="..\..\modules\inflowwind\src\IfW_FlowField.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\inflowwind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\inflowwind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\inflowwind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\inflowwind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\inflowwind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
@@ -389,53 +389,11 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\inflowwind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\inflowwind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\inflowwind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\inflowwind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\inflowwind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\inflowwind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\inflowwind\src\IfW_FlowField_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_FlowField" Description="Running Registry for IfW_FlowField" Outputs="..\..\modules\inflowwind\src\IfW_FlowField_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\inflowwind\src\IfW_FlowField_Types.f90">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\inflowwind\src\InflowWind_IO.txt">
-			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -447,9 +405,9 @@
 		<File RelativePath="..\..\modules\inflowwind\src\InflowWind.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\inflowwind\src\InflowWind_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\inflowwind\src\InflowWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\inflowwind\src\InflowWind_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\inflowwind\src\InflowWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\inflowwind\src\InflowWind_Types.f90"/></FileConfiguration>
@@ -457,18 +415,36 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\inflowwind\src\InflowWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\inflowwind\src\InflowWind_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\inflowwind\src\InflowWind_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\inflowwind\src\InflowWind_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\inflowwind\src\InflowWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\inflowwind\src\InflowWind_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\inflowwind\src\InflowWind_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\modules\inflowwind\src\InflowWind_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\inflowwind\src\InflowWind_IO.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind_IO" Description="Running Registry for InflowWind_IO" Outputs="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\inflowwind\src\InflowWind_IO_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\inflowwind\src\InflowWind_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
@@ -481,9 +457,9 @@
 		<File RelativePath="..\..\modules\inflowwind\src\Lidar.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\inflowwind\src\Lidar_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\inflowwind\src\Lidar_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\inflowwind\src\Lidar_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\inflowwind\src\Lidar_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\inflowwind\src\Lidar_Types.f90"/></FileConfiguration>
@@ -491,17 +467,9 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\inflowwind\src\Lidar_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\inflowwind\src\Lidar_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\inflowwind\src\Lidar_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\inflowwind\src\Lidar_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\inflowwind\src\Lidar_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\inflowwind\src\Lidar_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\inflowwind\src\Lidar_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Matlab|Win32">
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\modules\inflowwind\src\Lidar_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\inflowwind\src\Lidar_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -513,8 +481,8 @@
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\inflowwind\src\IfW_FlowField.f90"/>
-		<File RelativePath="..\..\modules\inflowwind\src\InflowWind_IO.f90"/>
 		<File RelativePath="..\..\modules\inflowwind\src\InflowWind.f90"/>
+		<File RelativePath="..\..\modules\inflowwind\src\InflowWind_IO.f90"/>
 		<File RelativePath="..\..\modules\inflowwind\src\InflowWind_Subs.f90"/>
 		<File RelativePath="..\..\modules\inflowwind\src\Lidar.f90"/></Filter>
 		<Filter Name="NWTC_Library">
@@ -523,8 +491,6 @@
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\fftpack4.1.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -535,9 +501,9 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File></Filter>
 		<Filter Name="Polynomial">
 		<File RelativePath="..\..\modules\nwtc-library\src\Polynomial\quartic.f90"/></Filter>
@@ -545,8 +511,6 @@
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\scalapack\dlasrt2.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -557,15 +521,13 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\scalapack\slasrt2.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -576,16 +538,14 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File></Filter>
 		<Filter Name="SLATEC">
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\d1mach.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -596,15 +556,13 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\dqk61.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -615,15 +573,13 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\fdump.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -634,15 +590,13 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\i1mach.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -653,15 +607,13 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\j4save.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -672,15 +624,13 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\qk61.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -691,15 +641,13 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\r1mach.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -710,15 +658,13 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xercnt.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -729,15 +675,13 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xerhlt.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -748,15 +692,13 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xermsg.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -767,14 +709,12 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xerprn.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
@@ -793,8 +733,6 @@
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xersve.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -811,8 +749,6 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\slatec\xgetua.f">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" DisableSpecificDiagnostics="6717"/></FileConfiguration>
@@ -835,13 +771,6 @@
 		<Filter Name="RanLux">
 		<File RelativePath="..\..\modules\nwtc-library\src\ranlux\RANLUX.f90"/></Filter>
 		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules\nwtc-library\src\Registry_NWTC_Library.txt"/></Filter>
-		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Mapping.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Types.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Base.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_IO.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
@@ -851,19 +780,36 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\nwtc-library\src\Registry_NWTC_Library.txt"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\Registry_NWTC_Library_typedef_nomesh.txt">
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat NWTC_Lib" Description="Running Registry for NWTC_Lib" Outputs="..\..\modules\nwtc-library\NWTC_Library_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat NWTC_Lib" Description="Running Registry for NWTC_Lib" Outputs="..\..\modules\nwtc-library\NWTC_Library_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat NWTC_Lib" Description="Running Registry for NWTC_Lib" Outputs="..\..\modules\nwtc-library\NWTC_Library_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="call ..\RunRegistry.bat NWTC_Lib" Description="Running Registry for NWTC_Lib" Outputs="..\..\modules\nwtc-library\NWTC_Library_Types.f90"/></FileConfiguration></File></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Mapping.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Types.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\ModReg.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Base.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_IO.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Num.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90"/>
 		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/>
-		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\VTK.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\YAML.f90"/></Filter>
 		<Filter Name="UnsteadyAero">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\AeroDyn\src\UnsteadyAero_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\modules\AeroDyn\src\UnsteadyAero_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\modules\AeroDyn\src\UnsteadyAero_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\modules\AeroDyn\src\UnsteadyAero_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\modules\AeroDyn\src\UnsteadyAero_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\modules\AeroDyn\src\UnsteadyAero_Types.f90"/></FileConfiguration>
@@ -871,9 +817,9 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\modules\AeroDyn\src\UnsteadyAero_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\modules\AeroDyn\src\UnsteadyAero_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\modules\AeroDyn\src\UnsteadyAero_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\modules\AeroDyn\src\UnsteadyAero_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\modules\AeroDyn\src\UnsteadyAero_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\AeroDyn\src\UnsteadyAero_Types.f90"/></Filter>
 		<File RelativePath="..\..\modules\AeroDyn\src\UnsteadyAero.f90">

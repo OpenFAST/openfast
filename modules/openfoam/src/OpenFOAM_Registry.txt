@@ -7,6 +7,7 @@
 ###################################################################################################################################
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include	Registry_NWTC_Library.txt
+include IfW_FlowField.txt
 
 
 
@@ -18,8 +19,7 @@ typedef	^	^	ReKi	StructTwrHNodes	{:}	-	-	"Location of tower nodes from AD15 (rel
 typedef	^       ^	ReKi	BladeLength	-	-	-	"Blade length"	meters
 typedef	^	^	ReKi	TowerHeight	-	-	-	"Tower Height"	meters
 typedef	^	^	ReKi	TowerBaseHeight	-	-	-	"Tower Base Height"	meters
-
-
+typedef ^       ^       IntKi   NodeClusterType -       -       -       "Node clustering (0 - Uniform, 1 - Non-uniform clustered towards tip)"   -
 
 
 
@@ -28,12 +28,14 @@ typedef	^	^	ReKi	TowerBaseHeight	-	-	-	"Tower Base Height"	meters
 typedef	OpenFOAM/OpFM	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
+typedef ^       InitOutputType  FlowFieldType	*FlowField	-	-	-	"Pointer of flow field data type"	- 
 
 # ..... MiscVars ................................................................................................................
 typedef	OpenFOAM/OpFM	OpFM_MiscVarType	MeshType	ActForceMotionsPoints	{:}	-	-	"point mesh for transferring AeroDyn motions to OpenFOAM  (includes hub+blades+nacelle+tower+tailfin)"	-
 typedef	OpenFOAM/OpFM	OpFM_MiscVarType	MeshType	ActForceLoadsPoints	{:}	-	-	"point mesh for transferring AeroDyn distributed loads to OpenFOAM (includes hub+blades+nacelle+tower+tailfin)"	-
 typedef	OpenFOAM/OpFM	OpFM_MiscVarType	MeshMapType	Line2_to_Point_Loads	{:}	-	-	"mapping data structure to convert line2 loads to point loads"	-
 typedef	OpenFOAM/OpFM	OpFM_MiscVarType	MeshMapType	Line2_to_Point_Motions	{:}	-	-	"mapping data structure to convert line2 loads to point motions"	-
+typedef	OpenFOAM/OpFM	OpFM_MiscVarType	FlowFieldType	&FlowField	-	-	-	"Flow field data type"	- 
 
 
 # ..... Parameters ................................................................................................................
@@ -44,12 +46,12 @@ typedef	OpenFOAM/OpFM	ParameterType	IntKi	NnodesVel	-	-	-	"number of velocity no
 typedef	OpenFOAM/OpFM	ParameterType	IntKi	NnodesForce	-	-	-	"number of force nodes on FAST v8-OpenFOAM interface"	-
 typedef	OpenFOAM/OpFM	ParameterType	IntKi	NnodesForceBlade	-	-	-	"number of force nodes on FAST v8-OpenFOAM interface"	-
 typedef	OpenFOAM/OpFM	ParameterType	IntKi	NnodesForceTower	-	-	-	"number of force nodes on FAST v8-OpenFOAM interface"	-
-typedef  OpenFOAM/OpFM	ParameterType	ReKi	forceBldRnodes	{:}	-	-	"Radial location of force nodes"  -
-typedef  OpenFOAM/OpFM	ParameterType	ReKi	forceTwrHnodes	{:}	-	-	"Vertical location of force nodes"  -
+typedef OpenFOAM/OpFM	ParameterType	ReKi	forceBldRnodes	{:}	-	-	"Radial location of force nodes"  -
+typedef OpenFOAM/OpFM	ParameterType	ReKi	forceTwrHnodes	{:}	-	-	"Vertical location of force nodes"  -
 typedef	OpenFOAM/OpFM	ParameterType	ReKi	BladeLength	-	-	-	"Blade length (same for all blades)"	"m"
 typedef	OpenFOAM/OpFM	ParameterType	ReKi	TowerHeight	-	-	-	"Tower height"	"m"
 typedef	OpenFOAM/OpFM	ParameterType	ReKi	TowerBaseHeight	-	-	-	"Tower base height"	"m"
-
+typedef OpenFOAM/OpFM   ParameterType   IntKi   NodeClusterType -       -       -       "Node clustering (0 - Uniform, 1 - Non-uniform clustered towards tip)"   -
 
 # ..... OpenFOAM_InputType data .......................................................................................................
 typedef	^	InputType	ReKi	pxVel	{:}	-	-	"x position of velocity interface (Aerodyn) nodes"	"m"

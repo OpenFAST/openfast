@@ -20,6 +20,8 @@
 !> This is a pseudo module used to couple OpenFAST with OpenFOAM; it is used to interface to CFD codes including SOWFA, OpenFOAM, and AMR-Wind
 MODULE OpenFOAM
    USE FAST_Types
+   USE IfW_FlowField
+   USE InflowWind_IO
 
    IMPLICIT NONE
    PRIVATE
@@ -29,6 +31,7 @@ MODULE OpenFOAM
    PUBLIC :: Init_OpFM                           ! Initialization routine
    PUBLIC :: OpFM_SetInputs                      ! Glue-code routine to update inputs for OpenFOAM
    PUBLIC :: OpFM_SetWriteOutput
+   PUBLIC :: OpFM_UpdateFlowField
 
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -46,7 +49,7 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, OpFM, In
 
       ! local variables
    INTEGER(IntKi)                                   :: k          ! blade loop counter
-
+   Type(Points_InitInputType)                       :: Points_InitInput
    INTEGER(IntKi)                                   :: ErrStat2    ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                             :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
 
@@ -181,8 +184,9 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, OpFM, In
 
       ! initialize the arrays:
       !-----------------------
+   OpFM%p%NodeClusterType = InitInp%NodeClusterType
       ! Create the blade and tower nodes in radial and tower height co-ordinates
-   call OpFM_CreateActForceBladeTowerNodes(OpFM%p, ErrStat2, ErrMsg2);  if (Failed()) return;
+   call OpFM_CreateActForceBladeTowerNodes(initOut_AD, OpFM%p, OpFM%u, ErrStat2, ErrMsg2);  if (Failed()) return;
       ! Interpolates the chord distribution to the force nodes
    call OpFM_InterpolateForceNodesChord(initOut_AD, OpFM%p, OpFM%u,  ErrStat2, ErrMsg2); if (Failed()) return;
       ! create actuator point motion mesh
@@ -241,6 +245,23 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD, initOut_AD, y_AD, OpFM, In
    OpFM%y%c_obj%v_Len = OpFM%p%nNodesVel; OpFM%y%c_obj%v = C_LOC( OpFM%y%v(1) )
    OpFM%y%c_obj%w_Len = OpFM%p%nNodesVel; OpFM%y%c_obj%w = C_LOC( OpFM%y%w(1) )
 
+      !............................................................................................
+      ! Initialize InflowWind FlowField
+      !............................................................................................
+   if (associated(OpFm%m%FlowField)) deallocate(OpFm%m%FlowField)
+   allocate(OpFm%m%FlowField, stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating m%FlowField', ErrStat, ErrMsg, RoutineName )
+      return
+   end if
+   
+   ! Initialize flowfield points type
+   OpFm%m%FlowField%FieldType = Point_FieldType
+   Points_InitInput%NumWindPoints = OpFM%p%nNodesVel
+   call IfW_Points_Init(Points_InitInput, OpFm%m%FlowField%Points, ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! Set pointer to flow field in InitOut
+   InitOut%FlowField => OpFm%m%FlowField
 
       !............................................................................................
       ! Define initialization-routine output (including writeOutput array) here:
@@ -271,6 +292,20 @@ contains
       endif
    end function Failed2
 END SUBROUTINE Init_OpFM
+
+SUBROUTINE OpFM_UpdateFlowField(p_FAST, OpFM, ErrStat, ErrMsg)
+   TYPE(FAST_ParameterType),       INTENT(IN    )  :: p_FAST      ! Parameters for the glue code
+   TYPE(OpenFOAM_Data),            INTENT(INOUT)   :: OpFM        ! data for the OpenFOAM integration module
+   INTEGER(IntKi),                 INTENT(  OUT)   :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   OpFM%m%FlowField%Points%Vel(1:size(OpFM%y%u),1) = OpFM%y%u
+   OpFM%m%FlowField%Points%Vel(1:size(OpFM%y%v),2) = OpFM%y%v
+   OpFM%m%FlowField%Points%Vel(1:size(OpFM%y%w),3) = OpFM%y%w
+END SUBROUTINE OpFM_UpdateFlowField
 
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE OpFM_SetInputs( p_FAST, u_AD, y_AD, y_SrvD, OpFM, ErrStat, ErrMsg )
@@ -322,21 +357,26 @@ SUBROUTINE SetOpFMPositions(p_FAST, u_AD, OpFM, ErrStat, ErrMsg)
 
    ! Do the Velocity (AeroDyn) nodes first
    !-------------------------------------------------------------------------------------------------
-   Node = 1   ! displaced hub position
-   OpFM%u%pxVel(Node) = u_AD%rotors(1)%HubMotion%Position(1,1) + u_AD%rotors(1)%HubMotion%TranslationDisp(1,1)
-   OpFM%u%pyVel(Node) = u_AD%rotors(1)%HubMotion%Position(2,1) + u_AD%rotors(1)%HubMotion%TranslationDisp(2,1)
-   OpFM%u%pzVel(Node) = u_AD%rotors(1)%HubMotion%Position(3,1) + u_AD%rotors(1)%HubMotion%TranslationDisp(3,1)
-
+   
+   ! Hub
+   Node = 1 
+   if (u_AD%rotors(1)%HubMotion%Committed) then
+      OpFM%u%pxVel(Node) = real(u_AD%rotors(1)%HubMotion%Position(1,1) + u_AD%rotors(1)%HubMotion%TranslationDisp(1,1), c_float)
+      OpFM%u%pyVel(Node) = real(u_AD%rotors(1)%HubMotion%Position(2,1) + u_AD%rotors(1)%HubMotion%TranslationDisp(2,1), c_float)
+      OpFM%u%pzVel(Node) = real(u_AD%rotors(1)%HubMotion%Position(3,1) + u_AD%rotors(1)%HubMotion%TranslationDisp(3,1), c_float)
+   else
+      OpFM%u%pxVel(Node) = 0.0_c_float
+      OpFM%u%pyVel(Node) = 0.0_c_float
+      OpFM%u%pzVel(Node) = 0.0_c_float
+   end if
 
    ! blade nodes
    DO K = 1,SIZE(u_AD%rotors(1)%BladeMotion)
       DO J = 1,u_AD%rotors(1)%BladeMotion(k)%nNodes
-
          Node = Node + 1
-         OpFM%u%pxVel(Node) = u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(1,j) + u_AD%rotors(1)%BladeMotion(k)%Position(1,j)
-         OpFM%u%pyVel(Node) = u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(2,j) + u_AD%rotors(1)%BladeMotion(k)%Position(2,j)
-         OpFM%u%pzVel(Node) = u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(3,j) + u_AD%rotors(1)%BladeMotion(k)%Position(3,j)
-
+         OpFM%u%pxVel(Node) = real(u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(1,j) + u_AD%rotors(1)%BladeMotion(k)%Position(1,j), c_float)
+         OpFM%u%pyVel(Node) = real(u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(2,j) + u_AD%rotors(1)%BladeMotion(k)%Position(2,j), c_float)
+         OpFM%u%pzVel(Node) = real(u_AD%rotors(1)%BladeMotion(k)%TranslationDisp(3,j) + u_AD%rotors(1)%BladeMotion(k)%Position(3,j), c_float)
       END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
    END DO !K = 1,p%NumBl
 
@@ -344,51 +384,42 @@ SUBROUTINE SetOpFMPositions(p_FAST, u_AD, OpFM, ErrStat, ErrMsg)
       ! tower nodes
       DO J=1,u_AD%rotors(1)%TowerMotion%nnodes
          Node = Node + 1
-         OpFM%u%pxVel(Node) = u_AD%rotors(1)%TowerMotion%TranslationDisp(1,J) + u_AD%rotors(1)%TowerMotion%Position(1,J)
-         OpFM%u%pyVel(Node) = u_AD%rotors(1)%TowerMotion%TranslationDisp(2,J) + u_AD%rotors(1)%TowerMotion%Position(2,J)
-         OpFM%u%pzVel(Node) = u_AD%rotors(1)%TowerMotion%TranslationDisp(3,J) + u_AD%rotors(1)%TowerMotion%Position(3,J)
+         OpFM%u%pxVel(Node) = real(u_AD%rotors(1)%TowerMotion%TranslationDisp(1,J) + u_AD%rotors(1)%TowerMotion%Position(1,J), c_float)
+         OpFM%u%pyVel(Node) = real(u_AD%rotors(1)%TowerMotion%TranslationDisp(2,J) + u_AD%rotors(1)%TowerMotion%Position(2,J), c_float)
+         OpFM%u%pzVel(Node) = real(u_AD%rotors(1)%TowerMotion%TranslationDisp(3,J) + u_AD%rotors(1)%TowerMotion%Position(3,J), c_float)
       END DO
    end if
 
    ! Do the Actuator Force nodes now
    !-------------------------------------------------------------------------------------------------
-   Node = 1   ! displaced hub position
-   OpFM%u%pxForce(Node) = OpFM%u%pxVel(Node)
-   OpFM%u%pyForce(Node) = OpFM%u%pyVel(Node)
-   OpFM%u%pzForce(Node) = OpFM%u%pzVel(Node)
-   OpFM%u%pOrientation((Node-1)*9 + 1) = u_AD%rotors(1)%HubMotion%Orientation(1,1,1)
-   OpFM%u%pOrientation((Node-1)*9 + 2) = u_AD%rotors(1)%HubMotion%Orientation(2,1,1)
-   OpFM%u%pOrientation((Node-1)*9 + 3) = u_AD%rotors(1)%HubMotion%Orientation(3,1,1)
-   OpFM%u%pOrientation((Node-1)*9 + 4) = u_AD%rotors(1)%HubMotion%Orientation(1,2,1)
-   OpFM%u%pOrientation((Node-1)*9 + 5) = u_AD%rotors(1)%HubMotion%Orientation(2,2,1)
-   OpFM%u%pOrientation((Node-1)*9 + 6) = u_AD%rotors(1)%HubMotion%Orientation(3,2,1)
-   OpFM%u%pOrientation((Node-1)*9 + 7) = u_AD%rotors(1)%HubMotion%Orientation(1,3,1)
-   OpFM%u%pOrientation((Node-1)*9 + 8) = u_AD%rotors(1)%HubMotion%Orientation(2,3,1)
-   OpFM%u%pOrientation((Node-1)*9 + 9) = u_AD%rotors(1)%HubMotion%Orientation(3,3,1)
-
+   
+   ! Hub
+   Node = 1 
+   if (u_AD%rotors(1)%HubMotion%Committed) then
+      OpFM%u%pxForce(Node) = OpFM%u%pxVel(Node)
+      OpFM%u%pyForce(Node) = OpFM%u%pyVel(Node)
+      OpFM%u%pzForce(Node) = OpFM%u%pzVel(Node)
+      OpFM%u%pOrientation((Node-1)*9+1:Node*9) = real(pack(u_AD%rotors(1)%HubMotion%Orientation(:,:,1),.true.),c_float)
+   else
+      OpFM%u%pxForce(Node) = 0.0_c_float
+      OpFM%u%pyForce(Node) = 0.0_c_float
+      OpFM%u%pzForce(Node) = 0.0_c_float
+      OpFM%u%pOrientation((Node-1)*9+1:Node*9) = real([1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0], c_float)
+   end if
 
    DO K = 1,OpFM%p%NumBl
       ! mesh mapping from line2 mesh to point mesh
       call Transfer_Line2_to_Point( u_AD%rotors(1)%BladeMotion(k), OpFM%m%ActForceMotionsPoints(k), OpFM%m%Line2_to_Point_Motions(k), ErrStat2, ErrMsg2 ); if (Failed()) return;
 
-
       DO J = 1, OpFM%p%nNodesForceBlade
          Node = Node + 1
-         OpFM%u%pxForce(Node) = OpFM%m%ActForceMotionsPoints(k)%Position(1,J) +  OpFM%m%ActForceMotionsPoints(k)%TranslationDisp(1,J)
-         OpFM%u%pyForce(Node) = OpFM%m%ActForceMotionsPoints(k)%Position(2,J) +  OpFM%m%ActForceMotionsPoints(k)%TranslationDisp(2,J)
-         OpFM%u%pzForce(Node) = OpFM%m%ActForceMotionsPoints(k)%Position(3,J) +  OpFM%m%ActForceMotionsPoints(k)%TranslationDisp(3,J)
-         OpFM%u%xdotForce(Node) = OpFM%m%ActForceMotionsPoints(k)%TranslationVel(1,J)
-         OpFM%u%ydotForce(Node) = OpFM%m%ActForceMotionsPoints(k)%TranslationVel(2,J)
-         OpFM%u%zdotForce(Node) = OpFM%m%ActForceMotionsPoints(k)%TranslationVel(3,J)
-         OpFM%u%pOrientation((Node-1)*9 + 1) = OpFM%m%ActForceMotionsPoints(k)%Orientation(1,1,J)
-         OpFM%u%pOrientation((Node-1)*9 + 2) = OpFM%m%ActForceMotionsPoints(k)%Orientation(2,1,J)
-         OpFM%u%pOrientation((Node-1)*9 + 3) = OpFM%m%ActForceMotionsPoints(k)%Orientation(3,1,J)
-         OpFM%u%pOrientation((Node-1)*9 + 4) = OpFM%m%ActForceMotionsPoints(k)%Orientation(1,2,J)
-         OpFM%u%pOrientation((Node-1)*9 + 5) = OpFM%m%ActForceMotionsPoints(k)%Orientation(2,2,J)
-         OpFM%u%pOrientation((Node-1)*9 + 6) = OpFM%m%ActForceMotionsPoints(k)%Orientation(3,2,J)
-         OpFM%u%pOrientation((Node-1)*9 + 7) = OpFM%m%ActForceMotionsPoints(k)%Orientation(1,3,J)
-         OpFM%u%pOrientation((Node-1)*9 + 8) = OpFM%m%ActForceMotionsPoints(k)%Orientation(2,3,J)
-         OpFM%u%pOrientation((Node-1)*9 + 9) = OpFM%m%ActForceMotionsPoints(k)%Orientation(3,3,J)
+         OpFM%u%pxForce(Node) = real(OpFM%m%ActForceMotionsPoints(k)%Position(1,J) +  OpFM%m%ActForceMotionsPoints(k)%TranslationDisp(1,J),c_float)
+         OpFM%u%pyForce(Node) = real(OpFM%m%ActForceMotionsPoints(k)%Position(2,J) +  OpFM%m%ActForceMotionsPoints(k)%TranslationDisp(2,J),c_float)
+         OpFM%u%pzForce(Node) = real(OpFM%m%ActForceMotionsPoints(k)%Position(3,J) +  OpFM%m%ActForceMotionsPoints(k)%TranslationDisp(3,J),c_float)
+         OpFM%u%xdotForce(Node) = real(OpFM%m%ActForceMotionsPoints(k)%TranslationVel(1,J),c_float)
+         OpFM%u%ydotForce(Node) = real(OpFM%m%ActForceMotionsPoints(k)%TranslationVel(2,J),c_float)
+         OpFM%u%zdotForce(Node) = real(OpFM%m%ActForceMotionsPoints(k)%TranslationVel(3,J),c_float)
+         OpFM%u%pOrientation((Node-1)*9_1:Node*9) = real(pack(OpFM%m%ActForceMotionsPoints(k)%Orientation(:,:,J),.true.),c_float)
       END DO
 
    END DO
@@ -399,18 +430,10 @@ SUBROUTINE SetOpFMPositions(p_FAST, u_AD, OpFM, ErrStat, ErrMsg)
 
          DO J=1,OpFM%p%nNodesForceTower
             Node = Node + 1
-            OpFM%u%pxForce(Node) = OpFM%m%ActForceMotionsPoints(k)%Position(1,J) +  OpFM%m%ActForceMotionsPoints(k)%TranslationDisp(1,J)
-            OpFM%u%pyForce(Node) = OpFM%m%ActForceMotionsPoints(k)%Position(2,J) +  OpFM%m%ActForceMotionsPoints(k)%TranslationDisp(2,J)
-            OpFM%u%pzForce(Node) = OpFM%m%ActForceMotionsPoints(k)%Position(3,J) +  OpFM%m%ActForceMotionsPoints(k)%TranslationDisp(3,J)
-            OpFM%u%pOrientation((Node-1)*9 + 1) = OpFM%m%ActForceMotionsPoints(k)%Orientation(1,1,J)
-            OpFM%u%pOrientation((Node-1)*9 + 2) = OpFM%m%ActForceMotionsPoints(k)%Orientation(2,1,J)
-            OpFM%u%pOrientation((Node-1)*9 + 3) = OpFM%m%ActForceMotionsPoints(k)%Orientation(3,1,J)
-            OpFM%u%pOrientation((Node-1)*9 + 4) = OpFM%m%ActForceMotionsPoints(k)%Orientation(1,2,J)
-            OpFM%u%pOrientation((Node-1)*9 + 5) = OpFM%m%ActForceMotionsPoints(k)%Orientation(2,2,J)
-            OpFM%u%pOrientation((Node-1)*9 + 6) = OpFM%m%ActForceMotionsPoints(k)%Orientation(3,2,J)
-            OpFM%u%pOrientation((Node-1)*9 + 7) = OpFM%m%ActForceMotionsPoints(k)%Orientation(1,3,J)
-            OpFM%u%pOrientation((Node-1)*9 + 8) = OpFM%m%ActForceMotionsPoints(k)%Orientation(2,3,J)
-            OpFM%u%pOrientation((Node-1)*9 + 9) = OpFM%m%ActForceMotionsPoints(k)%Orientation(3,3,J)
+            OpFM%u%pxForce(Node) = real(OpFM%m%ActForceMotionsPoints(k)%Position(1,J) +  OpFM%m%ActForceMotionsPoints(k)%TranslationDisp(1,J),c_float)
+            OpFM%u%pyForce(Node) = real(OpFM%m%ActForceMotionsPoints(k)%Position(2,J) +  OpFM%m%ActForceMotionsPoints(k)%TranslationDisp(2,J),c_float)
+            OpFM%u%pzForce(Node) = real(OpFM%m%ActForceMotionsPoints(k)%Position(3,J) +  OpFM%m%ActForceMotionsPoints(k)%TranslationDisp(3,J),c_float)
+            OpFM%u%pOrientation((Node-1)*9+1:Node*9) = real(pack(OpFM%m%ActForceMotionsPoints(k)%Orientation(:,:,J),.true.),c_float)
          END DO
       END DO
    endif
@@ -1004,41 +1027,132 @@ END SUBROUTINE CalcForceActuatorPositionsTower
 
 !--------------------------------------------------------------------------
 !> Creates the blade and tower nodes in radial and tower height co-ordinates
-SUBROUTINE OpFM_CreateActForceBladeTowerNodes(p_OpFM, ErrStat, ErrMsg)
-   TYPE(OpFM_ParameterType),INTENT(INOUT) :: p_OpFM     ! data for the OpenFOAM integration module
-   INTEGER(IntKi)                         :: ErrStat    ! Error status of the operation
-   CHARACTER(ErrMsgLen)                   :: ErrMsg     ! Error message if ErrStat /= ErrID_None
+SUBROUTINE OpFM_CreateActForceBladeTowerNodes(InitOut_AD, p_OpFM, u_OpFM, ErrStat, ErrMsg)
+   TYPE(AD_InitOutputType), INTENT(IN   )  :: InitOut_AD ! InitOut data for the OpenFOAM integration module
+   TYPE(OpFM_ParameterType),INTENT(INOUT)  :: p_OpFM     ! Parameter data for the OpenFOAM integration module
+   TYPE(OpFM_InputType),    INTENT(INOUT)  :: u_OpFM     ! Input data for the OpenFOAM integration module
+   INTEGER(IntKi)                          :: ErrStat    ! Error status of the operation
+   CHARACTER(ErrMsgLen)                    :: ErrMsg     ! Error message if ErrStat /= ErrID_None
 
    !Local variables
-   REAL(ReKi)                             :: dRforceNodes ! Uniform distance between two consecutive force nodes
-   INTEGER(IntKI)                         :: i            ! Loop variables
-   INTEGER(IntKi)                         :: ErrStat2     ! temporary Error status of the operation
-   CHARACTER(ErrMsgLen)                   :: ErrMsg2      ! temporary Error message if ErrStat /= ErrID_None
-   CHARACTER(*),   PARAMETER             :: RoutineName = 'OpFM_CreateActForceBladeTowerNodes'
+   REAL(ReKi), ALLOCATABLE                 :: cNonUniform(:)
+   REAL(ReKi), ALLOCATABLE                 :: sNonUniform(:)
+   REAL(ReKi), ALLOCATABLE                 :: pNonUniform(:)
+   REAL(ReKi), ALLOCATABLE                 :: pUniform(:)
+   REAL(ReKi), ALLOCATABLE                 :: cByS(:)
+   REAL(ReKi), ALLOCATABLE                 :: e(:)
+   REAL(ReKi)                              :: eSum, eTol
+   REAL(ReKi)                              :: bladeRoot, bladeTip, rInterp
+   INTEGER(IntKi)                          :: counter
+   REAL(ReKi)                              :: dRforceNodes ! Uniform distance between two consecutive force nodes
+   INTEGER(IntKI)                          :: i            ! Loop variables
+   INTEGER(IntKi)                          :: ErrStat2     ! temporary Error status of the operation
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2      ! temporary Error message if ErrStat /= ErrID_None
+   CHARACTER(*),   PARAMETER               :: RoutineName = 'OpFM_CreateActForceBladeTowerNodes'
 
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   ! Line2 to Line2 mapping expects the destination mesh to be smaller than the source mesh for deformation mapping and larger than the source mesh for load mapping. This forces me to create nodes at the very ends of the blade.
-
-   ! Blades
-   allocate(p_OpFM%forceBldRnodes(p_OpFM%nNodesForceBlade), stat=errStat2);   if (Failed2()) return;
-   dRforceNodes = p_OpFM%BladeLength/(p_OpFM%nNodesForceBlade-1)
-   do i=1,p_OpFM%nNodesForceBlade-1
-      p_OpFM%forceBldRnodes(i) = (i-1)*dRforceNodes
-   end do
-   p_OpFM%forceBldRnodes(p_OpFM%nNodesForceBlade) = p_OpFM%BladeLength
 
 
+   ! Tower
    if (p_OpFM%NMappings .gt. p_OpFM%NumBl) then
-      ! tower
       allocate(p_OpFM%forceTwrHnodes(p_OpFM%nNodesForceTower), stat=errStat2);   if (Failed2()) return;
+      ! Compute uniform spacing.
       dRforceNodes = p_OpFM%TowerHeight/(p_OpFM%nNodesForceTower-1)
       do i=1,p_OpFM%nNodesForceTower-1
          p_OpFM%forceTwrHnodes(i) = (i-1)*dRforceNodes
       end do
       p_OpFM%forceTwrHnodes(p_OpFM%nNodesForceTower) = p_OpFM%TowerHeight
    end if
+
+
+
+   ! Blades
+   allocate(cNonUniform(p_OpFM%nNodesForceBlade),stat=errStat2)
+   allocate(sNonUniform(p_OpFM%nNodesForceBlade),stat=errStat2)
+   allocate(pNonUniform(p_OpFM%nNodesForceBlade),stat=errStat2)
+   allocate(pUniform(p_OpFM%nNodesForceBlade),stat=errStat2)
+   allocate(cByS(p_OpFM%nNodesForceBlade),stat=errStat2)
+   allocate(e(p_OpFM%nNodesForceBlade-1),stat=errStat2)
+   allocate(p_OpFM%forceBldRnodes(p_OpFM%nNodesForceBlade), stat=errStat2);   if (Failed2()) return;
+
+   ! Compute uniform spacing.
+   dRforceNodes = p_OpFM%BladeLength/(p_OpFM%nNodesForceBlade-1)
+   do i=1,p_OpFM%nNodesForceBlade-1
+       pUniform(i) = (i-1)*dRforceNodes
+   end do
+   pUniform(p_OpFM%nNodesForceBlade) = p_OpFM%BladeLength
+   p_OpFM%forceBldRnodes = pUniform
+
+   if (p_OpFM%NodeClusterType .eq. 0) then
+       print*, "Using uniform blade force node clustering."
+      !do i = 1, p_OpFM%nNodesForceBlade
+      !    print*, "r(",i,") = ", pUniform(i)
+      !end do
+   end if
+
+
+   ! If non-uniform spacing is called for, compute the spacing.  
+   ! We know that if the spacing is proportional to chord, then at each
+   ! element, ds = a*c, where a is some constant factor across the entire
+   ! blade.  Therefore sum(ds) = sum(a*c) = L, so a is L/sum(c).  Because
+   ! we don't know c at every point exactly beforehand, we have to
+   ! iterate using c from our previous best guess.  We know things have
+   ! converged when a = c/ds is constant along the blade, so that is our
+   ! convergence check.  We take the difference between a = c/ds between
+   ! all neighboring points to see how different they are, and take the
+   ! rms of that error as the convergence measure (eSum).
+   if (p_OpFM%NodeClusterType .eq. 1) then
+
+       ! For chord-based clustering (increase resolution in regions of decreased chord), an iterative solution to the grid spacing is used.
+       ! The initial guess to the spacing is uniform spacing, so start with that.
+       pNonUniform = pUniform
+
+       ! Get the chord at the initial force points.
+       call OpFM_InterpolateForceNodesChord(initOut_AD, p_OpFM, u_OpFM, ErrStat2, ErrMsg2)
+       cNonUniform(1:p_OpFM%nNodesForceBlade) = u_OpFM%forceNodesChord(2:p_OpFM%nNodesForceBlade+1)
+
+       ! Iterate on a chord-based non-uniform spacing.
+       counter = 0
+       e = 1.0e+6
+       eTol = 1.0e-6
+       eSum = sqrt(sum(e*e))
+       do while ((eSum .gt. eTol) .and. (counter < 50))
+
+          !set the non-uniform spacing to ds = (sum(ds^) / sum(c^)) * c^, where
+          !the ^ denotes from the last iteration.  To begin the iteration, we
+          !use ds = uniform.
+          sNonUniform = (p_OpFM%BladeLength)*cNonUniform/(sum(cNonUniform(2:p_OpFM%nNodesForceBlade-1)) + 0.5*(cNonUniform(1)+cNonUniform(p_OpFM%nNodesForceBlade)))
+
+          ! set the new blade points based on the new ds.
+          do i = 2, p_OpFM%nNodesForceBlade
+             pNonUniform(i) = pNonUniform(i-1) + 0.5*(sNonUniform(i-1) + sNonUniform(i))
+          end do
+          pNonUniform(p_OpFM%nNodesForceBlade) = p_OpFM%BladeLength
+          p_OpFM%forceBldRnodes = pNonUniform
+
+          ! interpolate chord to the new points to get the updated chord values
+          call OpFM_InterpolateForceNodesChord(initOut_AD, p_OpFM, u_OpFM,ErrStat2, ErrMsg2)
+          cNonUniform(1:p_OpFM%nNodesForceBlade) = u_OpFM%forceNodesChord(2:p_OpFM%nNodesForceBlade+1)
+
+          ! compute a = c/ds
+          cByS = cNonUniform/sNonUniform
+
+          ! check how a = c/s varies along the span and take its rms to check
+          ! convergence.
+          e = cByS(2:p_OpFM%nNodesForceBlade) - cByS(1:p_OpFM%nNodesForceBlade-1)
+          eSum = sqrt(sum(e*e))
+
+          ! increment the iteration counter
+          counter = counter + 1
+
+       end do
+
+       CALL WrScr("Using chord-scaled blade force node clustering")
+       CALL WrScr(" -converged to "//trim(Num2LStr(eSum))//" in "//trim(Num2LStr(counter))//" iterations.")
+   end if
+
 
    return
 
@@ -1057,8 +1171,8 @@ END SUBROUTINE OpFM_CreateActForceBladeTowerNodes
 !> Interpolates the chord distribution to the force nodes
 SUBROUTINE OpFM_InterpolateForceNodesChord(InitOut_AD, p_OpFM, u_OpFM, ErrStat, ErrMsg)
   TYPE(AD_InitOutputType),  INTENT(IN   ) :: InitOut_AD ! InitOut  data for the OpenFOAM integration module
-  TYPE(OpFM_ParameterType), INTENT(IN   ) :: p_OpFM     ! Input data for the OpenFOAM integration module
-  TYPE(OpFM_InputType),     INTENT(INOUT) :: u_OpFM     ! Parameter data for the OpenFOAM integration module
+  TYPE(OpFM_ParameterType), INTENT(IN   ) :: p_OpFM     ! Parameter data for the OpenFOAM integration module
+  TYPE(OpFM_InputType),     INTENT(INOUT) :: u_OpFM     ! Input data for the OpenFOAM integration module
   INTEGER(IntKi)                          :: ErrStat    ! temporary Error status of the operation
   CHARACTER(ErrMsgLen)                    :: ErrMsg     ! temporary Error message if ErrStat /= ErrID_None
 
@@ -1078,6 +1192,7 @@ SUBROUTINE OpFM_InterpolateForceNodesChord(InitOut_AD, p_OpFM, u_OpFM, ErrStat, 
 
   ! The blades first
   do k = 1, p_OpFM%NumBl
+
      ! Calculate the chord at the force nodes based on interpolation
      ! NOTE: the InterpArray function from the NWTC Library could be used here instead.  This interpolation will eventually be removed, so we won't update it here.
      nNodesBladeProps = SIZE(InitOut_AD%rotors(1)%BladeProps(k)%BlChord)
@@ -1097,28 +1212,31 @@ SUBROUTINE OpFM_InterpolateForceNodesChord(InitOut_AD, p_OpFM, u_OpFM, ErrStat, 
      END DO
   end do
 
+  ! The tower now
+  if (p_OpFM%NMappings .gt. p_OpFM%NumBl) then
+     do k = p_OpFM%NumBl+1,p_OpFM%NMappings
+        nNodesTowerProps = SIZE(InitOut_AD%rotors(1)%TwrElev)
 
-   ! The tower now
-   if (p_OpFM%NMappings .gt. p_OpFM%NumBl) then
-      do k = p_OpFM%NumBl+1,p_OpFM%NMappings
-         nNodesTowerProps = SIZE(InitOut_AD%rotors(1)%TwrElev)
-         ! Calculate the chord at the force nodes based on interpolation
-         DO I=1,p_OpFM%nNodesForceTower
-            Node = Node + 1
-            do jLower = 1, (nNodesTowerProps - 1)
-               if ( (InitOut_AD%rotors(1)%TwrElev(jLower) - p_OpFM%forceTwrHnodes(I)-p_OpFM%TowerBaseHeight)*(InitOut_AD%rotors(1)%TwrElev(jLower+1) - p_OpFM%forceTwrHnodes(I)-p_OpFM%TowerBaseHeight) .le. 0) then
-                  exit
-               endif
-            enddo
-            if (jLower .lt. nNodesTowerProps) then
-               rInterp =  (p_OpFM%forceTwrHnodes(I)+p_OpFM%TowerBaseHeight - InitOut_AD%rotors(1)%TwrElev(jLower))/(InitOut_AD%rotors(1)%TwrElev(jLower+1)-InitOut_AD%rotors(1)%TwrElev(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
-               u_OpFM%forceNodesChord(Node) = InitOut_AD%rotors(1)%TwrDiam(jLower) + rInterp * (InitOut_AD%rotors(1)%TwrDiam(jLower+1) - InitOut_AD%rotors(1)%TwrDiam(jLower))
-            else
-               u_OpFM%forceNodesChord(Node) = InitOut_AD%rotors(1)%TwrDiam(nNodesTowerProps) !Work around for when the last node of the actuator mesh is slightly outside of the Aerodyn tower properties.
-            end if
-         END DO
-      end do
-   endif
+        ! Calculate the chord at the force nodes based on interpolation
+        do I=1,p_OpFM%nNodesForceTower
+           Node = Node + 1
+
+           do jLower = 1, (nNodesTowerProps - 1)
+              if ( (InitOut_AD%rotors(1)%TwrElev(jLower) - p_OpFM%forceTwrHnodes(I)-p_OpFM%TowerBaseHeight)*(InitOut_AD%rotors(1)%TwrElev(jLower+1) - p_OpFM%forceTwrHnodes(I)-p_OpFM%TowerBaseHeight) .le. 0) then
+                 exit
+              endif
+           enddo
+
+           if (jLower .lt. nNodesTowerProps) then
+              rInterp =  (p_OpFM%forceTwrHnodes(I)+p_OpFM%TowerBaseHeight - InitOut_AD%rotors(1)%TwrElev(jLower))/(InitOut_AD%rotors(1)%TwrElev(jLower+1)-InitOut_AD%rotors(1)%TwrElev(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
+              u_OpFM%forceNodesChord(Node) = InitOut_AD%rotors(1)%TwrDiam(jLower) + rInterp * (InitOut_AD%rotors(1)%TwrDiam(jLower+1) - InitOut_AD%rotors(1)%TwrDiam(jLower))
+           else
+              u_OpFM%forceNodesChord(Node) = InitOut_AD%rotors(1)%TwrDiam(nNodesTowerProps) !Work around for when the last node of the actuator mesh is slightly outside of the Aerodyn tower properties.
+           end if
+
+        end do
+     end do
+  endif
 
 END SUBROUTINE OpFM_InterpolateForceNodesChord
 

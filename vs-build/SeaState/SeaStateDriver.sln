@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30503.244
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{6989167D-11E4-40FE-8C1A-21924BCA7E90}") = "SeaStateDriver", "SeaStateDriver.vfproj", "{815C302F-A93D-4C22-9329-717B4BC113C0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug_Double|Win32 = Debug_Double|Win32
+		Debug_Double|x64 = Debug_Double|x64
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{815C302F-A93D-4C22-9329-717B4BC113C0}.Debug_Double|Win32.ActiveCfg = Debug_Double|Win32
+		{815C302F-A93D-4C22-9329-717B4BC113C0}.Debug_Double|Win32.Build.0 = Debug_Double|Win32
+		{815C302F-A93D-4C22-9329-717B4BC113C0}.Debug_Double|x64.ActiveCfg = Debug_Double|x64
+		{815C302F-A93D-4C22-9329-717B4BC113C0}.Debug_Double|x64.Build.0 = Debug_Double|x64
+		{815C302F-A93D-4C22-9329-717B4BC113C0}.Debug|Win32.ActiveCfg = Debug|Win32
+		{815C302F-A93D-4C22-9329-717B4BC113C0}.Debug|Win32.Build.0 = Debug|Win32
+		{815C302F-A93D-4C22-9329-717B4BC113C0}.Debug|x64.ActiveCfg = Debug|x64
+		{815C302F-A93D-4C22-9329-717B4BC113C0}.Debug|x64.Build.0 = Debug|x64
+		{815C302F-A93D-4C22-9329-717B4BC113C0}.Release|Win32.ActiveCfg = Release|Win32
+		{815C302F-A93D-4C22-9329-717B4BC113C0}.Release|Win32.Build.0 = Release|Win32
+		{815C302F-A93D-4C22-9329-717B4BC113C0}.Release|x64.ActiveCfg = Release|x64
+		{815C302F-A93D-4C22-9329-717B4BC113C0}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D73C5D81-14CD-4C14-8B52-6885B380AE3E}
+	EndGlobalSection
+EndGlobal

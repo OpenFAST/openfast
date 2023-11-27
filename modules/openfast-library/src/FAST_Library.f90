@@ -134,6 +134,7 @@ subroutine FAST_Sizes(iTurb, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, dt
       ! -- MATLAB Integration --
       ! Make sure fast farm integration is false
       ExternInitData%FarmIntegration = .false.
+      ExternInitData%WaveFieldMod = 0
    
       IF ( NINT(InitInpAry(2)) == 1 ) THEN
          ExternInitData%LidRadialVel = .true.
@@ -506,7 +507,7 @@ subroutine FAST_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, NumOuts_c, d
       
 end subroutine FAST_Restart 
 !==================================================================================================================================
-subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, NumSC2Ctrl, NumCtrl2SC, InitSCOutputsGlob, InitSCOutputsTurbine, NumActForcePtsBlade, NumActForcePtsTower, TurbPosn, AbortErrLev_c, dt_c, NumBl_c, NumBlElem_c, &
+subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, NumSC2Ctrl, NumCtrl2SC, InitSCOutputsGlob, InitSCOutputsTurbine, NumActForcePtsBlade, NumActForcePtsTower, TurbPosn, AbortErrLev_c, dt_c, NumBl_c, NumBlElem_c, NodeClusterType_c, &
                           OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Init')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
@@ -524,6 +525,7 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    REAL(C_FLOAT),          INTENT(IN   ) :: InitScOutputsTurbine (*) ! Initial Supercontroller turbine specific outputs = controller inputs
    INTEGER(C_INT),         INTENT(IN   ) :: NumActForcePtsBlade ! number of actuator line force points in blade
    INTEGER(C_INT),         INTENT(IN   ) :: NumActForcePtsTower ! number of actuator line force points in tower
+   INTEGER(C_INT),         INTENT(IN    ):: NodeClusterType_c
    REAL(C_FLOAT),          INTENT(IN   ) :: TurbPosn(3)      
    INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c      
    REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c      
@@ -582,6 +584,8 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2CtrlGlob, 
    
    ExternInitData%NumActForcePtsBlade = NumActForcePtsBlade
    ExternInitData%NumActForcePtsTower = NumActForcePtsTower
+
+   ExternInitData%NodeClusterType = NodeClusterType_c
 
    CALL FAST_InitializeAll_T( t_initial, iTurb, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
 

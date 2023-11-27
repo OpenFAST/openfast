@@ -219,6 +219,15 @@ function(py_ifw_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(py_ifw_regression)
 
+# seastate
+function(seast_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeSeaStateRegressionCase.py")
+  set(SEASTATE_EXECUTABLE "${CTEST_SEASTATE_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/seastate")
+  regression(${TEST_SCRIPT} ${SEASTATE_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(seast_regression)
+
 # moordyn
 function(md_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeMoordynRegressionCase.py")
@@ -268,6 +277,7 @@ of_regression("SWRT_YFree_VS_EDC01"             "openfast;elastodyn;aerodyn14;se
 # of_regression("SWRT_YFree_VS_WTurb"             "openfast;elastodyn;aerodyn14;servodyn")
 of_regression("5MW_Land_DLL_WTurb"              "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("5MW_OC3Mnpl_DLL_WTurb_WavesIrr"  "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
+of_regression("5MW_OC3Mnpl_DLL_WTurb_WavesIrr_Restart"  "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore;restart")
 of_regression("5MW_OC3Trpd_DLL_WSt_WavesReg"    "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
 # of_regression("5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth" "openfast;elastodyn;aerodyn15;servodyn;hydrodyn;subdyn;offshore")
 # of_regression("5MW_ITIBarge_DLL_WTurb_WavesIrr"        "openfast;elastodyn;aerodyn14;servodyn;hydrodyn;map;offshore")
@@ -389,6 +399,11 @@ ifw_regression("ifw_BoxExceedTwr"                             "inflowwind")
 
 # Py-InflowWind regression tests
 py_ifw_regression("py_ifw_turbsimff"                          "inflowwind;python")
+
+# SeaState regression tests
+seast_regression("seastate_1"                                "seastate")
+seast_regression("seastate_wavemod5"                         "seastate")
+seast_regression("seastate_wr_kin1"                          "seastate")
 
 # MoorDyn regression tests
 md_regression("md_5MW_OC4Semi"                                "moordyn")

@@ -4,6 +4,6 @@ author: 'Rafael Mudafort https://github.com/rafmudaf'
 runs:
   using: "composite"
   steps:  
-    - run: ctest -VV -j7 -R hd_ -LE python
+    - run: ctest -VV -j6 -R hd_ -LE python
       working-directory: ${{runner.workspace}}/openfast/build
       shell: bash

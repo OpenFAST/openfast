@@ -29,7 +29,6 @@ MODULE MoorDyn
    USE MoorDyn_Body
    USE MoorDyn_Misc
    
-   !USE WAVES, only: WaveGrid_n, WaveGrid_x0, WaveGrid_dx, WaveGrid_nx, WaveGrid_y0, WaveGrid_dy, WaveGrid_ny, WaveGrid_nz  ! seeing if I can get waves data here directly...
 
    IMPLICIT NONE
 
@@ -84,18 +83,18 @@ CONTAINS
       INTEGER(IntKi)                               :: iTurb          ! index for turbine in FAST.Farm applications
       INTEGER(IntKi)                               :: Converged      ! flag indicating whether the dynamic relaxation has converged
       INTEGER(IntKi)                               :: N              ! convenience integer for readability: number of segments in the line
-      REAL(ReKi)                                   :: rPos(3)        ! array for setting fairlead reference positions in mesh
+!      REAL(ReKi)                                   :: rPos(3)        ! array for setting fairlead reference positions in mesh
       REAL(ReKi)                                   :: OrMat(3,3)     ! rotation matrix for setting fairlead positions correctly if there is initial platform rotation
       REAL(ReKi)                                   :: OrMat2(3,3)
       REAL(R8Ki)                                   :: OrMatRef(3,3)
       REAL(DbKi), ALLOCATABLE                      :: FairTensIC(:,:)! array of size nCpldCons, 3 to store three latest fairlead tensions of each line
-      CHARACTER(20)                                :: TempString     ! temporary string for incidental use
+!      CHARACTER(20)                                :: TempString     ! temporary string for incidental use
       INTEGER(IntKi)                               :: ErrStat2       ! Error status of the operation
       CHARACTER(ErrMsgLen)                         :: ErrMsg2        ! Error message if ErrStat2 /= ErrID_None
       
       REAL(DbKi)                                      :: dtM         ! actual mooring dynamics time step
       INTEGER(IntKi)                                  :: NdtM        ! number of time steps to integrate through with RK2
-      INTEGER(IntKi)                                  :: ntWave      ! number of time steps of wave data
+!      INTEGER(IntKi)                                  :: ntWave      ! number of time steps of wave data
       
       TYPE(MD_InputType)    :: u_array(1)    ! a size-one array for u to make call to TimeStep happy
       REAL(DbKi)            :: t_array(1)    ! a size-one array saying time is 0 to make call to TimeStep happy  
@@ -107,10 +106,10 @@ CONTAINS
       
       ! Local variables for reading file input (Previously in MDIO_ReadInput)
       INTEGER(IntKi)               :: UnEc                 ! The local unit number for this module's echo file
-      INTEGER(IntKi)               :: UnOut    ! for outputing wave kinematics data
-      CHARACTER(200)               :: Frmt     ! a string to hold a format statement
+!      INTEGER(IntKi)               :: UnOut    ! for outputing wave kinematics data
+!      CHARACTER(200)               :: Frmt     ! a string to hold a format statement
 
-      CHARACTER(1024)              :: EchoFile             ! Name of MoorDyn echo file
+!      CHARACTER(1024)              :: EchoFile             ! Name of MoorDyn echo file
       CHARACTER(1024)              :: Line                 ! String to temporarially hold value of read line
       CHARACTER(20)                :: LineOutString        ! String to temporarially hold characters specifying line output options
       CHARACTER(20)                :: OptString            ! String to temporarially hold name of option variable
@@ -124,7 +123,7 @@ CONTAINS
       CHARACTER(40)                :: TempString4          !
       CHARACTER(40)                :: TempString5          !
       CHARACTER(40)                :: TempStrings(6)       ! Array of 6 strings used when parsing comma-separated items
-      CHARACTER(1024)              :: FileName             !
+!      CHARACTER(1024)              :: FileName             !
 
       REAL(DbKi)                   :: depth                ! local water depth interpolated from bathymetry grid [m]
       Real(DbKi)                   :: nvec(3)              ! local seabed surface normal vector (positive out)
@@ -688,8 +687,8 @@ CONTAINS
                    !read into a line
                    Line = NextLine(i)
 
-                   ! check for correct number of columns in current line
-                   IF ( CountWords( Line ) /= 7 ) THEN
+                   ! check for correct number of columns in current line (bjj: I'm not going to throw an error if there are extra columns in this line, e.g. comments)
+                   IF ( CountWords( Line ) < 7 ) THEN
                        CALL SetErrStat( ErrID_Fatal, ' Unable to parse Rod Type '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 7 columns.', ErrStat, ErrMsg, RoutineName )
                        CALL CleanUp()
                        RETURN
@@ -1245,8 +1244,8 @@ CONTAINS
                   !read into a line
                   Line = NextLine(i)
 
-                  ! check for correct number of columns in current line
-                  IF ( CountWords( Line ) /= 7 ) THEN
+                  ! check for correct number of columns in current line (bjj: I'm not going to throw an error if there are extra columns in this line, e.g. comments)
+                  IF ( CountWords( Line ) < 7 ) THEN
                       CALL SetErrStat( ErrID_Fatal, ' Unable to parse Line '//trim(Num2LStr(l))//' on row '//trim(Num2LStr(i))//' in input file. Row has wrong number of columns. Must be 7 columns.', ErrStat, ErrMsg, RoutineName )
                       CALL CleanUp()
                       RETURN
@@ -2658,10 +2657,10 @@ CONTAINS
       INTEGER(IntKi)                                     :: J       ! index
       INTEGER(IntKi)                                     :: K       ! index
       INTEGER(IntKi)                                     :: iTurb   ! index
-      INTEGER(IntKi)                                     :: Istart  ! start index of line/connect in state vector
-      INTEGER(IntKi)                                     :: Iend    ! end index of line/connect in state vector
+!      INTEGER(IntKi)                                     :: Istart  ! start index of line/connect in state vector
+!      INTEGER(IntKi)                                     :: Iend    ! end index of line/connect in state vector
 
-      REAL(DbKi)                                         :: temp(3) ! temporary for passing kinematics
+!      REAL(DbKi)                                         :: temp(3) ! temporary for passing kinematics
       
       REAL(DbKi)                                         :: r6_in(6) ! temporary for passing kinematics
       REAL(DbKi)                                         :: v6_in(6) ! temporary for passing kinematics
@@ -3625,7 +3624,7 @@ SUBROUTINE MD_Init_Jacobian(Init, p, u, y, m, InitOut, ErrStat, ErrMsg)
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'SD_Init_Jacobian'
-   real(ReKi) :: dx, dy, dz, maxDim
+!   real(ReKi) :: dx, dy, dz, maxDim
    
    INTEGER(IntKi)                                    :: l, I
    real(ReKi)                                        :: dl_slack     ! how much a given line segment is stretched [m] 

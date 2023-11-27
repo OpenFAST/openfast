@@ -16,20 +16,16 @@
 
 if (GENERATE_TYPES)
   generate_f90_types(src/Conv_Radiation.txt ${CMAKE_CURRENT_LIST_DIR}/src/Conv_Radiation_Types.f90)
-  generate_f90_types(src/Current.txt ${CMAKE_CURRENT_LIST_DIR}/src/Current_Types.f90)
   generate_f90_types(src/HydroDyn.txt ${CMAKE_CURRENT_LIST_DIR}/src/HydroDyn_Types.f90)
   generate_f90_types(src/Morison.txt ${CMAKE_CURRENT_LIST_DIR}/src/Morison_Types.f90)
   generate_f90_types(src/SS_Radiation.txt ${CMAKE_CURRENT_LIST_DIR}/src/SS_Radiation_Types.f90)
   generate_f90_types(src/SS_Excitation.txt ${CMAKE_CURRENT_LIST_DIR}/src/SS_Excitation_Types.f90)
   generate_f90_types(src/WAMIT.txt ${CMAKE_CURRENT_LIST_DIR}/src/WAMIT_Types.f90)
   generate_f90_types(src/WAMIT2.txt ${CMAKE_CURRENT_LIST_DIR}/src/WAMIT2_Types.f90)
-  generate_f90_types(src/Waves.txt ${CMAKE_CURRENT_LIST_DIR}/src/Waves_Types.f90)
-  generate_f90_types(src/Waves2.txt ${CMAKE_CURRENT_LIST_DIR}/src/Waves2_Types.f90)
 endif()
 
-set(HYDRODYN_SOURCES
+add_library(hydrodynlib 
   src/Conv_Radiation.f90
-  src/Current.f90
   src/HydroDyn.f90
   src/HydroDyn_Input.f90
   src/HydroDyn_Output.f90
@@ -37,47 +33,48 @@ set(HYDRODYN_SOURCES
   src/Morison_Output.f90
   src/SS_Radiation.f90
   src/SS_Excitation.f90
-  src/UserWaves.f90
   src/WAMIT.f90
   src/WAMIT2.f90
   src/WAMIT_Interp.f90
-  src/Waves.f90
-  src/Waves2.f90
-  src/Waves2_Output.f90
   src/Conv_Radiation_Types.f90
-  src/Current_Types.f90
   src/HydroDyn_Types.f90
   src/Morison_Types.f90
   src/SS_Radiation_Types.f90
   src/SS_Excitation_Types.f90
   src/WAMIT_Types.f90
   src/WAMIT2_Types.f90
-  src/Waves_Types.f90
-  src/Waves2_Types.f90
 )
+target_link_libraries(hydrodynlib seastlib nwtclibs)
 
-add_library(hydrodynlib_obj OBJECT ${HYDRODYN_SOURCES})
-target_link_libraries(hydrodynlib_obj nwtclibs_obj)
+# HydroDyn Driver Subs Library
+add_library(hydrodyn_driver_subs
+  src/HydroDyn_DriverSubs.f90
+)
+target_link_libraries(hydrodyn_driver_subs hydrodynlib)
 
-add_library(hydrodynlib $<TARGET_OBJECTS:hydrodynlib_obj>)
-target_link_libraries(hydrodynlib nwtclibs)
+# Driver
+add_executable(hydrodyn_driver 
+  src/HydroDyn_DriverCode.f90
+)
+target_link_libraries(hydrodyn_driver hydrodyn_driver_subs versioninfolib)
 
-# c-bindings interface library
-add_library(hydrodyn_c_binding SHARED src/HydroDyn_C_Binding.f90)
-target_link_libraries(hydrodyn_c_binding hydrodynlib versioninfolib)
+# C-bindings interface library
+add_library(hydrodyn_c_binding SHARED 
+  src/HydroDyn_C_Binding.f90
+)
+target_link_libraries(hydrodyn_c_binding hydrodynlib seastlib versioninfolib)
 if(APPLE OR UNIX)
-   target_compile_definitions(hydrodyn_c_binding PUBLIC  -DIMPLICIT_DLLEXPORT)
+   target_compile_definitions(hydrodyn_c_binding PRIVATE IMPLICIT_DLLEXPORT)
 endif()
 
-add_executable(hydrodyn_driver src/HydroDyn_DriverCode.f90)
-target_link_libraries(hydrodyn_driver hydrodynlib nwtclibs versioninfolib)
 
 #add_executable(ss_radiation
 #  src/SS_Radiation_DriverCode.f90)
 #target_link_libraries(ss_radiation hydrodynlib nwtclibs)
 
-install(TARGETS hydrodynlib hydrodyn_driver hydrodyn_c_binding hydrodynlib_obj
+install(TARGETS hydrodynlib hydrodyn_driver hydrodyn_driver_subs hydrodyn_c_binding
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib)
+  ARCHIVE DESTINATION lib
+)

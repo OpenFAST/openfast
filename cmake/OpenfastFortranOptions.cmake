@@ -139,12 +139,6 @@ macro(set_fast_gfortran)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS},--stack,${stack_size}")
   endif()
 
-  # OPENMP
-  if (OPENMP)
-     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fopenmp")
-     set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fopenmp" )
-  endif()
-
   check_f2008_features()
 endmacro(set_fast_gfortran)
 
@@ -178,12 +172,6 @@ macro(set_fast_intel_fortran_posix)
     else()
       set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -real_size 64 -double_size 64")
     endif()
-  endif()
-
-  # OPENMP
-  if (OPENMP)
-     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -qopenmp")
-     set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -qopenmp" )
   endif()
 
   check_f2008_features()
@@ -233,12 +221,6 @@ macro(set_fast_intel_fortran_windows)
     set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} /check:all,noarg_temp_created /traceback /Qinit=huge,infinity" )
   endif()
 
-  # OPENMP
-  if (OPENMP)
-     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /qopenmp")
-     set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} /qopenmp" )
-  endif()
-
   check_f2008_features()
 endmacro(set_fast_intel_fortran_windows)
 
@@ -254,11 +236,6 @@ macro(set_fast_flang)
     add_definitions(-DOPENFAST_DOUBLE_PRECISION)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fdefault-real-8")
   endif (DOUBLE_PRECISION)
-
-  # OPENMP
-  if (OPENMP)
-     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fopenmp")
-  endif()
 
   add_definitions(-DFLANG_COMPILER)
 

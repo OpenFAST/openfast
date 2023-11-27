@@ -1725,105 +1725,65 @@ END SUBROUTINE CheckR8Var
 !=======================================================================
 !> This routine packs the DLL_Type (nwtc_base::dll_type) data into an integer buffer.
 !! It is required for the FAST Registry. It is the inverse of DLLTypeUnPack (nwtc_io::dlltypeunpack).
-   SUBROUTINE DLLTypePack( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg, SizeOnly )
-   
-   
-      TYPE(DLL_Type),                INTENT(IN   ) :: InData             !< DLL data to pack (store in arrays of type ReKi, DbKi, and/or IntKi)
-      REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)         !< buffer with real (ReKi) data from InData structure
-      REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)         !< buffer with double (DbKi) data from InData structure
-      INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)        !< buffer with integer (IntKi) data from InData structure
-      INTEGER(IntKi),                INTENT(  OUT) :: ErrStat            !< error status
-      CHARACTER(*),                  INTENT(  OUT) :: ErrMsg             !< error message
-      LOGICAL,          OPTIONAL,    INTENT(IN   ) :: SizeOnly           !< flag to determine if we're just looking for the size of the buffers instead of the packed data
+   SUBROUTINE DLLTypePack(Buf, InData)
+      type(PackBuffer), intent(inout)  :: Buf
+      TYPE(DLL_Type), intent(in)       :: InData  !< DLL data to pack
       
-         ! Local variable
-      INTEGER(IntKi)                               :: Int_BufSz
-      INTEGER(IntKi)                               :: i,buf_start
-      
-      ErrStat = ErrID_None
-      ErrMsg  = ""
+      INTEGER(IntKi)                   :: i
 
-         ! get size of buffer:
-      Int_BufSz = LEN(InData%FileName) + LEN(InData%ProcName(1))*NWTC_MAX_DLL_PROC + 1
+      ! If buffer error, return
+      if (Buf%ErrStat /= ErrID_None) return
       
-      ALLOCATE( IntKiBuf(Int_BufSz), STAT=ErrStat )
-      IF (ErrStat /= 0 ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' DLLTypePack: Error allocating IntKiBuf.'
-         RETURN
-      END IF
-            
-      IF ( PRESENT(SizeOnly) ) THEN
-         IF ( SizeOnly ) RETURN
-      ENDIF      
+      ! has the DLL procedure been loaded?
+      call RegPack(Buf, c_associated(InData%ProcAddr(1)))
       
-      !..............
-      ! Fill buffer
-      !..............
-      
-         ! has the DLL procedure been loaded?
-      IF ( C_ASSOCIATED(InData%ProcAddr(1))) THEN
-         IntKiBuf(1) = 1
-      ELSE
-         IntKiBuf(1) = 0         
-      END IF
-      
-         ! Put an ascii representation of the strings in the integer array
-      CALL Str2IntAry( InData%FileName, IntKiBuf(2:), ErrStat, ErrMsg )
-      buf_start=LEN(InData%FileName)+2
-      DO i=1,NWTC_MAX_DLL_PROC
-         CALL Str2IntAry( InData%ProcName(i), IntKiBuf(buf_start:), ErrStat, ErrMsg )
-         buf_start = buf_start + LEN(InData%ProcName(i))
-      END DO
-      
+      ! Pack strings
+      call RegPack(Buf, InData%FileName)
+      do i = 1, NWTC_MAX_DLL_PROC
+         call RegPack(Buf, InData%ProcName(i))
+      end do
+
+      ! If buffer error, return
+      if (RegCheckErr(Buf, 'DLLTypeUnPack')) return
       
    END SUBROUTINE DLLTypePack
 !=======================================================================
 !> This routine unpacks the DLL_Type data from an integer buffer.
 !! It is required for the FAST Registry. It is the inverse of DLLTypePack (nwtc_io::dlltypepack).
-   SUBROUTINE DLLTypeUnPack( OutData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg )
-   
-   
-      REAL(ReKi),       ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)        !< buffer with real (ReKi) data to place in the OutData structure
-      REAL(DbKi),       ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)        !< buffer with real (DbKi) data to place in the OutData structure
-      INTEGER(IntKi),   ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)       !< buffer with integer (IntKi) data to place in the OutData structure
-      TYPE(DLL_Type),                INTENT(  OUT) :: OutData           !< the reconstituted OutData structure, created from 3 buffers
-      INTEGER(IntKi),                INTENT(  OUT) :: ErrStat           !< error status/level
-      CHARACTER(*),                  INTENT(  OUT) :: ErrMsg            !< message corresponding to ErrStat
-      
-         ! Local variable
-      INTEGER(IntKi)                               :: Int_BufSz
-      INTEGER(IntKi)                               :: i, Int_BufEnd
-      
-      ErrStat = ErrID_None
-      ErrMsg  = ""
+   subroutine DLLTypeUnPack(Buf, OutData)
+      type(PackBuffer), intent(inout)  :: Buf
+      type(DLL_Type), intent(out)      :: OutData !< Reconstituted OutData structure
+         
+      logical        :: WasAssociated
+      integer(IntKi) :: i
 
-      IF (.NOT. ALLOCATED(IntKiBuf) ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' DLLTypeUnPack: invalid buffer.'
-      END IF
-                     
-         ! Get an ascii representation of the strings from the integer array                           
-      Int_BufSz = LEN(OutData%FileName) + 1
-      CALL IntAry2Str( IntKiBuf(2:(Int_BufSz)), OutData%FileName, ErrStat, ErrMsg )
-      IF (ErrStat >= AbortErrLev) RETURN
-      Int_BufSz = Int_BufSz + 1
-      do i=1,NWTC_MAX_DLL_PROC
-         Int_BufEnd=Int_BufSz+LEN(OutData%ProcName(i))-1
-         CALL IntAry2Str( IntKiBuf(Int_BufSz:Int_BufEnd), OutData%ProcName(i), ErrStat, ErrMsg )
-         IF (ErrStat >= AbortErrLev) RETURN
-         Int_BufSz = Int_BufSz+LEN(OutData%ProcName(i))
+      ! If buffer error, return
+      if (Buf%ErrStat /= ErrID_None) return
+      
+      ! Get flag indicating if dll was associated
+      call RegUnpack(Buf, WasAssociated)
+
+      ! Unpack strings
+      call RegUnpack(Buf, OutData%FileName)
+      do i = 1, NWTC_MAX_DLL_PROC
+         call RegUnpack(Buf, OutData%ProcName(i))
       end do
+
+      ! If buffer error, return
+      if (RegCheckErr(Buf, 'DLLTypeUnPack')) return
       
-      
-      IF ( IntKiBuf(1) == 1 .AND. LEN_TRIM(OutData%FileName) > 0 .AND. LEN_TRIM(OutData%ProcName(1)) > 0 ) THEN
-         CALL LoadDynamicLib( OutData, ErrStat, ErrMsg )
+      ! If dll was loaded, and data in filename and procname, load dll
+      IF (WasAssociated .AND. LEN_TRIM(OutData%FileName) > 0 .AND. LEN_TRIM(OutData%ProcName(1)) > 0) THEN
+         CALL LoadDynamicLib(OutData, Buf%ErrStat, Buf%ErrMsg)
       else
          ! Nullifying
          OutData%FileAddr  = INT(0,C_INTPTR_T)
          OutData%FileAddrX = C_NULL_PTR
          OutData%ProcAddr  = C_NULL_FUNPTR
       END IF
+
+      ! If buffer error, return
+      if (RegCheckErr(Buf, 'DLLTypeUnPack')) return
       
    END SUBROUTINE DLLTypeUnPack   
 !=======================================================================
@@ -1999,7 +1959,7 @@ END SUBROUTINE CheckR8Var
    INTEGER(IntKi), INTENT(IN) :: ErrID          !< error status/level
 
       ! Function delcaration
-   CHARACTER(13)              :: GetErrStr      !< description of the ErrID level
+   CHARACTER(25)              :: GetErrStr      !< description of the ErrID level
 
       SELECT CASE ( ErrID )
          CASE ( ErrID_None )
@@ -2013,7 +1973,7 @@ END SUBROUTINE CheckR8Var
          CASE ( ErrID_Fatal )
             GetErrStr = 'FATAL ERROR'
          CASE DEFAULT
-            GetErrStr = 'Unknown ErrID'
+            GetErrStr = 'Unknown ErrID '//TRIM(Num2LStr(ErrID))
       END SELECT
 
 
@@ -5813,15 +5773,17 @@ END SUBROUTINE CheckR8Var
 
       IF ( AryLenRead > MaxAryLen )  THEN
 
-         ErrStat = ErrID_Fatal
+         ErrStat = ErrID_Severe
          ErrMsg = 'ReadOutputList:The maximum number of output channels allowed is '//TRIM( Int2LStr(MaxAryLen) )//'.'
-         RETURN
+         AryLenRead = AryLenRead - NumWords ! The total number of output channels read in so far.
+!         RETURN ! finish reading the file instead of returning first
 
       ELSE
 
          CALL GetWords ( OutLine, CharAry((AryLenRead - NumWords + 1):AryLenRead), NumWords )
 
       END IF
+
 
    END DO
 
@@ -5851,10 +5813,11 @@ END SUBROUTINE CheckR8Var
 
    INTEGER                          :: MaxAryLen                                   ! Maximum length of the array being read
    INTEGER                          :: NumWords                                    ! Number of words contained on a line
+   INTEGER                          :: ErrStat2
 
-   INTEGER                          :: QuoteCh                                     ! Character position.
+!   INTEGER                          :: QuoteCh                                     ! Character position.
 
-   CHARACTER(1000)                  :: OutLine                                     ! Character string read from file, containing output list
+   CHARACTER(MaxFileInfoLineLen)    :: OutLine                                     ! Character string read from file, containing output list
    CHARACTER(3)                     :: EndOfFile
 
 
@@ -5876,21 +5839,27 @@ END SUBROUTINE CheckR8Var
       IF ( PRESENT(UnEc) )  THEN
          if (UnEc > 0) WRITE(UnEc, '(A)')  trim(FileInfo%Lines(LineNum))
       ENDIF
-      OutLine = adjustl(trim(FileInfo%Lines(LineNum)))   ! remove leading whitespace
+      
+!      OutLine = adjustl(trim(FileInfo%Lines(LineNum)))   ! remove leading whitespace
+      READ (FileInfo%Lines(LineNum),*,IOSTAT=ErrStat2)  OutLine ! read first output channel name, or remove quotes on list of outputs so that this behaves like ReadOutputList
+      IF (ErrStat2 /= 0) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Error reading from OutList. Line # '//trim(num2lstr(LineNum))//': "'//trim(FileInfo%Lines(LineNum))//'".'
+         RETURN
+      END IF
+
+      !IF ( PRESENT(UnEc) )  THEN
+      !   IF ( UnEc > 0 ) WRITE (UnEc,Ec_StrFrmt)  OutLine, "List of user-requested output channels", '"OutList"'
+      !END IF      
+      
+      LineNum = LineNum + 1
+      
 
       EndOfFile = OutLine(1:3)            ! EndOfFile is the 1st 3 characters of OutLine
       CALL Conv2UC( EndOfFile )           ! Convert EndOfFile to upper case
       IF ( EndOfFile == 'END' ) THEN
-         LineNum = LineNum + 1
          EXIT     ! End of OutList has been reached; therefore, exit this DO
       ENDIF
-
-      ! Check if we have a quoted string at the begining.  Ignore anything outside the quotes if so (this is the ReadVar behaviour for quoted strings).
-      if (SCAN(OutLine(1:1), '''"' ) == 1_IntKi ) then
-         QuoteCh = SCAN( OutLine(2:), '''"' )            ! last quote
-         if (QuoteCh < 1)  QuoteCh = LEN_TRIM(OutLine)   ! in case no end quote
-         OutLine(QuoteCh+2:) = ' '    ! blank out everything after last quote
-      endif
 
       NumWords = CountWords( OutLine )    ! The number of words in OutLine.
 
@@ -5900,9 +5869,10 @@ END SUBROUTINE CheckR8Var
 
       IF ( AryLenRead > MaxAryLen )  THEN
 
-         ErrStat = ErrID_Fatal
+         ErrStat = ErrID_Severe
          ErrMsg = 'ReadOutputList:The maximum number of output channels allowed is '//TRIM( Int2LStr(MaxAryLen) )//'.'
-         RETURN
+         AryLenRead = AryLenRead - NumWords ! The total number of output channels read in so far.
+!        RETURN ! finish processing the OutList variable before returning
 
       ELSE
 
@@ -5910,7 +5880,6 @@ END SUBROUTINE CheckR8Var
 
       END IF
 
-      LineNum = LineNum+1
 
       if (LineNum > FileInfo%NumLines) exit  ! Don't overrun end of file in case no END found
 
@@ -6235,7 +6204,6 @@ END SUBROUTINE CheckR8Var
 
    CALL ReadNum ( UnIn, Fil, Word, VarName, ErrStat, ErrMsg )
    IF ( ErrStat >= AbortErrLev) RETURN  ! If we're about to read a T/F and treat it as a number, we have a less severe ErrStat
-
 
    READ (Word,*,IOSTAT=IOS)  Var
 
@@ -7788,6 +7756,5 @@ END SUBROUTINE CheckR8Var
 
    RETURN
    END SUBROUTINE WrScr1
-
       
 END MODULE NWTC_IO

@@ -18,7 +18,7 @@ set_source_files_properties(${pfunit_directory}/include/driver.F90 PROPERTIES GE
 
 set(module_name "fvw")
 set(module_directory "aerodyn")
-set(module_library "fvwlib")
+set(module_library "aerodynlib")
 
 file(MAKE_DIRECTORY ${build_testdirectory}/${module_directory})
 file(WRITE ${build_testdirectory}/${module_directory}/testSuites.inc "")

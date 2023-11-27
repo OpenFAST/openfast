@@ -5,7 +5,6 @@ module AeroDyn_Inflow
    use AeroDyn_Inflow_Types
    use AeroDyn_Types
    use AeroDyn, only: AD_Init, AD_ReInit, AD_CalcOutput, AD_UpdateStates, AD_End
-   use AeroDyn, only: AD_NumWindPoints, AD_GetExternalWind, AD_GetExternalAccel, AD_SetExternalWindPositions
    use AeroDyn_IO, only: AD_SetVTKSurface
    use InflowWind, only: InflowWind_Init, InflowWind_CalcOutput, InflowWind_End
 
@@ -22,7 +21,6 @@ module AeroDyn_Inflow
    public   :: ADI_UpdateStates
 
    ! Convenient routines for driver
-   public   :: ADI_ADIW_Solve
    public   :: concatOutputHeaders
    public   :: Init_MeshMap_For_ADI
    public   :: Set_Inputs_For_ADI
@@ -85,6 +83,8 @@ subroutine ADI_Init(InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    call ADI_InitInflowWind(InitInp%RootName, InitInp%IW_InitInp, u%AD, OtherState%AD, m%IW, Interval, InitOut_IW, errStat2, errMsg2); if (Failed()) return
    ! Concatenate AD outputs to IW outputs
    call concatOutputHeaders(InitOut%WriteOutputHdr, InitOut%WriteOutputUnt, InitOut_IW%WriteOutputHdr, InitOut_IW%WriteOutputUnt, errStat2, errMsg2); if(Failed()) return
+   ! Link InflowWind's FlowField to AeroDyn's FlowField
+   p%AD%FlowField => InitOut_IW%FlowField
 
    ! --- Initialize grouped outputs
    !TODO: assumes one rotor
@@ -244,6 +244,7 @@ end subroutine ADI_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
 subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
+   use IfW_FlowField, only: IfW_FlowField_GetVelAcc
    real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
    type(ADI_InputType),             intent(inout)  :: u           !< Inputs at Time t  ! NOTE: set as in-out since "Inflow" needs to be set
    type(ADI_ParameterType),         intent(in   )  :: p           !< Parameters
@@ -256,36 +257,55 @@ subroutine ADI_CalcOutput(t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg)
    type(ADI_MiscVarType),           intent(inout)  :: m           !< Misc/optimization variables
    integer(IntKi),                  intent(  out)  :: errStat     !< Error status of the operation
    character(*),                    intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
-   ! Local variables
+
    integer(IntKi)                :: errStat2
    character(errMsgLen)          :: errMsg2
+   integer(IntKi)                :: node
    character(*), parameter       :: RoutineName = 'ADI_CalcOutput'
    integer :: iWT
    errStat = ErrID_None
    errMsg  = ""
 
-   ! --- CalcOutputs for IW (Sets u_AD%rotors(:)%InflowOnBlade, etc,  and m%IW%y)
-   y%IW_WriteOutput(:) = m%IW%y%WriteOutput(:)
+   !----------------------------------------------------------------------------
+   ! Calculate InflowWind outputs if module was initialized
+   !----------------------------------------------------------------------------
 
+   if (m%IW%CompInflow == 1) then
+      call InflowWind_CalcOutput(t, m%IW%u, m%IW%p, m%IW%x, m%IW%xd, m%IW%z,  &
+                                 m%IW%OtherSt, m%IW%y, m%IW%m, errStat2, errMsg2)
+      if(Failed()) return
+
+      ! Copy InflowWind outputs to ADI outputs
+      y%IW_WriteOutput(:) = m%IW%y%WriteOutput(:)
+   end if
+
+   !----------------------------------------------------------------------------
+   ! Calculate aerodyn output
+   !----------------------------------------------------------------------------
 
    ! Calculate outputs at t
-   call AD_CalcOutput(t, u%AD, p%AD, x%AD, xd%AD, z%AD, OtherState%AD, y%AD, m%AD, errStat2, errMsg2); if(Failed()) return
+   call AD_CalcOutput(t, u%AD, p%AD, x%AD, xd%AD, z%AD, OtherState%AD, y%AD, m%AD, errStat2, errMsg2)
+   if(Failed()) return
 
    ! --- Outputs for driver
-   ! Hub Height velocity outputs
-   if (p%storeHHVel) then
-      do iWT = 1, size(p%AD%rotors)
-         y%HHVel(1, iWT) = m%IW%y%VelocityUVW(1, iWT)
-         y%HHVel(2, iWT) = m%IW%y%VelocityUVW(2, iWT)
-         y%HHVel(3, iWT) = m%IW%y%VelocityUVW(3, iWT)
-      enddo
-   endif
    y%PLExp = m%IW%PLExp
 
    ! --- Set outputs
-!TODO: this assumes one rotor!!!
-   y%WriteOutput(1:p%AD%rotors(1)%NumOuts+p%AD%rotors(1)%BldNd_TotNumOuts) = y%AD%rotors(1)%WriteOutput(1:p%AD%rotors(1)%NumOuts+p%AD%rotors(1)%BldNd_TotNumOuts)
-   y%WriteOutput(p%AD%rotors(1)%NumOuts+p%AD%rotors(1)%BldNd_TotNumOuts+1:p%NumOuts) = y%IW_WriteOutput(1:m%IW%p%NumOuts)
+   !TODO: this assumes one rotor!!!
+   associate(AD_NumOuts => p%AD%rotors(1)%NumOuts + p%AD%rotors(1)%BldNd_TotNumOuts)
+      y%WriteOutput(1:AD_NumOuts) = y%AD%rotors(1)%WriteOutput(1:AD_NumOuts)
+      y%WriteOutput(AD_NumOuts+1:p%NumOuts) = y%IW_WriteOutput(1:m%IW%p%NumOuts)
+   end associate
+
+   !----------------------------------------------------------------------------
+   ! Store hub height velocity calculated in CalcOutput
+   !----------------------------------------------------------------------------
+
+   if (p%storeHHVel) then
+      do iWT = 1, size(u%AD%rotors)
+         y%HHVel(:,iWT) = u%AD%rotors(iWT)%InflowOnHub(:,1)
+      end do
+   endif
 
 contains
 
@@ -303,7 +323,9 @@ end subroutine ADI_CalcOutput
 !>
 subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errStat, errMsg)
    use InflowWind, only: InflowWind_Init
-   character(len=*),             intent(in   ) :: Root          ! Rootname for input files
+   use InflowWind_IO, only: IfW_SteadyWind_Init
+   use IfW_FlowField, only: IfW_UniformField_CalcAccel
+   character(*),                 intent(in   ) :: Root          ! Rootname for input files
    type(ADI_IW_InputData),       intent(in   ) :: i_IW          ! Inflow Wind "pseudo init input" data
    type(AD_InputType),           intent(in   ) :: u_AD          ! AeroDyn data 
    type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
@@ -312,37 +334,45 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
    type(InflowWind_InitOutputType), intent(out) :: InitOutData  ! Output data from initialization
    integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
    character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
-   ! locals
-   integer(IntKi)                  :: errStat2      ! local status of error message
-   character(errMsgLen)            :: errMsg2       ! local error message if errStat /= ErrID_None
-   type(InflowWind_InitInputType)  :: InitInData     ! Input data for initialization
+
+   integer(IntKi)                   :: errStat2             ! local status of error message
+   character(errMsgLen)             :: errMsg2              ! local error message if errStat /= ErrID_None
+   type(InflowWind_InitInputType)   :: InitInData           ! Input data for initialization
+   Type(Steady_InitInputType)       :: Steady_InitInput
+   Type(WindFileDat)                :: FileDat
    errStat = ErrID_None
    errMsg  = ''
 
-   ! --- Count number of points required by AeroDyn
-   InitInData%NumWindPoints = AD_NumWindPoints(u_AD, o_AD)
-   ! Adding Hub windspeed for each turbine
-   InitInData%NumWindPoints = InitInData%NumWindPoints + size(u_AD%rotors)
-
    ! --- Init InflowWind
-   if (i_IW%CompInflow==0) then
-      ! Fake "InflowWind" init
+   if (i_IW%CompInflow == 0) then
+      ! Initialze only the flow field with steady wind
       allocate(InitOutData%WriteOutputHdr(0))
       allocate(InitOutData%WriteOutputUnt(0))
       allocate(IW%y%WriteOutput(0))
-      call AllocAry(IW%u%PositionXYZ, 3, InitInData%NumWindPoints, 'PositionXYZ', errStat2, errMsg2); if (Failed()) return
-      call AllocAry(IW%y%VelocityUVW, 3, InitInData%NumWindPoints, 'VelocityUVW', errStat2, errMsg2); if (Failed()) return
-      IW%u%PositionXYZ = myNaN
-      IW%y%VelocityUVW = myNaN
-      if (i_IW%MHK > 0) then
-         call AllocAry(IW%y%AccelUVW, 3, InitInData%NumWindPoints, 'AccelUVW', errStat2, errMsg2); if (Failed()) return
-         IW%y%AccelUVW = myNaN
-      endif
+      Steady_InitInput%HWindSpeed = i_IW%HWindSpeed
+      Steady_InitInput%RefHt = i_IW%RefHt
+      Steady_InitInput%PLExp = i_IW%PLExp
+      allocate(IW%p%FlowField)
+      IW%p%FlowField%PropagationDir = 0.0_ReKi
+      IW%p%FlowField%VFlowAngle = 0.0_ReKi
+      IW%p%FlowField%RotateWindBox = .false.
+      IW%p%FlowField%FieldType = Uniform_FieldType
+      IW%p%FlowField%RefPosition = [0.0_ReKi, 0.0_ReKi, i_IW%RefHt]
+      InitOutData%FlowField => IW%p%FlowField
+      call IfW_SteadyWind_Init(Steady_InitInput, 0, IW%p%FlowField%Uniform, &
+                               FileDat, errStat2, errMsg2)
+      if(Failed()) return
+      if (i_IW%MHK == 1 .or. i_IW%MHK == 2) then
+         call IfW_UniformField_CalcAccel(IW%p%FlowField%Uniform, errStat2, errMsg2)
+         if(Failed()) return
+         IW%p%FlowField%AccFieldValid = .true.
+      end if
    else
-      ! Module init
+      ! Initialze InflowWind module
       InitInData%InputFileName    = i_IW%InputFile
       InitInData%Linearize        = i_IW%Linearize
       InitInData%UseInputFile     = i_IW%UseInputFile
+      InitInData%NumWindPoints = 1
       if (.not. i_IW%UseInputFile) then
          call NWTC_Library_Copyfileinfotype( i_IW%PassedFileData, InitInData%PassedFileData, MESH_NEWCOPY, errStat2, errMsg2 ); if (Failed()) return
       endif
@@ -353,8 +383,8 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
                      IW%x, IW%xd, IW%z, IW%OtherSt, &
                      IW%y, IW%m, dt,  InitOutData, errStat2, errMsg2 )
       if(Failed()) return
-
    endif
+
    ! --- Store main init input data (data that don't use InfloWind directly)
    IW%CompInflow = i_IW%CompInflow
    IW%HWindSpeed = i_IW%HWindSpeed
@@ -362,6 +392,7 @@ subroutine ADI_InitInflowWind(Root, i_IW, u_AD, o_AD, IW, dt, InitOutData, errSt
    IW%PLExp      = i_IW%PLExp
 
    call cleanup()
+
 contains
    subroutine cleanup()
       call InflowWind_DestroyInitInput( InitInData, errStat2, errMsg2 )   
@@ -410,140 +441,6 @@ subroutine concatOutputHeaders(WriteOutputHdr0, WriteOutputUnt0, WriteOutputHdr,
       deallocate(TmpUnt)
    endif
 end subroutine concatOutputHeaders
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Solve for the wind speed at the location necessary for AeroDyn
-subroutine ADI_ADIW_Solve(t, p_AD, u_AD, o_AD, u_IfW, IW, hubHeightFirst, errStat, errMsg)
-   real(DbKi),                   intent(in   ) :: t             ! Time of evaluation
-   type(ADI_ParameterType),      intent(in   ) :: p_AD          ! Parameters
-   type(AD_InputType),           intent(inout) :: u_AD          ! AeroDyn data 
-   type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
-   type(InflowWind_InputType),   intent(inout) :: u_IfW         ! InflowWind data 
-   type(ADI_InflowWindData),     intent(inout) :: IW            ! InflowWind data 
-   logical,                      intent(in   ) :: hubHeightFirst ! Hub Height velocity is packed at beginning
-   integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
-   integer(IntKi)       :: errStat2      ! Status of error message
-   character(errMsgLen) :: errMsg2       ! Error message if errStat /= ErrID_None
-   errStat = ErrID_None
-   errMsg  = ''
-
-   ! Set u_ifW%PositionXYZ
-   call ADI_Set_IW_Inputs(p_AD, u_AD, o_AD, u_IfW, hubHeightFirst, errStat2, errMsg2); if(Failed()) return
-   ! Compute IW%y%VelocityUVW
-   call ADI_CalcOutput_IW(t, u_IfW, IW, errStat2, errMsg2); if(Failed()) return
-   ! Set u_AD%..%InflowOnBlade, u_AD%..%InflowOnTower, etc
-   call ADI_AD_InputSolve_IfW(p_AD, u_AD, IW%y, hubHeightFirst, errStat2, errMsg2); if(Failed()) return
-
-contains
-   logical function Failed()
-      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ADI_ADIW_Solve')
-      Failed = errStat >= AbortErrLev
-   end function Failed
-end subroutine ADI_ADIW_Solve
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Set inputs for inflow wind
-subroutine ADI_Set_IW_Inputs(p_AD, u_AD, o_AD, u_IfW, hubHeightFirst, errStat, errMsg)
-   type(ADI_ParameterType),      intent(in   ) :: p_AD          ! Parameters
-   type(AD_InputType),           intent(in   ) :: u_AD          ! AeroDyn data 
-   type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
-   type(InflowWind_InputType),   intent(inout) :: u_IfW         ! InflowWind data 
-   logical,                      intent(in   ) :: hubHeightFirst ! Hub Height velocity is packed at beginning
-   integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
-   integer :: node, iWT
-   errStat = ErrID_None
-   errMsg  = ''
-   node=0
-
-   if (hubHeightFirst) then
-      ! Hub Height point for each turbine
-      do iWT=1,size(u_AD%rotors)
-         node = node + 1
-         u_IfW%PositionXYZ(:,node) = u_AD%rotors(iWT)%hubMotion%Position(:,1) + u_AD%rotors(iWT)%hubMotion%TranslationDisp(:,1)
-      enddo
-   endif
-   call AD_SetExternalWindPositions(u_AD, o_AD, u_IfW%PositionXYZ, node, errStat, errMsg)
-   if ( p_AD%MHK == 1 .or. p_AD%MHK == 2 ) then
-      u_IfW%PositionXYZ(3,:) = u_IfW%PositionXYZ(3,:) + p_AD%WtrDpth
-   endif 
-end subroutine ADI_Set_IW_Inputs
-!----------------------------------------------------------------------------------------------------------------------------------
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Calculate Wind at desired points
-!! NOTE: order is important and should match AD_NumWindPoints
-!! Similar to FAST_Solver, IfW_InputSolve
-subroutine ADI_CalcOutput_IW(t, u_IfW, IW, errStat, errMsg)
-   real(DbKi),                   intent(in   ) :: t             ! Time of evaluation
-   type(InflowWind_InputType),   intent(inout) :: u_IfW         ! InflowWind data 
-   type(ADI_InflowWindData),     intent(inout) :: IW            ! InflowWind data 
-   integer(IntKi)              , intent(  out) :: errStat       ! Status of error message
-   character(*)                , intent(  out) :: errMsg        ! Error message if errStat /= ErrID_None
-   integer              :: j
-   real(ReKi)           :: z
-   integer(IntKi)       :: errStat2      ! Status of error message
-   character(errMsgLen) :: errMsg2       ! Error message if errStat /= ErrID_None
-   errStat = ErrID_None
-   errMsg  = ''
-   if (IW%CompInflow==1) then
-      call InflowWind_CalcOutput(t, u_IfW, IW%p, IW%x, IW%xd, IW%z, IW%OtherSt, IW%y, IW%m, errStat2, errMsg2)
-      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'ADI_CalcOutput_IW') 
-   else
-      !$OMP PARALLEL DEFAULT(SHARED)
-      !$OMP DO PRIVATE(j,z) schedule(runtime)
-      do j=1,size(u_IfW%PositionXYZ,2)
-         z = u_IfW%PositionXYZ(3,j)
-         IW%y%VelocityUVW(1,j) = IW%HWindSpeed*(z/IW%RefHt)**IW%PLExp
-         IW%y%VelocityUVW(2,j) = 0.0_ReKi !V
-         IW%y%VelocityUVW(3,j) = 0.0_ReKi !W      
-      end do
-      !$OMP END DO 
-      !$OMP END PARALLEL
-      if (allocated(IW%y%AccelUVW)) then
-         IW%y%AccelUVW = 0.0_ReKi
-      endif 
-   endif
-end subroutine ADI_CalcOutput_IW
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine sets the wind claculated by InflowWind to the AeroDyn arrays
-!! See similar routine in FAST_Solver
-!! TODO put this in AeroDyn
-subroutine ADI_AD_InputSolve_IfW(p_AD, u_AD, y_IfW, hubHeightFirst, errStat, errMsg)
-   ! Passed variables
-   TYPE(ADI_ParameterType),     INTENT(IN   )   :: p_AD        !< Parameters
-   TYPE(AD_InputType),          INTENT(INOUT)   :: u_AD        !< The inputs to AeroDyn
-   TYPE(InflowWind_OutputType), INTENT(IN   )   :: y_IfW       !< The outputs from InflowWind
-   logical,                     INTENT(IN   )   :: hubHeightFirst !< Hub Height velocity is packed at beginning
-   INTEGER(IntKi)                               :: errStat     !< Error status of the operation
-   CHARACTER(*)                                 :: errMsg      !< Error message if errStat /= ErrID_None
-   ! Local variables:
-   INTEGER(IntKi)                               :: node
-   INTEGER(IntKi)                               :: iWT
-   errStat = ErrID_None
-   errMsg  = ""
-   node = 1
-   ! Order important!
-   if (hubHeightFirst) then
-      do iWT=1,size(u_AD%rotors)
-         node = node + 1 ! Hub velocities for each rotor
-      enddo
-   endif
-   call AD_GetExternalWind(u_AD, y_IfW%VelocityUVW, node, errStat, errMsg)
-
-   if ( p_AD%MHK > 0 ) then
-      node = 1
-      ! Order important!
-      if (hubHeightFirst) then
-         do iWT=1,size(u_AD%rotors)
-            node = node + 1 ! Hub velocities for each rotor
-         enddo
-      endif
-      call AD_GetExternalAccel(u_AD, y_IfW%AccelUVW, node, errStat, errMsg)
-   endif
-
-end subroutine ADI_AD_InputSolve_IfW
-
-
-
 ! --------------------------------------------------------------------------------}
 ! --- ROUTINES RELEVANT FOR COUPLING WITH "FED": Fake ElastoDyn 
 ! --------------------------------------------------------------------------------{

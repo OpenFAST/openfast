@@ -31,6 +31,8 @@ module AeroDyn
    use UnsteadyAero
    use FVW
    use FVW_Subs, only: FVW_AeroOuts
+   use IfW_FlowField, only: IfW_FlowField_GetVelAcc
+   use SeaSt_WaveField, only: WaveField_GetWaveVelAcc_AD
    
    implicit none
 
@@ -60,12 +62,6 @@ module AeroDyn
                                                !   (Xd), and constraint - state(Z) functions all with respect to the constraint
                                                !   states(z)
    PUBLIC :: AD_GetOP                          !< Routine to pack the operating point values (for linearization) into arrays
-   
-   PUBLIC :: AD_NumWindPoints                  !< Routine to return then number of windpoints required by AeroDyn
-   PUBLIC :: AD_BoxExceedPointsIdx             !< Routine to set the start of the OLAF wind points
-   PUBLIC :: AD_GetExternalWind                !< Set the external wind into AeroDyn inputs
-   PUBLIC :: AD_GetExternalAccel               !< Set the external accelerations into AeroDyn inputs
-   PUBLIC :: AD_SetExternalWindPositions       !< Set the external wind points needed by AeroDyn inputs 
   
 contains    
 !----------------------------------------------------------------------------------------------------------------------------------   
@@ -374,7 +370,8 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       p%rotors(iR)%TFin%TFinIndMod  = InputFileData%rotors(iR)%TFin%TFinIndMod
       p%rotors(iR)%TFin%TFinAFID    = InputFileData%rotors(iR)%TFin%TFinAFID
    enddo
-  
+
+ 
       !............................................................................................
       ! Define and initialize inputs here 
       !............................................................................................
@@ -464,7 +461,6 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !............................................................................................
       
       ! many states are in the BEMT module, which were initialized in BEMT_Init()
-      
    do iR = 1, nRotors
       call Init_MiscVars(m%rotors(iR), p%rotors(iR), u%rotors(iR), y%rotors(iR), errStat2, errMsg2)
       if (Failed()) return;
@@ -604,8 +600,7 @@ subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
 
 
       ! Local variables
-   integer(intKi)                               :: k
-   integer(intKi)                               :: j
+   integer(intKi)                               :: i, j, k
    integer(intKi)                               :: ErrStat2          ! temporary Error status
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'Init_MiscVars'
@@ -614,10 +609,11 @@ subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
 
    errStat = ErrID_None
    errMsg  = ""
-   
-   call AllocAry( m%DisturbedInflow, 3_IntKi, p%NumBlNds, p%numBlades, 'OtherState%DisturbedInflow', ErrStat2, ErrMsg2 ) ! must be same size as u%InflowOnBlade
+
+
+   call AllocAry( m%DisturbedInflow, 3_IntKi, p%NumBlNds, p%numBlades, 'm%DisturbedInflow', ErrStat2, ErrMsg2 ) ! must be same size as u%InflowOnBlade
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-   call AllocAry( m%orientationAnnulus, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'OtherState%orientationAnnulus', ErrStat2, ErrMsg2 )
+   call AllocAry( m%orientationAnnulus, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'm%orientationAnnulus', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
      
    call allocAry( m%SigmaCavit, p%NumBlNds, p%numBlades, 'm%SigmaCavit', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -1063,11 +1059,25 @@ subroutine Init_u( u, p, p_AD, InputFileData, MHK, WtrDpth, InitInp, errStat, er
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-
       ! Arrays for InflowWind inputs:
    
-   call AllocAry( u%InflowOnBlade, 3_IntKi, p%NumBlNds, p%numBlades, 'u%InflowOnBlade', ErrStat2, ErrMsg2 )
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   allocate(u%Bld(p%numBlades), stat=ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating u%Bld', errStat, errMsg, RoutineName )
+   end if
+
+   do k = 1, p%NumBlades
+      call AllocAry( u%Bld(k)%InflowOnBlade, 3_IntKi, p%NumBlNds, 'u%Bld(k)%InflowOnBlade', ErrStat2, ErrMsg2 )
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      u%Bld(k)%InflowOnBlade = 0.0_ReKi
+
+      if (p%MHK > 0) then
+         call AllocAry( u%Bld(k)%AccelOnBlade, 3_IntKi, p%NumBlNds, 'u%Bld(k)%AccelOnBlade', ErrStat2, ErrMsg2 )
+            call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         u%Bld(k)%AccelOnBlade = 0.0_ReKi
+      end if
+   end do
+
    call AllocAry( u%InflowOnTower, 3_IntKi, p%NumTwrNds, 'u%InflowOnTower', ErrStat2, ErrMsg2 ) ! could be size zero
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    call AllocAry( u%AccelOnBlade, 3_IntKi, p%NumBlNds, p%numBlades, 'u%AccelOnBlade', ErrStat2, ErrMsg2 )
@@ -1075,13 +1085,17 @@ subroutine Init_u( u, p, p_AD, InputFileData, MHK, WtrDpth, InitInp, errStat, er
    call AllocAry( u%AccelOnTower, 3_IntKi, p%NumTwrNds, 'u%AccelOnTower', ErrStat2, ErrMsg2 ) ! could be size zero
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
+   if (p%MHK > 0) then
+      call AllocAry( u%AccelOnTower, 3_IntKi, p%NumTwrNds, 'u%AccelOnTower', ErrStat2, ErrMsg2 ) ! could be size zero
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   end if
+
    call AllocAry( u%UserProp, p%NumBlNds, p%numBlades, 'u%UserProp', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       
    if (errStat >= AbortErrLev) return      
       
-   u%InflowOnBlade = 0.0_ReKi
-   u%AccelOnBlade  = 0.0_ReKi
+   
    u%UserProp      = 0.0_ReKi
    u%InflowOnHub   = 0.0_ReKi
    u%InflowOnNacelle = 0.0_ReKi
@@ -1666,8 +1680,8 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
 
    ! local variables
    integer(intKi)                               :: iR          ! Counter on rotors
-   integer                                       :: i
-   real(DbKi)                                    :: BEMT_utimes(2)    !< Times associated with m%BEMT_u(:), in seconds
+   integer(IntKi)                               :: i, node
+   real(DbKi)                                   :: BEMT_utimes(2)    !< Times associated with m%BEMT_u(:), in seconds
    type(AD_InputType)                           :: uInterp     ! Interpolated/Extrapolated input
    integer(intKi)                               :: ErrStat2          ! temporary Error status
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
@@ -1675,7 +1689,9 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
       
    ErrStat = ErrID_None
    ErrMsg  = ""
-     
+
+   call AD_CalcWind(utimes(1), u(1), p, OtherState, m, ErrStat2, ErrMsg2)
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    call AD_CopyInput( u(1), uInterp, MESH_NEWCOPY, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1693,10 +1709,10 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
       call AD_Input_ExtrapInterp(u,utimes,uInterp,BEMT_utimes(i), errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-   do iR = 1,size(p%rotors)
+      do iR = 1,size(p%rotors)
          call SetInputs(p%rotors(iR), p, uInterp%rotors(iR), m%rotors(iR), i, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   enddo
+      enddo
    enddo
          
 
@@ -1740,7 +1756,171 @@ contains
    subroutine Cleanup()
       call AD_DestroyInput( uInterp, errStat2, errMsg2)
    end subroutine Cleanup
+   logical function Failed()
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'AD_UpdateStates')
+      Failed = errStat >= AbortErrLev
+      if (Failed) call Cleanup()
+   end function Failed
 end subroutine AD_UpdateStates
+
+subroutine AD_CalcWind(t, u, p, o, m, ErrStat, ErrMsg)
+
+   real(DbKi),                intent(in   )     :: t        !< Current simulation time in seconds
+   type(AD_InputType),        intent(inout)     :: u        !< Inputs at Time t
+   type(AD_ParameterType),    intent(in   )     :: p        !< Parameters
+   type(AD_OtherStateType),   intent(in   )     :: o        !< Other states at t
+   type(AD_MiscVarType),      intent(inout)     :: m        !< Misc/optimization variables
+   integer(IntKi),            intent(  out)     :: ErrStat  !< Error status of the operation
+   character(*),              intent(  out)     :: ErrMsg   !< Error message if ErrStat /= ErrID_None
+   
+   integer(intKi)                               :: ErrStat2
+   character(ErrMsgLen)                         :: ErrMsg2
+   integer(intKi)                               :: StartNode, iWT, k
+   real(ReKi)                                   :: PosOffset(3)
+   real(ReKi), allocatable                      :: NoAcc(:,:)
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+   ! Initialize node. The StartNode is used for OpenFOAM to provide the wind
+   ! velocities. The node ordering in OpenFOAM must match that used in here.
+   StartNode = 1
+
+   do iWT = 1, size(u%rotors)
+
+      ! If rotor is MHK, add water depth to z coordinate
+      if (p%rotors(iWT)%MHK > 0) then
+         PosOffset = [0.0_ReKi, 0.0_ReKi, p%rotors(iWT)%WtrDpth]
+      else
+         PosOffset = 0.0_ReKi
+      end if
+
+      if (p%rotors(iWT)%MHK .EQ. 0_IntKi) then ! Wind turbines
+         ! Hub
+         if (u%rotors(iWT)%HubMotion%Committed) then
+            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+               real(u%rotors(iWT)%HubMotion%TranslationDisp + u%rotors(iWT)%HubMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnHub, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+            if(Failed()) return 
+         else
+            u%rotors(iWT)%InflowOnHub = 0.0_ReKi
+         end if
+         StartNode = StartNode + 1
+
+         ! Blade
+         do k = 1, p%rotors(iWT)%NumBlades
+            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+               real(u%rotors(iWT)%BladeMotion(k)%TranslationDisp + u%rotors(iWT)%BladeMotion(k)%Position, ReKi), &
+               u%rotors(iWT)%Bld(k)%InflowOnBlade, u%rotors(iWT)%Bld(k)%AccelOnBlade, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+            if(Failed()) return
+            StartNode = StartNode + p%rotors(iWT)%NumBlNds
+         end do
+
+         ! Tower
+         if (u%rotors(iWT)%TowerMotion%Nnodes > 0) then
+            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+               real(u%rotors(iWT)%TowerMotion%TranslationDisp + u%rotors(iWT)%TowerMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnTower, u%rotors(iWT)%AccelOnTower, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+            if(Failed()) return
+            StartNode = StartNode + p%rotors(iWT)%NumTwrNds
+         end if
+
+         ! Nacelle
+         if (u%rotors(iWT)%NacelleMotion%Committed) then   
+            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+               real(u%rotors(iWT)%NacelleMotion%TranslationDisp + u%rotors(iWT)%NacelleMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnNacelle, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+            if(Failed()) return
+            StartNode = StartNode + 1
+         else
+            u%rotors(iWT)%InflowOnNacelle = 0.0_ReKi
+         end if
+
+         ! TailFin
+         if (u%rotors(iWT)%TFinMotion%Committed) then
+            call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+               real(u%rotors(iWT)%TFinMotion%TranslationDisp + u%rotors(iWT)%TFinMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnTailFin, NoAcc, ErrStat2, ErrMsg2, PosOffset=PosOffset)
+            if(Failed()) return
+            StartNode = StartNode + 1
+         else
+            u%rotors(iWT)%InflowOnTailFin = 0.0_ReKi
+         end if
+
+      else ! MHK turbines
+         ! Hub
+         if (u%rotors(iWT)%HubMotion%Committed) then
+            call WaveField_GetWaveVelAcc_AD(p%WaveField, StartNode, t, &
+               real(u%rotors(iWT)%HubMotion%TranslationDisp + u%rotors(iWT)%HubMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnHub, NoAcc, ErrStat2, ErrMsg2)
+            if(Failed()) return 
+         else
+            u%rotors(iWT)%InflowOnHub = 0.0_ReKi
+         end if
+         StartNode = StartNode + 1
+
+         ! Blade
+         do k = 1, p%rotors(iWT)%NumBlades
+            call WaveField_GetWaveVelAcc_AD(p%WaveField, StartNode, t, &
+               real(u%rotors(iWT)%BladeMotion(k)%TranslationDisp + u%rotors(iWT)%BladeMotion(k)%Position, ReKi), &
+               u%rotors(iWT)%Bld(k)%InflowOnBlade, u%rotors(iWT)%Bld(k)%AccelOnBlade, ErrStat2, ErrMsg2)
+            if(Failed()) return
+            StartNode = StartNode + p%rotors(iWT)%NumBlNds
+         end do
+
+         ! Tower
+         if (u%rotors(iWT)%TowerMotion%Nnodes > 0) then
+            call WaveField_GetWaveVelAcc_AD(p%WaveField, StartNode, t, &
+               real(u%rotors(iWT)%TowerMotion%TranslationDisp + u%rotors(iWT)%TowerMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnTower, u%rotors(iWT)%AccelOnTower, ErrStat2, ErrMsg2)
+            if(Failed()) return
+            StartNode = StartNode + p%rotors(iWT)%NumTwrNds
+         end if
+
+         ! Nacelle
+         if (u%rotors(iWT)%NacelleMotion%Committed) then   
+            call WaveField_GetWaveVelAcc_AD(p%WaveField, StartNode, t, &
+               real(u%rotors(iWT)%NacelleMotion%TranslationDisp + u%rotors(iWT)%NacelleMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnNacelle, NoAcc, ErrStat2, ErrMsg2)
+            if(Failed()) return
+            StartNode = StartNode + 1
+         else
+            u%rotors(iWT)%InflowOnNacelle = 0.0_ReKi
+         end if
+
+         ! TailFin
+         if (u%rotors(iWT)%TFinMotion%Committed) then
+            call WaveField_GetWaveVelAcc_AD(p%WaveField, StartNode, t, &
+               real(u%rotors(iWT)%TFinMotion%TranslationDisp + u%rotors(iWT)%TFinMotion%Position, ReKi), &
+               u%rotors(iWT)%InflowOnTailFin, NoAcc, ErrStat2, ErrMsg2)
+            if(Failed()) return
+            StartNode = StartNode + 1
+         else
+            u%rotors(iWT)%InflowOnTailFin = 0.0_ReKi
+         end if
+
+      end if ! Wind or MHK turbines
+
+   enddo ! iWT
+
+   ! OLAF points
+   if (allocated(o%WakeLocationPoints) .and. allocated(u%InflowWakeVel)) then
+      call IfW_FlowField_GetVelAcc(p%FlowField, StartNode, t, &
+                                   o%WakeLocationPoints, &
+                                   u%InflowWakeVel, &
+                                   NoAcc, ErrStat2, ErrMsg2, &
+                                   BoxExceedAllow=.true., PosOffset=PosOffset)
+      if(Failed()) return
+      StartNode = StartNode + size(o%WakeLocationPoints)
+   end if
+
+contains
+   logical function Failed()
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, 'AD_CalcWind')
+      Failed = errStat >= AbortErrLev
+   end function Failed
+end subroutine
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
 !! This subroutine is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
@@ -1753,7 +1933,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
 !..................................................................................................................................
 
    REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
-   TYPE(AD_InputType),           INTENT(IN   )  :: u           !< Inputs at Time t
+   TYPE(AD_InputType),           INTENT(INOUT)  :: u           !< Inputs at Time t
    TYPE(AD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(AD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
    TYPE(AD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
@@ -1766,13 +1946,11 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    LOGICAL,          OPTIONAL,   INTENT(IN   )  :: NeedWriteOutput     !< Flag to determine if WriteOutput values need to be calculated in this call
 
-
-   integer(intKi)                               :: iR ! Loop on rotors
-
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'AD_CalcOutput'
    LOGICAL                                      :: CalcWriteOutput
+   integer(intKi)                               :: iR ! Loop on rotors
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1783,12 +1961,16 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       CalcWriteOutput = .true. ! by default, calculate WriteOutput unless told that we do not need it
    end if
 
+   ! Calculate wind based on current positions
+   call AD_CalcWind(t, u, p, OtherState, m, ErrStat2, ErrMsg2)
+   if(Failed()) return
 
    ! SetInputs, Calc BEM Outputs and Twr Outputs 
    do iR=1,size(p%rotors)
-      call RotCalcOutput( t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), y%rotors(iR), m%rotors(iR), m, iR, ErrStat2, ErrMsg2, .false.)
-         call SetErrStat(ErrStat2, ErrMSg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
+      call RotCalcOutput(t, u%rotors(iR), p%rotors(iR), p, x%rotors(iR), &
+                         xd%rotors(iR), z%rotors(iR), OtherState%rotors(iR), &
+                         y%rotors(iR), m%rotors(iR), m, iR, ErrStat2, ErrMsg2, .false.)
+      if(Failed()) return
    enddo
 
    if (p%WakeMod == WakeMod_FVW) then
@@ -1811,8 +1993,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    do iR = 1,size(p%rotors)
       if ( p%rotors(iR)%MHK > 0 ) then 
          call CalcBuoyantLoads( u%rotors(iR), p%rotors(iR), m%rotors(iR), y%rotors(iR), ErrStat, ErrMsg )
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat >= AbortErrLev) return
+            if(Failed()) return
       end if
    end do  
 
@@ -1835,6 +2016,11 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       end do
    end if
 
+contains
+   logical function Failed()
+      call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
+      Failed = errStat >= AbortErrLev
+   end function Failed
 end subroutine AD_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot, ErrStat, ErrMsg, NeedWriteOutput)
@@ -2707,7 +2893,9 @@ subroutine SetDisturbedInflow(p, p_AD, u, m, errStat, errMsg)
       call TwrInfl( p, u, m, errStat2, errMsg2 ) ! NOTE: tower clearance is computed here..
          call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
    else
-      m%DisturbedInflow = u%InflowOnBlade
+      do k = 1, p%NumBlades
+         m%DisturbedInflow(:,:,k) = u%Bld(k)%InflowOnBlade
+      end do
    end if
 
    if (p_AD%SkewMod == SkewMod_Orthogonal) then
@@ -2735,9 +2923,9 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    character(*),            intent(  out)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
       
    ! local variables
-   real(R8Ki)                              :: x_hat(3)
-   real(R8Ki)                              :: y_hat(3)
-   real(R8Ki)                              :: z_hat(3)
+   !real(R8Ki)                              :: x_hat(3)
+   !real(R8Ki)                              :: y_hat(3)
+   !real(R8Ki)                              :: z_hat(3)
    real(R8Ki)                              :: x_hat_disk(3)
    real(R8Ki)                              :: y_hat_disk(3)
    real(R8Ki)                              :: z_hat_disk(3)
@@ -2783,13 +2971,23 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
 
    ! Calculate Yaw and Tilt for use in xVelCorr
    ! Define a vector wrt which the yaw is defined 
-   x_hat_wind = m%V_diskAvg/twonorm(m%V_diskAvg)
-   ! Yaw
+   denom = twonorm(m%V_diskAvg)
+   if (EqualRealNos(denom, 0.0_ReKi)) then
+      x_hat_wind = 0.0_ReKi
+   else
+      x_hat_wind = m%V_diskAvg/denom
+   end if
+      ! Yaw
    tmpD = x_hat_disk 
    tmpD(3) = 0.0
    tmpW = x_hat_wind
    tmpW(3) = 0.0
-   yaw  = acos(max(-1.0_ReKi,min(1.0_ReKi,dot_product(tmpD,tmpW)/(twonorm(tmpD)*TwoNorm(tmpW)))))
+   denom = TwoNorm(tmpD)*TwoNorm(tmpW)
+   if (EqualRealNos(denom, 0.0_ReKi)) then
+      yaw = 0.0_ReKi
+   else
+      yaw  = acos(max(-1.0_ReKi,min(1.0_ReKi,dot_product(tmpD,tmpW)/denom)))
+   end if   
    tmp_skewVec = cross_product(tmpW,tmpD);
    yaw = sign(yaw,tmp_skewVec(3))
    m%Yaw = yaw
@@ -2799,7 +2997,13 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    tmpD(2) = 0.0 
    tmpW = x_hat_wind
    tmpW(2) = 0.0
-   tilt  = acos(max(-1.0_ReKi,min(1.0_ReKi,dot_product(tmpD,tmpW)/(twonorm(tmpD)*TwoNorm(tmpW))))) 
+   denom = TwoNorm(tmpD)*TwoNorm(tmpW)
+   if (EqualRealNos(denom, 0.0_Reki)) then
+      tilt = 0.0_ReKi
+   else
+      tilt  = acos(max(-1.0_ReKi,min(1.0_ReKi,dot_product(tmpD,tmpW)/denom)))
+   end if
+   
    tmp_skewVec = cross_product(tmpW,tmpD)
    tilt = sign(tilt,tmp_skewVec(2))
    m%tilt = tilt
@@ -2923,7 +3127,12 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
             dr(:) = elemPosRotorProj(:,j) - elemPosRotorProj(:,j-1)
             dz(:) =  elemPosRelToHub(:,j) -  elemPosRelToHub(:,j-1)
             
-            m%BEMT_u(indx)%drdz(j,k) = TwoNorm(dr(:)) / TwoNorm(dz(:))
+            denom = TwoNorm(dz(:))
+            if (EqualRealNos(denom,0.0_ReKi)) then ! this should not happen, but we'll check anyway
+               m%BEMT_u(indx)%drdz(j,k) = 0.0_ReKi
+            else
+               m%BEMT_u(indx)%drdz(j,k) = TwoNorm(dr(:)) / denom
+            end if
          end do ! j
          m%BEMT_u(indx)%drdz(1,k) = m%BEMT_u(indx)%drdz(2,k)
       end do !k=blades
@@ -3040,7 +3249,7 @@ subroutine DiskAvgValues(p, u, m, x_hat_disk, y_hat_disk, z_hat_disk, Azimuth)
    do k=1,p%NumBlades
       do j=1,p%NumBlNds
          m%AvgDiskVelDist = m%AvgDiskVelDist + m%DisturbedInflow(:,j,k)
-         m%AvgDiskVel = m%AvgDiskVel + u%InflowOnBlade(:,j,k)
+         m%AvgDiskVel = m%AvgDiskVel + u%Bld(k)%InflowOnBlade(:,j)
       end do
    end do
    m%AvgDiskVelDist = m%AvgDiskVelDist / real( p%NumBlades * p%NumBlNds, ReKi )
@@ -3397,9 +3606,7 @@ subroutine SetInputsForAA(p, u, m, errStat, errMsg)
          m%AA_u%AoANoise(i,j) = m%BEMT_y%AOA(i,j)
 
          ! Set the blade element undisturbed flow
-         m%AA_u%Inflow(1,i,j) = u%InflowonBlade(1,i,j)
-         m%AA_u%Inflow(2,i,j) = u%InflowonBlade(2,i,j)
-         m%AA_u%Inflow(3,i,j) = u%InflowonBlade(3,i,j)
+         m%AA_u%Inflow(:,i,j) = u%Bld(j)%InflowonBlade(:,i)
       end do
    end do
 end subroutine SetInputsForAA
@@ -3472,10 +3679,10 @@ subroutine SetOutputsFromBEMT( p, u, m, y )
             y%BladeLoad(k)%Moment(:,j) = matmul( moment, m%orientationAnnulus(:,:,j,k) )  ! moment per unit length of the jth node in the kth blade
          
          else
-	        ! Transfer loads from the airfoil frame to the blade frame
-	        y%BladeLoad(k)%Force(:,j)  = matmul( forceAirfoil,  u%BladeMotion(k)%Orientation(:,:,j) )  ! force per unit length of the jth node in the kth blade 
-	        y%BladeLoad(k)%Moment(:,j) = matmul( momentAirfoil, u%BladeMotion(k)%Orientation(:,:,j) )  ! moment per unit length of the jth node in the kth blade 
-	     endif
+            ! Transfer loads from the airfoil frame to the blade frame
+            y%BladeLoad(k)%Force(:,j)  = matmul( forceAirfoil,  u%BladeMotion(k)%Orientation(:,:,j) )  ! force per unit length of the jth node in the kth blade 
+            y%BladeLoad(k)%Moment(:,j) = matmul( momentAirfoil, u%BladeMotion(k)%Orientation(:,:,j) )  ! moment per unit length of the jth node in the kth blade 
+         endif
       end do !j=nodes
    end do !k=blades
    
@@ -3971,7 +4178,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
 contains
 
    SUBROUTINE Fatal(ErrMsg_in)
-      character(len=*), intent(in) :: ErrMsg_in
+      character(*), intent(in) :: ErrMsg_in
       call SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, RoutineName)
    END SUBROUTINE Fatal
    
@@ -4542,7 +4749,7 @@ SUBROUTINE TFin_CalcOutput(p, p_AD, u, m, y, ErrStat, ErrMsg )
 
 
    ! TODO TailFin: compute tower influence
-   V_wnd = u%InflowOnTailFin
+   V_wnd = u%InflowOnTailFin(:,1)
    V_str = u%TFinMotion%TranslationVel(:,1)
 
    if (p%TFin%TFinIndMod==TFinIndMod_none) then
@@ -4749,9 +4956,9 @@ SUBROUTINE TwrInfl( p, u, m, ErrStat, ErrMsg )
 
          if ( DisturbInflow ) then
             v = CalculateTowerInfluence(p, xbar, ybar, zbar, W_tower, TwrCd, TwrTI)
-            m%DisturbedInflow(:,j,k) = u%InflowOnBlade(:,j,k) + matmul( theta_tower_trans, v ) 
+            m%DisturbedInflow(:,j,k) = u%Bld(k)%InflowOnBlade(:,j) + matmul( theta_tower_trans, v ) 
          else
-            m%DisturbedInflow(:,j,k) = u%InflowOnBlade(:,j,k)
+            m%DisturbedInflow(:,j,k) = u%Bld(k)%InflowOnBlade(:,j)
          end if
       
       end do !j=NumBlNds
@@ -6329,7 +6536,7 @@ SUBROUTINE RotGetOP( t, u, p, p_AD, x, xd, z, OtherState, y, m, ErrStat, ErrMsg,
       do k=1,p%NumBlades
          do i=1,p%NumBlNds
             do j=1,3
-               u_op(index) = u%InflowOnBlade(j,i,k)
+               u_op(index) = u%Bld(k)%InflowOnBlade(j,i)
                index = index + 1
             end do            
          end do
@@ -6683,8 +6890,8 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
       ! determine how many inputs there are in the Jacobians
    nu = u%TowerMotion%NNodes * 9            & ! 3 Translation Displacements + 3 orientations + 3 Translation velocities at each node
       + u%hubMotion%NNodes   * 9            & ! 3 Translation Displacements + 3 orientations + 3 Rotation velocities at each node
-      + size( u%InflowOnBlade)              &
-      + size( u%InflowOnTower)              & !note that we are not passing the inflow on nacelle or hub here
+      ! + size( m%InflowOnBlade)              & ! TODO: FIXLIN
+      ! + size( m%InflowOnTower)              & !note that we are not passing the inflow on nacelle or hub here ! TODO: FIXLIN
       + size( u%UserProp)
 
    do i=1,p%NumBlades
@@ -6792,8 +6999,8 @@ SUBROUTINE Init_Jacobian_u( InputFileData, p, u, InitOut, ErrStat, ErrMsg)
    !Module/Mesh/Field: u%InflowOnBlade(:,:,1) = 25;
    !Module/Mesh/Field: u%InflowOnBlade(:,:,2) = 26;
    !Module/Mesh/Field: u%InflowOnBlade(:,:,3) = 27;
-   do k=1,size(u%InflowOnBlade,3)    ! p%NumBlades
-      do i=1,size(u%InflowOnBlade,2) ! numNodes
+   do k=1,size(u%Bld)    ! p%NumBlades
+      do i=1,size(u%Bld(k)%InflowOnBlade,2) ! numNodes
          do j=1,3
             p%Jac_u_indx(index,1) =  24 + k
             p%Jac_u_indx(index,2) =  j !component index:  j
@@ -7034,7 +7241,7 @@ SUBROUTINE Init_Jacobian( InputFileData, p, p_AD, u, y, m, InitOut, ErrStat, Err
    TYPE(AD_ParameterType)            , INTENT(INOUT) :: p_AD                  !< parameters
    TYPE(RotInputType)                , INTENT(IN   ) :: u                     !< inputs
    TYPE(RotOutputType)               , INTENT(IN   ) :: y                     !< outputs
-   TYPE(RotMiscVarType)              , INTENT(IN   ) :: m                     !< miscellaneous variable
+   TYPE(RotMiscVarType)              , INTENT(INOUT) :: m                     !< miscellaneous variable
    TYPE(RotInitOutputType)           , INTENT(INOUT) :: InitOut               !< Initialization output data (for Jacobian row/column names)
    
    INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
@@ -7142,12 +7349,12 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    CASE (24) !Module/Mesh/Field: u%BladeMotion(3)%TranslationAcc = 24;
       u%BladeMotion(3)%TranslationAcc(fieldIndx,node) = u%BladeMotion(3)%TranslationAcc(fieldIndx,node) + du * perturb_sign
 
-   CASE (25) !Module/Mesh/Field: u%InflowOnBlade(:,:,1) = 25;
-      u%InflowOnBlade(fieldIndx,node,1) = u%InflowOnBlade(fieldIndx,node,1) + du * perturb_sign
-   CASE (26) !Module/Mesh/Field: u%InflowOnBlade(:,:,2) = 26;
-      u%InflowOnBlade(fieldIndx,node,2) = u%InflowOnBlade(fieldIndx,node,2) + du * perturb_sign
-   CASE (27) !Module/Mesh/Field: u%InflowOnBlade(:,:,3) = 27;
-      u%InflowOnBlade(fieldIndx,node,3) = u%InflowOnBlade(fieldIndx,node,3) + du * perturb_sign
+   CASE (25) !Module/Mesh/Field: u%Bld(1)%InflowOnBlade(:,:) = 25;
+      u%Bld(1)%InflowOnBlade(fieldIndx,node) = u%Bld(1)%InflowOnBlade(fieldIndx,node) + du * perturb_sign
+   CASE (26) !Module/Mesh/Field: u%Bld(2)%InflowOnBlade(:,:) = 26;
+      u%Bld(2)%InflowOnBlade(fieldIndx,node) = u%Bld(2)%InflowOnBlade(fieldIndx,node) + du * perturb_sign
+   CASE (27) !Module/Mesh/Field: u%Bld(3)%InflowOnBlade(:,:) = 27;
+      u%Bld(3)%InflowOnBlade(fieldIndx,node) = u%Bld(3)%InflowOnBlade(fieldIndx,node) + du * perturb_sign
       
    CASE (28) !Module/Mesh/Field: u%InflowOnTower(:,:)   = 28;
       u%InflowOnTower(fieldIndx,node) = u%InflowOnTower(fieldIndx,node) + du * perturb_sign
@@ -7323,204 +7530,5 @@ SUBROUTINE Compute_dX(p, x_p, x_m, delta_p, delta_m, dX)
    dX = dX / (delta_p + delta_m)
    
 END SUBROUTINE Compute_dX
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Count number of wind points required by AeroDyn.
-!! Should respect the order of AD_GetExternalWind and AD_SetExternalWindPositions
-integer(IntKi) function AD_NumWindPoints(u_AD, o_AD) result(n)
-   type(AD_InputType),           intent(in   ) :: u_AD          ! AeroDyn data 
-   type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
-   ! locals
-   integer(IntKi)                  :: k
-   integer(IntKi)                  :: iWT
-   n = 0      
-   do iWT=1, size(u_AD%rotors)
-      ! Blades
-      do k=1,size(u_AD%rotors(iWT)%BladeMotion)
-         n = n + u_AD%rotors(iWT)%BladeMotion(k)%NNodes
-      end do
-      ! Tower
-      n = n + u_AD%rotors(iWT)%TowerMotion%NNodes
-      ! Nacelle
-      if (u_AD%rotors(iWT)%NacelleMotion%Committed) then
-         n = n + u_AD%rotors(iWT)%NacelleMotion%NNodes ! 1 point
-      endif
-      ! Hub Motion
-      if (u_AD%rotors(iWT)%HubMotion%Committed) then
-         n = n + u_AD%rotors(iWT)%HubMotion%NNodes ! 1 point
-      endif
-      ! TailFin
-      n = n + u_AD%rotors(iWT)%TFinMotion%NNodes ! 1 point
-   enddo
-   if (allocated(o_AD%WakeLocationPoints)) then
-      n = n + size(o_AD%WakeLocationPoints, dim=2)
-   end if
-end function AD_NumWindPoints
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Start index of the OLAF wind points for this turbine
-!! Should respect the order of AD_GetExternalWind and AD_SetExternalWindPositions
-integer(IntKi) function AD_BoxExceedPointsIdx(u_AD, o_AD) result(n)
-   type(AD_InputType),           intent(in   ) :: u_AD          ! AeroDyn data 
-   type(AD_OtherStateType),      intent(in   ) :: o_AD          ! AeroDyn data 
-   ! locals
-   integer(IntKi)                  :: k
-   integer(IntKi)                  :: TotPts ! call AD_NumWindPts, then subtract
-   TotPts = AD_NumWindPoints(u_AD, o_AD)
-   if (allocated(o_AD%WakeLocationPoints)) then
-      n = TotPts - size(o_AD%WakeLocationPoints, dim=2) + 1    ! start index of the olaf points
-   else  ! No OLAF, so return -1 to indicate not used
-      n = -1
-   endif 
-end function AD_BoxExceedPointsIdx
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Sets the wind calculated by InflowWind into the AeroDyn arrays ("InputSolve_IfW")
-!! Should respect the order of AD_NumWindPoints and AD_SetExternalWindPositions
-subroutine AD_GetExternalWind(u_AD, VelUVW, node, errStat, errMsg)
-   ! Passed variables
-   type(AD_InputType),          intent(inout)   :: u_AD   !< AeroDyn inputs
-   real(ReKi), dimension(:,:),  intent(in   )   :: VelUVW !< Velocity array 3 x n (as typically returned by InflowWind)
-   integer(IntKi),              intent(inout)   :: node   !< Counter for dimension 2 of VelUVW. Initialized by caller and returned!
-   integer(IntKi)                               :: errStat!< Error status of the operation
-   character(*)                                 :: errMsg !< Error message if errStat /= ErrID_None
-   ! Local variables:
-   integer(IntKi)                               :: j      ! Loops through nodes / elements.
-   integer(IntKi)                               :: k      ! Loops through blades.
-   integer(IntKi)                               :: nNodes
-   integer(IntKi)                               :: iWT
-   errStat = ErrID_None
-   errMsg  = ""
-
-   do iWT=1,size(u_AD%rotors)
-      nNodes = size(u_AD%rotors(iWT)%InflowOnBlade,2)
-      ! Blades
-      do k=1,size(u_AD%rotors(iWT)%InflowOnBlade,3)
-         do j=1,nNodes
-            u_AD%rotors(iWT)%InflowOnBlade(:,j,k) = VelUVW(:,node)
-            node = node + 1
-         end do
-      end do
-      ! Tower
-      if ( allocated(u_AD%rotors(iWT)%InflowOnTower) ) then
-         do j=1,size(u_AD%rotors(iWT)%InflowOnTower,2)
-            u_AD%rotors(iWT)%InflowOnTower(:,j) = VelUVW(:,node)
-            node = node + 1
-         end do      
-      end if
-      ! Nacelle
-      if (u_AD%rotors(iWT)%NacelleMotion%Committed) then
-         u_AD%rotors(iWT)%InflowOnNacelle(:) = VelUVW(:,node)
-         node = node + 1
-      else
-         u_AD%rotors(iWT)%InflowOnNacelle = 0.0_ReKi
-      end if
-      ! Hub 
-      if (u_AD%rotors(iWT)%HubMotion%NNodes > 0) then
-         u_AD%rotors(iWT)%InflowOnHub(:) = VelUVW(:,node)
-         node = node + 1
-      else
-         u_AD%rotors(iWT)%InflowOnHub = 0.0_ReKi
-      end if
-      ! TailFin
-      if (u_AD%rotors(iWT)%TFinMotion%NNodes > 0) then
-         u_AD%rotors(iWT)%InflowOnTailFin(:) = VelUVW(:,node)
-         node = node + 1
-      else
-         u_AD%rotors(iWT)%InflowOnTailFin = 0.0_ReKi
-      end if
-   enddo ! rotors
-   ! OLAF points
-   if ( allocated(u_AD%InflowWakeVel) ) then
-      do j=1,size(u_AD%InflowWakeVel,DIM=2)
-         u_AD%InflowWakeVel(:,j) = VelUVW(:,node)
-         node = node + 1
-      end do !j, wake points
-   end if
-end subroutine AD_GetExternalWind
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Sets the flow accelerations calculated by InflowWind into the AeroDyn arrays ("InputSolve_IfW") for MHK turbines
-!! Should respect the order of AD_NumWindPoints and AD_SetExternalWindPositions
-subroutine AD_GetExternalAccel(u_AD, AccUVW, node, errStat, errMsg)
-   ! Passed variables
-   type(AD_InputType),          intent(inout)   :: u_AD   !< AeroDyn inputs
-   real(ReKi), dimension(:,:),  intent(in   )   :: AccUVW !< Acceleration array 3 x n (as typically returned by InflowWind)
-   integer(IntKi),              intent(inout)   :: node   !< Counter for dimension 2 of AccUVW. Initialized by caller and returned!
-   integer(IntKi)                               :: errStat!< Error status of the operation
-   character(*)                                 :: errMsg !< Error message if errStat /= ErrID_None
-   ! Local variables:
-   integer(IntKi)                               :: j      ! Loops through nodes / elements.
-   integer(IntKi)                               :: k      ! Loops through blades.
-   integer(IntKi)                               :: nNodes
-   integer(IntKi)                               :: iWT
-   errStat = ErrID_None
-   errMsg  = ""
-
-   do iWT=1,size(u_AD%rotors)
-      nNodes = size(u_AD%rotors(iWT)%AccelOnBlade,2)
-      ! Blades
-      do k=1,size(u_AD%rotors(iWT)%AccelOnBlade,3)
-         do j=1,nNodes
-            u_AD%rotors(iWT)%AccelOnBlade(:,j,k) = AccUVW(:,node)
-            node = node + 1
-         end do
-      end do
-      ! Tower
-      if ( allocated(u_AD%rotors(iWT)%AccelOnTower) ) then
-         do j=1,size(u_AD%rotors(iWT)%AccelOnTower,2)
-            u_AD%rotors(iWT)%AccelOnTower(:,j) = AccUVW(:,node)
-            node = node + 1
-         end do      
-      end if
-   enddo ! rotors
-end subroutine AD_GetExternalAccel
-!----------------------------------------------------------------------------------------------------------------------------------
-!> Set inputs for inflow wind
-!! Order should match AD_NumWindPoints and AD_GetExternalWind
-subroutine AD_SetExternalWindPositions(u_AD, o_AD, PosXYZ, node, errStat, errMsg)
-   type(AD_InputType),           intent(in   ) :: u_AD    !< AeroDyn inputs
-   type(AD_OtherStateType),      intent(in   ) :: o_AD    !< AeroDyn other states
-   real(ReKi), dimension(:,:),   intent(inout) :: PosXYZ  !< Positions
-   integer(IntKi),               intent(inout) :: node    !< Counter for dimension 2 of PosXYZ. Initialized by caller and returned!
-   integer(IntKi)              , intent(out  ) :: errStat !< Status of error message
-   character(*)                , intent(out  ) :: errMsg  !< Error message if errStat /= ErrID_None
-   integer :: k, j, iWT
-   errStat = ErrID_None
-   errMsg  = ''
-
-   do iWT=1,size(u_AD%rotors)
-      ! Blade
-      do k = 1,size(u_AD%rotors(iWT)%BladeMotion)
-         do j = 1,u_AD%rotors(iWT)%BladeMotion(k)%nNodes
-            node = node + 1
-            PosXYZ(:,node) = u_AD%rotors(iWT)%BladeMotion(k)%TranslationDisp(:,j) + u_AD%rotors(iWT)%BladeMotion(k)%Position(:,j)
-         end do !J = 1,p%Bldnodes ! Loop through the blade nodes / elements
-      end do !K = 1,p%NumBl         
-      ! Tower
-      do j = 1,u_AD%rotors(iWT)%TowerMotion%nNodes
-         node = node + 1
-         PosXYZ(:,node) = u_AD%rotors(iWT)%TowerMotion%TranslationDisp(:,J) + u_AD%rotors(iWT)%TowerMotion%Position(:,J)
-      end do      
-      ! Nacelle
-      if (u_AD%rotors(iWT)%NacelleMotion%Committed) then
-         node = node + 1
-         PosXYZ(:,node) = u_AD%rotors(iWT)%NacelleMotion%TranslationDisp(:,1) + u_AD%rotors(iWT)%NacelleMotion%Position(:,1)
-      end if
-      ! Hub
-      if (u_AD%rotors(iWT)%HubMotion%Committed) then
-         node = node + 1
-         PosXYZ(:,node) = u_AD%rotors(iWT)%HubMotion%TranslationDisp(:,1) + u_AD%rotors(iWT)%HubMotion%Position(:,1)
-      end if
-      ! TailFin
-      if (u_AD%rotors(iWT)%TFinMotion%Committed) then
-         node = node + 1
-         PosXYZ(:,node) = u_AD%rotors(iWT)%TFinMotion%TranslationDisp(:,1) + u_AD%rotors(iWT)%TFinMotion%Position(:,1)
-      end if
-   enddo ! iWT
-   ! vortex points from FVW in AD15
-   if (allocated(o_AD%WakeLocationPoints)) then
-      do j = 1,size(o_AD%WakeLocationPoints,dim=2)
-         node = node + 1
-         PosXYZ(:,node) = o_AD%WakeLocationPoints(:,j)
-      enddo !j, wake points
-   end if
-end subroutine AD_SetExternalWindPositions
 
 END MODULE AeroDyn

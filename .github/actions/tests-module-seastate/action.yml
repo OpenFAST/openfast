@@ -1,0 +1,9 @@
+name: 'SeaState module tests'
+description: 'Run tests specific to the SeaState module'
+author: 'Rafael Mudafort https://github.com/rafmudaf'
+runs:
+  using: "composite"
+  steps:  
+    - run: ctest -VV -j7 -R seastate_ -LE python
+      working-directory: ${{runner.workspace}}/openfast/build
+      shell: bash

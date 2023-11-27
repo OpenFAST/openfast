@@ -91,7 +91,7 @@ if not os.path.isdir(inputsDirectory):
 # create the local output directory and initialize it with input files (overwrite if exists)
 rtl.copyTree(inputsDirectory, testBuildDirectory, renameExtDict={'.out':'_ref.out'}, includeExt=['.dvr','.dat','.out','.csv'])
 
-    
+
 ### Run SubDyn on the test case
 if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, caseName+".dvr")

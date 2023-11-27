@@ -252,7 +252,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_VUndx )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(1,:,IdxNode,IdxBlade), u%InflowOnBlade(:,IdxNode,IdxBlade) )
+                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(1,:,IdxNode,IdxBlade), u%Bld(IdxBlade)%InflowOnBlade(:,IdxNode) )
                   OutIdx = OutIdx + 1
                END DO
             END DO
@@ -261,7 +261,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_VUndy )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(2,:,IdxNode,IdxBlade), u%InflowOnBlade(:,IdxNode,IdxBlade) )
+                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(2,:,IdxNode,IdxBlade), u%Bld(IdxBlade)%InflowOnBlade(:,IdxNode) )
                   OutIdx = OutIdx + 1
                END DO
             END DO
@@ -269,7 +269,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_VUndz )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(3,:,IdxNode,IdxBlade), u%InflowOnBlade(:,IdxNode,IdxBlade) )
+                  y%WriteOutput( OutIdx )  = dot_product( m%orientationAnnulus(3,:,IdxNode,IdxBlade), u%Bld(IdxBlade)%InflowOnBlade(:,IdxNode) )
                   OutIdx = OutIdx + 1
                END DO
             END DO
@@ -280,7 +280,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_VUndxi )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = u%InflowOnBlade(1,IdxNode,IdxBlade)
+                  y%WriteOutput( OutIdx )  = u%Bld(IdxBlade)%InflowOnBlade(1,IdxNode)
                   OutIdx = OutIdx + 1
                END DO
             END DO
@@ -289,7 +289,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_VUndyi )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = u%InflowOnBlade(2,IdxNode,IdxBlade)
+                  y%WriteOutput( OutIdx )  = u%Bld(IdxBlade)%InflowOnBlade(2,IdxNode)
                   OutIdx = OutIdx + 1
                END DO
             END DO
@@ -297,7 +297,7 @@ SUBROUTINE Calc_WriteAllBldNdOutput( p, p_AD, u, m, m_AD, x, y, OtherState, Indx
          CASE ( BldNd_VUndzi )
             DO IdxBlade=1,p%BldNd_BladesOut
                DO IdxNode=1,p%NumBlNds
-                  y%WriteOutput( OutIdx )  = u%InflowOnBlade(3,IdxNode,IdxBlade)
+                  y%WriteOutput( OutIdx )  = u%Bld(IdxBlade)%InflowOnBlade(3,IdxNode)
                   OutIdx = OutIdx + 1
                END DO
             END DO
