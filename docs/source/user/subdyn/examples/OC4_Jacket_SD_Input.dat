@@ -111,7 +111,7 @@ IJointID   ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss 
   56           1           1           1           1           1           1
 ----------------------------------- MEMBERS -------------------------------------------
            112   NMembers    - Number of members (-)
-MemberID   MJointID1   MJointID2   MPropSetID1   MPropSetID2  MType   COSMID   ![MType={1:beam circ., 2:cable, 3:rigid, 4:beam arb.}. COMSID={-1:none}]
+MemberID   MJointID1   MJointID2   MPropSetID1   MPropSetID2  MType   COSMID   ![MType={1:beam circ., 2:cable, 3:rigid, 4:beam arb., 5:spring}. COMSID={-1:none}]
   (-)         (-)         (-)          (-)           (-)        (-)      (-)
    1           1           2            2             2          1       -1
    2           2           3            2             2          1       -1
