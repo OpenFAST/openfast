@@ -247,6 +247,10 @@ PropSetID     EA          MatDens        T0         CtrlChannel
              0   NRigidPropSets - Number of rigid link properties
 PropSetID   MatDens   
   (-)       (kg/m)
+----------------------- SPRING ELEMENT PROPERTIES -------------------------------------
+             0   NSpringPropSets - Number of spring properties
+PropSetID   k11     k12     k13     k14     k15     k16     k22     k23     k24     k25     k26     k33     k34     k35     k36     k44      k45      k46      k55      k56      k66    
+  (-)      (N/m)   (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)  (N/rad) (N/rad) (N/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad)
 ---------------------- MEMBER COSINE MATRICES COSM(i,j) -------------------------------
              0   NCOSMs      - Number of unique cosine matrices (i.e., of unique member alignments including principal axis rotations); ignored if NXPropSets=0   or 9999 in any element below
 COSMID    COSM11    COSM12    COSM13    COSM21    COSM22    COSM23    COSM31    COSM32    COSM33
