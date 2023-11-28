@@ -690,7 +690,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
     ! --- Cables, rigid link and spring properties (these cannot be subdivided, so direct copy of inputs)
     Init%NPropC = Init%NPropSetsC
     Init%NPropR = Init%NPropSetsR
-	Init%NPropS = Init%NPropSetsS
+    Init%NPropS = Init%NPropSetsS
     CALL AllocAry(Init%PropsC, Init%NPropC, PropSetsCCol, 'Init%PropsCable', ErrStat2, ErrMsg2); if(Failed()) return
     CALL AllocAry(Init%PropsR, Init%NPropR, PropSetsRCol, 'Init%PropsRigid', ErrStat2, ErrMsg2); if(Failed()) return
     CALL AllocAry(Init%PropsS, Init%NPropS, PropSetsSCol, 'Init%PropsSpring', ErrStat2, ErrMsg2); if(Failed()) return
@@ -888,27 +888,27 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       p%ElemProps(i)%Area    = -9.99e+36
       p%ElemProps(i)%Rho     = -9.99e+36
       p%ElemProps(i)%T0      = -9.99e+36
-	  p%ElemProps(i)%k11     = -9.99e+36
-	  p%ElemProps(i)%k12     = -9.99e+36
-	  p%ElemProps(i)%k13     = -9.99e+36
-	  p%ElemProps(i)%k14     = -9.99e+36
-	  p%ElemProps(i)%k15     = -9.99e+36
-	  p%ElemProps(i)%k16     = -9.99e+36
-	  p%ElemProps(i)%k22     = -9.99e+36
-	  p%ElemProps(i)%k23     = -9.99e+36
-	  p%ElemProps(i)%k24     = -9.99e+36
-	  p%ElemProps(i)%k25     = -9.99e+36
-	  p%ElemProps(i)%k26     = -9.99e+36
-	  p%ElemProps(i)%k33     = -9.99e+36
-	  p%ElemProps(i)%k34     = -9.99e+36
-	  p%ElemProps(i)%k35     = -9.99e+36
-	  p%ElemProps(i)%k36     = -9.99e+36
-	  p%ElemProps(i)%k44     = -9.99e+36
-	  p%ElemProps(i)%k45     = -9.99e+36
-	  p%ElemProps(i)%k46     = -9.99e+36
-	  p%ElemProps(i)%k55     = -9.99e+36
-	  p%ElemProps(i)%k56     = -9.99e+36
-	  p%ElemProps(i)%k66     = -9.99e+36
+      p%ElemProps(i)%k11     = -9.99e+36
+      p%ElemProps(i)%k12     = -9.99e+36
+      p%ElemProps(i)%k13     = -9.99e+36
+      p%ElemProps(i)%k14     = -9.99e+36
+      p%ElemProps(i)%k15     = -9.99e+36
+      p%ElemProps(i)%k16     = -9.99e+36
+      p%ElemProps(i)%k22     = -9.99e+36
+      p%ElemProps(i)%k23     = -9.99e+36
+      p%ElemProps(i)%k24     = -9.99e+36
+      p%ElemProps(i)%k25     = -9.99e+36
+      p%ElemProps(i)%k26     = -9.99e+36
+      p%ElemProps(i)%k33     = -9.99e+36
+      p%ElemProps(i)%k34     = -9.99e+36
+      p%ElemProps(i)%k35     = -9.99e+36
+      p%ElemProps(i)%k36     = -9.99e+36
+      p%ElemProps(i)%k44     = -9.99e+36
+      p%ElemProps(i)%k45     = -9.99e+36
+      p%ElemProps(i)%k46     = -9.99e+36
+      p%ElemProps(i)%k55     = -9.99e+36
+      p%ElemProps(i)%k56     = -9.99e+36
+      p%ElemProps(i)%k66     = -9.99e+36
 	  
       ! --- Properties that are specific to some elements
       if (eType==idMemberBeamCirc) then
@@ -1017,8 +1017,8 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          if (DEV_VERSION) then
             print*,'Member',I,'is a spring element'
          endif
-		 p%ElemProps(i)%Area = 0	! Spring elements have no area
-		 p%ElemProps(i)%Rho  = 0	! Spring elements have no mass
+         p%ElemProps(i)%Area = 0        ! Spring elements have no area
+         p%ElemProps(i)%Rho  = 0        ! Spring elements have no mass
          p%ElemProps(i)%k11  = Init%PropsS(P1, 2)
          p%ElemProps(i)%k12  = Init%PropsS(P1, 3)
          p%ElemProps(i)%k13  = Init%PropsS(P1, 4)
@@ -2344,7 +2344,7 @@ SUBROUTINE ElemM(ep, Me)
       endif
    
    else if (ep%eType==idMemberSpring) then
-         Me=0.0_FEKi	! Spring element has no mass associated. Consider using a lumped mass at JointID, if desired.
+         Me=0.0_FEKi     ! Spring element has no mass associated. Consider using a lumped mass at JointID, if desired.
    endif   
    
 END SUBROUTINE ElemM
