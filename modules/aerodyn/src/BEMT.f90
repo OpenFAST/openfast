@@ -882,7 +882,7 @@ subroutine BEMT_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, AFInfo, 
       !........................
       do j = 1,p%numBlades
          do i = 1,p%numBladeNodes
-            call DBEMT_UpdateStates(i, j, t, n, m%u_DBEMT, p%DBEMT, x%DBEMT, OtherState%DBEMT, m%DBEMT, errStat2, errMsg2)
+            call DBEMT_UpdateStates(i, j, t, n, m%u_DBEMT, uTimes, p%DBEMT, x%DBEMT, OtherState%DBEMT, m%DBEMT, errStat2, errMsg2)
                if (ErrStat2 /= ErrID_None) then
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
                   if (errStat >= AbortErrLev) return

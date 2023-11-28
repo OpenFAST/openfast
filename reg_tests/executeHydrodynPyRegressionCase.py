@@ -88,24 +88,15 @@ if not os.path.isdir(targetOutputDirectory):
 if not os.path.isdir(inputsDirectory):
     rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
-# create the local output directory if it does not already exist
-# and initialize it with input files for all test cases
-if not os.path.isdir(testBuildDirectory):
-    os.makedirs(testBuildDirectory)
-    for file in glob.glob(os.path.join(inputsDirectory,"*py")):
-        filename = file.split(os.path.sep)[-1]
-        shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
-    for file in glob.glob(os.path.join(inputsDirectory,"hd_*inp")):
-        filename = file.split(os.path.sep)[-1]
-        shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
-    for file in glob.glob(os.path.join(inputsDirectory,"*dat")):
-        filename = file.split(os.path.sep)[-1]
-        shutil.copy(os.path.join(inputsDirectory,filename), os.path.join(testBuildDirectory,filename))
     
+# create the local output directory and initialize it with input files 
+rtl.copyTree(inputsDirectory, testBuildDirectory)
+       # , excludeExt=['.out','.outb'])
+
 ### Run HydroDyn on the test case
 if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, "hydrodyn_driver.py")
-    returnCode = openfastDrivers.runHydrodynDriverCase(caseInputFile, executable)
+    returnCode = openfastDrivers.runHydrodynDriverCase(caseInputFile, executable, verbose=verbose)
     if returnCode != 0:
         sys.exit(returnCode*10)
     

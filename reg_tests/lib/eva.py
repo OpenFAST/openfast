@@ -158,18 +158,18 @@ def eigA(A, nq=None, nq1=None, fullEV=False, normQ=None, sort=True):
 
     if m!=n:
         raise Exception('Matrix needs to be squared')
-    if nq is None:
-        if nq1 is None:
-            nq1=0
-        nq = int((n-nq1)/2)
-    else:
-        nq1 = n-2*nq
-    if n!=2*nq+nq1 or nq1<0:
-        raise Exception('Number of 1st and second order dofs should match the matrix shape (n= 2*nq + nq1')
     Q, Lambda = eig(A, sort=False)
     v = np.diag(Lambda)
 
     if not fullEV:
+        if nq is None:
+            if nq1 is None:
+                nq1=0
+            nq = int((n-nq1)/2)
+        else:
+            nq1 = n-2*nq
+        if n!=2*nq+nq1 or nq1<0:
+            raise Exception('Number of 1st and second order dofs should match the matrix shape (n= 2*nq + nq1')
         Q=np.delete(Q, slice(nq,2*nq), axis=0)
 
     # Selecting eigenvalues with positive imaginary part (frequency)

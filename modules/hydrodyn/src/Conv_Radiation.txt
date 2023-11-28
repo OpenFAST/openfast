@@ -28,7 +28,6 @@ typedef   ^                            ^                             SiKi       
 typedef   ^                            ^                             SiKi             HdroDmpng                {:}{:}{:}  -        -         ""    -
 typedef   ^                            ^                             INTEGER          NInpFreq                 -          -        -         ""    -
 typedef   ^                            ^                             DbKi             RdtnTMax                 -          -        -         ""    -
-typedef   ^                            ^                             INTEGER          UnSum                    -          -        -         ""    -
 #
 #
 # Define outputs from the initialization routine here:

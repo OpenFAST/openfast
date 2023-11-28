@@ -57,7 +57,6 @@ PROGRAM MoorDyn_Driver
    TYPE(MD_Drvr_InitInput)               :: drvrInitInp      ! Initialization data for the driver program
    INTEGER                               :: UnIn             ! Unit number for the input file
    INTEGER                               :: UnEcho           ! The local unit number for this module's echo file
-  
 
    TYPE (MD_InitInputType)               :: MD_InitInp    
    TYPE (MD_ParameterType)               :: MD_p
@@ -102,7 +101,7 @@ PROGRAM MoorDyn_Driver
    Integer(IntKi)                        :: iTurb
    Integer(IntKi)                        :: nTurbines
    Integer(IntKi)                        :: iIn
-   integer(intKi)                        :: Un
+   !integer(intKi)                        :: Un
   
    ! data for SimStatus/RunTimes:
    REAL(DbKi)                            :: PrevSimTime        !< Previous time message was written to screen (s > 0)
@@ -214,29 +213,29 @@ PROGRAM MoorDyn_Driver
    ! -------------------------------- -----------------------------------
    
    ! fill in the hydrodynamics data
-   ALLOCATE( MD_InitInp%WaveVel (2,200,3))
-   ALLOCATE( MD_InitInp%WaveAcc (2,200,3))
-   ALLOCATE( MD_InitInp%WavePDyn(2,200)  )
-   ALLOCATE( MD_InitInp%WaveElev(2,200)  )
-   ALLOCATE( MD_InitInp%WaveTime(2)      )
-   MD_InitInp%WaveVel  = 0.0_ReKi
-   MD_InitInp%WaveAcc  = 0.0_ReKi
-   MD_InitInp%WavePDyn = 0.0_ReKi
-   MD_InitInp%WaveElev = 0.0_ReKi
-   MD_InitInp%WaveTime = 0.0_ReKi
-   DO I = 1,SIZE(MD_InitInp%WaveTime)
-      MD_InitInp%WaveTime(I) = 600.0*I
-   END DO
+   !ALLOCATE( MD_InitInp%WaveVel (2,200,3))
+   !ALLOCATE( MD_InitInp%WaveAcc (2,200,3))
+   !ALLOCATE( MD_InitInp%WavePDyn(2,200)  )
+   !ALLOCATE( MD_InitInp%WaveElev(2,200)  )
+   !ALLOCATE( MD_InitInp%WaveTime(2)      )
+   !MD_InitInp%WaveVel  = 0.0_ReKi
+   !MD_InitInp%WaveAcc  = 0.0_ReKi
+   !MD_InitInp%WavePDyn = 0.0_ReKi
+   !MD_InitInp%WaveElev = 0.0_ReKi
+   !MD_InitInp%WaveTime = 0.0_ReKi
+   !DO I = 1,SIZE(MD_InitInp%WaveTime)
+   !   MD_InitInp%WaveTime(I) = 600.0*I
+   !END DO
    
    ! open driver output file >>> not yet used <<<
    !CALL GetNewUnit( Un )
    !OPEN(Unit=Un,FILE='MD.out',STATUS='UNKNOWN')
   
    ! call the initialization routine
-   CALL MD_Init( MD_InitInp, MD_u(1), MD_p, MD_x , MD_xd, MD_xc, MD_xo, MD_y, MD_m, dtC, MD_InitOut, ErrStat, ErrMsg2 ); call AbortIfFailed()
+   CALL MD_Init( MD_InitInp, MD_u(1), MD_p, MD_x , MD_xd, MD_xc, MD_xo, MD_y, MD_m, dtC, MD_InitOut, ErrStat2, ErrMsg2 ); call AbortIfFailed()
    
-   CALL MD_DestroyInitInput  ( MD_InitInp , ErrStat, ErrMsg ); call AbortIfFailed()
-   CALL MD_DestroyInitOutput ( MD_InitOut , ErrStat, ErrMsg ); call AbortIfFailed()
+   CALL MD_DestroyInitInput  ( MD_InitInp , ErrStat2, ErrMsg2 ); call AbortIfFailed()
+   CALL MD_DestroyInitOutput ( MD_InitOut , ErrStat2, ErrMsg2 ); call AbortIfFailed()
       
    CALL DispNVD( MD_InitOut%Ver ) 
    
@@ -259,8 +258,8 @@ PROGRAM MoorDyn_Driver
    if (drvrInitInp%InputsMod == 1 ) then
 
       if ( LEN( TRIM(drvrInitInp%InputsFile) ) < 1 ) then
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' ERROR: MoorDyn Driver InputFile cannot be empty if InputsMode is 1.'
+         ErrStat2 = ErrID_Fatal
+         ErrMsg2  = ' ERROR: MoorDyn Driver InputFile cannot be empty if InputsMode is 1.'
          CALL AbortIfFailed()
       end if
    
@@ -308,7 +307,7 @@ PROGRAM MoorDyn_Driver
       ALLOCATE ( r_in(nt, ncIn), r_in2(nt, ncIn), rd_in(nt, ncIn), rd_in2(nt, ncIn), rdd_in(nt, ncIn), rdd_in2(nt, ncIn), STAT=ErrStat2)
       IF ( ErrStat2 /= ErrID_None ) THEN
          ErrStat2 = ErrID_Fatal
-         ErrMsg  = '  Error allocating space for r_in or rd_in array.'
+         ErrMsg2  = '  Error allocating space for r_in or rd_in array.'
          call AbortIfFailed()
       END IF 
 
@@ -667,43 +666,41 @@ PROGRAM MoorDyn_Driver
    CALL MD_End( MD_u(1), MD_p, MD_x, MD_xd, MD_xc , MD_xo, MD_y, MD_m, ErrStat2, ErrMsg2 ); call AbortIfFailed()
    
    do j = 2,MD_interp_order+1
-      call MD_DestroyInput( MD_u(j), ErrStat, ErrMsg)
+      call MD_DestroyInput( MD_u(j), ErrStat2, ErrMsg2)
    end do  
-   
-   DEALLOCATE(MD_u)
-   DEALLOCATE(MD_uTimes)
-   
-   IF (ALLOCATED(r_in)  ) DEALLOCATE(r_in  )
-   IF (ALLOCATED(PtfmMotIn)) DEALLOCATE(PtfmMotIn)
-   
-   CALL WrScr( "Program has ended" )
-   close (un) 
+
+   !close (un)    
+   call CleanUp()
+   CALL NormStop()
   
 
 CONTAINS
 
    SUBROUTINE AbortIfFailed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MoorDyn_Driver') 
-        IF ( ErrStat /= ErrID_None ) THEN
-           CALL WrScr( "Local error: "//ErrMsg2 )
-           CALL WrScr( "Full error messages: "//ErrMsg )
-        END IF
+   
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MoorDyn_Driver')
+        
         if (ErrStat >= AbortErrLev) then
            call CleanUp()
-           STOP
-        endif
+           Call ProgAbort(trim(ErrMsg))
+        elseif ( ErrStat /= ErrID_None ) THEN
+           CALL WrScr1( trim(GetErrStr(ErrStat))//': '//trim(ErrMsg) )
+        end if
    END SUBROUTINE AbortIfFailed
 
-   LOGICAL FUNCTION Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'OutSummary') 
-        Failed =  ErrStat >= AbortErrLev
-        if (Failed) call CleanUp()
-   END FUNCTION Failed
-
    SUBROUTINE CleanUp()
-      if(UnEcho>0) CLOSE(UnEcho)
-      if(UnEcho>0) CLOSE( UnIn)
-      if(allocated(MD_u)) deallocate(MD_u)
+      if(UnEcho     >0) CLOSE( UnEcho )
+      if(UnIn       >0) CLOSE( UnIn )
+
+      IF (ALLOCATED(MD_u     )) DEALLOCATE(MD_u     )
+      IF (ALLOCATED(MD_uTimes)) DEALLOCATE(MD_uTimes)
+      IF (ALLOCATED(PtfmMotIn)) DEALLOCATE(PtfmMotIn)
+      IF (ALLOCATED(r_in     )) DEALLOCATE(r_in     )
+      IF (ALLOCATED(r_in2    )) DEALLOCATE(r_in2    )
+      IF (ALLOCATED(rd_in    )) DEALLOCATE(rd_in    )
+      IF (ALLOCATED(rd_in2   )) DEALLOCATE(rd_in2   )
+      IF (ALLOCATED(rdd_in   )) DEALLOCATE(rdd_in   )
+      IF (ALLOCATED(rdd_in2  )) DEALLOCATE(rdd_in2  )
    END SUBROUTINE CleanUp
 
    !-------------------------------------------------------------------------------------------------------------------------------
@@ -711,16 +708,11 @@ CONTAINS
       CHARACTER(*),                  INTENT( IN    )   :: inputFile
       TYPE(MD_Drvr_InitInput),       INTENT(   OUT )   :: InitInp
       ! Local variables  
-      INTEGER                                          :: I                    ! generic integer for counting
       INTEGER                                          :: J                    ! generic integer for counting
-      CHARACTER(   2)                                  :: strI                 ! string version of the loop counter
 
       CHARACTER(1024)                                  :: EchoFile             ! Name of MoorDyn echo file  
-      CHARACTER(1024)                                  :: Line                 ! String to temporarially hold value of read line   
-      CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
-      CHARACTER(1024)                                  :: TmpFmt               ! Temporary storage for format statement
       CHARACTER(1024)                                  :: FileName             ! Name of MoorDyn input file  
-      CHARACTER(1024)                                  :: FilePath             ! Path Name of MoorDyn input file  
+      CHARACTER(1024)                                  :: FilePath             ! Name of path to MoorDyn input file
    
       UnEcho=-1
       UnIn  =-1
@@ -741,7 +733,7 @@ CONTAINS
       IF ( InitInp%Echo ) THEN
          EchoFile = TRIM(FileName)//'.echo'
          CALL GetNewUnit( UnEcho )   
-         CALL OpenEcho ( UnEcho, EchoFile, ErrStat, ErrMsg ); call AbortIfFailed()
+         CALL OpenEcho ( UnEcho, EchoFile, ErrStat2, ErrMsg2 ); call AbortIfFailed()
          REWIND(UnIn)
          CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 1', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
          CALL ReadCom( UnIn, FileName, 'MoorDyn Driver input file header line 2', ErrStat2, ErrMsg2, UnEcho); call AbortIfFailed()
@@ -772,17 +764,23 @@ CONTAINS
       if(UnEcho>0) CLOSE( UnEcho )
       if(UnIn>0)   CLOSE( UnIn   )
    
+      UnEcho = -1
+      UnIn = -1
+      
       ! Perform input checks and triggers
-      !CALL GetPath( FileName, FilePath )
-      !IF ( PathIsRelative( InitInp%MDInputFile ) ) then
-      !   InitInp%MDInputFile = TRIM(FilePath)//TRIM(InitInp%MDInputFile)
-      !END IF
-      !IF ( PathIsRelative( InitInp%OutRootName ) ) then
-      !   InitInp%OutRootName = TRIM(FilePath)//TRIM(InitInp%OutRootName)
-      !endif
-      !IF ( PathIsRelative( InitInp%InputsFile ) ) then
-      !   InitInp%InputsFile = TRIM(FilePath)//TRIM(InitInp%InputsFile)
-      !endif
+      CALL GetPath( FileName, FilePath )
+      
+      IF ( PathIsRelative( InitInp%MDInputFile ) ) then
+         InitInp%MDInputFile = TRIM(FilePath)//TRIM(InitInp%MDInputFile)
+      END IF
+      
+      IF ( PathIsRelative( InitInp%OutRootName ) ) then
+         InitInp%OutRootName = TRIM(FilePath)//TRIM(InitInp%OutRootName)
+      endif
+      
+      IF ( PathIsRelative( InitInp%InputsFile ) ) then
+         InitInp%InputsFile = TRIM(FilePath)//TRIM(InitInp%InputsFile)
+      endif
 
    END SUBROUTINE ReadDriverInputFile
 

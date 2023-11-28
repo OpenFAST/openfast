@@ -62,7 +62,7 @@ void fast::OpenFAST::init() {
                     CheckpointFileRoot[iTurb].data() + (CheckpointFileRoot[iTurb].size() + 1),
                     currentFileName
                 );
-                FAST_OpFM_Restart(
+                FAST_ExtInfw_Restart(
                     &iTurb,
                     currentFileName,
                     &AbortErrLev,
@@ -116,7 +116,7 @@ void fast::OpenFAST::init() {
                     FASTInputFileName[iTurb].data() + (FASTInputFileName[iTurb].size() + 1),
                     currentFileName
                 );
-                FAST_OpFM_Init(
+                FAST_ExtInfw_Init(
                     &iTurb,
                     &tMax,
                     currentFileName,
@@ -186,7 +186,7 @@ void fast::OpenFAST::init() {
                     FASTInputFileName[iTurb].data() + (FASTInputFileName[iTurb].size() + 1),
                     currentFileName
                 );
-                FAST_OpFM_Init(
+                FAST_ExtInfw_Init(
                     &iTurb,
                     &tMax,
                     currentFileName,
@@ -275,7 +275,7 @@ void fast::OpenFAST::solution0() {
         }
 
         for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-            FAST_OpFM_Solution0(&iTurb, &ErrStat, ErrMsg);
+            FAST_ExtInfw_Solution0(&iTurb, &ErrStat, ErrMsg);
             checkError(ErrStat, ErrMsg);
         }
 
@@ -301,7 +301,7 @@ void fast::OpenFAST::step() {
         //     setOutputsToFAST(cDriver_Input_from_FAST[iTurb], cDriver_Output_to_FAST[iTurb]);
 
         // this advances the states, calls CalcOutput, and solves for next inputs. Predictor-corrector loop is imbeded here:
-        // (note OpenFOAM could do subcycling around this step)
+        // (note ExternalInflow could do subcycling around this step)
 
         writeVelocityData(velNodeDataFile, iTurb, nt_global, cDriver_Input_from_FAST[iTurb], cDriver_Output_to_FAST[iTurb]);
 
@@ -316,7 +316,7 @@ void fast::OpenFAST::step() {
             fastcpp_velocity_file.close() ;
         }
 
-        FAST_OpFM_Step(&iTurb, &ErrStat, ErrMsg);
+        FAST_ExtInfw_Step(&iTurb, &ErrStat, ErrMsg);
         checkError(ErrStat, ErrMsg);
 
         // Compute the force from the nacelle only if the drag coefficient is
@@ -394,8 +394,8 @@ void fast::OpenFAST::stepNoWrite() {
         //     setOutputsToFAST(cDriver_Input_from_FAST[iTurb], cDriver_Output_to_FAST[iTurb]);
 
         // this advances the states, calls CalcOutput, and solves for next inputs. Predictor-corrector loop is imbeded here:
-        // (note OpenFOAM could do subcycling around this step)
-        FAST_OpFM_Step(&iTurb, &ErrStat, ErrMsg);
+        // (note ExternalInflow could do subcycling around this step)
+        FAST_ExtInfw_Step(&iTurb, &ErrStat, ErrMsg);
         checkError(ErrStat, ErrMsg);
 
     }
@@ -480,7 +480,7 @@ void fast::OpenFAST::checkError(const int ErrStat, const char * ErrMsg){
     }
 }
 
-void fast::OpenFAST::setOutputsToFAST(OpFM_InputType_t cDriver_Input_from_FAST, OpFM_OutputType_t cDriver_Output_to_FAST){
+void fast::OpenFAST::setOutputsToFAST(ExtInfw_InputType_t cDriver_Input_from_FAST, ExtInfw_OutputType_t cDriver_Output_to_FAST){
 
     // routine sets the u-v-w wind speeds used in FAST and the SuperController inputs
 
@@ -848,7 +848,7 @@ void fast::OpenFAST::allocateMemory() {
     // Allocate memory for Turbine datastructure for all turbines
     FAST_AllocateTurbines(&nTurbinesProc, &ErrStat, ErrMsg);
 
-    // Allocate memory for OpFM Input types in FAST
+    // Allocate memory for ExtInfw Input types in FAST
     cDriver_Input_from_FAST.resize(nTurbinesProc) ;
     cDriver_Output_to_FAST.resize(nTurbinesProc) ;
 
@@ -994,7 +994,7 @@ void fast::OpenFAST::backupVelocityDataFile(int curTimeStep, hid_t & velDataFile
     velDataFile = openVelocityDataFile(false);
 }
 
-void fast::OpenFAST::writeVelocityData(hid_t h5File, int iTurb, int iTimestep, OpFM_InputType_t iData, OpFM_OutputType_t oData) {
+void fast::OpenFAST::writeVelocityData(hid_t h5File, int iTurb, int iTimestep, ExtInfw_InputType_t iData, ExtInfw_OutputType_t oData) {
 
     hsize_t start[3]; start[0] = iTimestep; start[1] = 0; start[2] = 0;
     int nVelPts = get_numVelPtsLoc(iTurb) ;
@@ -1028,7 +1028,7 @@ void fast::OpenFAST::writeVelocityData(hid_t h5File, int iTurb, int iTimestep, O
 
 }
 
-void fast::OpenFAST::applyVelocityData(int iPrestart, int iTurb, OpFM_OutputType_t cDriver_Output_to_FAST, std::vector<double> & velData) {
+void fast::OpenFAST::applyVelocityData(int iPrestart, int iTurb, ExtInfw_OutputType_t cDriver_Output_to_FAST, std::vector<double> & velData) {
     int nVelPts = get_numVelPtsLoc(iTurb);
     for (int j = 0; j < nVelPts; j++){
         cDriver_Output_to_FAST.u[j] = velData[(iPrestart*nVelPts+j)*6 + 3];

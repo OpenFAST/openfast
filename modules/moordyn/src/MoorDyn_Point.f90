@@ -161,8 +161,8 @@ CONTAINS
 
       !INTEGER(IntKi)             :: l         ! index of attached lines
       INTEGER(IntKi)                        :: J                ! index
-      INTEGER(IntKi)                        :: K                ! index      
-      Real(DbKi)                            :: Sum1             ! for adding things
+!      INTEGER(IntKi)                        :: K                ! index      
+!      Real(DbKi)                            :: Sum1             ! for adding things
       
       Real(DbKi)                            :: S(3,3)           ! inverse mass matrix
 
@@ -215,9 +215,9 @@ CONTAINS
       !TYPE(MD_MiscVarType), INTENT(INOUT)  :: m       ! misc/optimization variables
 
       INTEGER(IntKi)             :: l         ! index of attached lines
-      INTEGER(IntKi)             :: I         ! index
+!      INTEGER(IntKi)             :: I         ! index
       INTEGER(IntKi)             :: J         ! index
-      INTEGER(IntKi)             :: K         ! index
+!      INTEGER(IntKi)             :: K         ! index
 
       Real(DbKi)                 :: Fnet_i(3) ! force from an attached line
       Real(DbKi)                 :: Moment_dummy(3) ! dummy vector to hold unused line end moments
