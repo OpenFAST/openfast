@@ -398,7 +398,7 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
             p%Elems(iMem,n) = FINDLOCI(Init%PropSetsX(:,1), Init%Members(iMem, n) )
          else if (mType==idMemberSpring) then
             sType='Spring property'
-            p%Elems(iMem,n) = FINDLOCI(Init%PropSetsS(:,1), Init%Members(iMem, n) )	
+            p%Elems(iMem,n) = FINDLOCI(Init%PropSetsS(:,1), Init%Members(iMem, n) )
          else
             ! Should not happen
             print*,'Element type unknown',mType
@@ -694,10 +694,10 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
     CALL AllocAry(Init%PropsC, Init%NPropC, PropSetsCCol, 'Init%PropsCable', ErrStat2, ErrMsg2); if(Failed()) return
     CALL AllocAry(Init%PropsR, Init%NPropR, PropSetsRCol, 'Init%PropsRigid', ErrStat2, ErrMsg2); if(Failed()) return
     CALL AllocAry(Init%PropsS, Init%NPropS, PropSetsSCol, 'Init%PropsSpring', ErrStat2, ErrMsg2); if(Failed()) return
-	Init%PropsC(1:Init%NPropC, 1:PropSetsCCol) = Init%PropSetsC(1:Init%NPropC, 1:PropSetsCCol)
+    Init%PropsC(1:Init%NPropC, 1:PropSetsCCol) = Init%PropSetsC(1:Init%NPropC, 1:PropSetsCCol)
     Init%PropsR(1:Init%NPropR, 1:PropSetsRCol) = Init%PropSetsR(1:Init%NPropR, 1:PropSetsRCol)
-	Init%PropsS(1:Init%NPropS, 1:PropSetsSCol) = Init%PropSetsS(1:Init%NPropS, 1:PropSetsSCol)
-	
+    Init%PropsS(1:Init%NPropS, 1:PropSetsSCol) = Init%PropSetsS(1:Init%NPropS, 1:PropSetsSCol)
+
     CALL CleanUp_Discrt()
 
 CONTAINS
@@ -909,7 +909,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       p%ElemProps(i)%k55     = -9.99e+36
       p%ElemProps(i)%k56     = -9.99e+36
       p%ElemProps(i)%k66     = -9.99e+36
-	  
+  
       ! --- Properties that are specific to some elements
       if (eType==idMemberBeamCirc) then
          E   = Init%PropsB(P1, 2) ! TODO E2 
@@ -2364,7 +2364,7 @@ SUBROUTINE ElemK(ep, Ke)
 
    else if (ep%eType==idMemberSpring) then
       CALL ElemK_Spring(eP%k11, eP%k12, eP%k13, eP%k14, eP%k15, eP%k16, eP%k22, eP%k23, eP%k24, eP%k25, eP%k26, eP%k33, eP%k34, eP%k35, eP%k36, eP%k44, eP%k45, eP%k46, eP%k55, eP%k56, eP%k66, eP%DirCos, Ke)
-	  
+  
    endif
 END SUBROUTINE ElemK
 
@@ -2380,7 +2380,7 @@ SUBROUTINE ElemF(ep, gravity, Fg, Fo)
    else if (ep%eType==idMemberRigid) then
       Fo(1:12)=0.0_FEKi
    else if (ep%eType==idMemberSpring) then
-      Fo(1:12)=0.0_FEKi	  
+      Fo(1:12)=0.0_FEKi  
    endif
    CALL ElemG( eP%Area, eP%Length, eP%rho, eP%DirCos, Fg, gravity )
 END SUBROUTINE ElemF

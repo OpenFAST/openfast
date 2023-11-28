@@ -1259,7 +1259,7 @@ if (.not. LegacyFormat) then
    CALL AllocAry(Init%PropSetsS, Init%NPropSetsS, PropSetsSCol, 'PropSetsS', ErrStat2, ErrMsg2); if(Failed()) return
    DO I = 1, Init%NPropSetsS
       READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line; ErrMsg2='Error reading spring property line'; if (Failed()) return
-	  call ReadFAryFromStr(Line, Init%PropSetsS(I,:), PropSetsSCol, nColValid, nColNumeric);
+      call ReadFAryFromStr(Line, Init%PropSetsS(I,:), PropSetsSCol, nColValid, nColNumeric);
       if ((nColValid/=nColNumeric).or.((nColNumeric/=22).and.(nColNumeric/=PropSetsSCol)) ) then
          CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": Spring property line must consist of 22 numerical values. Problematic line: "'//trim(Line)//'"')
          return
@@ -3783,13 +3783,13 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
    WRITE(UnSum, '(A,I6)')  '#Number of nodes per member:', Init%Ndiv+1
    WRITE(UnSum, '(A9,A10,A10,A10,A10,A15,A15,A16)')  '#Member ID', 'Joint1_ID', 'Joint2_ID','Prop_I','Prop_J', 'Mass','Length', 'Node IDs...'
    DO i=1,p%NMembers
-       !Calculate member mass here; this should really be done somewhere else, yet it is not used anywhere else
-       !IT WILL HAVE TO BE MODIFIED FOR OTHER THAN CIRCULAR PIPE ELEMENTS
-       propIDs=Init%Members(i,iMProp:iMProp+1) 
-       if (Init%Members(I, iMType)/=idMemberSpring) then ! This check only applies for members different than springs (springs have no mass and no length)
-		mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
-       endif
-	   IF (ErrStat .EQ. ErrID_None) THEN
+      !Calculate member mass here; this should really be done somewhere else, yet it is not used anywhere else
+      !IT WILL HAVE TO BE MODIFIED FOR OTHER THAN CIRCULAR PIPE ELEMENTS
+      propIDs=Init%Members(i,iMProp:iMProp+1) 
+      if (Init%Members(I, iMType)/=idMemberSpring) then ! This check only applies for members different than springs (springs have no mass and no length)
+      mLength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg) ! TODO double check mass and length
+      endif
+      IF (ErrStat .EQ. ErrID_None) THEN
         mType =  Init%Members(I, iMType) ! 
         if (mType==idMemberBeamCirc) then
            iProp(1) = FINDLOCI(Init%PropSetsB(:,1), propIDs(1))
@@ -3812,7 +3812,7 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
         else if (mType==idMemberSpring) then
            iProp(1) = FINDLOCI(Init%PropSetsS(:,1), propIDs(1))
            mMass= 0.0 ! Spring element has no mass
-		   mLength = 0.0 ! Spring element has no length. Both JointIDs must be coincident.
+           mLength = 0.0 ! Spring element has no length. Both JointIDs must be coincident.
            WRITE(UnSum, '("#",I9,I10,I10,I10,I10,ES15.6E2,ES15.6E2, A3,2(I6),A)') Init%Members(i,1:3),propIDs(1),propIDs(2),&
                  mMass,mLength,' ',(Init%MemberNodes(i, j), j = 1, 2), ' # Spring element'
          else if (mType==idMemberBeamArb) then
@@ -3824,9 +3824,9 @@ SUBROUTINE OutSummary(Init, p, m, InitInput, CBparams, Modes, Omega, Omega_Gy, E
          else
            WRITE(UnSum, '(A)') '#TODO, member unknown'
         endif
-       ELSE 
-           RETURN
-       ENDIF
+      ELSE 
+          RETURN
+      ENDIF
    ENDDO   
    !-------------------------------------------------------------------------------------------------------------
    ! write Cosine matrix for all members to a txt file
@@ -4086,7 +4086,7 @@ END SUBROUTINE StateMatrices
 FUNCTION MemberLength(MemberID,Init,ErrStat,ErrMsg)
     TYPE(SD_InitType), INTENT(IN)             :: Init         !< Input data for initialization routine, this structure contains many variables needed for summary file
     INTEGER(IntKi),    INTENT(IN)             :: MemberID     !< Member ID #
-	REAL(ReKi)                                :: MemberLength !< Member Length
+    REAL(ReKi)                                :: MemberLength !< Member Length
     INTEGER(IntKi),            INTENT(   OUT) :: ErrStat      !< Error status of the operation
     CHARACTER(*),              INTENT(   OUT) :: ErrMsg       !< Error message if ErrStat /= ErrID_None
     !Locals
@@ -4110,7 +4110,7 @@ FUNCTION MemberLength(MemberID,Init,ErrStat,ErrMsg)
     xyz1= Init%Joints(Joint1,2:4)
     xyz2= Init%Joints(Joint2,2:4)
     MemberLength=SQRT( SUM((xyz2-xyz1)**2.) )
-    if ( EqualRealNos(MemberLength, 0.0_ReKi) ) then	
+    if ( EqualRealNos(MemberLength, 0.0_ReKi) ) then
         call SetErrStat(ErrID_Fatal,' Member with ID '//trim(Num2LStr(MemberID))//' has zero length!', ErrStat,ErrMsg,RoutineName);
         return
     endif

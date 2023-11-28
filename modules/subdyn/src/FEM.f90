@@ -953,7 +953,7 @@ END SUBROUTINE GetRigidTransformation
 !!      in the FAST framework.
 SUBROUTINE GetDirCos(P1, P2, eType, DirCos, L_out, ErrStat, ErrMsg)
    REAL(ReKi) ,      INTENT(IN   )  :: P1(3), P2(3)      ! (x,y,z) global positions of two nodes making up an element
-   INTEGER(IntKi),   INTENT(IN   )  :: eType			 ! element type (1:beam circ., 2:cable, 3:rigid, 4:beam arb., 5:spring)
+   INTEGER(IntKi),   INTENT(IN   )  :: eType             ! element type (1:beam circ., 2:cable, 3:rigid, 4:beam arb., 5:spring)
    REAL(FEKi) ,      INTENT(  OUT)  :: DirCos(3, 3)      ! calculated direction cosine matrix
    REAL(ReKi) ,      INTENT(  OUT)  :: L_out             ! length of element
    INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat           ! Error status of the operation
