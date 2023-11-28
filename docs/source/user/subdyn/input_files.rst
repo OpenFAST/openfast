@@ -426,7 +426,7 @@ A member is one of the four following types (see :numref:`SD_FEM`):
 
 - Rigid link (*MType=3*)
 
-- Spring element (*MType=4*)
+- Spring element (*MType=5*)
 
 **COSMID** refers to the IDs of the members' cosine matrices for noncircular
 members and spring elements; the current release uses SubDyn's default direction cosine convention
