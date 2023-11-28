@@ -532,10 +532,11 @@ Spring Properties
 ~~~~~~~~~~~~~~~~
 Members that are specified as spring elements (**MType=5**), 
 have their properties defined in the spring element properties table. 
-The table lists for each spring property: the property ID (**PropSetID**), the diagonal stiffness 
-coefficients (**K11**, **K22**, **K33**, **K44**, **K55**, **K66**), and the cross-coupling
-stiffness coefficients (**K12**, **K13**, **K14**, **K15**, **K16**, **K23**, **K24**, **K25**,
-**K26**, **K34**, **K35**, **K36**, **K45**, **K46**, **K56**). The stiffness matrix is considered symmetric. 
+The table lists for each spring property: the property ID (**PropSetID**) and the 
+stiffness coefficients (**K11**, **K12**, **K13**, **K14**, **K15**, **K16**, **K22**,
+**K23**, **K24**, **K25**, **K26**,  **K33**, **K34**, **K35**, **K36**, **K44**, **K45**,
+**K46**, **K55**, **K56**, **K66**). The stiffness matrix is considered symmetric and 
+includes diagonal (kii) and cross-coupling (kij) coefficients. 
 The FEM representation of the spring element is given in :numref:`SD_SpringElement`.
 
 An example of spring properties table is given below:
