@@ -323,7 +323,7 @@ contains
       character(ErrMsgLen), intent(out) :: ErrMsg
 
       real(ReKi), dimension(3) :: P1, P2, e1, e2, e3
-	  integer(IntKi) :: eType
+      integer(IntKi) :: eType
       real(FEKi), dimension(3,3) :: DirCos, Ref
       real(ReKi), dimension(6,6) :: T, Tref
       real(ReKi) :: L
