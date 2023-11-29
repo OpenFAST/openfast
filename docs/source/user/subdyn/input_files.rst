@@ -547,7 +547,7 @@ An example of spring properties table is given below:
              1   NSpringPropSets - Number of spring properties
     PropSetID   k11     k12     k13     k14     k15     k16     k22     k23     k24     k25     k26     k33     k34     k35     k36     k44      k45      k46      k55      k56      k66    
       (-)      (N/m)   (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)   (N/m)  (N/rad) (N/rad) (N/rad)  (N/m)  (N/rad) (N/rad) (N/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad) (Nm/rad)
-       2        2E7      0      0        0      0       0       1E12     0        0     0        0       1E12   0       0        0       1E12     0     0         1E8      0        1e12
+       2        2E7      0      0        0      0       0       1E12     0        0     0        0       1E12   0       0        0       1E12     0     0         1E8      0        1E12
 
 Member Cosine Matrices COSM (i,j)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
