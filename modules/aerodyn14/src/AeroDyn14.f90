@@ -873,7 +873,7 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
       ! calculate yaw angle
       ! note: YawAng should use the Hub instead of the RotorFurl, but it is calculated this way to
       ! get the same answers as previous version.
-   m%Rotor%YawAng = ATAN2( -1.*u%TurbineComponents%RotorFurl%Orientation(1,2), u%TurbineComponents%RotorFurl%Orientation(1,1) )
+   m%Rotor%YawAng = ATAN2( -1.0_ReKi*u%TurbineComponents%RotorFurl%Orientation(1,2), u%TurbineComponents%RotorFurl%Orientation(1,1) )
    m%Rotor%SYaw   = SIN( m%Rotor%YawAng )
    m%Rotor%CYaw   = COS( m%Rotor%YawAng )
 
@@ -959,7 +959,7 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
          ! note: the equation below should use TurbineComponents%Blade markers, but this is used to get the
          ! same answers as the previous version (before v13.00.00)
 
-      AzimuthAngle = ATAN2( -1.*DOT_PRODUCT( u%TurbineComponents%Hub%Orientation(3,:),         &
+      AzimuthAngle = ATAN2( -1.0_ReKi*DOT_PRODUCT( u%TurbineComponents%Hub%Orientation(3,:),         &
                                              u%TurbineComponents%RotorFurl%Orientation(2,:) ), &
                                 DOT_PRODUCT( u%TurbineComponents%Hub%Orientation(3,:),         &
                                              u%TurbineComponents%RotorFurl%Orientation(3,:) )  ) + pi + (IBlade - 1)*p%TwoPiNB

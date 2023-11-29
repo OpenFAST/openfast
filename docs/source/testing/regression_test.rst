@@ -40,6 +40,7 @@ configuration as described in the following sections.
 
 In both modes of execution a directory is created in the build directory
 called ``reg_tests`` where all of the input files for the test cases are copied
+(but not overwritten) 
 and all of the locally generated outputs are stored. Ultimately, both CTest and
 the manual execution program call a series of Python scripts and libraries in
 ``reg_tests`` and ``reg_tests/lib``. One such script is ``lib/pass_fail.py``

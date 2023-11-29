@@ -84,6 +84,7 @@ typedef	^	RotInitInputType	R8Ki	NacellePosition	{3}	-	-	"X-Y-Z reference positio
 typedef	^	RotInitInputType	R8Ki	NacelleOrientation	{3}{3}	-	-	"DCM reference orientation of nacelle"	-
 typedef	^	RotInitInputType	IntKi	AeroProjMod   	-	1	-	"Flag to switch between different projection models"	-
 typedef	^	RotInitInputType	IntKi	AeroBEM_Mod   	-      -1	-	"Flag to switch between different BEM Model"	-
+typedef	^	RotInitInputType	ReKi	RotSpeed	-	-	0	"Rotor speed used when AeroDyn is computing aero maps"	"rad/s"
 
 typedef	^	InitInputType	RotInitInputType rotors	{:}	-	-	"Init Input Types for rotors"	-
 typedef	^	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-
@@ -91,6 +92,7 @@ typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing out
 typedef	^	InitInputType	LOGICAL	UsePrimaryInputFile	-	.TRUE.	-	"Read input file instead of passed data"	-
 typedef	^	InitInputType	FileInfoType	PassedPrimaryInputData	-	-	-	"Primary input file as FileInfoType (set by driver/glue code)"	-
 typedef	^	InitInputType	Logical	Linearize	-	.FALSE.	-	"Flag that tells this module if the glue code wants to linearize."	-
+typedef	^	InitInputType	LOGICAL	CompAeroMaps   -  .FALSE. -   "flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false)"	-
 typedef	^	InitInputType	ReKi	Gravity	-	-	-	"Gravity force" Nm/s^2
 typedef ^   InitInputType   IntKi   MHK     -   -   -   "MHK turbine type switch"   -
 typedef ^   InitInputType   ReKi    defFldDens  -   -   -   "Default fluid density from the driver; may be overwritten" kg/m^3
@@ -421,6 +423,7 @@ typedef	^	RotInputType	ReKi	InflowOnTower	{:}{:}	-	-	"U,V,W at nodes on the towe
 typedef	^	RotInputType	ReKi	InflowOnHub 	{3}	-	-	"U,V,W at hub"	m/s
 typedef	^	RotInputType	ReKi	InflowOnNacelle	{3}	-	-	"U,V,W at nacelle"	m/s
 typedef	^	RotInputType	ReKi	InflowOnTailFin	{3}	-	-	"U,V,W at tailfin"	m/s
+typedef	^	RotInputType	ReKi	AvgDiskVel	{3}	-	0.0	"disk-averaged U,V,W"	m/s
 typedef	^	RotInputType	ReKi	UserProp	{:}{:}	-	-	"Optional user property for interpolating airfoils (per element per blade)" -
 
 

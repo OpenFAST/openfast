@@ -18,7 +18,7 @@
 # Generic test functions
 #===============================================================================
 
-function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TESTNAME LABEL)
+function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY STEADYSTATE_FLAG TESTNAME LABEL)
 
   file(TO_NATIVE_PATH "${EXECUTABLE}" EXECUTABLE)
   file(TO_NATIVE_PATH "${TEST_SCRIPT}" TEST_SCRIPT)
@@ -52,6 +52,10 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
   if(CTEST_NO_RUN_FLAG)
     set(NO_RUN_FLAG "-n")
   endif()
+
+  if(STEADYSTATE_FLAG STREQUAL " ")
+    set(STEADYSTATE_FLAG "")
+  endif()
   
   add_test(
     ${TESTNAME} ${Python_EXECUTABLE}
@@ -65,6 +69,7 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
        ${PLOT_FLAG}                     # empty or "-p"
        ${RUN_VERBOSE_FLAG}              # empty or "-v"
        ${NO_RUN_FLAG}                   # empty or "-n"
+       ${STEADYSTATE_FLAG}              # empty or "-steadystate"
   )
   # limit each test to 90 minutes: 5400s
   set_tests_properties(${TESTNAME} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABEL}")
@@ -80,15 +85,25 @@ function(of_regression TESTNAME LABEL)
   set(OPENFAST_EXECUTABLE "${CTEST_OPENFAST_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
-  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(of_regression)
+
+function(of_aeromap_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastRegressionCase.py")
+  set(OPENFAST_EXECUTABLE "${CTEST_OPENFAST_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
+  set(STEADYSTATE_FLAG "-steadystate")
+  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${STEADYSTATE_FLAG} ${TESTNAME} "${LABEL}")
+endfunction(of_aeromap_regression)
 
 function(of_fastlib_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastRegressionCase.py")
   set(OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast/openfast_cpp_driver")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
-  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} "${TESTNAME}_fastlib" "${LABEL}" ${TESTNAME})
+  # extra flag in call to "regression" on next line sets the ${TESTDIR}
+  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " "${TESTNAME}_fastlib" "${LABEL}" ${TESTNAME})
 endfunction(of_fastlib_regression)
 
 # openfast aeroacoustic 
@@ -97,7 +112,7 @@ function(of_regression_aeroacoustic TESTNAME LABEL)
   set(OPENFAST_EXECUTABLE "${CTEST_OPENFAST_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
-  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(of_regression_aeroacoustic)
 
 # FAST Farm
@@ -106,7 +121,7 @@ function(ff_regression TESTNAME LABEL)
   set(FASTFARM_EXECUTABLE "${CTEST_FASTFARM_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/fast-farm")
-  regression(${TEST_SCRIPT} ${FASTFARM_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${FASTFARM_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(ff_regression)
 
 # openfast linearized
@@ -115,7 +130,7 @@ function(of_regression_linear TESTNAME LABEL)
   set(OPENFAST_EXECUTABLE "${CTEST_OPENFAST_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
-  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(of_regression_linear)
 
 # openfast C++ interface
@@ -124,7 +139,7 @@ function(of_cpp_interface_regression TESTNAME LABEL)
   set(OPENFAST_CPP_EXECUTABLE "${CTEST_OPENFASTCPP_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast-cpp")
-  regression(${TEST_SCRIPT} ${OPENFAST_CPP_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${OPENFAST_CPP_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(of_cpp_interface_regression)
 
 # openfast Python-interface
@@ -133,7 +148,7 @@ function(of_regression_py TESTNAME LABEL)
   set(EXECUTABLE "None")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/python")
-  regression(${TEST_SCRIPT} ${EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(of_regression_py)
 
 # aerodyn
@@ -142,7 +157,7 @@ function(ad_regression TESTNAME LABEL)
   set(AERODYN_EXECUTABLE "${CTEST_AERODYN_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/aerodyn")
-  regression(${TEST_SCRIPT} ${AERODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${AERODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(ad_regression)
 
 # aerodyn-Py
@@ -151,7 +166,7 @@ function(py_ad_regression TESTNAME LABEL)
   set(AERODYN_EXECUTABLE "${Python_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/aerodyn")
-  regression(${TEST_SCRIPT} ${AERODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${AERODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(py_ad_regression)
 
 
@@ -161,7 +176,7 @@ function(ua_regression TESTNAME LABEL)
   set(AERODYN_EXECUTABLE "${CTEST_UADRIVER_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/unsteadyaero")
-  regression(${TEST_SCRIPT} ${AERODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${AERODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(ua_regression)
 
 
@@ -171,7 +186,7 @@ function(bd_regression TESTNAME LABEL)
   set(BEAMDYN_EXECUTABLE "${CTEST_BEAMDYN_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/beamdyn")
-  regression(${TEST_SCRIPT} ${BEAMDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${BEAMDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(bd_regression)
 
 # hydrodyn
@@ -180,7 +195,7 @@ function(hd_regression TESTNAME LABEL)
   set(HYDRODYN_EXECUTABLE "${CTEST_HYDRODYN_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/hydrodyn")
-  regression(${TEST_SCRIPT} ${HYDRODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${HYDRODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(hd_regression)
 
 # py_hydrodyn
@@ -189,7 +204,7 @@ function(py_hd_regression TESTNAME LABEL)
   set(HYDRODYN_EXECUTABLE "${Python_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/hydrodyn")
-  regression(${TEST_SCRIPT} ${HYDRODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${HYDRODYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(py_hd_regression)
 
 # subdyn
@@ -198,7 +213,7 @@ function(sd_regression TESTNAME LABEL)
   set(SUBDYN_EXECUTABLE "${CTEST_SUBDYN_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/subdyn")
-  regression(${TEST_SCRIPT} ${SUBDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${SUBDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(sd_regression)
 
 # inflowwind
@@ -207,7 +222,7 @@ function(ifw_regression TESTNAME LABEL)
   set(INFLOWWIND_EXECUTABLE "${CTEST_INFLOWWIND_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/inflowwind")
-  regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(ifw_regression)
 
 # py_inflowwind
@@ -216,8 +231,17 @@ function(py_ifw_regression TESTNAME LABEL)
   set(INFLOWWIND_EXECUTABLE "${Python_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/inflowwind")
-  regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${INFLOWWIND_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(py_ifw_regression)
+
+# seastate
+function(seast_regression TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeSeaStateRegressionCase.py")
+  set(SEASTATE_EXECUTABLE "${CTEST_SEASTATE_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/seastate")
+  regression(${TEST_SCRIPT} ${SEASTATE_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
+endfunction(seast_regression)
 
 # moordyn
 function(md_regression TESTNAME LABEL)
@@ -225,7 +249,7 @@ function(md_regression TESTNAME LABEL)
   set(MOORDYN_EXECUTABLE "${CTEST_MOORDYN_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/moordyn")
-  regression(${TEST_SCRIPT} ${MOORDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${MOORDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(md_regression)
 
 # py_moordyn c-bindings interface
@@ -234,7 +258,7 @@ function(py_md_regression TESTNAME LABEL)
   set(MOORDYN_EXECUTABLE "${Python_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/moordyn")
-  regression(${TEST_SCRIPT} ${MOORDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+  regression(${TEST_SCRIPT} ${MOORDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} " " ${TESTNAME} "${LABEL}")
 endfunction(py_md_regression)
 
 # # Python-based OpenFAST Library tests
@@ -283,6 +307,8 @@ of_regression("StC_test_OC4Semi"                       "openfast;servodyn;hydrod
 of_regression("MHK_RM1_Fixed"                          "openfast;elastodyn;aerodyn15;mhk")
 of_regression("MHK_RM1_Floating"                       "openfast;elastodyn;aerodyn15;hydrodyn;moordyn;mhk")
 of_regression("Tailfin_FreeYaw1DOF_PolarBased"         "openfast;elastodyn;aerodyn15")
+
+of_aeromap_regression("5MW_Land_AeroMap"               "aeromap;elastodyn;aerodyn15")
 
 # OpenFAST C++ API test
 if(BUILD_OPENFAST_CPP_DRIVER)
@@ -381,6 +407,12 @@ sd_regression("SD_SparHanging"                                "subdyn;offshore")
 sd_regression("SD_AnsysComp1_PinBeam"                         "subdyn;offshore") # TODO Issue #855
 sd_regression("SD_AnsysComp2_Cable"                           "subdyn;offshore") 
 sd_regression("SD_AnsysComp3_PinBeamCable"                    "subdyn;offshore") # TODO Issue #855
+sd_regression("SD_Spring_Case1"                               "subdyn;offshore")
+sd_regression("SD_Spring_Case2"                               "subdyn;offshore")
+sd_regression("SD_Spring_Case3"                               "subdyn;offshore")
+sd_regression("SD_Revolute_Joint"                             "subdyn;offshore")
+sd_regression("SD_2Beam_Spring"                               "subdyn;offshore")
+sd_regression("SD_2Beam_Cantilever"                           "subdyn;offshore")
 # TODO test below are bugs, should be added when fixed
 # sd_regression("SD_Force"                                      "subdyn;offshore")
 # sd_regression("SD_AnsysComp4_UniversalCableRigid"             "subdyn;offshore")
@@ -396,6 +428,11 @@ ifw_regression("ifw_HAWC"                                     "inflowwind")
 
 # Py-InflowWind regression tests
 py_ifw_regression("py_ifw_turbsimff"                          "inflowwind;python")
+
+# SeaState regression tests
+seast_regression("seastate_1"                                "seastate")
+seast_regression("seastate_wavemod5"                         "seastate")
+seast_regression("seastate_wr_kin1"                          "seastate")
 
 # MoorDyn regression tests
 md_regression("md_5MW_OC4Semi"                                "moordyn")

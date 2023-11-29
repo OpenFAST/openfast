@@ -19,7 +19,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/Registry-DWM.txt ${CMAKE_CURRENT_LIST_DIR}/src/DWM_Types.f90)
 endif()
 
-add_library(aerodyn14lib 
+add_library(aerodyn14lib STATIC
   src/AeroDyn14.f90
   src/AeroSubs.f90
   src/DWM.f90
