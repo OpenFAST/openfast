@@ -529,7 +529,7 @@ An example of rigid link properties table is given below
        3       7000.0
 
 Spring Properties
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 Members that are specified as spring elements (**MType=5**), 
 have their properties defined in the spring element properties table. 
 The table lists for each spring property: the property ID (**PropSetID**) and the 
