@@ -279,7 +279,7 @@ The following joints are supported:
 
 - Ball joint (*JointType=4*)
 
-A member is one of the three following types:
+A member is one of the four following types:
 
 - Beams (*MType=1*), Euler-Bernoulli (*FEMMod=1*) or Timoshenko (*FEMMod=3*)
 
@@ -287,11 +287,13 @@ A member is one of the three following types:
 
 - Rigid link (*MType=3*)
 
+- Spring element (*MType=5*)
+
 Beam members may be split into several elements to increase the accuracy of the model (using
-the input parameter *NDiv*). Member of other types (rigid links and
-pretension cables) are not split. In this document, the term *element*
+the input parameter *NDiv*). Member of other types (rigid links, pretension cables and springs)
+are not split. In this document, the term *element*
 refers to: a sub-division of a beam member or a member of another type
-than beam (rigid-link or pretension cable). The term *joints* refers to
+than beam (rigid-link, pretension cable or spring). The term *joints* refers to
 the points defining the extremities of the members. Some joints are
 defined in the input file, while others arise from the subdivision of
 beam members. The end points of an elements are called nodes and each
@@ -1287,9 +1289,50 @@ The constraint are applied after the full system has been assembled.
 
 
 
+.. _SD_SpringElement:
 
 
+Spring Elements
+~~~~~~~~~~~
 
+Do not confuse the spring member with the springs defined as 
+a boundary condition in land-based systems. The spring element 
+relates two joints by means of a 6 by 6 stiffness matrix that 
+is assumed symmetric (k_ij = k_ji).
+
+.. math::
+
+\begin{aligned}
+    K=
+    \begin{bmatrix}
+    k_{11} & k_{12} & k_{13} & k_{14} & k_{15} & k_{16} \\
+    k_{21} & k_{22} & k_{23} & k_{24} & k_{25} & k_{26} \\
+    k_{31} & k_{32} & k_{33} & k_{34} & k_{35} & k_{36} \\
+    k_{41} & k_{42} & k_{43} & k_{44} & k_{45} & k_{46} \\
+    k_{51} & k_{52} & k_{53} & k_{54} & k_{55} & k_{56} \\
+    k_{61} & k_{62} & k_{63} & k_{64} & k_{65} & k_{66} \\
+    \end{bmatrix}
+
+The spring element does not have a mass associated. However, if desired, a lumped mass can be 
+defined at the joints.
+
+Since each joint has 6 DOFs (3 translations and 3 rotations), mathematically, the
+spring element has a 12 by 12 dimension.
+.. math::
+
+\begin{aligned}
+    K_e=
+    \begin{bmatrix}
+    k_{6x6} & -k_{6x6} \\
+    -k_{6x6} & k_{6x6}  \\
+    \end{bmatrix}
+
+The spring element must be defined between two coincident joints and the orientation has to be 
+provided by means of the direction cosine. This allows the assembly of the spring element in the
+global system stiffness matrix. 
+
+The spring element can be connected to beams, kinematic joints (e.g., revolute joint, universal joint, 
+and spherical joint), the interface joint and rigid links. However, it cannot be connected to a cable.
 
 .. _GenericCBReduction:
 
