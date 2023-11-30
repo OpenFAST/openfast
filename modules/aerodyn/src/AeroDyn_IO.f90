@@ -1054,7 +1054,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    if (frozenWakeProvided) then
       if (InputFileData%FrozenWake) then
          call WrScr('   FrozenWake=True     -> Setting DBEMT_Mod=-1')
-         ! InputFileData%DBEMT_Mod =-1
+         InputFileData%DBEMT_Mod = DBEMT_frozen
       else
          call WrScr('   FrozenWake=False    -> Not changing DBEMT_Mod')
       endif
@@ -1624,24 +1624,24 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       ! MaxIter 
       
       
-      if (p_AD%WakeMod == WakeMod_DBEMT) then
-         select case (InputFileData%DBEMT_Mod)
-            case (DBEMT_tauConst)
-               Msg = 'constant tau1'
-            case (DBEMT_tauVaries)
-               Msg = 'time-dependent tau1'
-            case (DBEMT_cont_tauConst)
-               Msg = 'continuous formulation with constant tau1'
-            case default
-               Msg = 'unknown'
-         end select   
+      select case (InputFileData%DBEMT_Mod)
+         case (DBEMT_frozen)
+            Msg = 'frozen-wake'
+         case (DBEMT_tauConst)
+            Msg = 'dynamic - constant tau1'
+         case (DBEMT_tauVaries)
+            Msg = 'dynamic - time-dependent tau1'
+         case (DBEMT_cont_tauConst)
+            Msg = 'dynamic - continuous formulation with constant tau1'
+         case default
+            Msg = 'unknown'
+      end select   
+      
+      WRITE (UnSu,Ec_IntFrmt) InputFileData%DBEMT_Mod, 'DBEMT_Mod', 'Type of dynamic BEMT (DBEMT) model: '//TRIM(Msg)
          
-         WRITE (UnSu,Ec_IntFrmt) InputFileData%DBEMT_Mod, 'DBEMT_Mod', 'Type of dynamic BEMT (DBEMT) model: '//TRIM(Msg)
+      if (InputFileData%DBEMT_Mod==DBEMT_tauConst) &
+      WRITE (UnSu,Ec_ReFrmt) InputFileData%tau1_const, 'tau1_const', 'Time constant for DBEMT (s)'
          
-         if (InputFileData%DBEMT_Mod==DBEMT_tauConst) &
-         WRITE (UnSu,Ec_ReFrmt) InputFileData%tau1_const, 'tau1_const', 'Time constant for DBEMT (s)'
-         
-      end if      
       
    end if
    

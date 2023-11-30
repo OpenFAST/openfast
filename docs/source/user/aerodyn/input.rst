@@ -94,10 +94,10 @@ tower or FALSE to disable these effects.
 
 During linearization analyses
 with AeroDyn coupled OpenFAST and BEM enabled (``WakeMod = 1``), set the
-``FrozenWake`` flag to TRUE to employ frozen-wake assumptions during
-linearization (i.e. to fix the axial and tangential induces velocities,
-and, at their operating-point values during linearization) or FALSE to
-recalculate the induction during linearization using BEM theory. 
+``DBEMT_Mod=-1`` to employ frozen-wake assumptions 
+(i.e. to fix the axial and tangential induces velocities, and, at their operating-point values during linearization)
+or 
+``DBEMT_Mod=3`` to use the continuous dynamic wake model.
 
 Set the ``CavitCheck`` flag to TRUE to perform a cavitation check for MHK
 turbines or FALSE to disable this calculation. If ``CavitCheck`` is

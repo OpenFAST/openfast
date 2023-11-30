@@ -596,7 +596,8 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
    call BEMT_InitOtherStates( OtherState, p,  errStat, errMsg )    ! initialize the other states
    if (errStat >= AbortErrLev) return
 
-   if ( p%DBEMT_Mod /= DBEMT_none ) then
+   InitInp_DBEMT%DBEMT_Mod = p%DBEMT_Mod
+   if ( p%DBEMT_Mod > DBEMT_none ) then
       InitInp_DBEMT%DBEMT_Mod  = p%DBEMT_Mod
       InitInp_DBEMT%numBlades  = p%numBlades 
       InitInp_DBEMT%numNodes   = p%numBladeNodes
@@ -735,7 +736,7 @@ subroutine BEMT_ReInit(p,x,xd,z,OtherState,misc,ErrStat,ErrMsg)
    if (p%UseInduction) then
       OtherState%ValidPhi = .true.
       
-      if (p%DBEMT_Mod /= DBEMT_none ) then
+      if (p%DBEMT_Mod > DBEMT_none ) then
          call DBEMT_ReInit(p%DBEMT, x%DBEMT, OtherState%DBEMT, misc%DBEMT)
       end if
    

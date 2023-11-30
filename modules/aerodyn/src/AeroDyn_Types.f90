@@ -199,7 +199,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: TwrPotent = 0_IntKi      !< Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
     INTEGER(IntKi)  :: TwrShadow = 0_IntKi      !< Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
     LOGICAL  :: TwrAero = .false.      !< Calculate tower aerodynamic loads? [flag]
-    LOGICAL  :: FrozenWake = .false.      !< Flag that tells this module it should assume a frozen wake during linearization. [-]
+    LOGICAL  :: FrozenWake = .false.      !< LEGACY - Flag that tells this module it should assume a frozen wake during linearization. [-]
     LOGICAL  :: CavitCheck = .false.      !< Flag that tells us if we want to check for cavitation [-]
     LOGICAL  :: Buoyancy = .false.      !< Include buoyancy effects? [flag]
     LOGICAL  :: CompAA = .false.      !< Compute AeroAcoustic noise [flag]
@@ -417,7 +417,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: TwrPotent = 0_IntKi      !< Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
     INTEGER(IntKi)  :: TwrShadow = 0_IntKi      !< Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
     LOGICAL  :: TwrAero = .false.      !< Calculate tower aerodynamic loads? [flag]
-    LOGICAL  :: FrozenWake = .false.      !< Flag that tells this module it should assume a frozen wake during linearization. [-]
+    INTEGER(IntKi)  :: DBEMT_Mod = 0_IntKi      !< DBEMT_Mod [-]
     LOGICAL  :: CavitCheck = .false.      !< Flag that tells us if we want to check for cavitation [-]
     LOGICAL  :: Buoyancy = .false.      !< Include buoyancy effects? [flag]
     INTEGER(IntKi)  :: MHK = 0_IntKi      !< MHK [flag]
@@ -5660,7 +5660,7 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
    DstRotParameterTypeData%TwrPotent = SrcRotParameterTypeData%TwrPotent
    DstRotParameterTypeData%TwrShadow = SrcRotParameterTypeData%TwrShadow
    DstRotParameterTypeData%TwrAero = SrcRotParameterTypeData%TwrAero
-   DstRotParameterTypeData%FrozenWake = SrcRotParameterTypeData%FrozenWake
+   DstRotParameterTypeData%DBEMT_Mod = SrcRotParameterTypeData%DBEMT_Mod
    DstRotParameterTypeData%CavitCheck = SrcRotParameterTypeData%CavitCheck
    DstRotParameterTypeData%Buoyancy = SrcRotParameterTypeData%Buoyancy
    DstRotParameterTypeData%MHK = SrcRotParameterTypeData%MHK
@@ -5941,7 +5941,7 @@ subroutine AD_PackRotParameterType(Buf, Indata)
    call RegPack(Buf, InData%TwrPotent)
    call RegPack(Buf, InData%TwrShadow)
    call RegPack(Buf, InData%TwrAero)
-   call RegPack(Buf, InData%FrozenWake)
+   call RegPack(Buf, InData%DBEMT_Mod)
    call RegPack(Buf, InData%CavitCheck)
    call RegPack(Buf, InData%Buoyancy)
    call RegPack(Buf, InData%MHK)
@@ -6284,7 +6284,7 @@ subroutine AD_UnPackRotParameterType(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%TwrAero)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%FrozenWake)
+   call RegUnpack(Buf, OutData%DBEMT_Mod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%CavitCheck)
    if (RegCheckErr(Buf, RoutineName)) return

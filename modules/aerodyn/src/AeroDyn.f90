@@ -347,15 +347,10 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          InputFileData%TwrPotent  = TwrPotent_none
          InputFileData%TwrShadow  = TwrShadow_none
          InputFileData%TwrAero    = .false.
-         InputFileData%FrozenWake = .false.
         !InputFileData%CavitCheck = .false.
         !InputFileData%TFinAero   = .false. ! not sure if this needs to be set or not
       end do
-      
-      if (InputFileData%WakeMod == WakeMod_DBEMT) then
-         ! these models (DBEMT and BEMT) should be the same at the first time step, so we'll simplify here
-         InputFileData%WakeMod = WakeMod_BEMT
-      end if
+      InputFileData%DBEMT_Mod = 0
    end if
       
       ! Validate the inputs
@@ -1335,19 +1330,13 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    
    p_AD%DT            = InputFileData%DTAero
    p_AD%WakeMod       = InputFileData%WakeMod
+   p%DBEMT_Mod        = InputFileData%DBEMT_Mod
    p%TwrPotent        = InputFileData%TwrPotent
    p%TwrShadow        = InputFileData%TwrShadow
    p%TwrAero          = InputFileData%TwrAero
    p%CavitCheck       = InputFileData%CavitCheck
    p%Buoyancy         = InputFileData%Buoyancy
 
-   
-
-   if (InitInp%Linearize .and. InputFileData%WakeMod == WakeMod_BEMT) then
-      p%FrozenWake = InputFileData%FrozenWake
-   else
-      p%FrozenWake = .FALSE.
-   end if
 
    p%CompAA = InputFileData%CompAA
    
@@ -5494,7 +5483,7 @@ SUBROUTINE Rot_JacobianPInput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, 
 
 
       ! get OP values here (i.e., set inputs for BEMT):
-   if ( p%FrozenWake ) then
+   if ( p%DBEMT_Mod == DBEMT_frozen ) then
       call SetInputs(t, p, p_AD, u, m, indx, errStat2, errMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
          
@@ -5812,7 +5801,7 @@ SUBROUTINE RotJacobianPContState( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_A
    ErrMsg  = ''
 
 
-   if ( p%FrozenWake ) then
+   if ( p%DBEMT_Mod == DBEMT_frozen ) then
       call SetInputs(t, p, p_AD, u, m, indx, errStat2, errMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
@@ -6190,7 +6179,7 @@ SUBROUTINE RotJacobianPConstrState( t, u, p, p_AD, x, xd, z, OtherState, y, m, m
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later                        
  
       
-   if ( p%FrozenWake ) then            
+   if ( p%DBEMT_Mod == DBEMT_frozen ) then
             ! compare arguments with call to BEMT_CalcOutput   
       call computeFrozenWake(m%BEMT_u(op_indx), p%BEMT, m%BEMT_y, m%BEMT )      
       m%BEMT%UseFrozenWake = .true.
@@ -7323,7 +7312,7 @@ SUBROUTINE Init_Jacobian( InputFileData, p, p_AD, u, y, m, InitOut, ErrStat, Err
    call Init_Jacobian_y( p, p_AD, y, InitOut, ErrStat, ErrMsg)
    
       ! these matrices will be needed for linearization with frozen wake feature
-   if (p%FrozenWake) then
+   if ( p%DBEMT_Mod == DBEMT_frozen ) then
       call AllocAry(m%BEMT%AxInd_op,p%NumBlNds,p%numBlades,'m%BEMT%AxInd_op', ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       call AllocAry(m%BEMT%TnInd_op,p%NumBlNds,p%numBlades,'m%BEMT%TnInd_op', ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
