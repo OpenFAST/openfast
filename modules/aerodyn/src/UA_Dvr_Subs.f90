@@ -193,7 +193,7 @@ subroutine ReadDriverInputFile( FileName, InitInp, ErrStat, ErrMsg )
    type(FileInfoType)      :: FI       !< The derived type for holding the file information.
    integer(IntKi)          :: errStat2 ! Status of error message
    character(1024)         :: errMsg2  ! Error message if ErrStat /= ErrID_None
-   character(*), parameter :: RoutineName = 'ReadDriverfilename'
+   character(*), parameter :: RoutineName = 'ReadDriverInputFile'
    ! Initialize the echo file unit to -1 which is the default to prevent echoing, we will alter this based on user input
    UnEcho  = -1
    ErrStat = ErrID_None
@@ -401,6 +401,10 @@ subroutine driverInputsToUAInitData(p, InitInData, AFI_Params, AFIndx, errStat, 
    errStat     = ErrID_None
    errMsg      = ''
    InitInData%UA_OUTS = 1  ! 0=None, 1=Write Outputs, 2=Separate File
+#ifdef ADD_UA_OUTS
+   InitInData%UA_OUTS = 2 ! Compiler Flag Override,  2=Write a separate file
+#endif
+   
 
    ! -- UA Init Input Data
    InitInData%nNodesPerBlade  = 1 
@@ -416,7 +420,7 @@ subroutine driverInputsToUAInitData(p, InitInData, AFI_Params, AFIndx, errStat, 
    InitInData%c(1,1)       = p%Chord
    InitInData%UAMod        = p%UAMod 
    InitInData%Flookup      = p%Flookup
-   InitInData%OutRootName  = p%OutRootName
+   InitInData%OutRootName  = trim(p%OutRootName)//'.UA'
    InitInData%WrSum        = p%SumPrint 
    InitInData%d_34_to_ac   = p%d_34_to_ac !  d_34_to_ac = d_QT ~0.5 [-], Approximated using y coordinate
 
@@ -959,36 +963,36 @@ subroutine Dvr_WriteOutputs(nt, t, dvr, out, errStat, errMsg)
    ! Driver outputs
    j = 1 
    if (dvr%p%SimMod==3) then
-   ! TODO harmonization
-   out%outLine(j) = dvr%U0(1, 1)             ; j=j+1  ! Ux
-   out%outLine(j) = dvr%U0(1, 2)             ; j=j+1  ! Uy
-   out%outLine(j) = dvr%m%Vst_Q(1)           ; j=j+1  ! VSTx_Q
-   out%outLine(j) = dvr%m%Vst_Q(2)           ; j=j+1  ! VSTy_Q
-   out%outLine(j) = dvr%m%Vst_T(1)           ; j=j+1  ! VSTx_T
-   out%outLine(j) = dvr%m%Vst_T(2)           ; j=j+1  ! VSTy_T
-   out%outLine(j) = dvr%m%Vrel_Q(1)          ; j=j+1  ! Vrelx_Q
-   out%outLine(j) = dvr%m%Vrel_Q(2)          ; j=j+1  ! Vrely_Q
-   out%outLine(j) = dvr%m%Vrel_T(1)          ; j=j+1  ! Vrelx_T
-   out%outLine(j) = dvr%m%Vrel_T(2)          ; j=j+1  ! Vrely_T
-   out%outLine(j) = sqrt(dvr%m%Vrel_norm2_Q) ; j=j+1  ! Vrel_Q
-   out%outLine(j) = sqrt(dvr%m%Vrel_norm2_T) ; j=j+1  ! Vrel_T
-   out%outLine(j) = dvr%m%alpha_Q*R2D        ; j=j+1  ! alpha_Q
-   out%outLine(j) = dvr%m%alpha_T*R2D        ; j=j+1  ! alpha_T
-   out%outLine(j) = dvr%m%phi_Q  *R2D        ; j=j+1  ! phi_Q
-   out%outLine(j) = dvr%m%phi_T  *R2D        ; j=j+1  ! phi_T
-   out%outLine(j) = dvr%m%twist_full*R2D     ; j=j+1  ! twist_full
-   out%outLine(j) = dvr%m%Re                 ; j=j+1  ! Re_T
-   out%outLine(j) = dvr%m%L                  ; j=j+1  ! L
-   out%outLine(j) = dvr%m%D                  ; j=j+1  ! D
-   out%outLine(j) = dvr%m%tau_Q              ; j=j+1  ! M
-   out%outLine(j) = dvr%m%FxA                ; j=j+1  ! Fx_A
-   out%outLine(j) = dvr%m%FyA                ; j=j+1  ! Fy_A
-   out%outLine(j) = dvr%m%tau_A              ; j=j+1  ! M_A
-   out%outLine(j) = dvr%m%GF(1)              ; j=j+1  ! GFx
-   out%outLine(j) = dvr%m%GF(2)              ; j=j+1  ! GFy
-   out%outLine(j) = dvr%m%GF(3)              ; j=j+1  ! GFM
-   ! LD Outputs
-   out%outLine(nDV+1:nDV+nLD) = dvr%LD_y%WriteOutput(1:nLD)
+      ! TODO harmonization
+      out%outLine(j) = dvr%U0(1, 1)             ; j=j+1  ! Ux
+      out%outLine(j) = dvr%U0(1, 2)             ; j=j+1  ! Uy
+      out%outLine(j) = dvr%m%Vst_Q(1)           ; j=j+1  ! VSTx_Q
+      out%outLine(j) = dvr%m%Vst_Q(2)           ; j=j+1  ! VSTy_Q
+      out%outLine(j) = dvr%m%Vst_T(1)           ; j=j+1  ! VSTx_T
+      out%outLine(j) = dvr%m%Vst_T(2)           ; j=j+1  ! VSTy_T
+      out%outLine(j) = dvr%m%Vrel_Q(1)          ; j=j+1  ! Vrelx_Q
+      out%outLine(j) = dvr%m%Vrel_Q(2)          ; j=j+1  ! Vrely_Q
+      out%outLine(j) = dvr%m%Vrel_T(1)          ; j=j+1  ! Vrelx_T
+      out%outLine(j) = dvr%m%Vrel_T(2)          ; j=j+1  ! Vrely_T
+      out%outLine(j) = sqrt(dvr%m%Vrel_norm2_Q) ; j=j+1  ! Vrel_Q
+      out%outLine(j) = sqrt(dvr%m%Vrel_norm2_T) ; j=j+1  ! Vrel_T
+      out%outLine(j) = dvr%m%alpha_Q*R2D        ; j=j+1  ! alpha_Q
+      out%outLine(j) = dvr%m%alpha_T*R2D        ; j=j+1  ! alpha_T
+      out%outLine(j) = dvr%m%phi_Q  *R2D        ; j=j+1  ! phi_Q
+      out%outLine(j) = dvr%m%phi_T  *R2D        ; j=j+1  ! phi_T
+      out%outLine(j) = dvr%m%twist_full*R2D     ; j=j+1  ! twist_full
+      out%outLine(j) = dvr%m%Re                 ; j=j+1  ! Re_T
+      out%outLine(j) = dvr%m%L                  ; j=j+1  ! L
+      out%outLine(j) = dvr%m%D                  ; j=j+1  ! D
+      out%outLine(j) = dvr%m%tau_Q              ; j=j+1  ! M
+      out%outLine(j) = dvr%m%FxA                ; j=j+1  ! Fx_A
+      out%outLine(j) = dvr%m%FyA                ; j=j+1  ! Fy_A
+      out%outLine(j) = dvr%m%tau_A              ; j=j+1  ! M_A
+      out%outLine(j) = dvr%m%GF(1)              ; j=j+1  ! GFx
+      out%outLine(j) = dvr%m%GF(2)              ; j=j+1  ! GFy
+      out%outLine(j) = dvr%m%GF(3)              ; j=j+1  ! GFM
+      ! LD Outputs
+      out%outLine(nDV+1:nDV+nLD) = dvr%LD_y%WriteOutput(1:nLD)
    endif
    ! UA Outputs
    out%outLine(nDV+nLD+1:nDV+nLD+nUA) = dvr%UA_y%WriteOutput(1:nUA)

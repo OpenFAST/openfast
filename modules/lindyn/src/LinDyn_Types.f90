@@ -72,12 +72,12 @@ IMPLICIT NONE
 ! =======================
 ! =========  LD_DiscreteStateType  =======
   TYPE, PUBLIC :: LD_DiscreteStateType
-    LOGICAL  :: Dummy      !<  [-]
+    REAL(SiKi)  :: Dummy      !<  [-]
   END TYPE LD_DiscreteStateType
 ! =======================
 ! =========  LD_ConstraintStateType  =======
   TYPE, PUBLIC :: LD_ConstraintStateType
-    LOGICAL  :: Dummy      !<  [-]
+    REAL(SiKi)  :: Dummy      !<  [-]
   END TYPE LD_ConstraintStateType
 ! =======================
 ! =========  LD_OtherStateType  =======
@@ -1800,7 +1800,7 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! Dummy
+      Re_BufSz   = Re_BufSz   + 1  ! Dummy
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1828,8 +1828,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%Dummy, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Dummy
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE LD_PackDiscState
 
  SUBROUTINE LD_UnPackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1858,8 +1858,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%Dummy = TRANSFER(IntKiBuf(Int_Xferred), OutData%Dummy)
-    Int_Xferred = Int_Xferred + 1
+    OutData%Dummy = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE LD_UnPackDiscState
 
  SUBROUTINE LD_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
@@ -1937,7 +1937,7 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! Dummy
+      Re_BufSz   = Re_BufSz   + 1  ! Dummy
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1965,8 +1965,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-    IntKiBuf(Int_Xferred) = TRANSFER(InData%Dummy, IntKiBuf(1))
-    Int_Xferred = Int_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%Dummy
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE LD_PackConstrState
 
  SUBROUTINE LD_UnPackConstrState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1995,8 +1995,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-    OutData%Dummy = TRANSFER(IntKiBuf(Int_Xferred), OutData%Dummy)
-    Int_Xferred = Int_Xferred + 1
+    OutData%Dummy = REAL(ReKiBuf(Re_Xferred), SiKi)
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE LD_UnPackConstrState
 
  SUBROUTINE LD_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )

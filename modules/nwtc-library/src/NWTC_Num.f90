@@ -4984,7 +4984,7 @@ end function Rad2M180to180Deg
    RETURN
    END FUNCTION RegCubicSplineInterpM ! ( X, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
 !=======================================================================
-!> This routine is used to integrate funciton f over the interval [a, b]. This routine
+!> This routine is used to integrate function f over the interval [a, b]. This routine
 !! is useful for sufficiently smooth (e.g., analytic) integrands, integrated over
 !! intervals which contain no singularities, and where the endpoints are also nonsingular.
 !!

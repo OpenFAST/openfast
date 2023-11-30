@@ -126,7 +126,7 @@ subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMs
    call move_alloc(InitInp%UAOff_outerNode, Init_UA_Data%UAOff_outerNode)
    
    Init_UA_Data%dt              = interval          
-   Init_UA_Data%OutRootName     = InitInp%RootName ! was 'Debug.UA'
+   Init_UA_Data%OutRootName     = trim(InitInp%RootName)//'.UA'
                
    Init_UA_Data%numBlades       = InitInp%numBlades 
    Init_UA_Data%nNodesPerBlade  = InitInp%numBladeNodes
@@ -136,6 +136,9 @@ subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMs
    Init_UA_Data%a_s             = InitInp%a_s ! m/s  
    Init_UA_Data%ShedEffect      = .true. ! This should be true when coupled to BEM
    Init_UA_Data%WrSum           = InitInp%SumPrint
+   
+   Init_UA_Data%UA_OUTS         = 0
+   Init_UA_Data%d_34_to_ac      = 0.5_ReKi
    
 end subroutine BEMT_Set_UA_InitData
 

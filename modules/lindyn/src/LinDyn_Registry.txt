@@ -39,10 +39,10 @@ typedef   ^                            ^                             IntKi      
 typedef   ^                            ContinuousStateType           ReKi                     q                               {:}           -         -        "Continuous states q =(x,xdot)"        "-"
 
 # Discrete (non-differentiable) states:
-typedef   ^                            DiscreteStateType             Logical                  Dummy                           -             -        -         "" -
+typedef   ^                            DiscreteStateType             SiKi                     Dummy                           -             -        -         "" -
 
 # Constraint states:
-typedef   ^                            ConstraintStateType           Logical                  Dummy                           -             -         -        "" -
+typedef   ^                            ConstraintStateType           SiKi                     Dummy                           -             -         -        "" -
 
 # Other states:
 typedef   ^                            OtherStateType                LD_ContinuousStateType   xdot                           {:}            -         -        "Previous state derivs for m-step time integrator"

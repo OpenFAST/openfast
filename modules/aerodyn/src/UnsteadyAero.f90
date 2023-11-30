@@ -522,7 +522,7 @@ endif
       
       KC%Cn_q_circ       = KC%C_nalpha_circ*KC%q_f_cur/2.0 - KC%X3 - KC%X4                                                    ! Eqn 1.16
 
-   else ! these aren't used (they are possibly output to UA output file (when UA_OUTS defined) file, though)
+   else ! these aren't used (they are possibly output to UA output file when UA_OUTS is > 0 file, though)
       KC%X3              = 0.0_ReKi
       KC%X4              = 0.0_ReKi
       KC%Cn_q_circ       = 0.0_ReKi
@@ -748,9 +748,6 @@ subroutine UA_SetParameters( dt, InitInp, p, AFInfo, AFIndx, ErrStat, ErrMsg )
    p%Flookup    = InitInp%Flookup
    p%ShedEffect = InitInp%ShedEffect
    p%UA_OUTS    = InitInp%UA_OUTS
-#ifdef UA_OUTS 
-   p%UA_OUTS = 2 ! Compiler Flag Override,  2=Write a separate file
-#endif
    
    if (p%UAMod==UA_HGM .or. p%UAMod==UA_HGMV) then
       UA_NumLinStates = 4
@@ -1419,11 +1416,11 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
    
    ! --- Write to File
    if ((p%NumOuts > 0) .and. p%UA_OUTS==2) then
-      call WrScr('   UA: Writing separate output file: '//trim((InitInp%OutRootName)//'.UA.out'))
+      call WrScr('   UA: Writing separate output file: '//trim((InitInp%OutRootName)//'.out'))
       CALL GetNewUnit( p%unOutFile, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
-      CALL OpenFOutFile ( p%unOutFile, trim(InitInp%OutRootName)//'.UA.out', ErrStat2, ErrMsg2 )
+      CALL OpenFOutFile ( p%unOutFile, trim(InitInp%OutRootName)//'.out', ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
 
@@ -1443,7 +1440,7 @@ subroutine UA_Init_Outputs(InitInp, p, y, InitOut, errStat, errMsg)
          WRITE (p%unOutFile,'(:,A,'//trim( p%OutSFmt )//')', ADVANCE='no' )  p%Delim, trim(InitOut%WriteOutputUnt(i))
       end do
       WRITE (p%unOutFile,'()', IOSTAT=ErrStat2)          ! write the line return
-   elseif ((p%NumOuts > 0) .and. p%UA_OUTS==2) then
+   else
 
       call WrScr('   UA: saving write outputs')
 
@@ -3844,9 +3841,9 @@ contains
       ! --- Recompute variables, for temporary output to file only
       ! Calculate deltas to negative and positive stall angle (delN, and delP)
       if (p%UA_OUTS>0) then
-      call BV_delNP(adotnorm, alpha_34, alphaLag_D, BL_p, OtherState%activeD(i,j), delN, delP)
-      call BV_getGammas(tc=AFInfo%RelThickness, umach=0.0_ReKi, gammaL=gammaL, gammaD=gammaD)
-      TransA = BV_TransA(BL_p)
+         call BV_delNP(adotnorm, alpha_34, alphaLag_D, BL_p, OtherState%activeD(i,j), delN, delP)
+         call BV_getGammas(tc=AFInfo%RelThickness, umach=0.0_ReKi, gammaL=gammaL, gammaD=gammaD)
+         TransA = BV_TransA(BL_p)
       endif
 
       ! --- Cl, _,  at effective angle of attack alphaE
