@@ -166,6 +166,7 @@ typedef  ^  RotInputFile   TFinInputFileType TFin     -    -    -   "Input file 
 typedef	^	AD_InputFile	Logical	Echo	-	-	-	"Echo input file to echo file"	-
 typedef	^	AD_InputFile	DbKi	DTAero	-	-	-	"Time interval for aerodynamic calculations {or \"default\"}"	s
 typedef	^	AD_InputFile	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
+typedef	^	AD_InputFile	IntKi	BEMMod	-	-	-	"Type of BEM model {1=legacy NoSweepPitchTwist, 2=polar grid}"	-
 typedef	^	AD_InputFile	IntKi	AFAeroMod	-	-	-	"Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model}"	-
 typedef	^	AD_InputFile	IntKi	TwrPotent	-	-	-	"Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
 typedef	^	AD_InputFile	IntKi	TwrShadow	-	-	-	"Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}"	-
@@ -181,7 +182,9 @@ typedef	^	AD_InputFile	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
 typedef	^	AD_InputFile	ReKi	Patm 	-	-	-	"Atmospheric pressure" Pa
 typedef	^	AD_InputFile	ReKi	Pvap 	-	-	-	"Vapour pressure" Pa
 typedef	^	AD_InputFile	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
-typedef	^	AD_InputFile	IntKi	SkewMod	-	-	-	"Type of skewed-wake correction model {0=orthogonal, 1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0]"	-
+typedef	^	AD_InputFile	IntKi	SkewMod	-	-	-	"Select skew model {0=No skew model at all, -1=Throw away non-normal component for linearization, 1=Glauert skew model}"	-
+typedef	^	AD_InputFile	Logical SkewMomCorr	-	-	-	"Turn the skew momentum correction on or off [used only when SkewMod=1]" - 
+typedef	^	AD_InputFile	IntKi   SkewRedistrMod	-	-	-	"Type of skewed-wake correction model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]" - 
 typedef	^	AD_InputFile	ReKi	SkewModFactor	-	-	-	"Constant used in Pitt/Peters skewed wake model (default is 15*pi/32)" -
 typedef	^	AD_InputFile	LOGICAL	TipLoss	-	-	-	"Use the Prandtl tip-loss model? [unused when WakeMod=0]"	flag
 typedef	^	AD_InputFile	LOGICAL	HubLoss	-	-	-	"Use the Prandtl hub-loss model? [unused when WakeMod=0]"	flag
@@ -190,11 +193,13 @@ typedef	^	AD_InputFile	LOGICAL	AIDrag	-	-	-	"Include the drag term in the axial-
 typedef	^	AD_InputFile	LOGICAL	TIDrag	-	-	-	"Include the drag term in the tangential-induction calculation? [unused when WakeMod=0 or TanInd=FALSE]"	flag
 typedef	^	AD_InputFile	ReKi	IndToler	-	-	-	"Convergence tolerance for BEM induction factors [unused when WakeMod=0]"	-
 typedef	^	AD_InputFile	ReKi	MaxIter	-	-	-	"Maximum number of iteration steps [unused when WakeMod=0]"	-
-typedef	^	AD_InputFile	Logical	SectAvg	-	-	False	"Use Sector average for BEM inflow velocity calculation"	-
+typedef	^	AD_InputFile	Logical	SectAvg	-	-	False	"Use Sector average for BEM inflow velocity calculation (flag)"	-
+typedef	^	     ^      	IntKi  	SA_Weighting	-	-	1	    "Sector Average - Weighting function for sector average  {1=Uniform, 2=Impulse, }  within a 360/nB sector centered on the blade (switch) [used only when SectAvg=True]" -
 typedef	^	     ^      	ReKi   	SA_PsiBwd	-	-60	-	"Sector Average - Backard Azimuth (<0)"	deg
 typedef	^	     ^      	ReKi   	SA_PsiFwd	-	 60	-	"Sector Average - Forward Azimuth (>0)"	deg
-typedef	^	     ^      	IntKi  	SA_nPerSec	-	 11	-	"Sector Average - Number of points per sectors (>1)"	-
-typedef	^	     ^      	IntKi	UAMod	-	-	-	"Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [used only when AFAeroMod=2]"	-
+typedef	^	     ^      	IntKi  	SA_nPerSec	-	 11	-	"Sector average - Number of points per sectors (-) [used only when SectAvg=True]" -
+typedef	^	     ^      	IntKi	AoA34	-	-	-	"Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used]"	-
+typedef	^	     ^      	IntKi	UAMod	-	-	-	"Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)}" -
 typedef	^	AD_InputFile	LOGICAL	FLookup	-	-	-	"Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAeroMod=2]"	flag
 typedef	^	AD_InputFile	ReKi	InCol_Alfa	-	-	-	"The column in the airfoil tables that contains the angle of attack"	-
 typedef	^	AD_InputFile	ReKi	InCol_Cl	-	-	-	"The column in the airfoil tables that contains the lift coefficient"	-
@@ -215,7 +220,7 @@ typedef	^	AD_InputFile	IntKi	TwOutNd	{9}	-	-	"Tower nodes whose values will be o
 typedef	^	AD_InputFile	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	AD_InputFile	CHARACTER(ChanLen)	OutList	{:}	-	-	"List of user-requested output channels"	-
 typedef	^	AD_InputFile	ReKi	tau1_const	-	-	-	"time constant for DBEMT [used only when WakeMod=2 and DBEMT_Mod/=2]"	s
-typedef	^	AD_InputFile	IntKi	DBEMT_Mod	-	-	-	"Type of dynamic BEMT (DBEMT) model {1=constant tau1, 2=time-dependent tau1}"	-
+typedef	^	AD_InputFile	IntKi	DBEMT_Mod	-	-	-	"Type of dynamic BEMT (DBEMT) model {0=No Dynamic Wake, -1=Frozen Wake for linearization, 1=constant tau1, 2=time-dependent tau1, 3=constant tau1 with continuous formulation} (-) [used only when WakeMod=1]" -
 typedef	^	AD_InputFile	IntKi	BldNd_NumOuts	-	-	-	"Number of requested output channels per blade node (AD_AllBldNdOuts)"	-
 typedef	^	AD_InputFile	CHARACTER(ChanLen)	BldNd_OutList	{:}	-	-	"List of user-requested output channels (AD_AllBldNdOuts)"	-
 #typedef  ^  AD_InputFile   IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (AD_AllBldNdOuts)" -
