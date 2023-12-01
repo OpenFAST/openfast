@@ -365,7 +365,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          
       
       ! set the rest of the parameters
-   p%SkewMod = InputFileData%SkewMod
+   p%Skew_Mod = InputFileData%Skew_Mod
    do iR = 1, nRotors
       p%rotors(iR)%AeroProjMod = InitInp%rotors(iR)%AeroProjMod
       !p%rotors(iR)%AeroProjMod = AeroProjMod(iR)
@@ -2679,7 +2679,7 @@ subroutine SetDisturbedInflow(p, p_AD, u, m, errStat, errMsg)
       end do
    end if
 
-   if (p_AD%SkewMod == SkewMod_Orthogonal) then
+   if (p_AD%Skew_Mod == Skew_Mod_Orthogonal) then
       x_hat_disk = u%HubMotion%Orientation(1,:,1)
   
       do k=1,p%NumBlades
@@ -3847,8 +3847,8 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       if ( InputFileData%IndToler < 0.0 .or. EqualRealNos(InputFileData%IndToler, 0.0_ReKi) ) &
          call SetErrStat( ErrID_Fatal, 'IndToler must be greater than 0.', ErrStat, ErrMsg, RoutineName )
    
-      if ( InputFileData%SkewMod /= SkewMod_Orthogonal .and. InputFileData%SkewMod /= SkewMod_Uncoupled .and. InputFileData%SkewMod /= SkewMod_PittPeters) &  !  .and. InputFileData%SkewMod /= SkewMod_Coupled )
-           call SetErrStat( ErrID_Fatal, 'SkewMod must be 1, or 2.  Option 3 will be implemented in a future version.', ErrStat, ErrMsg, RoutineName )      
+      if ( InputFileData%Skew_Mod /= Skew_Mod_Orthogonal .and. InputFileData%Skew_Mod /= Skew_Mod_None .and. InputFileData%Skew_Mod /= Skew_Mod_Glauert) & 
+           call SetErrStat( ErrID_Fatal, 'Skew_Mod must be -1, 0, or 1.', ErrStat, ErrMsg, RoutineName )      
 
       if ( InputFileData%SectAvg) then
          if (InputFileData%SA_nPerSec <= 1) call SetErrStat(ErrID_Fatal, 'SA_nPerSec must be >=1', ErrStat, ErrMsg, RoutineName)
@@ -4294,7 +4294,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
    
    InitInp%airDens          = InputFileData%AirDens 
    InitInp%kinVisc          = InputFileData%KinVisc
-   InitInp%skewWakeMod      = InputFileData%SkewMod
+   InitInp%skewWakeMod      = InputFileData%Skew_Mod
    InitInp%yawCorrFactor    = InputFileData%SkewModFactor
    InitInp%aTol             = InputFileData%IndToler
    InitInp%useTipLoss       = InputFileData%TipLoss

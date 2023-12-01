@@ -659,7 +659,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    integer(IntKi)                                  :: CurLine           !< current entry in FileInfo_In%Lines array
    real(ReKi)                                      :: TmpRe5(5)         !< temporary 8 number array for reading values in
    character(1024)                                 :: sDummy            !< temporary string
-   logical :: frozenWakeProvided, AFAeroModProvided, isLegalComment, firstWarn !< Temporary for legacy purposes
+   logical :: frozenWakeProvided, skewModProvided, AFAeroModProvided, isLegalComment, firstWarn !< Temporary for legacy purposes
 
    character(*), parameter                         :: RoutineName = 'ParsePrimaryFileInfo'
 
@@ -765,9 +765,20 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       InputFileData%BEM_Mod = BEMMod_2D
    endif
 
-   ! SkewMod -  Select skew model {0: No skew model at all, -1:Throw away non-normal component for linearization, 1: Glauert skew model, }
+   ! SkewMod Legacy
    call ParseVar( FileInfo_In, CurLine, "SkewMod", InputFileData%SkewMod, ErrStat2, ErrMsg2, UnEc )
-      if (Failed()) return
+   skewModProvided = legacyInputPresent('SkewMod', CurLine, ErrStat2, ErrMsg2, 'Skew_Mod=-1 (SkewMod=0), Skew_Mod=0 (SkewMod=1), Skew_Mod=1 (SkewMod>=2)')
+   ! Skew_Mod-  Select skew model {0: No skew model at all, -1:Throw away non-normal component for linearization, 1: Glauert skew model, }
+   call ParseVar( FileInfo_In, CurLine, "Skew_Mod", InputFileData%Skew_Mod, ErrStat2, ErrMsg2, UnEc )
+   if (newInputAbsent('Skew_Mod', CurLine, errStat2, errMsg2)) then
+      call WrScr('         Setting Skew_Mod to 1 (skew active, Gluaert) as the input is absent (typical behavior).')
+      InputFileData%Skew_Mod = Skew_Mod_Glauert
+   else
+      if (skewModProvided) then
+         call LegacyAbort('Cannot have both Skew_Mod and SkewMod in the input file'); return
+      endif
+   endif
+
 
    ! SkewMomCorr - Turn the skew momentum correction on or off [used only when SkewMod=1]
    call ParseVar( FileInfo_In, CurLine, "SkewMomCorr", InputFileData%SkewMomCorr, ErrStat2, ErrMsg2, UnEc )
@@ -1048,6 +1059,17 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
          call LegacyAbort('AFAeroMod should be 1 or 2'); return
       endif
    endif
+   if (skewModProvided) then
+      if (InputFileData%SkewMod==0) then
+         InputFileData%Skew_Mod = Skew_Mod_Orthogonal
+      else if (InputFileData%SkewMod==1) then
+         InputFileData%Skew_Mod = Skew_Mod_None
+      else if (InputFileData%SkewMod==2) then
+         InputFileData%Skew_Mod = Skew_Mod_Glauert
+      else
+         call LegacyAbort('Legacy option SkewMod is not 0, 1,2  which is not supported.')
+      endif
+   endif
 
    !======  Nodal Outputs  ==============================================================================
       ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it.
@@ -1090,12 +1112,13 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    write (*,'(A20,I0)') 'SectAvgWeighting:  ', InputFileData%SA_Weighting
    write (*,'(A20,I0)') 'SectAvgNPoints:    ', InputFileData%SA_nPerSec
    write (*,'(A20,I0)') 'DBEMT_Mod:'         , InputFileData%DBEMT_Mod
-   write (*,'(A20,I0)') 'SkewMod:  '         , InputFileData%SkewMod
+   write (*,'(A20,I0)') 'Skew_Mod:  '        , InputFileData%Skew_Mod
    write (*,'(A20,L0)') 'SkewMomCorr:'       , InputFileData%SkewMomCorr
    write (*,'(A20,I0)') 'SkewRedistrMod:'    , InputFileData%SkewRedistrMod
    write (*,'(A20,L0)') 'AoA34:    '         , InputFileData%AoA34
    write (*,'(A20,I0)') 'UAMod:    '         , InputFileData%UAMod
    call WrScr('-------------- Old AeroDyn inputs:')
+   write (*,'(A20,I0)') 'SkewMod:  ', InputFileData%SkewMod
    write (*,'(A20,I0)') 'AFAeroMod:', InputFileData%AFAeroMod
    write (*,'(A20,L0)') 'FrozenWake:', InputFileData%FrozenWake
    call WrScr('------------------------------------------------------')
@@ -1174,7 +1197,7 @@ CONTAINS
       legacyInputPresent = errStat == ErrID_None
       if (legacyInputPresent) then
          if (present(varNameSubs)) then
-            call LegacyWarning(trim(varName)//' has now been removed.'//NewLine//'  Using: '//trim(varNameSubs)//'.')
+            call LegacyWarning(trim(varName)//' has now been removed.'//NewLine//'    Use: '//trim(varNameSubs)//'.')
          else
             call LegacyWarning(trim(varName)//' has now been removed.')
          endif
@@ -1561,17 +1584,17 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       WRITE (UnSu,'(A)') '======  Blade-Element/Momentum Theory Options  ======================================================'
       
       ! SkewMod 
-      select case (InputFileData%SkewMod)
-         case (SkewMod_Orthogonal)
+      select case (InputFileData%Skew_Mod)
+         case (Skew_Mod_Orthogonal)
             Msg = 'orthogonal'
-         case (SkewMod_Uncoupled)
-            Msg = 'uncoupled'
-         case (SkewMod_PittPeters)
-            Msg = 'Pitt/Peters' 
+         case (Skew_Mod_None)
+            Msg = 'no correction'
+         case (Skew_Mod_Glauert)
+            Msg = 'Glauert/Pitt/Peters' 
          case default      
             Msg = 'unknown'      
       end select
-      WRITE (UnSu,Ec_IntFrmt) InputFileData%SkewMod, 'SkewMod', 'Type of skewed-wake correction model: '//TRIM(Msg)
+      WRITE (UnSu,Ec_IntFrmt) InputFileData%Skew_Mod, 'Skew_Mod', 'Type of skewed-wake correction model: '//TRIM(Msg)
       
       
       ! TipLoss

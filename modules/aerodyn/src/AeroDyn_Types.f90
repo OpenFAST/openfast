@@ -208,8 +208,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: Patm = 0.0_ReKi      !< Atmospheric pressure [Pa]
     REAL(ReKi)  :: Pvap = 0.0_ReKi      !< Vapour pressure [Pa]
     REAL(ReKi)  :: SpdSound = 0.0_ReKi      !< Speed of sound [m/s]
+    INTEGER(IntKi)  :: SkewMod = 0_IntKi      !< LEGACY - Skew Mod [-]
     INTEGER(IntKi)  :: Skew_Mod = 0_IntKi      !< Select skew model {0=No skew model at all, -1=Throw away non-normal component for linearization, 1=Glauert skew model} [-]
-    INTEGER(IntKi)  :: SkewMod = 0_IntKi      !< Legacy Skew Mod [-]
     LOGICAL  :: SkewMomCorr = .false.      !< Turn the skew momentum correction on or off [used only when SkewMod=1] [-]
     INTEGER(IntKi)  :: SkewRedistrMod = 0_IntKi      !< Type of skewed-wake correction model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1] [-]
     REAL(ReKi)  :: SkewModFactor = 0.0_ReKi      !< Constant used in Pitt/Peters skewed wake model (default is 15*pi/32) [-]
@@ -453,7 +453,7 @@ IMPLICIT NONE
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(AFI_ParameterType) , DIMENSION(:), ALLOCATABLE  :: AFI      !< AirfoilInfo parameters [-]
-    INTEGER(IntKi)  :: SkewMod = 0_IntKi      !< Type of skewed-wake correction model {0=orthogonal, 1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0] [-]
+    INTEGER(IntKi)  :: Skew_Mod = 0_IntKi      !< Type of skewed-wake correction model {-1=orthogonal, 0=None, 1=Glauert} [unused when WakeMod=0] [-]
     INTEGER(IntKi)  :: WakeMod = 0_IntKi      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
     TYPE(FVW_ParameterType)  :: FVW      !< Parameters for FVW module [-]
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false) [-]
@@ -2609,8 +2609,8 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%Patm = SrcInputFileData%Patm
    DstInputFileData%Pvap = SrcInputFileData%Pvap
    DstInputFileData%SpdSound = SrcInputFileData%SpdSound
-   DstInputFileData%Skew_Mod = SrcInputFileData%Skew_Mod
    DstInputFileData%SkewMod = SrcInputFileData%SkewMod
+   DstInputFileData%Skew_Mod = SrcInputFileData%Skew_Mod
    DstInputFileData%SkewMomCorr = SrcInputFileData%SkewMomCorr
    DstInputFileData%SkewRedistrMod = SrcInputFileData%SkewRedistrMod
    DstInputFileData%SkewModFactor = SrcInputFileData%SkewModFactor
@@ -2769,8 +2769,8 @@ subroutine AD_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%Patm)
    call RegPack(Buf, InData%Pvap)
    call RegPack(Buf, InData%SpdSound)
-   call RegPack(Buf, InData%Skew_Mod)
    call RegPack(Buf, InData%SkewMod)
+   call RegPack(Buf, InData%Skew_Mod)
    call RegPack(Buf, InData%SkewMomCorr)
    call RegPack(Buf, InData%SkewRedistrMod)
    call RegPack(Buf, InData%SkewModFactor)
@@ -2897,9 +2897,9 @@ subroutine AD_UnPackInputFile(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%SpdSound)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%Skew_Mod)
-   if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%SkewMod)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%Skew_Mod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%SkewMomCorr)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -6431,7 +6431,7 @@ subroutine AD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
       end do
    end if
-   DstParamData%SkewMod = SrcParamData%SkewMod
+   DstParamData%Skew_Mod = SrcParamData%Skew_Mod
    DstParamData%WakeMod = SrcParamData%WakeMod
    call FVW_CopyParam(SrcParamData%FVW, DstParamData%FVW, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -6507,7 +6507,7 @@ subroutine AD_PackParam(Buf, Indata)
          call AFI_PackParam(Buf, InData%AFI(i1)) 
       end do
    end if
-   call RegPack(Buf, InData%SkewMod)
+   call RegPack(Buf, InData%Skew_Mod)
    call RegPack(Buf, InData%WakeMod)
    call FVW_PackParam(Buf, InData%FVW) 
    call RegPack(Buf, InData%CompAeroMaps)
@@ -6571,7 +6571,7 @@ subroutine AD_UnPackParam(Buf, OutData)
          call AFI_UnpackParam(Buf, OutData%AFI(i1)) ! AFI 
       end do
    end if
-   call RegUnpack(Buf, OutData%SkewMod)
+   call RegUnpack(Buf, OutData%Skew_Mod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WakeMod)
    if (RegCheckErr(Buf, RoutineName)) return

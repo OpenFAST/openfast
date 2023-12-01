@@ -1590,7 +1590,7 @@ subroutine ApplySkewedWakeCorrection_AllNodes(p, u, m, x, phi, OtherState, axInd
    !............................................
    ! Apply skewed wake correction to the axial induction (y%axInduction)
    !............................................
-   if ( p%skewWakeMod == SkewMod_PittPeters ) then
+   if ( p%skewWakeMod == Skew_Mod_Glauert ) then
       if (p%BEM_Mod==BEMMod_2D) then
          ! do nothing
       else

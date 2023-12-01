@@ -36,13 +36,10 @@ USE UnsteadyAero_Types
 USE DBEMT_Types
 USE NWTC_Library
 IMPLICIT NONE
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_Orthogonal = -1      ! Inflow orthogonal to rotor [-] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_None = 0      ! No skew model (previously called uncoupled) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_Glauert = 10      ! Pitt/Peters/Glauert skew model (should be 1) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_Uncoupled = 1      ! Uncoupled (no correction) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_PittPeters = 2      ! Pitt/Peters [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_Coupled = 3      ! Coupled [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewMod_PittPeters_Cont = 4      ! Pitt/Peters continuous formulation [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_Orthogonal = -1      ! Inflow orthogonal to rotor [-] [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_None = 0      ! No skew model (previously called uncoupled) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_Glauert = 1      ! Pitt/Peters/Glauert skew model (should be 1) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_PittPeters_Cont = 4      ! Pitt/Peters continuous formulation [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewRedistrMod_None = 0      ! No redistribution [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewRedistrMod_PittPeters = 1      ! Pitt/Petesr/Glauert redistribution [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_2D = 0      ! 2D BEM assuming Cx, Cy, phi, L, D are in the same plane [-]
@@ -156,7 +153,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: numBlades = 0_IntKi      !< Number of blades [-]
     REAL(ReKi)  :: airDens = 0.0_ReKi      !< Air density [kg/m^3]
     REAL(ReKi)  :: kinVisc = 0.0_ReKi      !< Kinematic air viscosity [m^2/s]
-    INTEGER(IntKi)  :: skewWakeMod = 0_IntKi      !< Type of skewed-wake correction model [switch] {1=uncoupled, 2=Pitt/Peters, 3=coupled} [-]
+    INTEGER(IntKi)  :: skewWakeMod = 0_IntKi      !< Type of skewed-wake correction model [switch] {0=None, 1=Glauert/Pitt/Peters} [-]
     REAL(ReKi)  :: aTol = 0.0_ReKi      !< Tolerance for the induction solution [-]
     LOGICAL  :: useTipLoss = .false.      !< Use the Prandtl tip-loss model?  [flag] [-]
     LOGICAL  :: useHubLoss = .false.      !< Use the Prandtl hub-loss model?  [flag] [-]
