@@ -16,11 +16,16 @@ usefrom   AirfoilInfo_Registry.txt
 usefrom   UnsteadyAero_Registry.txt
 usefrom   DBEMT_Registry.txt
 
-param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Orthogonal          -      0     -   "Inflow orthogonal to rotor [-]" -
+param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Orthogonal          -     -1     -   "Inflow orthogonal to rotor [-]" -
+param     BEMT/BEMT                   -                              INTEGER                 SkewMod_None                -      0     -   "No skew model (previously called uncoupled)" -
+param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Glauert             -      10    -   "Pitt/Peters/Glauert skew model (should be 1)" -
 param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Uncoupled           -      1     -   "Uncoupled (no correction)" -
 param     BEMT/BEMT                   -                              INTEGER                 SkewMod_PittPeters          -      2     -   "Pitt/Peters" -
 param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Coupled             -      3     -   "Coupled" -
 param     BEMT/BEMT                   -                              INTEGER                 SkewMod_PittPeters_Cont     -      4     -   "Pitt/Peters continuous formulation" -
+
+param     BEMT/BEMT                   -                              INTEGER                 SkewRedistrMod_None         -      0     -   "No redistribution" -
+param     BEMT/BEMT                   -                              INTEGER                 SkewRedistrMod_PittPeters   -      1     -   "Pitt/Petesr/Glauert redistribution" -
 
 param     BEMT/BEMT                   -                              INTEGER                 BEMMod_2D                   -      0     -   "2D BEM assuming Cx, Cy, phi, L, D are in the same plane" -
 param     BEMT/BEMT                   -                              INTEGER                 BEMMod_3D                   -      2     -   "3D BEM assuming a momentum balance system, and an airfoil system" -

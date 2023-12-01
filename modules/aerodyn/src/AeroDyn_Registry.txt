@@ -163,7 +163,7 @@ typedef  ^  RotInputFile   TFinInputFileType TFin     -    -    -   "Input file 
 typedef	^	AD_InputFile	Logical	Echo	-	-	-	"Echo input file to echo file"	-
 typedef	^	AD_InputFile	DbKi	DTAero	-	-	-	"Time interval for aerodynamic calculations {or \"default\"}"	s
 typedef	^	AD_InputFile	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
-typedef	^	AD_InputFile	IntKi	BEMMod	-	-	-	"Type of BEM model {1=legacy NoSweepPitchTwist, 2=polar grid}"	-
+typedef	^	AD_InputFile	IntKi	BEM_Mod	-	-	-	"Type of BEM model {1=legacy NoSweepPitchTwist, 2=polar grid}"	-
 typedef	^	AD_InputFile	IntKi	AFAeroMod	-	-	-	"Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model}"	-
 typedef	^	AD_InputFile	IntKi	TwrPotent	-	-	-	"Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
 typedef	^	AD_InputFile	IntKi	TwrShadow	-	-	-	"Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model}"	-
@@ -179,7 +179,8 @@ typedef	^	AD_InputFile	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
 typedef	^	AD_InputFile	ReKi	Patm 	-	-	-	"Atmospheric pressure" Pa
 typedef	^	AD_InputFile	ReKi	Pvap 	-	-	-	"Vapour pressure" Pa
 typedef	^	AD_InputFile	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
-typedef	^	AD_InputFile	IntKi	SkewMod	-	-	-	"Select skew model {0=No skew model at all, -1=Throw away non-normal component for linearization, 1=Glauert skew model}"	-
+typedef	^	AD_InputFile	IntKi	Skew_Mod -	-	-	"Select skew model {0=No skew model at all, -1=Throw away non-normal component for linearization, 1=Glauert skew model}"	-
+typedef	^	AD_InputFile	IntKi	SkewMod	-	-	-	"Legacy Skew Mod"	-
 typedef	^	AD_InputFile	Logical SkewMomCorr	-	-	-	"Turn the skew momentum correction on or off [used only when SkewMod=1]" - 
 typedef	^	AD_InputFile	IntKi   SkewRedistrMod	-	-	-	"Type of skewed-wake correction model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]" - 
 typedef	^	AD_InputFile	ReKi	SkewModFactor	-	-	-	"Constant used in Pitt/Peters skewed wake model (default is 15*pi/32)" -
@@ -195,7 +196,7 @@ typedef	^	     ^      	IntKi  	SA_Weighting	-	-	1	    "Sector Average - Weightin
 typedef	^	     ^      	ReKi   	SA_PsiBwd	-	-60	-	"Sector Average - Backard Azimuth (<0)"	deg
 typedef	^	     ^      	ReKi   	SA_PsiFwd	-	 60	-	"Sector Average - Forward Azimuth (>0)"	deg
 typedef	^	     ^      	IntKi  	SA_nPerSec	-	 11	-	"Sector average - Number of points per sectors (-) [used only when SectAvg=True]" -
-typedef	^	     ^      	IntKi	AoA34	-	-	-	"Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used]"	-
+typedef	^	     ^      	LOGICAL	AoA34	-	-	-	"Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used]"	-
 typedef	^	     ^      	IntKi	UAMod	-	-	-	"Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)}" -
 typedef	^	AD_InputFile	LOGICAL	FLookup	-	-	-	"Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAeroMod=2]"	flag
 typedef	^	AD_InputFile	ReKi	InCol_Alfa	-	-	-	"The column in the airfoil tables that contains the angle of attack"	-

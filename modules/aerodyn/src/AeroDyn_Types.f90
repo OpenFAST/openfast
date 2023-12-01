@@ -192,7 +192,7 @@ IMPLICIT NONE
     LOGICAL  :: Echo = .false.      !< Echo input file to echo file [-]
     REAL(DbKi)  :: DTAero = 0.0_R8Ki      !< Time interval for aerodynamic calculations {or "default"} [s]
     INTEGER(IntKi)  :: WakeMod = 0_IntKi      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
-    INTEGER(IntKi)  :: BEMMod = 0_IntKi      !< Type of BEM model {1=legacy NoSweepPitchTwist, 2=polar grid} [-]
+    INTEGER(IntKi)  :: BEM_Mod = 0_IntKi      !< Type of BEM model {1=legacy NoSweepPitchTwist, 2=polar grid} [-]
     INTEGER(IntKi)  :: AFAeroMod = 0_IntKi      !< Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model} [-]
     INTEGER(IntKi)  :: TwrPotent = 0_IntKi      !< Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
     INTEGER(IntKi)  :: TwrShadow = 0_IntKi      !< Type of tower influence on wind based on downstream tower shadow {0=none, 1=Powles model, 2=Eames model} [-]
@@ -208,7 +208,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: Patm = 0.0_ReKi      !< Atmospheric pressure [Pa]
     REAL(ReKi)  :: Pvap = 0.0_ReKi      !< Vapour pressure [Pa]
     REAL(ReKi)  :: SpdSound = 0.0_ReKi      !< Speed of sound [m/s]
-    INTEGER(IntKi)  :: SkewMod = 0_IntKi      !< Select skew model {0=No skew model at all, -1=Throw away non-normal component for linearization, 1=Glauert skew model} [-]
+    INTEGER(IntKi)  :: Skew_Mod = 0_IntKi      !< Select skew model {0=No skew model at all, -1=Throw away non-normal component for linearization, 1=Glauert skew model} [-]
+    INTEGER(IntKi)  :: SkewMod = 0_IntKi      !< Legacy Skew Mod [-]
     LOGICAL  :: SkewMomCorr = .false.      !< Turn the skew momentum correction on or off [used only when SkewMod=1] [-]
     INTEGER(IntKi)  :: SkewRedistrMod = 0_IntKi      !< Type of skewed-wake correction model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1] [-]
     REAL(ReKi)  :: SkewModFactor = 0.0_ReKi      !< Constant used in Pitt/Peters skewed wake model (default is 15*pi/32) [-]
@@ -224,7 +225,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: SA_PsiBwd = -60      !< Sector Average - Backard Azimuth (<0) [deg]
     REAL(ReKi)  :: SA_PsiFwd = 60      !< Sector Average - Forward Azimuth (>0) [deg]
     INTEGER(IntKi)  :: SA_nPerSec = 11      !< Sector average - Number of points per sectors (-) [used only when SectAvg=True] [-]
-    INTEGER(IntKi)  :: AoA34 = 0_IntKi      !< Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used] [-]
+    LOGICAL  :: AoA34 = .false.      !< Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used] [-]
     INTEGER(IntKi)  :: UAMod = 0_IntKi      !< Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} [-]
     LOGICAL  :: FLookup = .false.      !< Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAeroMod=2] [flag]
     REAL(ReKi)  :: InCol_Alfa = 0.0_ReKi      !< The column in the airfoil tables that contains the angle of attack [-]
@@ -2581,7 +2582,7 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%Echo = SrcInputFileData%Echo
    DstInputFileData%DTAero = SrcInputFileData%DTAero
    DstInputFileData%WakeMod = SrcInputFileData%WakeMod
-   DstInputFileData%BEMMod = SrcInputFileData%BEMMod
+   DstInputFileData%BEM_Mod = SrcInputFileData%BEM_Mod
    DstInputFileData%AFAeroMod = SrcInputFileData%AFAeroMod
    DstInputFileData%TwrPotent = SrcInputFileData%TwrPotent
    DstInputFileData%TwrShadow = SrcInputFileData%TwrShadow
@@ -2608,6 +2609,7 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%Patm = SrcInputFileData%Patm
    DstInputFileData%Pvap = SrcInputFileData%Pvap
    DstInputFileData%SpdSound = SrcInputFileData%SpdSound
+   DstInputFileData%Skew_Mod = SrcInputFileData%Skew_Mod
    DstInputFileData%SkewMod = SrcInputFileData%SkewMod
    DstInputFileData%SkewMomCorr = SrcInputFileData%SkewMomCorr
    DstInputFileData%SkewRedistrMod = SrcInputFileData%SkewRedistrMod
@@ -2747,7 +2749,7 @@ subroutine AD_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%Echo)
    call RegPack(Buf, InData%DTAero)
    call RegPack(Buf, InData%WakeMod)
-   call RegPack(Buf, InData%BEMMod)
+   call RegPack(Buf, InData%BEM_Mod)
    call RegPack(Buf, InData%AFAeroMod)
    call RegPack(Buf, InData%TwrPotent)
    call RegPack(Buf, InData%TwrShadow)
@@ -2767,6 +2769,7 @@ subroutine AD_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%Patm)
    call RegPack(Buf, InData%Pvap)
    call RegPack(Buf, InData%SpdSound)
+   call RegPack(Buf, InData%Skew_Mod)
    call RegPack(Buf, InData%SkewMod)
    call RegPack(Buf, InData%SkewMomCorr)
    call RegPack(Buf, InData%SkewRedistrMod)
@@ -2850,7 +2853,7 @@ subroutine AD_UnPackInputFile(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WakeMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%BEMMod)
+   call RegUnpack(Buf, OutData%BEM_Mod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%AFAeroMod)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -2893,6 +2896,8 @@ subroutine AD_UnPackInputFile(Buf, OutData)
    call RegUnpack(Buf, OutData%Pvap)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%SpdSound)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%Skew_Mod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%SkewMod)
    if (RegCheckErr(Buf, RoutineName)) return

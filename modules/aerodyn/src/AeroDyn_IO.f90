@@ -758,9 +758,11 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    !======  Blade-Element/Momentum Theory Options  ====================================================== [unused when WakeMod=0 or 3]
    call ParseCom (FileInfo_in, CurLine, sDummy, errStat2, errMsg2, UnEc, isLegalComment); if (Failed()) return
 
-   ! BEMMod
-   call ParseVar( FileInfo_In, CurLine, "BEMMod", InputFileData%BEMMod, ErrStat2, ErrMsg2, UnEc )
-   if (newInputAbsent('BEMMod', CurLine, errStat2, errMsg2)) then
+   ! BEM_Mod
+   call ParseVar( FileInfo_In, CurLine, "BEM_Mod", InputFileData%BEM_Mod, ErrStat2, ErrMsg2, UnEc )
+   if (newInputAbsent('BEM_Mod', CurLine, errStat2, errMsg2)) then
+      call WrScr('         Setting BEM_Mod to 1 (NoPitchSweepPitch) as the input is absent (legacy behavior).')
+      InputFileData%BEM_Mod = BEMMod_2D
    endif
 
    ! SkewMod -  Select skew model {0: No skew model at all, -1:Throw away non-normal component for linearization, 1: Glauert skew model, }
@@ -770,11 +772,15 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    ! SkewMomCorr - Turn the skew momentum correction on or off [used only when SkewMod=1]
    call ParseVar( FileInfo_In, CurLine, "SkewMomCorr", InputFileData%SkewMomCorr, ErrStat2, ErrMsg2, UnEc )
    if (newInputAbsent('SkewMomCorr', CurLine, errStat2, errMsg2)) then
+      call WrScr('         Setting SkewMomCorr to False as the input is absent (legacy behavior).')
+      InputFileData%SkewMomCorr = .False.
    endif
 
    ! SkewRedistrMod - Type of skewed-wake correction model (switch) {0: no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]
    call ParseVar( FileInfo_In, CurLine, "SkewRedistrMod", InputFileData%SkewRedistrMod, ErrStat2, ErrMsg2, UnEc )
    if (newInputAbsent('SkewRedistrMod', CurLine, errStat2, errMsg2)) then
+      call WrScr('         Setting SkewRedistrMod to 1 as the input is absent (legacy behavior).')
+      InputFileData%SkewRedistrMod = 1
    endif
 
       ! SkewModFactor - Constant used in Pitt/Peters skewed wake model {or "default" is 15/32*pi} (-) [used only when SkewMod=2; unused when WakeMod=0 or 3]
@@ -809,7 +815,8 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    call ParseCom (FileInfo_in, CurLine, sDummy, errStat2, errMsg2, UnEc, isLegalComment); if (Failed()) return
    call ParseVar( FileInfo_In, CurLine, "SectAvg"         , InputFileData%SectAvg, ErrStat2, ErrMsg2, UnEc ); 
    if (newInputAbsent('SectAvg', CurLine, errStat2, errMsg2)) then
-      ! pass
+      call WrScr('         Setting SectAvg to False as the input is absent (legacy behavior).')
+      InputFileData%SectAvg = .false.
    else
       call ParseVar( FileInfo_In, CurLine, "SectAvgWeighting", InputFileData%SA_Weighting, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
       call ParseVar( FileInfo_In, CurLine, "SectAvgNPoints"  , InputFileData%SA_nPerSec, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
@@ -837,6 +844,8 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    ! AoA34 Sample the angle of attack (AoA) at the 3/4 chord or the AC point {default=True} [always used]
    call ParseVar( FileInfo_In, CurLine, "AoA34", InputFileData%AoA34, ErrStat2, ErrMsg2, UnEc )
    if (newInputAbsent('AoA34', CurLine, errStat2, errMsg2)) then
+      call WrScr('         Setting AoA34 to False as the input is absent (legacy behavior).')
+      InputFileData%AoA34=.false.
    endif
    ! UAMod - Unsteady Aero Model Switch (switch) {0=Quasi-steady (no UA),  2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minnema/Pierce variant (changes in Cc and Cm)} 
    call ParseVar( FileInfo_In, CurLine, "UAMod", InputFileData%UAMod, ErrStat2, ErrMsg2, UnEc )
@@ -1076,6 +1085,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    ! NOTE: remove me in future release
    call WrScr('-------------- New AeroDyn inputs (with new meaning):')
    write (*,'(A20,I0)') 'WakeMod:  '         , InputFileData%WakeMod
+   write (*,'(A20,I0)') 'BEM_Mod:  '         , InputFileData%BEM_Mod
    write (*,'(A20,L0)') 'SectAvg:  '         , InputFileData%SectAvg
    write (*,'(A20,I0)') 'SectAvgWeighting:  ', InputFileData%SA_Weighting
    write (*,'(A20,I0)') 'SectAvgNPoints:    ', InputFileData%SA_nPerSec
