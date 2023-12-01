@@ -21,7 +21,7 @@ usefrom InflowWind.txt
 param    AeroDyn/AD     -  IntKi    ModelUnknown            - -1  -  "" -
 param    ^              -  IntKi    WakeMod_none            -  0  -  "Wake model - none"                                      -
 param    ^              -  IntKi    WakeMod_BEMT            -  1  -  "Wake model - BEMT (blade elememnt momentum theory)"     -
-param    ^              -  IntKi    WakeMod_DBEMT           -  2  -  "Wake model - DBEMT (dynamic elememnt momentum theory)"  -
+#param    ^              -  IntKi    WakeMod_TODO           -  2  -  "Wake model - TBD"  -
 param    ^              -  IntKi    WakeMod_FVW             -  3  -  "Wake model - FVW (free vortex wake, OLAF)"              -
 
 param    ^              -  IntKi    TwrPotent_none          -  0  -  "no tower potential flow"                    -
@@ -161,7 +161,8 @@ typedef  ^  RotInputFile   TFinInputFileType TFin     -    -    -   "Input file 
 
 typedef	^	AD_InputFile	Logical	Echo	-	-	-	"Echo input file to echo file"	-
 typedef	^	AD_InputFile	DbKi	DTAero	-	-	-	"Time interval for aerodynamic calculations {or \"default\"}"	s
-typedef	^	AD_InputFile	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
+typedef	^	AD_InputFile	IntKi	WakeMod	-	-	-	"LEGACY - Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
+typedef	^	AD_InputFile	IntKi	Wake_Mod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
 typedef	^	AD_InputFile	IntKi	BEM_Mod	-	-	-	"Type of BEM model {1=legacy NoSweepPitchTwist, 2=polar grid}"	-
 typedef	^	AD_InputFile	IntKi	AFAeroMod	-	-	-	"Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model}"	-
 typedef	^	AD_InputFile	IntKi	TwrPotent	-	-	-	"Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
@@ -183,13 +184,13 @@ typedef	^	AD_InputFile	IntKi	Skew_Mod -	-	-	"Select skew model {0=No skew model 
 typedef	^	AD_InputFile	Logical SkewMomCorr	-	-	-	"Turn the skew momentum correction on or off [used only when SkewMod=1]" - 
 typedef	^	AD_InputFile	IntKi   SkewRedistrMod	-	-	-	"Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]" - 
 typedef	^	AD_InputFile	ReKi	SkewModFactor	-	-	-	"Constant used in Pitt/Peters skewed wake model (default is 15*pi/32)" -
-typedef	^	AD_InputFile	LOGICAL	TipLoss	-	-	-	"Use the Prandtl tip-loss model? [unused when WakeMod=0]"	flag
-typedef	^	AD_InputFile	LOGICAL	HubLoss	-	-	-	"Use the Prandtl hub-loss model? [unused when WakeMod=0]"	flag
-typedef	^	AD_InputFile	LOGICAL	TanInd	-	-	-	"Include tangential induction in BEMT calculations? [unused when WakeMod=0]"	flag
-typedef	^	AD_InputFile	LOGICAL	AIDrag	-	-	-	"Include the drag term in the axial-induction calculation? [unused when WakeMod=0]"	flag
-typedef	^	AD_InputFile	LOGICAL	TIDrag	-	-	-	"Include the drag term in the tangential-induction calculation? [unused when WakeMod=0 or TanInd=FALSE]"	flag
-typedef	^	AD_InputFile	ReKi	IndToler	-	-	-	"Convergence tolerance for BEM induction factors [unused when WakeMod=0]"	-
-typedef	^	AD_InputFile	ReKi	MaxIter	-	-	-	"Maximum number of iteration steps [unused when WakeMod=0]"	-
+typedef	^	AD_InputFile	LOGICAL	TipLoss	-	-	-	"Use the Prandtl tip-loss model? [unused when Wake_Mod=0]"	flag
+typedef	^	AD_InputFile	LOGICAL	HubLoss	-	-	-	"Use the Prandtl hub-loss model? [unused when Wake_Mod=0]"	flag
+typedef	^	AD_InputFile	LOGICAL	TanInd	-	-	-	"Include tangential induction in BEMT calculations? [unused when Wake_Mod=0]"	flag
+typedef	^	AD_InputFile	LOGICAL	AIDrag	-	-	-	"Include the drag term in the axial-induction calculation? [unused when Wake_Mod=0]"	flag
+typedef	^	AD_InputFile	LOGICAL	TIDrag	-	-	-	"Include the drag term in the tangential-induction calculation? [unused when Wake_Mod=0 or TanInd=FALSE]"	flag
+typedef	^	AD_InputFile	ReKi	IndToler	-	-	-	"Convergence tolerance for BEM induction factors [unused when Wake_Mod=0]"	-
+typedef	^	AD_InputFile	ReKi	MaxIter	-	-	-	"Maximum number of iteration steps [unused when Wake_Mod=0]"	-
 typedef	^	AD_InputFile	Logical	SectAvg	-	-	False	"Use Sector average for BEM inflow velocity calculation (flag)"	-
 typedef	^	     ^      	IntKi  	SA_Weighting	-	-	1	    "Sector Average - Weighting function for sector average  {1=Uniform, 2=Impulse, }  within a 360/nB sector centered on the blade (switch) [used only when SectAvg=True]" -
 typedef	^	     ^      	ReKi   	SA_PsiBwd	-	-60	-	"Sector Average - Backard Azimuth (<0)"	deg
@@ -216,7 +217,7 @@ typedef	^	AD_InputFile	IntKi	NTwOuts	-	-	-	"Number of tower node outputs [0 - 9]
 typedef	^	AD_InputFile	IntKi	TwOutNd	{9}	-	-	"Tower nodes whose values will be output"	-
 typedef	^	AD_InputFile	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	AD_InputFile	CHARACTER(ChanLen)	OutList	{:}	-	-	"List of user-requested output channels"	-
-typedef	^	AD_InputFile	ReKi	tau1_const	-	-	-	"time constant for DBEMT [used only when WakeMod=2 and DBEMT_Mod/=2]"	s
+typedef	^	AD_InputFile	ReKi	tau1_const	-	-	-	"time constant for DBEMT"	s
 typedef	^	AD_InputFile	IntKi	DBEMT_Mod	-	-	-	"Type of dynamic BEMT (DBEMT) model {0=No Dynamic Wake, -1=Frozen Wake for linearization, 1=constant tau1, 2=time-dependent tau1, 3=constant tau1 with continuous formulation} (-) [used only when WakeMod=1]" -
 typedef	^	AD_InputFile	IntKi	BldNd_NumOuts	-	-	-	"Number of requested output channels per blade node (AD_AllBldNdOuts)"	-
 typedef	^	AD_InputFile	CHARACTER(ChanLen)	BldNd_OutList	{:}	-	-	"List of user-requested output channels (AD_AllBldNdOuts)"	-
@@ -414,8 +415,8 @@ typedef  ^  ParameterType  RotParameterType rotors {:} - - "Parameter types for 
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
 typedef	^	ParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 typedef	^	ParameterType	AFI_ParameterType	AFI	{:}	-	-	"AirfoilInfo parameters"
-typedef	^	ParameterType	IntKi	Skew_Mod	-	-	-	"Type of skewed-wake correction model {-1=orthogonal, 0=None, 1=Glauert} [unused when WakeMod=0]"	-
-typedef	^	ParameterType	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
+typedef	^	ParameterType	IntKi	Skew_Mod	-	-	-	"Type of skewed-wake correction model {-1=orthogonal, 0=None, 1=Glauert} [unused when Wake_Mod=0]"	-
+typedef	^	ParameterType	IntKi	Wake_Mod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
 typedef	^	ParameterType	FVW_ParameterType	FVW	-	-	-	"Parameters for FVW module"
 typedef   ^     ParameterType LOGICAL         CompAeroMaps   -  .FALSE. -   "flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false)"	-
 typedef   ^     ParameterType LOGICAL         UA_Flag       -  -  -  "logical flag indicating whether to use UnsteadyAero"        - 

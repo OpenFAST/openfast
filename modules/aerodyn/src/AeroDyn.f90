@@ -318,17 +318,17 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (Failed()) return;
 
    ! Temporary HACK, for WakeMod=10, 11 or 12 use AeroProjMod 2 (will trigger PolarBEM)
-   if (InputFileData%WakeMod==10) then
-      call WrScr('   WARNING: WakeMod=10 is a temporary hack. Using new projection method with WakeMod=0.')
-      InputFileData%WakeMod = 0
+   if (InputFileData%Wake_Mod==10) then
+      call WrScr('   WARNING: Wake_Mod=10 is a temporary hack. Using new projection method with Wake_Mod=0.')
+      InputFileData%Wake_Mod = 0
       AeroProjMod(:) = 2
-   elseif (InputFileData%WakeMod==11) then
-      call WrScr('   WARNING: WakeMod=11 is a temporary hack. Using new projection method with WakeMod=1.')
-      InputFileData%WakeMod = 1
+   elseif (InputFileData%Wake_Mod==11) then
+      call WrScr('   WARNING: Wake_Mod=11 is a temporary hack. Using new projection method with Wake_Mod=1.')
+      InputFileData%Wake_Mod = 1
       AeroProjMod(:) = 2
-   elseif (InputFileData%WakeMod==12) then
-      call WrScr('   WARNING: WakeMod=12 is a temporary hack. Using new projection method with WakeMod=2.')
-      InputFileData%WakeMod = 2
+   elseif (InputFileData%Wake_Mod==12) then
+      call WrScr('   WARNING: Wake_Mod=12 is a temporary hack. Using new projection method with Wake_Mod=2.')
+      InputFileData%Wake_Mod = 2
       AeroProjMod(:) = 2
    endif
 
@@ -370,7 +370,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       p%rotors(iR)%AeroProjMod = InitInp%rotors(iR)%AeroProjMod
       !p%rotors(iR)%AeroProjMod = AeroProjMod(iR)
       call WrScr('   AeroDyn: projMod: '//trim(num2lstr(p%rotors(iR)%AeroProjMod)))
-      if (AeroProjMod(iR) == APM_BEM_Polar .and. InputFileData%WakeMod==WakeMod_FVW) then
+      if (AeroProjMod(iR) == APM_BEM_Polar .and. InputFileData%Wake_Mod==WakeMod_FVW) then
          call WrScr('AeroProj cannot be 2 (somehow) when using OLAF - Aborting')
          STOP
       endif
@@ -413,7 +413,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! initialize BEMT after setting parameters and inputs because we are going to use the already-
       ! calculated node positions from the input meshes
       
-   if (p%WakeMod /= WakeMod_FVW) then
+   if (p%Wake_Mod /= WakeMod_FVW) then
       do iR = 1, nRotors
          call Init_BEMTmodule( InputFileData, InputFileData%rotors(iR), u%rotors(iR), m%rotors(iR)%BEMT_u(1), p%rotors(iR), p, x%rotors(iR)%BEMT, xd%rotors(iR)%BEMT, z%rotors(iR)%BEMT, &
                                  OtherState%rotors(iR)%BEMT, m%rotors(iR)%BEMT_y, m%rotors(iR)%BEMT, ErrStat2, ErrMsg2 )
@@ -432,7 +432,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          end if   
       enddo
 
-   else ! if (p%WakeMod == WakeMod_FVW) then
+   else ! if (p%Wake_Mod == WakeMod_FVW) then
 
       !-------------------------------------------------------------------------------------------------
       ! Initialize FVW module if it is used
@@ -578,7 +578,7 @@ subroutine AD_ReInit(p, x, xd, z, OtherState, m, Interval, ErrStat, ErrMsg )
       ! and the UA filter
    end if
       
-   if (p%WakeMod /= WakeMod_FVW) then
+   if (p%Wake_Mod /= WakeMod_FVW) then
       do IR=1, size(p%rotors)
          call BEMT_ReInit(p%rotors(iR)%BEMT,x%rotors(iR)%BEMT,xd%rotors(iR)%BEMT,z%rotors(iR)%BEMT,OtherState%rotors(iR)%BEMT,m%rotors(iR)%BEMT,ErrStat,ErrMsg)
 
@@ -619,7 +619,7 @@ subroutine Init_MiscVars(m, p, p_AD, u, y, errStat, errMsg)
    
    call AllocAry( m%DisturbedInflow, 3_IntKi, p%NumBlNds, p%numBlades, 'm%DisturbedInflow', ErrStat2, ErrMsg2 ) ! must be same size as u%InflowOnBlade
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-if ((p_AD%SectAvg) .and. ((p_AD%WakeMod == WakeMod_BEMT).or.(p_AD%WakeMod == WakeMod_DBEMT))  ) then
+if ((p_AD%SectAvg) .and. ((p_AD%Wake_Mod == WakeMod_BEMT))  ) then
    call AllocAry( m%SectAvgInflow,   3_IntKi, p%NumBlNds, p%numBlades, 'm%SectAvgInflow'  , ErrStat2, ErrMsg2 ); if(Failed()) return
 endif
    call AllocAry( m%orientationAnnulus, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'm%orientationAnnulus', ErrStat2, ErrMsg2 )
@@ -1326,7 +1326,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
    p%MHK              = InitInp%MHK
    
    p_AD%DT            = InputFileData%DTAero
-   p_AD%WakeMod       = InputFileData%WakeMod
+   p_AD%Wake_Mod      = InputFileData%Wake_Mod
    p%DBEMT_Mod        = InputFileData%DBEMT_Mod
    p%TwrPotent        = InputFileData%TwrPotent
    p%TwrShadow        = InputFileData%TwrShadow
@@ -1552,7 +1552,7 @@ subroutine AD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
          ! Place any last minute operations or calculations here:
          ! End the FVW submodule
-      if (p%WakeMod == WakeMod_FVW ) then
+      if (p%Wake_Mod == WakeMod_FVW ) then
 
          if ( p%UA_Flag ) then
             do iW=1,p%FVW%nWings
@@ -1657,7 +1657,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
          
 
 
-   if (p%WakeMod /= WakeMod_FVW) then
+   if (p%Wake_Mod /= WakeMod_FVW) then
       do iR = 1,size(p%rotors)
             ! Call into the BEMT update states    NOTE:  This is a non-standard framework interface!!!!!  GJH
          call BEMT_UpdateStates(t, n, m%rotors(iR)%BEMT_u(:), BEMT_utimes,  p%rotors(iR)%BEMT, x%rotors(iR)%BEMT, xd%rotors(iR)%BEMT, z%rotors(iR)%BEMT, OtherState%rotors(iR)%BEMT, p%AFI, m%rotors(iR)%BEMT, errStat2, errMsg2)
@@ -1861,7 +1861,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
       if(Failed()) return
    enddo
 
-   if (p%WakeMod == WakeMod_FVW) then
+   if (p%Wake_Mod == WakeMod_FVW) then
          ! This needs to extract the inputs from the AD data types (mesh) and copy pieces for the FVW module
       call SetInputsForFVW(p, (/u/), m, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1946,7 +1946,7 @@ subroutine RotCalcOutput( t, u, p, p_AD, x, xd, z, OtherState, y, m, m_AD, iRot,
    call SetInputs(t, p, p_AD, u, m, indx, errStat2, errMsg2)      
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-   if (p_AD%WakeMod /= WakeMod_FVW) then
+   if (p_AD%Wake_Mod /= WakeMod_FVW) then
       ! Call the BEMT module CalcOutput.  Notice that the BEMT outputs are purposely attached to AeroDyn's MiscVar structure to
       ! avoid issues with the coupling code
 
@@ -2078,10 +2078,10 @@ subroutine AD_CavtCrit(u, p, m, errStat, errMsg)
          do j = 1,p%rotors(iR)%numBlades  ! Loop through all blades
             do i = 1,p%rotors(iR)%NumBlNds  ! Loop through all nodes
                      
-               if ( p%WakeMod == WakeMod_BEMT .or. p%WakeMod == WakeMod_DBEMT ) then
+               if ( p%Wake_Mod == WakeMod_BEMT ) then
                   Vreltemp = m%rotors(iR)%BEMT_y%Vrel(i,j)
                   Cpmintemp = m%rotors(iR)%BEMT_y%Cpmin(i,j)
-               else if ( p%WakeMod == WakeMod_FVW ) then
+               else if ( p%Wake_Mod == WakeMod_FVW ) then
                   iW = p%FVW%Bld2Wings(iR,j)
                   Vreltemp = m%FVW%W(iW)%BN_Vrel(i)
                   Cpmintemp = m%FVW%W(iW)%BN_Cpmin(i)
@@ -2640,7 +2640,7 @@ subroutine SetInputs(t, p, p_AD, u, m, indx, errStat, errMsg)
    ! Disturbed inflow on blade (if tower shadow present)
    call SetDisturbedInflow(p, p_AD, u, m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
 
-   if (p_AD%WakeMod /= WakeMod_FVW) then
+   if (p_AD%Wake_Mod /= WakeMod_FVW) then
 
       if (p_AD%SectAvg) then
          call SetSectAvgInflow(t, p, p_AD, u, m, errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
@@ -3789,9 +3789,9 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
 !   end do
    
    if (InputFileData%DTAero <= 0.0)  call SetErrStat ( ErrID_Fatal, 'DTAero must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-   if (InputFileData%WakeMod /= WakeMod_None .and. InputFileData%WakeMod /= WakeMod_BEMT .and. InputFileData%WakeMod /= WakeMod_DBEMT .and. InputFileData%WakeMod /= WakeMod_FVW) then
+   if (InputFileData%Wake_Mod /= WakeMod_None .and. InputFileData%Wake_Mod /= WakeMod_BEMT .and. InputFileData%Wake_Mod /= WakeMod_FVW) then
       call SetErrStat ( ErrID_Fatal, 'WakeMod must be '//trim(num2lstr(WakeMod_None))//' (none), '//trim(num2lstr(WakeMod_BEMT))//' (BEMT), '// &
-         trim(num2lstr(WakeMod_DBEMT))//' (DBEMT), or '//trim(num2lstr(WakeMod_FVW))//' (FVW).',ErrStat, ErrMsg, RoutineName ) 
+        ' or '//trim(num2lstr(WakeMod_FVW))//' (FVW).',ErrStat, ErrMsg, RoutineName ) 
    end if
    
    if (InputFileData%TwrPotent /= TwrPotent_none .and. InputFileData%TwrPotent /= TwrPotent_baseline .and. InputFileData%TwrPotent /= TwrPotent_Bak) then
@@ -3840,7 +3840,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    
       ! BEMT/DBEMT inputs
       ! bjj: these checks should probably go into BEMT where they are used...
-   if (InputFileData%WakeMod /= WakeMod_none .and. InputFileData%WakeMod /= WakeMod_FVW) then
+   if (InputFileData%Wake_Mod /= WakeMod_none .and. InputFileData%Wake_Mod /= WakeMod_FVW) then
       if ( InputFileData%MaxIter < 1 ) call SetErrStat( ErrID_Fatal, 'MaxIter must be greater than 0.', ErrStat, ErrMsg, RoutineName )
       
       if ( InputFileData%IndToler < 0.0 .or. EqualRealNos(InputFileData%IndToler, 0.0_ReKi) ) &
@@ -4055,17 +4055,17 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    ! check for linearization
    !..................
    if (InitInp%Linearize) then
+
+      if (InputFileData%Wake_Mod /= WakeMod_None .and. InputFileData%Wake_Mod /= WakeMod_None) then 
+         call SetErrStat( ErrID_Fatal, 'WakeMod must be 0 or 1 for linearization.', ErrStat, ErrMsg, RoutineName )
+      endif
+
       if (InputFileData%UAMod /= UA_None .and. InputFileData%UAMod /= UA_HGM .and. InputFileData%UAMod /= UA_HGMV .and. InputFileData%UAMod /= UA_OYE) then
          call SetErrStat( ErrID_Fatal, 'UAMod must be 0, 4, 5, or 6 for linearization.', ErrStat, ErrMsg, RoutineName )
       end if
-      
-      if (InputFileData%WakeMod == WakeMod_FVW) then !bjj: note: among other things, WriteOutput values will not be calculated properly in AD Jacobians if FVW this is allowed
-         call SetErrStat( ErrID_Fatal, 'FVW cannot currently be used for linearization. Set WakeMod=0 or WakeMod=1.', ErrStat, ErrMsg, RoutineName )
 
-      else if (InputFileData%WakeMod == WakeMod_DBEMT) then
-         if (InputFileData%DBEMT_Mod /= DBEMT_cont_tauConst) then
-            call SetErrStat( ErrID_Fatal, 'DBEMT requires the continuous formulation with constant tau1 for linearization. Set DBEMT_Mod=3 or set WakeMod to 0 or 1.', ErrStat, ErrMsg, RoutineName )
-         end if
+      if (InputFileData%DBEMT_Mod /= DBEMT_None .or. InputFileData%DBEMT_Mod /= DBEMT_cont_tauConst) then
+         call SetErrStat( ErrID_Fatal, 'DBEMT Mod must be 0 or 3 (continuous formulation with constant tau1) for linearization. Set DBEMT_Mod=0,3.', ErrStat, ErrMsg, RoutineName )
       end if
    end if
 
@@ -4299,7 +4299,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
    InitInp%aTol             = InputFileData%IndToler
    InitInp%useTipLoss       = InputFileData%TipLoss
    InitInp%useHubLoss       = InputFileData%HubLoss
-   InitInp%useInduction     = InputFileData%WakeMod /= WakeMod_none
+   InitInp%useInduction     = InputFileData%Wake_Mod == WakeMod_BEMT
    InitInp%useTanInd        = InputFileData%TanInd
    InitInp%useAIDrag        = InputFileData%AIDrag        
    InitInp%useTIDrag        = InputFileData%TIDrag  
@@ -4424,7 +4424,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
    if (InitInp%BEM_Mod==BEMMod_2D) then
       Label = trim(Label)//', BEM: legacy (2D)'
    elseif (InitInp%BEM_Mod==BEMMod_3D) then
-      Label = trim(Label)//', BEM: 3D'
+      Label = trim(Label)//', BEM: polar (3D)'
    else
       print*,'Invalid BEM method'
       STOP
@@ -4443,11 +4443,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
       InitInp%RootName = InitInp%RootName(1:k-3)
    end if
    
-   if (InputFileData%WakeMod == WakeMod_DBEMT) then
-      InitInp%DBEMT_Mod  = InputFileData%DBEMT_Mod
-   else
-      InitInp%DBEMT_Mod  = DBEMT_none
-   end if
+   InitInp%DBEMT_Mod  = InputFileData%DBEMT_Mod
    InitInp%tau1_const = InputFileData%tau1_const
    
    if (ErrStat >= AbortErrLev) then

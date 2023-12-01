@@ -1409,7 +1409,7 @@ subroutine BEMT_InitStates(t, u, p, x, xd, z, OtherState, m, AFInfo, ErrStat, Er
    m%phi = z%phi
    call BEMT_CalcOutput_Inductions( InputIndex, t, CalculateDBEMTInputs, ApplyCorrections, m%phi, u, p, x, xd, z, OtherState, AFInfo, m%axInduction, m%tanInduction, m%chi, m, errStat, errMsg )
 
-   if (p%DBEMT_Mod /= DBEMT_none) then
+   if (p%DBEMT_Mod > DBEMT_none) then
       call DBEMT_InitStates_AllNodes( m%u_DBEMT(InputIndex), p%DBEMT, x%DBEMT, OtherState%DBEMT )
    end if
    
@@ -1513,7 +1513,7 @@ subroutine BEMT_CalcOutput_Inductions( InputIndex, t, CalculateDBEMTInputs, Appl
          !............................................
          ! apply DBEMT correction to axInduction and tanInduction:
          !............................................
-         if (p%DBEMT_Mod /= DBEMT_none) then
+         if (p%DBEMT_Mod > DBEMT_none) then
             ! If we are using DBEMT, then we will obtain the time-filtered versions of axInduction(i,j), tanInduction(i,j)
          
             ! Note that the outputs of DBEMT are the state variables x%vind, so we don't NEED to set the inputs except on initialization step (when we output the inputs instead of the states)
@@ -1696,7 +1696,7 @@ subroutine BEMT_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, AFIn
    !...............................................................................................................................
    !  compute derivatives for DBEMT continuous states:
    !...............................................................................................................................
-   if (p%DBEMT_Mod /= DBEMT_none) then
+   if (p%DBEMT_Mod > DBEMT_none) then
       if (.not. allocated(dxdt%DBEMT%element)) then
          call DBEMT_CopyContState( x%DBEMT, dxdt%DBEMT, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)

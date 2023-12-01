@@ -445,7 +445,7 @@ subroutine Init_ADI_ForDriver(iCase, ADI, dvr, FED, dt, errStat, errMsg)
          !call AD_Dvr_DestroyAeroDyn_Data   (AD     , errStat2, errMsg2); call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
          needInit=.true.
       endif
-      if (ADI%p%AD%WakeMod == WakeMod_FVW) then
+      if (ADI%p%AD%Wake_Mod == WakeMod_FVW) then
          call WrScr('[INFO] OLAF is used, AeroDyn will be re-initialized')
          needInit=.true.
       endif

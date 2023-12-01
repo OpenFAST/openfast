@@ -41,7 +41,6 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: ModelUnknown = -1      !  [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_none = 0      ! Wake model - none [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_BEMT = 1      ! Wake model - BEMT (blade elememnt momentum theory) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_DBEMT = 2      ! Wake model - DBEMT (dynamic elememnt momentum theory) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_FVW = 3      ! Wake model - FVW (free vortex wake, OLAF) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrPotent_none = 0      ! no tower potential flow [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrPotent_baseline = 1      ! baseline tower potential flow [-]
@@ -190,7 +189,8 @@ IMPLICIT NONE
   TYPE, PUBLIC :: AD_InputFile
     LOGICAL  :: Echo = .false.      !< Echo input file to echo file [-]
     REAL(DbKi)  :: DTAero = 0.0_R8Ki      !< Time interval for aerodynamic calculations {or "default"} [s]
-    INTEGER(IntKi)  :: WakeMod = 0_IntKi      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
+    INTEGER(IntKi)  :: WakeMod = 0_IntKi      !< LEGACY - Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
+    INTEGER(IntKi)  :: Wake_Mod = 0_IntKi      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
     INTEGER(IntKi)  :: BEM_Mod = 0_IntKi      !< Type of BEM model {1=legacy NoSweepPitchTwist, 2=polar grid} [-]
     INTEGER(IntKi)  :: AFAeroMod = 0_IntKi      !< Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model} [-]
     INTEGER(IntKi)  :: TwrPotent = 0_IntKi      !< Type of tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
@@ -212,13 +212,13 @@ IMPLICIT NONE
     LOGICAL  :: SkewMomCorr = .false.      !< Turn the skew momentum correction on or off [used only when SkewMod=1] [-]
     INTEGER(IntKi)  :: SkewRedistrMod = 0_IntKi      !< Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1] [-]
     REAL(ReKi)  :: SkewModFactor = 0.0_ReKi      !< Constant used in Pitt/Peters skewed wake model (default is 15*pi/32) [-]
-    LOGICAL  :: TipLoss = .false.      !< Use the Prandtl tip-loss model? [unused when WakeMod=0] [flag]
-    LOGICAL  :: HubLoss = .false.      !< Use the Prandtl hub-loss model? [unused when WakeMod=0] [flag]
-    LOGICAL  :: TanInd = .false.      !< Include tangential induction in BEMT calculations? [unused when WakeMod=0] [flag]
-    LOGICAL  :: AIDrag = .false.      !< Include the drag term in the axial-induction calculation? [unused when WakeMod=0] [flag]
-    LOGICAL  :: TIDrag = .false.      !< Include the drag term in the tangential-induction calculation? [unused when WakeMod=0 or TanInd=FALSE] [flag]
-    REAL(ReKi)  :: IndToler = 0.0_ReKi      !< Convergence tolerance for BEM induction factors [unused when WakeMod=0] [-]
-    REAL(ReKi)  :: MaxIter = 0.0_ReKi      !< Maximum number of iteration steps [unused when WakeMod=0] [-]
+    LOGICAL  :: TipLoss = .false.      !< Use the Prandtl tip-loss model? [unused when Wake_Mod=0] [flag]
+    LOGICAL  :: HubLoss = .false.      !< Use the Prandtl hub-loss model? [unused when Wake_Mod=0] [flag]
+    LOGICAL  :: TanInd = .false.      !< Include tangential induction in BEMT calculations? [unused when Wake_Mod=0] [flag]
+    LOGICAL  :: AIDrag = .false.      !< Include the drag term in the axial-induction calculation? [unused when Wake_Mod=0] [flag]
+    LOGICAL  :: TIDrag = .false.      !< Include the drag term in the tangential-induction calculation? [unused when Wake_Mod=0 or TanInd=FALSE] [flag]
+    REAL(ReKi)  :: IndToler = 0.0_ReKi      !< Convergence tolerance for BEM induction factors [unused when Wake_Mod=0] [-]
+    REAL(ReKi)  :: MaxIter = 0.0_ReKi      !< Maximum number of iteration steps [unused when Wake_Mod=0] [-]
     LOGICAL  :: SectAvg = .false.      !< Use Sector average for BEM inflow velocity calculation (flag) [-]
     INTEGER(IntKi)  :: SA_Weighting = 0_IntKi      !< Sector Average - Weighting function for sector average  {1=Uniform, 2=Impulse, }  within a 360/nB sector centered on the blade (switch) [used only when SectAvg=True] [-]
     REAL(ReKi)  :: SA_PsiBwd = -60      !< Sector Average - Backard Azimuth (<0) [deg]
@@ -244,7 +244,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:9)  :: TwOutNd = 0_IntKi      !< Tower nodes whose values will be output [-]
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
-    REAL(ReKi)  :: tau1_const = 0.0_ReKi      !< time constant for DBEMT [used only when WakeMod=2 and DBEMT_Mod/=2] [s]
+    REAL(ReKi)  :: tau1_const = 0.0_ReKi      !< time constant for DBEMT [s]
     INTEGER(IntKi)  :: DBEMT_Mod = 0_IntKi      !< Type of dynamic BEMT (DBEMT) model {0=No Dynamic Wake, -1=Frozen Wake for linearization, 1=constant tau1, 2=time-dependent tau1, 3=constant tau1 with continuous formulation} (-) [used only when WakeMod=1] [-]
     INTEGER(IntKi)  :: BldNd_NumOuts = 0_IntKi      !< Number of requested output channels per blade node (AD_AllBldNdOuts) [-]
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: BldNd_OutList      !< List of user-requested output channels (AD_AllBldNdOuts) [-]
@@ -452,8 +452,8 @@ IMPLICIT NONE
     REAL(DbKi)  :: DT = 0.0_R8Ki      !< Time step for continuous state integration & discrete state update [seconds]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(AFI_ParameterType) , DIMENSION(:), ALLOCATABLE  :: AFI      !< AirfoilInfo parameters [-]
-    INTEGER(IntKi)  :: Skew_Mod = 0_IntKi      !< Type of skewed-wake correction model {-1=orthogonal, 0=None, 1=Glauert} [unused when WakeMod=0] [-]
-    INTEGER(IntKi)  :: WakeMod = 0_IntKi      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
+    INTEGER(IntKi)  :: Skew_Mod = 0_IntKi      !< Type of skewed-wake correction model {-1=orthogonal, 0=None, 1=Glauert} [unused when Wake_Mod=0] [-]
+    INTEGER(IntKi)  :: Wake_Mod = 0_IntKi      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
     TYPE(FVW_ParameterType)  :: FVW      !< Parameters for FVW module [-]
     LOGICAL  :: CompAeroMaps = .FALSE.      !< flag to determine if AeroDyn is computing aero maps (true) or running a normal simulation (false) [-]
     LOGICAL  :: UA_Flag = .false.      !< logical flag indicating whether to use UnsteadyAero [-]
@@ -2577,6 +2577,7 @@ subroutine AD_CopyInputFile(SrcInputFileData, DstInputFileData, CtrlCode, ErrSta
    DstInputFileData%Echo = SrcInputFileData%Echo
    DstInputFileData%DTAero = SrcInputFileData%DTAero
    DstInputFileData%WakeMod = SrcInputFileData%WakeMod
+   DstInputFileData%Wake_Mod = SrcInputFileData%Wake_Mod
    DstInputFileData%BEM_Mod = SrcInputFileData%BEM_Mod
    DstInputFileData%AFAeroMod = SrcInputFileData%AFAeroMod
    DstInputFileData%TwrPotent = SrcInputFileData%TwrPotent
@@ -2744,6 +2745,7 @@ subroutine AD_PackInputFile(Buf, Indata)
    call RegPack(Buf, InData%Echo)
    call RegPack(Buf, InData%DTAero)
    call RegPack(Buf, InData%WakeMod)
+   call RegPack(Buf, InData%Wake_Mod)
    call RegPack(Buf, InData%BEM_Mod)
    call RegPack(Buf, InData%AFAeroMod)
    call RegPack(Buf, InData%TwrPotent)
@@ -2847,6 +2849,8 @@ subroutine AD_UnPackInputFile(Buf, OutData)
    call RegUnpack(Buf, OutData%DTAero)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%WakeMod)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%Wake_Mod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%BEM_Mod)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -6427,7 +6431,7 @@ subroutine AD_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
       end do
    end if
    DstParamData%Skew_Mod = SrcParamData%Skew_Mod
-   DstParamData%WakeMod = SrcParamData%WakeMod
+   DstParamData%Wake_Mod = SrcParamData%Wake_Mod
    call FVW_CopyParam(SrcParamData%FVW, DstParamData%FVW, CtrlCode, ErrStat2, ErrMsg2)
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -6503,7 +6507,7 @@ subroutine AD_PackParam(Buf, Indata)
       end do
    end if
    call RegPack(Buf, InData%Skew_Mod)
-   call RegPack(Buf, InData%WakeMod)
+   call RegPack(Buf, InData%Wake_Mod)
    call FVW_PackParam(Buf, InData%FVW) 
    call RegPack(Buf, InData%CompAeroMaps)
    call RegPack(Buf, InData%UA_Flag)
@@ -6568,7 +6572,7 @@ subroutine AD_UnPackParam(Buf, OutData)
    end if
    call RegUnpack(Buf, OutData%Skew_Mod)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%WakeMod)
+   call RegUnpack(Buf, OutData%Wake_Mod)
    if (RegCheckErr(Buf, RoutineName)) return
    call FVW_UnpackParam(Buf, OutData%FVW) ! FVW 
    call RegUnpack(Buf, OutData%CompAeroMaps)

@@ -123,7 +123,7 @@ SUBROUTINE Calc_WriteOutput( p, p_AD, u, x, m, m_AD, y, OtherState, xd, indx, iR
    tmpHubMB  = 0.0_ReKi
 
    ! Compute max radius and rotor speed
-   if (p_AD%WakeMod /= WakeMod_FVW) then
+   if (p_AD%Wake_Mod /= WakeMod_FVW) then
       rmax = 0.0_ReKi
       do k=1,p%NumBlades
          do j=1,p%NumBlNds
@@ -141,7 +141,7 @@ SUBROUTINE Calc_WriteOutput( p, p_AD, u, x, m, m_AD, y, OtherState, xd, indx, iR
    
    call Calc_WriteOutput_AD() ! need to call this before calling the BEMT vs FVW versions of outputs so that the integrated output quantities are known
    
-   if (p_AD%WakeMod /= WakeMod_FVW) then
+   if (p_AD%Wake_Mod /= WakeMod_FVW) then
       call Calc_WriteOutput_BEMT()
    else
       call Calc_WriteOutput_FVW()
@@ -659,7 +659,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    integer(IntKi)                                  :: CurLine           !< current entry in FileInfo_In%Lines array
    real(ReKi)                                      :: TmpRe5(5)         !< temporary 8 number array for reading values in
    character(1024)                                 :: sDummy            !< temporary string
-   logical :: frozenWakeProvided, skewModProvided, AFAeroModProvided, isLegalComment, firstWarn !< Temporary for legacy purposes
+   logical :: wakeModProvided, frozenWakeProvided, skewModProvided, AFAeroModProvided, isLegalComment, firstWarn !< Temporary for legacy purposes
 
    character(*), parameter                         :: RoutineName = 'ParsePrimaryFileInfo'
 
@@ -705,8 +705,21 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       ! DTAero - Time interval for aerodynamic calculations {or default} (s):
    call ParseVarWDefault ( FileInfo_In, CurLine, "DTAero", InputFileData%DTAero, interval, ErrStat2, ErrMsg2, UnEc )
       if (Failed()) return
-   ! WakeMod - Type of wake/induction model (switch) {0=none, 1=BEMT, 2=TBD, 3=OLAF}  [WakeMod cannot be 2 or 3 when linearizing]
+   ! WakeMod - LEGACY 
    call ParseVar( FileInfo_In, CurLine, "WakeMod", InputFileData%WakeMod, ErrStat2, ErrMsg2, UnEc ); if (Failed()) return
+   wakeModProvided = legacyInputPresent('WakeMod', CurLine, ErrStat2, ErrMsg2, 'Wake_Mod=0 (WakeMod=0), Wake_Mod=1 (WakeMod=1), DBEMT_Mod>0 (WakeMod=2, Wake_Mod=3 (WakeMod=3)')
+   ! Wake_Mod- Type of wake/induction model (switch) {0=none, 1=BEMT, 2=TBD, 3=OLAF}
+   call ParseVar( FileInfo_In, CurLine, "Wake_Mod", InputFileData%Wake_Mod, ErrStat2, ErrMsg2, UnEc )
+   if (newInputAbsent('Wake_Mod', CurLine, errStat2, errMsg2)) then
+      call WrScr('         Setting Wake_Mod to 1 (BEM active) as the input is absent (typical behavior).')
+      InputFileData%Wake_Mod = WakeMod_BEMT
+   else
+      if (wakeModProvided) then
+         call LegacyAbort('Cannot have both Wake_Mod and WakeMod in the input file'); return
+      endif
+   endif
+
+
    ! AFAeroMod - Type of blade airfoil aerodynamics model (switch) {1=steady model, 2=Beddoes-Leishman unsteady model} [AFAeroMod must be 1 when linearizing]
    call ParseVar( FileInfo_In, CurLine, "AFAeroMod", InputFileData%AFAeroMod, ErrStat2, ErrMsg2, UnEc )
    AFAeroModProvided = legacyInputPresent('AFAeroMod', CurLine, ErrStat2, ErrMsg2, 'UAMod=0 (AFAeroMod=1), UAMod>1 (AFAeroMod=2)')
@@ -1044,6 +1057,20 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
          InputFileData%DBEMT_Mod = DBEMT_frozen
       else
          call WrScr('   FrozenWake=False    -> Not changing DBEMT_Mod')
+      endif
+   endif
+   if (wakeModProvided) then
+      InputFileData%Wake_Mod = InputFileData%WakeMod
+      if (InputFileData%WakeMod==1) then
+         call WrScr('   WakeMod=1           -> Setting DBEMT_Mod=0')
+         ! Turn off DBEMT
+         InputFileData%DBEMT_Mod=DBEMT_none
+      else if (InputFileData%WakeMod==2) then
+         call WrScr('   WakeMod=2           -> Setting Wake_Mod=1 (BEMT) (DBEMT_Mod needs to be >0)')
+         InputFileData%Wake_Mod = WakeMod_BEMT
+         if (InputFileData%DBEMT_Mod < DBEMT_none) then
+            call LegacyAbort('DBEMT should be >0 when using legacy input WakeMod=2')
+         endif
       endif
    endif
    if (AFAeroModProvided) then
@@ -1513,11 +1540,9 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
 
    WRITE (UnSu,'(/,A)') '======  General Options  ============================================================================'
    ! WakeMod
-   select case (p_AD%WakeMod)
+   select case (p_AD%Wake_Mod)
       case (WakeMod_BEMT)
          Msg = 'Blade-Element/Momentum Theory'
-      case (WakeMod_DBEMT)
-         Msg = 'Dynamic Blade-Element/Momentum Theory'
       case (WakeMod_FVW)
          Msg = 'Free Vortex Wake Theory'
       case (WakeMod_None)
@@ -1525,7 +1550,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       case default      
          Msg = 'unknown'      
    end select   
-   WRITE (UnSu,Ec_IntFrmt) p_AD%WakeMod, 'WakeMod', 'Type of wake/induction model: '//TRIM(Msg)
+   WRITE (UnSu,Ec_IntFrmt) p_AD%Wake_Mod, 'WakeMod', 'Type of wake/induction model: '//TRIM(Msg)
    
    ! TwrPotent
    select case (p%TwrPotent)
@@ -1580,7 +1605,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
    WRITE (UnSu,Ec_LgFrmt) p%Buoyancy, 'Buoyancy', 'Include buoyancy effects? '//TRIM(Msg)
 
 
-   if (p_AD%WakeMod/=WakeMod_none) then
+   if (p_AD%Wake_Mod/=WakeMod_none) then
       WRITE (UnSu,'(A)') '======  Blade-Element/Momentum Theory Options  ======================================================'
       
       ! SkewMod 
@@ -1649,6 +1674,8 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       select case (InputFileData%DBEMT_Mod)
          case (DBEMT_frozen)
             Msg = 'frozen-wake'
+         case (DBEMT_none)
+            Msg = 'quasi-steady'
          case (DBEMT_tauConst)
             Msg = 'dynamic - constant tau1'
          case (DBEMT_tauVaries)
@@ -1818,7 +1845,7 @@ SUBROUTINE SetOutParam(OutList, p, p_AD, ErrStat, ErrMsg )
       
    end if
       
-   if (p_AD%WakeMod /= WakeMod_DBEMT) then
+   if (p%DBEMT_Mod > DBEMT_none) then
       InvalidOutput( DBEMTau1 ) = .true.
    end if
 
