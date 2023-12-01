@@ -3847,7 +3847,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       if ( InputFileData%IndToler < 0.0 .or. EqualRealNos(InputFileData%IndToler, 0.0_ReKi) ) &
          call SetErrStat( ErrID_Fatal, 'IndToler must be greater than 0.', ErrStat, ErrMsg, RoutineName )
    
-      if ( InputFileData%Skew_Mod /= Skew_Mod_Orthogonal .and. InputFileData%Skew_Mod /= Skew_Mod_None .and. InputFileData%Skew_Mod /= Skew_Mod_Glauert) & 
+      if ( InputFileData%Skew_Mod /= Skew_Mod_Orthogonal .and. InputFileData%Skew_Mod /= Skew_Mod_None .and. InputFileData%Skew_Mod /= Skew_Mod_Active) & 
            call SetErrStat( ErrID_Fatal, 'Skew_Mod must be -1, 0, or 1.', ErrStat, ErrMsg, RoutineName )      
 
       if ( InputFileData%SectAvg) then
@@ -4295,6 +4295,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
    InitInp%airDens          = InputFileData%AirDens 
    InitInp%kinVisc          = InputFileData%KinVisc
    InitInp%skewWakeMod      = InputFileData%Skew_Mod
+   InitInp%skewRedistrMod   = InputFileData%SkewRedistrMod
    InitInp%yawCorrFactor    = InputFileData%SkewModFactor
    InitInp%aTol             = InputFileData%IndToler
    InitInp%useTipLoss       = InputFileData%TipLoss

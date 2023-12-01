@@ -449,10 +449,10 @@ real(ReKi) function BEMTU_InductionWithResidual(p, u, i, j, phi, AFInfo, IsValid
    
 end function BEMTU_InductionWithResidual
 !-----------------------------------------------------------------------------------------
-subroutine ApplySkewedWakeCorrection(BEM_Mod, SkewMod, yawCorrFactor, F, azimuth, azimuthOffset, chi0, tipRatio, a, chi, FirstWarn )
+subroutine ApplySkewedWakeCorrection(BEM_Mod, SkewRedistrMod, yawCorrFactor, F, azimuth, azimuthOffset, chi0, tipRatio, a, chi, FirstWarn )
    
    integer(IntKi),            intent(in   ) :: BEM_Mod
-   integer(IntKi),            intent(in   ) :: SkewMod
+   integer(IntKi),            intent(in   ) :: SkewRedistrMod
    real(ReKi),                intent(in   ) :: yawCorrFactor ! set to 15*pi/32 previously; now allowed to be input (to better match data) 
    real(ReKi),                intent(in   ) :: F             ! tip/hub loss factor
    real(ReKi),                intent(in   ) :: azimuth
@@ -467,6 +467,10 @@ subroutine ApplySkewedWakeCorrection(BEM_Mod, SkewMod, yawCorrFactor, F, azimuth
    real(ReKi)                               :: yawCorr
    real(ReKi)                               :: yawCorr_tan ! magnitude of the tan(chi/2) correction term (with possible limits)
    
+   if (SkewRedistrMod==SkewRedistrMod_None) then
+      print*,'>>> SkewRedistrMod is None, Shouldnt happen'
+      STOP
+   endif
    
    ! Skewed wake correction
    if(BEM_Mod==BEMMod_2D) then

@@ -17,8 +17,8 @@ usefrom   UnsteadyAero_Registry.txt
 usefrom   DBEMT_Registry.txt
 
 param     BEMT/BEMT                   -                              INTEGER                 Skew_Mod_Orthogonal         -     -1     -   "Inflow orthogonal to rotor [-]" -
-param     BEMT/BEMT                   -                              INTEGER                 Skew_Mod_None               -      0     -   "No skew model (previously called uncoupled)" -
-param     BEMT/BEMT                   -                              INTEGER                 Skew_Mod_Glauert            -      1     -   "Pitt/Peters/Glauert skew model (should be 1)" -
+param     BEMT/BEMT                   -                              INTEGER                 Skew_Mod_None               -      0     -   "No skew model" -
+param     BEMT/BEMT                   -                              INTEGER                 Skew_Mod_Active             -      1     -   "Skew model active" - 
 param     BEMT/BEMT                   -                              INTEGER                 Skew_Mod_PittPeters_Cont    -      4     -   "Pitt/Peters continuous formulation" -
 
 param     BEMT/BEMT                   -                              INTEGER                 SkewRedistrMod_None         -      0     -   "No redistribution" -
@@ -39,7 +39,8 @@ typedef   BEMT/BEMT                    InitInputType                 ReKi       
 typedef   ^                            ^                             INTEGER                  numBlades                       -          -         -        "Number of blades"    -
 typedef   ^                            ^                             ReKi                     airDens                         -          -         -        "Air density"        kg/m^3
 typedef   ^                            ^                             ReKi                     kinVisc                         -          -         -        "Kinematic air viscosity"       m^2/s
-typedef   ^                            ^                             INTEGER                  skewWakeMod                     -          -         -        "Type of skewed-wake correction model [switch] {1=uncoupled, 2=Pitt/Peters, 3=coupled}"  -
+typedef   ^                            ^                             INTEGER                  skewWakeMod                     -          -         -        "Type of skewed-wake model [switch] {0=None, 1=Glauert}"  -
+typedef   ^                            ^                             INTEGER                  skewRedistrMod                  -          -         -        "Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]" - 
 typedef   ^                            ^                             ReKi                     aTol                            -          -         -        "Tolerance for the induction solution" -
 typedef   ^                            ^                             LOGICAL                  useTipLoss                      -          -         -        "Use the Prandtl tip-loss model?  [flag]"        -
 typedef   ^                            ^                             LOGICAL                  useHubLoss                      -          -         -        "Use the Prandtl hub-loss model?  [flag]"        -
@@ -144,6 +145,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             ReKi                     airDens                         -             -         -        "Air density"        kg/m^3
 typedef   ^                            ^                             ReKi                     kinVisc                         -             -         -        "Kinematic air viscosity"       m^2/s
 typedef   ^                            ^                             INTEGER                  skewWakeMod                     -             -         -        "Type of skewed-wake correction model [switch] {0=None, 1=Glauert/Pitt/Peters}"  -
+typedef   ^                            ^                             INTEGER                  skewRedistrMod                  -             -         -        "Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]" - 
 typedef   ^                            ^                             ReKi                     aTol                            -             -         -        "Tolerance for the induction solution" -
 typedef   ^                            ^                             LOGICAL                  useTipLoss                      -             -         -        "Use the Prandtl tip-loss model?  [flag]"        -
 typedef   ^                            ^                             LOGICAL                  useHubLoss                      -             -         -        "Use the Prandtl hub-loss model?  [flag]"        -

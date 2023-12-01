@@ -771,8 +771,8 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    ! Skew_Mod-  Select skew model {0: No skew model at all, -1:Throw away non-normal component for linearization, 1: Glauert skew model, }
    call ParseVar( FileInfo_In, CurLine, "Skew_Mod", InputFileData%Skew_Mod, ErrStat2, ErrMsg2, UnEc )
    if (newInputAbsent('Skew_Mod', CurLine, errStat2, errMsg2)) then
-      call WrScr('         Setting Skew_Mod to 1 (skew active, Gluaert) as the input is absent (typical behavior).')
-      InputFileData%Skew_Mod = Skew_Mod_Glauert
+      call WrScr('         Setting Skew_Mod to 1 (skew active) as the input is absent (typical behavior).')
+      InputFileData%Skew_Mod = Skew_Mod_Active
    else
       if (skewModProvided) then
          call LegacyAbort('Cannot have both Skew_Mod and SkewMod in the input file'); return
@@ -1065,7 +1065,7 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
       else if (InputFileData%SkewMod==1) then
          InputFileData%Skew_Mod = Skew_Mod_None
       else if (InputFileData%SkewMod==2) then
-         InputFileData%Skew_Mod = Skew_Mod_Glauert
+         InputFileData%Skew_Mod = Skew_Mod_Active
       else
          call LegacyAbort('Legacy option SkewMod is not 0, 1,2  which is not supported.')
       endif
@@ -1589,12 +1589,12 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
             Msg = 'orthogonal'
          case (Skew_Mod_None)
             Msg = 'no correction'
-         case (Skew_Mod_Glauert)
-            Msg = 'Glauert/Pitt/Peters' 
+         case (Skew_Mod_Active)
+            Msg = 'active'
          case default      
             Msg = 'unknown'      
       end select
-      WRITE (UnSu,Ec_IntFrmt) InputFileData%Skew_Mod, 'Skew_Mod', 'Type of skewed-wake correction model: '//TRIM(Msg)
+      WRITE (UnSu,Ec_IntFrmt) InputFileData%Skew_Mod, 'Skew_Mod', 'Skewed-wake correction model: '//TRIM(Msg)
       
       
       ! TipLoss

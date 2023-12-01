@@ -182,7 +182,7 @@ typedef	^	AD_InputFile	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
 typedef	^	AD_InputFile	IntKi	SkewMod	-	-	-	"LEGACY - Skew Mod"	-
 typedef	^	AD_InputFile	IntKi	Skew_Mod -	-	-	"Select skew model {0=No skew model at all, -1=Throw away non-normal component for linearization, 1=Glauert skew model}"	-
 typedef	^	AD_InputFile	Logical SkewMomCorr	-	-	-	"Turn the skew momentum correction on or off [used only when SkewMod=1]" - 
-typedef	^	AD_InputFile	IntKi   SkewRedistrMod	-	-	-	"Type of skewed-wake correction model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]" - 
+typedef	^	AD_InputFile	IntKi   SkewRedistrMod	-	-	-	"Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1]" - 
 typedef	^	AD_InputFile	ReKi	SkewModFactor	-	-	-	"Constant used in Pitt/Peters skewed wake model (default is 15*pi/32)" -
 typedef	^	AD_InputFile	LOGICAL	TipLoss	-	-	-	"Use the Prandtl tip-loss model? [unused when WakeMod=0]"	flag
 typedef	^	AD_InputFile	LOGICAL	HubLoss	-	-	-	"Use the Prandtl hub-loss model? [unused when WakeMod=0]"	flag

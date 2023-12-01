@@ -37,8 +37,8 @@ USE DBEMT_Types
 USE NWTC_Library
 IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_Orthogonal = -1      ! Inflow orthogonal to rotor [-] [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_None = 0      ! No skew model (previously called uncoupled) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_Glauert = 1      ! Pitt/Peters/Glauert skew model (should be 1) [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_None = 0      ! No skew model [-]
+    INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_Active = 1      ! Skew model active [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: Skew_Mod_PittPeters_Cont = 4      ! Pitt/Peters continuous formulation [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewRedistrMod_None = 0      ! No redistribution [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewRedistrMod_PittPeters = 1      ! Pitt/Petesr/Glauert redistribution [-]
@@ -52,7 +52,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: numBlades = 0_IntKi      !< Number of blades [-]
     REAL(ReKi)  :: airDens = 0.0_ReKi      !< Air density [kg/m^3]
     REAL(ReKi)  :: kinVisc = 0.0_ReKi      !< Kinematic air viscosity [m^2/s]
-    INTEGER(IntKi)  :: skewWakeMod = 0_IntKi      !< Type of skewed-wake correction model [switch] {1=uncoupled, 2=Pitt/Peters, 3=coupled} [-]
+    INTEGER(IntKi)  :: skewWakeMod = 0_IntKi      !< Type of skewed-wake model [switch] {0=None, 1=Glauert} [-]
+    INTEGER(IntKi)  :: skewRedistrMod = 0_IntKi      !< Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1] [-]
     REAL(ReKi)  :: aTol = 0.0_ReKi      !< Tolerance for the induction solution [-]
     LOGICAL  :: useTipLoss = .false.      !< Use the Prandtl tip-loss model?  [flag] [-]
     LOGICAL  :: useHubLoss = .false.      !< Use the Prandtl hub-loss model?  [flag] [-]
@@ -154,6 +155,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: airDens = 0.0_ReKi      !< Air density [kg/m^3]
     REAL(ReKi)  :: kinVisc = 0.0_ReKi      !< Kinematic air viscosity [m^2/s]
     INTEGER(IntKi)  :: skewWakeMod = 0_IntKi      !< Type of skewed-wake correction model [switch] {0=None, 1=Glauert/Pitt/Peters} [-]
+    INTEGER(IntKi)  :: skewRedistrMod = 0_IntKi      !< Type of skewed-wake redistribution model (switch) {0=no redistribution, 1=Glauert/Pitt/Peters, 2=Vortex Cylinder} [unsed only when SkewMod=1] [-]
     REAL(ReKi)  :: aTol = 0.0_ReKi      !< Tolerance for the induction solution [-]
     LOGICAL  :: useTipLoss = .false.      !< Use the Prandtl tip-loss model?  [flag] [-]
     LOGICAL  :: useHubLoss = .false.      !< Use the Prandtl hub-loss model?  [flag] [-]
@@ -259,6 +261,7 @@ subroutine BEMT_CopyInitInput(SrcInitInputData, DstInitInputData, CtrlCode, ErrS
    DstInitInputData%airDens = SrcInitInputData%airDens
    DstInitInputData%kinVisc = SrcInitInputData%kinVisc
    DstInitInputData%skewWakeMod = SrcInitInputData%skewWakeMod
+   DstInitInputData%skewRedistrMod = SrcInitInputData%skewRedistrMod
    DstInitInputData%aTol = SrcInitInputData%aTol
    DstInitInputData%useTipLoss = SrcInitInputData%useTipLoss
    DstInitInputData%useHubLoss = SrcInitInputData%useHubLoss
@@ -428,6 +431,7 @@ subroutine BEMT_PackInitInput(Buf, Indata)
    call RegPack(Buf, InData%airDens)
    call RegPack(Buf, InData%kinVisc)
    call RegPack(Buf, InData%skewWakeMod)
+   call RegPack(Buf, InData%skewRedistrMod)
    call RegPack(Buf, InData%aTol)
    call RegPack(Buf, InData%useTipLoss)
    call RegPack(Buf, InData%useHubLoss)
@@ -521,6 +525,8 @@ subroutine BEMT_UnPackInitInput(Buf, OutData)
    call RegUnpack(Buf, OutData%kinVisc)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%skewWakeMod)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%skewRedistrMod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%aTol)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -1578,6 +1584,7 @@ subroutine BEMT_CopyParam(SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg)
    DstParamData%airDens = SrcParamData%airDens
    DstParamData%kinVisc = SrcParamData%kinVisc
    DstParamData%skewWakeMod = SrcParamData%skewWakeMod
+   DstParamData%skewRedistrMod = SrcParamData%skewRedistrMod
    DstParamData%aTol = SrcParamData%aTol
    DstParamData%useTipLoss = SrcParamData%useTipLoss
    DstParamData%useHubLoss = SrcParamData%useHubLoss
@@ -1726,6 +1733,7 @@ subroutine BEMT_PackParam(Buf, Indata)
    call RegPack(Buf, InData%airDens)
    call RegPack(Buf, InData%kinVisc)
    call RegPack(Buf, InData%skewWakeMod)
+   call RegPack(Buf, InData%skewRedistrMod)
    call RegPack(Buf, InData%aTol)
    call RegPack(Buf, InData%useTipLoss)
    call RegPack(Buf, InData%useHubLoss)
@@ -1809,6 +1817,8 @@ subroutine BEMT_UnPackParam(Buf, OutData)
    call RegUnpack(Buf, OutData%kinVisc)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%skewWakeMod)
+   if (RegCheckErr(Buf, RoutineName)) return
+   call RegUnpack(Buf, OutData%skewRedistrMod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%aTol)
    if (RegCheckErr(Buf, RoutineName)) return
