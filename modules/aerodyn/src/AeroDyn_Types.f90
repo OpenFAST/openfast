@@ -100,7 +100,6 @@ IMPLICIT NONE
     REAL(R8Ki) , DIMENSION(1:3)  :: NacellePosition = 0.0_R8Ki      !< X-Y-Z reference position of nacelle [m]
     REAL(R8Ki) , DIMENSION(1:3,1:3)  :: NacelleOrientation = 0.0_R8Ki      !< DCM reference orientation of nacelle [-]
     INTEGER(IntKi)  :: AeroProjMod = 1      !< Flag to switch between different projection models [-]
-    INTEGER(IntKi)  :: AeroBEM_Mod = -1      !< Flag to switch between different BEM Model [-]
     REAL(ReKi)  :: RotSpeed = 0.0_ReKi      !< Rotor speed used when AeroDyn is computing aero maps [rad/s]
   END TYPE RotInitInputType
 ! =======================
@@ -430,7 +429,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: WtrDpth = 0.0_ReKi      !< Water depth [m]
     REAL(ReKi)  :: MSL2SWL = 0.0_ReKi      !< Offset between still-water level and mean sea level [m]
     INTEGER(IntKi)  :: AeroProjMod = 1      !< Flag to switch between different projection models [-]
-    INTEGER(IntKi)  :: AeroBEM_Mod = -1      !< Flag to switch between different BEM Model [-]
+    INTEGER(IntKi)  :: BEM_Mod = -1      !< Flag to switch between different BEM Model [-]
     INTEGER(IntKi)  :: NumOuts = 0_IntKi      !< Number of parameters in the output list (number of outputs requested) [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
     TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
@@ -878,7 +877,6 @@ subroutine AD_CopyRotInitInputType(SrcRotInitInputTypeData, DstRotInitInputTypeD
    DstRotInitInputTypeData%NacellePosition = SrcRotInitInputTypeData%NacellePosition
    DstRotInitInputTypeData%NacelleOrientation = SrcRotInitInputTypeData%NacelleOrientation
    DstRotInitInputTypeData%AeroProjMod = SrcRotInitInputTypeData%AeroProjMod
-   DstRotInitInputTypeData%AeroBEM_Mod = SrcRotInitInputTypeData%AeroBEM_Mod
    DstRotInitInputTypeData%RotSpeed = SrcRotInitInputTypeData%RotSpeed
 end subroutine
 
@@ -919,7 +917,6 @@ subroutine AD_PackRotInitInputType(Buf, Indata)
    call RegPack(Buf, InData%NacellePosition)
    call RegPack(Buf, InData%NacelleOrientation)
    call RegPack(Buf, InData%AeroProjMod)
-   call RegPack(Buf, InData%AeroBEM_Mod)
    call RegPack(Buf, InData%RotSpeed)
    if (RegCheckErr(Buf, RoutineName)) return
 end subroutine
@@ -973,8 +970,6 @@ subroutine AD_UnPackRotInitInputType(Buf, OutData)
    call RegUnpack(Buf, OutData%NacelleOrientation)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%AeroProjMod)
-   if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%AeroBEM_Mod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%RotSpeed)
    if (RegCheckErr(Buf, RoutineName)) return
@@ -5677,7 +5672,7 @@ subroutine AD_CopyRotParameterType(SrcRotParameterTypeData, DstRotParameterTypeD
    DstRotParameterTypeData%WtrDpth = SrcRotParameterTypeData%WtrDpth
    DstRotParameterTypeData%MSL2SWL = SrcRotParameterTypeData%MSL2SWL
    DstRotParameterTypeData%AeroProjMod = SrcRotParameterTypeData%AeroProjMod
-   DstRotParameterTypeData%AeroBEM_Mod = SrcRotParameterTypeData%AeroBEM_Mod
+   DstRotParameterTypeData%BEM_Mod = SrcRotParameterTypeData%BEM_Mod
    DstRotParameterTypeData%NumOuts = SrcRotParameterTypeData%NumOuts
    DstRotParameterTypeData%RootName = SrcRotParameterTypeData%RootName
    if (allocated(SrcRotParameterTypeData%OutParam)) then
@@ -5958,7 +5953,7 @@ subroutine AD_PackRotParameterType(Buf, Indata)
    call RegPack(Buf, InData%WtrDpth)
    call RegPack(Buf, InData%MSL2SWL)
    call RegPack(Buf, InData%AeroProjMod)
-   call RegPack(Buf, InData%AeroBEM_Mod)
+   call RegPack(Buf, InData%BEM_Mod)
    call RegPack(Buf, InData%NumOuts)
    call RegPack(Buf, InData%RootName)
    call RegPack(Buf, allocated(InData%OutParam))
@@ -6315,7 +6310,7 @@ subroutine AD_UnPackRotParameterType(Buf, OutData)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%AeroProjMod)
    if (RegCheckErr(Buf, RoutineName)) return
-   call RegUnpack(Buf, OutData%AeroBEM_Mod)
+   call RegUnpack(Buf, OutData%BEM_Mod)
    if (RegCheckErr(Buf, RoutineName)) return
    call RegUnpack(Buf, OutData%NumOuts)
    if (RegCheckErr(Buf, RoutineName)) return

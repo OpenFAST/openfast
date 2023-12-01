@@ -82,7 +82,6 @@ typedef	^	RotInitInputType	R8Ki	BladeRootOrientation	{:}{:}{:}	-	-	"DCM referenc
 typedef	^	RotInitInputType	R8Ki	NacellePosition	{3}	-	-	"X-Y-Z reference position of nacelle"	m
 typedef	^	RotInitInputType	R8Ki	NacelleOrientation	{3}{3}	-	-	"DCM reference orientation of nacelle"	-
 typedef	^	RotInitInputType	IntKi	AeroProjMod   	-	1	-	"Flag to switch between different projection models"	-
-typedef	^	RotInitInputType	IntKi	AeroBEM_Mod   	-      -1	-	"Flag to switch between different BEM Model"	-
 typedef	^	RotInitInputType	ReKi	RotSpeed	-	-	0	"Rotor speed used when AeroDyn is computing aero maps"	"rad/s"
 
 typedef	^	InitInputType	RotInitInputType rotors	{:}	-	-	"Init Input Types for rotors"	-
@@ -390,7 +389,7 @@ typedef ^   RotParameterType    ReKi    Pvap      -   -   -  "Vapour pressure" P
 typedef ^   RotParameterType    ReKi    WtrDpth -  -   -     "Water depth" m
 typedef ^   RotParameterType    ReKi    MSL2SWL -  -   -     "Offset between still-water level and mean sea level" m
 typedef	^	RotParameterType	IntKi	AeroProjMod   	-	1	-	"Flag to switch between different projection models"	-
-typedef	^	RotParameterType	IntKi	AeroBEM_Mod   	-      -1	-	"Flag to switch between different BEM Model"	-
+typedef	^	RotParameterType	IntKi	BEM_Mod   	-      -1	-	"Flag to switch between different BEM Model"	-
 # parameters for output
 typedef	^	RotParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	RotParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-

@@ -467,11 +467,6 @@ subroutine ApplySkewedWakeCorrection(BEM_Mod, SkewRedistrMod, yawCorrFactor, F, 
    real(ReKi)                               :: yawCorr
    real(ReKi)                               :: yawCorr_tan ! magnitude of the tan(chi/2) correction term (with possible limits)
    
-   if (SkewRedistrMod==SkewRedistrMod_None) then
-      print*,'>>> SkewRedistrMod is None, Shouldnt happen'
-      STOP
-   endif
-   
    ! Skewed wake correction
    if(BEM_Mod==BEMMod_2D) then
       chi = (0.6_ReKi*a + 1.0_ReKi)*chi0

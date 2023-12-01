@@ -369,8 +369,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    do iR = 1, nRotors
       p%rotors(iR)%AeroProjMod = InitInp%rotors(iR)%AeroProjMod
       !p%rotors(iR)%AeroProjMod = AeroProjMod(iR)
-      p%rotors(iR)%AeroBEM_Mod = InitInp%rotors(iR)%AeroBEM_Mod
-      call WrScr('   AeroDyn: projMod: '//trim(num2lstr(p%rotors(iR)%AeroProjMod))//', BEM_Mod:'//trim(num2lstr(p%rotors(iR)%AeroBEM_Mod)))      
+      call WrScr('   AeroDyn: projMod: '//trim(num2lstr(p%rotors(iR)%AeroProjMod)))
       if (AeroProjMod(iR) == APM_BEM_Polar .and. InputFileData%WakeMod==WakeMod_FVW) then
          call WrScr('AeroProj cannot be 2 (somehow) when using OLAF - Aborting')
          STOP
@@ -2936,7 +2935,7 @@ subroutine SetInputsForBEMT(p, p_AD, u, m, indx, errStat, errMsg)
         signofAngle = sign(1.0_ReKi,SkewVec(3))
       endif
 
-      if (p%AeroBEM_Mod /= BEMMod_2D) then
+      if (p%BEM_Mod /= BEMMod_2D) then ! TODO
          m%BEMT_u(indx)%chi0 = sign( m%BEMT_u(indx)%chi0, signOfAngle )
       endif
    end if
@@ -4404,37 +4403,11 @@ SUBROUTINE Init_BEMTmodule( InputFileData, RotInputFileData, u_AD, u, p, p_AD, x
    InitInp%UAMod         = InputFileData%UAMod
    InitInp%Flookup       = InputFileData%Flookup
    InitInp%a_s           = InputFileData%SpdSound
-   InitInp%MomentumCorr  = .FALSE. ! TODO EB
    InitInp%SumPrint      = InputFileData%SumPrint
    InitInp%RootName      = p%RootName
-   InitInp%BEM_Mod       = p%AeroBEM_Mod
-
-
-   if (p%AeroBEM_Mod==-1) then
-      !call WrSCr('WARNING: AeroDyn: BEM_Mod is -1, using default BEM_Mod based on projection')
-      if (p%AeroProjMod == APM_BEM_NoSweepPitchTwist) then
-         InitInp%BEM_Mod    = BEMMod_2D
-      else if (p%AeroProjMod == APM_BEM_Polar) then
-         InitInp%BEM_Mod    = BEMMod_3D
-      else
-         InitInp%BEM_Mod    = -1
-         call SetErrStat(ErrID_Fatal, "AeroProjMod needs to be 1 or 2 when used with BEM", ErrStat, ErrMsg, RoutineName)   
-      endif
-   else if (p%AeroBEM_Mod== BEMMod_3D_MomCorr) then
-         InitInp%BEM_Mod  = BEMMod_3D
-         InitInp%MomentumCorr = .TRUE. 
-   else if (p%AeroBEM_Mod== BEMMod_3D_MomCorr_SA) then
-         InitInp%BEM_Mod  = BEMMod_3D
-         InitInp%MomentumCorr = .TRUE. 
-         ! HACK
-         p_AD%SectAvg        = .TRUE.
-         !p_AD%SA_PsiBwd      = -30*D2R
-         !p_AD%SA_PsiFwd      = 30*D2R
-         !p_AD%SA_nPerSec     = 5
-
-   endif
-   p%AeroBEM_Mod = InitInp%BEM_Mod ! Very important, for consistency
-   ! 
+   InitInp%BEM_Mod       = InputFileData%BEM_Mod
+   InitInp%MomentumCorr  = InputFileData%SkewMomCorr
+   p%BEM_Mod             = InputFileData%BEM_Mod ! TODO try to get rid of me
 
    ! --- Print BEM formulation to screen
    Label = ''

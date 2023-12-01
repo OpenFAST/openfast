@@ -44,8 +44,6 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: SkewRedistrMod_PittPeters = 1      ! Pitt/Petesr/Glauert redistribution [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_2D = 0      ! 2D BEM assuming Cx, Cy, phi, L, D are in the same plane [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_3D = 2      ! 3D BEM assuming a momentum balance system, and an airfoil system [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_3D_MomCorr = 250      ! 3D BEM - Momentum Correction [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: BEMMod_3D_MomCorr_SA = 500      ! 3D BEM - Shear sector average [-]
 ! =========  BEMT_InitInputType  =======
   TYPE, PUBLIC :: BEMT_InitInputType
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: chord      !< Chord length at node [m]
