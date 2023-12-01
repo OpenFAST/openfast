@@ -1016,6 +1016,30 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
    call ReadOutputListFromFileInfo( FileInfo_In, CurLine, InputFileData%OutList, InputFileData%NumOuts, ErrStat2, ErrMsg2, UnEc )
          if (Failed()) return;
 
+   !====== Legacy logic to match old and new input files ================================================
+   ! NOTE: remove me in future release
+   if (frozenWakeProvided) then
+      if (InputFileData%FrozenWake) then
+         call WrScr('   FrozenWake=True     -> Setting DBEMT_Mod=-1')
+         InputFileData%DBEMT_Mod = DBEMT_frozen
+      else
+         call WrScr('   FrozenWake=False    -> Not changing DBEMT_Mod')
+      endif
+   endif
+   if (AFAeroModProvided) then
+      if (InputFileData%AFAeroMod==1) then
+         call WrScr('   AFAeroMod=1         -> Setting UAMod=0')
+         InputFileData%UAMod = UA_None
+      else if (InputFileData%AFAeroMod==2) then
+         call WrScr('   AFAeroMod=2         -> Not changing DBEMT_Mod')
+         if (InputFileData%UAMod==0) then
+            call LegacyAbort('Cannot set UAMod=0 with legacy option AFAeroMod=2 (inconsistent behavior).')
+         endif
+      else
+         call LegacyAbort('AFAeroMod should be 1 or 2'); return
+      endif
+   endif
+
    !======  Nodal Outputs  ==============================================================================
       ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it.
       ! Expecting at least 5 more lines in the input file for this section
@@ -1047,28 +1071,6 @@ SUBROUTINE ParsePrimaryFileInfo( PriPath, InitInp, InputFile, RootName, NumBlade
 !FIXME: improve logic on the node outputs
    ! Prevent segfault when no blades specified.  All logic tests on BldNd_NumOuts at present.
    if (InputFileData%BldNd_BladesOut <= 0)   InputFileData%BldNd_NumOuts = 0
-
-
-   !====== Legacy logic to match old and new input files ================================================
-   ! NOTE: remove me in future release
-   if (frozenWakeProvided) then
-      if (InputFileData%FrozenWake) then
-         call WrScr('   FrozenWake=True     -> Setting DBEMT_Mod=-1')
-         InputFileData%DBEMT_Mod = DBEMT_frozen
-      else
-         call WrScr('   FrozenWake=False    -> Not changing DBEMT_Mod')
-      endif
-   endif
-   if (AFAeroModProvided) then
-      if (InputFileData%AFAeroMod==1) then
-         call WrScr('   AFAeroMod=1         -> Setting UAMod=0')
-         ! InputFileData%UAMod=0
-      else if (InputFileData%AFAeroMod==2) then
-         call WrScr('   AFAeroMod=2         -> Not changing DBEMT_Mod')
-      else
-         call LegacyAbort('AFAeroMod should be 1 or 2'); return
-      endif
-   endif
 
    !====== Summary of new AeroDyn options ===============================================================
    ! NOTE: remove me in future release
@@ -1162,9 +1164,9 @@ CONTAINS
       legacyInputPresent = errStat == ErrID_None
       if (legacyInputPresent) then
          if (present(varNameSubs)) then
-            call LegacyWarning('Input '//trim(varName)//' has now been removed.'//NewLine//'Replaced by: '//trim(varNameSubs)//'.')
+            call LegacyWarning(trim(varName)//' has now been removed.'//NewLine//'  Using: '//trim(varNameSubs)//'.')
          else
-            call LegacyWarning('Input '//trim(varName)//' has now been removed.')
+            call LegacyWarning(trim(varName)//' has now been removed.')
          endif
       else
          ! We are actually happy, this input should indeed not be present.
@@ -1182,7 +1184,7 @@ CONTAINS
       character(len=*), optional, intent(in  )  :: varNameSubs !< Substituted variable
       newInputAbsent = errStat == ErrID_Fatal
       if (newInputAbsent) then
-         call LegacyWarning('Input '//trim(varName)//' should be present on line '//trim(num2lstr(iLine))//'.')
+         call LegacyWarning(trim(varName)//' should be present on line '//trim(num2lstr(iLine))//'.')
       else
          ! We are happy
       endif
@@ -1491,19 +1493,6 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
          Msg = 'unknown'      
    end select   
    WRITE (UnSu,Ec_IntFrmt) p_AD%WakeMod, 'WakeMod', 'Type of wake/induction model: '//TRIM(Msg)
-
-   
-   ! AFAeroMod
-   select case (InputFileData%AFAeroMod)
-      case (AFAeroMod_BL_unsteady)
-         Msg = 'Beddoes-Leishman unsteady model'
-      case (AFAeroMod_steady)
-         Msg = 'steady'
-      case default      
-         Msg = 'unknown'      
-   end select   
-   WRITE (UnSu,Ec_IntFrmt) InputFileData%AFAeroMod, 'AFAeroMod', 'Type of blade airfoil aerodynamics model: '//TRIM(Msg)
-   
    
    ! TwrPotent
    select case (p%TwrPotent)
@@ -1645,42 +1634,43 @@ SUBROUTINE AD_PrintSum( InputFileData, p, p_AD, u, y, ErrStat, ErrMsg )
       
    end if
    
-   if (InputFileData%AFAeroMod==AFAeroMod_BL_unsteady) then
-      WRITE (UnSu,'(A)') '======  Beddoes-Leishman Unsteady Airfoil Aerodynamics Options  ====================================='
-      
-      ! UAMod
-      select case (InputFileData%UAMod)
-         case (UA_Baseline)
-            Msg = 'baseline model (original)'
-         case (UA_Gonzalez)
-            Msg = "Gonzalez's variant (changes in Cn, Cc, and Cm)"
-         case (UA_MinnemaPierce)
-            Msg = 'Minnema/Pierce variant (changes in Cc and Cm)'      
-         !case (4)
-         !   Msg = 'DYSTOOL'      
-         case (UA_HGM)
-            Msg = 'HGM (continuous state)'
-         case (UA_HGMV)
-            Msg = 'HGMV (continuous state + vortex)'
-         case (UA_OYE)
-            Msg = 'Stieg Oye dynamic stall model'
-         case (UA_BV)
-            Msg = 'Boeing-Vertol dynamic stall model (e.g. used in CACTUS)'
-         case default
-            Msg = 'unknown'      
-      end select
-      WRITE (UnSu,Ec_IntFrmt) InputFileData%UAMod, 'UAMod', 'Unsteady Aero Model: '//TRIM(Msg)
+   WRITE (UnSu,'(A)') '======================== Unsteady Airfoil Aerodynamics Options  ====================================='
    
-   
-      ! FLookup
-      if (InputFileData%FLookup) then
-         Msg = 'Yes'
-      else
-         Msg = 'No, use best-fit exponential equations instead'
-      end if   
-      WRITE (UnSu,Ec_LgFrmt) InputFileData%FLookup, 'FLookup', "Use a lookup for f'? "//TRIM(Msg)      
+   ! UAMod
+   select case (InputFileData%UAMod)
+      case (UA_None)
+         Msg = 'none (quasi-steady airfoil aerodynamics)'
+      case (UA_Baseline)
+         Msg = 'baseline model (original)'
+      case (UA_Gonzalez)
+         Msg = "Gonzalez's variant (changes in Cn, Cc, and Cm)"
+      case (UA_MinnemaPierce)
+         Msg = 'Minnema/Pierce variant (changes in Cc and Cm)'      
+      !case (4)
+      !   Msg = 'DYSTOOL'      
+      case (UA_HGM)
+         Msg = 'HGM (continuous state)'
+      case (UA_HGMV)
+         Msg = 'HGMV (continuous state + vortex)'
+      case (UA_OYE)
+         Msg = 'Stieg Oye dynamic stall model'
+      case (UA_BV)
+         Msg = 'Boeing-Vertol dynamic stall model (e.g. used in CACTUS)'
+      case default
+         Msg = 'unknown'      
+   end select
+   WRITE (UnSu,Ec_IntFrmt) InputFileData%UAMod, 'UAMod', 'Unsteady Aero Model: '//TRIM(Msg)
+
+
+   ! FLookup
+   if (InputFileData%FLookup) then
+      Msg = 'Yes'
+   else
+      Msg = 'No, use best-fit exponential equations instead'
+   end if   
+   WRITE (UnSu,Ec_LgFrmt) InputFileData%FLookup, 'FLookup', "Use a lookup for f'? "//TRIM(Msg)      
+
       
-   end if
    
    WRITE (UnSu,'(A)') '======  Outputs  ===================================================================================='
    

@@ -342,15 +342,13 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! bjj: do we put a warning here if any of these values aren't currently set this way?
    if (InitInp%CompAeroMaps) then
       InputFileData%DTAero     = interval ! we're not using this, so set it to something "safe"
-      do iR = 1, nRotors
-         InputFileData%AFAeroMod  = AFAeroMod_Steady
-         InputFileData%TwrPotent  = TwrPotent_none
-         InputFileData%TwrShadow  = TwrShadow_none
-         InputFileData%TwrAero    = .false.
-        !InputFileData%CavitCheck = .false.
-        !InputFileData%TFinAero   = .false. ! not sure if this needs to be set or not
-      end do
-      InputFileData%DBEMT_Mod = 0
+      InputFileData%UAMod      = UA_None
+      InputFileData%TwrPotent  = TwrPotent_none
+      InputFileData%TwrShadow  = TwrShadow_none
+      InputFileData%TwrAero    = .false.
+     !InputFileData%CavitCheck = .false.
+     !InputFileData%TFinAero   = .false. ! not sure if this needs to be set or not
+      InputFileData%DBEMT_Mod = DBEMT_none
    end if
       
       ! Validate the inputs
@@ -1318,7 +1316,7 @@ subroutine SetParameters( InitInp, InputFileData, RotData, p, p_AD, ErrStat, Err
 
    ! NOTE: p_AD%FlowField is set in the glue code (or ADI module); seems like FlowField should be an initialization input so that would be clearer for new developers...
    
-   p_AD%UA_Flag       = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
+   p_AD%UA_Flag       = InputFileData%UAMod > UA_None
    p_AD%CompAeroMaps  = InitInp%CompAeroMaps
 
    p_AD%SectAvg        = InputFileData%SectAvg
@@ -3797,10 +3795,6 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
          trim(num2lstr(WakeMod_DBEMT))//' (DBEMT), or '//trim(num2lstr(WakeMod_FVW))//' (FVW).',ErrStat, ErrMsg, RoutineName ) 
    end if
    
-   if (InputFileData%AFAeroMod /= AFAeroMod_Steady .and. InputFileData%AFAeroMod /= AFAeroMod_BL_unsteady) then
-      call SetErrStat ( ErrID_Fatal, 'AFAeroMod must be '//trim(num2lstr(AFAeroMod_Steady))//' (steady) or '//&
-                        trim(num2lstr(AFAeroMod_BL_unsteady))//' (Beddoes-Leishman unsteady).', ErrStat, ErrMsg, RoutineName ) 
-   end if
    if (InputFileData%TwrPotent /= TwrPotent_none .and. InputFileData%TwrPotent /= TwrPotent_baseline .and. InputFileData%TwrPotent /= TwrPotent_Bak) then
       call SetErrStat ( ErrID_Fatal, 'TwrPotent must be 0 (none), 1 (baseline potential flow), or 2 (potential flow with Bak correction).', ErrStat, ErrMsg, RoutineName ) 
    end if   
@@ -3866,7 +3860,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    end if !BEMT/DBEMT checks
    
    
-   if ( InputFileData%CavitCheck .and. InputFileData%AFAeroMod == AFAeroMod_BL_unsteady) then
+   if ( InputFileData%CavitCheck .and. InputFileData%UAMod >0) then
       call SetErrStat( ErrID_Fatal, 'Cannot use unsteady aerodynamics module with a cavitation check', ErrStat, ErrMsg, RoutineName )
    end if
         
@@ -4062,14 +4056,13 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    ! check for linearization
    !..................
    if (InitInp%Linearize) then
-      if (InputFileData%AFAeroMod /= AFAeroMod_Steady) then
-         if (InputFileData%UAMod /= UA_HGM .and. InputFileData%UAMod /= UA_HGMV .and. InputFileData%UAMod /= UA_OYE) then
-            call SetErrStat( ErrID_Fatal, 'When AFAeroMod=2, UAMod must be 4, 5, or 6 for linearization. Set AFAeroMod=1, or, set UAMod=4, 5, or 6.', ErrStat, ErrMsg, RoutineName )
-         end if
+      if (InputFileData%UAMod /= UA_None .and. InputFileData%UAMod /= UA_HGM .and. InputFileData%UAMod /= UA_HGMV .and. InputFileData%UAMod /= UA_OYE) then
+         call SetErrStat( ErrID_Fatal, 'UAMod must be 0, 4, 5, or 6 for linearization.', ErrStat, ErrMsg, RoutineName )
       end if
       
       if (InputFileData%WakeMod == WakeMod_FVW) then !bjj: note: among other things, WriteOutput values will not be calculated properly in AD Jacobians if FVW this is allowed
          call SetErrStat( ErrID_Fatal, 'FVW cannot currently be used for linearization. Set WakeMod=0 or WakeMod=1.', ErrStat, ErrMsg, RoutineName )
+
       else if (InputFileData%WakeMod == WakeMod_DBEMT) then
          if (InputFileData%DBEMT_Mod /= DBEMT_cont_tauConst) then
             call SetErrStat( ErrID_Fatal, 'DBEMT requires the continuous formulation with constant tau1 for linearization. Set DBEMT_Mod=3 or set WakeMod to 0 or 1.', ErrStat, ErrMsg, RoutineName )

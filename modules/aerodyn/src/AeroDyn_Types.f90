@@ -43,8 +43,6 @@ IMPLICIT NONE
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_BEMT = 1      ! Wake model - BEMT (blade elememnt momentum theory) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_DBEMT = 2      ! Wake model - DBEMT (dynamic elememnt momentum theory) [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: WakeMod_FVW = 3      ! Wake model - FVW (free vortex wake, OLAF) [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFAeroMod_steady = 1      ! steady model [-]
-    INTEGER(IntKi), PUBLIC, PARAMETER  :: AFAeroMod_BL_unsteady = 2      ! Beddoes-Leishman unsteady model [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrPotent_none = 0      ! no tower potential flow [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrPotent_baseline = 1      ! baseline tower potential flow [-]
     INTEGER(IntKi), PUBLIC, PARAMETER  :: TwrPotent_Bak = 2      ! tower potential flow with Bak correction [-]
