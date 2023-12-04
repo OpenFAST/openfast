@@ -508,14 +508,14 @@ subroutine FAST_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, NumOuts_c, d
 end subroutine FAST_Restart 
 
 !==================================================================================================================================
-subroutine FAST_BR_CFD_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c, TurbPosn, AbortErrLev_c, dtDriver_c, dt_c, NumBl_c, &
+subroutine FAST_ExtLoads_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c, TurbPosn, AbortErrLev_c, dtDriver_c, dt_c, NumBl_c, &
      az_blend_mean_c, az_blend_delta_c, vel_mean_c, wind_dir_c, z_ref_c, shear_exp_c, &
-     ExtLd_Input_from_FAST, ExtLd_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_BR_CFD_Init')
-!DEC$ ATTRIBUTES DLLEXPORT::FAST_BR_CFD_Init
+     ExtLd_Input_from_FAST, ExtLd_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_ExtLoads_Init')
+!DEC$ ATTRIBUTES DLLEXPORT::FAST_ExtLoads_Init
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: FAST_BR_CFD_Init
-!GCC$ ATTRIBUTES DLLEXPORT :: FAST_BR_CFD_Init
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_ExtLoads_Init
+!GCC$ ATTRIBUTES DLLEXPORT :: FAST_ExtLoads_Init
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number
    REAL(C_DOUBLE),         INTENT(IN   ) :: TMax
@@ -546,7 +546,7 @@ subroutine FAST_BR_CFD_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c,
    TYPE(FAST_ExternInitType)             :: ExternInitData
    INTEGER(IntKi)                        :: CompLoadsType
 
-   CHARACTER(*),           PARAMETER     :: RoutineName = 'FAST_BR_CFD_Init'
+   CHARACTER(*),           PARAMETER     :: RoutineName = 'FAST_ExtLoads_Init'
 
       ! transfer the character array from C to a Fortran string:
    InputFileName = TRANSFER( InputFileName_c, InputFileName )
@@ -604,72 +604,68 @@ subroutine FAST_BR_CFD_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c,
    ErrStat_c     = ErrStat
    ErrMsg_c      = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
 
-end subroutine FAST_BR_CFD_Init
-
+end subroutine FAST_ExtLoads_Init
 !==================================================================================================================================
-subroutine FAST_AL_CFD_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c, NumSC2CtrlGlob, NumSC2Ctrl, NumCtrl2SC, InitSCOutputsGlob, InitSCOutputsTurbine, &
-     NumActForcePtsBlade, NumActForcePtsTower, TurbPosn, AbortErrLev_c, dtDriver_c, dt_c, InflowType, NumBl_c, NumBlElem_c, NumTwrElem_c, &
-     ExtInfw_Input_from_FAST, ExtInfw_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_AL_CFD_Init')
-!DEC$ ATTRIBUTES DLLEXPORT::FAST_CFD_Init
+subroutine FAST_ExtInfw_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c, NumSC2CtrlGlob, NumSC2Ctrl, NumCtrl2SC, InitSCOutputsGlob, InitSCOutputsTurbine, NumActForcePtsBlade, NumActForcePtsTower, TurbPosn, AbortErrLev_c, dtDriver_c, dt_c, InflowType, NumBl_c, NumBlElem_c, NumTwrElem_c, NodeClusterType_c, &
+                          ExtInfw_Input_from_FAST, ExtInfw_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_ExtInfw_Init')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: FAST_CFD_Init
-!GCC$ ATTRIBUTES DLLEXPORT :: FAST_CFD_Init
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_ExtInfw_Init
+!GCC$ ATTRIBUTES DLLEXPORT :: FAST_ExtInfw_Init
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number
-   REAL(C_DOUBLE),         INTENT(IN   ) :: TMax
-   CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: InputFileName_c(IntfStrLen)
-   INTEGER(C_INT),         INTENT(IN   ) :: TurbID           ! Need not be same as iTurb
-   INTEGER(C_INT),         INTENT(IN   ) :: NumSC2CtrlGlob   ! Supercontroller global outputs = controller global inputs
+   INTEGER(C_INT),            INTENT(IN   ) :: iTurb            ! Turbine number 
+   REAL(C_DOUBLE),            INTENT(IN   ) :: TMax      
+   CHARACTER(KIND=C_CHAR),    INTENT(IN   ) :: InputFileName_c(IntfStrLen)      
+   INTEGER(C_INT),            INTENT(IN   ) :: TurbID           ! Need not be same as iTurb
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: OutFileRoot_c(IntfStrLen)    ! Root of output and restart file name
-   INTEGER(C_INT),         INTENT(IN   ) :: NumSC2Ctrl       ! Supercontroller outputs = controller inputs
-   INTEGER(C_INT),         INTENT(IN   ) :: NumCtrl2SC       ! controller outputs = Supercontroller inputs
-   REAL(C_FLOAT),          INTENT(IN   ) :: InitScOutputsGlob (*) ! Initial Supercontroller global outputs = controller inputs
-   REAL(C_FLOAT),          INTENT(IN   ) :: InitScOutputsTurbine (*) ! Initial Supercontroller turbine specific outputs = controller inputs
-   INTEGER(C_INT),         INTENT(IN   ) :: NumActForcePtsBlade ! number of actuator line force points in blade
-   INTEGER(C_INT),         INTENT(IN   ) :: NumActForcePtsTower ! number of actuator line force points in tower
-   REAL(C_FLOAT),          INTENT(IN   ) :: TurbPosn(3)
-   REAL(C_DOUBLE),         INTENT(IN   ) :: dtDriver_c
-   REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c
-   INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c
-   INTEGER(C_INT),         INTENT(  OUT) :: InflowType    ! inflow type - 1 = From Inflow module, 2 = External
-   INTEGER(C_INT),         INTENT(  OUT) :: NumBl_c
-   INTEGER(C_INT),         INTENT(  OUT) :: NumBlElem_c
-   INTEGER(C_INT),         INTENT(  OUT) :: NumTwrElem_c
-   TYPE(ExtInfw_InputType_C), INTENT(  OUT) :: ExtInfw_Input_from_FAST
-   TYPE(ExtInfw_OutputType_C),INTENT(  OUT) :: ExtInfw_Output_to_FAST
+   INTEGER(C_INT),            INTENT(IN   ) :: NumSC2CtrlGlob   ! Supercontroller global outputs = controller global inputs   
+   INTEGER(C_INT),            INTENT(IN   ) :: NumSC2Ctrl       ! Supercontroller outputs = controller inputs
+   INTEGER(C_INT),            INTENT(IN   ) :: NumCtrl2SC       ! controller outputs = Supercontroller inputs
+   REAL(C_FLOAT),             INTENT(IN   ) :: InitScOutputsGlob (*) ! Initial Supercontroller global outputs = controller inputs
+   REAL(C_FLOAT),             INTENT(IN   ) :: InitScOutputsTurbine (*) ! Initial Supercontroller turbine specific outputs = controller inputs
+   INTEGER(C_INT),            INTENT(IN   ) :: NumActForcePtsBlade ! number of actuator line force points in blade
+   INTEGER(C_INT),            INTENT(IN   ) :: NumActForcePtsTower ! number of actuator line force points in tower
+   INTEGER(C_INT),            INTENT(IN    ):: NodeClusterType_c
+   REAL(C_FLOAT),             INTENT(IN   ) :: TurbPosn(3)      
+   INTEGER(C_INT),            INTENT(  OUT) :: AbortErrLev_c
+   REAL(C_DOUBLE),            INTENT(IN   ) :: dtDriver_c
+   REAL(C_DOUBLE),            INTENT(  OUT) :: dt_c
+   INTEGER(C_INT),            INTENT(  OUT) :: InflowType    ! inflow type - 1 = From Inflow module, 2 = External
+   INTEGER(C_INT),            INTENT(  OUT) :: NumBl_c      
+   INTEGER(C_INT),            INTENT(  OUT) :: NumBlElem_c      
+   INTEGER(C_INT),            INTENT(  OUT) :: NumTwrElem_c      
+   TYPE(ExtInfw_InputType_C), INTENT(INOUT) :: ExtInfw_Input_from_FAST  !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
+   TYPE(ExtInfw_OutputType_C),INTENT(INOUT) :: ExtInfw_Output_to_FAST   !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
    TYPE(SC_DX_InputType_C),   INTENT(INOUT) :: SC_DX_Input_from_FAST
    TYPE(SC_DX_OutputType_C),  INTENT(INOUT) :: SC_DX_Output_to_FAST
-   INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
-   CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
-
+   INTEGER(C_INT),            INTENT(  OUT) :: ErrStat_c      
+   CHARACTER(KIND=C_CHAR),    INTENT(  OUT) :: ErrMsg_c(IntfStrLen) 
+      
    ! local
-   CHARACTER(IntfStrLen)                 :: InputFileName
-   INTEGER(C_INT)                        :: i
+   CHARACTER(IntfStrLen)                 :: InputFileName   
+   INTEGER(C_INT)                        :: i    
    TYPE(FAST_ExternInitType)             :: ExternInitData
-
-   CHARACTER(*),           PARAMETER     :: RoutineName = 'FAST_CFD_Init'
-
-      ! transfer the character array from C to a Fortran string:
+   
+      ! transfer the character array from C to a Fortran string:   
    InputFileName = TRANSFER( InputFileName_c, InputFileName )
    I = INDEX(InputFileName,C_NULL_CHAR) - 1            ! if this has a c null character at the end...
    IF ( I > 0 ) InputFileName = InputFileName(1:I)     ! remove it
-
-      ! initialize variables:
-   n_t_global = 0
+   
+      ! initialize variables:   
+   n_t_global = 0   
    ErrStat = ErrID_None
    ErrMsg = ""
-
+   
    NumBl_c       = 0    ! initialize here in case of error
    NumBlElem_c   = 0    ! initialize here in case of error
-
+   
    ExternInitData%TMax = TMax
    ExternInitData%TurbineID = TurbID
    ExternInitData%TurbinePos = TurbPosn
    ExternInitData%SensorType = SensorType_None
    ExternInitData%NumCtrl2SC = NumCtrl2SC
    ExternInitData%NumSC2CtrlGlob = NumSC2CtrlGlob
-
+   
    if ( NumSC2CtrlGlob > 0 ) then
       CALL AllocAry( ExternInitData%fromSCGlob, NumSC2CtrlGlob, 'ExternInitData%fromSCGlob', ErrStat, ErrMsg)
          IF (FAILED()) RETURN
@@ -678,7 +674,7 @@ subroutine FAST_AL_CFD_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c,
          ExternInitData%fromSCGlob(i) = InitScOutputsGlob(i)
       end do
    end if
-
+   
    ExternInitData%NumSC2Ctrl = NumSC2Ctrl
    if ( NumSC2Ctrl > 0 ) then
       CALL AllocAry( ExternInitData%fromSC, NumSC2Ctrl, 'ExternInitData%fromSC', ErrStat, ErrMsg)
@@ -688,45 +684,33 @@ subroutine FAST_AL_CFD_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c,
          ExternInitData%fromSC(i) = InitScOutputsTurbine(i)
       end do
    end if
-
+   
    ExternInitData%NumActForcePtsBlade = NumActForcePtsBlade
    ExternInitData%NumActForcePtsTower = NumActForcePtsTower
    ExternInitData%DTdriver = dtDriver_c
+   ExternInitData%NodeClusterType = NodeClusterType_c
 
-   CALL FAST_InitializeAll_T( t_initial, 1_IntKi, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
+   CALL FAST_InitializeAll_T( t_initial, iTurb, Turbine(iTurb), ErrStat, ErrMsg, InputFileName, ExternInitData )
 
       ! set values for return to ExternalInflow
-   if (ErrStat .ne. ErrID_None) then
-      AbortErrLev_c = AbortErrLev
-      ErrStat_c = ErrStat
-      ErrMsg_c  = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
-      return
-   end if
-
-   dt_c = Turbine(iTurb)%p_FAST%dt
-
-   InflowType = Turbine(iTurb)%p_FAST%CompInflow
-
-   if ( (InflowType == 3) .and. (NumActForcePtsBlade .eq. 0) .and. (NumActForcePtsTower .eq. 0) ) then
-      CALL SetErrStat(ErrID_Warn, "Number of actuator points is zero when inflow type is 2. Mapping of loads may not work. ", ErrStat, ErrMsg, RoutineName )
-   end if
-
-   if ( (InflowType .ne. 3) .and. ((NumActForcePtsBlade .ne. 0) .or. (NumActForcePtsTower .ne. 0)) ) then
-      !!FAST reassigns CompInflow after reading it to a module number based on an internal list in the FAST_Registry. So 2 in input file becomes 3 inside the code.
-      CALL SetErrStat(ErrID_Fatal, "Number of requested actuator points is non-zero when inflow type is not 2. Please set number of actuator points to zero when induction is turned on.", ErrStat, ErrMsg, RoutineName )
-      ErrStat_c = ErrStat
-      ErrMsg_c  = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
-      return
-   end if
-
+   AbortErrLev_c = AbortErrLev   
+   dt_c          = Turbine(iTurb)%p_FAST%dt
+   ErrStat_c     = ErrStat
+   ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
+   ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
+      
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL WrScr( "Error in FAST_ExtInfw_Init:FAST_InitializeAll_T" // TRIM(ErrMsg) )
+      RETURN
+   END IF
+   
    call SetExternalInflow_pointers(iTurb, ExtInfw_Input_from_FAST, ExtInfw_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST)
-
-   ! 7-Sep-2015: OpenFAST doesn't restrict the number of nodes on each blade mesh to be the same, so if this DOES ever change,
-   ! we'll need to make ExternalInflow less tied to the AeroDyn mapping.
-   IF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD14) THEN
+                        
+   ! 7-Sep-2015: Sang wants these integers for the ExternalInflow mapping, which is tied to the AeroDyn nodes. FAST doesn't restrict the number of nodes on each 
+   ! blade mesh to be the same, so if this DOES ever change, we'll need to make ExternalInflow less tied to the AeroDyn mapping.
+   IF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD14) THEN   
       NumBl_c     = SIZE(Turbine(iTurb)%AD14%Input(1)%InputMarkers)
       NumBlElem_c = Turbine(iTurb)%AD14%Input(1)%InputMarkers(1)%Nnodes
-      NumTwrElem_c = 0 ! Don't care about Aerodyn14 anymore
    ELSEIF (Turbine(iTurb)%p_FAST%CompAero == MODULE_AD) THEN
       IF (ALLOCATED(Turbine(iTurb)%AD%Input(1)%rotors)) THEN
          IF (ALLOCATED(Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion)) THEN
@@ -736,43 +720,34 @@ subroutine FAST_AL_CFD_Init(iTurb, TMax, InputFileName_c, TurbID, OutFileRoot_c,
       IF (NumBl_c > 0) THEN
          NumBlElem_c = Turbine(iTurb)%AD%Input(1)%rotors(1)%BladeMotion(1)%Nnodes
       END IF
-!FIXME: need some checks on this.  If the Tower mesh is not initialized, this will be garbage
-      NumTwrElem_c = Turbine(iTurb)%AD%y%rotors(1)%TowerLoad%Nnodes
-   ELSE
-      NumBl_c     = 0
-      NumBlElem_c = 0
-      NumTwrElem_c = 0
    END IF
 
    OutFileRoot_c = TRANSFER( trim(Turbine(iTurb)%p_FAST%OutFileRoot)//C_NULL_CHAR, OutFileRoot_c )
-
-   ErrStat_c     = ErrStat
-   ErrMsg_c      = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
-
- contains
+   
+contains
    LOGICAL FUNCTION FAILED()
-
-     FAILED = ErrStat >= AbortErrLev
-
-     IF (ErrStat > 0) THEN
-        CALL WrScr( "Error in FAST_ExtInfw_Init:FAST_InitializeAll_T" // TRIM(ErrMsg) )
-
-        IF ( FAILED ) THEN
-
-           AbortErrLev_c = AbortErrLev
-           ErrStat_c     = ErrStat
-           ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
-           ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
-
-           !IF (ALLOCATED(Turbine)) DEALLOCATE(Turbine)
-           ! bjj: if there is an error, the driver should call FAST_DeallocateTurbines() instead of putting this deallocate statement here
-        END IF
-     END IF
-
-
+   
+      FAILED = ErrStat >= AbortErrLev
+      
+      IF (ErrStat > 0) THEN
+         CALL WrScr( "Error in FAST_ExtInfw_Init:FAST_InitializeAll_T" // TRIM(ErrMsg) )
+         
+         IF ( FAILED ) THEN
+               
+            AbortErrLev_c = AbortErrLev
+            ErrStat_c     = ErrStat
+            ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
+            ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
+   
+            !IF (ALLOCATED(Turbine)) DEALLOCATE(Turbine)
+            ! bjj: if there is an error, the driver should call FAST_DeallocateTurbines() instead of putting this deallocate statement here
+         END IF
+      END IF
+      
+      
    END FUNCTION FAILED
+end subroutine   
 
-end subroutine FAST_AL_CFD_Init
 !==================================================================================================================================
 subroutine FAST_CFD_Solution0(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CFD_Solution0')
    IMPLICIT NONE
@@ -818,107 +793,88 @@ subroutine FAST_CFD_InitIOarrays_SS(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='F
 
 end subroutine FAST_CFD_InitIOarrays_SS
 !==================================================================================================================================
-subroutine FAST_AL_CFD_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, InflowType, numblades_c, &
-     numElementsPerBlade_c, numElementsTower_c, n_t_global_c, ExtInfw_Input_from_FAST, ExtInfw_Output_to_FAST, &
-     SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_AL_CFD_Restart')
-!DEC$ ATTRIBUTES DLLEXPORT::FAST_AL_CFD_Restart
+subroutine FAST_ExtInfw_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, numblades_c, numElementsPerBlade_c, numElementsTower_c, n_t_global_c, &
+                      ExtInfw_Input_from_FAST, ExtInfw_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_ExtInfw_Restart')
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: FAST_AL_CFD_Restart
-!GCC$ ATTRIBUTES DLLEXPORT :: FAST_AL_CFD_Restart
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_ExtInfw_Restart
+!GCC$ ATTRIBUTES DLLEXPORT :: FAST_ExtInfw_Restart
 #endif
-   INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number
-   CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: CheckpointRootName_c(IntfStrLen)
-   INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c
-   INTEGER(C_INT),         INTENT(  OUT) :: numblades_c
-   INTEGER(C_INT),         INTENT(  OUT) :: numElementsPerBlade_c
-   INTEGER(C_INT),         INTENT(  OUT) :: numElementsTower_c
-   REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c
-   INTEGER(C_INT),         INTENT(  OUT) :: InflowType
-   INTEGER(C_INT),         INTENT(  OUT) :: n_t_global_c
-   TYPE(ExtInfw_InputType_C), INTENT(  OUT) :: ExtInfw_Input_from_FAST
-   TYPE(ExtInfw_OutputType_C),INTENT(  OUT) :: ExtInfw_Output_to_FAST
+   INTEGER(C_INT),            INTENT(IN   ) :: iTurb            ! Turbine number 
+   CHARACTER(KIND=C_CHAR),    INTENT(IN   ) :: CheckpointRootName_c(IntfStrLen)      
+   INTEGER(C_INT),            INTENT(  OUT) :: AbortErrLev_c      
+   INTEGER(C_INT),            INTENT(  OUT) :: numblades_c
+   INTEGER(C_INT),            INTENT(  OUT) :: numElementsPerBlade_c
+   INTEGER(C_INT),            INTENT(  OUT) :: numElementsTower_c
+   REAL(C_DOUBLE),            INTENT(  OUT) :: dt_c      
+   INTEGER(C_INT),            INTENT(  OUT) :: n_t_global_c      
+   TYPE(ExtInfw_InputType_C), INTENT(INOUT) :: ExtInfw_Input_from_FAST  !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
+   TYPE(ExtInfw_OutputType_C),INTENT(INOUT) :: ExtInfw_Output_to_FAST   !INTENT(INOUT) instead of INTENT(OUT) to avoid gcc compiler warnings about variable tracking sizes
    TYPE(SC_DX_InputType_C),   INTENT(INOUT) :: SC_DX_Input_from_FAST
    TYPE(SC_DX_OutputType_C),  INTENT(INOUT) :: SC_DX_Output_to_FAST
-   INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
-   CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)
-
+   INTEGER(C_INT),            INTENT(  OUT) :: ErrStat_c      
+   CHARACTER(KIND=C_CHAR),    INTENT(  OUT) :: ErrMsg_c(IntfStrLen) 
+   
    ! local variables
-   INTEGER(C_INT)                        :: NumOuts_c
-   CHARACTER(IntfStrLen)                 :: CheckpointRootName
+   INTEGER(C_INT)                        :: NumOuts_c      
+   CHARACTER(IntfStrLen)                 :: CheckpointRootName   
    INTEGER(IntKi)                        :: I
    INTEGER(IntKi)                        :: Unit
    REAL(DbKi)                            :: t_initial_out
    INTEGER(IntKi)                        :: NumTurbines_out
-   CHARACTER(*),           PARAMETER     :: RoutineName = 'FAST_Restart'
-
+   CHARACTER(*),           PARAMETER     :: RoutineName = 'FAST_Restart' 
+             
    CALL NWTC_Init()
-      ! transfer the character array from C to a Fortran string:
+      ! transfer the character array from C to a Fortran string:   
    CheckpointRootName = TRANSFER( CheckpointRootName_c, CheckpointRootName )
    I = INDEX(CheckpointRootName,C_NULL_CHAR) - 1                 ! if this has a c null character at the end...
    IF ( I > 0 ) CheckpointRootName = CheckpointRootName(1:I)     ! remove it
-
+   
    Unit = -1
    CALL FAST_RestoreFromCheckpoint_T(t_initial_out, n_t_global, NumTurbines_out, Turbine(iTurb), CheckpointRootName, ErrStat, ErrMsg, Unit )
-
+   
       ! check that these are valid:
       IF (t_initial_out /= t_initial) CALL SetErrStat(ErrID_Fatal, "invalid value of t_initial.", ErrStat, ErrMsg, RoutineName )
       IF (NumTurbines_out /= 1) CALL SetErrStat(ErrID_Fatal, "invalid value of NumTurbines.", ErrStat, ErrMsg, RoutineName )
-
-       ! transfer Fortran variables to C:
+   
+       ! transfer Fortran variables to C: 
    n_t_global_c  = n_t_global
-   AbortErrLev_c = AbortErrLev
-   NumOuts_c     = min(MAXOUTPUTS, 1 + SUM( Turbine(iTurb)%y_FAST%numOuts )) ! includes time
-
+   AbortErrLev_c = AbortErrLev   
+   NumOuts_c     = min(MAXOUTPUTS, SUM( Turbine(iTurb)%y_FAST%numOuts )) ! includes time
    if (allocated(Turbine(iTurb)%ad%p%rotors)) then ! this might not be allocated if we had an error earlier
       numBlades_c   = Turbine(iTurb)%ad%p%rotors(1)%numblades
       numElementsPerBlade_c = Turbine(iTurb)%ad%p%rotors(1)%numblnds ! I'm not sure if FASTv8 can handle different number of blade nodes for each blade.
-      numElementsTower_c = Turbine(iTurb)%ad%y%rotors(1)%TowerLoad%Nnodes
    else
       numBlades_c = 0
       numElementsPerBlade_c = 0
-      numElementsTower_c = 0
    end if
 
-   dt_c          = Turbine(iTurb)%p_FAST%dt
-
+   numElementsTower_c = Turbine(iTurb)%ad%p%rotors(1)%numtwrnds
+   
+   dt_c          = Turbine(iTurb)%p_FAST%dt      
+      
    ErrStat_c     = ErrStat
    ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
    ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
 
-#ifdef CONSOLE_FILE
-   if (ErrStat .ne. ErrID_None) call wrscr1(trim(ErrMsg))
-#endif
+#ifdef CONSOLE_FILE   
+   if (ErrStat /= ErrID_None) call wrscr1(trim(ErrMsg))
+#endif   
 
    if (ErrStat >= AbortErrLev) return
-
+   
    call SetExternalInflow_pointers(iTurb, ExtInfw_Input_from_FAST, ExtInfw_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST)
 
-   InflowType = Turbine(iTurb)%p_FAST%CompInflow
-
-   if (ErrStat .ne. ErrID_None) then
-      call wrscr1(trim(ErrMsg))
-      return
-   end if
-
-   if (dt_c == Turbine(iTurb)%p_FAST%dt) then
-      CALL SetErrStat(ErrID_Fatal, "Time step specified in C++ API does not match with time step specified in OpenFAST input file.", ErrStat, ErrMsg, RoutineName )
-      return
-   end if
-
-   call SetExternalInflow_pointers(iTurb, ExtInfw_Input_from_FAST, ExtInfw_Output_to_FAST, SC_DX_Input_from_FAST, SC_DX_Output_to_FAST)
-
-end subroutine FAST_AL_CFD_Restart
-
+end subroutine FAST_ExtInfw_Restart
 !==================================================================================================================================
-subroutine FAST_BR_CFD_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, numblades_c, &
+subroutine FAST_ExtLoads_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, numblades_c, &
      n_t_global_c, ExtLd_Input_from_FAST, ExtLd_Output_to_FAST, &
-     SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_BR_CFD_Restart')
-!DEC$ ATTRIBUTES DLLEXPORT::FAST_BR_CFD_Restart
+     SC_DX_Input_from_FAST, SC_DX_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_ExtLoads_Restart')
+!DEC$ ATTRIBUTES DLLEXPORT::FAST_ExtLoads_Restart
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
-!DEC$ ATTRIBUTES DLLEXPORT :: FAST_BR_CFD_Restart
-!GCC$ ATTRIBUTES DLLEXPORT :: FAST_BR_CFD_Restart
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_ExtLoads_Restart
+!GCC$ ATTRIBUTES DLLEXPORT :: FAST_ExtLoads_Restart
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: CheckpointRootName_c(IntfStrLen)
@@ -988,7 +944,7 @@ subroutine FAST_BR_CFD_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c,
    ErrStat_c     = ErrStat
    ErrMsg_c      = TRANSFER( trim(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
 
-end subroutine FAST_BR_CFD_Restart
+end subroutine FAST_ExtLoads_Restart
 !==================================================================================================================================
 subroutine SetExtLoads_pointers(iTurb, ExtLd_iFromOF, ExtLd_oToOF)
 
